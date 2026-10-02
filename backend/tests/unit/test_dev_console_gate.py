@@ -277,8 +277,10 @@ def test_a_production_process_builds_an_app_without_it():
     )
 
     assert result.returncode == 0, result.stderr
-    assert "/dev" not in result.stdout
-    assert "/dev/roster" not in result.stdout
+    # Exact paths, as the printed list quotes them — ``/players/me/devices``
+    # (#549) is no console.
+    assert "'/dev'" not in result.stdout
+    assert "'/dev/roster'" not in result.stdout
 
 
 #: A fifth environment, spelled as `app/core/config.py` spells the four. Patched

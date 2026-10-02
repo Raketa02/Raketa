@@ -488,6 +488,42 @@ forbidden_modules =
     app.modules.conversations
 allow_indirect_imports = true
 
+# **Nor does any context know a player is told** (#549). Notifications is told
+# through the outbox by `proposals`, `bookings` and `payments`, exactly as a room
+# is — `notifications/application/telling.py` subscribes to their events and
+# reads what a notice says through ports of its own, signed in
+# `notifications/infrastructure/` — and nothing it tells reads back. The moment
+# a fill or a leaving pushes a phone itself, a push service that is down holds
+# up the money, and a notice is one more thing every act must remember.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:a-player-is-told-and-nothing-asks]
+name = No context knows Notifications exists
+type = forbidden
+source_modules =
+    app.modules.administrators
+    app.modules.auth
+    app.modules.blocks
+    app.modules.bookings
+    app.modules.challenges
+    app.modules.clubs
+    app.modules.conversations
+    app.modules.games
+    app.modules.groups
+    app.modules.matchmaking
+    app.modules.payments
+    app.modules.plans
+    app.modules.player_profile
+    app.modules.player_record
+    app.modules.player_score
+    app.modules.proposals
+    app.modules.rating
+    app.modules.sportsmanship
+    app.modules.users
+forbidden_modules =
+    app.modules.notifications
+allow_indirect_imports = true
+
 # **`games` cannot read a plan** (docs/adr/0145 §4). ADR-0137's sentence — *"there
 # is no booking, no calendar and no date field anywhere"* — was scoped rather than
 # deleted when the Plan arrived: it is a claim about **`games`' record**, and it is
@@ -704,6 +740,7 @@ forbidden_modules =
     app.modules.games
     app.modules.groups
     app.modules.matchmaking
+    app.modules.notifications
     app.modules.payments
     app.modules.plans
     app.modules.player_profile

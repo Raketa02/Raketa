@@ -72,6 +72,13 @@ from app.modules.payments.application.event_subscriptions import (
     subscribe_the_seat_charge_settler,
 )
 from app.modules.payments.domain.provider import PaymentProvider
+from app.modules.notifications.application.event_subscriptions import (
+    register_notification_events,
+    subscribe_notification_handlers,
+    subscribe_the_pusher,
+    subscribe_the_teller,
+)
+from app.modules.notifications.domain.ports import PushNotifications
 from app.modules.plans.application.event_subscriptions import (
     register_plan_events,
     subscribe_plan_handlers,
@@ -131,6 +138,7 @@ class EventRuntime:
         batch_size: int,
         nudges: NudgePublisher,
         payments: PaymentProvider,
+        push: PushNotifications,
         proposer_due: DueForProposing | None = None,
     ) -> EventBatch:
         """One batch of the outbox, over this session.
@@ -149,6 +157,11 @@ class EventRuntime:
         API's delivery holds the provider its requests hold, a seed run's holds
         the fake it saved its cards through, and a default here would be a
         release sent somewhere nobody chose.
+
+        **``push`` is required on the same argument** (#549): a notice given is
+        pushed to its player's phones by the pusher this run holds — the API's
+        Expo, a seed run's recording service, whose players have no phones —
+        and a default here would be phones pushed, or not, by nobody's choice.
 
         **``proposer_due`` is the one that may be absent**: it is where this
         process's proposer is told what changed (#540), and a seed run or a
@@ -169,6 +182,7 @@ class EventRuntime:
                 clock=clock,
                 nudges=nudges,
                 payments=payments,
+                push=push,
                 proposer_due=proposer_due,
             ),
             uow=build_unit_of_work(session),
@@ -183,6 +197,7 @@ class EventRuntime:
         clock: Clock,
         nudges: NudgePublisher,
         payments: PaymentProvider,
+        push: PushNotifications,
         proposer_due: DueForProposing | None = None,
     ) -> EventDispatcher:
         """The process's subscriptions, plus the ones that need this batch's session.
@@ -205,9 +220,11 @@ class EventRuntime:
         """
 
         from app.bootstrap.composition import (
+            build_push_the_notice,
             build_resume_paused_yeses,
             build_send_club_payout,
             build_settle_seat_charges,
+            build_tell_the_players,
             build_tell_the_room,
             build_withdraw_a_leavers_yeses,
         )
@@ -255,6 +272,17 @@ class EventRuntime:
                 session, provider=payments, settings=get_settings(), runtime=self
             ),
         )
+        # What players are told about a game and its money, given in the
+        # delivery's own transaction — and a notice given, pushed to their
+        # phones over this run's push service (#549).
+        subscribe_the_teller(
+            dispatcher,
+            build_tell_the_players(session, settings=get_settings(), runtime=self),
+        )
+        subscribe_the_pusher(
+            dispatcher,
+            build_push_the_notice(session, push=push, clock=clock, runtime=self),
+        )
         # And what changed, for this process's proposer, when one is listening.
         if proposer_due is not None:
             subscribe_the_proposer_on_changes(dispatcher, proposer_due)
@@ -278,6 +306,7 @@ def build_event_runtime() -> EventRuntime:
     register_payment_events(catalog)
     register_proposal_events(catalog)
     register_booking_events(catalog)
+    register_notification_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
@@ -295,6 +324,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_payment_handlers(dispatcher)
     subscribe_proposal_handlers(dispatcher)
     subscribe_booking_handlers(dispatcher)
+    subscribe_notification_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),
@@ -332,6 +362,7 @@ def build_event_delivery_worker(
     settings: Settings,
     nudges: NudgePublisher,
     payments: PaymentProvider,
+    push: PushNotifications,
     clock: Clock | None = None,
     proposer_due: DueForProposing | None = None,
 ) -> EventWorker:
@@ -339,8 +370,9 @@ def build_event_delivery_worker(
 
     It runs inside the API process, beside the streams, so the system lines it
     writes reach open conversations without anybody refreshing — which is what
-    ``nudges`` is, and why it has no default here either. ``proposer_due`` is
-    this process's proposer, told what the delivery changed.
+    ``nudges`` is, and why it has no default here either. ``push`` is the push
+    service a notice reaches a phone through. ``proposer_due`` is this
+    process's proposer, told what the delivery changed.
     """
 
     processing_clock = clock or SystemClock()
@@ -352,6 +384,7 @@ def build_event_delivery_worker(
             batch_size=settings.EVENT_DELIVERY_BATCH_SIZE,
             nudges=nudges,
             payments=payments,
+            push=push,
             proposer_due=proposer_due,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,

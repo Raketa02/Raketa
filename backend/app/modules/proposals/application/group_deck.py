@@ -53,6 +53,7 @@ from app.modules.proposals.domain.deck import (
     CappedWeek,
     DeckCard,
     ReadersView,
+    SellingTerms,
     arrangements,
     capped_weeks,
     card_of,
@@ -123,6 +124,22 @@ class GroupDeck:
 
 
 @final
+@dataclass(frozen=True, slots=True)
+class ReadersDeal:
+    """Which of some proposals the reader's deck shows now, and the reader's
+    own facts it was decided against."""
+
+    #: The segments the reader's intent shows, Competitive first.
+    shown: tuple[SearchMode, ...]
+    games_per_week: int
+    capped: tuple[CappedWeek, ...]
+    terms: Mapping[UUID, SellingTerms]
+    #: Each proposal the deck shows, as the reader sees it.
+    views: list[tuple[Proposal, ReadersView]]
+    genders: dict[UUID, Gender | None]
+
+
+@final
 class ReadGroupDeck:
     def __init__(
         self,
@@ -166,28 +183,10 @@ class ReadGroupDeck:
         if pool is None or not await self._pools.members_among(pool, [reader]):
             raise PoolNotFound()
 
-        wanted = await self._wanted.of(reader, sport=sport)
-        shown = tuple(kind for kind in SearchMode if wanted and kind in wanted)
-        limits = await self._settings.load(reader)
-        weeks = weeks_ahead(now)
-        start, end = week_window(weeks)
-        booked = await self._booked.starts_of(reader, start=start, end=end)
-        capped = capped_weeks(weeks, booked, games_per_week=limits.games_per_week)
-        at_the_cap = {week.starts_on for week in capped}
-
-        dealt = await self._dealt(reader, command, now)
-        terms = await self._terms.of({p.club_id for p in dealt}, now=now)
-        candidates = [
-            proposal
-            for proposal in dealt
-            if proposal.kind in shown
-            and limits.shows(share_grosze=proposal.share_grosze)
-            and week_of(proposal.start) not in at_the_cap
-            and not hour_taken(proposal.start, booked)
-            and proposal.club_id in terms
-        ]
-
-        views, genders = await self._views(pool, reader, sport, candidates, now)
+        deal = await self.deal_to(
+            reader, pool, sport, await self._dealt(reader, command, now), now=now
+        )
+        shown, terms, views, genders = deal.shown, deal.terms, deal.views, deal.genders
         options = [
             standing_for(
                 arrangements(
@@ -266,8 +265,8 @@ class ReadGroupDeck:
                 DeckSegment(kind=kind, count=len(segments[kind])) for kind in shown
             ),
             games_badge=sum(1 for kind in shown for card in segments[kind] if card.in_),
-            games_per_week=limits.games_per_week,
-            capped_weeks=capped,
+            games_per_week=deal.games_per_week,
+            capped_weeks=deal.capped,
             cards=dealt_now,
             people={
                 player: person
@@ -279,6 +278,59 @@ class ReadGroupDeck:
             },
             club_names=await self._clubs.names_of({card.club_id for card in dealt_now}),
         )
+
+    async def deal_to(
+        self,
+        reader: UUID,
+        pool: Pool,
+        sport: Sport,
+        proposals: Sequence[Proposal],
+        *,
+        now: Instant,
+    ) -> ReadersDeal:
+        """Which of ``proposals`` — each dealt to the reader in ``pool`` — the
+        reader's deck shows now: the reader's own filters first, then the live
+        reads every card shares."""
+
+        wanted = await self._wanted.of(reader, sport=sport)
+        shown = tuple(kind for kind in SearchMode if wanted and kind in wanted)
+        limits = await self._settings.load(reader)
+        weeks = weeks_ahead(now)
+        start, end = week_window(weeks)
+        booked = await self._booked.starts_of(reader, start=start, end=end)
+        capped = capped_weeks(weeks, booked, games_per_week=limits.games_per_week)
+        at_the_cap = {week.starts_on for week in capped}
+
+        terms = await self._terms.of({p.club_id for p in proposals}, now=now)
+        candidates = [
+            proposal
+            for proposal in proposals
+            if proposal.kind in shown
+            and limits.shows(share_grosze=proposal.share_grosze)
+            and week_of(proposal.start) not in at_the_cap
+            and not hour_taken(proposal.start, booked)
+            and proposal.club_id in terms
+        ]
+        views, genders = await self._views(pool, reader, sport, candidates, now)
+        return ReadersDeal(
+            shown=shown,
+            games_per_week=limits.games_per_week,
+            capped=capped,
+            terms=terms,
+            views=views,
+            genders=genders,
+        )
+
+    async def shows(self, reader: UUID, proposal: Proposal, *, now: Instant) -> bool:
+        """Whether the reader's deck shows this card now — what an alert about
+        it may promise (#549): a member of its pool, every filter the deck
+        reads passed, and the card not withheld from them."""
+
+        pool = await self._pools.find(proposal.pool.id)
+        if pool is None or not await self._pools.members_among(pool, [reader]):
+            return False
+        deal = await self.deal_to(reader, pool, proposal.sport, [proposal], now=now)
+        return bool(deal.views)
 
     async def _dealt(
         self, reader: UUID, command: ReadGroupDeckCommand, now: Instant

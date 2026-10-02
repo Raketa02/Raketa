@@ -53,6 +53,7 @@ from app.modules.conversations.infrastructure.absent_providers import (
     NobodyIsFollowing,
 )
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
+from app.modules.notifications.infrastructure.push import RecordingPush
 from app.modules.payments.infrastructure.fake_payments import FakePayments
 from app.modules.matchmaking.infrastructure.prompt_decline_model import (
     PromptDeclineORM,
@@ -913,6 +914,7 @@ async def deliver_the_outbox(
     live_channel=None,
     payments=None,
     proposer_due=None,
+    push=None,
 ) -> int:
     """Run the transactional outbox to exhaustion, the way the worker does.
 
@@ -946,6 +948,10 @@ async def deliver_the_outbox(
     **``proposer_due`` is the proposer listening** — a ``DueForProposing`` the
     delivery notes what changed in, as the API process's does (#540); left out,
     nobody is.
+
+    **``push`` is the push service a notice given is pushed through** — the
+    ``pushes`` fixture, when a test reads what a phone was pushed; otherwise a
+    recording one nobody reads (#549).
     """
 
     runtime = build_event_runtime()
@@ -964,6 +970,7 @@ async def deliver_the_outbox(
                 batch_size=100,
                 nudges=nudges,
                 payments=provider,
+                push=push if push is not None else RecordingPush(),
                 proposer_due=proposer_due,
             )
             delivered = await batch.execute(worker_id="tests")

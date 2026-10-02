@@ -64,7 +64,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `proposals.games_and_money_set` / v1). Games per week and *one game per hour* read
   **`BookedGames`**, answered off the bookings (#541); API tests may override
   `get_booked_games`. A withdrawn yes is dealt again. The seed fails if her deck would be
-  empty (`assert_the_group_deck`, beside the screens battery).
+  empty (`assert_the_group_deck`, beside the screens battery). **Its filters are one
+  method** (`ReadGroupDeck.deal_to`), and `shows` asks them of one card for one reader:
+  Notifications' *You complete it* and challenges go only where the deck shows the card
+  (#549), so a new filter added anywhere but `deal_to` is one an alert would not know.
 - **The proposer builds the games, and its rules are one pure batch** (#540, the mechanics
   §4.3, §5, §6.2–§6.3, §7): `domain/proposer.py`'s `propose` — one pool, one sport, one
   instant; members (Level and σ off rating's estimates, weekly hours, intent, Games & money,

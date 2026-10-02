@@ -46,7 +46,7 @@ from app.application.ports import (
     UnitOfWork,
 )
 from app.bootstrap.events import EventRuntime, get_event_runtime
-from app.core.config import Settings
+from app.core.config import PushProvider, Settings
 from app.engines.assessment import AssessmentEngine
 from app.engines.matchfit.core import Term
 from app.engines.matchfit.ruleset import Ruleset
@@ -344,6 +344,33 @@ from app.modules.payments.infrastructure.sqlalchemy_notice_inbox import (
 )
 from app.modules.payments.infrastructure.stripe_notices import StripeNotices
 from app.modules.payments.infrastructure.stripe_payments import StripePayments
+from app.modules.notifications.application.pushing import PushTheNotice
+from app.modules.notifications.application.reading import NoticeWords
+from app.modules.notifications.application.telling import GiveNotice, TellThePlayers
+from app.modules.notifications.domain.ports import (
+    Decks,
+    GameBriefs,
+    Names,
+    NoticeDayRepository,
+    NoticeDirectory,
+    NotificationPreferencesRepository,
+    PaidShares,
+    PushNotifications,
+    SeatOffers,
+)
+from app.modules.notifications.infrastructure.event_sourced_notification_repositories import (  # noqa: E501
+    EventSourcedNoticeDayRepository,
+    EventSourcedNotificationPreferencesRepository,
+    SqlAlchemyNoticeDirectory,
+)
+from app.modules.notifications.infrastructure.push import ExpoPush, RecordingPush
+from app.modules.notifications.infrastructure.told_by import (
+    BookedAndProposedGames,
+    PlatformNames,
+    ProposalsDecks,
+    RescueSeatOffers,
+    SeatChargeShares,
+)
 from app.modules.player_profile.application.has_player_profile import (
     HasPlayerProfile,
 )
@@ -5121,4 +5148,157 @@ def build_follow_conversation(
 
     return FollowConversation(
         rooms=rooms, nudges=nudges, typists=typists, clock=build_clock()
+    )
+
+
+# --------------------------------------------------------------------------
+# Notifications (#549; docs/adr/0189 §5)
+# --------------------------------------------------------------------------
+#
+# Told through the outbox by contexts that do not know it exists, as a room is
+# (docs/adr/0146 §5): the teller and the pusher are built per delivery run over
+# its session, and the push service is a per-run seam beside the payment
+# provider — Expo's for the API, a recording one for a seed run.
+
+
+def build_notification_preferences_repository(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> NotificationPreferencesRepository:
+    """One stream per player — the three choices and the phones — and the
+    choices' and phones' projections written beside it."""
+    return EventSourcedNotificationPreferencesRepository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+
+
+def build_notice_day_repository(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> NoticeDayRepository:
+    """One stream per player per day in Kraków — what they were told — and the
+    recent list written beside it."""
+    return EventSourcedNoticeDayRepository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+
+
+def build_notice_directory(session: AsyncSession) -> NoticeDirectory:
+    return SqlAlchemyNoticeDirectory(session)
+
+
+def build_push_notifications(settings: Settings) -> PushNotifications:
+    """The push service this process pushes through: Expo's, or — where
+    ``PUSH_PROVIDER`` says so, which a deployed environment refuses — one that
+    records and pushes nothing."""
+
+    if settings.PUSH_PROVIDER is PushProvider.RECORDING:
+        return RecordingPush()
+    return ExpoPush(
+        endpoint_url=settings.EXPO_PUSH_URL,
+        access_token=settings.EXPO_ACCESS_TOKEN,
+        timeout_seconds=settings.EXPO_PUSH_TIMEOUT_SECONDS,
+    )
+
+
+def build_recording_push() -> RecordingPush:
+    """A push service that pushes nothing — a seed run's, whose players have no
+    phones."""
+    return RecordingPush()
+
+
+def build_game_briefs(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GameBriefs:
+    """A game as a notice tells it: its proposal's stream and its booking's."""
+    store = build_domain_event_store(session, runtime=runtime)
+    events = build_event_publisher(session, runtime=runtime)
+    return BookedAndProposedGames(
+        proposals=build_proposal_repository(session, event_store=store, events=events),
+        bookings=build_booking_repository(session, event_store=store, events=events),
+    )
+
+
+def build_decks(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> Decks:
+    """Whose deck shows a card — asked of the deck itself, so an alert never
+    points at a card the reader cannot find."""
+    return ProposalsDecks(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        deck=build_read_group_deck(
+            session, settings=settings, clock=build_clock(), runtime=runtime
+        ),
+    )
+
+
+def build_paid_shares(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> PaidShares:
+    """What a refund gives back, off the share's own Seat charge."""
+    return SeatChargeShares(_seat_charge_repository(session, runtime))
+
+
+def build_seat_offers(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> SeatOffers:
+    """Who an open seat is offered to — the Fill in board's own offer."""
+    return RescueSeatOffers(
+        pools=build_pools(session),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        offers=build_rescue_offers(session, settings=settings, runtime=runtime),
+    )
+
+
+def build_notice_names(session: AsyncSession) -> Names:
+    """A person's Name and a club's, for what a notice says."""
+    return PlatformNames(
+        users=build_user_repository(session),
+        clubs=build_proposal_club_names(session),
+    )
+
+
+def build_notice_words(session: AsyncSession) -> NoticeWords:
+    return NoticeWords(names=build_notice_names(session))
+
+
+def build_tell_the_players(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> TellThePlayers:
+    """What a player is told about a game and its money — built per delivery
+    run, over the session the delivery commits in."""
+    preferences = build_notification_preferences_repository(session, runtime=runtime)
+    return TellThePlayers(
+        give=GiveNotice(
+            preferences=preferences,
+            days=build_notice_day_repository(session, runtime=runtime),
+        ),
+        games=build_game_briefs(session, runtime=runtime),
+        decks=build_decks(session, settings=settings, runtime=runtime),
+        shares=build_paid_shares(session, runtime=runtime),
+        offers=build_seat_offers(session, settings=settings, runtime=runtime),
+        preferences=preferences,
+    )
+
+
+def build_push_the_notice(
+    session: AsyncSession,
+    *,
+    push: PushNotifications,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> PushTheNotice:
+    """A notice given, pushed to its player's phones over the run's push
+    service."""
+    return PushTheNotice(
+        preferences=build_notification_preferences_repository(session, runtime=runtime),
+        words=build_notice_words(session),
+        push=push,
+        clock=clock,
     )

@@ -32,6 +32,11 @@ from app.modules.matchmaking.infrastructure.candidate_index_model import (
 )
 from app.modules.matchmaking.infrastructure.deck_reset_model import DeckResetORM
 from app.modules.matchmaking.infrastructure.interest_model import InterestORM
+from app.modules.notifications.infrastructure.notification_models import (
+    NoticeORM,
+    NotificationPreferencesORM,
+    PushDeviceORM,
+)
 from app.modules.payments.infrastructure.payment_models import (
     PaymentCustomerORM,
     PaymentNoticeORM,
@@ -70,12 +75,15 @@ __all__ = [
     "GroupORM",
     "InterestORM",
     "MailQueueORM",
+    "NoticeORM",
+    "NotificationPreferencesORM",
     "OneTimeCredentialORM",
     "PaymentCustomerORM",
     "PaymentNoticeORM",
     "PoolORM",
     "ProposalORM",
     "ProposalPersonORM",
+    "PushDeviceORM",
     "RefreshTokenORM",
     "SearchCandidateORM",
     "SearchORM",

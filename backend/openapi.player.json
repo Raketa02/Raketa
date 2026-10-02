@@ -6792,6 +6792,221 @@
         ]
       }
     },
+    "/api/v1/players/me/notifications": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "My notification choices",
+        "description": "You \u203a Account \u203a *Notifications*: the three notices a player chooses \u2014 *You complete it* and *Challenges for you* on, *Fill in alerts* off, until changed. The seven always-on notices are no choice.",
+        "operationId": "read_notification_choices_api_v1_players_me_notifications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationChoicesSchema"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Save my notification choices",
+        "description": "All three, as the screen saves them on every tap. The same answer records nothing. Answers what is now saved.",
+        "operationId": "set_notification_choices_api_v1_players_me_notifications_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationChoicesSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationChoicesSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/me/devices": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Push to this phone",
+        "description": "What a phone sends once it is allowed to show notifications, and again whenever its token changes. You keep at most ten phones; past them the one registered longest ago is let go.",
+        "operationId": "register_a_phone_api_v1_players_me_devices_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "This phone is pushed every notice given to you. Also the answer when it already was. A phone signed in as somebody else before is theirs no more."
+          },
+          "400": {
+            "description": "`push_token_invalid` \u2014 not an Expo push token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/me/devices/removal": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Stop pushing to this phone",
+        "description": "What a phone sends as it signs out, before its session ends. The token travels in the body, never the path, so it is in no access log.",
+        "operationId": "remove_a_phone_api_v1_players_me_devices_removal_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "This phone is pushed nothing more for you. Also the answer when it was not registered."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/players/me/notices": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "My recent notices",
+        "description": "Everything you were told \u2014 the list behind the bell on Home \u2014 the newest first, each in the words it was pushed in and with where a tap opens it. A notice past its kind's daily cap that was bundled is not its own row: the row it joined says how many it holds (`gathered`).",
+        "operationId": "read_recent_notices_api_v1_players_me_notices_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "The most notices to answer.",
+              "default": 30,
+              "title": "Limit"
+            },
+            "description": "The most notices to answer."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecentNoticesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/proposals/{proposal_id}/yes": {
       "post": {
         "tags": [
@@ -14519,6 +14734,119 @@
         "title": "NoShowSchema",
         "description": "A player reported as not coming to this booked game (#547; the\nmechanics \u00a715.3) \u2014 and what became of it. **Who reported them is not\nhere**: the report is the game's, said by the people who came, and a name\non it would be the platform pointing at one of them."
       },
+      "NoticeKind": {
+        "type": "string",
+        "enum": [
+          "GAME_BOOKED",
+          "CONFIRM_PAYMENT",
+          "GAME_CALLED_OFF",
+          "SOMEONE_LEFT",
+          "REFUNDED",
+          "CLUB_CONFIRMED",
+          "CLUB_COULD_NOT_TAKE_IT",
+          "POST_DID_NOT_FILL",
+          "YOU_COMPLETE_IT",
+          "CHALLENGE",
+          "FILL_IN_ALERT"
+        ],
+        "title": "NoticeKind",
+        "description": "Every notice a player can be told (the mechanics \u00a717.2)."
+      },
+      "NoticeSchema": {
+        "properties": {
+          "notice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Notice Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NoticeKind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "given_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Given At",
+            "description": "When it was given \u2014 or when the day last bundled a notice into it, which is what moves it up the list."
+          },
+          "opens": {
+            "$ref": "#/components/schemas/Opens",
+            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top."
+          },
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The game it is about: its proposal's id, which its booking takes."
+          },
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "game_kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "gathered": {
+            "type": "integer",
+            "title": "Gathered",
+            "description": "How many more notices of its kind the day bundled into this one \u2014 told in its words, and pushed to nobody."
+          }
+        },
+        "type": "object",
+        "required": [
+          "notice_id",
+          "kind",
+          "title",
+          "body",
+          "given_at",
+          "opens",
+          "game_id",
+          "pool_id",
+          "sport",
+          "game_kind",
+          "gathered"
+        ],
+        "title": "NoticeSchema",
+        "description": "One notice, in the words the phone was pushed \u2014 and where a tap opens."
+      },
+      "NotificationChoicesSchema": {
+        "properties": {
+          "you_complete_it": {
+            "type": "boolean",
+            "title": "You Complete It",
+            "description": "*You complete it* \u2014 a card needs only you. On until switched off; at most one a day, the rest bundled into it."
+          },
+          "challenges_for_you": {
+            "type": "boolean",
+            "title": "Challenges For You",
+            "description": "*Challenges for you* \u2014 a member's post names you. On until switched off; at most three a day, the rest bundled into the third."
+          },
+          "fill_in_alerts": {
+            "type": "boolean",
+            "title": "Fill In Alerts",
+            "description": "*Fill in alerts* \u2014 a booked game you fit needs one more. Off until switched on; at most three a day."
+          }
+        },
+        "type": "object",
+        "required": [
+          "you_complete_it",
+          "challenges_for_you",
+          "fill_in_alerts"
+        ],
+        "title": "NotificationChoicesSchema",
+        "description": "The three notices a player chooses. The seven that are always on are\nno choice, and are not here."
+      },
       "OfficialGroupClubSchema": {
         "properties": {
           "id": {
@@ -14636,6 +14964,16 @@
         ],
         "title": "OpenCardsResponse",
         "description": "Every card waiting for you, **soonest to expire first**.\n\nAn empty list is the ordinary answer and means nothing is waiting. It does\nnot distinguish *no games*, *not yet a day* and *already answered*: all three\nare simply not on the list, and none of them is something a client would draw\ndifferently.\n\n``cards`` is **required and never absent**, empty though it usually is: a\ndefault would emit it as optional and hand every client a list it has to\ncheck for existence before checking for length."
+      },
+      "Opens": {
+        "type": "string",
+        "enum": [
+          "BOOKING",
+          "PROPOSAL",
+          "DECK"
+        ],
+        "title": "Opens",
+        "description": "The screen a notice opens on when tapped (the screens A9)."
       },
       "OpponentVarietySchema": {
         "properties": {
@@ -16354,6 +16692,21 @@
         "title": "ProposalsOptInResponse",
         "description": "The standing answer, and the evidence recorded with it.\n\nThis is the *current* answer. The **history** \u2014 every answer this player ever\ngave, against which words and on which surface \u2014 is the stream, and nothing\nserves it yet because nothing has asked for it."
       },
+      "PushDeviceRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Token",
+            "description": "The phone's Expo push token \u2014 `ExponentPushToken[\u2026]` or `ExpoPushToken[\u2026]` \u2014 as the notifications library hands it out."
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "PushDeviceRequest"
+      },
       "QuestionResponse": {
         "properties": {
           "id": {
@@ -16631,6 +16984,23 @@
         ],
         "title": "ReceiptsResponse",
         "description": "You \u203a Payments' *RECEIPTS*, the latest first."
+      },
+      "RecentNoticesResponse": {
+        "properties": {
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/NoticeSchema"
+            },
+            "type": "array",
+            "title": "Notices",
+            "description": "The newest first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "notices"
+        ],
+        "title": "RecentNoticesResponse"
       },
       "RecordLikelyRangeSchema": {
         "properties": {

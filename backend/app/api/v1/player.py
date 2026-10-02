@@ -47,6 +47,9 @@ from app.modules.matchmaking.presentation.prompt_decline_routes import (
 )
 from app.modules.matchmaking.presentation.radar_routes import router as radar_router
 from app.modules.matchmaking.presentation.routes import router as searches_router
+from app.modules.notifications.presentation.routes import (
+    router as notifications_router,
+)
 from app.modules.payments.presentation.routes import router as payments_router
 from app.modules.payments.presentation.seat_charge_routes import (
     receipts_router,
@@ -121,6 +124,7 @@ player_api_router.include_router(invitations_router)
 player_api_router.include_router(administrator_router)
 player_api_router.include_router(administrator_groups_router)
 player_api_router.include_router(payments_router)
+player_api_router.include_router(notifications_router)
 player_api_router.include_router(proposals_router)
 player_api_router.include_router(proposal_players_router)
 player_api_router.include_router(pools_router)

@@ -244,6 +244,11 @@ class SeatChargeRefundDecided:
     #: the share goes back whole.
     withhold_fee: bool
     occurred_at: datetime
+    #: Why — the ``RefundReason`` code: ``LEFT``, ``CALLED_OFF_AT_THE_CUT_OFF``,
+    #: ``SEAT_TAKEN`` or ``CANCELLED_BY_THE_CLUB``. ``None`` on every decision
+    #: recorded before it was kept: a default rather than a version 2, since a
+    #: row without it is a refund decided in the past, read for nothing new.
+    reason: str | None = None
 
 
 @dataclass(frozen=True)

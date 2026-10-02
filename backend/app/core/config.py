@@ -68,6 +68,21 @@ class SmtpSecurity(StrEnum):
     TLS = "tls"
 
 
+class PushProvider(StrEnum):
+    """Which push service a notice is pushed through (#549; the mechanics
+    §17.2).
+
+    ``expo`` is Expo's push service, which reaches a phone running the app on
+    Android and — with the Apple Developer membership publishing needs anyway —
+    on iPhone. ``recording`` pushes nothing and remembers what it was asked: a
+    laptop with no phone to push to may choose it, and a deployed environment
+    refuses it, since every notice would reach nobody's phone.
+    """
+
+    EXPO = "expo"
+    RECORDING = "recording"
+
+
 class PaymentsProvider(StrEnum):
     """Which adapter money moves through (``docs/adr/0189`` §4).
 
@@ -392,6 +407,21 @@ class Settings(BaseSettings):
     #: Onboarding is a walk through Stripe's hosted pages that the suite does not
     #: script, so without it the money half of the suite is skipped by name.
     STRIPE_TEST_CLUB_ACCOUNT: Optional[str] = None
+
+    # --- push notifications (#549; the mechanics §17.2)
+    #
+    # Expo's push service needs no key: a phone's push token is what it pushes
+    # to. **An access token is optional and worth placing deployed** — with
+    # *enhanced push security* switched on for the Expo project, Expo refuses a
+    # push without it, which makes a phone's token useless to anybody else. A
+    # person places it (#533), never an agent. A push that cannot be made is
+    # logged and given up — the notice is in the player's list whatever happens.
+    PUSH_PROVIDER: PushProvider = PushProvider.EXPO
+    EXPO_PUSH_URL: str = "https://exp.host/--/api/v2/push/send"
+    EXPO_ACCESS_TOKEN: Optional[str] = None
+    #: The whole budget for one request to Expo. Pushing runs in the outbox's
+    #: delivery, so a slow service holds the queue behind it for this long.
+    EXPO_PUSH_TIMEOUT_SECONDS: float = 10.0
 
     # --- domain event delivery
     EVENT_DELIVERY_WORKER_ENABLED: bool = True
@@ -907,6 +937,13 @@ class Settings(BaseSettings):
                     f"PAYMENTS_PROVIDER is the in-process fake, and APP_ENV "
                     f"selects '{env}', which is deployed. The fake charges nobody "
                     f"— set PAYMENTS_PROVIDER to stripe or use 'local'."
+                )
+            if self.PUSH_PROVIDER is PushProvider.RECORDING:
+                # A notice would be given and pushed to nobody's phone.
+                raise ConfigurationError(
+                    f"PUSH_PROVIDER is the recording one, and APP_ENV selects "
+                    f"'{env}', which is deployed. It pushes nothing — set "
+                    f"PUSH_PROVIDER to expo or use 'local'."
                 )
 
         if env in DEPLOYED:

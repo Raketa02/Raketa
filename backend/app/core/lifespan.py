@@ -49,6 +49,7 @@ from app.bootstrap.composition import (
     close_payment_provider,
     build_nudge_publisher,
     build_payment_provider,
+    build_push_notifications,
     build_scoring_meter,
 )
 from app.bootstrap.events import build_event_delivery_worker
@@ -170,6 +171,9 @@ def build_lifespan(settings: Settings):
                     # through, so a card a request replaced or removed is
                     # released at the provider that saved it.
                     payments=build_payment_provider(settings),
+                    # And the push service a notice reaches a player's phones
+                    # through (#549).
+                    push=build_push_notifications(settings),
                     proposer_due=proposer_due,
                 )
                 # Kept on the application because the delivery worker's identity

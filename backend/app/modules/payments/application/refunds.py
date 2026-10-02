@@ -21,7 +21,6 @@ about money is.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
-from enum import StrEnum
 from typing import final
 from uuid import UUID
 
@@ -36,22 +35,7 @@ from app.modules.payments.application.seat_charge_emails import (
 )
 from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.ports import Payers, SeatChargeRepository, Sellers
-from app.modules.payments.domain.seat_charge import SeatCharge
-
-
-class RefundReason(StrEnum):
-    """Why a paid share is given back."""
-
-    #: The player left before the club's cut-off: less the card fee.
-    LEFT = "LEFT"
-    #: The game was called off at the club's cut-off: in full.
-    CALLED_OFF_AT_THE_CUT_OFF = "CALLED_OFF_AT_THE_CUT_OFF"
-    #: The player left after the cut-off and somebody took their seat (#545):
-    #: less the card fee.
-    SEAT_TAKEN = "SEAT_TAKEN"
-    #: The club cancelled the booked game (#547): in full — the club bears the
-    #: fees, as the seller.
-    CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+from app.modules.payments.domain.seat_charge import RefundReason, SeatCharge
 
 
 #: The reasons that give everything back: the club's own rules.
@@ -100,7 +84,7 @@ class RefundTheSeats:
         for charge in await self._charges.of_game(game_id):
             if charge.player_id not in players:
                 continue
-            if charge.refund(withhold_fee=withhold_fee, at=at):
+            if charge.refund(withhold_fee=withhold_fee, at=at, reason=reason):
                 await self._charges.save(charge)
                 refunded[charge.player_id] = charge
         await self._email(refunded, reason=reason, because=because, at=at)
@@ -168,3 +152,6 @@ class RefundTheSeats:
                     app_link=self._app_link,
                 )
             await self._mail.enqueue(message, at=at)
+
+
+__all__ = ["RefundReason", "RefundTheSeats"]

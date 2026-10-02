@@ -80,6 +80,7 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_fake_payments,
+    build_recording_push,
     build_lifetime,
     build_member_faces,
     build_membership,
@@ -227,6 +228,9 @@ async def deliver_everything_told(
                 batch_size=200,
                 nudges=build_nobody_is_following(),
                 payments=build_fake_payments(),
+                # Nobody seeded has a phone, so nothing is pushed — and a
+                # notice is still given, and listed (#549).
+                push=build_recording_push(),
             )
             published = await batch.execute(worker_id="seed")
         if not published:

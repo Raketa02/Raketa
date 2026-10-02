@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Fifteen registers, and they are fifteen on purpose — one per kind of claim.**
+  **Seventeen registers, and they are seventeen on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
@@ -87,6 +87,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `payments_demands.py`'s two provider adapters: which games are over for good, so their money
   is the club's to be paid out (`GamesOver`, signed by `proposals`). Its older demands —
   `Sellers`, `Payers`, `PaymentCommitments` — were contracted over HTTP only and are owed rows.
+  **The sixteenth, `push_demands.py`, is the second of `payments_demands.py`'s kind** (#549):
+  the two adapters of the push port — the recording service every API test reads, and Expo,
+  asked over a loopback server speaking Expo's documented push API, never Expo itself.
+  **The seventeenth, `notification_demands.py`, is Notifications' consumer register**
+  (#549): a game as it stands (`GameBriefs`), what a refund gave back (`PaidShares`), who an
+  open seat is offered to (`SeatOffers`) and what a person and a club are called (`Names`).
+  Notifications is told and tells nothing, so like a conversation it publishes no port.
   **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
   takes the two seams the platform supplies from outside a request — the process's
   candidate index and the exposure ledger behind Redis — because the pairing it contracts

@@ -70,6 +70,21 @@ class SeatChargeStatus(StrEnum):
 PAID = frozenset({SeatChargeStatus.TAKING, SeatChargeStatus.CAPTURED})
 
 
+class RefundReason(StrEnum):
+    """Why a paid share is given back."""
+
+    #: The player left before the club's cut-off: less the card fee.
+    LEFT = "LEFT"
+    #: The game was called off at the club's cut-off: in full.
+    CALLED_OFF_AT_THE_CUT_OFF = "CALLED_OFF_AT_THE_CUT_OFF"
+    #: The player left after the cut-off and somebody took their seat (#545):
+    #: less the card fee.
+    SEAT_TAKEN = "SEAT_TAKEN"
+    #: The club cancelled the booked game (#547): in full — the club bears the
+    #: fees, as the seller.
+    CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+
+
 class FailureReason(StrEnum):
     """Why a share could not be held (the mechanics §12.2, §19)."""
 
@@ -362,10 +377,12 @@ class SeatCharge:
         )
         return True
 
-    def refund(self, *, withhold_fee: bool, at: Instant) -> bool:
-        """Give this paid share back — less the card fee, or whole. Answers
-        whether anything was recorded: nothing for a share nobody paid, and
-        nothing for one already being given back."""
+    def refund(
+        self, *, withhold_fee: bool, at: Instant, reason: RefundReason | None = None
+    ) -> bool:
+        """Give this paid share back — less the card fee, or whole — for
+        ``reason``. Answers whether anything was recorded: nothing for a share
+        nobody paid, and nothing for one already being given back."""
 
         if self.status not in PAID or self.refund_withholds_fee is not None:
             return False
@@ -375,6 +392,7 @@ class SeatCharge:
                 player_id=self.player_id,
                 withhold_fee=withhold_fee,
                 occurred_at=at,
+                reason=None if reason is None else reason.value,
             )
         )
         return True

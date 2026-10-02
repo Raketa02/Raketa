@@ -100,10 +100,11 @@ Rules to preserve:
   times, so a job must be safe beside itself. A window or threshold is domain; only the
   cadence is configuration.
 - **The outside world sits behind ports** — photo storage, the photo-check sidecar (fails
-  open), the Redis ledgers (fail soft), the mail queue and `Mailer`, `PaymentProvider`.
+  open), the Redis ledgers (fail soft), the mail queue and `Mailer`, `PaymentProvider`,
+  `PushNotifications` (Expo; fails soft).
   `.importlinter` keeps each SDK out of every domain and application layer, including
   through the adapter, and `tests/conftest.py` overrides each port, so no test needs a
-  container, Redis, Mailpit or Stripe.
+  container, Redis, Mailpit, Stripe or Expo.
 - **Money is integer grosze.** Wall-clock hours are `Europe/Warsaw`, converted through the
   kernel's `slot_start` and nowhere else.
 - **New routes mount on the surface whose client calls them**
@@ -140,6 +141,7 @@ changing code that calls into another context, read its rule.**
 | `payments.md`, `proposals.md` | the payments port and webhook; club money and payouts, once a day after the game; proposals and the group deck |
 | `bookings.md` | the fill: all-or-nothing seat charges, the booking, its game and chat; On request — the club's answer; leaving, refunds, the cut-off and the record of who kept a booked game; rescues — seats to fill, the first join wins; the club's bookings — by day, Move, Cancel, Check in; no-shows on the Game; the club's Money page and its daily summary of new bookings |
 | `accounts-and-mail.md` | the mail queue, administrators, signing out everywhere |
+| `notifications.md` | who is told what and when: push through Expo, the recent list, the three choices, caps and bundling |
 
 ## The API contract
 
