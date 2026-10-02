@@ -41,6 +41,8 @@ export { GroupNameCard, WhoCanJoinCard } from './components/GroupFormCards';
 export { RequestRow } from './components/RequestRow';
 export { AdmittedCard } from './components/AdmittedCard';
 export { FaceStack } from './components/FaceStack';
+/** Members, as an official group's Administrator opens it from the players card (#529). */
+export { AdministeredMembersScreen } from './components/MembersScreen';
 export { ReadFailure } from './components/ReadFailure';
 export { ROW_FACE } from './components/peopleRow';
 export { GROUPS_COPY } from './components/groupsCopy';

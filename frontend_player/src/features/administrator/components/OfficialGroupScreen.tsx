@@ -5,13 +5,14 @@
  * Headed *OGRODY 33 · OFFICIAL* over the group's name, with a back arrow to the Groups tab. Top to
  * bottom:
  *
- * - **The link card**, club 11's always (`PostLinkCard`) — the Administrator's one job, one tap.
+ * - **The link card** (`ShareLinkCard`) — the link, **Share link** and **Copy link**: the
+ *   Administrator's one job, one tap.
  * - **Want to join · N**, club 20's card (`OfficialRequests`), only while somebody is waiting.
- * - **The players** — the stacked faces and *N players*, then every player newest first with the day
- *   they joined (`GroupPlayers`).
+ * - **The players card** (`PlayersCard`) — the stacked faces, *N players* and the ring of how much
+ *   of the group has arrived; a tap opens **Members** (#529).
  *
- * **There is no way to delete or leave the group, and no row to tap**: running an official group is
- * not membership, and only the club moves it (ADR-0183 §7–§8). Its settings are the You tab's
+ * **There is no way to delete or leave the group**: running an official group is not membership,
+ * and only the club moves it (ADR-0183 §7–§8). Its settings are the You tab's
  * ([#517](https://github.com/Raketa02/Raketa/issues/517)).
  *
  * Nothing is drawn under the header while the first read is on its way; a failed read says why, in
@@ -31,9 +32,9 @@ import { useOfficialGroup } from '../hooks/useOfficialGroups';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
 import { officialEyebrow } from './administratorPresentation';
-import { GroupPlayers } from './GroupPlayers';
 import { OfficialRequests } from './OfficialRequests';
-import { PostLinkCard } from './PostLinkCard';
+import { PlayersCard } from './PlayersCard';
+import { ShareLinkCard } from './ShareLinkCard';
 
 export interface OfficialGroupScreenProps {
   readonly clubId: string;
@@ -66,9 +67,9 @@ export function OfficialGroupScreen({ clubId, groupId }: OfficialGroupScreenProp
 
         {group === undefined ? null : (
           <>
-            <PostLinkCard group={group} />
+            <ShareLinkCard group={group} />
             <OfficialRequests clubId={clubId} groupId={groupId} requests={group.requests} />
-            <GroupPlayers group={group} readAt={read.dataUpdatedAt} />
+            <PlayersCard clubId={clubId} group={group} />
           </>
         )}
       </ScrollView>

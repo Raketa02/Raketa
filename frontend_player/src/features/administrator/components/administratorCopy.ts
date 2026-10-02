@@ -1,6 +1,6 @@
 /**
  * **The administrator area's fixed sentences** — every word a screen says that quotes no value.
- * The sentences that compose values (*Ogrody 33 · Administrator*, *1 waiting*, *7 Sep*) are
+ * The sentences that compose values (*Ogrody 33 · Administrator*, *1 waiting*, *3 players*) are
  * functions in `administratorPresentation.ts`, beside this.
  *
  * Taken from the club mocks (club 8–11, 17–20), with *Rakieta* read as **Raketa** (ADR-0187 §8).
@@ -28,8 +28,9 @@ export const ADMINISTRATOR_COPY = {
     back: 'Back to Groups',
     namePlaceholder: 'Same name as the WhatsApp group',
     homeClub: 'Home club',
-    whatsAppSize: 'WhatsApp group size',
-    whatsAppSizePlaceholder: 'How many are in it?',
+    /** The group's size, not its WhatsApp group's: the crowd gathers anywhere (#529). */
+    size: 'Group size',
+    sizePlaceholder: 'How many are in it?',
     sports: 'Sports',
     create: 'Create the group',
     creating: 'Creating the group',
@@ -37,17 +38,18 @@ export const ADMINISTRATOR_COPY = {
   },
   group: {
     back: 'Back to Groups',
-    /** Club 11's link card, always — no *posted* tag and no *Post again* (PRD #500). */
-    linkLine: 'Post this in the WhatsApp group. Everybody who taps it lands here.',
-    post: 'Post to WhatsApp',
+    /** The link card's two doors — no *posted* tag and no *Post again* (PRD #500). */
+    share: 'Share link',
     copy: 'Copy link',
-    /** The players card's policy half (club 11). */
-    anyoneJoins: 'anyone with the link joins',
-    youApprove: 'you approve joins',
-    thisWeek: 'this week',
+    /** The players card's hint: the card is the door to Members. */
+    playersHint: 'Opens Members',
     /** One code for every group that is not theirs — a colleague's, another club's, none. */
     refused: {
       group_not_found: 'This isn’t a group you run.',
+    },
+    /** Members, opened from the page — so a refusal means the group was handed on since. */
+    membersRefused: {
+      group_not_found: 'This isn’t a group you run any more.',
     },
   },
   you: {

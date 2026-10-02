@@ -26,6 +26,10 @@
  * the sport — `undefined` until the phone has answered, so
  * nothing is drawn for one sport and then another (ADR-0188 §4) — and, for an official group the
  * reader is rated in none of the sports of, what they would add to see it (#519).
+ *
+ * **The filter's state can be handed in** (`SportFilterFrame`): the Administrator's Members lists
+ * an official group's declared sports whatever the reader is rated in (#529), so it brings its own
+ * state and draws the same header, pill and bar.
  */
 
 import { useFocusEffect } from 'expo-router';
@@ -36,7 +40,7 @@ import { useHardwareBack } from '@/shared/lib/platform';
 import { theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { useGroupSport } from '../hooks/useGroupSport';
+import { useGroupSport, type GroupSport } from '../hooks/useGroupSport';
 
 import { SportBar, SportPill, type BarCover } from './SportFilter';
 
@@ -75,7 +79,22 @@ export interface SportFilterPageProps {
 }
 
 export function SportFilterPage({ declaredSports, header, children }: SportFilterPageProps) {
-  const { sports, sport, toAdd, choose } = useGroupSport(declaredSports);
+  const filter = useGroupSport(declaredSports);
+  return (
+    <SportFilterFrame filter={filter} header={header}>
+      {children}
+    </SportFilterFrame>
+  );
+}
+
+export interface SportFilterFrameProps extends Omit<SportFilterPageProps, 'declaredSports'> {
+  /** The filter's state — the sports it lists, the one it is on, and picking another. */
+  readonly filter: GroupSport;
+}
+
+/** **The page around a filter whose state is handed in** — `SportFilterPage`'s drawing. */
+export function SportFilterFrame({ filter, header, children }: SportFilterFrameProps) {
+  const { sports, sport, toAdd, choose } = filter;
   const [unfolded, setUnfolded] = useState(false);
   const [headerBox, setHeaderBox] = useState<{ readonly width: number; readonly height: number }>();
   const [covered, setCovered] = useState<Box>();

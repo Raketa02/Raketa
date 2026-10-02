@@ -345,6 +345,22 @@ record.
 route admits on (ADR-0159's 2026-09-30 amendment); before it, anybody the reader had not been shown
 by a search, a challenge or a game met _This record isn't available_ (#529 F1).
 
+**An official group's Administrator opens the same Members** (#529, the product owner's ask) — from
+the players card on the group's page in the administrator area, at
+`/administrator/[clubId]/group/[groupId]/members` (`AdministeredMembersScreen`). The header, the
+rows, the tags and the record sheet are this screen's; two things differ, because running a group
+is not playing in it. **The pill lists the sports the group declares** (`useDeclaredSport`), not the
+ones the reader is rated in, so an Administrator who plays nothing sees the list rather than an
+_Add Padel_ card, and **a pick is held while the screen is up and kept nowhere** — Play's last sport
+is the player's choice. The group's sports come from the administrator area's read, handed in. To
+make that possible the filter's page split in two: `SportFilterPage` reads `useGroupSport` and draws
+`SportFilterFrame`, which takes the filter's state from whoever holds it. **The server admits whoever
+runs an official group** to the members read and to its members' records, as a member is admitted
+([#566](https://github.com/Raketa02/Raketa/issues/566)). **A refused list
+says why in its caller's words** (`refused`, by code): a member's _This group isn't one of yours._,
+the page's own, and the Administrator's _This isn't a group you run any more._ — where it had fallen
+through to the recovery's _Something went wrong at our end_, which blamed the server for a refusal.
+
 **What this record departs from, and what is open.** The way out is 6.1's `secondary` where play
 57–60 draw it in dark red: `red` is _ended badly_ and coral is closed at six. Club 20 draws the
 Levels in sans; they are mono, as every Level is. Both are in design-system Part 16 for the product

@@ -5,21 +5,19 @@
  *
  * `groups`' two rules hold here too: **a name is said whole** (ADR-0171 §4), and **a counted phrase
  * goes through `counted()`**. What is borrowed from `groups` — *N members*, *Want to join · N*, a
- * request's Levels, the share sentence — is read inside these functions and never at module load,
- * because the feature barrels form a cycle.
+ * request's Levels — is read inside these functions and never at module load, because the feature
+ * barrels form a cycle.
  */
 
 import type { HeldProfiles } from '@/features/auth/types';
-import { GROUP_NAME_MAX, membersLine, personName, shareMessage } from '@/features/groups/types';
+import { GROUP_NAME_MAX, membersLine } from '@/features/groups/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { codeMessage, type AppError } from '@/shared/errors';
-import { dayDate } from '@/shared/date/calendarDay';
 import { counted } from '@/shared/formatting/counted';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import { WHATSAPP_SIZE, type AdministeredGroup, type OfficialGroup } from '../domain/officialGroup';
-import type { JoinedWhen } from '../domain/officialGroupRules';
+import { WHATSAPP_SIZE, type AdministeredGroup } from '../domain/officialGroup';
 import { isRemoval } from '../hooks/useRemovalWatch';
 
 import { ADMINISTRATOR_COPY } from './administratorCopy';
@@ -85,7 +83,7 @@ function settingsRefusal(error: AppError): string {
   return codeMessage(
     {
       group_name_invalid: `Give the group a name of up to ${GROUP_NAME_MAX} characters.`,
-      whatsapp_size_invalid: `The WhatsApp group size is a whole number from ${WHATSAPP_SIZE.min} to ${WHATSAPP_SIZE.max}.`,
+      whatsapp_size_invalid: `The group size is a whole number from ${WHATSAPP_SIZE.min} to ${WHATSAPP_SIZE.max}.`,
       group_sports_required: 'Pick at least one sport the group plays.',
       sport_not_offered_by_club: 'The club doesn’t offer one of those sports any more. Pick again.',
       ...ADMINISTRATOR_COPY.settings.refused,
@@ -127,42 +125,17 @@ export const REQUEST_REFUSALS = {
   group_not_found: 'This isn’t a group you run any more.',
 } as const satisfies Readonly<Record<string, string>>;
 
-/** The message Post to WhatsApp types, and the sheet carries when there is no WhatsApp. */
-export function postMessage(group: Pick<OfficialGroup, 'name' | 'link'>): string {
-  return shareMessage(group.name, group.link);
-}
-
 /** *11 players* — the players card's count (club 18, 19). */
 export function playersLine(count: number): string {
   return counted(count, 'player', 'players');
 }
 
 /**
- * *anyone with the link joins · 23% of the WhatsApp group* — under the count (club 11): who gets
- * in, and how much of the WhatsApp crowd has arrived, which passes 100% when it has.
+ * *11 players, 23% of the group size* — the players card, spoken whole: the ring draws the share
+ * without words, and may pass 100% when more have arrived than the size said.
  */
-export function playersCardLine(group: Pick<OfficialGroup, 'joinPolicy'>, share: number): string {
-  const policy =
-    group.joinPolicy === 'ANYONE'
-      ? ADMINISTRATOR_COPY.group.anyoneJoins
-      : ADMINISTRATOR_COPY.group.youApprove;
-  return `${policy}${DOT}${formatPercent(share)} of the WhatsApp group`;
-}
-
-/** *11 players, anyone with the link joins · 23% of the WhatsApp group* — the card, spoken whole. */
-export function playersCardLabel(count: string, line: string): string {
-  return `${count}, ${line}`;
-}
-
-/** *this week*, or *7 Sep* — when a player joined (club 18, 19). */
-export function joinedLabel(when: JoinedWhen): string {
-  return when.kind === 'this-week' ? ADMINISTRATOR_COPY.group.thisWeek : dayDate(when.day);
-}
-
-/** *Ania Kowalczyk, joined 7 Sep* — a player's row, spoken. It opens nothing. */
-export function playerRowLabel(name: string | null, when: JoinedWhen | undefined): string {
-  const who = personName(name);
-  return when === undefined ? who : `${who}, joined ${joinedLabel(when)}`;
+export function playersCardLabel(count: number, share: number): string {
+  return `${playersLine(count)}, ${formatPercent(share)} of the group size`;
 }
 
 /** *Ogrody 33 removed you as an administrator.* — and what happens next, for an account with nothing else. */

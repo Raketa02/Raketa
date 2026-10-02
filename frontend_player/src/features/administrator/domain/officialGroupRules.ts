@@ -1,47 +1,20 @@
 /**
- * **The four things the administrator area works out on the phone** — everything else about an
+ * **The three things the administrator area works out on the phone** — everything else about an
  * official group is the server's.
  *
- * - **When a player joined**, as the players list says it: *this week* within seven days, the date
- *   after (club 18, 19). The seven days are **rolling** — seven times twenty-four hours back from
- *   the read — as the club website's *this week* is (#523), so the two surfaces a club and its
- *   Administrator look at never disagree about one player. The date is the day **in the platform's
- *   zone**, never the phone's (`shared/date/platformZone`), so a player who joined at half past
- *   midnight in Kraków joined on that day wherever the phone is.
- * - **How much of the WhatsApp group has arrived** — the players over the WhatsApp group size. It
- *   may pass 100%, and says so: the size limits nothing (ADR-0183 §3).
+ * - **How much of the group has arrived** — the players over the WhatsApp group size, which the
+ *   screens call the group size (#529). It may pass 100%, and says so: the size limits nothing
+ *   (ADR-0183 §3).
  * - **Which faces the players card draws** — the five newest, and *+N* for the rest of the group's
  *   count, as Info's members row counts (#514).
  * - **Whether the settings say what the group already says** — *Saved*, settled, in place of *Save*
  *   (#517), so a save that would record nothing is never a round trip.
+ *
+ * A fourth — when a player joined, *this week* or *7 Sep* — went with the players list the card's
+ * tap to Members replaced (#529).
  */
-
-import { platformDay } from '@/shared/date/platformZone';
 
 import type { OfficialGroup, OfficialGroupSettings } from './officialGroup';
-
-/** Seven days, rolling — *this week*. */
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-export type JoinedWhen =
-  /** Within seven days of the read — and a moment the phone's clock has not reached yet. */
-  | { readonly kind: 'this-week' }
-  /** Earlier: the calendar day, `YYYY-MM-DD`, in the platform's zone. */
-  | { readonly kind: 'day'; readonly day: string };
-
-/**
- * When a player joined, read at `readAt` — the instant the group was read, in milliseconds, so
- * every row of one answer is judged against the same moment. Nothing for a value that is not an
- * instant: there is no day to name.
- */
-export function joinedWhen(joinedAt: string, readAt: number): JoinedWhen | undefined {
-  const at = Date.parse(joinedAt);
-  if (Number.isNaN(at)) return undefined;
-  if (readAt - at < WEEK_MS) return { kind: 'this-week' };
-
-  const day = platformDay(joinedAt);
-  return day === undefined ? undefined : { kind: 'day', day };
-}
 
 /** **The share of the WhatsApp group that has arrived**, as a percentage — past 100 when it has. */
 export function whatsAppShare(players: number, whatsAppSize: number): number {

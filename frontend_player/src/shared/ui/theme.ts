@@ -801,6 +801,13 @@ const size = {
    *  `stackOverlap` how far each slides under the one before it, about a third, and `stackRing`
    *  the card-coloured ring that keeps one face from merging into the next. */
   groupPage: { seat: 34, filterPad: 9, stackFace: 28, stackOverlap: 9, stackRing: 2 },
+  /** THE ARRIVED RING — the players card on an official group's page in the administrator area
+   *  (#529): how much of the group has arrived, the players over the group size, round the
+   *  percentage it draws inside. A drawn object on `surface`, the ring's light-card sibling: a
+   *  `line2` track and a `mint` arc (4,07:1 on white, past 1.4.11's 3:1) — the club website's
+   *  green bar for the same share. `diameter` holds *117%* in `num.xs` inside the stroke on the
+   *  narrowest phone; `stroke` is the meter's weight grown to read at a ring's length. */
+  arrivedRing: { diameter: 48, stroke: 4 },
   /** The yes screen's tile — a face at this screen's two sizes, and the initials over a poster
    *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    *  §2, §3). MEASURED off the mocks at 1x: 64 x 64 in the singles mock, 54 x 54 in the doubles

@@ -28,6 +28,16 @@
  * accessibility equivalent — the way the games feature's players card does: the row is a button,
  * every screen reader activates it, and the hint says what it opens. So the footer went with the
  * hold, and so did the custom `longpress` action. Recorded in the feature's design record.
+ *
+ * ## The Administrator's Members
+ *
+ * **An official group's Administrator opens the same screen** from the players card on the group's
+ * page in the administrator area (#529) — the same header, list, rows and record sheet
+ * (`AdministeredMembersScreen`). Two things differ, because somebody who runs a group need not
+ * play in it: **the pill lists the sports the group declares**, not the ones the reader is rated in
+ * (`useDeclaredSport`), so there is never an *Add Padel* card in place of the list; and the group
+ * is the administrator area's read, handed in, since the player's read of a group is its members'.
+ * The reader is no row unless they joined as a player, when they are *You*, as anywhere.
  */
 
 import { router } from 'expo-router';
@@ -47,6 +57,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { GroupMember } from '../domain/group';
 import { adminTagged } from '../domain/groupInfo';
+import { useDeclaredSport } from '../hooks/useGroupSport';
 import { useGroup, useGroupMembers } from '../hooks/useGroups';
 import { useReaderId } from '../hooks/useReaderId';
 
@@ -61,7 +72,7 @@ import {
 } from './groupsPresentation';
 import { ROW_FACE } from './peopleRow';
 import { ReadFailure } from './ReadFailure';
-import { SportFilterPage } from './SportFilterPage';
+import { SportFilterFrame, SportFilterPage } from './SportFilterPage';
 
 const COPY = GROUPS_COPY.members;
 
@@ -98,10 +109,44 @@ export function MembersScreen({ groupId }: { readonly groupId: string }) {
               <AddSportCard sports={toAdd} />
             </View>
           ) : sport === undefined ? null : (
-            <MembersList groupId={groupId} sport={sport} />
+            <MembersList groupId={groupId} sport={sport} refused={GROUPS_COPY.group.refused} />
           )
         }
       </SportFilterPage>
+    </SafeAreaView>
+  );
+}
+
+export interface AdministeredMembersScreenProps {
+  readonly groupId: string;
+  /** The sports the official group declares — `undefined` while the group is being read. */
+  readonly sports: readonly Sport[] | undefined;
+  /** What a refused list says, by code — in the Administrator's words, which are not this feature's. */
+  readonly refused: Readonly<Record<string, string>>;
+}
+
+/** **Members, for the Administrator who runs an official group** — its sports, not the reader's. */
+export function AdministeredMembersScreen({
+  groupId,
+  sports,
+  refused,
+}: AdministeredMembersScreenProps) {
+  const filter = useDeclaredSport(sports);
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      <SportFilterFrame
+        filter={filter}
+        header={(pill, _cover, sport) => (
+          <MembersHeader groupId={groupId} sport={sport} right={pill} />
+        )}
+      >
+        {(sport) =>
+          sport === undefined ? null : (
+            <MembersList groupId={groupId} sport={sport} refused={refused} />
+          )
+        }
+      </SportFilterFrame>
     </SafeAreaView>
   );
 }
@@ -133,7 +178,17 @@ function Header({ title, right }: { readonly title: string; readonly right: Reac
   );
 }
 
-function MembersList({ groupId, sport }: { readonly groupId: string; readonly sport: Sport }) {
+interface MembersListProps {
+  readonly groupId: string;
+  readonly sport: Sport;
+  /**
+   * What a refused list says, by code — `group_not_found` for a group the reader has left or no
+   * longer runs. Anything else is the recovery's sentence.
+   */
+  readonly refused: Readonly<Record<string, string>>;
+}
+
+function MembersList({ groupId, sport, refused }: MembersListProps) {
   const read = useGroupMembers(groupId, sport);
   const readerId = useReaderId();
   const members = read.data;
@@ -149,7 +204,11 @@ function MembersList({ groupId, sport }: { readonly groupId: string; readonly sp
       <ScrollView contentContainerStyle={s.body}>
         {members === undefined ? (
           read.error === null ? null : (
-            <ReadFailure error={read.error} onRetry={() => void read.refetch()} />
+            <ReadFailure
+              error={read.error}
+              message={codeMessage(refused, read.error)}
+              onRetry={() => void read.refetch()}
+            />
           )
         ) : (
           <>

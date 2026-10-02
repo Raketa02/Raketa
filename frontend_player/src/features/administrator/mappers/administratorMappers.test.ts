@@ -98,7 +98,7 @@ describe('an official group’s page', () => {
     ],
   };
 
-  it('carries the link, the settings, the players with their day and the requests', () => {
+  it('carries the link, the settings, the players and the requests', () => {
     expect(toOfficialGroup(PAGE)).toEqual({
       id: PAGE.id,
       name: 'Ogrody 33 Club',
@@ -110,14 +110,9 @@ describe('an official group’s page', () => {
       joinPolicy: 'PEOPLE_I_APPROVE',
       whatsAppSize: 48,
       players: [
-        {
-          playerId: 'p1',
-          name: 'Ania Kowalczyk',
-          photoUrl: 'https://photos.test/f1',
-          joinedAt: '2026-09-07T18:00:00Z',
-        },
+        { playerId: 'p1', name: 'Ania Kowalczyk', photoUrl: 'https://photos.test/f1' },
         // No photograph, and nobody to name: the seat is kept, the poster stands in.
-        { playerId: 'p2', name: null, joinedAt: '2026-08-31T10:00:00Z' },
+        { playerId: 'p2', name: null },
       ],
       requests: [
         {

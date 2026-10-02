@@ -77,7 +77,7 @@ function toRequest(wire: Schemas['JoinRequestSchema']): JoinRequest {
 }
 
 function toPlayer(wire: Schemas['GroupPlayerSchema']): GroupPlayer {
-  return { playerId: wire.player_id, name: wire.name, ...photoOf(wire), joinedAt: wire.joined_at };
+  return { playerId: wire.player_id, name: wire.name, ...photoOf(wire) };
 }
 
 export function toOfficialGroup(wire: Schemas['AdministeredGroupResponse']): OfficialGroup {

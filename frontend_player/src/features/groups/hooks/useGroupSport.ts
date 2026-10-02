@@ -96,3 +96,21 @@ export function useGroupSport(declared?: readonly Sport[]): GroupSport {
     choose,
   };
 }
+
+/**
+ * **An official group's declared sports, whoever is reading** — the Administrator's Members
+ * (#529). Somebody who runs a group need not play, so the filter lists every sport the group
+ * declares, in the order it is served (the registry's), and opens on the first. **A pick is held
+ * while the screen is up and kept nowhere**: Play's last sport is the player's choice, and an
+ * Administrator looking down a list has not made one. Nothing until the group is read.
+ */
+export function useDeclaredSport(declared: readonly Sport[] | undefined): GroupSport {
+  const [picked, setPicked] = useState<Sport>();
+
+  if (declared === undefined) {
+    return { sports: undefined, sport: undefined, toAdd: [], choose: setPicked };
+  }
+
+  const sport = picked !== undefined && declared.includes(picked) ? picked : declared[0];
+  return { sports: declared, sport, toAdd: [], choose: setPicked };
+}

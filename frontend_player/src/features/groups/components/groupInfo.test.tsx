@@ -964,6 +964,17 @@ describe('Members', () => {
     expect(screen.queryByText(/press and hold/i)).toBeNull();
   });
 
+  // A group left on another phone: the list is refused with the page's own code, and says so
+  // rather than blaming the server.
+  it('says the group is not theirs when the list is refused', async () => {
+    await openInfo({ members: KAZIMIERZ });
+    transport.on('GET', `${GROUP_PATH}/members`, () => errorResponse(404, 'group_not_found'));
+    await openMembers();
+
+    expect(await screen.findByText(COPY.group.refused.group_not_found)).toBeTruthy();
+    expect(screen.queryByText(/went wrong at our end/)).toBeNull();
+  });
+
   it('shares the filter with the group page', async () => {
     await openInfo({ members: KAZIMIERZ });
     await openMembers();

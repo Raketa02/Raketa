@@ -2,7 +2,7 @@
  * **An official group's settings** — pushed over the You tab from the group's row
  * ([#517](https://github.com/Raketa02/Raketa/issues/517), PRD #500 story 131). No mock draws it: it
  * is New official group's four cards over Edit group's *Save* — the name, who can join, the
- * WhatsApp group size and the sports, which are what the group's Administrator said about it at its
+ * group size and the sports, which are what the group's Administrator said about it at its
  * creation and may say again as its WhatsApp twin changes. The home club and the link are not here:
  * neither ever changes (ADR-0183 §2, §8).
  *

@@ -9,9 +9,9 @@
  * group as its page reads it, and its settings — to create it, and to change it later. The tile, the dots and the request card are
  * the `groups` feature's own — an official group is a Group — and the shapes here add what only an
  * Administrator sees: *N waiting* on the card, the **WhatsApp group size**, the declared sports and
- * every player with the day they joined.
+ * the faces of the newest players.
  *
- * **Nothing here is computed on the phone** but *this week*, the share of the WhatsApp group and
+ * **Nothing here is computed on the phone** but the share of the WhatsApp group, the faces drawn and
  * whether the settings changed, all in `officialGroupRules.ts`: the monogram, the dots, the counts and the order are the
  * server's.
  */
@@ -57,16 +57,15 @@ export interface AdministeredGroups {
 }
 
 /**
- * **A player of the group, with the day they joined** — this stay (club 18, 19). `name` is the
- * whole Name, `null` for an account that can no longer be named; `photoUrl` is signed for the one
- * answer it came on, absent where the poster stands in.
+ * **A player of the group** — a face on the players card (club 18, 19). `name` is the whole Name,
+ * `null` for an account that can no longer be named; `photoUrl` is signed for the one answer it came
+ * on, absent where the poster stands in. The wire says when they joined too; nothing draws it since
+ * the card's tap to Members replaced the list of join dates (#529).
  */
 export interface GroupPlayer {
   readonly playerId: string;
   readonly name: string | null;
   readonly photoUrl?: string;
-  /** An instant. *this week* within seven days, the date after (`joinedWhen`). */
-  readonly joinedAt: string;
 }
 
 /** **An official group, as its Administrator opens it** (club 11, 18, 19). */

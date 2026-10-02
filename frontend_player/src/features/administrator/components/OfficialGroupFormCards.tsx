@@ -1,5 +1,5 @@
 /**
- * **The two cards only an official group's form has** — the WhatsApp group size and the Sports —
+ * **The two cards only an official group's form has** — the group size and the Sports —
  * shared by New official group ([#516](https://github.com/Raketa02/Raketa/issues/516)) and the
  * group's settings ([#517](https://github.com/Raketa02/Raketa/issues/517)), which ask the same four
  * things. The Name and *Who can join* are `groups`' own two cards; these are the other two, drawn
@@ -22,8 +22,10 @@ import { sportsCardLine, whatsAppSizeRule } from './administratorPresentation';
 const COPY = ADMINISTRATOR_COPY.newGroup;
 
 /**
- * **WhatsApp group size** — required, 2–1024. The field says the rule the moment what is typed is
- * not a whole number in it, and otherwise what the server refused about it.
+ * **Group size** — required, 2–1024. The field says the rule the moment what is typed is not a
+ * whole number in it, and otherwise what the server refused about it. It is the domain's WhatsApp
+ * group size, labelled for what it measures rather than where the crowd gathers: since #529 the
+ * link goes out through any app, so the screen no longer names one.
  */
 export function WhatsAppSizeCard({
   size,
@@ -42,9 +44,9 @@ export function WhatsAppSizeCard({
   return (
     <Card style={s.card}>
       <TextField
-        label={COPY.whatsAppSize}
+        label={COPY.size}
         recessed
-        placeholder={COPY.whatsAppSizePlaceholder}
+        placeholder={COPY.sizePlaceholder}
         value={size}
         onChangeText={onSize}
         keyboardType="number-pad"

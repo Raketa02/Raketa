@@ -383,37 +383,23 @@ export function fakeClipboard(text = ''): FakeClipboard {
 }
 
 /**
- * **A share sheet that records what it was handed** — a group page's Share the link opens it —
- * **and a WhatsApp that records what was typed into it**, an official group's Post to WhatsApp.
- * Every open is kept, in order, and settles at once as though the person closed it: the device's
- * port never rejects, and a dismissal is not something the page answers. WhatsApp is installed
- * unless the suite says the phone has none, and then it takes nothing and answers `false`, as the
- * device's port does when nothing claims the scheme.
+ * **A share sheet that records what it was handed** — a group page's Share the link opens it, and
+ * an official group's Share link. Every open is kept, in order, and settles at once as though the
+ * person closed it: the device's port never rejects, and a dismissal is not something the page
+ * answers.
  */
 export interface FakeShare extends SharePort {
   /** Every text the sheet was opened with, oldest first. */
   readonly shared: string[];
-  /** Every text WhatsApp was opened with, oldest first. */
-  readonly whatsApped: string[];
-  /** Whether this phone has WhatsApp. Set `false` to be the phone without it. */
-  whatsAppInstalled: boolean;
 }
 
 export function fakeShare(): FakeShare {
   const shared: string[] = [];
-  const whatsApped: string[] = [];
-  const port: FakeShare = {
+  return {
     shared,
-    whatsApped,
-    whatsAppInstalled: true,
     shareText: (message) => {
       shared.push(message);
       return Promise.resolve();
     },
-    openWhatsApp: (message) => {
-      if (port.whatsAppInstalled) whatsApped.push(message);
-      return Promise.resolve(port.whatsAppInstalled);
-    },
   };
-  return port;
 }

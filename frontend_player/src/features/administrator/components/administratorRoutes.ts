@@ -2,7 +2,7 @@
  * **Where the administrator area lives** — its own group of screens, outside the player's tab shell
  * (PRD #500: *its own group of screens outside the player's tab shell*), one area per club it runs:
  * `/administrator/<club>` is the Groups tab, `…/you` the You tab, New official group and a group's
- * page are pushed over Groups, and a group's settings over You.
+ * page are pushed over Groups, a group's Members over its page, and a group's settings over You.
  *
  * **The club is in the path**, because every screen here is one Administrator's at one club and a
  * person running two clubs' groups is two Administrators (ADR-0184 §1): the area is whole from its
@@ -38,6 +38,14 @@ export function newOfficialGroupRoute(clubId: string) {
 export function officialGroupRoute(clubId: string, groupId: string) {
   return {
     pathname: '/administrator/[clubId]/group/[groupId]',
+    params: { clubId, groupId },
+  } as const;
+}
+
+/** **An official group's Members**, pushed over its page from the players card (#529). */
+export function officialGroupMembersRoute(clubId: string, groupId: string) {
+  return {
+    pathname: '/administrator/[clubId]/group/[groupId]/members',
     params: { clubId, groupId },
   } as const;
 }

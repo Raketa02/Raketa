@@ -253,7 +253,15 @@ and on Android when no activity resolves it, so opening it is the test of whethe
 no native setting is needed (`canOpenURL` is what would need `LSApplicationQueriesSchemes` and
 `<queries>`). It never rejects. **The fallback to the sheet is the caller's**, so a suite can see it:
 `fakeShare()` has `whatsAppInstalled` and records `whatsApped` beside `shared`. Still one file, still
-the only importer of `Share`; no new port.
+the only importer of `Share`; no new port. **Gone since #529**: the official group's door became
+_Share link_, the sheet, so `openWhatsApp`, `whatsAppUrl` and the fake's two WhatsApp fields went
+with their only caller; the port is `shareText` alone again.
+
+**`theme.ts` gained `size.arrivedRing`** (#529): the administrator area's players card draws how much
+of an official group has arrived as a ring on `surface` — 48 across, a 4pt stroke, a `line2` track and
+a `mint` arc round the percentage. The drawing stays the administrator feature's (`ArrivedRing`), one
+caller; the tokens are here because every value comes from the theme. Recorded in design-system
+Part 16.
 
 **`shared/ui` has a second tab bar, the administrator area's** (`AdministratorTabBar`, club 17): **Groups
 · You**, a second fixed inventory beside the five, drawn from the same columns — Feather, one weight,

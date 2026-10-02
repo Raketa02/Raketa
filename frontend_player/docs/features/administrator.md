@@ -12,7 +12,8 @@ makes one per WhatsApp group the club keeps and posts its link there. The area i
 `src/app/(administrator)/`, a **sibling of `(app)`** for onboarding's reason — the entry gate
 redirects into it, so it cannot sit behind the gate — with its own session guard, and one area per
 club at `/administrator/<club>`: the Groups tab at the root, **You** at `…/you`, and **New official
-group** (`…/new-group`) and **a group's page** (`…/group/<id>`) pushed over Groups. **The club is in
+group** (`…/new-group`) and **a group's page** (`…/group/<id>`) pushed over Groups, and the group's
+**Members** (`…/group/<id>/members`) over its page. **The club is in
 the path** because every screen is one Administrator's at one club, and a person running two clubs'
 groups is two Administrators (ADR-0184 §1). The words are club 8–11 and 17–20's, with _Rakieta_
 read as Raketa, in `components/administratorCopy.ts` and `administratorPresentation.ts`; the mocks
@@ -45,23 +46,30 @@ The lit column is read off the path. The bar is `shared/ui`'s `AdministratorTabB
 You**, club 17, a second fixed inventory beside the player's five ([`_shared.md`](_shared.md),
 design-system Part 16).
 
-**The Groups tab is club 17's header over club 8–9's button and card** (stories 122–124).
-_OGRODY 33 · ADMINISTRATOR_ over _Groups_ — PRD #500 overrides club 8–9's name-and-chip header by
-name, and the switcher chip is the You tab's. **+ New official group** first, in every state, then
-the groups this Administrator runs at the club, newest created first: the tile, the name with an
+**The Groups tab is _Groups_ over club 8–9's cards, with + New official group floating** (stories
+122–124). The title alone: PRD #500 overrides club 8–9's name-and-chip header by name, the switcher
+chip is the You tab's, and the _OGRODY 33 · ADMINISTRATOR_ eyebrow club 17 draws over it went at the
+product owner's ask (#529) — the Groups · You bar under the screen already says whose area it is,
+and the You tab keeps the eyebrow, where it names whose profile it is. **+ New official group floats
+over the page's bottom corner**, at the gutter, in every state — Fill in's _+ Post a game_ precedent
+(play 46), so the button stays put however long the list grows (#529; it was the first thing in the
+list, pushed off by a scroll). Under it, the groups this Administrator runs at the club, newest
+created first: the tile, the name with an
 amber **_N waiting_** tag beside it — amber is _not yet answered_, and the tag carries the word — the
 dots and _N members_, the home club, a chevron; the whole card is one element and opens the page.
 Before the first group, **one dark card**: _No official groups yet_ and _Make one for each WhatsApp
 group you run, then post its link there._ — the mock's card and the ticket's words, where 10.1's
 empty state is one `tiny` line (design-system Part 16, #512's precedent). A failed read says why and
-offers the retry where one can help, under the button that still works.
+offers the retry where one can help, with the button still there to press.
 
 **New official group is five cards and a button, and the form is the screen's own state** (club 10
 plus a Sports card; stories 125–126). _Name_ is New group's card with _Same name as the WhatsApp
 group_; **the home club is the club, fixed**, a mint tag rather than a field; _Who can join_ is New
 group's card **without** its _no sport to pick_ note, which is false of a group that declares its
-sports; the **WhatsApp group size** is **required** and 2–1024 — club 10 draws it _optional_, and PRD
-#500 overrides it by name — and says _A whole number from 2 to 1024_ on the field the moment what is
+sports; the **group size** — the domain's WhatsApp group size, labelled **_Group size_** since #529,
+because the link goes out through any app and the form no longer names one — is **required** and
+2–1024 — club 10 draws it _optional_, and PRD #500 overrides it by name — and says _A whole number
+from 2 to 1024_ on the field the moment what is
 typed is not one; **Sports** is a chip per sport **the club offers**, any number ticked, and sent in
 the registry's order whatever order they were ticked in. The club's sports are the Groups tab's read
 (`club.sports`), so the form offers exactly what may be declared. One Zod schema answers the group
@@ -72,45 +80,56 @@ _Group created_; _back_ from a new group is the list. **A refusal is said on the
 (`details.field`: `name`, `whatsapp_size`, `sports`) and forgotten the moment any field changes;
 anything the form cannot name goes under the button.
 
-**The page is the link card, the queue and the players, and nothing to delete or leave** (club 11, 18,
-19; stories 126–130, 137). Headed _OGRODY 33 · OFFICIAL_ over the group's name. **The link card is
-club 11's, always** — _Post this in the WhatsApp group. Everybody who taps it lands here._, the link in
-mono cut in the middle, **Post to WhatsApp** (volt) and **Copy link** (`onDark`) of one width — with
-no _posted_ tag and no _Post again_, which PRD #500 overrides by name. **Want to join · N** is club
-20's card, `groups`' `RequestRow`, only while somebody waits. Then **the players card** — up to five
-stacked faces, newest first, _+N_ for the rest of the member count, _N players_, and club 11's line
-under it: who gets in (_anyone with the link joins_, _you approve joins_) and **how much of the
-WhatsApp group has arrived**, which passes 100% when it has — and **the list**, every player newest
-first with the day they joined: _this week_ within seven days, otherwise _7 Sep_, in mono. Rows open
-nothing and nobody can be removed. There is no door out of the group: running it is not membership,
-and only the club moves it (ADR-0183 §7–§8); its settings are the You tab's
-([#517](https://github.com/Raketa02/Raketa/issues/517)).
+**The page is the link card, the queue and the players card, and nothing to delete or leave**
+(club 11, 18, 19; stories 126–130, 137). Headed _OGRODY 33 · OFFICIAL_ over the group's name. **The
+link card** (`ShareLinkCard`) is the link in mono cut in the middle, then **Share link** (volt) and
+**Copy link** (`onDark`) of one width — with no _posted_ tag and no _Post again_, which PRD #500
+overrides by name. **Want to join · N** is club 20's card, `groups`' `RequestRow`, only while
+somebody waits. Then **the players card** (`PlayersCard`): Info's members row's drawing — up to five
+stacked faces, newest first, _+N_ for the rest of the member count, _N players_ and a chevron — with
+**a ring of how much of the group has arrived** on the right, and **a tap opens Members**. There is
+no door out of the group: running it is not membership, and only the club moves it (ADR-0183
+§7–§8); its settings are the You tab's ([#517](https://github.com/Raketa02/Raketa/issues/517)).
 
-**Post to WhatsApp opens WhatsApp with the sentence typed, and the share sheet on a phone without
-it** (story 128). The sentence is the group page's share sentence — _Join Ogrody 33 Club on Raketa:
-<link>_ — and the share port gained the verb that opens it (`openWhatsApp`, `whatsapp://send?text=`),
-which answers whether WhatsApp took it. **The fallback is this feature's, not the port's**
-(`PostLinkCard`): a `false` opens the sheet with the same sentence, so the tap never dead-ends, and a
-suite watches the decision with WhatsApp and the sheet both faked at the platform edge. No native
-setting was needed and no new build: `openURL` needs neither `LSApplicationQueriesSchemes` nor
-Android's `<queries>`, which only `canOpenURL` reads.
+**Share link hands the phone's share sheet the group's sentence** — _Join Ogrody 33 Club on Raketa:
+<link>_, the group page's own — so the link goes out through whatever the Administrator's crowd
+gathers in, a WhatsApp group among them (#529). It was club 11's _Post this in the WhatsApp group.
+Everybody who taps it lands here._ over **Post to WhatsApp**, which opened WhatsApp by its scheme
+(`whatsapp://send?text=`) and fell back to the sheet on a phone without it (story 128); the product
+owner retired the line and the button together, since the group is no longer tied to one app. With no
+caller left, the share port's `openWhatsApp` went too ([`_shared.md`](_shared.md)).
 
-**_This week_ is rolling, and judged against the read** (`domain/officialGroupRules.ts`). Seven times
-twenty-four hours back from when the group was read (the query's `dataUpdatedAt`), as the club
-website's _this week_ is (#523), so the two surfaces never disagree about one player; a moment the
-phone's clock has not reached yet is _this week_. **The date is the day in the platform's zone**
-(`platformDay`), never the phone's. The phone's clock decides only which of two labels a row wears —
-the contract serves no read instant to judge it by — and never anything anybody can act on. The share
-of the WhatsApp group is the member count over the size, `formatPercent`'s whole number. The card's
-faces are the five newest and _+N_ the rest **of the group's count** (`playersStack`), so a player a
-block hides is counted all the same.
+**The players card is the door to Members, and the ring is the share** (#529, the product owner's
+ask). The card was one element that opened nothing, with club 11's line under the count — _you
+approve joins · 6% of the WhatsApp group_ — and every player listed under it, newest first, with the
+day they joined (_this week_, or _7 Sep_). **A tap now opens Members** — the member's own screen,
+its rows, score tags and record sheet, the pill listing the group's declared sports
+([`groups.md`](groups.md)) — so the Administrator sees who is in by sport and Level rather than by
+date, and the list and its _this week_ rule went. **The ring** (`ArrivedRing`) replaced the line: an
+empty circle whose stroke fills clockwise as players arrive, round the percentage it stands for —
+the member count over the group size, `formatPercent`'s whole number. A `line2` track, a `mint` arc
+from 12 o'clock with butt caps — the confidence ring's geometry on a light card, and the club
+website's green bar for the same share — and the figure in `num.xs` inside. **The arc stops at full
+and the figure does not**: the size limits nothing (ADR-0183 §3), so a crowd past it reads _117%_
+round a closed ring. The card is spoken whole — _3 players, 6% of the group size_ — and the rule half
+of the old line is the settings' to say. The faces are the five newest and _+N_ the rest **of the
+group's count** (`playersStack`), so a player a block hides is counted all the same.
+
+**Members is read by whoever runs the group** ([#566](https://github.com/Raketa02/Raketa/issues/566),
+`bf6822ac`). The members read (`GET /groups/{id}/members`) and the record route admitted a group's
+members only, so an Administrator who had not joined as a player — Marta Wójcik, administrator-only,
+on _Ogrody 33 Club_ — met a refusal; the backend now admits the account running an official group to
+both, read live, so a removal or a handover takes it on the next read. **A refused list says so in
+this area's words** — _This isn't a group you run any more._ — where it had fallen through to the
+recovery's _Something went wrong at our end_: with the runner admitted, a refusal means the group was
+handed on or the Administrator removed, which is what the sentence says.
 
 **An answer takes its row at once, as an Owner's does** (`useAnswerAsAdministrator`, #514's
 `useAnswerRequest` for the Administrator's routes). **✕** and **Approve** each end the request
 whatever the server then does, so the row leaves on the tap and comes back — that row alone, where it
 stood — only if the tap is refused, with a toast. The group is re-read once the last answer in flight
-has landed, which is what puts an approved player at the top of the list, _this week_; the Groups tab
-is re-read with it, since _N waiting_ and _N members_ have moved. The queue rides on the group's own
+has landed, which is what puts an approved player's face first on the players card; the Groups tab is
+re-read with it, since _N waiting_ and _N members_ have moved. The queue rides on the group's own
 read (`requests`), so there is no second request and nothing draws before the page does.
 
 **Removed while here: the area hears it two ways and answers it once** (story 136, ADR-0184 §7).
@@ -146,7 +165,7 @@ under the group title. #518 puts the switcher chip in the header.
 **A group's settings are New official group's four cards over Edit group's _Save_** (story 131;
 `GroupSettingsScreen`, pushed over You at `…/you/settings/<group>`, so the You column stays lit and a
 press on You lays the tab's root down). No mock draws it. The **name** (_Same name as the WhatsApp
-group_), **who can join**, the **WhatsApp group size** (2–1024, the rule said on the field the moment
+group_), **who can join**, the **group size** (2–1024, the rule said on the field the moment
 what is typed is not one) and the **sports**, one chip per sport the club offers — the group's own read
 serves the club's sports, so the form offers exactly what may be declared. The home club and the link
 are not there: neither ever changes. The form is **one schema with New official group's**
@@ -190,8 +209,7 @@ read inside functions and components, never at module load, because the feature 
 
 **Calls made without the product owner, open for a ruling.** The Groups tab draws **`users`** on the
 bar, the glyph Players draws on the player's; the two bars are never on screen together. The empty
-state is **the mocks' dark card**, not 10.1's line. **The players card carries club 11's line in every
-state**, where club 18–19 draw the count alone. **Create the group** is New group's coral `xl`, where
+state is **the mocks' dark card**, not 10.1's line. **Create the group** is New group's coral `xl`, where
 club 10 draws it dark. The Sports card's line — _The sports Ogrody 33 offers. Players see this group's
 games in them._ — is no mock's. The removal is **a toast over the sign-in screen**, not a sheet to
 acknowledge. Names are whole, as everywhere since #505.
@@ -216,9 +234,9 @@ there, **_Sign out_ under _Continue_** ([`auth.md`](auth.md)).
 **Left open.** Offline, the area reads what is cached and the create and the
 answers pause and resume, as the player's do — and the settings save with them; nothing says so beside
 them yet. **Nothing here has been seen on a device** — the bar's two columns, the card's tag beside a
-long name, the two equal doors on the link card, WhatsApp opening on both platforms, the You tab's
-header and rows, the settings form with the keyboard up, and the attestation step over the bar are
-asked for a look.
+long name, the two equal doors on the link card, the You tab's header and rows, the settings form
+with the keyboard up, and the attestation step over the bar are asked for a look; so are #529's
+floating _+ New official group_ over a long list and the players card's ring at _117%_.
 
 **The invitation sheet offers an account that already exists a club's administrator profile, on
 launch** ([#518](https://github.com/Raketa02/Raketa/issues/518), PRD #500 stories 117–119, club 5–6;

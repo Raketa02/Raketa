@@ -10,8 +10,9 @@
  *   (ADR-0183 §8), so there is nothing to choose.
  * - **Who can join** — *Anyone* or *People I approve*, New group's card without its *no sport to
  *   pick* note, which is false here.
- * - **WhatsApp group size** — **required**, 2–1024, where club 10 draws it *optional* (PRD #500
- *   overrides by name). The field says the rule the moment what is typed is not a whole number in it.
+ * - **Group size** — the WhatsApp group size, labelled without the app's name since #529;
+ *   **required**, 2–1024, where club 10 draws it *optional* (PRD #500 overrides by name). The field
+ *   says the rule the moment what is typed is not a whole number in it.
  * - **Sports** — **required**, one chip per sport **the club offers**, any number ticked. The sports
  *   are the club's as the Groups tab's read serves them, so the form offers exactly what may be
  *   declared.

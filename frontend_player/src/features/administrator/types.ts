@@ -15,6 +15,7 @@ export { AdministratorYouScreen } from './components/AdministratorYouScreen';
 export { GroupSettingsScreen } from './components/GroupSettingsScreen';
 export { NewOfficialGroupScreen } from './components/NewOfficialGroupScreen';
 export { OfficialGroupScreen } from './components/OfficialGroupScreen';
+export { OfficialMembersScreen } from './components/OfficialMembersScreen';
 export { administratorHome } from './components/administratorRoutes';
 /**
  * **The profile switcher's chip** (#518, club 7) — for the one caller outside this feature: the

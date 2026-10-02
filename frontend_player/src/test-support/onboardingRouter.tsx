@@ -25,7 +25,8 @@ import AdministratorYouRoute from '@/app/(administrator)/administrator/[clubId]/
 import GroupSettingsRoute from '@/app/(administrator)/administrator/[clubId]/you/settings/[groupId]';
 import AdministratorStartPlayingRoute from '@/app/(administrator)/administrator/[clubId]/you/start-playing';
 import NewOfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/new-group';
-import OfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]';
+import OfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]/index';
+import OfficialGroupMembersRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]/members';
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
@@ -196,7 +197,8 @@ export const ONBOARDING_ROUTES = {
   '(administrator)/administrator/[clubId]/you/settings/[groupId]': GroupSettingsRoute,
   '(administrator)/administrator/[clubId]/you/start-playing': AdministratorStartPlayingRoute,
   '(administrator)/administrator/[clubId]/new-group': NewOfficialGroupRoute,
-  '(administrator)/administrator/[clubId]/group/[groupId]': OfficialGroupRoute,
+  '(administrator)/administrator/[clubId]/group/[groupId]/index': OfficialGroupRoute,
+  '(administrator)/administrator/[clubId]/group/[groupId]/members': OfficialGroupMembersRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
   // Sign-up is in the tree for the one walk that starts before a session exists: an account

@@ -160,7 +160,7 @@ async function openSettings(setup: GroupSetup, setups: readonly GroupSetup[] = [
 }
 
 const nameField = () => screen.getByLabelText('Name');
-const sizeField = () => screen.getByLabelText(COPY.newGroup.whatsAppSize);
+const sizeField = () => screen.getByLabelText(COPY.newGroup.size);
 const saveButton = () => screen.getByRole('button', { name: COPY.settings.save });
 const isDisabled = (element: Found) => element.props.accessibilityState?.disabled === true;
 /** What a query hands back. */
@@ -228,7 +228,7 @@ describe('a group’s settings', () => {
     ).toBeTruthy();
   });
 
-  it('changes the WhatsApp group size', async () => {
+  it('changes the group size', async () => {
     await openSettings(O3_CLUB_GROUP);
 
     fireEvent.changeText(sizeField(), '52');
@@ -238,7 +238,7 @@ describe('a group’s settings', () => {
     expect(sent(O3_CLUB_ID).map((body) => body.whatsapp_size)).toEqual([52]);
   });
 
-  it('holds the WhatsApp group size to 2–1024, and says so on the field', async () => {
+  it('holds the group size to 2–1024, and says so on the field', async () => {
     await openSettings(O3_CLUB_GROUP);
 
     for (const typed of ['1', '1025', '4.5']) {
@@ -337,11 +337,7 @@ describe('a group’s settings', () => {
 
   it.each([
     ['group_name_invalid', 'name', 'Give the group a name of up to 40 characters.'],
-    [
-      'whatsapp_size_invalid',
-      'whatsapp_size',
-      'The WhatsApp group size is a whole number from 2 to 1024.',
-    ],
+    ['whatsapp_size_invalid', 'whatsapp_size', 'The group size is a whole number from 2 to 1024.'],
     [
       'sport_not_offered_by_club',
       'sports',

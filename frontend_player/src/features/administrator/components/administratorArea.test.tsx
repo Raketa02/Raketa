@@ -3,8 +3,8 @@
  * group's page ([#516](https://github.com/Raketa02/Raketa/issues/516), PRD #500 stories 122–130
  * and 136; club mocks 8–11, 17–20).
  *
- * The real route tree, with the socket, the share sheet, WhatsApp and the clipboard faked at the
- * platform edge. **The club's administrator routes are answered by a small fake of the server**
+ * The real route tree, with the socket, the share sheet and the clipboard faked at the platform
+ * edge. **The club's administrator routes are answered by a small fake of the server**
  * (`club`), so a create, an approval or a removal changes what the next read says, as it would.
  */
 
@@ -107,7 +107,7 @@ describe('the entry gate', () => {
   it('sends an account that only administers straight to its area, never to onboarding', async () => {
     await launchAsAdministrator();
 
-    expect(screen.getByText('Ogrody 33 · Administrator')).toBeTruthy();
+    expect(screen.getByRole('button', { name: COPY.groups.newGroupLabel })).toBeTruthy();
   });
 
   // What a player owes the gate — a rating, a run — is no question this account has to answer, so
@@ -118,7 +118,7 @@ describe('the entry gate', () => {
 
     await launchAsAdministrator();
 
-    expect(screen.getByText('Ogrody 33 · Administrator')).toBeTruthy();
+    expect(screen.getByRole('button', { name: COPY.groups.newGroupLabel })).toBeTruthy();
   });
 
   it('draws the area’s own two tabs, Groups lit', async () => {
@@ -146,7 +146,15 @@ describe('the entry gate', () => {
 });
 
 describe('the Groups tab', () => {
-  it('says there are no official groups yet, under the one button', async () => {
+  // The bar under the screen already says whose area it is; the You tab keeps the eyebrow (#529).
+  it('is titled Groups, with nothing over the title', async () => {
+    await launchAsAdministrator();
+
+    expect(screen.getByRole('header', { name: 'Groups' })).toBeTruthy();
+    expect(screen.queryByText('Ogrody 33 · Administrator')).toBeNull();
+  });
+
+  it('says there are no official groups yet, beside the one button', async () => {
     await launchAsAdministrator();
 
     expect(await screen.findByText(COPY.groups.emptyTitle)).toBeTruthy();
@@ -221,7 +229,7 @@ async function fillNewGroup({
 } = {}) {
   fireEvent.changeText(screen.getByLabelText('Name'), name);
   if (approve) fireEvent.press(screen.getByRole('button', { name: 'People I approve' }));
-  fireEvent.changeText(screen.getByLabelText(COPY.newGroup.whatsAppSize), size);
+  fireEvent.changeText(screen.getByLabelText(COPY.newGroup.size), size);
   for (const sport of sports) fireEvent.press(await screen.findByRole('button', { name: sport }));
 }
 
@@ -231,7 +239,10 @@ describe('New official group', () => {
     await openNewGroup();
 
     expect(screen.getByPlaceholderText(COPY.newGroup.namePlaceholder)).toBeTruthy();
-    expect(screen.getByPlaceholderText(COPY.newGroup.whatsAppSizePlaceholder)).toBeTruthy();
+    // The size is the group's, not a WhatsApp group's: the crowd gathers in any app (#529).
+    expect(screen.getByLabelText('Group size')).toBeTruthy();
+    expect(screen.queryByText(/WhatsApp group size/i)).toBeNull();
+    expect(screen.getByPlaceholderText(COPY.newGroup.sizePlaceholder)).toBeTruthy();
     // The home club is the club, fixed — a tag, not a field or a choice.
     expect(screen.getByText('Ogrody 33')).toBeTruthy();
     expect(screen.queryByPlaceholderText(/search clubs/i)).toBeNull();
@@ -284,7 +295,7 @@ describe('New official group', () => {
     expect((sent?.body as Wire['CreateOfficialGroupRequest']).sports).toEqual(['PADEL', 'SQUASH']);
   });
 
-  it('stays closed without a name, a WhatsApp group size or a sport', async () => {
+  it('stays closed without a name, a group size or a sport', async () => {
     await launchAsAdministrator();
     await openNewGroup();
 
@@ -296,20 +307,20 @@ describe('New official group', () => {
     expect(createDisabled()).toBe(false);
 
     // Required: an empty size is no group.
-    fireEvent.changeText(screen.getByLabelText(COPY.newGroup.whatsAppSize), '');
+    fireEvent.changeText(screen.getByLabelText(COPY.newGroup.size), '');
     expect(createDisabled()).toBe(true);
-    fireEvent.changeText(screen.getByLabelText(COPY.newGroup.whatsAppSize), '48');
+    fireEvent.changeText(screen.getByLabelText(COPY.newGroup.size), '48');
 
     // Required: unticking the one sport is no group.
     fireEvent.press(screen.getByRole('button', { name: 'Padel' }));
     expect(createDisabled()).toBe(true);
   });
 
-  it('holds the WhatsApp group size to 2–1024, and says so on the field', async () => {
+  it('holds the group size to 2–1024, and says so on the field', async () => {
     await launchAsAdministrator();
     await openNewGroup();
     await fillNewGroup();
-    const size = screen.getByLabelText(COPY.newGroup.whatsAppSize);
+    const size = screen.getByLabelText(COPY.newGroup.size);
 
     for (const typed of ['1', '1025', '4.5']) {
       fireEvent.changeText(size, typed);
@@ -365,42 +376,28 @@ async function openGroup(setup: GroupSetup, setups: readonly GroupSetup[] = [set
 }
 
 describe('an official group’s page', () => {
-  it('draws club 11’s link card, and never a posted tag', async () => {
+  it('draws the link card with Share link and Copy link, and never a posted tag', async () => {
     await openGroup(O3_CLUB_GROUP);
 
-    expect(screen.getByText(COPY.group.linkLine)).toBeTruthy();
     expect(screen.getByLabelText('Group link, raketa.app/join/K7PQ2MXA')).toBeTruthy();
-    expect(screen.getByRole('button', { name: COPY.group.post })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Share link' })).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.group.copy })).toBeTruthy();
+    // The link goes out through any app now, so the card names none (#529).
+    expect(screen.queryByText(/WhatsApp/)).toBeNull();
     expect(screen.queryByText(/posted/i)).toBeNull();
     expect(screen.queryByText(/Post again/i)).toBeNull();
   });
 
-  it('opens WhatsApp with the message typed', async () => {
+  it('shares the message through the phone’s share sheet', async () => {
     await openGroup(O3_CLUB_GROUP);
 
-    fireEvent.press(screen.getByRole('button', { name: COPY.group.post }));
-
-    await waitFor(() =>
-      expect(share.whatsApped).toEqual([
-        'Join Ogrody 33 Club on Raketa: https://raketa.app/join/K7PQ2MXA',
-      ]),
-    );
-    expect(share.shared).toEqual([]);
-  });
-
-  it('opens the share sheet instead on a phone without WhatsApp', async () => {
-    share.whatsAppInstalled = false;
-    await openGroup(O3_CLUB_GROUP);
-
-    fireEvent.press(screen.getByRole('button', { name: COPY.group.post }));
+    fireEvent.press(screen.getByRole('button', { name: COPY.group.share }));
 
     await waitFor(() =>
       expect(share.shared).toEqual([
         'Join Ogrody 33 Club on Raketa: https://raketa.app/join/K7PQ2MXA',
       ]),
     );
-    expect(share.whatsApped).toEqual([]);
   });
 
   it('copies the bare link, and says so', async () => {
@@ -412,53 +409,139 @@ describe('an official group’s page', () => {
     await waitFor(() => expect(toasts()).toEqual([['Link copied', 'ok']]));
   });
 
-  it('counts the players, stacks their faces, and lists them newest first with the day', async () => {
+  it('counts the players, stacks their faces, and rings how much of the group has arrived', async () => {
     await openGroup(OPEN_PLAY_GROUP);
 
-    expect(
-      screen.getByLabelText('2 players, anyone with the link joins · 7% of the WhatsApp group'),
-    ).toBeTruthy();
-    const faces = screen
+    const card = screen.getByRole('button', { name: '2 players, 7% of the group size' });
+    const faces = within(card)
       .queryAllByTestId(/^players-face-/, { includeHiddenElements: true })
       .map((node) => (node.props.testID as string).replace('players-face-', ''));
     expect(faces).toEqual([MICHAL.id, TOMEK.id]);
-
-    const rows = screen
-      .queryAllByTestId(/^player-/)
-      .map((node) => node.props.accessibilityLabel as string);
-    expect(rows).toEqual(['Michał Rogalski, joined this week', 'Tomek Kowal, joined 31 Aug']);
-    // A row opens nothing, and nobody can be removed.
-    expect(screen.queryByRole('button', { name: /Michał Rogalski/ })).toBeNull();
+    expect(within(card).getByText('7%', { includeHiddenElements: true })).toBeTruthy();
+    // The rule and the share in words went with the line; the list of join dates with the tap.
+    expect(screen.queryByText(/of the WhatsApp group/)).toBeNull();
+    expect(screen.queryByText(/anyone with the link joins/)).toBeNull();
+    expect(screen.queryByText(/31 Aug|this week/)).toBeNull();
     expect(screen.queryByText(/remove/i)).toBeNull();
   });
 
-  it('draws the join rule and the WhatsApp share under nobody yet', async () => {
+  it('draws an empty ring under nobody yet', async () => {
     await openGroup({ ...O3_CLUB_GROUP, players: [], requests: [] });
 
-    expect(
-      screen.getByLabelText('0 players, you approve joins · 0% of the WhatsApp group'),
-    ).toBeTruthy();
-    expect(screen.queryAllByTestId(/^player-/)).toHaveLength(0);
+    expect(screen.getByRole('button', { name: '0 players, 0% of the group size' })).toBeTruthy();
+    expect(screen.queryAllByTestId(/^players-face-/, { includeHiddenElements: true })).toEqual([]);
+    expect(screen.queryByTestId('arrived-arc', { includeHiddenElements: true })).toBeNull();
     expect(screen.queryByText(/^Want to join/)).toBeNull();
   });
 
-  it('counts past five faces, and past the whole WhatsApp group', async () => {
+  it('counts past five faces, and past the whole group size', async () => {
     const crowd = EVERYBODY.map((who, at) => ({
       who,
       joinedAt: `2026-08-${String(20 - at).padStart(2, '0')}T10:00:00Z`,
     }));
     await openGroup({ ...OPEN_PLAY_GROUP, size: 6, players: crowd });
 
-    expect(
-      screen.getByLabelText('7 players, anyone with the link joins · 117% of the WhatsApp group'),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: '7 players, 117% of the group size' })).toBeTruthy();
     expect(screen.getByText('+2')).toBeTruthy();
+    expect(screen.getByText('117%', { includeHiddenElements: true })).toBeTruthy();
   });
 
   it('has no way to delete or leave the group', async () => {
     await openGroup(O3_CLUB_GROUP);
 
     expect(screen.queryByRole('button', { name: /delete|leave/i })).toBeNull();
+  });
+});
+
+describe('Members, from the players card', () => {
+  const membersPath = (groupId: string) => `/api/v1/groups/${groupId}/members`;
+
+  /** The members read, for one sport — the server's rows for the Administrator who runs it. */
+  function serveMembers(
+    groupId: string,
+    rows: Readonly<Record<string, Wire['GroupMemberSchema'][]>>,
+  ) {
+    transport.on('GET', membersPath(groupId), (request) => {
+      const sport = new URLSearchParams(request.path.split('?')[1]).get('sport') as Wire['Sport'];
+      return json<Wire['GroupMembersResponse']>({ sport, members: rows[sport] ?? [] });
+    });
+  }
+
+  const member = (who: typeof MICHAL, level: number): Wire['GroupMemberSchema'] => ({
+    player_id: who.id,
+    name: who.name,
+    level,
+    is_owner: false,
+    is_administrator: false,
+    joined_at: '2026-09-24T09:00:00Z',
+  });
+
+  async function openMembers(setup: GroupSetup) {
+    await openGroup(setup);
+    fireEvent.press(screen.getByRole('button', { name: /^\d+ players?, / }));
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/administrator/${CLUB_ID}/group/${setup.id}/members`),
+    );
+  }
+
+  it('opens the member’s Members from the card, on the group’s first sport', async () => {
+    serveMembers(OPEN_PLAY_GROUP.id, {
+      PADEL: [member(MICHAL, 2.44), member(TOMEK, 2.71)],
+      TENNIS: [member(TOMEK, 3.1)],
+    });
+    await openMembers(OPEN_PLAY_GROUP);
+
+    expect(await screen.findByRole('header', { name: 'Members · 2' })).toBeTruthy();
+    const rows = (await screen.findAllByTestId(/^member-/)).map(
+      (node) => node.props.accessibilityLabel as string,
+    );
+    expect(rows).toEqual([
+      expect.stringMatching(/^Michał Rogalski/),
+      expect.stringMatching(/^Tomek Kowal/),
+    ]);
+    const asked = transport.requestsTo('GET', membersPath(OPEN_PLAY_GROUP.id));
+    expect(asked.map((request) => request.path.split('?')[1])).toEqual(['sport=PADEL']);
+  });
+
+  // Marta plays nothing: the pill is the group's sports, never an *Add Padel* card for hers.
+  it('lists the group’s declared sports, whatever the Administrator plays', async () => {
+    serveMembers(OPEN_PLAY_GROUP.id, {
+      PADEL: [member(MICHAL, 2.44), member(TOMEK, 2.71)],
+      TENNIS: [member(TOMEK, 3.1)],
+    });
+    await openMembers(OPEN_PLAY_GROUP);
+    expect(await screen.findByRole('header', { name: 'Members · 2' })).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Sport: Padel' }));
+    const bar = await screen.findByTestId('sport-bar');
+    fireEvent.press(within(bar).getByRole('button', { name: 'Tennis' }));
+
+    expect(await screen.findByRole('header', { name: 'Members · 1' })).toBeTruthy();
+    expect(screen.queryByText(/Add (Padel|Tennis)/)).toBeNull();
+  });
+
+  // The server reads Members for whoever runs the group; a refusal means it is no longer hers.
+  it('says the group is no longer hers when the list is refused', async () => {
+    transport.on('GET', membersPath(OPEN_PLAY_GROUP.id), () =>
+      errorResponse(404, 'group_not_found'),
+    );
+    await openMembers(OPEN_PLAY_GROUP);
+
+    expect(await screen.findByText('This isn’t a group you run any more.')).toBeTruthy();
+    expect(screen.queryByText(/went wrong at our end/)).toBeNull();
+  });
+
+  it('goes back to the group’s page', async () => {
+    serveMembers(OPEN_PLAY_GROUP.id, { PADEL: [member(MICHAL, 2.44)] });
+    await openMembers(OPEN_PLAY_GROUP);
+    expect(await screen.findByRole('header', { name: 'Members · 1' })).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: GROUPS_COPY.members.back }));
+
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/administrator/${CLUB_ID}/group/${OPEN_PLAY_GROUP.id}`),
+    );
+    expect(screen.getByRole('tab', { name: 'Groups', selected: true })).toBeTruthy();
   });
 });
 
@@ -470,19 +553,17 @@ describe('Want to join', () => {
     expect(screen.getByLabelText('Michał Rogalski, Padel 2,44 · Tennis 2,60')).toBeTruthy();
   });
 
-  it('admits the person approved, who tops the players list, this week', async () => {
+  it('admits the person approved, whose face comes first on the players card', async () => {
     await openGroup(O3_CLUB_GROUP);
 
     fireEvent.press(screen.getByRole('button', { name: 'Approve Michał Rogalski' }));
 
     await waitFor(() => expect(screen.queryByText(/^Want to join/)).toBeNull());
-    expect(
-      await screen.findByLabelText('4 players, you approve joins · 8% of the WhatsApp group'),
-    ).toBeTruthy();
-    const rows = screen
-      .queryAllByTestId(/^player-/)
-      .map((node) => node.props.accessibilityLabel as string);
-    expect(rows[0]).toBe('Michał Rogalski, joined this week');
+    const card = await screen.findByRole('button', { name: '4 players, 8% of the group size' });
+    const [newest] = within(card).queryAllByTestId(/^players-face-/, {
+      includeHiddenElements: true,
+    });
+    expect(newest?.props.testID).toBe(`players-face-${MICHAL.id}`);
     expect(
       transport.requestsTo('POST', `${GROUPS_PATH}/${O3_CLUB_ID}/requests/${MICHAL.id}/approve`),
     ).toHaveLength(1);
@@ -503,7 +584,7 @@ describe('Want to join', () => {
     expect(
       transport.requestsTo('POST', `${GROUPS_PATH}/${O3_CLUB_ID}/requests/${KUBA.id}/decline`),
     ).toHaveLength(1);
-    expect(screen.getByLabelText(/^3 players,/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^3 players,/ })).toBeTruthy();
   });
 
   it('takes the row before the answer lands', async () => {
