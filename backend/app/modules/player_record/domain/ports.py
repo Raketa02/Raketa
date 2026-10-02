@@ -31,14 +31,16 @@ in it. That sport never reaches ``RecordGates``, which runs in the partition of
 the **disclosure** — what a sheet is about and who may be seen are two questions,
 and the second one is not the client's to influence.
 
-**The disclosure port is the interesting one, and its shape is the whole
+**The disclosure port is the interesting one, and its shape is almost the whole
 admission rule.** It does not answer *may this reader see this person* — that is
 this context's decision and it is made in ``application/admission.py``. It
 answers *where has this reader already been shown this person*, in **sports**,
 because the four fail-closed gates read the other side's preference off a
 candidate index row and the index is keyed by sport. A disclosure that could not
 say which partition it happened in would leave the gate unable to be evaluated,
-and a gate that cannot be evaluated excludes.
+and a gate that cannot be evaluated excludes. **The one strand it does not carry
+is whoever runs the subject's group** — ``RunnerDisclosure``, a boolean, because
+the preference does not reach that reader and so no partition is read (#566).
 """
 
 from __future__ import annotations

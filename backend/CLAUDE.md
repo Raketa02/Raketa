@@ -1141,8 +1141,9 @@ Rules to preserve:
   a port of its own, `RunnerDisclosure`, asked last and admitted **without the gender
   preference** — the three gates about accounts and the reader's hold, through
   `FailClosedGates.withheld_regardless_of_preference`, which `withheld_among` is composed
-  from (ADR-0159's amendment of 2026-10-02, #566). **Nothing expires**, because a search record is kept for ever (ADR-0104) and a
-  shorter window could only refuse a face the app is currently showing. **The four
+  from (ADR-0159's amendment of 2026-10-02, #566). **Nothing expires**, because a search
+  record is kept for ever (ADR-0104) and a shorter window could only refuse a face the app
+  is currently showing. **The four
   fail-closed gates run live, in the partition of the disclosure** — never in the sport
   the reader arrived from, since the gender gate reads a candidate index row and the index
   is keyed by sport, so a subject rated only in squash has no padel row and *a gate that
@@ -1310,9 +1311,10 @@ Rules to preserve:
   with the published Level and the Player Score — omitted, never `0`, for somebody with no
   record. It is the one read also open to **whoever runs an official group now**
   (`listing_for_a_member_or_its_runner`, #566), who reads the same rows and is one only once
-  they join as a player. **A blocked pair, either way round, is shown to neither** there and on the Info
-  tab's members row that opens it (`member_faces`, up to five, everybody but the reader in
-  the Members order) — the Games tab's seats stay the first rated in joining order,
+  they join as a player. **A blocked pair, either way round, is shown to neither** there
+  and on the Info tab's members row that opens it (`member_faces`, up to five, everybody
+  but the reader in the Members order) — the Games tab's seats stay the first rated in
+  joining order,
   whoever reads them (ADR-0183 §10, §13, #504) — and **no count moves**. The block read
   fails closed (`503 block_state_unavailable`), is skipped for a reader alone, and on
   `PUT /details` runs **before the commit** (`GroupPages`), so a refusal records nothing.

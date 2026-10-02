@@ -9,6 +9,12 @@ spelling of a safety gate is the defect the whole fail-closed rule exists to
 prevent, so what lives here is a **translation and never a copy** — this file
 contains no gate.
 
+**The same collaborator answers the fifth strand without the preference.**
+Whoever runs a group the subject is in is admitted on the three gates about
+accounts, which read no partition (#566, ``docs/adr/0159``'s amendment of
+2026-10-02) — ``FailClosedGates.withheld_regardless_of_preference``, which the
+four are composed from, so that question is not a copy either.
+
 **The reader's own hold is added here, and it is the one thing this adapter
 decides.** The four answer about *subjects*; whether the person asking may be
 shown anybody at all is the surface's own entry rule, and it belongs to whichever
