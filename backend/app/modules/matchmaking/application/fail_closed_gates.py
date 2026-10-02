@@ -68,7 +68,9 @@ from app.modules.player_profile.domain.ports import PlayerProfileRepository
 
 @final
 class FailClosedGates:
-    """The four, asked about a reader and a set of subjects in one partition."""
+    """The four, asked about a reader and a set of subjects in one partition —
+    or the three about accounts, for the one reader a preference does not
+    reach."""
 
     def __init__(
         self,
@@ -110,7 +112,38 @@ class FailClosedGates:
         subjects = tuple(subject_ids)
         if not subjects:
             return frozenset()
-        asked_about = frozenset(subjects)
+        withheld = await self.withheld_regardless_of_preference(
+            reader_id=reader_id, subject_ids=subjects
+        )
+        gendered = await self._gender_refuses(
+            reader_id=reader_id, subjects=subjects, sport=sport
+        )
+        return withheld | (gendered & frozenset(subjects))
+
+    async def withheld_regardless_of_preference(
+        self, *, reader_id: UUID, subject_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        """Which of these subjects the three gates about **accounts** withhold —
+        a block in either direction, a hold, an account that may not be shown —
+        with the mutual gender preference **not asked**.
+
+        For the one reader a subject's preference does not reach: whoever runs
+        a group the subject is in (``docs/adr/0159``'s amendment of 2026-10-02).
+        A preference says who a player is willing to be **matched** with, and
+        running their group is not that — the Administrator already reads
+        every member's face and Levels on their own page and lets them in. So
+        no profile is loaded and no container is bound, which is also what lets
+        an Administrator who has never played, and so has no gender to read a
+        preference against, be answered at all.
+
+        The three are the same three ``withheld_among`` asks, in the same order
+        — it is composed from this — so neither caller holds a second spelling
+        of a gate. The answer is bounded by ``subject_ids`` for the same reason.
+        """
+
+        subjects = tuple(subject_ids)
+        if not subjects:
+            return frozenset()
         blocked = await live_block_set(self._blocks, reader_id)
         held = await read_demand(
             AccountHoldQuery, lambda: self._holds.held_among(subjects)
@@ -119,10 +152,7 @@ class FailClosedGates:
             AccountStatusQuery,
             lambda: self._account_status.may_not_be_shown(subjects),
         )
-        gendered = await self._gender_refuses(
-            reader_id=reader_id, subjects=subjects, sport=sport
-        )
-        return (frozenset(blocked | held | unshowable) | gendered) & asked_about
+        return frozenset(blocked | held | unshowable) & frozenset(subjects)
 
     async def _gender_refuses(
         self, *, reader_id: UUID, subjects: tuple[UUID, ...], sport: Sport

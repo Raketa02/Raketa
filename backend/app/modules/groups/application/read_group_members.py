@@ -3,13 +3,11 @@ from __future__ import annotations
 from uuid import UUID
 
 from app.kernel import Clock, Sport
-from app.modules.groups.application.membership import hidden_in, listing_for_a_member
-from app.modules.groups.application.views import (
-    MemberRow,
-    face_of,
-    running_account,
-    who_runs_it,
+from app.modules.groups.application.membership import (
+    hidden_in,
+    listing_for_a_member_or_its_runner,
 )
+from app.modules.groups.application.views import MemberRow, face_of, who_runs_it
 from app.modules.groups.domain.members import in_members_order
 from app.modules.groups.domain.ports import (
     GroupAdministrators,
@@ -38,10 +36,16 @@ class ReadGroupMembers:
     could check is not served — except for a reader alone, who has nobody to
     hide.
 
-    **For members only**: anyone else meets ``group_not_found``, as the group's
-    page refuses them. Four reads whatever the size of the group — who is
-    hidden, the Levels, the faces and the scores — each one question about the
-    rows it serves, and on an official group a fifth: who runs it now.
+    **For its members, and for whoever runs an official group now** (#566):
+    running one is not membership, and the administrator area opens Members from
+    the group's players card. That reader is a row only once they have joined as
+    a player, and reads the rows and their order as a member does; a block
+    between them and a member hides that row, either way round. Anyone else —
+    a removed Administrator, one the group was handed away from — meets
+    ``group_not_found``, as the group's page refuses a stranger. Four reads
+    whatever the size of the group — who is hidden, the Levels, the faces and
+    the scores — each one question about the rows it serves, and on an official
+    group a fifth, asked first: who runs it now.
     """
 
     def __init__(
@@ -66,12 +70,13 @@ class ReadGroupMembers:
     async def execute(
         self, group_id: UUID, *, reader_id: UUID, sport: Sport
     ) -> tuple[MemberRow, ...]:
-        listing = await listing_for_a_member(self._directory, group_id, reader_id)
+        listing, runner = await listing_for_a_member_or_its_runner(
+            self._directory, self._administrators, group_id, reader_id
+        )
 
         hidden = await hidden_in(self._hidden, listing, reader_id)
         visible = [member for member in listing.members if member not in hidden]
         levels = await self._ratings.levels_in(visible, sport=sport)
-        runner = await running_account(self._administrators, listing)
         shown = in_members_order(
             [member for member in visible if member in levels],
             reader_id=reader_id,

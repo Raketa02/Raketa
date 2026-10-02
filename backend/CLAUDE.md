@@ -1135,9 +1135,13 @@ Rules to preserve:
   it from `player_score` is that it also **enforces admission**, and that is the whole of
   what it decides for itself. Five things are load-bearing. **A record opens on a prior
   disclosure and never on a person**: you are the subject, a search of yours *returned*
-  them, or you share a live challenge or a game — otherwise a route taking a player id is
-  a player-enumeration endpoint, and a UUID being hard to guess is not an authorization
-  model. **Nothing expires**, because a search record is kept for ever (ADR-0104) and a
+  them, or you share a live challenge, a game or a group — otherwise a route taking a player
+  id is a player-enumeration endpoint, and a UUID being hard to guess is not an
+  authorization model. **Whoever runs an official group they are in** is a fifth strand and
+  a port of its own, `RunnerDisclosure`, asked last and admitted **without the gender
+  preference** — the three gates about accounts and the reader's hold, through
+  `FailClosedGates.withheld_regardless_of_preference`, which `withheld_among` is composed
+  from (ADR-0159's amendment of 2026-10-02, #566). **Nothing expires**, because a search record is kept for ever (ADR-0104) and a
   shorter window could only refuse a face the app is currently showing. **The four
   fail-closed gates run live, in the partition of the disclosure** — never in the sport
   the reader arrived from, since the gender gate reads a candidate index row and the index
@@ -1304,7 +1308,9 @@ Rules to preserve:
   **Members** (`GET /groups/{id}/members?sport=`) lists only the members rated in the
   sport, the reader, then the Owner, then newest joined first (`domain/members.py`), each
   with the published Level and the Player Score — omitted, never `0`, for somebody with no
-  record. **A blocked pair, either way round, is shown to neither** there and on the Info
+  record. It is the one read also open to **whoever runs an official group now**
+  (`listing_for_a_member_or_its_runner`, #566), who reads the same rows and is one only once
+  they join as a player. **A blocked pair, either way round, is shown to neither** there and on the Info
   tab's members row that opens it (`member_faces`, up to five, everybody but the reader in
   the Members order) — the Games tab's seats stay the first rated in joining order,
   whoever reads them (ADR-0183 §10, §13, #504) — and **no count moves**. The block read

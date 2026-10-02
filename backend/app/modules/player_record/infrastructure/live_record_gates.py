@@ -51,7 +51,8 @@ from app.modules.matchmaking.domain.ports import AccountHoldQuery
 
 @final
 class LiveRecordGates:
-    """The four gates and the reader's own hold, asked about one pair."""
+    """The four gates and the reader's own hold, asked about one pair — or the
+    three about accounts and the reader's hold, for whoever runs their group."""
 
     def __init__(
         self, *, gates: FailClosedGates, holds: AccountHoldQuery
@@ -64,10 +65,7 @@ class LiveRecordGates:
     ) -> bool:
         """Whether this reader may be shown this person in this partition."""
 
-        held = await read_demand(
-            AccountHoldQuery, lambda: self._holds.held_among([reader_id])
-        )
-        if reader_id in held:
+        if await self._reader_is_held(reader_id):
             return False
         try:
             withheld = await self._gates.withheld_among(
@@ -76,6 +74,27 @@ class LiveRecordGates:
         except PlayerProfileNotCommitted:
             return False
         return subject_id not in withheld
+
+    async def admits_regardless_of_preference(
+        self, *, reader_id: UUID, subject_id: UUID
+    ) -> bool:
+        """Whether this reader may be shown this person **with the preference
+        not asked** — for whoever runs a group the subject is in. The reader's
+        own hold first, as above; then the three about accounts, which load no
+        profile, so there is no ``PlayerProfileNotCommitted`` to answer."""
+
+        if await self._reader_is_held(reader_id):
+            return False
+        withheld = await self._gates.withheld_regardless_of_preference(
+            reader_id=reader_id, subject_ids=(subject_id,)
+        )
+        return subject_id not in withheld
+
+    async def _reader_is_held(self, reader_id: UUID) -> bool:
+        held = await read_demand(
+            AccountHoldQuery, lambda: self._holds.held_among([reader_id])
+        )
+        return reader_id in held
 
 
 __all__ = ["LiveRecordGates"]

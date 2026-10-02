@@ -16,6 +16,12 @@
   game's endpoints nor the new group endpoints are guarded by one.
 - **Reads [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md)'s**
   symmetric effect into a new surface, the Members list (§10).
+- **§10's Members list is also read by whoever runs an official group now**, by
+  [ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)'s
+  amendment of 2026-10-02 ([#566](https://github.com/Raketa02/Raketa/issues/566)), which opens
+  the record of anybody on it too. Running a group is still not membership (§7): that account is
+  no row until it joins as a player, counts in nothing, and a block either way round hides a row
+  from it as from a member.
 - **Distinguishes [ADR-0022](0022-kernel-negative-space-and-constant-homes.md)'s** *no
   presentation* rule. A monogram's letters are content cut from content, and its colour crosses
   as a key (§5).

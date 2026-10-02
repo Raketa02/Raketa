@@ -300,3 +300,58 @@ async def test_an_unreadable_hold_refuses_rather_than_admitting():
 async def test_a_reader_with_no_profile_cannot_have_the_gender_gate_evaluated():
     with pytest.raises(PlayerProfileNotCommitted):
         await ask(gates(profiles=Profiles(None)), 1, 2)
+
+
+# --------------------------------------------------------------------------- #
+# Regardless of preference — for whoever runs a group the subject is in
+# --------------------------------------------------------------------------- #
+
+
+async def ask_regardless(collaborator: FailClosedGates, *numbers: int):
+    return await collaborator.withheld_regardless_of_preference(
+        reader_id=READER,
+        subject_ids=tuple(build.player(number) for number in numbers),
+    )
+
+
+async def test_regardless_of_preference_the_three_about_accounts_still_withhold():
+    """A block either way, a hold and an account that may not be shown are
+    facts about people rather than about who wants to play with whom, so they
+    withhold here exactly as they do beside the preference (#566)."""
+
+    withheld = await ask_regardless(
+        gates(
+            blocks=Blocks(exclusions=frozenset({build.player(1)})),
+            holds=Holds(held=frozenset({build.player(2)})),
+            statuses=Statuses(hidden=frozenset({build.player(3)})),
+        ),
+        1,
+        2,
+        3,
+        4,
+    )
+    assert withheld == frozenset({build.player(1), build.player(2), build.player(3)})
+
+
+async def test_regardless_of_preference_reads_no_profile_and_binds_no_container():
+    """**The preference is the one gate that is not asked**, so a reader with no
+    profile — an Administrator who has never played — is no refusal, and a
+    subject whose row would refuse the reader withholds nothing."""
+
+    snapshots = Snapshots((build.row(1, gender_preference="MEN_ONLY"),))
+
+    withheld = await ask_regardless(
+        gates(profiles=Profiles(None), snapshots=snapshots), 1, 2
+    )
+
+    assert withheld == frozenset()
+    assert snapshots.bindings == []
+
+
+async def test_regardless_of_preference_an_unreadable_block_set_still_refuses():
+    with pytest.raises(GateDataUnavailable):
+        await ask_regardless(gates(blocks=Blocks(raises=True)), 1)
+
+
+async def test_regardless_of_preference_nobody_to_ask_about_reads_nothing():
+    assert await ask_regardless(gates(blocks=Blocks(raises=True))) == frozenset()

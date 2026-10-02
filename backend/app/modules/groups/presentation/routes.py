@@ -366,7 +366,12 @@ async def leave_group(
         "sport, their Player Score where they have one, whether they own the "
         "group and when they joined. **A blocked pair, either way round, is "
         "left out of each other's list**, and the group's member count does "
-        "not change."
+        "not change.\n\n"
+        "**Read by the group's members, and by whoever runs an official group "
+        "now** — running one is not membership. That caller reads the same rows "
+        "in the same order, and is a row only once they have joined as a "
+        "player. A removed Administrator, and one the group was handed away "
+        "from, are answered as anyone else who is not in it is."
     ),
 )
 async def group_members(

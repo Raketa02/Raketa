@@ -2,12 +2,12 @@
 
 > A record is read **through a prior disclosure**, never **about** a person.
 
-Admitted on three strands and never otherwise: the reader **is** the subject; a
-search of the reader's **returned** them; or the pair **share an open challenge,
-a game or a group**. Without a rule of that shape, a route taking a player id is a
-player-enumeration endpoint — a level, a photograph and an area for anybody in
-the city reachable by id — and a UUID being hard to guess is not an
-authorization model (``docs/adr/0159``).
+Admitted on four strands and never otherwise: the reader **is** the subject; a
+search of the reader's **returned** them; the pair **share an open challenge, a
+game or a group**; or the reader **runs a group they are in**. Without a rule of
+that shape, a route taking a player id is a player-enumeration endpoint — a
+level, a photograph and an area for anybody in the city reachable by id — and a
+UUID being hard to guess is not an authorization model (``docs/adr/0159``).
 
 **Nothing expires.** A search record is kept for ever (``docs/adr/0104``), so any
 window shorter than that could only misfire: it would refuse a face the app is
@@ -19,6 +19,16 @@ group's Members lists who is in it now.
 **And the four fail-closed gates run live on every open**, because a disclosure
 made in August is not a permission to show somebody in December. The disclosure
 entitles a reader to *ask*; the gates decide.
+
+**Except the preference, for whoever runs the subject's group** (#566,
+``docs/adr/0159``'s amendment of 2026-10-02). An official group's Administrator
+is not in it, reads every member's face and Levels on their own page, and lets
+them in; a gender preference says who a player is willing to be *matched* with,
+and running their group is not that. So that strand is asked **last**, only
+once every disclosure has been refused, and is admitted on the gates about
+accounts — the block, the holds and an account that may not be shown — which
+read no partition. Asked last, it costs the ordinary record nothing: a search,
+a challenge, a game or a group the pair share admits first.
 
 **The partition is the disclosure's, and that is the whole reason this reads in
 sports.** The mutual gender gate reads the other side's preference off a
@@ -34,8 +44,11 @@ questions of four different stores — and then one gate evaluation per disclose
 partition until one admits. A gate evaluation is a profile load, three set reads
 over a single id and one index container binding, and there are at most four
 partitions because there are four sports. In the overwhelming case there is one
-partition and the loop runs once. It is paid on a deliberate tap on one person,
-which is the latency budget ``docs/adr/0107`` reserved for exactly this.
+partition and the loop runs once. Only a record every partition refused pays
+one more — *does the reader run a group they are in* — and, where they do, one
+evaluation of the three gates about accounts. It is paid on a deliberate tap on
+one person, which is the latency budget ``docs/adr/0107`` reserved for exactly
+this.
 """
 
 from __future__ import annotations
@@ -44,20 +57,27 @@ from typing import Sequence, final
 from uuid import UUID
 
 from app.kernel import Instant, Sport
-from app.modules.player_record.domain.ports import PriorDisclosure, RecordGates
+from app.modules.player_record.domain.ports import (
+    PriorDisclosure,
+    RecordGates,
+    RunnerDisclosure,
+)
 
 
 @final
 class RecordAdmission:
-    """The three strands and the four gates, asked in that order."""
+    """The strands and the four gates, asked in that order — and whoever runs
+    the subject's group last, on the three that are about accounts."""
 
     def __init__(
         self,
         *,
         disclosures: Sequence[PriorDisclosure],
+        runners: RunnerDisclosure,
         gates: RecordGates,
     ) -> None:
         self._disclosures = tuple(disclosures)
+        self._runners = runners
         self._gates = gates
 
     async def admits(
@@ -94,6 +114,16 @@ class RecordAdmission:
                 reader_id=reader_id, subject_id=subject_id, sport=sport
             ):
                 return True
+        # **Whoever runs their group, last.** Not a partition, so not in the
+        # walk above: the preference is not asked of this strand, and it is the
+        # only gate that reads one. Asked only now, so a record any disclosure
+        # opened never pays for it.
+        if await self._runners.runs_a_group_of(
+            reader_id=reader_id, subject_id=subject_id
+        ):
+            return await self._gates.admits_regardless_of_preference(
+                reader_id=reader_id, subject_id=subject_id
+            )
         return False
 
     async def _disclosed_partitions(

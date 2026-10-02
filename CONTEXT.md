@@ -455,7 +455,11 @@ of the code because this file asks for them in that order.
   or `ANY`. Durable, optional, defaulting to `ANY`. **Mutual, never one-directional** — it
   governs both what a player sees and whether they can be seen, so it protects an inbox and not
   only a search. A **gate, never a weight, and never relaxed**. A search may narrow it for that
-  search and may never widen it past another player's.
+  search and may never widen it past another player's. **It does not reach whoever runs an
+  Official group the player is in**: running their group is not being matched with them, and
+  that account opens their record without it
+  ([ADR-0159](docs/adr/0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md),
+  amended 2026-10-02).
 - **Play intent** — what kind of game a player wants in **one sport**: `COMPETITIVE`,
   `FOR_FUN` or `NO_PREFERENCE`. **Declared, per sport, and never inferred.** `NO_PREFERENCE`
   is an explicit answer and never a null — *either suits me* and *I never opened that screen*
@@ -1913,8 +1917,11 @@ every fact read through the owning context's published port, and one rule of its
   person, and read at most a few times a day.
 - **A disclosure** — the thing that entitles a reader to open a record. A search of theirs
   that **returned** the subject, a **live challenge** they are both seated in, a **game** they
-  both played, or *being the subject*. **Nothing else, and nothing expires**: a search record
-  is kept for ever, so a shorter window could only refuse a face the app is currently showing.
+  both played, a **Group** they are both in, an **Official group the reader runs** that the
+  subject is in, or *being the subject*. **Nothing else, and nothing expires but a group**: a
+  search record is kept for ever, so a shorter window could only refuse a face the app is
+  currently showing, while a group discloses its members only while they are in it and only to
+  whoever runs it now.
 - **The metered rows** — what the platform *watched* this person do, under the card headed
   *counted by the system, not written by people*. Each is a **raw pair and its figure**: how
   many opportunities fell due, how many went the way the strand is named for, and the
@@ -1927,7 +1934,8 @@ every fact read through the owning context's published port, and one rule of its
   gates are re-run live on every open **in that sport's partition** and never in whichever
   sport the reader arrived from, because the mutual gender gate reads an index row and the
   index is keyed by sport. A subject rated only in squash has no padel row, and *a gate that
-  cannot be evaluated excludes*.
+  cannot be evaluated excludes*. **Whoever runs the subject's group has no partition**: the
+  gender preference is the one gate that reads one, and it is not asked of them.
 
 **Invariants**
 - **A record is read through a prior disclosure, never about a person.** Otherwise a route
@@ -2089,7 +2097,8 @@ Official group per WhatsApp group and post its link there.
   **(club, email)**, so a person running two clubs' groups is two Administrators. **Invited**
   (shown as *expired* once its credential lapses), **active** (linked to an account) or
   **removed**; a removed person may be invited again. Creates the club's Official groups, answers
-  their Join requests and edits their settings; can neither delete one nor stop running one.
+  their Join requests and edits their settings; reads their **Members** list and opens the record
+  of anybody on it without being a Group member; can neither delete one nor stop running one.
   Removal ends it on the next request, and leaves the person's player side untouched.
   **Collisions, recorded:** an Administrator is **not the `ADMIN` Authority** and holds no power
   over the platform or any account; the **admin** tag on a Members list is **copy** for *runs this

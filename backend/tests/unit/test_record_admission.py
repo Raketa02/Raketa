@@ -48,11 +48,14 @@ class Disclosures:
 
 
 class Gates:
-    """A ``RecordGates`` that admits in the partitions it was told to."""
+    """A ``RecordGates`` that admits in the partitions it was told to — and,
+    regardless of preference, only when told to."""
 
-    def __init__(self, *admitting: Sport) -> None:
+    def __init__(self, *admitting: Sport, regardless: bool = False) -> None:
         self.admitting = frozenset(admitting)
+        self.regardless = regardless
         self.asked: list[Sport] = []
+        self.asked_regardless: list[tuple[UUID, UUID]] = []
 
     async def admits(
         self, *, reader_id: UUID, subject_id: UUID, sport: Sport
@@ -60,9 +63,31 @@ class Gates:
         self.asked.append(sport)
         return sport in self.admitting
 
+    async def admits_regardless_of_preference(
+        self, *, reader_id: UUID, subject_id: UUID
+    ) -> bool:
+        self.asked_regardless.append((reader_id, subject_id))
+        return self.regardless
 
-def admission(*, disclosures, gates) -> RecordAdmission:
-    return RecordAdmission(disclosures=tuple(disclosures), gates=gates)
+
+class Runners:
+    """A ``RunnerDisclosure`` answering one fixed fact about the pair."""
+
+    def __init__(self, runs: bool = False) -> None:
+        self.runs = runs
+        self.asked: list[tuple[UUID, UUID]] = []
+
+    async def runs_a_group_of(self, *, reader_id: UUID, subject_id: UUID) -> bool:
+        self.asked.append((reader_id, subject_id))
+        return self.runs
+
+
+def admission(*, disclosures, gates, runners: Runners | None = None) -> RecordAdmission:
+    return RecordAdmission(
+        disclosures=tuple(disclosures),
+        runners=runners or Runners(),
+        gates=gates,
+    )
 
 
 async def test_your_own_record_needs_no_disclosure_and_asks_nothing():
@@ -71,28 +96,30 @@ async def test_your_own_record_needs_no_disclosure_and_asks_nothing():
     themselves."""
 
     searches, gates = Disclosures(Sport.PADEL), Gates(Sport.PADEL)
+    runners = Runners(True)
 
-    admitted = await admission(disclosures=[searches], gates=gates).admits(
-        reader_id=READER, subject_id=READER, now=NOW
-    )
+    admitted = await admission(
+        disclosures=[searches], gates=gates, runners=runners
+    ).admits(reader_id=READER, subject_id=READER, now=NOW)
 
     assert admitted is True
     assert searches.asked == []
-    assert gates.asked == []
+    assert runners.asked == []
+    assert gates.asked == gates.asked_regardless == []
 
 
 async def test_a_stranger_is_refused_before_a_gate_is_evaluated():
     """No disclosure is the ordinary answer about almost everybody, and it costs
     no gate read: there is no partition to evaluate one in."""
 
-    gates = Gates(*Sport)
+    gates = Gates(*Sport, regardless=True)
 
     admitted = await admission(
         disclosures=[Disclosures(), Disclosures(), Disclosures()], gates=gates
     ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
 
     assert admitted is False
-    assert gates.asked == []
+    assert gates.asked == gates.asked_regardless == []
 
 
 async def test_a_search_that_returned_them_admits_in_that_search_s_sport():
@@ -188,3 +215,82 @@ async def test_a_disclosure_the_gates_refuse_everywhere_is_no_entitlement():
     ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
 
     assert admitted is False
+
+
+# ---------------------------------------------------------------------------
+# The fifth strand: whoever runs a group the subject is in
+# ---------------------------------------------------------------------------
+
+
+async def test_whoever_runs_their_group_is_admitted_regardless_of_preference():
+    """**The strand that is not a disclosure in sports** (#566). Running a group
+    is not being introduced to play with its members, so the gender preference
+    is not asked and there is no partition to ask it in — the three gates
+    about accounts decide, on the pair, once."""
+
+    runners, gates = Runners(True), Gates(*Sport, regardless=True)
+
+    admitted = await admission(
+        disclosures=[Disclosures()], gates=gates, runners=runners
+    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+
+    assert admitted is True
+    assert runners.asked == [(READER, SUBJECT)]
+    assert gates.asked == []
+    assert gates.asked_regardless == [(READER, SUBJECT)]
+
+
+async def test_the_gates_about_accounts_still_refuse_whoever_runs_their_group():
+    """A block, a hold or an account that may not be shown refuses the
+    Administrator as it refuses anybody."""
+
+    admitted = await admission(
+        disclosures=[Disclosures()],
+        gates=Gates(regardless=False),
+        runners=Runners(True),
+    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+
+    assert admitted is False
+
+
+async def test_a_disclosure_the_preference_refuses_still_opens_for_whoever_runs_it():
+    """An Administrator who plays, and who is in the group they run, is a
+    co-member too — and that strand's gates may refuse on a preference. Running
+    the group is what admits them then."""
+
+    gates = Gates(regardless=True)
+
+    admitted = await admission(
+        disclosures=[Disclosures(Sport.PADEL)], gates=gates, runners=Runners(True)
+    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+
+    assert admitted is True
+    assert gates.asked == [Sport.PADEL]
+    assert gates.asked_regardless == [(READER, SUBJECT)]
+
+
+async def test_who_runs_their_group_is_asked_only_once_the_disclosures_refuse():
+    """**The cost is paid on the refusal path and nowhere else.** A record a
+    search opened never asks whether the reader runs anything."""
+
+    runners = Runners(True)
+
+    admitted = await admission(
+        disclosures=[Disclosures(Sport.PADEL)],
+        gates=Gates(Sport.PADEL),
+        runners=runners,
+    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+
+    assert admitted is True
+    assert runners.asked == []
+
+
+async def test_nobody_s_group_run_asks_no_gate_regardless_of_preference():
+    gates = Gates(regardless=True)
+
+    admitted = await admission(
+        disclosures=[Disclosures()], gates=gates, runners=Runners(False)
+    ).admits(reader_id=READER, subject_id=SUBJECT, now=NOW)
+
+    assert admitted is False
+    assert gates.asked_regardless == []

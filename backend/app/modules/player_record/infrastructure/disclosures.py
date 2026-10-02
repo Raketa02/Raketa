@@ -1,4 +1,4 @@
-"""The four things that entitle a reader to a record, one adapter each.
+"""The things that entitle a reader to a record, one adapter each.
 
 Four implementations of one port, in the **consumer's** infrastructure — the
 shape ``sportsmanship`` takes over ``games``' directory, and for the same reason:
@@ -15,7 +15,14 @@ about — and one more thing on a refusal path that is supposed to say nothing.
 are.** The fourth is the one the others anticipated: a group's Members is a
 surface that shows one player to another and is not a search, so it satisfied
 this same demand with a fourth row in the register, and this context never
-learned what a group is. A fifth would do the same.
+learned what a group is.
+
+**The fifth is here and is not a fifth row**, because it is admitted under
+other gates: whoever runs an official group reads its Members without being in
+it, and a member's gender preference does not reach them (#566,
+``docs/adr/0159``'s amendment of 2026-10-02). So it signs ``RunnerDisclosure``
+— a port of its own the admission asks last — and answers a boolean, since the
+gates it is admitted under read no partition.
 """
 
 from __future__ import annotations
@@ -27,7 +34,7 @@ from app.kernel import Instant, Sport
 from app.modules.challenges.domain.ports import ChallengeDirectory
 from app.modules.challenges.domain.standing import ENDED
 from app.modules.games.domain.ports import GameDirectory
-from app.modules.groups.domain.ports import GroupDirectory
+from app.modules.groups.domain.ports import GroupAdministrators, GroupDirectory
 from app.modules.matchmaking.domain.search_store import SearchStore
 
 
@@ -186,9 +193,53 @@ class GroupsTheyShare:
         return frozenset(Sport) if shared else frozenset()
 
 
+@final
+class GroupsTheReaderRuns:
+    """``RunnerDisclosure`` over ``groups``' directory and who runs each
+    official group now. **The fifth strand.**
+
+    An official group's Members is opened by the account running it, which is
+    not a member (``docs/adr/0183`` §7) — so ``GroupsTheyShare`` never admits
+    it, and every row it lists would open on ``record_unavailable`` (#566).
+
+    **Who runs a group is ``groups``' answer, read through its own port**:
+    ``GroupAdministrators`` is the one the Members list asks, so the list and
+    the record it opens cannot come to two answers about who runs it — and a
+    removed Administrator, or one the group was handed away from, runs nothing
+    on the next read of either.
+    """
+
+    def __init__(
+        self, groups: GroupDirectory, administrators: GroupAdministrators
+    ) -> None:
+        self._groups = groups
+        self._administrators = administrators
+
+    async def runs_a_group_of(self, *, reader_id: UUID, subject_id: UUID) -> bool:
+        """Whether the reader runs, now, any official group the subject is in.
+
+        **Asked from the subject's side**: the groups they belong to, the
+        official ones among them, and who runs each — one question about the
+        set. A Join request that waits is not membership, so it is not among
+        them; a player group is run by nobody, so it asks nothing.
+        """
+
+        listings = await self._groups.listings(await self._groups.groups_of(subject_id))
+        administrator_ids = {
+            listing.administrator_id
+            for listing in listings.values()
+            if listing.is_official and listing.administrator_id is not None
+        }
+        if not administrator_ids:
+            return False
+        running = await self._administrators.running(administrator_ids)
+        return any(runner.account_id == reader_id for runner in running.values())
+
+
 __all__ = [
     "ChallengesTheyShare",
     "GamesTheyPlayed",
+    "GroupsTheReaderRuns",
     "GroupsTheyShare",
     "SearchesThatShowedThem",
 ]

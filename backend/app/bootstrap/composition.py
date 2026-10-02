@@ -510,6 +510,7 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    RunnerDisclosure,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -520,6 +521,7 @@ from app.modules.player_record.domain.ports import (
 from app.modules.player_record.infrastructure.disclosures import (
     ChallengesTheyShare,
     GamesTheyPlayed,
+    GroupsTheReaderRuns,
     GroupsTheyShare,
     SearchesThatShowedThem,
 )
@@ -2384,6 +2386,20 @@ def build_group_disclosure(session: AsyncSession) -> PriorDisclosure:
     """
 
     return GroupsTheyShare(build_group_directory(session))
+
+
+def build_runner_disclosure(session: AsyncSession) -> RunnerDisclosure:
+    """*I run a group they are in* — over ``groups``' directory and who runs each
+    official group now, the same reading the group's Members makes (#566).
+
+    The strand an official group's Administrator needed: Members lists every
+    member rated in the sport and opens their record on a press and hold, and
+    running a group is not being in it.
+    """
+
+    return GroupsTheReaderRuns(
+        build_group_directory(session), build_group_administrators(session)
+    )
 
 
 def build_record_gates(

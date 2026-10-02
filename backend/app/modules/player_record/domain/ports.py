@@ -1,4 +1,4 @@
-"""What this context asks of contexts it does not write. **Nine demands.**
+"""What this context asks of contexts it does not write. **Ten demands.**
 
 ``docs/adr/0098``'s consumer-driven shape, and this is the second *consumer*
 register on the platform after the matcher's. Every port here is declared in
@@ -12,7 +12,7 @@ no aggregate, no table and no migration; every fact it publishes it reads throug
 the owning context's published port, and the one thing it decides for itself is
 whether the reader may see any of them.
 
-**Seven of the nine are single-player reads and say so in their signatures.** A
+**Eight of the ten are single-player reads and say so in their signatures.** A
 record is one person opened by a deliberate tap, so a set-shaped port here would
 be a contract nobody can honour cheaply for a caller that never batches — the
 mirror of the rule every read in ``matchmaking`` takes, where the caller always
@@ -174,6 +174,53 @@ class RecordGates(Protocol):
         cost of that is real and is priced in ``application/admission.py``: each
         call is one reader profile, three set reads over a single id, and one
         index container bound.
+        """
+        ...
+
+    async def admits_regardless_of_preference(
+        self, *, reader_id: UUID, subject_id: UUID
+    ) -> bool:
+        """Whether the live gates admit this pair **with the mutual gender
+        preference not asked** — the reader's own hold, then a block in either
+        direction, the subject's hold and an account that may not be shown.
+
+        For the one strand a preference does not reach: a reader who runs a
+        group the subject is in (``RunnerDisclosure``). A preference says who a
+        player is willing to be *matched* with, and running their group is not
+        that (``docs/adr/0159``'s amendment of 2026-10-02). It takes **no
+        sport**, because the preference is the only gate that reads a
+        partition — so this binds no index container and loads no profile, and
+        a reader who has never played is answered rather than refused for
+        having no gender to read a preference against.
+        """
+        ...
+
+
+@runtime_checkable
+class RunnerDisclosure(Protocol):
+    """*Does this reader run, right now, a group this person is in?*
+
+    **The fifth strand, and the one that is not a ``PriorDisclosure``.** An
+    official group's Members is opened by the account running it, which is not
+    a member of it (``docs/adr/0183`` §7) — so ``PriorDisclosure``'s *a group
+    they are both in* never admits it, and every row of the list it reads would
+    open on ``record_unavailable``. It is a port of its own because it is
+    admitted under **different gates**: the preference does not reach whoever
+    runs the group, so the caller has to know which strand it is asking.
+
+    **A boolean and not sports**, for the same reason: the gates this strand
+    is admitted under read no partition, so a sport here would be an answer
+    nobody asks. **Running as it stands, never as it was** — a removed
+    Administrator, and one the group was handed away from, run nothing on the
+    next read, exactly as a group left ends ``PriorDisclosure``'s group strand.
+    """
+
+    async def runs_a_group_of(self, *, reader_id: UUID, subject_id: UUID) -> bool:
+        """Whether this reader runs, now, any group this person is a member of.
+
+        ``False`` for almost everybody — a player group is run by nobody, and a
+        Join request that waits is not membership — which is the ordinary
+        answer, and never an error.
         """
         ...
 
@@ -371,6 +418,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     SubjectIdentitySource,
     RecordPhotoLink,
     PriorDisclosure,
+    RunnerDisclosure,
     RecordGates,
     SubjectRatings,
     SubjectForm,
@@ -385,6 +433,7 @@ __all__ = [
     "PriorDisclosure",
     "RecordGates",
     "RecordPhotoLink",
+    "RunnerDisclosure",
     "SubjectForm",
     "SubjectIdentitySource",
     "SubjectRatings",
