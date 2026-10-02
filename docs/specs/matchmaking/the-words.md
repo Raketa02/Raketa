@@ -2783,7 +2783,7 @@ card is a figure the platform computed or a name the player gave.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| The tab | `You` · eyebrow `Player profile` | the shell's, as today |
+| The tab | `You` | the shell's; the eyebrow `Player profile` went in #529 (2026-10-02) |
 | The three group titles | `Playing` · `Finding players` · `On your card` | `flab`, uppercase by style; the shell's |
 | The rows, Playing | `Skill passport` · `Player reliability` · `What kind of game` | |
 | The rows, Finding players | `Your week` · `How far to look` · `Where you play` · `Who you play with` · `Game suggestions` | *How far to look* is the radius step's own label |
