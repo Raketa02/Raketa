@@ -37,6 +37,7 @@ function game(over: Partial<Game> = {}): Game {
     plannedAt: '2026-09-08T09:00:00Z',
     entryClosesAt: '2026-09-19T09:00:00Z',
     proposals: [],
+    noShows: [],
     readAt: READ_AT,
     ...over,
   };

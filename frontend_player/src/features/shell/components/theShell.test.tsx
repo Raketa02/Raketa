@@ -226,6 +226,7 @@ describe('Home’s badge', () => {
         { side: 'B', player_id: OPPONENT, name: 'tomek.p' },
       ],
       proposals: [],
+      no_shows: [],
       ...over,
     };
   }

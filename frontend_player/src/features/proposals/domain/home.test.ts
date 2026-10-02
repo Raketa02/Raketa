@@ -129,6 +129,34 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     });
   });
 
+  /** The club's cancel (#547): why, as the club gave it, and the full refund. */
+  it('carries the club’s reason for a game it cancelled', () => {
+    const cancelled = game({
+      status: 'CALLED_OFF',
+      calledOffReason: 'CANCELLED_BY_THE_CLUB',
+      clubCancelReason: 'WEATHER',
+      money: { shareGrosze: 3000, paid: true, refundedGrosze: 3000 },
+    });
+    expect(moneyLineOf(cancelled, BEFORE_CUT_OFF)).toEqual({
+      kind: 'calledOff',
+      reason: 'CANCELLED_BY_THE_CLUB',
+      clubCancelReason: 'WEATHER',
+      club: 'Bonarka Arena',
+      refundedGrosze: 3000,
+    });
+  });
+
+  /**
+   * **Somebody didn't come** (#560): uncounted, and the line says which of the two it is to this
+   * reader — marked themselves with a day to answer (the read's *needs you*), or anybody else.
+   */
+  it('says somebody didn’t come, and to the player marked, that they were', () => {
+    const marked = game({ status: 'UNCOUNTED', uncountedReason: 'NO_SHOW', needsYou: true });
+    const other = game({ status: 'UNCOUNTED', uncountedReason: 'NO_SHOW' });
+    expect(moneyLineOf(marked, BEFORE_CUT_OFF)).toEqual({ kind: 'noShow', yours: true });
+    expect(moneyLineOf(other, BEFORE_CUT_OFF)).toEqual({ kind: 'noShow', yours: false });
+  });
+
   it('says a seat was empty on a game uncounted for it (§14.1)', () => {
     const short = game({ status: 'UNCOUNTED', uncountedReason: 'SEAT_EMPTY' });
     expect(moneyLineOf(short, BEFORE_CUT_OFF)).toEqual({ kind: 'seatEmpty' });
@@ -259,8 +287,15 @@ describe('bookedGameIds — the Games Home’s cards stand for', () => {
 
 describe('resultActOf — the result, reached from the details as today', () => {
   it('asks for the result once the hour has come, and its answer once a score is told', () => {
-    expect(resultActOf('NEEDS_RESULT')).toBe('we-played');
-    expect(resultActOf('CONFIRM_THE_RESULT')).toBe('confirm');
+    expect(resultActOf(game({ status: 'NEEDS_RESULT' }))).toBe('we-played');
+    expect(resultActOf(game({ status: 'CONFIRM_THE_RESULT' }))).toBe('confirm');
+  });
+
+  /** The marked player's day to dispute it (#560) — the read's *needs you*, and theirs alone. */
+  it('opens the dispute to the player marked as not coming, while it needs them', () => {
+    const noShow = { status: 'UNCOUNTED', uncountedReason: 'NO_SHOW' } as const;
+    expect(resultActOf(game({ ...noShow, needsYou: true }))).toBe('dispute');
+    expect(resultActOf(game({ ...noShow, needsYou: false }))).toBeUndefined();
   });
 
   it.each<HomeStatus>([
@@ -272,7 +307,7 @@ describe('resultActOf — the result, reached from the details as today', () => 
     'NEVER_PLAYED',
     'CALLED_OFF',
   ])('offers nothing on %s', (status) => {
-    expect(resultActOf(status)).toBeUndefined();
+    expect(resultActOf(game({ status }))).toBeUndefined();
   });
 });
 

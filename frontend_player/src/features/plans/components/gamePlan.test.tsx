@@ -99,6 +99,7 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
       { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
+    no_shows: [],
     ...over,
   };
 }

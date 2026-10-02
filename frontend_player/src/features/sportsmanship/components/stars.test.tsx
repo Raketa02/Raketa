@@ -87,6 +87,7 @@ const DOUBLES: Wire['GameSchema'] = {
     { side: 'B', player_id: THEIR_PARTNER, name: 'marekb' },
   ],
   proposals: [],
+  no_shows: [],
 };
 
 /** A settled singles squash game, for the second card and the singles sentence. */

@@ -175,6 +175,26 @@ export interface CalledOffBy {
   readonly name?: string;
 }
 
+/**
+ * **A no-show report** — a player on a booked game marked as not coming by somebody who came
+ * ([#560](https://github.com/Raketa02/Raketa/issues/560); the Games & Fill in mechanics §15.3), and
+ * what became of it. **Who made it is on no wire**: the report is the game's, said by the people
+ * who came, and a name on it would be the platform pointing at one of them.
+ */
+export interface NoShowReport {
+  readonly playerId: string;
+  /** The whole name. Absent where `users` no longer has the account. */
+  readonly name?: string;
+  readonly reportedAt: string;
+  /**
+   * The end of their day to say they came — 24 hours from the report, the backend's instant.
+   * **Nothing happens at it**: an undisputed report simply stands from here on.
+   */
+  readonly disputeBy: string;
+  /** When they said they came. A disputed report falls and is on nobody's record. */
+  readonly disputedAt?: string;
+}
+
 export interface Game {
   readonly gameId: string;
   readonly challengeId: string;
@@ -230,6 +250,11 @@ export interface Game {
   readonly proposals: readonly StandingProposal[];
   /** The agreement waiting out its grace, and absent when none is. **A counter voids one.** */
   readonly acceptance?: Acceptance;
+  /**
+   * Everybody reported as not coming to this **booked** game, in the court's order — empty on every
+   * other game. A report is the game's entry: no score goes on the table beside one.
+   */
+  readonly noShows: readonly NoShowReport[];
   /** The instant this game's standing and every deadline on it were folded against. */
   readonly readAt: string;
 }

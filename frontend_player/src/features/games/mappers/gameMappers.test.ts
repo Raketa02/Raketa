@@ -27,6 +27,7 @@ function wireGame(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
       { side: 'B', player_id: 'them' },
     ],
     proposals: [],
+    no_shows: [],
     ...over,
   };
 }
@@ -268,6 +269,54 @@ describe('a code this build has never seen', () => {
     expect(named?.calledOffBy).toEqual({ playerId: 'tomek', name: 'tomek.p' });
     expect(nameless?.calledOffBy).toEqual({ playerId: 'tomek' });
     expect(toGame(wireGame({ called_off_by: null }), READ_AT)).not.toHaveProperty('calledOffBy');
+  });
+
+  /**
+   * **A no-show report, and what became of it** (#560; the backend's #547) — who, by id and whole
+   * name, when it was made, the end of their day to dispute it, and when they did. Who reported
+   * them is on no wire: the report is the game's.
+   */
+  it('reads every no-show report — a lost name and an undisputed report left absent', () => {
+    const game = toGame(
+      wireGame({
+        standing: 'NO_SHOW_REPORTED',
+        entry_closes_at: null,
+        no_shows: [
+          {
+            player_id: 'them',
+            name: 'Kuba Nowak',
+            reported_at: '2026-09-04T20:00:00Z',
+            dispute_by: '2026-09-05T20:00:00Z',
+            disputed_at: '2026-09-05T08:00:00Z',
+          },
+          {
+            player_id: 'gone',
+            name: null,
+            reported_at: '2026-09-04T20:05:00Z',
+            dispute_by: '2026-09-05T20:05:00Z',
+            disputed_at: null,
+          },
+        ],
+      }),
+      READ_AT,
+    );
+
+    expect(game?.standing).toBe('NO_SHOW_REPORTED');
+    expect(game?.noShows).toEqual([
+      {
+        playerId: 'them',
+        name: 'Kuba Nowak',
+        reportedAt: '2026-09-04T20:00:00Z',
+        disputeBy: '2026-09-05T20:00:00Z',
+        disputedAt: '2026-09-05T08:00:00Z',
+      },
+      {
+        playerId: 'gone',
+        reportedAt: '2026-09-04T20:05:00Z',
+        disputeBy: '2026-09-05T20:05:00Z',
+      },
+    ]);
+    expect(toGame(wireGame(), READ_AT)?.noShows).toEqual([]);
   });
 
   it('drops a game whose court it cannot place somebody on', () => {

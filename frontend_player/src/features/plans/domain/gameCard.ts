@@ -100,8 +100,11 @@ export function gameCardName(game: Game, plan: Plan | undefined): GameCardName {
       return 'counted';
     case 'UNSCORED':
     // A booked game that started short is uncounted too, *a seat was empty* — and a booked game
-    // is Home's card, never this rail's (#556), so the word is only ever a fallback here.
+    // is Home's card, never this rail's (#556), so the word is only ever a fallback here. So is a
+    // booked game somebody did not come to, whatever the report comes to (#560).
     case 'STARTED_SHORT':
+    case 'NO_SHOW_REPORTED':
+    case 'NO_SHOW':
       return 'uncounted';
     case 'NEVER_PLAYED':
       return 'never-played';

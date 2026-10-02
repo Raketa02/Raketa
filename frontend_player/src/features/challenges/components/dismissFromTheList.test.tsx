@@ -182,6 +182,7 @@ const CALLED_OFF_GAME: Wire['GameSchema'] = {
     { side: 'B', player_id: null, name: null },
   ],
   proposals: [],
+  no_shows: [],
 };
 
 let transport: Transport;
@@ -331,6 +332,7 @@ function cachedGame(gameId: string, challengeId: string): Game {
     plannedAt: READ_AT,
     calledOffAt: READ_AT,
     proposals: [],
+    noShows: [],
     readAt: READ_AT,
   };
 }

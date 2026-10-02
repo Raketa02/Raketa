@@ -132,6 +132,7 @@ function game(): Wire['GameSchema'] {
       { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
+    no_shows: [],
   };
 }
 

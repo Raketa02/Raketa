@@ -184,7 +184,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
 
   // Neither Chat nor Leave for a rescue seen from outside (A4.3): the reader is not in the game.
   const chat = rescue === undefined && chatIsOpen(game.status) ? room.conversationId : undefined;
-  const act = resultActOf(game.status);
+  const act = resultActOf(game);
 
   return (
     <>

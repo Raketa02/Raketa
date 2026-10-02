@@ -67,6 +67,26 @@ const BY_CODE: Readonly<Record<string, string>> = {
    * `challenges` write for the same code, because it is one fact with one remedy.
    */
   account_held: 'Your account is on hold. Get in touch with us.',
+  /** A score refused because somebody was marked as not coming while the screen was open (#560). */
+  a_no_show_is_reported:
+    'Somebody was marked as not coming, so this game doesn’t count and takes no score.',
+  // Marking somebody as not coming (#560) — the route's refusals, most of them races.
+  not_on_this_court: 'That player isn’t on this game.',
+  you_cannot_report_yourself: 'You can’t mark yourself as not coming.',
+  no_shows_are_for_booked_games: 'Only a game booked on a court can have somebody not come.',
+  the_game_has_not_started: 'The game hasn’t started yet.',
+  a_result_is_entered:
+    'A score went in while this screen was open, so the game happened — answer the score instead.',
+  checked_in_at_the_club: 'The club checked them in, so they were there.',
+  you_were_reported_as_a_no_show:
+    'You were marked as not coming yourself — say you were there instead.',
+  // These two refuse a score as well as a mark, so their sentences say only what both share.
+  the_game_was_called_off: 'This game was called off, so there is nothing to record.',
+  the_game_started_short:
+    'This game started with a seat empty, so nothing about it can be recorded.',
+  // Disputing one (#560).
+  nobody_reported_you: 'Nobody marked you as not coming.',
+  the_dispute_window_has_closed: 'Your day to say you were there has passed, so the mark stands.',
 };
 
 export function gameErrorMessage(error: AppError): string {
@@ -75,4 +95,20 @@ export function gameErrorMessage(error: AppError): string {
   // rather than failing, so the sentence is the one that promises they resume.
   if (error.kind === 'network-unavailable') return offlineMessage('resumes');
   return codeMessage(BY_CODE, error);
+}
+
+/**
+ * **A refused mark** (#560) — the table above, except where its sentence is about a score: the
+ * entry window closing, or the game settling, on a game somebody was marked on is a mark that came
+ * too late, not an evening going unrecorded. The rows go on being offered while a report's day runs
+ * (`domain/noShows.ts`), and the window behind them is not on the wire once a report is made.
+ */
+const MARK_BY_CODE: Readonly<Record<string, string>> = {
+  the_entry_window_has_closed: 'It’s too late to mark anybody else on this game.',
+  the_result_is_settled: 'This game is settled now, so nobody else can be marked.',
+};
+
+export function markErrorMessage(error: AppError): string {
+  if (error.kind === 'network-unavailable') return offlineMessage('resumes');
+  return codeMessage({ ...BY_CODE, ...MARK_BY_CODE }, error);
 }

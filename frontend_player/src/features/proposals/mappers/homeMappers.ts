@@ -27,6 +27,7 @@ export function toSeat(wire: Schemas['BookedTileSchema']): DeckPerson {
     // Nobody on a booked court is *In* — that word is a game still filling's.
     isIn: false,
     paid: wire.paid,
+    checkedIn: wire.checked_in,
     ...(wire.name === null ? {} : { name: wire.name }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),
@@ -57,6 +58,7 @@ function toBooking(
     kind: toKind(wire.kind),
     status: wire.status,
     ...(wire.called_off_reason === null ? {} : { calledOffReason: wire.called_off_reason }),
+    ...(wire.club_cancel_reason === null ? {} : { clubCancelReason: wire.club_cancel_reason }),
     ...(wire.uncounted_reason === null ? {} : { uncountedReason: wire.uncounted_reason }),
     openSeats: wire.open_seats,
     needsYou: wire.needs_you,

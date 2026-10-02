@@ -137,9 +137,20 @@
  * ADR-0149 §3 named is back to its one importer, `features/plans`. `We played` opens the grid
  * over the plan exactly as before, and the moment it is open the pinned footer is back with
  * *Send this score* and the way out.
+ *
+ * ## A booked game's result can say somebody didn't come, and the player marked can answer
+ *
+ * [#560](https://github.com/Raketa02/Raketa/issues/560) (the Games & Fill in mechanics §15.3): where
+ * a **booked** game's result is entered, a *Didn't come?* block under the grid has a row per other
+ * player — *Kuba Nowak didn't come*, behind a sheet that says what it does — and a player the club
+ * checked in has a row with nothing to press. Which game is booked, and who was checked in, are the
+ * booking's to know, so the composer hands them in (`booked`); a Classic game has no block because
+ * nobody hands one in. Once somebody is marked the game takes no score: the arm reads the reports,
+ * the rows go on offering whoever else did not come, and **the player marked** finds *I was there*
+ * pinned, with their day on the clock.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -149,9 +160,10 @@ import { ShellScreen } from '@/features/shell/types';
 import { StarCardSection } from '@/features/sportsmanship/types';
 import { offlineMessage, recoveryMessage } from '@/shared/errors';
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
-import { Button, Note, theme } from '@/shared/ui';
+import { Button, Note, behindOverlay, theme } from '@/shared/ui';
 
 import type { Game } from '../domain/game';
+import { noShowRows, type NoShowRow } from '../domain/noShows';
 import {
   actsOffered,
   courtSizes,
@@ -162,16 +174,23 @@ import {
   type EntryLead,
 } from '../domain/resultArgument';
 import { draftFrom, emptyDraft, readScore, sameScore, type ScoreDraft } from '../domain/score';
-import { useAcceptResult, useGame, useStateResult } from '../hooks/useGames';
+import {
+  useAcceptResult,
+  useDisputeNoShow,
+  useGame,
+  useReportNoShow,
+  useStateResult,
+} from '../hooks/useGames';
 
 import { COUNTER_A11Y_LABEL, acceptLabel, submitLabelFor } from './gameAccessibility';
-import { gameErrorMessage } from './gameErrorMessage';
+import { gameErrorMessage, markErrorMessage } from './gameErrorMessage';
 import {
   ACCEPT_LABEL,
   CANCEL_LABEL,
   COUNTER_IS_THEIR_SCORE,
   COUNTER_LABEL,
   CORRECT_LABEL,
+  DISPUTE_LABEL,
   NOT_YOURS_LINE,
   SCORE_LEAD,
   SENDING_LABEL,
@@ -183,6 +202,7 @@ import {
   formatEyebrow,
   gameEyebrow,
   outcomeLine,
+  reportLines,
   resultBody,
   resultTitle,
   scoreProblemLine,
@@ -191,8 +211,24 @@ import {
   submitLabel,
   worthLine,
 } from './gamePresentation';
+import { NoShowBlock } from './NoShowBlock';
+import { NoShowSheet } from './NoShowSheet';
 import { ScoreEntry } from './ScoreEntry';
 import { ScoreTable } from './ScoreTable';
+
+/**
+ * **What a booked game's composer knows that the Game does not** (#560) — handed in by `proposals`,
+ * which holds the booking, and absent on a Classic game.
+ */
+export interface BookedFacts {
+  /** Who the club's desk checked in, by id: they were there, and can never be marked. */
+  readonly checkedIn: readonly string[];
+  /**
+   * Re-read the booking's own reads once an act here has landed — Home's status and badge, and the
+   * details this screen is pushed over — which this feature cannot name.
+   */
+  readonly reread: () => void;
+}
 
 export interface GameScreenProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
@@ -244,9 +280,23 @@ export interface GameScreenProps {
    * that says *needs a player*, and stood down with the doors while the grid is open.
    */
   readonly fill: ReactNode;
+  /**
+   * **A booked game's facts** (#560) — who the club checked in and how to re-read the booking.
+   * Present, the entry offers *Kuba didn't come*; absent, it is a Classic game, which has no hour
+   * anybody could fail to come to.
+   */
+  readonly booked?: BookedFacts;
 }
 
-export function GameScreen({ gameId, card, court, plan, entryLead, fill }: GameScreenProps) {
+export function GameScreen({
+  gameId,
+  card,
+  court,
+  plan,
+  entryLead,
+  fill,
+  booked,
+}: GameScreenProps) {
   const { game, isPending, error } = useGame(gameId);
   const me = useCurrentUser().data?.id;
 
@@ -275,6 +325,7 @@ export function GameScreen({ gameId, card, court, plan, entryLead, fill }: GameS
       plan={plan}
       entryLead={entryLead}
       fill={fill}
+      booked={booked}
     />
   );
 }
@@ -290,6 +341,7 @@ function Argument({
   plan,
   entryLead,
   fill,
+  booked,
 }: {
   readonly game: Game;
   readonly playerId: string;
@@ -298,10 +350,36 @@ function Argument({
   readonly plan: ReactNode;
   readonly entryLead: EntryLead;
   readonly fill: ReactNode;
+  readonly booked: BookedFacts | undefined;
 }) {
   const argument = resultArgument(game, playerId);
-  const state = useStateResult();
-  const accept = useAcceptResult();
+  // After any write here lands on a booked game, its booking's reads are read again — by the
+  // mutation, so a write that waited out a lost connection still does it after the screen has gone.
+  const afterAWrite = { reread: booked?.reread };
+  const state = useStateResult(afterAWrite);
+  const accept = useAcceptResult(afterAWrite);
+  const report = useReportNoShow(afterAWrite);
+  const dispute = useDisputeNoShow(afterAWrite);
+
+  /** The player the sheet asks about, or nothing while it is down. Route-local, like the draft. */
+  const [toMark, setToMark] = useState<NoShowRow>();
+  /** The row last pressed, which keeps the focus target once the sheet is down. */
+  const [askedAbout, setAskedAbout] = useState<string>();
+  const opener = useRef<View>(null);
+  /**
+   * **The rows of *Didn't come?*** — a booked game's alone, and the domain's to fill
+   * (`noShowRows`): every other player, a checked-in one without a control.
+   */
+  const rows = booked === undefined ? [] : noShowRows(game, playerId, booked.checkedIn);
+
+  /**
+   * **A new act clears what the last one was refused**, so the footer's one sentence is always
+   * about the act just taken — four writes share it, and a refused mark must not stand over a
+   * score that went through.
+   */
+  function clearRefusals(): void {
+    for (const write of [state, accept, report, dispute]) if (write.isError) write.reset();
+  }
 
   /**
    * The grid, or nothing when it is closed. **Route-local**, because it is a draft rather than a
@@ -378,10 +456,25 @@ function Argument({
       setProblem(COUNTER_IS_THEIR_SCORE);
       return;
     }
+    clearRefusals();
     state.mutate(
       { gameId: game.gameId, score: reading.score },
       { onSuccess: () => setDraft(undefined) },
     );
+  }
+
+  /** A row pressed: the sheet asks about that player, and focus comes back to that row. */
+  function ask(row: NoShowRow): void {
+    setAskedAbout(row.playerId);
+    setToMark(row);
+  }
+
+  /** The sheet confirmed: it goes down at once, and the mark happens on the row (`NoShowSheet`). */
+  function mark(): void {
+    if (toMark === undefined) return;
+    setToMark(undefined);
+    clearRefusals();
+    report.mutate({ gameId: game.gameId, playerId: toMark.playerId });
   }
 
   /**
@@ -404,237 +497,301 @@ function Argument({
   // **On the plan lead the eyebrow says the format and the card draws the court**, so the shape
   // line would be the same fact a third time.
   const shape = planLead ? undefined : courtLine(ours, theirs);
-  const rule = doorsInTheScroll ? undefined : resultBody(argument);
+  const rule = doorsInTheScroll
+    ? undefined
+    : resultBody(argument, { booked: booked !== undefined });
+  /** Everybody else's report, one line each, while a report's day runs (#560). */
+  const reports = reportLines(argument, game.readAt);
   const outcome = argument.kind === 'confirmed' ? outcomeLine(argument.outcome) : undefined;
   // The entry window is the standing line's clause on all four entry arms, so the block never
   // draws over one: a 40pt figure counting down to *recorded as one that never happened* is not
   // what a game six days away is about, and on the score-led arm the grid is over it anyway.
   const clock = open === undefined && !entryArm ? clockLine(argument, game.readAt) : undefined;
   const sending = state.isPending && !state.isPaused;
-  // Two mutations, one at a time by construction — the grid is either open or it is not — so one
-  // sentence rather than two identical blocks that could never both be right.
-  const failure = state.error ?? accept.error;
-  const paused = state.isPaused || accept.isPaused;
+  // The acts here run one at a time by construction — the grid is open or it is not, the sheet is
+  // up or it is not, and a report takes the score away — so one sentence rather than four identical
+  // blocks that could never all be right.
+  const refused = state.error ?? accept.error ?? dispute.error;
+  const failure =
+    report.error !== null
+      ? markErrorMessage(report.error)
+      : refused === null
+        ? undefined
+        : gameErrorMessage(refused);
+  const paused = state.isPaused || accept.isPaused || report.isPaused || dispute.isPaused;
 
   return (
-    <ShellScreen
-      // No title on the plan lead: the eyebrow is the heading there (10.3 as amended by #414).
-      title={planLead ? undefined : resultTitle(argument)}
-      eyebrow={eyebrow}
-      onBack={router.back}
-      // Nothing is pinned on the plan lead while the grid is closed — the design pins nothing,
-      // and its two doors sit in the scroll under the plan. The grid opening brings the footer
-      // back with the send and the way out, exactly as on every other arm.
-      action={
-        doorsInTheScroll ? undefined : (
-          <Footer>
-            {/* Part 11: the sentence sits **beside the act that is waiting**, which is here rather
-              than in the page — a paused mutation is not in flight at all, and a note that
-              scrolled would be a note about a control the player cannot see. */}
-            {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
-            {failure === null ? null : (
-              <Note variant="coral" accessibilityRole="alert">
-                {gameErrorMessage(failure)}
-              </Note>
-            )}
-
-            {open !== undefined && act !== undefined ? (
-              <>
-                <Button
-                  label={submitLabel(act)}
-                  accessibilityLabel={submitLabelFor(submitLabel(act), open, game.sport)}
-                  onPress={send}
-                  busy={sending}
-                  busyLabel={SENDING_LABEL}
-                />
-                {gridIsTheScreen ? null : (
-                  <Button
-                    label={CANCEL_LABEL}
-                    variant="secondary"
-                    onPress={() => {
-                      setDraft(undefined);
-                      setProblem(undefined);
-                    }}
-                  />
+    <>
+      <View style={s.root} {...behindOverlay(toMark !== undefined)}>
+        <ShellScreen
+          // No title on the plan lead: the eyebrow is the heading there (10.3 as amended by #414).
+          title={planLead ? undefined : resultTitle(argument)}
+          eyebrow={eyebrow}
+          onBack={router.back}
+          // Nothing is pinned on the plan lead while the grid is closed — the design pins nothing,
+          // and its two doors sit in the scroll under the plan. The grid opening brings the footer
+          // back with the send and the way out, exactly as on every other arm.
+          action={
+            doorsInTheScroll ? undefined : (
+              <Footer>
+                {/* Part 11: the sentence sits **beside the act that is waiting**, which is here rather
+                  than in the page — a paused mutation is not in flight at all, and a note that
+                  scrolled would be a note about a control the player cannot see. */}
+                {paused ? <Note variant="amber">{offlineMessage('resumes')}</Note> : null}
+                {failure === undefined ? null : (
+                  <Note variant="coral" accessibilityRole="alert">
+                    {failure}
+                  </Note>
                 )}
-              </>
-            ) : (
-              <>
-                {/* No *We played* here any more: on the plan lead it is in the scroll under the
-                  chat door, and on the score lead the grid is the screen, so no entry arm reaches
-                  this branch with the grid closed. What is left is the answer arms' three acts. */}
 
-                {/* Whether an agreement stands is the response's answer and `actsOffered`'s to
-                  fold — `accept.isSuccess` only covers the round trip between the tap and the
-                  list catching up, which is the echo and not the fact. */}
-                {acts.includes('accept') && theirScore !== undefined && !accept.isSuccess ? (
-                  <Button
-                    label={ACCEPT_LABEL}
-                    accessibilityLabel={acceptLabel({
-                      score: theirScore.score,
-                      sport: game.sport,
-                      mine: side,
-                      sides,
-                    })}
-                    onPress={() => accept.mutate(game.gameId)}
-                    busy={accept.isPending && !accept.isPaused}
-                    busyLabel={SENDING_LABEL}
-                  />
-                ) : null}
-                {acts.includes('counter') && theirScore !== undefined ? (
-                  <Button
-                    label={COUNTER_LABEL}
-                    accessibilityLabel={COUNTER_A11Y_LABEL}
-                    variant="secondary"
-                    onPress={() => edit(draftFrom(theirScore.score, game.sport))}
-                  />
-                ) : null}
-                {acts.includes('correct') && ourScore !== undefined ? (
-                  <Button
-                    label={CORRECT_LABEL}
-                    variant="secondary"
-                    onPress={() => edit(draftFrom(ourScore.score, game.sport))}
-                  />
-                ) : null}
-              </>
-            )}
-          </Footer>
-        )
-      }
-    >
-      {/* The standing line goes on the plan lead: the card's bars say what is agreed and the
-          counter says how much, and the window left is a fact about a game whose day is here,
-          which this lead's is not. */}
-      {planLead ? null : <Text style={s.line}>{standingLine(argument, game.readAt)}</Text>}
+                {open !== undefined && act !== undefined ? (
+                  <>
+                    <Button
+                      label={submitLabel(act)}
+                      accessibilityLabel={submitLabelFor(submitLabel(act), open, game.sport)}
+                      onPress={send}
+                      busy={sending}
+                      busyLabel={SENDING_LABEL}
+                    />
+                    {gridIsTheScreen ? null : (
+                      <Button
+                        label={CANCEL_LABEL}
+                        variant="secondary"
+                        onPress={() => {
+                          setDraft(undefined);
+                          setProblem(undefined);
+                        }}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* No *We played* here any more: on the plan lead it is in the scroll under the
+                      chat door, and on the score lead the grid is the screen, so no entry arm reaches
+                      this branch with the grid closed. What is left is the answer arms' three acts. */}
 
-      {/* The plan lead's head: the Now card without its doors, the fill directly under it where
-          the card says *needs a player* (ADR-0175 §4), and the court's pairing under both. Three
-          slots this screen draws in order and cannot read; the fill stands down with the doors
-          while the grid is open. */}
-      {planLead ? card : null}
-      {planLead && doorsInTheScroll ? fill : null}
-      {planLead ? court : null}
+                    {/* Whether an agreement stands is the response's answer and `actsOffered`'s to
+                      fold — `accept.isSuccess` only covers the round trip between the tap and the
+                      list catching up, which is the echo and not the fact. */}
+                    {acts.includes('accept') && theirScore !== undefined && !accept.isSuccess ? (
+                      <Button
+                        label={ACCEPT_LABEL}
+                        accessibilityLabel={acceptLabel({
+                          score: theirScore.score,
+                          sport: game.sport,
+                          mine: side,
+                          sides,
+                        })}
+                        onPress={() => {
+                          clearRefusals();
+                          accept.mutate(game.gameId);
+                        }}
+                        busy={accept.isPending && !accept.isPaused}
+                        busyLabel={SENDING_LABEL}
+                      />
+                    ) : null}
+                    {acts.includes('counter') && theirScore !== undefined ? (
+                      <Button
+                        label={COUNTER_LABEL}
+                        accessibilityLabel={COUNTER_A11Y_LABEL}
+                        variant="secondary"
+                        onPress={() => edit(draftFrom(theirScore.score, game.sport))}
+                      />
+                    ) : null}
+                    {acts.includes('correct') && ourScore !== undefined ? (
+                      <Button
+                        label={CORRECT_LABEL}
+                        variant="secondary"
+                        onPress={() => edit(draftFrom(ourScore.score, game.sport))}
+                      />
+                    ) : null}
+                    {/* *I was there* — the marked player's, inside their day (#560). Whether it is
+                      offered is the list's answer; `isSuccess` covers only the echo before it lands. */}
+                    {acts.includes('dispute') && !dispute.isSuccess ? (
+                      <Button
+                        label={DISPUTE_LABEL}
+                        onPress={() => {
+                          clearRefusals();
+                          dispute.mutate(game.gameId);
+                        }}
+                        busy={dispute.isPending && !dispute.isPaused}
+                        busyLabel={SENDING_LABEL}
+                      />
+                    ) : null}
+                  </>
+                )}
+              </Footer>
+            )
+          }
+        >
+          {/* The standing line goes on the plan lead: the card's bars say what is agreed and the
+              counter says how much, and the window left is a fact about a game whose day is here,
+              which this lead's is not. */}
+          {planLead ? null : <Text style={s.line}>{standingLine(argument, game.readAt)}</Text>}
 
-      {/* The plan, high on the page, because on two of the four entry arms it is what the player
-          came for. It is drawn on this arm alone: the four confirm arms and the three endings are
-          #314's, built and untouched, and a plan panel over a settled score would be an agreement
-          about an evening that has already happened. */}
-      {entryArm ? plan : null}
+          {/* The plan lead's head: the Now card without its doors, the fill directly under it where
+              the card says *needs a player* (ADR-0175 §4), and the court's pairing under both. Three
+              slots this screen draws in order and cannot read; the fill stands down with the doors
+              while the grid is open. */}
+          {planLead ? card : null}
+          {planLead && doorsInTheScroll ? fill : null}
+          {planLead ? court : null}
 
-      {/* The one door on the plan lead: *We played*, quiet, in the scroll, because nothing is
-          pinned here. It stands down while the grid is open, when the pinned footer carries the
-          send and the way out. It is the domain's to offer, and it withholds it while a seat is
-          open (#411 rule 5). */}
-      {doorsInTheScroll && acts.includes('enter') ? (
-        <Button
-          label={WE_PLAYED}
-          variant="secondary"
-          onPress={() => edit(emptyDraft(game.sport))}
-        />
-      ) : null}
+          {/* The plan, high on the page, because on two of the four entry arms it is what the player
+              came for. It is drawn on this arm alone: the four confirm arms and the three endings are
+              #314's, built and untouched, and a plan panel over a settled score would be an agreement
+              about an evening that has already happened. */}
+          {entryArm ? plan : null}
 
-      {rule === undefined ? null : <Text style={s.body}>{rule}</Text>}
-      {worth === undefined ? null : <Text style={s.body}>{worth}</Text>}
-      {outcome === undefined ? null : <Text style={s.outcome}>{outcome}</Text>}
-      {ours === 0 || shape === undefined ? null : <Text style={s.body}>{shape}</Text>}
+          {/* The one door on the plan lead: *We played*, quiet, in the scroll, because nothing is
+              pinned here. It stands down while the grid is open, when the pinned footer carries the
+              send and the way out. It is the domain's to offer, and it withholds it while a seat is
+              open (#411 rule 5). */}
+          {doorsInTheScroll && acts.includes('enter') ? (
+            <Button
+              label={WE_PLAYED}
+              variant="secondary"
+              onPress={() => edit(emptyDraft(game.sport))}
+            />
+          ) : null}
 
-      {argument.kind === 'unscored' ? (
-        <View style={s.facts}>
-          {UNSCORED_FACTS.map((fact) => (
-            <View key={fact} style={s.factRow}>
-              <View style={s.factDot} />
-              <Text style={s.factText}>{fact}</Text>
+          {rule === undefined ? null : <Text style={s.body}>{rule}</Text>}
+          {worth === undefined ? null : <Text style={s.body}>{worth}</Text>}
+          {outcome === undefined ? null : <Text style={s.outcome}>{outcome}</Text>}
+          {ours === 0 || shape === undefined ? null : <Text style={s.body}>{shape}</Text>}
+
+          {reports.length === 0 ? null : (
+            <View style={s.facts}>
+              {reports.map((line) => (
+                <View key={line} style={s.factRow}>
+                  <View style={s.factDot} />
+                  <Text style={s.factText}>{line}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
-      ) : null}
-
-      {argument.kind === 'confirmed' && argument.score !== undefined ? (
-        <View style={s.block}>
-          <ScoreTable
-            score={argument.score}
-            sport={game.sport}
-            mine={side}
-            sides={sides}
-            lead={SCORE_LEAD.agreed}
-          />
-        </View>
-      ) : null}
-
-      {/* Our own score, quiet wherever it is context rather than the subject: beside the other
-          side's on a disagreement, and beside the grid while it is being corrected. */}
-      {ourScore === undefined ? null : (
-        <View style={s.block}>
-          <ScoreTable
-            score={ourScore.score}
-            sport={game.sport}
-            mine={side}
-            sides={sides}
-            quiet={ourScoreIsContext}
-            lead={SCORE_LEAD.ours}
-          />
-        </View>
-      )}
-
-      {/* The score being answered stays on screen beside the one being typed — variant C's own
-          arrangement, and the thing it said only a route had room for. On a disagreement it is
-          also the score the one control agrees with, which is why it is the loud one. The
-          *THEIRS* heading is on this table alone now: it used to sit over whichever score was
-          standing, which put it over the reader's **own** score while they corrected it. */}
-      {theirScore === undefined ? null : (
-        <View style={s.block}>
-          {open === undefined ? null : <Text style={s.attrib}>{STILL_ON_THE_TABLE}</Text>}
-          <ScoreTable
-            score={theirScore.score}
-            sport={game.sport}
-            mine={side}
-            sides={sides}
-            quiet={open !== undefined}
-            lead={theirLead}
-          />
-        </View>
-      )}
-
-      {/* The clock, big enough to read at arm's length. It is the whole of *silence confirming
-          is visible before it happens*, and it stands down while a score is being typed. */}
-      {clock === undefined ? null : (
-        <View style={s.clock} accessible accessibilityLabel={`${clock.figure} ${clock.line}`}>
-          <Text style={s.clockFigure}>{clock.figure}</Text>
-          <Text style={s.clockLine}>{clock.line}</Text>
-        </View>
-      )}
-
-      {open !== undefined ? (
-        <View style={s.block}>
-          {/* The heading exists to keep two tables apart, so it is drawn when there is another
-              one — which is every state but the entry, where the grid is the whole screen. */}
-          {ourScore === undefined && theirScore === undefined ? null : (
-            <Text style={s.attrib}>{YOURS}</Text>
           )}
-          <ScoreEntry draft={open} onChange={edit} sport={game.sport} mine={side} sides={sides} />
-        </View>
-      ) : null}
 
-      {/* This one stays in the page, under the grid it is about — it names a cell. */}
-      {problem === undefined ? null : (
-        <Note variant="coral" accessibilityRole="alert">
-          {problem}
-        </Note>
-      )}
+          {argument.kind === 'unscored' ? (
+            <View style={s.facts}>
+              {UNSCORED_FACTS.map((fact) => (
+                <View key={fact} style={s.factRow}>
+                  <View style={s.factDot} />
+                  <Text style={s.factText}>{fact}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
-      {/* **How were they** — last, and under everything this screen exists to say. The moment a
-          player has to think about how an evening went is the moment they are looking at what
-          came of it, which is this screen and not a row in a list.
+          {argument.kind === 'confirmed' && argument.score !== undefined ? (
+            <View style={s.block}>
+              <ScoreTable
+                score={argument.score}
+                sport={game.sport}
+                mine={side}
+                sides={sides}
+                lead={SCORE_LEAD.agreed}
+              />
+            </View>
+          ) : null}
 
-          It is handed the game and asks nothing about the state: *whether* a card is open is the
-          server's answer, and it is open only once the result has settled and only between the
-          day after and a week later. So it draws on `confirmed` and `unscored` and on nothing
-          else — which is also every state where `actsOffered` is empty, so the card's own send is
-          never a second control beside a pinned one. Nothing here re-derives any of that: a
-          second spelling of that window would eventually disagree with the one the send is judged
-          against, and it would disagree silently. */}
-      <StarCardSection court={game} />
-    </ShellScreen>
+          {/* Our own score, quiet wherever it is context rather than the subject: beside the other
+              side's on a disagreement, and beside the grid while it is being corrected. */}
+          {ourScore === undefined ? null : (
+            <View style={s.block}>
+              <ScoreTable
+                score={ourScore.score}
+                sport={game.sport}
+                mine={side}
+                sides={sides}
+                quiet={ourScoreIsContext}
+                lead={SCORE_LEAD.ours}
+              />
+            </View>
+          )}
+
+          {/* The score being answered stays on screen beside the one being typed — variant C's own
+              arrangement, and the thing it said only a route had room for. On a disagreement it is
+              also the score the one control agrees with, which is why it is the loud one. The
+              *THEIRS* heading is on this table alone now: it used to sit over whichever score was
+              standing, which put it over the reader's **own** score while they corrected it. */}
+          {theirScore === undefined ? null : (
+            <View style={s.block}>
+              {open === undefined ? null : <Text style={s.attrib}>{STILL_ON_THE_TABLE}</Text>}
+              <ScoreTable
+                score={theirScore.score}
+                sport={game.sport}
+                mine={side}
+                sides={sides}
+                quiet={open !== undefined}
+                lead={theirLead}
+              />
+            </View>
+          )}
+
+          {/* The clock, big enough to read at arm's length. It is the whole of *silence confirming
+              is visible before it happens*, and it stands down while a score is being typed. */}
+          {clock === undefined ? null : (
+            <View style={s.clock} accessible accessibilityLabel={`${clock.figure} ${clock.line}`}>
+              <Text style={s.clockFigure}>{clock.figure}</Text>
+              <Text style={s.clockLine}>{clock.line}</Text>
+            </View>
+          )}
+
+          {open !== undefined ? (
+            <View style={s.block}>
+              {/* The heading exists to keep two tables apart, so it is drawn when there is another
+                  one — which is every state but the entry, where the grid is the whole screen. */}
+              {ourScore === undefined && theirScore === undefined ? null : (
+                <Text style={s.attrib}>{YOURS}</Text>
+              )}
+              <ScoreEntry
+                draft={open}
+                onChange={edit}
+                sport={game.sport}
+                mine={side}
+                sides={sides}
+              />
+            </View>
+          ) : null}
+
+          {/* This one stays in the page, under the grid it is about — it names a cell. */}
+          {problem === undefined ? null : (
+            <Note variant="coral" accessibilityRole="alert">
+              {problem}
+            </Note>
+          )}
+
+          {/* *Didn't come?* — under the grid, beside the entry it stands in for (#560). */}
+          <NoShowBlock
+            rows={rows}
+            onMark={ask}
+            marking={report.isPending && !report.isPaused ? report.variables?.playerId : undefined}
+            opener={opener}
+            askedAbout={askedAbout}
+          />
+
+          {/* **How were they** — last, and under everything this screen exists to say. The moment a
+              player has to think about how an evening went is the moment they are looking at what
+              came of it, which is this screen and not a row in a list.
+
+              It is handed the game and asks nothing about the state: *whether* a card is open is the
+              server's answer, and it is open only once the result has settled and only between the
+              day after and a week later. So it draws on `confirmed` and `unscored` and on nothing
+              else — which is also every state where `actsOffered` is empty, so the card's own send is
+              never a second control beside a pinned one. Nothing here re-derives any of that: a
+              second spelling of that window would eventually disagree with the one the send is judged
+              against, and it would disagree silently. */}
+          <StarCardSection court={game} />
+        </ShellScreen>
+      </View>
+
+      <NoShowSheet
+        who={toMark?.who}
+        onClose={() => setToMark(undefined)}
+        onMark={mark}
+        returnFocusTo={opener}
+      />
+    </>
   );
 }
 
@@ -644,6 +801,7 @@ function Footer({ children }: { readonly children: ReactNode }) {
 }
 
 const s = StyleSheet.create({
+  root: { flex: 1 },
   footer: { gap: theme.space.sm },
   line: { ...theme.type.h2, color: theme.color.ink },
   body: { ...theme.type.tiny, color: theme.color.muted },

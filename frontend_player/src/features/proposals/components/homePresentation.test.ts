@@ -68,6 +68,38 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
   it('says a seat was empty on a game that started short', () => {
     expect(moneyWords({ kind: 'seatEmpty' })).toBe('A seat was empty · no Level moved');
   });
+
+  /** The club's cancel (#547; the mechanics §16.9): the club named, its reason, the refund. */
+  it('names the club that cancelled, and why, before the refund', () => {
+    expect(
+      moneyWords({
+        kind: 'calledOff',
+        reason: 'CANCELLED_BY_THE_CLUB',
+        clubCancelReason: 'WEATHER',
+        club: 'Bonarka Arena',
+        refundedGrosze: 3000,
+      }),
+    ).toBe('Bonarka Arena cancelled it because of the weather · Refunded 30 zł');
+    expect(
+      moneyWords({
+        kind: 'calledOff',
+        reason: 'CANCELLED_BY_THE_CLUB',
+        clubCancelReason: 'OTHER',
+        club: 'Bonarka Arena',
+        refundedGrosze: 3000,
+      }),
+    ).toBe('Bonarka Arena cancelled it · Refunded 30 zł');
+  });
+
+  /** Somebody didn't come (#560) — said to the player marked as theirs to answer. */
+  it('tells the player marked that they were, and everybody else that somebody didn’t come', () => {
+    expect(moneyWords({ kind: 'noShow', yours: true })).toBe(
+      'You were marked as not coming · say so if you were there',
+    );
+    expect(moneyWords({ kind: 'noShow', yours: false })).toBe(
+      'Somebody didn’t come · no Level moved',
+    );
+  });
 });
 
 describe('statusSubline — the details’ second line', () => {

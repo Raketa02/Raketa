@@ -240,7 +240,48 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
       return 'Nobody agreed a score.';
     case 'started-short':
       return SEAT_WAS_EMPTY;
+    case 'no-show-reported': {
+      // The marked player's own line says how long they have, as a score's says how long silence
+      // takes: what happens when it runs out is visible before it does (#560).
+      const { yours } = argument;
+      if (yours === undefined) {
+        const marked = argument.others.map((mark) => playerName(mark.who));
+        return `${sentenceList(marked)} ${marked.length > 1 ? 'were' : 'was'} marked as not coming.`;
+      }
+      switch (yours.state) {
+        case 'open':
+          return `You were marked as not coming. ${durationLeft(yours.disputeBy, readAt)} left to say you were there.`;
+        case 'disputed':
+          return 'You said you were there, so the mark is gone.';
+        case 'stood':
+          return 'You were marked as not coming, and your day to say otherwise has passed.';
+      }
+    }
+    case 'no-show':
+      return argument.didNotCome.length === 0
+        ? 'Somebody didn’t come.'
+        : `${sentenceList(argument.didNotCome.map(playerName))} didn’t come.`;
   }
+}
+
+/**
+ * **Everybody else's report, one line each** (#560) — what became of it: their day still running,
+ * and how long it has; said they were there; or the day over and nobody said so. The reader's own
+ * report is the standing line's and the clock's, so it is not repeated here.
+ */
+export function reportLines(argument: ResultArgument, readAt: string): readonly string[] {
+  if (argument.kind !== 'no-show-reported') return [];
+  return argument.others.map((mark) => {
+    const name = playerName(mark.who);
+    switch (mark.state) {
+      case 'open':
+        return `${name} — ${durationLeft(mark.disputeBy, readAt)} left to say they were there`;
+      case 'disputed':
+        return `${name} says they were there`;
+      case 'stood':
+        return `${name} didn’t come`;
+    }
+  });
 }
 
 /** *A seat was empty.* — the standing line of a booked game that started short (#544). */
@@ -319,7 +360,19 @@ export function resultTitle(argument: ResultArgument): string {
       return 'The result';
     case 'unscored':
     case 'started-short':
+    case 'no-show':
       return 'No result';
+    case 'no-show-reported':
+      switch (argument.yours?.state) {
+        case undefined:
+          return 'Somebody didn’t come';
+        case 'open':
+          return 'Were you there?';
+        case 'disputed':
+          return 'You said you were there';
+        case 'stood':
+          return 'Marked as not coming';
+      }
   }
 }
 
@@ -360,6 +413,13 @@ export function clockLine(argument: ResultArgument, readAt: string): ClockBlock 
       line: 'until this becomes the result. Nobody has to do anything — silence confirms it.',
     };
   }
+  // The marked player's day, at arm's length — what saying nothing does, before it happens (#560).
+  if (argument.kind === 'no-show-reported' && argument.yours?.state === 'open') {
+    return {
+      figure: durationLeft(argument.yours.disputeBy, readAt),
+      line: 'left to say you were there. After that the mark stands.',
+    };
+  }
   if (argument.kind === 'awaiting-entry' && argument.entryClosesAt !== undefined) {
     return {
       figure: durationLeft(argument.entryClosesAt, readAt),
@@ -397,12 +457,19 @@ export const UNSCORED_FACTS: readonly string[] = [
  * `undefined` where the standing line has already said the whole of it: a second sentence
  * restating the first is what teaches somebody to stop reading the first.
  */
-export function resultBody(argument: ResultArgument): string | undefined {
+export function resultBody(
+  argument: ResultArgument,
+  { booked = false }: { readonly booked?: boolean } = {},
+): string | undefined {
   switch (argument.kind) {
     case 'awaiting-entry':
       // ADR-0137 §2 for a player: there is no booking behind any of this, so the entry is not
-      // paperwork about a game the platform already knows about — it *is* the record.
-      return 'Putting a score in is what records that this game happened. There is nothing else behind it — no booking, no calendar.';
+      // paperwork about a game the platform already knows about — it *is* the record. **A booked
+      // game has a booking behind it** (#556), and somebody may not have come to it (#560), so it
+      // says the other thing that can be said instead of a score.
+      return booked
+        ? 'Putting a score in records how this game went. If somebody didn’t come, say so below instead.'
+        : 'Putting a score in is what records that this game happened. There is nothing else behind it — no booking, no calendar.';
     case 'never-played':
       return NOBODY_IS_MARKED_FOR_THAT;
     // The fourth end is drawn as the ghost is (#419 §3): neither an evening nor a game that never
@@ -438,6 +505,24 @@ export function resultBody(argument: ResultArgument): string | undefined {
       // The mechanics §14.1: *it cannot take a result … no levels move, and nothing goes on the
       // record of the players who stayed*.
       return 'Somebody left after the club’s cut-off and nobody took the seat, so this game can’t take a result. No Level moved, and nobody who stayed is marked for it.';
+    case 'no-show-reported': {
+      // Nobody arbitrates (the mechanics §15.3): a dispute falls the report whole, silence lets it
+      // stand, and the game does not count either way.
+      switch (argument.yours?.state) {
+        case undefined:
+          return 'Each of them has a day to say they were there; if they don’t, the mark stands. Either way the game doesn’t count and no Level moves — and nobody who came is marked for it.';
+        case 'open':
+          return 'If you were there, say so: the mark falls and nothing goes on your record. If you don’t, it stands — not turning up is the strongest mark on a record. The game doesn’t count either way, and no Level moves.';
+        case 'disputed':
+          return 'Raketa doesn’t decide who is right, so the game doesn’t count and no Level moves — and nothing about it is on your record.';
+        case 'stood':
+          return 'The game doesn’t count, and no Level moves.';
+      }
+    }
+    case 'no-show':
+      return argument.didNotCome.some((who) => who.kind === 'you')
+        ? 'Nobody said otherwise in time, so the mark stands: the game didn’t count, and not turning up is the strongest mark on a record.'
+        : 'The game didn’t count and no Level moved. Nobody who came is marked for it.';
     case 'not-yours':
     case 'unreadable':
     case 'confirmed':
@@ -665,6 +750,59 @@ export function submitLabel(act: 'enter' | 'correct' | 'counter'): string {
 
 /** The busy label under every one of them — the same act, still happening. */
 export const SENDING_LABEL = 'Sending…';
+
+// ---------------------------------------------------------------------------
+// Somebody didn't come (#560; the Games & Fill in mechanics §15.3)
+// ---------------------------------------------------------------------------
+
+/**
+ * The block's eyebrow, where a booked game's result is entered. Stored as words and drawn
+ * uppercase, `BALANCE_FORECAST`'s rule.
+ */
+export const DIDNT_COME = 'Didn’t come?';
+
+/** The one line under it — when to use it, and what it does, before anybody presses. */
+export const DIDNT_COME_LINE =
+  'Only for somebody who didn’t turn up at all. The game then doesn’t count, and they get a day to say they were there.';
+
+/**
+ * ***Kuba Nowak didn't come*** — the control on a row, and the act on the sheet: the mechanics'
+ * own words, the name **whole** (ADR-0171), never a first name derived from it.
+ */
+export function didNotComeLabel(who: NamedPlayer): string {
+  return `${playerName(who)} didn’t come`;
+}
+
+/** The row of a player the club's desk checked in — drawn, and nothing to press. */
+export function checkedInLine(who: NamedPlayer): string {
+  return `${playerName(who)} · checked in at the club`;
+}
+
+/**
+ * The sheet's title names **the moment**, so the act is named once — by the control that carries it
+ * out — on the leave sheet's rule.
+ */
+export const NO_SHOW_SHEET_TITLE = 'Before you say so';
+
+/** The sheet's dismissal, named by what it does. */
+export const NO_SHOW_SHEET_CLOSE_LABEL = 'Don’t mark anybody';
+
+/**
+ * **The sheet's three lines** — when it is for, what it does to the game, and what it does to them:
+ * the mechanics' 24 hours, said before the report as the product's rule; after it, the screen reads
+ * the server's own instant.
+ */
+export function noShowSheetBody(who: NamedPlayer): readonly string[] {
+  const name = playerName(who);
+  return [
+    `Say this only if ${name} didn’t turn up at all — not for being late.`,
+    'The game won’t count, and nobody’s Level moves.',
+    `${name} gets 24 hours to say they were there. If they don’t, it stands — the strongest mark on a record.`,
+  ];
+}
+
+/** ***I was there*** — the marked player's dispute, pinned while their day runs. */
+export const DISPUTE_LABEL = 'I was there';
 
 /**
  * The rub-out key. **A word rather than ⌫**, for the reason the on-court mark is a word rather

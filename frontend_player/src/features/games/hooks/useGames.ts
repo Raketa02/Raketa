@@ -8,6 +8,8 @@
  * | `useStateResult` | `POST /result` — the entry, the correction and the counter |
  * | `useAcceptResult` | `POST /result/acceptance` — from across the net, one is enough |
  * | `useDismissGame` | `POST /dismissal` — *Remove this card*, the reader's own, on a called-off game |
+ * | `useReportNoShow` | `POST /no-shows` — *Kuba didn't come*, on a booked game (#560) |
+ * | `useDisputeNoShow` | `POST /no-shows/dispute` — *I was there*, the reported player's (#560) |
  *
  * ## Both writes invalidate and neither is optimistic
  *
@@ -37,11 +39,21 @@ import { challengeKeys, dropCourtOfGame } from '@/features/challenges/types';
 import type { Game } from '../domain/game';
 import { acceptResult } from '../use-cases/acceptResult';
 import { dismissGame } from '../use-cases/dismissGame';
+import { disputeNoShow, reportNoShow, type NoShowToReport } from '../use-cases/noShows';
 import { readGames } from '../use-cases/readGames';
 import { stateResult, type StatedResult } from '../use-cases/stateResult';
 
 import { dropCardOfGame } from './gameCache';
 import { gameKeys } from './gameKeys';
+
+/**
+ * **What a composer re-reads once a write lands** — a booked game's Home and details, which this
+ * feature cannot name (#560). Run from the mutation rather than from the press, so a write that
+ * waited out a lost connection still re-reads them after the screen that sent it has gone.
+ */
+export interface AfterAWrite {
+  readonly reread?: () => void;
+}
 
 export function useGames() {
   return useQuery<readonly Game[], AppError>({
@@ -72,25 +84,63 @@ export function useGame(gameId: string | undefined) {
 }
 
 /** *This is the score* — the entry, the correction and the counter, which are one request. */
-export function useStateResult() {
+export function useStateResult({ reread }: AfterAWrite = {}) {
   const client = useQueryClient();
 
   return useMutation<void, AppError, StatedResult>({
     mutationFn: stateResult,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: gameKeys.list() });
+      reread?.();
     },
   });
 }
 
 /** *That is what happened* — and it goes on offering the disagreement until the grace passes. */
-export function useAcceptResult() {
+export function useAcceptResult({ reread }: AfterAWrite = {}) {
   const client = useQueryClient();
 
   return useMutation<void, AppError, string>({
     mutationFn: acceptResult,
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: gameKeys.list() });
+      reread?.();
+    },
+  });
+}
+
+/**
+ * ***Kuba didn't come*** — a no-show report (#560). Invalidates and is never optimistic, as the
+ * result's writes are: what the game becomes — the report waiting out its day — is the server's
+ * fold. It pauses offline like them too: the reported player's day runs from the report landing,
+ * so nothing about it is fixed by the moment it is tapped.
+ */
+export function useReportNoShow({ reread }: AfterAWrite = {}) {
+  const client = useQueryClient();
+
+  return useMutation<void, AppError, NoShowToReport>({
+    mutationFn: reportNoShow,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: gameKeys.list() });
+      reread?.();
+    },
+  });
+}
+
+/**
+ * ***I was there*** — the reported player's dispute (#560). The same posture: invalidate, never
+ * optimistic, pause offline. **It does carry a deadline** — the report's day — and a dispute queued
+ * past it is refused by name (`the_dispute_window_has_closed`) and said so, rather than sent
+ * early by a rule this side would have to restate.
+ */
+export function useDisputeNoShow({ reread }: AfterAWrite = {}) {
+  const client = useQueryClient();
+
+  return useMutation<void, AppError, string>({
+    mutationFn: disputeNoShow,
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: gameKeys.list() });
+      reread?.();
     },
   });
 }

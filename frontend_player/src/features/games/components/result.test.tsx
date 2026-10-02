@@ -84,6 +84,7 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
       { side: 'B', player_id: OPPONENT, name: THEIR_HANDLE },
     ],
     proposals: [],
+    no_shows: [],
     ...over,
   };
 }

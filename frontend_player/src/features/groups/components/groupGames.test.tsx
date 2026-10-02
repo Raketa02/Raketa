@@ -330,6 +330,9 @@ describe('the states around the deck', () => {
       return errorResponse(429, 'rate_limited');
     });
     await launchSignedIn();
+    // The deck's own clock, as `openGames` pins it: on the real one the card's book-by — two days
+    // after the read — has passed since 2 October 2026, and the retried deck draws nothing.
+    jest.setSystemTime(DECK_READ_AT);
     fireEvent.press(await screen.findByLabelText('Play'));
     fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
 

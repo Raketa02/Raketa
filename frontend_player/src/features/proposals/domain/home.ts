@@ -20,6 +20,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import type { DeckCard } from './deck';
 import type {
   CalledOffReason,
+  ClubCancelReason,
   GameKind,
   HomeStatus,
   LeavingKind,
@@ -59,11 +60,16 @@ export interface HomeGame {
   readonly status: HomeStatus;
   /** Why it is `CALLED_OFF` — absent on every other status. */
   readonly calledOffReason?: CalledOffReason;
+  /** Why the club cancelled it — present with `CANCELLED_BY_THE_CLUB` alone (#547). */
+  readonly clubCancelReason?: ClubCancelReason;
   /** Why it is `UNCOUNTED` with nobody disagreeing about a score — absent otherwise. */
   readonly uncountedReason?: UncountedReason;
   /** Seats somebody left and nobody has taken yet — *1 seat open* (#544). */
   readonly openSeats: number;
-  /** A result to enter, a score waiting on the reader's agreement, or a seat open in their game. */
+  /**
+   * A result to enter, a score waiting on the reader's agreement, a seat open in their game — or a
+   * report of their not coming, theirs to dispute while its day runs (#560).
+   */
   readonly needsYou: boolean;
   /** The court hour's start; games are an hour. */
   readonly startsAt: string;
@@ -155,6 +161,9 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
  * - `calledOff` — why, and *refunded 30 zł* when the shares came back, *nobody paid* when none was
  *   taken. The club is carried for the two reasons that are the club's.
  * - `seatEmpty` — *Uncounted* because its hour came with a seat still open: no Level moved.
+ * - `noShow` — *Uncounted* because somebody who came marked a player who did not (#560): to that
+ *   player, while they may still say they were there (`yours`, the read's *needs you*), that they
+ *   were marked; to everybody else, that somebody didn't come.
  */
 export type MoneyLine =
   | {
@@ -168,10 +177,13 @@ export type MoneyLine =
   | {
       readonly kind: 'calledOff';
       readonly reason?: CalledOffReason;
+      /** The club's own reason, with `CANCELLED_BY_THE_CLUB` (#547). */
+      readonly clubCancelReason?: ClubCancelReason;
       readonly club?: string;
       readonly refundedGrosze?: number;
     }
-  | { readonly kind: 'seatEmpty' };
+  | { readonly kind: 'seatEmpty' }
+  | { readonly kind: 'noShow'; readonly yours: boolean };
 
 /**
  * **The cut-off, while it is still ahead of `now`** — the instant *free to leave until …* leaves
@@ -190,7 +202,14 @@ export function cutOffAhead(money: BookedMoney, now: number): string | undefined
 export function moneyLineOf(
   game: Pick<
     HomeGame,
-    'status' | 'money' | 'club' | 'openSeats' | 'calledOffReason' | 'uncountedReason'
+    | 'status'
+    | 'money'
+    | 'club'
+    | 'openSeats'
+    | 'calledOffReason'
+    | 'clubCancelReason'
+    | 'uncountedReason'
+    | 'needsYou'
   >,
   now: number,
 ): MoneyLine | undefined {
@@ -220,11 +239,19 @@ export function moneyLineOf(
       return {
         kind: 'calledOff',
         ...(game.calledOffReason === undefined ? {} : { reason: game.calledOffReason }),
+        ...(game.clubCancelReason === undefined ? {} : { clubCancelReason: game.clubCancelReason }),
         ...club,
         ...(money.refundedGrosze === undefined ? {} : { refundedGrosze: money.refundedGrosze }),
       };
     case 'UNCOUNTED':
-      return game.uncountedReason === 'SEAT_EMPTY' ? { kind: 'seatEmpty' } : undefined;
+      switch (game.uncountedReason) {
+        case 'SEAT_EMPTY':
+          return { kind: 'seatEmpty' };
+        case 'NO_SHOW':
+          return { kind: 'noShow', yours: youMayDispute(game) };
+        case undefined:
+          return undefined;
+      }
     case 'NEEDS_RESULT':
     case 'CONFIRM_THE_RESULT':
     case 'COUNTED':
@@ -370,16 +397,42 @@ export function bookedGameIds(games: readonly Pick<HomeGame, 'gameId'>[]): Reado
   return new Set(games.flatMap((game) => (game.gameId === undefined ? [] : [game.gameId])));
 }
 
-/** The result act the details lead to — today's game screen, which tells and agrees a result. */
-export type ResultAct = 'we-played' | 'confirm';
+/**
+ * The result act the details lead to — today's game screen, which tells and agrees a result, and
+ * where a player marked as not coming says they were there (#560).
+ */
+export type ResultAct = 'we-played' | 'confirm' | 'dispute';
 
 /**
  * **What the details offer once the hour has come** — *We played* while nobody has said, *Confirm
- * the result* once a score is on the table — or nothing. The result states are unchanged from
+ * the result* once a score is on the table, and to a player marked as not coming, while their day
+ * runs, the door to saying they were there — or nothing. The result states are unchanged from
  * today (§14.1), so the act is today's screen's; the details are only the door to it.
  */
-export function resultActOf(status: HomeStatus): ResultAct | undefined {
-  if (status === 'NEEDS_RESULT') return 'we-played';
-  if (status === 'CONFIRM_THE_RESULT') return 'confirm';
-  return undefined;
+export function resultActOf(
+  game: Pick<HomeGame, 'status' | 'uncountedReason' | 'needsYou'>,
+): ResultAct | undefined {
+  if (game.status === 'NEEDS_RESULT') return 'we-played';
+  if (game.status === 'CONFIRM_THE_RESULT') return 'confirm';
+  return youMayDispute(game) ? 'dispute' : undefined;
+}
+
+/**
+ * **The reader was marked as not coming, and their day to answer runs** (#560) — the read's *needs
+ * you* on a game uncounted because somebody didn't come: on an uncounted game nobody disagreed
+ * about, a report waiting on the reader is the only thing that needs them. Home's line says it and
+ * the details' door opens on it.
+ */
+function youMayDispute(game: Pick<HomeGame, 'status' | 'uncountedReason' | 'needsYou'>): boolean {
+  return game.status === 'UNCOUNTED' && game.uncountedReason === 'NO_SHOW' && game.needsYou;
+}
+
+/**
+ * **Who the club's desk checked in** — by id, as `games`' result screen is handed them: a player
+ * checked in can never be marked as not coming (#560; the mechanics §15.1).
+ */
+export function checkedInOn(game: Pick<HomeGame, 'sides'>): readonly string[] {
+  return [...game.sides.yours, ...game.sides.theirs].flatMap((person) =>
+    person.checkedIn === true ? [person.playerId] : [],
+  );
 }

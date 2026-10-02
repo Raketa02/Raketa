@@ -143,6 +143,7 @@ function game(standing: Wire['GameSchema']['standing'] = 'AWAITING_ENTRY'): Wire
       { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
+    no_shows: [],
   };
 }
 
@@ -751,6 +752,7 @@ describe('held', () => {
             { side: 'B', player_id: TOMEK, name: 'tomek.p' },
           ],
           proposals: [],
+          no_shows: [],
         },
       ],
       READ_AT,

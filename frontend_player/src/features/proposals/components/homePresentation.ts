@@ -27,6 +27,7 @@ import {
 } from '../domain/home';
 import type {
   CalledOffReason,
+  ClubCancelReason,
   GameKind,
   HomeStatus,
   LeavingKind,
@@ -130,20 +131,41 @@ function moneyParts(line: MoneyLine): readonly string[] {
     }
     case 'calledOff':
       return [
-        ...(line.reason === undefined ? [] : [calledOffWhy(line.reason, line.club)]),
+        ...(line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })]),
         line.refundedGrosze === undefined
           ? money.nobodyPaid
           : `${money.refunded} ${formatZloty(line.refundedGrosze)}`,
       ];
     case 'seatEmpty':
       return [money.seatEmpty, money.noLevelMoved];
+    case 'noShow':
+      return line.yours
+        ? [money.youWereMarked, money.sayIfYouWere]
+        : [money.somebodyDidNotCome, money.noLevelMoved];
   }
 }
 
-/** *A seat was still empty at the cut-off* · *Kazimierz Padel couldn't take it* — why a game is off. */
-function calledOffWhy(reason: CalledOffReason, club: string | undefined): string {
+/**
+ * *A seat was still empty at the cut-off* · *Kazimierz Padel couldn't take it* · *Bonarka Arena
+ * cancelled it because of the weather* — why a game is off: the club named for the three that are
+ * the club's, with its own reason after a cancel (#547).
+ */
+function calledOffWhy({
+  reason,
+  club,
+  clubCancelReason,
+}: {
+  readonly reason: CalledOffReason;
+  readonly club?: string;
+  readonly clubCancelReason?: ClubCancelReason;
+}): string {
   const why = COPY.money.calledOff[reason];
-  return reason === 'SHORT_AT_THE_CUT_OFF' ? why : `${club ?? COPY.money.theClubLead} ${why}`;
+  if (reason === 'SHORT_AT_THE_CUT_OFF') return why;
+  const clause =
+    reason === 'CANCELLED_BY_THE_CLUB' && clubCancelReason !== undefined
+      ? COPY.money.clubCancelled[clubCancelReason]
+      : undefined;
+  return [club ?? COPY.money.theClubLead, why, ...(clause === undefined ? [] : [clause])].join(' ');
 }
 
 /**
@@ -213,7 +235,15 @@ export function bookedTime(
 export function moneyRow(
   game: Pick<
     BookedGame,
-    'status' | 'money' | 'where' | 'openSeats' | 'calledOffReason' | 'uncountedReason' | 'rescue'
+    | 'status'
+    | 'money'
+    | 'where'
+    | 'openSeats'
+    | 'calledOffReason'
+    | 'clubCancelReason'
+    | 'uncountedReason'
+    | 'needsYou'
+    | 'rescue'
   >,
   now: number,
 ): FactWords {
@@ -229,7 +259,7 @@ export function moneyRow(
   const line = moneyLineOf({ ...game, club: game.where }, now);
   switch (line?.kind) {
     case 'calledOff': {
-      const why = line.reason === undefined ? [] : [calledOffWhy(line.reason, line.club)];
+      const why = line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })];
       return line.refundedGrosze === undefined
         ? { label: words.yourShare, value, aside: [...why, words.nobodyPaid].join(LINE_JOIN) }
         : {
@@ -246,6 +276,7 @@ export function moneyRow(
       };
     case 'seatOpen':
     case 'seatEmpty':
+    case 'noShow':
       return { label: share, value, aside: moneyWords(line) };
     case 'booked':
     case undefined: {

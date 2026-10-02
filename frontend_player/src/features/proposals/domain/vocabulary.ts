@@ -78,18 +78,26 @@ export type HomeStatus =
   | 'CALLED_OFF';
 
 /**
- * **Why a game on Home is called off** (#543, #544) — the club refused the request, or did not
- * answer it in time (nobody paid in either), or a seat that opened before the club's cut-off was
- * still empty at it (everybody still in is refunded in full). The wire's own spelling: the line
- * under the card is keyed by it.
+ * **Why a game on Home is called off** (#543, #544, #547) — the club refused the request, or did not
+ * answer it in time (nobody paid in either), a seat that opened before the club's cut-off was still
+ * empty at it, or the club cancelled it (everybody still in is refunded in full in both). The wire's
+ * own spelling: the line under the card is keyed by it.
  */
-export type CalledOffReason = 'REFUSED' | 'NO_ANSWER' | 'SHORT_AT_THE_CUT_OFF';
+export type CalledOffReason =
+  'REFUSED' | 'NO_ANSWER' | 'SHORT_AT_THE_CUT_OFF' | 'CANCELLED_BY_THE_CLUB';
 
 /**
- * **Why a game on Home is uncounted with nobody disagreeing about a score** (#544) — its hour came
- * with a seat still open: *Uncounted · a seat was empty*.
+ * **Why the club cancelled a booked game** (#547; the mechanics §16.9) — the players are told it with
+ * their refund. `OTHER` is no reason given, and the line says none.
  */
-export type UncountedReason = 'SEAT_EMPTY';
+export type ClubCancelReason = 'WEATHER' | 'REPAIR' | 'DOUBLE_BOOKING' | 'OTHER';
+
+/**
+ * **Why a game on Home is uncounted with nobody disagreeing about a score** — its hour came with a
+ * seat still open (#544): *Uncounted · a seat was empty*; or somebody who came marked a player who
+ * did not (#547, #560), and the game does not count whatever the report comes to.
+ */
+export type UncountedReason = 'SEAT_EMPTY' | 'NO_SHOW';
 
 /**
  * **What *Leave the game* costs right now** (the mechanics §13; #544) — before the club's cut-off

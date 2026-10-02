@@ -40,7 +40,18 @@ export type GameStanding =
    * cut-off and nobody took the seat. It takes no result, no Level moves and nobody who stayed is
    * marked for it — *Uncounted · a seat was empty* (the Games & Fill in mechanics §14.1).
    */
-  | 'STARTED_SHORT';
+  | 'STARTED_SHORT'
+  /**
+   * Somebody who came to a booked game marked a player who did not (#547, #560), and a report's
+   * day to dispute it is still running — a wait, like a score on the table. The game does not
+   * count whatever the reports come to (the Games & Fill in mechanics §15.3).
+   */
+  | 'NO_SHOW_REPORTED'
+  /**
+   * Every report that stands has had its day undisputed: the game does not count, nobody's Level
+   * moves, and not coming is the strongest mark on the record of the player who did not.
+   */
+  | 'NO_SHOW';
 
 /**
  * Whether this evening is evidence.

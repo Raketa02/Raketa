@@ -19,6 +19,9 @@ import {
   barLabels,
   clockLine,
   courtLine,
+  didNotComeLabel,
+  noShowSheetBody,
+  reportLines,
   forecastSentence,
   formatEyebrow,
   gameEyebrow,
@@ -50,6 +53,7 @@ const GAME: Game = {
   ],
   plannedAt: '2026-09-01T09:00:00Z',
   proposals: [],
+  noShows: [],
   readAt: READ_AT,
 };
 
@@ -637,5 +641,78 @@ describe('the court’s pairing, in words', () => {
     expect(recordLabel({ name: 'tomek.p', yours: false })).toBe('tomek.p’s record');
     expect(recordLabel({ name: 'tomek.p', yours: true })).toBe('Your record');
     expect(recordLabel({ yours: false })).toBe('?’s record');
+  });
+});
+
+/**
+ * **Somebody didn't come** ([#560](https://github.com/Raketa02/Raketa/issues/560); the mechanics
+ * §15.3). The marked player is told before their day runs out what saying nothing costs, the way
+ * silence is named before a score settles; the others read who was marked and that nobody who came
+ * is blamed; and the mark is never said of a person who said they were there.
+ */
+describe('a no-show report, in words', () => {
+  const KUBA: NamedPlayer = { kind: 'player', name: 'Kuba Nowak' };
+  /** Their day ends 23 hours after `READ_AT`. */
+  const DAY_ENDS = '2026-09-06T08:00:00Z';
+
+  const YOURS: ResultArgument = {
+    kind: 'no-show-reported',
+    yours: { who: YOU, disputeBy: DAY_ENDS, state: 'open' },
+    others: [],
+  };
+  const KUBAS: ResultArgument = {
+    kind: 'no-show-reported',
+    others: [{ who: KUBA, disputeBy: DAY_ENDS, state: 'open' }],
+  };
+
+  it('tells the marked player how long they have, and what saying nothing costs', () => {
+    expect(standingLine(YOURS, READ_AT)).toContain('23 hours');
+    expect(clockLine(YOURS, READ_AT)?.figure).toBe('23 hours');
+    expect(resultBody(YOURS)).toContain('strongest mark');
+  });
+
+  it('names who was marked to everybody else, and blames nobody who came', () => {
+    expect(standingLine(KUBAS, READ_AT)).toContain('Kuba Nowak');
+    expect(resultBody(KUBAS)).toMatch(/nobody who came is marked/i);
+    expect(clockLine(KUBAS, READ_AT)).toBeUndefined();
+    expect(reportLines(KUBAS, READ_AT)).toEqual([
+      'Kuba Nowak — 23 hours left to say they were there',
+    ]);
+  });
+
+  it('never says a player who disputed it did not come', () => {
+    const disputed: ResultArgument = {
+      kind: 'no-show-reported',
+      others: [{ who: KUBA, disputeBy: DAY_ENDS, state: 'disputed' }],
+    };
+    const yoursDisputed: ResultArgument = {
+      kind: 'no-show-reported',
+      yours: { who: YOU, disputeBy: DAY_ENDS, state: 'disputed' },
+      others: [],
+    };
+
+    expect(reportLines(disputed, READ_AT)).toEqual(['Kuba Nowak says they were there']);
+    expect(standingLine(yoursDisputed, READ_AT)).not.toMatch(/marked as not coming/);
+  });
+
+  it('says a mark whose day passed undisputed stood, with no clock left on it', () => {
+    const stood: ResultArgument = {
+      kind: 'no-show-reported',
+      others: [{ who: KUBA, disputeBy: DAY_ENDS, state: 'stood' }],
+    };
+
+    expect(reportLines(stood, READ_AT)).toEqual(['Kuba Nowak didn’t come']);
+  });
+
+  it('ends naming who did not come, and that the game did not count', () => {
+    const ended: ResultArgument = { kind: 'no-show', didNotCome: [KUBA] };
+
+    expect(standingLine(ended, READ_AT)).toBe('Kuba Nowak didn’t come.');
+    expect(resultBody(ended)).toMatch(/didn’t count/);
+  });
+
+  it('names the player whole on the control and the sheet, and gives them their day', () => {
+    expect(didNotComeLabel(KUBA)).toBe('Kuba Nowak didn’t come');
+    expect(noShowSheetBody(KUBA).join(' ')).toContain('Kuba Nowak gets 24 hours');
   });
 });

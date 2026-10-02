@@ -300,3 +300,39 @@ result, no Level moves and nobody who stayed is marked for it. It joins `GameSta
 end — `resultArgument`'s `started-short`, titled _No result_, its standing line _A seat was empty._,
 offering nothing — and the Classic card names it _uncounted_. A booked game is Home's card, so the
 arm is reached only by a link straight to the Game; Home itself says _Uncounted · a seat was empty_.
+
+**A booked game's result can say somebody didn't come, and the player marked can say they came**
+([#560](https://github.com/Raketa02/Raketa/issues/560); the backend's #547; the Games & Fill in
+mechanics §15.3). `NO_SHOW_REPORTED` and `NO_SHOW` join `GameStanding`, and `Game.noShows` carries
+each report — who, whole name, `reportedAt`, `disputeBy`, `disputedAt` — but never who made it: the
+report is the game's. **Two arms**: `no-show-reported` holds the reader's own mark (`yours`) and
+everybody else's (`others`), each a `NoShowMark` — the glossary's verb, _the players who came marking
+one who didn't_ — whose `state` the domain folds: `open` while it is undisputed and `readAt` is still
+before its `disputeBy` (two of the server's instants, never this phone's clock: the backend's
+`may_dispute` asked of the moment the list was folded), `disputed`, or `stood`. So no sentence
+compares instants. `no-show`'s `didNotCome` is the reports nobody disputed. `ResultAct` gains
+`dispute`, _I was there_, offered on an `open` mark of your own and pinned as the `primary` over the
+clock of your day; it is never an editing act. **Marking is not a `ResultAct`**: it is an act per
+person, offered beside the entry rather than instead of it, so `domain/noShows.ts`' `noShowRows`
+folds the rows of the _Didn't come?_ block — every other player on the court in its order, on the
+entry arm with the court whole and on `no-show-reported` for a reader nobody marked, so the second
+player who did not come to a doubles game can be marked after the first; a player the desk checked
+in keeps a row with the reason in words and nothing to press. **Which game is booked, and who was
+checked in, are the booking's**, so `GameScreen` takes an optional `booked` (`BookedFacts`: the
+check-ins, and a `reread` of the booking's own reads that this feature cannot name); a Classic game
+has no block because nobody hands one in. **A row presses and a sheet decides** (`NoShowSheet`, the
+leave sheet's shape: _Before you say so_, three lines, _Don't mark anybody_) — the mark, if it
+stands, is the strongest thing on a record — and focus goes back to the row pressed. Confirming puts
+the sheet away and the mark happens on the row, busy there, a refusal said in the pinned footer with
+the screen's other acts: `gameErrorMessage` gains the two routes' codes, and a mark's own refusals
+(`markErrorMessage`) say a mark came too late where the score's sentence would say the evening went
+unrecorded — the rows outlive the entry window, which is off the wire once a report is made. **A new
+act clears the last one's refusal**, so the footer's one sentence is about the act just taken. The
+writes are `useReportNoShow` / `useDisputeNoShow`: invalidate, never optimistic, pause offline, the
+answer dropped for `stateResult`'s reason. On a booked game the entry's body no longer says _no
+booking, no calendar_ — it says a score records how it went, or to say below that somebody didn't
+come. **Every write on a booked game's result re-reads Home and the booking** — the score and the
+agreement too, which before #560 left Home's status and badge stale until the next refetch: the four
+hooks take an `AfterAWrite` and run its `reread` from the mutation, so a write that waited out a lost
+connection still re-reads after the screen has gone. A game whose every report was disputed is the
+backend's `UNSCORED` and reads as today's evening. **Not seen on a device.**

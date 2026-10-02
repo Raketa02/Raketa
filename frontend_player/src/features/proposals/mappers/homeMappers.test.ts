@@ -12,6 +12,7 @@ const tile = (extra: Partial<Wire['BookedTileSchema']> = {}): Wire['BookedTileSc
   photo_url: null,
   level: 2.95,
   paid: true,
+  checked_in: false,
   ...extra,
 });
 
@@ -23,6 +24,7 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
   kind: 'COMPETITIVE',
   status: 'BOOKED',
   called_off_reason: null,
+  club_cancel_reason: null,
   uncounted_reason: null,
   open_seats: 0,
   needs_you: false,
@@ -40,8 +42,19 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
 });
 
 describe('toHome', () => {
-  it('reads the badge, the clock and every card, the sides with their paid', () => {
-    const home = toHome({ read_at: '2026-10-01T08:00:00Z', needing_you: 2, games: [homeGame()] });
+  it('reads the badge, the clock and every card, the sides with their paid and check-in', () => {
+    const home = toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 2,
+      games: [
+        homeGame({
+          sides: {
+            yours: [tile({ player_id: 'me', is_you: true })],
+            theirs: [tile({ checked_in: true })],
+          },
+        }),
+      ],
+    });
 
     expect(home).toEqual({
       readAt: '2026-10-01T08:00:00Z',
@@ -66,6 +79,7 @@ describe('toHome', () => {
                 isYou: true,
                 isIn: false,
                 paid: true,
+                checkedIn: false,
                 name: 'Piotr Sowa',
                 level: 2.95,
               },
@@ -76,6 +90,7 @@ describe('toHome', () => {
                 isYou: false,
                 isIn: false,
                 paid: true,
+                checkedIn: true,
                 name: 'Piotr Sowa',
                 level: 2.95,
               },
@@ -114,6 +129,7 @@ describe('toHome', () => {
       isYou: false,
       isIn: false,
       paid: false,
+      checkedIn: false,
     });
     expect(game?.money).toEqual({ shareGrosze: 2800, paid: false });
   });
@@ -182,6 +198,7 @@ describe('toBookedGame', () => {
     read_at: '2026-10-03T08:00:00Z',
     status: 'BOOKED',
     called_off_reason: null,
+    club_cancel_reason: null,
     uncounted_reason: null,
     open_seats: 0,
     needs_you: false,

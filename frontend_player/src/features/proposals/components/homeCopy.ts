@@ -12,7 +12,7 @@
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 
 import type { ResultAct } from '../domain/home';
-import type { CalledOffReason, HomeStatus } from '../domain/vocabulary';
+import type { CalledOffReason, ClubCancelReason, HomeStatus } from '../domain/vocabulary';
 
 export const HOME_GAME_COPY = {
   /** The status tag on a card and on the details — the mechanics §14.1's names. */
@@ -68,12 +68,27 @@ export const HOME_GAME_COPY = {
       SHORT_AT_THE_CUT_OFF: 'A seat was still empty at the cut-off',
       REFUSED: 'couldn’t take it',
       NO_ANSWER: 'didn’t answer in time',
+      CANCELLED_BY_THE_CLUB: 'cancelled it',
     } satisfies Readonly<Record<CalledOffReason, string>>,
+    /**
+     * Why the club cancelled (#547; the mechanics §16.9) — the clause after *cancelled it*. *Other*
+     * is no reason given, and nothing is said in its place.
+     */
+    clubCancelled: {
+      WEATHER: 'because of the weather',
+      REPAIR: 'for a court repair',
+      DOUBLE_BOOKING: 'after a double booking',
+      OTHER: undefined,
+    } satisfies Readonly<Record<ClubCancelReason, string | undefined>>,
     /** *The club* at the head of a sentence, for a club the read no longer names. */
     theClubLead: 'The club',
     /** *Uncounted · a seat was empty* (§14.1): no Level moved, and nobody who stayed is marked. */
     seatEmpty: 'A seat was empty',
     noLevelMoved: 'no Level moved',
+    /** *Uncounted* because somebody didn't come (#560) — to the player marked, and to the rest. */
+    youWereMarked: 'You were marked as not coming',
+    sayIfYouWere: 'say so if you were there',
+    somebodyDidNotCome: 'Somebody didn’t come',
   },
   details: {
     back: 'Back',
@@ -98,6 +113,8 @@ export const HOME_GAME_COPY = {
     resultAct: {
       'we-played': WE_PLAYED,
       confirm: 'Confirm the result',
+      /** The marked player's door to their dispute (#560), named for what they go there to do. */
+      dispute: 'Say you were there',
     } satisfies Readonly<Record<ResultAct, string>>,
     reading: 'Reading the game',
     gone: 'This game isn’t one of yours any more.',

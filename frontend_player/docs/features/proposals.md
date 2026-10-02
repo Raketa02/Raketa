@@ -548,3 +548,46 @@ post at an hour the poster already plays (`you_play_then`) — so a duplicate is
 **Owed**: CONTEXT.md's Post into Part 1 and the ADR-0189 §5 amendment (root, #546's); _Your post
 didn't fill_ (#549). **Nothing here has been seen on a device** — the cells' looks, the bounce, the
 legend's width and two sheets swapping in one tick on iOS least of all.
+
+**Somebody didn't come — the booking hands the Game what it knows, and Home says it**
+([#560](https://github.com/Raketa02/Raketa/issues/560); the backend's #547; the mechanics §15.3).
+`BookedGameResult` composes `games`' result screen with `booked`: who the desk checked in, read off
+the booking's tiles (`DeckPerson.checkedIn`, the wire's `checked_in`; `checkedInOn`), and
+`useRereadBooking` — Home and this booking read again once a score, an agreement, a mark or a
+dispute lands, so the status, the bar's badge and the door under the screen follow at once. The
+result entry then offers _Kuba Nowak didn't come_ for every other player but a checked-in one
+(`games.md` has the screen). **The player marked finds it on Home**: an uncounted card with
+`uncounted_reason` `NO_SHOW` says _You were marked as not coming · say so if you were there_ while the
+read says it needs them, and _Somebody didn't come · no Level moved_ to everybody else (`MoneyLine`'s
+`noShow`, the details' money row too); `resultActOf` takes the game now and opens **Say you were
+there** on the details for that player alone, onto the result screen where _I was there_ is
+pinned. **gen:api** also brought #547's club cancel: `CANCELLED_BY_THE_CLUB` with
+`club_cancel_reason`, said _Bonarka Arena cancelled it because of the weather · Refunded 30 zł_
+(`OTHER` names no reason) — no player ticket held those words, and the `Exact` assertion demanded
+them. The walk is `noShows.test.tsx`.
+
+**Calls made here, open for the product owner**:
+
+- **A sheet stands in front of the mark** — the mechanics say players _can tap_ _Kuba didn't come_;
+  a mark that can become the strongest on a record is never one tap away here.
+- **A checked-in player keeps a row**, _Inés Díaz · checked in at the club_, where the criterion
+  only says they cannot be marked: a missing button alone leaves the reader guessing why.
+- **Marking goes on while a report's day runs**, for whoever nobody marked — two players can fail
+  to come to a doubles game. The backend takes a mark until the entry window closes, and that window
+  is off the wire once a report is made, so a mark past it is refused and said so (_too late to mark
+  anybody else_) rather than withheld.
+- **The dispute is two doors deep**: Home → the details' _Say you were there_ → the result screen's
+  _I was there_, where the clock of the day is. The Home card is not a door (A8).
+- **Home cannot tell the player marked once their day has passed** — the read's _needs you_ is the
+  only sign — so the card then says _Somebody didn't come_ to them too.
+- **Nobody else gets a door back to the report** from the details once it is made: the reporter
+  reads it on the result screen they marked from, and Home's line after that.
+- **A game every report was disputed on reads as today's unscored evening** (_No result_), the
+  backend's `UNSCORED` — nothing says a report was made and fell.
+- **_checked in_ is not drawn on the details' tiles**; no mock has it, and it is read only to keep
+  a player from being marked.
+- **The club's three reasons are said as clauses** — _because of the weather_, _for a court repair_,
+  _after a double booking_ — where §16.9 lists the club's words for the dialog.
+
+**Owed**: the push and in-app notice for a report and for the club's cancel (#549/#559). **Nothing
+here has been seen on a device.**

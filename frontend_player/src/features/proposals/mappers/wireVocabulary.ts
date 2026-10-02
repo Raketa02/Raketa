@@ -14,6 +14,7 @@ import type { Exact } from '@/shared/vocabulary/wireAgreement';
 import type {
   CalledOffReason,
   CardType,
+  ClubCancelReason,
   CourtState,
   DayRange,
   HomeStatus,
@@ -38,6 +39,7 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   readonly paymentRefusal: Exact<PaymentRefusal, Schemas['PaymentRefusal']>;
   readonly homeStatus: Exact<HomeStatus, Schemas['HomeStatus']>;
   readonly calledOffReason: Exact<CalledOffReason, Schemas['CalledOffReason']>;
+  readonly clubCancelReason: Exact<ClubCancelReason, Schemas['ClubCancelReason']>;
   readonly uncountedReason: Exact<UncountedReason, Schemas['UncountedReason']>;
   readonly leaving: Exact<LeavingKind, Schemas['Leaving']>;
   readonly proposalStatus: Exact<ProposalStatus, Schemas['ProposalStatus']>;
@@ -52,6 +54,7 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   paymentRefusal: true,
   homeStatus: true,
   calledOffReason: true,
+  clubCancelReason: true,
   uncountedReason: true,
   leaving: true,
   proposalStatus: true,

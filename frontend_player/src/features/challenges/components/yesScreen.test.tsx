@@ -521,6 +521,7 @@ describe('Open the chat', () => {
         name: seat.name,
       })),
       proposals: [],
+      no_shows: [],
     };
     await openTheChallenge(detail(lastSeat), row(lastSeat), /^ewa\.m.*, Padel, .*to answer/);
     // Not a member until the yes: the list holds the others' room and not this reader's.

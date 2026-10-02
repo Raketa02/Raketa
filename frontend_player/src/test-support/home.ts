@@ -45,6 +45,7 @@ function seat(
     photo_url: null,
     level,
     paid: true,
+    checked_in: false,
     ...extra,
   };
 }
@@ -83,6 +84,7 @@ export function homeGame(extra: Partial<Wire['HomeGameSchema']> = {}): Wire['Hom
     kind: 'COMPETITIVE',
     status: 'BOOKED',
     called_off_reason: null,
+    club_cancel_reason: null,
     uncounted_reason: null,
     open_seats: 0,
     needs_you: false,
@@ -117,6 +119,7 @@ export function bookingDetails(
     read_at: HOME_READ_AT,
     status: 'BOOKED',
     called_off_reason: null,
+    club_cancel_reason: null,
     uncounted_reason: null,
     open_seats: 0,
     needs_you: false,
@@ -194,6 +197,7 @@ export function bookedGameOnTheList(extra: Partial<Wire['GameSchema']> = {}): Wi
       { side: 'B', player_id: BARTEK, name: 'Bartek Lis' },
     ],
     proposals: [],
+    no_shows: [],
     ...extra,
   };
 }

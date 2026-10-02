@@ -25,7 +25,7 @@
  * derived from the one list this feature reads. **Nothing in the app pushes it today** — the
  * list that did is composed nowhere — so the route resolves and no control reaches it.
  */
-export { GameScreen, type GameScreenProps } from './components/GameScreen';
+export { GameScreen, type BookedFacts, type GameScreenProps } from './components/GameScreen';
 
 /**
  * **The court's pairing, for the composition that fills the game screen's `court` slot.**
