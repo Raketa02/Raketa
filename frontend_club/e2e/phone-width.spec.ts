@@ -1,3 +1,4 @@
+import { fakeCamera } from './camera';
 import { expect, signIn, test } from './fixtures';
 import { booking } from './stub/bookings';
 import { administrator, DAY_MS, fromNow, officialGroup } from './stub/club';
@@ -30,11 +31,14 @@ test('the signed-out pages fit a phone', async ({ page }) => {
 });
 
 test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) => {
-  void club;
+  // So Bookings has its Check in button, and Check in its camera and box.
+  club.raketa.settings.check_in = true;
+  await fakeCamera(page);
   await signIn(page);
   for (const path of [
     '/overview',
     '/bookings',
+    '/bookings/check-in',
     '/courts',
     '/groups',
     '/administrators',

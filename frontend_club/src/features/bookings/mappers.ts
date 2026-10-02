@@ -76,13 +76,17 @@ const CLOCK = new Intl.DateTimeFormat('en-GB', {
   minute: '2-digit',
 });
 
+/** **The club's clock at an instant** the wire wrote: `18:52`. */
+export function clubClock(instant: string): string {
+  return CLOCK.format(Date.parse(instant));
+}
+
 /** The club's hour from the wire's two instants. */
-function clubHour(startsAt: string, endsAt: string): ClubHour {
-  const start = Date.parse(startsAt);
+export function clubHour(startsAt: string, endsAt: string): ClubHour {
   return {
-    day: clubDay(start),
-    from: CLOCK.format(start),
-    until: CLOCK.format(Date.parse(endsAt)),
+    day: clubDay(Date.parse(startsAt)),
+    from: clubClock(startsAt),
+    until: clubClock(endsAt),
   };
 }
 

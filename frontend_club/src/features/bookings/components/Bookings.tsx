@@ -1,5 +1,8 @@
 import Link from 'next/link';
 
+import { CHECK_IN_COPY } from '@/features/check-in/copy';
+import { CHECK_IN_PATH } from '@/features/check-in/schemas';
+import { ButtonLink } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { Segments } from '@/ui/Segments';
@@ -18,14 +21,32 @@ const COPY = BOOKINGS_COPY;
 /**
  * **Bookings** (the screens B4, the mechanics §16.7): one day at a time, *‹ Today ›* and a date
  * box, the filters with the day's count under each, and the day's games. A link may point at one
- * booking, which is marked.
+ * booking, which is marked. *Check in* is at the top right when the club checks players in.
  */
-export function Bookings({ day, pointedAt }: { day: BookingsDay; pointedAt: string | null }) {
+export function Bookings({
+  day,
+  pointedAt,
+  checksIn,
+}: {
+  day: BookingsDay;
+  pointedAt: string | null;
+  checksIn: boolean;
+}) {
   const at = (date: string) =>
     dayHref({ date: date === day.today ? null : date, filter: day.filter });
   return (
     <>
-      <PageHeader caption={COPY.caption} title={COPY.title} />
+      <PageHeader
+        caption={COPY.caption}
+        title={COPY.title}
+        aside={
+          checksIn ? (
+            <ButtonLink href={CHECK_IN_PATH} tone="primary">
+              {CHECK_IN_COPY.title}
+            </ButtonLink>
+          ) : undefined
+        }
+      />
       <Card labelledBy="day-title">
         <div className={styles.dayBar}>
           <nav aria-label={COPY.day.label} className={styles.dayNav}>

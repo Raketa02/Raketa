@@ -3,8 +3,8 @@
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. A club signs up, signs in, keeps its
 details, sets up what it sells through Raketa (courts, weekly hours, exceptions, prices and its
 Raketa settings, followed by Overview's setup checklist), runs its Raketa bookings (answering a
-request, moving or cancelling a game), invites its Administrators and watches its official
-groups
+request, moving or cancelling a game, checking players in at the desk), invites its
+Administrators and watches its official groups
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
 It talks to the backend's **club surface** (`backend/openapi.club.json`) **from its server
 only**: the browser never holds a token.
@@ -81,8 +81,11 @@ a group is run only while its administrator is active), and whose Raketa offer, 
 keeps the courts, prices and settings and reads the setup checklist off them (nothing set until
 a test says; `club.raketa.ready()` makes the club live), and whose bookings, `club.bookings`,
 fold their status off the clock as the backend does (a test seats them with
-`club.bookings.add(booking(…))`). A test about one reply overrides
+`club.bookings.add(booking(…))`, and reads a seat's check-in code with
+`club.bookings.checkInCode(game, seat)`). A test about one reply overrides
 that operation with `stub.on`, naming it by the contract's path, `{administrator_id}` and all.
+A spec that opens _Check in_ gives the page **the fake camera** first (`fakeCamera(page)`,
+`e2e/camera.ts`), which holds up a real QR code.
 One worker, because the one server talks to the one stub.
 
 - **A token in a test comes from the fake**: `club.accessToken(n)`, `club.refreshToken(n)`.

@@ -12,8 +12,8 @@ pull request.
 src/
   app/                 routes and layouts only
     (signed-out)/      sign-in, sign-up, forgot-password/…, reset/[token]
-    (signed-in)/       layout (the frame), overview, bookings, courts, groups, administrators,
-                       details, raketa-settings
+    (signed-in)/       layout (the frame), overview, bookings (and bookings/check-in), courts,
+                       groups, administrators, details, raketa-settings
     session/           renew and end: the session's own route handlers (§3)
   proxy.ts             renews a lapsing session and stamps each request's path (§3)
   instrumentation.ts   refuses to start without the configuration (§6)
@@ -31,7 +31,8 @@ e2e/                   the Playwright suite and its stub backend (§7)
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
   password?_, _Set a new password_), `club-details`, `overview` (with the setup checklist),
   `bookings` (the day's Raketa bookings, answering a request, _Move_ and _Cancel_, and what
-  waits for an answer), `courts` (_Courts & prices_: the courts, their weekly hours,
+  waits for an answer), `check-in` (_Check in_: the camera and the short code at the desk, under
+  Bookings), `courts` (_Courts & prices_: the courts, their weekly hours,
   exceptions and prices), `raketa-settings`, `administrators` and `groups` (the Groups table
   and _Hand over_). A feature may use another feature's components, schemas, copy and mappers
   (sign-up draws Club details' fields; Overview greets a `Club` and lists Bookings' requests),
@@ -204,6 +205,14 @@ points.
 - **One worker**, because the one server talks to the one stub, which each test resets.
 - **Start-up refusal is tested at the process**: `e2e/config.spec.ts` spawns `next start` with a
   bad configuration and reads its exit code and output.
+- **The camera is the browser's, and the suite hands it a fake one.** _Check in_ asks for the
+  camera with `getUserMedia` and reads each frame's QR code with jsQR, a decoder in plain
+  JavaScript, because Safari, on the tablets desks use, has no `BarcodeDetector`. A spec that
+  opens the page first calls `fakeCamera(page)` (`e2e/camera.ts`): `getUserMedia` answers with a
+  canvas's stream, the test holds up a real QR code drawn as the player app draws one, and the
+  page decodes it as it would a phone's screen. The fake counts the frames the page looks at, so
+  "it kept reading that code and asked once" needs no clock; refused, it is a blocked or a
+  missing camera, and unplugged, one that stops.
 - **Every page is checked at 360 px** for sideways scrolling.
 
 No automated test crosses apps. The journey through the backend, the app and this site is a QA

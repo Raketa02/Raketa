@@ -18,6 +18,15 @@ export async function getWayAndSettings(): Promise<WayAndSettings> {
 }
 
 /**
+ * **Whether the club checks players in**, for Bookings' *Check in* button: `false` when the
+ * backend could not say, so a settings read that fails leaves the button off rather than the day.
+ */
+export async function getChecksIn(): Promise<boolean> {
+  const outcome = await readAsClub((api, auth) => api.GET('/api/v1/club/raketa-settings', auth));
+  return outcome.ok && toWayAndSettings(outcome.data).checkIn;
+}
+
+/**
  * **How the club works with Raketa, and whether it has confirmed its settings**: the page's
  * button confirms them the first time and saves them after, as the setup checklist says.
  */

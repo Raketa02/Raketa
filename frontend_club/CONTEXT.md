@@ -52,6 +52,13 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
   whose reset signs everyone out and whose administrators, official groups, Raketa offer
   (`club.raketa`, `e2e/stub/courts.ts`) and bookings (`club.bookings`, `e2e/stub/bookings.ts`)
   keep the backend's rules, so a test programs only the reply it is about.
+- **Scan** — what the Check in page's camera read off a player's QR code: the whole payload
+  (`RAKETA-CHECK-IN:1:…`), sent to the backend as it was read, once each time the code is held
+  up (taken away for a second, it is new again). The **short code** is the six
+  characters under the QR code, typed when the camera won't read. Both are the domain's
+  **Check-in** code; what a code _is_ (whose seat, which day) is only the backend's to say.
+- **Fake camera** — `e2e/camera.ts`: the camera the suite gives the Check in page, a canvas's
+  stream showing a real QR code a test holds up, which counts the frames the page looks at.
 - **Countdown** — what is left of a request's time to answer, counted from the backend's own
   `read_at`, so a browser whose clock is wrong draws the same figure. Not a timer of the
   backend's: when it runs out the page is read again, and the backend says the request is off.
