@@ -2,7 +2,8 @@ import type { Page } from '@playwright/test';
 
 import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
-import { court, dayFromToday } from './stub/courts';
+import { dayFromToday } from './stub/clock';
+import { court } from './stub/courts';
 
 /**
  * **Courts & prices: Exceptions** (#561, the screens B3, the mechanics §16.5): hours the club
@@ -193,7 +194,7 @@ test.describe('Exceptions', () => {
     const two = court({ name: 'Court 2', sport: 'PADEL' });
     club.raketa.courts = [one, two];
     const day = dayFromToday(6);
-    const booking = club.raketa.book(two, day, 18);
+    const booking = club.bookings.book(two, day, 18);
     const exceptions = await openExceptions(page);
 
     await exceptions.getByRole('button', { name: '+ Add an exception' }).click();
@@ -208,7 +209,7 @@ test.describe('Exceptions', () => {
     await expect(refused).toContainText('Court 2 is booked then — cancel the booking first.');
     await expect(refused.getByRole('link', { name: 'See the booking' })).toHaveAttribute(
       'href',
-      `/bookings?date=${day}&booking=${booking.id}`,
+      `/bookings?date=${day}&booking=${booking.booking_id}`,
     );
     expect(club.raketa.exceptions).toEqual([]);
     // What the desk typed is still there to change.

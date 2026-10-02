@@ -14,6 +14,7 @@ export function Toggle({
   name,
   checked,
   onChange,
+  anchor,
   children,
 }: {
   label: string;
@@ -21,11 +22,13 @@ export function Toggle({
   name: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  /** An id for the setting, so a link can lead to it: `#its-anchor`. */
+  anchor?: string;
   children?: ReactNode;
 }) {
   const id = useId();
   return (
-    <div className={styles.setting}>
+    <div id={anchor} className={styles.setting}>
       <div className={styles.row}>
         <input
           id={id}

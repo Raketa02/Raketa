@@ -1,6 +1,8 @@
 import { expect, signIn, test } from './fixtures';
+import { booking } from './stub/bookings';
 import { administrator, DAY_MS, fromNow, officialGroup } from './stub/club';
-import { court, dayFromToday, week } from './stub/courts';
+import { dayFromToday } from './stub/clock';
+import { court, week } from './stub/courts';
 
 /** **Every page works at phone width** (#500 story 95): nothing scrolls sideways at 360 px. */
 
@@ -32,6 +34,7 @@ test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) 
   await signIn(page);
   for (const path of [
     '/overview',
+    '/bookings',
     '/courts',
     '/groups',
     '/administrators',
@@ -189,4 +192,66 @@ test('Courts & prices fits a phone: the table, the grid, the forms and the bands
   await page.getByRole('button', { name: 'Copy to other courts' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await fitsSideways(page, '/courts, copying');
+});
+
+test('Bookings fits a phone: the day, its filters, its rows and each question', async ({
+  page,
+  club,
+}) => {
+  const hours = week([1, 2, 3, 4, 5, 6, 7], 7, 23);
+  const one = court({ name: 'Kort centralny przy wejściu', sport: 'PADEL', hours });
+  club.raketa.courts = [one, court({ name: 'Court 2', sport: 'PADEL', hours })];
+  const day = dayFromToday(2);
+  const long = club.bookings.add(
+    booking({
+      court: one,
+      day,
+      hour: 19,
+      booked_from: {
+        group_id: '0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e01',
+        name: 'Ogrody 33 Club — wieczorne granie dla wszystkich',
+        official: true,
+      },
+    }),
+  );
+  long.players = long.players.map((player, index) =>
+    index === 0
+      ? {
+          ...player,
+          name: 'Małgorzata Szczepańska-Wiśniewska',
+          checked_in_at: new Date().toISOString(),
+        }
+      : player,
+  );
+  club.bookings.add(booking({ court: one, day, hour: 20, stage: 'WAITING_FOR_YOU' }));
+  await signIn(page);
+  await page.goto(`/bookings?date=${day}`);
+  await expect(page.getByRole('timer')).toBeVisible();
+  await fitsSideways(page, '/bookings');
+
+  await page.getByRole('button', { name: /^Move/ }).click();
+  await expect(page.getByRole('dialog').getByRole('radio')).toHaveCount(1);
+  await fitsSideways(page, '/bookings, moving');
+  await page.getByRole('dialog').getByRole('button', { name: 'Back' }).click();
+
+  await page.getByRole('button', { name: /^Cancel/ }).click();
+  await page.getByRole('dialog').getByRole('radio', { name: 'Repair' }).check();
+  await fitsSideways(page, '/bookings, cancelling');
+  await page.getByRole('dialog').getByRole('button', { name: 'Keep the game' }).click();
+
+  await page.getByRole('button', { name: /^Refuse/ }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await fitsSideways(page, '/bookings, refusing');
+});
+
+test("Overview's requests fit a phone", async ({ page, club }) => {
+  club.raketa.ready();
+  const padel = club.raketa.courts[0];
+  if (padel === undefined) throw new Error('ready() seats a court');
+  club.bookings.add(
+    booking({ court: padel, day: dayFromToday(1), hour: 19, stage: 'WAITING_FOR_YOU' }),
+  );
+  await signIn(page);
+  await expect(page.getByRole('timer')).toBeVisible();
+  await fitsSideways(page, '/overview, live');
 });

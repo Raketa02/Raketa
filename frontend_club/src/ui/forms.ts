@@ -68,13 +68,18 @@ export function formText(form: FormData, name: string): string {
 /** An id as the backend's routes take one: a UUID. */
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** Whether a value is an id as the backend's routes take one: a UUID. */
+export function isId(value: string): boolean {
+  return ID.test(value);
+}
+
 /**
  * An id from a posted form, as the backend's routes take one (a UUID), or `null`: anything else
  * names nothing the club has, and never reaches the backend.
  */
 export function formId(form: FormData, name: string): string | null {
   const value = formText(form, name);
-  return ID.test(value) ? value : null;
+  return isId(value) ? value : null;
 }
 
 /** Every id a repeated field posted, each once, in order; anything else is dropped. */

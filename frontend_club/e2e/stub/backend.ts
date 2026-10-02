@@ -57,6 +57,8 @@ export interface Received<P extends Path = Path, M extends Method = Method> {
   readonly method: M;
   /** The path as the request named it, ids and all. */
   readonly path: string;
+  /** The query string's parameters, by name: `?date=2026-10-12` is `{ date: '2026-10-12' }`. */
+  readonly query: Readonly<Record<string, string>>;
   /**
    * The path's ids, by the names the operation's template gives them: as a handler receives the
    * request, and as {@link StubBackend.requests} returns it. `all()` knows no template, so none.
@@ -212,6 +214,7 @@ export class StubBackend {
     const received = {
       method: (request.method ?? 'GET').toLowerCase() as Method,
       path: url.pathname,
+      query: Object.fromEntries(url.searchParams),
       params: {},
       headers,
       body: raw === '' ? undefined : (JSON.parse(raw) as unknown),

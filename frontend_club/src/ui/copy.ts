@@ -12,6 +12,7 @@ export const SITE_COPY = {
     pagesLabel: 'Club website',
     pages: {
       overview: 'Overview',
+      bookings: 'Bookings',
       courts: 'Courts & prices',
       groups: 'Groups',
       administrators: 'Administrators',

@@ -22,7 +22,21 @@ export const DAYS = [
   { long: 'Sunday', short: 'Sun' },
 ] as const;
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** The months as a short date writes them: *12 Oct*. */
+export const MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 function hourOptions(from: number, to: number): SelectOption[] {
   return Array.from({ length: to - from + 1 }, (_, index) => ({

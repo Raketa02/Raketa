@@ -13,6 +13,7 @@ import { randomUUID } from 'node:crypto';
 import type { components } from '../../src/generated/schema';
 
 import { refusal, type StubBackend } from './backend';
+import { FakeClubBookings } from './bookings';
 import { FakeClubCourts } from './courts';
 
 type ClubDetails = components['schemas']['ClubDetailsResponse'];
@@ -137,16 +138,27 @@ export class FakeClub {
    * started, unless the test says (`club.raketa.ready()` makes the club live).
    */
   readonly raketa: FakeClubCourts;
+  /**
+   * The club's Raketa bookings, any day: none unless the test seats them (`booking(…)`). A
+   * booking still to be played holds its court, which Courts & prices reads.
+   */
+  readonly bookings: FakeClubBookings;
 
   constructor(private readonly stub: StubBackend) {
+    const guard = (authorization: string | undefined) =>
+      this.accessIsLive(authorization)
+        ? null
+        : ({ status: 401, body: refusal('access_token_invalid') } as const);
     this.raketa = new FakeClubCourts(
       stub,
-      (authorization) =>
-        this.accessIsLive(authorization)
-          ? null
-          : { status: 401, body: refusal('access_token_invalid') },
+      guard,
       () => this.details.sports,
+      () => this.bookings.ahead(),
     );
+    this.bookings = new FakeClubBookings(stub, guard, () => ({
+      courts: this.raketa.courts,
+      exceptions: this.raketa.exceptions,
+    }));
   }
 
   /**
@@ -294,6 +306,7 @@ export class FakeClub {
     this.installAdministrators();
     this.installGroups();
     this.raketa.install();
+    this.bookings.install();
     return this;
   }
 

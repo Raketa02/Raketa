@@ -13,6 +13,16 @@ export const GROUPS_COPY = {
     fromWhatsApp: 'From WhatsApp',
     games: 'Games',
   },
+  /** The line over the table: whether the groups are offered other clubs' courts (B8). */
+  otherClubs: {
+    /** The line up to its link: whether they are offered, and the way to change it. */
+    lead: (offered: boolean, km: number) =>
+      offered
+        ? `When your courts are full, your groups are also offered other clubs' courts within ${km} km. Change it in`
+        : "When your courts are full, your groups are offered only yours. Offer other clubs' courts in",
+    settings: 'Raketa settings',
+    end: '.',
+  },
   needsAdministrator: 'needs an administrator',
   waiting: (count: number) => `${count} waiting`,
   fromWhatsApp: (players: number, size: number, percent: number) =>

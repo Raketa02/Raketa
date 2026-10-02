@@ -2,8 +2,9 @@
 
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. A club signs up, signs in, keeps its
 details, sets up what it sells through Raketa (courts, weekly hours, exceptions, prices and its
-Raketa settings, followed by Overview's setup checklist), invites its Administrators and watches
-its official groups
+Raketa settings, followed by Overview's setup checklist), runs its Raketa bookings (answering a
+request, moving or cancelling a game), invites its Administrators and watches its official
+groups
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
 It talks to the backend's **club surface** (`backend/openapi.club.json`) **from its server
 only**: the browser never holds a token.
@@ -30,7 +31,8 @@ for its own machinery are in [`CONTEXT.md`](CONTEXT.md); domain words are the ro
   and the configuration directly.
 - **`src/proxy.ts`** renews a pair that is about to lapse before a page or an action reads it,
   because a render cannot set a cookie, and stamps each request with its own path.
-- **`src/features/<area>/`**: `queries.ts` reads, `actions.ts` writes, `mappers.ts` turns wire
+- **`src/features/<area>/`**: `queries.ts` reads, `actions.ts` writes (and makes the reads
+  that have no render to read in: a dialog opening, the frame's badge), `mappers.ts` turns wire
   into view model (**the only file outside `src/server/` and `e2e/` that imports a generated
   type**), `schemas.ts` checks a form, `copy.ts` holds every sentence, and `components/` are
   server components unless a page needs interaction. A feature may use another feature's
@@ -77,7 +79,9 @@ club whose tokens rotate, whose reset signs everyone out, and whose administrato
 groups keep the backend's rules (a test seats them in `club.administrators` and `club.groups`;
 a group is run only while its administrator is active), and whose Raketa offer, `club.raketa`,
 keeps the courts, prices and settings and reads the setup checklist off them (nothing set until
-a test says; `club.raketa.ready()` makes the club live). A test about one reply overrides
+a test says; `club.raketa.ready()` makes the club live), and whose bookings, `club.bookings`,
+fold their status off the clock as the backend does (a test seats them with
+`club.bookings.add(booking(…))`). A test about one reply overrides
 that operation with `stub.on`, naming it by the contract's path, `{administrator_id}` and all.
 One worker, because the one server talks to the one stub.
 

@@ -30,7 +30,7 @@ export interface GroupRow {
    * rounded half up and never capped (*52 of 48 · 108%*), and is never worked out again here.
    */
   readonly whatsApp: { readonly size: number; readonly percent: number };
-  /** Games born in the group. None can be yet, so `0` (ADR-0183 §11). */
+  /** Games booked in the group: every game its deck filled into a booking at a court. */
   readonly games: number;
 }
 

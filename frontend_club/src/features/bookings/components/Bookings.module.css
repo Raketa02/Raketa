@@ -1,0 +1,267 @@
+/* Bookings and Overview's requests: the parts they share. Every value is a token. */
+
+.none,
+.lead {
+  color: var(--colour-muted);
+}
+
+/* The day: ‹ its name ›, back to today, and the date box. */
+
+.dayBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.dayNav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dayTitle {
+  font-size: var(--text-wordmark);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+}
+
+.arrow {
+  display: inline-flex;
+  width: var(--size-control-small);
+  height: var(--size-control-small);
+  align-items: center;
+  justify-content: center;
+  border: var(--size-hairline) solid var(--colour-line);
+  border-radius: var(--radius-pill);
+  background: var(--colour-surface);
+  color: var(--colour-ink);
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+}
+
+.arrow:hover {
+  background: var(--colour-paper);
+}
+
+.picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+/* A row of the day. */
+
+.row[aria-current='true'] > * {
+  background: var(--colour-amber-soft);
+}
+
+.when {
+  white-space: nowrap;
+}
+
+.hours {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+}
+
+.court {
+  display: block;
+  color: var(--colour-muted);
+  font-weight: var(--weight-medium);
+}
+
+.players {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.player {
+  display: block;
+  font-weight: var(--weight-medium);
+}
+
+/* paid ✓ and checked in ✓, under the name. */
+.marks {
+  display: block;
+  color: var(--colour-green);
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
+}
+
+.open {
+  color: var(--colour-muted);
+  font-style: italic;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.why {
+  color: var(--colour-muted);
+  font-size: var(--text-small);
+}
+
+.money {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-small);
+}
+
+.moneyLine {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.moneyLine dt {
+  color: var(--colour-muted);
+  white-space: nowrap;
+}
+
+.moneyLine dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.from {
+  display: flex;
+  flex-direction: column;
+}
+
+.group {
+  font-weight: var(--weight-medium);
+}
+
+.groupKind,
+.gone {
+  color: var(--colour-muted);
+  font-size: var(--text-small);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* A request's answer: its countdown over Accept and Refuse. */
+
+.request {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.countdown {
+  color: var(--colour-amber);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.countdown[data-over='true'] {
+  color: var(--colour-muted);
+}
+
+/* Dialogs */
+
+.dialogForm {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.consequence {
+  color: var(--colour-ink-deep);
+  font-weight: var(--weight-medium);
+}
+
+.dialogButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+@media (max-width: 800px) {
+  .actions {
+    justify-content: flex-start;
+    padding-top: var(--space-2);
+  }
+
+  .request {
+    align-items: flex-start;
+  }
+
+  .moneyLine {
+    justify-content: flex-start;
+  }
+}
+
+/* Overview's requests: one card, a request to a line. */
+
+.requests {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.waiting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  padding: var(--space-4) 0;
+  border-bottom: var(--size-hairline) solid var(--colour-rule);
+}
+
+.waiting:first-child {
+  padding-top: 0;
+}
+
+.waiting:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.about {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.waitingWhen {
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+}
+
+.price {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+}

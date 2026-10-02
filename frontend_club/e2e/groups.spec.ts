@@ -114,6 +114,47 @@ test.describe('Groups', () => {
     await expect(club33.getByText('1 waiting')).toHaveCSS('color', 'rgb(135, 100, 26)');
   });
 
+  test('Games counts the games booked in each group', async ({ page, club }) => {
+    club.groups = [
+      officialGroup({ name: 'Ogrody 33 Club', member_count: 11, games: 7 }),
+      officialGroup({ name: 'Ogrody open play', member_count: 8 }),
+    ];
+    await openGroups(page);
+    await expect(rowOf(page, 'Ogrody 33 Club').getByRole('cell').last()).toHaveText('7');
+    await expect(rowOf(page, 'Ogrody open play').getByRole('cell').last()).toHaveText('0');
+  });
+
+  test("a line over the table says whether the groups are offered other clubs' courts, and leads to the setting", async ({
+    page,
+    club,
+  }) => {
+    club.groups = [officialGroup({ name: 'Ogrody 33 Club', member_count: 11 })];
+    club.raketa.way = 'INSTANT';
+    await openGroups(page);
+
+    const line = page.getByRole('main').getByText(/^When your courts are full/);
+    await expect(line).toHaveText(
+      "When your courts are full, your groups are offered only yours. Offer other clubs' courts in Raketa settings.",
+    );
+    await line.getByRole('link', { name: 'Raketa settings' }).click();
+    await expect(page).toHaveURL(/\/raketa-settings#other-clubs$/);
+    await expect(
+      page.getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" }),
+    ).toBeInViewport();
+
+    club.raketa.settings.other_clubs_courts = { offered: true, within_km: 15 };
+    await page.goto('/groups');
+    await expect(page.getByRole('main').getByText(/^When your courts are full/)).toHaveText(
+      "When your courts are full, your groups are also offered other clubs' courts within 15 km. Change it in Raketa settings.",
+    );
+  });
+
+  test('with no official groups, there is no line about other clubs', async ({ page, club }) => {
+    void club;
+    await openGroups(page);
+    await expect(page.getByText(/^When your courts are full/)).toHaveCount(0);
+  });
+
   test('From WhatsApp is drawn as a bar, full with the real figure past 100%', async ({
     page,
     club,

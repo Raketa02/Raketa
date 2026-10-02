@@ -2,7 +2,8 @@ import type { Page } from '@playwright/test';
 
 import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
-import { court, dayFromToday } from './stub/courts';
+import { dayFromToday } from './stub/clock';
+import { court } from './stub/courts';
 
 /**
  * **Courts & prices: the courts** (#561, the screens B3, the mechanics §16.4): the courts the
@@ -125,7 +126,7 @@ test.describe('Courts', () => {
   }) => {
     const one = court({ name: 'Court 1', sport: 'PADEL' });
     club.raketa.courts = [one];
-    club.raketa.book(one, dayFromToday(2), 18);
+    club.bookings.book(one, dayFromToday(2), 18);
     const courts = await openCourts(page);
     await rowOf(page, 'Court 1').getByRole('button', { name: 'Edit' }).click();
     await courts.getByRole('radio', { name: 'Tennis' }).check();
@@ -168,7 +169,7 @@ test.describe('Courts', () => {
     const one = court({ name: 'Court 1', sport: 'PADEL' });
     const two = court({ name: 'Court 2', sport: 'PADEL' });
     club.raketa.courts = [one, two];
-    club.raketa.book(two, dayFromToday(1), 19);
+    club.bookings.book(two, dayFromToday(1), 19);
     const courts = await openCourts(page);
 
     await rowOf(page, 'Court 2').getByRole('button', { name: 'Edit' }).click();

@@ -30,6 +30,7 @@ test.describe('Sign in', () => {
     const pages = page.getByRole('navigation', { name: 'Club website' });
     await expect(pages.getByRole('link')).toHaveText([
       'Overview',
+      'Bookings',
       'Courts & prices',
       'Groups',
       'Administrators',

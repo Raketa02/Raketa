@@ -1,4 +1,7 @@
-/** **Overview's words**: the setup checklist until the club is live (the screens B2), then once, *You're live*. */
+/**
+ * **Overview's words**: the setup checklist until the club is live (the screens B2), then once,
+ * *You're live*. What waits for the club's answer is said in Bookings' words.
+ */
 
 import type { SetupStep, StepState } from './mappers';
 
@@ -45,7 +48,6 @@ const STEPS: Readonly<Record<SetupStep, StepWords>> = {
 };
 
 export const OVERVIEW_COPY = {
-  empty: 'Nothing to show here yet.',
   live: "You're live — your courts can now be booked through Raketa.",
   checklist: {
     title: 'Before your courts can be booked',

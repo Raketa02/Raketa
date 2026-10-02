@@ -142,6 +142,7 @@ export function RaketaSettingsForm({
             label={COPY.otherClubs.label}
             hint={COPY.otherClubs.hint}
             name="other_clubs"
+            anchor="other-clubs"
             checked={draft.otherClubs}
             onChange={(otherClubs) => {
               setDraft({ ...draft, otherClubs });

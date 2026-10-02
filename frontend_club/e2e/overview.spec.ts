@@ -1,13 +1,19 @@
 import type { Page } from '@playwright/test';
 
 import { expect, signIn, test } from './fixtures';
+import { booking } from './stub/bookings';
+import { fromNow } from './stub/club';
+import { dayFromToday } from './stub/clock';
 import { court, week } from './stub/courts';
 
 /**
- * **Overview** (#561, the screens B2): the setup checklist until the club is live, each step
- * with its state and the one button that does it; then, once, *You're live*, and the checklist
- * is gone. Connecting payments is shown as pending until its own ticket (#562) opens it here.
+ * **Overview** (#561, #563, the screens B2): the setup checklist until the club is live, each
+ * step with its state and the one button that does it; then, once, *You're live*, the checklist
+ * is gone, and Overview shows only what waits for the club's answer. Connecting payments is
+ * shown as pending until its own ticket (#562) opens it here.
  */
+
+const MINUTE_MS = 60_000;
 
 const TOLD_LIVE_COOKIE = 'raketa_club_told_live';
 
@@ -44,6 +50,8 @@ test.describe('Overview', () => {
       'locked',
       'locked',
     ]);
+
+    await expect(page.getByRole('region', { name: 'Waiting for your answer' })).toHaveCount(0);
 
     // Payments are connected from here with their own ticket: no button yet.
     await expect(step(page, 'Connect payments').getByRole('link')).toHaveCount(0);
@@ -155,5 +163,95 @@ test.describe('Overview', () => {
       'New password set. Any other browser signed in as the club is signed out.',
     );
     await expect(checklist(page)).toHaveCount(5);
+  });
+
+  test('a live club with nothing waiting is told so', async ({ page, club }) => {
+    club.raketa.ready();
+    const padel = club.raketa.courts[0];
+    if (padel === undefined) throw new Error('ready() seats a court');
+    club.bookings.add(booking({ court: padel, day: dayFromToday(1), hour: 19 }));
+    await signIn(page);
+
+    const waiting = page.getByRole('region', { name: 'Waiting for your answer' });
+    await expect(waiting).toContainText('Nothing is waiting for you.');
+    await expect(waiting.getByRole('listitem')).toHaveCount(0);
+    await expect(page.getByText('Nothing to show here yet.')).toHaveCount(0);
+  });
+
+  test('a live club sees only what waits for its answer, and answers it there', async ({
+    page,
+    stub,
+    club,
+  }) => {
+    club.raketa.ready();
+    const padel = club.raketa.courts[0];
+    if (padel === undefined) throw new Error('ready() seats a court');
+    club.bookings.add(booking({ court: padel, day: dayFromToday(1), hour: 18 }));
+    const later = club.bookings.add(
+      booking({
+        court: padel,
+        day: dayFromToday(2),
+        hour: 20,
+        stage: 'WAITING_FOR_YOU',
+        kind: 'FOR_FUN',
+        answer_by: fromNow(28 * MINUTE_MS),
+      }),
+    );
+    const sooner = club.bookings.add(
+      booking({
+        court: padel,
+        day: dayFromToday(1),
+        hour: 19,
+        stage: 'WAITING_FOR_YOU',
+        answer_by: fromNow(12 * MINUTE_MS),
+      }),
+    );
+    await signIn(page);
+    const bar = page.getByRole('navigation', { name: 'Club website' });
+    await expect(
+      bar.getByRole('link', { name: 'Bookings, 2 waiting for your answer' }),
+    ).toBeVisible();
+
+    const waiting = page.getByRole('region', { name: 'Waiting for your answer' });
+    const requests = waiting.getByRole('listitem');
+    // The one due first, first; booked games are not here.
+    await expect(requests).toHaveCount(2);
+    await expect(requests.first()).toContainText('19:00–20:00 · Court 1');
+    await expect(requests.first()).toContainText('Padel · Competitive');
+    await expect(requests.first()).toContainText(
+      'Anna Nowak, Piotr Sikora, Kasia Wiśniewska, Marek Zając',
+    );
+    await expect(requests.first()).toContainText('140 zł · 35 zł each');
+    await expect(requests.first().getByRole('timer')).toHaveText(/^1[12]:\d\d left to answer$/);
+    await expect(requests.last()).toContainText('20:00–21:00 · Court 1');
+    await expect(requests.last()).toContainText('Padel · Friendly');
+    await expect(requests.last().getByRole('timer')).toHaveText(/^2[78]:\d\d left to answer$/);
+
+    await requests
+      .first()
+      .getByRole('button', { name: /^Accept/ })
+      .click();
+    await expect(page.getByRole('main').getByRole('status').last()).toHaveText(
+      /^The 19:00 game on .+ is booked on Court 1\. Everybody paid\.$/,
+    );
+    await expect(requests).toHaveCount(1);
+    await expect(
+      bar.getByRole('link', { name: 'Bookings, 1 waiting for your answer' }),
+    ).toBeVisible();
+
+    await requests
+      .first()
+      .getByRole('button', { name: /^Refuse/ })
+      .click();
+    const dialog = page.getByRole('dialog', { name: /^Refuse the 20:00 game on / });
+    await dialog.getByRole('button', { name: 'Refuse', exact: true }).click();
+    await expect(waiting).toContainText('Nothing is waiting for you.');
+    await expect(bar.getByRole('link', { name: 'Bookings', exact: true })).toBeVisible();
+    expect(
+      stub.requests('post', '/api/v1/club/bookings/{booking_id}/acceptance').map((r) => r.params),
+    ).toEqual([{ booking_id: sooner.booking_id }]);
+    expect(
+      stub.requests('post', '/api/v1/club/bookings/{booking_id}/refusal').map((r) => r.params),
+    ).toEqual([{ booking_id: later.booking_id }]);
   });
 });

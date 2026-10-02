@@ -1,9 +1,9 @@
 import { expect, signIn, test } from './fixtures';
 
 /**
- * **The top bar** (#561, the screens B1): the pages a desk works in, and the club's name opening
- * the two pages about the club itself, *Details* and *Raketa settings*. Bookings and Money join
- * the bar with their own tickets.
+ * **The top bar** (#561, #563, the screens B1): the pages a desk works in, and the club's name
+ * opening the two pages about the club itself, *Details* and *Raketa settings*. Money joins the
+ * bar with its own ticket. The coral count on Bookings is Bookings' own spec's.
  */
 
 test.describe('The top bar', () => {
@@ -17,6 +17,7 @@ test.describe('The top bar', () => {
     const pages = bar.getByRole('navigation', { name: 'Club website' });
     await expect(pages.getByRole('link')).toHaveText([
       'Overview',
+      'Bookings',
       'Courts & prices',
       'Groups',
       'Administrators',
@@ -83,7 +84,9 @@ test.describe('The top bar', () => {
 
     await menu.click();
     await expect(bar.getByRole('link', { name: 'Details' })).toBeVisible();
-    await page.getByRole('heading', { name: 'Overview' }).click();
+    // Away: an empty part of the page, wherever the bar's rows put the menu.
+    const { width, height } = page.viewportSize() ?? { width: 1280, height: 720 };
+    await page.mouse.click(width - 16, height - 16);
     await expect(bar.getByRole('link', { name: 'Details' })).toBeHidden();
   });
 });

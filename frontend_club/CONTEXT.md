@@ -49,6 +49,9 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
 - **Stub backend** — `e2e/stub/backend.ts`: an HTTP server standing in for the club surface in
   the Playwright suite, typed from the wire types, recording every request.
 - **Fake club** — `e2e/stub/club.ts`: the stub's default handlers, one club whose tokens rotate,
-  whose reset signs everyone out and whose administrators, official groups and Raketa offer
-  (`club.raketa`, `e2e/stub/courts.ts`) keep the backend's rules, so a test programs only the
-  reply it is about.
+  whose reset signs everyone out and whose administrators, official groups, Raketa offer
+  (`club.raketa`, `e2e/stub/courts.ts`) and bookings (`club.bookings`, `e2e/stub/bookings.ts`)
+  keep the backend's rules, so a test programs only the reply it is about.
+- **Countdown** — what is left of a request's time to answer, counted from the backend's own
+  `read_at`, so a browser whose clock is wrong draws the same figure. Not a timer of the
+  backend's: when it runs out the page is read again, and the backend says the request is off.

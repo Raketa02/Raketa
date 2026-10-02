@@ -12,8 +12,8 @@ pull request.
 src/
   app/                 routes and layouts only
     (signed-out)/      sign-in, sign-up, forgot-password/…, reset/[token]
-    (signed-in)/       layout (the frame), overview, courts, groups, administrators, details,
-                       raketa-settings
+    (signed-in)/       layout (the frame), overview, bookings, courts, groups, administrators,
+                       details, raketa-settings
     session/           renew and end: the session's own route handlers (§3)
   proxy.ts             renews a lapsing session and stamps each request's path (§3)
   instrumentation.ts   refuses to start without the configuration (§6)
@@ -30,10 +30,13 @@ e2e/                   the Playwright suite and its stub backend (§7)
   `src/app/session/`, whose two route handlers belong to the server layer as the proxy does.
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
   password?_, _Set a new password_), `club-details`, `overview` (with the setup checklist),
-  `courts` (_Courts & prices_: the courts, their weekly hours, exceptions and prices),
-  `raketa-settings`, `administrators` and `groups` (the Groups table and _Hand over_). A feature may use another feature's components, schemas,
-  copy and mappers (sign-up draws Club details' fields; Overview greets a `Club`), and never
-  another feature's actions or queries. A feature's queries and actions call the backend only
+  `bookings` (the day's Raketa bookings, answering a request, _Move_ and _Cancel_, and what
+  waits for an answer), `courts` (_Courts & prices_: the courts, their weekly hours,
+  exceptions and prices), `raketa-settings`, `administrators` and `groups` (the Groups table
+  and _Hand over_). A feature may use another feature's components, schemas, copy and mappers
+  (sign-up draws Club details' fields; Overview greets a `Club` and lists Bookings' requests),
+  and never another feature's actions or queries: a route reads both features' queries and
+  hands each its view model. A feature's queries and actions call the backend only
   through the three doors of §4, and may read the session, the recovery cookie, the marks of
   §2 and the configuration directly.
 - **`mappers.ts` is the only file outside `src/server/` that imports a generated type**, besides
@@ -105,6 +108,12 @@ deploy-time question for the day there is a deployment.
 - **`anonymously(call)`**: sign-up, sign-in, _Forgot password?_.
 - **`readAsClub(call)`**: a render's read. No session redirects to sign-in; a 401 renews by §3.
 - **`writeAsClub(call)`**: a server action's write, with the retry of §3.
+
+**A read with no render to read in is a server action too**, in `actions.ts`, through
+`writeAsClub`: a dialog that opens on a click (Bookings' _Move_ reads the free courts as it
+opens, `readFreeCourts`), and the frame asking whether its badge is out of date, since a layout
+is not drawn again as the desk moves between pages (`readRequestCount`). They write nothing;
+the door is the one that can renew in place.
 
 Each call is `openapi-fetch` over the generated `paths`, with a ten-second timeout, and each
 settles into an **outcome**: `{ ok: true, data }` or `{ ok: false, error: { status, code,
@@ -181,9 +190,13 @@ points.
   removal leaves them needing one until a handover. Its Raketa offer, `club.raketa`
   (`e2e/stub/courts.ts`), keeps #535's rules for courts, hours, exceptions, prices and settings
   and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
-  makes the club live. A test seats its people in `club.administrators`, its groups in
-  `club.groups` (`officialGroup(…)`) and its courts in `club.raketa.courts` (`court(…)`), and a
-  test about one reply overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
+  makes the club live. Its bookings, `club.bookings` (`e2e/stub/bookings.ts`), keep #543's and
+  #547's rules: each status folded from where the booking stands and the clock, as the backend
+  folds it, and a booking still to be played holds its court for Courts & prices. A test seats
+  its people in `club.administrators`, its groups in `club.groups` (`officialGroup(…)`), its
+  courts in `club.raketa.courts` (`court(…)`) and its games with `club.bookings.add(booking(…))`,
+  and a test about one reply overrides that operation; a handler reads the query string in
+  `query`. Its tokens are unique across the run (`club.accessToken(n)`),
   because the single flight's grace window would hand one test the pair it renewed for another.
 - **Tests assert what the desk or the backend would see**: text on the page, the URL, the
   cookie's attributes, and the requests that arrived at the stub. They never read the cookie's

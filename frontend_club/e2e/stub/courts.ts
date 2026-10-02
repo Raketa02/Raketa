@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto';
 import type { components } from '../../src/generated/schema';
 
 import { refusal, type Reply, type StubBackend } from './backend';
+import { clubTime, dayFromToday } from './clock';
 
 type Sport = components['schemas']['Sport'];
 type WayOfWorking = components['schemas']['WayOfWorking'];
@@ -70,26 +71,12 @@ export function week(days: readonly number[], from: number, until: number): Cour
   );
 }
 
-/** A booking an exception may not close: a court, a local day and the hour it starts. */
-export interface Booking {
-  readonly id: string;
-  readonly courtId: string;
-  /** The local day, `2026-10-12`. */
-  readonly day: string;
-  readonly hour: number;
-  /** The same hour as the wire writes an instant. */
-  readonly startsAt: string;
-}
-
-/** A local day `days` from today, as the wire writes one: `2026-10-12`. */
-export function dayFromToday(days: number): string {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Warsaw',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(Date.now() + days * 86_400_000));
-  return parts;
+/** A booking that holds a court until it is played: none is deleted or given another sport. */
+export interface BookingAhead {
+  readonly booking_id: string;
+  readonly court_id: string;
+  /** The hour it begins, as the wire writes an instant. */
+  readonly starts_at: string;
 }
 
 function tidy(text: string): string {
@@ -116,8 +103,6 @@ export class FakeClubCourts {
   /** Whether the club has confirmed its settings: the checklist's last step. */
   confirmed = false;
   payments: PaymentsStatus = 'NOT_STARTED';
-  /** Bookings ahead: a court with one is neither deleted nor given another sport. */
-  bookings: Booking[] = [];
 
   constructor(
     private readonly stub: StubBackend,
@@ -128,20 +113,9 @@ export class FakeClubCourts {
     } | null,
     /** The sports the club offers now. */
     private readonly sports: () => readonly Sport[],
+    /** The club's bookings still to be played (`club.bookings`). */
+    private readonly bookingsAhead: () => readonly BookingAhead[],
   ) {}
-
-  /** A booking on `court` at `hour` on the local `day`. */
-  book(court: Court, day: string, hour: number): Booking {
-    const booking = {
-      id: randomUUID(),
-      courtId: court.id,
-      day,
-      hour,
-      startsAt: `${day}T${String(hour - 2).padStart(2, '0')}:00:00Z`,
-    };
-    this.bookings.push(booking);
-    return booking;
-  }
 
   /** Price `sport` at `zloty` a court-hour, with no bands. */
   price(sport: Sport, zloty: number): void {
@@ -160,7 +134,7 @@ export class FakeClubCourts {
   }
 
   private hasBookingAhead(id: string): boolean {
-    return this.bookings.some((booking) => booking.courtId === id);
+    return this.bookingsAhead().some((booking) => booking.court_id === id);
   }
 
   /** The setup checklist, read off everything set, as the backend reads it (#535, #537). */
@@ -319,18 +293,20 @@ export class FakeClubCourts {
       if (ids?.some((id) => !this.courts.some((each) => each.id === id))) {
         return { status: 404, body: refusal('court_not_found') };
       }
-      const held = this.bookings.find(
-        (booking) =>
-          (ids === null || ids.includes(booking.courtId)) &&
-          booking.day >= body.first_day &&
-          booking.day <= body.last_day &&
-          (from === null || until === null || (booking.hour >= from && booking.hour < until)),
-      );
+      const held = this.bookingsAhead().find((booking) => {
+        const { day, hour } = clubTime(booking.starts_at);
+        return (
+          (ids === null || ids.includes(booking.court_id)) &&
+          day >= body.first_day &&
+          day <= body.last_day &&
+          (from === null || until === null || (hour >= from && hour < until))
+        );
+      });
       if (held !== undefined) {
         return conflict('court_booked_then', undefined, {
-          court_id: held.courtId,
-          booking_id: held.id,
-          starts_at: held.startsAt,
+          court_id: held.court_id,
+          booking_id: held.booking_id,
+          starts_at: held.starts_at,
         });
       }
       const added: Exception = { id: randomUUID(), ...body, reason };
