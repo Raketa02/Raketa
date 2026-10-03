@@ -116,6 +116,15 @@ const stripeImport = {
     'and fakePayments() from src/test-support/platform.ts in a test. See #552.',
 };
 
+const pushImport = {
+  group: ['expo-notifications'],
+  message:
+    'Only src/shared/lib/platform/push.ts may import expo-notifications. The permission, the push ' +
+    'token, a push arriving and a push tapped are native and cannot be driven from a test — use ' +
+    'the PushPort from @/shared/lib/platform, and fakePush() from src/test-support/platform.ts in ' +
+    'a test. See #559.',
+};
+
 const featurevisorImport = {
   group: ['@featurevisor/*'],
   message:
@@ -202,6 +211,7 @@ const CORE_PATTERNS = [
   hapticsImport,
   clipboardImport,
   stripeImport,
+  pushImport,
   featurevisorImport,
   observabilityVendorImports,
 ];
@@ -434,6 +444,12 @@ export default [
     // the other native ports (#552).
     files: ['src/shared/lib/platform/payments.tsx'],
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(stripeImport)) },
+  },
+  {
+    // The phone's push notifications — the permission, the token, a push arriving and one tapped,
+    // one file wide like the other native ports (#559).
+    files: ['src/shared/lib/platform/push.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(pushImport)) },
   },
   {
     // The share sheet — one verb, one file, the clipboard's exemption with the path ban

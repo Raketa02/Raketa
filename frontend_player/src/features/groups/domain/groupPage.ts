@@ -25,6 +25,9 @@ export const OPENING_TAB: GroupTab = 'games';
 /** The Friends tab's switch — held in memory while the app is open, never on the phone (§5). */
 export type GameIntent = 'competitive' | 'forFun';
 
+/** The two, in the switch's order — what a route param naming one is checked against. */
+export const GAME_INTENTS = ['competitive', 'forFun'] as const satisfies readonly GameIntent[];
+
 /**
  * **The filter's sports** — only the ones the reader is rated in, in the registry's order
  * (padel › tennis › squash › badminton). A player group's dots are not the list: a player rated in
@@ -50,14 +53,20 @@ export function filterSports(
  * that is no longer a rated sport — or a sport this official group does not play, or never was a
  * sport — is the default, never an error (§4). `undefined` only for a reader the filter lists
  * nothing for, who has no sport to open.
+ *
+ * **A notice opens the page in its card's sport** (#559; the screens A9), `wanted`, ahead of the one
+ * picked last — while the filter lists it. Opening is not picking: the saved value is untouched.
  */
 export function openingSport(
   rated: readonly Sport[],
   saved: string | undefined,
   declared?: readonly Sport[],
+  wanted?: Sport,
 ): Sport | undefined {
   const sports = filterSports(rated, declared);
-  return sports.find((sport) => sport === saved) ?? sports[0];
+  return (
+    sports.find((sport) => sport === wanted) ?? sports.find((sport) => sport === saved) ?? sports[0]
+  );
 }
 
 /**

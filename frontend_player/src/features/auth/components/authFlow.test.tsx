@@ -25,12 +25,15 @@ import {
   setSessionStatus,
   wireHttpCredentials,
 } from '@/shared/lib/auth';
+import { PushProvider } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
+import { fakePush, PUSH_TOKEN } from '@/test-support/platform';
 import {
   errorResponse,
   installTransport,
   json,
   networkFailure,
+  noContent,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
@@ -428,6 +431,97 @@ describe('signing out', () => {
 
     const [revoke] = transport.requestsTo('POST', '/api/v1/auth/logout');
     expect(revoke?.body).toEqual({ refresh_token: 'refresh-token-1' });
+  });
+
+  /**
+   * **The phone stops being pushed this player's notices before the session ends** (#559): the
+   * removal needs the session the sign-out is about to end, so it is sent while the access token is
+   * still there — the token in the body, never a path — and the next player to sign in on this phone
+   * is not pushed the last one's.
+   */
+  it('lets this phone go while the session can still say so', async () => {
+    await signedIn();
+    transport.on('POST', '/api/v1/players/me/devices/removal', () => noContent());
+    transport.on('POST', '/api/v1/auth/logout', () =>
+      json<Wire['LogoutResponse']>({ message: 'Logged out successfully' }),
+    );
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PushProvider port={fakePush({ state: 'granted' })}>
+          <AccountPanel />
+        </PushProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.press(screen.getByLabelText('Sign out'));
+
+    await waitFor(() => expect(getSessionStatus()).toBe('unauthenticated'));
+    const [removal] = transport.requestsTo('POST', '/api/v1/players/me/devices/removal');
+    expect(removal?.body).toEqual({ token: PUSH_TOKEN });
+    expect(removal?.headers.Authorization).toBe('Bearer access-token-1');
+    expect(transport.requestsTo('POST', '/api/v1/auth/logout')).toHaveLength(1);
+  });
+
+  // A phone registered while it allowed notifications, switched off in Settings since: switched on
+  // again with nobody signed in, it would show the last player's notices.
+  it('lets the phone go whatever its permission says now', async () => {
+    await signedIn();
+    transport.on('POST', '/api/v1/players/me/devices/removal', () => noContent());
+    transport.on('POST', '/api/v1/auth/logout', () =>
+      json<Wire['LogoutResponse']>({ message: 'Logged out successfully' }),
+    );
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PushProvider port={fakePush({ state: 'blocked' })}>
+          <AccountPanel />
+        </PushProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.press(screen.getByLabelText('Sign out'));
+
+    await waitFor(() => expect(getSessionStatus()).toBe('unauthenticated'));
+    expect(transport.requestsTo('POST', '/api/v1/players/me/devices/removal')).toHaveLength(1);
+  });
+
+  it('lets nothing go from a phone with no token to give', async () => {
+    await signedIn();
+    transport.on('POST', '/api/v1/auth/logout', () =>
+      json<Wire['LogoutResponse']>({ message: 'Logged out successfully' }),
+    );
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PushProvider port={fakePush({ state: 'granted', token: null })}>
+          <AccountPanel />
+        </PushProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.press(screen.getByLabelText('Sign out'));
+
+    await waitFor(() => expect(getSessionStatus()).toBe('unauthenticated'));
+    expect(transport.requestsTo('POST', '/api/v1/players/me/devices/removal')).toHaveLength(0);
+  });
+
+  it('still signs the player out when the phone cannot be let go', async () => {
+    await signedIn();
+    transport.on('POST', '/api/v1/players/me/devices/removal', networkFailure());
+    transport.on('POST', '/api/v1/auth/logout', () =>
+      json<Wire['LogoutResponse']>({ message: 'Logged out successfully' }),
+    );
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PushProvider port={fakePush({ state: 'granted' })}>
+          <AccountPanel />
+        </PushProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.press(screen.getByLabelText('Sign out'));
+
+    await waitFor(() => expect(getSessionStatus()).toBe('unauthenticated'));
+    expect(hasTokens()).toBe(false);
+    expect(transport.requestsTo('POST', '/api/v1/auth/logout')).toHaveLength(1);
   });
 
   it('still signs the player out when the revoke cannot reach the server', async () => {

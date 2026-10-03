@@ -16,6 +16,7 @@ import {
   rowsOf,
   standingCards,
   weekCapOf,
+  withOnTop,
   withoutCard,
   type DeckCard,
   type DeckPerson,
@@ -345,5 +346,27 @@ describe('answering', () => {
       expect(refusalOutcome(code)).toBe('gone');
     }
     expect(refusalOutcome('payment_to_confirm')).toBe('returns');
+  });
+});
+
+describe('the card a notice opened the deck for (#559; the screens A9)', () => {
+  const first = card({ proposalId: 'p-1' });
+  const second = card({ proposalId: 'p-2' });
+  const third = card({ proposalId: 'p-3' });
+
+  it('is drawn on top, and the rest keep the order they were dealt in', () => {
+    expect(withOnTop([first, second, third], 'p-3').map((one) => one.proposalId)).toEqual([
+      'p-3',
+      'p-1',
+      'p-2',
+    ]);
+  });
+
+  it('changes nothing once it is no longer dealt — answered, filled, or gone', () => {
+    expect(withOnTop([first, second], 'p-9')).toEqual([first, second]);
+  });
+
+  it('changes nothing when no notice opened the deck', () => {
+    expect(withOnTop([first, second], undefined)).toEqual([first, second]);
   });
 });

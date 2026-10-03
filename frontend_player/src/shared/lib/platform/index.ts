@@ -45,6 +45,11 @@
  * **component** beside its verbs, because what is typed stays inside the fields and is read out of
  * them there.
  *
+ * **The eighth is the phone's push notifications** (#559): the permission, the token Expo's push
+ * service addresses the phone by, a push arriving while the app is open, and the tap that opens
+ * one. All native, and the walks a suite has to finish — a refusal, a token registered, a banner
+ * tapped — are none it could otherwise reach.
+ *
  * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
  * the two device facts a feature flag's rules may target (ADR-0180 §8). Nothing to decide and
  * nothing a test would drive, so no port.
@@ -111,3 +116,5 @@ export {
   type TakenCard,
 } from './payments';
 export { PaymentsProvider, usePayments, type PaymentsProviderProps } from './PaymentsProvider';
+export { devicePush, type PushNotice, type PushPort } from './push';
+export { PushProvider, usePush, type PushProviderProps } from './PushProvider';

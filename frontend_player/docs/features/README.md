@@ -32,6 +32,7 @@ is referenced from the other by a sentence, not copied.
 | [`games.md`](games.md)                       | The result argument's eight states, the score pad, the game screen                             |
 | [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page, Friends                                |
 | [`links.md`](links.md)                       | The three links into the app, the reader, the held link, the two sign-out sheets               |
+| [`notifications.md`](notifications.md)       | You › Account › Notifications, the phone's push, the in-app banner, the list behind the bell   |
 | [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate                         |
 | [`payments.md`](payments.md)                 | You › Payments: the four-step setup, the method card, Change and Remove, the Stripe port       |
 | [`plans.md`](plans.md)                       | The plan card, the ladder, the Now rail and its nine card states                               |

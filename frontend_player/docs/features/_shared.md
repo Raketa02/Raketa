@@ -308,3 +308,23 @@ plugin and the port read is `shared/config/applePay.ts`, which imports nothing, 
 `appIdentity.ts`'s reason. `theme.size.payments` holds
 the step mark, the method card's badge and the fields' row. The record is
 [`payments.md`](payments.md).
+
+**The eighth port is the phone's push notifications** ([#559](https://github.com/Raketa02/Raketa/issues/559)).
+`shared/lib/platform/push.ts` is the only importer of `expo-notifications` — fenced in
+`CORE_PATTERNS` like the native ports, one file wide, and probed by `pnpm test:boundaries`. Six verbs:
+the permission in the platform's vocabulary (asked through a notification channel on Android, made
+first), `readToken` (this phone's Expo push token, kept for the process until the system replaces it
+— or `null` for a build that cannot be pushed, and for an answer Expo has not given within the app's
+request timeout; it never rejects, since the sign-out waits on it), `onTokenChange`,
+`onNotice` (a push while the app is open, handed up as it came — the payload is untrusted and the
+feature checks it) and `onOpen` (a push tapped, the cold start's tap read once when the first
+listener subscribes, every tap handed over once). `PushProvider`/`usePush` as the other ports;
+`fakePush()` is a phone whose permission, token, arriving pushes and taps a suite decides, and **the
+router harness always provides one** — `NO_PUSH`, inert, so no suite's _Allow notifications_ carries
+into the next — with `stubPush` for the suites about it. `jest.setup.js` mocks the library's far
+side. `shared/config/push.ts` holds the Expo project (none yet, #533) and whether an iPhone build may
+carry the push entitlement (not yet, O6); `plugins/push.ts` takes the entitlement back out of the
+iPhone build, which `expo-notifications`' own plugin adds unasked — **the removal is applied to the
+returned config, before the plugin list, because a plugin registered earlier runs its change
+later**, and `npx expo config --type introspect` shows no `aps-environment`. `theme.motion.hold.notice`
+holds the banner's six seconds. The record is [`notifications.md`](notifications.md).

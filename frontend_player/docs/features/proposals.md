@@ -591,3 +591,12 @@ them. The walk is `noShows.test.tsx`.
 
 **Owed**: the push and in-app notice for a report and for the club's cancel (#549/#559). **Nothing
 here has been seen on a device.**
+
+**A notice opens the deck at its card** ([#559](https://github.com/Raketa02/Raketa/issues/559); the
+screens A9). `GamesDeck` takes `onTop` — the card's id, handed down by the group page from its route —
+and draws it first while it is dealt, the rest in the order dealt (`withOnTop`, pure and tested); once
+it is answered, filled or gone the deck is the server's order again, with nothing said about it. Two
+exports cross for the notices: `gameRoute`, so a notice about a game still filling opens the details
+the deck's **i** opens, and `proposalKeys`, so a tap re-reads the read behind the screen it opens and a
+push arriving re-reads Home's — `paymentKeys`' reason. The record is
+[`notifications.md`](notifications.md).

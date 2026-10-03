@@ -19,6 +19,31 @@ describe('a group page’s route param', () => {
   );
 });
 
+/**
+ * **A group's deck opened by a notice** (#559; the screens A9): the sport, the kind and the card to
+ * put on top ride with the group's id. All three, or the page opens as the page always does — a
+ * group id is enough to open on, and an arrival this build cannot read is no reason to refuse it.
+ */
+describe('a group page opened at a card', () => {
+  const GROUP = 'a0000000-0000-4000-8000-000000000002';
+  const CARD = 'b0000000-0000-4000-8000-000000000003';
+
+  it('reads the sport, the kind and the card beside the group', () => {
+    expect(
+      parseGroupRouteParams({ groupId: GROUP, sport: 'padel', kind: 'forFun', card: CARD }),
+    ).toEqual({ groupId: GROUP, arrival: { sport: 'padel', kind: 'forFun', card: CARD } });
+  });
+
+  it.each([
+    { sport: 'padel', kind: 'forFun' },
+    { sport: 'pickleball', kind: 'forFun', card: CARD },
+    { sport: 'padel', kind: 'FOR_FUN', card: CARD },
+    { sport: 'padel', kind: 'forFun', card: 'not-a-card' },
+  ])('opens the page as it always does for %p', (arrival) => {
+    expect(parseGroupRouteParams({ groupId: GROUP, ...arrival })).toEqual({ groupId: GROUP });
+  });
+});
+
 describe('the Friends screen’s route params', () => {
   const GROUP = 'a0000000-0000-4000-8000-000000000002';
 

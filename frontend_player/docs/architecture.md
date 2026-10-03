@@ -422,7 +422,8 @@ session that cannot recover.
 ### Logout is a system operation, not a `router.replace`
 
 ```
-1. optionally revoke the server session / refresh token
+1. optionally revoke the server session / refresh token — and, beside it, let the phone go:
+   its push token removed, so the next player on it is not pushed this one's notices (#559)
 2. clear the token manager's memory
 3. delete the SecureStore credentials
 4. cancel in-flight authenticated requests
@@ -841,7 +842,9 @@ sessions.
   ([#552](https://github.com/Raketa02/Raketa/issues/552)), the one port that carries a component:
   Stripe's card fields are a native view whose entry stays inside it, so the port hands a screen
   `CardFields` beside its verbs, and `fakePayments()` behaves as Stripe's test cards do
-  ([`docs/features/_shared.md`](features/_shared.md)).
+  ([`docs/features/_shared.md`](features/_shared.md)). The eighth is **`PushPort` over
+  `expo-notifications`** ([#559](https://github.com/Raketa02/Raketa/issues/559)): the permission, the
+  push token, a push arriving while the app is open and a push tapped, with `fakePush()` beside it.
 - **A screen reaches a port through its context** — `useLocation()` /
   `useImagePicking()` / `useLiveStream()`, each defaulting to the real device, so nothing
   in the app wires anything up and a test wraps the tree in the device it wants. A screen
@@ -1364,6 +1367,12 @@ when the code that needs them is written — not preemptively:
   behind `shared/lib/observability` ([Part 15](#part-15--observability)).
 - Maestro — E2E journeys ([Part 16](#part-16--testing)).
 
+> `expo-notifications` joined the manifest with the notices
+> ([#559](https://github.com/Raketa02/Raketa/issues/559)), at the version Expo SDK 52 pins (0.29.14),
+> behind the eighth platform port — a native module, so it needs a development build rebuilt with
+> it; its config plugin's iPhone push entitlement is taken back out until the Apple Developer
+> membership exists (`plugins/push.ts`).
+>
 > `@stripe/stripe-react-native` joined the manifest with You › Payments
 > ([#552](https://github.com/Raketa02/Raketa/issues/552)), at the version Expo SDK 52 pins (0.38.6),
 > behind the seventh platform port — a native module and a native view, so it needs a development

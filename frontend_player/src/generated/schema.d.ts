@@ -2425,6 +2425,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/players/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My notification choices
+         * @description You › Account › *Notifications*: the three notices a player chooses — *You complete it* and *Challenges for you* on, *Fill in alerts* off, until changed. The seven always-on notices are no choice.
+         */
+        get: operations["read_notification_choices_api_v1_players_me_notifications_get"];
+        /**
+         * Save my notification choices
+         * @description All three, as the screen saves them on every tap. The same answer records nothing. Answers what is now saved.
+         */
+        put: operations["set_notification_choices_api_v1_players_me_notifications_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Push to this phone
+         * @description What a phone sends once it is allowed to show notifications, and again whenever its token changes. You keep at most ten phones; past them the one registered longest ago is let go.
+         */
+        post: operations["register_a_phone_api_v1_players_me_devices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/devices/removal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop pushing to this phone
+         * @description What a phone sends as it signs out, before its session ends. The token travels in the body, never the path, so it is in no access log.
+         */
+        post: operations["remove_a_phone_api_v1_players_me_devices_removal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My recent notices
+         * @description Everything you were told — the list behind the bell on Home — the newest first, each in the words it was pushed in and with where a tap opens it. A notice past its kind's daily cap that was bundled is not its own row: the row it joined says how many it holds (`gathered`).
+         */
+        get: operations["read_recent_notices_api_v1_players_me_notices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/proposals/{proposal_id}/yes": {
         parameters: {
             query?: never;
@@ -7192,6 +7276,76 @@ export interface components {
             disputed_at?: string | null;
         };
         /**
+         * NoticeKind
+         * @description Every notice a player can be told (the mechanics §17.2).
+         * @enum {string}
+         */
+        NoticeKind: "GAME_BOOKED" | "CONFIRM_PAYMENT" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "CLUB_CONFIRMED" | "CLUB_COULD_NOT_TAKE_IT" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT";
+        /**
+         * NoticeSchema
+         * @description One notice, in the words the phone was pushed — and where a tap opens.
+         */
+        NoticeSchema: {
+            /**
+             * Notice Id
+             * Format: uuid
+             */
+            notice_id: string;
+            kind: components["schemas"]["NoticeKind"];
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /**
+             * Given At
+             * Format: date-time
+             * @description When it was given — or when the day last bundled a notice into it, which is what moves it up the list.
+             */
+            given_at: string;
+            /** @description `BOOKING` — the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` — a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` — the pool's deck in the sport and kind, with this card on top. */
+            opens: components["schemas"]["Opens"];
+            /**
+             * Game Id
+             * Format: uuid
+             * @description The game it is about: its proposal's id, which its booking takes.
+             */
+            game_id: string;
+            /**
+             * Pool Id
+             * Format: uuid
+             */
+            pool_id: string;
+            sport: components["schemas"]["Sport"];
+            game_kind: components["schemas"]["SearchMode"];
+            /**
+             * Gathered
+             * @description How many more notices of its kind the day bundled into this one — told in its words, and pushed to nobody.
+             */
+            gathered: number;
+        };
+        /**
+         * NotificationChoicesSchema
+         * @description The three notices a player chooses. The seven that are always on are
+         *     no choice, and are not here.
+         */
+        NotificationChoicesSchema: {
+            /**
+             * You Complete It
+             * @description *You complete it* — a card needs only you. On until switched off; at most one a day, the rest bundled into it.
+             */
+            you_complete_it: boolean;
+            /**
+             * Challenges For You
+             * @description *Challenges for you* — a member's post names you. On until switched off; at most three a day, the rest bundled into the third.
+             */
+            challenges_for_you: boolean;
+            /**
+             * Fill In Alerts
+             * @description *Fill in alerts* — a booked game you fit needs one more. Off until switched on; at most three a day.
+             */
+            fill_in_alerts: boolean;
+        };
+        /**
          * OfficialGroupClubSchema
          * @description The club an administrator acts for.
          */
@@ -7296,6 +7450,12 @@ export interface components {
              */
             cards: components["schemas"]["OpenCardSchema"][];
         };
+        /**
+         * Opens
+         * @description The screen a notice opens on when tapped (the screens A9).
+         * @enum {string}
+         */
+        Opens: "BOOKING" | "PROPOSAL" | "DECK";
         /**
          * OpponentVarietySchema
          * @description How widely this person spreads their games, over their **whole** record.
@@ -8741,6 +8901,14 @@ export interface components {
              */
             answered_at: string;
         };
+        /** PushDeviceRequest */
+        PushDeviceRequest: {
+            /**
+             * Token
+             * @description The phone's Expo push token — `ExponentPushToken[…]` or `ExpoPushToken[…]` — as the notifications library hands it out.
+             */
+            token: string;
+        };
         /**
          * QuestionResponse
          * @description A question in reading order: category, situation, question, answers.
@@ -8899,6 +9067,14 @@ export interface components {
         ReceiptsResponse: {
             /** Receipts */
             receipts: components["schemas"]["ReceiptSchema"][];
+        };
+        /** RecentNoticesResponse */
+        RecentNoticesResponse: {
+            /**
+             * Notices
+             * @description The newest first.
+             */
+            notices: components["schemas"]["NoticeSchema"][];
         };
         /**
          * RecordLikelyRangeSchema
@@ -16164,6 +16340,162 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    read_notification_choices_api_v1_players_me_notifications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChoicesSchema"];
+                };
+            };
+        };
+    };
+    set_notification_choices_api_v1_players_me_notifications_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationChoicesSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationChoicesSchema"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    register_a_phone_api_v1_players_me_devices_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description This phone is pushed every notice given to you. Also the answer when it already was. A phone signed in as somebody else before is theirs no more. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `push_token_invalid` — not an Expo push token. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_a_phone_api_v1_players_me_devices_removal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description This phone is pushed nothing more for you. Also the answer when it was not registered. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_recent_notices_api_v1_players_me_notices_get: {
+        parameters: {
+            query?: {
+                /** @description The most notices to answer. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentNoticesResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -75,6 +75,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useChallengesWaiting } from '@/features/challenges/types';
 import { useFollowedFeature } from '@/features/feature_flags/types';
+import { NoticesHost } from '@/features/notifications/types';
 import { useGamesNeedingYou } from '@/features/plans/types';
 import { bookedGameRoute, FillProvider, useHomeBadge } from '@/features/proposals/types';
 import { TAB_BAR_HEIGHT, TabBar, theme } from '@/shared/ui';
@@ -115,6 +116,7 @@ const YOU_SCREENS = [
   'you/name',
   'you/games-and-money',
   'you/payments',
+  'you/notifications',
 ] as const;
 
 export function TabShell() {
@@ -174,6 +176,9 @@ export function TabShell() {
           <Stack.Screen name="booking/[bookingId]/index" options={{ animation: 'default' }} />
           <Stack.Screen name="booking/[bookingId]/chat" options={{ animation: 'default' }} />
           <Stack.Screen name="booking/[bookingId]/result" options={{ animation: 'default' }} />
+          {/* And so are the recent notices behind Home's bell (#559): pushed over Home, and back
+            is Home — a row opens its game over the list, so back from the game is the list. */}
+          <Stack.Screen name="notices" options={{ animation: 'default' }} />
           {/* And so is a challenge: it is pushed over the Chats inbox, the list stays underneath,
             and backing out returns to the row it was tapped from
             ([#360](https://github.com/Raketa02/Raketa/issues/360)). It needs no `INSIDE_A_TAB`
@@ -229,6 +234,10 @@ export function TabShell() {
             challengesWaiting={challengesWaiting}
           />
         ) : null}
+        {/* The notices (#559), for the session: the phone registered, a push while the app is
+            open drawn as the banner over every screen and the bar, and a push tapped opening its
+            game. Held here for the fill's reason — all three outlive the screen the player is on. */}
+        <NoticesHost />
       </FillProvider>
     </View>
   );

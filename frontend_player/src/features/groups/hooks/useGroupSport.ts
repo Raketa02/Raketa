@@ -47,8 +47,12 @@ export interface GroupSport {
   readonly choose: (sport: Sport) => void;
 }
 
-/** `declared` is an official group's declared sports; `undefined` for a player group, or none yet read. */
-export function useGroupSport(declared?: readonly Sport[]): GroupSport {
+/**
+ * `declared` is an official group's declared sports; `undefined` for a player group, or none yet
+ * read. `opening` is the sport a notice opened the page in (#559) — the page stands on it until the
+ * player picks another, and it is never saved as a pick.
+ */
+export function useGroupSport(declared?: readonly Sport[], opening?: Sport): GroupSport {
   const client = useQueryClient();
   const account = useReaderId();
   const ratings = useSkillRatings();
@@ -68,9 +72,12 @@ export function useGroupSport(declared?: readonly Sport[]): GroupSport {
   // A phone that cannot tell whose choice to read is a store that cannot be read, and that gives
   // the default (ADR-0188 §4) — a pick is held in memory for as long as the page is up, kept nowhere.
   const [unkept, setUnkept] = useState<Sport>();
+  // The notice's sport, until the player picks one.
+  const [wanted, setWanted] = useState(opening);
 
   const choose = useCallback(
     (sport: Sport) => {
+      setWanted(undefined);
       if (account === undefined) {
         setUnkept(sport);
         return;
@@ -91,7 +98,7 @@ export function useGroupSport(declared?: readonly Sport[]): GroupSport {
 
   return {
     sports: filterSports(rated, declared),
-    sport: openingSport(rated, picked ?? undefined, declared),
+    sport: openingSport(rated, picked ?? undefined, declared, wanted),
     toAdd: sportsToAdd(rated, declared),
     choose,
   };

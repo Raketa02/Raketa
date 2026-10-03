@@ -1,5 +1,5 @@
 /**
- * Hand-written fakes for the four platform ports.
+ * Hand-written fakes for the platform ports.
  *
  * Beside `transport.ts` and for the same reason: a test states what the world outside the
  * app does, and everything inside it runs for real. The socket is one such edge; the OS
@@ -62,6 +62,8 @@ import type {
   LocationPort,
   PermissionState,
   PickedImage,
+  PushNotice,
+  PushPort,
 } from '@/shared/lib/platform';
 
 /** The bits every port fake shares: what the state is, and what asking would make it. */
@@ -556,4 +558,97 @@ export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}
     },
   };
   return port;
+}
+
+/**
+ * **A phone whose pushes a suite decides** (#559) — the permission, the token Expo's service would
+ * address it by, a push arriving while the app is open, a push tapped, and a token replaced.
+ *
+ * Defaults to the ordinary path every port's fake starts on — never asked, says yes — and a phone
+ * that **has** a token to give, because a token withheld is the edge (no Expo project, an iPhone
+ * build without the entitlement) and a suite about one says so with `token: null`. The token is
+ * handed over whatever the permission says, as the real port does: whether a phone that may not
+ * show anything is worth registering is the caller's question.
+ *
+ * Nothing arrives on its own: `receive`, `tap` and `rotate` are the suite's, delivered to whoever
+ * is listening at that moment — and a tap made before anybody listens is the **cold start**, held
+ * until the first listener subscribes and handed to it once, as the real port reads the tap that
+ * started the app.
+ */
+export interface FakePush extends PushPort, FakePermission {
+  /** The token the phone would hand over — `null` for one that has none to give. */
+  token: string | null;
+  /** How many times a token was asked for. */
+  readonly tokenReads: number;
+  /** A push arrives while the app is open. */
+  receive: (notice: PushNotice) => void;
+  /** The player taps a push — before anybody listens, it is the tap that starts the app. */
+  tap: (data: unknown) => void;
+  /** The system hands the phone a new token. */
+  rotate: (token: string) => void;
+}
+
+/** What Expo's service mints for a phone — the shape the backend accepts. */
+export const PUSH_TOKEN = 'ExponentPushToken[fake-phone-0001]';
+
+export function fakePush(
+  initial: Partial<Pick<FakePush, 'state' | 'answer' | 'token'>> = {},
+): FakePush {
+  let tokenReads = 0;
+  const notices = new Set<(notice: PushNotice) => void>();
+  const opens = new Set<(data: unknown) => void>();
+  const tokens = new Set<() => void>();
+  /** A tap nobody was listening for — the cold start's. */
+  let launchedBy: { readonly data: unknown } | undefined;
+
+  const fake: FakePush = {
+    state: initial.state ?? 'undetermined',
+    answer: initial.answer ?? 'granted',
+    token: initial.token === undefined ? PUSH_TOKEN : initial.token,
+
+    get tokenReads() {
+      return tokenReads;
+    },
+
+    getPermission: async () => fake.state,
+    requestPermission: async () => settle(fake),
+    readToken: async () => {
+      tokenReads += 1;
+      return fake.token;
+    },
+
+    onTokenChange: (listener) => {
+      tokens.add(listener);
+      return () => tokens.delete(listener);
+    },
+    onNotice: (listener) => {
+      notices.add(listener);
+      return () => notices.delete(listener);
+    },
+    onOpen: (listener) => {
+      opens.add(listener);
+      const held = launchedBy;
+      launchedBy = undefined;
+      // Asynchronously, as the real port reads the cold start's tap.
+      if (held !== undefined) void Promise.resolve().then(() => listener(held.data));
+      return () => opens.delete(listener);
+    },
+
+    receive: (notice) => {
+      for (const listener of [...notices]) listener(notice);
+    },
+    tap: (data) => {
+      if (opens.size === 0) {
+        launchedBy = { data };
+        return;
+      }
+      for (const listener of [...opens]) listener(data);
+    },
+    rotate: (token) => {
+      fake.token = token;
+      for (const listener of [...tokens]) listener();
+    },
+  };
+
+  return fake;
 }

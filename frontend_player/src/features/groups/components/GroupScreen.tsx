@@ -40,6 +40,11 @@
  * buttons, so it is drawn outside the page's scroller, and scrolls itself in the states that are
  * not a deck — the question, the starting card.
  *
+ * **A notice opens the deck at a card** (#559; the screens A9: *the deck opens with the card on top
+ * for You complete it and Challenges*). The route hands in the card's sport, kind and id: the page
+ * stands on that sport until the player picks another — never saved as a pick — the switch moves
+ * to the card's kind, the page is on Games, and the deck draws the card first while it is dealt.
+ *
  * **Info re-reads on a pull** (#529) — the group, who is waiting and the members row with it.
  * Only Info: the other three tabs are drawn for a sport and read their own rows.
  *
@@ -67,6 +72,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group } from '../domain/group';
 import { GROUP_TABS, OPENING_TAB, type GroupTab } from '../domain/groupPage';
+import type { DeckArrival } from '../schemas/groupRouteParams';
 import { useGroup, useGroupReread, useJoinRequests } from '../hooks/useGroups';
 import { useGameIntent } from '../store/gameIntent.store';
 import { useGroupTab } from '../store/groupTab.store';
@@ -162,7 +168,13 @@ function usePull(reread: () => Promise<void>) {
   return { refreshing, pull: () => void pull() };
 }
 
-export function GroupScreen({ groupId }: { readonly groupId: string }) {
+export interface GroupScreenProps {
+  readonly groupId: string;
+  /** The card a notice opened the deck at (#559) — absent for a page the player opened. */
+  readonly arrival?: DeckArrival;
+}
+
+export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
   const read = useGroup(groupId);
   const group = read.data;
 
@@ -170,6 +182,16 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
   const show = useGroupTab((state) => state.show);
   const setTab = (next: GroupTab) => show(groupId, next);
   const { refreshing, pull } = usePull(useGroupReread(groupId));
+
+  // A notice's card: the deck, in the card's kind. Before the deck is drawn — it waits for the sport,
+  // which is read off the phone — so it is never read for one kind and then another.
+  const card = arrival?.card;
+  const kind = arrival?.kind;
+  useEffect(() => {
+    if (kind === undefined) return;
+    show(groupId, 'games');
+    useGameIntent.getState().choose(kind);
+  }, [card, kind, groupId, show]);
 
   // The page's tab and *Post a game*'s draft are kept while the page is up, and go with it — so it
   // opens on Games the next time, and the next post starts from nothing.
@@ -185,6 +207,7 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
     <SafeAreaView style={s.screen} edges={['top']}>
       <SportFilterPage
         {...(group?.declaredSports === undefined ? {} : { declaredSports: group.declaredSports })}
+        {...(arrival === undefined ? {} : { opening: arrival.sport })}
         header={(pill) => (
           <ScreenHeader
             compact
@@ -230,7 +253,11 @@ export function GroupScreen({ groupId }: { readonly groupId: string }) {
               {tab === 'games' && playing !== undefined ? (
                 // The deck lays itself out — see the module note.
                 <View style={s.fill}>
-                  <GamesTab group={group} sport={playing} />
+                  <GamesTab
+                    group={group}
+                    sport={playing}
+                    {...(card === undefined ? {} : { onTop: card })}
+                  />
                 </View>
               ) : (
                 <ScrollView

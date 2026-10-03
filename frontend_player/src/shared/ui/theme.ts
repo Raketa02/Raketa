@@ -1526,6 +1526,10 @@ const motion = {
      *  Nothing surrounds it: the toast neither arrives nor leaves on an animation (1.5), so
      *  this is the whole of that component's timing and there is no reduced-motion branch. */
     toast: 2600,
+    /** The in-app banner a push draws while the app is open (#559, Part 16 2026-10-02). Long
+     *  enough to read a notice's two lines **and** reach for it — it is a control, unlike the
+     *  toast — and it closes on a press too, so a player in a hurry is not held by it. */
+    notice: 6000,
   },
 } as const;
 

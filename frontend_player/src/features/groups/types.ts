@@ -29,6 +29,13 @@ export {
  * where the links feature sends a link it has read, with the code the screen fills its field with.
  */
 export { joinGroupRouteFor } from './components/groupRoutes';
+/**
+ * **A group's deck, opened at a card** ([#559](https://github.com/Raketa02/Raketa/issues/559)): where
+ * the notifications feature sends a notice about a card waiting for the player — the page on Games,
+ * in the card's sport and kind, the card first.
+ */
+export { groupDeckRoute } from './components/groupRoutes';
+export type { DeckArrival } from './schemas/groupRouteParams';
 
 /**
  * **What the administrator area draws with** ([#516](https://github.com/Raketa02/Raketa/issues/516),

@@ -70,6 +70,8 @@ const INSIDE_A_TAB: Readonly<Partial<Record<string, TabBarKey>>> = {
   games: 'home',
   // A booked game's details, its chat and its result (#556) — pushed over Home, as a game is.
   booking: 'home',
+  // The recent notices behind Home's bell (#559).
+  notices: 'home',
 };
 
 /**

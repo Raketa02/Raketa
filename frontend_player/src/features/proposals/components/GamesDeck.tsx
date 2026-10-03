@@ -94,6 +94,7 @@ import {
   refusalOutcome,
   standingCards,
   weekCapOf,
+  withOnTop,
   type DeckCard,
   type DeckPerson,
 } from '../domain/deck';
@@ -132,6 +133,11 @@ export interface GamesDeckProps {
   readonly onChoose: (kind: GameKind) => void;
   /** What the tab draws when this segment deals nothing — the group's starting cards. */
   readonly empty: ReactNode;
+  /**
+   * **The card a notice opened the deck for** (#559; the screens A9) — on top while it is dealt,
+   * the rest in the order they were dealt. Absent for a deck opened by the page.
+   */
+  readonly onTop?: string;
 }
 
 /** The card on its way out, and the answer that sent it there. */
@@ -140,7 +146,7 @@ interface Leaving {
   readonly said: DeckExit;
 }
 
-export function GamesDeck({ groupId, sport, chosen, onChoose, empty }: GamesDeckProps) {
+export function GamesDeck({ groupId, sport, chosen, onChoose, empty, onTop }: GamesDeckProps) {
   const { read, kind } = useGroupDeck(groupId, sport, chosen);
   const reread = useRereadDeck(groupId);
   const drop = useDropCard(groupId, sport, kind);
@@ -176,7 +182,10 @@ export function GamesDeck({ groupId, sport, chosen, onChoose, empty }: GamesDeck
   const standing =
     deck === undefined
       ? []
-      : standingCards(deck.cards, at).filter((card) => card.proposalId !== fill.counting);
+      : withOnTop(
+          standingCards(deck.cards, at).filter((card) => card.proposalId !== fill.counting),
+          onTop,
+        );
   // The card in flight stays on the stage until it has flown, whatever a re-read says.
   const shown =
     leaving === undefined

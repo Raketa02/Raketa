@@ -46,7 +46,14 @@ import { LinkCard } from './LinkCard';
 
 const SEAT = theme.size.groupPage.seat;
 
-export function GamesTab({ group, sport }: { readonly group: Group; readonly sport: Sport }) {
+export interface GamesTabProps {
+  readonly group: Group;
+  readonly sport: Sport;
+  /** The card a notice opened the deck at (#559) — on top while it is dealt. */
+  readonly onTop?: string;
+}
+
+export function GamesTab({ group, sport, onTop }: GamesTabProps) {
   const chosen = useGameIntent((state) => state.intent);
   const choose = useGameIntent((state) => state.choose);
 
@@ -57,6 +64,7 @@ export function GamesTab({ group, sport }: { readonly group: Group; readonly spo
       chosen={chosen}
       onChoose={choose}
       empty={<StartingCard group={group} sport={sport} />}
+      {...(onTop === undefined ? {} : { onTop })}
     />
   );
 }

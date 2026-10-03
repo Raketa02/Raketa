@@ -8,12 +8,39 @@ import { z } from 'zod';
 
 import { SPORTS, type Sport } from '@/shared/vocabulary/sport';
 
+import { GAME_INTENTS, type GameIntent } from '../domain/groupPage';
+
 const GroupRouteParams = z.object({ groupId: z.string().uuid() });
 
-/** The group id, or `undefined` for a param this app cannot read. */
-export function parseGroupRouteParams(params: unknown): { readonly groupId: string } | undefined {
+/**
+ * **A deck opened at a card** — what a notice's tap adds to the group's id (#559; the screens A9):
+ * the sport and the kind the card was dealt in, and the card to put on top.
+ */
+const DeckArrivalParams = z.object({
+  sport: z.enum(SPORTS),
+  kind: z.enum(GAME_INTENTS),
+  card: z.string().uuid(),
+});
+
+export interface DeckArrival {
+  readonly sport: Sport;
+  readonly kind: GameIntent;
+  /** The card's id — the proposal it is. */
+  readonly card: string;
+}
+
+/**
+ * The group id, and the card a notice opened its deck at — or `undefined` for a group id this app
+ * cannot read. An arrival is all three of its params or none: one this build cannot read opens the
+ * page as the page always opens, since the group id alone is a page to open.
+ */
+export function parseGroupRouteParams(
+  params: unknown,
+): { readonly groupId: string; readonly arrival?: DeckArrival } | undefined {
   const parsed = GroupRouteParams.safeParse(params);
-  return parsed.success ? parsed.data : undefined;
+  if (!parsed.success) return undefined;
+  const arrival = DeckArrivalParams.safeParse(params);
+  return arrival.success ? { ...parsed.data, arrival: arrival.data } : parsed.data;
 }
 
 /**

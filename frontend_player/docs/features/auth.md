@@ -258,3 +258,12 @@ with `useInvitationLink`, `LINK_STATE_MESSAGE`, `invitationErrorMessage`, `SIGN_
 used, and the sheets' _Sign out_ is this feature's button. A malformed token no longer reaches
 either route from outside — the reader ignores the link — so their redirects to the code form and the
 email form now guard only the app's own navigation.
+
+**A sign-out lets the phone go first** ([#559](https://github.com/Raketa02/Raketa/issues/559)).
+`signOut(phone)` — handed the push port by `useSignOut` — asks the phone for its push token, only on
+a phone that may show a notice, and `POST /players/me/devices/removal` with it in the body, **before
+the revoke**: both need what `endSession` destroys, the removal the session and the revoke the
+refresh token. Best-effort, as the revoke is — a player on a train still leaves. `removePushDevice` is
+in `auth`'s api because the act is the sign-out's; registering the phone is `notifications`'. A session
+that ends by itself — a refused refresh — cannot sign a removal, and that phone stays registered to
+the last player until the next sign-in on it (`notifications.md`'s call 7).

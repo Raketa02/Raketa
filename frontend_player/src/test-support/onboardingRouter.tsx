@@ -31,6 +31,7 @@ import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import BookedGameRoute from '@/app/(app)/(tabs)/booking/[bookingId]/index';
 import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
 import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
+import NoticesRoute from '@/app/(app)/(tabs)/notices';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
 import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
 import YesRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/yes';
@@ -59,6 +60,7 @@ import YouGamesAndMoneyRoute from '@/app/(app)/(tabs)/you/games-and-money';
 import YouIntroRoute from '@/app/(app)/(tabs)/you/intro';
 import YouKindOfGameRoute from '@/app/(app)/(tabs)/you/kind-of-game';
 import YouNameRoute from '@/app/(app)/(tabs)/you/name';
+import YouNotificationsRoute from '@/app/(app)/(tabs)/you/notifications';
 import YouPaymentsRoute from '@/app/(app)/(tabs)/you/payments';
 import YouPassportRoute from '@/app/(app)/(tabs)/you/passport';
 import YouPhotosRoute from '@/app/(app)/(tabs)/you/photos';
@@ -108,8 +110,10 @@ import {
   LiveStreamProvider,
   LocationProvider,
   PaymentsProvider,
+  PushProvider,
   type ClipboardPort,
   type PaymentsPort,
+  type PushPort,
   type HapticsPort,
   type SharePort,
   type ImagePickingPort,
@@ -170,6 +174,8 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/booking/[bookingId]/index': BookedGameRoute,
   '(app)/(tabs)/booking/[bookingId]/chat': BookedGameChatRoute,
   '(app)/(tabs)/booking/[bookingId]/result': BookedGameResultRoute,
+  // The recent notices behind Home's bell (#559), under a `notices` segment the shell counts as Home's.
+  '(app)/(tabs)/notices': NoticesRoute,
   '(app)/(tabs)/chats': ChatsRoute,
   // A challenge is pushed over the Chats tab, and the static `challenge` above the id is the
   // decision that keeps a challenge id and a conversation id from sharing one segment.
@@ -209,6 +215,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/name': YouNameRoute,
   '(app)/(tabs)/you/games-and-money': YouGamesAndMoneyRoute,
   '(app)/(tabs)/you/payments': YouPaymentsRoute,
+  '(app)/(tabs)/you/notifications': YouNotificationsRoute,
   // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
   // tabs: Groups at the root, You beside it, New official group and a group's page pushed over
   // Groups, and a group's settings and Start playing's first step pushed over You (#517).
@@ -407,6 +414,25 @@ export function resetPayments(): void {
 }
 
 /**
+ * The phone this tree is pushed on, for the suites about the notices (#559). **Like the live channel
+ * and the payment provider, it always has one**: the device's port would reach `expo-notifications`,
+ * which jest's setup mocks into a phone nobody described. A suite that says nothing gets a phone that
+ * was never asked, says nothing when asked and has no token — `NO_PUSH`, which no suite can change;
+ * a suite about the notices says so with `stubPush(fakePush())` and keeps it.
+ */
+let push: PushPort | undefined;
+
+/** Run the tree against this phone. Call before `launchSignedIn`. */
+export function stubPush(port: PushPort): void {
+  push = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetPush(): void {
+  push = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -444,8 +470,10 @@ function TestRoot() {
  * `stubPayments` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withPush = <PushProvider port={push ?? NO_PUSH}>{children}</PushProvider>;
+
   const withPayments = (
-    <PaymentsProvider port={payments ?? NO_PAYMENTS}>{children}</PaymentsProvider>
+    <PaymentsProvider port={payments ?? NO_PAYMENTS}>{withPush}</PaymentsProvider>
   );
 
   const withShare =
@@ -507,6 +535,21 @@ const SILENT_CHANNEL: LiveStreamPort = {
  * one suite's card into the next. This one is a fresh fake per process that no suite types into.
  */
 const NO_PAYMENTS: PaymentsPort = fakePayments();
+
+/**
+ * The phone a suite that said nothing gets — `SILENT_CHANNEL`'s shape, for its reason: one instance
+ * for the process, and **inert**, because a fake holds a permission a suite can change by pressing
+ * *Allow notifications* and shared across suites it would carry one suite's answer into the next.
+ * Never asked, and asking changes nothing; no token; nothing ever arrives.
+ */
+const NO_PUSH: PushPort = {
+  getPermission: async () => 'undetermined',
+  requestPermission: async () => 'undetermined',
+  readToken: async () => null,
+  onTokenChange: () => () => {},
+  onNotice: () => () => {},
+  onOpen: () => () => {},
+};
 
 /** The four sports the backend serves, as the registry route answers. */
 export const SPORTS_SERVED: Wire['SportsResponse'] = {
@@ -1213,6 +1256,43 @@ export function stubGate(
   stubPaymentsToConfirm(transport);
   stubReceipts(transport);
   stubHome(transport);
+  stubNotificationChoices(transport);
+  stubNotices(transport);
+}
+
+export const NOTIFICATION_CHOICES_PATH = '/api/v1/players/me/notifications';
+export const NOTICES_PATH = '/api/v1/players/me/notices';
+export const DEVICES_PATH = '/api/v1/players/me/devices';
+export const DEVICE_REMOVAL_PATH = '/api/v1/players/me/devices/removal';
+
+/**
+ * The three choices, as `GET /players/me/notifications` answers — **the backend's defaults**, *You
+ * complete it* and *Challenges for you* on and *Fill in alerts* off, unless the suite says otherwise.
+ * The gate stubs it, because the You tab's *Notifications* row reads it on every visit (#559).
+ */
+export function stubNotificationChoices(
+  transport: Transport,
+  choices: Partial<Wire['NotificationChoicesSchema']> = {},
+) {
+  transport.on('GET', NOTIFICATION_CHOICES_PATH, () =>
+    json<Wire['NotificationChoicesSchema']>({
+      you_complete_it: true,
+      challenges_for_you: true,
+      fill_in_alerts: false,
+      ...choices,
+    }),
+  );
+}
+
+/**
+ * The recent notices, as `GET /players/me/notices` answers — **none** unless the suite says
+ * otherwise. The gate stubs it, because a push arriving re-reads the list wherever the player is
+ * (#559); the query string is the transport's to drop.
+ */
+export function stubNotices(transport: Transport, notices: readonly Wire['NoticeSchema'][] = []) {
+  transport.on('GET', NOTICES_PATH, () =>
+    json<Wire['RecentNoticesResponse']>({ notices: [...notices] }),
+  );
 }
 
 export const HOME_PATH = '/api/v1/home';

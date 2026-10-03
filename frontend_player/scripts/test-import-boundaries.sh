@@ -4,7 +4,7 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Nine modules may be imported from exactly one place:
+# Ten modules may be imported from exactly one place:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → feature_flags/api/datafileCache.ts
@@ -15,6 +15,7 @@
 #   expo-haptics                                 → platform/haptics.ts
 #   expo-clipboard                               → platform/clipboard.ts
 #   @stripe/stripe-react-native                  → platform/payments.tsx
+#   expo-notifications                           → platform/push.ts
 #   @featurevisor/sdk                            → feature_flags/api/featurevisor.ts
 #
 # And one **name** out of a module every screen imports:
@@ -179,6 +180,7 @@ HAPTICS_PORT='src/shared/lib/platform/haptics.ts'
 CLIPBOARD_PORT='src/shared/lib/platform/clipboard.ts'
 SHARE_PORT='src/shared/lib/platform/share.ts'
 PAYMENTS_PORT='src/shared/lib/platform/payments.tsx'
+PUSH_PORT='src/shared/lib/platform/push.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
 # The flag seam's three edges, each an api/ file of one feature: the fetch, the saved
@@ -319,6 +321,20 @@ expect_blocked @stripe/stripe-react-native "$OTHER_PLATFORM_FILE" 'payments.tsx'
 expect_allowed @stripe/stripe-react-native "$PAYMENTS_PORT"
 # And the port itself is still under every other ban.
 expect_blocked expo-clipboard "$PAYMENTS_PORT" 'clipboard.ts'
+
+echo
+echo "push notifications — expo-notifications belongs to platform/push.ts"
+expect_blocked expo-notifications "$FEATURE" 'push.ts'
+expect_blocked expo-notifications "$SCREEN" 'push.ts'
+expect_blocked expo-notifications "$TEST" 'push.ts'
+expect_blocked expo-notifications "$SUPPORT" 'push.ts'
+expect_blocked expo-notifications "$AUTH" 'push.ts'
+# One file wide: the payment provider beside it may not reach the phone's pushes.
+expect_blocked expo-notifications "$PAYMENTS_PORT" 'push.ts'
+expect_blocked expo-notifications "$OTHER_PLATFORM_FILE" 'push.ts'
+expect_allowed expo-notifications "$PUSH_PORT"
+# And the port itself is still under every other ban.
+expect_blocked @stripe/stripe-react-native "$PUSH_PORT" 'payments.tsx'
 
 echo
 echo "the share sheet — { Share } from react-native belongs to platform/share.ts"

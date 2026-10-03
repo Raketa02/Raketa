@@ -221,3 +221,14 @@ invalidates it re-reads at once. **A booked game is pushed over Home** under a `
 push transition — and **the bar stands down in its room** (`/booking/{id}/chat`, the third route
 `barStandsDown` names), for the room's own reason. _It's a game!_'s _Open game_ lays Home down and
 pushes the booking's details (`openGame(bookingId)`), not the Classic game screen.
+
+**Home has a bell, and the notices are held around the tabs** ([#559](https://github.com/Raketa02/Raketa/issues/559);
+the Games & Fill in screens A9). `HomeScreen` puts `notifications`' `NoticeBell` in `ShellScreen`'s
+right slot; the list behind it is `/notices`, pushed over Home under a segment `INSIDE_A_TAB` counts as
+Home's, with the push transition, and the bar stays up there. `TabShell` mounts
+`NoticesHost` inside the fill, after the bar, for the session — the phone registered, a notice while
+the app is open drawn as the banner over every screen, a tapped push opened — and lists
+`you/notifications` in `YOU_SCREENS`; _Notifications_ is the ACCOUNT group's third row, under
+_Payments_ (mock 50). **The price, stated as the badges' were: the shell now holds
+`GET /players/me/notices` for the session** — the banner's second source — read again every minute
+while the phone is not being pushed, so every launch makes it and the harness's gate stubs it.

@@ -411,3 +411,12 @@ the chevron, the hardware back and the swipe all land on _You're In_, as A5 asks
 used. The page forgets its entry — and the post's draft (`forgetPostDraft`) — when it goes, so it
 still always opens on Games (story 51, ADR-0188 §5). The record of the screen is
 [`proposals.md`](proposals.md); its walk `proposals/components/postAGame.test.tsx`.
+
+**A group's page opens at a card when a notice says so** ([#559](https://github.com/Raketa02/Raketa/issues/559);
+the screens A9: _the deck opens with the card on top_). The route reads an **arrival** beside the
+group's id — the card's sport, kind and id, all three or none (`parseGroupRouteParams`), spelled by
+`groupDeckRoute`, which `notifications` pushes. The page stands on the card's sport until the player
+picks another (`useGroupSport`'s `opening`, `openingSport`'s `wanted`) — **opening is not picking**, so
+the phone's last sport is untouched — turns to Games, moves the switch to the card's kind
+(`gameIntent.store`, one value for the app), and hands the card to the deck as `onTop`. An arrival
+this build cannot read opens the page as it always opens: the group's id alone is a page.

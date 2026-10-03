@@ -337,6 +337,20 @@ export function standingCards(cards: readonly DeckCard[], readAt: number): reado
   return cards.filter((card) => countdownOf(card.deadline, readAt).kind !== 'over');
 }
 
+/**
+ * **The card a notice opened the deck for, on top** (#559; the screens A9: *the deck opens with the
+ * card on top for You complete it and Challenges*) — the rest in the order they were dealt. While it
+ * stands it stays there; once it is no longer dealt — answered, filled, gone — the deck is the
+ * server's order again, with nothing to say about it.
+ */
+export function withOnTop(
+  cards: readonly DeckCard[],
+  proposalId: string | undefined,
+): readonly DeckCard[] {
+  const top = cards.find((card) => card.proposalId === proposalId);
+  return top === undefined ? cards : [top, ...cards.filter((card) => card !== top)];
+}
+
 // ---------------------------------------------------------------------------
 // The forecast's fold
 // ---------------------------------------------------------------------------

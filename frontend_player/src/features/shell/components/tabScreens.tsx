@@ -20,6 +20,7 @@
  * is — the tab has no words of its own for the shell to compose anything under.
  */
 
+import { NoticeBell } from '@/features/notifications/types';
 import { GamesRail } from '@/features/plans/types';
 import { PaymentsToConfirm, useBookedCards } from '@/features/proposals/types';
 
@@ -47,11 +48,14 @@ import { HOME_COPY } from './shellCopy';
  * — proposals' *TO CONFIRM*, which draws nothing while there is none: the bar's Home badge counts
  * every payment the player has to confirm, and a count with nothing on the tab to answer it would
  * be a dead end.
+ *
+ * **The bell in the header's right slot is the door to the recent notices** (#559; the screens A9:
+ * *a list reached from a bell on Home*) — `features/notifications`' own, composed here.
  */
 export function HomeScreen() {
   const booked = useBookedCards();
   return (
-    <ShellScreen title={HOME_COPY.title}>
+    <ShellScreen title={HOME_COPY.title} right={<NoticeBell />}>
       <PaymentsToConfirm />
       <GamesRail empty={HOME_COPY.empty} booked={booked} />
     </ShellScreen>

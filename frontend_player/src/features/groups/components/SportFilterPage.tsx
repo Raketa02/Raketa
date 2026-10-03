@@ -39,6 +39,11 @@ export interface SportFilterPageProps {
    * narrows to. `undefined` for a player group, and while the group is being read.
    */
   readonly declaredSports?: readonly Sport[];
+  /**
+   * **The sport a notice opened the page in** (#559) — stood on until the player picks another, and
+   * never saved as a pick. Absent for a page opened by the player.
+   */
+  readonly opening?: Sport;
   /** The page's header, with the pill for its right slot — `undefined` until there is a sport. */
   readonly header: (pill: ReactNode | undefined) => ReactNode;
   /**
@@ -49,8 +54,13 @@ export interface SportFilterPageProps {
   readonly children: (sport: Sport | undefined, toAdd: readonly Sport[]) => ReactNode;
 }
 
-export function SportFilterPage({ declaredSports, header, children }: SportFilterPageProps) {
-  const { sports, sport, toAdd, choose } = useGroupSport(declaredSports);
+export function SportFilterPage({
+  declaredSports,
+  opening,
+  header,
+  children,
+}: SportFilterPageProps) {
+  const { sports, sport, toAdd, choose } = useGroupSport(declaredSports, opening);
   const [unfolded, setUnfolded] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number>();
 
