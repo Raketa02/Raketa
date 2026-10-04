@@ -6397,6 +6397,68 @@
           }
         }
       }
+    },
+    "/api/v1/administrator/clubs/{club_id}/handovers/seen": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "I was told the club handed me these groups",
+        "description": "The sheet that says *[club] made you the administrator of [group]* was closed or followed: each named group this administratorship runs and has not been told about leaves `/users/me`'s `profiles.handovers`, for every phone. **Anything else is stepped over, never refused** \u2014 a group handed on meanwhile, told about already, or not theirs.",
+        "operationId": "handovers_seen_api_v1_administrator_clubs__club_id__handovers_seen_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandoversSeenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6457,13 +6519,22 @@
             "type": "array",
             "title": "Pending Invitations",
             "description": "Invitations addressed to this account's email that are still open, soonest to expire first. One disappears once accepted, removed or past its 72 hours."
+          },
+          "handovers": {
+            "items": {
+              "$ref": "#/components/schemas/HandoverSchema"
+            },
+            "type": "array",
+            "title": "Handovers",
+            "description": "Every official group a club handed this account's active administratorship there **that it has not been told about**, oldest first (`docs/adr/0192`). One disappears once `POST /administrator/clubs/{club_id}/handovers/seen` names it, or when the club hands the group on. Empty for an account that runs nothing, and for groups an administrator created."
           }
         },
         "type": "object",
         "required": [
           "acts_as_player",
           "administers",
-          "pending_invitations"
+          "pending_invitations",
+          "handovers"
         ],
         "title": "AccountProfilesSchema",
         "description": "Which profiles this account holds (``docs/adr/0185`` \u00a72) \u2014 what the\nentry gate reads first. *Profile* is the switcher's word."
@@ -10186,6 +10257,65 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HandoverSchema": {
+        "properties": {
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Group Id",
+            "description": "What `POST /administrator/clubs/{club_id}/handovers/seen` takes."
+          },
+          "group_name": {
+            "type": "string",
+            "title": "Group Name"
+          },
+          "waiting_count": {
+            "type": "integer",
+            "title": "Waiting Count",
+            "description": "How many Join requests wait on it \u2014 the queue the handover gave."
+          }
+        },
+        "type": "object",
+        "required": [
+          "club_id",
+          "club_name",
+          "group_id",
+          "group_name",
+          "waiting_count"
+        ],
+        "title": "HandoverSchema",
+        "description": "A group the club handed this account that it has not been told about \u2014\n*Ogrody 33 made you the administrator of Ogrody 33 Club*."
+      },
+      "HandoversSeenRequest": {
+        "properties": {
+          "group_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Group Ids",
+            "description": "The `group_id` of each handover the sheet named, from `/users/me`'s `profiles.handovers`. A group handed on meanwhile, told about already or not theirs is stepped over."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_ids"
+        ],
+        "title": "HandoversSeenRequest",
+        "description": "The groups the sheet told the Administrator about (``docs/adr/0192``)."
       },
       "HomeClubPageResponse": {
         "properties": {

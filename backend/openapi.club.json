@@ -842,6 +842,189 @@
           }
         }
       }
+    },
+    "/api/v1/club/groups/{group_id}/requests": {
+      "get": {
+        "tags": [
+          "club"
+        ],
+        "summary": "The Join requests waiting on one of the club's official groups",
+        "description": "*Want to join \u00b7 N*: everybody waiting, **in the order they asked** \u2014 whoever runs the group, and **while it needs an administrator**, when the club is the only one who can answer. Each is a name and every sport they are rated in with its Level.",
+        "operationId": "club_group_requests_api_v1_club_groups__group_id__requests_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubJoinRequestsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 not an official group of this club: no such group, a player group whose home club this is, or another club's.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/groups/{group_id}/requests/{player_id}/approve": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Approve a Join request on one of the club's official groups",
+        "description": "The player is a Group member **at once**, as if whoever runs the group had said yes \u2014 who runs it does not change. Approving somebody already in changes nothing.",
+        "operationId": "approve_club_group_request_api_v1_club_groups__group_id__requests__player_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 not an official group of this club: no such group, a player group whose home club this is, or another club's. `join_request_not_found` \u2014 the player has no request waiting: whoever runs the group answered it first, it was declined, or it was never made, and nobody is admitted who did not ask. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/club/groups/{group_id}/requests/{player_id}/decline": {
+      "post": {
+        "tags": [
+          "club"
+        ],
+        "summary": "Decline a Join request on one of the club's official groups",
+        "description": "The request is gone **silently**: nothing tells the player, and they may ask again. Declining a request that is not waiting changes nothing, and never removes a member.",
+        "operationId": "decline_club_group_request_api_v1_club_groups__group_id__requests__player_id__decline_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 not an official group of this club: no such group, a player group whose home club this is, or another club's. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1199,6 +1382,60 @@
         ],
         "title": "ClubGroupsResponse"
       },
+      "ClubJoinRequestSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the request still waits."
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/SportLevelSchema"
+            },
+            "type": "array",
+            "title": "Levels",
+            "description": "**Every sport they are rated in**, in the registry's order, each with its Level \u2014 *Padel 2,44 \u00b7 Tennis 2,60*. Empty for somebody rated in nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "levels"
+        ],
+        "title": "ClubJoinRequestSchema",
+        "description": "A Join request as the club answers it \u2014 club 20's card without the\nphotograph: who is asking, and what they play. ``player_id`` is the id to\napprove or decline. **No Player Score**, as everywhere a request is drawn,\nand **no photograph**, which the club website draws nowhere."
+      },
+      "ClubJoinRequestsResponse": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/ClubJoinRequestSchema"
+            },
+            "type": "array",
+            "title": "Requests",
+            "description": "Everybody waiting to be let in, **in the order they asked** \u2014 *Want to join \u00b7 N*, the same queue the administrator who runs it answers in the app. Empty when nobody is waiting."
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests"
+        ],
+        "title": "ClubJoinRequestsResponse"
+      },
       "ClubSignUpRequest": {
         "properties": {
           "name": {
@@ -1520,6 +1757,25 @@
         ],
         "title": "Sport",
         "description": "The four sports Raketa rates, as a closed enum."
+      },
+      "SportLevelSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level in it, as RacketSkill published it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level"
+        ],
+        "title": "SportLevelSchema",
+        "description": "One sport somebody is rated in, and their Level in it."
       },
       "TokenResponse": {
         "properties": {

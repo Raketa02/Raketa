@@ -7,6 +7,7 @@ from app.modules.groups.application.handlers import (
     LogGroupJoined,
     LogGroupLeft,
     LogGroupRenamed,
+    LogHandoverSeen,
     LogJoinPolicyChanged,
     LogJoinRequestApproved,
     LogJoinRequestDeclined,
@@ -23,6 +24,7 @@ from app.modules.groups.domain.events import (
     GroupJoined,
     GroupLeft,
     GroupRenamed,
+    HandoverSeen,
     JoinPolicyChanged,
     JoinRequestApproved,
     JoinRequestDeclined,
@@ -58,6 +60,7 @@ def register_group_events(catalog: EventCatalog) -> None:
     catalog.register(
         AdministratorAssigned, name="groups.administrator_assigned", version=1
     )
+    catalog.register(HandoverSeen, name="groups.handover_seen", version=1)
 
 
 def subscribe_group_handlers(dispatcher: EventDispatcher) -> None:
@@ -75,3 +78,4 @@ def subscribe_group_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(WhatsAppSizeSet, LogWhatsAppSizeSet())
     dispatcher.subscribe(SportsDeclared, LogSportsDeclared())
     dispatcher.subscribe(AdministratorAssigned, LogAdministratorAssigned())
+    dispatcher.subscribe(HandoverSeen, LogHandoverSeen())

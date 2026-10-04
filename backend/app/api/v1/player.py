@@ -24,6 +24,9 @@ from app.modules.conversations.presentation.routes import (
 )
 from app.modules.games.presentation.routes import router as games_router
 from app.modules.groups.presentation.administrator_routes import (
+    handovers_router,
+)
+from app.modules.groups.presentation.administrator_routes import (
     router as administrator_groups_router,
 )
 from app.modules.groups.presentation.routes import (
@@ -105,3 +108,4 @@ player_api_router.include_router(join_search_router)
 player_api_router.include_router(invitations_router)
 player_api_router.include_router(administrator_router)
 player_api_router.include_router(administrator_groups_router)
+player_api_router.include_router(handovers_router)

@@ -18,6 +18,7 @@ from tests.api.administration_world import (
     ADMINISTRATORS,
     ATTEST,
     CLAIM,
+    CODE,
     MARTA,
     MARTA_PASSWORD,
     ME,
@@ -492,6 +493,75 @@ async def test_removing_an_invited_person_retires_their_link(client, desk, mailb
     by_code = await client.post(CLAIM, json={"email": MARTA, "code": code_in(email)})
     assert by_link.json()["code"] == "credential_expired"
     assert by_code.json()["code"] == "credential_expired"
+
+
+async def test_removing_an_administrator_emails_them_to_say_so(client, desk, mailbox):
+    """The app hears a removal only on its next administrator request, and only
+    while it is open: whoever is away would find out by their groups vanishing.
+    So the email says it, and what stays (#529 N4)."""
+
+    row = await invites(client, desk, name="Marta Wójcik", email=MARTA)
+    await marta_sets_her_password(client, mailbox)
+
+    await client.delete(f"{ADMINISTRATORS}/{row['id']}", headers=desk)
+
+    email = await the_email_to(mailbox, MARTA)
+    assert email.subject == "Ogrody 33 removed you as an administrator"
+    assert "Hi Marta Wójcik" in email.text
+    assert "You no longer run Ogrody 33's groups on Raketa" in email.text
+    assert "Your Raketa account stays" in email.text
+    assert "ask Ogrody 33 about it" in email.text
+    # Nothing to open and nothing to type: it tells, and asks for nothing.
+    assert "http" not in email.text
+    assert "<a " not in email.html
+    assert CODE.search(email.text) is None
+
+
+async def test_removing_somebody_who_also_plays_emails_them_too(client, desk, mailbox):
+    tomek = await player_signs_up(client)
+    row = await invites(client, desk, name="Tomek Kowalski", email=TOMEK)
+    await client.post(accept_path(row["id"]), headers=tomek)
+
+    await client.delete(f"{ADMINISTRATORS}/{row['id']}", headers=desk)
+
+    email = await the_email_to(mailbox, TOMEK)
+    assert email.subject == "Ogrody 33 removed you as an administrator"
+    assert "anything you do on it as a player" in email.text
+
+
+async def test_removing_somebody_whose_password_the_club_reset_says_removed(
+    client, desk, mailbox
+):
+    """A reset puts her back to *invited*, but she ran its groups: what ends is
+    an administratorship, not an invitation she never took up."""
+
+    row = await invites(client, desk, name="Marta Wójcik", email=MARTA)
+    await marta_sets_her_password(client, mailbox)
+    await client.post(f"{ADMINISTRATORS}/{row['id']}/password-reset", headers=desk)
+
+    await client.delete(f"{ADMINISTRATORS}/{row['id']}", headers=desk)
+
+    email = await the_email_to(mailbox, MARTA)
+    assert email.subject == "Ogrody 33 removed you as an administrator"
+
+
+async def test_removing_an_invited_person_tells_them_the_invitation_is_withdrawn(
+    client, desk, mailbox
+):
+    """Their link would otherwise read *expired, ask the club to send a new
+    one* — and the club is who withdrew it."""
+
+    row = await invites(client, desk, name="Marta Wójcik", email=MARTA)
+
+    await client.delete(f"{ADMINISTRATORS}/{row['id']}", headers=desk)
+
+    email = await the_email_to(mailbox, MARTA)
+    assert email.subject == "Ogrody 33 withdrew its invitation"
+    assert "Hi Marta Wójcik" in email.text
+    assert "no longer wants you to run its groups on Raketa" in email.text
+    assert "The invitation it sent you no longer works." in email.text
+    assert "http" not in email.text
+    assert CODE.search(email.text) is None
 
 
 async def test_a_removed_person_can_be_invited_again(client, desk, mailbox):

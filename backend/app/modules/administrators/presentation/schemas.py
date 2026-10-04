@@ -227,6 +227,21 @@ class PendingInvitationSchema(BaseModel):
     expires_at: datetime
 
 
+class HandoverSchema(BaseModel):
+    """A group the club handed this account that it has not been told about —
+    *Ogrody 33 made you the administrator of Ogrody 33 Club*."""
+
+    club_id: UUID
+    club_name: str
+    group_id: UUID = Field(
+        description="What `POST /administrator/clubs/{club_id}/handovers/seen` takes."
+    )
+    group_name: str
+    waiting_count: int = Field(
+        description="How many Join requests wait on it — the queue the handover gave."
+    )
+
+
 class AccountProfilesSchema(BaseModel):
     """Which profiles this account holds (``docs/adr/0185`` §2) — what the
     entry gate reads first. *Profile* is the switcher's word."""
@@ -249,6 +264,16 @@ class AccountProfilesSchema(BaseModel):
             "past its 72 hours."
         )
     )
+    handovers: list[HandoverSchema] = Field(
+        description=(
+            "Every official group a club handed this account's active "
+            "administratorship there **that it has not been told about**, oldest "
+            "first (`docs/adr/0192`). One disappears once "
+            "`POST /administrator/clubs/{club_id}/handovers/seen` names it, or "
+            "when the club hands the group on. Empty for an account that runs "
+            "nothing, and for groups an administrator created."
+        )
+    )
 
     @classmethod
     def from_profiles(cls, profiles: AccountProfiles) -> "AccountProfilesSchema":
@@ -266,6 +291,16 @@ class AccountProfilesSchema(BaseModel):
                     expires_at=invitation.expires_at,
                 )
                 for invitation in profiles.pending_invitations
+            ],
+            handovers=[
+                HandoverSchema(
+                    club_id=handover.club_id,
+                    club_name=handover.club_name,
+                    group_id=handover.group_id,
+                    group_name=handover.group_name,
+                    waiting_count=handover.waiting_count,
+                )
+                for handover in profiles.handovers
             ],
         )
 

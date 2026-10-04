@@ -89,6 +89,8 @@ async def test_setting_a_password_by_the_link_creates_her_account_as_the_club_na
         "acts_as_player": False,
         "administers": [{"club_id": club_id, "club_name": "Ogrody 33"}],
         "pending_invitations": [],
+        # Nothing was handed to them: a handover is the club's act (ADR-0192).
+        "handovers": [],
     }
     # And the password is hers from now on.
     assert await signs_in(client, MARTA, MARTA_PASSWORD)
@@ -270,6 +272,8 @@ async def test_an_existing_player_finds_the_invitation_on_me_and_accepts_it(
         "acts_as_player": True,
         "administers": [{"club_id": club_id, "club_name": "Ogrody 33"}],
         "pending_invitations": [],
+        # Nothing was handed to them: a handover is the club's act (ADR-0192).
+        "handovers": [],
     }
     assert (await client.get(profile_at(club_id), headers=tomek)).status_code == 200
 

@@ -16,6 +16,10 @@ Each credential retires every live one of both kinds for the same
 Administrator, so the newest email is the only one that opens anything. The
 email is written to the mail queue in the caller's transaction; nothing here
 sends and nothing here commits.
+
+**A removal ends here too** (``docs/adr/0191`` §4): every live link retired,
+and a notice that says so — *removed* to somebody who ran the club's groups,
+*withdrawn* to somebody still invited.
 """
 
 from __future__ import annotations
@@ -28,6 +32,10 @@ from app.modules.administrators.application.invitation_emails import (
     club_reset_email,
     existing_account_email,
     new_person_email,
+)
+from app.modules.administrators.application.removal_emails import (
+    removed_email,
+    withdrawn_email,
 )
 from app.modules.administrators.domain.administrator import Administrator
 from app.modules.administrators.domain.ports import (
@@ -109,6 +117,26 @@ class InvitationSender:
                 club_name=club_name,
                 link=self._links.invitation(prepared.token),
                 code=prepared.code,
+            ),
+            at=now,
+        )
+
+    async def send_removal(self, administrator: Administrator, *, now: Instant) -> None:
+        """The removal's notice, for an Administrator just removed: every live
+        link retired, and the email that says what happened.
+
+        **Whether they ran its groups is whether they took up the invitation**
+        — an account on the administratorship, which the club's reset keeps
+        and a new invitation clears — so it is read off the Administrator as
+        the removal left it, and nothing records which email went."""
+
+        await self.retire(administrator, now=now)
+        write = withdrawn_email if administrator.account_id is None else removed_email
+        await self._mail.enqueue(
+            write(
+                to=administrator.email.value,
+                name=administrator.name.value,
+                club_name=await club_name_of(self._clubs, administrator.club_id),
             ),
             at=now,
         )

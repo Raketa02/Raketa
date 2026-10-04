@@ -17,6 +17,7 @@ from app.modules.groups.domain.events import (
     GroupJoined,
     GroupLeft,
     GroupRenamed,
+    HandoverSeen,
     JoinPolicyChanged,
     JoinRequestApproved,
     JoinRequestDeclined,
@@ -92,6 +93,19 @@ class LogAdministratorAssigned:
     ) -> None:
         logger.info(
             "groups.administrator.assigned",
+            extra={
+                "group_id": str(event.group_id),
+                "administrator_id": str(event.administrator_id),
+                "event_id": str(context.event_id),
+                "attempt": context.attempt,
+            },
+        )
+
+
+class LogHandoverSeen:
+    async def __call__(self, event: HandoverSeen, context: DeliveryContext) -> None:
+        logger.info(
+            "groups.handover.seen",
             extra={
                 "group_id": str(event.group_id),
                 "administrator_id": str(event.administrator_id),

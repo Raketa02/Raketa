@@ -1389,6 +1389,17 @@ Rules to preserve:
   Administrator simply finds; anything but the club's official group is
   `group_not_found`, anybody but an **active** Administrator of the club is `409
   administrator_not_active`, and handing it to whoever runs it records nothing.
+  **The club answers an official group's Join requests itself, at any time**
+  ([ADR-0191](../docs/adr/0191-the-club-answers-its-official-groups-requests-and-a-removal-is-emailed.md)
+  §1): `GET …/groups/{id}/requests` (a name and the Levels, no photograph) and
+  `POST …/requests/{player_id}/approve|decline`, the Administrator's rules and events,
+  answered `as_club` with the Club account as `approved_by` — the only two acts the
+  aggregate lets a club do, and never on a player group at its courts. Answering is not
+  running: the group still needs an administrator until a handover. **A handover is told to
+  whom it was handed, once** (ADR-0192): `administrator_assigned` sets the projection's
+  `handed_over_at`, `handover_seen` clears it, `/users/me` lists the untold ones as
+  `profiles.handovers` (through `OfficialGroupAssignments.handed_untold`), and
+  `POST /administrator/clubs/{club_id}/handovers/seen` steps over anything it cannot apply.
   Because who runs a group stays **read, never held**, two things follow and are
   pinned: the club's *Reset password* (back to *invited*) leaves that person's groups
   needing an administrator until they set a new password, and **somebody removed and
@@ -1423,7 +1434,10 @@ Rules to preserve:
   and recorded nowhere** (`application/sending.py`): an account that can sign in is asked to
   accept in the app with no code; anybody else gets a link to `<PUBLIC_SITE_URL>/invite/<token>`
   and a code — the club reset's while one is pending — and each credential **retires every live
-  one of both kinds**, as acceptance and removal do. **Everything done to a User is done by
+  one of both kinds**, as acceptance and removal do. **A removal is emailed**
+  (`application/removal_emails.py`, ADR-0191 §4–§5): *removed* to somebody whose
+  administratorship reached an account, *invitation withdrawn* to somebody still invited —
+  notices, so no button and no code. **Everything done to a User is done by
   `users`** (`InvitationAccounts`, behind the `AccountHolders` port): an account an invitation
   opens is `AccountOpenedByInvitation` — the club-typed Name, no Nickname, no attestation —
   the club's reset is `PasswordCleared` (`users.password_hash` became nullable, and a cleared

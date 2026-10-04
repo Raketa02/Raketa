@@ -8,6 +8,8 @@ entry gate reads first (``docs/adr/0185`` §2–§3).
 - **The clubs it administers**, one per active Administrator.
 - **Any pending invitation addressed to its email** — invited, and not yet past
   its window — so the app can offer it on launch.
+- **Every group the club handed it that it has not been told about**
+  (``docs/adr/0192`` §1), so the app can tell it once.
 
 *Profile* is the switcher's word, not a domain term (``docs/adr/0185`` §1).
 """
@@ -25,6 +27,7 @@ from app.modules.administrators.domain.ports import (
     AccountHolders,
     AdministratorDirectory,
     ClubNames,
+    OfficialGroupAssignments,
 )
 from app.modules.users.domain.value_objects import Email
 
@@ -47,10 +50,25 @@ class PendingInvitation:
 
 @final
 @dataclass(frozen=True, slots=True)
+class Handover:
+    """A group a club handed to this account's administratorship there, which
+    it has not been told about: the club, the group, and the queue it got."""
+
+    club_id: UUID
+    club_name: str
+    group_id: UUID
+    group_name: str
+    waiting_count: int
+    handed_over_at: Instant
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class AccountProfiles:
     acts_as_player: bool
     administers: Sequence[AdministeredClub]
     pending_invitations: Sequence[PendingInvitation]
+    handovers: Sequence[Handover] = ()
 
 
 class ReadAccountProfiles:
@@ -60,11 +78,13 @@ class ReadAccountProfiles:
         directory: AdministratorDirectory,
         accounts: AccountHolders,
         clubs: ClubNames,
+        groups: OfficialGroupAssignments,
         clock: Clock,
     ) -> None:
         self._directory = directory
         self._accounts = accounts
         self._clubs = clubs
+        self._groups = groups
         self._clock = clock
 
     async def execute(self, *, account_id: UUID, email: Email) -> AccountProfiles:
@@ -80,6 +100,9 @@ class ReadAccountProfiles:
             {listing.club_id for listing in active}
             | {listing.club_id for listing, _ in pending}
         )
+        # Only an active administratorship is told: a removed one runs nothing.
+        club_of = {listing.id: listing.club_id for listing in active}
+        handed = await self._groups.handed_untold(list(club_of)) if club_of else ()
         return AccountProfiles(
             acts_as_player=await self._accounts.acts_as_player(account_id),
             administers=sorted(
@@ -104,5 +127,21 @@ class ReadAccountProfiles:
                     if listing.club_id in names
                 ),
                 key=lambda invitation: (invitation.expires_at, invitation.club_id),
+            ),
+            # Oldest handed first, as they happened.
+            handovers=sorted(
+                (
+                    Handover(
+                        club_id=club_of[group.administrator_id],
+                        club_name=names[club_of[group.administrator_id]],
+                        group_id=group.id,
+                        group_name=group.name,
+                        waiting_count=group.waiting_count,
+                        handed_over_at=group.handed_over_at,
+                    )
+                    for group in handed
+                    if club_of[group.administrator_id] in names
+                ),
+                key=lambda handover: (handover.handed_over_at, handover.group_id),
             ),
         )

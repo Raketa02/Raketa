@@ -21,6 +21,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.infrastructure.database.stored_time import stored_instant_or_none
 from app.modules.clubs.domain.folding import fold
 from app.modules.groups.domain.ports import GroupListing
 from app.modules.groups.domain.value_objects import (
@@ -176,6 +177,7 @@ class SqlAlchemyGroupDirectory:
                     if row.declared_sports is None
                     else DeclaredSports.from_codes(row.declared_sports)
                 ),
+                handed_over_at=stored_instant_or_none(row.handed_over_at),
             )
             for row in rows
         }

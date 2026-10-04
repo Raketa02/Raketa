@@ -1,5 +1,7 @@
 """The one shape every Raketa email takes: a heading, a few lines, a button, and
-— when the email opens something — its code.
+— when the email opens something — its code. **A notice has no button**: an
+email that only tells somebody what happened, and asks nothing of them, leads
+nowhere (``docs/adr/0191`` §5).
 
 **An email's words live here, in the backend** (``docs/adr/0186`` §4). The rule
 that the API carries codes and never sentences exists for text a client renders,
@@ -21,6 +23,7 @@ from html import escape
 from typing import Optional, TypeAlias, final
 
 from app.application.ports.mail import OutgoingMessage
+from app.kernel import invariant
 
 #: Who signs every email. The brand is Raketa everywhere (``docs/adr/0187`` §8).
 SIGNATURE = "Raketa"
@@ -59,14 +62,26 @@ class ButtonEmail:
     subject: str
     heading: str
     lines: Sequence[str]
-    button_label: str
-    button_url: str
+    #: Where the email leads, and what its button says — both, or neither for
+    #: a notice.
+    button_label: Optional[str] = None
+    button_url: Optional[str] = None
     #: The 8-character code, for an email that carries a credential, and the
     #: line that says what to do with it.
     code: Optional[str] = None
     code_line: Optional[Phrase] = None
     #: What a person who did not ask for this email should do.
     footer: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        invariant(
+            (self.button_label is None) == (self.button_url is None),
+            "a button needs both its label and its address",
+        )
+        invariant(
+            self.code is None or self.button_url is not None,
+            "a code opens what the button opens, so it needs one",
+        )
 
 
 def render(email: ButtonEmail) -> OutgoingMessage:
@@ -85,7 +100,8 @@ def _text(email: ButtonEmail) -> str:
     parts: list[str] = [email.heading, ""]
     for line in email.lines:
         parts.extend([line, ""])
-    parts.extend([f"{email.button_label}:", email.button_url, ""])
+    if email.button_url is not None:
+        parts.extend([f"{email.button_label}:", email.button_url, ""])
     if email.code is not None:
         if email.code_line:
             parts.append(_plain(email.code_line))
@@ -103,11 +119,15 @@ def _html(email: ButtonEmail) -> str:
         f'<p style="margin:0 0 16px">{escape(line)}</p>' for line in email.lines
     )
     button = (
-        f'<p style="margin:24px 0">'
-        f'<a href="{escape(email.button_url, quote=True)}" '
-        f'style="display:inline-block;padding:12px 24px;border-radius:8px;'
-        f"background:{_BUTTON_COLOUR};color:#ffffff;font-weight:600;"
-        f'text-decoration:none">{escape(email.button_label)}</a></p>'
+        ""
+        if email.button_url is None or email.button_label is None
+        else (
+            f'<p style="margin:24px 0">'
+            f'<a href="{escape(email.button_url, quote=True)}" '
+            f'style="display:inline-block;padding:12px 24px;border-radius:8px;'
+            f"background:{_BUTTON_COLOUR};color:#ffffff;font-weight:600;"
+            f'text-decoration:none">{escape(email.button_label)}</a></p>'
+        )
     )
     code = ""
     if email.code is not None:

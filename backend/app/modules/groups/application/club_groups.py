@@ -1,10 +1,13 @@
 """The club's side of its official groups (#510, ``docs/adr/0183`` §8, §11):
-the Groups table on the club website, and the handover.
+the Groups table on the club website, the handover, and the Join requests the
+club answers (``docs/adr/0191`` §1).
 
 **The club watches, and does not run.** It sees each of its official groups —
 who runs it, how many players it has and how many wait, how much of its
 WhatsApp group has arrived, and how many games it gave birth to — and it
-creates none: groups are made by its Administrators, in the app.
+creates none: groups are made by its Administrators, in the app. **The one
+thing it does inside a group is answer who asked to join**, whoever runs it
+and while nobody does, so a request never waits on nobody.
 
 **Who runs a group is read, never held** (``docs/adr/0184`` §7): the group
 records the Administrator it was given to, and whether that administratorship
@@ -28,16 +31,27 @@ from uuid import UUID
 
 from app.application.ports import UnitOfWork
 from app.kernel import Clock
-from app.modules.groups.application.commands import HandOverCommand
-from app.modules.groups.application.views import runner_of, running_administrators
+from app.modules.groups.application.commands import (
+    AnswerAsClubCommand,
+    HandOverCommand,
+)
+from app.modules.groups.application.views import (
+    RequestCard,
+    face_of,
+    runner_of,
+    running_administrators,
+)
 from app.modules.groups.domain.errors import AdministratorNotActive, GroupNotFound
+from app.modules.groups.domain.group import Group
 from app.modules.groups.domain.monogram import Monogram, monogram_of
 from app.modules.groups.domain.ports import (
     GroupAdministrators,
     GroupBornGames,
     GroupDirectory,
+    GroupFaces,
     GroupListing,
     GroupRepository,
+    RatedGroupMembers,
     RunningAdministrator,
 )
 from app.modules.groups.domain.value_objects import GroupKind
@@ -77,6 +91,26 @@ class ClubGroupRow:
     whatsapp_size: int
     whatsapp_percent: int
     games: int
+
+
+def _the_club_s(kind: GroupKind, home_club_id: UUID, club_id: UUID) -> bool:
+    """Whether a group is **this club's official group** — the one test every
+    act of the club's on a group passes first. A player group whose home club
+    this is, another club's group and no group at all are one refusal,
+    ``group_not_found``."""
+
+    return kind is GroupKind.OFFICIAL and home_club_id == club_id
+
+
+async def _the_club_s_group(
+    groups: GroupRepository, group_id: UUID, club_id: UUID
+) -> Group:
+    """The group, to act on, if it is this club's official group."""
+
+    group = await groups.load(group_id)
+    if group is None or not _the_club_s(group.kind, group.home_club_id, club_id):
+        raise GroupNotFound()
+    return group
 
 
 class ClubGroupRows:
@@ -184,13 +218,7 @@ class HandOverOfficialGroup:
         self._clock = clock
 
     async def execute(self, command: HandOverCommand) -> ClubGroupRow:
-        group = await self._groups.load(command.group_id)
-        if (
-            group is None
-            or group.kind is not GroupKind.OFFICIAL
-            or group.home_club_id != command.club_id
-        ):
-            raise GroupNotFound()
+        group = await _the_club_s_group(self._groups, command.group_id, command.club_id)
         chosen = command.administrator_id
         runner = await runner_of(self._administrators, chosen)
         if runner is None or runner.club_id != command.club_id:
@@ -204,3 +232,99 @@ class HandOverOfficialGroup:
         (row,) = await self._rows.rows([listing])
         await self._uow.commit()
         return row
+
+
+# --------------------------------------------------------------------------- #
+# Its Join requests (docs/adr/0191 §1)
+# --------------------------------------------------------------------------- #
+
+
+class ReadClubGroupRequests:
+    """The Join requests waiting on one of the club's official groups, **in
+    the order people asked** — whoever runs it, and while nobody does.
+
+    Club 20's card, as the administrator's: who is asking and every sport they
+    are rated in with its Level — **what deciding needs and nothing more**. No
+    block applies: a club is in no player's block list, and nobody here is
+    hidden from it. Two reads whatever the length of the queue.
+    """
+
+    def __init__(
+        self,
+        *,
+        directory: GroupDirectory,
+        faces: GroupFaces,
+        ratings: RatedGroupMembers,
+    ) -> None:
+        self._directory = directory
+        self._faces = faces
+        self._ratings = ratings
+
+    async def execute(
+        self, group_id: UUID, *, club_id: UUID
+    ) -> tuple[RequestCard, ...]:
+        listing = (await self._directory.listings([group_id])).get(group_id)
+        if listing is None or not _the_club_s(
+            listing.kind, listing.home_club_id, club_id
+        ):
+            raise GroupNotFound()
+        faces = await self._faces.faces_of(listing.waiting)
+        levels = await self._ratings.levels_of(listing.waiting)
+        return tuple(
+            RequestCard(
+                face=face_of(faces, player_id), levels=levels.get(player_id, ())
+            )
+            for player_id in listing.waiting
+        )
+
+
+class _AnswerAsClub:
+    """What both of the club's answers share: the club's own official group,
+    loaded to act on, and the save. ``by`` is the Club account, as a
+    handover's is."""
+
+    def __init__(
+        self, *, groups: GroupRepository, uow: UnitOfWork, clock: Clock
+    ) -> None:
+        self._groups = groups
+        self._uow = uow
+        self._clock = clock
+
+    async def _group(self, command: AnswerAsClubCommand) -> Group:
+        return await _the_club_s_group(self._groups, command.group_id, command.club_id)
+
+    async def _save(self, group: Group) -> None:
+        await self._groups.save(group)
+        await self._uow.commit()
+
+
+class ApproveJoinRequestAsClub(_AnswerAsClub):
+    """The person is a Group member at once, as if whoever runs it had said
+    yes. Approving somebody already in changes nothing; approving somebody
+    with nothing waiting is ``join_request_not_found`` — the administrator, or
+    another tab, answered first, or they never asked."""
+
+    async def execute(self, command: AnswerAsClubCommand) -> None:
+        group = await self._group(command)
+        group.approve(
+            command.player_id,
+            by=command.answered_by,
+            as_club=command.club_id,
+            occurred_at=self._clock.now(),
+        )
+        await self._save(group)
+
+
+class DeclineJoinRequestAsClub(_AnswerAsClub):
+    """The request is gone, silently, and the person may ask again. Declining
+    what is not waiting changes nothing, and never removes a member."""
+
+    async def execute(self, command: AnswerAsClubCommand) -> None:
+        group = await self._group(command)
+        group.decline(
+            command.player_id,
+            by=command.answered_by,
+            as_club=command.club_id,
+            occurred_at=self._clock.now(),
+        )
+        await self._save(group)

@@ -298,13 +298,14 @@ def get_read_account_profiles(
     directory: AdministratorDirectoryDep,
     accounts: AccountHoldersDep,
     clubs: ClubNamesDep,
+    groups: OfficialGroupAssignmentsDep,
     clock: ClockDep,
 ) -> ReadAccountProfiles:
     # Declared here rather than in the users context that serves it on `/me`,
     # because *what* is built is this context's answer — as the Player
     # profile's `HasPlayerProfile` is declared in its own context.
     return ReadAccountProfiles(
-        directory=directory, accounts=accounts, clubs=clubs, clock=clock
+        directory=directory, accounts=accounts, clubs=clubs, groups=groups, clock=clock
     )
 
 

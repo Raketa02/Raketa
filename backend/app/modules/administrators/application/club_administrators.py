@@ -259,7 +259,9 @@ class ResetAdministratorPassword:
 class RemoveAdministrator:
     """End an administratorship (``docs/adr/0184`` §7). The next administrator
     request is refused; the person's player side and its sessions are
-    untouched, and a link still in their inbox opens nothing."""
+    untouched, and a link still in their inbox opens nothing. **The person is
+    emailed to say so** (``docs/adr/0191`` §4), in the same transaction: the
+    app hears a removal only while it is open."""
 
     def __init__(
         self,
@@ -281,5 +283,5 @@ class RemoveAdministrator:
         now = self._clock.now()
         administrator.remove(occurred_at=now)
         await self._administrators.save(administrator)
-        await self._sender.retire(administrator, now=now)
+        await self._sender.send_removal(administrator, now=now)
         await self._uow.commit()

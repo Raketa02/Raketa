@@ -127,6 +127,20 @@ class AdministratorAssigned:
 
 
 @dataclass(frozen=True)
+class HandoverSeen:
+    """The Administrator an official group was handed to has been told so
+    (``docs/adr/0192`` §1) — the app's sheet, closed or followed. Recorded
+    once per handover, **on the group**, so every phone the person signs in on
+    agrees that they know, and a handover nobody has been told about is a fact
+    the group can answer. ``seen_by`` is the account that closed it."""
+
+    group_id: UUID
+    administrator_id: UUID
+    seen_by: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class GroupJoined:
     """A player became a Group member. Recorded once per joining: joining a
     group you are already in records nothing (``docs/adr/0183`` §7)."""
@@ -153,7 +167,8 @@ class JoinRequestApproved:
     from this instant**, so there is no separate *joined* beside it: approving
     is admitting, and one act is one event. ``approved_by`` is who answered,
     because ownership passes (#506) and the history should still say who let
-    somebody in."""
+    somebody in — on an official group the club's account when its club
+    answered (``docs/adr/0191`` §1), as a handover's ``assigned_by`` is."""
 
     group_id: UUID
     player_id: UUID

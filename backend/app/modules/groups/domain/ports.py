@@ -81,6 +81,9 @@ class GroupListing:
     administrator_id: UUID | None
     whatsapp_size: WhatsAppSize | None
     declared_sports: DeclaredSports | None
+    #: When the club handed it to whoever runs it now, while they have not been
+    #: told (``docs/adr/0192`` §1).
+    handed_over_at: Instant | None = None
 
     @property
     def member_count(self) -> int:

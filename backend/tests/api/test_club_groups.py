@@ -8,7 +8,8 @@ play*, eight of 30 — and no games, because no group gives birth to one yet. Th
 desk removes Marta, and both groups *need an administrator*: players read
 *Ogrody 33 approves joins* and the request waits. The desk hands *Ogrody 33
 Club* to Tomek, and the waiting request is his to answer; the link, the rule
-and the size never moved.
+and the size never moved. And the desk answers who asked itself — while nobody
+runs a group, and beside whoever does (``docs/adr/0191`` §1).
 
 Every assertion reads what a person reads: an answer on the club surface, on
 the administrator's paths or on the player surface.
@@ -21,6 +22,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.kernel import Sport
 from tests.api.administration_world import (
     ADMINISTRATORS,
     MARTA,
@@ -31,7 +33,15 @@ from tests.api.administration_world import (
     marta_sets_her_password,
     me,
 )
-from tests.api.test_groups import a_club, a_group, a_player, join, my_groups, read
+from tests.api.test_groups import (
+    a_club,
+    a_group,
+    a_player,
+    a_rated_player,
+    join,
+    my_groups,
+    read,
+)
 from tests.api.test_join_search import search
 from tests.api.test_official_groups import (
     an_administrator_who_plays,
@@ -539,3 +549,267 @@ async def test_each_administrator_s_row_names_the_groups_they_run(
     assert groups_of(after, "tomek@example.com") == ["Ogrody open play"]
     (marta_s,) = [row for row in after if row["email"] == MARTA]
     assert marta_s["groups"] == [{"id": club["id"], "name": "Ogrody 33 Club"}]
+
+
+# --------------------------------------------------------------------------- #
+# Whom it was handed to is told, once (docs/adr/0192)
+# --------------------------------------------------------------------------- #
+
+
+def handovers_seen(club_id: str) -> str:
+    return f"/api/v1/administrator/clubs/{club_id}/handovers/seen"
+
+
+async def untold(client, session: dict) -> list[dict]:
+    return (await me(client, session["headers"]))["profiles"]["handovers"]
+
+
+async def says_told(client, administrator: dict, club_id: str, *groups: dict):
+    return await client.post(
+        handovers_seen(club_id),
+        json={"group_ids": [group["id"] for group in groups]},
+        headers=administrator["headers"],
+    )
+
+
+async def test_tomek_is_told_the_desk_handed_him_a_group_and_then_he_knows(
+    client, ogrody, marta
+):
+    club = await an_official_group(client, marta, ogrody["id"])
+    await join(client, await a_player(client, "kasia"), club)
+    tomek = await an_administrator_who_plays(client, ogrody, "tomek")
+    assert await untold(client, tomek) == []
+
+    await hands_over(client, ogrody["desk"], club, tomek["administrator_id"])
+
+    assert await untold(client, tomek) == [
+        {
+            "club_id": ogrody["id"],
+            "club_name": "Ogrody 33",
+            "group_id": club["id"],
+            "group_name": "Ogrody 33 Club",
+            "waiting_count": 1,
+        }
+    ]
+    # Marta created it, and was handed nothing.
+    assert await untold(client, marta) == []
+
+    seen = await says_told(client, tomek, ogrody["id"], club)
+
+    assert seen.status_code == 204, seen.text
+    assert await untold(client, tomek) == []
+    again = await says_told(client, tomek, ogrody["id"], club)
+    assert again.status_code == 204, again.text
+
+
+async def test_handovers_are_listed_oldest_first(client, ogrody, marta, clock):
+    club = await an_official_group(client, marta, ogrody["id"])
+    open_play = await an_official_group(
+        client, marta, ogrody["id"], name="Ogrody open play"
+    )
+    tomek = await an_administrator_who_plays(client, ogrody, "tomek")
+
+    await hands_over(client, ogrody["desk"], open_play, tomek["administrator_id"])
+    clock.move(timedelta(minutes=1))
+    await hands_over(client, ogrody["desk"], club, tomek["administrator_id"])
+
+    assert [row["group_name"] for row in await untold(client, tomek)] == [
+        "Ogrody open play",
+        "Ogrody 33 Club",
+    ]
+
+
+async def test_handed_on_before_he_was_told_it_is_the_next_one_s_to_know(
+    client, ogrody, marta
+):
+    club = await an_official_group(client, marta, ogrody["id"])
+    tomek = await an_administrator_who_plays(client, ogrody, "tomek")
+    ola = await an_administrator_who_plays(client, ogrody, "ola")
+    await hands_over(client, ogrody["desk"], club, tomek["administrator_id"])
+
+    await hands_over(client, ogrody["desk"], club, ola["administrator_id"])
+    late = await says_told(client, tomek, ogrody["id"], club)
+
+    assert await untold(client, tomek) == []
+    # Tomek's word is about a group he no longer runs: it changes nothing.
+    assert late.status_code == 204, late.text
+    assert [row["group_id"] for row in await untold(client, ola)] == [club["id"]]
+
+
+async def test_handed_back_to_marta_she_is_told_too(client, ogrody, marta):
+    club = await an_official_group(client, marta, ogrody["id"])
+    tomek = await an_administrator_who_plays(client, ogrody, "tomek")
+
+    await hands_over(client, ogrody["desk"], club, tomek["administrator_id"])
+    await hands_over(client, ogrody["desk"], club, marta["administrator_id"])
+
+    assert [row["group_id"] for row in await untold(client, marta)] == [club["id"]]
+
+
+async def test_saying_so_about_another_s_group_changes_nothing(client, ogrody, marta):
+    club = await an_official_group(client, marta, ogrody["id"])
+    tomek = await an_administrator_who_plays(client, ogrody, "tomek")
+    ola = await an_administrator_who_plays(client, ogrody, "ola")
+    await hands_over(client, ogrody["desk"], club, ola["administrator_id"])
+
+    noted = await says_told(client, tomek, ogrody["id"], club, {"id": str(uuid4())})
+
+    assert noted.status_code == 204, noted.text
+    assert [row["group_id"] for row in await untold(client, ola)] == [club["id"]]
+
+
+async def test_a_removed_administrator_is_told_nothing_and_says_nothing(
+    client, ogrody, marta
+):
+    club = await an_official_group(client, marta, ogrody["id"])
+    tomek = await an_administrator_who_plays(client, ogrody, "tomek")
+    await hands_over(client, ogrody["desk"], club, tomek["administrator_id"])
+
+    await removes(client, ogrody, tomek)
+    refused = await says_told(client, tomek, ogrody["id"], club)
+
+    assert await untold(client, tomek) == []
+    assert refused.status_code == 403
+    assert refused.json()["code"] == "not_an_administrator"
+
+
+async def test_saying_so_names_at_least_one_group(client, ogrody, marta):
+    refused = await client.post(
+        handovers_seen(ogrody["id"]), json={"group_ids": []}, headers=marta["headers"]
+    )
+
+    assert refused.status_code == 422
+
+
+# --------------------------------------------------------------------------- #
+# The club answers who asked (docs/adr/0191 §1)
+# --------------------------------------------------------------------------- #
+
+
+def requests_of(group: dict) -> str:
+    return f"{CLUB_GROUPS}/{group['id']}/requests"
+
+
+async def the_club_s_queue(client, ogrody, group: dict) -> list[dict]:
+    read_ = await client.get(requests_of(group), headers=ogrody["desk"])
+    assert read_.status_code == 200, read_.text
+    return read_.json()["requests"]
+
+
+async def the_club_answers(client, desk: dict, group: dict, asker: dict, verb: str):
+    return await client.post(f"{requests_of(group)}/{asker['id']}/{verb}", headers=desk)
+
+
+async def test_with_nobody_running_it_the_desk_lets_kasia_in(client, ogrody, marta):
+    club = await an_official_group(client, marta, ogrody["id"])
+    kasia = await a_rated_player(client, "kasia", Sport.TENNIS, Sport.PADEL)
+    await join(client, kasia, club)
+    await removes(client, ogrody, marta)
+
+    [request] = await the_club_s_queue(client, ogrody, club)
+
+    # A name and her Levels: what deciding needs, and no photograph.
+    assert set(request) == {"player_id", "name", "levels"}
+    assert (request["player_id"], request["name"]) == (str(kasia["id"]), "kasia")
+    assert [row["sport"] for row in request["levels"]] == ["PADEL", "TENNIS"]
+
+    approved = await the_club_answers(client, ogrody["desk"], club, kasia, "approve")
+
+    assert approved.status_code == 204, approved.text
+    (row,) = await the_club_s_groups(client, ogrody)
+    assert (row["member_count"], row["waiting_count"]) == (1, 0)
+    # Answering is not running it: it still needs an administrator.
+    assert row["administrator"] is None
+    assert (await read(client, kasia, club)).status_code == 200
+    assert await the_club_s_queue(client, ogrody, club) == []
+
+
+async def test_the_desk_answers_beside_marta_and_her_queue_is_the_same_one(
+    client, ogrody, marta
+):
+    club = await an_official_group(client, marta, ogrody["id"])
+    kasia = await a_player(client, "kasia")
+    michal = await a_player(client, "michal")
+    await join(client, kasia, club)
+    await join(client, michal, club)
+
+    queue = await the_club_s_queue(client, ogrody, club)
+    declined = await the_club_answers(client, ogrody["desk"], club, kasia, "decline")
+
+    # In the order they asked.
+    assert [request["name"] for request in queue] == ["kasia", "michal"]
+    assert declined.status_code == 204, declined.text
+    page = await page_of(client, marta, ogrody["id"], club)
+    assert [request["player_id"] for request in page["requests"]] == [str(michal["id"])]
+    (row,) = await the_club_s_groups(client, ogrody)
+    assert row["administrator"]["id"] == marta["administrator_id"]
+    # Silently: Kasia reads it as never asked, and may ask again.
+    assert row_in(await search(client, kasia, "ogrody"), club)["relation"] == "NONE"
+    assert (await join(client, kasia, club)).json()["relation"] == "REQUESTED"
+
+
+async def test_an_answer_marta_gave_first_stands(client, ogrody, marta):
+    club = await an_official_group(client, marta, ogrody["id"])
+    kasia = await a_player(client, "kasia")
+    michal = await a_player(client, "michal")
+    await join(client, kasia, club)
+    await answer(client, marta, ogrody["id"], club, kasia, "approve")
+
+    late_yes = await the_club_answers(client, ogrody["desk"], club, kasia, "approve")
+    late_no = await the_club_answers(client, ogrody["desk"], club, kasia, "decline")
+    never_asked = await the_club_answers(
+        client, ogrody["desk"], club, michal, "approve"
+    )
+
+    # She is in, and stays in: a decline never removes a member.
+    assert (late_yes.status_code, late_no.status_code) == (204, 204)
+    assert never_asked.status_code == 404
+    assert never_asked.json()["code"] == "join_request_not_found"
+    (row,) = await the_club_s_groups(client, ogrody)
+    assert (row["member_count"], row["waiting_count"]) == (1, 0)
+
+
+async def test_only_this_club_s_official_groups_are_its_to_answer(
+    client, ogrody, marta
+):
+    karol = await a_player(client, "karol")
+    kasia = await a_player(client, "kasia")
+    player_group = await a_group(
+        client,
+        karol,
+        {"id": ogrody["id"]},
+        name="Ogrody wieczorem",
+        join_policy="PEOPLE_I_APPROVE",
+    )
+    theirs = await an_official_group(client, marta, ogrody["id"])
+    await join(client, kasia, player_group)
+    await join(client, kasia, theirs)
+    _, bonarka_desk = await club_signs_up(
+        client, name="Bonarka Arena", email="desk@bonarka.pl"
+    )
+
+    refused = [
+        await client.get(requests_of(theirs), headers=bonarka_desk),
+        await the_club_answers(client, bonarka_desk, theirs, kasia, "approve"),
+        await the_club_answers(client, bonarka_desk, theirs, kasia, "decline"),
+        await client.get(requests_of(player_group), headers=ogrody["desk"]),
+        await the_club_answers(client, ogrody["desk"], player_group, kasia, "approve"),
+        await the_club_answers(client, ogrody["desk"], player_group, kasia, "decline"),
+        await client.get(requests_of({"id": str(uuid4())}), headers=ogrody["desk"]),
+    ]
+
+    assert [answer_.status_code for answer_ in refused] == [404] * 7
+    assert {answer_.json()["code"] for answer_ in refused} == {"group_not_found"}
+    (row,) = await the_club_s_groups(client, ogrody)
+    assert row["waiting_count"] == 1
+
+
+async def test_a_player_token_is_refused_the_club_s_queue(client, ogrody, marta):
+    group = await an_official_group(client, marta, ogrody["id"])
+    kasia = await a_player(client, "kasia")
+    await join(client, kasia, group)
+
+    read_ = await client.get(requests_of(group), headers=kasia["headers"])
+    approved = await the_club_answers(client, kasia["headers"], group, kasia, "approve")
+
+    assert (read_.status_code, approved.status_code) == (401, 401)

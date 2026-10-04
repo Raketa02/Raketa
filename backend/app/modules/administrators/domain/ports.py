@@ -192,16 +192,39 @@ class AssignedGroup:
     administrator_id: UUID
 
 
+@final
+@dataclass(frozen=True, slots=True)
+class HandedGroup:
+    """An official group the club handed to an Administrator, who has **not
+    been told yet** (``docs/adr/0192`` §1): when, and how many wait to join
+    it — the queue the handover gave them."""
+
+    id: UUID
+    name: str
+    administrator_id: UUID
+    handed_over_at: Instant
+    waiting_count: int
+
+
 @runtime_checkable
 class OfficialGroupAssignments(Protocol):
     """Which of a club's official groups are given to which of its
-    Administrators — the Administrators table's *groups* column (#510)."""
+    Administrators — the Administrators table's *groups* column (#510) — and
+    which were handed to one who has not been told (``docs/adr/0192``)."""
 
     async def assigned_at(self, club_id: UUID) -> Sequence[AssignedGroup]:
         """Every official group at this club and whom it names, in no
         particular order — **one naming an administratorship that is no longer
         active included**: whether a group is still run by whom it names is
         this context's to decide (``docs/adr/0184`` §7), never the answer's."""
+        ...
+
+    async def handed_untold(
+        self, administrator_ids: Collection[UUID]
+    ) -> Sequence[HandedGroup]:
+        """The groups handed to these administratorships that they have not
+        been told about, in no particular order. Whether each is still active
+        is the caller's to have asked: it passes only the active ones."""
         ...
 
 

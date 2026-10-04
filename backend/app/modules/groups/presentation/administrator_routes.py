@@ -10,6 +10,10 @@ on the next request, as ``403 not_an_administrator``.
 
 **There is no route that deletes an official group or leaves one**: running
 one is not membership, and only the club moves it (``docs/adr/0183`` §7–§8).
+
+Beside them, under ``/administrator/clubs/{club_id}/handovers``, the one route
+that says the Administrator was told the club handed them a group
+(``docs/adr/0192``).
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ from app.modules.groups.application.commands import (
     AnswerAsAdministratorCommand,
     ChangeOfficialGroupSettingsCommand,
     CreateOfficialGroupCommand,
+    NoteHandoversSeenCommand,
 )
 from app.modules.groups.presentation.dependencies import (
     AdministeringDep,
@@ -32,6 +37,7 @@ from app.modules.groups.presentation.dependencies import (
     ChangeOfficialGroupSettingsDep,
     CreateOfficialGroupDep,
     DeclineAsAdministratorDep,
+    NoteHandoversSeenDep,
     ReadAdministeredGroupDep,
     ReadAdministeredGroupsDep,
 )
@@ -39,12 +45,16 @@ from app.modules.groups.presentation.schemas import (
     AdministeredGroupResponse,
     AdministeredGroupsResponse,
     CreateOfficialGroupRequest,
+    HandoversSeenRequest,
     OfficialGroupSettingsRequest,
     SavedSettingsResponse,
 )
 
 router = APIRouter(
     prefix="/administrator/clubs/{club_id}/groups", tags=["administrator"]
+)
+handovers_router = APIRouter(
+    prefix="/administrator/clubs/{club_id}/handovers", tags=["administrator"]
 )
 
 _GUARDED: dict[int | str, dict[str, Any]] = {
@@ -281,5 +291,31 @@ async def decline_join_request(
     await decline.execute(
         AnswerAsAdministratorCommand(
             administering=administering, group_id=group_id, player_id=player_id
+        )
+    )
+
+
+@handovers_router.post(
+    "/seen",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=_GUARDED,
+    summary="I was told the club handed me these groups",
+    description=(
+        "The sheet that says *[club] made you the administrator of [group]* was "
+        "closed or followed: each named group this administratorship runs and "
+        "has not been told about leaves `/users/me`'s `profiles.handovers`, for "
+        "every phone. **Anything else is stepped over, never refused** — a group "
+        "handed on meanwhile, told about already, or not theirs."
+    ),
+)
+async def handovers_seen(
+    club_id: UUID,
+    payload: HandoversSeenRequest,
+    administering: AdministeringDep,
+    note: NoteHandoversSeenDep,
+) -> None:
+    await note.execute(
+        NoteHandoversSeenCommand(
+            administering=administering, group_ids=payload.group_ids
         )
     )

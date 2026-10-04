@@ -33,6 +33,7 @@ from app.modules.groups.application.commands import (
     AnswerAsAdministratorCommand,
     ChangeOfficialGroupSettingsCommand,
     CreateOfficialGroupCommand,
+    NoteHandoversSeenCommand,
 )
 from app.modules.groups.application.membership import hidden_in
 from app.modules.groups.application.views import (
@@ -429,6 +430,50 @@ class DeclineJoinRequestAsAdministrator(_AnswerAsAdministrator):
             occurred_at=self._clock.now(),
         )
         await self._save(group)
+
+
+# --------------------------------------------------------------------------- #
+# Being told it was handed to you (docs/adr/0192 §1)
+# --------------------------------------------------------------------------- #
+
+
+class NoteHandoversSeen:
+    """The Administrator has been told the club handed them these groups — the
+    sheet closed, or followed into the group — **once**, for every phone.
+
+    Each named group this administratorship runs and has not been told about
+    records ``handover_seen``; **any other is stepped over, never refused**:
+    one handed on meanwhile, one told about already, one that is not theirs.
+    The person closed a sheet, and nothing they could do about a stale one
+    would be an answer to them. One transaction for the lot.
+    """
+
+    def __init__(
+        self, *, groups: GroupRepository, uow: UnitOfWork, clock: Clock
+    ) -> None:
+        self._groups = groups
+        self._uow = uow
+        self._clock = clock
+
+    async def execute(self, command: NoteHandoversSeenCommand) -> None:
+        administering = command.administering
+        now = self._clock.now()
+        for group_id in dict.fromkeys(command.group_ids):
+            group = await self._groups.load(group_id)
+            if group is None or not _runs(
+                administering,
+                kind=group.kind,
+                administrator_id=group.administrator_id,
+                home_club_id=group.home_club_id,
+            ):
+                continue
+            group.note_handover_seen(
+                by=administering.account_id,
+                as_administrator=administering.administrator_id,
+                occurred_at=now,
+            )
+            await self._groups.save(group)
+        await self._uow.commit()
 
 
 # --------------------------------------------------------------------------- #

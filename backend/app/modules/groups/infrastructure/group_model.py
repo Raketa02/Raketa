@@ -95,6 +95,11 @@ class GroupORM(Base):
         JSON(none_as_null=True), nullable=True
     )
     code: Mapped[str] = mapped_column(String(8), nullable=False)
+    #: When the club handed it to whoever runs it now, while they have not been
+    #: told; cleared by ``handover_seen`` (``docs/adr/0192`` §1).
+    handed_over_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

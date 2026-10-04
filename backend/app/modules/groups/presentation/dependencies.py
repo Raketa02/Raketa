@@ -44,8 +44,11 @@ from app.modules.groups.application.answer_join_request import (
     DeclineJoinRequest,
 )
 from app.modules.groups.application.club_groups import (
+    ApproveJoinRequestAsClub,
     ClubGroupRows,
+    DeclineJoinRequestAsClub,
     HandOverOfficialGroup,
+    ReadClubGroupRequests,
     ReadClubGroups,
 )
 from app.modules.groups.application.commands import Administering
@@ -60,6 +63,7 @@ from app.modules.groups.application.official_groups import (
     ChangeOfficialGroupSettings,
     CreateOfficialGroup,
     DeclineJoinRequestAsAdministrator,
+    NoteHandoversSeen,
     ReadAdministeredGroup,
     ReadAdministeredGroups,
 )
@@ -550,3 +554,43 @@ def get_hand_over_official_group(
 HandOverOfficialGroupDep = Annotated[
     HandOverOfficialGroup, Depends(get_hand_over_official_group)
 ]
+
+
+def get_read_club_group_requests(
+    directory: GroupDirectoryDep,
+    faces: GroupFacesDep,
+    ratings: RatedGroupMembersDep,
+) -> ReadClubGroupRequests:
+    return ReadClubGroupRequests(directory=directory, faces=faces, ratings=ratings)
+
+
+ReadClubGroupRequestsDep = Annotated[
+    ReadClubGroupRequests, Depends(get_read_club_group_requests)
+]
+
+
+def get_approve_as_club(
+    groups: GroupRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> ApproveJoinRequestAsClub:
+    return ApproveJoinRequestAsClub(groups=groups, uow=uow, clock=clock)
+
+
+ApproveAsClubDep = Annotated[ApproveJoinRequestAsClub, Depends(get_approve_as_club)]
+
+
+def get_decline_as_club(
+    groups: GroupRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> DeclineJoinRequestAsClub:
+    return DeclineJoinRequestAsClub(groups=groups, uow=uow, clock=clock)
+
+
+DeclineAsClubDep = Annotated[DeclineJoinRequestAsClub, Depends(get_decline_as_club)]
+
+
+def get_note_handovers_seen(
+    groups: GroupRepositoryDep, uow: UnitOfWorkDep, clock: ClockDep
+) -> NoteHandoversSeen:
+    return NoteHandoversSeen(groups=groups, uow=uow, clock=clock)
+
+
+NoteHandoversSeenDep = Annotated[NoteHandoversSeen, Depends(get_note_handovers_seen)]

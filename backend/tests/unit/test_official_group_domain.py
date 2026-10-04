@@ -2,10 +2,11 @@
 
 Marta runs *Ogrody 33 Club* for her club's 48-person padel WhatsApp group. It
 has **no Owner**: she is its Administrator, and running it is not membership.
-Only she answers its requests and edits it; Tomek, who runs it and plays, joins
-it directly. The HTTP suite (``tests/api/test_official_groups.py``) walks the
-same stories as an administrator and a player meet them; this is each rule
-itself, read off what the group records.
+Only she edits it, and only she and her club answer its requests; Tomek, who
+runs it and plays, joins it directly. The HTTP suite
+(``tests/api/test_official_groups.py``) walks the same stories as an
+administrator and a player meet them; this is each rule itself, read off what
+the group records.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ import pytest
 from app.kernel import InvariantViolated, Sport
 from app.modules.groups.domain.errors import (
     GroupSportsRequired,
+    JoinRequestNotFound,
     NotTheGroupOwner,
     SportNotOfferedByClub,
     WhatsAppSizeInvalid,
@@ -27,6 +29,7 @@ from app.modules.groups.domain.events import (
     GroupJoined,
     GroupLeft,
     GroupRenamed,
+    HandoverSeen,
     JoinPolicyChanged,
     JoinRequestApproved,
     JoinRequestDeclined,
@@ -344,6 +347,87 @@ def test_nobody_but_its_administrator_answers_or_edits_it(act, who):
 
 
 # --------------------------------------------------------------------------- #
+# Its club answers too (docs/adr/0191 §1)
+# --------------------------------------------------------------------------- #
+
+
+def test_its_club_approves_and_declines_whoever_runs_it():
+    group = ogrody_33_club()
+    group.join(MICHAL, occurred_at=NOW)
+    group.join(KASIA, occurred_at=NOW)
+    group.pull_events()
+
+    group.approve(MICHAL, by=DESK, as_club=CLUB, occurred_at=LATER)
+    group.decline(KASIA, by=DESK, as_club=CLUB, occurred_at=LATER)
+
+    approved, declined = group.pull_events()
+    # Who answered is the club's account, as a handover's `assigned_by` is.
+    assert approved == JoinRequestApproved(
+        group_id=group.id, player_id=MICHAL, approved_by=DESK, occurred_at=LATER
+    )
+    assert declined == JoinRequestDeclined(
+        group_id=group.id, player_id=KASIA, declined_by=DESK, occurred_at=LATER
+    )
+    assert group.is_member(MICHAL)
+    assert not group.is_waiting(KASIA)
+    # Marta still runs it, and still answers it.
+    assert group.administrator_id == MARTA
+
+
+def test_its_club_answering_what_is_settled_is_what_marta_s_answer_would_be():
+    group = ogrody_33_club()
+    group.join(MICHAL, occurred_at=NOW)
+    group.approve(MICHAL, occurred_at=NOW, **answered_by_marta())
+    group.pull_events()
+
+    group.approve(MICHAL, by=DESK, as_club=CLUB, occurred_at=LATER)
+    group.decline(KASIA, by=DESK, as_club=CLUB, occurred_at=LATER)
+    with pytest.raises(JoinRequestNotFound):
+        group.approve(KASIA, by=DESK, as_club=CLUB, occurred_at=LATER)
+
+    assert group.pull_events() == []
+
+
+@pytest.mark.parametrize(
+    "act",
+    [
+        lambda group, **by: group.approve(MICHAL, occurred_at=LATER, **by),
+        lambda group, **by: group.decline(MICHAL, occurred_at=LATER, **by),
+    ],
+    ids=["approve", "decline"],
+)
+def test_another_club_answers_nothing_here(act):
+    group = ogrody_33_club()
+    group.join(MICHAL, occurred_at=NOW)
+    group.pull_events()
+
+    with pytest.raises(NotTheGroupOwner):
+        act(group, by=uuid4(), as_club=uuid4())
+
+    assert group.is_waiting(MICHAL)
+    assert group.pull_events() == []
+
+
+def test_a_club_answers_no_player_group_even_at_its_own_courts():
+    group = Group.create_player_group(
+        group_id=uuid4(),
+        name=GroupName("Ogrody wieczorem"),
+        home_club_id=CLUB,
+        join_policy=JoinPolicy.PEOPLE_I_APPROVE,
+        owner_id=OLA_ACCOUNT,
+        code=GroupCode("ab3de7fg"),
+        occurred_at=NOW,
+    )
+    group.join(MICHAL, occurred_at=NOW)
+    group.pull_events()
+
+    with pytest.raises(NotTheGroupOwner):
+        group.approve(MICHAL, by=DESK, as_club=CLUB, occurred_at=LATER)
+
+    assert group.pull_events() == []
+
+
+# --------------------------------------------------------------------------- #
 # Settings
 # --------------------------------------------------------------------------- #
 
@@ -527,6 +611,93 @@ def test_the_handover_folds_back_out_of_the_stream():
 
     assert replayed.administrator_id == OLA
     assert replayed.version == 2
+
+
+def test_a_handover_waits_to_be_told_to_whom_it_was_handed():
+    """ADR-0192: the club handed it, and the app tells the new administrator
+    once — what records that is the group, so every phone agrees."""
+
+    group = ogrody_33_club()
+    assert group.handed_over_at is None
+
+    group.assign_administrator(OLA, by=DESK, occurred_at=LATER)
+
+    assert group.handed_over_at == LATER
+    group.pull_events()
+
+    group.note_handover_seen(by=OLA_ACCOUNT, as_administrator=OLA, occurred_at=LATER)
+
+    (seen,) = group.pull_events()
+    assert seen == HandoverSeen(
+        group_id=group.id, administrator_id=OLA, seen_by=OLA_ACCOUNT, occurred_at=LATER
+    )
+    assert group.handed_over_at is None
+
+
+def test_a_group_its_administrator_created_was_handed_to_nobody():
+    group = ogrody_33_club()
+
+    group.note_handover_seen(
+        by=MARTA_ACCOUNT, as_administrator=MARTA, occurred_at=LATER
+    )
+
+    assert group.handed_over_at is None
+    assert group.pull_events() == []
+
+
+def test_being_told_twice_records_once():
+    group = ogrody_33_club()
+    group.assign_administrator(OLA, by=DESK, occurred_at=LATER)
+    group.note_handover_seen(by=OLA_ACCOUNT, as_administrator=OLA, occurred_at=LATER)
+    group.pull_events()
+
+    group.note_handover_seen(by=OLA_ACCOUNT, as_administrator=OLA, occurred_at=LATER)
+
+    assert group.pull_events() == []
+
+
+def test_only_whom_it_was_handed_to_can_have_been_told():
+    group = ogrody_33_club()
+    group.assign_administrator(OLA, by=DESK, occurred_at=LATER)
+    group.pull_events()
+
+    with pytest.raises(NotTheGroupOwner):
+        group.note_handover_seen(
+            by=MARTA_ACCOUNT, as_administrator=MARTA, occurred_at=LATER
+        )
+
+    assert group.handed_over_at == LATER
+
+
+def test_handed_on_again_it_waits_for_the_next_one():
+    group = ogrody_33_club()
+    group.assign_administrator(OLA, by=DESK, occurred_at=NOW)
+    group.note_handover_seen(by=OLA_ACCOUNT, as_administrator=OLA, occurred_at=NOW)
+
+    group.assign_administrator(MARTA, by=DESK, occurred_at=LATER)
+
+    assert group.handed_over_at == LATER
+
+
+def test_the_notice_folds_back_out_of_the_stream():
+    created = Group.create_official_group(
+        group_id=uuid4(),
+        name=GroupName("Ogrody 33 Club"),
+        club_id=CLUB,
+        join_policy=JoinPolicy.PEOPLE_I_APPROVE,
+        administrator_id=MARTA,
+        created_by=MARTA_ACCOUNT,
+        whatsapp_size=WhatsAppSize(48),
+        sports=DeclaredSports.of([Sport.PADEL]),
+        code=GroupCode("ab3de7fg"),
+        occurred_at=NOW,
+    )
+    created.assign_administrator(OLA, by=DESK, occurred_at=LATER)
+    handed = created.pull_events()
+
+    assert Group.from_history(handed).handed_over_at == LATER
+    created.note_handover_seen(by=OLA_ACCOUNT, as_administrator=OLA, occurred_at=LATER)
+    assert Group.from_history([*handed, *created.pull_events()]).handed_over_at is None
 
 
 def test_a_player_group_is_never_handed_over():

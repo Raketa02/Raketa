@@ -39,6 +39,9 @@ CLUB_OPERATIONS = {
     "delete /api/v1/club/administrators/{administrator_id}",
     "get /api/v1/club/groups",
     "put /api/v1/club/groups/{group_id}/administrator",
+    "get /api/v1/club/groups/{group_id}/requests",
+    "post /api/v1/club/groups/{group_id}/requests/{player_id}/approve",
+    "post /api/v1/club/groups/{group_id}/requests/{player_id}/decline",
 }
 
 

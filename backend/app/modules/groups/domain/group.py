@@ -5,7 +5,8 @@ membership, the join policy and its requests, both searches and the whole page,
 and two aggregates would be two copies of every shared rule. They differ in
 three places, and each rule below says which kind it binds (#509): **who
 answers** — a player group's Owner, an official group's Administrator, whom
-only the club changes (#510) — **where the sports come from** — an official
+only the club changes (#510), and that club itself (``docs/adr/0191`` §1) —
+**where the sports come from** — an official
 group declares them — and **whether the one who runs it can delete or leave
 it** — an official group's Administrator can do neither, because running it is
 not membership (§7).
@@ -31,6 +32,7 @@ from app.modules.groups.domain.events import (
     GroupJoined,
     GroupLeft,
     GroupRenamed,
+    HandoverSeen,
     JoinPolicyChanged,
     JoinRequestApproved,
     JoinRequestDeclined,
@@ -85,6 +87,10 @@ class Group:
     administrator_id: UUID | None = None
     whatsapp_size: WhatsAppSize | None = None
     declared_sports: DeclaredSports | None = None
+    #: When the club handed it to whoever runs it now, **while they have not
+    #: been told** (``docs/adr/0192`` §1); ``None`` once they have, and for a
+    #: group its Administrator created.
+    handed_over_at: datetime | None = None
     is_deleted: bool = False
     version: int = 0
     _events: EventRecorder = field(
@@ -112,6 +118,7 @@ class Group:
         group.administrator_id = None
         group.whatsapp_size = None
         group.declared_sports = None
+        group.handed_over_at = None
         group.is_deleted = False
         group._events = EventRecorder()
         return group
@@ -247,6 +254,7 @@ class Group:
         by: UUID,
         occurred_at: datetime,
         as_administrator: UUID | None = None,
+        as_club: UUID | None = None,
     ) -> None:
         """Whoever answers approves a Join request, and the person is a member
         **at once** (``docs/adr/0183`` §7).
@@ -256,7 +264,7 @@ class Group:
         with nothing waiting is refused: nobody is admitted who did not ask.
         """
 
-        self._refuse_unless_it_answers(by, as_administrator)
+        self._refuse_unless_it_answers(by, as_administrator, as_club)
         if self.is_member(player_id):
             return
         if not self.is_waiting(player_id):
@@ -277,6 +285,7 @@ class Group:
         by: UUID,
         occurred_at: datetime,
         as_administrator: UUID | None = None,
+        as_club: UUID | None = None,
     ) -> None:
         """Whoever answers declines a Join request, and it is gone **silently**: the
         person's relation is *none* again and they may ask again
@@ -288,7 +297,7 @@ class Group:
         to decline.
         """
 
-        self._refuse_unless_it_answers(by, as_administrator)
+        self._refuse_unless_it_answers(by, as_administrator, as_club)
         if not self.is_waiting(player_id):
             return
         self._record_that(
@@ -491,6 +500,31 @@ class Group:
             )
         )
 
+    def note_handover_seen(
+        self, *, by: UUID, as_administrator: UUID, occurred_at: datetime
+    ) -> None:
+        """The Administrator it was handed to has been told (``docs/adr/0192``
+        §1). **Only whoever runs it now** can have been told about it being
+        handed to them; a group nobody handed — its Administrator created it,
+        or they were told already — records nothing. Official groups only."""
+
+        invariant(
+            self.kind is GroupKind.OFFICIAL,
+            "only an official group is handed over",
+        )
+        if as_administrator != self.administrator_id:
+            raise NotTheGroupOwner()
+        if self.handed_over_at is None:
+            return
+        self._record_that(
+            HandoverSeen(
+                group_id=self.id,
+                administrator_id=as_administrator,
+                seen_by=by,
+                occurred_at=occurred_at,
+            )
+        )
+
     def delete(self, *, by: UUID, occurred_at: datetime) -> None:
         """The Owner taps *Delete the group* (``docs/adr/0183`` §7) — **only
         while they are its only member**, which undoes a group nobody joined and
@@ -518,17 +552,27 @@ class Group:
             raise NotTheGroupOwner()
 
     def _refuse_unless_it_answers(
-        self, answerer: UUID, as_administrator: UUID | None
+        self,
+        answerer: UUID,
+        as_administrator: UUID | None,
+        as_club: UUID | None = None,
     ) -> None:
         """**Nobody but whoever runs the group** answers its Join requests
         (#505) or edits it (#506, #509): a player group's **Owner**, and an
         official group's **Administrator**, acting as that Administrator
         (``as_administrator``) — never as a player, whose account is refused
         here as any member is. That the Administrator is still active at the
-        club is the administrator guard's, on the same request."""
+        club is the administrator guard's, on the same request.
+
+        **An official group's club answers its requests too** (``as_club``,
+        ``docs/adr/0191`` §1) — whoever runs it, and while nobody does — and
+        edits nothing: only approving and declining pass it. A player group
+        is never its home club's, so no club answers one."""
 
         if self.kind is GroupKind.PLAYER:
             self._refuse_unless_the_owner(answerer)
+            return
+        if as_club is not None and as_club == self.home_club_id:
             return
         if as_administrator is None or as_administrator != self.administrator_id:
             raise NotTheGroupOwner()
@@ -562,6 +606,9 @@ class Group:
             self.declared_sports = DeclaredSports.from_codes(event.sports)
         elif isinstance(event, AdministratorAssigned):
             self.administrator_id = event.administrator_id
+            self.handed_over_at = event.occurred_at
+        elif isinstance(event, HandoverSeen):
+            self.handed_over_at = None
         elif isinstance(event, GroupJoined):
             self.members[event.player_id] = event.occurred_at
         elif isinstance(event, JoinRequested):

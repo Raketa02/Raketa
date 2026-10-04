@@ -942,6 +942,63 @@ class ClubGroupsResponse(BaseModel):
     )
 
 
+class ClubJoinRequestSchema(BaseModel):
+    """A Join request as the club answers it — club 20's card without the
+    photograph: who is asking, and what they play. ``player_id`` is the id to
+    approve or decline. **No Player Score**, as everywhere a request is drawn,
+    and **no photograph**, which the club website draws nowhere."""
+
+    player_id: UUID
+    name: str | None = Field(
+        description=(
+            "The whole Name, never the nickname. `null` for an account that can "
+            "no longer be named — the request still waits."
+        )
+    )
+    levels: list[SportLevelSchema] = Field(
+        description=(
+            "**Every sport they are rated in**, in the registry's order, each "
+            "with its Level — *Padel 2,44 · Tennis 2,60*. Empty for somebody "
+            "rated in nothing."
+        )
+    )
+
+    @classmethod
+    def from_card(cls, card: RequestCard) -> "ClubJoinRequestSchema":
+        return cls(
+            player_id=card.face.player_id,
+            name=card.face.name,
+            levels=[
+                SportLevelSchema(sport=row.sport, level=row.level)
+                for row in card.levels
+            ],
+        )
+
+
+class ClubJoinRequestsResponse(BaseModel):
+    requests: list[ClubJoinRequestSchema] = Field(
+        description=(
+            "Everybody waiting to be let in, **in the order they asked** — "
+            "*Want to join · N*, the same queue the administrator who runs it "
+            "answers in the app. Empty when nobody is waiting."
+        )
+    )
+
+
+class HandoversSeenRequest(BaseModel):
+    """The groups the sheet told the Administrator about (``docs/adr/0192``)."""
+
+    group_ids: list[UUID] = Field(
+        min_length=1,
+        max_length=100,
+        description=(
+            "The `group_id` of each handover the sheet named, from "
+            "`/users/me`'s `profiles.handovers`. A group handed on meanwhile, "
+            "told about already or not theirs is stepped over."
+        ),
+    )
+
+
 class HandOverRequest(BaseModel):
     """*Hand over*: who the club chose."""
 

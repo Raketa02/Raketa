@@ -28,6 +28,7 @@ from app.modules.groups.domain.events import (
     GroupJoined,
     GroupLeft,
     GroupRenamed,
+    HandoverSeen,
     JoinPolicyChanged,
     JoinRequestApproved,
     JoinRequestDeclined,
@@ -135,8 +136,15 @@ class EventSourcedGroupRepository:
         elif isinstance(event, SportsDeclared):
             await self._change(event.group_id, declared_sports=list(event.sports))
         elif isinstance(event, AdministratorAssigned):
-            # Only who runs it moves: the requests waiting stay on the group.
-            await self._change(event.group_id, administrator_id=event.administrator_id)
+            # Only who runs it moves: the requests waiting stay on the group. The
+            # new administrator is told once (docs/adr/0192 §1).
+            await self._change(
+                event.group_id,
+                administrator_id=event.administrator_id,
+                handed_over_at=event.occurred_at,
+            )
+        elif isinstance(event, HandoverSeen):
+            await self._change(event.group_id, handed_over_at=None)
         elif isinstance(event, GroupJoined):
             self._admit(event.group_id, event.player_id, event, version)
         elif isinstance(event, JoinRequested):
