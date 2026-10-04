@@ -2041,8 +2041,10 @@ decides how they will (Part 2, and the note under **Conversation**).
   It may be deleted only while its Owner is its only member.
 - **Official group** — a Group an **Administrator** created for their club, one per WhatsApp group
   the club keeps. **It has no Owner**: one Administrator runs it, or none while it **needs an
-  administrator** — then it reads *"[club] approves joins"* and its requests wait for a
-  **Handover**. It **declares its sports** (a non-empty subset of the club's) and its **WhatsApp
+  administrator** — then it reads *"[club] approves joins"*, and the club answers its requests
+  until a **Handover**. **Its club answers its Join requests at any time**, beside whoever runs it
+  ([ADR-0191](docs/adr/0191-the-club-answers-its-official-groups-requests-and-a-removal-is-emailed.md)
+  §1), and edits nothing in it. It **declares its sports** (a non-empty subset of the club's) and its **WhatsApp
   group size**. Whoever runs it can neither delete it nor stop running it; only the club moves it.
   _Avoid_: club group, verified group, public group.
 - **Owner** — the player who runs a Player group: answers its Join requests and edits its name and
@@ -2060,8 +2062,9 @@ decides how they will (Part 2, and the note under **Conversation**).
   approve** (joining creates a Join request). **Switching to Anyone admits everyone waiting.** An
   Administrator acting as a player joins the groups they run directly, whatever the policy.
   _Avoid_: private / public, privacy, visibility.
-- **Join request** — a player's ask to join a *People I approve* group, waiting for its Owner or its
-  Administrator. At most one pending per player per group. **Approved** makes them a Group member;
+- **Join request** — a player's ask to join a *People I approve* group, waiting for its Owner — or,
+  on an Official group, for its Administrator **or its club**, whichever answers first. At most one
+  pending per player per group. **Approved** makes them a Group member;
   **declined** removes the request **silently**, and they may ask again. _Avoid_: application,
   invitation (an **Invitation** is a club naming an Administrator).
 - **Group link** — the public site's address, `/join/`, and the group's **code**: eight characters
@@ -2071,12 +2074,16 @@ decides how they will (Part 2, and the note under **Conversation**).
   share link, group URL.
 - **WhatsApp group size** — how many people the WhatsApp group an Official group mirrors has, as
   its Administrator typed it: a whole number from 2 to 1024. It limits nothing; it is the
-  denominator of the club's *From WhatsApp* figure, which may pass 100% and says so. Only Official
+  denominator of the club's *From original group* figure (*From WhatsApp* until #529), which may
+  pass 100% and says so. The app's form calls it *Group size*. Only Official
   groups have one. _Avoid_: capacity, limit, max members.
 - **Handover** — the club giving an Official group to another **active** Administrator of the club
   — any group, including one that needs an administrator. The group keeps its link, Join policy,
-  WhatsApp group size, members and waiting requests; only who answers them changes. _Avoid_:
-  transfer, reassignment.
+  WhatsApp group size, members and waiting requests; only which Administrator answers them
+  changes, and the club answers them throughout. **The Administrator it was handed to is told,
+  once**, on a sheet in the app
+  ([ADR-0192](docs/adr/0192-a-handover-is-told-to-whom-it-was-handed-and-the-app-follows-the-account.md)).
+  _Avoid_: transfer, reassignment.
 
 ### Administrators
 
@@ -2099,7 +2106,9 @@ Official group per WhatsApp group and post its link there.
   **removed**; a removed person may be invited again. Creates the club's Official groups, answers
   their Join requests and edits their settings; reads their **Members** list and opens the record
   of anybody on it without being a Group member; can neither delete one nor stop running one.
-  Removal ends it on the next request, and leaves the person's player side untouched.
+  Removal ends it on the next request, leaves the person's player side untouched, and is
+  **emailed** to them — *removed*, or *invitation withdrawn* for somebody who never took it up
+  (ADR-0191 §4).
   **Collisions, recorded:** an Administrator is **not the `ADMIN` Authority** and holds no power
   over the platform or any account; the **admin** tag on a Members list is **copy** for *runs this
   group*, not a role; and *Administrator* in the app's profile switcher is **UI vocabulary** for

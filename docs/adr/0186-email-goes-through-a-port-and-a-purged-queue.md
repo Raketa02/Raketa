@@ -2,6 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-25
+- **§3 amended 2026-10-04 by [ADR-0191](0191-the-club-answers-its-official-groups-requests-and-a-removal-is-emailed.md)**: two removal notices join the table, and **a
+  notice carries no button and no code**. Every message that leads somewhere still has a button.
 - **Follows [ADR-0091](0091-photo-storage-behind-a-port.md)'s shape**, where a port has a local stand-in
   and a deployed adapter selected by configuration. Here that's a mail catcher locally, and a
   production sender that stays off.

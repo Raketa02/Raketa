@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-25
+- **§8 narrowed and §7 amended 2026-10-04 by [ADR-0191](0191-the-club-answers-its-official-groups-requests-and-a-removal-is-emailed.md)**: the club answers its Official
+  groups' Join requests too, and **a removal is emailed to the person**: *removed*, or *invitation
+  withdrawn* for somebody who never took it up.
 - **Answers [ADR-0002](0002-event-sourced-user-aggregate.md)'s per-context question for
   Administrators:** *event-sourced*. The one-time credentials are deliberately **not** event-sourced
   (§3).
