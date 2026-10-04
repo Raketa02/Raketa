@@ -20,7 +20,7 @@ function handOverPath(group: GroupRow): string {
 
 /**
  * **The Groups table** (club mocks 15–16): each official group, who runs it, its players and
- * how many are waiting, how much of its WhatsApp crowd has arrived, and the games it gave birth
+ * how many are waiting, how much of its original group has arrived, and the games it gave birth
  * to. Anywhere on a row opens its Hand over page: the group's name is the link a keyboard and a
  * screen reader follow, and a click elsewhere on the row goes where it goes. (A link stretched
  * over the row would need the row to hold it, which Safari's table rows never do.) On a phone
@@ -36,7 +36,7 @@ export function GroupsTable({ groups }: { groups: readonly GroupRow[] }) {
             <th scope="col">{COPY.columns.group}</th>
             <th scope="col">{COPY.columns.administrator}</th>
             <th scope="col">{COPY.columns.players}</th>
-            <th scope="col">{COPY.columns.fromWhatsApp}</th>
+            <th scope="col">{COPY.columns.fromOriginalGroup}</th>
             <th scope="col">{COPY.columns.games}</th>
           </tr>
         </thead>
@@ -70,10 +70,14 @@ export function GroupsTable({ groups }: { groups: readonly GroupRow[] }) {
                   ) : null}
                 </span>
               </td>
-              <td className={styles.labelled} data-label={COPY.columns.fromWhatsApp}>
-                <div className={styles.whatsApp}>
+              <td className={styles.labelled} data-label={COPY.columns.fromOriginalGroup}>
+                <div className={styles.arrived}>
                   <span className={styles.figure}>
-                    {COPY.fromWhatsApp(group.players, group.whatsApp.size, group.whatsApp.percent)}
+                    {COPY.fromOriginalGroup(
+                      group.players,
+                      group.whatsApp.size,
+                      group.whatsApp.percent,
+                    )}
                   </span>
                   <Bar value={group.players} max={group.whatsApp.size} />
                 </div>

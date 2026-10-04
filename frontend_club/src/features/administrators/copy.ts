@@ -51,8 +51,9 @@ export const ADMINISTRATORS_COPY = {
     title: (name: string) => `Remove ${name}?`,
     lead:
       'They stop being one of your administrators at once, and an invitation they have not ' +
-      'taken up stops working. Their groups stay, marked needs an administrator, until you ' +
-      'hand them over. If they also play, nothing changes for their player profile.',
+      'taken up stops working. Raketa emails them to say so. Their groups stay, marked needs ' +
+      'an administrator, until you hand them over. If they also play, nothing changes for ' +
+      'their player profile.',
     cancel: 'Cancel',
     remove: 'Remove',
   },

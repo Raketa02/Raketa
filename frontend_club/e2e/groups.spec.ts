@@ -1,11 +1,12 @@
 import type { Page } from '@playwright/test';
 
 import { expect, signIn, test } from './fixtures';
-import { administrator, DAY_MS, fromNow, officialGroup } from './stub/club';
+import { administrator, DAY_MS, fromNow, joinRequest, officialGroup } from './stub/club';
 
 /**
- * **The Groups page and the handover** (#524, club mocks 15–16): the club watches its official
- * groups fill up from WhatsApp, and moves each one between its administrators.
+ * **The Groups page, a group's page and the handover** (#524, club mocks 15–16 and 20): the club
+ * watches its official groups fill up from the groups they mirror, answers who asks to join
+ * (ADR-0191 §1), and moves each one between its administrators.
  */
 
 /** An administrator who took up the invitation and used the profile this week. */
@@ -94,7 +95,7 @@ test.describe('Groups', () => {
       'Group',
       'Administrator',
       'Players',
-      'From WhatsApp',
+      'From original group',
       'Games',
     ]);
     await expect(table.getByRole('rowheader')).toHaveText(['Ogrody 33 Club', 'Ogrody open play']);
@@ -114,7 +115,7 @@ test.describe('Groups', () => {
     await expect(club33.getByText('1 waiting')).toHaveCSS('color', 'rgb(135, 100, 26)');
   });
 
-  test('From WhatsApp is drawn as a bar, full with the real figure past 100%', async ({
+  test('From original group is drawn as a bar, full with the real figure past 100%', async ({
     page,
     club,
   }) => {
@@ -217,7 +218,12 @@ test.describe('Hand over', () => {
     await row.click({ position: { x: box.width - 4, y: box.height / 2 } });
     await expect(page).toHaveURL(new RegExp(`/groups/${group.id}$`));
     await expect(page.getByRole('heading', { name: 'Ogrody 33 Club' })).toBeVisible();
+    await expect(page.getByText('Official group', { exact: true })).toBeVisible();
     await expect(page.getByText('needs an administrator')).toHaveCSS('color', 'rgb(135, 100, 26)');
+    await expect(page.getByRole('main')).toContainText(
+      'Its link, who can join and its group size stay as they are.',
+    );
+    await expect(page.getByRole('main')).not.toContainText('WhatsApp');
 
     // Ola hasn't taken up her invitation, so only Tomek can take it.
     const choices = page.getByRole('group', { name: 'Hand it over to' });
@@ -229,6 +235,7 @@ test.describe('Hand over', () => {
     const dialog = page.getByRole('dialog', { name: 'Hand Ogrody 33 Club over to Tomek K.?' });
     await handOver.click();
     await expect(dialog).toContainText('Tomek K. answers its join requests from now on');
+    await expect(dialog).toContainText('Raketa tells Tomek K. in the app.');
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(dialog).toBeHidden();
     expect(stub.requests('put', '/api/v1/club/groups/{group_id}/administrator')).toEqual([]);
@@ -384,5 +391,131 @@ test.describe('Hand over', () => {
     await signIn(page);
     await page.goto('/groups/0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e99');
     await expect(page.getByRole('heading', { name: 'Nothing at this address' })).toBeVisible();
+  });
+});
+
+test.describe('Join requests', () => {
+  /** The row in *Want to join* that a person's name heads. */
+  function requestOf(page: Page, name: string) {
+    return page.getByRole('listitem').filter({ hasText: name });
+  }
+
+  test('with nobody running it, the desk lets one in and turns one away, and the table counts', async ({
+    page,
+    stub,
+    club,
+  }) => {
+    const rafa = joinRequest({
+      name: 'Rafa Peralta',
+      levels: [
+        { sport: 'PADEL', level: 2.456 },
+        { sport: 'TENNIS', level: 3.1 },
+      ],
+    });
+    const kasia = joinRequest({ name: 'Kasia Lis' });
+    const group = officialGroup({
+      name: 'Ogrody 33 Club',
+      member_count: 5,
+      whatsapp_size: 48,
+      requests: [rafa, kasia],
+    });
+    club.groups = [group];
+    await openGroups(page);
+    await expect(rowOf(page, 'Ogrody 33 Club').getByText('2 waiting')).toBeVisible();
+    await rowOf(page, 'Ogrody 33 Club').getByRole('link').click();
+
+    await expect(page.getByRole('heading', { name: 'Want to join · 2' })).toBeVisible();
+    await expect(page.getByRole('main')).toContainText(
+      'Nobody runs this group right now, so they wait for you. Answer them here, or hand the ' +
+        'group over below.',
+    );
+    // In the order they asked; Levels as the app writes them.
+    await expect(requestOf(page, 'Rafa Peralta')).toContainText('Padel 2,46 · Tennis 3,10');
+    await expect(requestOf(page, 'Kasia Lis')).toContainText('Not rated in any sport yet');
+
+    await page.getByRole('button', { name: 'Approve Rafa Peralta' }).click();
+    await expect(page.getByRole('heading', { name: 'Want to join · 1' })).toBeVisible();
+    await expect(requestOf(page, 'Rafa Peralta')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Decline Kasia Lis' }).click();
+    await expect(page.getByRole('heading', { name: /Want to join/ })).toHaveCount(0);
+
+    expect(
+      stub
+        .requests('post', '/api/v1/club/groups/{group_id}/requests/{player_id}/approve')
+        .map(({ params }) => params),
+    ).toEqual([{ group_id: group.id, player_id: rafa.player_id }]);
+    expect(
+      stub
+        .requests('post', '/api/v1/club/groups/{group_id}/requests/{player_id}/decline')
+        .map(({ params }) => params),
+    ).toEqual([{ group_id: group.id, player_id: kasia.player_id }]);
+    // Answering is not running it: the group still needs an administrator.
+    await expect(page.getByText('needs an administrator')).toBeVisible();
+
+    await page.getByRole('navigation').getByRole('link', { name: 'Groups' }).click();
+    await expect(rowOf(page, 'Ogrody 33 Club').getByRole('cell')).toHaveText([
+      'needs an administrator',
+      '6',
+      '6 of 48 · 13%',
+      '0',
+    ]);
+  });
+
+  test('a group somebody runs says they answer in the app, and the desk can answer too', async ({
+    page,
+    club,
+  }) => {
+    const marta = active('Marta Wójcik', 'marta@ogrody33.pl');
+    club.administrators = [marta];
+    const group = officialGroup({
+      name: 'Ogrody 33 Club',
+      runBy: marta,
+      requests: [joinRequest({ name: 'Rafa Peralta' })],
+    });
+    club.groups = [group];
+    await signIn(page);
+    await page.goto(`/groups/${group.id}`);
+
+    await expect(page.getByRole('heading', { name: 'Want to join · 1' })).toBeVisible();
+    await expect(page.getByRole('main')).toContainText(
+      'Marta Wójcik answers them in the app, and you can answer them here too.',
+    );
+    await page.getByRole('button', { name: 'Approve Rafa Peralta' }).click();
+    await expect(page.getByRole('heading', { name: /Want to join/ })).toHaveCount(0);
+    await expect(page.getByRole('main')).toContainText(/Administrator\s*Marta Wójcik/);
+  });
+
+  test('an answer the administrator gave first is said, and the page catches up', async ({
+    page,
+    club,
+  }) => {
+    const group = officialGroup({
+      name: 'Ogrody 33 Club',
+      requests: [joinRequest({ name: 'Rafa Peralta' })],
+    });
+    club.groups = [group];
+    await signIn(page);
+    await page.goto(`/groups/${group.id}`);
+    await expect(page.getByRole('heading', { name: 'Want to join · 1' })).toBeVisible();
+
+    // The administrator lets him in from the app before the desk presses.
+    club.groups = [{ ...group, member_count: 1, requests: [] }];
+    await page.getByRole('button', { name: 'Approve Rafa Peralta' }).click();
+
+    await expect(page.getByRole('main').getByRole('alert')).toHaveText(
+      "Rafa Peralta isn't waiting any more: somebody answered first.",
+    );
+    await expect(page.getByRole('heading', { name: /Want to join/ })).toHaveCount(0);
+  });
+
+  test('nobody waiting draws no card', async ({ page, club }) => {
+    const group = officialGroup({ name: 'Ogrody 33 Club' });
+    club.groups = [group];
+    await signIn(page);
+    await page.goto(`/groups/${group.id}`);
+
+    await expect(page.getByRole('heading', { name: 'Ogrody 33 Club' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Want to join/ })).toHaveCount(0);
   });
 });

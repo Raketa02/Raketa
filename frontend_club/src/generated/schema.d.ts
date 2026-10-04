@@ -284,6 +284,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/club/groups/{group_id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Join requests waiting on one of the club's official groups
+         * @description *Want to join · N*: everybody waiting, **in the order they asked** — whoever runs the group, and **while it needs an administrator**, when the club is the only one who can answer. Each is a name and every sport they are rated in with its Level.
+         */
+        get: operations["club_group_requests_api_v1_club_groups__group_id__requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/groups/{group_id}/requests/{player_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a Join request on one of the club's official groups
+         * @description The player is a Group member **at once**, as if whoever runs the group had said yes — who runs it does not change. Approving somebody already in changes nothing.
+         */
+        post: operations["approve_club_group_request_api_v1_club_groups__group_id__requests__player_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/groups/{group_id}/requests/{player_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline a Join request on one of the club's official groups
+         * @description The request is gone **silently**: nothing tells the player, and they may ask again. Declining a request that is not waiting changes nothing, and never removes a member.
+         */
+        post: operations["decline_club_group_request_api_v1_club_groups__group_id__requests__player_id__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -502,6 +562,38 @@ export interface components {
             groups: components["schemas"]["ClubGroupSchema"][];
         };
         /**
+         * ClubJoinRequestSchema
+         * @description A Join request as the club answers it — club 20's card without the
+         *     photograph: who is asking, and what they play. ``player_id`` is the id to
+         *     approve or decline. **No Player Score**, as everywhere a request is drawn,
+         *     and **no photograph**, which the club website draws nowhere.
+         */
+        ClubJoinRequestSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description The whole Name, never the nickname. `null` for an account that can no longer be named — the request still waits.
+             */
+            name: string | null;
+            /**
+             * Levels
+             * @description **Every sport they are rated in**, in the registry's order, each with its Level — *Padel 2,44 · Tennis 2,60*. Empty for somebody rated in nothing.
+             */
+            levels: components["schemas"]["SportLevelSchema"][];
+        };
+        /** ClubJoinRequestsResponse */
+        ClubJoinRequestsResponse: {
+            /**
+             * Requests
+             * @description Everybody waiting to be let in, **in the order they asked** — *Want to join · N*, the same queue the administrator who runs it answers in the app. Empty when nobody is waiting.
+             */
+            requests: components["schemas"]["ClubJoinRequestSchema"][];
+        };
+        /**
          * ClubSignUpRequest
          * @description A club signs up: its details, and the email and password its desk signs
          *     in with. **No second password field** — the website asks once.
@@ -701,6 +793,18 @@ export interface components {
          * @enum {string}
          */
         Sport: "PADEL" | "TENNIS" | "SQUASH" | "BADMINTON";
+        /**
+         * SportLevelSchema
+         * @description One sport somebody is rated in, and their Level in it.
+         */
+        SportLevelSchema: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Level
+             * @description Their Level in it, as RacketSkill published it.
+             */
+            level: number;
+        };
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -1364,6 +1468,124 @@ export interface operations {
             };
             /** @description `administrator_not_active` — the one chosen is not an active Administrator of this club: still invited, expired, removed, another club's, or nobody. Nothing was recorded; choose again from the Administrators table as it stands. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    club_group_requests_api_v1_club_groups__group_id__requests_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClubJoinRequestsResponse"];
+                };
+            };
+            /** @description `group_not_found` — not an official group of this club: no such group, a player group whose home club this is, or another club's. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_club_group_request_api_v1_club_groups__group_id__requests__player_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                player_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `group_not_found` — not an official group of this club: no such group, a player group whose home club this is, or another club's. `join_request_not_found` — the player has no request waiting: whoever runs the group answered it first, it was declined, or it was never made, and nobody is admitted who did not ask. Nothing was recorded. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_club_group_request_api_v1_club_groups__group_id__requests__player_id__decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: string;
+                player_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `group_not_found` — not an official group of this club: no such group, a player group whose home club this is, or another club's. Nothing was recorded. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

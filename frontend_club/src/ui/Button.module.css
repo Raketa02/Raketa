@@ -58,12 +58,28 @@
 }
 
 .secondary,
-.danger {
+.danger,
+.ink {
   border-color: var(--colour-line);
   border-radius: var(--radius-pill);
   background: var(--colour-surface);
   color: var(--colour-ink);
   font-size: var(--text-small);
+}
+
+.ink {
+  border-color: var(--colour-ink);
+  background: var(--colour-ink);
+  color: var(--colour-on-dark);
+}
+
+.ink:hover:not(:disabled) {
+  background: var(--colour-ink-deep);
+}
+
+.ink:disabled {
+  border-color: var(--colour-disabled);
+  background: var(--colour-disabled);
 }
 
 .danger {

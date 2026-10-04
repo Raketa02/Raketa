@@ -29,7 +29,7 @@ e2e/                   the Playwright suite and its stub backend (§7)
   `src/app/session/`, whose two route handlers belong to the server layer as the proxy does.
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
   password?_, _Set a new password_), `club-details`, `overview`, `administrators` and `groups`
-  (the Groups table and _Hand over_). A feature may use another feature's components, schemas,
+  (the Groups table, and a group's page: _Want to join_ and _Hand over_). A feature may use another feature's components, schemas,
   copy and mappers (sign-up draws Club details' fields; Overview greets a `Club`), and never
   another feature's actions or queries. A feature's queries and actions call the backend only
   through the three doors of §4, and may read the session, the recovery cookie and the
@@ -190,8 +190,10 @@ points.
 - **The fake club** installs the default handlers: one club, whose tokens rotate, whose spent
   refresh tokens are refused, whose reset signs every session out, whose administrators keep
   ADR-0184's rules, and whose official groups are run only by an active administrator, so a
-  removal leaves them needing one until a handover. A test seats its people in
-  `club.administrators` and its groups in `club.groups` (`officialGroup(…)`), and a test about
+  removal leaves them needing one until a handover, and each keeps its queue of join requests,
+  which the club answers whoever runs it. A test seats its people in `club.administrators` and its
+  groups in `club.groups` (`officialGroup(…)`, with `requests: [joinRequest(…)]` or just a
+  `waiting_count`), and a test about
   one reply overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
   because the single flight's grace window would hand one test the pair it renewed for another.
 - **Tests assert what the desk or the backend would see**: text on the page, the URL, the
@@ -220,5 +222,5 @@ literal CSS allows no variable for.
 bar becomes three rows: the wordmark and _Sign out_, the club, then the pages. Every table is
 drawn by `src/ui/Table.module.css`: on a phone its rows become blocks, one cell under another,
 and its column heads are left to a screen reader. A cell that would be a bare figure there
-(Groups' _Players_, _From WhatsApp_ and _Games_) prints its column's name before it, for the eye
+(Groups' _Players_, _From original group_ and _Games_) prints its column's name before it, for the eye
 only.

@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { writeAsClub } from '@/server/club';
 import type { RefusalAbout } from '@/ui/forms';
 
-import { readHandOver } from './schemas';
+import { readAnswer, readHandOver } from './schemas';
 
 const TABLE = '/groups';
 
@@ -47,4 +47,46 @@ export async function handOverGroup(
   revalidatePath(TABLE, 'layout');
   revalidatePath('/administrators');
   redirect(TABLE);
+}
+
+export interface AnswerState {
+  /** What the backend refused, and about whom. */
+  readonly refusal: RefusalAbout | null;
+}
+
+/**
+ * **Approve** or **Decline** somebody asking to join (ADR-0191 §1), and draw the page and the
+ * table again: the queue is shorter and the count moved. A 404 means the page was out of date
+ * (whoever runs the group answered first, or the group is none of the club's), so it is drawn
+ * again with the truth and says so; a backend that did not answer leaves the page as it was.
+ */
+export async function answerJoinRequest(
+  _previous: AnswerState,
+  form: FormData,
+): Promise<AnswerState> {
+  const { groupId, playerId, answer, name } = readAnswer(form);
+  if (answer === null) return { refusal: { code: 'request_invalid', name } };
+  if (groupId === null) return { refusal: { code: 'group_not_found', name } };
+  if (playerId === null) return { refusal: { code: 'join_request_not_found', name } };
+
+  const path = { params: { path: { group_id: groupId, player_id: playerId } } };
+  const outcome = await writeAsClub((api, auth) =>
+    answer === 'approve'
+      ? api.POST('/api/v1/club/groups/{group_id}/requests/{player_id}/approve', {
+          ...auth,
+          ...path,
+        })
+      : api.POST('/api/v1/club/groups/{group_id}/requests/{player_id}/decline', {
+          ...auth,
+          ...path,
+        }),
+  );
+  if (!outcome.ok) {
+    if (outcome.error.status === 404) revalidatePath(TABLE, 'layout');
+    return { refusal: { code: outcome.error.code, name } };
+  }
+
+  // The page's queue and the table's count changed.
+  revalidatePath(TABLE, 'layout');
+  return { refusal: null };
 }

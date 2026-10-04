@@ -18,16 +18,25 @@ type ClubDetails = components['schemas']['ClubDetailsResponse'];
 type TokenPair = components['schemas']['TokenResponse'];
 type ClubGroup = components['schemas']['ClubGroupSchema'];
 export type Administrator = components['schemas']['AdministratorSchema'];
+export type JoinRequest = components['schemas']['ClubJoinRequestSchema'];
 
 /**
  * **An official group as the backend keeps it**: a row of the Groups table, except that it
- * records whom it was given to rather than who runs it. Somebody runs it only while they are an
- * active Administrator of the club, so removing them, or *Reset password*, leaves it needing an
- * administrator until a handover (ADR-0183 §8, #510).
+ * records whom it was given to rather than who runs it, and keeps its queue rather than a count.
+ * Somebody runs it only while they are an active Administrator of the club, so removing them, or
+ * *Reset password*, leaves it needing an administrator until a handover (ADR-0183 §8, #510).
+ * The club answers its queue whoever runs it (ADR-0191 §1).
  */
-export type OfficialGroup = Omit<ClubGroup, 'administrator'> & {
+export type OfficialGroup = Omit<ClubGroup, 'administrator' | 'waiting_count'> & {
   administrator_id: string | null;
+  /** Everybody waiting to be let in, in the order they asked: the table's *N waiting*. */
+  requests: JoinRequest[];
 };
+
+/** **Somebody asking to join**, rated in nothing unless the test says. */
+export function joinRequest(fields: Pick<JoinRequest, 'name'> & Partial<JoinRequest>): JoinRequest {
+  return { player_id: randomUUID(), levels: [], ...fields };
+}
 
 const HOUR_MS = 3_600_000;
 export const DAY_MS = 24 * HOUR_MS;
@@ -57,16 +66,25 @@ export function administrator(
   };
 }
 
+/** The backend's *From original group* percent: players over the size, half up, never capped. */
+function percentOf(members: number, size: number): number {
+  return Math.floor((200 * members + size) / (2 * size));
+}
+
 /**
  * **An official group of the club**, given to `runBy` (nobody by default), with no players yet
- * unless the test says. Its *From WhatsApp* percent is the backend's: players over the WhatsApp
- * group's size, rounded half up and never capped.
+ * and nobody waiting unless the test says: `requests` names who waits, or `waiting_count` asks
+ * for that many people a test does not need to name. Its *From original group* percent is the
+ * backend's.
  */
 export function officialGroup(
   fields: Pick<OfficialGroup, 'name'> &
-    Partial<Omit<OfficialGroup, 'administrator_id'>> & { runBy?: Administrator | null },
+    Partial<Omit<OfficialGroup, 'administrator_id'>> & {
+      runBy?: Administrator | null;
+      waiting_count?: number;
+    },
 ): OfficialGroup {
-  const { runBy = null, ...rest } = fields;
+  const { runBy = null, waiting_count = 0, ...rest } = fields;
   const members = rest.member_count ?? 0;
   const size = rest.whatsapp_size ?? 30;
   return {
@@ -74,10 +92,12 @@ export function officialGroup(
     monogram: { letters: [...rest.name].slice(0, 2).join(''), colour: 0 },
     administrator_id: runBy?.id ?? null,
     member_count: members,
-    waiting_count: 0,
     whatsapp_size: size,
-    whatsapp_percent: Math.floor((200 * members + size) / (2 * size)),
+    whatsapp_percent: percentOf(members, size),
     games: 0,
+    requests: Array.from({ length: waiting_count }, (_, n) =>
+      joinRequest({ name: `Player ${n + 1}` }),
+    ),
     ...rest,
   };
 }
@@ -362,14 +382,23 @@ export class FakeClub {
   }
 
   /** A group's row as the Groups table reads it: run by whom it was given to, if still active. */
-  private rowOf({ administrator_id, ...group }: OfficialGroup): ClubGroup {
+  private rowOf({ administrator_id, requests, ...group }: OfficialGroup): ClubGroup {
     const runner = this.administrators.find(
       (each) => each.id === administrator_id && each.status === 'ACTIVE',
     );
     return {
       ...group,
+      waiting_count: requests.length,
       administrator: runner === undefined ? null : { id: runner.id, name: runner.name },
     };
+  }
+
+  private group(id: string | undefined): OfficialGroup | undefined {
+    return this.groups.find((each) => each.id === id);
+  }
+
+  private replaceGroup(group: OfficialGroup): void {
+    this.groups = this.groups.map((each) => (each.id === group.id ? group : each));
   }
 
   /** The club's official groups, as #510 keeps them. */
@@ -393,8 +422,56 @@ export class FakeClub {
         return { status: 409, body: refusal('administrator_not_active') };
       }
       const handed = { ...group, administrator_id: to.id };
-      this.groups = this.groups.map((each) => (each.id === group.id ? handed : each));
+      this.replaceGroup(handed);
       return { status: 200, body: this.rowOf(handed) };
     });
+
+    // The queue, whoever runs the group, and the club's two answers to it (ADR-0191 §1).
+    const notTheClubs = { status: 404, body: refusal('group_not_found') } as const;
+
+    stub.on('get', '/api/v1/club/groups/{group_id}/requests', ({ headers, params }) => {
+      if (!this.accessIsLive(headers.authorization)) return signedOut;
+      const group = this.group(params.group_id);
+      if (group === undefined) return notTheClubs;
+      return { status: 200, body: { requests: group.requests } };
+    });
+
+    // Approving is admitting; somebody with nothing waiting is nobody to admit.
+    stub.on(
+      'post',
+      '/api/v1/club/groups/{group_id}/requests/{player_id}/approve',
+      ({ headers, params }) => {
+        if (!this.accessIsLive(headers.authorization)) return signedOut;
+        const group = this.group(params.group_id);
+        if (group === undefined) return notTheClubs;
+        if (!group.requests.some((each) => each.player_id === params.player_id)) {
+          return { status: 404, body: refusal('join_request_not_found') };
+        }
+        const members = group.member_count + 1;
+        this.replaceGroup({
+          ...group,
+          member_count: members,
+          whatsapp_percent: percentOf(members, group.whatsapp_size),
+          requests: group.requests.filter((each) => each.player_id !== params.player_id),
+        });
+        return { status: 204, body: undefined };
+      },
+    );
+
+    // Declining is silent, and declining what is not waiting changes nothing.
+    stub.on(
+      'post',
+      '/api/v1/club/groups/{group_id}/requests/{player_id}/decline',
+      ({ headers, params }) => {
+        if (!this.accessIsLive(headers.authorization)) return signedOut;
+        const group = this.group(params.group_id);
+        if (group === undefined) return notTheClubs;
+        this.replaceGroup({
+          ...group,
+          requests: group.requests.filter((each) => each.player_id !== params.player_id),
+        });
+        return { status: 204, body: undefined };
+      },
+    );
   }
 }

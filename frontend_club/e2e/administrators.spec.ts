@@ -347,6 +347,7 @@ test.describe('Administrators', () => {
     await remove.click();
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText('Their groups stay, marked needs an administrator');
+    await expect(dialog).toContainText('Raketa emails them to say so.');
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(dialog).toBeHidden();
 

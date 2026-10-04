@@ -3,11 +3,13 @@
  * generated type (ADR-0187 §6); everything else reads the {@link GroupRow} it makes.
  */
 
+import type { Sport } from '@/features/club-details/mappers';
 import type { components } from '@/generated/schema';
 
 type WireGroup = components['schemas']['ClubGroupSchema'];
 type WireGroups = components['schemas']['ClubGroupsResponse'];
 type WireAdministrators = components['schemas']['AdministratorListResponse'];
+type WireJoinRequests = components['schemas']['ClubJoinRequestsResponse'];
 
 /** Who runs a group: the name the club gave them, as its Administrators table prints it. */
 export interface GroupAdministrator {
@@ -26,7 +28,8 @@ export interface GroupRow {
   /** Join requests waiting for an answer. */
   readonly waiting: number;
   /**
-   * *From WhatsApp*: the players, of the WhatsApp group's size. The percent is the backend's,
+   * *From original group*: the players, of the size of the group it mirrors (a WhatsApp group,
+   * say; the wire still calls it that). The percent is the backend's,
    * rounded half up and never capped (*52 of 48 · 108%*), and is never worked out again here.
    */
   readonly whatsApp: { readonly size: number; readonly percent: number };
@@ -82,4 +85,37 @@ export function toHandOver(
       .filter((each) => each.status === 'ACTIVE' && each.id !== group.administrator?.id)
       .map((each) => ({ id: each.id, name: each.name, email: each.email })),
   };
+}
+
+/** One sport somebody is rated in, and their Level in it. */
+export interface SportLevel {
+  readonly sport: Sport;
+  readonly level: number;
+}
+
+/** **Somebody asking to join** one of the club's official groups (club mock 20, ADR-0191 §1). */
+export interface JoinRequest {
+  /** The player's id: whom the club approves or declines. */
+  readonly id: string;
+  /** Their whole Name, or `null` for an account that can no longer be named. */
+  readonly name: string | null;
+  /** Every sport they are rated in, in the registry's order, each with its Level. */
+  readonly levels: readonly SportLevel[];
+}
+
+/** Everybody waiting on a group, in the order they asked. */
+export function toJoinRequests(wire: WireJoinRequests): readonly JoinRequest[] {
+  return wire.requests.map((request) => ({
+    id: request.player_id,
+    name: request.name,
+    levels: request.levels.map(({ sport, level }) => ({ sport, level })),
+  }));
+}
+
+/**
+ * **A group's page**: who runs it and whom it can be handed to, and everybody waiting to join,
+ * whom the club answers whoever runs it (ADR-0191 §1).
+ */
+export interface GroupPageView extends HandOverView {
+  readonly requests: readonly JoinRequest[];
 }
