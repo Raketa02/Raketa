@@ -63,7 +63,8 @@ asserting it renders correctly.
   `EXPO_PUBLIC_FEATURES_URL` (the feature-flag datafiles' host, ADR-0180) and
   `EXPO_PUBLIC_ENV` are all required, validated once at launch by `src/shared/config/env.ts`.
   A missing or malformed value stops the app on a startup screen naming it — that is the
-  guardrail working, not a bug.
+  guardrail working, not a bug. `EXPO_PUBLIC_LINK_DOMAIN` is the one optional value — the web
+  domain the app's links live on, empty until a domain exists (`docs/features/links.md`).
 - `EXPO_PUBLIC_ENV` is `local | development | staging | production`, the backend's four names,
   and **only `local` runs today.** The environment fixes the URL scheme — `https://` for the
   three deployed ones, for both URLs — so a laptop URL under a deployed name fails at launch
@@ -139,14 +140,17 @@ src/
   the union itself in `domain/vocabulary.ts` and holds it equal to the generated one with a
   compile-time assertion in `mappers/wireVocabulary.ts`, so a contract change fails
   `pnpm typecheck` in the one file whose job is saying so (`play`, `challenges`, `games`,
-  `player_record` do this).
+  `player_record`, `groups` and `auth` do this).
 - **One chokepoint per capability**, each the only importer of its module: `shared/lib/auth`
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
-  classes), and three platform ports in `shared/lib/platform/` — `location.ts`,
-  `imagePicking.ts`, `liveStream.ts`. Features depend on the port and drive the fakes in
-  `src/test-support/platform.ts`. The flag seam adds two, one file each in
+  classes), and six platform ports in `shared/lib/platform/` — `location.ts`,
+  `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`, `share.ts` (React Native's
+  `Share`, the one fenced name out of that module). Features depend on the port
+  and drive the fakes in `src/test-support/platform.ts`. The flag seam adds two, one file each in
   `features/feature_flags/api/`: `featurevisor.ts` (the SDK) and `datafileCache.ts`
-  (AsyncStorage — a public datafile, never a credential; ADR-0180). _(lint)_
+  (AsyncStorage — a public datafile, never a credential; ADR-0180). AsyncStorage's second and
+  last importer is `shared/lib/preferences/phonePreferences.ts` — three per-account choices,
+  wiped at sign-out (ADR-0188). _(lint)_
 - **`shared/` never imports a feature; a feature never deep-imports another** — go through its
   `types.ts`. `features/plans` may import `features/games`, never the reverse. _(lint)_ But do
   not move code to `shared/` because two files use it; keep it local until cross-feature
@@ -177,6 +181,7 @@ src/
 | Form input                | The form + one Zod schema                                                                                                        |
 | Navigation                | expo-router — a route param is not app state                                                                                     |
 | Config                    | `shared/config/env.ts`, Zod-validated at startup                                                                                 |
+| A choice the phone keeps  | `shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out — the Play segment today (ADR-0188)                      |
 
 Reach for Zustand last: component-local → feature store → app-wide store, and only with a
 reason. Zustand never holds API entities, tokens, a backend cache, or a global loading flag.

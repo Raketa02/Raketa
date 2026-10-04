@@ -4,19 +4,23 @@
 ``matcher_demands.py`` holds the ports the matcher declares of contexts it does
 not write; ``games_demands.py``, ``rating_demands.py`` and
 ``player_score_demands.py`` each hold what one **provider** publishes outward.
-This one is the matcher's kind: a context that writes nothing and asks nine
+This one is the matcher's kind: a context that writes nothing and asks ten
 questions of eight others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
-**One port here has three implementations, and that is the shape rather than an
+**One port here has four implementations, and that is the shape rather than an
 accident.** ``PriorDisclosure`` is *where has this reader already been shown this
-person*, and the platform answers it in three places — a search of theirs
+person*, and the platform answers it in four places — a search of theirs
 returned them, they are both seated in a live challenge, they were on a court
-together. A fourth surface that introduces one player to another satisfies the
-same demand with a fourth row, and this context never learns what it is. The
+together, they are both in a group. The fourth was a surface that introduces one
+player to another arriving with a fourth row, and this context never learned
+what a group is. The
 suite runs **each** of them against the demand, which is what makes *no adapter
-signs half a contract* true of a port with more than one signatory.
+signs half a contract* true of a port with more than one signatory. **Whoever
+runs a group they are in** is a fifth strand and a port of its own,
+``RunnerDisclosure``, because it is admitted under other gates — a row beside
+the four would be a claim this list could not check (#566).
 
 **A row carries a builder over a session**, not an instance, so the suite cannot
 quietly excuse the implementations with a database behind them — which here is
@@ -46,10 +50,12 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_game_disclosure,
+    build_group_disclosure,
     build_photo_storage,
     build_player_profile_repository,
     build_record_gates,
     build_record_photo_link,
+    build_runner_disclosure,
     build_search_disclosure,
     build_subject_identity_source,
     build_subject_reliability,
@@ -64,6 +70,7 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    RunnerDisclosure,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -161,6 +168,16 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=PriorDisclosure,
         name="GamesTheyPlayed",
         build=build_game_disclosure,
+    ),
+    RegisteredImplementation(
+        port=PriorDisclosure,
+        name="GroupsTheyShare",
+        build=build_group_disclosure,
+    ),
+    RegisteredImplementation(
+        port=RunnerDisclosure,
+        name="GroupsTheReaderRuns",
+        build=build_runner_disclosure,
     ),
     RegisteredImplementation(
         port=RecordGates,

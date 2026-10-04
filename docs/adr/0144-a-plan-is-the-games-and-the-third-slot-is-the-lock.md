@@ -8,6 +8,8 @@
   record's shape all stand. The title is left as it stands rather than renamed, because the
   file is linked from a dozen others.
 - **Date:** 2026-09-07
+- **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: a game made in a group has no plan — the booking is the plan.
+- **Its *"there is no club record to hold the true one"* narrowed 2026-09-25 by [ADR-0182](0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md)** §8: a club record now exists. A plan's *where* is unchanged — free text nothing reads — and so is the one platform zone; linking a plan to a club is its own later decision.
 - **Extends [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)**, which drew the
   line this record stands on: `games`' subject is *everybody accepted* to *there is nothing more
   to say about this evening*, and *"there is no booking, no calendar and no date field anywhere."*

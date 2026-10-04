@@ -13,6 +13,12 @@ export { AccountPanel } from './components/AccountPanel';
  * context's, and the follow-up that edits them will drive the same rules. See the screen.
  */
 export { NamingScreen } from './components/NamingScreen';
+/**
+ * ***Start playing*'s first step, the Adult attestation** (ADR-0185 §4–§5,
+ * [#517](https://github.com/Raketa02/Raketa/issues/517)) — this feature's on the naming's precedent:
+ * the act is the users context's, on the account, and the tick box and its sentence are sign-up's.
+ */
+export { StartPlayingScreen } from './components/StartPlayingScreen';
 
 /**
  * **The naming, from the You tab**
@@ -26,8 +32,64 @@ export { NAME_ROW_TITLE, SAVE_NAME, nameLine } from './components/namePresentati
 export { SignInScreen } from './components/SignInScreen';
 export { SignUpScreen } from './components/SignUpScreen';
 
+/**
+ * ***Forgot password?*** ([#515](https://github.com/Raketa02/Raketa/issues/515)) — the email form,
+ * the neutral confirmation, the code, and *Set a new password* by a claimed code or by the email's
+ * link. Each route file reads its params through the parser beside it and mounts the screen.
+ */
+export { ForgotPasswordScreen } from './components/ForgotPasswordScreen';
+export { ResetCodeScreen } from './components/ResetCodeScreen';
+export { ResetSentScreen } from './components/ResetSentScreen';
+export { RESET_ROUTES } from './components/resetRoutes';
+export { SetNewPasswordScreen } from './components/SetNewPasswordScreen';
+export {
+  parseEmailParam,
+  parseInvitationLinkParams,
+  parseInvitationTicketParams,
+  parseResetLinkParams,
+  parseResetTicketParams,
+} from './schemas/credentialRouteParams';
+
+/**
+ * ***Have an invitation code?*** and ***Set your password*** ([#518](https://github.com/Raketa02/Raketa/issues/518))
+ * — the email and the code, and the password by a claimed code or by the invitation email's link,
+ * validated before the form is drawn. `INVITATION_ROUTES.link` is what the links ticket (#520) opens.
+ */
+export { InvitationCodeScreen } from './components/InvitationCodeScreen';
+export { InvitationLinkScreen } from './components/InvitationLinkScreen';
+export { SetYourPasswordScreen } from './components/SetYourPasswordScreen';
+export { INVITATION_ROUTES } from './components/invitationRoutes';
+
+/**
+ * **An invitation's link, read — and its words** ([#520](https://github.com/Raketa02/Raketa/issues/520)):
+ * a link opened on a phone that is signed in is read here too, before the sheet it opens is drawn,
+ * and a spent one is said in the sentence *Set your password* would have said it in.
+ */
+export type { InvitationLink, InvitationLinkState } from './domain/invitation';
+export { useInvitationLink } from './hooks/useInvitationLink';
+export { LINK_STATE_MESSAGE, invitationErrorMessage } from './components/invitationPresentation';
+
+/**
+ * **Named in full** — a name and a nickname (ADR-0185 §4) — for the entry gate's first destination;
+ * the naming step reads the same rule from inside this feature.
+ */
+export { namedInFull } from './domain/naming';
+
+/**
+ * **Which profile the account wears, and the one the phone remembers** (ADR-0188 §2, #518) — the
+ * value, its reading back, and the hooks that read and keep it per account. The entry gate opens an
+ * account with two profiles in the one it wore last; the switcher keeps what is chosen.
+ */
+export { PLAYER_PROFILE, type ProfileChoice } from './domain/lastProfile';
+export { useKeepProfile, useLastProfile } from './hooks/useLastProfile';
+
 export type {
+  AccountProfiles,
+  AdministeredClub,
   AuthenticatedUser,
+  Handover,
+  HeldProfiles,
+  PendingInvitation,
   Naming,
   Registration,
   SignInCredentials,
@@ -39,6 +101,12 @@ export type {
  */
 export const NAMING_STEP = '/name';
 
+/**
+ * Where *Start playing* begins — the Adult attestation. The administrator's You tab pushes it, and
+ * the entry gate sends an account that holds no profile at all to it; one spelling for both.
+ */
+export const START_PLAYING_STEP = '/start-playing';
+
 export { authKeys } from './hooks/authKeys';
 /**
  * The signed-in player's read — its key and its fetch as one thing — for the one reader that must
@@ -46,7 +114,12 @@ export { authKeys } from './hooks/authKeys';
  * screen mounts (ADR-0180 §7). Its key carries the mapped type, so that lookup needs no cast and
  * cannot disagree with this feature about what the entry holds.
  */
-export { currentUserQuery, useCurrentUser } from './hooks/useCurrentUser';
+export {
+  ACCOUNT_FOLLOWED_MS,
+  currentUserQuery,
+  useCurrentUser,
+  useFollowedAccount,
+} from './hooks/useCurrentUser';
 /**
  * The one write another feature may make to the authenticated player.
  *
@@ -55,6 +128,27 @@ export { currentUserQuery, useCurrentUser } from './hooks/useCurrentUser';
  * is auth's too — see the hook.
  */
 export { useMarkPlayerProfileCommitted } from './hooks/useMarkPlayerProfileCommitted';
+
+/**
+ * **The one way out of a session**, for the one caller outside this feature that must take it
+ * without a button: the administrator area, when the club has removed an account that holds
+ * nothing else (PRD #500 story 136). The sequence is this feature's — revoke, then `endSession` —
+ * so the caller gets the hook and never the steps.
+ */
+export { useSignOut } from './hooks/useAuthActions';
+/**
+ * Its button's words and its refusal's, for the one other place that offers it: a link's sheet
+ * (#520).
+ */
+export { SIGN_OUT } from './components/accountPresentation';
+export { authErrorMessage } from './components/authErrorMessage';
+
+/**
+ * **Accepting a club's invitation** (#518) — for the invitation sheet, which the administrator
+ * feature draws. The act and its cache effect are this feature's: what it changes is the account's
+ * profiles, which this feature carries.
+ */
+export { useAcceptInvitation } from './hooks/useAuthActions';
 
 /**
  * The two launch steps. Exported because the bootstrap sequence needs them and

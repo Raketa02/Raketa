@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
+- **Amended 2026-09-25 by [ADR-0187](0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md) §5: one document per surface, and there are four** — `openapi.player.json`, `openapi.dev.json` (no client), `openapi.club.json` and `openapi.public.json`, each generated into its own client and gated for freshness and drift. The decision below is unchanged.
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0016** (two API surfaces), removed in the 2026-08-25 reset. The contract is one document again, `backend/openapi.player.json`; the decision this ADR records — the backend owns it, and no client hand-writes a mirroring DTO — is unchanged. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
 

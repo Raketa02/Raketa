@@ -5,6 +5,9 @@ from typing import Collection, Mapping, Optional, Protocol, final, runtime_check
 from uuid import UUID
 
 from app.modules.users.domain.events import (
+    AccountOpenedByInvitation,
+    PasswordChanged,
+    PasswordCleared,
     UserMarkedAsTester,
     UserNamed,
     UserRegistered,
@@ -45,6 +48,14 @@ class UserRepository(Protocol):
 
     async def project_registered(self, event: UserRegistered) -> User: ...
 
+    async def project_opened_by_invitation(
+        self, event: AccountOpenedByInvitation
+    ) -> User:
+        """Write the row for an account an Invitation opened, **with the name
+        the club typed and no nickname**, in the act's own transaction
+        (``docs/adr/0185`` §4)."""
+        ...
+
     async def project_named(self, event: UserNamed) -> User:
         """Write the naming onto the projection row, in the act's own transaction.
 
@@ -52,6 +63,23 @@ class UserRepository(Protocol):
         (``docs/adr/0002``'s CQRS-lite), which is what lets the uniqueness read
         above see a nickname the instant it is taken.
         """
+        ...
+
+    async def project_password_changed(self, event: PasswordChanged) -> None:
+        """Write the new hash and the credentials-changed instant onto the
+        projection row, in the act's own transaction (``docs/adr/0185`` §7).
+
+        On the row because sign-in reads the hash from it and every request
+        reads the instant from it — a change on the stream alone would leave
+        the old password working and the old sessions open.
+        """
+        ...
+
+    async def project_password_cleared(self, event: PasswordCleared) -> None:
+        """Clear the hash and move the credentials-changed instant on the row,
+        in the act's own transaction (``docs/adr/0184`` §6): sign-in reads the
+        hash from the row, so a password cleared on the stream alone would
+        still sign in."""
         ...
 
     async def project_tester_mark(

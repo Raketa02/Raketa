@@ -269,8 +269,8 @@ def test_a_declared_intent_moves_the_row_for_the_sport_it_names() -> None:
 @pytest.mark.parametrize(
     "event",
     [
-        RefreshTokenIssued(uuid4(), PLAYER, "jti", LATER, WHEN),
-        RefreshTokenRotated(PLAYER, uuid4(), "old", uuid4(), "new", WHEN),
+        RefreshTokenIssued(uuid4(), PLAYER, "jti", LATER, WHEN, "player_app"),
+        RefreshTokenRotated(PLAYER, uuid4(), "old", uuid4(), "new", WHEN, "player_app"),
     ],
     ids=["issued", "rotated"],
 )
@@ -289,10 +289,33 @@ def test_a_session_refresh_is_the_whole_of_the_activity_signal(
     )
 
 
+@pytest.mark.parametrize(
+    "event",
+    [
+        RefreshTokenIssued(uuid4(), PLAYER, "jti", LATER, WHEN, audience="club"),
+        RefreshTokenRotated(
+            PLAYER, uuid4(), "old", uuid4(), "new", WHEN, audience="club"
+        ),
+    ],
+    ids=["issued", "rotated"],
+)
+def test_a_club_s_session_is_nobody_s_activity(event: object) -> None:
+    """A club website's token belongs to a Club account, which is not a player
+    and is never a candidate (``docs/adr/0185`` §6) — so its refresh moves no
+    row, whatever id it carries."""
+
+    assert project(event) == ()
+
+
 def test_a_revoked_token_is_not_activity() -> None:
     """Signing out is not a session refresh, and the two must not read alike."""
 
-    assert project(RefreshTokenRevoked(uuid4(), PLAYER, "jti", "logout", WHEN)) == ()
+    assert (
+        project(
+            RefreshTokenRevoked(uuid4(), PLAYER, "jti", "logout", WHEN, "player_app")
+        )
+        == ()
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -61,6 +61,23 @@ export function countedRows(strands: readonly StrandRow[]): readonly StrandRow[]
   return strands.filter((row) => row.strand !== 'SPORTSMANSHIP');
 }
 
+/**
+ * **Whether the record card has anything to draw** — a counted row, the variety pair or the
+ * sportsmanship figure. Asked by the card, which draws nothing without one, and by the sheet,
+ * which folds the card and the tags under *Full record* and draws no fold over nothing.
+ */
+export function recordCardDrawn(record: {
+  readonly strands?: readonly StrandRow[];
+  readonly variety?: OpponentVariety;
+  readonly opinion?: unknown;
+}): boolean {
+  return (
+    countedRows(record.strands ?? []).length > 0 ||
+    record.variety !== undefined ||
+    record.opinion !== undefined
+  );
+}
+
 /** What the share means at its top. */
 const WIDEST = 100;
 

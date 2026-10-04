@@ -15,6 +15,13 @@
 
 export { PlayerRecordSheet, type PlayerRecordSheetProps } from './components/PlayerRecordSheet';
 
+/**
+ * **A Player Score drawn as a tag**, for Members' rows in `groups` — the one surface that tints
+ * the figure itself. The tint is `scoreBand`'s, which this feature owns beside the ladder it
+ * refines, so a group's list and the record it opens cannot band one number two ways.
+ */
+export { PlayerScoreTag, type PlayerScoreTagProps } from './components/PlayerScoreTag';
+
 export type {
   Opinion,
   OpponentVariety,
@@ -110,6 +117,7 @@ export {
   YOU_MARK,
   RECORD_TITLE,
   FIT_ROW_NAME,
+  FULL_RECORD,
   fitRowLabel,
   PLAYER_SCORE_BLOCK,
   RECORD_UNAVAILABLE,

@@ -52,7 +52,7 @@
           "users"
         ],
         "summary": "Current authenticated user",
-        "description": "Carries `name` and `nickname` \u2014 null until the naming, and `name` is the **first** branch of onboarding's entry gate \u2014 and `has_player_profile`, its fourth. All three are read from the player's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up.",
+        "description": "Carries `name` and `nickname` \u2014 the entry gate's first destination is *not named in full*, either missing \u2014 `has_player_profile`, its fourth, and `adult_attested`, all read from the account's own event streams rather than from a projection, so a player who has just named themselves or committed their profile is never sent back to a step they just finished by a read model that has not caught up. And `profiles` (docs/adr/0185 \u00a72), which the gate reads **ahead of every destination**: whether the account acts as a player, the clubs it administers, and any invitation pending for its email.",
         "operationId": "me_api_v1_users_me_get",
         "responses": {
           "200": {
@@ -60,7 +60,57 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserResponse"
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/adult-attestation": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Attest that you are an adult \u2014 Start playing's first step",
+        "description": "For an account that exists without the Adult attestation: one an invitation opened, which gives it the first time it acts as a player (docs/adr/0185 \u00a75). Once given, giving it again records nothing \u2014 so an account that attested at sign-up is answered the same.",
+        "operationId": "attest_adult_api_v1_users_me_adult_attestation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdultAttestationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "`adult_attestation_required` \u2014 the answer was not yes; `details.field` is `adult_attested`. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -253,6 +303,180 @@
         }
       }
     },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Forgot password?: email a link and a code",
+        "description": "Sends an email with a button and an 8-character code, valid for **one hour** and usable once. The button opens the public site's `/reset/<token>` page, for a player or an administrator; the code does the same from wherever the person asked.\n\n**Nobody can use this to learn who has an account**: the answer is `202` with no body for an address with an account, without one, and for one asked for too often. **Throttled per address** \u2014 past three emails in an hour, a request sends nothing and says so to nobody. A newer email replaces the older one's link and code.",
+        "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted \u2014 **the same answer whether or not the address has an account**, and whether or not an email was sent.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password/claim": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Exchange the emailed code for a ticket",
+        "description": "The address and the code from the email, exchanged for a short-lived `ticket` the new password is then set with. A claim is not a use: until a password is set, the same code can be claimed again.\n\nOnly a **right** code learns why it cannot be used; a wrong one is `code_incorrect` whatever else is true.",
+        "operationId": "claim_reset_code_api_v1_auth_forgot_password_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimTicketResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`code_incorrect` (`details.field`: `code`) \u2014 not the code sent to that address, **or nothing was sent to it**: the two are one answer. Five wrong codes lock the credential.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code is right, and it can no longer be used: `credential_expired` (ask again), `credential_used` or `credential_locked` (five wrong codes).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password/new-password": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Set a new password, sign out everywhere, and sign in",
+        "description": "Sets the new password with **exactly one** of the email's link `token` or a claimed code's `ticket`, then **signs out everywhere** and signs this session in: every access token issued before this moment is refused (`access_token_revoked`) and every refresh token revoked, so another phone still signed in is signed out on its next request. The answer is this session's new token pair. The link, the code and the ticket are spent.",
+        "operationId": "set_new_password_api_v1_auth_forgot_password_new_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`password_too_weak` (`details.field`: `password`) \u2014 8 to 128 characters with a letter and a digit. The link and the code still work.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link or a ticket this surface never issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`credential_expired` (ask again), `credential_used`, `credential_locked`, or `ticket_expired` \u2014 the code was right and the password came too late; claiming the code again is a fresh ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sports": {
       "get": {
         "tags": [
@@ -309,6 +533,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AssessmentStepResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`adult_attestation_missing` \u2014 this account has not given the Adult attestation, which playing requires: an account an invitation opened, before *Start playing*'s first step.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -743,6 +977,16 @@
           },
           "400": {
             "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`availability_grid_empty` \u2014 nothing ticked on the week. At least one of the twenty-one cells; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`adult_attestation_missing` \u2014 this account has not given the Adult attestation, which playing requires: an account an invitation opened, before *Start playing*'s first step.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4415,7 +4659,7 @@
           "player-record"
         ],
         "summary": "One player's record",
-        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge or a game with, and yourself \u2014 and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires.** A search record is kept for ever, so a sheet you could open this morning opens next year \u2014 any shorter window could only refuse a face the app is currently showing.\n\n**The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
+        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge, a game or a group with, somebody in a group you run, and yourself \u2014 and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires but a group.** A search record is kept for ever, so a sheet you could open this morning opens next year \u2014 any shorter window could only refuse a face the app is currently showing. A group opens it while you are both in it, because its Members lists who is in it now \u2014 and while you run an official group they are in.\n\n**The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered. **The gender preference is the one gate that does not reach whoever runs the group they are in**: it says who a player is willing to be matched with, and running their group is not that.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
         "operationId": "read_player_record_api_v1_players__player_id__record_get",
         "security": [
           {
@@ -4485,6 +4729,1736 @@
           }
         }
       }
+    },
+    "/api/v1/groups": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "The groups the caller belongs to, newest joined first",
+        "operationId": "my_groups_api_v1_groups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyGroupsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Create a player group at a home club",
+        "description": "The caller becomes the group's **Owner and first member**, and the group gets its link, which never changes. Answers the group as its page reads it.",
+        "operationId": "create_group_api_v1_groups_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlayerGroupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field the player has to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) \u2014 1\u201340 characters once trimmed; `home_club_unknown` (`home_club_id`) \u2014 only a club in Raketa can be a home club. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/groups/{group_id}": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "A group, for its members",
+        "description": "Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; for every sport, how many members are rated in it and the first of them to join \u2014 the Games tab's *N of M*; and the faces on the Info tab's members row, which **leaves out a blocked pair, either way round**, as the Members list does. No count moves.",
+        "operationId": "read_group_api_v1_groups__group_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Delete a group nobody else is in",
+        "description": "**The Owner, and only while they are its only member.** Afterwards the group is in no list and no search, its link reads *nothing at that link* (join search answers `read_as` `LINK` and no clubs), and the requests waiting on it are gone.",
+        "operationId": "delete_group_api_v1_groups__group_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`group_has_other_members` \u2014 somebody besides the Owner is in it. A group is deleted only while its Owner is its only member; an Owner who wants out of one with people in it leaves. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/details": {
+      "put": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Edit a group: its name and who can join",
+        "description": "**The Owner's**, both fields as *Edit group* holds them, recorded together or not at all. Saving what the group already says records nothing. **The link never changes**, and nor does the monogram's colour. **Switching to `ANYONE` admits everybody waiting at once**, and `admitted` says who. Answers the group as its page reads it, under `group`.",
+        "operationId": "edit_group_api_v1_groups__group_id__details_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EditedGroupResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`group_name_invalid` (`details.field` `name`) \u2014 1\u201340 characters once trimmed. Read only once the caller is known to be the Owner. **Nothing was recorded** \u2014 the policy neither.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the answer's members row. **Nothing was recorded**: the answer is drawn before the save commits, so the retry is the whole edit again.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/membership": {
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Join a group, or ask to",
+        "description": "**One tap, and the group's policy decides what it was.** Under *Anyone* the caller is a member **at once** (`relation` `MEMBER`). Under *People I approve* their Join request waits for the Owner (`relation` `REQUESTED`). Neither is recorded twice: tapping again as a member, or while the request waits, changes nothing and answers the same. Answers the group as a club's card draws it, so the card is patched in place.",
+        "operationId": "join_group_api_v1_groups__group_id__membership_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupAtClubSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 there is no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Leave a group",
+        "description": "The caller is no longer a member, and may join again later under the group's policy. **An Owner leaving a group other people are in passes it to the member who has been in longest** \u2014 their current stay, so somebody who left and came back counts from their return \u2014 and the requests waiting on it pass with it.",
+        "operationId": "leave_group_api_v1_groups__group_id__membership_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in: a second tap on *Leave* meets this, because they are not in it any more.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`lone_owner_cannot_leave` \u2014 the caller owns the group and is its only member, so there is nobody to pass it to. *Delete the group* is what undoes it. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/members": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Members of a group, for one sport",
+        "description": "**Only the members rated in `sport`** \u2014 who in the group the caller could play it with: the caller first, then the Owner, then everybody else newest joined first. Each with their face, their Level in the sport, their Player Score where they have one, whether they own the group and when they joined. **A blocked pair, either way round, is left out of each other's list**, and the group's member count does not change.\n\n**Read by the group's members, and by whoever runs an official group now** \u2014 running one is not membership. That caller reads the same rows in the same order, and is a row only once they have joined as a player. A removed Administrator, and one the group was handed away from, are answered as anyone else who is not in it is.",
+        "operationId": "group_members_api_v1_groups__group_id__members_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport",
+              "description": "The sport whose players to list."
+            },
+            "description": "The sport whose players to list."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupMembersResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/requests": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "The Join requests waiting on a group, for its Owner",
+        "description": "*Want to join \u00b7 N*: everybody waiting, in the order they asked \u2014 each with their name, their face and every sport they are rated in with its Level.",
+        "operationId": "join_requests_api_v1_groups__group_id__requests_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinRequestsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in: the person waiting is not in it yet, and meets this too.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/requests/{player_id}/approve": {
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Approve a Join request",
+        "description": "The player is a Group member **at once**. Approving somebody already in changes nothing.",
+        "operationId": "approve_join_request_api_v1_groups__group_id__requests__player_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in. `join_request_not_found` \u2014 the player has no request waiting: it was declined, or never made, and nobody is admitted who did not ask. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{group_id}/requests/{player_id}/decline": {
+      "post": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Decline a Join request",
+        "description": "The request is gone **silently**: nothing tells the player, their relation to the group is `NONE` again, and they may ask again. Declining a request that is not waiting changes nothing, and never removes a member.",
+        "operationId": "decline_join_request_api_v1_groups__group_id__requests__player_id__decline_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_the_group_owner` \u2014 the caller is in the group and is not its Owner. **Nobody but the Owner** sees or answers its requests, edits it or deletes it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group, or one the caller is not in: the person waiting is not in it yet, and meets this too.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/home-clubs": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Search every club in Raketa for a group's home club",
+        "description": "Clubs whose name or district contains `q` anywhere, ignoring case and accents (*debniki* finds *D\u0119bniki*). **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A\u2013Z and no distance. A blank `q` finds nothing. Each club carries every group at it and what each is to the caller.",
+        "operationId": "search_home_clubs_api_v1_home_clubs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "What was typed into the home club field.",
+              "title": "Q"
+            },
+            "description": "What was typed into the home club field."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Which page, from one.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Which page, from one."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomeClubPageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/join-search": {
+      "get": {
+        "tags": [
+          "groups"
+        ],
+        "summary": "Search for a group to join by club, district, group name or link",
+        "description": "One field, four matches, answered as **club cards with groups inside**. A club whose name or district contains `q` comes with **every** group at it; a group whose name contains `q` comes inside its club's card, with **only** the matching groups when the club itself did not match \u2014 ignoring case and accents either way. **Any text containing `/join/<code>` is a link**, whatever domain or words are around it, and finds exactly that group; a link that leads nowhere answers no clubs with `read_as` `LINK` \u2014 *nothing at that link*. **Nearest first** from the caller's Location area, then by name, twenty to a page; a caller with no Location area gets A\u2013Z and no distance. A blank `q` finds nothing.",
+        "operationId": "join_search_api_v1_join_search_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "What was typed or pasted into *Join a group*.",
+              "title": "Q"
+            },
+            "description": "What was typed or pasted into *Join a group*."
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Which page, from one.",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Which page, from one."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinSearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/claim": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "Have an invitation code?: exchange it for a ticket",
+        "description": "The email and the 8-character code from an invitation \u2014 or from the club's reset of an administrator. The ticket lasts a few minutes, and *Set your password* is set with it.",
+        "operationId": "claim_invitation_api_v1_invitations_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimInvitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimTicketResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`code_incorrect` (`details.field`: `code`) \u2014 not the code sent to that address, **or nothing was sent to it**: one answer. Five wrong codes lock the invitation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The invitation can no longer be used: `credential_expired` (ask the club to send a new one), `credential_used`, `credential_locked` (five wrong codes) \u2014 or `sign_in_to_accept`: the email has an account now, which accepts from the app, signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/password": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "Set your password, by the invitation's link or a ticket, and sign in",
+        "description": "**A new person's account is created** \u2014 its Name the one the club typed, no nickname, and no Adult attestation \u2014 and **an account the club reset gets its password back**. Either way the administrator is active and this answers a signed-in session. `ticket_expired` is a 409 too: claiming the code again is a fresh ticket.",
+        "operationId": "set_invitation_password_api_v1_invitations_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`password_too_weak` (`details.field`: `password`) \u2014 8 to 128 characters with a letter and a digit. The link and the code still work.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link or ticket never issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The invitation can no longer be used: `credential_expired` (ask the club to send a new one), `credential_used`, `credential_locked` (five wrong codes) \u2014 or `sign_in_to_accept`: the email has an account now, which accepts from the app, signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/by-token": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "What an invitation's link opens",
+        "description": "Read before anything is set: the email *Set your password* locks its field to, the name the club typed, the club, and whether the link still works. Changes nothing.",
+        "operationId": "read_invitation_by_token_api_v1_invitations_by_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationByTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationByTokenResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link never issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/{administrator_id}/acceptance": {
+      "post": {
+        "tags": [
+          "invitations"
+        ],
+        "summary": "Accept a pending invitation",
+        "description": "For the signed-in account whose email the invitation names: the administrator profile is added, with no password step. Answers the account's profiles as `/users/me` would, so the switcher can be drawn at once. Accepting again is the same answer.",
+        "operationId": "accept_invitation_api_v1_invitations__administrator_id__acceptance_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "administrator_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Administrator Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfilesSchema"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`invitation_not_found` \u2014 no invitation to this account's email has that id: somebody else's, a removed one, or none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`invitation_expired` \u2014 ask the club to send a new one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}": {
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "My administrator profile at a club",
+        "description": "The guarded read the administrator area opens on: the club's name. Checked for an active administratorship on every request.",
+        "operationId": "administrator_profile_api_v1_administrator_clubs__club_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministratorProfileResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Create an official group for my club",
+        "description": "One per WhatsApp group the administrator runs. **Its home club is the club in the path**, fixed. **It has no Owner and nobody in it**: running it is not membership \u2014 an administrator who plays joins it from their player profile, directly. It gets its link, which never changes. Answers the group as its administrator's page reads it.",
+        "operationId": "create_official_group_api_v1_administrator_clubs__club_id__groups_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOfficialGroupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministeredGroupResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) \u2014 1\u201340 characters once trimmed; `whatsapp_size_invalid` (`whatsapp_size`) \u2014 a whole number from 2 to 1024; `group_sports_required` (`sports`) \u2014 at least one; `sport_not_offered_by_club` (`sports`, with `details.sport`) \u2014 only the club's. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "The official groups I run at my club",
+        "description": "The administrator's Groups tab: each group's monogram, name, declared sports, member count, waiting count and home club, newest created first \u2014 and the club, whose sports are what a group may declare.",
+        "operationId": "administered_groups_api_v1_administrator_clubs__club_id__groups_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministeredGroupsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups/{group_id}": {
+      "get": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "An official group I run",
+        "description": "Its link to post, how many players it has, every player newest first with the day they joined, everybody waiting with every sport they are rated in and its Level \u2014 and its settings: name, who can join, WhatsApp group size and sports.",
+        "operationId": "administered_group_api_v1_administrator_clubs__club_id__groups__group_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdministeredGroupResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for every group that is not theirs**: no such group, a player group, one at another club, or one a colleague runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the players list. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups/{group_id}/settings": {
+      "put": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Save an official group's settings",
+        "description": "All four as the settings screen holds them, recorded together or not at all; saving what the group already says records nothing. **The link never changes.** **Switching to `ANYONE` admits everybody waiting at once**, and `admitted` says who.",
+        "operationId": "save_settings_api_v1_administrator_clubs__club_id__groups__group_id__settings_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfficialGroupSettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedSettingsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for every group that is not theirs**: no such group, a player group, one at another club, or one a colleague runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the players list. Nothing was recorded; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field to correct, named by `details.field`, checked in the form's order: `group_name_invalid` (`name`) \u2014 1\u201340 characters once trimmed; `whatsapp_size_invalid` (`whatsapp_size`) \u2014 a whole number from 2 to 1024; `group_sports_required` (`sports`) \u2014 at least one; `sport_not_offered_by_club` (`sports`, with `details.sport`) \u2014 only the club's. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups/{group_id}/requests/{player_id}/approve": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Approve a Join request on an official group I run",
+        "description": "The player is a Group member **at once**. Approving somebody already in changes nothing.",
+        "operationId": "approve_join_request_api_v1_administrator_clubs__club_id__groups__group_id__requests__player_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 not a group this administrator runs. `join_request_not_found` \u2014 the player has no request waiting: it was declined, or never made, and nobody is admitted who did not ask. Nothing was recorded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/groups/{group_id}/requests/{player_id}/decline": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "Decline a Join request on an official group I run",
+        "description": "The request is gone **silently**: nothing tells the player, and they may ask again. Declining a request that is not waiting changes nothing, and never removes a member.",
+        "operationId": "decline_join_request_api_v1_administrator_clubs__club_id__groups__group_id__requests__player_id__decline_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Group Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 **one code for every group that is not theirs**: no such group, a player group, one at another club, or one a colleague runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/administrator/clubs/{club_id}/handovers/seen": {
+      "post": {
+        "tags": [
+          "administrator"
+        ],
+        "summary": "I was told the club handed me these groups",
+        "description": "The sheet that says *[club] made you the administrator of [group]* was closed or followed: each named group this administratorship runs and has not been told about leaves `/users/me`'s `profiles.handovers`, for every phone. **Anything else is stepped over, never refused** \u2014 a group handed on meanwhile, told about already, or not theirs.",
+        "operationId": "handovers_seen_api_v1_administrator_clubs__club_id__handovers_seen_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Club Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandoversSeenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_an_administrator` \u2014 this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.**",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4522,6 +6496,260 @@
         ],
         "title": "AcceptanceSchema",
         "description": "Somebody agreed with the other side's score, and it has not settled yet.\n\n**Present only while the grace runs.** Once it has passed the game is\nconfirmed and the agreed score is on `score`; inside it nothing has settled,\na disagreement still wins, and the proposing side is no longer waiting on\nsilence \u2014 which is a different sentence on their screen and a correction the\naggregate will now refuse."
+      },
+      "AccountProfilesSchema": {
+        "properties": {
+          "acts_as_player": {
+            "type": "boolean",
+            "title": "Acts As Player",
+            "description": "Whether this account acts as a player: it has given the Adult attestation \u2014 every sign-up did, and *Start playing* asks it first \u2014 or it holds a Player profile. `false` only for an account an invitation opened that has not started playing."
+          },
+          "administers": {
+            "items": {
+              "$ref": "#/components/schemas/AdministeredClubSchema"
+            },
+            "type": "array",
+            "title": "Administers",
+            "description": "One entry per club whose groups this account runs, by name."
+          },
+          "pending_invitations": {
+            "items": {
+              "$ref": "#/components/schemas/PendingInvitationSchema"
+            },
+            "type": "array",
+            "title": "Pending Invitations",
+            "description": "Invitations addressed to this account's email that are still open, soonest to expire first. One disappears once accepted, removed or past its 72 hours."
+          },
+          "handovers": {
+            "items": {
+              "$ref": "#/components/schemas/HandoverSchema"
+            },
+            "type": "array",
+            "title": "Handovers",
+            "description": "Every official group a club handed this account's active administratorship there **that it has not been told about**, oldest first (`docs/adr/0192`). One disappears once `POST /administrator/clubs/{club_id}/handovers/seen` names it, or when the club hands the group on. Empty for an account that runs nothing, and for groups an administrator created."
+          }
+        },
+        "type": "object",
+        "required": [
+          "acts_as_player",
+          "administers",
+          "pending_invitations",
+          "handovers"
+        ],
+        "title": "AccountProfilesSchema",
+        "description": "Which profiles this account holds (``docs/adr/0185`` \u00a72) \u2014 what the\nentry gate reads first. *Profile* is the switcher's word."
+      },
+      "AdministeredClubSchema": {
+        "properties": {
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "club_id",
+          "club_name"
+        ],
+        "title": "AdministeredClubSchema"
+      },
+      "AdministeredGroupCardSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "waiting_count": {
+            "type": "integer",
+            "title": "Waiting Count",
+            "description": "How many Join requests are waiting \u2014 the amber *N waiting*. `0` when nobody is."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/ClubNameSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "waiting_count",
+          "home_club"
+        ],
+        "title": "AdministeredGroupCardSchema",
+        "description": "A card on the administrator's Groups tab. `sports` are the declared\ndots; `member_count` is *N members*."
+      },
+      "AdministeredGroupResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/OfficialGroupClubSchema"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link",
+            "description": "The Group link to post into the WhatsApp group: the public site's address, `/join/` and the group's code. **It never changes** \u2014 not on a rename, a policy change or a handover."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy"
+          },
+          "whatsapp_size": {
+            "type": "integer",
+            "title": "Whatsapp Size",
+            "description": "How many people the WhatsApp group has."
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Every player, **newest joined first** \u2014 the Administrator too, if they joined as a player. A blocked pair, either way round, is left out, as every Members list leaves them out; `member_count` is the group's."
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/JoinRequestSchema"
+            },
+            "type": "array",
+            "title": "Requests",
+            "description": "*Want to join \u00b7 N*: everybody waiting, in the order they asked, each with every sport they are rated in and its Level. Empty when nobody is."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "home_club",
+          "link",
+          "join_policy",
+          "whatsapp_size",
+          "players",
+          "requests"
+        ],
+        "title": "AdministeredGroupResponse",
+        "description": "An official group as the administrator running it opens it \u2014 and what\nits settings hold. `member_count` is *N players*."
+      },
+      "AdministeredGroupsResponse": {
+        "properties": {
+          "club": {
+            "$ref": "#/components/schemas/OfficialGroupClubSchema"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/AdministeredGroupCardSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "**The official groups this administrator runs** at this club, newest created first \u2014 never a colleague's. Empty before the first: *No official groups yet*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "club",
+          "groups"
+        ],
+        "title": "AdministeredGroupsResponse"
+      },
+      "AdministratorProfileResponse": {
+        "properties": {
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "club_id",
+          "club_name"
+        ],
+        "title": "AdministratorProfileResponse",
+        "description": "*My administrator profile at club X* \u2014 the guarded read."
+      },
+      "AdultAttestationRequest": {
+        "properties": {
+          "adult_attested": {
+            "type": "boolean",
+            "title": "Adult Attested",
+            "description": "Required to be `true`, exactly as at sign-up: `false` is refused with `adult_attestation_required`. **Not a date of birth and not age verification.**"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "adult_attested"
+        ],
+        "title": "AdultAttestationRequest",
+        "description": "The Adult attestation, given by an account that already exists \u2014 what\n*Start playing* asks first (``docs/adr/0185`` \u00a75)."
       },
       "AnswerOptionResponse": {
         "properties": {
@@ -5337,6 +7565,149 @@
         ],
         "title": "ChangeSocialTagsRequest",
         "description": "The Social tags, replaced whole (``docs/adr/0179`` \u00a78).\n\nStrings rather than an enum, as the commit carries them: an id outside the\nserved vocabulary is refused by the domain with ``unknown_social_tag``, a\ncount outside the served bounds with ``social_tag_selection_out_of_bounds``,\nand the client gets a code it can act on rather than a 422."
+      },
+      "ClaimCodeRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "ClaimCodeRequest",
+        "description": "The address and the 8-character code from the email. The code is read\nforgivingly \u2014 case, spaces and dashes are ignored \u2014 and its length is not\nchecked here: a code of the wrong length is simply not the right code, and\nis told ``code_incorrect`` as every other one is. The bound is a cap on\nwhat a request may carry, not a rule about codes."
+      },
+      "ClaimInvitationRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Email"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "ClaimInvitationRequest",
+        "description": "*Have an invitation code?*: the address and the 8-character code. The\ncode is read forgivingly \u2014 case, spaces and dashes are ignored \u2014 and its\nlength is not checked here: a code of the wrong length is simply not the\nright code."
+      },
+      "ClaimTicketResponse": {
+        "properties": {
+          "ticket": {
+            "type": "string",
+            "title": "Ticket",
+            "description": "Present it as `ticket` when setting the new password. Good for `expires_in` seconds, and never past the code's own hour; claiming the code again replaces it."
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ticket",
+          "expires_in"
+        ],
+        "title": "ClaimTicketResponse",
+        "description": "A correct code, exchanged for a ticket the new password is set with."
+      },
+      "ClubCardSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km",
+            "description": "From the reader's Location area to the club, one decimal and never below `0.1`. **`null` for a reader with no Location area**, whose clubs come A\u2013Z."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the club offers, in the registry's order."
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/GroupAtClubSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "The biggest crowd first. **Home-club search**: every group at the club \u2014 and a club with some is the one the New group form tints and tags *group already here*. **Join search**: every group when the club itself matched, only the groups whose name matched when it did not, and exactly the linked group for a link. Empty for a club with none: *no groups here yet*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "district",
+          "distance_km",
+          "sports",
+          "groups"
+        ],
+        "title": "ClubCardSchema",
+        "description": "One club as a search draws it: its header \u2014 which is context, not a\nchoice \u2014 and the groups inside it."
+      },
+      "ClubNameSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ClubNameSchema",
+        "description": "The group's home club, as a line under its name."
       },
       "CommitPlayerProfileRequest": {
         "properties": {
@@ -6403,6 +8774,70 @@
         ],
         "title": "CreateAssessmentRequest"
       },
+      "CreateOfficialGroupRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "*Same name as the WhatsApp group*: trimmed, runs of whitespace collapsed, then 1\u201340 characters. Refused with `group_name_invalid`, `details.field` `name`."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits everybody waiting at once.**"
+          },
+          "whatsapp_size": {
+            "type": "integer",
+            "title": "Whatsapp Size",
+            "description": "How many people the WhatsApp group has \u2014 **required**, a whole number from 2 to 1024. It limits nothing: more players than this is allowed and honest. Refused with `whatsapp_size_invalid`, `details.field` `whatsapp_size`."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the group plays \u2014 **required**, and **only the club's**. Ticking one twice is ticking it. Refused with `group_sports_required` for none, or `sport_not_offered_by_club` with the sport in `details.sport` \u2014 `details.field` `sports` either way."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "join_policy",
+          "whatsapp_size",
+          "sports"
+        ],
+        "title": "CreateOfficialGroupRequest",
+        "description": "*New official group*. **The home club is not asked**: it is the club in\nthe path, fixed."
+      },
+      "CreatePlayerGroupRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Trimmed, runs of whitespace collapsed, then 1\u201340 characters. Never unique. Refused with `group_name_invalid`, `details.field` `name`."
+          },
+          "home_club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Home Club Id",
+            "description": "A club from home-club search \u2014 **required**. A club Raketa does not have is `home_club_unknown`, `details.field` `home_club_id`."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` (the form's default) or `PEOPLE_I_APPROVE`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "home_club_id",
+          "join_policy"
+        ],
+        "title": "CreatePlayerGroupRequest",
+        "description": "A player creates a group. **No sport is asked for**: the group plays\nwhatever its members are rated in (``docs/adr/0183`` \u00a76)."
+      },
       "DayPart": {
         "type": "string",
         "enum": [
@@ -6582,6 +9017,50 @@
         ],
         "title": "DistanceEvidence",
         "description": "How far away they are, and whether the searcher is outside *their* ring.\n\nA candidate's own radius is a Liveness dock and **never a gate**: somebody\nwho set a small radius is not refusing to be found, and the searcher is\nshown the fact rather than having the person removed. The standalone flat\ndock for it is struck \u2014 the reciprocal reading already prices it, and\nproportionately."
+      },
+      "EditGroupRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Trimmed, runs of whitespace collapsed, then 1\u201340 characters. Refused with `group_name_invalid`, `details.field` `name`."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits everybody waiting at once.**"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "join_policy"
+        ],
+        "title": "EditGroupRequest",
+        "description": "The Owner saves *Edit group* \u2014 the New group form's Name and Who can join\ncards, **both as the form holds them**. The home club is not here: it never\nchanges (``docs/adr/0183`` \u00a72)."
+      },
+      "EditedGroupResponse": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/GroupResponse",
+            "description": "The group as its page reads it, after the save."
+          },
+          "admitted": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "Admitted",
+            "description": "Everybody the switch to `ANYONE` admitted, **in the order they asked** \u2014 the Edit screen shows them. Empty for every other save."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "admitted"
+        ],
+        "title": "EditedGroupResponse",
+        "description": "The group as *Edit group* left it, and who the save let in."
       },
       "EntryPageResponse": {
         "properties": {
@@ -6893,6 +9372,22 @@
         ],
         "title": "ForecastSchema",
         "description": "How even a game is forecast to be. One type, everywhere it appears.\n\n``provisional`` travels **inside** the forecast rather than beside it: the\nfailure being guarded against is a screen showing the number without its\ncaveat, and a sibling boolean is exactly how the two get separated in a\nrefactor."
+      },
+      "ForgotPasswordRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "ForgotPasswordRequest",
+        "description": "*Forgot password?*: the address to send a link and a code to."
       },
       "GameKind": {
         "type": "string",
@@ -7320,6 +9815,277 @@
         "title": "GenderPreference",
         "description": "Who a player is willing to be matched with \u2014 durable, not per search.\n\n**Durable rather than per-search because the gate is mutual.** It has to be\nevaluated against a player when somebody *else* searches and they are not\npresent, and a per-search setting cannot bind that direction at all. A\nper-search override may **narrow** this, never widen past it."
       },
+      "GroupAtClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` \u2014 *Join* admits at once (*anyone can join*); `PEOPLE_I_APPROVE` \u2014 *Ask to join* leaves a request for the Owner (*Karol approves joins*)."
+          },
+          "owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Name",
+            "description": "The Owner's **whole Name**, never the nickname \u2014 who answers a request, for the *approves joins* line. **No first name is cut from it, here or by a client**: a sentence naming somebody uses the whole Name (`docs/adr/0171` \u00a74), so the line reads *Karol Nowak approves joins* and the row truncates it as it truncates any line. `null` for an account that can no longer be named \u2014 and **always `null` on an official group**, which has no Owner: its line names `administrator_name`."
+          },
+          "administrator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administrator Name",
+            "description": "**An official group's** *approves joins* line: the whole name the club gave the Administrator running it now \u2014 *Administrator Marta W\u00f3jcik approves joins* \u2014 cut by nobody, as `owner_name` is. `null` while nobody runs it, and **always `null` on a player group**, whose line names `owner_name`."
+          },
+          "is_administrator": {
+            "type": "boolean",
+            "title": "Is Administrator",
+            "description": "Whether **the reader** runs this official group. Their tap is **Join**, never *Ask to join*: they are admitted at once whatever `join_policy` says \u2014 they would otherwise be asking themselves. Always `false` on a player group."
+          },
+          "relation": {
+            "$ref": "#/components/schemas/GroupRelation",
+            "description": "`MEMBER` \u2014 the reader is in it (*you're in*); `REQUESTED` \u2014 they asked and their request is waiting (*requested \u00b7 waiting*); `NONE` \u2014 neither, and *Join* or *Ask to join* is the tap. **A declined request reads `NONE`**: nothing tells them it was declined, and they may ask again."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "join_policy",
+          "owner_name",
+          "administrator_name",
+          "is_administrator",
+          "relation"
+        ],
+        "title": "GroupAtClubSchema",
+        "description": "A group inside a club's card, with what it is to the reader."
+      },
+      "GroupKind": {
+        "type": "string",
+        "enum": [
+          "PLAYER",
+          "OFFICIAL"
+        ],
+        "title": "GroupKind",
+        "description": "The two kinds of Group (``docs/adr/0183`` \u00a71), and every rule that differs\nbetween them says which it binds rather than reading a null.\n\nA **player group** has an Owner who created it and plays whatever its\nmembers are rated in. An **official group** belongs to a club, has **no\nOwner** \u2014 one Administrator runs it \u2014 and **declares** its sports and the\nsize of the WhatsApp group it mirrors (\u00a73)."
+      },
+      "GroupMemberSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level in the sport asked for, as RacketSkill published it. Always present: somebody not rated in it is not listed."
+          },
+          "player_score": {
+            "type": "integer",
+            "title": "Player Score",
+            "description": "Their published Player Score, 0\u2013100 \u2014 the figure their record and a player card print. **Omitted for somebody the platform has watched nothing of**, never `0`: no record is not a bad one."
+          },
+          "is_owner": {
+            "type": "boolean",
+            "title": "Is Owner",
+            "description": "Whether they own the group \u2014 the row the **admin** tag is drawn on in a player group."
+          },
+          "is_administrator": {
+            "type": "boolean",
+            "title": "Is Administrator",
+            "description": "Whether they run this **official** group as its Administrator, and joined it as a player \u2014 the row the **admin** tag is drawn on in an official group, second after the reader as an Owner is. Always `false` on a player group."
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At",
+            "description": "When they joined \u2014 this stay: somebody who left and came back counts from their return."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "level",
+          "is_owner",
+          "is_administrator",
+          "joined_at"
+        ],
+        "title": "GroupMemberSchema",
+        "description": "One row of Members, for one sport \u2014 *Padel 2,71 \u00b7 score 92*."
+      },
+      "GroupMembersResponse": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport",
+            "description": "The sport the list was asked for."
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/GroupMemberSchema"
+            },
+            "type": "array",
+            "title": "Members",
+            "description": "**Only the members rated in `sport`**: the reader first, then the Owner \u2014 or the Administrator running an official group, once they joined it as a player \u2014 then everybody else **newest joined first**. **A blocked pair, either way round, is left out of each other's list** \u2014 and nothing says so: the group's `member_count` is the same for every reader, so it may be more than the rows here. Empty when nobody in the group the reader may see is rated in it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "members"
+        ],
+        "title": "GroupMembersResponse"
+      },
+      "GroupPersonSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name"
+        ],
+        "title": "GroupPersonSchema",
+        "description": "A member's face \u2014 **a name and a photograph, and nothing else**."
+      },
+      "GroupPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At",
+            "description": "When they joined \u2014 this stay. The app prints *this week* within seven days, and the date after."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "joined_at"
+        ],
+        "title": "GroupPlayerSchema",
+        "description": "One player on an official group's page \u2014 rows are not tappable, and\nnobody can be removed."
+      },
       "GroupReason": {
         "type": "string",
         "enum": [
@@ -7331,6 +10097,153 @@
         ],
         "title": "GroupReason",
         "description": "Why this four beat the runner-up. **One closed code, never a number.**\n\n``G`` chose these four over the other combinations and the third refusal \u2014\n*never a number it cannot explain in one sentence with the evidence named* \u2014\napplies. A second score the player must trust is worse than none: it competes\nwith Fit and nobody can act on it. So the evidence half is paid here, by the\nterm with the largest margin between the winning combination and the\nrunner-up \u2014 the group analogue of the card's top three reasons\n(``docs/adr/0117``).\n\nClosed vocabulary and ``docs/adr/0106``-shaped: **the client writes the\nsentence, the engine names which.**"
+      },
+      "GroupRelation": {
+        "type": "string",
+        "enum": [
+          "MEMBER",
+          "REQUESTED",
+          "NONE"
+        ],
+        "title": "GroupRelation",
+        "description": "What a group is to the person reading it (``docs/adr/0183`` \u00a79): they\nare in it, they have asked and their Join request is waiting, or neither.\n\n**A declined request reads as ``NONE``** \u2014 the request is gone, and nothing\ntells them it was declined (``docs/adr/0183`` \u00a77)."
+      },
+      "GroupResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/ClubNameSchema"
+          },
+          "link": {
+            "type": "string",
+            "title": "Link",
+            "description": "The Group link: the public site's address, `/join/` and the group's code. **It never changes** \u2014 not on a rename, a policy change or a handover."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy"
+          },
+          "is_owner": {
+            "type": "boolean",
+            "title": "Is Owner",
+            "description": "Whether the reader is the group's Owner. Always `false` on an official group, which has none."
+          },
+          "declared_sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Declared Sports",
+            "description": "**An official group's** declared sports, in the registry's order \u2014 what it plays, so the sport filter narrows to the ones the reader is rated in among these, and a reader rated in none of them is shown what to add. **Omitted on a player group**, which plays whatever its members are rated in."
+          },
+          "rated_by_sport": {
+            "items": {
+              "$ref": "#/components/schemas/GroupSportSchema"
+            },
+            "type": "array",
+            "title": "Rated By Sport",
+            "description": "**Every sport**, in the registry's order \u2014 one the group has no dot for too, because the reader may be rated in it and open it."
+          },
+          "member_faces": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "Member Faces",
+            "description": "The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order \u2014 the Owner, then newest joined first \u2014 with a blocked pair, either way round, left out, as the list it opens leaves them out. Empty for a reader alone (`member_count` 1), whose row draws their own face \u2014 and empty too, with `member_count` above 1, when a block hides everybody else. `member_count` is the group's, so its *+N* counts everybody."
+          },
+          "administrator_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administrator Name",
+            "description": "**An official group's** *approves joins* line, as a club's card says it: the whole Name of the Administrator running it now. **`null` while it needs an administrator** \u2014 the line then names the home club, *Ogrody 33 approves joins*, and requests wait for a handover \u2014 and **always `null` on a player group**, whose line names its Owner."
+          },
+          "is_administrator": {
+            "type": "boolean",
+            "title": "Is Administrator",
+            "description": "Whether **the reader** runs this official group \u2014 who joined it as a player: *you approve joins*, answered from the administrator profile. Always `false` on a player group."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "home_club",
+          "link",
+          "join_policy",
+          "is_owner",
+          "rated_by_sport",
+          "member_faces",
+          "administrator_name",
+          "is_administrator"
+        ],
+        "title": "GroupResponse",
+        "description": "A group, as one of its members opens it."
+      },
+      "GroupSportSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "rated_count": {
+            "type": "integer",
+            "title": "Rated Count",
+            "description": "How many members hold a Skill rating in it."
+          },
+          "first_rated": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "First Rated",
+            "description": "The first members to join who are rated in it, in joining order \u2014 **at most as many as the sport seats**, the faces that fill its seats."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "rated_count",
+          "first_rated"
+        ],
+        "title": "GroupSportSchema",
+        "description": "One sport's *N of M* for the Games tab."
       },
       "HTTPValidationError": {
         "properties": {
@@ -7344,6 +10257,95 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HandoverSchema": {
+        "properties": {
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          },
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Group Id",
+            "description": "What `POST /administrator/clubs/{club_id}/handovers/seen` takes."
+          },
+          "group_name": {
+            "type": "string",
+            "title": "Group Name"
+          },
+          "waiting_count": {
+            "type": "integer",
+            "title": "Waiting Count",
+            "description": "How many Join requests wait on it \u2014 the queue the handover gave."
+          }
+        },
+        "type": "object",
+        "required": [
+          "club_id",
+          "club_name",
+          "group_id",
+          "group_name",
+          "waiting_count"
+        ],
+        "title": "HandoverSchema",
+        "description": "A group the club handed this account that it has not been told about \u2014\n*Ogrody 33 made you the administrator of Ogrody 33 Club*."
+      },
+      "HandoversSeenRequest": {
+        "properties": {
+          "group_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Group Ids",
+            "description": "The `group_id` of each handover the sheet named, from `/users/me`'s `profiles.handovers`. A group handed on meanwhile, told about already or not theirs is stepped over."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_ids"
+        ],
+        "title": "HandoversSeenRequest",
+        "description": "The groups the sheet told the Administrator about (``docs/adr/0192``)."
+      },
+      "HomeClubPageResponse": {
+        "properties": {
+          "clubs": {
+            "items": {
+              "$ref": "#/components/schemas/ClubCardSchema"
+            },
+            "type": "array",
+            "title": "Clubs",
+            "description": "Nearest first, then by name \u2014 or A\u2013Z for a reader with no Location area."
+          },
+          "next_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Page",
+            "description": "The page to ask for next, or `null` when this was the last."
+          }
+        },
+        "type": "object",
+        "required": [
+          "clubs",
+          "next_page"
+        ],
+        "title": "HomeClubPageResponse"
       },
       "InProgressAssessmentResponse": {
         "properties": {
@@ -7446,6 +10448,214 @@
         ],
         "title": "InterestListResponse",
         "description": "Your own *Let's play* screen. **Outgoing and mutuals only.**\n\nThere is no incoming list and there will not be one: a yes nobody has\nanswered stays silent, which is what makes saying yes low-stakes. The two\nlists are disjoint \u2014 a yes that came back is in `mutual` and not in\n`outgoing` \u2014 so a client renders both without deriving either."
+      },
+      "InvitationByTokenRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "InvitationByTokenRequest",
+        "description": "The token off an invitation's link. In a body rather than a path, so it\nis in no access log."
+      },
+      "InvitationByTokenResponse": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The name the club typed."
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          },
+          "state": {
+            "$ref": "#/components/schemas/InvitationLinkState",
+            "description": "`valid`, `expired` (ask the club to send a new one), `used`, or `locked` \u2014 five wrong codes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "name",
+          "club_name",
+          "state"
+        ],
+        "title": "InvitationByTokenResponse",
+        "description": "What a link opens, before anything is set: the email *Set your\npassword* locks its field to, whom it greets, and whether it still\nworks."
+      },
+      "InvitationLinkState": {
+        "type": "string",
+        "enum": [
+          "valid",
+          "expired",
+          "used",
+          "locked"
+        ],
+        "title": "InvitationLinkState",
+        "description": "Whether an invitation's link still works \u2014 the credential's standing,\nunder a name of its own on the wire (``Standing`` is a challenge's)."
+      },
+      "InvitationPasswordRequest": {
+        "properties": {
+          "token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "ticket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "InvitationPasswordRequest",
+        "description": "*Set your password*, and **exactly one** of what opens the way to it:\nthe `token` from the email's link, or the `ticket` a claimed code returned.\n\nThe password carries no bound here: the rule every account shares \u2014 8 to\n128 characters with a letter and a digit \u2014 is refused as\n`password_too_weak` naming the field. Sending both or neither of `token`\nand `ticket` is the one refusal here that is a `422`."
+      },
+      "JoinPolicy": {
+        "type": "string",
+        "enum": [
+          "ANYONE",
+          "PEOPLE_I_APPROVE"
+        ],
+        "title": "JoinPolicy",
+        "description": "Who gets in (``docs/adr/0183`` \u00a77).\n\n**Anyone** admits a player the moment they join, and is the default the New\ngroup form opens on. **People I approve** turns a join into a Join request\nits Owner answers."
+      },
+      "JoinRequestSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole Name, never the nickname. `null` for an account that can no longer be named \u2014 the member keeps their seat."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          },
+          "levels": {
+            "items": {
+              "$ref": "#/components/schemas/SportLevelSchema"
+            },
+            "type": "array",
+            "title": "Levels",
+            "description": "**Every sport they are rated in**, in the registry's order, each with its Level \u2014 *Padel 2,44 \u00b7 Tennis 2,60*. Empty for somebody rated in nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "levels"
+        ],
+        "title": "JoinRequestSchema",
+        "description": "A Join request as the Owner sees it: who is asking \u2014 ``player_id`` is the\nid to approve or decline \u2014 and what they play. **No Player Score**: the\nrequest card is club 20's everywhere."
+      },
+      "JoinRequestsResponse": {
+        "properties": {
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/JoinRequestSchema"
+            },
+            "type": "array",
+            "title": "Requests",
+            "description": "Everybody waiting to be let in, **in the order they asked** \u2014 *Want to join \u00b7 N*. Empty when nobody is waiting."
+          }
+        },
+        "type": "object",
+        "required": [
+          "requests"
+        ],
+        "title": "JoinRequestsResponse"
+      },
+      "JoinSearchResponse": {
+        "properties": {
+          "clubs": {
+            "items": {
+              "$ref": "#/components/schemas/ClubCardSchema"
+            },
+            "type": "array",
+            "title": "Clubs",
+            "description": "Nearest first, then by name \u2014 or A\u2013Z for a reader with no Location area. Empty when nothing matched."
+          },
+          "next_page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Page",
+            "description": "The page to ask for next, or `null` when this was the last."
+          },
+          "read_as": {
+            "$ref": "#/components/schemas/ReadAs",
+            "description": "What the text was read as. `LINK` \u2014 it held `/join/` and a code, and the answer is exactly that group; **`LINK` with no clubs is *nothing at that link***, a link that leads nowhere. `TEXT` \u2014 matched against clubs, districts and group names; `TEXT` with no clubs is *no match*."
+          }
+        },
+        "type": "object",
+        "required": [
+          "clubs",
+          "next_page",
+          "read_as"
+        ],
+        "title": "JoinSearchResponse"
       },
       "LevelDirection": {
         "type": "string",
@@ -7762,6 +10972,100 @@
         "type": "object",
         "title": "LogoutResponse"
       },
+      "MeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "What this player is called \u2014 what every screen says. `null` until the naming \u2014 except on an account an invitation opened, which carries the name the club typed. The entry gate's first destination is **not named in full**: no name, or no nickname \u2014 and the naming step asks only for what is missing."
+          },
+          "nickname": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nickname",
+            "description": "The handle, unique across the platform, drawn as `@nickname` under the name on the You tab and nowhere else. `null` until the naming."
+          },
+          "authority": {
+            "type": "string",
+            "title": "Authority"
+          },
+          "is_admin": {
+            "type": "boolean",
+            "title": "Is Admin"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "is_tester": {
+            "type": "boolean",
+            "title": "Is Tester",
+            "description": "Whether this account carries the **tester mark**: a real player who may be given a feature before anyone else. Set and cleared by an admin command, never by the player, and `false` for every account until then. **Not a role** \u2014 `authority` does not move with it. The player app passes it to flag evaluation as `isTester`, so no published datafile ever has to name a tester."
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "has_player_profile": {
+            "type": "boolean",
+            "title": "Has Player Profile",
+            "description": "Whether this player has committed a Player profile \u2014 the fourth branch of the entry gate. Read from the profile's own event stream rather than from a projection, so it is correct immediately after the commit that creates one. False on a response that is not about the authenticated player, such as the one registration returns.",
+            "default": false
+          },
+          "adult_attested": {
+            "type": "boolean",
+            "title": "Adult Attested",
+            "description": "Whether this account has given the Adult attestation. Every sign-up has; an account an invitation opened has not, and *Start playing* asks it first \u2014 `POST /users/me/adult-attestation`."
+          },
+          "profiles": {
+            "$ref": "#/components/schemas/AccountProfilesSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "authority",
+          "is_admin",
+          "is_active",
+          "is_tester",
+          "adult_attested",
+          "profiles"
+        ],
+        "title": "MeResponse",
+        "description": "``/me``: the account, and **which profiles it holds**\n(``docs/adr/0185`` \u00a72) \u2014 what the entry gate reads ahead of every\nonboarding destination.\n\nIts own shape rather than more fields on :class:`UserResponse`, because the\nregistration's answer is about an account one line old and has no honest\nvalue for either: it holds no profile yet, and ``/me`` is where the gate\nreads them."
+      },
       "MessageSchema": {
         "properties": {
           "type": {
@@ -7840,6 +11144,94 @@
         "title": "ModifierSchema",
         "description": "One modifier that fired, and what it was worth on this pairing."
       },
+      "MonogramSchema": {
+        "properties": {
+          "letters": {
+            "type": "string",
+            "title": "Letters",
+            "description": "The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes \u2014 never change its case."
+          },
+          "colour": {
+            "type": "integer",
+            "exclusiveMaximum": 8.0,
+            "minimum": 0.0,
+            "title": "Colour",
+            "description": "A colour **key** from 0 to 7, fixed for the group for ever \u2014 derived from its id, so a rename keeps it. Map it to your own palette; the backend never names a colour."
+          }
+        },
+        "type": "object",
+        "required": [
+          "letters",
+          "colour"
+        ],
+        "title": "MonogramSchema",
+        "description": "The group's tile, **cut by the backend** so every client draws the same\none (``docs/adr/0183`` \u00a75)."
+      },
+      "MyGroupSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GroupKind",
+            "description": "`PLAYER` \u2014 a player's own group, with an Owner. `OFFICIAL` \u2014 a club's, one per WhatsApp group, run by one of its Administrators: **no Owner**, and its sports are the ones it declares."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order. **A player group's**: each sport **at least two** members hold a Skill rating in, read when the group is read \u2014 a rating earned or a member leaving moves them on the next read. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "Every Group member \u2014 a player group's Owner, and the Administrator who joined an official group as a player, included. The same for every reader."
+          },
+          "home_club": {
+            "$ref": "#/components/schemas/ClubNameSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "monogram",
+          "sports",
+          "member_count",
+          "home_club"
+        ],
+        "title": "MyGroupSchema",
+        "description": "A card on the reader's Groups list."
+      },
+      "MyGroupsResponse": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/MyGroupSchema"
+            },
+            "type": "array",
+            "title": "Groups",
+            "description": "Every group the reader belongs to, **newest joined first**. Empty for a player in none."
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups"
+        ],
+        "title": "MyGroupsResponse"
+      },
       "NameRequest": {
         "properties": {
           "name": {
@@ -7887,6 +11279,112 @@
         ],
         "title": "NamingResponse",
         "description": "What the naming recorded: the name as it now stands and the nickname.\n\nNot a ``UserResponse``, deliberately \u2014 that shape carries\n``has_player_profile``, a fact of another context's this write never asks\nabout, and ``false`` there would be a claim. The client re-reads ``/me``\nbefore moving on (``docs/adr/0171`` \u00a73); this is what lets it show the\nnormalised name back at once."
+      },
+      "NewPasswordRequest": {
+        "properties": {
+          "token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "ticket": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 256,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "NewPasswordRequest",
+        "description": "The new password, and **exactly one** of what opens the way to it: the\n`token` from the email's link, or the `ticket` a claimed code returned.\n\nThe password carries no bound here, deliberately: the rule every account\nshares \u2014 8 to 128 characters with a letter and a digit \u2014 is refused as\n`password_too_weak` naming the field, not as a validation error naming none.\nSending both or neither of `token` and `ticket` is a malformed request rather\nthan a person's mistake, and is the one refusal here that is a `422`."
+      },
+      "OfficialGroupClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the club offers, in the registry's order \u2014 **the sports an official group may declare**, so the form offers exactly these."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "sports"
+        ],
+        "title": "OfficialGroupClubSchema",
+        "description": "The club an administrator acts for."
+      },
+      "OfficialGroupSettingsRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "*Same name as the WhatsApp group*: trimmed, runs of whitespace collapsed, then 1\u201340 characters. Refused with `group_name_invalid`, `details.field` `name`."
+          },
+          "join_policy": {
+            "$ref": "#/components/schemas/JoinPolicy",
+            "description": "`ANYONE` or `PEOPLE_I_APPROVE`. **Switching to `ANYONE` admits everybody waiting at once.**"
+          },
+          "whatsapp_size": {
+            "type": "integer",
+            "title": "Whatsapp Size",
+            "description": "How many people the WhatsApp group has \u2014 **required**, a whole number from 2 to 1024. It limits nothing: more players than this is allowed and honest. Refused with `whatsapp_size_invalid`, `details.field` `whatsapp_size`."
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "What the group plays \u2014 **required**, and **only the club's**. Ticking one twice is ticking it. Refused with `group_sports_required` for none, or `sport_not_offered_by_club` with the sport in `details.sport` \u2014 `details.field` `sports` either way."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "join_policy",
+          "whatsapp_size",
+          "sports"
+        ],
+        "title": "OfficialGroupSettingsRequest",
+        "description": "An official group's settings, **all four as the settings screen holds\nthem**, recorded together or not at all."
       },
       "OnCourtVerdict": {
         "type": "string",
@@ -8057,6 +11555,38 @@
         ],
         "title": "PairingAbsence",
         "description": "Why a court came back with no cards on it. **Two codes, and a third\nanswer that is their absence** (``docs/adr/0143`` \u00a76).\n\nThree answers rather than two, because an outage drawing the *identical*\nabsence as an unrated sport is the collapse ADR-0141's Consequences refused\nin as many words. And refusing the whole read with a 503 is worse than\neither: it turns an unrelated matchmaking outage into *you cannot answer your\nchallenge*, and answering is not gated.\n\n**The codes are the contract and the client writes both sentences**\n(``docs/adr/0106``)."
+      },
+      "PendingInvitationSchema": {
+        "properties": {
+          "administrator_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Administrator Id",
+            "description": "What `POST /invitations/{administrator_id}/acceptance` takes."
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "administrator_id",
+          "club_id",
+          "club_name",
+          "expires_at"
+        ],
+        "title": "PendingInvitationSchema"
       },
       "PhotoResponse": {
         "properties": {
@@ -8605,7 +12135,7 @@
           "sports"
         ],
         "title": "PlayerRecordResponse",
-        "description": "Everything the platform will say about one person, to this reader.\n\n**Read through a prior disclosure and never about a person at large.** A\nrecord opens for somebody a search of yours returned, somebody you share an\nopen challenge or a game with, and yourself. Anybody else \u2014 and anybody a\nlive gate no longer admits \u2014 is `404`, in one shape that names nothing."
+        "description": "Everything the platform will say about one person, to this reader.\n\n**Read through a prior disclosure and never about a person at large.** A\nrecord opens for somebody a search of yours returned, somebody you share an\nopen challenge, a game or a group with, and yourself. Anybody else \u2014 and\nanybody a live gate no longer admits \u2014 is `404`, in one shape that names\nnothing."
       },
       "PlayingStyleEvidence": {
         "properties": {
@@ -9028,6 +12558,15 @@
         ],
         "title": "RatingsResponse",
         "description": "Every sport this player is rated at \u2014 empty when they are rated at none."
+      },
+      "ReadAs": {
+        "type": "string",
+        "enum": [
+          "TEXT",
+          "LINK"
+        ],
+        "title": "ReadAs",
+        "description": "What the text was read as \u2014 so an empty answer can say which empty it is:\n*no match for \"\u2026\"* for text, *nothing at that link* for a link (#500\nstories 37 and 38)."
       },
       "ReadRadarRequest": {
         "properties": {
@@ -9480,6 +13019,28 @@
         ],
         "title": "RungOfferSchema",
         "description": "One rung of the relaxation ladder, priced. **Offered, never applied.**\n\nThe engine computes what relaxing one of *your own* asks would be worth and\nhands you the number; it never takes the offer for you, because only you can\nsay truthfully that you are free on a Saturday.\n\n**The count is real.** It comes from re-running the whole search at this\nrung \u2014 not from an estimate, and not from the strict count plus something."
+      },
+      "SavedSettingsResponse": {
+        "properties": {
+          "group": {
+            "$ref": "#/components/schemas/AdministeredGroupResponse"
+          },
+          "admitted": {
+            "items": {
+              "$ref": "#/components/schemas/GroupPersonSchema"
+            },
+            "type": "array",
+            "title": "Admitted",
+            "description": "Everybody the switch to `ANYONE` admitted, **in the order they asked**. Empty for every other save."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group",
+          "admitted"
+        ],
+        "title": "SavedSettingsResponse",
+        "description": "The group as its settings left it, and who the save let in."
       },
       "ScoreSchema": {
         "properties": {
@@ -10384,6 +13945,25 @@
         "title": "Sport",
         "description": "The four sports Raketa rates, as a closed enum."
       },
+      "SportLevelSchema": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "level": {
+            "type": "number",
+            "title": "Level",
+            "description": "Their Level in it, as RacketSkill published it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "level"
+        ],
+        "title": "SportLevelSchema",
+        "description": "One sport somebody is rated in, and their Level in it."
+      },
       "SportPillSchema": {
         "properties": {
           "sport": {
@@ -10864,7 +14444,7 @@
               }
             ],
             "title": "Name",
-            "description": "What this player is called \u2014 what every screen says. `null` until the naming, and **the entry gate's first destination**: a player with no name is sent to the naming step before anything else."
+            "description": "What this player is called \u2014 what every screen says. `null` until the naming \u2014 except on an account an invitation opened, which carries the name the club typed. The entry gate's first destination is **not named in full**: no name, or no nickname \u2014 and the naming step asks only for what is missing."
           },
           "nickname": {
             "anyOf": [
@@ -10924,7 +14504,7 @@
           "is_tester"
         ],
         "title": "UserResponse",
-        "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n``name`` and ``nickname`` are **null until the naming**, and this is the one\nread where either may be null (``docs/adr/0171`` \u00a72): a player on any\nsurface that names another player has necessarily been named, because the\ngate holds an unnamed account at the naming step. On ``/me`` they are read\nfrom the player's own stream, as ``has_player_profile`` is, so they are\nright the instant after the commit the gate reads them after.\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."
+        "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n``name`` and ``nickname`` are **null until the naming** \u2014 and each on its\nown since ``docs/adr/0185`` \u00a74, because an account an Invitation opened\ncarries the club-typed name and no nickname \u2014 and this is the one read\nwhere either may be null (``docs/adr/0171`` \u00a72): a player on any\nsurface that names another player has necessarily been named, because the\ngate holds an unnamed account at the naming step. On ``/me`` they are read\nfrom the player's own stream, as ``has_player_profile`` is, so they are\nright the instant after the commit the gate reads them after.\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."
       },
       "ValidationError": {
         "properties": {

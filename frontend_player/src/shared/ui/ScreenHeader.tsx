@@ -94,10 +94,25 @@ export interface ScreenHeaderProps {
    * a face was would be the design system owning one, which #338 §5 refused by name.
    */
   readonly lead?: ReactNode;
+  /**
+   * **A mark on the title's own line**, straight after its last letter and centred on it — a
+   * group's official mark (#529). Hidden from a screen reader by whoever draws it, so a screen
+   * whose mark means something says it in `titleLabel`. The title still ends in an ellipsis
+   * before the mark is pushed off.
+   */
+  readonly titleMark?: ReactNode;
   /** A segmented control, a close control — whatever the screen pins to the right. */
   readonly right?: ReactNode;
   readonly onBack?: () => void;
   readonly backLabel?: string;
+  /**
+   * **A header that names a thing rather than a screen** — a group's page (play 39, 40;
+   * [#512](https://github.com/Raketa02/Raketa/issues/512)): the title at `h2` beside the group's
+   * tile in the lead slot, and **the title and the sub-line each on one line, ending in an
+   * ellipsis** rather than wrapping (story 50), because a long group name and its club must not
+   * push the page down. The spoken name is never cut: the element reads both texts whole.
+   */
+  readonly compact?: boolean;
 }
 
 export function ScreenHeader({
@@ -106,10 +121,14 @@ export function ScreenHeader({
   eyebrow,
   subline,
   lead,
+  titleMark,
   right,
   onBack,
   backLabel = 'Back',
+  compact = false,
 }: ScreenHeaderProps) {
+  const lines = compact ? 1 : undefined;
+
   return (
     <View style={s.header}>
       {onBack !== undefined ? (
@@ -147,10 +166,26 @@ export function ScreenHeader({
           >
             {title === undefined ? (
               <Text style={s.eyebrow}>{eyebrow}</Text>
+            ) : titleMark === undefined ? (
+              <Text style={[s.title, compact ? s.titleCompact : undefined]} numberOfLines={lines}>
+                {title}
+              </Text>
             ) : (
-              <Text style={s.title}>{title}</Text>
+              <View style={s.titleLine}>
+                <Text
+                  style={[s.title, compact ? s.titleCompact : undefined, s.titleBesideMark]}
+                  numberOfLines={lines}
+                >
+                  {title}
+                </Text>
+                {titleMark}
+              </View>
             )}
-            {subline !== undefined ? <Text style={s.subline}>{subline}</Text> : null}
+            {subline !== undefined ? (
+              <Text style={s.subline} numberOfLines={lines}>
+                {subline}
+              </Text>
+            ) : null}
           </View>
         )}
       </View>
@@ -176,6 +211,10 @@ const s = StyleSheet.create({
   },
   named: { gap: theme.space.xxs },
   title: { ...theme.type.h1, color: theme.color.ink },
+  titleCompact: { ...theme.type.h2 },
+  // The mark rides the title's line: the title gives way to it rather than pushing it off.
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xxs },
+  titleBesideMark: { flexShrink: 1 },
   subline: { ...theme.type.tiny, color: theme.color.muted },
   back: { alignItems: 'center', justifyContent: 'center' },
   backPressed: { opacity: 0.7 },

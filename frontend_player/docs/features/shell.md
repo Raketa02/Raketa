@@ -119,8 +119,9 @@ Where you play · Who you play with · Game suggestions), **On your card** (How 
 Photos · Tags · Intro · Name). Three groups because the rows answer three questions — what has
 the platform concluded about me, what does the matcher read when it looks for a game, what does
 a stranger read about me — and the fourth, the account, is not asked on this tab (§9). **The
-shell owns the tab's own words and composes the rest**: the title, the eyebrow _Player profile_
-and the three group titles are `youCopy`'s, and every row from _Skill passport_ down is the
+shell owns the tab's own words and composes the rest**: the title and the three group titles are
+`youCopy`'s — the eyebrow _Player profile_ over the title went at the product owner's ask (#529,
+2026-10-02), since the bar under the screen already says _You_ — and every row from _Skill passport_ down is the
 feature's whose fact it is — `player_record`'s two read-only facts and the door to the sheet,
 `player_profile`'s declarations, `auth`'s name — each reading its own fact, saying it in a live
 line, and pushing its own screen. What this file decides is which row sits in which group and in
@@ -132,7 +133,10 @@ up is this screen's state and both are handed the same press; the sheet is a sib
 screen it covers, as every overlay is. **`PLACEHOLDER_COPY`, `PlaceholderTab` and
 `PlaceholderScreen` are gone**, not emptied: the line _your profile, your radius, your week — not
 built yet_ was the last citation in the table, every column the bar draws has a screen behind it
-now, and an empty union kept for a case that cannot recur is a shape and not a fact.
+now, and an empty union kept for a case that cannot recur is a shape and not a fact. **_Sign out_ is pinned** (#529, 2026-10-02): the account panel is the shell's `action`, under
+the scroller and above the bar, so it is at the tab's foot in one place however many rows are over
+it — the administrator's You tab pins it the same way — and `AccountPanel` puts no step of its own
+above the button, since whoever pins it spaces the slot.
 `shellCopy.test.ts` keeps the two refusals over every sentence the shell still writes, the group
 titles included, and asserts the placeholder's line absent so it cannot come back as a
 gap-filler. **The pushed screens take the push transition**: `TabShell` names the twelve
@@ -145,3 +149,33 @@ the pinned action wrapped in `KeyboardAvoidingView` under `KEYBOARD_AVOIDANCE`, 
 `SocialStepLayout` already does, and off everywhere else. **Not seen on a device**: the header
 card's fit beside a long name, the row lead's 28 pt against the chevron, and the push over the
 tab.
+
+**Play with `find_a_game` off is a _Groups | Explore_ segment, and the shell draws it**
+([#512](https://github.com/Raketa02/Raketa/issues/512), play mocks 1 and 3, PRD #500 stories 1–4).
+`PlayScreen` is the shell's for the reason Now, Chats and You are — a tab owns its own words and
+composes other features' pages under them: _Groups_ is `features/groups`' list, _Explore_ is
+`features/find_a_game_next`'s empty screen. The segment is `Segment`'s new **`prominent`** form —
+`ink` under a `surface` label on a `paper2` track, a `btn`-high thumb, and no shadow although the
+mocks draw one (design-system 6.3 as amended) — and it is **pinned above the page** rather than in
+`ShellScreen`'s header, whose title column would take half its width. **The segment is the first
+value the phone remembers** ([ADR-0188](../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)):
+`usePlaySegment` reads it once per account per session from `shared/lib/preferences` into the
+Query cache (under `shared/lib/preferences`' `phonePreferenceKeys`, so the next two values'
+owners share one root; `networkMode: 'always'`, never stale), and **draws nothing until the read
+lands** — a local key, so a frame — because a screen that drew Groups and jumped to
+Explore is §4's flash. A choice is written to the cache and then to the phone, fire and forget.
+`playSegmentFrom` turns whatever was saved into a segment, and anything this build does not know
+is Groups — and so is a phone that cannot tell whose choice to read, which is §4's store that
+cannot be read. The account is read from the cache once and never observed, as the flag gate
+reads it, so entering Play never refetches `/users/me`. The walks are `components/playSegment.test.tsx`: the segment across a relaunch and
+across a tab change, another account on the same phone, a sign-out, and a value that is not a
+segment. **Not seen on a device.**
+
+**The You header's right slot is the profile switcher's chip** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+club 7; ADR-0185 §3 amends ADR-0179 §1's locked header by this element). The You route hands it
+to `YouScreen` (`headerRight`), which forwards it to `ShellScreen`'s right slot: the chip is the
+administrator feature's, and the shell importing it would close a cycle through `auth`, so the route
+file — whose job is composition — composes it. What it draws, its sheet and the switch are that
+feature's ([`administrator.md`](administrator.md)). **It draws
+nothing for an account that only plays**, so the tab most people see is unchanged. **Not seen on a
+device.**

@@ -19,18 +19,26 @@ route depends on `HasPlayerProfile`, which depends on that context's port, so
 nothing here knows a profile is event-sourced or where its stream lives.
 """
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from app.core.exception_handlers import ErrorResponse
+from app.modules.administrators.presentation.dependencies import (
+    ReadAccountProfilesDep,
+)
+from app.modules.administrators.presentation.schemas import AccountProfilesSchema
 from app.modules.player_profile.presentation.dependencies import HasPlayerProfileDep
+from app.modules.users.application.attest_adult import AttestAdultCommand
 from app.modules.users.application.commands import NameUserCommand, RegisterUserCommand
 from app.modules.users.presentation.dependencies import (
+    AttestAdultDep,
     CurrentUserDep,
     NameUserDep,
-    ReadNamingDep,
+    ReadOwnAccountDep,
     RegisterUserDep,
 )
 from app.modules.users.presentation.schemas import (
+    AdultAttestationRequest,
+    MeResponse,
     NameRequest,
     NamingResponse,
     UserCreateRequest,
@@ -65,28 +73,64 @@ async def register_user(
 
 @router.get(
     "/me",
-    response_model=UserResponse,
+    response_model=MeResponse,
     status_code=status.HTTP_200_OK,
     summary="Current authenticated user",
     description=(
-        "Carries `name` and `nickname` — null until the naming, and `name` is the "
-        "**first** branch of onboarding's entry gate — and `has_player_profile`, "
-        "its fourth. All three are read from the player's own event streams "
-        "rather than from a projection, so a player who has just named "
-        "themselves or committed their profile is never sent back to a step they "
-        "just finished by a read model that has not caught up."
+        "Carries `name` and `nickname` — the entry gate's first destination is "
+        "*not named in full*, either missing — `has_player_profile`, its "
+        "fourth, and `adult_attested`, all read from the account's own event "
+        "streams rather than from a projection, so a player who has just named "
+        "themselves or committed their profile is never sent back to a step "
+        "they just finished by a read model that has not caught up. And "
+        "`profiles` (docs/adr/0185 §2), which the gate reads **ahead of every "
+        "destination**: whether the account acts as a player, the clubs it "
+        "administers, and any invitation pending for its email."
     ),
 )
 async def me(
     user: CurrentUserDep,
     has_profile: HasPlayerProfileDep,
-    naming: ReadNamingDep,
-) -> UserResponse:
-    return UserResponse.from_domain(
+    own: ReadOwnAccountDep,
+    profiles: ReadAccountProfilesDep,
+) -> MeResponse:
+    return MeResponse.from_parts(
         user,
         has_player_profile=await has_profile.execute(user.id),
-        naming=await naming.execute(user.id),
+        own=await own.execute(user.id),
+        profiles=AccountProfilesSchema.from_profiles(
+            await profiles.execute(account_id=user.id, email=user.email)
+        ),
     )
+
+
+@router.post(
+    "/me/adult-attestation",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`adult_attestation_required` — the answer was not yes; "
+                "`details.field` is `adult_attested`. Nothing was recorded."
+            ),
+        },
+    },
+    summary="Attest that you are an adult — Start playing's first step",
+    description=(
+        "For an account that exists without the Adult attestation: one an "
+        "invitation opened, which gives it the first time it acts as a player "
+        "(docs/adr/0185 §5). Once given, giving it again records nothing — so "
+        "an account that attested at sign-up is answered the same."
+    ),
+)
+async def attest_adult(
+    payload: AdultAttestationRequest, user: CurrentUserDep, use_case: AttestAdultDep
+) -> Response:
+    await use_case.execute(
+        AttestAdultCommand(user_id=user.id, adult_attested=payload.adult_attested)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.put(

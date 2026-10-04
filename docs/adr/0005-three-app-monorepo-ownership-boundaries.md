@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09
+- **Amended 2026-09-25 by [ADR-0187](0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md): four deployables** — `backend/`, `frontend_player/`, `frontend_club/` (the club website) and `frontend_public/` (the public site). The decision below is unchanged and binds all four; the `frontend_club/` fence kept after the reset is used for what it was kept for, and `frontend_public/` gets a tier of its own.
 
 > **Note — the 2026-08-25 reset.** This ADR is named for three apps; **two remain.** The
 > club console (`frontend_club/`) was removed when the repository was reset to sign-up,

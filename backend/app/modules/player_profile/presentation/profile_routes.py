@@ -47,7 +47,10 @@ from app.modules.player_profile.presentation.schemas import (
     CommitPlayerProfileRequest,
     PlayerProfileResponse,
 )
-from app.modules.users.presentation.dependencies import CurrentUserDep
+from app.modules.users.presentation.dependencies import (
+    ADULT_ATTESTATION_MISSING,
+    AttestedPlayerDep,
+)
 
 router = APIRouter(prefix="/players/me", tags=["player-profile"])
 
@@ -114,6 +117,7 @@ IdempotencyKeyDep = Annotated[
                 "never says what it matched."
             ),
         },
+        **ADULT_ATTESTATION_MISSING,
         status.HTTP_404_NOT_FOUND: {
             "model": ErrorResponse,
             "description": (
@@ -170,7 +174,7 @@ IdempotencyKeyDep = Annotated[
 async def commit_player_profile(
     payload: CommitPlayerProfileRequest,
     idempotency_key: IdempotencyKeyDep,
-    user: CurrentUserDep,
+    user: AttestedPlayerDep,
     use_case: CommitPlayerProfileDep,
     response: Response,
 ) -> PlayerProfileResponse:

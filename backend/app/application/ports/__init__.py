@@ -7,6 +7,14 @@ from app.application.ports.events import (
     OutboxWriter,
     PendingOutbox,
 )
+from app.application.ports.mail import (
+    Mailer,
+    MailerUnavailable,
+    MailQueue,
+    OutgoingMessage,
+    PendingMail,
+    QueuedMail,
+)
 from app.application.ports.unit_of_work import UnitOfWork
 
 __all__ = [
@@ -15,7 +23,13 @@ __all__ = [
     "EncodedEvent",
     "EventCodec",
     "EventDecodingError",
+    "MailQueue",
+    "Mailer",
+    "MailerUnavailable",
     "OutboxWriter",
+    "OutgoingMessage",
+    "PendingMail",
     "PendingOutbox",
+    "QueuedMail",
     "UnitOfWork",
 ]

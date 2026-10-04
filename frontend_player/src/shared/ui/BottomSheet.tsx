@@ -77,6 +77,12 @@ export interface BottomSheetProps {
   readonly closeLabel: string;
   /** The control that opened the sheet. Focus returns here when it closes. */
   readonly returnFocusTo?: FocusTarget;
+  /**
+   * **A mark over a centred title** — the invitation sheet's head (club 5): the close alone on the
+   * top row, then the mark and the title under it, centred. Absent, the title shares the top row
+   * with the close, as every other sheet's does.
+   */
+  readonly mark?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -86,6 +92,7 @@ export function BottomSheet({
   title,
   closeLabel,
   returnFocusTo,
+  mark,
   children,
 }: BottomSheetProps) {
   const reducedMotion = useReducedMotion();
@@ -119,15 +126,31 @@ export function BottomSheet({
         <View style={s.sheet} accessibilityViewIsModal testID="bottom-sheet">
           <View style={s.grab} />
 
-          <View style={s.head}>
-            {/* `accessible` on the wrapper, not the Text: focus has to land on a host
-                element this component holds a ref to, and it must be the heading alone
-                rather than the row it shares with the close control. */}
-            <View ref={heading} accessible accessibilityRole="header" style={s.titleBox}>
-              <Text style={s.title}>{title}</Text>
+          {mark === undefined ? (
+            <View style={s.head}>
+              {/* `accessible` on the wrapper, not the Text: focus has to land on a host
+                  element this component holds a ref to, and it must be the heading alone
+                  rather than the row it shares with the close control. */}
+              <View ref={heading} accessible accessibilityRole="header" style={s.titleBox}>
+                <Text style={s.title}>{title}</Text>
+              </View>
+              <CloseControl onPress={onClose} accessibilityLabel={closeLabel} />
             </View>
-            <CloseControl onPress={onClose} accessibilityLabel={closeLabel} />
-          </View>
+          ) : (
+            <>
+              <View style={[s.head, s.headClose]}>
+                <CloseControl onPress={onClose} accessibilityLabel={closeLabel} />
+              </View>
+              {/* The mark is the thing the title is about, drawn — hidden by the caller, and the
+                  heading is still the one element focus lands on. */}
+              <View style={s.hero}>
+                {mark}
+                <View ref={heading} accessible accessibilityRole="header">
+                  <Text style={[s.title, s.centred]}>{title}</Text>
+                </View>
+              </View>
+            </>
+          )}
 
           {/* `flexShrink` is what lets the cap apply to this rather than to the sheet's
               last child: without it the ScrollView takes its content's full height and the
@@ -178,4 +201,8 @@ const s = StyleSheet.create({
   },
   titleBox: { flex: 1 },
   title: { ...theme.type.h1, color: theme.color.ink },
+  // The close alone on the top row, at its trailing edge.
+  headClose: { justifyContent: 'flex-end' },
+  hero: { alignItems: 'center', gap: theme.space.md },
+  centred: { textAlign: 'center' },
 });

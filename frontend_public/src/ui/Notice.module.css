@@ -1,0 +1,19 @@
+.notice {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+}
+
+.success {
+  background: var(--colour-green-soft);
+  color: var(--colour-green);
+}
+
+.error {
+  background: var(--colour-red-soft);
+  color: var(--colour-red);
+}
+
+.info {
+  background: var(--colour-paper);
+  color: var(--colour-ink);
+}

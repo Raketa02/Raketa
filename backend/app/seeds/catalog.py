@@ -15,8 +15,9 @@ wrong database cannot mail a stranger. Which of the four reserved TLDs, and why
 it is not the one the ticket names, is on ``RESERVED_TLD`` below.
 
 **Scope is what is modeled.** Players, onboarding assessments and Skill ratings
-have aggregates; Clubs, Courts, Bookings and Matches do not. Nothing here invents
-one — each context seeds its own scenarios when it exists, and
+have aggregates; Courts, Bookings and Matches do not. Nothing here invents one —
+each context seeds its own scenarios when it exists (the clubs, in ``clubs.py``,
+the day the Club context did), and
 ``test_the_seed_path_touches_only_the_contexts_that_exist`` is what keeps that
 from being a promise nobody checks.
 

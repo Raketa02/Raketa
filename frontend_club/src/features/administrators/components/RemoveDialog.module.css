@@ -1,0 +1,10 @@
+.lead {
+  color: var(--colour-muted);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

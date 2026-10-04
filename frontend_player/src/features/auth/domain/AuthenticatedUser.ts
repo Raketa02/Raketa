@@ -12,7 +12,7 @@
  */
 
 /**
- * A `UserResponse` mapped into the app's vocabulary.
+ * `GET /users/me`'s answer mapped into the app's vocabulary.
  *
  * The wire's `authority`, `is_admin` and `created_at` are deliberately dropped rather
  * than carried: nothing in the player app may branch on them. A client that renders
@@ -67,6 +67,76 @@ export interface AuthenticatedUser {
    * early grants no power over anyone, which is why `is_admin` beside it is still dropped.
    */
   readonly isTester: boolean;
+  /**
+   * **Which profiles the account holds** — the entry gate's first read, ahead of every onboarding
+   * destination
+   * ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+   * §2–§3). Carried for the reason `hasPlayerProfile` is: the client is required to branch on it
+   * at launch, before any route tree exists — an account that only runs a club's groups has not
+   * asked to play, and must never be sent into onboarding.
+   */
+  readonly profiles: AccountProfiles;
+}
+
+/**
+ * **The hats one account wears** (ADR-0185 §1). *Profile* is the switcher's word, not a domain
+ * term — a **Player profile** is an aggregate, and this is not it.
+ */
+export interface AccountProfiles {
+  /**
+   * Whether the account acts as a player: it gave the Adult attestation — every sign-up did — or
+   * holds a Player profile. `false` only for an account an Invitation opened that has not started
+   * playing.
+   */
+  readonly actsAsPlayer: boolean;
+  /** One per club whose groups this account runs as its **Administrator**, in the server's order. */
+  readonly administers: readonly AdministeredClub[];
+  /**
+   * **Invitations to this account's email still open**, soonest to expire first (ADR-0185 §2) — what
+   * the invitation sheet offers on launch. The server drops one once it is accepted, removed or past
+   * its 72 hours, so a list read after that no longer holds it.
+   */
+  readonly pendingInvitations: readonly PendingInvitation[];
+  /**
+   * **Groups a club handed this account that it has not been told about**, oldest first
+   * ([ADR-0192](../../../../../docs/adr/0192-a-handover-is-told-to-whom-it-was-handed-and-the-app-follows-the-account.md)) —
+   * what the handover sheet tells. The server drops one once the sheet says it was seen, or when
+   * the club hands the group on.
+   */
+  readonly handovers: readonly Handover[];
+}
+
+/**
+ * **The profiles an account holds, without the invitations it is offered** — what the entry gate,
+ * the switcher and a removal read. An invitation is not a profile until it is accepted.
+ */
+export type HeldProfiles = Pick<AccountProfiles, 'actsAsPlayer' | 'administers'>;
+
+/** **A club's invitation to be its Administrator**, waiting for this account to accept it. */
+export interface PendingInvitation {
+  /** What accepting it names. */
+  readonly administratorId: string;
+  readonly clubId: string;
+  readonly clubName: string;
+  /** When it lapses — the server's instant, carried as it came. */
+  readonly expiresAt: string;
+}
+
+/** **A group a club handed this account**, which it has not been told about yet. */
+export interface Handover {
+  readonly clubId: string;
+  readonly clubName: string;
+  /** What saying it was seen names. */
+  readonly groupId: string;
+  readonly groupName: string;
+  /** How many wait to join it: the queue the handover gave them. */
+  readonly waitingCount: number;
+}
+
+/** A club this account is an active Administrator of — the administrator area opens on it. */
+export interface AdministeredClub {
+  readonly clubId: string;
+  readonly clubName: string;
 }
 
 /** What a player types to sign in. Never logged, never persisted. */

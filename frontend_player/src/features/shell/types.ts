@@ -34,7 +34,14 @@ export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
  * tab's own suite, which asserts the tab's sentences rather than string literals, because the
  * wording is this file's to change and the rules the sentences carry are not.
  */
-export { CHATS_COPY, NOW_COPY } from './components/shellCopy';
+export { CHATS_COPY, NOW_COPY, PLAY_COPY } from './components/shellCopy';
+
+/**
+ * **Play with `find_a_game` off** — the *Groups | Explore* segment and the page under it
+ * ([#512](https://github.com/Raketa02/Raketa/issues/512)). The Play route draws it where the empty
+ * placeholder used to be; the placeholder is Explore's page now.
+ */
+export { PlayScreen } from './components/PlayScreen';
 
 /**
  * **The You tab's own sentences** — read outside this feature by the screens behind its rows,

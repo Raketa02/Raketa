@@ -1,0 +1,26 @@
+.button {
+  display: inline-flex;
+  width: 100%;
+  min-height: var(--size-control);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-5);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: var(--colour-coral);
+  color: var(--colour-on-coral);
+  font: inherit;
+  font-size: var(--text-control);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled),
+.button:active:not(:disabled) {
+  background: var(--colour-coral-pressed);
+}
+
+.button:disabled {
+  background: var(--colour-disabled);
+  cursor: default;
+}

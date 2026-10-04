@@ -416,8 +416,9 @@ class PlayerRecordResponse(BaseModel):
 
     **Read through a prior disclosure and never about a person at large.** A
     record opens for somebody a search of yours returned, somebody you share an
-    open challenge or a game with, and yourself. Anybody else — and anybody a
-    live gate no longer admits — is `404`, in one shape that names nothing.
+    open challenge, a game or a group with, and yourself. Anybody else — and
+    anybody a live gate no longer admits — is `404`, in one shape that names
+    nothing.
     """
 
     is_self: bool = Field(

@@ -28,6 +28,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  FULL_RECORD,
   IN_YOUR_AREA,
   SPORTSMANSHIP_LABEL,
   OWN_RECORD_TITLE,
@@ -46,8 +47,8 @@ import { BALANCE_SOFT, POSTER_LABEL, courtSeatCount, theme } from '@/shared/ui';
 import { NO_TAGS_IN_COMMON, socialTagChip } from '@/shared/vocabulary/socialTagPresentation';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
+  launchIntoFindAGame,
   PROFILE_SURFACE_SERVED,
-  launchSignedIn,
   stubGate,
   stubInterest,
   stubOutgoingYeses,
@@ -404,7 +405,7 @@ const summary = (filled: number) => courtSummaryLabel({ sportName: 'Padel', fill
 
 /** Search, spend the latch, and arrive on the court the search minted. */
 async function openTheBuilder() {
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
@@ -949,6 +950,11 @@ describe('who this person is', () => {
     fireEvent.press(named('YOUR_PARTNER', C));
   }
 
+  /** The counted card and the tags are folded under *Full record*; open the fold to read them. */
+  async function openFullRecord() {
+    fireEvent.press(await screen.findByRole('button', { name: FULL_RECORD }));
+  }
+
   it('opens the record on a tap, which is the gesture a listener can reach', async () => {
     await openAFace();
 
@@ -1090,6 +1096,9 @@ describe('who this person is', () => {
   it('draws the counted rows and the variety pair, each with its raw fraction', async () => {
     await openAFace();
     await screen.findByText(NAMES[C] ?? '');
+    // Folded until asked for: the blocks are the summary, the card is its account.
+    expect(screen.queryByText(STRAND_NAME.SHOWS_UP)).toBeNull();
+    await openFullRecord();
 
     for (const strand of ['SHOWS_UP', 'ANSWERS_CHALLENGES', 'ANSWERS_RESULTS'] as const) {
       expect(screen.getByText(STRAND_NAME[strand])).toBeTruthy();
@@ -1109,6 +1118,7 @@ describe('who this person is', () => {
   it('draws the average and the count of raters, as a row naming its author', async () => {
     await openAFace();
     await screen.findByText(NAMES[C] ?? '');
+    await openFullRecord();
 
     expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
     expect(screen.getByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeTruthy();
@@ -1133,6 +1143,7 @@ describe('who this person is', () => {
 
     fireEvent.press(yourFace('YOUR_SIDE'));
     await screen.findByText(`me_myself ${YOU_MARK}`);
+    await openFullRecord();
 
     expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
     expect(screen.getByText(opinionFigure({ average: 4.7, raters: 17 }))).toBeTruthy();
@@ -1165,6 +1176,8 @@ describe('who this person is', () => {
 
     fireEvent.press(named('YOUR_PARTNER', C));
     await screen.findByText(NAMES[C] ?? '');
+    // Their tags are still there, so the fold is; what is under it holds no card.
+    await openFullRecord();
 
     expect(screen.queryByText(STRAND_NAME.SHOWS_UP)).toBeNull();
     expect(screen.queryByText(SPORTSMANSHIP_LABEL)).toBeNull();
@@ -1211,6 +1224,7 @@ describe('who this person is', () => {
    */
   it('draws their tags untinted and claims nothing about common ground', async () => {
     await openAFace();
+    await openFullRecord();
 
     expect(
       await screen.findByText(socialTagChip({ id: 'PLAYS_TO_WIN', shared: false })),
@@ -1739,7 +1753,7 @@ describe('singles', () => {
 
   /** Search, spend the latch, and let the engine seat the one empty seat a match has. */
   async function openTheMatch() {
-    await launchSignedIn();
+    await launchIntoFindAGame(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
     await screen.findByLabelText('Tuesday evening');
 
@@ -1906,7 +1920,7 @@ describe('the question ⚡ raised', () => {
     transport.on('POST', SEARCHES, () => json(shortlist([keepTheseTimes])));
     raising([keepTheseTimes]);
 
-    await launchSignedIn();
+    await launchIntoFindAGame(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
     fireEvent.press(await screen.findByLabelText('Monday morning'));
 

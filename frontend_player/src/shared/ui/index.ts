@@ -118,16 +118,21 @@ export { StatBox, StatFigure, StatRow, type StatBoxProps, type StatBoxVariant } 
 export { Switch, type SwitchProps } from './Switch';
 export { SwipeRow, type RevealedControl, type SwipeRowProps } from './SwipeRow';
 export {
+  ADMINISTRATOR_TAB_BAR_TABS,
+  AdministratorTabBar,
   TabBar,
   TAB_BAR_HEIGHT,
   TAB_BAR_TABS,
+  type AdministratorTabBarKey,
+  type AdministratorTabBarProps,
   type TabBarKey,
   type TabBarProps,
   type TabBarTab,
 } from './TabBar';
 export { Tag, type TagProps, type TagVariant } from './Tag';
 export { TextField, type TextFieldProps } from './TextField';
-export { Dash, Plus, Tick } from './Tick';
+export { TopSafeArea, type TopSafeAreaProps } from './TopSafeArea';
+export { Dash, Plus, PlusOnMedia, Tick, TICK_PATH, TICK_SPACE } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { Toast, ToastHost, type ToastProps } from './Toast';
 export { ModalStage, type ModalStageProps } from './ModalStage';
@@ -148,6 +153,7 @@ export {
   type ReducedMotionProviderProps,
 } from './overlay';
 export {
+  MONOGRAM_HUES,
   POSTER_HUES,
   theme,
   type BandKey,

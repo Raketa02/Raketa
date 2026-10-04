@@ -1,0 +1,22 @@
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--colour-ink);
+  text-decoration: none;
+}
+
+.mark {
+  flex: none;
+  width: var(--size-mark);
+  height: var(--size-mark);
+  border-radius: var(--radius-mark);
+  background: var(--colour-coral);
+}
+
+.name {
+  font-size: var(--text-wordmark);
+  font-weight: var(--weight-heavy);
+  letter-spacing: var(--tracking-title);
+  white-space: nowrap;
+}

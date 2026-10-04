@@ -42,7 +42,12 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.bootstrap.composition import build_token_service, build_typing_roster
+from app.modules.auth.domain.audience import Audience
+from app.bootstrap.composition import (
+    build_clock,
+    build_token_service,
+    build_typing_roster,
+)
 from app.core.config import get_settings
 from app.infrastructure.redis_client import get_redis, get_redis_subscriber
 from app.modules.conversations.domain.live import TYPING_CHECK, TYPING_TTL
@@ -149,7 +154,11 @@ def _a_token_expiring_in(seconds: int, player_id) -> str:
     settings = get_settings().model_copy(
         update={"ACCESS_TOKEN_EXPIRE_SECONDS": seconds}
     )
-    return build_token_service(settings).issue_access(str(player_id)).token
+    return (
+        build_token_service(settings, clock=build_clock())
+        .issue_access(str(player_id), audience=Audience.PLAYER_APP)
+        .token
+    )
 
 
 def _expires_at(token: str) -> datetime:
@@ -161,7 +170,9 @@ def _expires_at(token: str) -> datetime:
     that fails on a fast morning.
     """
 
-    decoded = build_token_service(get_settings()).decode_access(token)
+    decoded = build_token_service(get_settings(), clock=build_clock()).decode_access(
+        token, audience=Audience.PLAYER_APP
+    )
     return datetime.fromtimestamp(int(decoded["exp"]), tz=timezone.utc)
 
 

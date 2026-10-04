@@ -74,3 +74,16 @@ datafile never leaks into the next one. The toggle arriving mid-search is walked
 `challenges/components/challengeFill.test.tsx`. **Seen on a device on 2026-09-23**: the `local`
 rule turned off and on through the flags repo's serve script, each change showing at the next Play
 mount after a return to the foreground.
+
+**`find_a_game` defaults to off since [#512](https://github.com/Raketa02/Raketa/issues/512)**, and
+off is Play › Groups (PRD #500): the app as it ships is the _Groups | Explore_ segment, and on
+restores Find a game whole (story 141). The code default was _the app as it ships_ and still is —
+what ships changed. Two consequences for the walks. **Every suite about Find a game switches the
+flag on** through `launchIntoFindAGame` in `test-support/onboardingRouter.tsx`, which serves the
+datafile and waits on it before Play is pressed, because a gate reads once on mount and a press
+that raced the datafile would — correctly — land on Groups. And **every walk that proves a cached
+or refused datafile is still in use now saves _on_**: with the default off, a walk that saved off
+would pass with the cache broken. `isFeatureEnabled`'s _nothing to say_ walks raise the default to
+on for their length (`jest.replaceProperty`), for the same reason — the SDK's own `false` and an
+off default would otherwise agree. The flags repo's local datafile is the other half of PRD #500's
+ruling and is [#521](https://github.com/Raketa02/Raketa/issues/521)'s, a human ticket.

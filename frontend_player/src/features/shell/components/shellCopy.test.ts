@@ -30,7 +30,6 @@ const LINES = [
   CHATS_COPY.emptyConversations,
   NOW_COPY.empty.line,
   NOW_COPY.empty.act,
-  YOU_COPY.eyebrow,
   ...Object.values(YOU_COPY.groups),
 ];
 
@@ -59,7 +58,6 @@ describe("what You's groups say", () => {
   /** `the-words.md` §27: three groups, for the three questions the rows answer. */
   it('names the three questions the rows answer, in the order they are asked', () => {
     expect(Object.values(YOU_COPY.groups)).toEqual(['Playing', 'Finding players', 'On your card']);
-    expect(YOU_COPY.eyebrow).toBe('Player profile');
   });
 });
 

@@ -27,6 +27,31 @@
  * tests. This file only turns the decision into a route — which is the whole job of a
  * route file.
  *
+ * ## An account that only runs a club's groups is sent to its area
+ *
+ * The gate reads the account's **profiles** ahead of all five destinations
+ * ([ADR-0185](../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §3): an account that holds nothing but administrator profiles has not asked to play, so it is
+ * redirected to its **administrator area** — a sibling group, `(administrator)`, with its own two
+ * tabs — and never into onboarding. Which route that is belongs to the feature that owns the area.
+ * An account that holds **no profile at all** is offered *Start playing* from its first step, the
+ * Adult attestation, which the naming and the player setup follow through this gate.
+ *
+ * ## Two profiles, and an invitation to a third
+ *
+ * An account that holds both opens in **the profile the phone remembers** — Player by default — and
+ * the gate's decision already reads it (ADR-0185 §3, ADR-0188 §2). And a club's **invitation** is
+ * offered here, as a sheet over the player's app, the moment the account is in it (#518) — the
+ * administrator area offers it over its own screens the same way.
+ *
+ * ## A link is answered once the account is in
+ *
+ * A link opened on the phone — a group link out of WhatsApp, an invitation's or a reset's button — is
+ * **held** from the moment it arrives, through sign-in, sign-up and every destination above, and
+ * answered here, where the account is in the player's app
+ * ([#520](https://github.com/Raketa02/Raketa/issues/520)): Join a group with the link filled in, or a
+ * sheet over the app. What each gets is the links feature's; this file only mounts the place.
+ *
  * ## A pass that began at the passport ends on it
  *
  * The gate's app branch is where every onboarding pass ends, and a pass has an origin
@@ -43,7 +68,8 @@
 import { Redirect, Stack, router, usePathname } from 'expo-router';
 import { useCallback } from 'react';
 
-import { NAMING_STEP } from '@/features/auth/types';
+import { administratorHome, HandoverSheet, InvitationSheet } from '@/features/administrator/types';
+import { NAMING_STEP, PLAYER_PROFILE, START_PLAYING_STEP } from '@/features/auth/types';
 import { useFeatureDatafile } from '@/features/feature_flags/types';
 import {
   EntryUnavailableScreen,
@@ -52,6 +78,7 @@ import {
   type PassOrigin,
 } from '@/features/onboarding/types';
 import { YOU_PASSPORT_ROUTE } from '@/features/player_record/types';
+import { IncomingLinks } from '@/features/links/types';
 import { SOCIAL_STEPS_ENTRY, useLocationRefresh } from '@/features/player_profile/types';
 import { openTab } from '@/features/shell/types';
 import { useSessionStatus } from '@/shared/lib/auth';
@@ -102,6 +129,14 @@ export default function AppLayout() {
       return null;
     case 'unavailable':
       return <EntryUnavailableScreen reason={entry.reason} onRetry={entry.retry} />;
+    case 'administrator':
+      // Ahead of everything a player is asked: this account runs a club's groups and has not asked
+      // to play (ADR-0185 §3).
+      return <Redirect href={administratorHome(entry.clubId)} />;
+    case 'start-playing':
+      // An account that holds no profile at all — an administrator-only account its club removed —
+      // takes Start playing's steps from here, the Adult attestation first (ADR-0185 §3).
+      return <Redirect href={START_PLAYING_STEP} />;
     case 'naming':
       // Before anything else: every destination after this one says the player's name. Which
       // route that is belongs to the feature that owns the naming, not to this file.
@@ -124,6 +159,18 @@ export default function AppLayout() {
         />
       );
     case 'app':
-      return <Stack screenOptions={{ headerShown: false }} />;
+      return (
+        <>
+          <Stack screenOptions={{ headerShown: false }} />
+          {/* A club's invitation, offered on launch over the player's app and never inside
+              onboarding: it waits until the account is in (#518). */}
+          <InvitationSheet worn={PLAYER_PROFILE} />
+          {/* A club handing this account a group, told over the player's app too (ADR-0192). */}
+          <HandoverSheet worn={PLAYER_PROFILE} />
+          {/* A link held since it arrived — a group link through sign-up and onboarding, an
+              invitation through a sign-in — is answered here once the account is in (#520). */}
+          <IncomingLinks over="player" />
+        </>
+      );
   }
 }

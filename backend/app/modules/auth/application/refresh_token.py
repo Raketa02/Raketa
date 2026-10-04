@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import UUID
 
 import jwt
 
 from app.kernel import Clock
 from app.modules.auth.application.token_rotation import TokenPair, TokenRotator
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.errors import (
     InvalidRefreshToken,
     RefreshTokenExpired,
@@ -17,10 +17,9 @@ from app.modules.auth.domain.errors import (
 from app.modules.auth.domain.ports import (
     PasswordHasher,
     RefreshTokenRepository,
+    SessionHolders,
     TokenService,
 )
-from app.modules.users.domain.errors import UserNotEligible
-from app.modules.users.domain.ports import UserRepository
 
 
 @dataclass(frozen=True)
@@ -29,18 +28,30 @@ class RefreshTokensCommand:
 
 
 class RefreshAuthTokens:
-    """Validate the presented refresh token then rotate the pair."""
+    """Validate the presented refresh token then rotate the pair — **on one
+    surface**.
+
+    Built once per audience (``docs/adr/0185`` §6). A refresh token minted for
+    the other surface fails the decode as a forgery would, and the stored row is
+    asked the same question again, because the row is what records whose the
+    token is: a token the JWT and the row disagree about is one this surface did
+    not issue. ``holders`` is the audience's own answer to *may this account
+    still hold a session*, refused in its own words.
+    """
 
     def __init__(
         self,
-        users: UserRepository,
+        *,
+        audience: Audience,
+        holders: SessionHolders,
         tokens: RefreshTokenRepository,
         jwt_service: TokenService,
         hasher: PasswordHasher,
         rotator: TokenRotator,
         clock: Clock,
     ) -> None:
-        self._users = users
+        self._audience = audience
+        self._holders = holders
         self._tokens = tokens
         self._jwt = jwt_service
         self._hasher = hasher
@@ -49,11 +60,10 @@ class RefreshAuthTokens:
 
     async def execute(self, command: RefreshTokensCommand) -> TokenPair:
         payload = self._decode(command.presented_token)
-        user_id = UUID(payload["sub"])
         jti = payload["jti"]
 
         stored = await self._tokens.get_by_jti(jti)
-        if stored is None:
+        if stored is None or stored.audience is not self._audience:
             raise RefreshTokenNotRecognised()
         if not stored.is_valid:
             raise RefreshTokenRevoked()
@@ -62,15 +72,13 @@ class RefreshAuthTokens:
         if stored.is_expired(now=self._clock.now()):
             raise RefreshTokenExpired()
 
-        user = await self._users.get_by_id(user_id)
-        if user is None or not user.is_active:
-            raise UserNotEligible()
+        await self._holders.refuse_unless_eligible(stored.account_id)
 
-        return await self._rotator.rotate(stored, user_id)
+        return await self._rotator.rotate(stored)
 
     def _decode(self, token: str) -> dict:
         try:
-            return self._jwt.decode_refresh(token)
+            return self._jwt.decode_refresh(token, audience=self._audience)
         except jwt.ExpiredSignatureError as exc:
             raise RefreshTokenExpired() from exc
         except jwt.InvalidTokenError as exc:

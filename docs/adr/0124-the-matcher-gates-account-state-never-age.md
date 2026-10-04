@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-26
+- **§1 narrowed 2026-09-25 by [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §5**: age is a precondition of **playing**, not of holding an account. An account an Invitation created isn't attested, and *Start playing* asks before anything player-side; sign-up still refuses without it, and no Skill rating exists without one. *Adults only* and *attestation, not verification* stand.
 
 ## Context
 

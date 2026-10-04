@@ -35,7 +35,14 @@ from __future__ import annotations
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from app.application.ports import DomainEventPublisher, DomainEventStore, UnitOfWork
+from app.application.ports import (
+    DomainEventPublisher,
+    DomainEventStore,
+    Mailer,
+    MailQueue,
+    PendingMail,
+    UnitOfWork,
+)
 from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import Settings
 from app.engines.assessment import AssessmentEngine
@@ -46,16 +53,53 @@ from app.engines.matchfit.v1 import MatchFitV1
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
+from app.infrastructure.mail.smtp_mailer import SmtpMailer
+from app.infrastructure.mail.sqlalchemy_mail_queue import SqlAlchemyMailQueue
 from app.kernel import Clock
+from app.modules.auth.application.one_time_credentials import OneTimeCredentials
 from app.modules.auth.domain.ports import (
+    CredentialSecrets,
+    OneTimeCredentialStore,
+    PasswordAccounts,
     PasswordHasher,
     RefreshTokenRepository,
+    SessionHolders,
     TokenService,
 )
 from app.modules.auth.infrastructure.jwt_token_service import JwtTokenService
 from app.modules.auth.infrastructure.password_hasher import BcryptPasswordHasher
+from app.modules.auth.infrastructure.random_credential_secrets import (
+    RandomCredentialSecrets,
+)
+from app.modules.auth.infrastructure.sqlalchemy_one_time_credential_store import (
+    SqlAlchemyOneTimeCredentialStore,
+)
 from app.modules.auth.infrastructure.sqlalchemy_refresh_token_repository import (
     SqlAlchemyRefreshTokenRepository,
+)
+from app.modules.administrators.application.sending import InvitationSender
+from app.modules.administrators.domain.ports import (
+    AccountHolders,
+    AdministratorDirectory,
+    AdministratorRepository,
+    ClubNames,
+    InvitationLinks,
+    OfficialGroupAssignments,
+)
+from app.modules.administrators.infrastructure.clubs_club_names import (
+    ClubsClubNames,
+)
+from app.modules.administrators.infrastructure.event_sourced_administrator_repository import (  # noqa: E501
+    EventSourcedAdministratorRepository,
+)
+from app.modules.administrators.infrastructure.sqlalchemy_administrator_directory import (  # noqa: E501
+    SqlAlchemyAdministratorDirectory,
+)
+from app.modules.administrators.infrastructure.users_account_holders import (
+    UsersAccountHolders,
+)
+from app.modules.player_profile.application.has_player_profile import (
+    HasPlayerProfile,
 )
 from app.modules.blocks.domain.ports import BlockQuery, BlockRepository
 from app.modules.blocks.infrastructure.event_sourced_block_query import (
@@ -88,7 +132,66 @@ from app.modules.challenges.infrastructure.games_settled_game import (
 from app.modules.challenges.infrastructure.profile_friendly_choice import (
     ProfileFriendlyChoice,
 )
+from app.modules.clubs.application.password_accounts import ClubPasswordAccounts
+from app.modules.clubs.application.session_holders import ClubAccountSessionHolders
+from app.modules.clubs.domain.ports import (
+    ClubAccountRepository,
+    ClubDirectory,
+    ClubRepository,
+    OfficialGroupSports,
+)
+from app.modules.clubs.infrastructure.event_sourced_club_account_repository import (
+    EventSourcedClubAccountRepository,
+)
+from app.modules.clubs.infrastructure.event_sourced_club_repository import (
+    EventSourcedClubRepository,
+)
+from app.modules.clubs.infrastructure.sqlalchemy_club_directory import (
+    SqlAlchemyClubDirectory,
+)
 from app.modules.games.application.call_off_game import CallOffGame
+from app.modules.groups.domain.ports import (
+    GroupAdministrators,
+    GroupBornGames,
+    GroupCodeMinter,
+    GroupDirectory,
+    GroupFaces,
+    GroupMemberScores,
+    GroupRepository,
+    HiddenMembers,
+    HomeClubs,
+    RatedGroupMembers,
+    ReaderAreas,
+)
+from app.modules.groups.infrastructure.administrators_group_administrators import (
+    AdministratorsGroupAdministrators,
+)
+from app.modules.groups.infrastructure.administrators_official_group_assignments import (  # noqa: E501
+    GroupsOfficialGroupAssignments,
+)
+from app.modules.groups.infrastructure.blocks_hidden_members import (
+    BlocksHiddenMembers,
+)
+from app.modules.groups.infrastructure.clubs_home_clubs import ClubsHomeClubs
+from app.modules.groups.infrastructure.clubs_official_group_sports import (
+    GroupsOfficialGroupSports,
+)
+from app.modules.groups.infrastructure.event_sourced_group_repository import (
+    EventSourcedGroupRepository,
+)
+from app.modules.groups.infrastructure.no_group_born_games import NoGroupBornGames
+from app.modules.groups.infrastructure.profile_group_faces import ProfileGroupFaces
+from app.modules.groups.infrastructure.profile_reader_areas import ProfileReaderAreas
+from app.modules.groups.infrastructure.published_group_member_scores import (
+    PublishedGroupMemberScores,
+)
+from app.modules.groups.infrastructure.random_group_codes import RandomGroupCodes
+from app.modules.groups.infrastructure.rated_group_members import (
+    RatingsRatedGroupMembers,
+)
+from app.modules.groups.infrastructure.sqlalchemy_group_directory import (
+    SqlAlchemyGroupDirectory,
+)
 from app.modules.games.application.dismiss_game import DismissGameOfCourt
 from app.modules.games.application.open_planned_game import OpenPlannedGame
 from app.modules.games.application.vacate_seat import VacateSeat
@@ -407,6 +510,7 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    RunnerDisclosure,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -417,6 +521,8 @@ from app.modules.player_record.domain.ports import (
 from app.modules.player_record.infrastructure.disclosures import (
     ChallengesTheyShare,
     GamesTheyPlayed,
+    GroupsTheReaderRuns,
+    GroupsTheyShare,
     SearchesThatShowedThem,
 )
 from app.modules.player_record.infrastructure.live_record_gates import (
@@ -442,6 +548,9 @@ from app.modules.sportsmanship.infrastructure.sqlalchemy_standing_answers import
 from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger import (
     SqlAlchemySportsmanshipLedger,
 )
+from app.modules.users.application.invitation_accounts import InvitationAccounts
+from app.modules.users.application.password_accounts import UserPasswordAccounts
+from app.modules.users.application.session_holders import UserSessionHolders
 from app.modules.users.application.set_tester_mark import SetTesterMark
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
@@ -497,12 +606,308 @@ def build_password_hasher(settings: Settings) -> PasswordHasher:
     return BcryptPasswordHasher(rounds=settings.BCRYPT_ROUNDS)
 
 
-def build_token_service(settings: Settings) -> TokenService:
-    return JwtTokenService(settings)
+def build_token_service(settings: Settings, *, clock: Clock) -> TokenService:
+    return JwtTokenService(settings, clock=clock)
 
 
 def build_refresh_token_repository(session: AsyncSession) -> RefreshTokenRepository:
     return SqlAlchemyRefreshTokenRepository(session)
+
+
+def build_one_time_credential_store(session: AsyncSession) -> OneTimeCredentialStore:
+    """Where one-time credentials live: a plain table, **never** the event store
+    (``docs/adr/0184`` §3–§4)."""
+    return SqlAlchemyOneTimeCredentialStore(session)
+
+
+def build_credential_secrets() -> CredentialSecrets:
+    """A credential's randomness: the operating system's CSPRNG."""
+    return RandomCredentialSecrets()
+
+
+# --------------------------------------------------------------------------
+# Email (docs/adr/0186)
+# --------------------------------------------------------------------------
+
+
+def build_mail_queue(session: AsyncSession) -> MailQueue:
+    """Where a use case leaves an email, in its own transaction."""
+    return SqlAlchemyMailQueue(session)
+
+
+def build_pending_mail(session: AsyncSession) -> PendingMail:
+    """The worker's side of the same table."""
+    return SqlAlchemyMailQueue(session)
+
+
+def build_mailer(settings: Settings) -> Mailer:
+    """The one mailer: SMTP, at the mail catcher locally and at a relay once a
+    domain exists. Held by the worker and by nothing a request reaches."""
+    return SmtpMailer(
+        host=settings.SMTP_HOST,
+        port=settings.SMTP_PORT,
+        security=settings.SMTP_SECURITY,
+        username=settings.SMTP_USERNAME,
+        password=settings.SMTP_PASSWORD,
+        sender=settings.MAIL_SENDER,
+        timeout_seconds=settings.SMTP_TIMEOUT_SECONDS,
+    )
+
+
+# --------------------------------------------------------------------------
+# Clubs
+# --------------------------------------------------------------------------
+
+
+def build_club_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ClubRepository:
+    """Per unit of work, for the reason every aggregate repository is: it
+    remembers the stream versions it loaded.
+
+    **It takes the session as well as the store**, unlike ``blocks``', because
+    its ``save`` writes the club's search row in the same transaction as the
+    event (``docs/adr/0182`` §2).
+    """
+    return EventSourcedClubRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_club_account_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> ClubAccountRepository:
+    """The club's sign-in: read from its row, written to its stream and its row
+    in one transaction (``docs/adr/0182`` §3)."""
+    return EventSourcedClubAccountRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_club_account_session_holders(
+    accounts: ClubAccountRepository,
+) -> SessionHolders:
+    """Who may renew a **club** session: a Club account that still exists
+    (``docs/adr/0185`` §6). Over the repository the request already holds."""
+    return ClubAccountSessionHolders(accounts)
+
+
+def build_club_account_passwords(accounts: ClubAccountRepository) -> PasswordAccounts:
+    """Whose password a **club** reset recovers: a Club account's
+    (``docs/adr/0184`` §5). Over the repository the request already holds."""
+    return ClubPasswordAccounts(accounts)
+
+
+def build_official_group_sports(session: AsyncSession) -> OfficialGroupSports:
+    """What the official groups at a club declare — the one thing a details
+    edit is refused over from outside the club (``docs/adr/0182`` §5) —
+    answered by the Groups context over its own directory, so the arrow runs
+    ``groups → clubs`` only."""
+    return GroupsOfficialGroupSports(build_group_directory(session))
+
+
+def build_club_directory(session: AsyncSession) -> ClubDirectory:
+    """What the Club context publishes: its clubs, read off the search
+    projection (``docs/adr/0182`` §2) and never as an aggregate."""
+    return SqlAlchemyClubDirectory(session)
+
+
+# --------------------------------------------------------------------------
+# Administrators (docs/adr/0184)
+# --------------------------------------------------------------------------
+
+
+def build_administrator_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> AdministratorRepository:
+    """Per unit of work, as every aggregate repository is. **It takes the
+    session as well as the store**, because its ``save`` writes the
+    ``administrators`` row in the same transaction."""
+    return EventSourcedAdministratorRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_administrator_directory(session: AsyncSession) -> AdministratorDirectory:
+    return SqlAlchemyAdministratorDirectory(session)
+
+
+def build_account_holders(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> AccountHolders:
+    """The Users behind administratorships: written by ``users`` on its own
+    stream — an account opened or cleared by ``InvitationAccounts``, a password
+    set by the same ``PasswordAccounts`` *Forgot password?* uses — and *acts as
+    a player* read off that stream and the Player profile's."""
+    return UsersAccountHolders(
+        accounts=InvitationAccounts(
+            users=build_user_repository(session),
+            event_store=event_store,
+            events=events,
+        ),
+        passwords=build_user_password_accounts(
+            session, event_store=event_store, events=events
+        ),
+        profiles=HasPlayerProfile(
+            profiles=build_player_profile_repository(
+                event_store=event_store, events=events
+            )
+        ),
+    )
+
+
+def build_club_names(session: AsyncSession) -> ClubNames:
+    """A club's name, off the clubs' published directory."""
+    return ClubsClubNames(build_club_directory(session))
+
+
+def build_official_group_assignments(
+    session: AsyncSession,
+) -> OfficialGroupAssignments:
+    """Which official groups each Administrator was given — the Administrators
+    table's *groups* column — answered by the Groups context over its own
+    directory, so the arrow runs ``groups → administrators`` only (#510)."""
+    return GroupsOfficialGroupAssignments(build_group_directory(session))
+
+
+def build_invitation_sender(
+    session: AsyncSession,
+    settings: Settings,
+    *,
+    accounts: AccountHolders,
+    credentials: OneTimeCredentials,
+) -> InvitationSender:
+    """Where every invitation email is decided and queued — the invite, a
+    resend and the club's reset. Its buttons go to the public site's
+    ``/invite/<token>`` for somebody with a password to set, and to the app
+    for an account that only has to accept; both addresses are settings
+    (``docs/adr/0187`` §7). ``credentials`` is the caller's, so a request and a
+    seed run issue through the mechanism they already hold."""
+    return InvitationSender(
+        accounts=accounts,
+        credentials=credentials,
+        mail=build_mail_queue(session),
+        clubs=build_club_names(session),
+        links=InvitationLinks(
+            site=settings.PUBLIC_SITE_URL, app_scheme=settings.APP_SCHEME
+        ),
+    )
+
+
+# --------------------------------------------------------------------------
+# Groups
+# --------------------------------------------------------------------------
+
+
+def build_group_repository(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> GroupRepository:
+    """Per unit of work, as every aggregate repository is. **It takes the session
+    as well as the store**, because its ``save`` writes the groups and
+    group-members projections in the same transaction (``docs/adr/0183`` §1)."""
+    return EventSourcedGroupRepository(
+        session=session, event_store=event_store, events=events
+    )
+
+
+def build_group_directory(session: AsyncSession) -> GroupDirectory:
+    return SqlAlchemyGroupDirectory(session)
+
+
+def build_group_code_minter(session: AsyncSession) -> GroupCodeMinter:
+    return RandomGroupCodes(session)
+
+
+def build_home_clubs(session: AsyncSession) -> HomeClubs:
+    """A group's home club, and the clubs a player searches — over the clubs'
+    own published directory, never their table."""
+    return ClubsHomeClubs(build_club_directory(session))
+
+
+def build_rated_group_members(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> RatedGroupMembers:
+    """The sport dots' ratings, over the rating context's published read — which
+    replays and remembers nothing, so a dot cannot move a Level."""
+    return RatingsRatedGroupMembers(build_rated_player_query(session, runtime=runtime))
+
+
+def build_group_faces(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> GroupFaces:
+    """A name from ``users``, a face from the Player profile, a link from the
+    store — ``build_member_faces``' three providers, for the Games tab's seats,
+    a Join request's asker and, name only, a group's Owner. The window is the
+    platform's one photo window."""
+    return ProfileGroupFaces(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
+
+
+def build_group_member_scores(session: AsyncSession) -> GroupMemberScores:
+    """A Members row's *score 92*, over ``player_score``'s published read — the
+    figure every other surface already prints, copied and never re-blended."""
+    return PublishedGroupMemberScores(build_published_score_query(session))
+
+
+def build_hidden_members(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> HiddenMembers:
+    """Who a reader's Members list leaves out: the one block read every surface
+    that shows one player to another consults (``docs/adr/0095`` §7), which
+    fails closed."""
+    return BlocksHiddenMembers(build_block_query(session, runtime=runtime))
+
+
+def build_group_administrators(session: AsyncSession) -> GroupAdministrators:
+    """Who runs each official group now: the account behind its Administrator,
+    read off the administrators' own directory while that administratorship is
+    active — so a removal takes a group from its administrator on the next read
+    (``docs/adr/0184`` §7)."""
+    return AdministratorsGroupAdministrators(build_administrator_directory(session))
+
+
+def build_group_born_games() -> GroupBornGames:
+    """The club's *Games* figure: games born in a group, of which there are none
+    while no group picks a game (``docs/adr/0183`` §11) — so nought, and the
+    day one can, an adapter over those games is built here instead."""
+    return NoGroupBornGames()
+
+
+def build_reader_areas(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> ReaderAreas:
+    """Where the reader is, read off their Player profile's Location area."""
+    return ProfileReaderAreas(
+        build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
 
 
 # --------------------------------------------------------------------------
@@ -512,6 +917,25 @@ def build_refresh_token_repository(session: AsyncSession) -> RefreshTokenReposit
 
 def build_user_repository(session: AsyncSession) -> UserRepository:
     return SqlAlchemyUserRepository(session)
+
+
+def build_user_session_holders(session: AsyncSession) -> SessionHolders:
+    """Who may renew a **player-app** session: an active User
+    (``docs/adr/0185`` §6)."""
+    return UserSessionHolders(build_user_repository(session))
+
+
+def build_user_password_accounts(
+    session: AsyncSession,
+    *,
+    event_store: DomainEventStore,
+    events: DomainEventPublisher,
+) -> PasswordAccounts:
+    """Whose password a **player-app** reset recovers: an active User's
+    (``docs/adr/0184`` §5), changed on the User's own stream."""
+    return UserPasswordAccounts(
+        users=build_user_repository(session), event_store=event_store, events=events
+    )
 
 
 def build_set_tester_mark(
@@ -1951,6 +2375,31 @@ def build_game_disclosure(session: AsyncSession) -> PriorDisclosure:
     """*We were on a court together* — over ``games``' directory."""
 
     return GamesTheyPlayed(build_game_directory(session))
+
+
+def build_group_disclosure(session: AsyncSession) -> PriorDisclosure:
+    """*We are both in a group* — over ``groups``' directory.
+
+    The strand a group's Members needed: it lists every member rated in the
+    sport and opens their record on a press and hold, and a member who never
+    searched had been shown them by the group alone.
+    """
+
+    return GroupsTheyShare(build_group_directory(session))
+
+
+def build_runner_disclosure(session: AsyncSession) -> RunnerDisclosure:
+    """*I run a group they are in* — over ``groups``' directory and who runs each
+    official group now, the same reading the group's Members makes (#566).
+
+    The strand an official group's Administrator needed: Members lists every
+    member rated in the sport and opens their record on a press and hold, and
+    running a group is not being in it.
+    """
+
+    return GroupsTheReaderRuns(
+        build_group_directory(session), build_group_administrators(session)
+    )
 
 
 def build_record_gates(

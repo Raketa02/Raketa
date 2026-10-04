@@ -1,0 +1,47 @@
+.tile {
+  display: inline-flex;
+  width: var(--size-tile);
+  height: var(--size-tile);
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--radius-tile);
+  color: var(--colour-on-monogram);
+  font-size: var(--text-letters);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-none);
+  white-space: nowrap;
+}
+
+.hue0 {
+  background: var(--colour-monogram-0);
+}
+
+.hue1 {
+  background: var(--colour-monogram-1);
+}
+
+.hue2 {
+  background: var(--colour-monogram-2);
+}
+
+.hue3 {
+  background: var(--colour-monogram-3);
+}
+
+.hue4 {
+  background: var(--colour-monogram-4);
+}
+
+.hue5 {
+  background: var(--colour-monogram-5);
+}
+
+.hue6 {
+  background: var(--colour-monogram-6);
+}
+
+.hue7 {
+  background: var(--colour-monogram-7);
+}

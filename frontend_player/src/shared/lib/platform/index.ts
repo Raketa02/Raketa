@@ -29,6 +29,16 @@
  * native module with nothing under it in a test, and *exactly one, and none under reduced
  * motion* is a rule a fake can count where a mock could only record.
  *
+ * **The fifth is the clipboard** (#512), for the same reason: *Join a group*'s **Paste** is a
+ * native read, and a suite has to be able to put a link on it. It learned to write with a group
+ * page's **Copy link** (#513).
+ *
+ * **The sixth is the share sheet** (#513), one verb wide: a group page's **Share the link** opens
+ * a native sheet no suite can open, so a fake records what it was handed. It is React Native's
+ * own module rather than an Expo one — `useHardwareBack`'s `BackHandler` is too, and has no port —
+ * and the difference is what a test needs: a back press is something a suite presses, a sheet is
+ * something it has to see opened.
+ *
  * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
  * the two device facts a feature flag's rules may target (ADR-0180 §8). Nothing to decide and
  * nothing a test would drive, so no port.
@@ -76,3 +86,7 @@ export {
 } from './LiveStreamProvider';
 export { deviceHaptics, type HapticsPort } from './haptics';
 export { HapticsProvider, useHaptics, type HapticsProviderProps } from './HapticsProvider';
+export { deviceClipboard, type ClipboardPort } from './clipboard';
+export { ClipboardProvider, useClipboard, type ClipboardProviderProps } from './ClipboardProvider';
+export { deviceShare, type SharePort } from './share';
+export { ShareProvider, useShare, type ShareProviderProps } from './ShareProvider';

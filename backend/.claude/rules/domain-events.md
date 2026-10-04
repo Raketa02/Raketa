@@ -34,4 +34,11 @@ name, is what history is recorded under.
   Redis and kept that sentence literally — and the reset argued for itself in ADR-0169's
   amendment of 2026-09-15. Anything else that wants the exemption argues for it in an
   ADR first.
+- **Two tables are event-free because an event would hold a secret**, and each was argued
+  for in its ADR: `one_time_credentials`, where a link and a code live as hashes with a
+  lifetime (ADR-0184 §3 — *a code's hash kept for ever is a code that can be cracked
+  offline for ever*), and `mail_queue`, where a rendered email waits for the mail worker
+  and is purged once sent (ADR-0186 §2). **No token, code or ticket may ever be written to
+  an event or to the outbox** (ADR-0184 §4); an event says *that* a password changed, never
+  *what* opened the way to it.
 - `domain/` stays pure Python: no FastAPI, SQLAlchemy, Pydantic or external SDK imports.

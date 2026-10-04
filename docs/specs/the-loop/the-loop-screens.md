@@ -1,5 +1,11 @@
 # The loop screens
 
+> **Narrowed 2026-09-29 by [ADR-0189](../../adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
+> to the Classic play loop**, behind its feature flag. A game made in a group is booked when it
+> fills, so the states this file refuses by name (*Being booked*, *Booked*, *Cancelled*…) are drawn
+> there, and Now's *Planning*, *Game on* and *Needs a player* give way to Home's statuses — see
+> [`games-and-fill-in/the-screens.md`](../games-and-fill-in/the-screens.md).
+
 **What each surface draws, what each control does, and which screen behaviours are decisions
 rather than interface choices.**
 

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.events import (
     RefreshTokenIssued,
     RefreshTokenRevoked,
@@ -22,10 +23,16 @@ class RefreshToken:
 
     Events raised by `issue`, `revoke`, and `rotate_to` are collected in the
     composed `EventRecorder` and drained by the application layer.
+
+    **It records whose it is** (``docs/adr/0185`` §6): the account it was issued
+    to, and the audience it was issued for — which says what kind of account
+    that is, a User on the player app or a Club account on the club website. A
+    refresh on one surface never rotates a token the other surface issued.
     """
 
     id: UUID
-    user_id: UUID
+    account_id: UUID
+    audience: Audience
     token_hash: str
     jti: str
     refresh_expires_at: datetime
@@ -45,7 +52,8 @@ class RefreshToken:
         cls,
         *,
         token_id: UUID,
-        user_id: UUID,
+        account_id: UUID,
+        audience: Audience,
         token_hash: str,
         jti: str,
         refresh_expires_at: datetime,
@@ -53,7 +61,8 @@ class RefreshToken:
     ) -> "RefreshToken":
         token = cls(
             id=token_id,
-            user_id=user_id,
+            account_id=account_id,
+            audience=audience,
             token_hash=token_hash,
             jti=jti,
             refresh_expires_at=refresh_expires_at,
@@ -61,10 +70,11 @@ class RefreshToken:
         token._events.record(
             RefreshTokenIssued(
                 token_id=token.id,
-                user_id=token.user_id,
+                account_id=token.account_id,
                 jti=token.jti,
                 expires_at=token.refresh_expires_at,
                 occurred_at=occurred_at,
+                audience=token.audience.value,
             )
         )
         return token
@@ -83,10 +93,11 @@ class RefreshToken:
         self._events.record(
             RefreshTokenRevoked(
                 token_id=self.id,
-                user_id=self.user_id,
+                account_id=self.account_id,
                 jti=self.jti,
                 reason=reason,
                 occurred_at=now,
+                audience=self.audience.value,
             )
         )
 
@@ -97,11 +108,12 @@ class RefreshToken:
         self.revoked_at = now
         self._events.record(
             RefreshTokenRotated(
-                user_id=self.user_id,
+                account_id=self.account_id,
                 revoked_token_id=self.id,
                 revoked_jti=self.jti,
                 issued_token_id=new_token.id,
                 issued_jti=new_token.jti,
                 occurred_at=now,
+                audience=self.audience.value,
             )
         )

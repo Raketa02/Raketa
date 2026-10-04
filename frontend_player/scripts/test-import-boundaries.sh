@@ -4,20 +4,27 @@
 #
 #   bash scripts/test-import-boundaries.sh      # or: pnpm test:boundaries
 #
-# Seven modules may be imported from exactly one place:
+# Eight modules may be imported from exactly one place:
 #
 #   expo-secure-store                            → src/shared/lib/auth
 #   @react-native-async-storage/async-storage    → feature_flags/api/datafileCache.ts
+#                                                  and preferences/phonePreferences.ts
 #   expo-location                                → platform/location.ts
 #   expo-image-picker                            → platform/imagePicking.ts
 #   react-native-sse                             → platform/liveStream.ts
 #   expo-haptics                                 → platform/haptics.ts
+#   expo-clipboard                               → platform/clipboard.ts
 #   @featurevisor/sdk                            → feature_flags/api/featurevisor.ts
 #
+# And one **name** out of a module every screen imports:
+#
+#   { Share } from 'react-native'                → platform/share.ts
+#
 # AsyncStorage was banned everywhere until ADR-0180 let the feature flags' saved datafile
-# use it — a public file, never a credential. The ban is still asserted everywhere else,
-# the owning module's own directory included, because an allow-list of one is only one
-# while something checks it.
+# use it — a public file, never a credential — and ADR-0188 let the phone-preferences store
+# keep three choices a player made beside it. The ban is still asserted everywhere else, both
+# owning modules' own directories included, because an allow-list of two is only two while
+# something checks it.
 #
 # And one is banned everywhere *except* a feature's api/ and mappers/ layers, plus the
 # one file above that is an api/ layer without a feature to live in:
@@ -99,6 +106,39 @@ expect_blocked() { # <module> <path> <substring the message must name>
   fi
 }
 
+# The same, for one NAME out of a module — `Share` out of `react-native`, whose every other name
+# is the app's own drawing and must stay free.
+lint_named_import() { # <name> <module> <path>
+  printf "import { %s } from '%s';\n\nexport const used = %s;\n" "$1" "$2" "$1" \
+    | "$ESLINT" --stdin --stdin-filename "$3" 2>&1
+}
+
+expect_name_blocked() { # <name> <module> <path> <substring the message must name>
+  local name="$1" module="$2" path="$3" needle="$4" out status
+  out=$(lint_named_import "$name" "$module" "$path")
+  status=$?
+
+  if [ "$status" = 0 ]; then
+    bad "{ $name } from $module is blocked in $path" "the linter accepted it"
+  elif ! printf '%s' "$out" | grep -q -- "$needle"; then
+    bad "{ $name } from $module is blocked in $path" "the message never names '$needle'"
+  else
+    ok "{ $name } from $module is blocked in $path"
+  fi
+}
+
+expect_name_allowed() { # <name> <module> <path>
+  local name="$1" module="$2" path="$3" out status
+  out=$(lint_named_import "$name" "$module" "$path")
+  status=$?
+
+  if [ "$status" = 0 ]; then
+    ok "{ $name } from $module is allowed in $path"
+  else
+    bad "{ $name } from $module is allowed in $path" "$(printf '%s' "$out" | tail -n 3)"
+  fi
+}
+
 expect_allowed() { # <module> <path>
   local module="$1" path="$2" out status
   out=$(lint_import "$module" "$path")
@@ -135,6 +175,8 @@ LOCATION_PORT='src/shared/lib/platform/location.ts'
 PICKING_PORT='src/shared/lib/platform/imagePicking.ts'
 LIVE_PORT='src/shared/lib/platform/liveStream.ts'
 HAPTICS_PORT='src/shared/lib/platform/haptics.ts'
+CLIPBOARD_PORT='src/shared/lib/platform/clipboard.ts'
+SHARE_PORT='src/shared/lib/platform/share.ts'
 OTHER_PLATFORM_FILE='src/shared/lib/platform/appState.ts'
 
 # The flag seam's three edges, each an api/ file of one feature: the fetch, the saved
@@ -145,6 +187,12 @@ FLAGS_FETCH='src/features/feature_flags/api/datafileApi.ts'
 FLAGS_CACHE='src/features/feature_flags/api/datafileCache.ts'
 FLAGS_SDK='src/features/feature_flags/api/featurevisor.ts'
 FLAGS_HOOK='src/features/feature_flags/hooks/useFeatureOnMount.ts'
+
+# The phone-preferences store (ADR-0188 §1) — the second AsyncStorage importer, one file wide
+# like the first: its own directory's barrel may not, and neither may the sign-out sequence that
+# empties it through the barrel.
+PREFERENCES_STORE='src/shared/lib/preferences/phonePreferences.ts'
+PREFERENCES_OTHER='src/shared/lib/preferences/index.ts'
 
 # Where a generated wire type is legitimately read: the two layers of a feature, and the
 # one file outside a feature that is an api/ layer — the live channel, whose frame ADR-0147
@@ -183,6 +231,13 @@ expect_blocked @react-native-async-storage/async-storage "$FLAGS_FETCH" 'datafil
 expect_blocked @react-native-async-storage/async-storage "$FLAGS_SDK" 'datafileCache.ts'
 expect_blocked @react-native-async-storage/async-storage "$FLAGS_HOOK" 'datafileCache.ts'
 expect_allowed @react-native-async-storage/async-storage "$FLAGS_CACHE"
+# The second owner, and the message names it so a blocked import knows where the door is.
+expect_blocked @react-native-async-storage/async-storage "$FEATURE" 'phonePreferences.ts'
+expect_blocked @react-native-async-storage/async-storage "$PREFERENCES_OTHER" 'phonePreferences.ts'
+expect_blocked @react-native-async-storage/async-storage "$OTHER_PLATFORM_FILE" 'phonePreferences.ts'
+expect_allowed @react-native-async-storage/async-storage "$PREFERENCES_STORE"
+# And it is exempt from the path ban only: the keychain is still the auth module's.
+expect_blocked expo-secure-store "$PREFERENCES_STORE" 'src/shared/lib/auth'
 
 echo
 echo "the device's position — expo-location belongs to src/shared/lib/platform"
@@ -235,6 +290,38 @@ expect_blocked expo-haptics "$OTHER_PLATFORM_FILE" 'haptics.ts'
 expect_allowed expo-haptics "$HAPTICS_PORT"
 # And the port itself is still under every other ban.
 expect_blocked expo-location "$HAPTICS_PORT" 'src/shared/lib/platform'
+
+echo
+echo "the clipboard — expo-clipboard belongs to platform/clipboard.ts"
+expect_blocked expo-clipboard "$FEATURE" 'clipboard.ts'
+expect_blocked expo-clipboard "$SCREEN" 'clipboard.ts'
+expect_blocked expo-clipboard "$TEST" 'clipboard.ts'
+expect_blocked expo-clipboard "$AUTH" 'clipboard.ts'
+# One file wide: the motor beside it may not read the clipboard.
+expect_blocked expo-clipboard "$HAPTICS_PORT" 'clipboard.ts'
+expect_blocked expo-clipboard "$OTHER_PLATFORM_FILE" 'clipboard.ts'
+expect_allowed expo-clipboard "$CLIPBOARD_PORT"
+# And the port itself is still under every other ban.
+expect_blocked expo-haptics "$CLIPBOARD_PORT" 'haptics.ts'
+
+echo
+echo "the share sheet — { Share } from react-native belongs to platform/share.ts"
+expect_name_blocked Share react-native "$FEATURE" 'share.ts'
+expect_name_blocked Share react-native "$SCREEN" 'share.ts'
+expect_name_blocked Share react-native "$TEST" 'share.ts'
+expect_name_blocked Share react-native "$AUTH" 'share.ts'
+# One file wide: the clipboard beside it may not share, and neither may the two files that are
+# exempt from the other path ban — an exemption subtracts one entry, never the list.
+expect_name_blocked Share react-native "$CLIPBOARD_PORT" 'share.ts'
+expect_name_blocked Share react-native "$OTHER_PLATFORM_FILE" 'share.ts'
+expect_name_blocked Share react-native "$FLAGS_CACHE" 'share.ts'
+expect_name_blocked Share react-native "$PREFERENCES_STORE" 'share.ts'
+expect_name_allowed Share react-native "$SHARE_PORT"
+# The ban is one name wide: every other name out of the module is the app's own drawing.
+expect_name_allowed View react-native "$FEATURE"
+# And the port itself is still under every other ban, the storage path included.
+expect_blocked expo-clipboard "$SHARE_PORT" 'clipboard.ts'
+expect_blocked @react-native-async-storage/async-storage "$SHARE_PORT" 'datafileCache.ts'
 
 echo
 echo "flag evaluation — @featurevisor/sdk belongs to feature_flags/api/featurevisor.ts"

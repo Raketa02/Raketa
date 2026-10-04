@@ -20,13 +20,21 @@ os.environ.setdefault("LOG_LEVEL", "INFO")
 # fifth of a second; three API files took 170 s at twelve and 19 s at four.
 os.environ.setdefault("BCRYPT_ROUNDS", "4")
 
+from datetime import datetime, timezone
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.bootstrap.composition import build_clock  # noqa: E402
+from app.api.dependencies import get_clock  # noqa: E402
+from app.application.mail.deliver_queued_mail import DeliverQueuedMail  # noqa: E402
+from app.bootstrap.composition import (  # noqa: E402
+    build_clock,
+    build_pending_mail,
+    build_unit_of_work,
+)
 from app.core.config import get_settings  # noqa: E402
 from app.infrastructure.database.base import Base  # noqa: E402
 from app.infrastructure.database.session import get_db  # noqa: E402
@@ -56,6 +64,8 @@ from tests.unit.fake_ledgers import (  # noqa: E402
     InMemoryPromptLedger,
     InMemorySuppressionLedger,
 )
+from tests.unit.fake_clock import MovableClock  # noqa: E402
+from tests.unit.fake_mailer import RecordingMailer  # noqa: E402
 from tests.unit.fake_redis import FakeRedis  # noqa: E402
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage  # noqa: E402
 
@@ -229,6 +239,77 @@ async def app(
         yield app
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def clock(app):
+    """A **controllable clock**, overridden on the running application so every
+    request in the test agrees about what time it is (``docs/adr/0186`` §5).
+
+    Starts at the wall clock's now, so a test that never moves it behaves as one
+    that never asked for it; ``clock.move(...)`` is how a one-hour expiry is
+    checked without waiting an hour. A module that needs a different start
+    declares its own ``clock`` fixture, which takes precedence over this one.
+    """
+
+    movable = MovableClock(datetime.now(timezone.utc))
+    app.dependency_overrides[get_clock] = lambda: movable
+    return movable
+
+
+class Mailbox:
+    """Every email the application has sent, read the way a person reads mail.
+
+    **The queues are drained first**, each the way its worker drains it — the
+    outbox, then the mail queue through the production ``DeliverQueuedMail``,
+    into a recording mailer — so what a test reads is what a relay would have
+    been handed, and nothing is asserted about which table was written
+    (``docs/adr/0186`` §5).
+    """
+
+    def __init__(self, app, session_factory, mailer: RecordingMailer) -> None:
+        self._app = app
+        self._session_factory = session_factory
+        self.mailer = mailer
+
+    def _clock(self):
+        # The application's own clock — the ``clock`` fixture's when a test
+        # moved time — so a retry waits on the same clock that queued it.
+        return self._app.dependency_overrides.get(get_clock, build_clock)()
+
+    async def drain(self) -> None:
+        # Imported here: the outbox's drain lives with the matchmaking world
+        # that needed it first, and importing it at module load would drag that
+        # module into every test.
+        from tests.api.matchmaking_world import deliver_the_outbox
+
+        await deliver_the_outbox(self._session_factory)
+        while True:
+            async with self._session_factory() as session:
+                run = await DeliverQueuedMail(
+                    pending=build_pending_mail(session),
+                    mailer=self.mailer,
+                    uow=build_unit_of_work(session),
+                    clock=self._clock(),
+                    batch_size=100,
+                ).execute()
+            if not run.sent and not run.failed:
+                return
+
+    async def sent(self):
+        await self.drain()
+        return list(self.mailer.sent)
+
+    async def to(self, address: str):
+        await self.drain()
+        return self.mailer.to(address)
+
+
+@pytest.fixture
+def mailbox(app, session_factory) -> Mailbox:
+    """The **recording mailer**, read after draining the queues."""
+
+    return Mailbox(app, session_factory, RecordingMailer())
 
 
 @pytest_asyncio.fixture

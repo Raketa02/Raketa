@@ -35,3 +35,12 @@ export const CONTINUE = {
   busyLabel: 'Saving…',
   hint: 'Next, a few questions to find your level',
 } as const;
+
+/**
+ * **Under the title, where only the nickname is asked** — an account whose name the club gave
+ * (ADR-0185 §4). The step says the name it will keep, so the one box is not a question about a
+ * name nobody sees; it changes later from the You tab's *Name*, the same act.
+ */
+export function nameKeptLine(name: string): string {
+  return `People will see you as ${name}. Pick a nickname to go with it.`;
+}

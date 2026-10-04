@@ -12,12 +12,21 @@
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { Slot } from 'expo-router';
-import { renderRouter, waitFor } from 'expo-router/testing-library';
+import { Slot, router, type Href } from 'expo-router';
+import { act, renderRouter, waitFor } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ReducedMotionProvider } from '@/shared/ui';
 
+import AdministratorLayout from '@/app/(administrator)/_layout';
+import AdministratorAreaLayout from '@/app/(administrator)/administrator/[clubId]/_layout';
+import AdministratorGroupsRoute from '@/app/(administrator)/administrator/[clubId]/index';
+import AdministratorYouRoute from '@/app/(administrator)/administrator/[clubId]/you/index';
+import GroupSettingsRoute from '@/app/(administrator)/administrator/[clubId]/you/settings/[groupId]';
+import AdministratorStartPlayingRoute from '@/app/(administrator)/administrator/[clubId]/you/start-playing';
+import NewOfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/new-group';
+import OfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]/index';
+import OfficialGroupMembersRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]/members';
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
@@ -30,7 +39,13 @@ import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
 import NowRoute from '@/app/(app)/(tabs)/index';
 import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
 import PoolRoute from '@/app/(app)/(tabs)/play/pool';
-import FindAGameRoute from '@/app/(app)/(tabs)/play/index';
+import PlayRoute from '@/app/(app)/(tabs)/play/index';
+import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
+import JoinGroupRoute from '@/app/(app)/(tabs)/play/join';
+import GroupRoute from '@/app/(app)/(tabs)/play/group/[groupId]/index';
+import GroupFriendsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/friends';
+import GroupMembersRoute from '@/app/(app)/(tabs)/play/group/[groupId]/members';
+import GroupEditRoute from '@/app/(app)/(tabs)/play/group/[groupId]/edit';
 import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
@@ -48,12 +63,22 @@ import YouWhoYouPlayWithRoute from '@/app/(app)/(tabs)/you/who-you-play-with';
 import AuthLayout from '@/app/(auth)/_layout';
 import SignInRoute from '@/app/(auth)/sign-in';
 import SignUpRoute from '@/app/(auth)/sign-up';
+import ForgotPasswordRoute from '@/app/(auth)/forgot-password/index';
+import ResetCodeRoute from '@/app/(auth)/forgot-password/code';
+import ResetSentRoute from '@/app/(auth)/forgot-password/sent';
+import ResetNewPasswordRoute from '@/app/(auth)/forgot-password/new-password';
+import ResetLinkRoute from '@/app/(auth)/reset/[token]';
+import InvitationCodeRoute from '@/app/(auth)/invitation/index';
+import InvitationPasswordRoute from '@/app/(auth)/invitation/password';
+import InvitationLinkRoute from '@/app/(auth)/invite/[token]';
+import * as NativeIntent from '@/app/+native-intent';
 import AvailabilityRoute from '@/app/(onboarding)/availability';
 import DataRoute from '@/app/(onboarding)/data';
 import DoneRoute from '@/app/(onboarding)/done';
 import IntroRoute from '@/app/(onboarding)/intro';
 import LocationRoute from '@/app/(onboarding)/location';
 import NameRoute from '@/app/(onboarding)/name';
+import StartPlayingRoute from '@/app/(onboarding)/start-playing';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
 import OptInRoute from '@/app/(onboarding)/opt-in';
 import PhotosRoute from '@/app/(onboarding)/photos';
@@ -67,13 +92,17 @@ import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { featureFlagKeys } from '@/features/feature_flags/types';
 import { NOW_COPY } from '@/features/shell/types';
-import { beginSession } from '@/shared/lib/auth';
+import { beginSession, setSessionStatus } from '@/shared/lib/auth';
 import {
+  ClipboardProvider,
   HapticsProvider,
+  ShareProvider,
   ImagePickingProvider,
   LiveStreamProvider,
   LocationProvider,
+  type ClipboardPort,
   type HapticsPort,
+  type SharePort,
   type ImagePickingPort,
   type LiveStreamPort,
   type LocationPort,
@@ -107,9 +136,17 @@ export const ONBOARDING_ROUTES = {
   // root: the deck is the whole tab (ADR-0169 §1).
   '(app)/(tabs)/index': NowRoute,
   '(app)/(tabs)/players': PlayersRoute,
-  '(app)/(tabs)/play/index': FindAGameRoute,
+  '(app)/(tabs)/play/index': PlayRoute,
   '(app)/(tabs)/play/builder': BuilderRoute,
   '(app)/(tabs)/play/pool': PoolRoute,
+  // Play › Groups' screens (#512–#514), under Play so the column stays lit and *back* is the list —
+  // and Friends, Members and Edit group over a group's page, so *back* is the page.
+  '(app)/(tabs)/play/new-group': NewGroupRoute,
+  '(app)/(tabs)/play/join': JoinGroupRoute,
+  '(app)/(tabs)/play/group/[groupId]/index': GroupRoute,
+  '(app)/(tabs)/play/group/[groupId]/friends': GroupFriendsRoute,
+  '(app)/(tabs)/play/group/[groupId]/members': GroupMembersRoute,
+  '(app)/(tabs)/play/group/[groupId]/edit': GroupEditRoute,
   // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
   // because the Now tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,
@@ -150,15 +187,43 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/tags': YouTagsRoute,
   '(app)/(tabs)/you/intro': YouIntroRoute,
   '(app)/(tabs)/you/name': YouNameRoute,
+  // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
+  // tabs: Groups at the root, You beside it, New official group and a group's page pushed over
+  // Groups, and a group's settings and Start playing's first step pushed over You (#517).
+  '(administrator)/_layout': AdministratorLayout,
+  '(administrator)/administrator/[clubId]/_layout': AdministratorAreaLayout,
+  '(administrator)/administrator/[clubId]/index': AdministratorGroupsRoute,
+  '(administrator)/administrator/[clubId]/you/index': AdministratorYouRoute,
+  '(administrator)/administrator/[clubId]/you/settings/[groupId]': GroupSettingsRoute,
+  '(administrator)/administrator/[clubId]/you/start-playing': AdministratorStartPlayingRoute,
+  '(administrator)/administrator/[clubId]/new-group': NewOfficialGroupRoute,
+  '(administrator)/administrator/[clubId]/group/[groupId]/index': OfficialGroupRoute,
+  '(administrator)/administrator/[clubId]/group/[groupId]/members': OfficialGroupMembersRoute,
   '(auth)/_layout': AuthLayout,
   '(auth)/sign-in': SignInRoute,
   // Sign-up is in the tree for the one walk that starts before a session exists: an account
   // created here is unnamed, and where the gate sends it next is the naming step's suite's.
   '(auth)/sign-up': SignUpRoute,
+  // *Forgot password?* (#515), under the same guard as sign-in: the email form, the neutral
+  // confirmation, the code, *Set a new password* by a claimed code — and by the email's link.
+  '(auth)/forgot-password/index': ForgotPasswordRoute,
+  '(auth)/forgot-password/sent': ResetSentRoute,
+  '(auth)/forgot-password/code': ResetCodeRoute,
+  '(auth)/forgot-password/new-password': ResetNewPasswordRoute,
+  '(auth)/reset/[token]': ResetLinkRoute,
+  // *Have an invitation code?* and *Set your password* (#518), under the same guard: the email and
+  // the code, the password by a claimed code — and by the invitation email's link.
+  '(auth)/invitation/index': InvitationCodeRoute,
+  '(auth)/invitation/password': InvitationPasswordRoute,
+  '(auth)/invite/[token]': InvitationLinkRoute,
   '(onboarding)/_layout': OnboardingLayout,
   // The naming step — the first screen after sign-up, and the gate's first destination
   // (ADR-0171 §3). Before welcome in the table as it is in the walk.
   '(onboarding)/name': NameRoute,
+  // *Start playing*'s first step, the Adult attestation (#517), at the gate's own address: where it
+  // sends an account that holds no profile at all. The You tab pushes the same screen inside its
+  // area.
+  '(onboarding)/start-playing': StartPlayingRoute,
   '(onboarding)/welcome': WelcomeRoute,
   '(onboarding)/sports': SportsRoute,
   '(onboarding)/question/[assessmentId]': QuestionRoute,
@@ -268,6 +333,40 @@ export function resetHaptics(): void {
 }
 
 /**
+ * The clipboard this tree reads, for the suite whose screen has a Paste — Join a group's (#512).
+ * Same shape and reasons as the motor above; unset is the real port over a native module jest
+ * has mocked, which answers nothing.
+ */
+let clipboard: ClipboardPort | undefined;
+
+/** Run the tree against this clipboard. Call before `launchSignedIn`. */
+export function stubClipboard(port: ClipboardPort): void {
+  clipboard = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetClipboard(): void {
+  clipboard = undefined;
+}
+
+/**
+ * The share sheet this tree opens, for the suite whose screen has a Share the link — a group
+ * page's (#513). Same shape and reasons as the clipboard above; unset is React Native's own
+ * module, which jest's setup has made answer nothing.
+ */
+let share: SharePort | undefined;
+
+/** Run the tree against this share sheet. Call before `launchSignedIn`. */
+export function stubShare(port: SharePort): void {
+  share = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetShare(): void {
+  share = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -303,8 +402,22 @@ function TestRoot() {
  * the device, for the reason `stubLiveStream` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withShare =
+    share === undefined ? children : <ShareProvider port={share}>{children}</ShareProvider>;
+
+  const withClipboard =
+    clipboard === undefined ? (
+      withShare
+    ) : (
+      <ClipboardProvider port={clipboard}>{withShare}</ClipboardProvider>
+    );
+
   const withHaptics =
-    haptics === undefined ? children : <HapticsProvider port={haptics}>{children}</HapticsProvider>;
+    haptics === undefined ? (
+      withClipboard
+    ) : (
+      <HapticsProvider port={haptics}>{withClipboard}</HapticsProvider>
+    );
 
   const withLive = (
     <LiveStreamProvider port={liveStream ?? SILENT_CHANNEL}>{withHaptics}</LiveStreamProvider>
@@ -790,6 +903,35 @@ export async function datafileSettled(transport: Transport, count = 1) {
   await waitFor(() => expect(queryClient.isFetching({ queryKey: featureFlagKeys.all })).toBe(0));
 }
 
+/**
+ * **Find a game, switched on** — for every suite about it, since
+ * [#512](https://github.com/Raketa02/Raketa/issues/512) turned `find_a_game`'s code default off and
+ * the Play tab opens on Groups without a datafile.
+ *
+ * Served, launched, and **waited on before anything presses Play**: a gate reads its flag once, when
+ * its screen mounts, so a Play press that raced the datafile would land on Groups — correctly, and
+ * not what the suite is about. Call it where the suite would have called `launchSignedIn`, after
+ * `stubGate` (which serves no datafile).
+ */
+export async function launchIntoFindAGame(transport: Transport, initialUrl = '/') {
+  stubDatafile(transport, datafileFor({ find_a_game: 'on' }));
+  await launchSignedIn(initialUrl);
+  await datafileSettled(transport);
+}
+
+export const MY_GROUPS_PATH = '/api/v1/groups';
+
+/**
+ * **The player's Groups list** — `GET /groups`, newest joined first. Defaulted to none by
+ * `stubGate`, because the Play tab opens on Groups since #512 and every suite that presses Play
+ * reads it; a suite about the list calls this again to serve one.
+ */
+export function stubMyGroups(transport: Transport, groups: readonly Wire['MyGroupSchema'][] = []) {
+  transport.on('GET', MY_GROUPS_PATH, () =>
+    json<Wire['MyGroupsResponse']>({ groups: [...groups] }),
+  );
+}
+
 export const OWN_RECORD_PATH = '/api/v1/players/me/record';
 
 /** What the signed-in player is called — on `GET /users/me` and on their own record alike. */
@@ -860,6 +1002,11 @@ export interface GateStub {
    */
   readonly id?: string;
   /**
+   * The address the account signs in with. Defaulted for `id`'s reason; the suites about an
+   * invitation's link state it, because whose invitation a link is is decided by it (#520).
+   */
+  readonly email?: string;
+  /**
    * The runs this player left unfinished, in the order the server sends them — sport
    * registry order. A single run is the ordinary case; two is what proves which one the
    * gate picks.
@@ -886,18 +1033,38 @@ export interface GateStub {
    */
   readonly name?: string | null;
   /**
+   * The handle — **with the name by default**, since the two are one act: an account with no name
+   * has no handle, and a named one has `ada`. An account an Invitation opened is the one shape that
+   * holds a name and no handle (ADR-0185 §4), so its suites pass `null`.
+   */
+  readonly nickname?: string | null;
+  /**
    * Whether the account carries the **tester mark** (ADR-0180 §9) — the one thing on this read the
    * flag seam sends on. Defaults to **false**, which is every account until an admin marks it.
    */
   readonly isTester?: boolean;
+  /**
+   * **Which profiles the account holds** — the gate's first read (ADR-0185 §3). Defaults to a
+   * player's: every sign-up acts as a player and administers nothing. A suite about the
+   * administrator area passes `ADMINISTRATOR_ONLY` or its own.
+   */
+  readonly profiles?: Wire['AccountProfilesSchema'];
 }
+
+/** What every signed-up account holds: it acts as a player, runs no club's groups, and is invited to none. */
+export const PLAYER_ONLY: Wire['AccountProfilesSchema'] = {
+  acts_as_player: true,
+  administers: [],
+  pending_invitations: [],
+  handovers: [],
+};
 
 /**
  * The signed-in player, as `GET /users/me` answers. Identity is filler; the flag is not, and
  * neither is the name: it is what every screen says about her, and its absence is where a
  * launch is sent first.
  */
-export const GATE_USER: Wire['UserResponse'] = {
+export const GATE_USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
   name: GATE_USER_NAME,
@@ -908,6 +1075,8 @@ export const GATE_USER: Wire['UserResponse'] = {
   is_tester: false,
   has_player_profile: false,
   created_at: '2026-08-13T10:00:00Z',
+  adult_attested: true,
+  profiles: PLAYER_ONLY,
 };
 
 /**
@@ -927,6 +1096,9 @@ export const GATE_USER: Wire['UserResponse'] = {
  * All three are defaulted to nothing, and a suite with any of them calls the stub again afterwards
  * to replace it.
  *
+ * **So is the Groups list** ([#512](https://github.com/Raketa02/Raketa/issues/512)): the Play tab
+ * opens on Groups with the code defaults, so a suite that presses Play for any reason reads it.
+ *
  * **So is the feature-flag datafile**, and for the same reason: the signed-in app fetches it the
  * moment it opens, whatever the suite is about (ADR-0180 §6). It is defaulted to **none**, which
  * is every flag at its code default — the app as it ships. A suite about a flag calls
@@ -945,8 +1117,11 @@ export function stubGate(
     runs = [],
     hasPlayerProfile = false,
     id = GATE_USER.id,
+    email = GATE_USER.email,
     name = GATE_USER.name ?? null,
+    nickname = name === null ? null : (GATE_USER.nickname ?? null),
     isTester = false,
+    profiles = PLAYER_ONLY,
   }: GateStub = {},
 ) {
   transport.on('GET', '/api/v1/ratings', () =>
@@ -954,14 +1129,16 @@ export function stubGate(
   );
 
   transport.on('GET', '/api/v1/users/me', () =>
-    json<Wire['UserResponse']>({
+    json<Wire['MeResponse']>({
       ...GATE_USER,
       id,
+      email,
       name,
-      // The two are one act: an account with no name has no handle either.
-      nickname: name === null ? null : GATE_USER.nickname,
+      nickname,
       has_player_profile: hasPlayerProfile,
       is_tester: isTester,
+      adult_attested: profiles.acts_as_player,
+      profiles,
     }),
   );
 
@@ -972,6 +1149,7 @@ export function stubGate(
   stubConversations(transport);
   stubSportsmanship(transport);
   stubDatafile(transport);
+  stubMyGroups(transport);
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */
@@ -996,4 +1174,39 @@ export function runInProgress(
 export async function launchSignedIn(initialUrl = '/') {
   await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
   renderRouter(ONBOARDING_ROUTES, { initialUrl });
+}
+
+/**
+ * **The tree with the app's link reader in front of it** (#520) — `src/app/+native-intent`, which
+ * expo-router hands every address the operating system opens the app with before it routes one.
+ *
+ * Its own table rather than an entry in `ONBOARDING_ROUTES`, because the reader is the gate a link
+ * passes and nothing else: every other suite's `initialUrl` is a route the suite put the player on,
+ * and the reader would — rightly — refuse every one of them that is not one of the three links.
+ */
+export const ROUTES_WITH_LINKS = { ...ONBOARDING_ROUTES, '+native-intent': NativeIntent };
+
+/**
+ * **A cold start by a link.** The address is what expo-router hands the reader for a launch — the
+ * harness takes a path, so `/join/<code>` stands for `raketa://join/<code>`; the scheme's own
+ * spelling is walked by `openLink` and read in `incomingLinkUrl.test.ts`.
+ */
+export async function launchByLink(path: string, { signedIn }: { readonly signedIn: boolean }) {
+  if (signedIn) await beginSession({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+  else setSessionStatus('unauthenticated');
+  renderRouter(ROUTES_WITH_LINKS, { initialUrl: path });
+}
+
+/**
+ * **A link opened while the app is running** — what expo-router's listener does with one: the
+ * reader's answer is navigated to, and an empty answer is no navigation at all. The full address,
+ * scheme and all, because that is what the operating system hands a running app.
+ */
+export function openLink(url: string): void {
+  act(() => {
+    const to = NativeIntent.redirectSystemPath({ path: url, initial: false });
+    // The reader answers with one of its own screens' paths, or nothing; the router's typed hrefs
+    // cannot know which path a string is.
+    if (to !== '') router.navigate(to as Href);
+  });
 }

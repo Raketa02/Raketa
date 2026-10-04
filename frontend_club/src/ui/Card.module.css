@@ -1,0 +1,16 @@
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border: var(--size-hairline) solid var(--colour-line);
+  border-radius: var(--radius-card);
+  background: var(--colour-surface);
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: var(--space-5) var(--space-4);
+  }
+}

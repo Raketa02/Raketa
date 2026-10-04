@@ -64,9 +64,10 @@ as that screen's alone; it is not a dark mode and not a licence for a second dar
 - **Colour is picked by meaning:** coral = the one accent · mint = settled · amber =
   reversible, not yet wrong · red = ended badly · info = explanation, not status.
 - **§1.2's coral list is closed at six** — primary button, active tab, level mark, onboarding
-  progress fill, hot tag, Chats badge. A sixth-and-a-half is not a taste call: pick the meaning
-  and you will land on `amber` or on `ink`, which is where the row stripe and the rail's
-  current dot both landed.
+  progress fill, hot tag, Chats badge (the same mark at a segment's size counts an Owner's
+  requests on a group's Info tab — one meaning, two surfaces). A sixth-and-a-half is not a
+  taste call: pick the meaning and you will land on `amber` or on `ink`, which is where the
+  row stripe and the rail's current dot both landed.
 - **A `Tag`'s dot is the sport's and only the sport's — except on the Now card, where it is the
   stage's** and the sport is the word beside it (`STAGE_DOT`, 6.4 as amended by #413). Under
   both: a dot is always accompanied by its name in text, and one surface gives the token one
@@ -78,8 +79,10 @@ as that screen's alone; it is not a dark mode and not a licence for a second dar
   is invisible.
 - **Every number is mono and tabular** — that is what stops a row reflowing when a level goes
   from 2,71 to 2,80. Polish formatting: `38,00 zł`, `2,71`, `65%`, `18:30`.
-- **Cards never cast a shadow.** Five shadows exist; all are for things that float, and
-  the deck card is one of them because it is not a card. The ⚡Play disc's is the only
+- **Cards never cast a shadow — with one named exception.** Six shadows exist; five are for
+  things that float, and the deck card is one of them because it is not a card. The sixth is
+  the club result both group searches draw (`ClubCard`, `shadow.clubResult`, 4.3,
+  2026-09-27), and it is not a licence for cards in general. The ⚡Play disc's is the only
   tinted one, and only on iOS — Android's `elevation` cannot be coloured.
 - **Band `ink` for text and rails**, `tint`/`deep` for the bar only. A printed level range
   always comes from the model's `bandLo`/`bandHi`, never the bar's drawing values.

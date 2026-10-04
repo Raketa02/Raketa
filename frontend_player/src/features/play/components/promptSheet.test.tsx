@@ -19,7 +19,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { courtSeatCount } from '@/shared/ui';
 import {
-  launchSignedIn,
+  launchIntoFindAGame,
   stubGate,
   stubProfileOptions,
   stubProfileSurface,
@@ -139,7 +139,7 @@ async function pressSearch(ran: number) {
 
 /** Sign in and stand on Find a game with the profile read landed. */
 async function openPlay() {
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
   await screen.findByLabelText('Tuesday evening');

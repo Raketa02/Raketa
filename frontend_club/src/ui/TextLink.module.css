@@ -1,0 +1,11 @@
+.link {
+  color: var(--colour-ink);
+  font-weight: var(--weight-bold);
+  text-decoration: underline;
+  text-decoration-color: var(--colour-line);
+  text-underline-offset: var(--space-1);
+}
+
+.link:hover {
+  text-decoration-color: var(--colour-coral);
+}

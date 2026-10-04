@@ -41,6 +41,8 @@
  */
 
 import type {
+  ClipboardPort,
+  SharePort,
   FollowLive,
   HapticsPort,
   ImagePickingPort,
@@ -352,5 +354,52 @@ export function pickedImage(overrides: Partial<PickedImage> = {}): PickedImage {
     mimeType: 'image/jpeg',
     fileName: 'one.jpg',
     ...overrides,
+  };
+}
+
+/**
+ * **A clipboard holding what the suite put on it** — Join a group's Paste chip reads it, and a
+ * group page's Copy link writes it. Neither rejects, as the device's port never does: nothing on
+ * it is `''`, and a write lands unless the suite said the OS refuses it.
+ */
+export interface FakeClipboard extends ClipboardPort {
+  /** What is on the clipboard now. Assign to copy something between two presses. */
+  text: string;
+  /** Whether a write lands. Set `false` to be the phone that refused one. */
+  writable: boolean;
+}
+
+export function fakeClipboard(text = ''): FakeClipboard {
+  const clipboard: FakeClipboard = {
+    text,
+    writable: true,
+    readText: () => Promise.resolve(clipboard.text),
+    writeText: (written) => {
+      if (clipboard.writable) clipboard.text = written;
+      return Promise.resolve(clipboard.writable);
+    },
+  };
+  return clipboard;
+}
+
+/**
+ * **A share sheet that records what it was handed** — a group page's Share the link opens it, and
+ * an official group's Share link. Every open is kept, in order, and settles at once as though the
+ * person closed it: the device's port never rejects, and a dismissal is not something the page
+ * answers.
+ */
+export interface FakeShare extends SharePort {
+  /** Every text the sheet was opened with, oldest first. */
+  readonly shared: string[];
+}
+
+export function fakeShare(): FakeShare {
+  const shared: string[] = [];
+  return {
+    shared,
+    shareText: (message) => {
+      shared.push(message);
+      return Promise.resolve();
+    },
   };
 }

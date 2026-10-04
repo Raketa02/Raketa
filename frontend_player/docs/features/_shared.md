@@ -212,3 +212,66 @@ one loop**, so the guard that stops a malformed URL being blamed on the environm
 written for one and forgotten for the other. `platform/appBuild.ts` is the platform module's one
 plain _reading_ — `platform` (`ios` / `android`) and the app's own version — the two device facts
 a flag's rules may target; each is absent rather than guessed when the build cannot say.
+
+**The phone-preferences store, the clipboard port, and three primitives that grew a form each**
+([#512](https://github.com/Raketa02/Raketa/issues/512)). `shared/lib/preferences` is the second
+and last AsyncStorage importer (ADR-0188): **one key per account per value**, a read that fails is
+_nothing saved_, and `forgetPhonePreferences` is step 4 of `endSession`, awaited after the status
+change because it waits on no query — whichever way the session ended. It judges no value; the
+owning feature turns a stale one into its default, and `phonePreferenceKeys` spells the Query key
+every owner holds its value under, so the three owners share one root. `shared/lib/platform/clipboard.ts` is the fifth
+port, **read-only and one verb wide** at #512 (`readText`, never rejecting — #513 gave it a second), for Join a group's **Paste**;
+`fakeClipboard()` and `stubClipboard` drive it. Both fences are lint rules proved by
+`pnpm test:boundaries`. The primitives: `Segment` gained **`prominent`** (the tab's own view
+switch, 6.3), `TextField` gained a **`trailing`** slot, a **`recessed`** ground for a field inside
+a card and a **`focusRing`** of `ink` or `coral` (6.13), and `ScreenHeader` gained **`compact`** —
+an `h2` title and a sub-line each ending in an ellipsis, for a header that names a thing rather
+than a screen (10.3). `theme.ts` gained `MONOGRAM_HUES` beside `POSTER_HUES` and
+`size.monogram` (7.20). All recorded in design-system Part 16.
+
+**The sixth port is the share sheet, the clipboard writes, and a group page's pieces**
+([#513](https://github.com/Raketa02/Raketa/issues/513)). `shared/lib/platform/share.ts` wraps
+**React Native's own `Share`** — one verb, `shareText`, never rejecting, because closing the sheet
+is an answer and a sheet that did not open has nothing to say — behind `ShareProvider`/`useShare`,
+with `fakeShare()` recording every text it was handed and `stubShare` wiring it into the router
+harness. It is fenced like the native ports, but as a **path ban with `importNames`**: `Share` is
+one name out of a module every screen imports, so the ban is that name and every other one stays
+free; the port file subtracts the one path ban it owns, the two AsyncStorage files keep it, and
+`pnpm test:boundaries` drives a named import at all of them. **The clipboard gained `writeText`**,
+answering whether the OS took the text — so a screen confirms only a copy that happened — and
+`fakeClipboard()` gained `writable` to be the phone that refuses. **The store's second value,
+`lastSport`**, is groups', judged there against the ratings on every read. The primitives:
+`PlusOnMedia` in `Tick.tsx`, the plus in `surface` for a court's ground — a third bed for one
+drawing — and `theme.ts` gained `size.groupPage` (the Games card's seat, 34, and the fast
+filter's bar inset, 9) and **`motion.unfold`**, 280 ms, the eighth motion (7.21). All recorded in
+design-system Part 16.
+
+**The share port opens WhatsApp** ([#516](https://github.com/Raketa02/Raketa/issues/516)).
+`SharePort` gains `openWhatsApp(message)` — `Linking.openURL('whatsapp://send?text=…')` — which
+answers **whether WhatsApp took the message**: `openURL` rejects on iOS when no app claims the scheme
+and on Android when no activity resolves it, so opening it is the test of whether it is installed and
+no native setting is needed (`canOpenURL` is what would need `LSApplicationQueriesSchemes` and
+`<queries>`). It never rejects. **The fallback to the sheet is the caller's**, so a suite can see it:
+`fakeShare()` has `whatsAppInstalled` and records `whatsApped` beside `shared`. Still one file, still
+the only importer of `Share`; no new port. **Gone since #529**: the official group's door became
+_Share link_, the sheet, so `openWhatsApp`, `whatsAppUrl` and the fake's two WhatsApp fields went
+with their only caller; the port is `shareText` alone again.
+
+**`theme.ts` gained `size.arrivedRing`** (#529): the administrator area's players card draws how much
+of an official group has arrived as a ring on `surface` — 48 across, a 4pt stroke, a `line2` track and
+a `mint` arc round the percentage. The drawing stays the administrator feature's (`ArrivedRing`), one
+caller; the tokens are here because every value comes from the theme. Recorded in design-system
+Part 16.
+
+**`shared/ui` has a second tab bar, the administrator area's** (`AdministratorTabBar`, club 17): **Groups
+· You**, a second fixed inventory beside the five, drawn from the same columns — Feather, one weight,
+selection in tone alone — with no disc and no badge. `TabBarTab` and the columns are generic over the
+key so the two inventories share one drawing. Recorded in design-system Part 16.
+
+**The phone keeps its third and last value, and a sheet can put a mark over its title**
+([#518](https://github.com/Raketa02/Raketa/issues/518)). `PhonePreference` gains `lastProfile` — the
+profile an account with two wore last, owned by `auth` ([`auth.md`](auth.md)) — and ADR-0188 §2's table
+is full: a fourth value is a new record. `BottomSheet` takes an optional **`mark`**: the close alone on
+the top row, then the mark and the title under it, centred, the title still the heading focus lands on
+(9.1 as amended, for the invitation sheet's club tile). `theme.size.switcher` holds the switcher chip's
+drawn ⇅ — a 16pt box and a 1,5pt stroke — because Feather ships no up-and-down pair.

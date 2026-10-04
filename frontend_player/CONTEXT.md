@@ -124,6 +124,14 @@ review comment and a test description all use the same word.
   per-player question with a per-player answer, which is the distinction
   [ADR-0090](../docs/adr/0090-onboarding-per-player-checkpoint.md) draws and the shared
   glossary now carries.
+- **Profile (the switcher's)** — which hat the app is wearing for an account: **Player**, or the
+  **Administrator** of one club ([ADR-0185](../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+  §1). UI vocabulary, never a domain term — a _Player profile_ is an aggregate, and this is not it.
+  In code it is `ProfileChoice` (auth's) and the switcher's rows `ProfileOption`. The **last
+  profile** is the one the phone remembers per account and the entry gate opens in
+  ([ADR-0188](../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)
+  §2). Switching is client state, never a token. _Avoid_: "role" — `authority` on the wire is a
+  different thing — and "account type".
 - **Datafile** — the JSON a **Feature flag** is decided from: one per environment, built by the
   flags repo and fetched from `EXPO_PUBLIC_FEATURES_URL`. **Fresh** is this session's, **saved**
   is the last readable one kept in AsyncStorage, and the **code default** is what a feature says
@@ -135,6 +143,15 @@ review comment and a test description all use the same word.
   gate in this sense — those are routing on who the player is, not on a flag.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
+- **Incoming link** — an address the operating system opens the app with, read by
+  `+native-intent` before anything is routed. Only three are links — `join/<code>` (a **Group
+  link**), `invite/<token>` and `reset/<token>` — by the app's scheme or the **link domain**
+  (`EXPO_PUBLIC_LINK_DOMAIN`, unset today) — plus the bare `raketa://`, the existing-account
+  invitation email's button; anything else is ignored (#520). _Avoid_: deep link
+  for these three — any path is a deep link, and these are the only ones the app answers.
+- **Held link** — an incoming link not answered yet, kept in memory (one at a time) through
+  sign-in and onboarding until a place that can answer it is reached: Join a group, the
+  invitation sheet, or a sheet asking to sign out first. Dies with the process.
 - **The shell** — the five tabs a signed-in player is inside, and the **one stack** under
   them. `Now · Players · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
   `TabShell`. Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it,
@@ -371,6 +388,12 @@ profile editor that later edits the same values.
   screen read", which names one of two callers rather than the facts.
 
 ### The Play tab
+
+- **Play segment** — _Groups_ or _Explore_, the two pages the Play tab opens on while
+  `find_a_game` is off (#512): Groups is the player's groups, Explore the empty screen the rebuilt
+  Find a game grows in. The shell's, remembered per account by the phone-preferences store, and
+  **Groups** whenever nothing — or nothing this build recognises — was saved. _Avoid_: "tab" —
+  Play is the tab and these are its segments.
 
 Nine client-only concepts, one kit of parts, and one gate that is **not** client-only. The
 nine do not exist on the backend, and the first four are the shape
@@ -1225,14 +1248,22 @@ it.
 
 - **Platform port** — a narrow TypeScript interface in `shared/lib/platform/` over one
   capability the app cannot run in a test, with exactly two implementations: the real one that
-  imports the module, and a fake in `src/test-support/platform.ts`. Three exist —
-  `LocationPort`, `ImagePickingPort` and `LiveStreamPort` — and each is **the only importer of
-  its module**, the way `shared/lib/auth` is the only importer of the keychain. The reason is
+  imports the module, and a fake in `src/test-support/platform.ts`. Five exist —
+  `LocationPort`, `ImagePickingPort`, `LiveStreamPort`, `HapticsPort` and `ClipboardPort` (#512,
+  read-only, for Join a group's Paste) — and each is **the only importer of its module**, the way `shared/lib/auth` is the only importer of the keychain. The reason is
   not tidiness: a native module has no JS underneath it, so a feature that imports one is a
   feature no test can drive — and **the third one is a socket rather than a native module**,
   here on that argument alone, which is why _platform_ and not _native_ is the word. _Avoid_:
   "device module", "native service" — a module holding several capabilities is the utils bucket
   this app bans, and a capability is one file.
+- **Phone-preferences store** — `shared/lib/preferences`, the **choices a player made that the
+  phone keeps for them**: one key per account per value, the second and last AsyncStorage
+  importer, and **emptied at every sign-out** as a step of `endSession`
+  ([ADR-0188](../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
+  Three values at most — the **Play segment** since #512, the last sport and the last profile to
+  come — and a stale or unreadable one is its default, judged by the feature that owns it.
+  _Avoid_: "settings", "local storage", "cache" — it holds a choice, never a copy of the server,
+  and never a credential.
 - **Permission state** — the four answers a platform port gives about a capability:
   `undetermined | granted | denied | blocked`. **Denied and blocked are different
   refusals** — denied can be asked again at the moment the player understands why; blocked

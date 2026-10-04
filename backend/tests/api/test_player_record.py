@@ -57,6 +57,8 @@ from app.modules.rating.infrastructure.event_sourced_skill_rating_repository imp
 from app.shared.ids import new_uuid
 from tests.unit.candidate_index_fixtures import append
 from tests.api import matchmaking_world as world
+from tests.api.test_groups import a_club, a_group
+from tests.api.test_groups import join as join_group
 
 
 @pytest.fixture
@@ -449,6 +451,94 @@ async def test_the_person_who_was_invited_can_open_the_organiser_s_record(
     assert response.status_code == 200, response.text
     assert response.json()["name"] == "searcher"
     assert response.json()["nickname"] == "searcher"
+
+
+async def two_strangers_in_one_group(
+    client, session_factory, candidate_source, searcher
+) -> tuple[dict, dict, dict]:
+    """The searcher and a candidate nobody has shown them, both in the searcher's
+    *Anyone* group — the pair a group's Members lists to each other (#514)."""
+
+    subject_id, subject_token = await world.a_signed_in_candidate(
+        client, session_factory, "subject", mu=searcher["mu"]
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    owner = {"id": searcher["id"], "headers": world.auth(searcher["token"])}
+    member = {"id": subject_id, "headers": world.auth(subject_token)}
+    group = await a_group(client, owner, await a_club(client))
+    joined = await join_group(client, member, group)
+    assert joined.status_code == 200, joined.text
+    return group, {**owner, "token": searcher["token"]}, {
+        **member,
+        "token": subject_token,
+    }
+
+
+async def test_a_group_you_are_both_in_opens_the_record_both_ways(
+    client, session_factory, candidate_source, searcher
+):
+    """**The strand Members promises** (#529): *Press and hold anyone for the
+    full record* is read by a member who never searched, about people no search
+    of theirs returned — the group is what introduced them."""
+
+    subject_id, subject_token = await world.a_signed_in_candidate(
+        client, session_factory, "subject", mu=searcher["mu"]
+    )
+    await world.fold_the_log(session_factory, candidate_source)
+    assert (await record_of(client, searcher["token"], subject_id)).status_code == 404
+
+    owner = {"id": searcher["id"], "headers": world.auth(searcher["token"])}
+    group = await a_group(client, owner, await a_club(client))
+    joined = await join_group(
+        client, {"id": subject_id, "headers": world.auth(subject_token)}, group
+    )
+    assert joined.status_code == 200, joined.text
+
+    theirs = await record_of(client, searcher["token"], subject_id)
+    mine = await record_of(client, subject_token, searcher["id"])
+
+    assert theirs.status_code == 200, theirs.text
+    assert theirs.json()["name"] == "subject"
+    assert mine.status_code == 200, mine.text
+    assert mine.json()["name"] == "searcher"
+
+
+async def test_leaving_the_group_closes_the_record_it_opened(
+    client, session_factory, candidate_source, searcher
+):
+    """**Membership as it stands, not as it was** — Members lists who is in the
+    group now, so the strand is the group now: unlike a game, a group left is no
+    longer one the pair are in."""
+
+    group, owner, member = await two_strangers_in_one_group(
+        client, session_factory, candidate_source, searcher
+    )
+    assert (await record_of(client, owner["token"], member["id"])).status_code == 200
+
+    left = await client.delete(
+        f"/api/v1/groups/{group['id']}/membership", headers=member["headers"]
+    )
+
+    assert left.status_code == 204, left.text
+    assert (await record_of(client, owner["token"], member["id"])).status_code == 404
+    assert (await record_of(client, member["token"], owner["id"])).status_code == 404
+
+
+async def test_a_block_between_two_members_closes_the_record_the_group_opened(
+    client, session_factory, candidate_source, searcher
+):
+    """The gates stay live whatever the strand: Members leaves a blocked pair out
+    of each other's list, and the record refuses them either way round."""
+
+    _, owner, member = await two_strangers_in_one_group(
+        client, session_factory, candidate_source, searcher
+    )
+
+    blocked = await world.block_between(client, member["token"], owner["id"])
+
+    assert blocked.status_code == 204, blocked.text
+    assert (await record_of(client, owner["token"], member["id"])).status_code == 404
+    assert (await record_of(client, member["token"], owner["id"])).status_code == 404
 
 
 # ---------------------------------------------------------------------------

@@ -64,6 +64,14 @@
  * refused record is somebody the reader may not act on, and the buttons would say otherwise.
  * The next surface that wants a foot has to argue for one.
  *
+ * ## The account is folded under the blocks
+ *
+ * The three blocks — Player reliability, Last 5, Counted — are the summary; the counted card and
+ * the tags are its account, and they sit under one row, a centred chevron spoken *Full record*,
+ * shut each time the sheet opens (`RecordDetails`). A face is tapped to ask *who is this*, which
+ * the header and the blocks answer; the reader who wants *why that number* asks for it. The pairing row and the foot stay
+ * outside the fold — they are things to do, not things to read. No fold is drawn over nothing.
+ *
  * ## Six regions, six elements
  *
  * There is no interactive element inside it other than the pairing row — and the foot, where a
@@ -88,11 +96,13 @@ import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { PlayerRecord, RecordSubject } from '../domain/playerRecord';
+import { recordCardDrawn } from '../domain/recordCard';
 import { recordTagRow } from '../domain/tagRow';
 import { usePlayerRecord } from '../hooks/usePlayerRecord';
 
 import { RecordBlocks } from './RecordBlocks';
 import { RecordCard } from './RecordCard';
+import { RecordDetails } from './RecordDetails';
 import { RecordHeader } from './RecordHeader';
 import { SkillCard } from './SkillCard';
 import {
@@ -265,6 +275,11 @@ function Filled({
   // engine's and is kept; every other silence draws the tags and says nothing.
   const tags = recordTagRow(record.socialTags, tagOverlap);
   const tagsLabel = socialTagsLabel(tags);
+  const cardDrawn = recordCardDrawn({
+    ...(record.reliability === undefined ? {} : { strands: record.reliability.strands }),
+    ...(record.variety === undefined ? {} : { variety: record.variety }),
+    ...(record.opinion === undefined ? {} : { opinion: record.opinion }),
+  });
 
   return (
     <>
@@ -293,21 +308,28 @@ function Filled({
         {...(record.skill === undefined ? {} : { countedGames: record.skill.countedGames })}
       />
 
-      {/* Three absences that do not move together, handed down separately and drawn as
-          whatever survives them: a newcomer's record is a short sheet rather than an empty
-          card. What other players said is a row on it now rather than a block under it — the
-          card's heading promised *counted by the system, not written by people*, and the
-          heading is what went. */}
-      <RecordCard
-        {...(record.reliability === undefined ? {} : { reliability: record.reliability })}
-        {...(record.variety === undefined ? {} : { variety: record.variety })}
-        {...(record.opinion === undefined ? {} : { opinion: record.opinion })}
-      />
+      {/* Everything under the blocks is folded under *Full record* (`RecordDetails`): the
+          blocks are the summary, and this is its account. No fold over nothing — a newcomer
+          with neither a card nor a tag gets a short sheet, not a row that opens onto empty. */}
+      {!cardDrawn && tagsLabel === '' ? null : (
+        <RecordDetails>
+          {/* Three absences that do not move together, handed down separately and drawn as
+              whatever survives them: a newcomer's record is a short sheet rather than an empty
+              card. What other players said is a row on it now rather than a block under it —
+              the card's heading promised *counted by the system, not written by people*, and
+              the heading is what went. */}
+          <RecordCard
+            {...(record.reliability === undefined ? {} : { reliability: record.reliability })}
+            {...(record.variety === undefined ? {} : { variety: record.variety })}
+            {...(record.opinion === undefined ? {} : { opinion: record.opinion })}
+          />
 
-      {tagsLabel === '' ? null : (
-        <View accessible accessibilityLabel={tagsLabel}>
-          <SocialTagRow row={tags} />
-        </View>
+          {tagsLabel === '' ? null : (
+            <View accessible accessibilityLabel={tagsLabel}>
+              <SocialTagRow row={tags} />
+            </View>
+          )}
+        </RecordDetails>
       )}
 
       {/* The foot, last, where the surface filled it. A sheet reads statement first and answer

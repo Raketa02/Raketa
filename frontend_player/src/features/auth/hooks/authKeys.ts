@@ -10,4 +10,6 @@
 export const authKeys = {
   all: ['auth'] as const,
   currentUser: () => [...authKeys.all, 'current-user'] as const,
+  /** What an invitation's link opens — held for the screen it is read on, and gone with it. */
+  invitationLink: (token: string) => [...authKeys.all, 'invitation-link', token] as const,
 } as const;

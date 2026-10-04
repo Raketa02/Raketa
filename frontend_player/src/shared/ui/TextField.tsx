@@ -67,7 +67,7 @@
  * field that wants autofill passes both.
  */
 
-import { forwardRef, useCallback, useRef, useState } from 'react';
+import { forwardRef, useCallback, useRef, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { theme } from './theme';
@@ -118,6 +118,20 @@ export interface TextFieldProps extends Omit<
    * said why — see the module note.
    */
   readonly disabled?: boolean;
+  /**
+   * **A control inside the box, after the value** — Join a group's *Paste* chip and the **✕**
+   * that replaces it while typing (play 23, 26; [#512](https://github.com/Raketa02/Raketa/issues/512)).
+   * A slot rather than a second `reveal`: what goes in it is the screen's, and the field only
+   * owns that it sits inside the border it belongs to. The caller names it — a slot is not a
+   * way to put an unnamed control on screen.
+   */
+  readonly trailing?: ReactNode;
+  /**
+   * **The field inside a card**, on `paper` rather than `surface` — the group forms' Name card
+   * (play 5), where a white box on a white card would have only its border to be seen by.
+   * The recess is the page's own ground, the step `paper2` takes for a header on paper.
+   */
+  readonly recessed?: boolean;
 }
 
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
@@ -128,6 +142,8 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
     reveal = false,
     growTo = 1,
     disabled = false,
+    trailing,
+    recessed = false,
     ...inputProps
   },
   ref,
@@ -188,6 +204,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       <View
         style={[
           s.box,
+          recessed ? s.boxRecessed : undefined,
           grows ? s.boxGrown : undefined,
           focused && s.boxFocused,
           error !== undefined && s.boxError,
@@ -247,6 +264,8 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
             <Text style={s.revealWord}>{revealed ? 'Hide' : 'Show'}</Text>
           </Pressable>
         ) : null}
+
+        {trailing === undefined ? null : <View style={s.trailing}>{trailing}</View>}
       </View>
 
       {error !== undefined ? (
@@ -287,6 +306,14 @@ const s = StyleSheet.create({
   },
   boxFocused: {
     borderColor: theme.color.ink,
+  },
+  boxRecessed: {
+    backgroundColor: theme.color.paper,
+  },
+  // Inside the box, at the trailing edge, with the row's own padding — the reveal word's place.
+  trailing: {
+    justifyContent: 'center',
+    paddingRight: theme.space.xs,
   },
   boxError: {
     borderColor: theme.color.red,

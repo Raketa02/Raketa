@@ -780,6 +780,88 @@ there; they are not repeated here.
   `LiveNudgeSchema` from `components.schemas`. It is a dated shim with a test that goes red if it
   stops matching. _Avoid_: hand-writing the SSE `itemSchema` in `openapi_extra` — that is the
   mirror of a backend response ADR-0006 exists to forbid.
+- **Mail queue** — the `mail_queue` table, and the **second queue** beside the transactional
+  outbox ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §2). A use
+  case that sends an email **renders it whole** — recipient, subject, plain text and HTML, link and
+  code — and writes it here through the `MailQueue` port **in its own transaction**, so the email
+  and the act that caused it commit together. It is the one place a secret sits, for as long as it
+  takes to send it. _Avoid_: putting an email on the outbox — the outbox carries domain events,
+  and a domain event may never carry a secret.
+- **Mail worker** — the `mail-delivery` `PeriodicJob` that drains the mail queue through
+  `DeliverQueuedMail`: one message per transaction, claimed `FOR UPDATE SKIP LOCKED`, sent through
+  the **Mailer** port, then **purged** — `text_body` and `html_body` cleared, the kind, recipient,
+  subject and delivery record kept. A refused send waits on `RETRY_AFTER` and is tried again; once
+  the retries are spent it is **given up on and purged all the same**. At least once. _Avoid_:
+  treating `MAIL_DELIVERY_ENABLED=false` as *not sending* — it is a table of live secrets nobody
+  receives.
+- **Mailer** — the port that sends one rendered message (`SmtpMailer`: the dev stack's Mailpit
+  locally, a relay once a domain exists). The API suite reads a `RecordingMailer` through the
+  `mailbox` fixture, after draining both queues. _Avoid_: calling a mailer from a use case.
+- **One-time credential** — a **link token** (256 random bits, in a URL) and an **8-character
+  code** issued together, in the `one_time_credentials` table and never in an event
+  ([ADR-0184](../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
+  §3–§4). **Both are stored hashed** — the token by SHA-256, the code by the password hasher,
+  because the code is the one small enough to guess — and **the code is derived from the token**
+  (`credential_code.py`), so a page holding the link can show its code without either being
+  stored readable. A purpose (`invitation`, `club_reset`, `forgot_password`) sets its lifetime and
+  an audience says which surface may use it. Its **standing** — valid, expired, used, locked — is
+  folded from the clock and the row, never stored. A newer credential for the same subject
+  **retires** the older ones of its purpose — or of every purpose the issuer names: an
+  Administrator's `invitation` and `club_reset` retire each other, because both open the same
+  page for the same person. One mechanism, `OneTimeCredentials`, for every flow that issues one;
+  `verify_code` and `grant_ticket` are its claim split in two, so the invitation's claim can
+  answer *sign in to accept* between them, to somebody holding the right code and nobody else.
+- **Claim ticket** — what a **right** code is exchanged for: a second random secret, stored hashed
+  on the credential, good for `TICKET_LIFETIME` and never past the credential's own deadline. The
+  new password is set with it, so guessing is bounded to the claim, which is the one place wrong
+  codes are counted. A claim is not a use; claiming again replaces the ticket.
+- **Credentials-changed instant** — `users.credentials_changed_at` and
+  `club_accounts.credentials_changed_at`: the `occurred_at` of the account's last
+  `PasswordChanged` / `ClubAccountPasswordChanged`, on the row each surface already reads per
+  request. An access token whose **issue instant** is strictly before it is refused
+  (`access_token_revoked`). The issue instant is the token's `iat_us` claim — **microseconds, on
+  the application's clock** — because a whole-second `iat` would refuse the very session a reset
+  opens, and an instant on another clock than the one that wrote the change would disagree with it
+  in every test that moves time. _Avoid_: comparing against `iat`.
+- **PasswordAccounts** — the auth port *Forgot password?* recovers through, answered **per
+  audience** as `SessionHolders` is: `UserPasswordAccounts` for the player app,
+  `ClubPasswordAccounts` for the club website. Each records the change on its own stream.
+- **Public surface** — `/api/v1/public`, emitted as `openapi.public.json`, which only the public
+  site generates from
+  ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+  §4–§5): what a group link, an invitation email or a reset email opens without the app. **No
+  route on it takes a session**, and its document carries no bearer scheme —
+  `tests/unit/test_public_surface.py` refuses one. It **discloses the least a page needs**: a
+  group's row and its club, never anybody in it; an invitation's name — whole, as the club typed
+  it (ADR-0171 §4) — club and standing, and its code while it is valid, recomputed from the link;
+  a reset's standing and nothing else. A link token travels in a body, a group's code in the
+  path. **Its two password routes sign nobody in**: `SetInvitationPasswordWithoutSigningIn` and
+  `SetNewPasswordWithoutSigningIn` call the very rules the app's `SetInvitationPassword` and
+  `SetNewPassword` call — one class per flow — and commit where those issue a token pair, so the
+  page and the app cannot come to two answers about one link. _Avoid_: a second copy of a
+  password rule for the web; a token in a public path; a first name cut out of a name.
+
+- **Invitation sender** — `InvitationSender`, where the invite, a resend and the club's reset all
+  end, so the three choose **which email** by one rule read off the account at the moment of
+  sending and recorded nowhere: an account that can sign in is asked to accept in the app, with
+  no credential; anybody else has a password to set and is sent a link and a code — the reset's
+  while one is pending, the invitation's otherwise
+  ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §3).
+- **Administrator guard** — `AdministratorAtClubDep`: the request dependency every administrator
+  operation declares, reading **an active administratorship of this account at the club its own
+  path names** on every request, and refusing with `403 not_an_administrator`
+  ([ADR-0184](../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md)
+  §7). It is also the only writer of **last used**, at most once an hour and in its own commit —
+  the one column on `administrators` no event carries.
+- **AccountHolders** — the Administrators context's demand on `users`: the account behind an
+  address, opening one by invitation, setting or clearing its password, and **acts as a player**
+  (attested, or holding a Player profile). Every write is `users`' own, on the User's stream
+  (`InvitationAccounts`); the adapter only translates.
+- **Attested player** — `AttestedPlayerDep`, what starting an assessment and committing a Player
+  profile take instead of the current user: the account **refused with `403
+  adult_attestation_missing` unless its stream holds the Adult attestation** (ADR-0185 §5). Read
+  off the stream, because the `users` row has no column for it — and a `User` read from the row
+  carries `adult_attested=None`, meaning *not read here*, never *not attested*.
 
 Add backend-specific technical terms here as they are resolved. Anything describing the
 *domain* belongs in the shared glossary instead.

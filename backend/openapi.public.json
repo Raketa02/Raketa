@@ -1,0 +1,639 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Raketa Public API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/public/groups/{code}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "The group a link opens",
+        "description": "`code` is what follows `/join/` in the group's link, read in any case. Its name, monogram, club and district, sport dots and member count \u2014 **and never who is in it**.",
+        "operationId": "group_by_link_api_v1_public_groups__code__get",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkedGroupResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 a link that leads nowhere: no group has that code, it could be no group's, or its group was deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/invitations/by-token": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "What an invitation's link opens, on the invitation page",
+        "description": "Read before anything is set, whatever the link's state: the name to greet, the club, whether the link still works \u2014 and its code while it does. The club's reset of an administrator opens this page too. Changes nothing.",
+        "operationId": "invitation_page_api_v1_public_invitations_by_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationByTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link never issued as an invitation: a password reset's link included.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/invitations/password": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Set your password here, by the invitation's link",
+        "description": "**The same rules and the same results as the app's *Set your password***: a new person's account is created \u2014 its Name the one the club typed, no nickname, no Adult attestation \u2014 or an account the club reset gets its password back, and either way the administrator is active and the link is spent. **Nobody is signed in**: the page then says to open Raketa and sign in with this email and password.",
+        "operationId": "set_password_on_the_invitation_page_api_v1_public_invitations_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationPagePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "`password_too_weak` (`details.field`: `password`) \u2014 8 to 128 characters with a letter and a digit. The link and the code still work.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link never issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The invitation can no longer be used: `credential_expired` (ask the club to send a new one), `credential_used`, `credential_locked` (five wrong codes) \u2014 or `sign_in_to_accept`: the email has an account now, which accepts from the app, signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/password-resets/by-token": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Whether a reset's link still works",
+        "description": "Read before anything is set, whatever the link's state \u2014 its state and nothing else. Changes nothing.",
+        "operationId": "reset_page_api_v1_public_password_resets_by_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResetPageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link never issued as a player's or an administrator's reset: a club's, or an invitation's, included.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/password-resets/password": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Set a new password by a reset's link, and sign out everywhere",
+        "description": "**The same rules and the same results as the app's *Forgot password?***: the password rule, the link spent, and **every session signed out** \u2014 every access token issued before this moment is refused (`access_token_revoked`) and every refresh token revoked. **Nobody is signed in**: the page then says to open Raketa and sign in with the new password.",
+        "operationId": "set_password_on_the_reset_page_api_v1_public_password_resets_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPagePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "`password_too_weak` (`details.field`: `password`) \u2014 8 to 128 characters with a letter and a digit. The link and the code still work.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`credential_not_found` \u2014 a link never issued as a player's or an administrator's reset: a club's, or an invitation's, included.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`credential_expired` (ask again), `credential_used` or `credential_locked` (five wrong codes).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "description": "The body of every error response, on both API surfaces.",
+        "properties": {
+          "code": {
+            "description": "Stable, machine-readable identifier for this exact failure. The only half of the envelope a client may branch on.",
+            "examples": [
+              "question_not_outstanding"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "Human-readable diagnostic. Never the copy shown to a user \u2014 that is the client's, chosen from the code.",
+            "title": "Message",
+            "type": "string"
+          },
+          "trace_id": {
+            "description": "This request's identifier, also returned on the X-Request-ID header. Ties a client-side failure to a server log without logging a payload.",
+            "title": "Trace Id",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Structured context for this code, when the code defines any.",
+            "title": "Details"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "trace_id"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InvitationByTokenRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "InvitationByTokenRequest",
+        "description": "The token off an invitation's link. In a body rather than a path, so it\nis in no access log."
+      },
+      "InvitationLinkState": {
+        "type": "string",
+        "enum": [
+          "valid",
+          "expired",
+          "used",
+          "locked"
+        ],
+        "title": "InvitationLinkState",
+        "description": "Whether an invitation's link still works \u2014 the credential's standing,\nunder a name of its own on the wire (``Standing`` is a challenge's)."
+      },
+      "InvitationPagePasswordRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Token"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "InvitationPagePasswordRequest",
+        "description": "*Set your password here*, on the invitation page: the link's `token`\nand the password \u2014 **never a ticket**, since the page holds the link and a\nclaimed code is the app's way in.\n\nThe password carries no bound here, exactly as in the app: 8 to 128\ncharacters with a letter and a digit, refused as `password_too_weak`\nnaming the field."
+      },
+      "InvitationPageResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The name the club typed, **whole** \u2014 *Marta W\u00f3jcik*, never a first name cut out of it (``docs/adr/0171`` \u00a74). It becomes the person's Name when they set a password."
+          },
+          "club_name": {
+            "type": "string",
+            "title": "Club Name"
+          },
+          "state": {
+            "$ref": "#/components/schemas/InvitationLinkState",
+            "description": "`valid`, `expired` (ask the club to send a new one), `used`, or `locked` \u2014 five wrong codes."
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code",
+            "description": "The 8-character code the email carries under its button, for *after you install, open Raketa and enter this code* \u2014 **only while `valid`**, `null` otherwise."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "club_name",
+          "state",
+          "code"
+        ],
+        "title": "InvitationPageResponse",
+        "description": "What the invitation page greets with \u2014 **the least it needs**\n(``docs/adr/0187`` \u00a75), and no email: the page locks no field to it."
+      },
+      "LinkedGroupClubSchema": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "district": {
+            "type": "string",
+            "title": "District"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "district"
+        ],
+        "title": "LinkedGroupClubSchema",
+        "description": "Where the group plays, as the page's line under its name."
+      },
+      "LinkedGroupResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "monogram": {
+            "$ref": "#/components/schemas/MonogramSchema"
+          },
+          "club": {
+            "$ref": "#/components/schemas/LinkedGroupClubSchema"
+          },
+          "sports": {
+            "items": {
+              "$ref": "#/components/schemas/Sport"
+            },
+            "type": "array",
+            "title": "Sports",
+            "description": "The sport dots, in the registry's order, by the rule every surface draws them by. **A player group's**: each sport **at least two** members hold a Skill rating in, read now. **An official group's**: the sports it declares."
+          },
+          "member_count": {
+            "type": "integer",
+            "title": "Member Count",
+            "description": "How many are in it \u2014 the same count the app draws."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "monogram",
+          "club",
+          "sports",
+          "member_count"
+        ],
+        "title": "LinkedGroupResponse",
+        "description": "A group as its link's page draws it for somebody who has not signed in \u2014\nand the preview a messenger draws from that page (``docs/adr/0187`` \u00a74).\n**The least that page needs, and nobody in the group**: no member, Owner or\nadministrator is named, counted apart or pictured (\u00a75)."
+      },
+      "MonogramSchema": {
+        "properties": {
+          "letters": {
+            "type": "string",
+            "title": "Letters",
+            "description": "The first character of each of the first two words, as typed, or the first two characters of a one-word name: *my raketa group* is `mr`, *Ogrody 33 Club* is `O3`. Draw it as it comes \u2014 never change its case."
+          },
+          "colour": {
+            "type": "integer",
+            "exclusiveMaximum": 8.0,
+            "minimum": 0.0,
+            "title": "Colour",
+            "description": "A colour **key** from 0 to 7, fixed for the group for ever \u2014 derived from its id, so a rename keeps it. Map it to your own palette; the backend never names a colour."
+          }
+        },
+        "type": "object",
+        "required": [
+          "letters",
+          "colour"
+        ],
+        "title": "MonogramSchema",
+        "description": "The group's tile, **cut by the backend** so every client draws the same\none (``docs/adr/0183`` \u00a75)."
+      },
+      "ResetLinkState": {
+        "type": "string",
+        "enum": [
+          "valid",
+          "expired",
+          "used",
+          "locked"
+        ],
+        "title": "ResetLinkState",
+        "description": "Whether a reset's link still works \u2014 the credential's standing, under a\nname of its own on the wire."
+      },
+      "ResetPagePasswordRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Token"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "password"
+        ],
+        "title": "ResetPagePasswordRequest",
+        "description": "*Set a new password* on the reset page: the link's `token` and the\npassword \u2014 **never a ticket**, since the page holds the link and a claimed\ncode is the app's way in.\n\nThe password carries no bound here, exactly as in the app: 8 to 128\ncharacters with a letter and a digit, refused as `password_too_weak`\nnaming the field."
+      },
+      "ResetPageRequest": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "ResetPageRequest",
+        "description": "The token off a reset's link. In a body rather than a path, so it is in\nno access log."
+      },
+      "ResetPageResponse": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/ResetLinkState",
+            "description": "`valid`; `expired` \u2014 after an hour, or once a newer email was asked for: ask again; `used`; or `locked` \u2014 five wrong codes."
+          }
+        },
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "title": "ResetPageResponse",
+        "description": "What the reset page reads off its link \u2014 **its state and nothing else**\n(``docs/adr/0187`` \u00a75): not whose it is, and not its code."
+      },
+      "Sport": {
+        "type": "string",
+        "enum": [
+          "PADEL",
+          "TENNIS",
+          "SQUASH",
+          "BADMINTON"
+        ],
+        "title": "Sport",
+        "description": "The four sports Raketa rates, as a closed enum."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

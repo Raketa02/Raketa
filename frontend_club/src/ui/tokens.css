@@ -1,0 +1,99 @@
+/*
+ * The club website's design tokens: the only file in this app that writes a colour or a size.
+ *
+ * Every colour was sampled from the club mocks (docs/specs/play-groups/mocks/club, 1–4 and
+ * 14–16). The sizes are the mocks' measured at one CSS pixel per mock pixel and rounded to the
+ * four-point grid. Nothing is shared with the player app, whose tokens are its own (ADR-0187 §6).
+ * A component reads these through var(); scripts/check-tokens.sh fails on a literal anywhere
+ * else.
+ */
+
+:root {
+  /* Colour */
+  --colour-paper: #f4f3ec; /* the page, and an input's fill */
+  --colour-surface: #ffffff; /* cards and the top bar */
+  --colour-line: #e1ded3; /* card, input and outlined-button borders */
+  --colour-rule: #eeece3; /* table rules, a bar's track, the top bar's underline */
+  --colour-selected: #ebeae0; /* the current page in the top bar */
+  --colour-ink: #13181b;
+  --colour-ink-deep: #15252c; /* labels, and the dark banner */
+  --colour-muted: #667379;
+  --colour-coral: #d34d2e; /* the square, and the one primary button */
+  --colour-coral-pressed: #b8401f;
+  --colour-on-coral: #ffffff;
+  --colour-disabled: #a1a8ab;
+  --colour-green: #308361;
+  --colour-green-soft: #e0f1e9;
+  --colour-amber: #87641a;
+  --colour-amber-soft: #f7efd6;
+  --colour-red: #9e3c2b;
+  --colour-red-soft: #f8e9e5;
+  --colour-focus: #d34d2e66;
+  --colour-on-dark: #ffffff; /* words on the dark banner */
+  --colour-on-dark-muted: #b9bec0; /* the banner's line on what comes next */
+  --colour-on-dark-faint: #959da0; /* the banner's small capitals */
+  --colour-on-dark-button: #3c4a50; /* the banner's Done */
+  --colour-scrim: #13181b66; /* the page behind a dialog */
+
+  /* Type */
+  --font-sans: 'Archivo Variable', 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --text-small: 0.875rem;
+  --text-body: 1rem;
+  --text-control: 1.0625rem;
+  --text-label: 0.8125rem;
+  --text-wordmark: 1.25rem;
+  --text-title: 2.25rem;
+  --text-title-phone: 1.75rem;
+  --leading-body: 1.45;
+  --leading-tight: 1.15;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+  --tracking-label: 0.1em;
+  --tracking-title: -0.01em;
+
+  /* Space: the four-point grid */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-gutter: 1rem; /* a phone's side margin */
+
+  /* Radius */
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+  --radius-mark: 0.5rem;
+  --radius-tag: 0.375rem;
+  --radius-pill: 999px;
+
+  /* Size */
+  --size-screen: 100vh;
+  --size-hairline: 1px;
+  --size-focus: 3px;
+  --size-stroke: 2px; /* a chevron's line */
+  --size-chevron: 0.5rem;
+  --size-control: 3.25rem;
+  --size-control-small: 2.5rem;
+  --size-mark: 2rem;
+  --size-pin: 1.5rem;
+  --size-bar: 0.5rem; /* From original group's bar */
+  --size-bar-width: 12rem;
+  --size-map: 20rem;
+  --size-map-phone: 16rem;
+  --size-card-narrow: 29.75rem;
+  --size-card-wide: 42rem;
+  --size-dialog: 30rem;
+  --size-page: 80rem;
+  --size-top-bar: 5.25rem;
+
+  /* Shadow */
+  --shadow-pin: 0 2px 6px #13181b40;
+  --shadow-dialog: 0 16px 48px #13181b33;
+}

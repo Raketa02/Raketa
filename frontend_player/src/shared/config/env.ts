@@ -13,6 +13,8 @@
 
 import { z } from 'zod';
 
+import { LINK_DOMAIN_RULE, readLinkDomain } from './appLinks';
+
 /**
  * The four environments, named identically by all three apps.
  *
@@ -92,6 +94,24 @@ const EnvFields = z.object({
   EXPO_PUBLIC_ENV: z.enum(ENVIRONMENTS, {
     errorMap: () => ({ message: `must be one of ${ENVIRONMENT_NAMES}` }),
   }),
+  /**
+   * **The web domain the app's links live on** — `raketa.app`, bare — or nothing, which is every
+   * environment today ([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7). While it
+   * is empty the links open the app by its own scheme only. `appLinks.ts` reads it for this file and
+   * for `app.config.ts` alike, once each, in one wording — which, like every refusal here, never
+   * echoes the value.
+   */
+  EXPO_PUBLIC_LINK_DOMAIN: z
+    .string()
+    .optional()
+    .transform((value, ctx) => {
+      try {
+        return readLinkDomain(value);
+      } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: LINK_DOMAIN_RULE });
+        return z.NEVER;
+      }
+    }),
 });
 
 /** The variables the scheme rule governs — each one a URL a phone reaches over the internet. */
@@ -143,6 +163,8 @@ export interface Env {
    *  device caveat: on a phone it is the Mac's LAN IP, never `localhost`. */
   readonly featuresUrl: string;
   readonly environment: AppEnvironment;
+  /** The web domain the app's links live on, bare — `null` while none is set, which is today. */
+  readonly linkDomain: string | null;
 }
 
 /**
@@ -179,6 +201,7 @@ export function parseEnv(raw: RawEnv): Env {
     apiUrl: result.data.EXPO_PUBLIC_API_URL,
     featuresUrl: result.data.EXPO_PUBLIC_FEATURES_URL,
     environment: result.data.EXPO_PUBLIC_ENV,
+    linkDomain: result.data.EXPO_PUBLIC_LINK_DOMAIN,
   };
 }
 
@@ -193,6 +216,7 @@ function readRawEnv(): RawEnv {
     EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
     EXPO_PUBLIC_FEATURES_URL: process.env.EXPO_PUBLIC_FEATURES_URL,
     EXPO_PUBLIC_ENV: process.env.EXPO_PUBLIC_ENV,
+    EXPO_PUBLIC_LINK_DOMAIN: process.env.EXPO_PUBLIC_LINK_DOMAIN,
   };
 }
 

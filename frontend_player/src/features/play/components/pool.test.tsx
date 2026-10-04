@@ -35,10 +35,11 @@ import { queryClient } from '@/shared/lib/query-client';
 import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
-  PROFILE_SURFACE_SERVED,
   datafileFor,
   datafileSettled,
+  launchIntoFindAGame,
   launchSignedIn,
+  PROFILE_SURFACE_SERVED,
   stubDatafile,
   stubGate,
   stubInterest,
@@ -248,7 +249,7 @@ afterEach(async () => {
 
 /** Search, spend the latch, land on the court, and open the pool against its first hole. */
 async function openThePool() {
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
@@ -338,7 +339,7 @@ async function openTheSinglesPool(
     json(singles() as Wire['ShortlistResponse']),
   );
 
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 
@@ -1067,7 +1068,7 @@ describe('the ladder', () => {
 
   it('is drawn on no other Play screen', async () => {
     offerRungs();
-    await launchSignedIn();
+    await launchIntoFindAGame(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
     await screen.findByLabelText('Tuesday evening');
 

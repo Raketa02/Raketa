@@ -4,6 +4,11 @@
  * every API response is ([#479](https://github.com/Raketa02/Raketa/issues/479),
  * [ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)).
  *
+ * **Off is the code default since [#512](https://github.com/Raketa02/Raketa/issues/512)**, and off
+ * is Play › Groups where the empty placeholder used to be. So every walk that proves a *cached* or
+ * *refused* datafile is still in use now saves **on** and expects Find a game: with the default
+ * off, a walk that saved off would pass with the cache broken.
+ *
  * What is asserted is what a player could see: which screen the Play tab draws, and where a route
  * under it lands. How the SDK was called is not, and neither is which players a rule reaches — the
  * flags repo's specs own that. The one rule here that names a player is the tester walk, and it is
@@ -18,8 +23,8 @@ import { focusManager } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
-import { FIND_A_GAME_NEXT_TEST_ID } from '@/features/find_a_game_next/types';
 import { FIND_A_GAME_TITLE, endPlaySession } from '@/features/play/types';
+import { PLAY_COPY } from '@/features/shell/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
@@ -104,11 +109,14 @@ async function pressPlay() {
 
 async function expectFindAGame() {
   expect(await screen.findByText(FIND_A_GAME_TITLE)).toBeTruthy();
-  expect(screen.queryByTestId(FIND_A_GAME_NEXT_TEST_ID)).toBeNull();
+  expect(screen.queryByRole('button', { name: PLAY_COPY.segment.groups })).toBeNull();
 }
 
-async function expectThePlaceholder() {
-  expect(await screen.findByTestId(FIND_A_GAME_NEXT_TEST_ID)).toBeTruthy();
+/** Play › Groups — what the tab opens on with the feature off (#512). */
+async function expectGroups() {
+  expect(
+    await screen.findByRole('button', { name: PLAY_COPY.segment.groups, selected: true }),
+  ).toBeTruthy();
   expect(screen.queryByText(FIND_A_GAME_TITLE)).toBeNull();
 }
 
@@ -122,23 +130,24 @@ describe('the Play tab, by what the datafile says', () => {
     await expectFindAGame();
   });
 
-  // A first launch with the flags host unreachable and nothing saved: the app as it ships.
-  it('shows Find a game when there is no datafile and nothing cached', async () => {
+  // A first launch with the flags host unreachable and nothing saved: the app as it ships, which
+  // since #512 is Play › Groups.
+  it('shows Groups when there is no datafile and nothing cached', async () => {
     await launch();
 
     await pressPlay();
 
-    await expectFindAGame();
+    await expectGroups();
   });
 
-  it('shows the empty placeholder when the feature is off, and keeps the tab bar', async () => {
+  it('shows Groups when the feature is off, and keeps the tab bar', async () => {
     stubDatafile(transport, OFF);
     await launch();
 
     await pressPlay();
 
-    await expectThePlaceholder();
-    // Story 23: an empty screen, not a dead end — every column is still there to leave by.
+    await expectGroups();
+    // Every column is still there to leave by.
     expect(screen.getByLabelText('Play')).toBeTruthy();
     expect(screen.getByLabelText(/^Chats/)).toBeTruthy();
   });
@@ -174,7 +183,7 @@ describe('the Play tab, by what the datafile says', () => {
 
     await pressPlay();
 
-    await expectThePlaceholder();
+    await expectGroups();
   });
 });
 
@@ -192,7 +201,7 @@ describe('the routes under Play while the feature is off', () => {
     act(() => router.push({ pathname: '/play/builder', params: { search: SOME_SEARCH } }));
 
     await waitFor(() => expect(screen).toHavePathname('/play'));
-    await expectThePlaceholder();
+    await expectGroups();
   });
 
   it('sends a link to the pool back to Play', async () => {
@@ -201,7 +210,7 @@ describe('the routes under Play while the feature is off', () => {
     act(() => router.push({ pathname: '/play/pool', params: { search: SOME_SEARCH, seat: '1' } }));
 
     await waitFor(() => expect(screen).toHavePathname('/play'));
-    await expectThePlaceholder();
+    await expectGroups();
   });
 });
 
@@ -230,47 +239,51 @@ describe('a change that arrives while Play is on screen', () => {
     await waitFor(() => expect(screen).toHavePathname('/'));
     await pressPlay();
 
-    await expectThePlaceholder();
+    await expectGroups();
   });
 });
 
+/**
+ * Each of these saves **on**, because on is now the one answer only a datafile can give: with the
+ * code default off, a walk that saved off would pass with the cache broken.
+ */
 describe('when the fresh datafile cannot be used', () => {
   /** The last good datafile was saved by an earlier launch — this walk's first. */
-  async function aLaunchThatSavedOff() {
-    stubDatafile(transport, OFF);
+  async function aLaunchThatSavedOn() {
+    stubDatafile(transport, ON);
     await launch();
     await pressPlay();
-    await expectThePlaceholder();
+    await expectFindAGame();
   }
 
   it('uses the cached datafile when the fetch fails', async () => {
-    await aLaunchThatSavedOff();
+    await aLaunchThatSavedOn();
 
     transport.on('GET', DATAFILE_PATH, networkFailure());
     await relaunch(2);
     await pressPlay();
 
-    await expectThePlaceholder();
+    await expectFindAGame();
   });
 
   // ADR-0180 §10: a format this build does not read is refused, and the last good one stays. Were
-  // it read, this one would turn Find a game back on.
+  // it read, this one would turn Find a game off.
   it('falls back to the cache when the schema version is unknown', async () => {
-    await aLaunchThatSavedOff();
+    await aLaunchThatSavedOn();
 
-    stubDatafile(transport, datafileFor({ find_a_game: 'on' }, { schemaVersion: '3' }));
+    stubDatafile(transport, datafileFor({ find_a_game: 'off' }, { schemaVersion: '3' }));
     await relaunch(2);
     await pressPlay();
 
-    await expectThePlaceholder();
+    await expectFindAGame();
   });
 
   it('keeps the datafile fetched earlier when a later one is refused mid-session', async () => {
-    stubDatafile(transport, OFF);
+    stubDatafile(transport, ON);
     await launch();
 
     transport.on('GET', DATAFILE_PATH, () =>
-      json(datafileFor({ find_a_game: 'on' }, { schemaVersion: '3' })),
+      json(datafileFor({ find_a_game: 'off' }, { schemaVersion: '3' })),
     );
     act(() => {
       focusManager.setFocused(false);
@@ -279,6 +292,6 @@ describe('when the fresh datafile cannot be used', () => {
     await datafileSettled(transport, 2);
     await pressPlay();
 
-    await expectThePlaceholder();
+    await expectFindAGame();
   });
 });

@@ -97,6 +97,22 @@ describe('the drawing', () => {
     expect(labelStyle('Find a game')).toMatchObject({ color: theme.color.muted });
   });
 
+  /**
+   * The tab's own view switch (play mocks 1, 3): the same step read from the dark side — `ink`
+   * under a `surface` label — and a taller thumb, with `selected` still saying which.
+   */
+  it('raises the selected segment onto ink when it is the tab’s own switch', () => {
+    render(<Segment options={OPTIONS} selected="find" onSelect={() => undefined} prominent />);
+
+    expect(styleOf(screen.getByLabelText('Find a game'))).toMatchObject({
+      backgroundColor: theme.color.ink,
+      minHeight: theme.size.btn,
+    });
+    expect(labelStyle('Find a game')).toMatchObject({ color: theme.color.surface });
+    expect(labelStyle('Match me · 3')).toMatchObject({ color: theme.color.muted });
+    expect(isSelected('Find a game')).toBe(true);
+  });
+
   it("reaches the touch minimum through 6.5's own slop", () => {
     renderSegment('find');
 

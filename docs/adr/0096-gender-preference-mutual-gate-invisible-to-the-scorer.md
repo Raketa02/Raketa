@@ -6,6 +6,11 @@
   `GET /players/me/profile`, is the one response shape that carries `gender` and
   `gender_preference` out; every shape a stranger reads stays clean, and §21's test asserts both
   halves.
+- **§3's reach narrowed by [ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)'s
+  amendment of 2026-10-02.** The preference governs who a player is **matched** with. It does not
+  reach the account **running an official group** the player joined, which opens their record
+  without it ([#566](https://github.com/Raketa02/Raketa/issues/566)). Every surface that
+  introduces one player to another, and every co-member of a group, is still gated by it.
 
 ## Context
 

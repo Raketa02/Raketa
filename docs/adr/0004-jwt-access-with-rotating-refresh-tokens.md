@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09 *(captured retroactively from the existing implementation)*
+- **Amended 2026-09-25 by [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)** §6–§7, taking the "new decision" this record's *Harder* reserved for immediate revocation: an access token issued before its account's **credentials-changed instant** is refused, and every token names an **audience**, player app or club. Neither a denylist nor a shorter lifetime; rotation, hashing and the single-flight rule stand.
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0007** (the club console's cookie session), removed in the 2026-08-25 reset along with the club app. The two-client threat-model argument below is the reason this ADR chose rotation, and it stands as written — one of the two clients simply no longer exists. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
 

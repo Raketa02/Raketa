@@ -44,6 +44,27 @@ POISON_DB_URL = f"postgresql+asyncpg://u:{POISON_PASSWORD}@db.example:5432/raket
 POISON_SECRET = "s3cret-do-not-log-me"
 POISON_PHOTO_SECRET = "photo-s3cret-do-not-log-me"
 POISON_REDIS_URL = f"redis://:{POISON_PASSWORD}@redis.example:6379/0"
+#: A public site on a host nobody should read in a crash report.
+POISON_PUBLIC_SITE_URL = f"https://{POISON_PASSWORD}.raketa.example"
+#: And the club website, the mail relay and the sender, likewise.
+POISON_CLUB_WEBSITE_URL = f"https://{POISON_PASSWORD}.clubs.raketa.example"
+POISON_SMTP_HOST = f"{POISON_PASSWORD}.smtp.example"
+POISON_MAIL_SENDER = f"Raketa <no-reply@{POISON_PASSWORD}.example>"
+
+#: What every deployed environment has to supply because its shipped default is
+#: a laptop's: three addresses out of `docker-compose-local.yml`, the two web
+#: apps' dev servers, the local mail catcher and its reserved-domain sender — and
+#: an encrypted connection to the relay, which is a value rather than a presence.
+DEPLOYED_ADDRESSES = {
+    "APP_HOST": "10.0.0.1",
+    "WRITER_DB_URL": POISON_DB_URL,
+    "REDIS_URL": POISON_REDIS_URL,
+    "PUBLIC_SITE_URL": POISON_PUBLIC_SITE_URL,
+    "CLUB_WEBSITE_URL": POISON_CLUB_WEBSITE_URL,
+    "SMTP_HOST": POISON_SMTP_HOST,
+    "MAIL_SENDER": POISON_MAIL_SENDER,
+}
+DEPLOYED_MAIL_SECURITY = {"SMTP_SECURITY": "starttls"}
 
 
 @pytest.fixture
@@ -73,18 +94,15 @@ def settings_for(env, **overrides) -> Settings:
     """A minimally *valid* configuration for `env`, plus whatever a case overrides.
 
     What each environment needs differs, which is the whole subject of this file: a
-    laptop needs nothing, anything deployed needs the three addresses whose shipped
-    defaults are the dev stack's own service names, and production needs those plus
-    the four things it refuses to start with the shipped value of.
+    laptop needs nothing, anything deployed needs the addresses whose shipped
+    defaults are the dev stack's own (``DEPLOYED_ADDRESSES``) and an encrypted mail
+    relay — and production needs those plus the four things it refuses to start
+    with the shipped value of.
     """
     env = Environment(env)
     base: dict = {"APP_ENV": env}
     if env in DEPLOYED:
-        base |= {
-            "APP_HOST": "10.0.0.1",
-            "WRITER_DB_URL": POISON_DB_URL,
-            "REDIS_URL": POISON_REDIS_URL,
-        }
+        base |= DEPLOYED_ADDRESSES | DEPLOYED_MAIL_SECURITY
     if env is Environment.PRODUCTION:
         base |= {
             "JWT_SECRET_KEY": POISON_SECRET,
@@ -253,12 +271,8 @@ def test_a_deployed_environment_inherits_no_local_address(clean_env, env) -> Non
     environment that deliberately configured the laptop's address is somebody's
     decision, and an empty variable is nobody's.
     """
-    for missing in ("APP_HOST", "WRITER_DB_URL", "REDIS_URL"):
-        supplied = {
-            "APP_HOST": "10.0.0.1",
-            "WRITER_DB_URL": POISON_DB_URL,
-            "REDIS_URL": POISON_REDIS_URL,
-        }
+    for missing in DEPLOYED_ADDRESSES:
+        supplied = DEPLOYED_ADDRESSES | DEPLOYED_MAIL_SECURITY
         del supplied[missing]
         with pytest.raises(ConfigurationError) as exc:
             build(APP_ENV=env, **supplied)
@@ -278,17 +292,12 @@ def test_an_unprovisioned_environment_that_is_provisioned_starts(
     clean_env, env
 ) -> None:
     """`development` and `staging` are not forbidden — they are unbuilt. The day a
-    domain is registered, turning one on is setting these three variables.
+    domain is registered, turning one on is setting these variables.
 
     Still only the unbuilt two: `production` is covered by
     `test_a_valid_production_configuration_starts`, which has four more things to
     supply before it gets an answer."""
-    settings = build(
-        APP_ENV=env,
-        APP_HOST="10.0.0.1",
-        WRITER_DB_URL=POISON_DB_URL,
-        REDIS_URL=POISON_REDIS_URL,
-    )
+    settings = build(APP_ENV=env, **DEPLOYED_ADDRESSES, **DEPLOYED_MAIL_SECURITY)
     assert settings.APP_ENV is Environment(env)
 
 
@@ -341,9 +350,10 @@ def test_production_allows_a_wildcard_without_credentials(clean_env) -> None:
 # A URL a browser reaches over a public network is `https://` in every deployed
 # environment. The two clients have carried that rule since #95 and #96; the backend
 # carried none, so "the three apps agree" was false in the direction nobody was
-# looking. `ALLOW_ORIGINS` is the only such URL the backend holds — it calls nothing
-# over HTTP — and an `http://` entry is a browser origin served in the clear, which is
-# the session cookie ADR-0007 puts in an httpOnly cookie travelling in the clear.
+# looking. The backend calls nothing over HTTP and holds two such URLs: an `http://`
+# entry in `ALLOW_ORIGINS` is a browser origin served in the clear, which is the session
+# cookie ADR-0007 puts in an httpOnly cookie travelling in the clear; and
+# `PUBLIC_SITE_URL` is the address every group link is printed under (#504).
 
 
 @pytest.mark.parametrize("env", ["development", "staging", "production"])
@@ -362,6 +372,78 @@ def test_a_deployed_environment_accepts_https_browser_origins(
     """The other half. A guard that fires on everything is not a guard."""
     origins = ["https://club.raketa.example", "https://admin.raketa.example"]
     assert settings_for(env, ALLOW_ORIGINS=origins).ALLOW_ORIGINS == origins
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_refuses_a_plaintext_public_site(clean_env, env) -> None:
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, PUBLIC_SITE_URL="http://raketa.example")
+    assert "PUBLIC_SITE_URL" in str(exc.value)
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_accepts_an_https_public_site(clean_env, env) -> None:
+    site = "https://raketa.example"
+    assert settings_for(env, PUBLIC_SITE_URL=site).PUBLIC_SITE_URL == site
+
+
+def test_local_links_to_the_public_site_s_dev_server(clean_env) -> None:
+    """The one environment that runs today needs no public site configured, and
+    its links are plaintext because a laptop is not a public network."""
+
+    from app.core.config import DEFAULT_PUBLIC_SITE_URL
+
+    assert build(APP_ENV="local").PUBLIC_SITE_URL == DEFAULT_PUBLIC_SITE_URL
+    assert DEFAULT_PUBLIC_SITE_URL.startswith("http://localhost")
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_refuses_a_plaintext_club_website(
+    clean_env, env
+) -> None:
+    """A club's reset link is printed under it and opened over a public network."""
+
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, CLUB_WEBSITE_URL="http://clubs.raketa.example")
+    assert "CLUB_WEBSITE_URL" in str(exc.value)
+
+
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_refuses_mail_in_the_clear(clean_env, env) -> None:
+    """Every reset and invitation carries a code that opens an account
+    (``docs/adr/0186`` §1), so the relay is reached over TLS once deployed."""
+
+    with pytest.raises(ConfigurationError) as exc:
+        settings_for(env, SMTP_SECURITY="none")
+    assert "SMTP_SECURITY" in str(exc.value)
+
+
+@pytest.mark.parametrize("security", ["starttls", "tls"])
+@pytest.mark.parametrize("env", DEPLOYED_NAMES)
+def test_a_deployed_environment_accepts_an_encrypted_relay(
+    clean_env, env, security
+) -> None:
+    assert settings_for(env, SMTP_SECURITY=security).SMTP_SECURITY == security
+
+
+def test_local_mails_the_catcher_and_links_to_the_club_website_s_dev_server(
+    clean_env,
+) -> None:
+    """A laptop's email lands in the dev stack's mail catcher, in the clear,
+    from a reserved domain — and none of that is a refusal there."""
+
+    from app.core.config import (
+        DEFAULT_CLUB_WEBSITE_URL,
+        DEFAULT_MAIL_SENDER,
+        DEFAULT_SMTP_HOST,
+    )
+
+    settings = build(APP_ENV="local")
+    assert settings.SMTP_HOST == DEFAULT_SMTP_HOST == "mailpit"
+    assert settings.SMTP_SECURITY == "none"
+    assert settings.MAIL_SENDER == DEFAULT_MAIL_SENDER
+    assert settings.CLUB_WEBSITE_URL == DEFAULT_CLUB_WEBSITE_URL
+    assert DEFAULT_CLUB_WEBSITE_URL.startswith("http://localhost")
 
 
 def test_one_plaintext_origin_among_several_is_enough_to_refuse(clean_env) -> None:
@@ -540,6 +622,15 @@ REFUSALS = [
     # The same three in production. Not redundant: production reaches them through
     # a different branch than it used to, and these are the messages a deploy of the
     # ECS task definition would actually print into CloudWatch.
+    (
+        "PUBLIC_SITE_URL",
+        lambda: build(
+            APP_ENV="staging",
+            APP_HOST="10.0.0.1",
+            WRITER_DB_URL=POISON_DB_URL,
+            REDIS_URL=POISON_REDIS_URL,
+        ),
+    ),
     ("APP_HOST", lambda: build(APP_ENV="production", WRITER_DB_URL=POISON_DB_URL)),
     ("WRITER_DB_URL", lambda: build(APP_ENV="production", APP_HOST="10.0.0.1")),
     (
@@ -561,7 +652,41 @@ REFUSALS = [
         "ALLOW_ORIGINS",
         lambda: production(ALLOW_ORIGINS=[f"http://{POISON_PASSWORD}.example"]),
     ),
+    (
+        "PUBLIC_SITE_URL",
+        lambda: production(PUBLIC_SITE_URL=f"http://{POISON_PASSWORD}.example"),
+    ),
     ("DB_SSL_MODE", lambda: production(DB_SSL_MODE="disable")),
+    (
+        "CLUB_WEBSITE_URL",
+        lambda: build(
+            APP_ENV="staging",
+            **{
+                k: v
+                for k, v in DEPLOYED_ADDRESSES.items()
+                if k != "CLUB_WEBSITE_URL"
+            },
+        ),
+    ),
+    (
+        "SMTP_HOST",
+        lambda: build(
+            APP_ENV="production",
+            **{k: v for k, v in DEPLOYED_ADDRESSES.items() if k != "SMTP_HOST"},
+        ),
+    ),
+    (
+        "MAIL_SENDER",
+        lambda: build(
+            APP_ENV="production",
+            **{k: v for k, v in DEPLOYED_ADDRESSES.items() if k != "MAIL_SENDER"},
+        ),
+    ),
+    (
+        "CLUB_WEBSITE_URL",
+        lambda: production(CLUB_WEBSITE_URL=f"http://{POISON_PASSWORD}.example"),
+    ),
+    ("SMTP_SECURITY", lambda: production(SMTP_SECURITY="none")),
     (
         "BCRYPT_ROUNDS",
         lambda: settings_for("staging", BCRYPT_ROUNDS=BCRYPT_MINIMUM_ROUNDS),
@@ -576,6 +701,7 @@ REFUSAL_IDS = [
     "APP_HOST",
     "WRITER_DB_URL",
     "REDIS_URL",
+    "PUBLIC_SITE_URL",
     "APP_HOST-in-production",
     "WRITER_DB_URL-in-production",
     "REDIS_URL-in-production",
@@ -584,7 +710,13 @@ REFUSAL_IDS = [
     "DEBUG",
     "ALLOW_ORIGINS-wildcard-with-credentials",
     "ALLOW_ORIGINS-plaintext-when-deployed",
+    "PUBLIC_SITE_URL-plaintext-when-deployed",
     "DB_SSL_MODE",
+    "CLUB_WEBSITE_URL",
+    "SMTP_HOST-in-production",
+    "MAIL_SENDER-in-production",
+    "CLUB_WEBSITE_URL-plaintext-when-deployed",
+    "SMTP_SECURITY-none-in-production",
     "BCRYPT_ROUNDS",
     "BCRYPT_ROUNDS-in-production",
 ]
@@ -609,6 +741,10 @@ def test_no_refusal_echoes_a_value(clean_env, variable, trigger) -> None:
         POISON_PASSWORD,
         POISON_DB_URL,
         POISON_REDIS_URL,
+        POISON_PUBLIC_SITE_URL,
+        POISON_CLUB_WEBSITE_URL,
+        POISON_SMTP_HOST,
+        POISON_MAIL_SENDER,
         POISON_SECRET,
         POISON_PHOTO_SECRET,
         DEFAULT_JWT_SECRET_KEY,

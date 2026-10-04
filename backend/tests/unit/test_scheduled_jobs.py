@@ -26,6 +26,7 @@ from app.bootstrap.jobs import (
     CANDIDATE_INDEX_TAIL_JOB,
     CHALLENGE_LAPSE_JOB,
     CONVERSATION_SWEEP_JOB,
+    MAIL_DELIVERY_JOB,
     UNFILLED_COURT_JOB,
     RATING_CATCH_UP_JOB,
     EXPOSURE_ROLL_JOB,
@@ -178,6 +179,7 @@ def _nothing_but(**overrides):
             "UNFILLED_COURT_ENABLED": False,
             "RATING_CATCH_UP_ENABLED": False,
             "CONVERSATION_SWEEP_ENABLED": False,
+            "MAIL_DELIVERY_ENABLED": False,
             "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
@@ -962,5 +964,66 @@ async def test_the_conversation_sweep_runs_end_to_end_through_the_real_wiring(
         record.message == "conversation sweep finished"
         and record.rooms == 0
         and record.destroyed == 0
+        for record in caplog.records
+    )
+
+
+def test_the_mail_worker_is_registered_and_carries_the_configured_cadence():
+    """How often the queue is drained is a setting; what is sent, and how long
+    the link in it works, are not (``docs/adr/0186``)."""
+
+    settings = _nothing_but(
+        MAIL_DELIVERY_ENABLED=True, MAIL_DELIVERY_INTERVAL_SECONDS=5.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [job.name for job in jobs] == [MAIL_DELIVERY_JOB]
+    assert jobs[0].interval_seconds == 5.0
+
+
+def test_the_mail_worker_without_a_session_factory_refuses_to_be_registered():
+    """A worker enabled and silently dropped is a table of live secrets nobody
+    receives, which looks exactly like a quiet day."""
+
+    settings = _nothing_but(MAIL_DELIVERY_ENABLED=True)
+
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(session_factory=None, settings=settings)
+
+
+async def test_the_mail_worker_sends_through_the_configured_mailer(
+    monkeypatch, session_factory, caplog
+):
+    """One queued message, one run of the job's own callable, one send — and a
+    log line that says so."""
+
+    from app.application.ports.mail import OutgoingMessage
+    from app.bootstrap.composition import build_mail_queue
+    from tests.unit.fake_mailer import RecordingMailer
+
+    mailer = RecordingMailer()
+    monkeypatch.setattr(jobs_module, "build_mailer", lambda settings: mailer)
+    message = OutgoingMessage(
+        kind="forgot_password.player",
+        to="tomek@example.com",
+        subject="Set a new Raketa password",
+        text="text",
+        html="<p>html</p>",
+    )
+    async with session_factory() as session:
+        await build_mail_queue(session).enqueue(message, at=build_clock().now())
+        await session.commit()
+    (worker,) = build_scheduled_jobs(
+        session_factory=session_factory,
+        settings=_nothing_but(MAIL_DELIVERY_ENABLED=True),
+    )
+
+    with caplog.at_level(logging.INFO):
+        await worker.run_once()
+
+    assert mailer.sent == [message]
+    assert any(
+        record.message == "mail delivery run finished" and record.sent == 1
         for record in caplog.records
     )

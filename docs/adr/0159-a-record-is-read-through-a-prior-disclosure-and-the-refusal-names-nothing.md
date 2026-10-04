@@ -441,3 +441,82 @@ stopped being a promise.
 through a prior disclosure with no expiry, `?sport=` still says what the sheet is about and
 never who may be seen, your own record still has no gates, and this context still stores
 nothing at all.
+
+## Amendment — 2026-09-30: a group they are both in is the fourth strand
+
+**Found in [#529](https://github.com/Raketa02/Raketa/issues/529) F1–F2.** A group's Members
+([#514](https://github.com/Raketa02/Raketa/issues/514)) lists every member rated in the sport and
+ends in *Press and hold anyone for the full record* — and every co-member a reader had not been
+shown by a search, a challenge or a game answered `record_unavailable`. A member who never
+searched could open nobody's record but their own.
+
+§3's anticipated fourth row is that surface: `GroupsTheyShare`, a fourth implementation of
+`PriorDisclosure` over `groups`' directory. The pair must **both be members right now** — a
+Join request that waits is not membership, and leaving ends it, because Members lists who is in
+the group now. It is the one strand that ends, and it ends by membership rather than by age:
+*nothing expires* still holds of the other three. It answers **every sport**, because Members
+lists a member in whichever sport they are rated in; the gates find the partition that admits,
+at most four evaluations, which §4's cost already bounds.
+
+**The gates are unchanged**, and that leaves one case open. A co-member the mutual gender
+preference refuses, or with no index row in any partition, still meets the one refusal while
+Members lists them — Members hides only blocks. Whether the group strand should run fewer gates
+than a search does is a product call, recorded here and not decided.
+
+## Amendment — 2026-10-02: whoever runs their group is the fifth strand, and the preference does not reach it
+
+**Found in [#529](https://github.com/Raketa02/Raketa/issues/529) §K2, settled by
+[#566](https://github.com/Raketa02/Raketa/issues/566).** The player app's administrator area opens
+an official group's Members from its players card, and every row ends in a press-and-hold for the
+record. The account running an official group **is not a member of it**
+([ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md) §7), so two
+refusals met it: Members answered `group_not_found`, and every row's record answered
+`record_unavailable`, because the fourth strand admits a pair that are **both in** a group.
+
+**Members admits whoever runs an official group now.** *Runs it now* is `GroupAdministrators`'
+answer, read and never held, so a removal or a handover takes the list away on the next read. The
+rows and their order do not move; the reader is a row only once they have joined as a player; a
+block either way round hides a row from them as it does from a member (ADR-0183 §10). A player
+group, a group somebody else runs, and a removed or handed-away Administrator still meet
+`group_not_found`, byte for byte.
+
+**The record gains a fifth strand, and it is a port of its own.** `RunnerDisclosure` answers *does
+this reader run, now, a group this person is in*, signed by `GroupsTheReaderRuns` over `groups`'
+directory and the same `GroupAdministrators` read Members makes, so the list and the record it
+opens cannot disagree about who runs the group. It is not a fifth row of `PriorDisclosure`, because
+**it is admitted under different gates** and the admission has to know which strand it is asking.
+It answers a boolean rather than sports, because the gates it is admitted under read no partition.
+Running as it stands, never as it was, exactly as a group left ends the fourth strand; a Join
+request that waits is not membership.
+
+**The gender preference does not reach it** (ruled 2026-10-02). This settles, **for this strand
+only**, the question the 2026-09-30 amendment recorded and left open. A preference says who a
+player is willing to be **matched** with
+([ADR-0096](0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)), and running the group
+they chose to join is not being matched with them. The Administrator already reads every member's
+face, name and joining date on their own group page, and every asker's face and Levels on the
+request card, with no preference applied, so a record refused on the preference would hide nothing
+they had not been shown. And an Administrator who has never played has **no profile, and so no
+gender** for anybody's preference to be read against. Under the gate every row would refuse,
+because *a gate that cannot be evaluated excludes*. That dead end is what #566 was filed about.
+
+So the strand is admitted on the **three gates about accounts** plus the reader's own hold: a block
+in either direction, the subject's hold, and an account that may not be shown.
+`RecordGates.admits_regardless_of_preference` asks them through
+`FailClosedGates.withheld_regardless_of_preference`, and `withheld_among` is now composed from that
+method, so no gate gains a second spelling. It binds no index container and loads no profile. It
+applies to **whoever runs the group, playing or not**. An Administrator who plays and has joined
+is a co-member too, and where the fourth strand's preference refuses them, running the group is
+what admits them.
+
+**It is asked last**, only once every disclosed partition has refused, so a record that any of the
+other strands opened never pays for it. On the refusal path it costs the subject's group ids, their
+listings and one *who runs these* read, plus at most one evaluation of the three gates. §4's
+latency budget for a deliberate tap covers that.
+
+**Cost, accepted by name.** A member who set `WOMEN_ONLY` has their record opened by a man who
+runs a group they joined. They chose that group, and its Administrator had already seen their face
+and let them in. **What stays open** is the rest of 2026-09-30's question: a co-member the
+preference refuses still meets the one refusal while Members lists them. **Nothing else moves.**
+The refusals are still one refusal. A search, a challenge, a game and a shared group are admitted
+under all four gates, and nothing expires but a group.

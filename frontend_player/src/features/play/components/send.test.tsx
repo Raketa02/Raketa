@@ -49,7 +49,7 @@ import { courtSeatCount } from '@/shared/ui';
 import { useToastQueue } from '@/shared/store/toast.store';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
-  launchSignedIn,
+  launchIntoFindAGame,
   stubGate,
   stubInterest,
   stubProfileOptions,
@@ -279,7 +279,7 @@ afterEach(async () => {
 
 /** Search, spend both floors, fill the seats, and arrive at a court with the send under it. */
 async function openAFullCourt() {
-  await launchSignedIn();
+  await launchIntoFindAGame(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await screen.findByLabelText('Tuesday evening');
 

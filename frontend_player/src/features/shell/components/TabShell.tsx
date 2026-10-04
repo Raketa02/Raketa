@@ -124,6 +124,16 @@ export function TabShell() {
             §1), arrived at by a tab press, and it takes the shell's `none` like every root. */}
         <Stack.Screen name="play/builder" options={{ animation: 'default' }} />
         <Stack.Screen name="play/pool" options={{ animation: 'default' }} />
+        {/* And the groups screens (#512, #513, #514): New group and Join a group are pushed over
+            the Groups list and come back out to it, and a group's page is pushed over the list —
+            or replaces New group once the group exists, so *back* is the list either way.
+            Friends, Members and Edit group are pushed over the page and come back out to it. */}
+        <Stack.Screen name="play/new-group" options={{ animation: 'default' }} />
+        <Stack.Screen name="play/join" options={{ animation: 'default' }} />
+        <Stack.Screen name="play/group/[groupId]/index" options={{ animation: 'default' }} />
+        <Stack.Screen name="play/group/[groupId]/friends" options={{ animation: 'default' }} />
+        <Stack.Screen name="play/group/[groupId]/members" options={{ animation: 'default' }} />
+        <Stack.Screen name="play/group/[groupId]/edit" options={{ animation: 'default' }} />
         {/* And so is a game: it is pushed over the Now tab's list, the list stays underneath,
             and backing out returns to the row it was tapped from
             ([#314](https://github.com/Raketa02/Raketa/issues/314)). It is the first exception

@@ -1,4 +1,4 @@
-"""Emit the API contract as ``openapi.player.json``.
+"""Emit the API contracts, one document per surface.
 
 The backend owns the contract and the player client generates its wire types
 from this document, never hand-writing a DTO that mirrors a response
@@ -17,6 +17,13 @@ for *freshness* instead (``.github/scripts/check-contract-freshness.sh``), becau
 regeneration with that client's own pinned codegen, and here there is no client
 and no codegen.
 
+The third is the **club website**'s, ``openapi.club.json`` (``docs/adr/0187``
+§5): a client of its own, under a prefix of its own, so the two client documents
+never share a path (``tests/unit/test_club_surface.py``). The fourth is the
+**public site**'s, ``openapi.public.json``: the same again, and the one document
+with no bearer scheme in it, because nothing on it takes a session
+(``tests/unit/test_public_surface.py``).
+
 **Consequence, stated rather than discovered:** importing the dev router is
 unconditional, so this module refuses to import in production exactly as
 ``app/seeds/`` does. That makes it a dev-time module like the seeds — run by
@@ -33,7 +40,9 @@ from fastapi import APIRouter, FastAPI
 
 from app.api.dev.routes import dev_api_router
 from app.api.streaming import restore_stream_item_types
+from app.api.v1.club import club_api_router
 from app.api.v1.player import player_api_router
+from app.api.v1.public import public_api_router
 from app.core.config import get_settings
 from app.core.exception_handlers import ErrorResponse
 
@@ -49,6 +58,13 @@ SURFACES: dict[str, APIRouter] = {
     # document holds exactly one path, and that is the honest description of
     # what the surface is.
     "dev": dev_api_router,
+    # The club website's, and nobody else's (`docs/adr/0187` §5). Its paths are
+    # all under `/api/v1/club`, so this document and the player's never share
+    # one.
+    "club": club_api_router,
+    # The public site's (`docs/adr/0187` §4–§5): the pages a group link or an
+    # email opens without the app. No route on it takes a session.
+    "public": public_api_router,
 }
 
 

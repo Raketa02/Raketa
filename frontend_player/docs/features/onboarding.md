@@ -107,3 +107,39 @@ the passport and deferred is resumed on the next cold launch as a welcome pass a
 any resumed run does — ADR-0179 names that as a consequence. **Not seen on a device**: the frame
 between the gate mounting the Now tab and its effect laying the You stack down, and whether the
 passport's push animates in over the tab.
+
+**The gate reads the account's profiles first** ([#516](https://github.com/Raketa02/Raketa/issues/516),
+ADR-0185 §3). `entryDestination` has a sixth destination, **the administrator area**, ahead of the
+naming: an account that does not act as a player and administers a club goes to that club's area
+(`administratorArea`, the first club the server lists) and is never sent into onboarding — it has not
+asked to play, and a name without a nickname, no ratings and no run are no questions it owes. The hook
+answers it **from the player read alone**, the moment that read answers, without waiting on the
+ratings or the run — and once the player read says so, those two reads are not asked at all. An
+account that also plays falls through to the five destinations as before and opens in Player; the
+last-used profile is #518's. The redirect is `(app)/_layout`'s, to the route the `administrator`
+feature names (`administratorHome`).
+
+**No profile at all goes to _Start playing_, and named in full is a name and a nickname**
+([#517](https://github.com/Raketa02/Raketa/issues/517), ADR-0185 §3–§4). The gate's first read is
+`profileDestination` now: the administrator area for an account that only administers, and **a
+seventh destination, `start-playing`**, for one that holds no profile at all — an administrator-only
+account its club removed — which the layout redirects to `auth`'s `START_PLAYING_STEP`, the Adult
+attestation, ahead of the naming and of anything a player owes; like the area, it is answered from the
+player read alone. Past that read the first destination is **not named in full** (`namedInFull`: a
+name _and_ a nickname), because an account an Invitation opened carries the club's name and no
+nickname: once it attests, it acts as a player and the naming is still owed — asking only for the
+nickname ([`auth.md`](auth.md)). For every account sign-up creates this is the same destination as
+before, since it holds neither until the naming.
+
+**An account with two profiles opens in the one it wore last** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+ADR-0185 §3, ADR-0188 §2). `profileDestination` takes **the profile the phone remembers** (`auth`'s
+`useLastProfile`) ahead of everything: an administrator profile the account still holds opens that
+club's area — ahead of the naming and of anything the player side still owes, because choosing that
+profile was choosing not to be asked those now, and switching to Player is where they are asked. A
+remembered club the account no longer holds is no choice (ADR-0188 §4): the account opens as if it had
+chosen nothing — **Player** for an account that plays, its first club for one that does not. **The gate
+waits for that local read only for an account that runs a club**, and for no other launch; but the read
+is made for every account, so that one gaining a club under a mounted gate — an invitation accepted
+from the sheet over the app — finds it long settled. A read that began only then sent the gate back to
+_pending_ and unmounted the app it was drawing, the sheet with it, which the invitation suite caught. An
+account that does not play never asks the player's reads, whichever club it opens on.

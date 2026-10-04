@@ -8,6 +8,7 @@ import jwt
 import pytest
 
 from app.shared.domain import UnauthorizedError
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.ports import IssuedToken
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.application.resolve_current_user import (
@@ -25,12 +26,15 @@ from app.shared.ids import new_uuid
 #: never reaches this use case — and one caller reads it: the conversation stream
 #: closes at that instant rather than outliving the credential that opened it
 #: (`docs/adr/0147` §6). A stub that omitted it would be describing a token this
-#: application cannot issue.
+#: application cannot issue. ``iat`` likewise: it is required on decode, and it is
+#: the issue instant a token without ``iat_us`` is compared with when its account
+#: signs out everywhere (`docs/adr/0185` §7).
 AN_HOUR_FROM_NOW = int(datetime.now(timezone.utc).timestamp()) + 3600
+JUST_NOW = AN_HOUR_FROM_NOW - 3600
 
 
 def _payload(**fields) -> dict:
-    return {"exp": AN_HOUR_FROM_NOW, **fields}
+    return {"exp": AN_HOUR_FROM_NOW, "iat": JUST_NOW, **fields}
 
 
 class StubTokenService:
@@ -38,18 +42,18 @@ class StubTokenService:
         self._payload = payload or {}
         self._error = error
 
-    def issue_access(self, subject: str) -> IssuedToken:
+    def issue_access(self, subject: str, *, audience: Audience) -> IssuedToken:
         raise NotImplementedError
 
-    def issue_refresh(self, subject: str) -> IssuedToken:
+    def issue_refresh(self, subject: str, *, audience: Audience) -> IssuedToken:
         raise NotImplementedError
 
-    def decode_access(self, token: str) -> dict:
+    def decode_access(self, token: str, *, audience: Audience) -> dict:
         if self._error is not None:
             raise self._error
         return self._payload
 
-    def decode_refresh(self, token: str) -> dict:
+    def decode_refresh(self, token: str, *, audience: Audience) -> dict:
         raise NotImplementedError
 
     @property

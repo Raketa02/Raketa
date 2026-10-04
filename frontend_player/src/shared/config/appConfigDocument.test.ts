@@ -18,6 +18,7 @@
 import appConfig from '../../../app.config';
 
 import { appIdentity } from './appIdentity';
+import { APP_SCHEME } from './appLinks';
 import { getEnv } from './env';
 
 /**
@@ -65,7 +66,18 @@ describe('the config document', () => {
   });
 
   it('publishes exactly one URL scheme', () => {
-    expect(config.scheme).toBe('raketa');
+    expect(config.scheme).toBe(APP_SCHEME);
+  });
+
+  /**
+   * The web domain's links are the setting's, and **no domain is set** — here, as in every
+   * environment today (#520). So the binary claims no associated domain and no verified intent
+   * filter: a claim no site backs is a link that silently opens the browser. What a set domain
+   * turns on is `appLinks.test.ts`'s, against the pure function this document spreads.
+   */
+  it('claims no web domain while none is set', () => {
+    expect(config.ios?.associatedDomains).toBeUndefined();
+    expect(config.android?.intentFilters).toBeUndefined();
   });
 
   /**

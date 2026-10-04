@@ -15,7 +15,7 @@
 
 import { codeMessage, type AppError } from '@/shared/errors';
 
-import { ADULT_ATTESTATION_MISSING, type FieldErrors } from '../schemas/authForms';
+import { ADULT_ATTESTATION_MISSING, PASSWORD_RULE, type FieldErrors } from '../schemas/authForms';
 
 const BY_CODE: Readonly<Record<string, string>> = {
   invalid_credentials: "That email and password don't match. Try again.",
@@ -29,6 +29,16 @@ const BY_CODE: Readonly<Record<string, string>> = {
    * already uses for it, so the two cannot drift apart.
    */
   adult_attestation_required: ADULT_ATTESTATION_MISSING,
+  /**
+   * The server's copy of the one password rule, on `details.field: password` — the rule itself,
+   * because the form already said which half was missing and this is the server disagreeing.
+   */
+  password_too_weak: PASSWORD_RULE,
+  /**
+   * A code that is not the one sent to that address — **or no code was sent to it**: the server
+   * gives the two one answer, so this sentence cannot say which (ADR-0184 §5). Under the box.
+   */
+  code_incorrect: "That isn't the code we sent to that email. Check it and type it again.",
 };
 
 export function authErrorMessage(error: AppError): string {
@@ -74,11 +84,12 @@ export function errorUnderField(
   field: string,
   fieldErrors: FieldErrors,
   serverError: AppError | null,
+  message: (error: AppError) => string = authErrorMessage,
 ): string | undefined {
   const own = fieldErrors[field];
   if (own !== undefined) return own;
   if (serverError !== null && authErrorField(serverError) === field) {
-    return authErrorMessage(serverError);
+    return message(serverError);
   }
   return undefined;
 }
@@ -86,8 +97,14 @@ export function errorUnderField(
 /**
  * The banner's sentence: a server refusal that names **no** field. One that names a field is
  * rendered under that box by {@link errorUnderField} and must not be said twice.
+ *
+ * Both take the screen's own sentences where it has them — the recovery screens word a refusal
+ * by how the person got there — and the auth-wide table otherwise.
  */
-export function bannerMessage(serverError: AppError | null): string | undefined {
+export function bannerMessage(
+  serverError: AppError | null,
+  message: (error: AppError) => string = authErrorMessage,
+): string | undefined {
   if (serverError === null || authErrorField(serverError) !== undefined) return undefined;
-  return authErrorMessage(serverError);
+  return message(serverError);
 }

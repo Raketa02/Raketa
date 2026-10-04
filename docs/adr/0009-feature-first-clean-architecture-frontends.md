@@ -3,6 +3,7 @@
 - **Status:** Accepted, **narrowed to `frontend_player/` by
   **ADR-0014** *(removed)***
 - **Date:** 2026-08-09
+- **Confirmed player-only by [ADR-0187](0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md) §6** (2026-09-25): the club website and the public site each get their own standard, and nothing learned in one client transfers to another.
 
 > **Scope note.** This ADR governs **`frontend_player/` only.** The club app follows its
 > own production architecture standard, which rejects the uniform layer set for a

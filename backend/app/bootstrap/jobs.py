@@ -46,6 +46,8 @@ from app.bootstrap.composition import (
     build_interest_ledger,
     build_lapsing_challenge_query,
     build_left_court_query,
+    build_mailer,
+    build_pending_mail,
     build_planned_game_handover,
     build_seatable_game_query,
     build_photo_review,
@@ -59,6 +61,7 @@ from app.bootstrap.composition import (
     build_settle_ratings_on_results,
     build_unit_of_work,
 )
+from app.application.mail.deliver_queued_mail import DeliverQueuedMail
 from app.core.config import Settings
 from app.infrastructure.jobs import PeriodicJob
 from app.kernel import Clock
@@ -168,6 +171,12 @@ RATING_CATCH_UP_JOB = "rating-catch-up"
 #: end — but unlike it, what it removes is a stream rather than a row.
 CONVERSATION_SWEEP_JOB = "conversation-sweep"
 
+#: The mail worker (``docs/adr/0186`` §2). A queue drain written as a job, like
+#: the outbox: it sends what a use case left in the mail queue and purges the
+#: body — **the purge is the control** on a live secret sitting in the database,
+#: so turning this off is a table of links and codes nobody receives.
+MAIL_DELIVERY_JOB = "mail-delivery"
+
 
 def build_scheduled_jobs(
     *,
@@ -214,6 +223,7 @@ def build_scheduled_jobs(
         or settings.UNFILLED_COURT_ENABLED
         or settings.RATING_CATCH_UP_ENABLED
         or settings.CONVERSATION_SWEEP_ENABLED
+        or settings.MAIL_DELIVERY_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -271,6 +281,12 @@ def build_scheduled_jobs(
         if settings.CONVERSATION_SWEEP_ENABLED:
             jobs.append(
                 build_conversation_sweep_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.MAIL_DELIVERY_ENABLED:
+            jobs.append(
+                build_mail_delivery_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -398,6 +414,57 @@ def build_scale_pressure_job(
     return PeriodicJob(
         name=SCALE_PRESSURE_JOB,
         interval_seconds=settings.SCALE_PRESSURE_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_mail_delivery_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Send what is due in the mail queue, one message per transaction.
+
+    **Safe beside itself with no lock** (``docs/adr/0092``) because each message
+    is claimed ``FOR UPDATE SKIP LOCKED`` for exactly its own send: a second
+    process skips it rather than waiting for it or taking it too. What *N
+    processes* cannot rule out is a process dying between a send and its commit,
+    which sends that message again — at least once, and a duplicate reset email
+    carries the same link and code as the first (``docs/adr/0186`` §2).
+
+    **Correctness depends on it**, in the way the rating catch-up's does: nobody
+    receives a reset or an invitation until this runs, and a secret sits in the
+    table until this purges it. The mailer is built once, because it holds no
+    connection between sends.
+    """
+
+    clock = build_clock()
+    mailer = build_mailer(settings)
+
+    async def run() -> None:
+        async with session_factory() as session:
+            outcome = await DeliverQueuedMail(
+                pending=build_pending_mail(session),
+                mailer=mailer,
+                uow=build_unit_of_work(session),
+                clock=clock,
+                batch_size=settings.MAIL_DELIVERY_BATCH_SIZE,
+            ).execute()
+        if outcome.sent or outcome.failed:
+            logger.log(
+                logging.WARNING if outcome.given_up else logging.INFO,
+                "mail delivery run finished",
+                extra={
+                    "job": MAIL_DELIVERY_JOB,
+                    "sent": outcome.sent,
+                    "failed": outcome.failed,
+                    "given_up": outcome.given_up,
+                },
+            )
+
+    return PeriodicJob(
+        name=MAIL_DELIVERY_JOB,
+        interval_seconds=settings.MAIL_DELIVERY_INTERVAL_SECONDS,
         run=run,
     )
 

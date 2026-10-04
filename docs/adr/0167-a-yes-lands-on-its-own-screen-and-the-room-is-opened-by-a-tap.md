@@ -4,6 +4,7 @@
   2026-09-14 by [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)** §7: the deck card is the second dark surface, a surface and not a
   screen, fenced as this one is.
 - **Date:** 2026-09-14
+- **Extended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the same screen, with the word *It's a game!*, greets the player whose yes (or rescue join) books a group game.
 - **Supersedes, by named sentence,**
   [`the-loop-screens.md`](../specs/the-loop/the-loop-screens.md) §2.1's *"`I'm in` goes to the
   room … The reply is still the redraw (§2.4), and then the screen pushes the room"* — the reply

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-09 *(captured retroactively from the existing implementation)*
+- **Narrowed 2026-09-25 by [ADR-0186](0186-email-goes-through-a-port-and-a-purged-queue.md)**: an email that carries a one-time secret goes through a second queue, the purged mail queue, because a domain event may never carry a secret. Every other side effect still goes through this outbox, and *a use case that calls an external API directly is a defect* stands.
 
 ## Context
 

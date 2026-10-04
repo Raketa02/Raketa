@@ -1,4 +1,12 @@
-import { SCORE_FLOOR, SCORE_STRONG, scoreTone } from './scoreTone';
+import {
+  SCORE_FLOOR,
+  SCORE_RISKY,
+  SCORE_STRONG,
+  scoreBand,
+  scoreTone,
+  type ScoreBand,
+  type ScoreTone,
+} from './scoreTone';
 
 /**
  * **The pill's ladder, at both boundaries and in both directions.**
@@ -31,5 +39,45 @@ describe('the reliability pill’s tone', () => {
    */
   it('reads the floor at the value the matcher itself uses', () => {
     expect(SCORE_FLOOR).toBe(70);
+  });
+});
+
+/**
+ * **The score tag's four bands**, at every boundary from both sides — and held to the ladder
+ * above at every score, so the tag can never disagree with a meter on the record about which
+ * side of the floor a number is on.
+ */
+describe('the score tag’s band', () => {
+  it('is strong from the strong step up', () => {
+    expect(scoreBand(100)).toBe('strong');
+    expect(scoreBand(SCORE_STRONG)).toBe('strong');
+    expect(scoreBand(SCORE_STRONG - 1)).toBe('ordinary');
+  });
+
+  it('is ordinary down to the floor the matcher prices', () => {
+    expect(scoreBand(SCORE_FLOOR)).toBe('ordinary');
+    expect(scoreBand(SCORE_FLOOR - 1)).toBe('wobbly');
+  });
+
+  it('is wobbly down to the risky step, and risky below it', () => {
+    expect(scoreBand(SCORE_RISKY)).toBe('wobbly');
+    expect(scoreBand(SCORE_RISKY - 1)).toBe('risky');
+    expect(scoreBand(0)).toBe('risky');
+  });
+
+  it('reads the risky step at 50', () => {
+    expect(SCORE_RISKY).toBe(50);
+  });
+
+  it('refines the tone ladder and never contradicts it, at every score', () => {
+    const toneOf: Readonly<Record<ScoreBand, ScoreTone>> = {
+      strong: 'good',
+      ordinary: 'neutral',
+      wobbly: 'poor',
+      risky: 'poor',
+    };
+    for (let score = 0; score <= 100; score += 1) {
+      expect(toneOf[scoreBand(score)]).toBe(scoreTone(score));
+    }
   });
 });

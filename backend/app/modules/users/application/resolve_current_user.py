@@ -1,19 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import final
-from uuid import UUID
 
-import jwt
-
-from app.kernel import Instant, instant
-from app.modules.auth.domain.errors import (
-    AccessTokenExpired,
-    AccessTokenInvalid,
-    AccessTokenMissing,
-    AccessTokenSubjectMalformed,
-)
+from app.kernel import Instant
+from app.modules.auth.application.access import read_access_token
+from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.ports import TokenService
 from app.modules.users.application.get_current_user import GetCurrentUser
 from app.modules.users.domain.user import User
@@ -62,38 +54,15 @@ class ResolveCurrentUserFromAccessToken:
 
         **One decode, in one place.** The alternative was a second dependency
         that decoded the same token again for its ``exp``, which is two copies of
-        the five refusals below and one of them getting fixed alone.
+        the five refusals and one of them getting fixed alone. The refusals
+        themselves are ``read_access_token``'s, shared with the club surface, and
+        this surface is the **player app's**: a club token is refused here
+        (``docs/adr/0185`` §6).
         """
 
-        if not raw_token:
-            raise AccessTokenMissing()
-
-        try:
-            payload = self._token_service.decode_access(raw_token)
-        except jwt.ExpiredSignatureError as exc:
-            raise AccessTokenExpired() from exc
-        except jwt.InvalidTokenError as exc:
-            raise AccessTokenInvalid() from exc
-
-        try:
-            user_id = UUID(payload["sub"])
-        except (KeyError, ValueError) as exc:
-            raise AccessTokenSubjectMalformed() from exc
-
-        try:
-            expires_at = instant(
-                datetime.fromtimestamp(int(payload["exp"]), tz=timezone.utc)
-            )
-        except (KeyError, TypeError, ValueError, OverflowError, OSError) as exc:
-            # **The fifth refusal, and it is not defensive.** An access token
-            # with no readable expiry is one nothing can close a live stream on
-            # (``docs/adr/0147`` §6), and a credential that never runs out is
-            # exactly what ``docs/adr/0004`` refuses. ``JwtTokenService`` already
-            # requires ``exp`` on decode, so this is the port's contract stated
-            # where the port is consumed rather than trusted to every adapter.
-            raise AccessTokenInvalid() from exc
-
-        return AuthenticatedSession(
-            user=await self._get_current_user.execute(user_id),
-            expires_at=expires_at,
+        claims = read_access_token(
+            self._token_service, raw_token, audience=Audience.PLAYER_APP
         )
+        user = await self._get_current_user.execute(claims.account_id)
+        claims.refuse_if_signed_out(user.credentials_changed_at)
+        return AuthenticatedSession(user=user, expires_at=claims.expires_at)

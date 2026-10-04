@@ -281,3 +281,21 @@ open to find out what is holding them back; `WRITTEN_BY_PLAYERS`'s words are rec
 comment in `recordPresentation` against the day that matters — a record, not kept copy. Nothing
 changed on the wire here — #471 committed the regenerated types, and `make gen-api` is a no-op
 at this commit. Not seen on a device: the row on the reliability screen under the ring.
+
+**The account is folded under _Full record_, and the score tag bands the figure in four**
+(2026-10-01, the product owner's asks and mocks). Under the three blocks, the counted card — shows
+up, answers challenges, answers about results, opponent variety, sportsmanship — and the tags sit
+behind one quiet row — a chevron alone, centred, with no words, which the row's spoken name
+_Full record_ stands in for (`RecordDetails`) — **shut each time the sheet opens**: a face is tapped to ask _who is this_, which the header and the blocks answer, and _why
+that number_ is one tap further. It moves **both ways** on the UI thread over `motion.disclose`
+(280, `easeDecel`): the fold's height runs to the content's measured height, so the sheet grows and
+gives the space back rather than jumping; the content fades in from a `space.md` above; the chevron
+turns over. Shut, the fold is hidden from assistive technology and takes no touches, and the row is
+a button with `expanded` state. The pairing row and the foot stay outside — they are things to do —
+and no fold is drawn over nothing (`recordCardDrawn`, which `RecordCard` reads too). The You tab's
+_Player reliability_ screen draws `RecordCard` unfolded, as before: that screen _is_ the account.
+**`scoreBand`** cuts `scoreTone`'s bottom step in two at `SCORE_RISKY` 50 — `strong`, `ordinary`,
+`wobbly`, `risky` — for `PlayerScoreTag`, which `groups` draws on Members' rows: a refinement of
+the one ladder and never a second one, held to it at every score in `scoreTone.test.ts`, so a tag
+cannot turn amber where a meter stays neutral. Not seen on a device: the fold's pace, and the sheet
+growing under it on both platforms.

@@ -264,7 +264,7 @@ describe('submitting the naming', () => {
     stubNaming({ name: 'Ania Kowalska', nickname: 'ania_k' });
     // The server, once the naming is recorded: the same account, now named.
     transport.on('GET', ME_PATH, () =>
-      json<Wire['UserResponse']>({ ...GATE_USER, name: 'Ania Kowalska', nickname: 'ania_k' }),
+      json<Wire['MeResponse']>({ ...GATE_USER, name: 'Ania Kowalska', nickname: 'ania_k' }),
     );
 
     fillNaming();
@@ -307,7 +307,7 @@ describe('submitting the naming', () => {
     expect(screen).toHavePathname('/name');
     expect(screen.getByText(NAMING_TITLE)).toBeTruthy();
 
-    answer(json<Wire['UserResponse']>({ ...GATE_USER, name: 'Ania Kowalska', nickname: 'ania_k' }));
+    answer(json<Wire['MeResponse']>({ ...GATE_USER, name: 'Ania Kowalska', nickname: 'ania_k' }));
 
     await waitFor(() => expect(screen).toHavePathname('/welcome'));
   });
@@ -321,7 +321,7 @@ describe('submitting the naming', () => {
     await launchUnnamed();
     stubNaming({ name: 'Ania Kowalska', nickname: 'ania_k' });
     transport.on('GET', ME_PATH, () =>
-      json<Wire['UserResponse']>({ ...GATE_USER, name: 'Ania Kowalska', nickname: 'ania_k' }),
+      json<Wire['MeResponse']>({ ...GATE_USER, name: 'Ania Kowalska', nickname: 'ania_k' }),
     );
 
     fillNaming('  Ania   Kowalska ');
@@ -360,7 +360,7 @@ describe('submitting the naming', () => {
     expect(transport.requestsTo('GET', ME_PATH).length).toBeGreaterThan(2);
 
     transport.on('GET', ME_PATH, () =>
-      json<Wire['UserResponse']>({ ...GATE_USER, name: 'Ania Kowalska', nickname: 'ania_k' }),
+      json<Wire['MeResponse']>({ ...GATE_USER, name: 'Ania Kowalska', nickname: 'ania_k' }),
     );
     fireEvent.press(screen.getByLabelText(CONTINUE.label));
 

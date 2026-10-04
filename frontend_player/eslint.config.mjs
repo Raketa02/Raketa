@@ -89,6 +89,15 @@ const liveStreamImport = {
     'from src/test-support/platform.ts in a test. See docs/adr/0147.',
 };
 
+const clipboardImport = {
+  group: ['expo-clipboard'],
+  message:
+    'Only src/shared/lib/platform/clipboard.ts may import expo-clipboard. A native module cannot ' +
+    'be driven from a test, and Join a group has to be walked with a link on the clipboard — use ' +
+    'the ClipboardPort from @/shared/lib/platform, and fakeClipboard() from ' +
+    'src/test-support/platform.ts in a test. See #512.',
+};
+
 const hapticsImport = {
   group: ['expo-haptics'],
   message:
@@ -150,11 +159,27 @@ const planImportFromGames = {
 };
 
 const asyncStoragePath = {
-  // Tokens belong in the OS keychain, not in JS-readable storage. The one exemption is a file,
-  // not a directory, and it holds a public datafile — see its block below.
+  // Tokens belong in the OS keychain, not in JS-readable storage. The two exemptions are files,
+  // not directories: one holds a public datafile, the other three choices a player made — see
+  // their blocks below.
   name: '@react-native-async-storage/async-storage',
   message:
-    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importer is src/features/feature_flags/api/datafileCache.ts, which keeps the public feature-flag datafile and nothing else (docs/adr/0180 §6); a second need joins that allow-list by decision, not by import.',
+    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importers are src/features/feature_flags/api/datafileCache.ts, which keeps the public feature-flag datafile (docs/adr/0180 §6), and src/shared/lib/preferences/phonePreferences.ts, which keeps the per-account choices ADR-0188 lists (docs/adr/0188); a third need joins that allow-list by decision, not by import.',
+};
+
+/**
+ * React Native's own share sheet — a **named** import from `react-native`, so it is a path entry
+ * rather than a pattern: the rest of the module is every component the app draws, and only this
+ * one name is fenced (#513).
+ */
+const shareImportPath = {
+  name: 'react-native',
+  importNames: ['Share'],
+  message:
+    'Only src/shared/lib/platform/share.ts may import Share from react-native. The sheet is ' +
+    'native and a suite cannot open one, so a group page has to be walked with a sheet that ' +
+    'records what it was handed — use the SharePort from @/shared/lib/platform, and fakeShare() ' +
+    'from src/test-support/platform.ts in a test. See #513.',
 };
 
 /** Applies everywhere under src/, including api/ and mappers/. */
@@ -166,6 +191,7 @@ const CORE_PATTERNS = [
   imagePickerImport,
   liveStreamImport,
   hapticsImport,
+  clipboardImport,
   featurevisorImport,
   observabilityVendorImports,
 ];
@@ -198,7 +224,14 @@ const PURE_PATHS = [
   },
 ];
 
-const restrict = (patterns, paths = [asyncStoragePath]) => ['error', { patterns, paths }];
+/**
+ * The two path bans every block carries unless it is the one file exempt from one of them. The
+ * pure layers carry `PURE_PATHS` instead, which bans `react-native` whole and so the share sheet
+ * with it.
+ */
+const DEFAULT_PATHS = [asyncStoragePath, shareImportPath];
+
+const restrict = (patterns, paths = DEFAULT_PATHS) => ['error', { patterns, paths }];
 
 const literalHexColour = {
   selector: 'Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/]',
@@ -382,11 +415,29 @@ export default [
     rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(hapticsImport)) },
   },
   {
+    // The clipboard — read and write, the same one-file-wide exemption as the motor (#512, #513).
+    files: ['src/shared/lib/platform/clipboard.ts'],
+    rules: { 'no-restricted-imports': restrict(sharedPatternsExcept(clipboardImport)) },
+  },
+  {
+    // The share sheet — one verb, one file, the clipboard's exemption with the path ban
+    // subtracted rather than a pattern: `Share` is one name out of `react-native` (#513).
+    files: ['src/shared/lib/platform/share.ts'],
+    rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [asyncStoragePath]) },
+  },
+  {
     // The feature flags' saved datafile — the one module in the app that may import AsyncStorage
     // (ADR-0180 §6). The path ban is subtracted and nothing else: this file is a feature's api/
     // layer, so its baseline is `CORE_PATTERNS`, and every one of those still applies.
     files: ['src/features/feature_flags/api/datafileCache.ts'],
-    rules: { 'no-restricted-imports': restrict(CORE_PATTERNS, []) },
+    rules: { 'no-restricted-imports': restrict(CORE_PATTERNS, [shareImportPath]) },
+  },
+  {
+    // The phone-preferences store — the second module that may import AsyncStorage (ADR-0188
+    // §1), and one file wide for the datafile cache's reason. It sits under `shared/`, so its
+    // baseline is `SHARED_PATTERNS`, and only the path ban is subtracted.
+    files: ['src/shared/lib/preferences/phonePreferences.ts'],
+    rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [shareImportPath]) },
   },
   {
     // The one module that wraps the Featurevisor SDK (ADR-0180 §5) — one file wide, like the

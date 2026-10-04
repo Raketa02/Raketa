@@ -22,6 +22,7 @@ from app.bootstrap.jobs import (
     CANDIDATE_INDEX_TAIL_JOB,
     CHALLENGE_LAPSE_JOB,
     CONVERSATION_SWEEP_JOB,
+    MAIL_DELIVERY_JOB,
     INTEREST_EXPIRY_JOB,
     PHOTO_SWEEP_JOB,
     RATING_CATCH_UP_JOB,
@@ -208,6 +209,7 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         UNFILLED_COURT_ENABLED=False,
         RATING_CATCH_UP_ENABLED=False,
         CONVERSATION_SWEEP_ENABLED=False,
+        MAIL_DELIVERY_ENABLED=False,
     )
     app = FastAPI()
     app.state.event_runtime = object()
@@ -253,6 +255,7 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         ("UNFILLED_COURT_ENABLED", UNFILLED_COURT_JOB),
         ("RATING_CATCH_UP_ENABLED", RATING_CATCH_UP_JOB),
         ("CONVERSATION_SWEEP_ENABLED", CONVERSATION_SWEEP_JOB),
+        ("MAIL_DELIVERY_ENABLED", MAIL_DELIVERY_JOB),
     ],
 )
 async def test_a_lone_database_job_is_handed_a_session_factory(
@@ -284,6 +287,7 @@ async def test_a_lone_database_job_is_handed_a_session_factory(
             "UNFILLED_COURT_ENABLED",
             "RATING_CATCH_UP_ENABLED",
             "CONVERSATION_SWEEP_ENABLED",
+            "MAIL_DELIVERY_ENABLED",
             "SCALE_PRESSURE_ENABLED",
         )
     }

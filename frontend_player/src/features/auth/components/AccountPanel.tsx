@@ -19,6 +19,10 @@
  *
  * `dark`, not `primary`: coral is the accent an action *wants* you to take, and leaving is not
  * that action.
+ *
+ * **Both You tabs pin it under their page** (#529, 2026-10-02), so it is always at the tab's foot
+ * however many rows are over it. The pinned slot is spaced by whoever draws it, so the panel puts
+ * no step of its own above the button.
  */
 
 import { StyleSheet, View } from 'react-native';
@@ -51,6 +55,5 @@ export function AccountPanel() {
 }
 
 const s = StyleSheet.create({
-  // A step above the last group, so the way out reads as the tab's foot and not as a row.
-  panel: { gap: theme.space.md, paddingTop: theme.space.md },
+  panel: { gap: theme.space.md },
 });

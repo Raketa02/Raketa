@@ -2,11 +2,20 @@
 # ---------------------------------------------------------------------------
 # Contract drift check.
 #
-#   bash .github/scripts/check-contract-drift.sh frontend_player
+#   bash .github/scripts/check-contract-drift.sh <client>
 #
-# The backend owns the API contract and emits it as openapi.player.json
-# (docs/adr/0006). The client generates its wire types from that document.
-# This asserts the two agree: regenerate, then look for a diff.
+# The backend owns the API contract and emits one document per surface
+# (docs/adr/0006, docs/adr/0187 §5). Each client generates its wire types from
+# its own document. This asserts one client and its document agree: regenerate,
+# then look for a diff.
+#
+# **A client is an app whose package.json declares `gen:api`** — today
+# frontend_player (openapi.player.json), frontend_club (openapi.club.json) and
+# frontend_public (openapi.public.json). The script names none of them: who is
+# a client, and which document each reads, are contract-clients.sh's answers,
+# read from each app's own `gen:api` script — so a client added with that script
+# is checkable the day it lands, and an app without one is refused rather than
+# guessed at.
 #
 #   exit 0  the committed wire types reproduce from the committed contract
 #   exit 1  drift — a contract change was shipped without its client types,
@@ -32,18 +41,22 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-app="${1:-}"
-case "$app" in
-  frontend_player) ;;
-  *)
-    echo "usage: $0 <frontend_player>" >&2
-    exit 2
-    ;;
-esac
-
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
-cd "$ROOT/$app" || exit 2
+source "$ROOT/.github/scripts/contract-clients.sh"
+
+# The argument is one of the clients by name — never a path, never an app with
+# no `gen:api`.
+clients=$(contract_clients | tr '\n' ' ')
+app="${1:-}"
+case " $clients" in
+  *" $app "*) [ -n "$app" ] ;;
+  *) false ;;
+esac || {
+  echo "usage: $0 <client>" >&2
+  echo "  a client is an app whose package.json declares gen:api: ${clients:-none}" >&2
+  exit 2
+}
 
 # Both paths come out of the app's own `gen:api` script: the document it reads,
 # and the file it writes. Deriving them means the failure message cannot name a
@@ -52,17 +65,14 @@ cd "$ROOT/$app" || exit 2
 # src/generated/ as a directory would report an edit to the README.md that lives
 # beside the output as contract drift, which is the sort of false failure that
 # teaches people to ignore this check.
-read -r doc out <<<"$(node -p "
-  const s = (require('./package.json').scripts['gen:api'] || '').split(/\s+/);
-  const o = s.indexOf('-o');
-  [(s[1] || '').replace(/^\.\.\//, ''), o < 0 ? '' : (s[o + 1] || '')].join(' ')
-" 2>/dev/null)"
+read -r doc generated <<<"$(gen_api_of "$app")"
 
-if [ -z "$doc" ] || [ -z "$out" ]; then
+if [ -z "$doc" ] || [ -z "${generated:-}" ]; then
   echo "Could not read the document and output path out of $app's gen:api script." >&2
   exit 2
 fi
-generated="$app/$out"
+
+cd "$ROOT/$app" || exit 2
 
 if ! pnpm gen:api; then
   echo >&2

@@ -31,6 +31,12 @@
         { "name": "ACCESS_TOKEN_EXPIRE_SECONDS", "value": "900" },
         { "name": "REFRESH_TOKEN_EXPIRE_SECONDS", "value": "86400" },
         { "name": "ALLOW_ORIGINS", "value": "" },
+        { "name": "PUBLIC_SITE_URL", "value": "https://<PUBLIC_SITE_DOMAIN>" },
+        { "name": "CLUB_WEBSITE_URL", "value": "https://<CLUB_WEBSITE_DOMAIN>" },
+        { "name": "SMTP_HOST", "value": "<SMTP_RELAY_HOST>" },
+        { "name": "SMTP_PORT", "value": "587" },
+        { "name": "SMTP_SECURITY", "value": "starttls" },
+        { "name": "MAIL_SENDER", "value": "Raketa <no-reply@<PUBLIC_SITE_DOMAIN>>" },
         { "name": "RUN_MIGRATIONS_ON_STARTUP", "value": "true" }
       ],
       "secrets": [
@@ -38,7 +44,9 @@
         { "name": "WRITER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:WRITER_DB_URL::" },
         { "name": "READER_DB_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:READER_DB_URL::" },
         { "name": "REDIS_URL", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:REDIS_URL::" },
-        { "name": "PHOTO_STORAGE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:PHOTO_STORAGE_SECRET_KEY::" }
+        { "name": "PHOTO_STORAGE_SECRET_KEY", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:PHOTO_STORAGE_SECRET_KEY::" },
+        { "name": "SMTP_USERNAME", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:SMTP_USERNAME::" },
+        { "name": "SMTP_PASSWORD", "valueFrom": "arn:aws:secretsmanager:eu-central-1:<AWS_ACCOUNT_ID>:secret:raketa/prod-<SECRET_SUFFIX>:SMTP_PASSWORD::" }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"],

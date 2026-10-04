@@ -26,6 +26,13 @@ Decided by
 > [`the-play-components.md`](the-play-components.md) and
 > [`the-loop-components.md`](../the-loop/the-loop-components.md).
 
+> **§F1 rule 6's *no Rakieta* has one exception, from
+> [ADR-0187](../../adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+> §8 (2026-09-25).** Wherever a Play › Groups, club website or public site mock sentence names the
+> app (*"Join Ogrody 33 Club on Raketa: <link>"*), the app is named, and it is named **Raketa**.
+> Everywhere else the rule stands. Those surfaces' mocks are in
+> [`../play-groups/`](../play-groups/README.md).
+
 ---
 
 ## 1. Where the copy lives
@@ -2776,7 +2783,7 @@ card is a figure the platform computed or a name the player gave.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
-| The tab | `You` · eyebrow `Player profile` | the shell's, as today |
+| The tab | `You` | the shell's; the eyebrow `Player profile` went in #529 (2026-10-02) |
 | The three group titles | `Playing` · `Finding players` · `On your card` | `flab`, uppercase by style; the shell's |
 | The rows, Playing | `Skill passport` · `Player reliability` · `What kind of game` | |
 | The rows, Finding players | `Your week` · `How far to look` · `Where you play` · `Who you play with` · `Game suggestions` | *How far to look* is the radius step's own label |

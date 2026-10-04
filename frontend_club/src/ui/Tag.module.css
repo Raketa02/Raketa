@@ -1,0 +1,25 @@
+.tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: var(--size-hairline) var(--space-2);
+  border-radius: var(--radius-tag);
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.green {
+  background: var(--colour-green-soft);
+  color: var(--colour-green);
+}
+
+.amber {
+  background: var(--colour-amber-soft);
+  color: var(--colour-amber);
+}
+
+.red {
+  background: var(--colour-red-soft);
+  color: var(--colour-red);
+}

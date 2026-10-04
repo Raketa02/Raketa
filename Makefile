@@ -2,9 +2,10 @@
 # Raketa monorepo — root helpers.
 #
 # Each app owns its own commands: backend/Makefile, and the pnpm scripts in
-# frontend_player/. Targets here are only for things that genuinely span apps.
+# frontend_player/, frontend_club/ and frontend_public/. Targets here are only
+# for things that genuinely span apps.
 # ----------------------------------------------------------------------------
-.PHONY: help gen-api openapi check check-backend check-player \
+.PHONY: help gen-api openapi check check-backend check-player check-club check-public \
         test-hooks test-drift contract-freshness test-contract-freshness \
         gen-judged-pairings judged-pairings \
         test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
@@ -18,7 +19,7 @@ help:              ## list targets
 # ----------------------------------------------------------------------------
 # API contract — the backend is the source of truth (docs/adr/0006).
 # ----------------------------------------------------------------------------
-openapi:           ## emit the API contracts (backend/openapi.{player,dev}.json)
+openapi:           ## emit the API contracts (backend/openapi.{player,dev,club,public}.json)
 	$(MAKE) -C backend openapi
 
 # Freshness, not drift, and the two are different questions. `test-drift` below
@@ -33,11 +34,20 @@ contract-freshness: ## verify every emitted OpenAPI document reproduces from the
 test-contract-freshness: ## verify the contract-freshness check still fires
 	bash .github/scripts/test-contract-freshness.sh
 
-gen-api: openapi   ## regenerate the client's wire types from the contract
-	cd frontend_player && pnpm gen:api
-	@echo "Regenerated frontend_player/src/generated/."
-	@echo "Commit it along with backend/openapi.player.json."
-	@echo "CI diffs them (make test-drift covers the check itself)."
+# The clients: every app whose package.json declares `gen:api`, asked of
+# .github/scripts/contract-clients.sh — the answer check-contract-drift.sh reads
+# too, so the two cannot disagree about who is a client. Three today, each
+# generating from its own document (docs/adr/0187 §5): frontend_player,
+# frontend_club and frontend_public.
+CLIENTS := $(shell bash .github/scripts/contract-clients.sh)
+
+gen-api: openapi   ## regenerate every client's wire types from its own contract
+	@for app in $(CLIENTS); do \
+	  echo "→ $$app"; (cd $$app && pnpm gen:api) || exit 1; \
+	done
+	@echo "Regenerated the wire types of $(CLIENTS)."
+	@echo "Commit them along with the backend/openapi.*.json that moved."
+	@echo "CI diffs each client (make test-drift covers the check itself)."
 
 # ----------------------------------------------------------------------------
 # The six judged pairings — the same generate-commit-diff idiom as gen-api, one
@@ -97,7 +107,13 @@ check-backend:     ## backend: lint + typecheck + test
 check-player:      ## player app: lint + typecheck + test
 	cd frontend_player && pnpm check
 
-check: check-backend check-player  ## every app's gate
+check-club:        ## club website: lint + format + typecheck + tokens + Playwright
+	cd frontend_club && pnpm check
+
+check-public:      ## public site: lint + format + typecheck + tokens + Playwright
+	cd frontend_public && pnpm check
+
+check: check-backend check-player check-club check-public  ## every app's gate
 
 # ----------------------------------------------------------------------------
 # Guardrails. Run after touching anything in .claude/hooks/.
@@ -105,7 +121,7 @@ check: check-backend check-player  ## every app's gate
 test-hooks:        ## verify the ownership + bash guardrails still match
 	bash .claude/hooks/test-hooks.sh
 
-test-drift:        ## verify the contract drift check still fires
+test-drift:        ## verify the contract drift check still fires, for every client
 	bash .github/scripts/test-contract-drift.sh
 
 # The Poetry that writes backend/poetry.lock and the Poetry every build pins to

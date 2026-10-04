@@ -73,7 +73,7 @@ async def _write_the_fixture(session_factory) -> list:
         opt_in(alice),
         rating_initialised(alice, sport="PADEL"),
         intent_declared(alice, sport="PADEL"),
-        RefreshTokenIssued(uuid4(), alice, "jti", START, START),
+        RefreshTokenIssued(uuid4(), alice, "jti", START, START, "player_app"),
         profile_created(bob),
         opt_in(bob),
         PhotosChanged(bob, ("one", "two"), START),
@@ -91,7 +91,7 @@ async def _write_the_fixture(session_factory) -> list:
         rating_initialised(carol, sport="SQUASH"),
         profile_created(carol),
         opt_in(carol),
-        RefreshTokenRotated(bob, uuid4(), "old", uuid4(), "new", START),
+        RefreshTokenRotated(bob, uuid4(), "old", uuid4(), "new", START, "player_app"),
         intent_declared(carol, sport="SQUASH", intent="EITHER"),
     ]
     for event in events:

@@ -73,12 +73,18 @@ def production(**overrides) -> Settings:
         APP_ENV=Environment.PRODUCTION,
         JWT_SECRET_KEY=POISON_SECRET,
         PHOTO_STORAGE_SECRET_KEY=POISON_SECRET,
-        # `APP_HOST` and `REDIS_URL` are here because every *deployed*
-        # environment is asked for them, production included (#341) — not
-        # because the console gate has any interest in either.
+        # `APP_HOST`, `REDIS_URL`, the two sites and the mail relay are here
+        # because every *deployed* environment is asked for them, production
+        # included (#341, #504, #507) — not because the console gate has any interest
+        # in any of them.
         APP_HOST="10.0.0.1",
         WRITER_DB_URL=POISON_DB_URL,
         REDIS_URL=POISON_REDIS_URL,
+        PUBLIC_SITE_URL="https://raketa.example",
+        CLUB_WEBSITE_URL="https://clubs.raketa.example",
+        SMTP_HOST="smtp.raketa.example",
+        SMTP_SECURITY="starttls",
+        MAIL_SENDER="Raketa <no-reply@raketa.example>",
         DB_SSL_MODE="require",
         ALLOW_ORIGINS=["https://raketa.example"],
         **overrides,
@@ -108,6 +114,11 @@ def test_the_other_three_are_served(clean_env, environment):
         APP_HOST="127.0.0.1",
         WRITER_DB_URL=POISON_DB_URL,
         REDIS_URL=POISON_REDIS_URL,
+        PUBLIC_SITE_URL="https://raketa.example",
+        CLUB_WEBSITE_URL="https://clubs.raketa.example",
+        SMTP_HOST="smtp.raketa.example",
+        SMTP_SECURITY="starttls",
+        MAIL_SENDER="Raketa <no-reply@raketa.example>",
     )
 
     refuse_unless_served(settings)  # does not raise
@@ -201,6 +212,11 @@ PRODUCTION_ENV = {
     "APP_HOST": "10.0.0.1",
     "WRITER_DB_URL": UNREACHABLE_DB_URL,
     "REDIS_URL": POISON_REDIS_URL,
+    "PUBLIC_SITE_URL": "https://raketa.example",
+    "CLUB_WEBSITE_URL": "https://clubs.raketa.example",
+    "SMTP_HOST": "smtp.raketa.example",
+    "SMTP_SECURITY": "starttls",
+    "MAIL_SENDER": "Raketa <no-reply@raketa.example>",
     "DB_SSL_MODE": "require",
     "ALLOW_CREDENTIALS": "false",
 }

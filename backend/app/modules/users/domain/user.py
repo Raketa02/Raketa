@@ -8,6 +8,10 @@ from uuid import UUID
 
 from app.modules.users.domain.errors import InactiveUserCannotBePromoted
 from app.modules.users.domain.events import (
+    AccountOpenedByInvitation,
+    AdultAttested,
+    PasswordChanged,
+    PasswordCleared,
     UserDisabled,
     UserMarkedAsTester,
     UserNamed,
@@ -43,7 +47,9 @@ class User:
 
     id: UUID
     email: Email
-    password_hash: HashedPassword
+    #: ``None`` once the club's *Reset password* has cleared it
+    #: (``docs/adr/0184`` §6): nothing signs in until a new one is set.
+    password_hash: Optional[HashedPassword]
     name: Optional[Name] = None
     nickname: Optional[Nickname] = None
     authority: Authority = Authority.USER
@@ -52,6 +58,16 @@ class User:
     #: The **tester mark** (``docs/adr/0180`` §9): a Tester may be given a
     #: feature before anyone else. Beside ``authority`` and never inside it.
     is_tester: bool = False
+    #: When this account's credentials last changed (``docs/adr/0185`` §7): an
+    #: access token issued before it is refused. ``None`` for an account whose
+    #: password is the one it registered with.
+    credentials_changed_at: Optional[datetime] = None
+    #: Whether this account has given the **Adult attestation**
+    #: (``docs/adr/0185`` §5), **as its stream tells it** — and ``None`` on a
+    #: ``User`` read from the projection, which has no column for it. ``None``
+    #: says *this read did not learn it*, never *nobody attested*: the one
+    #: reader that needs it, ``/me``, replays the stream.
+    adult_attested: Optional[bool] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     version: int = 0
@@ -106,6 +122,39 @@ class User:
         return user
 
     @classmethod
+    def open_by_invitation(
+        cls,
+        *,
+        user_id: UUID,
+        email: Email,
+        name: Name,
+        password_hash: HashedPassword,
+        occurred_at: datetime,
+    ) -> "User":
+        """Open the account an Invitation is for, as its person sets a password
+        (``docs/adr/0184`` §2).
+
+        **Named by the club and holding nothing else**: the Name is the one the
+        club typed, there is no Nickname, and there is no Adult attestation —
+        running a club's groups asks nobody's age (``docs/adr/0185`` §5). The
+        attestation is asked at *Start playing*, before anything player-side.
+        Whether the address already has an account is the caller's question,
+        asked before this is reached.
+        """
+
+        user = cls._empty()
+        user._record_that(
+            AccountOpenedByInvitation(
+                user_id=user_id,
+                email=email.value,
+                password_hash=password_hash.value,
+                name=name.value,
+                occurred_at=occurred_at,
+            )
+        )
+        return user
+
+    @classmethod
     def _empty(cls) -> "User":
         user = cls.__new__(cls)
         user._events = EventRecorder()
@@ -127,16 +176,43 @@ class User:
             self.is_admin = event.is_admin
             self.is_active = event.is_active
             self.is_tester = False
-            # ``adult_attested`` is deliberately not folded into state. It is a
-            # precondition of the account existing, answered once and never
-            # asked again — no later command reads it, and no rule anywhere
-            # varies by it (``docs/adr/0124``). Holding it here would also make
-            # it a field ``_to_domain`` cannot fill, because the projection has
-            # no column for it: a ``User`` read back from the read model would
-            # report *nobody attested* about a player who did. The stream is the
-            # record, and the stream keeps it.
+            self.credentials_changed_at = None
+            # Folded since ``docs/adr/0185`` §5 made the attestation something
+            # an account can give later, and *Start playing* asks whether it
+            # has. **Only ``True`` is an attestation**: ``None`` is an account
+            # registered before the question existed, which was never asked and
+            # so is asked the first time it acts as a player — reading it as a
+            # claim would be the backfill ``docs/adr/0124`` forbids. The
+            # projection still has no column for it, which is why a ``User``
+            # read from the row carries ``None`` there rather than a guess.
+            self.adult_attested = event.adult_attested is True
             self.created_at = None
             self.updated_at = None
+            self.version += 1
+            return
+        if isinstance(event, AccountOpenedByInvitation):
+            self.id = event.user_id
+            self.email = Email(event.email)
+            self.name = Name(event.name)
+            self.nickname = None
+            self.password_hash = HashedPassword(event.password_hash)
+            self.authority = Authority.USER
+            self.is_admin = False
+            self.is_active = True
+            self.is_tester = False
+            self.credentials_changed_at = None
+            self.adult_attested = False
+            self.created_at = None
+            self.updated_at = None
+            self.version += 1
+            return
+        if isinstance(event, AdultAttested):
+            self.adult_attested = True
+            self.version += 1
+            return
+        if isinstance(event, PasswordCleared):
+            self.password_hash = None
+            self.credentials_changed_at = event.occurred_at
             self.version += 1
             return
         if isinstance(event, UserNamed):
@@ -146,6 +222,11 @@ class User:
             return
         if isinstance(event, UserDisabled):
             self.is_active = False
+            self.version += 1
+            return
+        if isinstance(event, PasswordChanged):
+            self.password_hash = HashedPassword(event.password_hash)
+            self.credentials_changed_at = event.occurred_at
             self.version += 1
             return
         if isinstance(event, UserPromotedToAdmin):
@@ -166,6 +247,43 @@ class User:
     def _ensure_registered(self) -> None:
         if not hasattr(self, "id"):
             raise RuntimeError("user aggregate is not registered")
+
+    @property
+    def has_password(self) -> bool:
+        """Whether anything can sign in to this account — false only between
+        the club clearing it and a new one being set."""
+
+        return self.password_hash is not None
+
+    def attest_adult(self, *, occurred_at: datetime) -> None:
+        """The Adult attestation, given after the account was opened
+        (``docs/adr/0185`` §5). The claim itself is the caller's to have built
+        — an :class:`AdultAttestation`, which cannot be built from a *no*.
+
+        **Once**: an account that has attested — at sign-up or here — records
+        nothing, as a second ``disable`` does. ``adult_attested`` is only known
+        on an aggregate replayed from its stream.
+        """
+
+        self._ensure_registered()
+        if self.adult_attested is None:
+            # Read from the projection, which does not know: attesting on that
+            # would record a second attestation for an account that gave one.
+            raise RuntimeError("the attestation is only known on a replayed stream")
+        if self.adult_attested:
+            return
+        self._record_that(AdultAttested(user_id=self.id, occurred_at=occurred_at))
+
+    def clear_password(self, *, occurred_at: datetime) -> None:
+        """The club's *Reset password* (``docs/adr/0184`` §6): no password at
+        all, and **signed out everywhere** from ``occurred_at``. Whether this
+        account may be cleared — only one holding nothing but administrator
+        profiles — is the caller's question, asked before this is reached.
+        Always recorded, as a password change is: clearing again still ends
+        whatever sessions were opened since."""
+
+        self._ensure_registered()
+        self._record_that(PasswordCleared(user_id=self.id, occurred_at=occurred_at))
 
     def name_as(
         self, *, name: Name, nickname: Nickname, occurred_at: datetime
@@ -188,6 +306,26 @@ class User:
                 user_id=self.id,
                 name=name.value,
                 nickname=nickname.value,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def change_password(
+        self, *, password_hash: HashedPassword, occurred_at: datetime
+    ) -> None:
+        """A new password, which **signs this account out everywhere**
+        (``docs/adr/0185`` §7): ``occurred_at`` becomes the instant before which
+        no access token counts. Always recorded — setting the same password
+        again is still somebody saying *end my other sessions*.
+
+        Whether a disabled account may do this is the caller's question, asked
+        before a credential is spent; this records the act."""
+
+        self._ensure_registered()
+        self._record_that(
+            PasswordChanged(
+                user_id=self.id,
+                password_hash=password_hash.value,
                 occurred_at=occurred_at,
             )
         )

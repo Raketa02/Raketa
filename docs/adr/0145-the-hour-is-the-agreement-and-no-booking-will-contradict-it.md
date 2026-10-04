@@ -6,6 +6,7 @@
   `Today 14 Sep`, under whichever tag the plan has earned. The hour as the agreement, the agreed
   point, *Needs result* and the ordering all stand.
 - **Date:** 2026-09-07
+- **Narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop** (behind one feature flag): a game made from a group's Games deck or Fill in is booked and paid when it fills, so there a booking is the agreement. This record governs the challenge-and-plan loop, word for word, while it exists.
 - **Extends [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)**, which
   decided the Plan's shape — three slots, *where · day · hour* — and said in as many words that
   it *"does not decide what the hour costs."* This record is that cost.

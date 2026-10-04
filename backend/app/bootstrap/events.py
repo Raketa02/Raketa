@@ -27,6 +27,10 @@ from app.infrastructure.events.transactional_publisher import (
 )
 from app.kernel import Clock
 from app.modules.conversations.domain.live import NudgePublisher
+from app.modules.administrators.application.event_subscriptions import (
+    register_administrator_events,
+    subscribe_administrator_handlers,
+)
 from app.modules.auth.application.event_subscriptions import (
     register_auth_events,
     subscribe_auth_handlers,
@@ -38,6 +42,14 @@ from app.modules.blocks.application.event_subscriptions import (
 from app.modules.challenges.application.event_subscriptions import (
     register_challenge_events,
     subscribe_challenge_handlers,
+)
+from app.modules.clubs.application.event_subscriptions import (
+    register_club_events,
+    subscribe_club_handlers,
+)
+from app.modules.groups.application.event_subscriptions import (
+    register_group_events,
+    subscribe_group_handlers,
 )
 from app.modules.conversations.application.event_subscriptions import (
     register_conversation_events,
@@ -167,6 +179,9 @@ def build_event_runtime() -> EventRuntime:
     register_game_events(catalog)
     register_plan_events(catalog)
     register_conversation_events(catalog)
+    register_club_events(catalog)
+    register_group_events(catalog)
+    register_administrator_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
@@ -178,6 +193,9 @@ def build_event_runtime() -> EventRuntime:
     subscribe_game_handlers(dispatcher)
     subscribe_plan_handlers(dispatcher)
     subscribe_conversation_handlers(dispatcher)
+    subscribe_club_handlers(dispatcher)
+    subscribe_group_handlers(dispatcher)
+    subscribe_administrator_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),

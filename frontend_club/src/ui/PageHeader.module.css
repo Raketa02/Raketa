@@ -1,0 +1,36 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.words {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.caption {
+  color: var(--colour-muted);
+  font-size: var(--text-small);
+}
+
+.title {
+  font-size: var(--text-title);
+  font-weight: var(--weight-heavy);
+  letter-spacing: var(--tracking-title);
+  line-height: var(--leading-tight);
+}
+
+.aside {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .title {
+    font-size: var(--text-title-phone);
+  }
+}

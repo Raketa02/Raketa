@@ -26,10 +26,12 @@ make lint        # ruff check .          make format → ruff format .
 make typecheck   # mypy app scripts
 make check       # lint + lint-imports + typecheck + test — the same gate CI runs
 make test-gates  # prove the kernel/engines purity gates still fire (CI runs it)
-make openapi     # emit openapi.{player,dev}.json — the player contract the client
-                 # generates from, and the dev console's one-path contract
+make openapi     # emit openapi.{player,dev,club,public}.json — the player contract
+                 # the client generates from, the dev console's one-path contract,
+                 # the club website's, and the public site's
 make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
-make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis); logs, shell
+make up / down   # dev stack (Postgres + API + MinIO + photo-review + Redis + Mailpit,
+                 # whose inbox at http://localhost:8025 is where every email lands); logs, shell
 make migrate     # alembic upgrade head inside the API container
 make seed        # the named accounts, the cohort, the games they have played and four
                  # more nobody has played — whose plans reach nought, one, two and
@@ -126,6 +128,10 @@ Rules to preserve:
   sentence literally — and the reset argued for itself in ADR-0169's amendment of
   2026-09-15, which is the rule: a new one does **not** inherit this — it needs the same
   argument made in an ADR.
+  Two tables made that argument for a different reason — **an event would hold a
+  secret** — and are named here for it: `one_time_credentials` (ADR-0184 §3) and the
+  `mail_queue` (ADR-0186 §2). The password change they lead to is still an event on the
+  account's own stream.
 - **Seeds execute use cases, never SQL.** `app/seeds/` creates deterministic development
   accounts through the same use cases a request runs, wired from the composition root, so
   a seeded aggregate has the event stream and the outbox rows a real one has. A structural
@@ -318,7 +324,7 @@ Rules to preserve:
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Twelve jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Thirteen jobs today — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -395,6 +401,12 @@ Rules to preserve:
   candidate index's tail is built for — a gap is stepped over once the snapshot horizon
   proves it permanent, so a destruction costs that projection a tick of lag and never an
   event. `CONVERSATION_GRACE` is domain; only the cadence is a setting.
+  The thirteenth is the **mail worker** (`mail-delivery`,
+  [ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §2), a queue
+  drain written as a job the way the outbox's is, and one **correctness depends on**: nobody
+  receives a reset until it runs, and the purge that clears a link and a code off the mail
+  queue is its to do. It claims one message per transaction `FOR UPDATE SKIP LOCKED`, so it is
+  safe beside itself; a process dying between a send and its commit sends that message again.
 - **The candidate index tails the log; the outbox delivers side effects**
   ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
   [ADR-0111](../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
@@ -607,8 +619,15 @@ Rules to preserve:
   one whose posture is `CLOSED` without being a gate: a fill that cannot read the court it
   names would silently become an ordinary ⚡ over a pool that still excludes the very people
   it was meant to seat around.
-- **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix. The one
-  exception is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
+- **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix, and mount
+  them on **the surface whose client calls them**: `app/api/v1/player.py` for the player
+  app, `app/api/v1/club.py` — everything under `/api/v1/club` — for the club website, and
+  `app/api/v1/public.py` — everything under `/api/v1/public`, and no route taking a session —
+  for the public site
+  ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)
+  §5). No path is in two documents (`tests/unit/test_club_surface.py`,
+  `tests/unit/test_public_surface.py`). The one
+  exception to the prefix is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
   second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one
   roster route, which is the whole of `openapi.dev.json`. It **acts as another player by
   signing in as them** through the ordinary `POST /api/v1/auth/login` with the public seed
@@ -1116,10 +1135,15 @@ Rules to preserve:
   it from `player_score` is that it also **enforces admission**, and that is the whole of
   what it decides for itself. Five things are load-bearing. **A record opens on a prior
   disclosure and never on a person**: you are the subject, a search of yours *returned*
-  them, or you share a live challenge or a game — otherwise a route taking a player id is
-  a player-enumeration endpoint, and a UUID being hard to guess is not an authorization
-  model. **Nothing expires**, because a search record is kept for ever (ADR-0104) and a
-  shorter window could only refuse a face the app is currently showing. **The four
+  them, or you share a live challenge, a game or a group — otherwise a route taking a player
+  id is a player-enumeration endpoint, and a UUID being hard to guess is not an
+  authorization model. **Whoever runs an official group they are in** is a fifth strand and
+  a port of its own, `RunnerDisclosure`, asked last and admitted **without the gender
+  preference** — the three gates about accounts and the reader's hold, through
+  `FailClosedGates.withheld_regardless_of_preference`, which `withheld_among` is composed
+  from (ADR-0159's amendment of 2026-10-02, #566). **Nothing expires**, because a search
+  record is kept for ever (ADR-0104) and a shorter window could only refuse a face the app
+  is currently showing. **The four
   fail-closed gates run live, in the partition of the disclosure** — never in the sport
   the reader arrived from, since the gender gate reads a candidate index row and the index
   is keyed by sport, so a subject rated only in squash has no padel row and *a gate that
@@ -1212,6 +1236,236 @@ Rules to preserve:
   test walks the emitted contract to prove the words reach exactly one response type — and
   that the band's field is on none — which
   is where *it is not on search result cards* stopped being a promise.
+- **A club is a place players search, and its account signs in only on the club
+  surface** ([ADR-0182](../docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md),
+  [ADR-0185](../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+  §6, #503). `app/modules/clubs/` holds **two event-sourced aggregates**, and the split is
+  the point: a **Club** (`club_registered`, `club_details_changed` — name, district, city,
+  a non-empty subset of the four sports, and a precise point stored as the desk dropped
+  it) and its **Club account** (`club_account_opened` — email and hash), because a club's
+  facts are searched by every player and its credentials must not sit on that stream.
+  Each repository's `save` **writes its projection in the caller's transaction** —
+  `clubs` for search, with `name_folded` and `district_folded` folded by
+  `clubs/domain/folding.py`, the function a query will be folded by (ł → l is the one row
+  Unicode needs help with); `club_accounts` for sign-in, its email unique among club
+  accounts and deliberately nowhere else, since the same address may be an unrelated
+  User's. **Every refusal a sign-up or a details edit can meet names its field**
+  (`details.field`) with its own code, so the request schemas carry types and no bounds —
+  a bound there would refuse first, as a `422` naming no field. **Every token names an
+  audience** (`aud`: `player_app` or `club`), a decode states the one it expects, and a
+  token with none is a player-app token so sessions from before survive; the five access
+  refusals are one function, `auth/application/access.py`, shared by both surfaces.
+  `RefreshAuthTokens` and `Logout` are **built once per audience**, each context answers
+  `SessionHolders` for its own accounts, and a `refresh_tokens` row records whose it is by
+  filling **exactly one** of `user_id` and `club_account_id` (a check constraint). The
+  candidate index counts only a **player-app** refresh as liveness. Seeded by
+  `app/seeds/clubs.py` — eight Kraków clubs placed as offsets from the seed centre, each
+  signed up through `SignUpClub`, each desk at `desk.<name>@raketa.example` on the seed
+  password.
+- **A group is a crowd at a home club, and its link never changes**
+  ([ADR-0183](../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md),
+  #504, #505, #506). `app/modules/groups/` holds **one event-sourced aggregate for both
+  kinds** (`player_group_created`, `group_joined`, the Join request's three —
+  `join_requested`, `join_request_approved`, `join_request_declined` — #506's five:
+  `group_left`, `ownership_passed`, `group_renamed`, `join_policy_changed`,
+  `group_deleted` — #509's three, below, and #510's `administrator_assigned`). The
+  repository's `save` writes **three projections in the caller's transaction** —
+  `groups`, with `name_folded` written from the first event (and again on a rename)
+  because SQL cannot fold, `group_members`, whose `joined_version` (the
+  admitting event's stream version) is the exact joining order, and
+  `group_join_requests`, one row **while a request waits** and deleted by its answer.
+  **A deletion leaves no row in any of the three** — the link then finds nothing, which is
+  how it reads *nothing at that link* — and the repository loads a stream ending in
+  `group_deleted` as **no group**, so every act on one meets `group_not_found`.
+  Five things are load-bearing. **The code is minted with `secrets`** from an alphabet
+  with no look-alikes, checked against the table, unique and never changed, and the
+  **link is `PUBLIC_SITE_URL` + `/join/` + code** — built in presentation, because the
+  address is configuration and a domain may not read it; a deployed environment refuses
+  to start without it or with a non-`https://` one. **The monogram is cut here and the
+  colour crosses as a key** (0–7, from a SHA-256 of the id), so three clients draw one
+  tile; the cut is by what a reader sees as a character, so an emoji or a decomposed
+  accent is never halved (`domain/monogram.py`). **Dots and each sport's *N of M* are
+  read, never stored** — `domain/sports.py`, over `RatedGroupMembers`, one question about the
+  union of every member a response names. **One tap, and the policy decides what it was**:
+  `POST /groups/{id}/membership` admits at once under *Anyone* and leaves a Join request
+  under *People I approve*, answering the card's row with `relation` `MEMBER` or
+  `REQUESTED`; neither is recorded twice. **Approving is admitting** — one event, no
+  `group_joined` beside it — and approving somebody with nothing waiting is
+  `join_request_not_found`, because nobody is admitted who did not ask; **declining is
+  silent** (the relation reads `NONE` again, they may ask again) and declining what is
+  not waiting changes nothing. **Nobody but the Owner** sees or answers requests, edits the
+  group (`PUT /groups/{id}/details`, name and policy together or neither) or deletes it: a
+  stranger — the asker included — meets `group_not_found`, a member `not_the_group_owner`,
+  and a member meets that before their name is read. **Switching to *Anyone* admits
+  everybody waiting at once** — `join_policy_changed`, then one `join_request_approved`
+  per request in the order they asked, answered by whoever switched, so there is one way
+  to become a member off a request — and the answer's `admitted` names them. **Leaving**
+  (`DELETE /groups/{id}/membership`) is open to every member but an Owner alone
+  (`lone_owner_cannot_leave`, who deletes instead); an Owner leaving a group with others in
+  it records `ownership_passed` **before** their `group_left`, to the first key of the
+  aggregate's joining-ordered `members` — this stay, so a rejoiner counts from their return
+  — and the queue passes with it because only `owner_id` moved. **Deleting**
+  (`DELETE /groups/{id}`) is the Owner's, only while alone (`group_has_other_members`).
+  **Members** (`GET /groups/{id}/members?sport=`) lists only the members rated in the
+  sport, the reader, then the Owner, then newest joined first (`domain/members.py`), each
+  with the published Level and the Player Score — omitted, never `0`, for somebody with no
+  record. It is the one read also open to **whoever runs an official group now**
+  (`listing_for_a_member_or_its_runner`, #566), who reads the same rows and is one only once
+  they join as a player. **A blocked pair, either way round, is shown to neither** there
+  and on the Info tab's members row that opens it (`member_faces`, up to five, everybody
+  but the reader in the Members order) — the Games tab's seats stay the first rated in
+  joining order,
+  whoever reads them (ADR-0183 §10, §13, #504) — and **no count moves**. The block read
+  fails closed (`503 block_state_unavailable`), is skipped for a reader alone, and on
+  `PUT /details` runs **before the commit** (`GroupPages`), so a refusal records nothing.
+  And **it reads six contexts through ports it
+  declares in its own words**, each adapter over the provider's own port: clubs'
+  `ClubDirectory` (which `clubs` now publishes over its search projection, folding the
+  query itself and escaping `LIKE`), rating's `RatedPlayerQuery` (published Levels for a
+  request card and a Members row), users and the Player profile for a face or, name only,
+  a group's Owner, the profile's Location area for distance, `player_score`'s
+  `PublishedScoreQuery` (`GroupMemberScores`) and blocks' `BlockQuery` (`HiddenMembers`,
+  its `exclusions_for` renamed) — and its domain
+  borrows two pure functions, clubs' `fold` and the matcher's distance print, and says
+  so where it does. **The two searches answer one card**, `ClubCardSchema`, built by
+  `views.club_cards`, and one order — the **printed** distance (`shown_kilometres`, from
+  the reader's Location area to the club's point), then the folded name, twenty to a page;
+  a reader with no Location area gets A–Z and `distance_km: null`, a blank query answers
+  nothing, and a card's groups come the biggest crowd first. Home-club search is
+  **`/home-clubs`, never `/clubs`** — anything beginning `/api/v1/club` reads as the club
+  surface. Join search is **`/join-search`** (`/groups/search` would read as a group id)
+  and matches four ways (`domain/join_search.py`): a club by name or district carries
+  **every** group at it, a group by its folded name comes inside its club's card **alone**
+  when the club did not match, and **any text containing `/join/<code>` is a link** that
+  finds exactly its group and is searched for nothing else — the domain is never read, and
+  a link that leads nowhere answers no clubs with `read_as: LINK`, which is *nothing at that
+  link* and not *no match*. Each row carries the Owner's **whole Name**, never a cut first
+  name (ADR-0171 §4; the player app draws the *approves joins* line). Reading a group is
+  members-only and a stranger meets the same `group_not_found` as a missing id. Seeded
+  by `app/seeds/groups.py` — four *Anyone* groups owned and joined by the named accounts,
+  so the dots follow the rule (no squash or badminton dot: one member rated is not a dot),
+  and the protagonist's *People I approve* group, with a member she let in through
+  `ApproveJoinRequest` and `rated-in-every-sport`'s request left waiting.
+  **An official group has no Owner, and an Administrator runs it from the app** (#509,
+  ADR-0183 §3, ADR-0184 §8): `official_group_created` names the `administrator_id` and
+  no member — running one is not membership — and `whatsapp_size_set` and
+  `sports_declared` are official-only; answering, renaming and the policy reuse the
+  player kind's events, every `*_by` the account that tapped. The projection's `kind`
+  and a check constraint (migration `0034`) hold the two shapes, and **every rule
+  branches on `kind`, never on a null**. Four things are load-bearing. **Who runs it is
+  read, never held**: `GroupAdministrators` (over the administrators' directory)
+  answers the account and the club's name for them **only while the administratorship
+  is active**, so a removal takes the group away on the next read and an orphan
+  needs no event. That account **joins directly** under *People I approve*
+  (`join(runs_it=…)`), comes second on Members with `is_administrator` — the **admin**
+  tag — and is `administrator_name` on the approver line: the account's Name, or the
+  club's name for an account an invitation opened, never cut. An official group's dots
+  are what it declares, and its page carries `declared_sports`. **The administrator's
+  routes are `/administrator/clubs/{club_id}/groups`** behind `AdministratorAtClubDep`
+  — create, list, read (players newest first, a blocked pair left out), approve,
+  decline and `PUT …/settings` (all four fields; *Anyone* admits everybody waiting) —
+  and a group that administratorship does not run is `group_not_found` whatever the
+  reason. **Nothing deletes one, and its Administrator cannot stop running it**: there
+  is no such route, and the player surface's Owner acts meet `not_the_group_owner`; an
+  Administrator who joined as a player leaves as one and still runs it. And **the club
+  cannot untick a sport one declares**: `ChangeClubDetails` asks `OfficialGroupSports`,
+  clubs' demand **signed in `groups/infrastructure/`** so the arrow runs `groups →
+  clubs` only (an `.importlinter` contract), and answers `409
+  club_sport_declared_by_group` naming the group. Seeded by `app/seeds/official_groups.py`
+  after the administrators: Marta's *Ogrody 33 Club* (*People I approve*, 48, padel,
+  three players, one waiting) and *Ogrody open play*, run by `rated-in-every-sport`,
+  who plays in it.
+  **The club watches its official groups and hands them over, on the club surface**
+  (#510, ADR-0183 §8, §11). `GET /api/v1/club/groups` is the Groups table — every
+  official group at the club, by name: who runs it (`administrator`, the name the club
+  gave them, or `null` — *needs an administrator*), `member_count` (the group's own
+  count, an Administrator who plays included), `waiting_count`, `whatsapp_size` and
+  `whatsapp_percent` (rounded half up by `WhatsAppSize.percent_arrived`, **never
+  capped**), and `games`. **`games` is read through `GroupBornGames`, whose only
+  adapter answers nought** — no group picks a game yet — so the day one can, another
+  adapter answers and the figure keeps its meaning. `PUT …/groups/{id}/administrator`
+  is the handover: one `administrator_assigned` event and nothing else moves — the
+  link, the policy, the size, the members and **the waiting requests**, which the new
+  Administrator simply finds; anything but the club's official group is
+  `group_not_found`, anybody but an **active** Administrator of the club is `409
+  administrator_not_active`, and handing it to whoever runs it records nothing.
+  **The club answers an official group's Join requests itself, at any time**
+  ([ADR-0191](../docs/adr/0191-the-club-answers-its-official-groups-requests-and-a-removal-is-emailed.md)
+  §1): `GET …/groups/{id}/requests` (a name and the Levels, no photograph) and
+  `POST …/requests/{player_id}/approve|decline`, the Administrator's rules and events,
+  answered `as_club` with the Club account as `approved_by` — the only two acts the
+  aggregate lets a club do, and never on a player group at its courts. Answering is not
+  running: the group still needs an administrator until a handover. **A handover is told to
+  whom it was handed, once** (ADR-0192): `administrator_assigned` sets the projection's
+  `handed_over_at`, `handover_seen` clears it, `/users/me` lists the untold ones as
+  `profiles.handovers` (through `OfficialGroupAssignments.handed_untold`), and
+  `POST /administrator/clubs/{club_id}/handovers/seen` steps over anything it cannot apply.
+  Because who runs a group stays **read, never held**, two things follow and are
+  pinned: the club's *Reset password* (back to *invited*) leaves that person's groups
+  needing an administrator until they set a new password, and **somebody removed and
+  invited back runs again the groups nobody was handed meanwhile**. The Administrators
+  table's *groups* column is filled on active rows only, through
+  `OfficialGroupAssignments` — administrators' demand, **signed in
+  `groups/infrastructure/`** like clubs' sports question, and held by its own
+  `.importlinter` contract. And the member's page, `GET /groups/{id}`, carries the
+  card's `administrator_name` and `is_administrator` (one `approver_name` for both),
+  so the Info tab reads *[club] approves joins* for an orphan, as the search row does.
+- **A use case never sends email; it writes the mail queue**
+  ([ADR-0186](../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md)). The
+  message is rendered whole — the copy lives with its templates in the backend
+  (`app/application/mail/layout.py`, and each flow's own words beside its use case), since an
+  email has no client to choose a sentence from a code — and written through `MailQueue` in
+  the act's own transaction; the mail worker sends it through the `Mailer` port and purges
+  the body. `.importlinter` keeps `smtplib` out of every domain and application layer. **A
+  secret never enters the event store or the outbox** (ADR-0184 §4): a one-time credential is
+  a row in `one_time_credentials`, hashed, and `OneTimeCredentials` is the one mechanism every
+  flow that issues one goes through — *Forgot password?* on both surfaces and the
+  administrators' invitations. `tests/api/test_forgot_password.py` and
+  `tests/api/test_invitations.py` assert that no link, code or ticket ever reaches an event,
+  at every step.
+- **An Administrator is a club naming a person, and every administrator request asks
+  again** ([ADR-0184](../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md),
+  [ADR-0185](../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md),
+  #508). `app/modules/administrators/` holds **one event-sourced aggregate per (club,
+  email)** — *invited*, *active*, *removed*, and *expired* **derived** from a window that is
+  the invitation credential's own 72 hours, so an existing account's invitation, which carries
+  no credential, lapses at the same instant — and its `save` writes the `administrators` row in
+  the caller's transaction. Five things are load-bearing. **Which email is decided at sending
+  and recorded nowhere** (`application/sending.py`): an account that can sign in is asked to
+  accept in the app with no code; anybody else gets a link to `<PUBLIC_SITE_URL>/invite/<token>`
+  and a code — the club reset's while one is pending — and each credential **retires every live
+  one of both kinds**, as acceptance and removal do. **A removal is emailed**
+  (`application/removal_emails.py`, ADR-0191 §4–§5): *removed* to somebody whose
+  administratorship reached an account, *invitation withdrawn* to somebody still invited —
+  notices, so no button and no code. **Everything done to a User is done by
+  `users`** (`InvitationAccounts`, behind the `AccountHolders` port): an account an invitation
+  opens is `AccountOpenedByInvitation` — the club-typed Name, no Nickname, no attestation —
+  the club's reset is `PasswordCleared` (`users.password_hash` became nullable, and a cleared
+  account signs in as a stranger would), and the attestation given later is `AdultAttested`.
+  **The club's reset is refused for an account that acts as a player** — attested, or holding
+  a Player profile — which is the same predicate `/users/me`'s `profiles.acts_as_player`
+  reports and the gate reads first. **The guard is `AdministratorAtClubDep`**: every
+  administrator operation takes the club from its own path under
+  `/api/v1/administrator/clubs/{club_id}` and meets `403 not_an_administrator` the request after
+  a removal; it is also the only writer of *last used*, at most once an hour. And **playing
+  requires the attestation**: `AttestedPlayerDep` refuses an assessment's start and a Player
+  profile's commit with `403 adult_attestation_missing`, because sign-up no longer guarantees
+  every account one. The club's five routes are under `/api/v1/club/administrators`; the
+  player's are `/api/v1/invitations/{claim,password,by-token,{id}/acceptance}` and
+  `POST /api/v1/users/me/adult-attestation`. `APP_SCHEME` is where the existing account's
+  button opens the app. Seeded by `app/seeds/administrators.py`: at Ogrody 33, the
+  administrator-only `administrator-only@raketa.example`, `rated-in-every-sport` who also plays,
+  and `the-one-sport-player`'s pending invitation, resent by a run that finds it expired.
+- **Signing out everywhere is one instant per account**
+  ([ADR-0185](../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+  §7). A password change is an event on the account's own stream — `PasswordChanged` on a
+  User's, `ClubAccountPasswordChanged` on a Club account's — projected onto the row as
+  `credentials_changed_at`, which both surfaces' token resolution already reads; an access
+  token issued **strictly before** it is refused as `access_token_revoked`, and
+  `SignOutEverywhere` revokes the account's refresh tokens on that surface. The comparison
+  reads the token's `iat_us` — microseconds **on the injected clock**, which is why
+  `get_token_service` takes `ClockDep` — never the whole-second `iat`, which would sign a reset
+  out of the session it opens.
 - **Validate and normalize inside the value object**, not in the use case — see
   `app/modules/users/domain/value_objects.py`.
 - **`app/kernel/` and `app/engines/` are pure and fenced by three gates**, because no one
@@ -1239,13 +1493,18 @@ This app is the single source of truth for the API
 (`make openapi`), so a response-shape change is load-bearing outside this directory. When
 you change it, run the `api-contract-change` skill.
 
-**`make openapi` writes one document per surface, and there are two.** The second is the
+**`make openapi` writes one document per surface, and there are four.** The second is the
 **dev console**'s `openapi.dev.json` — one path, and no client, so nothing generates types
-from it. Both are committed, and both are gated at the repository root by
-`make contract-freshness`: re-emit and diff, which is a different question from
-`make test-drift`'s (that one asks whether the *client's* generated types reproduce from
-the document, and has no purchase on a document with no client). Commit the regenerated
-documents with whatever moved them.
+from it. The third is the **club website**'s `openapi.club.json`, which `frontend_club`
+generates from; the fourth is the **public site**'s `openapi.public.json`, which
+`frontend_public` generates from — **no route on it takes a session**, and its password
+routes run the app's own rules and sign nobody in (#511). All four are committed and gated at
+the repository root by `make contract-freshness`: re-emit and diff, which is a different
+question from `make test-drift`'s (that one asks whether a *client's* generated types
+reproduce from its document, and has no purchase on a document with no client).
+`tests/unit/test_club_surface.py` and `tests/unit/test_public_surface.py` fail a stale club or
+public document inside this suite too, before the root gate runs. Commit the regenerated
+documents with whatever moved them, and hand the clients a `make gen-api` at the root.
 
 Prefer additive changes. Removing or renaming a field breaks a shipped client — a mobile
 app whose old versions stay installed on real phones for months.
@@ -1291,6 +1550,11 @@ tests.
   classes implementing the `Protocol` (see `tests/unit/test_resolve_current_user.py`).
 - `tests/api/` — full HTTP flows via the `client` fixture (HTTPX ASGI + in-memory SQLite).
   Reuse fixtures from `tests/conftest.py` rather than standing up new app/db instances.
+  Two of them replace the outside world's time and mail (ADR-0186 §5): **`clock`** overrides
+  the application's clock with one the test moves (`clock.move(timedelta(hours=1))` — an
+  expiry is checked by moving time, never by waiting), and **`mailbox`** drains the outbox and
+  the mail queue through the real worker into a recording mailer, so a test reads the emails
+  sent — their links and codes — the way a person would. No test needs Mailpit running.
 - `tests/demands/` — the **outward demands**, parameterised over every implementation
   registered in a register beside the wiring
   ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
@@ -1369,7 +1633,7 @@ tests.
   `PHOTO_SWEEP_ENABLED`, `PHOTO_REVIEW_BACKFILL_ENABLED`, `CANDIDATE_INDEX_ENABLED`,
   `EXPOSURE_ROLL_ENABLED`, `INTENT_DRIFT_ENABLED`, `GRID_STALENESS_ENABLED`,
   `INTEREST_EXPIRY_ENABLED`, `SCALE_PRESSURE_ENABLED`, `CHALLENGE_LAPSE_ENABLED`,
-  `RATING_CATCH_UP_ENABLED` — and **every
+  `RATING_CATCH_UP_ENABLED`, `MAIL_DELIVERY_ENABLED` — and **every
   job's first run is at startup**, not after its first interval, so a six-hourly job is
   observable on a laptop.
 

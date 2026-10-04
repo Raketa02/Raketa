@@ -151,7 +151,7 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             store,
             events,
             build_password_hasher(settings),
-            build_token_service(settings),
+            build_token_service(settings, clock=build_clock()),
             build_refresh_token_repository(session),
             build_user_repository(session),
             build_assessment_engine(),

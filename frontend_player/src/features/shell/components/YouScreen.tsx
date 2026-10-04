@@ -9,12 +9,18 @@
  * FINDING PLAYERS   Your week · How far to look · Where you play · Who you play with ·
  *                   Game suggestions
  * ON YOUR CARD      How others see you · Photos · Tags · Intro · Name
- * Sign out
+ * ─────────────
+ * Sign out          pinned under the page, above the bar
  * ```
+ *
+ * **The title stands alone**: the eyebrow *Player profile* over it went at the product owner's ask
+ * (#529, 2026-10-02) — the bar under the screen already says *You*. **_Sign out_ is pinned**, the
+ * shell's `action` slot under the scroller, so it is always at the tab's foot, in the same place
+ * however many rows are over it (#529, as a group page's way out stands under its Info).
  *
  * ## The shell composes, and owns only the tab's own words
  *
- * The title, the eyebrow and the three group titles are the shell's (`youCopy`); **every row
+ * The title and the three group titles are the shell's (`youCopy`); **every row
  * from *Skill passport* down is the feature's whose fact it is** — `player_record`'s two
  * read-only facts and the door to the sheet, `player_profile`'s declarations, `auth`'s name —
  * and each row reads its own fact and pushes its own screen. What this file decides is which
@@ -22,6 +28,14 @@
  * questions — what has the platform concluded about me, what does the matcher read when it
  * looks for a game, what does a stranger read about me. The fourth question, the account, is
  * not asked on this tab (§9); *Sign out* stays at the foot as the account panel draws it.
+ *
+ * ## The switcher chip
+ *
+ * **The header's right slot is the profile switcher** ([#518](https://github.com/Raketa02/Raketa/issues/518),
+ * club 7; ADR-0185 §3 amends ADR-0179 §1's locked header by exactly this element) — the
+ * administrator feature's, drawn only for an account that also runs a club's groups. **The route
+ * file hands it in** (`headerRight`) rather than this file importing it: the administrator feature
+ * reads `auth`, which reads this one, and a feature importing back into that chain is a cycle.
  *
  * ## The one overlay the tab holds
  *
@@ -65,14 +79,27 @@ import { Card, behindOverlay, theme } from '@/shared/ui';
 import { ShellScreen } from './ShellScreen';
 import { YOU_COPY } from './youCopy';
 
-export function YouScreen() {
+export interface YouScreenProps {
+  /**
+   * **The header's right slot — the profile switcher's chip**, handed in by the route file, which
+   * composes it from the administrator feature: this feature importing that one would close an
+   * import cycle through `auth`. Absent, the header has no right slot.
+   */
+  readonly headerRight?: ReactNode;
+}
+
+export function YouScreen({ headerRight }: YouScreenProps) {
   const [reading, setReading] = useState(false);
   const openRecord = () => setReading(true);
 
   return (
     <>
       <View style={s.root} {...behindOverlay(reading)}>
-        <ShellScreen title={YOU_COPY.title} eyebrow={YOU_COPY.eyebrow}>
+        <ShellScreen
+          title={YOU_COPY.title}
+          {...(headerRight === undefined ? {} : { right: headerRight })}
+          action={<AccountPanel />}
+        >
           <YouHeaderCard onPress={openRecord} />
 
           <YouGroup title={YOU_COPY.groups.playing}>
@@ -96,8 +123,6 @@ export function YouScreen() {
             <IntroRow divided />
             <NameRow divided />
           </YouGroup>
-
-          <AccountPanel />
         </ShellScreen>
       </View>
 

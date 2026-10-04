@@ -13,7 +13,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
-import { Text } from 'react-native';
+import { KeyboardAvoidingView, Text } from 'react-native';
 
 import {
   beginSession,
@@ -54,7 +54,7 @@ const TOKENS: Wire['TokenResponse'] = {
   expires_in: 900,
 };
 
-const USER: Wire['UserResponse'] = {
+const USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
   email: 'ada@example.com',
   name: 'Ada Lovelace',
@@ -65,6 +65,8 @@ const USER: Wire['UserResponse'] = {
   is_tester: false,
   has_player_profile: false,
   created_at: '2026-08-13T10:00:00Z',
+  adult_attested: true,
+  profiles: { acts_as_player: true, administers: [], pending_invitations: [], handovers: [] },
 };
 
 let transport: Transport;
@@ -91,6 +93,24 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // Signing in
 // ---------------------------------------------------------------------------
+
+/**
+ * #529: on iOS the keyboard's height changes while it is up — its bar is swapped per field and on
+ * *Show* — and a form centred in what a `KeyboardAvoidingView` left jumped with every swap. The
+ * scroll takes the keyboard as a native inset instead, so the form is laid out once.
+ */
+describe('the keyboard, on the sign-in and sign-up screens', () => {
+  it.each([
+    ['sign-in', <SignInScreen key="in" />],
+    ['sign-up', <SignUpScreen key="up" />],
+  ])('is an inset on %s’s scroll, never a re-layout of the form', (_name, element) => {
+    renderScreen(element);
+
+    const frame = screen.getByTestId('auth-frame');
+    expect(frame.props.automaticallyAdjustKeyboardInsets).toBe(true);
+    expect(screen.UNSAFE_queryAllByType(KeyboardAvoidingView)).toHaveLength(0);
+  });
+});
 
 describe('signing in', () => {
   it('opens a session and stores the credentials', async () => {
@@ -190,7 +210,8 @@ describe('signing up', () => {
   }
 
   /** The account is created **unnamed** — registration answers with no name and no handle. */
-  const UNNAMED: Wire['UserResponse'] = { ...USER, name: null, nickname: null };
+  const { adult_attested: _attested, profiles: _profiles, ...REGISTERED } = USER;
+  const UNNAMED: Wire['UserResponse'] = { ...REGISTERED, name: null, nickname: null };
 
   it('creates the account, signs in, and lands in a live session', async () => {
     setSessionStatus('unauthenticated');

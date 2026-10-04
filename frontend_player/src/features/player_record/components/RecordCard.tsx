@@ -51,7 +51,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Card, Row, theme } from '@/shared/ui';
 
 import type { Opinion, OpponentVariety, Reliability } from '../domain/playerRecord';
-import { countedRows } from '../domain/recordCard';
+import { countedRows, recordCardDrawn } from '../domain/recordCard';
 
 import { StrandMeterRow } from './StrandMeterRow';
 import {
@@ -84,7 +84,7 @@ export function RecordCard({ reliability, variety, opinion }: RecordCardProps) {
 
   // Nothing to say is said by not being here — the same spelling every absence takes on this
   // sheet, and the one that keeps a newcomer's record reading as new rather than as poor.
-  if (!drawn && variety === undefined && opinion === undefined) return null;
+  if (!recordCardDrawn({ strands: rows, variety, opinion })) return null;
 
   return (
     <Card>

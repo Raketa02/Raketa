@@ -1,0 +1,40 @@
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+}
+
+.box {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.face {
+  display: inline-flex;
+  min-height: var(--size-control-small);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border: var(--size-hairline) solid var(--colour-line);
+  border-radius: var(--radius-pill);
+  background: var(--colour-surface);
+  font-weight: var(--weight-medium);
+}
+
+.box:checked + .face {
+  border-color: var(--colour-ink);
+  background: var(--colour-ink);
+  color: var(--colour-surface);
+}
+
+.box:focus-visible + .face {
+  outline: var(--size-focus) solid var(--colour-focus);
+  outline-offset: var(--size-hairline);
+}

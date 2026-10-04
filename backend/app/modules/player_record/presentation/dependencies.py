@@ -34,8 +34,10 @@ from app.api.dependencies import (
 from app.bootstrap.composition import (
     build_challenge_disclosure,
     build_game_disclosure,
+    build_group_disclosure,
     build_record_gates,
     build_record_photo_link,
+    build_runner_disclosure,
     build_search_disclosure,
     build_subject_form,
     build_subject_identity_source,
@@ -142,20 +144,25 @@ def get_record_admission(
     gates: FailClosedGatesDep,
     holds: AccountHoldQueryDep,
 ) -> RecordAdmission:
-    """The three strands and the four gates, assembled per request.
+    """The strands and the four gates, assembled per request.
 
     The strands are listed **cheapest first**, which is the order they are read
     in: a search record is one indexed query, and the two directories fold
     streams. It changes no answer — the partitions are unioned before any gate
-    runs — and it is what a reader who arrived from the shortlist pays.
+    runs — and it is what a reader who arrived from the shortlist pays. The
+    group strand is two indexed reads, so it comes second. **Whoever runs their
+    group** is not on the list: it is admitted under other gates, so the
+    admission asks it by name, and last (#566).
     """
 
     return RecordAdmission(
         disclosures=(
             build_search_disclosure(db),
+            build_group_disclosure(db),
             build_challenge_disclosure(db),
             build_game_disclosure(db),
         ),
+        runners=build_runner_disclosure(db),
         gates=build_record_gates(gates=gates, holds=holds),
     )
 

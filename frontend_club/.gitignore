@@ -1,0 +1,22 @@
+# dependencies
+/node_modules/
+
+# Next.js
+/.next/
+/out/
+next-env.d.ts
+
+# Playwright
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+
+# env — only the template is committed
+.env
+.env.*
+!.env.example
+
+# misc
+*.tsbuildinfo
+.DS_Store

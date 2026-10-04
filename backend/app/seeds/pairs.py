@@ -14,7 +14,7 @@ Every write is a use case assembled in ``app/seeds/paths.py`` from the
 composition root, exactly as ``runner.py``'s registrations and questionnaires
 are. What this module adds to the seed path is two contexts — ``challenges`` and
 ``blocks`` — and it adds them as *writes through their own use cases*, which is
-the distinction ``test_the_seed_path_writes_six_contexts_and_only_reads_the_rest``
+the distinction ``test_the_seed_path_touches_only_the_contexts_that_exist``
 draws.
 
 **Re-running writes nothing twice, and each probe is the cheapest question that

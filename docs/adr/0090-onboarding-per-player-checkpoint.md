@@ -5,6 +5,7 @@
   fifth destination, *no name → the naming step*, read **first**, and passing the narrowed
   invariant's test the way the Player profile does. Everything else here stands.
 - **Date:** 2026-08-25
+- **The entry gate gains one read ahead of all five destinations, from [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §3** (2026-09-25): the account's profiles — administrator-only goes to the administrator area and skips onboarding; two profiles open in the last used. Its first destination reads *not named in full* (§4).
 
 > **Narrows an invariant in [`CONTEXT.md`](../../CONTEXT.md).** The rating context states
 > *"There is no **onboarded player**."* That invariant is upheld for everything it was

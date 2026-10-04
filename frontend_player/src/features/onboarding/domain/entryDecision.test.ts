@@ -6,7 +6,7 @@
  */
 
 import type { AssessmentRun } from './Assessment';
-import { entryDestination } from './entryDecision';
+import { entryDestination, type EntryInput } from './entryDecision';
 import type { SkillRating } from './SkillRating';
 import type { Sport } from '@/shared/vocabulary/sport';
 
@@ -29,6 +29,12 @@ const RUN: AssessmentRun = {
   sport: 'tennis',
 };
 
+/** What every signed-up account holds: it acts as a player and runs no club's groups. */
+const A_PLAYER: EntryInput['profiles'] = { actsAsPlayer: true, administers: [] };
+
+const OGRODY = { clubId: 'c0000000-0000-4000-8000-000000000001', clubName: 'Ogrody 33' };
+const BONARKA = { clubId: 'c0000000-0000-4000-8000-000000000002', clubName: 'Bonarka Arena' };
+
 /** Nothing set aside — the ordinary launch, and the default for most of these. */
 const NONE_DEFERRED: readonly string[] = [];
 
@@ -39,8 +45,9 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'welcome' });
   });
@@ -51,8 +58,9 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'app' });
   });
@@ -63,8 +71,9 @@ describe('where a player belongs on launch', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
   });
@@ -78,8 +87,9 @@ describe('where a player belongs on launch', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
   });
@@ -94,8 +104,9 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'welcome' });
   });
@@ -106,8 +117,9 @@ describe('a run the player asked to come back to later', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'app' });
   });
@@ -120,8 +132,9 @@ describe('a run the player asked to come back to later', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: ['a-different-assessment'],
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: true,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
   });
@@ -137,8 +150,9 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'social-steps' });
   });
@@ -153,8 +167,9 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'welcome' });
   });
@@ -167,8 +182,9 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'resume', run: RUN });
   });
@@ -182,8 +198,9 @@ describe('a player with a rating and no Player profile', () => {
         ratings: [rating('padel')],
         runInProgress: RUN,
         deferredRunIds: [RUN.assessmentId],
-        hasName: true,
+        namedInFull: true,
         hasPlayerProfile: false,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'social-steps' });
   });
@@ -204,8 +221,9 @@ describe('an account with no name yet', () => {
         ratings: [],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: false,
+        namedInFull: false,
         hasPlayerProfile: false,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'naming' });
   });
@@ -219,8 +237,9 @@ describe('an account with no name yet', () => {
         ratings: [],
         runInProgress: RUN,
         deferredRunIds: NONE_DEFERRED,
-        hasName: false,
+        namedInFull: false,
         hasPlayerProfile: false,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'naming' });
   });
@@ -231,9 +250,214 @@ describe('an account with no name yet', () => {
         ratings: [rating('padel')],
         runInProgress: undefined,
         deferredRunIds: NONE_DEFERRED,
-        hasName: false,
+        namedInFull: false,
         hasPlayerProfile: true,
+        profiles: A_PLAYER,
       }),
     ).toEqual({ kind: 'naming' });
+  });
+});
+
+/**
+ * **The account's profiles are read ahead of every onboarding destination**
+ * ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §3). An account that only runs a club's groups has not asked to play: it goes to its
+ * administrator area and never to onboarding — whatever its name, ratings or runs say.
+ */
+describe('an account that holds only administrator profiles', () => {
+  const ADMINISTRATOR_ONLY: EntryInput['profiles'] = {
+    actsAsPlayer: false,
+    administers: [OGRODY],
+  };
+
+  it('is sent to the administrator area of its club', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        // An account an Invitation opened: the club typed a name, and nobody chose a nickname.
+        namedInFull: true,
+        hasPlayerProfile: false,
+        profiles: ADMINISTRATOR_ONLY,
+      }),
+    ).toEqual({ kind: 'administrator', clubId: OGRODY.clubId });
+  });
+
+  it('is sent there ahead of the naming step, and never into onboarding', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: RUN,
+        deferredRunIds: NONE_DEFERRED,
+        namedInFull: false,
+        hasPlayerProfile: false,
+        profiles: ADMINISTRATOR_ONLY,
+      }),
+    ).toEqual({ kind: 'administrator', clubId: OGRODY.clubId });
+  });
+
+  it('opens on the first club it administers, in the server’s order', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        namedInFull: true,
+        hasPlayerProfile: false,
+        profiles: { actsAsPlayer: false, administers: [BONARKA, OGRODY] },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: BONARKA.clubId });
+  });
+
+  // Two profiles open in Player by default (ADR-0185 §3).
+  it('does not take an account that also plays out of the player’s app', () => {
+    expect(
+      entryDestination({
+        ratings: [rating('padel')],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        namedInFull: true,
+        hasPlayerProfile: true,
+        profiles: { actsAsPlayer: true, administers: [OGRODY] },
+      }),
+    ).toEqual({ kind: 'app' });
+  });
+});
+
+/**
+ * **An account with no profile at all is offered the player setup, from the Adult attestation**
+ * ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §3, [#517](https://github.com/Raketa02/Raketa/issues/517)). The only way to be one is an
+ * administrator-only account whose club removed it: it does not act as a player and runs no
+ * club's groups. Signing in again must never be a dead end, so it takes *Start playing*'s steps,
+ * from the gate instead of from a row — and the first is the attestation, which it has never given.
+ */
+describe('an account that holds no profile at all', () => {
+  const NO_PROFILE: EntryInput['profiles'] = { actsAsPlayer: false, administers: [] };
+
+  it('is sent to Start playing’s first step, the Adult attestation', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        // The club typed a name, and nobody chose a nickname.
+        namedInFull: false,
+        hasPlayerProfile: false,
+        profiles: NO_PROFILE,
+      }),
+    ).toEqual({ kind: 'start-playing' });
+  });
+
+  // Nothing player-side may be reached before the attestation (ADR-0185 §5) — not the naming, and
+  // not a run, which the server would refuse `adult_attestation_missing` anyway.
+  it('is asked for the attestation ahead of the naming and of anything a player owes', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: RUN,
+        deferredRunIds: NONE_DEFERRED,
+        namedInFull: false,
+        hasPlayerProfile: false,
+        profiles: NO_PROFILE,
+      }),
+    ).toEqual({ kind: 'start-playing' });
+  });
+});
+
+/**
+ * **Named in full is a name and a nickname** (ADR-0185 §4). An account an Invitation opened
+ * carries the club-typed Name and no Nickname; once it has attested it acts as a player, and the
+ * naming step is where it goes first — asking only for the nickname.
+ */
+describe('an administrator who has just started playing', () => {
+  it('is sent to the naming step, not past it on the strength of the club’s name', () => {
+    expect(
+      entryDestination({
+        ratings: [],
+        runInProgress: undefined,
+        deferredRunIds: NONE_DEFERRED,
+        namedInFull: false,
+        hasPlayerProfile: false,
+        profiles: { actsAsPlayer: true, administers: [OGRODY] },
+      }),
+    ).toEqual({ kind: 'naming' });
+  });
+});
+
+/**
+ * **An account with two profiles opens in the one used last** (ADR-0185 §3, ADR-0188 §2, #518) —
+ * which the phone remembers, and which is checked against what the account holds *now*: an
+ * administrator profile it no longer holds is Player (ADR-0188 §4), and Player is the default.
+ */
+describe('an account with two profiles', () => {
+  const BOTH: EntryInput['profiles'] = { actsAsPlayer: true, administers: [OGRODY] };
+  const IN_THE_APP = {
+    ratings: [rating('padel')],
+    runInProgress: undefined,
+    deferredRunIds: NONE_DEFERRED,
+    namedInFull: true,
+    hasPlayerProfile: true,
+  } as const;
+
+  it('opens in the administrator profile it used last', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        profiles: BOTH,
+        lastProfile: { kind: 'administrator', clubId: OGRODY.clubId },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: OGRODY.clubId });
+  });
+
+  it('opens in Player when Player was used last', () => {
+    expect(
+      entryDestination({ ...IN_THE_APP, profiles: BOTH, lastProfile: { kind: 'player' } }),
+    ).toEqual({ kind: 'app' });
+  });
+
+  it('opens in Player when the club it used last no longer has it', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        profiles: BOTH,
+        lastProfile: { kind: 'administrator', clubId: BONARKA.clubId },
+      }),
+    ).toEqual({ kind: 'app' });
+  });
+
+  // The profile was chosen, and choosing it is choosing not to be asked a player's questions now:
+  // they are still owed, and switching back to Player is where they are asked.
+  it('opens in the administrator profile ahead of anything the player side still owes', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        namedInFull: false,
+        ratings: [],
+        profiles: BOTH,
+        lastProfile: { kind: 'administrator', clubId: OGRODY.clubId },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: OGRODY.clubId });
+  });
+
+  it('opens an account running two clubs in the one it used last', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        profiles: { actsAsPlayer: false, administers: [BONARKA, OGRODY] },
+        lastProfile: { kind: 'administrator', clubId: OGRODY.clubId },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: OGRODY.clubId });
+  });
+
+  it('opens an account that does not play on its first club, whatever Player said', () => {
+    expect(
+      entryDestination({
+        ...IN_THE_APP,
+        profiles: { actsAsPlayer: false, administers: [BONARKA, OGRODY] },
+        lastProfile: { kind: 'player' },
+      }),
+    ).toEqual({ kind: 'administrator', clubId: BONARKA.clubId });
   });
 });

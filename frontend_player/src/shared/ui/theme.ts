@@ -36,6 +36,7 @@ const color = {
   // --- Surfaces and structure ---
   paper: '#F4F2ED', // app background — warm off-white, never pure white
   paper2: '#EDEAE3', // recessed: the situation header, the popover close
+  paper3: '#E2DED3', // the club card's tray — 1.21 on paper, where paper2 is 1.07 (#529)
   surface: '#FFFFFF', // cards, sheets, popovers, raised controls
 
   ink: '#101B20', // body text — 15.65 on paper, 17.50 on surface
@@ -44,6 +45,7 @@ const color = {
   /** (!) was #6E7F85 — `tiny` at 11pt was 3.73:1 on paper, the audit's own
    *  headline failure. Now 4.83 paper / 5.40 surface / 4.62 line2. */
   muted: '#5C6D73',
+  muted2: '#4E5E64', // secondary text on paper3 — 5.02, where muted there is 4.02
 
   line: '#E5E1D8', // BOUNDS a thing: card borders, chip borders
   line2: '#F0EDE6', // a FOLD inside one thing: hairlines, tag backgrounds, tracks
@@ -305,6 +307,41 @@ export const POSTER_HUES = [
 /** One member of the closed set. `CourtPoster` takes this and never a string. */
 export type PosterHue = (typeof POSTER_HUES)[number];
 
+// ---------------------------------------------------------------------------
+// The group monogram's hues — a second closed set, and for the poster's reason NOT in `color`
+// ---------------------------------------------------------------------------
+
+/**
+ * THE EIGHT FILLS A GROUP'S MONOGRAM CAN BE — one per colour key the backend serves, 0 to 7
+ * ([ADR-0183](../../../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
+ * §5, docs/design-system.md 7.20). The key is fixed for a group for ever — derived from its id —
+ * and **the backend never names a colour**: this list is the one place a key becomes a hue, so
+ * every screen that draws a group's tile draws the same one.
+ *
+ * Exported beside the theme and never inside it, as `POSTER_HUES` is: a monogram's hue is picked
+ * by a hash of a group's id, so it means nothing, and a `theme.color.monogram…` would be a value
+ * that means nothing sitting where every other one means something. `GroupMonogram` is the only
+ * component that reads it.
+ *
+ * MEASURED where the mocks draw one — play 1's *Oo* `#308361` and *Kc* `#87641A`, play 9's *O3*
+ * `#213E50`, play 40's *Mr* `#9E3C2B` — and four more chosen to sit between them on the wheel.
+ * **White letters on every one clear 4.5:1**, the floor for the tile's letters, which are text;
+ * the green is the tightest at 4,62. Derived in `monogramHues.test.ts`, which computes the ratio
+ * rather than asserting it. Unlike the poster, a monogram DOES sit near the sport hues: the mocks
+ * draw it so, and the tile always carries the group's name beside it, which is what tells a group
+ * from a sport.
+ */
+export const MONOGRAM_HUES = [
+  '#308361',
+  '#87641A',
+  '#213E50',
+  '#9E3C2B',
+  '#6A4C93',
+  '#1E6B73',
+  '#8C3F6E',
+  '#3D5A99',
+] as const;
+
 /**
  * The level bar's four bands. Three values each, not one with opacity:
  *   tint — the large bar fill
@@ -435,6 +472,11 @@ const num = {
    *  label on a hairline. A size and not a scale of `xs`, for 15.3's reason — the pair changes
    *  together with the record. */
   tiny: { fontFamily: font.mono[500], fontSize: 11, letterSpacing: -0.385, lineHeight: 16 },
+  /** A LEVEL IN A TAG — *Pad 2,44* under a Join request's name (#529, Part 16 2026-09-30).
+   *  `type.tag`'s 9,5 / 12 box and weight in the mono family, with the ramp's −0,035em (−0,33):
+   *  a figure is mono, and `tiny` at 11 puts two tags and a *+2* past the room a request row
+   *  leaves beside ✕ and Approve on a 393pt phone. */
+  tag: { fontFamily: font.mono[600], fontSize: 9.5, letterSpacing: -0.33, lineHeight: 12 },
 } as const;
 
 /**
@@ -553,6 +595,13 @@ const size = {
   chip: 27,
   chipSm: 25,
   seg: 25,
+  /** A segment's count — the Chats badge (`tabBar.badge`) at the segment's size (#529): the
+   *  group page's Info tab, counting the requests waiting on an Owner. **16, and it is
+   *  `num.tiny`'s own line box**, the digit role one step under the tab bar's `num.xs` — the
+   *  segment's label is 10,5 where the tab bar's is 12, so the mark comes down with it rather
+   *  than standing a size above the word it sits on. The fill, the white digit, the pill and the
+   *  missing cap are the Chats badge's; only the size is the segment's. */
+  segmentBadge: 16,
   tag: 19,
   /** The fit pill — 7.10. **26, which is the height every call site drew.** The prototype's
    *  class defaulted to 23 and was overridden inline at all five sites; UI §G1 records that
@@ -718,6 +767,47 @@ const size = {
    *  surface, exactly as 6.11's is: a 23pt track is well under the 44pt minimum, and a
    *  `hitSlop` around it would leave the words beside it inert. */
   switch: { track: 40, height: 23, knob: 18, row: 44 },
+  /** THE GROUP'S MONOGRAM — its tile at the three places a group is drawn (7.20, #512), MEASURED
+   *  off the mocks at 1×: 38 on a Groups list card (play 1, 38), 28 in a row inside a club's
+   *  card (play 9, 24, 35) and 36 in the group page's header (play 39, 40).
+   *
+   *  `radius` and `letters` are SHARES of the tile's side, for `yesTile.initials`' reason: one
+   *  drawn object at three sizes, and a point value per size is three numbers to keep in step.
+   *  A 38 tile's corner is 10 and its letters 14; a 28 tile's are 8 and 10. The letters are the
+   *  one font size in the app after the yes tile's that is computed from a box, and it is computed
+   *  inside the tile that owns the box — the group's, and since #518 a club's (`ClubTile`), which
+   *  is the same drawing at the same two sizes. `chip` is the profile switcher's face (#518, as
+   *  slimmed 2026-10-01): the worn profile drawn small enough that the pill reads as a control
+   *  rather than as a second avatar beside the header's. */
+  monogram: { card: 38, row: 28, header: 36, chip: 22, radius: 0.27, letters: 0.37 },
+  /** THE PROFILE SWITCHER'S CHIP (club 7, #518; slimmed 2026-10-01) — a face at `monogram.chip`
+   *  (22) beside a drawn ⇅, in PROPORTION to the product owner's mock rather than at its pixels: the
+   *  face about three quarters of the pill's height, the arrows about two fifths of the face's. So
+   *  the two arrows sit in a 14pt box (their strokes span 8,75 of it), drawn as geometry because
+   *  Feather ships no up-and-down pair and Archivo is never asked for a mark. `markStroke` is the
+   *  mock's hairline arrow, a step under the tick's 2pt because the arrows are two strokes side by
+   *  side and at 2 they close into a block. */
+  switcher: { mark: 14, markStroke: 1.5 },
+  /** THE GROUP PAGE'S TWO DRAWN PIECES (#513), MEASURED off the mocks at 1×. `seat` is a face or
+   *  an empty seat in the Games card's row under its headline — 34 in play 14–17 and 39, the
+   *  radar card's identity face and a `btn` high. It is `PlayerPhoto`'s `face` box at that size,
+   *  so its corner is the face's third and no second radius exists. `filterPad` is the white
+   *  bar's inset around the sport pills it unfolds into (play 42): the pills are chips, and
+   *  `chip` + 2 × 9 is 45 — so the bar is a reachable target tall and each pill's `hit.chip`
+   *  ends at the bar's edge rather than past it, where Android would never deliver the touch.
+   *
+   *  The Info tab's members row (#514, play 58–60) stacks up to five faces: `stackFace` is each
+   *  one, 28 — the monogram's row size, and what the mocks draw beside the row's `cardTitle` —
+   *  `stackOverlap` how far each slides under the one before it, about a third, and `stackRing`
+   *  the card-coloured ring that keeps one face from merging into the next. */
+  groupPage: { seat: 34, filterPad: 9, stackFace: 28, stackOverlap: 9, stackRing: 2 },
+  /** THE ARRIVED RING — the members card on an official group's page in the administrator area
+   *  (#529): how much of the group has arrived, the players over the group size, round the
+   *  percentage it draws inside. A drawn object on `surface`, the ring's light-card sibling: a
+   *  `line2` track and a `mint` arc (4,07:1 on white, past 1.4.11's 3:1) — the club website's
+   *  green bar for the same share. `diameter` holds *117%* in `num.xs` inside the stroke on the
+   *  narrowest phone; `stroke` is the meter's weight grown to read at a ring's length. */
+  arrivedRing: { diameter: 48, stroke: 4 },
   /** The yes screen's tile — a face at this screen's two sizes, and the initials over a poster
    *  ([ADR-0167](../../../../docs/adr/0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
    *  §2, §3). MEASURED off the mocks at 1x: 64 x 64 in the singles mock, 54 x 54 in the doubles
@@ -796,6 +886,18 @@ const size = {
    *  line at every placement, and its stroke is 1,5 for the same reason 6.8's is 2: at 7pt a 2pt
    *  stroke is a blob. Same path as `Tick`, in a smaller box. */
   onCourtTick: { share: 0.72, stroke: 1.5 },
+  /** AN OFFICIAL GROUP'S MARK — a seal with `Tick`'s path in it, beside the group's name in both
+   *  searches and in its page's header, where the *official* tag was (#529). The product owner's
+   *  bound: **no bigger than a lowercase letter**. So its box is a SHARE of the name's own font
+   *  size, and the share is Archivo's x-height — 526 of 1000 units (`OS/2.sxHeight`), 6,84pt
+   *  beside a row's `cardTitle` and 7,89 beside the header's `h2` — `onCourtTick`'s rule, read at
+   *  the lowercase line rather than the capital one. */
+  officialMark: { share: 0.526 },
+  /** THE SCORE TAG'S SPARK — the four-pointed star before a Player Score on Members' rows, drawn
+   *  because Archivo ships no U+2726. A SHARE of the figure's own font size, `onCourtTick`'s
+   *  rule: 0,8 of `num.tag` is about the digits' cap height, so the spark reads as part of the
+   *  figure rather than as a bullet beside it. */
+  scoreSpark: { share: 0.8 },
   /** The text field — 6.13. `row` is the box at ONE line, and it is `btnXl`: the field and
    *  the button it sits above are the same control height, which is what four shipped auth
    *  boxes have drawn since sign-up. It is written as its own number rather than borrowed
@@ -1066,10 +1168,12 @@ const hit = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Elevation — five shadows in the whole system, all for things that genuinely float, plus
-// one TEXT shadow, which is a different mechanism and not an elevation at all.
+// Elevation — six shadows in the whole system, five for things that genuinely float and one
+// for the club results of the two group searches, plus one TEXT shadow, which is a different mechanism and not
+// an elevation at all.
 // CARDS NEVER HAVE ONE: depth on paper comes from the surface change and the 1pt border.
-// The deck card is here because it is not a card, not because the rule bent.
+// The deck card is here because it is not a card, not because the rule bent; the club result
+// is the one amendment to the rule, and it is named rather than absorbed (4.3, Part 16).
 //
 // RN cannot express CSS spread, so these are calibrated approximations: the blur halves,
 // the offset shrinks toward the negative spread, and the opacity comes down with it.
@@ -1132,6 +1236,21 @@ const shadow = {
     shadowRadius: 7,
     elevation: 6,
   },
+  /** THE CLUB RESULT — the sixth, and the only card-shaped surface that casts one: one drawing
+   *  (`ClubCard`), in New group's home-club search and in Join a group's.
+   *
+   *  The product owner's mocks (2026-09-27) lift every club a search answers off the page, because a club and the groups under it were one list with nothing to say where
+   *  one club ended: on paper, a 1pt border between two white cards nine points apart is not
+   *  enough to read a club and its groups as one object. It is the faintest and the tightest
+   *  of the six — the result sits on the page it lifts from, it is not over anything — and its
+   *  `elevation` is the lowest, below the ⚡Play disc, because the bar passes over it. */
+  clubResult: {
+    shadowColor: '#0B2B33',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
   /** TEXT ON GENERATED MEDIA — a textShadow, not an elevation, and the only one in the app.
    *
    *  Carried by EVERY label drawn over the court, both sets: the ratios `color.courtScrim`
@@ -1146,8 +1265,9 @@ const shadow = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, and
-// the yes screen's entrance, which is the first and the fade composed. Nothing else moves.
+// Motion — one entrance, one sheet, one popover, one fade, one ripple, one pulse, one settle, one
+// unfold, one disclose, and the yes screen's entrance, which is the first and the fade composed.
+// Nothing else moves.
 // Press feedback is immediate (Pressable's `pressed`), not animated: the prototype's
 // 120ms is a mouse-hover transition and has no touch equivalent.
 //
@@ -1197,6 +1317,25 @@ const motion = {
    * presentation, where the card is drawn at rest.
    */
   settle: 160,
+  /**
+   * The group page's fast filter unfolding from its pill (play 41–42, #513): the white bar grows
+   * leftwards from the pill over the group's name while the other sports slide out one by one
+   * from under the current one, each over half of this and each starting a step after the one
+   * nearer the pill. Between `sheet` and `rise`, because three words have to be seen arriving
+   * in turn and a `popover` is over before the second has moved. `easeDecel`, on the UI thread.
+   * **Folding is not animated**: the finger has already chosen, and the pill it folds back to is
+   * a state the eye already knows. Skipped under reduced motion, where the bar is simply open.
+   */
+  unfold: 280,
+  /**
+   * The record sheet's *Full record* opening and closing under its three blocks: the fold's
+   * height runs to the content's measured height while the content fades in and slides down a
+   * `space.md` into place, and the chevron turns over. **Both ways**, unlike `unfold`: closing
+   * hands the space back to the sheet, and a sheet that jumped a card's height shorter would
+   * read as a different surface. `unfold`'s pace, `easeDecel`, on the UI thread. Skipped under
+   * reduced motion, where the fold is simply open or shut.
+   */
+  disclose: 280,
   /**
    * The radar's flight — a tap on a face carries the view to them, centred, at the 3 km stop
    * ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)

@@ -33,10 +33,16 @@ def test_the_nickname_reaches_exactly_the_reads_that_may_draw_it() -> None:
         if "nickname" in (schema.get("properties") or {})
     )
 
-    # ``UserResponse`` is ``/me`` (and the registration's echo of an unnamed
-    # account); ``PlayerRecordResponse`` is the one read about *another* player
+    # ``MeResponse`` is ``/me`` and ``UserResponse`` the registration's echo of
+    # an unnamed account, which ``MeResponse`` extends with the account's
+    # profiles; ``PlayerRecordResponse`` is the one read about *another* player
     # that carries both; ``NamingResponse`` is the act answering what it wrote.
-    assert carrying == ["NamingResponse", "PlayerRecordResponse", "UserResponse"]
+    assert carrying == [
+        "MeResponse",
+        "NamingResponse",
+        "PlayerRecordResponse",
+        "UserResponse",
+    ]
 
 
 def test_every_surface_that_names_another_player_carries_the_name() -> None:

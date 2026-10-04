@@ -1,14 +1,19 @@
 """The player API surface.
 
-Every endpoint the player client (``frontend_player/``) may depend on. It is the
-only surface this backend serves, and ``app/api/contract.py`` emits it as
-``openapi.player.json`` — the one document the client generates its wire types
-from (``docs/adr/0006-backend-owns-api-contract.md``).
+Every endpoint the player client (``frontend_player/``) may depend on, and
+``app/api/contract.py`` emits it as ``openapi.player.json`` — the one document
+that client generates its wire types from
+(``docs/adr/0006-backend-owns-api-contract.md``). The club website has a surface
+of its own (``app/api/v1/club.py``), and no path is in both.
 """
 
 from fastapi import APIRouter
 
 from app.api.v1.sports import router as sports_router
+from app.modules.administrators.presentation.routes import (
+    administrator_router,
+    invitations_router,
+)
 from app.modules.auth.presentation.routes import router as auth_router
 from app.modules.blocks.presentation.routes import router as blocks_router
 from app.modules.challenges.presentation.routes import (
@@ -18,6 +23,17 @@ from app.modules.conversations.presentation.routes import (
     router as conversations_router,
 )
 from app.modules.games.presentation.routes import router as games_router
+from app.modules.groups.presentation.administrator_routes import (
+    handovers_router,
+)
+from app.modules.groups.presentation.administrator_routes import (
+    router as administrator_groups_router,
+)
+from app.modules.groups.presentation.routes import (
+    home_clubs_router,
+    join_search_router,
+    router as groups_router,
+)
 from app.modules.matchmaking.presentation.deck_routes import (
     passes_router,
     router as deck_router,
@@ -86,3 +102,10 @@ player_api_router.include_router(games_router)
 player_api_router.include_router(plans_router)
 player_api_router.include_router(sportsmanship_router)
 player_api_router.include_router(player_record_router)
+player_api_router.include_router(groups_router)
+player_api_router.include_router(home_clubs_router)
+player_api_router.include_router(join_search_router)
+player_api_router.include_router(invitations_router)
+player_api_router.include_router(administrator_router)
+player_api_router.include_router(administrator_groups_router)
+player_api_router.include_router(handovers_router)

@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-23
+- **§6's *`find_a_game` defaults to enabled* amended 2026-09-25 by [ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md) §12**: it defaults **off**, in code and in every environment. **§5 stands, confirmed there**: the backend evaluates no flag. The `AsyncStorage` allow-list this record made one module long admits a second, the phone-preferences store ([ADR-0188](0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
 - **Supersedes** [ADR-0013](0013-player-app-runtime-architecture.md)'s *Not adopted now* line
   for **a feature-flag service** only. The rest of that list — `openapi-fetch`, Sentry,
   Maestro, React Hook Form, `expo-network`/netinfo — stands, and so does its rule that a

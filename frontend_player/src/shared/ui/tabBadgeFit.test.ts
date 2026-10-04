@@ -49,14 +49,15 @@ describe('the digit inside the mark', () => {
    * was added for one mark. `numTiny` arrived beneath it on 2026-09-16 for the radar's four
    * small figures (Part 16), and the badge **did not move down to it**: its 18 pt box is `xs`'s
    * 17 pt line box rounded to the grid, and a digit a step smaller would leave the box it
-   * derived. So the role is pinned by name, and the one role below it is named too.
+   * derived. So the role is pinned by name, and the roles below it are named too — `tag`, a Level
+   * in a Join request's tag, arrived on 2026-09-30 (#529) and the badge did not move to it either.
    */
-  it('is the mono role the badge was derived from, with only the radar’s tiny beneath it', () => {
+  it('is the mono role the badge was derived from, with only tiny and tag beneath it', () => {
     const smaller = Object.entries(theme.num)
       .filter(([, role]) => role.fontSize < theme.num.xs.fontSize)
       .map(([name]) => name);
 
-    expect(smaller).toEqual(['tiny']);
+    expect(smaller).toEqual(['tiny', 'tag']);
   });
 
   it('fits inside the mark with room on every side, at one digit', () => {

@@ -34,6 +34,7 @@ import { installTransport, json, type Transport, type Wire } from '@/test-suppor
 
 import {
   COUNTED_BLOCK,
+  FULL_RECORD,
   LAST_FIVE_BLOCK,
   OWN_RECORD_TITLE,
   PLAYER_SCORE_BLOCK,
@@ -354,6 +355,8 @@ describe('How others see you', () => {
       screen.getByLabelText(doorRowLabel(HOW_OTHERS_SEE_YOU_TITLE, HOW_OTHERS_SEE_YOU_LINE)),
     );
     await screen.findByRole('header', { name: OWN_RECORD_TITLE });
+    // The card is folded under *Full record* on the sheet, as on anybody's.
+    fireEvent.press(await screen.findByRole('button', { name: FULL_RECORD }));
 
     expect(await screen.findByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
     expect(screen.getByText(opinionFigure({ average: 4.3, raters: 12 }))).toBeTruthy();

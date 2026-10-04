@@ -46,7 +46,7 @@
 # appears anywhere in these four layers today, so this costs nothing to hold.
 #
 # The two `app.modules.*` arms are wildcards so that a context nobody has written yet
-# — Clubs, Courts, Bookings, Matches — is fenced on the day it is created rather than
+# — Courts, Bookings, Matches — is fenced on the day it is created rather than
 # on the day somebody remembers to come back here. That convenience carries a cost
 # worth knowing, and it was measured rather than assumed: **a wildcard matching
 # nothing is reported KEPT**, so an arm that stops matching becomes decoration in
@@ -207,8 +207,13 @@ forbidden_modules =
     os
 allow_indirect_imports = true
 
+# `smtplib` joined the list with the mailer (docs/adr/0186 §2), on the same
+# argument: *a use case never sends*. It writes a mail queue row and a worker sends
+# it through the `Mailer` port, and that is only true while nothing on the inside
+# can reach the library — or construct the adapter over it, which the flag below
+# catches as well.
 [importlinter:contract:a-business-layer-cannot-reach-an-imaging-or-object-store-library]
-name = No domain or application layer imports an imaging, object-store or HTTP-client library
+name = No domain or application layer imports an imaging, object-store, HTTP-client or mail library
 type = forbidden
 source_modules =
     app.application
@@ -222,6 +227,7 @@ forbidden_modules =
     boto3
     botocore
     aiohttp
+    smtplib
 allow_indirect_imports = false
 
 # The ephemeral store is fenced out of the business layers on exactly the argument
@@ -507,6 +513,42 @@ forbidden_modules =
     app.modules.plans
 allow_indirect_imports = true
 
+# A club does not know its groups exist. `groups` reads `clubs` — a group's home
+# club, both searches, the fold its names are matched by — and the one thing
+# `clubs` asks back, *which sports do the official groups here declare* (a details
+# edit may not untick one, docs/adr/0182 §5), is a port declared in `clubs`' own
+# words and **signed in `groups/infrastructure/`**, as `games`' agreed moment is
+# signed by the Plan. An adapter living in `clubs` would have been the obvious
+# place to write it, and would have pointed the arrow back; this is what refuses
+# it (#509).
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:clubs-does-not-know-groups]
+name = The Clubs context does not import Groups
+type = forbidden
+source_modules =
+    app.modules.clubs
+forbidden_modules =
+    app.modules.groups
+allow_indirect_imports = true
+
+# Nor does an administratorship know which groups it runs. `groups` reads
+# `administrators` — who runs an official group now, the guard every
+# administrator operation passes — and the one thing `administrators` asks back,
+# *which groups was each Administrator given* (the club's Administrators table
+# names them, #510), is a port declared in `administrators`' own words and
+# **signed in `groups/infrastructure/`**, exactly as clubs' sports question is.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:administrators-does-not-know-groups]
+name = The Administrators context does not import Groups
+type = forbidden
+source_modules =
+    app.modules.administrators
+forbidden_modules =
+    app.modules.groups
+allow_indirect_imports = true
+
 # The player record is an **assembler**: it stores nothing, and every fact on the
 # sheet it draws is somebody else's (docs/adr/0159). That makes it the one context
 # on this platform whose domain and application layers have a standing reason to
@@ -556,6 +598,7 @@ forbidden_modules =
     app.modules.challenges
     app.modules.conversations
     app.modules.games
+    app.modules.groups
     app.modules.matchmaking
     app.modules.plans
     app.modules.player_profile

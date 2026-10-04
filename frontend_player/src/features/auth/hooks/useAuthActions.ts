@@ -1,5 +1,5 @@
 /**
- * The four auth mutations, as semantic hooks.
+ * The auth mutations, as semantic hooks.
  *
  * Each one declares its own retry decision at the call site, because the global default
  * is `retry: false` and overriding it silently is how a mutation gets repeated.
@@ -8,20 +8,38 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
+import { showToast } from '@/shared/store/toast.store';
 
 import type {
+  AccountProfiles,
   AuthenticatedUser,
   Naming,
   Registration,
   SignInCredentials,
 } from '../domain/AuthenticatedUser';
+import type { InvitationCodeClaim, InvitationPassword } from '../domain/invitation';
+import { PLAYER_PROFILE } from '../domain/lastProfile';
+import type { NewPassword, ResetCodeClaim } from '../domain/passwordReset';
+import { acceptInvitation } from '../use-cases/acceptInvitation';
+import { askForPasswordReset } from '../use-cases/askForPasswordReset';
+import { attestAdult } from '../use-cases/attestAdult';
+import { claimInvitationCode } from '../use-cases/claimInvitationCode';
+import { claimResetCode } from '../use-cases/claimResetCode';
 import { namePlayer } from '../use-cases/namePlayer';
+import { setInvitationPassword } from '../use-cases/setInvitationPassword';
+import { setNewPassword } from '../use-cases/setNewPassword';
 import { signIn } from '../use-cases/signIn';
 import { signOut } from '../use-cases/signOut';
 import { signUp } from '../use-cases/signUp';
 
 import { authKeys } from './authKeys';
 import { currentUserQuery } from './useCurrentUser';
+import { useKeepProfile } from './useLastProfile';
+
+/** What the toast says once a new password is set — the copy module's, handed in by the screen. */
+export interface SetNewPasswordOptions {
+  readonly done: string;
+}
 
 /**
  * **Not retried.** A failed sign-in is almost always a wrong password, and repeating it
@@ -113,6 +131,142 @@ export function useNamePlayer() {
       // `staleTime: 0` is the point: the write above just made the entry fresh, and a fetch that
       // honoured that would hand the write back as the server's answer.
       await queryClient.fetchQuery({ ...currentUserQuery(), staleTime: 0 });
+    },
+  });
+}
+
+/**
+ * ***Start playing*'s first step, the Adult attestation** — and the cache effect it declares
+ * ([ADR-0185](../../../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)
+ * §4–§5).
+ *
+ * **Not retried.** The act is safe to repeat — giving it twice records nothing — but a failure is
+ * the player's to see and press again, every mutation's rule.
+ *
+ * **Written, and then re-read, in that order** — the naming's shape, for its reasons. The account
+ * **acts as a player** from the moment it attests (ADR-0185 §2), and that is what the entry gate
+ * reads first: the write puts it in the cached player at once, so a gate reading the cache in the
+ * next instant already sends the account on to the naming rather than back to its administrator
+ * area, and the awaited `fetchQuery` is the server staying the authority. The caller's own
+ * `onSuccess` navigates on a cache that is already right.
+ *
+ * **Starting to play is choosing Player** ([#518](https://github.com/Raketa02/Raketa/issues/518)):
+ * the gate reads the profile the phone remembers first, and an account that wore a club's profile
+ * last would be sent straight back to that club's area. So the choice is kept here, before the
+ * re-read, and the gate goes on to the naming.
+ */
+export function useAttestAdult() {
+  const queryClient = useQueryClient();
+  const keepProfile = useKeepProfile();
+
+  return useMutation<void, AppError, void>({
+    mutationFn: attestAdult,
+    retry: false,
+    onSuccess: async () => {
+      keepProfile(PLAYER_PROFILE);
+      queryClient.setQueryData<AuthenticatedUser>(authKeys.currentUser(), (player) =>
+        player === undefined
+          ? undefined
+          : { ...player, profiles: { ...player.profiles, actsAsPlayer: true } },
+      );
+      await queryClient.fetchQuery({ ...currentUserQuery(), staleTime: 0 });
+    },
+  });
+}
+
+/**
+ * ***Forgot password?*** — ask for the email.
+ *
+ * **Not retried.** The server throttles per address and says so to nobody, so a silent retry
+ * spends one of the person's three emails an hour on a request they cannot see; the answer is
+ * identical either way, and a person who got nothing asks again with the button.
+ */
+export function useAskForPasswordReset() {
+  return useMutation<void, AppError, string>({
+    mutationFn: askForPasswordReset,
+    retry: false,
+  });
+}
+
+/**
+ * The code, exchanged for a ticket. **Not retried**: five wrong codes lock the credential, and a
+ * retry of a wrong one is a second wrong one the person never typed.
+ */
+export function useClaimResetCode() {
+  return useMutation<string, AppError, ResetCodeClaim>({
+    mutationFn: claimResetCode,
+    retry: false,
+  });
+}
+
+/**
+ * *Set a new password*, signed in at the end.
+ *
+ * **Not retried.** Setting it spends the link, the code and the ticket together, so a retry of a
+ * request that landed but whose answer was lost meets `credential_used` — a refusal about a
+ * password that is, in fact, set. The person presses again, and is told so in words.
+ *
+ * **The toast is the "done"**: the `(auth)` guard sees the session begin and hands it to the entry
+ * gate, so there is no screen of this flow left to say it on. It says what else happened, because
+ * a person whose other phone goes quiet should know why.
+ */
+export function useSetNewPassword({ done }: SetNewPasswordOptions) {
+  return useMutation<void, AppError, NewPassword>({
+    mutationFn: setNewPassword,
+    retry: false,
+    onSuccess: () => showToast({ message: done, tone: 'ok' }),
+  });
+}
+
+/**
+ * ***Have an invitation code?*** — the code, exchanged for a ticket. **Not retried**, for
+ * `useClaimResetCode`'s reason: five wrong codes lock the invitation, and a retry of a wrong one is
+ * a second wrong one nobody typed.
+ */
+export function useClaimInvitationCode() {
+  return useMutation<string, AppError, InvitationCodeClaim>({
+    mutationFn: claimInvitationCode,
+    retry: false,
+  });
+}
+
+/**
+ * ***Set your password***, signed in at the end. **Not retried**: setting it spends the link, the
+ * code and the ticket together, so a retry of a request that landed meets `credential_used` about a
+ * password that is, in fact, set.
+ *
+ * **No toast.** The `(auth)` guard hands the session to the entry gate, which opens the
+ * administrator area — the place the invitation was for, and the *done* in itself.
+ */
+export function useSetInvitationPassword() {
+  return useMutation<void, AppError, InvitationPassword>({
+    mutationFn: setInvitationPassword,
+    retry: false,
+  });
+}
+
+/**
+ * **Accept a club's invitation** — the administrator profile added to this account, and the cache
+ * effect it declares ([#518](https://github.com/Raketa02/Raketa/issues/518), ADR-0184 §2).
+ *
+ * **Not retried**, though accepting twice is the same answer: a failure is the person's to see and
+ * press again, every mutation's rule here.
+ *
+ * **The answer is written, not re-read.** The server answers the account's profiles exactly as
+ * `/users/me` would — the new club among them, the invitation gone from those pending — so they go
+ * into the cached player at once: the switcher the sheet turns into draws both profiles from it, and
+ * nothing offers the invitation again.
+ */
+export function useAcceptInvitation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<AccountProfiles, AppError, string>({
+    mutationFn: acceptInvitation,
+    retry: false,
+    onSuccess: (profiles) => {
+      queryClient.setQueryData<AuthenticatedUser>(authKeys.currentUser(), (player) =>
+        player === undefined ? undefined : { ...player, profiles },
+      );
     },
   });
 }

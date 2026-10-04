@@ -1,5 +1,5 @@
 /**
- * **The You tab's own sentences** — its title, its eyebrow and the three group titles
+ * **The You tab's own sentences** — its title and the three group titles
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §27).
  *
  * They are the shell's for §1's reason: they are about the **tab** — what it is called and
@@ -14,6 +14,9 @@
  * about me. A fourth question — the account — is not asked on this tab (ADR-0179 §9), and
  * *Sign out* stays at the foot as the account panel draws it.
  *
+ * **The eyebrow is gone too**: *Player profile* over the title said what the bar under the screen
+ * already says, and went at the product owner's ask (#529, 2026-10-02).
+ *
  * **The placeholder line is gone.** *Your profile, your radius, your week — not built yet*
  * was a citation for as long as the tab was unbuilt; the tab is built, and the fifth tab has
  * left the placeholder table with it.
@@ -21,7 +24,6 @@
 
 export const YOU_COPY = {
   title: 'You',
-  eyebrow: 'Player profile',
   groups: {
     playing: 'Playing',
     findingPlayers: 'Finding players',

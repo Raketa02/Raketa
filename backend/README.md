@@ -354,6 +354,11 @@ The development compose file starts:
   wait for it**: the client fails open, so a sidecar still loading costs an
   upload its verdict and never costs a player their photo.
 - `redis`: Redis 7.2, available for future integrations.
+- `mailpit`: the mail catcher. Every email the API sends — a reset link and its
+  code, an invitation — lands in its web inbox at
+  [http://localhost:8025](http://localhost:8025), and none leaves the machine
+  (`docs/adr/0186`). SMTP is on `1025`. **The API does not wait for it**: a send
+  that finds nobody listening is retried by the mail worker.
 
 The API container waits for Postgres, runs `alembic upgrade head`, then starts
 Uvicorn. Source code, migrations, and `alembic.ini` are bind-mounted for reload.

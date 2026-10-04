@@ -115,6 +115,7 @@ nothing in `shared/` may import a feature.
 | Form input                    | The form layer + a Zod schema                                                          |
 | Navigation state              | expo-router                                                                            |
 | Build/environment config      | `src/shared/config/env.ts`                                                             |
+| A choice the phone remembers  | `src/shared/lib/preferences` → AsyncStorage, per account, wiped at sign-out (ADR-0188) |
 
 Never represent the same state in two of these at once. In particular: **never copy
 Query data into Zustand**, **never put a token in Zustand**, and **never use a navigation
@@ -132,6 +133,7 @@ src/app/
 ├── _layout.tsx            root providers + bootstrap gate
 ├── (public)/              reachable without a session
 ├── (auth)/                sign-in, sign-up, recovery
+├── (administrator)/       the administrator area: one club's Groups · You, its own stack and bar
 └── (app)/                 authenticated tree
     ├── _layout.tsx        the redirect guard
     └── (tabs)/            the shell: one Stack, five tabs
@@ -183,6 +185,16 @@ feature's `schemas/` before use**, and never let it short-circuit the guard:
 ```
 Is the session authorized?  →  Is this route allowed?  →  Are the params valid?  →  load
 ```
+
+**Before any of that, an address from outside is read, and only three are links**
+([#520](https://github.com/Raketa02/Raketa/issues/520)). expo-router hands every address the
+operating system opens the app with to `src/app/+native-intent.ts` before it routes one, and the
+links feature answers: `join/<code>`, `invite/<token>` and `reset/<token>` — by the app's scheme, or
+the web domain once one is set — are read value by value and **held** until a place that can answer
+them is reached (and so is the bare `raketa://`, the existing-account invitation email's button);
+**anything else is ignored**, so no screen in the app is reachable from outside by its path. A held link never short-circuits the guard: it waits through sign-in and onboarding, and is
+answered by the authenticated tree once the account is in it. The rules are
+[`features/links.md`](features/links.md).
 
 ---
 
@@ -415,14 +427,20 @@ session that cannot recover.
 3. delete the SecureStore credentials
 4. cancel in-flight authenticated requests
 5. queryClient.cancelQueries() ; queryClient.clear()
-6. reset sensitive feature UI state
-7. set session unauthenticated
-8. navigate to the unauthenticated tree
+6. forget the phone's preferences (ADR-0188 §3)
+7. reset sensitive feature UI state
+8. set session unauthenticated
+9. navigate to the unauthenticated tree
 ```
 
 Step 5 is a **privacy control**, not tidiness: user A's cached profile, bookings and
 matches sitting in memory when user B signs in on the same device is a data leak. Route
-replacement clears nothing.
+replacement clears nothing. **Step 6 is the same control one store over**
+([#512](https://github.com/Raketa02/Raketa/issues/512)): the Play segment, and later the last
+sport and profile, are kept per account on the phone, and a sign-out of any kind — by hand, or
+by the server refusing the credentials — empties them, because the store cannot tell _me again_
+from _somebody else_. `endSession` runs it after the status change, awaited, because it waits
+on no query.
 
 If the server revoke call fails offline, local credentials still need a defined product
 policy — decide it, don't leave them accidentally active.
@@ -936,8 +954,17 @@ const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
   EXPO_PUBLIC_FEATURES_URL: z.string().url(),
   EXPO_PUBLIC_ENV: z.enum(['local', 'development', 'staging', 'production']),
+  EXPO_PUBLIC_LINK_DOMAIN: z.string().optional(), // a bare host, or nothing
 });
 ```
+
+`EXPO_PUBLIC_LINK_DOMAIN` is the one **optional** value: the web domain the app's links live on
+(`raketa.app`, bare), and **empty in every environment today**
+([#520](https://github.com/Raketa02/Raketa/issues/520), ADR-0187 §7). Set, `app.config.ts` gives iOS
+an associated domain and Android a verified intent filter for the three link paths; empty, the links
+use the app's scheme alone. The native document and the runtime read it through one pure function,
+`src/shared/config/appLinks.ts`, so the binary and the running app cannot disagree about which links
+are the app's.
 
 `EXPO_PUBLIC_FEATURES_URL` is the base the feature-flag datafile is fetched from —
 `<base>/<environment>/featurevisor-player.json` — the Mac's LAN address today, a bucket later
@@ -1169,7 +1196,16 @@ could read, kept raw in AsyncStorage by `features/feature_flags/api/datafileCach
 back at launch, so a player offline keeps the flags they last saw. It is not a query-cache
 persistence and none of the rules above are waived for it: it is public-read by design, names no
 player, is checked on the way out as it was on the way in, and a read that fails is simply no
-cache. AsyncStorage stays banned everywhere else ([Part 19](#part-19--what-the-linter-enforces)).
+cache.
+
+**The second is the phone-preferences store**
+([ADR-0188](../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)):
+`src/shared/lib/preferences/phonePreferences.ts` keeps the choices a player made on this phone —
+the Play segment since [#512](https://github.com/Raketa02/Raketa/issues/512), the last sport and
+the last profile to come — **one key per account per value**, and **empties itself at sign-out**
+as step 4 of `endSession`, beside the cache clear. It holds a choice, never a copy of server
+state; a value it cannot read, or one the owning feature no longer recognises, is that value's
+default. AsyncStorage stays banned everywhere else ([Part 19](#part-19--what-the-linter-enforces)).
 
 **Introduce SQLite** only for true offline workflows, large structured local datasets,
 durable operation queues, complex local queries, conflict resolution, or persistence
@@ -1187,16 +1223,21 @@ encodes:
 - `domain/` and `use-cases/` import no React, React Native, Expo or wire types
 - no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is importable only by
-  `features/feature_flags/api/datafileCache.ts`, which keeps the public flag datafile — never a
-  credential (ADR-0008, ADR-0180 §6)
+  `features/feature_flags/api/datafileCache.ts`, which keeps the public flag datafile, and by
+  `shared/lib/preferences/phonePreferences.ts`, which keeps the per-account choices ADR-0188
+  lists — never a credential (ADR-0008, ADR-0180 §6, ADR-0188 §1)
 - `@featurevisor/sdk` is importable only by `features/feature_flags/api/featurevisor.ts`, the
   one module that holds the instance (ADR-0180 §5)
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
-- `expo-location`, `expo-image-picker` and `react-native-sse` are importable only by the
-  port that owns each — `platform/location.ts`, `platform/imagePicking.ts` and
-  `platform/liveStream.ts`, one file each rather than the platform directory, so a module of
+- `expo-location`, `expo-image-picker`, `react-native-sse`, `expo-haptics` and `expo-clipboard`
+  are importable only by the port that owns each — `platform/location.ts`,
+  `platform/imagePicking.ts`, `platform/liveStream.ts`, `platform/haptics.ts` and
+  `platform/clipboard.ts`, one file each rather than the platform directory, so a module of
   ports cannot become the device bucket. The ban holds in tests too, which could not drive a
   native module anyway
+- **`Share` from `react-native`** — one name out of a module every screen imports — is importable
+  only by `platform/share.ts`, the share sheet's port (#513). It is a path ban with
+  `importNames` rather than a pattern, so every other name out of `react-native` stays free
 - `platform/liveStream.ts` is the one file outside a feature's `api/` and `mappers/` that
   may read `src/generated/`, and it is exempt from **two** bans rather than one: ADR-0147 §7
   requires the live envelope to be the generated type, and a stream body is not a response

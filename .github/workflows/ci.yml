@@ -12,6 +12,8 @@ name: CI
 #   backend   static · tests (a group per runner) · generated artifacts · meta (two jobs),
 #             and the add-up check, which waits for the groups
 #   player    static · tests (four shards) · meta
+#   club      static · tests (Playwright)
+#   public    static · tests (Playwright)
 #   always    the guardrail hooks
 #   release   the recorded-corpus report block, on a ruleset pull request only
 #
@@ -65,16 +67,21 @@ jobs:
       ruleset: ${{ steps.filter.outputs.ruleset }}
       player: ${{ steps.filter.outputs.player }}
       player_ready: ${{ steps.bootstrapped.outputs.player }}
+      club: ${{ steps.filter.outputs.club }}
+      club_ready: ${{ steps.bootstrapped.outputs.club }}
+      public: ${{ steps.filter.outputs.public }}
+      public_ready: ${{ steps.bootstrapped.outputs.public }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          # The client watches its OWN OpenAPI document as well as its own
-          # directory. Without that, a backend pull request that regenerates the
-          # contract matches only `backend`, no client job runs, and the drift
-          # check below is dormant in precisely the case it exists to catch.
-          # `backend/**` already covers that document for the backend job.
+          # Each client watches its OWN OpenAPI document as well as its own
+          # directory — and never another client's (docs/adr/0187 §5). Without
+          # that, a backend pull request that regenerates a contract matches only
+          # `backend`, no client job runs, and that client's drift check below is
+          # dormant in precisely the case it exists to catch. `backend/**`
+          # already covers every document for the backend jobs.
           filters: |
             backend:
               - 'backend/**'
@@ -107,17 +114,32 @@ jobs:
               - '.github/scripts/**'
               - '.github/workflows/ci.yml'
               - '.github/actions/setup-player/**'
+            club:
+              - 'frontend_club/**'
+              - 'backend/openapi.club.json'
+              - '.github/scripts/**'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/setup-web/**'
+            public:
+              - 'frontend_public/**'
+              - 'backend/openapi.public.json'
+              - '.github/scripts/**'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/setup-web/**'
 
-      # The frontend ships as architecture + config and may not have been
-      # installed yet, so there may be no lockfile to build from. Gate its job on
-      # one existing rather than failing every run until someone bootstraps it
+      # A client can ship as architecture + config before anyone has installed
+      # it, so there may be no lockfile to build from. Gate its jobs on one
+      # existing rather than failing every run until someone bootstraps it
       # — a permanently-red CI teaches people to ignore CI.
-      # The job switches itself on the moment its pnpm-lock.yaml is committed.
+      # Each client's jobs switch themselves on the moment its pnpm-lock.yaml is
+      # committed.
       - id: bootstrapped
         run: |
-          for app in player; do
+          for app in player club public; do
             case $app in
               player) dir=frontend_player ;;
+              club) dir=frontend_club ;;
+              public) dir=frontend_public ;;
             esac
             if [ -f "$dir/pnpm-lock.yaml" ]; then
               echo "$app=true" >> "$GITHUB_OUTPUT"
@@ -320,13 +342,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-backend
-      # Every emitted OpenAPI document, re-emitted and diffed. The dev console's
-      # contract has no client and no codegen, so `check-contract-drift.sh` has
-      # no purchase on it and **freshness** is the analogue (#256): regenerate
-      # the document and diff the JSON. It watches openapi.player.json too,
-      # because one command writes both — and because a stale player document is
-      # invisible to the drift check, which regenerates the client's types from
-      # it and finds them in perfect agreement.
+      # Every emitted OpenAPI document, re-emitted and diffed — the player's, the
+      # dev console's, the club website's and the public site's, whichever the
+      # emit writes. The dev console's contract has no client and no codegen, so
+      # `check-contract-drift.sh` has no purchase on it and **freshness** is the
+      # analogue (#256): regenerate the document and diff the JSON. It watches
+      # the clients' documents too, because one command writes them all — and
+      # because a stale client document is invisible to that client's drift
+      # check, which regenerates the types from it and finds them in perfect
+      # agreement. The set is the emit's answer, never a list in the check, so
+      # a surface added in the backend is watched from its first pull request
+      # (#527).
       - name: Contract freshness
         run: bash .github/scripts/check-contract-freshness.sh
       # The six judged pairings, re-derived against the live ruleset: the tables
@@ -373,10 +399,12 @@ jobs:
       - uses: ./.github/actions/setup-backend
       - name: Poetry pin drift check still fires
         run: bash .github/scripts/test-poetry-pin-drift.sh
-      # It hand-edits each emitted document and then moves a route's summary
-      # without regenerating, and asserts the check goes red for each. Both
-      # documents are driven: a suite that only broke the player one would leave
-      # the document the check was added for unexercised.
+      # It hand-edits each of the four emitted documents, moves a route's summary
+      # without regenerating, removes a document and plants one no surface
+      # emits, and asserts the check goes red for each. Every document is
+      # driven: a suite that only broke the player one would leave the others
+      # unexercised — which is how the club's and the public site's went
+      # unwatched until #527.
       - name: Contract-freshness check still fires
         run: bash .github/scripts/test-contract-freshness.sh
       # It builds each group's report through the real `make test-group`, with
@@ -530,15 +558,152 @@ jobs:
       # disk: the violations arrive on stdin.
       - name: Verify the import boundaries still fire
         run: pnpm test:boundaries
-      # It perturbs the contract in the workspace and restores it. A drift check
-      # nothing exercises is one that can stop matching without anybody
-      # noticing — the argument test-hooks.sh already makes for the guardrail
-      # hooks.
+      # It perturbs the player's contract in the workspace and restores it. A
+      # drift check nothing exercises is one that can stop matching without
+      # anybody noticing — the argument test-hooks.sh already makes for the
+      # guardrail hooks. Named for this client alone, because no other client is
+      # installed on this runner; each web app's static job runs its own half.
       - name: Verify the drift check itself fires
         working-directory: ${{ github.workspace }}
-        run: bash .github/scripts/test-contract-drift.sh
+        run: bash .github/scripts/test-contract-drift.sh frontend_player
       # No `build` step: a release build is `eas build`, which is a deliberate
       # human-triggered action, not part of PR CI. See docs/adr/0008.
+
+  # ==========================================================================
+  # The web apps — the club website and the public site (ADR-0187). Two tiers
+  # each, two jobs: static, and the Playwright suite. Each is behind the
+  # bootstrap gate, and each installs only its own app, from a pnpm store
+  # cached on its own lockfile; the two share a setup action and nothing else,
+  # because they share no code (ADR-0005).
+  # ==========================================================================
+
+  # Every static check `pnpm check` runs locally, plus contract drift, which it
+  # does not run — and, last, the drift check's still-fires proof for this
+  # client. That proof is a few seconds of regeneration, and a meta job of its
+  # own would spend a runner's minute of setup to run it, so the web apps have
+  # no meta tier; the player's static job ends on a still-fires proof the same
+  # way (the Play label rule). A red step before it skips it, which only
+  # postpones its verdict: the job is already red. It perturbs the contract and
+  # restores it, which is why nothing runs after it.
+  club-static:
+    name: Club website — static (eslint, prettier, tsc, tokens, contract drift)
+    needs: changes
+    if: needs.changes.outputs.club == 'true' && needs.changes.outputs.club_ready == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_club
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-web
+        with:
+          app: frontend_club
+      # Runs on a backend-only pull request too — the `club` filter watches
+      # backend/openapi.club.json. Before typecheck, because the generated types
+      # are typecheck's input.
+      - name: Contract drift
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-contract-drift.sh frontend_club
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
+      - name: Typecheck
+        run: pnpm typecheck
+      # No literal colour or size outside src/ui/tokens.css (ADR-0187 §6).
+      - name: Tokens
+        run: pnpm test:tokens
+      - name: Verify the drift check itself fires
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/test-contract-drift.sh frontend_club
+
+  # **The whole Playwright suite, against the built site.** `pnpm test` builds
+  # the site, starts it on a port of its own and points its server at the
+  # suite's stub backend, typed from the generated contract — so no backend and
+  # no database run here, and a contract change reaches this job through the
+  # stub's types. One worker, as the suite is configured: one server talks to
+  # one stub. On a laptop the suite took under a minute, build included
+  # (2026-09-26); a runner's first number belongs here once there is one.
+  club-tests:
+    name: Club website — tests (Playwright)
+    needs: changes
+    if: needs.changes.outputs.club == 'true' && needs.changes.outputs.club_ready == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_club
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-web
+        with:
+          app: frontend_club
+          browser: "true"
+      - name: Test
+        run: bash ../.github/scripts/memory-peak.sh "Club website Playwright" pnpm test
+      # A red suite's HTML report carries every failed test's trace, which is
+      # the only way to see what a page did on a runner. Kept a week, like the
+      # backend's reports.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: club-playwright-report
+          path: frontend_club/playwright-report/
+          retention-days: 7
+
+  public-static:
+    name: Public site — static (eslint, prettier, tsc, tokens, contract drift)
+    needs: changes
+    if: needs.changes.outputs.public == 'true' && needs.changes.outputs.public_ready == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-web
+        with:
+          app: frontend_public
+      # Runs on a backend-only pull request too — the `public` filter watches
+      # backend/openapi.public.json.
+      - name: Contract drift
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/check-contract-drift.sh frontend_public
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Tokens
+        run: pnpm test:tokens
+      - name: Verify the drift check itself fires
+        working-directory: ${{ github.workspace }}
+        run: bash .github/scripts/test-contract-drift.sh frontend_public
+
+  # The public site's suite, the same shape as the club website's: built,
+  # started beside its own stub, one worker.
+  public-tests:
+    name: Public site — tests (Playwright)
+    needs: changes
+    if: needs.changes.outputs.public == 'true' && needs.changes.outputs.public_ready == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend_public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-web
+        with:
+          app: frontend_public
+          browser: "true"
+      - name: Test
+        run: bash ../.github/scripts/memory-peak.sh "Public site Playwright" pnpm test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: public-playwright-report
+          path: frontend_public/playwright-report/
+          retention-days: 7
 
   # ==========================================================================
   # ci-ok — the one status to read (ADR-0181 §4, .github/scripts/check-ci-ok.sh).
@@ -568,6 +733,10 @@ jobs:
       - player-static
       - player-tests
       - player-meta
+      - club-static
+      - club-tests
+      - public-static
+      - public-tests
     if: always()
     runs-on: ubuntu-latest
     steps:

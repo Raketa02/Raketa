@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-26
+- **Amended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the cells the overlap reads become hours per weekday; the term still reads the pair and nothing else. The judged pairings and the ruleset diff are regenerated with the change.
 
 ## Context
 
