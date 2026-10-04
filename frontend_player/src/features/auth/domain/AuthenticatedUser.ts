@@ -97,6 +97,13 @@ export interface AccountProfiles {
    * its 72 hours, so a list read after that no longer holds it.
    */
   readonly pendingInvitations: readonly PendingInvitation[];
+  /**
+   * **Groups a club handed this account that it has not been told about**, oldest first
+   * ([ADR-0192](../../../../../docs/adr/0192-a-handover-is-told-to-whom-it-was-handed-and-the-app-follows-the-account.md)) —
+   * what the handover sheet tells. The server drops one once the sheet says it was seen, or when
+   * the club hands the group on.
+   */
+  readonly handovers: readonly Handover[];
 }
 
 /**
@@ -113,6 +120,17 @@ export interface PendingInvitation {
   readonly clubName: string;
   /** When it lapses — the server's instant, carried as it came. */
   readonly expiresAt: string;
+}
+
+/** **A group a club handed this account**, which it has not been told about yet. */
+export interface Handover {
+  readonly clubId: string;
+  readonly clubName: string;
+  /** What saying it was seen names. */
+  readonly groupId: string;
+  readonly groupName: string;
+  /** How many wait to join it: the queue the handover gave them. */
+  readonly waitingCount: number;
 }
 
 /** A club this account is an active Administrator of — the administrator area opens on it. */

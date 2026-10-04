@@ -86,6 +86,20 @@ export const ADMINISTRATOR_COPY = {
     /** The one button left once the invitation has gone — nothing to decide later. */
     done: 'OK',
   },
+  /**
+   * **The handover sheet** (ADR-0192 §2) — a club telling this account it handed it a group. Nothing
+   * is asked of the person, so the sheet's one choice is where to go: the group, or nowhere. The
+   * title and the body are functions of the club and the groups, in `administratorPresentation`.
+   */
+  handover: {
+    /** One group handed: straight to its page, where its requests wait. */
+    openGroup: 'Open the group',
+    /** Several handed at once: the Groups tab, where each now has a card. */
+    openGroups: 'See your groups',
+    gotIt: 'Got it',
+    /** The close does what *Got it* does, under its own name — two controls, two names. */
+    close: 'Dismiss',
+  },
   /** An official group's settings, opened from its row on the You tab (#517). */
   settings: {
     title: 'Group settings',

@@ -85,6 +85,7 @@ function account({
       acts_as_player: state.attested || state.hasPlayerProfile,
       administers,
       pending_invitations: [],
+      handovers: [],
     },
   });
 
@@ -263,6 +264,13 @@ describe('the Adult attestation', () => {
     expect(
       screen.getByRole('checkbox', { name: 'I am 18 or over' }).props.accessibilityState,
     ).toEqual({ checked: false, disabled: false });
+  });
+
+  it('says nothing under the box about the steps after it', async () => {
+    // The QA walk asked for the line to go (#529 L3).
+    await startPlaying();
+
+    expect(screen.queryByText(/a few questions to find your level/)).toBeNull();
   });
 
   it('refuses to go on unticked, in sign-up’s words, and records nothing', async () => {

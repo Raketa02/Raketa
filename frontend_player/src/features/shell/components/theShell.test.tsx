@@ -632,7 +632,7 @@ describe('the shell survives the gate re-reading the player', () => {
       name: GATE_USER.name ?? undefined,
       nickname: GATE_USER.nickname ?? undefined,
       hasPlayerProfile: true,
-      profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [] },
+      profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [], handovers: [] },
     });
   }
 

@@ -410,7 +410,12 @@ describe('a group link, in the administrator area', () => {
   it('switches an account that also plays to Player, and opens it there', async () => {
     serve({
       ...KUBA,
-      profiles: { acts_as_player: true, administers: [OGRODY_ADMIN], pending_invitations: [] },
+      profiles: {
+        acts_as_player: true,
+        administers: [OGRODY_ADMIN],
+        pending_invitations: [],
+        handovers: [],
+      },
     });
     club().install(transport);
     await savePhonePreference(GATE_USER.id, 'lastProfile', `administrator:${CLUB_ID}`);

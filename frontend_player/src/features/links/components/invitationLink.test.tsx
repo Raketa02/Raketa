@@ -88,7 +88,12 @@ const TOMEK: GateStub = {
   name: 'Tomek Kowal',
   ratings: [rating('PADEL')],
   hasPlayerProfile: true,
-  profiles: { acts_as_player: true, administers: [], pending_invitations: [INVITATION] },
+  profiles: {
+    acts_as_player: true,
+    administers: [],
+    pending_invitations: [INVITATION],
+    handovers: [],
+  },
 };
 
 /** Kuba plays padel too, and nobody has invited him. */

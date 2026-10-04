@@ -39,6 +39,7 @@ import { useRemovalWatch } from '../hooks/useRemovalWatch';
 
 import { removedMessage } from './administratorPresentation';
 import { areaTabFor, openAreaTab, useSwitchProfile } from './areaNavigation';
+import { HandoverSheet } from './HandoverSheet';
 import { InvitationSheet } from './InvitationSheet';
 
 export function AdministratorArea({ clubId }: { readonly clubId: string }) {
@@ -128,6 +129,8 @@ function AreaShell({ club }: { readonly club: AdministeredClub }) {
       />
       {/* Another club's invitation is offered here too, over the area it would sit beside (#518). */}
       <InvitationSheet worn={{ kind: 'administrator', clubId: club.clubId }} />
+      {/* A club handing this account a group is told here, at whichever club it is (ADR-0192). */}
+      <HandoverSheet worn={{ kind: 'administrator', clubId: club.clubId }} />
     </View>
   );
 }

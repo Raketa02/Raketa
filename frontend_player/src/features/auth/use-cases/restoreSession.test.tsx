@@ -46,7 +46,7 @@ const USER: Wire['MeResponse'] = {
   is_tester: false,
   has_player_profile: false,
   adult_attested: true,
-  profiles: { acts_as_player: true, administers: [], pending_invitations: [] },
+  profiles: { acts_as_player: true, administers: [], pending_invitations: [], handovers: [] },
 };
 
 let transport: Transport;
@@ -86,7 +86,7 @@ describe('relaunching', () => {
       nickname: USER.nickname,
       hasPlayerProfile: USER.has_player_profile,
       isTester: USER.is_tester,
-      profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [] },
+      profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [], handovers: [] },
     });
   });
 
@@ -262,7 +262,7 @@ describe('the launch sequence', () => {
         nickname: USER.nickname,
         hasPlayerProfile: USER.has_player_profile,
         isTester: USER.is_tester,
-        profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [] },
+        profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [], handovers: [] },
       }),
     );
     expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1);

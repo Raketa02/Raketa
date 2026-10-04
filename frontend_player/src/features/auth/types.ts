@@ -87,6 +87,7 @@ export type {
   AccountProfiles,
   AdministeredClub,
   AuthenticatedUser,
+  Handover,
   HeldProfiles,
   PendingInvitation,
   Naming,
@@ -113,7 +114,12 @@ export { authKeys } from './hooks/authKeys';
  * screen mounts (ADR-0180 §7). Its key carries the mapped type, so that lookup needs no cast and
  * cannot disagree with this feature about what the entry holds.
  */
-export { currentUserQuery, useCurrentUser } from './hooks/useCurrentUser';
+export {
+  ACCOUNT_FOLLOWED_MS,
+  currentUserQuery,
+  useCurrentUser,
+  useFollowedAccount,
+} from './hooks/useCurrentUser';
 /**
  * The one write another feature may make to the authenticated player.
  *

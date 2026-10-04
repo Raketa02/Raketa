@@ -2297,6 +2297,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/administrator/clubs/{club_id}/handovers/seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * I was told the club handed me these groups
+         * @description The sheet that says *[club] made you the administrator of [group]* was closed or followed: each named group this administratorship runs and has not been told about leaves `/users/me`'s `profiles.handovers`, for every phone. **Anything else is stepped over, never refused** — a group handed on meanwhile, told about already, or not theirs.
+         */
+        post: operations["handovers_seen_api_v1_administrator_clubs__club_id__handovers_seen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2353,6 +2373,11 @@ export interface components {
              * @description Invitations addressed to this account's email that are still open, soonest to expire first. One disappears once accepted, removed or past its 72 hours.
              */
             pending_invitations: components["schemas"]["PendingInvitationSchema"][];
+            /**
+             * Handovers
+             * @description Every official group a club handed this account's active administratorship there **that it has not been told about**, oldest first (`docs/adr/0192`). One disappears once `POST /administrator/clubs/{club_id}/handovers/seen` names it, or when the club hands the group on. Empty for an account that runs nothing, and for groups an administrator created.
+             */
+            handovers: components["schemas"]["HandoverSchema"][];
         };
         /** AdministeredClubSchema */
         AdministeredClubSchema: {
@@ -5171,6 +5196,44 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HandoverSchema
+         * @description A group the club handed this account that it has not been told about —
+         *     *Ogrody 33 made you the administrator of Ogrody 33 Club*.
+         */
+        HandoverSchema: {
+            /**
+             * Club Id
+             * Format: uuid
+             */
+            club_id: string;
+            /** Club Name */
+            club_name: string;
+            /**
+             * Group Id
+             * Format: uuid
+             * @description What `POST /administrator/clubs/{club_id}/handovers/seen` takes.
+             */
+            group_id: string;
+            /** Group Name */
+            group_name: string;
+            /**
+             * Waiting Count
+             * @description How many Join requests wait on it — the queue the handover gave.
+             */
+            waiting_count: number;
+        };
+        /**
+         * HandoversSeenRequest
+         * @description The groups the sheet told the Administrator about (``docs/adr/0192``).
+         */
+        HandoversSeenRequest: {
+            /**
+             * Group Ids
+             * @description The `group_id` of each handover the sheet named, from `/users/me`'s `profiles.handovers`. A group handed on meanwhile, told about already or not theirs is stepped over.
+             */
+            group_ids: string[];
         };
         /** HomeClubPageResponse */
         HomeClubPageResponse: {
@@ -13650,6 +13713,48 @@ export interface operations {
             };
             /** @description `group_not_found` — **one code for every group that is not theirs**: no such group, a player group, one at another club, or one a colleague runs. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    handovers_seen_api_v1_administrator_clubs__club_id__handovers_seen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                club_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoversSeenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `not_an_administrator` — this account holds no active administratorship at that club: removed since the last request, or never. **Every administrator operation answers this the same way.** */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

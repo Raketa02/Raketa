@@ -253,7 +253,8 @@ then find people to play with_. **Start playing is shown while the account does 
 account that attested and left the setup half done is sent back into it by the gate. **The settings
 screen is titled _Group settings_**, not the group's name, and draws no home club. **The attestation
 step is pushed inside the area**, so the Groups · You bar stays under it. The sub-lines on the
-attestation and on the nickname-only naming, and the attestation's next-steps line, are new words.
+attestation and on the nickname-only naming are new words. The attestation's next-steps line under the
+box (_Next, a nickname, then a few questions to find your level._) was taken off at the #529 QA walk's ask.
 
 **An administrator-only account the club removed** holds no profile at all; since #517 the gate sends
 it to _Start playing_'s Adult attestation on its next launch or sign-in (ADR-0185 §3), with no way back
@@ -287,6 +288,28 @@ launch** (`useInvitationsSetAside`, memory only, `onboarding`'s set-aside runs' 
 offers it again. An invitation that ran out while the sheet was up is said — _This invitation has
 expired. Ask Ogrody 33 to send a new one._ — with nothing left to accept and _OK_ to close; a failure to
 reach the server keeps Accept to press again.
+
+**The handover sheet tells an administrator a club handed them a group** (#529 N5–N7, the product
+owner's ask, 2026-10-04; [ADR-0192](../../../docs/adr/0192-a-handover-is-told-to-whom-it-was-handed-and-the-app-follows-the-account.md);
+`HandoverSheet`). `/users/me` now lists **`handovers`**: every group a club handed this account's active
+administratorship that it has not been told about, oldest first, recorded on the group (`handover_seen`)
+so every phone agrees. The sheet is mounted where the invitation sheet is, and **waits while an
+invitation is on offer**, because that one asks and this one only tells. **One club at a time, with
+every group that club handed** (`nextHandoverNotice`): _Ogrody 33 made you the administrator of Ogrody 33
+Club_ under the club's tile, what running it means now, and the queue it came with (_2 people are waiting
+for your answer._). Several at once are one sheet: _… of 2 groups_, their names in the body. **Nothing is
+asked, so nothing can be declined**: **Open the group** (`dark`) goes to its page, or **See your groups**
+to the Groups tab for several, switching to that club's profile first if the person wears another. **Got
+it** (`secondary`) and the close, **Dismiss**, stay where the person is. **Every way out says it was
+seen** (`useNoteHandoversSeen`, `POST …/handovers/seen`): the groups leave the cached account at once, and
+the write is retried because the route steps over anything it has already applied. If it never lands,
+this launch has still closed them (`useHandoversClosed`, memory only), and the next launch tells them
+again. **It appears without the app going to the background**: `useFollowedAccount` re-reads `/users/me`
+every 30 s in the foreground, **only while the account administers a club**. So a handover, an invitation
+or a removal reaches an administrator within half a minute on whatever screen they are on, and a player
+who runs nothing costs the server nothing while the app sits open. It is not instant: no push channel
+exists on this branch. When the sheet appears, that club's Groups tab is re-read, so the handed group's
+card is there.
 
 **The profile switcher is a chip on each You tab and a sheet of profiles** (#518, stories 134–135 and
 138, club 6–7; `ProfileChip`, `ProfileRows`). The chip sits in the header's right slot on the player's

@@ -44,3 +44,33 @@ export function useCurrentUser() {
     enabled: status === 'authenticated',
   });
 }
+
+/**
+ * **How often the account is re-read while it runs a club's groups and the app is in front**
+ * ([ADR-0192](../../../../../docs/adr/0192-a-handover-is-told-to-whom-it-was-handed-and-the-app-follows-the-account.md)
+ * §3): the query's own staleness, so a handover, an invitation or a removal the server already
+ * knows reaches a screen nobody is touching within the same half minute it would reach a screen
+ * somebody returns to.
+ */
+export const ACCOUNT_FOLLOWED_MS = 30_000;
+
+/**
+ * **The same read, followed** — a second observer of `/users/me` that re-reads it every
+ * `ACCOUNT_FOLLOWED_MS` **while the account administers a club** and the app is in the foreground
+ * (Query pauses an interval in the background, through the focus manager the app wires to
+ * `AppState`). Nothing is fetched twice: it is the one query, with one more reason to refresh.
+ *
+ * Only an administrator is followed, because what it brings is theirs to hear — a club handing
+ * them a group, or taking their profile away. A player who administers nothing hears an invitation
+ * when the app comes back to the front, as before, and costs the server nothing while it sits open.
+ */
+export function useFollowedAccount() {
+  const status = useSessionStatus();
+
+  return useQuery({
+    ...currentUserQuery(),
+    enabled: status === 'authenticated',
+    refetchInterval: (query) =>
+      (query.state.data?.profiles.administers.length ?? 0) > 0 ? ACCOUNT_FOLLOWED_MS : false,
+  });
+}

@@ -1056,6 +1056,7 @@ export const PLAYER_ONLY: Wire['AccountProfilesSchema'] = {
   acts_as_player: true,
   administers: [],
   pending_invitations: [],
+  handovers: [],
 };
 
 /**

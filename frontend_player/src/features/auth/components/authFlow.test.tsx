@@ -66,7 +66,7 @@ const USER: Wire['MeResponse'] = {
   has_player_profile: false,
   created_at: '2026-08-13T10:00:00Z',
   adult_attested: true,
-  profiles: { acts_as_player: true, administers: [], pending_invitations: [] },
+  profiles: { acts_as_player: true, administers: [], pending_invitations: [], handovers: [] },
 };
 
 let transport: Transport;

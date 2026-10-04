@@ -180,6 +180,7 @@ const TOMEK_PROFILES: Wire['AccountProfilesSchema'] = {
   acts_as_player: true,
   administers: [{ club_id: OGRODY_ID, club_name: OGRODY.name }],
   pending_invitations: [],
+  handovers: [],
 };
 
 beforeEach(() => {

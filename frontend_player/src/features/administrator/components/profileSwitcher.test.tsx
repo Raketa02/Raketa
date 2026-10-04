@@ -57,7 +57,7 @@ const TOMEK: GateStub = {
   name: 'Tomek Kowal',
   ratings: [rating('PADEL')],
   hasPlayerProfile: true,
-  profiles: { acts_as_player: true, administers: [OGRODY], pending_invitations: [] },
+  profiles: { acts_as_player: true, administers: [OGRODY], pending_invitations: [], handovers: [] },
 };
 
 let transport: Transport;
@@ -244,7 +244,12 @@ describe('switching', () => {
     serve({
       name: 'Marta Nowak',
       nickname: null,
-      profiles: { acts_as_player: false, administers: [OGRODY, BONARKA], pending_invitations: [] },
+      profiles: {
+        acts_as_player: false,
+        administers: [OGRODY, BONARKA],
+        pending_invitations: [],
+        handovers: [],
+      },
     });
     await launchSignedIn();
     await expectTheArea();
@@ -301,7 +306,12 @@ describe('the profile the phone remembers', () => {
     serve({
       name: 'Marta Nowak',
       nickname: null,
-      profiles: { acts_as_player: false, administers: [OGRODY, BONARKA], pending_invitations: [] },
+      profiles: {
+        acts_as_player: false,
+        administers: [OGRODY, BONARKA],
+        pending_invitations: [],
+        handovers: [],
+      },
     });
     await savePhonePreference(GATE_USER.id, 'lastProfile', `administrator:${BONARKA_ID}`);
 

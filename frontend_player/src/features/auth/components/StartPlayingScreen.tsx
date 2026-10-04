@@ -28,7 +28,7 @@
 
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, ScreenHeader, TickBox, theme } from '@/shared/ui';
@@ -48,7 +48,6 @@ import { authErrorMessage, bannerMessage, errorUnderField } from './authErrorMes
 import {
   START_PLAYING_CONTINUE,
   START_PLAYING_EYEBROW,
-  START_PLAYING_NEXT,
   START_PLAYING_SUBLINE,
   START_PLAYING_TITLE,
 } from './startPlayingPresentation';
@@ -97,7 +96,6 @@ export function StartPlayingScreen() {
           error={errorUnderField('adultAttested', fieldErrors, attest.error)}
           disabled={attest.isPending}
         />
-        <Text style={s.next}>{START_PLAYING_NEXT}</Text>
       </ScrollView>
 
       <View style={s.action}>
@@ -127,7 +125,6 @@ const s = StyleSheet.create({
     paddingBottom: theme.space.lg,
     gap: theme.space.md,
   },
-  next: { ...theme.type.tiny, color: theme.color.muted },
   action: {
     paddingHorizontal: theme.size.gutter,
     paddingTop: theme.space.md,

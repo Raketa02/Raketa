@@ -11,6 +11,7 @@ import {
   getOfficialGroup,
   postApproval,
   postDecline,
+  postHandoversSeen,
   postOfficialGroup,
   putSettings,
   type Cancellable,
@@ -73,4 +74,9 @@ export function answerRequest(
   return answer === 'approve'
     ? postApproval(clubId, groupId, playerId)
     : postDecline(clubId, groupId, playerId);
+}
+
+/** The handover sheet was closed or followed: these groups were told (ADR-0192 §1). */
+export function noteHandoversSeen(clubId: string, groupIds: readonly string[]): Promise<void> {
+  return postHandoversSeen(clubId, groupIds);
 }

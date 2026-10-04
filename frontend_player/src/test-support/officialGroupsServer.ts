@@ -43,6 +43,7 @@ export const ADMINISTRATOR_ONLY: Wire['AccountProfilesSchema'] = {
   acts_as_player: false,
   administers: [{ club_id: CLUB_ID, club_name: CLUB.name }],
   pending_invitations: [],
+  handovers: [],
 };
 
 export interface Person {

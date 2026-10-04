@@ -68,7 +68,7 @@
 import { Redirect, Stack, router, usePathname } from 'expo-router';
 import { useCallback } from 'react';
 
-import { administratorHome, InvitationSheet } from '@/features/administrator/types';
+import { administratorHome, HandoverSheet, InvitationSheet } from '@/features/administrator/types';
 import { NAMING_STEP, PLAYER_PROFILE, START_PLAYING_STEP } from '@/features/auth/types';
 import { useFeatureDatafile } from '@/features/feature_flags/types';
 import {
@@ -165,6 +165,8 @@ export default function AppLayout() {
           {/* A club's invitation, offered on launch over the player's app and never inside
               onboarding: it waits until the account is in (#518). */}
           <InvitationSheet worn={PLAYER_PROFILE} />
+          {/* A club handing this account a group, told over the player's app too (ADR-0192). */}
+          <HandoverSheet worn={PLAYER_PROFILE} />
           {/* A link held since it arrived — a group link through sign-up and onboarding, an
               invitation through a sign-in — is answered here once the account is in (#520). */}
           <IncomingLinks over="player" />

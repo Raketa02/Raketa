@@ -55,7 +55,12 @@ function tomek(pending: readonly Wire['PendingInvitationSchema'][] = [INVITATION
     name: 'Tomek Kowal',
     ratings: [rating('PADEL')],
     hasPlayerProfile: true,
-    profiles: { acts_as_player: true, administers: [], pending_invitations: [...pending] },
+    profiles: {
+      acts_as_player: true,
+      administers: [],
+      pending_invitations: [...pending],
+      handovers: [],
+    },
   };
 }
 
@@ -94,6 +99,7 @@ function stubAccept() {
       acts_as_player: true,
       administers: [OGRODY],
       pending_invitations: [],
+      handovers: [],
     }),
   );
 }
@@ -282,6 +288,7 @@ describe('an administrator another club invites', () => {
         acts_as_player: false,
         administers: [{ club_id: BONARKA_ID, club_name: 'Bonarka Arena' }],
         pending_invitations: [INVITATION],
+        handovers: [],
       },
     });
     transport.on('GET', `/api/v1/administrator/clubs/${BONARKA_ID}/groups`, () =>

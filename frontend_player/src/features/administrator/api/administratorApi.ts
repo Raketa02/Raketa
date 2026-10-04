@@ -104,3 +104,18 @@ export function postDecline(clubId: string, groupId: string, playerId: string): 
     authenticated: true,
   });
 }
+
+/**
+ * **The club handed me these groups, and I was told** (ADR-0192 §1) — the handover sheet, closed
+ * or followed. Anything the server cannot apply is stepped over and still `204`, so saying it
+ * twice changes nothing: it is the one write here that is safe to send again.
+ */
+export function postHandoversSeen(clubId: string, groupIds: readonly string[]): Promise<void> {
+  const body: Schemas['HandoversSeenRequest'] = { group_ids: [...groupIds] };
+  return httpRequest<void>({
+    method: 'POST',
+    path: `/api/v1/administrator/clubs/${encodeURIComponent(clubId)}/handovers/seen`,
+    body,
+    authenticated: true,
+  });
+}

@@ -13,9 +13,12 @@ import type { HeldProfiles } from '@/features/auth/types';
 import { GROUP_NAME_MAX, membersLine } from '@/features/groups/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { codeMessage, type AppError } from '@/shared/errors';
+import { counted } from '@/shared/formatting/counted';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
+import { sentenceList } from '@/shared/formatting/sentenceList';
 import type { Sport } from '@/shared/vocabulary/sport';
 
+import type { HandedGroup } from '../domain/handovers';
 import { WHATSAPP_SIZE, type AdministeredGroup } from '../domain/officialGroup';
 import { isRemoval } from '../hooks/useRemovalWatch';
 
@@ -123,6 +126,39 @@ export function removedMessage(
 ): string {
   const removed = `${clubName} removed you as an administrator.`;
   return signedOut ? `${removed} You’re signed out.` : removed;
+}
+
+/**
+ * **The handover sheet's title** (ADR-0192 §2): *Ogrody 33 made you the administrator of Ogrody 33
+ * Club* — the club, and the group by its whole name; several handed at once are counted, and named
+ * in the body.
+ */
+export function handoverTitle(clubName: string, groups: readonly HandedGroup[]): string {
+  const [only] = groups;
+  const what =
+    groups.length === 1 && only !== undefined
+      ? only.groupName
+      : counted(groups.length, 'group', 'groups');
+  return `${clubName} made you the administrator of ${what}`;
+}
+
+/** **What running it means now**, and — for several — which they are. */
+export function handoverBody(groups: readonly HandedGroup[]): string {
+  if (groups.length === 1) {
+    return (
+      'You answer who asks to join it and look after its settings now. Its players, its link ' +
+      'and who can join stay as they were.'
+    );
+  }
+  const names = sentenceList(groups.map((group) => group.groupName));
+  return `${names}. You answer who asks to join them and look after their settings now.`;
+}
+
+/** *2 people are waiting for your answer.* — the queue the handover gave, or nothing to say. */
+export function handoverWaiting(groups: readonly HandedGroup[]): string | undefined {
+  const waiting = groups.reduce((sum, group) => sum + group.waitingCount, 0);
+  if (waiting === 0) return undefined;
+  return `${counted(waiting, 'person is', 'people are')} waiting for your answer.`;
 }
 
 /** **A profile's row, spoken** — who, then which hat: *Tomek Kowal, Player*, *Ogrody 33, Administrator*. */

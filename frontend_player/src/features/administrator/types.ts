@@ -27,6 +27,7 @@ export { ProfileChip } from './components/ProfileChip';
  * **The invitation sheet** (#518, club 5–6) — offered over each profile's home on launch: the area
  * mounts it itself, and the player's app layout mounts it over the player's.
  */
+export { HandoverSheet } from './components/HandoverSheet';
 export { InvitationSheet } from './components/InvitationSheet';
 /**
  * **What an incoming link asks of this feature** ([#520](https://github.com/Raketa02/Raketa/issues/520)):

@@ -76,6 +76,13 @@ export function toAccountProfiles(wire: AccountProfilesSchema): AccountProfiles 
       clubName: invitation.club_name,
       expiresAt: invitation.expires_at,
     })),
+    handovers: wire.handovers.map((handover) => ({
+      clubId: handover.club_id,
+      clubName: handover.club_name,
+      groupId: handover.group_id,
+      groupName: handover.group_name,
+      waitingCount: handover.waiting_count,
+    })),
   };
 }
 

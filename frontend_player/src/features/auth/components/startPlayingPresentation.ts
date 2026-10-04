@@ -17,9 +17,6 @@ export const START_PLAYING_TITLE = 'Start playing';
 /** Under the title: why the one question is asked. */
 export const START_PLAYING_SUBLINE = 'Playing on Raketa is for adults only.';
 
-/** Under the box: the two steps after this one, so the walk is known before it starts. */
-export const START_PLAYING_NEXT = 'Next, a nickname, then a few questions to find your level.';
-
 /** The naming step's *Continue*, promising this step's next one. */
 export const START_PLAYING_CONTINUE = {
   label: CONTINUE.label,

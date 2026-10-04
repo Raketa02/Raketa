@@ -63,7 +63,7 @@ export function membersAtClub(count: number, clubName: string): string {
 /**
  * **Whether joining needs somebody's yes** — *anyone can join* on an Anyone group, and *Needs
  * approval* on every other, whoever answers: a player group's Owner, an official group's
- * Administrator, or the club while the group needs one (#529). The row named them until the
+ * Administrator or its club, which answers at any time (#529, ADR-0191 §1). The row named them until the
  * owner asked for the shorter line; who answers is on the group's page once the reader is in.
  */
 export function approverLine(group: Pick<GroupAtClub, 'joinPolicy'>): string {

@@ -23,6 +23,11 @@ export const administratorKeys = {
   /** **A mutation key**: a settings save — keyed so the removal watch knows it is this feature's. */
   settings: (clubId: string, groupId: string) =>
     [...administratorKeys.group(clubId, groupId), 'settings'] as const,
+  /**
+   * **A mutation key**: the handover sheet saying it was seen (ADR-0192) — under the root, so a
+   * refusal of it is heard as a removal like any other request of this feature's.
+   */
+  handoversSeen: () => [...administratorKeys.all, 'handovers-seen'] as const,
   /** **A mutation key**: the answers to one group's requests, counted to re-read it once. */
   answers: (clubId: string, groupId: string) =>
     [...administratorKeys.group(clubId, groupId), 'answer'] as const,
