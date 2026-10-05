@@ -39,6 +39,7 @@ import {
   type FakeClipboard,
   type FakeShare,
 } from '@/test-support/platform';
+import { stubGroupDeck } from '@/test-support/groupDeck';
 import {
   errorResponse,
   installTransport,
@@ -222,6 +223,7 @@ function crew({
       transport.on('GET', GROUP_PATH, () =>
         state.deleted || !has(ME) ? errorResponse(404, 'group_not_found') : json(group()),
       );
+      stubGroupDeck(transport, GROUP_ID);
       transport.on('GET', `${GROUP_PATH}/members`, (request) => {
         const sport = (new URLSearchParams(request.path.split('?')[1]).get('sport') ??
           'PADEL') as Wire['Sport'];
@@ -618,10 +620,11 @@ describe('pulling Info', () => {
     );
   });
 
+  // On a tab the page's scroller draws: Games lays itself out, outside it (#553).
   it('is Info’s alone', async () => {
     await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
-    fireEvent.press(await tab('Games'));
-    await tab('Games', true);
+    fireEvent.press(await tab('Friends'));
+    await tab('Friends', true);
 
     expect(pageBody().UNSAFE_queryByType(RefreshControl)).toBeNull();
   });

@@ -22,7 +22,7 @@ import { clearStoredTokens, resetSessionStatus, wireHttpCredentials } from '@/sh
 import { queryClient } from '@/shared/lib/query-client';
 import {
   launchSignedIn,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   resetLocation,
   SPORTS_SERVED,
   stubGate as stubGateWith,
@@ -80,7 +80,7 @@ const PROFILE: Wire['PlayerProfileResponse'] = {
   player_id: '11111111-2222-4333-8444-555555555555',
   social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
   photo_ids: [],
-  availability: [{ day: 3, part: 'EVENING' }],
+  weekly_hours: [{ day: 3, hour: 19 }],
   location: AREA,
   search_radius_km: 10,
   proposals_opt_in: {
@@ -172,7 +172,7 @@ async function walkOnToTheLastStep() {
   fireEvent.press(screen.getByLabelText('Continue'));
   await waitFor(() => expect(screen).toHavePathname('/availability'));
 
-  fireEvent.press(screen.getByLabelText('Wednesday evening'));
+  fireEvent.press(screen.getByLabelText('Wednesday 19:00'));
   fireEvent.press(screen.getByLabelText('Continue'));
   await waitFor(() => expect(screen).toHavePathname('/location'));
 
@@ -238,7 +238,7 @@ describe('finishing the part', () => {
       // No photo is a complete answer, sent as itself rather than left out for the server
       // to default — the same value arrived at by two routes, one of them a guess.
       photo_ids: [],
-      availability: [{ day: 3, part: 'EVENING' }],
+      weekly_hours: [{ day: 3, hour: 19 }],
       // The area, not the fix. The metres the device reported were discarded on the way in
       // and there is nothing above `locationArea` that ever held them.
       location: AREA,
@@ -501,7 +501,7 @@ describe('a failed commit', () => {
     // had been written at all.
     expect(screen).toHavePathname('/opt-in');
     expect(screen.getByLabelText(YES).props.accessibilityState?.selected).toBe(true);
-    expect(screen.queryByText(NOW_TAB_LINE)).toBeNull();
+    expect(screen.queryByText(HOME_TAB_LINE)).toBeNull();
 
     // And the retry is the control that failed, open rather than stuck busy.
     expect(finish().props.accessibilityState?.disabled).toBe(false);
@@ -598,11 +598,11 @@ describe('a failed commit', () => {
     // refusal arrives, *try again* is the one sentence that is not true: the identical body
     // fails identically, so the screen names the answer and offers the step that takes it.
     await reachTheFinish();
-    transport.on('POST', COMMIT_PATH, () => errorResponse(400, 'availability_grid_empty'));
+    transport.on('POST', COMMIT_PATH, () => errorResponse(400, 'weekly_hours_empty'));
 
     fireEvent.press(finish());
 
-    expect(await screen.findByText(/One ticked slot of the twenty-one is enough/)).toBeTruthy();
+    expect(await screen.findByText(/One hour of the week is enough/)).toBeTruthy();
     expect(screen.queryByText(/Try again — this can only ever set you up once/)).toBeNull();
 
     // And the way back, which is the half a player cannot do without.
@@ -631,7 +631,7 @@ describe('once the commit has landed', () => {
     expect(screen.getByText('What we keep from setting up')).toBeTruthy();
 
     fireEvent.press(screen.getByLabelText('Start playing'));
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
@@ -644,7 +644,7 @@ describe('once the commit has landed', () => {
 
     fireEvent.press(screen.getByLabelText('Start playing'));
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     // The gate's fourth branch is answered now, so the way it used to turn this player round
     // into the steps is closed.
     expect(screen).toHavePathname('/');
@@ -661,7 +661,7 @@ describe('once the commit has landed', () => {
 
     await launchSignedIn();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     // And no second commit was made on the way: nothing about launching writes anything.
     expect(commits()).toHaveLength(1);

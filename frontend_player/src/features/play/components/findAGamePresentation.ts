@@ -349,6 +349,15 @@ export const DECLARATION_BODY =
   'Read when somebody else’s search finds you, and when a yes on Players becomes a game. ' +
   'Asked once for this sport.';
 
+/**
+ * **The same question on a group's Games tab** ([#553](https://github.com/Raketa02/Raketa/issues/553),
+ * the screens A2.1) — who reads the answer there is the group's deck: a group deals a player only
+ * the kind of game they want, and nothing at all until they have said (the Games deck's intent
+ * rule, #539). So the sentence names that reader, and keeps the lifetime.
+ */
+export const GROUP_DECK_DECLARATION_BODY =
+  'Your groups deal you games of this kind — both, if either suits you. Asked once for this sport.';
+
 /** Unreachable from the flow — the Play tab is behind a rating — and said rather than drawn. */
 export const NO_RATED_SPORT_LINE =
   'A search runs in a sport you have been rated in, and there is not one yet.';

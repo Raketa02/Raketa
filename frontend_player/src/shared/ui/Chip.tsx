@@ -62,6 +62,13 @@ export interface ChipProps {
    * rather than a screen that stops being readable.
    */
   readonly dot?: string;
+  /**
+   * **A count after the label** — *Padel 10*, the members rated in a sport on *Post a game*'s chips
+   * ([#558](https://github.com/Raketa02/Raketa/issues/558), mock 16; Part 16 2026-10-02). Mono, as
+   * every count is (1.4), and quieter than the word: `muted`, `onDarkTiny` once selected. Drawn and
+   * not spoken — the caller says it in `accessibilityLabel`, where it can say what it counts.
+   */
+  readonly count?: number;
   /** Fires on every press, selected or not. The chip reports; the caller decides. */
   readonly onPress: () => void;
   /**
@@ -112,6 +119,7 @@ export function Chip({
   accessibilityHint,
   style,
   onDark = false,
+  count,
 }: ChipProps) {
   const blocked = disabled || busy;
   // The accessible name follows what is drawn, exactly as 6.1's does: a chip reading "Saving…"
@@ -159,6 +167,9 @@ export function Chip({
       >
         {shown}
       </Text>
+      {count === undefined ? null : (
+        <Text style={[s.count, selected ? s.countSelected : undefined]}>{count}</Text>
+      )}
     </Pressable>
   );
 }
@@ -200,4 +211,6 @@ const s = StyleSheet.create({
   labelOnDark: { color: theme.color.surface },
   // `surface` is the app's one white; there is no separate `white` token, deliberately.
   labelSelected: { color: theme.color.surface },
+  count: { ...theme.num.tiny, ...theme.tabular, color: theme.color.muted },
+  countSelected: { color: theme.color.onDarkTiny },
 });

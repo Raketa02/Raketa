@@ -30,14 +30,15 @@ export { ShellScreen, type ShellScreenProps } from './components/ShellScreen';
 /**
  * The two built tabs' own sentences, read outside this feature by the test harness — which
  * asserts *the player is in the app* and needs to know what that looks like now that the
- * landing is the Now tab ([#367](https://github.com/Raketa02/Raketa/issues/367)) — and by each
+ * landing is the Home tab ([#367](https://github.com/Raketa02/Raketa/issues/367), renamed from Now
+ * by [#550](https://github.com/Raketa02/Raketa/issues/550)) — and by each
  * tab's own suite, which asserts the tab's sentences rather than string literals, because the
  * wording is this file's to change and the rules the sentences carry are not.
  */
-export { CHATS_COPY, NOW_COPY, PLAY_COPY } from './components/shellCopy';
+export { CHATS_COPY, HOME_COPY, PLAY_COPY } from './components/shellCopy';
 
 /**
- * **Play with `find_a_game` off** — the *Groups | Explore* segment and the page under it
+ * **Play with `classic_play` off** — the *Groups | Explore* segment and the page under it
  * ([#512](https://github.com/Raketa02/Raketa/issues/512)). The Play route draws it where the empty
  * placeholder used to be; the placeholder is Explore's page now.
  */
@@ -51,13 +52,13 @@ export { PlayScreen } from './components/PlayScreen';
  */
 export { YOU_COPY } from './components/youCopy';
 
-export { NowScreen } from './components/tabScreens';
+export { HomeScreen } from './components/tabScreens';
 
 /**
  * The You tab — **a screen rather than a placeholder**
  * ([ADR-0179](../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)).
  *
- * The shell's for the reason Now and Chats are: a tab owns its own sentences and composes other
+ * The shell's for the reason Home and Chats are: a tab owns its own sentences and composes other
  * features' rows under them. In a file of its own because it is not thin.
  */
 export { YouScreen } from './components/YouScreen';
@@ -66,7 +67,7 @@ export { YouScreen } from './components/YouScreen';
  * The Chats tab — **a screen rather than a placeholder**
  * ([#360](https://github.com/Raketa02/Raketa/issues/360)).
  *
- * It is the shell's for the reason the Now and You tabs are: a tab owns its own sentences and
+ * It is the shell's for the reason the Home and You tabs are: a tab owns its own sentences and
  * composes other features' sections under them. It has a file of its own because it is no
  * longer thin.
  */
@@ -92,9 +93,9 @@ export { openTab } from './components/shellNavigation';
 /**
  * Where a sent challenge lands.
  *
- * Called by the court's send and by nothing else. It lays down `[Now]` and **ends the Play
+ * Called by the court's send and by nothing else. It lays down `[Home]` and **ends the Play
  * session on the way**, which is the fourth and last caller `resetShellStack`'s own docblock
  * has been naming: *a sent game is gone for good*, so there is no court to go back to and no
  * line-up left to hold ([#274](https://github.com/Raketa02/Raketa/issues/274)).
  */
-export { landOnNow } from './components/shellNavigation';
+export { landOnHome } from './components/shellNavigation';

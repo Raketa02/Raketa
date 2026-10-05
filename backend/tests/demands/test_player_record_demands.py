@@ -33,6 +33,7 @@ import pytest_asyncio
 
 from app.bootstrap.composition import (
     build_administrator_repository,
+    build_booking_repository,
     build_challenge_repository,
     build_club_repository,
     build_domain_event_store,
@@ -61,6 +62,7 @@ from app.bootstrap.player_record_demands import (
 from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.administrators.domain.administrator import Administrator
+from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, court_sides
@@ -96,7 +98,7 @@ from app.modules.matchmaking.domain.searches import (
     SearchSurface,
     StagedCounts,
 )
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
@@ -791,18 +793,17 @@ async def test_both_live_strands_cross_as_their_counts_and_their_figure(
     """**The raw pair per row, and the figure derived from it.**
 
     Two plans, one of which produced a game and one of which nobody ever
-    claimed; two invitations, one answered inside its day and one left to run
-    out. Each strand is a half, and the pair is what makes *one of two* and
-    *twenty of forty* different claims on a sheet.
+    claimed; two booked games, one kept and one left after its cut-off with
+    nobody taking the seat (#544). Each strand is a half, and the pair is what
+    makes *one of two* and *twenty of forty* different claims on a sheet.
     """
 
     reliability = implementation.build(session)
     subject, other = new_uuid(), new_uuid()
     await _a_played_plan(session, subject, other)
     await _a_ghosted_plan(session, subject, other)
-    answered = await _an_invitation(session, other, subject, at=_ago(days=4))
-    await _answered_by(session, answered, subject, at=_ago(days=4))
-    await _an_invitation(session, other, subject, at=_ago(days=3))
+    await _a_booked_game(session, subject, starts=_ago(days=4))
+    await _a_booked_game(session, subject, starts=_ago(days=3), left=True)
 
     panel = await reliability.reliability_of(subject, now=_now())
 
@@ -811,7 +812,7 @@ async def test_both_live_strands_cross_as_their_counts_and_their_figure(
         (row.strand, row.good, row.opportunities, row.pct) for row in panel.strands
     ] == [
         (ReliabilityStrand.SHOWS_UP, 1, 2, 50),
-        (ReliabilityStrand.ANSWERS_CHALLENGES, 1, 2, 50),
+        (ReliabilityStrand.KEEPS_PLANS, 1, 2, 50),
     ]
 
 
@@ -831,8 +832,7 @@ async def test_the_pill_is_the_blend_the_rows_reproduce(implementation, session)
     subject, other = new_uuid(), new_uuid()
     await _a_played_plan(session, subject, other)
     await _a_ghosted_plan(session, subject, other)
-    answered = await _an_invitation(session, other, subject, at=_ago(days=4))
-    await _answered_by(session, answered, subject, at=_ago(days=4))
+    await _a_booked_game(session, subject, starts=_ago(days=4))
 
     panel = await reliability.reliability_of(subject, now=_now())
 
@@ -848,23 +848,20 @@ async def test_a_strand_with_nothing_behind_it_is_absent_and_never_a_nought(
 ):
     """One record and not the other is a panel of **one row**.
 
-    Somebody who has answered invitations and never had a plan made for them has
+    Somebody who has kept a booked game and never had a plan made for them has
     a pill built on the strand they have — the three names with no provider and
     the one with no opportunity are the same absence, and neither drags the
     number down.
     """
 
     reliability = implementation.build(session)
-    subject, other = new_uuid(), new_uuid()
-    answered = await _an_invitation(session, other, subject, at=_ago(days=4))
-    await _answered_by(session, answered, subject, at=_ago(days=4))
+    subject = new_uuid()
+    await _a_booked_game(session, subject, starts=_ago(days=4))
 
     panel = await reliability.reliability_of(subject, now=_now())
 
     assert panel is not None
-    assert [row.strand for row in panel.strands] == [
-        ReliabilityStrand.ANSWERS_CHALLENGES
-    ]
+    assert [row.strand for row in panel.strands] == [ReliabilityStrand.KEEPS_PLANS]
     assert panel.player_score == 100
 
 
@@ -882,16 +879,14 @@ async def test_a_player_nothing_has_fallen_due_for_has_no_panel_at_all(
 
 
 @pytest.mark.parametrize("implementation", registered(SubjectReliability))
-async def test_an_invitation_still_inside_its_day_is_no_row_at_all(
-    implementation, session
-):
-    """**An opportunity and never a total.** A seat still inside its window has
-    not been answered *or* missed, and publishing it either way would state a
-    conclusion the clock has not reached."""
+async def test_a_booked_game_still_ahead_is_no_row_at_all(implementation, session):
+    """**An opportunity and never a total.** A booked game whose hour has not
+    come has not been kept *or* broken, and publishing it either way would
+    state a conclusion the clock has not reached."""
 
     reliability = implementation.build(session)
-    subject, other = new_uuid(), new_uuid()
-    await _an_invitation(session, other, subject, at=_now())
+    subject = new_uuid()
+    await _a_booked_game(session, subject, starts=_ago(days=-2))
 
     assert await reliability.reliability_of(subject, now=_now()) is None
 
@@ -1154,7 +1149,7 @@ def _a_search(searcher: UUID, shown: UUID) -> SearchRecord:
             players_in_range=1,
             window=Window.THIS_WEEK,
         ),
-        searcher_grid=("2:EVENING",),
+        searcher_grid=("2:19",),
         searcher_slot_count=1,
         searcher_area_code="A+05151-000013",
         radius_clamp_bit=False,
@@ -1268,37 +1263,36 @@ async def _a_ghosted_plan(session, one: UUID, other: UUID) -> None:
     await session.commit()
 
 
-async def _an_invitation(
-    session, organiser: UUID, invitee: UUID, *, at: Instant
-) -> Challenge:
-    """One send through the aggregate — an opportunity to answer, and nothing else."""
-
-    challenge = _sent(organiser, invitee, at=at)
-    await build_challenge_repository(
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    ).save(challenge)
-    await session.commit()
-    return challenge
-
-
-async def _answered_by(
-    session, challenge: Challenge, invitee: UUID, *, at: Instant
+async def _a_booked_game(
+    session, subject: UUID, *, starts: Instant, left: bool = False
 ) -> None:
-    """The invitee answers inside their day. **A yes here, and a no would do.**
+    """A padel game booked five days before its hour with the subject and three
+    others, through the aggregate — and, when ``left``, the subject leaving it
+    after its 24-hour cut-off, so with nobody taking the seat it is broken once
+    its hour has come (#544)."""
 
-    *Answers challenges* is the one strand on this platform where turning
-    somebody down is a good outcome: what it prices is silence, not judgement.
-    """
-
-    repository = build_challenge_repository(
+    booking = Booking.confirmed(
+        booking_id=new_uuid(),
+        pool_id=new_uuid(),
+        club_id=new_uuid(),
+        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=starts,
+        share_grosze=30_00,
+        first_side=(subject, new_uuid()),
+        second_side=(new_uuid(), new_uuid()),
+        cut_off=instant(starts - timedelta(hours=24)),
+        game_id=new_uuid(),
+        at=instant(starts - timedelta(days=5)),
+    )
+    if left:
+        booking.leave(subject, at=instant(starts - timedelta(hours=3)))
+    await build_booking_repository(
+        session,
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
-    )
-    loaded = await repository.load(challenge.id)
-    assert loaded is not None
-    loaded.accept(invitee, occurred_at=at)
-    await repository.save(loaded)
+    ).save(booking)
     await session.commit()
 
 

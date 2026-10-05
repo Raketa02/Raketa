@@ -21,8 +21,8 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
   GATE_USER,
+  launchIntoClassicPlay,
   PLANS_PATH,
-  launchSignedIn,
   planSlotPath,
   resetLiveStream,
   stubConversation,
@@ -125,6 +125,7 @@ function game(): Wire['GameSchema'] {
       { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
+    no_shows: [],
   };
 }
 
@@ -223,7 +224,17 @@ async function openTheRoom({
   stubConversation(transport, room(gameId, readAt));
   stubEntries(transport, ROOM);
 
-  await launchSignedIn();
+  // A held plan list is opened straight at the room. Home's badge reads the list from launch
+  // (#550), so it is in flight the whole walk — and the harness runs every pending timer on a
+  // navigation, the request's own timeout included, so the launch already times the first read out
+  // and the list lands on the read's own retry. A walk that navigated in would time the retries
+  // out too.
+  if (listLands !== undefined) {
+    await launchIntoClassicPlay(transport, `/chats/conversation/${ROOM}`);
+    return;
+  }
+
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -334,6 +345,9 @@ describe('the card', () => {
    * and carries the anchor to draw it with, and a card that announced its own loading would be
    * chrome flickering above a stream.
    */
+  /** Longer than the query's first retry back-off, which is when a timed-out read is tried again. */
+  const LANDS_ON_THE_RETRY_MS = 5000;
+
   it('is not drawn until the plan list has landed', async () => {
     let landed: () => void = () => {};
     const listLands = new Promise<void>((resolve) => {
@@ -347,7 +361,10 @@ describe('the card', () => {
     expect(screen.queryByText(SLOT_NAME.day)).toBeNull();
 
     landed();
-    expect(await screen.findByText(SLOT_NAME.day)).toBeTruthy();
+    // Past the retry's back-off: the read the launch timed out is tried again, and that one lands.
+    expect(
+      await screen.findByText(SLOT_NAME.day, {}, { timeout: LANDS_ON_THE_RETRY_MS }),
+    ).toBeTruthy();
   });
 });
 

@@ -243,6 +243,18 @@ class PlayedCourt(Protocol):
         """
         ...
 
+    async def challenges_played_by(self, player_id: UUID) -> frozenset[UUID]:
+        """The challenge every game this player is on the court of was opened
+        from — the game's ``challenge_id``, which on a **booked** game is its
+        booking's (#541): nobody accepted a seat on a booking, so no challenge
+        answers for it (#542).
+
+        **Candidates, not conclusions**, as ``accepted_by``'s are: whether the
+        player is a member of each room is membership's question, read against
+        the game's current line-up.
+        """
+        ...
+
     async def game_of(self, challenge_id: UUID) -> UUID | None:
         """The game this challenge's line-up completed into, if it has one.
 

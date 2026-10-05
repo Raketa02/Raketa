@@ -68,6 +68,40 @@ class SmtpSecurity(StrEnum):
     TLS = "tls"
 
 
+class PushProvider(StrEnum):
+    """Which push service a notice is pushed through (#549; the mechanics
+    §17.2).
+
+    ``expo`` is Expo's push service, which reaches a phone running the app on
+    Android and — with the Apple Developer membership publishing needs anyway —
+    on iPhone. ``recording`` pushes nothing and remembers what it was asked: a
+    laptop with no phone to push to may choose it, and a deployed environment
+    refuses it, since every notice would reach nobody's phone.
+    """
+
+    EXPO = "expo"
+    RECORDING = "recording"
+
+
+class PaymentsProvider(StrEnum):
+    """Which adapter money moves through (``docs/adr/0189`` §4).
+
+    ``fake`` is the in-process provider a laptop, a seed run and every test use,
+    and a deployed environment refuses it: it saves cards that do not exist and
+    charges nobody, so a game would be booked that no one paid for. ``stripe`` is
+    Stripe, in test mode or live according to the key it is given.
+    """
+
+    FAKE = "fake"
+    STRIPE = "stripe"
+
+
+#: The prefixes of a Stripe key that moves real money — a secret key and a
+#: restricted one — and of one that moves only test money.
+STRIPE_LIVE_KEY_PREFIXES = ("sk_live_", "rk_live_")
+STRIPE_TEST_KEY_PREFIXES = ("sk_test_", "rk_test_")
+
+
 #: Spelled once, for refusal messages and for the environment template.
 ENVIRONMENT_NAMES = ", ".join(e.value for e in Environment)
 
@@ -340,6 +374,55 @@ class Settings(BaseSettings):
     #: open and records that it did.
     PHOTO_REVIEW_TIMEOUT_SECONDS: float = 10.0
 
+    # --- payments (docs/adr/0189 §4; the mechanics Appendix A)
+    #
+    # **Which provider money moves through, and the keys it holds, are
+    # configuration; what is charged, when and to whom is not.** A share, a
+    # cut-off and the fee withheld on a refund are rules a domain test observes,
+    # and live with the Club courts and the bookings.
+    #
+    # A laptop runs on the in-process fake, which needs no key and never leaves
+    # the machine. Stripe needs its secret key and the publishable key a phone
+    # opens its card fields with; the webhook secrets are what each endpoint
+    # verifies every event with — the platform's (`STRIPE_WEBHOOK_SECRET`) and
+    # the **Connected accounts** endpoint's, where a club's account and the
+    # payments made on it notify (`STRIPE_CONNECT_WEBHOOK_SECRET`, #537): Stripe
+    # signs each endpoint's with its own. `stripe listen` prints one for a
+    # laptop. **The keys are a person's to place** (#533), in `.env`, never an
+    # agent's.
+    #
+    # **A live key moves real money**, so only production may hold one, and
+    # production may hold nothing else: a test key there would book games that
+    # nobody paid for. Neither refusal ever prints the key.
+    PAYMENTS_PROVIDER: PaymentsProvider = PaymentsProvider.FAKE
+    STRIPE_SECRET_KEY: Optional[str] = None
+    STRIPE_PUBLISHABLE_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_CONNECT_WEBHOOK_SECRET: Optional[str] = None
+    #: The whole budget for one call to Stripe, connection included. A setup
+    #: waits on it inline, and a player is watching a spinner.
+    STRIPE_TIMEOUT_SECONDS: float = 20.0
+    #: **Read by nothing but the payments demand suite**: a club account a person
+    #: onboarded once in Stripe test mode, which the suite charges against.
+    #: Onboarding is a walk through Stripe's hosted pages that the suite does not
+    #: script, so without it the money half of the suite is skipped by name.
+    STRIPE_TEST_CLUB_ACCOUNT: Optional[str] = None
+
+    # --- push notifications (#549; the mechanics §17.2)
+    #
+    # Expo's push service needs no key: a phone's push token is what it pushes
+    # to. **An access token is optional and worth placing deployed** — with
+    # *enhanced push security* switched on for the Expo project, Expo refuses a
+    # push without it, which makes a phone's token useless to anybody else. A
+    # person places it (#533), never an agent. A push that cannot be made is
+    # logged and given up — the notice is in the player's list whatever happens.
+    PUSH_PROVIDER: PushProvider = PushProvider.EXPO
+    EXPO_PUSH_URL: str = "https://exp.host/--/api/v2/push/send"
+    EXPO_ACCESS_TOKEN: Optional[str] = None
+    #: The whole budget for one request to Expo. Pushing runs in the outbox's
+    #: delivery, so a slow service holds the queue behind it for this long.
+    EXPO_PUSH_TIMEOUT_SECONDS: float = 10.0
+
     # --- domain event delivery
     EVENT_DELIVERY_WORKER_ENABLED: bool = True
     EVENT_DELIVERY_POLL_INTERVAL_SECONDS: float = 1.0
@@ -358,6 +441,86 @@ class Settings(BaseSettings):
     MAIL_DELIVERY_ENABLED: bool = True
     MAIL_DELIVERY_INTERVAL_SECONDS: float = 2.0
     MAIL_DELIVERY_BATCH_SIZE: int = 20
+
+    # --- the book-by sweep (#538, the mechanics §5.4)
+    #
+    # **It buys the record, not correctness.** A proposal past its book-by is
+    # over at every instant, swept or not: a yes on it is refused, it is off
+    # every live list and no yes on it counts against a cap, because every read
+    # compares the book-by with the clock. What the sweep writes is the
+    # `ProposalExpired` a poster will be told from, and a projection whose live
+    # reads stay narrow as it grows.
+    #
+    # **The book-by itself is emphatically not here**: it is the club's, derived
+    # from its way of working in `clubs/domain/raketa_terms.py`, and an
+    # environment that could move it would decide when a player's yes lapses.
+    #
+    # Every minute, chosen against the record's lag rather than a backlog: the
+    # read is one indexed range of unrecorded endings.
+    PROPOSAL_EXPIRY_ENABLED: bool = True
+    PROPOSAL_EXPIRY_INTERVAL_SECONDS: float = 60
+
+    # --- the On request timeout (#543, the mechanics §16.8, §16.16)
+    #
+    # **Correctness depends on it**, unlike the book-by sweep: an unanswered
+    # request already refuses the club's answer past its deadline at every read,
+    # but only this calls the game off — *Called off · no answer* — frees the
+    # court it held and makes its players due a new card first.
+    #
+    # **The deadline itself is emphatically not here**: it is the club's time to
+    # confirm, a Raketa setting in `clubs/domain/raketa_terms.py`. Every thirty
+    # seconds, because that window is minutes long and a court held past it is
+    # an hour nobody can sell.
+    REQUEST_TIMEOUT_ENABLED: bool = True
+    REQUEST_TIMEOUT_INTERVAL_SECONDS: float = 30
+
+    # --- the cut-off (#544, the mechanics §12.3, §16.12)
+    #
+    # **Correctness depends on it**, as on the timeout: a booked game with a seat
+    # open since before its cut-off reads *called off* at every read from the
+    # cut-off on, but only this gives everybody still in their money back, frees
+    # the court and tells the club. **The cut-off itself is emphatically not
+    # here**: it is the club's free-cancellation setting, kept on each booking as
+    # it stood when the game filled. Every thirty seconds, because the money is
+    # owed from the cut-off on.
+    CUT_OFF_ENABLED: bool = True
+    CUT_OFF_INTERVAL_SECONDS: float = 30
+
+    # --- club payouts (#548, the mechanics §12.6, §16.11)
+    #
+    # **Correctness depends on it**: a club is paid after its games are played,
+    # and nothing else releases its money to its bank. **When is emphatically
+    # not here**: a club day's payout is released at the day's close, a game
+    # once it is over and its money settled — domain, in
+    # `payments/domain/club_payout.py`. Every five minutes, because a day closes
+    # once and its payout may wait for a capture or a refund still on its way.
+    CLUB_PAYOUTS_ENABLED: bool = True
+    CLUB_PAYOUTS_INTERVAL_SECONDS: float = 300
+
+    # --- the club's daily summary of new bookings (#548, the mechanics §16.12)
+    #
+    # Sent once a club day closes, for the bookings made since the close
+    # before — the day is domain, in `bookings/domain/summary.py`; only how
+    # often a closed day is looked for is a setting.
+    NEW_BOOKINGS_SUMMARY_ENABLED: bool = True
+    NEW_BOOKINGS_SUMMARY_INTERVAL_SECONDS: float = 300
+
+    # --- the proposer (#540, the mechanics §5, §6.2–§6.3)
+    #
+    # **The engine that builds games, and correctness depends on it**: nothing
+    # else deals a *Picked for you* card, hands a seat a no left to the next
+    # best fits, or widens a pick at half In. Two loops over one use case: the
+    # **sweep** walks every pool on this cadence, and the **short tick** walks
+    # the pools a change delivered in this process made due (somebody joined,
+    # set their week, a club changed what it sells, somebody swiped) — so a
+    # change is dealt from in seconds, and the sweep is what guarantees it.
+    #
+    # **What is dealt is domain and emphatically not here**: the most even
+    # four, the three next best fits, the three versions, the fourteen days and
+    # the ten kilometres are `proposals/domain/`'s. Only how often is a setting.
+    PROPOSER_ENABLED: bool = True
+    PROPOSER_INTERVAL_SECONDS: float = 300
+    PROPOSER_ON_CHANGES_INTERVAL_SECONDS: float = 5
 
     # --- scheduled jobs (docs/adr/0092)
     #
@@ -766,6 +929,22 @@ class Settings(BaseSettings):
                     f"relay will send from — set MAIL_SENDER explicitly or use "
                     f"'local'."
                 )
+            if self.PAYMENTS_PROVIDER is PaymentsProvider.FAKE:
+                # The same refusal again, and the one whose failure is money:
+                # the fake saves cards that do not exist and charges nobody, so
+                # every game it booked would be one no player paid for.
+                raise ConfigurationError(
+                    f"PAYMENTS_PROVIDER is the in-process fake, and APP_ENV "
+                    f"selects '{env}', which is deployed. The fake charges nobody "
+                    f"— set PAYMENTS_PROVIDER to stripe or use 'local'."
+                )
+            if self.PUSH_PROVIDER is PushProvider.RECORDING:
+                # A notice would be given and pushed to nobody's phone.
+                raise ConfigurationError(
+                    f"PUSH_PROVIDER is the recording one, and APP_ENV selects "
+                    f"'{env}', which is deployed. It pushes nothing — set "
+                    f"PUSH_PROVIDER to expo or use 'local'."
+                )
 
         if env in DEPLOYED:
             # A second question of the same set, kept separate because it is a rule
@@ -847,8 +1026,46 @@ class Settings(BaseSettings):
                     f"strength."
                 )
 
+        if self.PAYMENTS_PROVIDER is PaymentsProvider.STRIPE:
+            # Stripe cannot be asked anything without its secret key, and a
+            # phone cannot open its card fields without the publishable one.
+            # The webhook secrets are optional only on a laptop, whose
+            # endpoints then answer every event with 503 — anything deployed
+            # must verify what it is sent, at both endpoints: a club whose
+            # account notices were never read would never go live.
+            required = ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY"]
+            if env in DEPLOYED:
+                required.extend(
+                    ["STRIPE_WEBHOOK_SECRET", "STRIPE_CONNECT_WEBHOOK_SECRET"]
+                )
+            for name in required:
+                if not getattr(self, name):
+                    raise ConfigurationError(
+                        f"{name} is not set, and PAYMENTS_PROVIDER selects "
+                        f"stripe. Place the key from the Stripe dashboard in "
+                        f"the environment, or select the fake on a laptop."
+                    )
+
+        key = self.STRIPE_SECRET_KEY or ""
+        if env is not Environment.PRODUCTION and key.startswith(
+            STRIPE_LIVE_KEY_PREFIXES
+        ):
+            # Whichever provider is selected: a live key on a laptop is a key
+            # one setting away from charging real cards from a test run.
+            raise ConfigurationError(
+                f"STRIPE_SECRET_KEY is a live key, and APP_ENV selects '{env}'. "
+                f"A live key moves real money and only production may hold one "
+                f"— use a test key (sk_test_…) here."
+            )
+
         if env is not Environment.PRODUCTION:
             return
+
+        if key.startswith(STRIPE_TEST_KEY_PREFIXES):
+            raise ConfigurationError(
+                "STRIPE_SECRET_KEY is a test key in production. Every game it "
+                "booked would be one nobody paid for — use the live key."
+            )
 
         if self.JWT_SECRET_KEY == DEFAULT_JWT_SECRET_KEY:
             raise ConfigurationError(

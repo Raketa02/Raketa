@@ -22,15 +22,24 @@ from __future__ import annotations
 from typing import Collection, Mapping, final
 from uuid import UUID
 
-from app.modules.games.domain.ports import GameRepository
+from app.modules.games.domain.ports import GameDirectory, GameRepository
 
 
 @final
 class GamesPlayedCourt:
     """*Who was on the court of this game?*"""
 
-    def __init__(self, games: GameRepository) -> None:
+    def __init__(self, games: GameRepository, directory: GameDirectory) -> None:
         self._games = games
+        self._directory = directory
+
+    async def challenges_played_by(self, player_id: UUID) -> frozenset[UUID]:
+        """Read through ``playing``, the game list's own read: each game keeps
+        the challenge it was opened from."""
+
+        return frozenset(
+            game.challenge_id for game in await self._directory.playing(player_id)
+        )
 
     async def line_ups_of(
         self, game_ids: Collection[UUID]

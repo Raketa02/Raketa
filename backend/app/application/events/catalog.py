@@ -54,6 +54,11 @@ class EventCatalog:
         except KeyError as exc:
             raise LookupError(f"Event class {event_cls!r} is not registered") from exc
 
+    def registered_classes(self) -> tuple[Type[DomainEvent], ...]:
+        """Every event class with a durable contract, in registration order."""
+
+        return tuple(self._by_class)
+
     def class_for(self, name: str, version: int) -> Type[DomainEvent]:
         try:
             return self._by_name_version[(name, version)].event_cls

@@ -28,7 +28,7 @@ from pydantic import BaseModel
 from app.engines.matchfit.core import ChallengeLoad, LivenessSignal
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.matchmaking.domain.searches import InclusionReason
-from app.modules.player_profile.presentation.schemas import AvailabilitySlotResource
+from app.modules.player_profile.presentation.schemas import WeeklyHourResource
 from app.modules.matchmaking.presentation.schemas import (
     OMITTED,
     CandidateSchema,
@@ -259,15 +259,15 @@ def test_the_request_carries_asks_and_never_a_fact_about_the_searcher():
 def test_the_cell_a_times_rung_offers_is_the_resource_a_grid_is_drawn_from():
     """**Two named fields, on the one slot the client never sent us.**
 
-    Every other cell crosses as ``AvailabilitySlotResource`` because *"a client
-    that had to split ``"3:EVENING"`` would be parsing our persistence format"*,
+    Every other cell crosses as ``WeeklyHourResource`` because *"a client
+    that had to split ``"3:19"`` would be parsing our persistence format"*,
     and this one is drawn on the same seven-by-three grid as all of them —
     ticked there as this search's own (#283). It reached the wire as the joined
     code the engine holds it in, which made the one cell the player did not
     choose the one cell a client had to parse.
     """
 
-    assert RungOfferSchema.model_fields["slot"].annotation is AvailabilitySlotResource
+    assert RungOfferSchema.model_fields["slot"].annotation is WeeklyHourResource
 
 
 def test_the_week_a_prompt_quotes_back_is_the_resource_a_grid_is_drawn_from():
@@ -277,8 +277,8 @@ def test_the_week_a_prompt_quotes_back_is_the_resource_a_grid_is_drawn_from():
     asked to *draw* rather than to send: the prompt sheet renders it on the same
     seven-by-three grid as the profile's own and quotes the count off it. It
     crossed as the aggregate's storage codes, so the sheet had to split
-    ``"3:EVENING"`` for itself — which is the one thing
-    ``AvailabilitySlotResource`` was named to spare a client. It is the same
+    ``"3:19"`` for itself — which is the one thing
+    ``WeeklyHourResource`` was named to spare a client. It is the same
     reading the test one up gave ``RungOfferSchema.slot`` (#283), reached the
     second time on the second field that had been read as an exception (#286).
 
@@ -288,10 +288,7 @@ def test_the_week_a_prompt_quotes_back_is_the_resource_a_grid_is_drawn_from():
     persistence format is read.
     """
 
-    assert (
-        PromptSchema.model_fields["slots"].annotation
-        == list[AvailabilitySlotResource]
-    )
+    assert PromptSchema.model_fields["slots"].annotation == list[WeeklyHourResource]
 
 
 def test_the_response_has_two_halves_and_no_third_thing():

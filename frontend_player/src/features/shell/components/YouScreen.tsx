@@ -9,6 +9,7 @@
  * FINDING PLAYERS   Your week · How far to look · Where you play · Who you play with ·
  *                   Game suggestions
  * ON YOUR CARD      How others see you · Photos · Tags · Intro · Name
+ * ACCOUNT           Games & money · Payments · Notifications
  * ─────────────
  * Sign out          pinned under the page, above the bar
  * ```
@@ -20,14 +21,17 @@
  *
  * ## The shell composes, and owns only the tab's own words
  *
- * The title and the three group titles are the shell's (`youCopy`); **every row
+ * The title and the four group titles are the shell's (`youCopy`); **every row
  * from *Skill passport* down is the feature's whose fact it is** — `player_record`'s two
  * read-only facts and the door to the sheet, `player_profile`'s declarations, `auth`'s name —
  * and each row reads its own fact and pushes its own screen. What this file decides is which
- * row sits in which group, and in what order: three groups because the rows answer three
- * questions — what has the platform concluded about me, what does the matcher read when it
- * looks for a game, what does a stranger read about me. The fourth question, the account, is
- * not asked on this tab (§9); *Sign out* stays at the foot as the account panel draws it.
+ * row sits in which group, and in what order: groups because the rows answer questions — what
+ * has the platform concluded about me, what does the matcher read when it looks for a game, what
+ * does a stranger read about me, and **how do I pay for a game**. That fourth one was not asked on
+ * this tab until money was (ADR-0179 §9, amended by ADR-0189; the screens A7): **ACCOUNT** sits
+ * after *On your card* and before *Sign out*, and holds *Games & money* (#554), *Payments*
+ * (#552) and *Notifications* (#559), in that order (mock 50). *Sign out* stays at the foot as the
+ * account panel draws it, pinned under the scroller.
  *
  * ## The switcher chip
  *
@@ -67,6 +71,9 @@ import {
   WhoYouPlayWithRow,
   YourWeekRow,
 } from '@/features/player_profile/types';
+import { NotificationsRow } from '@/features/notifications/types';
+import { PaymentsRow } from '@/features/payments/types';
+import { GamesAndMoneyRow } from '@/features/proposals/types';
 import {
   HowOthersSeeYouRow,
   OwnRecordSheet,
@@ -122,6 +129,12 @@ export function YouScreen({ headerRight }: YouScreenProps) {
             <TagsRow divided />
             <IntroRow divided />
             <NameRow divided />
+          </YouGroup>
+
+          <YouGroup title={YOU_COPY.groups.account}>
+            <GamesAndMoneyRow />
+            <PaymentsRow divided />
+            <NotificationsRow divided />
           </YouGroup>
         </ShellScreen>
       </View>

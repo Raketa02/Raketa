@@ -31,7 +31,7 @@ import { counted } from '@/shared/formatting/counted';
 import { intentLabel } from '@/shared/vocabulary/playIntentPresentation';
 import { socialTagName } from '@/shared/vocabulary/socialTagPresentation';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { GenderPreference } from '../domain/gender';
 import type { PlayIntentRow } from '../domain/playIntentRows';
@@ -57,15 +57,15 @@ export const INTRO_TITLE = 'Intro';
 // --- the live lines ---------------------------------------------------------------------------
 
 /**
- * `10 slots ticked`, or what a blank week means.
+ * `10 hours ticked`, or what a blank week means.
  *
  * The blank line names no cost, for the footnote's reason: a week nobody gave is *absent*, left
  * out of the matching rather than counted against the player.
  */
-export function weekLine(week: readonly WeekCell[]): string {
+export function weekLine(week: readonly WeeklyHour[]): string {
   const standing = weekStanding(week);
   if (standing.kind === 'empty') return 'Nothing ticked — we do not know when you play';
-  return counted(standing.count, 'slot ticked', 'slots ticked');
+  return counted(standing.count, 'hour ticked', 'hours ticked');
 }
 
 /** `12 km · Across your town` — the figure and the step's reading, joined as the tab joins facts. */

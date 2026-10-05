@@ -4,9 +4,9 @@ import { parseGameRouteParams } from '@/features/games/types';
 import { GameScreenWithPlan } from '@/features/plans/types';
 
 /**
- * One game — **pushed over the Now tab, and genuinely a push.**
+ * One game — **pushed over the Home tab, and genuinely a push.**
  *
- * The shell's ordinary move is a replace, and this is one of the few screens it is not: the Now
+ * The shell's ordinary move is a replace, and this is one of the few screens it is not: the Home
  * tab stays underneath, and backing out of a game returns to the list it was tapped from.
  *
  * A param that does not survive the schema has no game behind it, so the screen it would draw is

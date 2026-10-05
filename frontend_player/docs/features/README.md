@@ -28,12 +28,15 @@ is referenced from the other by a sentence, not copied.
 | [`challenges.md`](challenges.md)             | The send, the challenge screen, the two answers, the fill, the withdraw                        |
 | [`conversations.md`](conversations.md)       | The Chats tab, the room, the optimistic send, the live layer, typing                           |
 | [`feature_flags.md`](feature_flags.md)       | The datafile, the fallback order, the SDK and cache fences, the gate                           |
-| [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore while `find_a_game` is off                             |
+| [`find_a_game_next.md`](find_a_game_next.md) | The empty screen that is Play › Explore while `classic_play` is off                            |
 | [`games.md`](games.md)                       | The result argument's eight states, the score pad, the game screen                             |
 | [`groups.md`](groups.md)                     | Play › Groups, New group, Join a group, a group's page, Friends                                |
 | [`links.md`](links.md)                       | The three links into the app, the reader, the held link, the two sign-out sheets               |
+| [`notifications.md`](notifications.md)       | You › Account › Notifications, the phone's push, the in-app banner, the list behind the bell   |
 | [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate                         |
+| [`payments.md`](payments.md)                 | You › Payments: the four-step setup, the method card, Change and Remove, the Stripe port       |
 | [`plans.md`](plans.md)                       | The plan card, the ladder, the Now rail and its nine card states                               |
+| [`proposals.md`](proposals.md)               | A group's Games deck and details; Games & money; the fill; Home's games; Fill in; posting      |
 | [`play.md`](play.md)                         | The copy deck, the three cards, the court, the four screens, `SH.whyfit`                       |
 | [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step, the consent copy, the commit                               |
 | [`player_record.md`](player_record.md)       | The record sheet a face opens, the metered rows, what opponents said                           |
@@ -56,8 +59,8 @@ steps over a client-held draft, and the one write that ends them — the Social 
 2 to 6 chips from a served vocabulary, the intro step, one line about yourself or nothing, with
 a visible Skip and the contact fence said up front, the photos step, up to three court photos or none, each
 one checked server-side against the on-court rule and **warned about rather than refused**,
-the availability grid, seven days by three parts of the day, blank on arrival and requiring
-one ticked cell of the twenty-one before it continues
+the week of hours, seven days by sixteen hours, tapped or painted by a drag, blank on arrival and
+requiring one ticked hour before it continues
 ([ADR-0102](../../../docs/adr/0102-silence-is-never-scored.md)), the location step, one foreground fix coarsened to about a kilometre before it is
 held, the radius step, a slider over the served bounds that opens at the served default, the gender
 step, one required answer about the player and one optional preference over who they are

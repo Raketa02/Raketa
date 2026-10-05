@@ -8,7 +8,9 @@ users with the Player profile, the Player profile again for where the reader
 is, the Player Score, blocks, administrators, and the games a group gave birth
 to — each declared here in this context's vocabulary and answered by an adapter
 in ``infrastructure/`` over that provider's own port, never its table. The last
-has no provider yet, and its one adapter says so (``GroupBornGames``).
+is answered from outside this context — by Proposals, which knows a group's pool
+is filed under the group's id — so ``groups`` never learns a game was booked
+(``GroupBornGames``, #542).
 """
 
 from __future__ import annotations
@@ -110,6 +112,11 @@ class GroupDirectory(Protocol):
 
     async def groups_of(self, player_id: UUID) -> Sequence[UUID]:
         """Every group this player belongs to, **newest joined first**."""
+        ...
+
+    async def every(self) -> Sequence[UUID]:
+        """Every group there is, **oldest created first** — what the proposer
+        walks, since every group is a pool (``docs/adr/0189`` §1)."""
         ...
 
     async def listings_at(
@@ -421,9 +428,10 @@ class GroupBornGames(Protocol):
     two of its members arranged elsewhere never does, because the club would
     read it as the group's work.
 
-    **No group picks a game yet**, so the one adapter answers nought for every
-    group and the figure reads 0. The day a group can pick games, an adapter
-    over them answers instead, and *Games* never changes meaning.
+    **The games booked in the group** (``docs/adr/0189`` §8): every game its
+    pool filled into a booking — answered by an adapter signed in
+    ``proposals/infrastructure/``, so the arrow runs ``proposals → groups`` and
+    this context knows nothing of proposals or bookings (#542).
     """
 
     async def born_in(self, group_ids: Collection[UUID]) -> Mapping[UUID, int]:

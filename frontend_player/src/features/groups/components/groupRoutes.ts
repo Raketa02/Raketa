@@ -8,7 +8,9 @@
 
 import type { Sport } from '@/shared/vocabulary/sport';
 
-/** **The Groups list** — Play's root while `find_a_game` is off; where leaving a group lands. */
+import type { DeckArrival } from '../schemas/groupRouteParams';
+
+/** **The Groups list** — Play's root while `classic_play` is off; where leaving a group lands. */
 export const GROUPS_LIST_ROUTE = '/play';
 
 export const NEW_GROUP_ROUTE = '/play/new-group';
@@ -26,6 +28,18 @@ export function joinGroupRouteFor(code: string) {
 /** A group's page. The id is validated where the route reads it (`schemas/groupRouteParams`). */
 export function groupRoute(groupId: string) {
   return { pathname: '/play/group/[groupId]', params: { groupId } } as const;
+}
+
+/**
+ * **A group's deck, opened at a card** — where a notice about a card waiting for the player opens
+ * (#559; the screens A9: *the deck opens with the card on top*): the page on Games, in the card's
+ * sport and kind, the card first. Validated where the route reads it (`schemas/groupRouteParams`).
+ */
+export function groupDeckRoute(groupId: string, arrival: DeckArrival) {
+  return {
+    pathname: '/play/group/[groupId]',
+    params: { groupId, sport: arrival.sport, kind: arrival.kind, card: arrival.card },
+  } as const;
 }
 
 /**

@@ -52,6 +52,7 @@ from app.bootstrap.composition import (
     build_membership,
     build_nudge_publisher,
     build_nudge_subscriber,
+    build_played_court,
     build_typing_heartbeat,
     build_typing_roster,
 )
@@ -82,6 +83,7 @@ from app.modules.conversations.domain.ports import (
     ConversationDirectory,
     ConversationRepository,
     MemberFaces,
+    PlayedCourt,
 )
 from app.modules.users.presentation.dependencies import AuthenticatedSessionDep
 
@@ -130,6 +132,15 @@ def get_arranging_court(db: DbSession) -> ArrangingCourt:
 ArrangingCourtDep = Annotated[ArrangingCourt, Depends(get_arranging_court)]
 
 
+def get_played_court(db: DbSession) -> PlayedCourt:
+    """Per request: the list read asks it which games the reader is on, beside
+    the challenges they accepted (#542)."""
+    return build_played_court(db)
+
+
+PlayedCourtDep = Annotated[PlayedCourt, Depends(get_played_court)]
+
+
 def get_membership(db: DbSession, arranging: ArrangingCourtDep) -> Membership:
     return build_membership(db, arranging=arranging)
 
@@ -162,6 +173,7 @@ MemberFacesDep = Annotated[MemberFaces, Depends(get_member_faces)]
 def get_read_conversations(
     directory: ConversationDirectoryDep,
     arranging: ArrangingCourtDep,
+    played: PlayedCourtDep,
     membership: MembershipDep,
     lifetime: LifetimeDep,
     faces: MemberFacesDep,
@@ -170,6 +182,7 @@ def get_read_conversations(
     return ReadConversations(
         directory=directory,
         arranging=arranging,
+        played=played,
         membership=membership,
         lifetime=lifetime,
         faces=faces,

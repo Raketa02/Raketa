@@ -270,7 +270,8 @@ TELLINGS: tuple[Telling, ...] = (
         why_nothing=(
             "the seats already imply it, so there is no *Game on* line — but the "
             "room is told, because this is where it learns its game and where "
-            "its own end is anchored"
+            "its own end is anchored; and a **booked** game's room is opened by "
+            "it, since a booking's yeses are silent and open nothing"
         ),
     ),
     Telling(
@@ -315,7 +316,9 @@ TELLINGS: tuple[Telling, ...] = (
         reaches_the_room=False,
         why_nothing=(
             "the acceptance that completed the court draws its own line, and "
-            "membership reads the game's line-up live rather than being told"
+            "membership reads the game's line-up live rather than being told — "
+            "a booking's rescue taking a seat (#545) joins the room the same "
+            "way, and its line, *Ola took the seat*, is not drawn yet"
         ),
     ),
     Telling(

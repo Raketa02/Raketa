@@ -30,12 +30,7 @@ export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';
  * client-held and starts empty, so the middle of the part is not a place anyone can be sent.
  */
 export { SOCIAL_STEPS_ENTRY } from './components/socialStepRoutes';
-export type {
-  AvailabilitySlot,
-  LocationArea,
-  ProfileDraft,
-  ProposalsOptIn,
-} from './domain/ProfileDraft';
+export type { WeeklyHour, LocationArea, ProfileDraft, ProposalsOptIn } from './domain/ProfileDraft';
 export type { Gender, GenderPreference } from './domain/gender';
 
 /**
@@ -63,7 +58,7 @@ export type { PlayerProfileSurface, PlayIntentDeclarations } from './domain/Play
 export type { PlayIntentSurface } from './api/playerProfileApi';
 export type { PlayIntentDeclaration } from './use-cases/declarePlayIntent';
 export {
-  useChangeAvailability,
+  useChangeWeeklyHours,
   useChangeSearchRadius,
   useDeclarePlayIntent,
   useProfileSurface,
@@ -183,8 +178,8 @@ export {
  *
  * **There is no third spelling.** A raised `KEEP_THESE_TIMES` used to carry the week as the
  * joined codes the event stream stores, and this feature owned a `toWeekFromCodes` that split
- * them; the contract now sends the same `AvailabilitySlotResource` every other week on the
- * wire does, so `toWeekCells` reads that one too and no client parses our persistence format
+ * them; the contract now sends the same `WeeklyHourResource` every other week on the
+ * wire does, so `toWeeklyHours` reads that one too and no client parses our persistence format
  * ([#286](https://github.com/Raketa02/Raketa/issues/286)).
  */
-export { toWeekCells, toWireSlots } from './mappers/playerProfileMappers';
+export { toWeeklyHours, toWireWeeklyHours } from './mappers/playerProfileMappers';

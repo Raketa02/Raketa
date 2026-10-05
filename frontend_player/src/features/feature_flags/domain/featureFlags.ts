@@ -26,23 +26,30 @@
  */
 export const FEATURE_DEFAULTS = {
   /**
-   * **Find a game**, the Play tab's first screen, with the builder and the pool behind it.
+   * **Classic play** — the old loop: the Players deck, the Chats tab, challenges with their
+   * where · day · hour plan, and Find a game
+   * ([ADR-0189](../../../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6,
+   * [#550](https://github.com/Raketa02/Raketa/issues/550)).
    *
-   * **Off by default since [#512](https://github.com/Raketa02/Raketa/issues/512)**: the app ships
-   * Play › Groups, with the *Groups | Explore* segment where the empty placeholder used to be and
-   * the placeholder under *Explore*, where the rebuilt Find a game will grow (PRD #500). On
-   * restores Find a game whole — the bridge is not burned (story 141). With it off, a link to the
-   * builder or pool under Play lands on Play's root — a search already under way is finished.
-   * Fill-the-seat and the Players tab are not behind it.
+   * **Off by default.** The app ships **Home · ⚡Play · You**, with Play › Groups where a group's
+   * Games deck and Fill in make games. On brings the old loop back **whole and untouched**:
+   * Players and Chats return to the bar where they were, and Play's root is Find a game, with the
+   * builder and the pool behind it. It **replaced `find_a_game`**, which gated Find a game alone:
+   * the grilling ruled one flag for the loop (Q42), so a toggle cannot bring back half of it.
    *
-   * - **Owner:** the Play tab — `features/play` for Find a game, `features/find_a_game_next` for
-   *   what grows under Explore.
-   * - **Purpose:** keep the current Find a game one pull request away while Groups ships and the
-   *   rebuild grows under Explore.
-   * - **Removal:** when the rebuild has reached everyone, this key goes with the old screen, the
-   *   gate in `play/index.tsx` and the two redirects in `play/builder.tsx` and `play/pool.tsx`.
+   * Read two ways. **The bar follows it** (`useFollowedFeature`), because it is mounted before any
+   * datafile has been read and stays mounted for the session; **Play's three routes read it once,
+   * when they mount** (`useFeatureOnMount`), and the builder and pool close to a bare link while
+   * it is off — a search already under way is finished. With it off, the Chats and Players routes
+   * stay routes: a Home card's chat door still leads into the room it always did.
+   *
+   * - **Owner:** the shell (the bar) and `features/play` (Play's root, the builder, the pool).
+   * - **Purpose:** keep the old loop one pull request away while games are made in groups.
+   * - **Removal:** when the old loop is removed (the Players deck first, ADR-0189 names it), this
+   *   key goes with the bar's two extra columns, the gate in `play/index.tsx` and the two
+   *   redirects in `play/builder.tsx` and `play/pool.tsx`.
    */
-  find_a_game: false,
+  classic_play: false,
 } as const satisfies Readonly<Record<string, boolean>>;
 
 /** A feature the app knows how to ask about. A key not declared above does not compile. */

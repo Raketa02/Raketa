@@ -28,9 +28,6 @@ from app.bootstrap.composition import (
 from app.modules.player_profile.application.answer_proposals_opt_in import (
     AnswerProposalsOptIn,
 )
-from app.modules.player_profile.application.change_availability import (
-    ChangeAvailability,
-)
 from app.modules.player_profile.application.change_gender import ChangeGender
 from app.modules.player_profile.application.change_gender_preference import (
     ChangeGenderPreference,
@@ -55,6 +52,7 @@ from app.modules.player_profile.application.has_player_profile import HasPlayerP
 from app.modules.player_profile.application.read_player_profile import (
     ReadPlayerProfile,
 )
+from app.modules.player_profile.application.set_weekly_hours import SetWeeklyHours
 from app.modules.player_profile.application.upload_photo import UploadPhoto
 from app.modules.player_profile.domain.ports import (
     ImageTranscoder,
@@ -208,17 +206,17 @@ def get_read_player_profile(
 ReadPlayerProfileDep = Annotated[ReadPlayerProfile, Depends(get_read_player_profile)]
 
 
-def get_change_availability(
+def get_set_weekly_hours(
     profiles: PlayerProfileRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
-) -> ChangeAvailability:
+) -> SetWeeklyHours:
     # No photo storage: a week has nothing to re-validate against an object
     # store, which is the difference between an edit and the creating commit.
-    return ChangeAvailability(profiles=profiles, uow=uow, clock=clock)
+    return SetWeeklyHours(profiles=profiles, uow=uow, clock=clock)
 
 
-ChangeAvailabilityDep = Annotated[ChangeAvailability, Depends(get_change_availability)]
+SetWeeklyHoursDep = Annotated[SetWeeklyHours, Depends(get_set_weekly_hours)]
 
 
 def get_change_search_radius(

@@ -46,7 +46,7 @@ through the same _code → message, never message → message_ mechanism, and **
 template inlined in a component** ([`the-words.md`](../../../docs/specs/matchmaking/the-words.md)
 §20). **One rule decides every element**: _one accessibility element per action, and everything
 with no action of its own merges into the nearest action above it_ — which is what makes the
-question navigator one element and the availability grid twenty-one, as one rule rather than
+question navigator one element and the availability grid one per hour, as one rule rather than
 two precedents. It has three consequences worth knowing before reading the file. **The card is
 spoken in a different order than it is drawn** — identifying facts lead, the argument follows —
 and it is the one recorded divergence from visual order in the feature. **The seat, its clear
@@ -1195,3 +1195,44 @@ fill minted — so the special case for a challenge it replaced is gone. `pool.t
 toggle arriving mid-search; `theFindAGameGate.test.tsx` walks the bare links. `findAGame.test.tsx`
 and the other Play suites are untouched: `stubGate` serves no datafile, which is every flag at its
 code default.
+
+**Find a game is behind `classic_play` now, with the rest of the old loop**
+([#550](https://github.com/Raketa02/Raketa/issues/550),
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6). The three
+route files read `classic_play` where they read `find_a_game`, and nothing else about the gate
+moved: on, Play's root is Find a game and the builder and pool open as before; off — the default —
+the root is Groups and a bare link to either lands there, while a search already under way and
+fill-the-seat still go through. The Players deck is this feature's too, and it is behind the same
+flag by way of the bar: the shell draws its column only with Classic play on
+([`shell.md`](shell.md)). Every suite that walks the deck, the radar or Find a game launches through
+`launchIntoClassicPlay`.
+
+**Classic play speaks hours too: the week it searches on, the sheet that offers to keep it, and
+the card's shared-hour line** ([#551](https://github.com/Raketa02/Raketa/issues/551), ruled on
+#534: _hours everywhere_). Find a game's week is the same 7 × 16 grid as the profile's
+([`player_profile.md`](player_profile.md)), built from `HOURS` × `WEEKDAYS`, and a drag paints a
+run onto the working copy through `paintWeekCells` beside `toggleWeekCell` in the session store.
+**A painted run that crosses the times rung's offered hour takes its mark off**, for the tap's
+reason — ticked or cleared, the player has answered that hour themselves — and a run elsewhere
+leaves it. `availability_override`, a TIMES rung's `slot`, `KEEP_THESE_TIMES`'s `slots` and
+`next_slot` all cross as `{ day, hour }` through player_profile's `toWireWeeklyHours` and
+`toWeeklyHours`, so there is still one spelling of a week. `SH.saveav`'s diff grid is sixteen rows
+of seven, and every count and name says hours: _3 hours you both ticked · next Tue 19:00_, _No
+shared hours — one of you would have to bend_, the deck's _9 hours_ tile, _6 hours now · 4 on your
+profile_, and the court's _share no hour_ dock. The wire code `NO_SHARED_SLOTS` is the backend's
+and keeps its name. **Owed, from a root session**: `docs/specs/matchmaking/the-words.md` still
+spells these lines in slots and parts of the day (§6.2's _slots you both ticked_ and _No shared
+slots_, the court's _share no slot_, §20.7's `{Day} {part}`), and now disagrees with the client.
+**Not seen on a device**, and the flag is off by default.
+
+**The deck's stage and its buttons serve a second deck** ([#553](https://github.com/Raketa02/Raketa/issues/553)).
+A group's Games deck (`proposals`) stands on `DeckStage` and `DeckAnswers` through `play/types`, so
+the two things that differ between the decks became the caller's: the stamps (`stamps`, words and an
+optional figure — Players passes `PLAYERS_STAMPS`, and a Games yes that charges at once stamps _I'M IN
+· 32 zł_, the figure in mono and never uppercased) and the buttons' spoken names (`labels`, which
+Players composes with `deckAnswerLabels` as before). **The cards behind now fade as well as shrink**
+(Q90 of the Games grilling, `STACK.fade`: 0,7 and 0,4), drawn off the same arrival, so the card coming
+forward brightens as it grows rather than being drawn whole from its first frame — a change to
+Players too. `DeclarationInterstitial` takes `DECK` again, for the Games tab's one-time question, with
+its own line about who reads the answer (`GROUP_DECK_DECLARATION_BODY`) and an `onDeclared` for the
+caller's re-read. **Not seen on a device.**

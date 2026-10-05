@@ -96,7 +96,7 @@
  * end, so the organiser leaves it from Chats like anybody else.
  *
  * **⚡ runs the fill and pushes the builder; the send is a separate press, on that screen, and it
- * pops back here** — which is why nothing in this flow calls `resetShellStack`. `landOnNow`'s
+ * pops back here** — which is why nothing in this flow calls `resetShellStack`. `landOnHome`'s
  * argument does not transfer: *"there is nothing left to be behind: the court is gone"* is false
  * here, where the thing behind is the challenge you were completing and is the surface that draws
  * the result.

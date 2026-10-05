@@ -27,7 +27,7 @@ from app.modules.games.application.commands import OpenPlannedGameCommand
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, LineUp, Seating, GameSide
 from app.modules.games.domain.ports import GameRepository
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 
 
@@ -77,6 +77,7 @@ class OpenPlannedGame:
             window=None if command.window is None else Window(command.window),
             line_up=line_up,
             occurred_at=occurred_at,
+            starts_at=command.starts_at,
         )
         await self._games.save(game)
         return game.id

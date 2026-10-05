@@ -2,7 +2,7 @@
  * The eight typed evidence variants a term carries, in this app's own spelling.
  *
  * A reason line is a **sentence over its evidence**, not a name for its term: a flat table
- * keyed by `Term` cannot hold *"3 slots you both ticked · next Tue evening"*, because the
+ * keyed by `Term` cannot hold *"3 hours you both ticked · next Tue 19:00"*, because the
  * facts are in the payload. That is ADR-0106's own *"a renderer per variant"*, and it is why
  * these are eight types rather than one with an optional bag on it
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §1).
@@ -17,7 +17,7 @@
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { LevelDirection, PlayIntent, SearchMode, Term } from './vocabulary';
 
@@ -70,7 +70,7 @@ export interface ReliabilityEvidence {
 export interface AvailabilityOverlapEvidence {
   readonly kind: 'availability_overlap';
   readonly sharedCount: number;
-  readonly nextSlot: WeekCell | null;
+  readonly nextSlot: WeeklyHour | null;
 }
 
 /** Two Social tag ids the product claims fit together, or do not. */

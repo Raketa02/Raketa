@@ -1,5 +1,5 @@
 /**
- * **Play, as it opens with `find_a_game` off** — a *Groups | Explore* segment pinned at the top,
+ * **Play, as it opens with `classic_play` off** — a *Groups | Explore* segment pinned at the top,
  * and the page for the segment under it ([#512](https://github.com/Raketa02/Raketa/issues/512),
  * play mocks 1 and 3, PRD #500 stories 1–4).
  *

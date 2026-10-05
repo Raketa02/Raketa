@@ -1,5 +1,5 @@
 /**
- * **The one zone this platform arranges in**, and the three conversions that depend on it.
+ * **The one zone this platform arranges in**, and the conversions that depend on it.
  *
  * A locale assumption recorded as one rather than a constant to tune
  * ([ADR-0144](../../../../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)),
@@ -138,4 +138,36 @@ export function daysAfter(day: string, count: number): string | undefined {
   if (Number.isNaN(at.getTime())) return undefined;
 
   return spell(new Date(at.getTime() + count * DAY));
+}
+
+/**
+ * **The wall clock an instant reads in the platform zone**, as `HH:MM` — *16:00* on a game card.
+ *
+ * The same arithmetic {@link platformDay} runs, read to the minute rather than to the day: a court
+ * hour at a club in Kraków is 16:00 on every phone that draws it, and a device zone would put the
+ * court an hour off for a player abroad. `undefined` for a value that is not an instant.
+ */
+export function platformClock(instant: string): string | undefined {
+  const at = Date.parse(instant);
+  if (Number.isNaN(at)) return undefined;
+
+  const wall = new Date(at + platformOffset(at));
+  const pad = (value: number) => String(value).padStart(2, '0');
+
+  return `${pad(wall.getUTCHours())}:${pad(wall.getUTCMinutes())}`;
+}
+
+/**
+ * **How many calendar days from one day to another** — `1` for tomorrow, negative for a day
+ * behind. On the calendar, as {@link daysAfter} is, so a 23- or 25-hour day cannot move it.
+ * `undefined` where either value is not a calendar day.
+ */
+export function daysBetween(from: string, to: string): number | undefined {
+  if (!CALENDAR_DAY.test(from) || !CALENDAR_DAY.test(to)) return undefined;
+
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end)) return undefined;
+
+  return Math.round((end - start) / DAY);
 }

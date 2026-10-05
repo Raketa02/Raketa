@@ -28,6 +28,7 @@ type ClaimInvitationRequest = components['schemas']['ClaimInvitationRequest'];
 type InvitationPasswordRequest = components['schemas']['InvitationPasswordRequest'];
 type InvitationByTokenResponse = components['schemas']['InvitationByTokenResponse'];
 type AccountProfilesSchema = components['schemas']['AccountProfilesSchema'];
+type PushDeviceRequest = components['schemas']['PushDeviceRequest'];
 
 export interface AuthApiOptions {
   readonly signal?: AbortSignal;
@@ -134,6 +135,24 @@ export function postAdultAttestation(body: AdultAttestationRequest): Promise<voi
     path: '/api/v1/users/me/adult-attestation',
     body,
     authenticated: true,
+  });
+}
+
+/**
+ * **This phone is pushed nothing more for the signed-in player** (#559, #549's route) — the
+ * sign-out's first step, because it needs the session the revoke ends. The token travels in the
+ * body, never the path, so it is in no access log. `204`, also for a phone that was not registered.
+ */
+export function removePushDevice(
+  body: PushDeviceRequest,
+  { signal }: AuthApiOptions = {},
+): Promise<void> {
+  return httpRequest<void>({
+    method: 'POST',
+    path: '/api/v1/players/me/devices/removal',
+    body,
+    authenticated: true,
+    signal,
   });
 }
 

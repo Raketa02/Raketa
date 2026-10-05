@@ -23,8 +23,9 @@ rather than as what was measured, because a curve from *days since a session
 refresh* to a reading is a measurement and belongs beside the clock
 (``measurements``).
 
-*The vocabularies stay single-spelled.* Social tag ids, parts of the day and Play
-intent declarations cross as the machine codes they already are. An engine may
+*The vocabularies stay single-spelled.* Social tag ids and Play intent
+declarations cross as the machine codes they already are, and an hour of the week
+as the weekday and the hour it is. An engine may
 not import the module that owns a vocabulary, and retyping one on the far side
 would be a second spelling of a closed set.
 
@@ -83,13 +84,7 @@ from app.modules.matchmaking.domain.search_context import (
     SearcherFacts,
     is_new_at,
 )
-from app.modules.player_profile.domain.availability import AvailabilitySlot, DayPart
-
-#: The parts of a day in the order the platform lays them out — **the one
-#: vocabulary fact the engine is told rather than allowed to know.** It is
-#: supplied once per search so the scorer can say *the soonest cell you both
-#: ticked* without ever learning that one of them is called a morning.
-DAY_PARTS: tuple[str, ...] = tuple(part.value for part in DayPart)
+from app.modules.player_profile.domain.weekly_hours import WeeklyHour
 
 #: What ``calibration_priority`` says when a rating is **not** clamouring for
 #: real games. Read as a binary because the rating aggregate has two values: a
@@ -122,10 +117,9 @@ def searcher_from(facts: SearcherFacts, now: datetime) -> Searcher:
         level=LevelReading(mu=facts.mu, sigma=facts.sigma),
         mode=facts.mode,
         tags=facts.tags,
-        grid=_cells(facts.grid.slots),
+        grid=_cells(facts.grid.hours),
         radius_km=float(facts.radius_km),
         today=iso_weekday(now.isoweekday()),
-        day_parts=DAY_PARTS,
     )
 
 
@@ -150,7 +144,7 @@ def seatable_of(row: CandidateRow, *, searcher: SearcherFacts) -> ScorableCandid
         level=LevelReading(mu=row.mu, sigma=row.sigma),
         declared_intent=row.declared_intent,
         tags=row.social_tags,
-        grid=_cells(slots_of(row)),
+        grid=_cells(hours_of(row)),
         radius_km=float(row.search_radius_km),
         area_code=area_code_of(area),
         distance_km=measure_distance(
@@ -181,7 +175,7 @@ def candidate_of(
         level=LevelReading(mu=row.mu, sigma=row.sigma),
         declared_intent=row.declared_intent,
         tags=row.social_tags,
-        grid=_cells(slots_of(row)),
+        grid=_cells(hours_of(row)),
         radius_km=float(row.search_radius_km),
         area_code=area_code_of(area_of(row)),
         distance_km=distance_km,
@@ -354,14 +348,15 @@ def area_of(row: CandidateRow) -> Point:
     return Point(latitude=row.areas[0].latitude, longitude=row.areas[0].longitude)
 
 
-def slots_of(row: CandidateRow) -> tuple[AvailabilitySlot, ...]:
-    """The candidate's grid, as the platform's own slots. Empty is a real answer."""
+def hours_of(row: CandidateRow) -> tuple[WeeklyHour, ...]:
+    """The candidate's weekly hours, as the platform's own cells. Empty is a real
+    answer."""
 
-    return tuple(AvailabilitySlot.from_code(code) for code in row.availability)
+    return tuple(WeeklyHour.from_code(code) for code in row.availability)
 
 
-def _cells(slots: tuple[AvailabilitySlot, ...]) -> tuple[GridCell, ...]:
-    return tuple(GridCell(day=slot.day, part=slot.part.value) for slot in slots)
+def _cells(hours: tuple[WeeklyHour, ...]) -> tuple[GridCell, ...]:
+    return tuple(GridCell(day=cell.day, hour=cell.hour) for cell in hours)
 
 
 def _combined(searcher_sigma: float, candidate_sigma: float) -> CombinedUncertainty:

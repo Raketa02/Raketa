@@ -153,7 +153,7 @@ async def test_competitive_and_for_fun_are_two_different_games(
         session_factory,
         "level-twin",
         mu=searcher["mu"],
-        availability=("1:MORNING",),
+        availability=("1:10",),
         latitude=51.58,
     )
     await world.a_candidate(

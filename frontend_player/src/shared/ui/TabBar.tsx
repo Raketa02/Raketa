@@ -1,5 +1,6 @@
 /**
- * The tab bar, per design-system 10.2 — five equal columns with ⚡Play raised at the centre.
+ * The tab bar, per design-system 10.2 — **Home · ⚡Play · You**, equal columns with ⚡Play raised
+ * at the centre, and five with **Classic play**.
  *
  * **The drawn object only.** It takes the active tab and a press handler and knows nothing
  * about routes, stacks or which screen is mounted; the shell that wires it is a separate
@@ -17,6 +18,14 @@
  * caller that could pass its own tabs is a caller that could add a sixth without argument —
  * and it would silently invalidate `labelMaxScale`, which is derived from exactly these five
  * words in exactly this many columns.
+ *
+ * **The bar ships three of the five** — Home · ⚡Play · You — and draws the other two, Players
+ * and Chats, only with **Classic play**
+ * ([ADR-0189](../../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6).
+ * That is a switch and not a list: the caller says whether Classic play is on, and which columns
+ * that means is decided here, so a caller still cannot pass tabs. The cap stays derived from the
+ * five, because five is the narrowest the columns ever get — three are wider, and the words fit
+ * them with room to spare.
  *
  * ## Feather, and selection in tone alone
  *
@@ -52,18 +61,21 @@
  * **The ring is absolutely positioned**: a bar that grew 8pt on arriving in Play would move
  * the four things that did not change in order to announce the one that did.
  *
- * ## The badge, on Chats and on no other column
+ * ## Two badges, on Home and on Chats, and on no other column
  *
- * **One badge, and the badge inventory is fixed at one for the reason the glyph inventory is
- * fixed at five** ([#326](https://github.com/Raketa02/Raketa/issues/326)). It counts unanswered
- * challenges **addressed to you** — things only you can clear — which is what makes it an
- * obligation a player can discharge rather than a number that nags.
+ * **The badge inventory is fixed at two, one per column, for the reason the glyph inventory is
+ * fixed at five** ([#326](https://github.com/Raketa02/Raketa/issues/326)). Each counts things
+ * only you can clear, which is what makes it an obligation a player can discharge rather than a
+ * number that nags. **Home's** counts the games that need you — a result to enter or confirm, a
+ * seat open in your game ([#550](https://github.com/Raketa02/Raketa/issues/550)). **Chats'**
+ * counts unanswered challenges **addressed to you**, and it is Classic play's: it goes with its
+ * column, whatever it is handed.
  *
- * **It is a named prop and never a hook.** `shared/ui` importing a feature hook inverts the
+ * **Each is a named prop and never a hook.** `shared/ui` importing a feature hook inverts the
  * dependency ([ADR-0009](../../../../docs/adr/0009-feature-first-clean-architecture-frontends.md))
- * and would give *"the drawn object only"* a network call. And it is `challengesWaiting` rather
- * than a generic `badges?: Partial<Record<TabBarKey, number>>`, which is the glyph argument in a
- * new costume: a caller that can badge any tab can badge You.
+ * and would give *"the drawn object only"* a network call. And they are `gamesNeedingYou` and
+ * `challengesWaiting` rather than a generic `badges?: Partial<Record<TabBarKey, number>>`, which
+ * is the glyph argument in a new costume: a caller that can badge any tab can badge You.
  *
  * **The argument that kept the bar bare survives as the test, and it still bites.** The count
  * this product already had was the player's own outstanding yeses, drawn as a **sentence** on
@@ -99,7 +111,7 @@ import { theme } from './theme';
 /** A glyph name Feather actually ships. Not a `string`, and not behind a cast. */
 type FeatherGlyph = keyof typeof Feather.glyphMap;
 
-export type TabBarKey = 'now' | 'players' | 'play' | 'chats' | 'you';
+export type TabBarKey = 'home' | 'players' | 'play' | 'chats' | 'you';
 
 export interface TabBarTab<Key extends string = TabBarKey> {
   readonly key: Key;
@@ -108,9 +120,11 @@ export interface TabBarTab<Key extends string = TabBarKey> {
 }
 
 /**
- * The five, in order. `home` beats the calendar and the clock: Now has no plans, no bookings
- * and no courts behind it, and a calendar glyph would announce a scheduling surface nothing is
- * building — `home` claims nothing that is not built. **The second column is Players and draws
+ * The five, in order — every column the bar can draw. **The first is Home**, today's Now renamed
+ * whole — key, label and screen, the route staying `/` ([#550](https://github.com/Raketa02/Raketa/issues/550)):
+ * your games from the moment they fill. It always drew `home`, which beat the calendar and the
+ * clock because it claims nothing that is not built, and now it is also the tab's name. **The
+ * second column is Players and draws
  * `users`** — the deck lives there, one person at a time, and `user` is You's
  * ([ADR-0169](../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
  * §1). It was Around, drawn with `map-pin` after `radar` was refused for a tab with no scan
@@ -122,12 +136,26 @@ export interface TabBarTab<Key extends string = TabBarKey> {
  * *Players* is the longest of the five, which is what moved the cap when Around retired.
  */
 export const TAB_BAR_TABS = [
-  { key: 'now', label: 'Now', glyph: 'home' },
+  { key: 'home', label: 'Home', glyph: 'home' },
   { key: 'players', label: 'Players', glyph: 'users' },
   { key: 'play', label: 'Play', glyph: 'zap' },
   { key: 'chats', label: 'Chats', glyph: 'message-circle' },
   { key: 'you', label: 'You', glyph: 'user' },
 ] as const satisfies readonly TabBarTab[];
+
+/**
+ * **The two columns only Classic play draws** — the old loop's Players deck and Chats tab
+ * ([ADR-0189](../../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6).
+ * They come back together and where they were, so the bar is the five with these two left out.
+ */
+const CLASSIC_PLAY_TABS: readonly TabBarKey[] = ['players', 'chats'];
+
+/** The columns the bar draws: the five with Classic play, and without it Home · ⚡Play · You. */
+function columnsOf(classicPlay: boolean): readonly TabBarTab[] {
+  return classicPlay
+    ? TAB_BAR_TABS
+    : TAB_BAR_TABS.filter((tab) => !CLASSIC_PLAY_TABS.includes(tab.key));
+}
 
 /**
  * The bar's height at the default text size, **excluding** the bottom safe-area inset.
@@ -152,15 +180,29 @@ export const TAB_BAR_HEIGHT =
   theme.space.md;
 
 export interface TabBarProps {
-  /** Which of the five is showing. Play stays active for every screen inside Play. */
+  /**
+   * Which of the five is showing. Play stays active for every screen inside Play. A column the
+   * bar does not draw — Chats, reached from a Home card's chat door without Classic play — lights
+   * nothing, rather than a neighbour the player is not on.
+   */
   readonly active: TabBarKey;
   readonly onPress: (key: TabBarKey) => void;
   /**
-   * Unanswered challenges addressed to you — the one badge this bar draws, on Chats.
+   * **Whether Classic play is on** — Players and Chats drawn in their places. The caller reads the
+   * flag; the bar decides which columns that means.
+   */
+  readonly classicPlay: boolean;
+  /**
+   * The games that need you — the badge on Home.
    *
    * Absent draws nothing, and absent covers zero, still loading and failed alike. The caller
    * folds those three together, so this prop is *a count to draw* rather than a number the bar
    * has to decide about.
+   */
+  readonly gamesNeedingYou?: number;
+  /**
+   * Unanswered challenges addressed to you — the badge on Chats, drawn only with Classic play.
+   * Absent draws nothing, as Home's does.
    */
   readonly challengesWaiting?: number;
 }
@@ -176,21 +218,61 @@ interface ColumnProps<Key extends string = TabBarKey> {
  * A count, drawn on the column's glyph and spoken in its name.
  *
  * It is **not** on `ColumnProps`, because ⚡Play has no badge and never will: the inventory is
- * fixed at one, and a prop the raised column inherits and ignores is the first step to a second.
+ * fixed at two, and a prop the raised column inherits and ignores is the first step to a third.
  */
 interface Badged {
   readonly waiting?: number;
 }
 
-export function TabBar({ active, onPress, challengesWaiting }: TabBarProps) {
+/** The two columns that carry a count. */
+type BadgedTabKey = Extract<TabBarKey, 'home' | 'chats'>;
+
+function isBadged(key: string): key is BadgedTabKey {
+  return key === 'home' || key === 'chats';
+}
+
+/**
+ * **What a badged column says after its own name** — the badge's half of the column's spoken
+ * label.
+ *
+ * **The words live here rather than in `the-words.md`**: that file is the deck for codes the
+ * backend sends and the app writes words for, and these are chrome copy over counts the client
+ * derives ([#326](https://github.com/Raketa02/Raketa/issues/326) §9). They sit beside
+ * `TAB_BAR_TABS`, which already owns the labels they follow — and each counted phrase goes through
+ * `counted()` like every other in the app, because a market with real plural rules has to have
+ * one function to change rather than every sentence that counts something.
+ */
+const BADGE_WORDS: Readonly<Record<BadgedTabKey, (count: number) => string>> = {
+  home: (count) => `${counted(count, 'game', 'games')} waiting on you`,
+  chats: (count) => `${counted(count, 'challenge', 'challenges')} waiting`,
+};
+
+/** What a column announces — its name, and the count when it is carrying one. */
+function columnLabel(tab: TabBarTab<string>, waiting: number | undefined): string {
+  if (waiting === undefined || !isBadged(tab.key)) return tab.label;
+  return `${tab.label}, ${BADGE_WORDS[tab.key](waiting)}`;
+}
+
+export function TabBar({
+  active,
+  onPress,
+  classicPlay,
+  gamesNeedingYou,
+  challengesWaiting,
+}: TabBarProps) {
   // The bar owns the bottom safe-area inset, and it owns it here rather than taking it as a
   // prop: a CTA sitting above the bar must not apply it too, and an inset applied twice is
   // 34pt of nothing on a notched device.
   const insets = useSafeAreaInsets();
 
+  const waiting: Readonly<Record<BadgedTabKey, number | undefined>> = {
+    home: gamesNeedingYou,
+    chats: challengesWaiting,
+  };
+
   return (
     <View style={[s.bar, { paddingBottom: theme.space.md + insets.bottom }]}>
-      {TAB_BAR_TABS.map((tab) =>
+      {columnsOf(classicPlay).map((tab) =>
         tab.key === 'play' ? (
           <PlayTab key={tab.key} tab={tab} selected={active === tab.key} onPress={onPress} />
         ) : (
@@ -199,9 +281,7 @@ export function TabBar({ active, onPress, challengesWaiting }: TabBarProps) {
             tab={tab}
             selected={active === tab.key}
             onPress={onPress}
-            {...(tab.key === 'chats' && challengesWaiting !== undefined
-              ? { waiting: challengesWaiting }
-              : {})}
+            waiting={isBadged(tab.key) ? waiting[tab.key] : undefined}
           />
         ),
       )}
@@ -336,7 +416,7 @@ function PlayTab({ tab, selected, onPress }: ColumnProps) {
 }
 
 /**
- * One of the five columns, and the whole of the touch target.
+ * One of the columns, and the whole of the touch target.
  *
  * The column reaches 44pt by its own geometry — the Play column is 30 + 3 + 12 = 45 inside
  * the bar's padding, and every column stretches to it — so there is no `hit` entry here.
@@ -368,21 +448,6 @@ function Column<Key extends string>({
       {children}
     </Pressable>
   );
-}
-
-/**
- * What a column announces — its name, and the count when it is carrying one.
- *
- * **The string lives here rather than in `the-words.md`**: that file is the deck for codes the
- * backend sends and the app writes words for, and this is chrome copy over a count the client
- * derives ([#326](https://github.com/Raketa02/Raketa/issues/326) §9). It sits beside
- * `TAB_BAR_TABS`, which already owns the five labels — and its one counted phrase goes through
- * `counted()` like every other in the app, because a market with real plural rules has to have
- * one function to change rather than every sentence that counts something.
- */
-function columnLabel(tab: TabBarTab<string>, waiting: number | undefined): string {
-  if (waiting === undefined) return tab.label;
-  return `${tab.label}, ${counted(waiting, 'challenge', 'challenges')} waiting`;
 }
 
 /**

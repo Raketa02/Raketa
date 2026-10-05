@@ -75,7 +75,7 @@ from typing import Final, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Sport, invariant
-from app.modules.player_profile.domain.availability import AvailabilityGrid
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 
 
 class Prompt(StrEnum):
@@ -114,7 +114,7 @@ class RaisedPrompt:
     #: **Two absences, and they are different answers.** ``None`` is *not this
     #: prompt*, exactly as it is for the two fields beside it; ``()`` is **a
     #: cleared week** — a player who unticked every cell and searched anyway,
-    #: which is a legal edit (``player_profile``'s ``AvailabilityGrid.edited``)
+    #: which is a legal edit (``player_profile``'s ``WeeklyHours.edited``)
     #: and therefore a legal thing to be asked about. One value carrying both
     #: made a cleared week violate this class's own invariant.
     slots: tuple[str, ...] | None = None
@@ -141,9 +141,7 @@ class RaisedPrompt:
         )
 
 
-def improvised_week(
-    *, asked: AvailabilityGrid, profile: AvailabilityGrid
-) -> RaisedPrompt | None:
+def improvised_week(*, asked: WeeklyHours, profile: WeeklyHours) -> RaisedPrompt | None:
     """*Keep these times?* — or nothing at all, on the week a search ran on.
 
     **One rule, and three surfaces raise it.** The shortlist, the line-up and the

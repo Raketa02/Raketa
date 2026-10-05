@@ -209,7 +209,7 @@ import {
 } from '@/features/challenges/types';
 import { useProfileSurface } from '@/features/player_profile/types';
 import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
-import { ShellScreen, landOnNow } from '@/features/shell/types';
+import { ShellScreen, landOnHome } from '@/features/shell/types';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
@@ -879,7 +879,7 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
         {
           // **The send pops back to the challenge screen**, which is the surface that draws the
           // result: the new seats, their fresh deadlines, and a standing that may now be awaiting
-          // answers again. Nothing here resets the shell stack — `landOnNow`'s *"there is nothing
+          // answers again. Nothing here resets the shell stack — `landOnHome`'s *"there is nothing
           // left to be behind: the court is gone"* is false when the thing behind is the
           // challenge you were completing (ADR-0150 §7). There is no toast for the same reason:
           // the confirmation is a screen that states what happened rather than a sentence
@@ -896,10 +896,10 @@ export function BuilderScreen({ arrivalSearchId }: BuilderScreenProps) {
       {
         onSuccess: () => {
           // The stack goes first and the sentence second, in that order and not the other:
-          // `landOnNow` ends the Play session and mounts the destination, and the toast is
+          // `landOnHome` ends the Play session and mounts the destination, and the toast is
           // spoken from the host's effect on the commit after it — so the platform's own
           // screen-change notification does not clobber the one announcement that interrupts.
-          landOnNow();
+          landOnHome();
           showToast({ message: CHALLENGE_SENT, tone: 'ok', politeness: 'interrupting' });
         },
         onError,
@@ -1603,8 +1603,8 @@ function toOccupant(
  * the size of a dot, with most of its own control blank around it.
  *
  * So the face is drawn at **`minTouch` itself**. The visual and the reachable area are the
- * same square, there is no slop to bound and nothing to spend — the availability cell's own
- * answer one screen over, and the shape [7.12](../../../../docs/design-system.md#712-the-court)
+ * same square, there is no slop to bound and nothing to spend — the tick box row's own answer,
+ * and the shape [7.12](../../../../docs/design-system.md#712-the-court)
  * says the clear badge is the single control in this app that cannot have. Two of them plus
  * the gap is 91pt against the 103pt a panel has inside its padding on the narrowest phone,
  * which is the arithmetic `builder.test.tsx` pins.

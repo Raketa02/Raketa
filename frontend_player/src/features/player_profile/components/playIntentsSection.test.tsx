@@ -61,7 +61,7 @@ function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
 /** Rated in three, declared in two — so both halves of a row are on screen at once. */
 const THREE_RATED = [rating('PADEL'), rating('TENNIS'), rating('SQUASH')];
 const DECLARED_IN_TWO = profileSurface({
-  availability: [{ day: 2, part: 'EVENING' }],
+  weekly_hours: [{ day: 2, hour: 19 }],
   search_radius_km: 12,
   play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'NO_PREFERENCE' },
 });

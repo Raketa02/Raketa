@@ -2,3 +2,7 @@
   color: var(--colour-muted);
   font-size: var(--text-small);
 }
+
+.otherClubs {
+  color: var(--colour-muted);
+}

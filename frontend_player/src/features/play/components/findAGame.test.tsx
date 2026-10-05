@@ -20,7 +20,7 @@ import { courtSeatCount } from '@/shared/ui';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  launchIntoFindAGame,
+  launchIntoClassicPlay,
   PROFILE_SURFACE_PATH,
   profileSurface,
   stubGate,
@@ -34,6 +34,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { paint } from '@/test-support/weekGridTouch';
 
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
@@ -54,7 +55,7 @@ import {
 const SEARCHES = '/api/v1/searches';
 const RADIUS = '/api/v1/players/me/search-radius';
 const PADEL_INTENT = '/api/v1/play-intents/PADEL';
-const AVAILABILITY = '/api/v1/players/me/availability';
+const AVAILABILITY = '/api/v1/players/me/weekly-hours';
 
 function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
   return {
@@ -125,7 +126,7 @@ afterEach(async () => {
 async function reachPlay(surface?: Wire['PlayerProfileReadResponse']) {
   if (surface !== undefined) stubProfileSurface(transport, surface);
 
-  await launchIntoFindAGame(transport);
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
 }
@@ -134,7 +135,7 @@ async function reachPlay(surface?: Wire['PlayerProfileReadResponse']) {
 async function openPlay(surface?: Wire['PlayerProfileReadResponse']) {
   await reachPlay(surface);
   // The grid is the last thing the three reads produce, so its arrival is the screen's.
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
 }
 
 /**
@@ -222,7 +223,7 @@ describe('what the screen draws before its reads land', () => {
       await held;
       return json(
         profileSurface({
-          availability: [{ day: 2, part: 'EVENING' }],
+          weekly_hours: [{ day: 2, hour: 19 }],
           search_radius_km: 12,
           play_intents: { PADEL: 'COMPETITIVE' },
         }),
@@ -244,7 +245,7 @@ describe('what the screen draws before its reads land', () => {
   it('asks once the read lands and says nothing was declared', async () => {
     await openPlayUndeclared(
       profileSurface({
-        availability: [{ day: 2, part: 'EVENING' }],
+        weekly_hours: [{ day: 2, hour: 19 }],
         search_radius_km: 12,
         play_intents: {},
       }),
@@ -271,7 +272,7 @@ describe('what the screen opens on', () => {
   it('opens the mode on the declaration', async () => {
     await openPlay(
       profileSurface({
-        availability: [{ day: 2, part: 'EVENING' }],
+        weekly_hours: [{ day: 2, hour: 19 }],
         search_radius_km: 12,
         play_intents: { PADEL: 'NO_PREFERENCE' },
       }),
@@ -284,7 +285,7 @@ describe('what the screen opens on', () => {
   it('opens on a declared competitive intent', async () => {
     await openPlay(
       profileSurface({
-        availability: [{ day: 2, part: 'EVENING' }],
+        weekly_hours: [{ day: 2, hour: 19 }],
         search_radius_km: 12,
         play_intents: { PADEL: 'COMPETITIVE' },
       }),
@@ -296,9 +297,9 @@ describe('what the screen opens on', () => {
   it('arrives with the grid already filled in from the profile', async () => {
     await openPlay();
 
-    expect(isTicked('Tuesday evening')).toBe(true);
-    expect(isTicked('Saturday morning')).toBe(true);
-    expect(isTicked('Monday morning')).toBe(false);
+    expect(isTicked('Tuesday 19:00')).toBe(true);
+    expect(isTicked('Saturday 09:00')).toBe(true);
+    expect(isTicked('Monday 09:00')).toBe(false);
   });
 });
 
@@ -308,7 +309,7 @@ describe('what the screen never writes', () => {
   it('changes the sport and the mode without touching the profile', async () => {
     await openPlay(
       profileSurface({
-        availability: [{ day: 2, part: 'EVENING' }],
+        weekly_hours: [{ day: 2, hour: 19 }],
         search_radius_km: 12,
         play_intents: { PADEL: 'FOR_FUN', TENNIS: 'FOR_FUN' },
       }),
@@ -327,9 +328,9 @@ describe('what the screen never writes', () => {
   it('edits the week without touching the profile', async () => {
     await openPlay();
 
-    fireEvent.press(cell('Monday morning'));
+    fireEvent.press(cell('Monday 09:00'));
 
-    await waitFor(() => expect(isTicked('Monday morning')).toBe(true));
+    await waitFor(() => expect(isTicked('Monday 09:00')).toBe(true));
     expect(profileWrites()).toEqual([]);
   });
 });
@@ -344,7 +345,7 @@ describe('changed from your profile', () => {
   it('appears the moment a cell moves', async () => {
     await openPlay();
 
-    fireEvent.press(cell('Monday morning'));
+    fireEvent.press(cell('Monday 09:00'));
 
     expect(await screen.findByText(WEEK_CHANGED_FROM_PROFILE)).toBeTruthy();
   });
@@ -358,10 +359,10 @@ describe('changed from your profile', () => {
   it('goes away again when the cell is put back', async () => {
     await openPlay();
 
-    fireEvent.press(cell('Monday morning'));
+    fireEvent.press(cell('Monday 09:00'));
     await screen.findByText(WEEK_CHANGED_FROM_PROFILE);
 
-    fireEvent.press(cell('Monday morning'));
+    fireEvent.press(cell('Monday 09:00'));
 
     await waitFor(() => expect(screen.queryByText(WEEK_CHANGED_FROM_PROFILE)).toBeNull());
   });
@@ -371,7 +372,7 @@ describe('the way onto the court', () => {
   /** Both sports declared, so switching the chip stays searchable rather than opening the
    *  interstitial — the fact under test is the court's shape and not the declaration. */
   const BOTH_DECLARED = profileSurface({
-    availability: [{ day: 2, part: 'EVENING' }],
+    weekly_hours: [{ day: 2, hour: 19 }],
     search_radius_km: 12,
     play_intents: { PADEL: 'FOR_FUN', TENNIS: 'FOR_FUN' },
   });
@@ -422,16 +423,38 @@ describe('the search', () => {
   it('sends the improvised week as the override, and still writes nothing', async () => {
     await openPlay();
 
-    fireEvent.press(cell('Monday morning'));
+    fireEvent.press(cell('Monday 09:00'));
     fireEvent.press(searchButton());
 
     await waitFor(() => expect(transport.requestsTo('POST', SEARCHES)).toHaveLength(1));
     const [request] = transport.requestsTo('POST', SEARCHES);
     expect(request?.body).toMatchObject({
       availability_override: [
-        { day: 2, part: 'EVENING' },
-        { day: 6, part: 'MORNING' },
-        { day: 1, part: 'MORNING' },
+        { day: 2, hour: 19 },
+        { day: 6, hour: 9 },
+        { day: 1, hour: 9 },
+      ],
+    });
+    expect(profileWrites()).toEqual([]);
+  });
+
+  it('sends a week painted by dragging, the run in the order the finger crossed it', async () => {
+    await openPlay();
+
+    // Thursday 18:00 down to 20:00, sampled at the ends: 19:00 is found on the line.
+    paint({ day: 4, hour: 18 }, { day: 4, hour: 20 });
+    expect(await screen.findByText(WEEK_CHANGED_FROM_PROFILE)).toBeTruthy();
+    fireEvent.press(searchButton());
+
+    await waitFor(() => expect(transport.requestsTo('POST', SEARCHES)).toHaveLength(1));
+    const [request] = transport.requestsTo('POST', SEARCHES);
+    expect(request?.body).toMatchObject({
+      availability_override: [
+        { day: 2, hour: 19 },
+        { day: 6, hour: 9 },
+        { day: 4, hour: 18 },
+        { day: 4, hour: 19 },
+        { day: 4, hour: 20 },
       ],
     });
     expect(profileWrites()).toEqual([]);
@@ -441,9 +464,9 @@ describe('the search', () => {
   it('runs on a cleared week', async () => {
     await openPlay();
 
-    fireEvent.press(cell('Tuesday evening'));
-    fireEvent.press(cell('Saturday morning'));
-    await waitFor(() => expect(isTicked('Tuesday evening')).toBe(false));
+    fireEvent.press(cell('Tuesday 19:00'));
+    fireEvent.press(cell('Saturday 09:00'));
+    await waitFor(() => expect(isTicked('Tuesday 19:00')).toBe(false));
 
     fireEvent.press(searchButton());
 
@@ -694,7 +717,7 @@ describe('the searching latch', () => {
 
 describe('a sport nobody has declared in', () => {
   const UNDECLARED = profileSurface({
-    availability: [{ day: 2, part: 'EVENING' }],
+    weekly_hours: [{ day: 2, hour: 19 }],
     search_radius_km: 12,
     play_intents: {},
   });
@@ -729,7 +752,7 @@ describe('a sport nobody has declared in', () => {
     for (const mode of ['Competitive, this search', 'For fun, this search']) {
       expect(screen.queryByLabelText(mode)).toBeNull();
     }
-    expect(screen.queryByLabelText('Tuesday evening')).toBeNull();
+    expect(screen.queryByLabelText('Tuesday 19:00')).toBeNull();
     expect(screen.queryByLabelText(RADIUS_LABEL)).toBeNull();
     // Nor the greyed card that used to stand in for it: a control that refuses is not drawn.
     expect(screen.queryByLabelText(COURT_CARD ?? '')).toBeNull();
@@ -876,7 +899,7 @@ describe('a sport nobody has declared in', () => {
 
     // Out of Play, and the declaration arrives from somewhere that is not this screen — as
     // *for fun*, so a segment re-derived from it would be seen moving off the player's own.
-    fireEvent.press(screen.getByLabelText('Now'));
+    fireEvent.press(screen.getByLabelText('Home'));
     await waitFor(() => expect(screen).toHavePathname('/'));
     stubProfileSurface(transport, {
       ...UNDECLARED,
@@ -973,7 +996,7 @@ describe('a sport nobody has declared in', () => {
  */
 describe('the declaration, standing under the switch', () => {
   const DECLARED = profileSurface({
-    availability: [{ day: 2, part: 'EVENING' }],
+    weekly_hours: [{ day: 2, hour: 19 }],
     search_radius_km: 12,
     play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'FOR_FUN' },
   });
@@ -1048,7 +1071,7 @@ describe('the declaration, standing under the switch', () => {
   it('is not on screen at all where there is nothing declared', async () => {
     await openPlayUndeclared(
       profileSurface({
-        availability: [{ day: 2, part: 'EVENING' }],
+        weekly_hours: [{ day: 2, hour: 19 }],
         search_radius_km: 12,
         play_intents: {},
       }),

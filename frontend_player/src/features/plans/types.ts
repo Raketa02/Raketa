@@ -27,7 +27,7 @@
  */
 
 /**
- * **The Now tab's rail** — `YOUR GAMES · n`, one card, swipe
+ * **The Home tab's rail** — `YOUR GAMES · n`, one card, swipe
  * ([#367](https://github.com/Raketa02/Raketa/issues/367)).
  *
  * Composed by the shell under the tab's own sentences, which it is handed: the tab owns its words
@@ -36,7 +36,7 @@
  * and ADR-0149 §1's arrow runs one way
  * ([`the-loop-components.md`](../../../../docs/specs/the-loop/the-loop-components.md) §3.4).
  */
-export { GamesRail, type GamesRailProps } from './components/GamesRail';
+export { GamesRail, type BookedOnTheRail, type GamesRailProps } from './components/GamesRail';
 
 /**
  * **The plan card, pinned under a room's header from its opening** — the counter, the three slot
@@ -130,3 +130,10 @@ export type { LineUp } from './domain/lock';
  */
 export { useGameCardName } from './hooks/useGameCardName';
 export { cardStateWord } from './components/nowPresentation';
+
+/**
+ * **How many of your games need you** — the count on Home's column, which the shell reads for the
+ * bar ([#550](https://github.com/Raketa02/Raketa/issues/550)). The rail's own cards, counted by
+ * `needsYou`: a seat open, a result to enter, a score waiting on your agreement.
+ */
+export { useGamesNeedingYou } from './hooks/useGamesNeedingYou';

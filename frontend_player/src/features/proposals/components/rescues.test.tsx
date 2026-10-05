@@ -1,0 +1,374 @@
+/**
+ * **Rescues, walked** — a booked game that lost a player, its open seat dealt as a *Seat open* card
+ * and taken from the card or from its details seen from outside
+ * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A2.3, A2.4, A4.3; mock 2; the
+ * mechanics §10.1; the backend's #545).
+ *
+ * The real route tree, from a group's Games tab, with the payment provider's phone half faked at the
+ * platform edge. **The ten seconds are walked by advancing the fake clock past them, never by
+ * polling** (`theFill.test.tsx`'s rule).
+ */
+
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+
+import { FILL_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
+import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
+import { queryClient } from '@/shared/lib/query-client';
+import { useToastQueue } from '@/shared/store/toast.store';
+import {
+  ANIA,
+  DECK_READ_AT,
+  KAROL,
+  groupDeck,
+  rescueCard,
+  rescueNoPath,
+  seatsPath,
+  stubGroupDeck,
+  yesPath,
+  youTile,
+} from '@/test-support/groupDeck';
+import { bookingDetails, stubBooking } from '@/test-support/home';
+import {
+  bookingPath,
+  launchSignedIn,
+  resetClipboard,
+  resetHaptics,
+  resetPayments,
+  resetShare,
+  stubClipboard,
+  stubGate,
+  stubHaptics,
+  stubMyGroups,
+  stubPaymentMethod,
+  stubPayments,
+  stubProfileOptions,
+  stubProfileSurface,
+  stubShare,
+} from '@/test-support/onboardingRouter';
+import { fakeClipboard, fakeHaptics, fakePayments, fakeShare } from '@/test-support/platform';
+import {
+  errorResponse,
+  installTransport,
+  json,
+  noContent,
+  type Transport,
+  type Wire,
+} from '@/test-support/transport';
+
+const COPY = PROPOSALS_COPY;
+const FILL = FILL_COPY;
+
+const PAST_THE_FLIGHT = 400;
+const SECOND = 1_000;
+
+const HIDDEN_TOO = { includeHiddenElements: true } as const;
+
+const VISA_4312: Wire['SavedMethodSchema'] = { brand: 'visa', last_four: '4312', wallet: null };
+
+const GAME_ID = 'a1000000-0000-4000-8000-000000000009';
+
+const RATING: Wire['RatingResponse'] = {
+  sport: 'PADEL',
+  mu: 2.71,
+  sigma: 0.62,
+  confidence: 28,
+  range: { low: 2.09, high: 3.33 },
+  band: { name: 'Established', lower: 2.7, upper: 3.8 },
+  status: 'initial_estimate',
+  engine_version: 'racketskill-v3',
+  updated_at: '2026-08-14T09:00:00Z',
+};
+
+const CREW: Wire['MyGroupSchema'] = {
+  id: 'a0000000-0000-4000-8000-000000000005',
+  kind: 'PLAYER',
+  name: 'Kazimierz crew',
+  monogram: { letters: 'Kc', colour: 1 },
+  sports: ['PADEL'],
+  member_count: 6,
+  home_club: { id: 'c0000000-0000-4000-8000-000000000001', name: 'Centrum Ruchu' },
+};
+
+const PAGE: Wire['GroupResponse'] = {
+  ...CREW,
+  link: 'https://raketa.app/join/K7PQ2MXA',
+  join_policy: 'ANYONE',
+  is_owner: false,
+  rated_by_sport: [{ sport: 'PADEL', rated_count: 5, first_rated: [] }],
+  member_faces: [],
+  administrator_name: null,
+  is_administrator: false,
+};
+
+/** The seat taken — the booking and its Game, now on the reader's Home. */
+const taken = (card: Wire['DeckCardSchema']): Wire['YesAnswerResponse'] => ({
+  proposal_id: card.proposal_id,
+  open_seats: 0,
+  booked: { booking_id: card.proposal_id, game_id: GAME_ID },
+  waiting_for_the_club: false,
+  your_payment: null,
+});
+
+/** A booked tile, from the deck's — paid unless it is the reader's, which is the open seat. */
+function bookedTile(tile: Wire['DeckTileSchema']): Wire['BookedTileSchema'] {
+  return {
+    player_id: tile.player_id,
+    is_you: tile.is_you,
+    name: tile.name,
+    photo_id: tile.photo_id,
+    photo_url: tile.photo_url,
+    level: tile.level,
+    paid: !tile.is_you,
+    checked_in: false,
+  };
+}
+
+/**
+ * **The rescue as its details read it from outside** — the card's game: you in the seat that opened
+ * on Kuba's side, unpaid; Karol and Ania across, paid; Court 6 at Ogrody 33, fills by the cut-off.
+ */
+function rescueDetails(card: Wire['DeckCardSchema']): Wire['BookingDetailsResponse'] {
+  return bookingDetails({
+    booking_id: card.proposal_id,
+    game_id: GAME_ID,
+    pool_id: CREW.id,
+    read_at: new Date(DECK_READ_AT).toISOString(),
+    status: 'SEAT_OPEN',
+    open_seats: 1,
+    starts_at: card.starts_at,
+    ends_at: '2026-10-03T15:00:00Z',
+    where: { id: card.club.id, name: card.club.name, distance_km: 3.1 },
+    court_name: 'Court 6',
+    sides: {
+      yours: card.sides.yours.map(bookedTile),
+      theirs: card.sides.theirs.map(bookedTile),
+    },
+    money: {
+      share_grosze: card.share_grosze,
+      paid: false,
+      free_to_leave_until: null,
+      refunded_grosze: null,
+    },
+    shows_forecast: false,
+    check_in: null,
+    leaving: null,
+    rescue: { deadline: card.deadline, fills_by_the_cut_off: true },
+  });
+}
+
+let transport: Transport;
+
+beforeEach(() => {
+  transport = installTransport();
+  stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
+  stubProfileOptions(transport);
+  stubProfileSurface(transport);
+  stubShare(fakeShare());
+  stubClipboard(fakeClipboard());
+  stubHaptics(fakeHaptics());
+  stubPayments(fakePayments());
+  stubPaymentMethod(transport, VISA_4312);
+  useToastQueue.setState({ queue: [] });
+});
+
+afterEach(async () => {
+  transport.restore();
+  resetShare();
+  resetClipboard();
+  resetHaptics();
+  resetPayments();
+  queryClient.clear();
+  resetSessionStatus();
+  await clearStoredTokens();
+});
+
+/** Land on the crew's Games tab, its deck dealing these cards until one is answered. */
+async function openGames(
+  cards: readonly Wire['DeckCardSchema'][],
+  join: (card: Wire['DeckCardSchema']) => ReturnType<typeof json> = (card) => json(taken(card)),
+) {
+  let dealt = [...cards];
+  const answered = (card: Wire['DeckCardSchema']) => {
+    dealt = dealt.filter((held) => held.proposal_id !== card.proposal_id);
+  };
+  for (const card of cards) {
+    transport.on('POST', seatsPath(card.proposal_id), () => {
+      answered(card);
+      return join(card);
+    });
+    transport.on('POST', rescueNoPath(card.proposal_id), () => {
+      answered(card);
+      return noContent();
+    });
+  }
+  stubMyGroups(transport, [CREW]);
+  transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
+  stubGroupDeck(transport, CREW.id, () => groupDeck({ cards: dealt }));
+  await launchSignedIn();
+  jest.setSystemTime(DECK_READ_AT);
+  fireEvent.press(await screen.findByLabelText('Play'));
+  fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+  await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+  const first = cards[0];
+  if (first !== undefined) await screen.findByTestId(`game-card-${first.proposal_id}`);
+}
+
+const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
+
+/** The ten seconds, from a yes just said. */
+const theTenSeconds = () => act(() => jest.advanceTimersByTime(10 * SECOND));
+
+// ---------------------------------------------------------------------------
+// The card
+// ---------------------------------------------------------------------------
+
+describe('a Seat open card in the deck (A2.3, mock 2)', () => {
+  it('draws the players paid, your dashed seat, the court booked with its number and the price on the stamp', async () => {
+    await openGames([rescueCard()]);
+
+    expect(await screen.findByRole('header', { name: /^Seat open · court booked/ })).toBeTruthy();
+    expect(screen.getByLabelText('Karol Tomaszewski, level 2,75, paid')).toBeTruthy();
+    expect(screen.getByLabelText('Kuba Wiśniewski, level 2,80, paid')).toBeTruthy();
+    expect(screen.getByLabelText('Your seat: you complete it, 27 zł, court booked')).toBeTruthy();
+    expect(screen.getByText('27 zł · court booked')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Booked, 27 zł, Saturday 16:00 · Ogrody 33 · Court 6'),
+    ).toBeTruthy();
+    expect(screen.getByText('I’m in · 27 zł', HIDDEN_TOO)).toBeTruthy();
+  });
+
+  it('says You? with the share while another seat is open too', async () => {
+    await openGames([
+      rescueCard({
+        open_seats_after_your_yes: 1,
+        sides: { yours: [youTile()], theirs: [KAROL({ paid: true }), ANIA({ paid: true })] },
+      }),
+    ]);
+
+    expect(await screen.findByLabelText('Your seat, 27 zł')).toBeTruthy();
+    expect(screen.getByText(COPY.youQuestion)).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Taking the seat from the card
+// ---------------------------------------------------------------------------
+
+describe('taking the seat from the card (A2.4)', () => {
+  it('counts ten seconds, then takes the booking’s seat, and It’s a game! opens it from Home', async () => {
+    const card = rescueCard();
+    await openGames([card]);
+
+    fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    expect(screen.getByText('Booking in 10 s')).toBeTruthy();
+    expect(transport.requestsTo('POST', seatsPath(card.proposal_id))).toHaveLength(0);
+
+    theTenSeconds();
+
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', seatsPath(card.proposal_id))).toHaveLength(1),
+    );
+    expect(transport.requestsTo('POST', yesPath(card.proposal_id))).toHaveLength(0);
+    expect(
+      await screen.findByRole('header', {
+        name: 'It’s a game! You and Kuba Wiśniewski against Karol Tomaszewski and Ania Kowalska',
+      }),
+    ).toBeTruthy();
+
+    stubBooking(
+      transport,
+      bookingDetails({ booking_id: card.proposal_id, game_id: GAME_ID, pool_id: CREW.id }),
+    );
+    fireEvent.press(screen.getByRole('button', { name: FILL.itsAGame.open }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${card.proposal_id}`));
+  });
+
+  it('says no to the booking, and the card does not come back', async () => {
+    const card = rescueCard();
+    await openGames([card]);
+
+    fireEvent.press(screen.getByRole('button', { name: COPY.no }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', rescueNoPath(card.proposal_id))).toHaveLength(1),
+    );
+    expect(transport.requestsTo('POST', `/api/v1/proposals/${card.proposal_id}/no`)).toHaveLength(
+      0,
+    );
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+  });
+
+  it('says Someone just took it when another join won the race, and lets the card go', async () => {
+    const card = rescueCard();
+    await openGames([card], () => errorResponse(409, 'seat_just_taken'));
+
+    fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    theTenSeconds();
+
+    await waitFor(() => expect(toasts()).toContainEqual(['Someone just took it.', 'bad']));
+    expect(screen.queryByTestId('its-a-game')).toBeNull();
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The rescue seen from outside
+// ---------------------------------------------------------------------------
+
+describe('the rescue seen from outside (A4.3)', () => {
+  async function openRescue(card = rescueCard()) {
+    stubBooking(transport, rescueDetails(card));
+    await openGames([card]);
+    fireEvent.press(await screen.findByRole('button', { name: COPY.details }));
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/play/group/${CREW.id}/rescue/${card.proposal_id}`),
+    );
+    await screen.findByLabelText('Your seat: you complete it, 27 zł, court booked');
+    return card;
+  }
+
+  it('opens from the i: the players paid, your dashed seat, the court, how long it is offered, and I’m in — no Chat, no Leave', async () => {
+    await openRescue();
+
+    expect(screen.getByText('Seat open')).toBeTruthy();
+    expect(screen.getByText('Padel · seat open')).toBeTruthy();
+    expect(screen.getByLabelText('Karol Tomaszewski, level 2,75, paid')).toBeTruthy();
+    expect(screen.getByLabelText('Where, Ogrody 33, Court 6 · 3,1 km')).toBeTruthy();
+    // The card's deadline is the cut-off, 21 hours after the read: Thursday 07:00 in Warsaw.
+    expect(screen.getByLabelText('Your share, 27 zł, fills by Thu 07:00')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'I’m in, pays 27 zł now' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Chat' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Leave the game' })).toBeNull();
+  });
+
+  it('takes the seat from there: ten seconds, the booking’s seat, It’s a game!, and back to the group', async () => {
+    const card = await openRescue();
+
+    fireEvent.press(screen.getByRole('button', { name: 'I’m in, pays 27 zł now' }));
+
+    expect(screen.getByText('Booking in 10 s')).toBeTruthy();
+    expect(screen.getByRole('button', { name: FILL.undo.booking })).toBeTruthy();
+    theTenSeconds();
+
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', seatsPath(card.proposal_id))).toHaveLength(1),
+    );
+    expect(await screen.findByText(FILL.itsAGame.word)).toBeTruthy();
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
+  });
+
+  it('says the seat is gone when it was taken before the details were read', async () => {
+    const card = rescueCard();
+    await openGames([card]);
+    transport.on('GET', bookingPath(card.proposal_id), () =>
+      errorResponse(404, 'booking_not_found'),
+    );
+
+    fireEvent.press(await screen.findByRole('button', { name: COPY.details }));
+
+    expect(await screen.findByText('This seat isn’t offered to you any more.')).toBeTruthy();
+  });
+});

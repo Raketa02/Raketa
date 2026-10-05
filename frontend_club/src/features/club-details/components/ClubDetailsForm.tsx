@@ -26,7 +26,7 @@ const NOTHING_YET: DetailsFormState = {
 
 /**
  * **Club details** (#500 story 93): every sign-up detail, editable at any time, with the server's
- * refusals under the field they name (a sport an official group plays names the group). A save
+ * refusals under the field they name (a sport a court or an official group plays names it). A save
  * that lands puts the details as the backend recorded them back into the boxes (names trimmed
  * and collapsed) and says so.
  */
@@ -42,7 +42,7 @@ export function ClubDetailsForm({ club, map }: { club: Club; map: MapSettings })
   }
 
   const sentences = sentencesFor(feedback.refusals, DETAILS_REFUSALS);
-  if (feedback.refusals.sports === 'club_sport_declared_by_group' && state.sportInUse !== null) {
+  if (feedback.refusals.sports !== undefined && state.sportInUse !== null) {
     sentences.sports = sportInUseRefusal(state.sportInUse);
   }
   const formSentence = sentenceFor(feedback.formRefusal, DETAILS_REFUSALS);

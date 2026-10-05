@@ -20,12 +20,12 @@ import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-lib
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
+  conversationPath,
   CONVERSATIONS_PATH,
   GAMES_PATH,
   GATE_USER,
+  launchIntoClassicPlay,
   PLANS_PATH,
-  conversationPath,
-  launchSignedIn,
   planSlotPath,
   resetLiveStream,
   stubConversation,
@@ -143,6 +143,7 @@ function game(standing: Wire['GameSchema']['standing'] = 'AWAITING_ENTRY'): Wire
       { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
+    no_shows: [],
   };
 }
 
@@ -192,7 +193,7 @@ async function openTheRoom(answer: Wire['ConversationResponse'] = room()) {
   stubConversation(transport, answer);
   stubEntries(transport, ROOM);
 
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -212,7 +213,7 @@ describe('one stream, and only for an open room', () => {
     stubConversation(transport, room());
     stubEntries(transport, ROOM);
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     await screen.findByLabelText(/^tomek\.p/);
@@ -676,7 +677,7 @@ describe('held', () => {
     stubConversation(transport, room([message(1, TOMEK, 'six works for me')]));
     stubEntries(transport, ROOM);
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
@@ -751,6 +752,7 @@ describe('held', () => {
             { side: 'B', player_id: TOMEK, name: 'tomek.p' },
           ],
           proposals: [],
+          no_shows: [],
         },
       ],
       READ_AT,
@@ -761,7 +763,7 @@ describe('held', () => {
     stubEntries(transport, ROOM);
     transport.on('PUT', planSlotPath(CHALLENGE, 'day'), () => errorResponse(403, 'account_held'));
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
     await screen.findByLabelText(COMPOSER_LABEL);

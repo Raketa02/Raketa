@@ -29,7 +29,7 @@ JUST_PAST_THE_RING = 51.61
 
 #: An evening the searcher has not ticked. ``commit_profile`` gives them Tuesday
 #: evening and Saturday morning.
-ANOTHER_EVENING = ("4:EVENING",)
+ANOTHER_EVENING = ("4:19",)
 
 
 def a_weekday_the_window_reads_as_this_week() -> int:
@@ -104,7 +104,7 @@ async def test_a_times_rung_names_its_cell_in_the_two_fields_a_grid_is_drawn_fro
 
     The client has to draw that cell on its own seven-by-three grid, marked as
     belonging to this one search (#283) — and that is the same grid every other
-    slot is drawn on, from ``AvailabilitySlotResource``. A joined ``"4:EVENING"``
+    slot is drawn on, from ``WeeklyHourResource``. A joined ``"4:19"``
     here would make the one cell the player never ticked the one cell whose
     client had to split our persistence format, which the resource one schema
     over refuses by name.
@@ -130,7 +130,7 @@ async def test_a_times_rung_names_its_cell_in_the_two_fields_a_grid_is_drawn_fro
             client,
             searcher["token"],
             "FOR_FUN",
-            availability_override=[{"day": 2, "part": "EVENING"}],
+            availability_override=[{"day": 2, "hour": 19}],
         )
     ).json()
 
@@ -138,7 +138,7 @@ async def test_a_times_rung_names_its_cell_in_the_two_fields_a_grid_is_drawn_fro
     offers = {offer["rung"]: offer for offer in body["search"]["rung_offers"]}
     assert offers["A"]["ask"] == "TIMES"
     assert offers["A"]["candidates_above_floor"] == 1
-    assert offers["A"]["slot"] == {"day": 4, "part": "EVENING"}
+    assert offers["A"]["slot"] == {"day": 4, "hour": 19}
     assert "radius_km" not in offers["A"], (
         "a times rung has no radius, rather than a radius of nothing"
     )
@@ -466,7 +466,7 @@ async def test_an_improvised_week_runs_this_search_and_asks_about_the_profile(
         session_factory,
         "thursday",
         mu=searcher["mu"],
-        availability=(f"{ticked}:EVENING",),
+        availability=(f"{ticked}:19",),
     )
     await world.fold_the_log(session_factory, candidate_source)
 
@@ -474,23 +474,21 @@ async def test_an_improvised_week_runs_this_search_and_asks_about_the_profile(
         await world.search(
             client,
             searcher["token"],
-            availability_override=[{"day": ticked, "part": "EVENING"}],
+            availability_override=[{"day": ticked, "hour": 19}],
         )
     ).json()
 
     assert body["search"]["pool"]["window"] == "THIS_WEEK"
     prompts = {prompt["prompt"]: prompt for prompt in body["search"]["prompts"]}
-    assert prompts["KEEP_THESE_TIMES"]["slots"] == [
-        {"day": ticked, "part": "EVENING"}
-    ]
+    assert prompts["KEEP_THESE_TIMES"]["slots"] == [{"day": ticked, "hour": 19}]
 
     assert await world.saved_grid(session_factory, searcher["id"]) == (
-        "2:EVENING",
-        "6:MORNING",
+        "2:19",
+        "6:10",
     ), "the profile is untouched"
 
     (row,) = await world.recorded_searches(session_factory)
-    assert list(row.searcher_grid) == [f"{ticked}:EVENING"]
+    assert list(row.searcher_grid) == [f"{ticked}:19"]
     assert row.searcher_slot_count == 1
 
 
@@ -520,8 +518,8 @@ async def test_a_cleared_week_runs_the_search_and_asks_about_it_too(
     )
 
     assert await world.saved_grid(session_factory, searcher["id"]) == (
-        "2:EVENING",
-        "6:MORNING",
+        "2:19",
+        "6:10",
     ), "the profile is untouched"
 
     (row,) = await world.recorded_searches(session_factory)

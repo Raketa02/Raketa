@@ -114,11 +114,17 @@ export { CONVERSATION_ROUTE } from './components/ConversationRow';
  * (`domain/roomOpening`). What it expects is the reply's to say — the room, or the room **and
  * its game** when the reply was `ON`, because a game is opened inline with that accept and the
  * room is told which a moment later.
+ *
+ * `useGameRoom` and `useGameRooms` are the join keyed by the **game** (#556): a booked game's room
+ * is found by the `game_id` its row carries, which is the join `GET /bookings/{id}` documents — its
+ * details' *Chat* door, and whether a Home card's chat is open.
  */
 export {
   useAwaitedChatDoor,
   useChatDoor,
   useChatDoors,
+  useGameRoom,
+  useGameRooms,
   type RoomDoor,
   type RoomExpectation,
 } from './hooks/useConversations';

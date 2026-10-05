@@ -25,7 +25,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import {
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
   pairingPath,
   stubConversation,
   stubConversations,
@@ -99,6 +99,7 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
       { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
+    no_shows: [],
     ...over,
   };
 }
@@ -201,7 +202,7 @@ function stubTheWorld({
 async function openFromNow(over: Parameters<typeof stubTheWorld>[0] = {}) {
   stubTheWorld(over);
 
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   await waitFor(() => expect(screen).toHavePathname('/'));
 
   const verbs = RUNGS.map(doorLabel).filter((verb): verb is string => verb !== undefined);
@@ -213,7 +214,7 @@ async function openFromNow(over: Parameters<typeof stubTheWorld>[0] = {}) {
 async function openFromTheRoom(over: Parameters<typeof stubTheWorld>[0] = {}) {
   stubTheWorld(over);
 
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -490,7 +491,7 @@ describe('one component, two routes', () => {
 
   /**
    * Each address lights its **own** column, which is what a `from` parameter would have cost:
-   * `tabForPathname` reads the first segment and stays pure, so `games/…` is Now's and
+   * `tabForPathname` reads the first segment and stays pure, so `games/…` is Home's and
    * `chats/…` is Chats'.
    */
   it('lights the column its own address is under', async () => {
@@ -503,12 +504,12 @@ describe('one component, two routes', () => {
     await openFromTheRoom({ plans: [WHOLE] });
     expect(lit()).toEqual(['Chats']);
 
-    fireEvent.press(screen.getByLabelText(/^Now/));
+    fireEvent.press(screen.getByLabelText(/^Home/));
     await waitFor(() => expect(screen).toHavePathname('/'));
 
     fireEvent.press(await screen.findByLabelText(doorLabel('game-on')!));
     await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
-    expect(lit()).toEqual(['Now']);
+    expect(lit()).toEqual(['Home']);
   });
 
   /** *Details* lands on the arm the standing derives, and an ended game's arm has no plan on it. */

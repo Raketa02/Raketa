@@ -533,15 +533,18 @@ proposals' needs, per club and hour.
   `GET /bookings/{id}` (details incl. the check-in code), `GET /home`, `PUT
   /players/me/weekly-hours`, `GET/PUT /players/me/games-and-money`, `GET/PUT
   /players/me/notifications`, `POST /players/me/devices`, `POST /players/me/payment-methods/setup`
-  (a SetupIntent), `POST /players/me/payment-methods/terms`, `DELETE
-  /players/me/payment-methods/current`, `GET /players/me/payments` (live yeses + receipts),
+  (a SetupIntent — its id, never its secret), `POST /players/me/payment-methods/terms` (answers
+  the secret), `POST /players/me/payment-methods/confirmation`, `GET` and `DELETE
+  /players/me/payment-methods/current` (settled by #536, ADR-0190), `GET /players/me/payments`
+  (live yeses + receipts),
   `POST /seat-charges/{id}/confirmation` (recovery).
 - **Club surface** — `GET/POST/PATCH /club/courts`, `PUT /club/courts/{id}/hours`,
   `GET/POST/DELETE /club/exceptions`, `PUT /club/prices`, `GET/PUT /club/raketa-settings`,
   `POST /club/stripe/onboarding-link`, `GET /club/setup`, `GET /club/bookings?date&filter`,
   `POST /club/bookings/{id}/acceptance|refusal|move|cancellation`, `POST /club/check-ins`,
   `GET /club/money?month`, `GET /club/payouts`.
-- **Webhooks** — `POST /webhooks/stripe`, `POST /webhooks/stripe-connect`.
+- **Webhooks** — `POST /api/v1/webhooks/stripe` (built by #536, on no client's contract —
+  ADR-0190 §4), `POST /api/v1/webhooks/stripe-connect`.
 
 ## C5. Data that must scale to a city
 

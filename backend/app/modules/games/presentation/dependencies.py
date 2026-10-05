@@ -26,6 +26,7 @@ from app.api.dependencies import (
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
+    build_club_check_ins,
     build_game_court_pairing,
     build_game_directory,
     build_game_repository,
@@ -33,9 +34,11 @@ from app.bootstrap.composition import (
 )
 from app.modules.games.application.answer_result import AcceptResult, StateResult
 from app.modules.games.application.dismiss_game import DismissGame
+from app.modules.games.application.no_shows import DisputeANoShow, ReportANoShow
 from app.modules.games.application.read_game_pairing import ReadGamePairing
 from app.modules.games.application.read_games import ReadGames
 from app.modules.games.domain.ports import (
+    ClubCheckIns,
     CourtPairing,
     GameRepository,
     PlayerNames,
@@ -97,6 +100,39 @@ def get_accept_result(
 
 
 AcceptResultDep = Annotated[AcceptResult, Depends(get_accept_result)]
+
+
+def get_club_check_ins(db: DbSession) -> ClubCheckIns:
+    """Who the club checked in, per request — read off the booking, never
+    copied onto the game (#547). It reads and never writes."""
+    return build_club_check_ins(db)
+
+
+def get_report_a_no_show(
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    games: GameRepositoryDep,
+    names: PlayerNamesDep,
+    check_ins: Annotated[ClubCheckIns, Depends(get_club_check_ins)],
+) -> ReportANoShow:
+    return ReportANoShow(
+        games=games, names=names, check_ins=check_ins, uow=uow, clock=clock
+    )
+
+
+ReportANoShowDep = Annotated[ReportANoShow, Depends(get_report_a_no_show)]
+
+
+def get_dispute_a_no_show(
+    clock: ClockDep,
+    uow: UnitOfWorkDep,
+    games: GameRepositoryDep,
+    names: PlayerNamesDep,
+) -> DisputeANoShow:
+    return DisputeANoShow(games=games, names=names, uow=uow, clock=clock)
+
+
+DisputeANoShowDep = Annotated[DisputeANoShow, Depends(get_dispute_a_no_show)]
 
 
 def get_dismiss_game(

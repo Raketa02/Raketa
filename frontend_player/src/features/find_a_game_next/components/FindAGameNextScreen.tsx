@@ -1,7 +1,7 @@
 /**
  * **The next Find a game — empty, for now.**
  *
- * What the Play tab's root shows when the `find_a_game` flag is off
+ * What the Play tab's root shows when the `classic_play` flag is off
  * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
  * §7, [#479](https://github.com/Raketa02/Raketa/issues/479)). Find a game is about to be rebuilt,
  * and the rebuild needs somewhere to live while the current one keeps working: this feature is

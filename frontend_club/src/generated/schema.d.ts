@@ -153,9 +153,191 @@ export interface paths {
         get: operations["read_details_api_v1_club_details_get"];
         /**
          * Change the signed-in club's details
-         * @description A full replacement of the five details, at any time. Saving them unchanged records nothing. **A sport an official group declares cannot be unticked**, and the refusal names the group. Answers the details as recorded — names trimmed and collapsed, sports in the registry's order.
+         * @description A full replacement of the five details, at any time. Saving them unchanged records nothing. **A sport one of the club's courts plays, or an official group declares, cannot be unticked**, and the refusal names the court or the group. Answers the details as recorded — names trimmed and collapsed, sports in the registry's order.
          */
         put: operations["change_details_api_v1_club_details_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/courts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The club's courts, and the Raketa hours of each */
+        get: operations["read_courts_api_v1_club_courts_get"];
+        put?: never;
+        /**
+         * Add a court
+         * @description A court is born **offered**, and offers nothing until its Raketa hours are painted (`PUT /raketa-hours`).
+         */
+        post: operations["add_court_api_v1_club_courts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/courts/{court_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit a court, or switch it off or on
+         * @description A full replacement of the court's name, sport, roof and whether it is offered. **Switching it off is allowed whatever is booked on it** — a booked game is played as booked — and keeps its hours; a new sport is refused while a booking is ahead of it. Saving it unchanged records nothing.
+         */
+        put: operations["change_court_api_v1_club_courts__court_id__put"];
+        post?: never;
+        /** Delete a court */
+        delete: operations["remove_court_api_v1_club_courts__court_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/raketa-hours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the Raketa hours of one court or several
+         * @description The same week on every court named — one court's *Save hours*, *Copy to other courts* or *All courts of a sport*. Recorded per court, only where the week moved. **Never refused over a booking or a card**: a booked game is played as booked, and the pattern is what the club offers from now on. Answers every court of the club.
+         */
+        put: operations["set_raketa_hours_api_v1_club_raketa_hours_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The hours the club has closed, that are not over yet */
+        get: operations["read_exceptions_api_v1_club_exceptions_get"];
+        put?: never;
+        /**
+         * Close hours without touching the weekly pattern
+         * @description An hour, a day or a run of days, on every court or some. **Allowed over an hour with cards on it** — the cards move to another court or disappear, and nobody was charged — and refused over a booking.
+         */
+        post: operations["add_exception_api_v1_club_exceptions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/exceptions/{exception_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an exception, opening its hours again */
+        delete: operations["remove_exception_api_v1_club_exceptions__exception_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What a court-hour costs, per sport the club offers */
+        get: operations["read_prices_api_v1_club_prices_get"];
+        /**
+         * Save the whole price table
+         * @description A full replacement: a sport left out is no longer priced. Money is **integer grosze**. **New prices apply to new cards only** — a card already dealt, and a game already booked, keep their price.
+         */
+        put: operations["set_prices_api_v1_club_prices_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/way-of-working": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Choose how the club works with Raketa
+         * @description One way for the whole club — the setup checklist's second step. Changeable later; **the change applies to hours not yet booked**. Choosing the one it has records nothing. Answers the settings page.
+         */
+        put: operations["choose_way_of_working_api_v1_club_way_of_working_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/raketa-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How the club works with Raketa, and its settings */
+        get: operations["read_raketa_settings_api_v1_club_raketa_settings_get"];
+        /**
+         * Save — the first time, confirm — the club's Raketa settings
+         * @description Every setting, defaults included: **the first save confirms them**, the setup checklist's last step. A changed setting applies to games booked after the change. Pausing stops new cards on the club's courts; booked games are played as booked.
+         */
+        put: operations["save_raketa_settings_api_v1_club_raketa_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The setup checklist, and whether the club is live
+         * @description Read off everything the club has set, never stored. The Overview shows it until `live`, and then gives way.
+         */
+        get: operations["read_setup_api_v1_club_setup_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -344,10 +526,246 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/club/payments/onboarding-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect with Stripe — or continue
+         * @description The setup checklist's first step (*Connect payments*). The first time, opens the club's account at the payment provider — **once, for ever** — and answers a link to the provider's hosted pages, where the club gives its company details, its representative and a Polish IBAN. Every later call answers a fresh link for the same account: *Continue with Stripe* while the provider needs more details. **Every call also reads the account as it stands**, so the checklist follows what the provider says even before its notice arrives.
+         */
+        post: operations["onboarding_link_api_v1_club_payments_onboarding_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your payouts
+         * @description The payouts to your bank, as the payment provider says they stand — the Money page's list. Empty until payments are connected and a first game is played.
+         */
+        get: operations["payouts_api_v1_club_payouts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/bookings/waiting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What is waiting for your answer
+         * @description Every Raketa game at this club waiting for its answer — an **On request** club's full games, each asking for a court — with the players, the hour, the sport, the price and the countdown. Nobody has paid. A request whose time to confirm has run out is not listed.
+         */
+        get: operations["waiting_api_v1_club_bookings_waiting_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/bookings/{booking_id}/acceptance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a request
+         * @description **Accept** books the game: everybody is charged at this moment, all together or not at all, on your account — you are the seller — and the players are given the court that was reserved for them. Their game, its chat and their receipts open; *It's a game! · you paid* is emailed to each.
+         */
+        post: operations["accept_api_v1_club_bookings__booking_id__acceptance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/bookings/{booking_id}/refusal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refuse a request
+         * @description **Refuse**, with a note for your own records if you like: nobody paid, the hour is yours to sell again, and the players read *Called off · refused* and are dealt a new card first — never this court hour again.
+         */
+        post: operations["refuse_api_v1_club_bookings__booking_id__refusal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your bookings, by day
+         * @description Every Raketa booking at this club on one of its calendar days — the Bookings page — each with its status, its players (name, *paid*, *checked in*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's. A request a player's leaving took back is not listed: it comes back when the game is full and asks again.
+         */
+        get: operations["bookings_on_a_day_api_v1_club_bookings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/bookings/{booking_id}/free-courts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where a game can be moved
+         * @description The Move dialog: the free courts of the game's sport at its hour.
+         */
+        get: operations["free_courts_api_v1_club_bookings__booking_id__free_courts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/bookings/{booking_id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a game to another court
+         * @description **Move** a booked game — whole or with a seat open — onto another free court of its sport at the same hour, until it starts. The players read the new number; nothing else about the game changes. Answers the court it is on now.
+         */
+        post: operations["move_api_v1_club_bookings__booking_id__move_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/bookings/{booking_id}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a game
+         * @description **Cancel** a booked game, with your reason, until it starts: everybody is **refunded in full** — the card fees on those payments are not returned, and as the seller you bear them — it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.
+         */
+        post: operations["cancel_api_v1_club_bookings__booking_id__cancellation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/check-ins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a player in
+         * @description **Check in** a player on the game's day: the code the camera read off their QR, or the short code typed by hand. They were there, and can never be reported as not coming. **Money never depends on it** — you are paid whether people come or not.
+         */
+        post: operations["check_in_api_v1_club_check_ins_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/club/money": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your money, by month
+         * @description A month of your Raketa money, booking by booking — by the day each game is played on — with what the players paid, what was given back, the card fees and what is yours, and the month's totals. **You are the seller**: every figure is your own account's. Your payouts are `GET /api/v1/club/payouts`.
+         */
+        get: operations["money_by_month_api_v1_club_money_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AcceptOutcome
+         * @description What the club's yes came to.
+         * @enum {string}
+         */
+        AcceptOutcome: "BOOKED" | "SEAT_OPENED";
+        /** AcceptanceResponse */
+        AcceptanceResponse: {
+            /** @description `BOOKED` — everybody paid, the game is booked on `court_name` and the players are told. `SEAT_OPENED` — a player's payment did not go through, or a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full. */
+            outcome: components["schemas"]["AcceptOutcome"];
+            /**
+             * Court Name
+             * @description The court the players were given — on a booked game only.
+             */
+            court_name: string | null;
+        };
         /** AdministratorGroupSchema */
         AdministratorGroupSchema: {
             /**
@@ -414,6 +832,91 @@ export interface components {
          */
         AdministratorStatus: "ACTIVE" | "INVITED" | "EXPIRED";
         /**
+         * BandDays
+         * @description Which days a band prices: Monday to Friday, or Saturday and Sunday.
+         * @enum {string}
+         */
+        BandDays: "WEEKDAYS" | "WEEKEND";
+        /**
+         * BookedFromSchema
+         * @description The group the game was booked in — *where it came from*.
+         */
+        BookedFromSchema: {
+            /**
+             * Group Id
+             * Format: uuid
+             */
+            group_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Official
+             * @description One of your official groups — or `false`, a player group.
+             */
+            official: boolean;
+        };
+        /**
+         * CalledOffReason
+         * @description Why a game will not be played (the mechanics §14.1).
+         * @enum {string}
+         */
+        CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB";
+        /** CancelRequest */
+        CancelRequest: {
+            /** @description `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the players with their refund. */
+            reason: components["schemas"]["ClubCancelReason"];
+        };
+        /** CheckInRequest */
+        CheckInRequest: {
+            /**
+             * Code
+             * @description What the camera read off the player's QR code, or the six-character short code typed by hand — spaces, dashes and case do not matter.
+             */
+            code: string;
+        };
+        /**
+         * CheckInResponse
+         * @description The booking and the player — *19:00 · Court 2 · Padel*, *Piotr S. —
+         *     checked in ✓*.
+         */
+        CheckInResponse: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Court Name */
+            court_name: string;
+            sport: components["schemas"]["Sport"];
+            kind: components["schemas"]["SearchMode"];
+            player: components["schemas"]["CheckedInPlayerSchema"];
+            /**
+             * Checked In At
+             * Format: date-time
+             */
+            checked_in_at: string;
+        };
+        /** CheckedInPlayerSchema */
+        CheckedInPlayerSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /** Name */
+            name: string | null;
+        };
+        /**
          * ClaimCodeRequest
          * @description The address and the 8-character code from the email. The code is read
          *     forgivingly — case, spaces and dashes are ignored — and its length is not
@@ -442,6 +945,156 @@ export interface components {
             ticket: string;
             /** Expires In */
             expires_in: number;
+        };
+        /** ClubBookingMoneySchema */
+        ClubBookingMoneySchema: {
+            /**
+             * Price Grosze
+             * @description The court's price for the hour.
+             */
+            price_grosze: number;
+            /**
+             * Collected Grosze
+             * @description Every share taken from the players, on your account.
+             */
+            collected_grosze: number;
+            /**
+             * Refunded Grosze
+             * @description Everything given back — to a leaver less the card fee, in full on a game called off or cancelled. Refunds are automatic: you never refund anybody by hand.
+             */
+            refunded_grosze: number;
+        };
+        /**
+         * ClubBookingPlayerSchema
+         * @description A player on the game, as the club sees them — **a name, whether they
+         *     paid, and whether the desk checked them in**, and nothing else (§16.14).
+         */
+        ClubBookingPlayerSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description Their Name, whole. `null` for an account that can no longer be named.
+             */
+            name: string | null;
+            /**
+             * Paid
+             * @description Their share was taken — *paid ✓*.
+             */
+            paid: boolean;
+            /**
+             * Checked In At
+             * @description When the desk checked them in — *checked in ✓* — or `null`.
+             */
+            checked_in_at: string | null;
+        };
+        /**
+         * ClubBookingSchema
+         * @description One Raketa booking at the club.
+         */
+        ClubBookingSchema: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Starts At
+             * Format: date-time
+             * @description The court hour's start; games are 1 h.
+             */
+            starts_at: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Court Name
+             * @description The court it is on — reserved for it, while it waits for your answer.
+             */
+            court_name: string;
+            sport: components["schemas"]["Sport"];
+            /** @description Competitive, or for fun (a friendly). */
+            kind: components["schemas"]["SearchMode"];
+            /** @description `WAITING_FOR_YOU` — an On request game asking for the court: Accept or Refuse before `answer_by`. `BOOKED` — full and paid. `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
+            status: components["schemas"]["ClubStatus"];
+            /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). `REFUSED` — you refused the request. `NO_ANSWER` — it was not answered in time. */
+            called_off_reason: components["schemas"]["CalledOffReason"] | null;
+            /** @description Why you cancelled it — on a game you cancelled, else `null`. */
+            cancel_reason: components["schemas"]["ClubCancelReason"] | null;
+            /**
+             * Players
+             * @description Everybody with a seat on it, the first side first.
+             */
+            players: components["schemas"]["ClubBookingPlayerSchema"][];
+            /**
+             * Open Seats
+             * @description Seats a leaver left open.
+             */
+            open_seats: number;
+            money: components["schemas"]["ClubBookingMoneySchema"];
+            /** @description The group it came from — `null` for a group that is gone. */
+            booked_from: components["schemas"]["BookedFromSchema"] | null;
+            /**
+             * Answer By
+             * @description Your countdown, while it waits for your answer — else `null`.
+             */
+            answer_by: string | null;
+            /**
+             * May Move Or Cancel
+             * @description **Move** and **Cancel** are yours: booked or with a seat open, and not started yet.
+             */
+            may_move_or_cancel: boolean;
+        };
+        /**
+         * ClubBookingsResponse
+         * @description One day of the club's Raketa bookings — the Bookings page.
+         */
+        ClubBookingsResponse: {
+            /**
+             * Day
+             * Format: date
+             * @description The club's calendar day read.
+             */
+            day: string;
+            /**
+             * Read At
+             * Format: date-time
+             * @description The instant every status and countdown here was read at.
+             */
+            read_at: string;
+            filter: components["schemas"]["ClubFilter"];
+            counts: components["schemas"]["ClubCountsSchema"];
+            /**
+             * Bookings
+             * @description Soonest first. Empty: *No Raketa bookings on this day.*
+             */
+            bookings: components["schemas"]["ClubBookingSchema"][];
+        };
+        /**
+         * ClubCancelReason
+         * @description Why the club cancelled a booked game (the mechanics §16.9) — the players
+         *     are told it with their refund.
+         * @enum {string}
+         */
+        ClubCancelReason: "WEATHER" | "REPAIR" | "DOUBLE_BOOKING" | "OTHER";
+        /**
+         * ClubCountsSchema
+         * @description How many of the day's bookings each filter shows.
+         */
+        ClubCountsSchema: {
+            /** All */
+            all: number;
+            /** Waiting For You */
+            waiting_for_you: number;
+            /** Seat Open */
+            seat_open: number;
+            /** Called Off */
+            called_off: number;
         };
         /**
          * ClubDetailsRequest
@@ -496,6 +1149,12 @@ export interface components {
             point: components["schemas"]["MapPointSchema"];
         };
         /**
+         * ClubFilter
+         * @description The page's filters (the screens B4).
+         * @enum {string}
+         */
+        ClubFilter: "ALL" | "WAITING_FOR_YOU" | "SEAT_OPEN" | "CALLED_OFF";
+        /**
          * ClubGroupAdministratorSchema
          * @description The Administrator running a group, as the club's own tables name them.
          */
@@ -549,7 +1208,7 @@ export interface components {
             whatsapp_percent: number;
             /**
              * Games
-             * @description How many games **the group gave birth to** — never a game two of its members arranged elsewhere. No group picks a game yet, so `0`; the day one can, it counts them and means the same.
+             * @description How many games **were booked in the group** — every game its deck filled into a booking at a court — never a game two of its members arranged elsewhere.
              */
             games: number;
         };
@@ -594,6 +1253,30 @@ export interface components {
             requests: components["schemas"]["ClubJoinRequestSchema"][];
         };
         /**
+         * ClubMoneyResponse
+         * @description A month of your Raketa money — the Money page.
+         */
+        ClubMoneyResponse: {
+            /**
+             * Month
+             * @description The month read, `YYYY-MM`.
+             * @example 2026-10
+             */
+            month: string;
+            /**
+             * Read At
+             * Format: date-time
+             */
+            read_at: string;
+            /** @description The month's, at the top. */
+            totals: components["schemas"]["MoneyTotalsSchema"];
+            /**
+             * Bookings
+             * @description Every booking played — or to be played — in the month that took money, soonest first. A request nobody paid for is not money and is not listed.
+             */
+            bookings: components["schemas"]["MoneyBookingSchema"][];
+        };
+        /**
          * ClubSignUpRequest
          * @description A club signs up: its details, and the email and password its desk signs
          *     in with. **No second password field** — the website asks once.
@@ -633,6 +1316,98 @@ export interface components {
             password: string;
         };
         /**
+         * ClubStatus
+         * @description What a booking is to its club, right now (the mechanics §16.7).
+         * @enum {string}
+         */
+        ClubStatus: "WAITING_FOR_YOU" | "BOOKED" | "SEAT_OPEN" | "CALLED_OFF" | "PLAYED";
+        /**
+         * CourtChangeRequest
+         * @description A court's edit form: the three facts it was added with, and whether it
+         *     is offered — **all four on every save**, a full replacement.
+         */
+        CourtChangeRequest: {
+            /**
+             * Name
+             * @description What the club calls it — *Court 2*, *Kort centralny*. Trimmed, runs of whitespace collapsed, 1–40 characters: `court_name_invalid`. Unique among the club's courts, ignoring case: `409 court_name_taken`.
+             */
+            name: string;
+            /** @description One sport, from the club's own: `court_sport_not_offered` otherwise. */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Indoor
+             * @description Indoor, or outdoor. Shown on a player's card.
+             */
+            indoor: boolean;
+            /**
+             * Offered
+             * @description `false` switches it off: kept, with its hours, and selling nothing new. Allowed whatever is booked on it.
+             */
+            offered: boolean;
+        };
+        /**
+         * CourtRequest
+         * @description A court as the desk types it into *Add a court* or its edit form.
+         */
+        CourtRequest: {
+            /**
+             * Name
+             * @description What the club calls it — *Court 2*, *Kort centralny*. Trimmed, runs of whitespace collapsed, 1–40 characters: `court_name_invalid`. Unique among the club's courts, ignoring case: `409 court_name_taken`.
+             */
+            name: string;
+            /** @description One sport, from the club's own: `court_sport_not_offered` otherwise. */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Indoor
+             * @description Indoor, or outdoor. Shown on a player's card.
+             */
+            indoor: boolean;
+        };
+        /**
+         * CourtResponse
+         * @description A court as the desk's table shows it.
+         */
+        CourtResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            sport: components["schemas"]["Sport"];
+            /** Indoor */
+            indoor: boolean;
+            /**
+             * Offered
+             * @description Offered to Raketa, or switched off — kept, with its hours, and selling nothing.
+             */
+            offered: boolean;
+            /**
+             * Hours
+             * @description The hours of an ordinary week this court is offered to Raketa, Monday-first and in the grid's order. Empty until they are painted.
+             */
+            hours: components["schemas"]["WeeklyHourResource"][];
+        };
+        /** CourtToMoveToSchema */
+        CourtToMoveToSchema: {
+            /**
+             * Court Id
+             * Format: uuid
+             */
+            court_id: string;
+            /** Name */
+            name: string;
+        };
+        /** CourtsResponse */
+        CourtsResponse: {
+            /**
+             * Courts
+             * @description Every court the club has, in the order they were added.
+             */
+            courts: components["schemas"]["CourtResponse"][];
+        };
+        /**
          * ErrorResponse
          * @description The body of every error response, on both API surfaces.
          */
@@ -663,6 +1438,85 @@ export interface components {
             } | null;
         };
         /**
+         * ExceptionRequest
+         * @description *Add an exception*: what, when, and why.
+         *
+         *     The three forms the desk is offered are one shape: **a date** is a run of
+         *     one day, **a range** a run of several, and **hours on a date** a run of one
+         *     day with its hours — hours on a run of several close them on each day.
+         */
+        ExceptionRequest: {
+            /**
+             * Court Ids
+             * @description `null` closes **every** court, one added later included; a list closes those — at least one (`exception_courts_required`), each the club's (`404 court_not_found`).
+             */
+            court_ids: string[] | null;
+            /**
+             * First Day
+             * Format: date
+             * @description The first local day it closes.
+             */
+            first_day: string;
+            /**
+             * Last Day
+             * Format: date
+             * @description The last local day it closes, inclusive — on or after `first_day` (`exception_days_invalid`), and not already over (`exception_in_the_past`).
+             */
+            last_day: string;
+            /**
+             * From Hour
+             * @description With `until_hour`, the hours it closes on each day — 9 and 12 close 09:00–12:00. Both `null` close the whole day; one alone, or hours outside 07:00–23:00, is `exception_hours_invalid`.
+             */
+            from_hour: number | null;
+            /**
+             * Until Hour
+             * @description The hour it closes until, exclusive.
+             */
+            until_hour: number | null;
+            /**
+             * Reason
+             * @description For the club's own records, and the label its list shows. Trimmed, 1–80 characters: `exception_reason_invalid`. No player reads it.
+             */
+            reason: string;
+        };
+        /** ExceptionResponse */
+        ExceptionResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Court Ids
+             * @description `null` for every court; otherwise the courts it closes, in the club's order. A deleted court leaves the list, and an exception left naming none is gone.
+             */
+            court_ids: string[] | null;
+            /**
+             * First Day
+             * Format: date
+             */
+            first_day: string;
+            /**
+             * Last Day
+             * Format: date
+             */
+            last_day: string;
+            /** From Hour */
+            from_hour: number | null;
+            /** Until Hour */
+            until_hour: number | null;
+            /** Reason */
+            reason: string;
+        };
+        /** ExceptionsResponse */
+        ExceptionsResponse: {
+            /**
+             * Exceptions
+             * @description Every exception not over yet — its last day today or later, at the club — by its first day, then the hour it closes from (a whole day first), then the order they were added.
+             */
+            exceptions: components["schemas"]["ExceptionResponse"][];
+        };
+        /**
          * ForgotPasswordRequest
          * @description *Forgot password?*: the address to send a link and a code to.
          */
@@ -672,6 +1526,14 @@ export interface components {
              * Format: email
              */
             email: string;
+        };
+        /** FreeCourtsResponse */
+        FreeCourtsResponse: {
+            /**
+             * Courts
+             * @description Every other court of the game's sport you still have for Raketa at its hour, in your own order. Empty: there is none — **Cancel** with *repair* if the court cannot be played.
+             */
+            courts: components["schemas"]["CourtToMoveToSchema"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -747,6 +1609,64 @@ export interface components {
             longitude: number;
         };
         /**
+         * MoneyBookingSchema
+         * @description One booking's money, on your account — you are the seller.
+         */
+        MoneyBookingSchema: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Starts At
+             * Format: date-time
+             * @description The court hour's start — the row's date.
+             */
+            starts_at: string;
+            /** Court Name */
+            court_name: string;
+            sport: components["schemas"]["Sport"];
+            /** @description What the booking is now, as on the Bookings page. */
+            status: components["schemas"]["ClubStatus"];
+            /** Collected Grosze */
+            collected_grosze: number;
+            /** Refunded Grosze */
+            refunded_grosze: number;
+            /** Card Fees Grosze */
+            card_fees_grosze: number;
+            /** Net Grosze */
+            net_grosze: number;
+            /**
+             * Paid Out
+             * @description A payout carried its money to your bank. Until then it waits on your account: **you are paid after the game is played**, at the close of its day, since a refund before the start comes out of it.
+             */
+            paid_out: boolean;
+        };
+        /** MoneyTotalsSchema */
+        MoneyTotalsSchema: {
+            /**
+             * Collected Grosze
+             * @description Every share taken from the players.
+             */
+            collected_grosze: number;
+            /**
+             * Refunded Grosze
+             * @description Everything given back — automatically: you never refund anybody by hand.
+             */
+            refunded_grosze: number;
+            /**
+             * Card Fees Grosze
+             * @description The provider's card fee on every share taken, yours to pay as at your own terminal. A refund never returns it.
+             */
+            card_fees_grosze: number;
+            /**
+             * Net Grosze
+             * @description Yours: collected, less refunded, less the card fees. Below nought when games given back whole cost you their card fees.
+             */
+            net_grosze: number;
+        };
+        /**
          * MonogramSchema
          * @description The group's tile, **cut by the backend** so every client draws the same
          *     one (``docs/adr/0183`` §5).
@@ -762,6 +1682,15 @@ export interface components {
              * @description A colour **key** from 0 to 7, fixed for the group for ever — derived from its id, so a rename keeps it. Map it to your own palette; the backend never names a colour.
              */
             colour: number;
+        };
+        /** MoveRequest */
+        MoveRequest: {
+            /**
+             * Court Id
+             * Format: uuid
+             * @description One of the game's free courts.
+             */
+            court_id: string;
         };
         /**
          * NewPasswordRequest
@@ -782,10 +1711,257 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** OnboardingLinkResponse */
+        OnboardingLinkResponse: {
+            /**
+             * Url
+             * @description The provider's own hosted pages for the club's account — **single use and short-lived**, so the desk is sent there at once and a new one is asked for every time. The provider sends the desk back to the website's `/overview` when it leaves, and to `/payments/continue` — which asks for a fresh link and follows it — when this one is spent or stale.
+             */
+            url: string;
+        };
+        /** OtherClubsCourtsSchema */
+        OtherClubsCourtsSchema: {
+            /**
+             * Offered
+             * @description *Offer our groups other clubs' courts when ours are full*. Off by default.
+             */
+            offered: boolean;
+            /**
+             * Within Km
+             * @description How far such a court may be, in kilometres — kept while off.
+             */
+            within_km: number;
+        };
+        /**
+         * PaymentsStatus
+         * @description Where the club's payments account stands.
+         * @enum {string}
+         */
+        PaymentsStatus: "NOT_STARTED" | "NEEDS_DETAILS" | "READY";
+        /** PayoutSchema */
+        PayoutSchema: {
+            /**
+             * Payout Id
+             * @description The provider's own id for it.
+             */
+            payout_id: string;
+            /** Amount Grosze */
+            amount_grosze: number;
+            /**
+             * Arrives At
+             * Format: date-time
+             * @description When it reaches — or reached — your bank, as the provider says.
+             */
+            arrives_at: string;
+            /** @description `PENDING` and `IN_TRANSIT` — on its way. `PAID` — in your bank. `FAILED` — your bank refused it: the provider asks you for your details. `CANCELLED` — it never left. */
+            status: components["schemas"]["PayoutStatus"];
+        };
+        /**
+         * PayoutStatus
+         * @enum {string}
+         */
+        PayoutStatus: "PENDING" | "IN_TRANSIT" | "PAID" | "FAILED" | "CANCELLED";
+        /** PayoutsResponse */
+        PayoutsResponse: {
+            /**
+             * Payouts
+             * @description Your account's payouts, newest first. **You are paid after the game is played**: at the close of each day, what that day's games over left you goes to your bank in one payout.
+             */
+            payouts: components["schemas"]["PayoutSchema"][];
+        };
+        /** PriceBandRequest */
+        PriceBandRequest: {
+            /** @description Monday to Friday, or Saturday and Sunday. */
+            days: components["schemas"]["BandDays"];
+            /**
+             * From Hour
+             * @description With `until_hour`, the hours it prices — 17 and 22 price 17:00–22:00. Within 07:00–23:00, at least one hour: `price_band_hours_invalid`. Two bands of the same days may not overlap: `price_bands_overlap`.
+             */
+            from_hour: number;
+            /**
+             * Until Hour
+             * @description The hour it prices until, exclusive.
+             */
+            until_hour: number;
+            /**
+             * Price Grosze
+             * @description The court-hour's price in those hours, in grosze.
+             */
+            price_grosze: number;
+        };
+        /** PriceBandResponse */
+        PriceBandResponse: {
+            days: components["schemas"]["BandDays"];
+            /** From Hour */
+            from_hour: number;
+            /** Until Hour */
+            until_hour: number;
+            /** Price Grosze */
+            price_grosze: number;
+            /**
+             * Share Grosze
+             * @description What one player pays of it: the price divided by the seats.
+             */
+            share_grosze: number;
+        };
+        /**
+         * PricesRequest
+         * @description The whole price table, **a full replacement**: a sport left out is no
+         *     longer priced.
+         */
+        PricesRequest: {
+            /** Prices */
+            prices: components["schemas"]["SportPriceRequest"][];
+        };
+        /** PricesResponse */
+        PricesResponse: {
+            /**
+             * Prices
+             * @description Every sport the club offers, in the registry's order, priced or not. **New prices apply to new cards only**: a card already dealt keeps the price it was dealt with.
+             */
+            prices: components["schemas"]["SportPriceResponse"][];
+        };
+        /**
+         * RaketaHoursRequest
+         * @description *Weekly hours for Raketa*, saved on one court or several at once —
+         *     which is what *Copy to other courts* and *All courts of a sport* send.
+         */
+        RaketaHoursRequest: {
+            /**
+             * Court Ids
+             * @description Each court to give this week. One the club does not have refuses the whole save with `404 court_not_found`. A court named twice is named once.
+             */
+            court_ids: string[];
+            /**
+             * Hours
+             * @description The week, as the player's grid spells it. **Empty is allowed**: a court offering nothing. A cell sent twice is one cell.
+             */
+            hours: components["schemas"]["WeeklyHourResource"][];
+        };
+        /**
+         * RaketaSettingsRequest
+         * @description The settings form — every field on every save, defaults included, since
+         *     the first save is the club **confirming** them. Each number is bounded by
+         *     the domain: `setting_out_of_range` names the field and carries `least` and
+         *     `most`.
+         */
+        RaketaSettingsRequest: {
+            /**
+             * Release Lead Days
+             * @description Only Raketa: days before a game unsold hours return to the club. 1–13, default 3.
+             */
+            release_lead_days: number;
+            /**
+             * Cut Off Hours
+             * @description Hours before a game players may leave free, and a game still short is called off. 0–72, default 24.
+             */
+            cut_off_hours: number;
+            /**
+             * Minimum Notice Hours
+             * @description Instant and On request: the latest a Raketa game can book, in hours before it. 1–48, default 2.
+             */
+            minimum_notice_hours: number;
+            /**
+             * Time To Confirm Minutes
+             * @description On request: minutes the club has to answer a full game. 5–60, default 30 — never more than the shortest minimum notice.
+             */
+            time_to_confirm_minutes: number;
+            /** @description The distance is 1–50 km, default 10. */
+            other_clubs_courts: components["schemas"]["OtherClubsCourtsSchema"];
+            /**
+             * Check In
+             * @description *We check players in*. Off by default.
+             */
+            check_in: boolean;
+            /**
+             * Paused
+             * @description *Pause Raketa bookings*: no new cards on the club's courts; booked games are played as booked, and cards already dealt keep their court until their book-by.
+             */
+            paused: boolean;
+        };
+        /**
+         * RaketaSettingsResponse
+         * @description How the club works with Raketa, and every setting — **at its default
+         *     until the club confirms it**, so the form can show what it would save.
+         */
+        RaketaSettingsResponse: {
+            /** @description `null` until the club chooses. */
+            way_of_working: components["schemas"]["WayOfWorking"] | null;
+            /** Release Lead Days */
+            release_lead_days: number;
+            /** Cut Off Hours */
+            cut_off_hours: number;
+            /** Minimum Notice Hours */
+            minimum_notice_hours: number;
+            /** Time To Confirm Minutes */
+            time_to_confirm_minutes: number;
+            other_clubs_courts: components["schemas"]["OtherClubsCourtsSchema"];
+            /** Check In */
+            check_in: boolean;
+            /** Paused */
+            paused: boolean;
+        };
         /** RefreshRequest */
         RefreshRequest: {
             /** Refresh Token */
             refresh_token: string;
+        };
+        /** RefusalRequest */
+        RefusalRequest: {
+            /**
+             * Reason
+             * @description Why, for your own records — **never shown to the players**, who read *Called off · refused*. Blank is no reason.
+             */
+            reason?: string | null;
+        };
+        /**
+         * SearchMode
+         * @description What kind of evening this search is for. **Two values, never three.**
+         *
+         *     ``PlayIntent`` is the *candidate's* declaration and has three values;
+         *     ``SearchMode`` is the *searcher's* setting — which tab they are on, right
+         *     now — and has two. ``app/modules/player_profile/domain/play_intent.py`` says
+         *     where this type belongs when it arrives: *"it belongs to the matcher and not
+         *     to this module"*. Here it is.
+         *
+         *     **There is never a ``NO_PREFERENCE`` weight vector.** A candidate who
+         *     declared ``NO_PREFERENCE`` is indifferent about the kind of evening, so their
+         *     reverse fit runs under the *searcher's* mode: ``NO_PREFERENCE`` never selects
+         *     a weight vector, it inherits one (``ranking-weights.md`` §9). The arities
+         *     differ on purpose, so the likeliest bug in the matcher is a type error rather
+         *     than a paragraph in a document.
+         * @enum {string}
+         */
+        SearchMode: "COMPETITIVE" | "FOR_FUN";
+        /**
+         * SetupResponse
+         * @description The Overview's checklist, shown until the club is live.
+         */
+        SetupResponse: {
+            /**
+             * Steps
+             * @description The five, in the Overview's order: `CONNECT_PAYMENTS` (the provider says the account is ready), `WAY_OF_WORKING`, `COURTS` (an offered court), `HOURS_AND_PRICES` (an offered court with hours, and every such court's sport priced) and `SETTINGS` (confirmed).
+             */
+            steps: components["schemas"]["SetupStepSchema"][];
+            /** @description Where the club's payments account stands, for the first step's row: `NOT_STARTED` — *Connect with Stripe* — `NEEDS_DETAILS` — *Stripe needs more details*, and *Continue with Stripe* — or `READY`. **Ready can be lost**: the provider may want more later, and the club is not live again until it has it. */
+            payments: components["schemas"]["PaymentsStatus"];
+            /**
+             * Live
+             * @description Every step is done: the club's courts can reach players' decks. A paused club is still live.
+             */
+            live: boolean;
+        };
+        /**
+         * SetupStep
+         * @description The five steps, in the order the Overview lists them.
+         * @enum {string}
+         */
+        SetupStep: "CONNECT_PAYMENTS" | "WAY_OF_WORKING" | "COURTS" | "HOURS_AND_PRICES" | "SETTINGS";
+        /** SetupStepSchema */
+        SetupStepSchema: {
+            step: components["schemas"]["SetupStep"];
+            /** @description `DONE`, `TO_DO` or `LOCKED` — waiting on the step it needs: hours and prices on a court, the settings on a way of working. *Next* is the first `TO_DO`. */
+            state: components["schemas"]["StepState"];
         };
         /**
          * Sport
@@ -805,6 +1981,50 @@ export interface components {
              */
             level: number;
         };
+        /** SportPriceRequest */
+        SportPriceRequest: {
+            /** @description A sport the club offers (`price_sport_not_offered`), once per save (`price_sport_repeated`). */
+            sport: components["schemas"]["Sport"];
+            /**
+             * Price Grosze
+             * @description The standard court-hour, in grosze — 12000 is 120 zł. Between `least` and `most` (`price_out_of_range`, which carries both), and splitting into whole grosze among the sport's seats (`price_does_not_split`, which carries `seats`) — so is every band's.
+             */
+            price_grosze: number;
+            /**
+             * Bands
+             * @description Optional hours priced differently. Empty is none.
+             */
+            bands: components["schemas"]["PriceBandRequest"][];
+        };
+        /** SportPriceResponse */
+        SportPriceResponse: {
+            sport: components["schemas"]["Sport"];
+            /**
+             * Seats
+             * @description How many players a game of this sport seats.
+             */
+            seats: number;
+            /**
+             * Price Grosze
+             * @description The standard court-hour in grosze, or `null` — not priced yet.
+             */
+            price_grosze: number | null;
+            /**
+             * Share Grosze
+             * @description What one player pays of the standard price — the price divided by the seats, exact to the grosz. `null` beside a `null` price.
+             */
+            share_grosze: number | null;
+            /**
+             * Bands
+             * @description Weekdays first, then by the hour each opens.
+             */
+            bands: components["schemas"]["PriceBandResponse"][];
+        };
+        /**
+         * StepState
+         * @enum {string}
+         */
+        StepState: "DONE" | "TO_DO" | "LOCKED";
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -831,6 +2051,130 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * WaitingBookingSchema
+         * @description A full game asking for a court — **Waiting for you**.
+         */
+        WaitingBookingSchema: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            sport: components["schemas"]["Sport"];
+            /** @description Competitive, or for fun (a friendly). */
+            kind: components["schemas"]["SearchMode"];
+            /**
+             * Starts At
+             * Format: date-time
+             * @description The court hour's start; games are 1 h.
+             */
+            starts_at: string;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Court Name
+             * @description The court reserved for the game while you decide — given to the players with your yes.
+             */
+            court_name: string;
+            /**
+             * Players
+             * @description Everybody on the game. Nobody has paid yet.
+             */
+            players: components["schemas"]["WaitingPlayerSchema"][];
+            /**
+             * Price Grosze
+             * @description The court's price for the hour.
+             */
+            price_grosze: number;
+            /**
+             * Share Grosze
+             * @description Each player's share of it.
+             */
+            share_grosze: number;
+            /**
+             * Answer By
+             * Format: date-time
+             * @description When your time to confirm runs out — the countdown. Past it the request is called off as unanswered: nobody pays and the hour is yours to sell again.
+             */
+            answer_by: string;
+        };
+        /**
+         * WaitingBookingsResponse
+         * @description Everything waiting for the club's answer — the Overview's *waiting for
+         *     your answer*, the Bookings page's *Waiting for you*, and its badge.
+         */
+        WaitingBookingsResponse: {
+            /**
+             * Read At
+             * Format: date-time
+             * @description The instant the list was read at — what each countdown runs from.
+             */
+            read_at: string;
+            /**
+             * Bookings
+             * @description The one due first, first. Empty: *Nothing is waiting for you.*
+             */
+            bookings: components["schemas"]["WaitingBookingSchema"][];
+        };
+        /** WaitingPlayerSchema */
+        WaitingPlayerSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description Their Name, whole. `null` for an account that can no longer be named.
+             */
+            name: string | null;
+        };
+        /**
+         * WayOfWorking
+         * @description How a club sells through Raketa (the mechanics §16.3).
+         * @enum {string}
+         */
+        WayOfWorking: "ONLY_RAKETA" | "INSTANT" | "ON_REQUEST";
+        /** WayOfWorkingRequest */
+        WayOfWorkingRequest: {
+            /** @description `ONLY_RAKETA` — Raketa sells the club's Raketa hours alone, until the release lead; `INSTANT` — both sell and a Raketa booking is final; `ON_REQUEST` — the club confirms each full game within its time to confirm, and nobody pays until it does. */
+            way_of_working: components["schemas"]["WayOfWorking"];
+        };
+        /**
+         * WeeklyHourResource
+         * @description One ticked hour of the week — a day, and the hour its cell starts at.
+         *
+         *     Two named fields rather than the single joined code the event stream stores.
+         *     The stream's code is a *storage* encoding chosen so a replay folds strings;
+         *     this is a contract a client renders a grid from, and a client that had to
+         *     split ``"3:19"`` would be parsing our persistence format.
+         *
+         *     **Every cell, and there is no exception.** The rule was twice read as
+         *     covering only the cells a player *chose* — the one a times rung offers
+         *     (#283), and the week a raised ``KEEP_THESE_TIMES`` quotes back (#286) — on
+         *     the argument that a payload handed back is not a resource. Both crossed as
+         *     codes, and in both cases a client ended up splitting one. What decides this
+         *     is not whose value it is but **what is done with it**: a cell that gets
+         *     drawn on the seven-by-sixteen grid crosses in these two fields, and the engine
+         *     holding it as a code is a fact about the engine. This side of the boundary
+         *     owns the encoding, so this side is where it is read.
+         */
+        WeeklyHourResource: {
+            /**
+             * Day
+             * @description ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
+             */
+            day: number;
+            /**
+             * Hour
+             * @description The hour the cell starts at, wall clock — 19 is 19:00 to 20:00. The week runs 07:00 to 23:00, so the first cell is 7 and the last is 22.
+             */
+            hour: number;
         };
     };
     responses: never;
@@ -1186,7 +2530,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `club_sport_declared_by_group` — the save unticks a sport an official group at the club declares; `details.field` is `sports`, `details.sport` the sport and `details.group` the group's name (the first by name, where several play it). Nothing was recorded. The group's administrator changes its sports first, or the sport stays ticked. */
+            /** @description `club_sport_has_courts` — the save unticks a sport one of the club's courts plays, switched off or not; `details.field` is `sports`, `details.sport` the sport and `details.court` the court's name (the first in the club's order). Delete the court or give it another sport first. Asked before the groups are. `club_sport_declared_by_group` — the save unticks a sport an official group at the club declares; `details.field` is `sports`, `details.sport` the sport and `details.group` the group's name (the first by name, where several play it). The group's administrator changes its sports first, or the sport stays ticked. Nothing was recorded either way. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1202,6 +2546,523 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_courts_api_v1_club_courts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourtsResponse"];
+                };
+            };
+        };
+    };
+    add_court_api_v1_club_courts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CourtRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourtResponse"];
+                };
+            };
+            /** @description A field the desk has to correct, named by `details.field`: `court_name_invalid` or `court_sport_not_offered`. Nothing was recorded. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_court_api_v1_club_courts__court_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                court_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CourtChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourtResponse"];
+                };
+            };
+            /** @description `court_name_invalid` or `court_sport_not_offered`, under `details.field`. Nothing was recorded. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `court_not_found` — no court of this club has that id; another club's is the same answer. Nothing was recorded. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `court_name_taken` — another court at the club has the name, ignoring case; or `court_has_bookings` — a new sport for a court with a booking ahead of it. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_court_api_v1_club_courts__court_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                court_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `court_not_found` — no court of this club has that id; another club's is the same answer. Nothing was recorded. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `court_has_bookings` — a booking is ahead of this court, one in progress included. Switch it off instead. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_raketa_hours_api_v1_club_raketa_hours_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RaketaHoursRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourtsResponse"];
+                };
+            };
+            /** @description `court_not_found` — no court of this club has that id; another club's is the same answer. Nothing was recorded. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_exceptions_api_v1_club_exceptions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExceptionsResponse"];
+                };
+            };
+        };
+    };
+    add_exception_api_v1_club_exceptions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExceptionResponse"];
+                };
+            };
+            /** @description A field the desk has to correct, named by `details.field`: `exception_reason_invalid` (`reason`), `exception_hours_invalid` (`hours`), `exception_days_invalid` or `exception_in_the_past` (`days`), `exception_courts_required` (`courts`). Nothing was recorded. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `court_not_found` — no court of this club has that id; another club's is the same answer. Nothing was recorded. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `court_booked_then` — a booking holds an hour it would close. `details` names the first: `court_id`, `booking_id` and `starts_at`. Cancel the booking first. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_exception_api_v1_club_exceptions__exception_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exception_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `exception_not_found` — no exception of this club has that id; another club's is the same answer. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_prices_api_v1_club_prices_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricesResponse"];
+                };
+            };
+        };
+    };
+    set_prices_api_v1_club_prices_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PricesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PricesResponse"];
+                };
+            };
+            /** @description A row the desk has to correct — `details.field` is `prices` and `details.sport` names the row: `price_sport_not_offered`, `price_sport_repeated`, `price_out_of_range` (with `least` and `most`), `price_does_not_split` (with `seats`), `price_band_hours_invalid` or `price_bands_overlap`. Rows are read in the order sent. Nothing was recorded. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    choose_way_of_working_api_v1_club_way_of_working_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WayOfWorkingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RaketaSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_raketa_settings_api_v1_club_raketa_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RaketaSettingsResponse"];
+                };
+            };
+        };
+    };
+    save_raketa_settings_api_v1_club_raketa_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RaketaSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RaketaSettingsResponse"];
+                };
+            };
+            /** @description `setting_out_of_range` — `details.field` names the setting and `least` and `most` its range. Nothing was recorded. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `way_of_working_not_chosen` — which settings matter depends on the way, so it is chosen first. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_setup_api_v1_club_setup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupResponse"];
                 };
             };
         };
@@ -1591,6 +3452,482 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    onboarding_link_api_v1_club_payments_onboarding_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingLinkResponse"];
+                };
+            };
+            /** @description `payments_already_connected` — the provider says the account is ready: the checklist's first step is done, and there is nothing left to fill in. No link was made. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `payments_unavailable` — the provider could not be reached. Try again; an account it had already opened is kept, and the next link continues it. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    payouts_api_v1_club_payouts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `payments_unavailable` — the provider could not be reached. Try again. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    waiting_api_v1_club_bookings_waiting_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaitingBookingsResponse"];
+                };
+            };
+        };
+    };
+    accept_api_v1_club_bookings__booking_id__acceptance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AcceptanceResponse"];
+                };
+            };
+            /** @description `booking_not_found` — no such booking at this club. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `request_not_waiting` — the game is not waiting for your answer: you already answered, a player left and it is looking for a player again, or it was called off as unanswered. `request_timed_out` — your time to confirm ran out: it is called off as unanswered. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `payments_unavailable` — the payment provider could not be reached to charge the players. Nothing was recorded; retry. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    refuse_api_v1_club_bookings__booking_id__refusal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RefusalRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `booking_not_found` — no such booking at this club. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `request_not_waiting` — the game is not waiting for your answer: you already answered, a player left and it is looking for a player again, or it was called off as unanswered. `request_timed_out` — your time to confirm ran out: it is called off as unanswered. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bookings_on_a_day_api_v1_club_bookings_get: {
+        parameters: {
+            query?: {
+                /** @description The day — today when left out. */
+                date?: string | null;
+                filter?: components["schemas"]["ClubFilter"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClubBookingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    free_courts_api_v1_club_bookings__booking_id__free_courts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FreeCourtsResponse"];
+                };
+            };
+            /** @description `booking_not_found` — no such booking at this club. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `booking_not_booked` — it is waiting for your answer: accept or refuse it. `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    move_api_v1_club_bookings__booking_id__move_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CourtToMoveToSchema"];
+                };
+            };
+            /** @description `booking_not_found` — no such booking at this club. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `booking_not_booked` — it is waiting for your answer: accept or refuse it. `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. `court_not_free` — that court is not a free court of the game's sport at its hour. `court_just_taken` — another game took it a moment ago; read the free courts again. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_club_bookings__booking_id__cancellation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `booking_not_found` — no such booking at this club. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `booking_not_booked` — it is waiting for your answer: accept or refuse it. `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_in_api_v1_club_check_ins_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckInRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckInResponse"];
+                };
+            };
+            /** @description `check_in_code_unknown` — the code opens no seat: mistyped, or a seat its player left. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `check_in_is_off` — you have not switched on *We check players in*. `check_in_code_for_another_day` — a seat here on another day (`details.starts_at`). `check_in_code_for_another_club` — a seat at another club. `already_checked_in` — scanned already (`details.checked_in_at`: *Checked in at 18:52*). `booking_is_called_off` — the game is off. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    money_by_month_api_v1_club_money_get: {
+        parameters: {
+            query?: {
+                /** @description `YYYY-MM` — this month when left out. */
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClubMoneyResponse"];
                 };
             };
             /** @description Validation Error */

@@ -26,14 +26,14 @@ import {
 export interface DetailsFormState extends FormState<DetailsField> {
   /** The details as the backend recorded them, after a save that landed. */
   readonly saved: Club | null;
-  /** The group that plays a sport the save unticked, when that is why it was refused. */
+  /** The court or the group that plays a sport the save unticked, when that is why it was refused. */
   readonly sportInUse: SportInUse | null;
 }
 
 /**
  * **Save Club details**: all five, as a full replacement. The frame re-renders afterwards, so the
- * top bar says the new name and place at once. Unticking a sport an official group plays is
- * refused under the sports, naming the group.
+ * top bar says the new name and place at once. Unticking a sport one of the club's courts or an
+ * official group plays is refused under the sports, naming the court or the group.
  */
 export async function saveClubDetails(
   _previous: DetailsFormState,

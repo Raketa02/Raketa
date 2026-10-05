@@ -248,8 +248,8 @@ class SocialTagSelection:
         is not the app.
 
         Duplicates are **refused** rather than dropped, which is the opposite of
-        what an availability grid does with a repeated slot — deliberately. A
-        grid is a set of cells and a cell ticked twice is ticked; a selection is
+        what a week of hours does with a repeated hour — deliberately. A
+        week is a set of hours and an hour ticked twice is ticked; a selection is
         counted against a floor and a ceiling, so silently collapsing three ids
         into two would refuse a player for a mistake their client made and tell
         them they picked too few.

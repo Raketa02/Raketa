@@ -18,7 +18,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import {
   GATE_USER,
   launchSignedIn,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   resetLocation,
   SPORTS_SERVED,
   stubGate,
@@ -187,7 +187,7 @@ const PROFILE: Wire['PlayerProfileResponse'] = {
   player_id: GATE_USER.id,
   social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
   photo_ids: [],
-  availability: [{ day: 3, part: 'EVENING' }],
+  weekly_hours: [{ day: 3, hour: 19 }],
   location: { latitude: 50.06, longitude: 19.94 },
   search_radius_km: 10,
   proposals_opt_in: {
@@ -399,7 +399,7 @@ describe('Start playing, from start to end', () => {
     await waitFor(() => expect(screen).toHavePathname('/photos'));
     fireEvent.press(screen.getByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/availability'));
-    fireEvent.press(screen.getByLabelText('Wednesday evening'));
+    fireEvent.press(screen.getByLabelText('Wednesday 19:00'));
     fireEvent.press(screen.getByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/location'));
     fireEvent.press(screen.getByLabelText('Use my location'));
@@ -416,7 +416,7 @@ describe('Start playing, from start to end', () => {
     fireEvent.press(screen.getByLabelText('Start playing'));
 
     // In the app, as a player.
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(screen).toHavePathname('/');
     expect(held.state).toEqual({
       attested: true,

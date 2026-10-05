@@ -24,7 +24,6 @@ from app.modules.matchmaking.infrastructure.candidate_index_tail import (
 from app.modules.matchmaking.infrastructure.snapshot_horizon import NoSnapshotHorizon
 from app.modules.auth.domain.events import RefreshTokenIssued, RefreshTokenRotated
 from app.modules.player_profile.domain.events import (
-    AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
     IntroChanged,
@@ -35,6 +34,7 @@ from app.modules.player_profile.domain.events import (
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+    WeeklyHoursSet,
 )
 from app.modules.rating.domain.events import RatingInitialised
 from app.shared.domain import DomainEvent
@@ -121,7 +121,7 @@ def profile_created(player_id: UUID, *, at: datetime = START) -> PlayerProfileCr
         player_id=player_id,
         social_tags=("competitive_edge",),
         photo_ids=("a-photo",),
-        availability=("1:MORNING",),
+        weekly_hours=("1:10",),
         latitude=52.23,
         longitude=21.01,
         search_radius_km=12,
@@ -176,7 +176,7 @@ _SOMEBODY = UUID("11111111-1111-1111-1111-111111111111")
 ONE_OF_EACH_PROJECTED_CONTRACT: tuple[DomainEvent, ...] = (
     profile_created(_SOMEBODY),
     SocialTagsChanged(_SOMEBODY, ("social_first",), START),
-    AvailabilityChanged(_SOMEBODY, ("3:EVENING",), START),
+    WeeklyHoursSet(_SOMEBODY, ("3:19",), START),
     LocationChanged(_SOMEBODY, 52.23, 21.01, START),
     SearchRadiusChanged(_SOMEBODY, 25, START),
     GenderChanged(_SOMEBODY, "NON_BINARY", START),

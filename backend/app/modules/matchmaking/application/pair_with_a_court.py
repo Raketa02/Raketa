@@ -353,7 +353,7 @@ def _the_court(context: SearchContext, court_ids: tuple[UUID, ...]) -> Generatio
 
     centre = context.searcher.area
     viewer = viewer_spot_of(context)
-    searcher_slots = context.searcher.grid.slots
+    searcher_hours = context.searcher.grid.hours
     today = iso_weekday(context.now.isoweekday())
     wanted = {str(player_id) for player_id in court_ids}
     admitted = tuple(
@@ -361,7 +361,7 @@ def _the_court(context: SearchContext, court_ids: tuple[UUID, ...]) -> Generatio
             row,
             distance_km=measure_distance(centre, area_of(row)),
             viewer=viewer,
-            searcher_slots=searcher_slots,
+            searcher_hours=searcher_hours,
             today=today,
         )
         for row in context.snapshot.rows

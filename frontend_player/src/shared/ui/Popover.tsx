@@ -37,7 +37,7 @@
  * to the popover's heading on open and back to the mark on close.
  */
 
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -86,18 +86,43 @@ export const InfoMark = forwardRef<View, InfoMarkProps>(function InfoMark(
   );
 });
 
-export interface PopoverProps {
+interface PopoverBase {
   readonly visible: boolean;
   /** The mark this belongs to: measured for position, focused again on close. */
   readonly trigger: FocusTarget | undefined;
   readonly title: string;
-  readonly body: string;
+  /**
+   * **The content's width rather than 7.6's 250** — a legend whose rows each carry a mark beside a
+   * sentence needs the room; the card is still clamped inside the gutters and anchored to its mark.
+   */
+  readonly wide?: boolean;
   /** What closes — "Close what the Level means", never "Close". */
   readonly closeLabel: string;
   readonly onClose: () => void;
 }
 
-export function Popover({ visible, trigger, title, body, closeLabel, onClose }: PopoverProps) {
+/**
+ * **One sentence, or a legend in its place — one of the two, never neither.** The legend is *Post a
+ * game*'s *How to read the map*: rows of a mark and its meaning
+ * ([#558](https://github.com/Raketa02/Raketa/issues/558), mock 20; Part 16 2026-10-02), drawn under
+ * the head where the sentence would be.
+ */
+export type PopoverProps = PopoverBase &
+  (
+    | { readonly body: string; readonly children?: never }
+    | { readonly body?: never; readonly children: ReactNode }
+  );
+
+export function Popover({
+  visible,
+  trigger,
+  title,
+  body,
+  children,
+  wide = false,
+  closeLabel,
+  onClose,
+}: PopoverProps) {
   const reducedMotion = useReducedMotion();
   const { width: screenWidth } = useWindowDimensions();
   const heading = useRef<View | null>(null);
@@ -117,7 +142,7 @@ export function Popover({ visible, trigger, title, body, closeLabel, onClose }: 
     moveAccessibilityFocus(heading);
   }, [visible, trigger]);
 
-  const width = theme.size.popoverWidth;
+  const width = wide ? screenWidth - 2 * theme.size.gutter : theme.size.popoverWidth;
   const gutter = theme.size.gutter;
   const arrow = theme.size.popoverArrow;
 
@@ -168,7 +193,7 @@ export function Popover({ visible, trigger, title, body, closeLabel, onClose }: 
             <CloseControl onPress={onClose} accessibilityLabel={closeLabel} />
           </View>
 
-          <Text style={s.body}>{body}</Text>
+          {children ?? <Text style={s.body}>{body}</Text>}
         </View>
       </View>
     </ModalStage>

@@ -21,6 +21,7 @@ from app.modules.clubs.application.commands import (
     ClubDetailsInput,
 )
 from app.modules.clubs.domain.club import Club
+from app.modules.clubs.domain.club_courts import ClubCourts
 from app.modules.clubs.domain.errors import ClubSportDeclaredByGroup
 from app.modules.clubs.domain.ports import DeclaringGroup
 from app.modules.clubs.domain.untick import refuse_an_untick, unticked
@@ -115,6 +116,16 @@ class _Groups:
         return self._declaring
 
 
+class _NoCourts:
+    """A club with no courts: nothing it plays holds a sport ticked."""
+
+    async def load(self, club_id: UUID) -> ClubCourts:
+        return ClubCourts.unwritten(club_id)
+
+    async def save(self, club: ClubCourts) -> None:
+        raise AssertionError("a details edit writes no court")
+
+
 class _UnitOfWork:
     async def commit(self) -> None:
         return None
@@ -155,7 +166,11 @@ def saving(club: Club, *sports: Sport) -> ChangeClubDetailsCommand:
 
 def change(clubs: _Clubs, groups: _Groups) -> ChangeClubDetails:
     return ChangeClubDetails(
-        clubs=clubs, groups=groups, uow=_UnitOfWork(), clock=MovableClock(NOW)
+        clubs=clubs,
+        courts=_NoCourts(),
+        groups=groups,
+        uow=_UnitOfWork(),
+        clock=MovableClock(NOW),
     )
 
 

@@ -44,9 +44,9 @@ from app.modules.matchmaking.domain.relaxation import (
 )
 from app.modules.matchmaking.domain.search_context import SearchContext
 from app.modules.matchmaking.domain.shortlist import generate, score_all
-from app.modules.player_profile.domain.availability import (
-    AvailabilityGrid,
-    AvailabilitySlot,
+from app.modules.player_profile.domain.weekly_hours import (
+    WeeklyHour,
+    WeeklyHours,
     Window,
     window_of,
 )
@@ -70,7 +70,7 @@ class Widened:
     above_floor: tuple[str, ...]
     window: Window
     radius_km: int | None = None
-    slot: AvailabilitySlot | None = None
+    slot: WeeklyHour | None = None
 
     @property
     def offer(self) -> RungOffer:
@@ -231,7 +231,7 @@ def _times_rung(
 
 def _additions_worth_testing(
     context: SearchContext,
-) -> tuple[AvailabilitySlot, ...]:
+) -> tuple[WeeklyHour, ...]:
     """The cells a candidate holds and the searcher does not, in reading order.
 
     A cell nobody in range has ticked cannot admit anybody: the availability term
@@ -244,16 +244,16 @@ def _additions_worth_testing(
     somebody a gate excluded.
     """
 
-    mine = set(context.searcher.grid.slots)
+    mine = set(context.searcher.grid.hours)
     theirs = {
         slot
         for row in generate(context).admitted
-        for slot in (AvailabilitySlot.from_code(code) for code in row.row.availability)
+        for slot in (WeeklyHour.from_code(code) for code in row.row.availability)
     }
     return tuple(sorted(theirs - mine, key=lambda slot: slot.in_reading_order))
 
 
-def _grid_plus(grid: AvailabilityGrid, slot: AvailabilitySlot) -> AvailabilityGrid:
+def _grid_plus(grid: WeeklyHours, slot: WeeklyHour) -> WeeklyHours:
     """The searcher's own grid with one more cell ticked. **For one search.**
 
     Built through ``of`` so the addition lands in the grid's canonical order,
@@ -262,10 +262,10 @@ def _grid_plus(grid: AvailabilityGrid, slot: AvailabilitySlot) -> AvailabilityGr
     new search citing the one that offered it, never a silent profile edit.
     """
 
-    return AvailabilityGrid.of((*grid.slots, slot))
+    return WeeklyHours.of((*grid.hours, slot))
 
 
-def _with_grid(context: SearchContext, grid: AvailabilityGrid) -> SearchContext:
+def _with_grid(context: SearchContext, grid: WeeklyHours) -> SearchContext:
     return replace(context, searcher=replace(context.searcher, grid=grid))
 
 

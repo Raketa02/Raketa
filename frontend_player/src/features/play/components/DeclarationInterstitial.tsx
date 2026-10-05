@@ -40,6 +40,14 @@
  * keeps for the events that carry it and this component does not. The argument above is kept as
  * the record of why the seam was cut where it was.
  *
+ * **A group's Games tab is the second caller again** ([#553](https://github.com/Raketa02/Raketa/issues/553),
+ * the screens A2.1): a group deals a player only the kind of game their intent wants, and nothing
+ * while they have declared none, so the one-time question replaces the deck until it is answered.
+ * It reports `DECK` — the contract's word for a deck, which is what the tab is — and says its own
+ * one line about who reads the answer (`GROUP_DECK_DECLARATION_BODY`), because *a yes on Players*
+ * is not the reader there. `onDeclared` is the caller's, so the deck is read again for the
+ * segments the answer now shows; the interstitial knows nothing about what it stands in front of.
+ *
  * **It is not the mode toggle, and the two must never be collapsed.** This writes a
  * `PlayIntent` with three values; the toggle chooses a `SearchMode` with two. That arity gap
  * is ADR-0094's central move, and `domain/playMode` holds the whole argument.
@@ -86,6 +94,7 @@ import { PLAY_INTENTS } from '../domain/vocabulary';
 import {
   DECLARATION_BODY,
   DECLARATION_EYEBROW,
+  GROUP_DECK_DECLARATION_BODY,
   declarationOptionLabel,
   declarationTitle,
   intentGloss,
@@ -107,7 +116,13 @@ import { playErrorMessage } from './playErrorMessage';
  * wire union, so a member the contract drops or renames makes this type unassignable *there*
  * — the same red build, on the same `pnpm typecheck`, without transport reaching `components/`.
  */
-export type PlayDeclarationSurface = 'SEARCH_SWITCH';
+export type PlayDeclarationSurface = 'SEARCH_SWITCH' | 'DECK';
+
+/** Who reads the answer, said on each surface — see the module note. */
+const BODY: Readonly<Record<PlayDeclarationSurface, string>> = {
+  SEARCH_SWITCH: DECLARATION_BODY,
+  DECK: GROUP_DECK_DECLARATION_BODY,
+};
 
 export interface DeclarationInterstitialProps {
   readonly sport: Sport;
@@ -115,12 +130,15 @@ export interface DeclarationInterstitialProps {
   readonly sportName: string;
   /** Which Play screen this is. See the module note — it is the caller's to say. */
   readonly declaredOn: PlayDeclarationSurface;
+  /** The answer has landed — for a caller whose own read the answer changes. */
+  readonly onDeclared?: () => void;
 }
 
 export function DeclarationInterstitial({
   sport,
   sportName,
   declaredOn,
+  onDeclared,
 }: DeclarationInterstitialProps) {
   const declare = useDeclarePlayIntent();
   // Which answer is being written, and therefore which one is *busy* rather than merely shut.
@@ -139,7 +157,7 @@ export function DeclarationInterstitial({
       <DarkCard>
         <Text style={s.eyebrow}>{DECLARATION_EYEBROW}</Text>
         <Text style={s.title}>{declarationTitle(sportName)}</Text>
-        <Text style={s.body}>{DECLARATION_BODY}</Text>
+        <Text style={s.body}>{BODY[declaredOn]}</Text>
 
         <View style={s.answers}>
           {PLAY_INTENTS.map((intent) => (
@@ -154,7 +172,12 @@ export function DeclarationInterstitial({
               variant="onDark"
               busy={inFlight === intent}
               disabled={declare.isPending && inFlight !== intent}
-              onPress={() => declare.mutate({ sport, intent, surface: declaredOn })}
+              onPress={() =>
+                declare.mutate(
+                  { sport, intent, surface: declaredOn },
+                  { onSuccess: () => onDeclared?.() },
+                )
+              }
             />
           ))}
         </View>

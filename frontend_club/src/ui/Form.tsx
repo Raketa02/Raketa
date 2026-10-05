@@ -15,10 +15,13 @@ import { startTransition, type ReactNode } from 'react';
 export function Form({
   action,
   className,
+  onSent,
   children,
 }: {
   action: (form: FormData) => void;
   className?: string;
+  /** Called once a submission is on its way: a question in a dialog closes. */
+  onSent?: () => void;
   children: ReactNode;
 }) {
   return (
@@ -31,6 +34,7 @@ export function Form({
         const submitter = (event.nativeEvent as SubmitEvent).submitter;
         const form = new FormData(event.currentTarget, submitter);
         startTransition(() => action(form));
+        onSent?.();
       }}
     >
       {children}

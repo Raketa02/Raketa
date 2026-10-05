@@ -5,13 +5,21 @@
  */
 
 export const SITE_COPY = {
-  description: "A club's desk: its details, its administrators and its groups.",
+  description:
+    "A club's desk: its courts and prices on Raketa, its bookings and its money, its settings, its administrators and its groups.",
   frame: {
     /** The top bar's pages, as a screen reader names the list. */
     pagesLabel: 'Club website',
-    /** What the club's line in the top bar opens. */
-    clubTitle: 'Club details',
-    pages: { overview: 'Overview', groups: 'Groups', administrators: 'Administrators' },
+    pages: {
+      overview: 'Overview',
+      bookings: 'Bookings',
+      courts: 'Courts & prices',
+      money: 'Money',
+      groups: 'Groups',
+      administrators: 'Administrators',
+    },
+    /** The pages the club's name opens. */
+    clubPages: { details: 'Details', raketaSettings: 'Raketa settings' },
   },
   error: {
     title: 'Something went wrong',

@@ -7,7 +7,7 @@
  * prompt that has none, rather than a string somebody forgot.
  */
 
-import { DAY_PARTS, WEEKDAYS, type WeekCell } from '@/shared/vocabulary/week';
+import { HOURS, WEEKDAYS, type WeeklyHour } from '@/shared/vocabulary/week';
 
 import { PROMPTS } from '../domain/vocabulary';
 
@@ -24,11 +24,11 @@ import {
  * the fact under test — but the payload is the grid the sheet draws, and a week built from
  * two numbers could not be drawn.
  */
-const EVERY_CELL: readonly WeekCell[] = WEEKDAYS.flatMap((day) =>
-  DAY_PARTS.map((part) => ({ day, part })),
+const EVERY_CELL: readonly WeeklyHour[] = WEEKDAYS.flatMap((day) =>
+  HOURS.map((hour) => ({ day, hour })),
 );
 
-const weekOf = (cells: number): readonly WeekCell[] => EVERY_CELL.slice(0, cells);
+const weekOf = (cells: number): readonly WeeklyHour[] => EVERY_CELL.slice(0, cells);
 
 const times = (now: number, was: number) =>
   ({ prompt: 'KEEP_THESE_TIMES', week: weekOf(now), profileWeek: weekOf(was) }) as const;
@@ -40,13 +40,13 @@ describe('every prompt quotes the value already in play', () => {
   });
 
   it('names both weeks: the one just used and the one on file', () => {
-    expect(promptCopy(times(6, 4)).body).toMatch(/^6 slots now · 4 on your profile\./);
+    expect(promptCopy(times(6, 4)).body).toMatch(/^6 hours now · 4 on your profile\./);
   });
 
   it('hardcodes no plural, in a body the deck wrote with one', () => {
-    // §19: no string here hardcodes an `s`, and a week of one cell is a legal week to be
+    // §19: no string here hardcodes an `s`, and a week of one hour is a legal week to be
     // offered — an empty one is too.
-    expect(promptCopy(times(1, 4)).body).toMatch(/^1 slot now/);
+    expect(promptCopy(times(1, 4)).body).toMatch(/^1 hour now/);
   });
 
   it('names the marks the grid draws, and never the colour it draws them in', () => {
@@ -54,12 +54,12 @@ describe('every prompt quotes the value already in play', () => {
     // so the sentence that named the retired scheme described marks nobody could see.
     const body = promptCopy(times(6, 4)).body;
 
-    expect(body).toBe('6 slots now · 4 on your profile. A plus is new, a dash is one you dropped.');
+    expect(body).toBe('6 hours now · 4 on your profile. A plus is new, a dash is one you dropped.');
     expect(body).not.toMatch(/green|ring|faded/i);
   });
 
   it('tells a cleared week what happens to it, rather than counting it as nought', () => {
-    // ADR-0102: a blank grid is *absent*, never *never*. `0 slots now` asserts the one
+    // ADR-0102: a blank grid is *absent*, never *never*. `0 hours now` asserts the one
     // measurement the matcher refuses to take, on the week where the whole grid is the
     // dropped half and there is no new one to describe.
     const body = promptCopy(times(0, 4)).body;
@@ -68,7 +68,7 @@ describe('every prompt quotes the value already in play', () => {
       'Nothing ticked · 4 on your profile. The matcher skips a blank week rather than scoring ' +
         'it nought.',
     );
-    expect(body).not.toMatch(/0 slots/);
+    expect(body).not.toMatch(/0 hours/);
   });
 
   it('closes a cleared week the same way, and still offers it no suppression', () => {

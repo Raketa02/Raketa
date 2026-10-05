@@ -93,6 +93,16 @@
  * way` when the agreed day is today* — read off the room's challenge, so a room whose line-up has
  * not completed asks about exactly the slots its card shows empty.
  *
+ * ## A booked game's room is the conversation alone
+ *
+ * ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.4.) A game booked through
+ * a group has one chat, opened with the booking and reached **only from the game's details**: the
+ * same screen, without the plan card, the plan's quick chips or the *Details* door, because the
+ * booking is the plan and the details are what *back* returns to. Everything else — the stream,
+ * the composer, the live channel, a hold, a room that ends — is the room as above. The header's
+ * second line is handed in (`booked.state`, the booking's word) rather than folded off the Classic
+ * games and plans lists, which name a booked Game by a rung it never stands on.
+ *
  * ## The room owns its chrome: the top inset, and the bottom one because the bar stands down
  *
  * This screen does not go through `ShellScreen` — it is a header, a pinned card, an inverted
@@ -134,6 +144,7 @@ import {
   cardStateWord,
   quickChips,
   RoomPlan,
+  type QuickChip,
   useGameCardName,
   usePlan,
   usePlanWriteRefusals,
@@ -189,9 +200,18 @@ export const GAME_DETAILS_ROUTE = '/chats/conversation/[conversationId]/details'
 export interface ConversationScreenProps {
   /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
   readonly conversationId: string;
+  /**
+   * **A booked game's room** ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens
+   * A4.4, the mechanics §14.3) — reached from the game's details and nowhere else, so it is the
+   * conversation alone: **no plan card, no plan chips and no *Details* door**. A booked game has
+   * no plan to fill — the booking is the plan — and *back* is the details it was opened from, by the
+   * stack. `state` is the header's second line in the booking's own word (*booked*), where a
+   * Classic room folds a card's rung off the games and plans lists.
+   */
+  readonly booked?: { readonly state: string };
 }
 
-export function ConversationScreen({ conversationId }: ConversationScreenProps) {
+export function ConversationScreen({ conversationId, booked }: ConversationScreenProps) {
   const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useConversation(conversationId);
   const me = useCurrentUser().data?.id;
@@ -231,6 +251,7 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
       opened={data}
       playerId={me}
       over={over}
+      booked={booked}
       onPageBack={() => {
         if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
       }}
@@ -242,12 +263,15 @@ function Room({
   opened,
   playerId,
   over,
+  booked,
   onPageBack,
 }: {
   readonly opened: OpenConversation;
   readonly playerId: string;
   /** The room has ended since this was read. Drawn as it was, and nothing here writes. */
   readonly over: boolean;
+  /** A booked game's room: the conversation alone, its header's word the booking's (#556). */
+  readonly booked: ConversationScreenProps['booked'];
   readonly onPageBack: () => void;
 }) {
   const { room, entries, people } = opened;
@@ -280,7 +304,8 @@ function Room({
    * the header draws the sport alone.
    */
   const card = useGameCardName(room.gameId);
-  const gameState = card === undefined ? undefined : cardStateWord(card);
+  const gameState =
+    booked !== undefined ? booked.state : card === undefined ? undefined : cardStateWord(card);
 
   /**
    * **What the room says about itself** — one fold, read once, over the channel and the account.
@@ -379,19 +404,24 @@ function Room({
           playerId={playerId}
           {...(gameState === undefined ? {} : { gameState })}
           onBack={router.back}
-          onOpenGame={() =>
-            router.push({
-              pathname: GAME_DETAILS_ROUTE,
-              params: { conversationId: room.conversationId },
-            })
-          }
+          // A booked game's room is reached from its details, and has no door back into them but
+          // *back* (#556): a second way to the same screen would stack the details on themselves.
+          {...(booked !== undefined
+            ? {}
+            : {
+                onOpenGame: () =>
+                  router.push({
+                    pathname: GAME_DETAILS_ROUTE,
+                    params: { conversationId: room.conversationId },
+                  }),
+              })}
         />
 
         {/* Pinned under the header rather than emitted into the stream, which is the whole of
           §3.2's finding: the chat opens at its newest entry, so a card in the scroll is the first
           thing off-screen. In every room, from its opening — the plan is the challenge's — and
           the count where the lock will be until the room has its game. */}
-        {over ? null : (
+        {over || booked !== undefined ? null : (
           <RoomPlan
             challengeId={room.challengeId}
             readAt={room.readAt}
@@ -477,7 +507,8 @@ function Room({
               setDraft(text);
               heartbeat.beat();
             }}
-            chips={quickChips(plan, room.readAt)}
+            // The chips ask about the plan's empty slots, and a booked game has no plan (#556).
+            chips={booked !== undefined ? NO_CHIPS : quickChips(plan, room.readAt)}
             onPost={post}
             refused={held}
           />
@@ -486,6 +517,9 @@ function Room({
     </SafeAreaView>
   );
 }
+
+/** A booked game's room asks nothing about a plan: one empty row rather than one per render. */
+const NO_CHIPS: readonly QuickChip[] = [];
 
 /**
  * One row of the stream: the separator that belongs above it, and the entry itself.

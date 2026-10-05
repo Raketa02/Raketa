@@ -92,7 +92,7 @@ async function reachTheGenderStep() {
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/availability'));
-  fireEvent.press(screen.getByLabelText('Wednesday evening'));
+  fireEvent.press(screen.getByLabelText('Wednesday 19:00'));
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/location'));

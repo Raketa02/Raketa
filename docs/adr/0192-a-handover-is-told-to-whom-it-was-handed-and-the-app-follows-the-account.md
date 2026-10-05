@@ -132,7 +132,8 @@ same half minute too.
   this, and none exists on this branch.
 - **A migration on a branch whose sibling chains its own.** `feature/games_fillin_club` has
   `0035`–`0044` on `0034`. Whichever branch lands second re-points its first migration onto the
-  other's head.
+  other's head. (Done 2026-10-05, at the merge into `feat/RKTA-06_games_fill_in`: the games chain
+  landed second and became `0036`–`0045` behind `0035_handover_notices`.)
 - **The event stream records a UI moment.** *The sheet was closed* is now a group event. It's a
   fact about the handover being complete, but a future reader must not take `handover_seen` to
   mean the person *read* anything, only that a sheet naming the group was dismissed or followed.

@@ -1,11 +1,11 @@
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import { differsFromProfile } from '../domain/workingWeek';
 
 import { endPlaySession, usePlaySession } from './playSession.store';
 
-const TUESDAY_EVENING: WeekCell = { day: 2, part: 'evening' };
-const SATURDAY_MORNING: WeekCell = { day: 6, part: 'morning' };
+const TUESDAY_EVENING: WeeklyHour = { day: 2, hour: 19 };
+const SATURDAY_MORNING: WeeklyHour = { day: 6, hour: 9 };
 const PROFILE_WEEK = [TUESDAY_EVENING, SATURDAY_MORNING];
 
 const read = () => usePlaySession.getState();
@@ -28,7 +28,7 @@ describe('the working copy', () => {
   it('is a copy: editing it does not reach the profile week it was seeded from', () => {
     const profile = [...PROFILE_WEEK];
     read().enter(profile);
-    read().toggleWeekCell({ day: 1, part: 'morning' });
+    read().toggleWeekCell({ day: 1, hour: 9 });
 
     expect(profile).toEqual(PROFILE_WEEK);
     expect(differsFromProfile(read().week ?? [], profile)).toBe(true);
@@ -48,10 +48,31 @@ describe('the working copy', () => {
 
     expect(read().week).toBeUndefined();
   });
+
+  it('paints a dragged run onto the copy, and clears one the same way', () => {
+    const run: readonly WeeklyHour[] = [
+      { day: 3, hour: 18 },
+      { day: 3, hour: 19 },
+    ];
+    read().enter(PROFILE_WEEK);
+
+    read().paintWeekCells(run, true);
+    expect(read().week).toEqual([...PROFILE_WEEK, ...run]);
+
+    read().paintWeekCells(run, false);
+    expect(read().week).toEqual(PROFILE_WEEK);
+    expect(differsFromProfile(read().week ?? [], PROFILE_WEEK)).toBe(false);
+  });
+
+  it('drops a run painted outside a session rather than beginning one', () => {
+    read().paintWeekCells([TUESDAY_EVENING], true);
+
+    expect(read().week).toBeUndefined();
+  });
 });
 
 describe('the cell a times rung added', () => {
-  const THURSDAY_EVENING: WeekCell = { day: 4, part: 'evening' };
+  const THURSDAY_EVENING: WeeklyHour = { day: 4, hour: 19 };
 
   it('is nothing until a rung is taken', () => {
     read().enter(PROFILE_WEEK);
@@ -82,6 +103,25 @@ describe('the cell a times rung added', () => {
 
     expect(read().week).toEqual([...PROFILE_WEEK, THURSDAY_EVENING]);
     expect(read().addedForThisSearch).toBeUndefined();
+  });
+
+  it('goes when a painted run crosses that cell — ticked or cleared, the player has answered it', () => {
+    read().enter(PROFILE_WEEK);
+    read().addForThisSearch(THURSDAY_EVENING);
+
+    read().paintWeekCells([{ day: 4, hour: 18 }, THURSDAY_EVENING], true);
+
+    expect(read().week).toEqual([...PROFILE_WEEK, { day: 4, hour: 18 }, THURSDAY_EVENING]);
+    expect(read().addedForThisSearch).toBeUndefined();
+  });
+
+  it('stays while a run elsewhere is painted', () => {
+    read().enter(PROFILE_WEEK);
+    read().addForThisSearch(THURSDAY_EVENING);
+
+    read().paintWeekCells([{ day: 1, hour: 7 }], true);
+
+    expect(read().addedForThisSearch).toEqual(THURSDAY_EVENING);
   });
 
   it('stays while another cell is edited, because that edit is not about it', () => {
@@ -173,7 +213,7 @@ describe('when a Play session ends', () => {
   it('takes the week, the line-up and the added cell with it', () => {
     read().enter(PROFILE_WEEK);
     read().seat('search-1', 'player-a');
-    read().addForThisSearch({ day: 4, part: 'evening' });
+    read().addForThisSearch({ day: 4, hour: 19 });
 
     endPlaySession();
 
@@ -184,9 +224,9 @@ describe('when a Play session ends', () => {
 
   it('re-entering seeds a fresh week and no line-up, whatever the last visit built', () => {
     read().enter(PROFILE_WEEK);
-    read().toggleWeekCell({ day: 1, part: 'morning' });
+    read().toggleWeekCell({ day: 1, hour: 9 });
     read().seat('search-1', 'player-a');
-    read().addForThisSearch({ day: 4, part: 'evening' });
+    read().addForThisSearch({ day: 4, hour: 19 });
 
     endPlaySession();
     read().enter(PROFILE_WEEK);

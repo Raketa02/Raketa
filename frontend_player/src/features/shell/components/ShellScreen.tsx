@@ -77,7 +77,7 @@ export interface ShellScreenProps {
    *
    * The module note below has said since this component was written that *"the day a Play
    * screen has a way back of its own it is a prop forwarded, not a control designed"*, and the
-   * first screen to have one is not a Play screen: a game pushed over the Now tab is genuinely
+   * first screen to have one is not a Play screen: a game pushed over the Home tab is genuinely
    * pushed, so what is behind it is a place the player came from rather than whatever the
    * router happened to be holding. Absent everywhere else, which is what keeps 10.3's chevron
    * opt-in.
@@ -109,7 +109,7 @@ export interface ShellScreenProps {
  * The back control is **opt-in and forwarded**, never drawn by default: every tab root is a
  * screen a tab press arrives at, and 10.3 makes the chevron opt-in precisely so a screen with
  * nothing behind it does not draw one. `ScreenHeader` already took `onBack`, so the first screen
- * with a way back of its own — a game pushed over the Now tab — is a prop passed through rather
+ * with a way back of its own — a game pushed over the Home tab — is a prop passed through rather
  * than a control designed.
  */
 export function ShellScreen({

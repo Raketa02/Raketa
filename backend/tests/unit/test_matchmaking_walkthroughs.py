@@ -53,6 +53,7 @@ from app.modules.matchmaking.domain.ports import (
 )
 from app.modules.matchmaking.domain.search_context import NEWCOMER_WINDOW
 from app.modules.matchmaking.domain.shortlist import Scored, Shortlist, run
+from app.modules.player_profile.domain.weekly_hours import HOURS_OF_THE_DAY
 from app.engines.matchfit.core import ReliabilityStrand
 from app.kernel import Instant
 from tests.unit import matchmaking_builders as build
@@ -94,11 +95,7 @@ ASYMMETRIC = 3
 #: A week wide enough that four shared cells are a small fraction of it. It is
 #: the *reverse* reading that this moves: forward, the searcher's own grid is the
 #: denominator and the overlap is total.
-A_WIDE_WEEK = tuple(
-    f"{day}:{part}"
-    for day in range(1, 8)
-    for part in ("MORNING", "AFTERNOON", "EVENING")
-)
+A_WIDE_WEEK = tuple(f"{day}:{hour}" for day in range(1, 8) for hour in HOURS_OF_THE_DAY)
 
 #: Declared the opposite kind of evening. In competitive their intent reads
 #: `0.00`; in for fun the same pairing reads the table's other cell — and in

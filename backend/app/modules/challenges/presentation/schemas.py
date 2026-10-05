@@ -44,7 +44,7 @@ from app.modules.challenges.domain.ports import PairingAbsence
 from app.modules.challenges.domain.seats import SeatAnswer, Side
 from app.modules.challenges.domain.standing import Standing
 from app.modules.challenges.presentation.evidence import CourtEvidence
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 
 #: The default that spells **omitted** — *this field does not apply here* — and
 #: it is the matcher's sentinel spelled again for the matcher's reason, on the

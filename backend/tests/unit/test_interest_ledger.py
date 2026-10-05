@@ -47,7 +47,7 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
     SqlAlchemySearchStore,
 )
 from app.kernel import InvariantViolated
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 
 NOW = datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc)
 TTL = 21
@@ -114,7 +114,7 @@ async def _a_search(
                 players_in_range=len(shown),
                 window=Window.THIS_WEEK,
             ),
-            searcher_grid=("1:EVENING",),
+            searcher_grid=("1:19",),
             searcher_area_code="A+05218+002123",
             searcher_slot_count=1,
             radius_clamp_bit=False,

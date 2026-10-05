@@ -204,7 +204,7 @@ function question(raised: RaisedPrompt): { readonly title: string; readonly body
           raised.week.length === 0
             ? `Nothing ticked · ${raised.profileWeek.length} on your profile. ` +
               'The matcher skips a blank week rather than scoring it nought.'
-            : `${counted(raised.week.length, 'slot', 'slots')} now · ` +
+            : `${counted(raised.week.length, 'hour', 'hours')} now · ` +
               `${raised.profileWeek.length} on your profile. ` +
               'A plus is new, a dash is one you dropped.',
       };

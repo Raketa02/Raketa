@@ -61,13 +61,13 @@ from app.modules.games.domain.ports import (
 )
 from app.modules.games.domain.results import Outcome, Score, SetScore
 from app.modules.games.domain.standing import GameStanding
-from app.modules.player_profile.domain.availability import Window
 from app.modules.games.domain.windows import (
     ACCEPTANCE_GRACE,
     ENTRY_GRACE,
     PLAN_HORIZON,
     PROPOSAL_WINDOW,
 )
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 
 

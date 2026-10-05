@@ -23,13 +23,13 @@ import { AppError, offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { theme } from '@/shared/ui';
-import { gameKeys } from '@/features/games/types';
-import { planKeys } from '@/features/plans/types';
 import {
   CHALLENGES_PATH,
   CONVERSATIONS_PATH,
+  GAMES_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
+  PLANS_PATH,
   stubChallenges,
   stubConversations,
   stubGames,
@@ -172,7 +172,7 @@ async function openChats(
   rows: readonly Wire['ChallengeSchema'][] = [MY_SEND_ROW, MY_JOINED_ROW, THEIR_SEND_ROW],
 ) {
   stubChallenges(transport, rows, READ_AT);
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
 
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
@@ -313,16 +313,17 @@ describe('the removal', () => {
   /**
    * And then every list the act touches is re-read — the withdraw's own cache effect: the
    * challenges, the rooms (invalidated rather than patched, because the reply says nothing about
-   * one), and the games and the plans marked stale.
+   * one), and the games and the plans. All four are held on every screen now — the games and the
+   * plans by Home's badge in the bar (#550) — so each is invalidated into a read and counted.
    */
-  it('re-reads the challenges and the rooms, and marks the games and the plans stale', async () => {
+  it('re-reads the challenges, the rooms, the games and the plans', async () => {
     await openChats();
     removalAnswers();
-    queryClient.setQueryData(gameKeys.list(), []);
-    queryClient.setQueryData(planKeys.list(), []);
     const before = {
       rooms: transport.requestsTo('GET', CONVERSATIONS_PATH).length,
       challenges: transport.requestsTo('GET', CHALLENGES_PATH).length,
+      games: transport.requestsTo('GET', GAMES_PATH).length,
+      plans: transport.requestsTo('GET', PLANS_PATH).length,
     };
 
     await revealAndPress();
@@ -333,9 +334,9 @@ describe('the removal', () => {
       expect(transport.requestsTo('GET', CHALLENGES_PATH).length).toBeGreaterThan(
         before.challenges,
       );
+      expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(before.games);
+      expect(transport.requestsTo('GET', PLANS_PATH).length).toBeGreaterThan(before.plans);
     });
-    expect(queryClient.getQueryState(gameKeys.list())?.isInvalidated).toBe(true);
-    expect(queryClient.getQueryState(planKeys.list())?.isInvalidated).toBe(true);
     // And the server's own read agrees: the row is not back.
     expect(mySendIfListed()).toBeNull();
   });

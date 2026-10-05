@@ -8,7 +8,7 @@
  * to enter a score or read the one that settled. So the question is put at the **end** of that
  * screen: below the score, below the clock, after everything the screen exists to say.
  *
- * It used to sit above the games list on the Now tab ([#386](https://github.com/Raketa02/Raketa/issues/386)),
+ * It used to sit above the games list on the Home tab ([#386](https://github.com/Raketa02/Raketa/issues/386)),
  * and the cost of moving it is worth stating rather than discovering: **nothing surfaces the
  * card any more.** Now no longer carries it, so a player who never re-opens a settled game
  * never sees it — which is a fair trade only because ignoring a card costs nothing and always

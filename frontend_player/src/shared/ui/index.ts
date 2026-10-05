@@ -135,6 +135,7 @@ export { TopSafeArea, type TopSafeAreaProps } from './TopSafeArea';
 export { Dash, Plus, PlusOnMedia, Tick, TICK_PATH, TICK_SPACE } from './Tick';
 export { TickBox, type TickBoxProps } from './TickBox';
 export { Toast, ToastHost, type ToastProps } from './Toast';
+export { UndoToast, type UndoToastProps } from './UndoToast';
 export { ModalStage, type ModalStageProps } from './ModalStage';
 export {
   OverlayHost,

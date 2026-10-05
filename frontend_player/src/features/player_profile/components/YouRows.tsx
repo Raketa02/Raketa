@@ -23,7 +23,7 @@
  * | Row | Read |
  * | --- | --- |
  * | What kind of game | `GET /ratings` ∩ `GET /players/me/profile`.play_intents |
- * | Your week | `GET /players/me/profile`.availability |
+ * | Your week | `GET /players/me/profile`.weekly_hours |
  * | How far to look | `GET /players/me/profile`.search_radius_km |
  * | Where you play | nothing — the one state, because a profile cannot be committed without an area |
  * | Who you play with | `GET /players/me/profile`.gender_preference — **the preference only**, never the gender (ADR-0179 §4) |

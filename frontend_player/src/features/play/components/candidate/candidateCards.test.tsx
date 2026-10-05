@@ -86,7 +86,7 @@ const TERMS: readonly ScoredTerm[] = [
   scored('AVAILABILITY_OVERLAP', {
     kind: 'availability_overlap',
     sharedCount: 3,
-    nextSlot: { day: 2, part: 'evening' },
+    nextSlot: { day: 2, hour: 19 },
   }),
   scored('DISTANCE', {
     kind: 'distance',
@@ -379,7 +379,7 @@ describe('one contract, three shapes', () => {
       ),
     });
 
-    expect(screen.getByText('No shared slots — one of you would have to bend')).toBeTruthy();
+    expect(screen.getByText('No shared hours — one of you would have to bend')).toBeTruthy();
   });
 });
 
@@ -430,7 +430,7 @@ describe('each card’s drawn set', () => {
     drawCompetitive();
 
     for (const line of [
-      '3 slots you both ticked · next Tue evening',
+      '3 hours you both ticked · next Tue 19:00',
       '4,3 km away',
       "They're here to compete too",
     ]) {

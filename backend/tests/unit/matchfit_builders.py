@@ -34,13 +34,8 @@ from app.engines.matchfit.scorable import (
 )
 from app.engines.racketskill.core import combine_sigma, confidence_percent
 from app.kernel import IsoWeekday, iso_weekday
-from app.modules.player_profile.domain.availability import DayPart
 
-#: The parts of a day, in the order the platform lays them out — the one
-#: vocabulary fact the engine is told rather than allowed to know.
-DAY_PARTS = tuple(part.value for part in DayPart)
-
-#: Judged case 1's searcher: four cells of twenty-one, a ten kilometre ring, and
+#: Judged case 1's searcher: four hours of the week's 112, a ten kilometre ring, and
 #: a Wednesday, because on a Saturday *today* and *the weekend* collapse.
 SEARCHER_MU = 2.80
 SEARCHER_SIGMA = 0.34
@@ -69,15 +64,17 @@ def capped_at(appearances: int, ruleset: Ruleset | None = None) -> Ruleset:
     )
 
 
-def cells(*specs: tuple[int, DayPart]) -> tuple[GridCell, ...]:
-    return tuple(GridCell(day=iso_weekday(day), part=part.value) for day, part in specs)
+def cells(*specs: tuple[int, int]) -> tuple[GridCell, ...]:
+    """``(weekday, the hour the cell starts at)`` pairs, as the engine reads them."""
+
+    return tuple(GridCell(day=iso_weekday(day), hour=hour) for day, hour in specs)
 
 
 FOUR_CELLS = cells(
-    (1, DayPart.EVENING),
-    (3, DayPart.EVENING),
-    (5, DayPart.EVENING),
-    (6, DayPart.MORNING),
+    (1, 19),
+    (3, 19),
+    (5, 19),
+    (6, 10),
 )
 
 
@@ -98,7 +95,6 @@ def searcher(
         grid=grid,
         radius_km=radius_km,
         today=today,
-        day_parts=DAY_PARTS,
     )
 
 

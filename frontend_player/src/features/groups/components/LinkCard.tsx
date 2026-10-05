@@ -4,7 +4,8 @@
  * while a group is starting, because at that stage every tab has the same remedy: send the link.
  *
  * `children` stand between the headline and the line — the Games card's seats. The line is
- * optional because one state has nothing to wait for (*Nothing picked right now*).
+ * optional because one state has nothing to wait for (*Nothing picked right now*). `foot` stands
+ * under the link's doors — *Nothing picked right now*'s third, *Post a game* (#553, Q96).
  */
 
 import type { ReactNode } from 'react';
@@ -23,6 +24,8 @@ export interface LinkCardProps {
   readonly headlineIsCount?: boolean;
   readonly line?: string;
   readonly children?: ReactNode;
+  /** A door under the link's two — see the module note. */
+  readonly foot?: ReactNode;
 }
 
 export function LinkCard({
@@ -31,6 +34,7 @@ export function LinkCard({
   headlineIsCount = false,
   line,
   children,
+  foot,
 }: LinkCardProps) {
   return (
     <DarkCard style={s.card}>
@@ -38,6 +42,7 @@ export function LinkCard({
       {children}
       {line === undefined ? null : <Text style={s.line}>{line}</Text>}
       <GroupLinkActions group={group} />
+      {foot}
     </DarkCard>
   );
 }

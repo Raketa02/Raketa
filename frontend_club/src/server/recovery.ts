@@ -2,7 +2,7 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 
-import { seal, sealedCookieOptions, unseal } from './seal';
+import { seal, cookieOptions, unseal } from './seal';
 
 /**
  * **Forgot password?'s own cookie**: what one recovery carries between its pages.
@@ -40,7 +40,7 @@ export async function saveRecovery(
 ): Promise<void> {
   const maxAge = Math.max(1, Math.min(seconds, RECOVERY_SECONDS));
   const sealed = await seal(recovery, RECOVERY_SECONDS);
-  (await cookies()).set(RECOVERY_COOKIE, sealed, sealedCookieOptions(maxAge));
+  (await cookies()).set(RECOVERY_COOKIE, sealed, cookieOptions(maxAge));
 }
 
 export async function endRecovery(): Promise<void> {

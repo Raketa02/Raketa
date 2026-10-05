@@ -19,6 +19,7 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
+import { stubGroupDeck } from '@/test-support/groupDeck';
 import {
   errorResponse,
   installTransport,
@@ -237,6 +238,7 @@ describe('a group’s page', () => {
   async function openGroup(group: Wire['MyGroupSchema'], page = pageOf(group)) {
     stubMyGroups(transport, [group]);
     transport.on('GET', `/api/v1/groups/${group.id}`, () => json(page));
+    stubGroupDeck(transport, group.id);
     await openGroups();
     fireEvent.press(await cardNamed(group.name));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${group.id}`));

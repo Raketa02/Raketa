@@ -85,7 +85,7 @@
             "kind": "availability_overlap",
             "next_slot": {
               "day": 3,
-              "part": "EVENING"
+              "hour": 19
             },
             "shared_count": 4
           },
@@ -222,7 +222,7 @@
             "kind": "availability_overlap",
             "next_slot": {
               "day": 3,
-              "part": "EVENING"
+              "hour": 19
             },
             "shared_count": 4
           },
@@ -296,7 +296,7 @@
         },
         {
           "load": null,
-          "points": -3,
+          "points": -4,
           "signal": "RECIPROCAL_ASYMMETRY"
         }
       ],
@@ -305,7 +305,7 @@
       ],
       "modifiers": [],
       "player_id": "00000003-0000-0000-0000-000000000000",
-      "rank_key": 101.159394,
+      "rank_key": 100.159394,
       "terms": [
         {
           "contribution": 29.885057,
@@ -351,7 +351,7 @@
             "kind": "availability_overlap",
             "next_slot": {
               "day": 3,
-              "part": "EVENING"
+              "hour": 19
             },
             "shared_count": 4
           },
@@ -470,7 +470,7 @@
             "kind": "availability_overlap",
             "next_slot": {
               "day": 3,
-              "part": "EVENING"
+              "hour": 19
             },
             "shared_count": 4
           },
@@ -592,7 +592,7 @@
             "kind": "availability_overlap",
             "next_slot": {
               "day": 3,
-              "part": "EVENING"
+              "hour": 19
             },
             "shared_count": 4
           },

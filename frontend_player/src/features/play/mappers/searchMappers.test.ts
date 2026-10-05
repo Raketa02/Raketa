@@ -7,7 +7,7 @@ import {
   toRunSearchRequest,
 } from './searchMappers';
 
-const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
+const TUESDAY_EVENING = { day: 2, hour: 19 } as const;
 
 const ORIGIN = {
   sport: 'padel',
@@ -17,10 +17,10 @@ const ORIGIN = {
 
 /** The profile's own week — four cells, which is `KEEP_THESE_TIMES`'s second number. */
 const PROFILE_WEEK = [
-  { day: 1, part: 'evening' },
-  { day: 2, part: 'evening' },
-  { day: 4, part: 'morning' },
-  { day: 6, part: 'morning' },
+  { day: 1, hour: 19 },
+  { day: 2, hour: 19 },
+  { day: 4, hour: 9 },
+  { day: 6, hour: 9 },
 ] as const;
 
 const QUOTED = { sportName: 'Padel', profileWeek: PROFILE_WEEK };
@@ -69,7 +69,7 @@ describe('the ask', () => {
 
   it('sends the improvised week as the override', () => {
     expect(toRunSearchRequest({ origin: ORIGIN, sentWeek: [TUESDAY_EVENING] })).toMatchObject({
-      availability_override: [{ day: 2, part: 'EVENING' }],
+      availability_override: [{ day: 2, hour: 19 }],
     });
   });
 
@@ -109,7 +109,7 @@ describe('the questions a search raises', () => {
 
   /**
    * The week the search ran on arrives in the **two named fields every other week on the wire
-   * arrives in** (#286), so it is read by the same `toWeekCells` the profile's own week is —
+   * arrives in** (#286), so it is read by the same `toWeeklyHours` the profile's own week is —
    * one spelling for the two grids the sheet draws side by side.
    */
   it('lifts the week the search ran on, beside the one on the profile', () => {
@@ -118,8 +118,8 @@ describe('the questions a search raises', () => {
         {
           prompt: 'KEEP_THESE_TIMES',
           slots: [
-            { day: 2, part: 'EVENING' },
-            { day: 6, part: 'MORNING' },
+            { day: 2, hour: 19 },
+            { day: 6, hour: 9 },
           ],
         },
       ]),
@@ -130,8 +130,8 @@ describe('the questions a search raises', () => {
       {
         prompt: 'KEEP_THESE_TIMES',
         week: [
-          { day: 2, part: 'evening' },
-          { day: 6, part: 'morning' },
+          { day: 2, hour: 19 },
+          { day: 6, hour: 9 },
         ],
         profileWeek: PROFILE_WEEK,
       },
@@ -139,7 +139,7 @@ describe('the questions a search raises', () => {
   });
 
   /**
-   * An eighth day is dropped, which is `toWeekCells`'s own answer on every other week: the
+   * An eighth day is dropped, which is `toWeeklyHours`'s own answer on every other week: the
    * wire types `day` as a bare integer, and there is no honest eighth day to draw. It is
    * dropped from the drawing and from the count alike, because the sheet quotes the length of
    * the list it draws.
@@ -150,8 +150,8 @@ describe('the questions a search raises', () => {
         {
           prompt: 'KEEP_THESE_TIMES',
           slots: [
-            { day: 2, part: 'EVENING' },
-            { day: 9, part: 'EVENING' },
+            { day: 2, hour: 19 },
+            { day: 9, hour: 19 },
           ],
         },
       ]),
@@ -161,7 +161,7 @@ describe('the questions a search raises', () => {
     expect(raised).toEqual([
       {
         prompt: 'KEEP_THESE_TIMES',
-        week: [{ day: 2, part: 'evening' }],
+        week: [{ day: 2, hour: 19 }],
         profileWeek: PROFILE_WEEK,
       },
     ]);
@@ -210,7 +210,7 @@ describe('the questions a search raises', () => {
   it('drops the two-week prompt where the profile’s own week has not landed', () => {
     const raised = toRaisedPrompts(
       shortlist([
-        { prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] },
+        { prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, hour: 19 }] },
         { prompt: 'KEEP_THIS_RADIUS', radius_km: 22 },
       ]),
       { ...QUOTED, profileWeek: undefined },

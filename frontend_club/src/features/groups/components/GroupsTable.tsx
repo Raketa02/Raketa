@@ -59,7 +59,7 @@ export function GroupsTable({ groups }: { groups: readonly GroupRow[] }) {
               <td>
                 <RunBy administrator={group.administrator} />
               </td>
-              <td className={styles.labelled} data-label={COPY.columns.players}>
+              <td className={tableStyles.labelled} data-label={COPY.columns.players}>
                 <span className={styles.players}>
                   {group.players}
                   {group.waiting > 0 ? (
@@ -70,7 +70,7 @@ export function GroupsTable({ groups }: { groups: readonly GroupRow[] }) {
                   ) : null}
                 </span>
               </td>
-              <td className={styles.labelled} data-label={COPY.columns.fromOriginalGroup}>
+              <td className={tableStyles.labelled} data-label={COPY.columns.fromOriginalGroup}>
                 <div className={styles.arrived}>
                   <span className={styles.figure}>
                     {COPY.fromOriginalGroup(
@@ -82,7 +82,7 @@ export function GroupsTable({ groups }: { groups: readonly GroupRow[] }) {
                   <Bar value={group.players} max={group.whatsApp.size} />
                 </div>
               </td>
-              <td className={styles.labelled} data-label={COPY.columns.games}>
+              <td className={tableStyles.labelled} data-label={COPY.columns.games}>
                 {group.games}
               </td>
             </tr>

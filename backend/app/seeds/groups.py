@@ -207,7 +207,7 @@ async def write_the_groups(
             created = group_id is None
             if group_id is None:
                 group_id = await CreatePlayerGroup(
-                    groups=_repository(session),
+                    groups=group_repository(session),
                     clubs=build_home_clubs(session),
                     codes=build_group_code_minter(session),
                     uow=build_unit_of_work(session),
@@ -223,10 +223,10 @@ async def write_the_groups(
             for hour, member in enumerate(declared.members, start=1):
                 clock = hours_before(now, hours_ago - hour)
                 member_id = await _player_id(users, member)
-                await _join(session, settings, group_id, member_id, clock)
+                await join_group(session, settings, group_id, member_id, clock)
                 if declared.join_policy is JoinPolicy.PEOPLE_I_APPROVE:
                     await ApproveJoinRequest(
-                        groups=_repository(session),
+                        groups=group_repository(session),
                         uow=build_unit_of_work(session),
                         clock=clock,
                     ).execute(
@@ -237,7 +237,7 @@ async def write_the_groups(
             for hour, asker in enumerate(
                 declared.waiting, start=len(declared.members) + 1
             ):
-                await _join(
+                await join_group(
                     session,
                     settings,
                     group_id,
@@ -250,7 +250,7 @@ async def write_the_groups(
     return SeededGroups(groups=tuple(seeded))
 
 
-async def _join(
+async def join_group(
     session: AsyncSession,
     settings: Settings,
     group_id: UUID,
@@ -258,10 +258,11 @@ async def _join(
     clock: Clock,
 ) -> None:
     """The player's tap — a membership on an *Anyone* group, a Join request on
-    one that needs approval."""
+    one that needs approval. Shared with the games layer (``proposals.py``),
+    whose group is joined the same way."""
 
     await JoinGroup(
-        groups=_repository(session),
+        groups=group_repository(session),
         directory=build_group_directory(session),
         ratings=build_rated_group_members(session),
         faces=build_group_faces(session, settings=settings),
@@ -271,7 +272,7 @@ async def _join(
     ).execute(JoinGroupCommand(group_id=group_id, player_id=player_id))
 
 
-def _repository(session: AsyncSession) -> GroupRepository:
+def group_repository(session: AsyncSession) -> GroupRepository:
     return build_group_repository(
         session,
         event_store=build_domain_event_store(session),

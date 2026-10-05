@@ -139,6 +139,8 @@ WRITTEN_CONTEXTS = frozenset(
         "games",
         "conversations",
         "plans",
+        "payments",
+        "proposals",
     }
 )
 
@@ -188,9 +190,20 @@ AGGREGATE_WRITERS = {
     # runs — which is why the layer needs both, and nothing else.
     "build_club_repository": "clubs",
     "build_club_account_repository": "clubs",
+    # What each club offers Raketa — courts, hours, an exception, prices and
+    # how it works — written by the use cases the club website's Courts &
+    # prices and Raketa settings run (#535), one stream per club.
+    "build_club_courts_repository": "clubs",
     # A group, created by its Owner and joined by its members — the two use
     # cases a request runs, over the one repository both take.
     "build_group_repository": "groups",
+    # The games still filling: a pick made by `MakeProposal` — the use case the
+    # engine will drive (#540) — and its yeses said by `SayYes`, the swipe's own
+    # use case, over the one repository both take (#538). **The last yes books
+    # the game** (#541): the booking, its Game and every seat's charge are
+    # written inline by that same `SayYes`, as an acceptance opens a game inside
+    # `challenges` — so `app/seeds/bookings.py` takes no repository of its own.
+    "build_proposal_repository": "proposals",
     # An Administrator, invited by its club and let in the way that person
     # would get in — `InviteAdministrator`, then `SetInvitationPassword` or
     # `AcceptInvitation` — over the one repository all three take.
@@ -199,6 +212,9 @@ AGGREGATE_WRITERS = {
     # a signed-in pair, as the request it is does, and that pair is a refresh
     # token row written through `auth`'s own `TokenRotator`.
     "build_refresh_token_repository": "auth",
+    # A player's saved card, set up the way a phone sets it up — start, the
+    # terms, the save — over the one repository all three take (#536).
+    "build_payment_method_repository": "payments",
 }
 
 #: The two infrastructure modules the seed path may import, and neither is an
@@ -286,8 +302,10 @@ def test_the_walk_has_something_to_walk():
         "__init__.py",
         "__main__.py",
         "administrators.py",
+        "bookings.py",
         "catalog.py",
         "clock.py",
+        "club_courts.py",
         "clubs.py",
         "cohort.py",
         "games.py",
@@ -297,10 +315,14 @@ def test_the_walk_has_something_to_walk():
         "official_groups.py",
         "pairs.py",
         "paths.py",
+        "payments.py",
         "photos.py",
         "plans.py",
         "pool_history.py",
+        "posts.py",
+        "proposals.py",
         "relationships.py",
+        "rescues.py",
         "rooms.py",
         "runner.py",
         "screens.py",

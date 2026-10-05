@@ -34,6 +34,7 @@ import { httpRequest } from '@/shared/lib/http';
 
 type GameListResponse = components['schemas']['GameListResponse'];
 type GameSchema = components['schemas']['GameSchema'];
+type ReportANoShowRequest = components['schemas']['ReportANoShowRequest'];
 type StateResultRequest = components['schemas']['StateResultRequest'];
 
 /** The read may be abandoned; a write may not. See the module note. */
@@ -93,6 +94,33 @@ export function postDismissal(gameId: string): Promise<void> {
   return httpRequest<void>({
     method: 'POST',
     path: `/api/v1/games/${gameId}/dismissal`,
+    authenticated: true,
+  });
+}
+
+/**
+ * ***Kuba didn't come*** — on a booked game whose hour has come, by somebody who came, about
+ * somebody else on the court (#560; the backend's #547). The game does not count from here on, and
+ * the reported player has a day to dispute it. A second report of the same player answers the same
+ * and writes nothing, which is why it needs no key.
+ */
+export function postNoShow(gameId: string, body: ReportANoShowRequest): Promise<GameSchema> {
+  return httpRequest<GameSchema>({
+    method: 'POST',
+    path: `/api/v1/games/${gameId}/no-shows`,
+    body,
+    authenticated: true,
+  });
+}
+
+/**
+ * ***I was there*** — the reported player, inside their day (#560). The report falls and nothing
+ * goes on their record; the game still does not count. A second dispute writes nothing.
+ */
+export function postNoShowDispute(gameId: string): Promise<GameSchema> {
+  return httpRequest<GameSchema>({
+    method: 'POST',
+    path: `/api/v1/games/${gameId}/no-shows/dispute`,
     authenticated: true,
   });
 }

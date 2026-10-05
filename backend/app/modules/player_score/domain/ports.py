@@ -4,7 +4,7 @@
 nothing, so there is no repository here and never will be one. What it owns is an
 *arithmetic over other people's records*, and the three facts it folds are read
 through their own contexts' published ports — ``games``' ``GameHistoryQuery``,
-twice, and ``challenges``' ``ChallengeHistoryQuery`` — rather than through a
+twice, and ``bookings``' ``BookingHistoryQuery`` (#544) — rather than through a
 query written here. A ``select`` over ``event_store`` on this side would make
 this context a second reader of two other schemas and a second author of what *a
 ghost* means.
@@ -47,7 +47,7 @@ class PublishedScoreQuery(Protocol):
 
     **It takes the clock rather than reading one.** Every part of the answer is a
     fact about an instant — a plan is a ghost only once its entry window has
-    closed, a seat has lapsed only once its day has run out, a score is ignored
+    closed, a booked game is kept only once its hour has come, a score is ignored
     only once its window has — so a caller asking about attendance and about
     answering in one request must get one instant's answer to all of it. The
     instant is also what the one **window** here is measured back from

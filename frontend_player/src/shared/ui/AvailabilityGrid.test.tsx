@@ -4,9 +4,9 @@
  *
  * **Asserted against the drawing, which is the declared exception to "assert what the
  * player can observe"** — the same exception `ConfidenceRing.test.tsx` makes, and for the
- * same reason. 6.8 says the selected state is a fill *and* a tick, and that the tick is the
- * half that matters: twenty-one rectangles differing only in lightness are a texture. A fill
- * has no role, no name and no text, so a suite that only went through a screen could not tell
+ * same reason. 6.8 says the selected state is a fill *and* a tick — every state carries a
+ * shape, never colour alone, and mock 36's plain fill does not change that. A fill has no
+ * role, no name and no text, so a suite that only went through a screen could not tell
  * a grid that filled a cell from one that also ticked it — and "selection is not carried by
  * colour alone" is precisely the claim that would slip. The fills are pinned beside it,
  * because `paper2` → `mint` is what makes the fill legal on its own (3,39:1) and is one
@@ -18,9 +18,10 @@
  * arithmetic and says outright that a derivation like two lines of `rlLabel` is not worth an
  * assertion that cannot fail.
  *
- * Everything else about the grid — what the cells are called, what pressing one does, what
+ * Everything else about the grid — what the cells are called, what a tap and a drag do, what
  * the footnote says — is asserted where a player meets it, in
- * `features/player_profile/components/socialAvailabilityStep.test.tsx`.
+ * `features/player_profile/components/socialAvailabilityStep.test.tsx` and the You tab's
+ * `youProfileScreens.test.tsx`; which cell a finger is over is `availabilityGridGeometry`'s.
  */
 
 import { render, screen } from '@testing-library/react-native';
@@ -44,48 +45,55 @@ const marks = () => screen.UNSAFE_queryAllByType(Path);
 const fillOf = (name: string) =>
   flatten(screen.getByRole('checkbox', { name }).props.style)?.backgroundColor;
 
-/** Two days of three, which is enough to tell a cell's state from its neighbour's. */
+/** Two hours of three days, which is enough to tell a cell's state from its neighbour's. */
 function rows(selected: readonly string[]): readonly AvailabilityGridRow[] {
-  return ['Mon', 'Tue'].map((day) => ({
-    key: day,
-    label: day,
-    cells: ['morning', 'afternoon', 'evening'].map((part) => ({
-      key: `${day} ${part}`,
-      selected: selected.includes(`${day} ${part}`),
+  return ['09:00', '19:00'].map((hour) => ({
+    key: hour,
+    label: hour,
+    cells: ['Mon', 'Tue', 'Wed'].map((day) => ({
+      key: `${day} ${hour}`,
+      selected: selected.includes(`${day} ${hour}`),
       onPress: () => undefined,
-      accessibilityLabel: `${day} ${part}`,
+      accessibilityLabel: `${day} ${hour}`,
     })),
   }));
 }
 
+/** The drag's report, which nothing here drives — a drawing is what is under test. */
+const noPaint = () => undefined;
+
 describe('the selected cell', () => {
   it('carries a tick as well as the fill', () => {
-    render(<AvailabilityGrid columnHeads={['Morning']} rows={rows(['Mon morning'])} />);
+    render(<AvailabilityGrid onPaint={noPaint} columnHeads={['Mon']} rows={rows(['Mon 09:00'])} />);
 
     expect(marks()).toHaveLength(1);
-    expect(fillOf('Mon morning')).toBe(theme.color.mint);
-    expect(screen.getByRole('checkbox', { name: 'Mon morning' }).props.accessibilityState).toEqual(
+    expect(fillOf('Mon 09:00')).toBe(theme.color.mint);
+    expect(screen.getByRole('checkbox', { name: 'Mon 09:00' }).props.accessibilityState).toEqual(
       expect.objectContaining({ checked: true }),
     );
   });
 
   it('draws one per ticked cell and none anywhere else', () => {
     render(
-      <AvailabilityGrid columnHeads={['Morning']} rows={rows(['Mon morning', 'Tue evening'])} />,
+      <AvailabilityGrid
+        onPaint={noPaint}
+        columnHeads={['Mon']}
+        rows={rows(['Mon 09:00', 'Tue 19:00'])}
+      />,
     );
 
     expect(marks()).toHaveLength(2);
-    expect(fillOf('Tue evening')).toBe(theme.color.mint);
-    expect(fillOf('Tue morning')).toBe(theme.color.paper2);
+    expect(fillOf('Tue 19:00')).toBe(theme.color.mint);
+    expect(fillOf('Tue 09:00')).toBe(theme.color.paper2);
   });
 
   it('draws nothing at all on an empty week', () => {
     // The empty grid is a complete answer and is drawn as one: nothing greyed, nothing
     // pre-seeded, and no cell ticked on the player's behalf.
-    render(<AvailabilityGrid columnHeads={['Morning']} rows={rows([])} />);
+    render(<AvailabilityGrid onPaint={noPaint} columnHeads={['Mon']} rows={rows([])} />);
 
     expect(marks()).toHaveLength(0);
-    expect(fillOf('Mon morning')).toBe(theme.color.paper2);
+    expect(fillOf('Mon 09:00')).toBe(theme.color.paper2);
   });
 
   /**
@@ -94,14 +102,14 @@ describe('the selected cell', () => {
    * reachable from a component, and the ratio is derived from the palette in the section.
    */
   it('separates its two states by a fill a reader of no hue can still tell apart', () => {
-    render(<AvailabilityGrid columnHeads={['Morning']} rows={rows(['Mon morning'])} />);
+    render(<AvailabilityGrid onPaint={noPaint} columnHeads={['Mon']} rows={rows(['Mon 09:00'])} />);
 
-    expect(fillOf('Mon morning')).toBe(theme.color.mint);
-    expect(fillOf('Mon afternoon')).toBe(theme.color.paper2);
-    // The cells carry no border: the card bounds the grid, and a line around each of
-    // twenty-one adjacent squares is a fold drawn twenty-one times inside one thing.
+    expect(fillOf('Mon 09:00')).toBe(theme.color.mint);
+    expect(fillOf('Tue 09:00')).toBe(theme.color.paper2);
+    // The cells carry no border: the card bounds the grid, and a line around each of a
+    // hundred and twelve adjacent cells is a fold drawn over and over inside one thing.
     expect(
-      flatten(screen.getByRole('checkbox', { name: 'Mon morning' }).props.style)?.borderWidth,
+      flatten(screen.getByRole('checkbox', { name: 'Mon 09:00' }).props.style)?.borderWidth,
     ).toBeUndefined();
   });
 });
@@ -123,15 +131,15 @@ describe('the cell a rung added for this search', () => {
     rows([]).map((row) => ({
       ...row,
       cells: row.cells.map((cell) =>
-        cell.key === 'Mon morning' ? { ...cell, addedForThisSearch: true } : cell,
+        cell.key === 'Mon 09:00' ? { ...cell, addedForThisSearch: true } : cell,
       ),
     }));
 
   it('draws the plus, on the unfilled cell, and never the tick', () => {
-    render(<AvailabilityGrid columnHeads={['Morning']} rows={added()} />);
+    render(<AvailabilityGrid onPaint={noPaint} columnHeads={['Mon']} rows={added()} />);
 
     expect(marks().map((node) => node.props.d as string)).toEqual(['M 6 2.5 V 9.5 M 2.5 6 H 9.5']);
-    expect(fillOf('Mon morning')).toBe(theme.color.paper2);
+    expect(fillOf('Mon 09:00')).toBe(theme.color.paper2);
   });
 
   /**
@@ -140,9 +148,9 @@ describe('the cell a rung added for this search', () => {
    * pressing — which is the opposite of what the press does.
    */
   it('is still a cell to press, and reports itself unticked', () => {
-    render(<AvailabilityGrid columnHeads={['Morning']} rows={added()} />);
+    render(<AvailabilityGrid onPaint={noPaint} columnHeads={['Mon']} rows={added()} />);
 
-    expect(screen.getByRole('checkbox', { name: 'Mon morning' }).props.accessibilityState).toEqual(
+    expect(screen.getByRole('checkbox', { name: 'Mon 09:00' }).props.accessibilityState).toEqual(
       expect.objectContaining({ checked: false }),
     );
   });
@@ -150,21 +158,21 @@ describe('the cell a rung added for this search', () => {
 
 describe('the column heads', () => {
   it('are drawn, and hidden from assistive technology so no cell is announced twice', () => {
-    render(<AvailabilityGrid columnHeads={['Morning', 'Afternoon']} rows={rows([])} />);
+    render(<AvailabilityGrid onPaint={noPaint} columnHeads={['Mon', 'Tue']} rows={rows([])} />);
 
     // On screen for whoever is looking at it...
-    expect(screen.getByText('Morning', { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText('Mon', { includeHiddenElements: true })).toBeTruthy();
     // ...and out of the way of whoever is not: a cell already names its own column, so a
     // readable head would be announced once for every row it sits above.
-    expect(screen.queryByText('Morning')).toBeNull();
+    expect(screen.queryByText('Mon')).toBeNull();
   });
 });
 
 /** One row of a diff grid — the states are the whole of what a diff cell carries. */
 const diffRows = (states: readonly AvailabilityDiffState[]): readonly AvailabilityDiffRow[] => [
   {
-    key: 'Mon',
-    label: 'Mon',
+    key: '09:00',
+    label: '09:00',
     cells: states.map((state, index) => ({
       key: `Mon ${index}`,
       state,
@@ -185,13 +193,18 @@ describe('the footnote slot', () => {
     // ticking the first, and a grid that jumped upward under a finger mid-tap would select
     // the wrong cell. So the slot's height is reserved, not conditional on the message.
     const { rerender } = render(
-      <AvailabilityGrid columnHeads={['Morning']} rows={rows([])} footnote="Nothing ticked" />,
+      <AvailabilityGrid
+        onPaint={noPaint}
+        columnHeads={['Mon']}
+        rows={rows([])}
+        footnote="Nothing ticked"
+      />,
     );
 
     expect(screen.getByText('Nothing ticked')).toBeTruthy();
     expect(reservedSlots()).toHaveLength(1);
 
-    rerender(<AvailabilityGrid columnHeads={['Morning']} rows={rows([])} />);
+    rerender(<AvailabilityGrid onPaint={noPaint} columnHeads={['Mon']} rows={rows([])} />);
 
     expect(screen.queryByText('Nothing ticked')).toBeNull();
     expect(reservedSlots()).toHaveLength(1);
@@ -204,7 +217,7 @@ describe('the footnote slot', () => {
    * draws this grid above two buttons inside a sheet that stops at 88% of the screen.
    */
   it('is not reserved on the diff, which has no tap to protect and no room to spare', () => {
-    render(<AvailabilityGrid variant="diff" columnHeads={['Morning']} rows={diffRows(['on'])} />);
+    render(<AvailabilityGrid variant="diff" columnHeads={['Mon']} rows={diffRows(['on'])} />);
 
     expect(reservedSlots()).toHaveLength(0);
   });
@@ -224,7 +237,7 @@ describe('the diff variant', () => {
     render(
       <AvailabilityGrid
         variant="diff"
-        columnHeads={['Morning', 'Afternoon', 'Evening']}
+        columnHeads={['Mon', 'Tue', 'Wed']}
         rows={diffRows(['on', 'added', 'dropped'])}
       />,
     );
@@ -241,7 +254,7 @@ describe('the diff variant', () => {
     render(
       <AvailabilityGrid
         variant="diff"
-        columnHeads={['Morning', 'Afternoon', 'Evening']}
+        columnHeads={['Mon', 'Tue', 'Wed']}
         rows={diffRows(['on', 'added', 'dropped'])}
       />,
     );
@@ -252,25 +265,21 @@ describe('the diff variant', () => {
 
   it('hides a cell with nothing to say rather than announcing it empty', () => {
     render(
-      <AvailabilityGrid
-        variant="diff"
-        columnHeads={['Morning']}
-        rows={diffRows(['off', 'added'])}
-      />,
+      <AvailabilityGrid variant="diff" columnHeads={['Mon']} rows={diffRows(['off', 'added'])} />,
     );
 
-    // Twenty-one names between the ones that changed is the double announcement 6.8 hides
+    // A hundred names between the ones that changed is the double announcement 6.8 hides
     // its column heads to avoid, arriving on a grid that cannot be operated at all.
     expect(screen.queryAllByLabelText(/^Mon/)).toHaveLength(1);
   });
 
   it('is 6.8 exactly — the same cell, at the same height, on the same fill', () => {
-    render(<AvailabilityGrid variant="diff" columnHeads={['Morning']} rows={diffRows(['on'])} />);
+    render(<AvailabilityGrid variant="diff" columnHeads={['Mon']} rows={diffRows(['on'])} />);
     const diffCell = flatten(screen.getByLabelText('Mon 0').props.style);
     screen.unmount();
 
-    render(<AvailabilityGrid columnHeads={['Morning']} rows={rows(['Mon morning'])} />);
-    const editorCell = flatten(screen.getByRole('checkbox', { name: 'Mon morning' }).props.style);
+    render(<AvailabilityGrid onPaint={noPaint} columnHeads={['Mon']} rows={rows(['Mon 09:00'])} />);
+    const editorCell = flatten(screen.getByRole('checkbox', { name: 'Mon 09:00' }).props.style);
 
     expect(diffCell?.height).toBe(grid.cellHeight);
     expect(diffCell?.backgroundColor).toBe(editorCell?.backgroundColor);

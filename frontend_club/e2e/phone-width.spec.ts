@@ -1,5 +1,11 @@
+import { fakeCamera } from './camera';
 import { expect, signIn, test } from './fixtures';
+import { refusal } from './stub/backend';
+import { booking } from './stub/bookings';
 import { administrator, DAY_MS, fromNow, officialGroup } from './stub/club';
+import { dayFromToday } from './stub/clock';
+import { court, week } from './stub/courts';
+import { moneyRow, payout } from './stub/money';
 
 /** **Every page works at phone width** (#500 story 95): nothing scrolls sideways at 360 px. */
 
@@ -27,9 +33,21 @@ test('the signed-out pages fit a phone', async ({ page }) => {
 });
 
 test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) => {
-  void club;
+  // So Bookings has its Check in button, and Check in its camera and box.
+  club.raketa.settings.check_in = true;
+  await fakeCamera(page);
   await signIn(page);
-  for (const path of ['/overview', '/groups', '/administrators', '/details']) {
+  for (const path of [
+    '/overview',
+    '/bookings',
+    '/bookings/check-in',
+    '/courts',
+    '/money',
+    '/groups',
+    '/administrators',
+    '/details',
+    '/raketa-settings',
+  ]) {
     await page.goto(path);
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Club website' })).toBeVisible();
@@ -114,4 +132,174 @@ test('Groups and Hand over fit a phone: the table, the choices and the question'
   await page.getByRole('button', { name: 'Hand over', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await fitsSideways(page, '/groups/<id>, confirming');
+});
+
+test("The club's menu, the checklist and Raketa settings fit a phone", async ({ page, club }) => {
+  club.raketa.way = 'ON_REQUEST';
+  await signIn(page);
+  await expect(page.getByRole('list', { name: 'Setup checklist' })).toBeVisible();
+  await fitsSideways(page, '/overview');
+  await page
+    .getByRole('banner')
+    .getByRole('button', { name: /Ogrody 33/ })
+    .click();
+  await expect(
+    page.getByRole('banner').getByRole('link', { name: 'Raketa settings' }),
+  ).toBeVisible();
+  await fitsSideways(page, '/overview, the menu open');
+
+  await page.goto('/raketa-settings');
+  await page
+    .getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" })
+    .check();
+  await fitsSideways(page, '/raketa-settings');
+  await page.getByRole('button', { name: 'Leave Raketa' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await fitsSideways(page, '/raketa-settings, leaving');
+});
+
+test('Courts & prices fits a phone: the table, the grid, the forms and the bands', async ({
+  page,
+  club,
+}) => {
+  const one = court({
+    name: 'Kort centralny przy wejściu',
+    sport: 'PADEL',
+    hours: week([1], 17, 22),
+  });
+  club.raketa.courts = [one, court({ name: 'Court 2', sport: 'TENNIS', offered: false })];
+  club.raketa.price('PADEL', 140);
+  club.raketa.exceptions = [
+    {
+      id: '0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e01',
+      court_ids: [one.id],
+      first_day: dayFromToday(3),
+      last_day: dayFromToday(30),
+      from_hour: 9,
+      until_hour: 12,
+      reason: 'Wymiana sztucznej trawy na korcie centralnym',
+    },
+  ];
+  await signIn(page);
+  await page.goto('/courts');
+  await expect(page.getByRole('checkbox', { name: 'Monday 17:00' })).toBeChecked();
+  await fitsSideways(page, '/courts');
+
+  await page.getByRole('button', { name: '+ Add a court' }).click();
+  await page.getByRole('button', { name: '+ Add an exception' }).click();
+  await page.getByRole('radio', { name: 'Some courts' }).check();
+  await page.getByRole('radio', { name: 'Hours on a day' }).check();
+  await page
+    .getByRole('region', { name: 'Prices' })
+    .getByRole('group', { name: 'Padel' })
+    .getByRole('button', { name: '+ Add a price band' })
+    .click();
+  await fitsSideways(page, '/courts, every form open');
+
+  await page.getByRole('button', { name: 'Copy to other courts' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await fitsSideways(page, '/courts, copying');
+});
+
+test('Bookings fits a phone: the day, its filters, its rows and each question', async ({
+  page,
+  club,
+}) => {
+  const hours = week([1, 2, 3, 4, 5, 6, 7], 7, 23);
+  const one = court({ name: 'Kort centralny przy wejściu', sport: 'PADEL', hours });
+  club.raketa.courts = [one, court({ name: 'Court 2', sport: 'PADEL', hours })];
+  const day = dayFromToday(2);
+  const long = club.bookings.add(
+    booking({
+      court: one,
+      day,
+      hour: 19,
+      booked_from: {
+        group_id: '0b8f5c1e-1c1d-4d2e-8f3a-5a6b7c8d9e01',
+        name: 'Ogrody 33 Club — wieczorne granie dla wszystkich',
+        official: true,
+      },
+    }),
+  );
+  long.players = long.players.map((player, index) =>
+    index === 0
+      ? {
+          ...player,
+          name: 'Małgorzata Szczepańska-Wiśniewska',
+          checked_in_at: new Date().toISOString(),
+        }
+      : player,
+  );
+  club.bookings.add(booking({ court: one, day, hour: 20, stage: 'WAITING_FOR_YOU' }));
+  await signIn(page);
+  await page.goto(`/bookings?date=${day}`);
+  await expect(page.getByRole('timer')).toBeVisible();
+  await fitsSideways(page, '/bookings');
+
+  await page.getByRole('button', { name: /^Move/ }).click();
+  await expect(page.getByRole('dialog').getByRole('radio')).toHaveCount(1);
+  await fitsSideways(page, '/bookings, moving');
+  await page.getByRole('dialog').getByRole('button', { name: 'Back' }).click();
+
+  await page.getByRole('button', { name: /^Cancel/ }).click();
+  await page.getByRole('dialog').getByRole('radio', { name: 'Repair' }).check();
+  await fitsSideways(page, '/bookings, cancelling');
+  await page.getByRole('dialog').getByRole('button', { name: 'Keep the game' }).click();
+
+  await page.getByRole('button', { name: /^Refuse/ }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await fitsSideways(page, '/bookings, refusing');
+});
+
+test("Overview's requests fit a phone", async ({ page, club }) => {
+  club.raketa.ready();
+  const padel = club.raketa.courts[0];
+  if (padel === undefined) throw new Error('ready() seats a court');
+  club.bookings.add(
+    booking({ court: padel, day: dayFromToday(1), hour: 19, stage: 'WAITING_FOR_YOU' }),
+  );
+  await signIn(page);
+  await expect(page.getByRole('timer')).toBeVisible();
+  await fitsSideways(page, '/overview, live');
+});
+
+test('Money fits a phone: the month, its totals, its rows and the payouts', async ({
+  page,
+  club,
+}) => {
+  club.raketa.payments = 'READY';
+  const long = court({ name: 'Kort centralny przy wejściu', sport: 'PADEL' });
+  club.money.add(
+    moneyRow({
+      court: long,
+      day: '2026-03-07',
+      hour: 18,
+      status: 'CALLED_OFF',
+      refunded_grosze: 140_00,
+    }),
+  );
+  club.money.add(moneyRow({ court: long, day: '2026-03-09', hour: 19, paid_out: true }));
+  club.money.payouts = [
+    payout({ amount_grosze: 1_234_50, arrives_at: fromNow(-DAY_MS), status: 'FAILED' }),
+    payout({ amount_grosze: 134_00, arrives_at: fromNow(-2 * DAY_MS) }),
+  ];
+  await signIn(page);
+  await page.goto('/money?month=2026-03');
+  await expect(page.getByRole('region', { name: 'Payouts' }).getByRole('row')).toHaveCount(3);
+  await fitsSideways(page, '/money');
+  // With the column heads gone, a bare figure says what it is.
+  const net = page.getByRole('row').nth(1).getByRole('cell').nth(4);
+  expect(await net.evaluate((cell) => getComputedStyle(cell, '::before').content)).toMatch(/Net/);
+});
+
+test("The checklist's Stripe step fits a phone, refused and all", async ({ page, stub, club }) => {
+  club.raketa.payments = 'NEEDS_DETAILS';
+  await signIn(page);
+  stub.on('post', '/api/v1/club/payments/onboarding-link', () => ({
+    status: 503,
+    body: refusal('payments_unavailable'),
+  }));
+  await page.getByRole('button', { name: 'Continue with Stripe' }).click();
+  await expect(page.getByRole('main').getByRole('alert')).toBeVisible();
+  await fitsSideways(page, '/overview, Stripe refused');
 });

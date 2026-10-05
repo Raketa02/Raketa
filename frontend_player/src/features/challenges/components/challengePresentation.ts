@@ -316,7 +316,7 @@ export const SENDING_LABEL = 'Sending…';
 /**
  * **The whole confirmation that the one irreversible act in this feature succeeded.**
  *
- * The send replaces the stack with `[Now]`, which is a placeholder with nothing on it to say a
+ * The send replaces the stack with `[Home]`, which is a placeholder with nothing on it to say a
  * challenge went — so this sentence is not a garnish on a screen that already reports success,
  * it is the report. That is why it is the single **interrupting** announcement in the app
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §20.10).

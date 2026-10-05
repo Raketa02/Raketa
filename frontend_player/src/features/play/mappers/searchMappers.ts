@@ -29,8 +29,8 @@
 
 import type { components } from '@/generated/schema';
 import { toWireSport } from '@/features/onboarding/types';
-import { toWeekCells, toWireSlots } from '@/features/player_profile/types';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import { toWeeklyHours, toWireWeeklyHours } from '@/features/player_profile/types';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { OriginSearch, PlayOrigin } from '../domain/lineup';
 import type { RaisedPrompt } from '../domain/raisedPrompt';
@@ -39,7 +39,7 @@ import { SEARCH_MODES, type Rung, type SearchMode } from '../domain/vocabulary';
 type RunSearchRequest = components['schemas']['RunSearchRequest'];
 type ShortlistResponse = components['schemas']['ShortlistResponse'];
 type PromptSchema = components['schemas']['PromptSchema'];
-type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
+type WeeklyHourResource = components['schemas']['WeeklyHourResource'];
 
 /**
  * What Find a game asks for: the origin, and whether the week is the profile's.
@@ -95,10 +95,10 @@ export function toRunSearchRequest(ask: SearchAsk): RunSearchRequest {
  * no longer sends one at all**: it is reached from a tab of its own and deals on the profile's
  * grid (ADR-0169 §1), so two callers remain and the rule is unchanged for both.
  */
-export function availabilityOverride(sentWeek: readonly WeekCell[] | undefined): {
-  readonly availability_override?: AvailabilitySlotResource[];
+export function availabilityOverride(sentWeek: readonly WeeklyHour[] | undefined): {
+  readonly availability_override?: WeeklyHourResource[];
 } {
-  return sentWeek === undefined ? {} : { availability_override: toWireSlots(sentWeek) };
+  return sentWeek === undefined ? {} : { availability_override: toWireWeeklyHours(sentWeek) };
 }
 
 /**
@@ -159,7 +159,7 @@ export interface PromptQuotes {
    * payload, so the prompt it belongs to is **dropped** exactly as one arriving without its
    * `slots` is — §3's rule, arriving from the client's side of the pair.
    */
-  readonly profileWeek: readonly WeekCell[] | undefined;
+  readonly profileWeek: readonly WeeklyHour[] | undefined;
 }
 
 /**
@@ -197,7 +197,7 @@ function toRaisedPrompt(raised: PromptSchema, quoted: PromptQuotes): RaisedPromp
             // The same two named fields the profile's own week arrives in, read by the same
             // mapper (#286) — the sheet draws these cells and quotes their count, so one list
             // answers both and neither can disagree with the other.
-            week: toWeekCells(raised.slots),
+            week: toWeeklyHours(raised.slots),
             profileWeek: quoted.profileWeek,
           };
     case 'KEEP_THIS_RADIUS':

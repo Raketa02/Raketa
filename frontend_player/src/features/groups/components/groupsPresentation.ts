@@ -143,6 +143,19 @@ export function groupCardLabel(group: {
   ].join(', ');
 }
 
+/**
+ * *Games, 4 with somebody In* — the group page's Games tab, spoken with its count: the cards where
+ * somebody is already In with you (#553, the screens A1).
+ */
+export function gamesTabLabel(cards: number): string {
+  return `${GROUPS_COPY.group.tabs.games}, ${cards} with somebody In`;
+}
+
+/** *Fill in, 1 seat to fill* — the Fill in tab, spoken with its count (#557). */
+export function fillInTabLabel(seats: number): string {
+  return `${GROUPS_COPY.group.tabs.fillIn}, ${counted(seats, 'seat', 'seats')} to fill`;
+}
+
 /** *Info, 2 requests waiting* — the group page's Info tab, spoken with its count (#529). */
 export function infoTabLabel(waiting: number): string {
   return `${GROUPS_COPY.group.tabs.info}, ${counted(waiting, 'request', 'requests')} waiting`;
@@ -545,6 +558,11 @@ export function admittedEyebrow(count: number): string {
 /** *This group plays padel* — the card's headline (story 57), every sport the group declares. */
 export function addSportHeadline(sports: readonly Sport[]): string {
   return `This group plays ${sportsInLine(sports, 'and')}`;
+}
+
+/** *Get rated in padel to post here* — *Post a game* for a reader rated in none of the sports (Q80). */
+export function rateToPostHeadline(sports: readonly Sport[]): string {
+  return `Get rated in ${sportsInLine(sports, 'or')} to post here`;
 }
 
 /** *Add padel to your Skill passport to see its games.* — any one of them will do. */

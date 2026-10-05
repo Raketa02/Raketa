@@ -90,8 +90,12 @@ export interface ConversationHeaderProps {
   /** The reader. A header names **the others**, exactly as the row it was opened from does. */
   readonly playerId: string;
   readonly onBack: () => void;
-  /** Called with the game this room completed into. Never called where there is none. */
-  readonly onOpenGame: (gameId: string) => void;
+  /**
+   * Called with the game this room completed into. Never called where there is none — and **absent
+   * in a booked game's room** (#556), which is reached from the game's details and draws no
+   * *Details* door back into them.
+   */
+  readonly onOpenGame?: (gameId: string) => void;
   /**
    * Where the game stands, as the Now card's own word in lower case — `features/plans`'
    * `cardStateWord`. Absent where there is no game, or no card to name yet; the line then says
@@ -133,7 +137,7 @@ export function ConversationHeader({
           ))}
         </View>
       }
-      {...(gameId === undefined
+      {...(gameId === undefined || onOpenGame === undefined
         ? {}
         : {
             right: (

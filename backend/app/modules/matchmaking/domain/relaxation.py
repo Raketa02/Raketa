@@ -48,8 +48,8 @@ from enum import StrEnum
 from typing import Final, final
 
 from app.kernel import invariant
-from app.modules.player_profile.domain.availability import Window
 from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
+from app.modules.player_profile.domain.weekly_hours import Window
 
 
 class Rung(StrEnum):
@@ -175,7 +175,7 @@ class RungOffer:
     #: The widened radius, in whole kilometres. ``RADIUS`` rungs only.
     radius_km: int | None = None
     #: The one cell this rung would add to the searcher's own grid, as
-    #: ``AvailabilitySlot.code`` spells it. ``TIMES`` rungs only, and **one**
+    #: ``WeeklyHour.code`` spells it. ``TIMES`` rungs only, and **one**
     #: slot: the engine tests the additions and offers the one that helps most,
     #: because the player takes a rung and not a shopping list.
     slot: str | None = None

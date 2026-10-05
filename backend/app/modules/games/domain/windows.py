@@ -77,6 +77,17 @@ PROPOSAL_WINDOW: Final = timedelta(hours=24)
 #: than by silence says whether accepting is still worth a tap.
 ACCEPTANCE_GRACE: Final = timedelta(hours=6)
 
+#: How long a **booked** game lasts: one hour, every sport (the mechanics §2).
+#: A booking opens a game with its hour on it (#541), and that game's entry
+#: window runs from the hour's end rather than from a week of not knowing when.
+A_BOOKED_GAME: Final = timedelta(hours=1)
+
+#: How long a player reported as not turning up has to say they did (#547; the
+#: mechanics §15.3, §18). **A day, the result's own day**: silence on a score
+#: confirms it after twenty-four hours, and silence on a report does the same —
+#: the same reach to somebody who has not opened the app, for the same reason.
+NO_SHOW_DISPUTE_WINDOW: Final = timedelta(hours=24)
+
 
 def horizon_ends_at(planned_at: Instant) -> Instant:
     """The last instant this game could have been played — the end of its
@@ -94,14 +105,24 @@ def horizon_ends_at(planned_at: Instant) -> Instant:
     return instant(planned_at + PLAN_HORIZON)
 
 
-def entry_closes_at(planned_at: Instant) -> Instant:
+def entry_closes_at(
+    planned_at: Instant, *, starts_at: Instant | None = None
+) -> Instant:
     """When *we played* stops being sayable, and the game becomes a ghost.
 
     Past it the game reads as never played whether or not anything swept it,
     which is what makes the answer to *did this happen* the same at every
     instant.
+
+    **A booked game knows its hour** (``starts_at``, #541): it is played then,
+    so the grace runs from that hour's end. A booking may be a fortnight ahead,
+    and a week from the moment it was booked would ghost a game before it was
+    played. A game with no hour — a completed line-up's — has its week; a
+    reader holding a ``Game`` asks ``Game.entry_closes_at``, which passes it.
     """
 
+    if starts_at is not None:
+        return instant(starts_at + A_BOOKED_GAME + ENTRY_GRACE)
     return instant(planned_at + PLAN_HORIZON + ENTRY_GRACE)
 
 
@@ -125,3 +146,10 @@ def acceptance_settles_at(proposed_at: Instant) -> Instant:
     """
 
     return instant(proposed_at + ACCEPTANCE_GRACE)
+
+
+def dispute_closes_at(reported_at: Instant) -> Instant:
+    """When a player reported as not turning up can no longer dispute it, and
+    the report stands (#547)."""
+
+    return instant(reported_at + NO_SHOW_DISPUTE_WINDOW)

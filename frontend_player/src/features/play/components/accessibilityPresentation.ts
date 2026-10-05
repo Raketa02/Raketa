@@ -16,14 +16,14 @@
  * ## §20.1 — the rule that decides an element
  *
  * Part 13's two worked examples disagree on their face: the question navigator is *"one
- * element, one label — never one per segment"*, where the availability grid is twenty-one
- * elements with the column heads hidden.
+ * element, one label — never one per segment"*, where the availability grid is one element
+ * per hour with the column heads hidden.
  *
  * > **One accessibility element per action. Everything with no action of its own merges into
  * > the nearest action above it.**
  *
  * Actions are what a listener navigates *by*. The navigator has none, so it is one element; a
- * grid cell is an answer, so there are twenty-one. That is one rule rather than two
+ * grid cell is an answer, so there is one per hour. That is one rule rather than two
  * precedents, and it is why the fit pill is not its own element, why the balance bar is one,
  * and why the why-fit meter is nothing at all.
  *
@@ -68,7 +68,7 @@ import type { AvailabilityDiffState } from '@/shared/ui/AvailabilityGrid';
 import type { Announcement } from '@/shared/ui/overlay';
 import { cellLabel } from '@/shared/vocabulary/availabilityPresentation';
 import { orOutOfDate } from '@/shared/vocabulary/outOfDate';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Split } from '../domain/forecast';
 import { courtHalfOf, type CourtHalf, type SeatPlace } from '../domain/lineup';
@@ -686,25 +686,25 @@ export function whyFitRowLabel(row: {
 }
 
 /**
- * A cell of the week Play searches on — `Thursday evening` · `Thursday evening, added for this
+ * A cell of the week Play searches on — `Thursday 19:00` · `Thursday 19:00, added for this
  * search`.
  *
  * 6.8's editor cell, whose name is `cellLabel`'s and stays it: **the suffix is a third fact and
  * not a state**, so `checked` still says what the *week* holds and this says what the *search*
  * did ([#283](https://github.com/Raketa02/Raketa/issues/283)). It is the one thing a listener
  * has instead of the plus, and without it a cell the player never ticked is announced exactly
- * like the twenty around it.
+ * like every hour around it.
  *
  * The suffix is the diff grid's *", newly added"* said the other way round, because it is a
  * different claim: that one is *your* week against your profile, this one is a cell the engine
  * added to one search.
  */
-export function searchWeekCellLabel(cell: WeekCell, addedForThisSearch: boolean): string {
+export function searchWeekCellLabel(cell: WeeklyHour, addedForThisSearch: boolean): string {
   return addedForThisSearch ? `${cellLabel(cell)}, added for this search` : cellLabel(cell);
 }
 
 /**
- * A cell of `SH.saveav`'s diff grid — `Monday evening` · `, newly added` · `, dropped`.
+ * A cell of `SH.saveav`'s diff grid — `Monday 19:00` · `, newly added` · `, dropped`.
  *
  * **This is the first of §20's two colour-only findings.** Newly-on drew a volt ring and
  * newly-off dropped to 45% opacity, and the sheet's own body text said *"Green rings are new,
@@ -712,8 +712,8 @@ export function searchWeekCellLabel(cell: WeekCell, addedForThisSearch: boolean)
  * colour as the mechanism**. 6.8's diff variant answered the drawing with three shapes; this
  * answers the announcement with three sentences.
  *
- * **`undefined` is hidden, never an empty name.** A slot that was off and stayed off has
- * nothing to tell a listener, and twenty-one of those between the ones that do is the double
+ * **`undefined` is hidden, never an empty name.** An hour that was off and stayed off has
+ * nothing to tell a listener, and a hundred of those between the ones that do is the double
  * announcement 6.8 hides its column heads to avoid. The cell is not interactive either way:
  * §20.7 records the diff grid as *"a different control with a third fact"*, and a role that
  * carried `checked` would offer a state a reader could try to change.
@@ -724,7 +724,7 @@ export function searchWeekCellLabel(cell: WeekCell, addedForThisSearch: boolean)
  * describe the same two marks rather than the scheme the drawing retired.
  */
 export function availabilityDiffCellLabel(
-  cell: WeekCell,
+  cell: WeeklyHour,
   state: AvailabilityDiffState,
 ): string | undefined {
   const suffix = DIFF_SUFFIX[state];
@@ -732,7 +732,7 @@ export function availabilityDiffCellLabel(
 }
 
 /**
- * What each of the diff grid's four states adds to the slot's name.
+ * What each of the diff grid's four states adds to the hour's name.
  *
  * Keyed by the component's own union, so a fifth state cannot ship without words — and `null`
  * rather than an empty string, because *hidden* and *named with nothing after it* are the two

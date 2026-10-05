@@ -78,7 +78,7 @@ def test_a_variant_round_trips_under_its_own_kind() -> None:
         {
             "kind": "availability_overlap",
             "shared_count": 4,
-            "next_slot": {"day": 2, "part": "EVENING"},
+            "next_slot": {"day": 2, "hour": 19},
         }
     )
     assert isinstance(parsed, AvailabilityOverlapEvidence)

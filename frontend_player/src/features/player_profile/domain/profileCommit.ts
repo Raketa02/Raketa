@@ -63,7 +63,7 @@ import { weekStanding } from './availabilityWeek';
 import { introToSend } from './intro';
 import { uploadsInFlight, type ProfilePhoto } from './photoCollection';
 import type { Gender, GenderPreference } from './gender';
-import type { AvailabilitySlot, LocationArea, ProfileDraft, ProposalsOptIn } from './ProfileDraft';
+import type { WeeklyHour, LocationArea, ProfileDraft, ProposalsOptIn } from './ProfileDraft';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { SocialStep } from './socialSteps';
 
@@ -82,7 +82,7 @@ export interface ProfileCommit {
    */
   readonly intro?: string;
   readonly photoIds: readonly string[];
-  readonly availability: readonly AvailabilitySlot[];
+  readonly weeklyHours: readonly WeeklyHour[];
   readonly location: LocationArea;
   readonly searchRadiusKm: number;
   readonly proposalsOptIn: ProposalsOptIn;
@@ -120,7 +120,7 @@ export type CommitReadiness =
  * control is drawn from, and the same one that would move if the floor ever did.
  */
 const ANSWER_HELD: Readonly<Record<MissingAnswer, (draft: ProfileDraft) => boolean>> = {
-  availability: (draft) => weekStanding(draft.availability).kind === 'ticked',
+  availability: (draft) => weekStanding(draft.weeklyHours).kind === 'ticked',
   location: (draft) => draft.location !== undefined,
   'search-radius': (draft) => draft.searchRadiusKm !== undefined,
   // The gender answer, and **not** the preference beside it: `any` is what having narrowed
@@ -147,7 +147,7 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
   // **One guard, because it is one question.** The four narrowings say to the compiler what
   // the filter above just said to a screen — and they are what make `ProfileCommit`
   // constructible at all. The week has no narrowing to do, since `readonly
-  // AvailabilitySlot[]` is already the commit's type, so it is carried by `missing` alone;
+  // WeeklyHour[]` is already the commit's type, so it is carried by `missing` alone;
   // counting the list a second time here would be the floor decided twice.
   if (
     missing.length > 0 ||
@@ -171,7 +171,7 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
       // Left out rather than carried empty — see the module note.
       ...(intro === undefined ? {} : { intro }),
       photoIds: draft.photoIds,
-      availability: draft.availability,
+      weeklyHours: draft.weeklyHours,
       location,
       searchRadiusKm,
       proposalsOptIn,

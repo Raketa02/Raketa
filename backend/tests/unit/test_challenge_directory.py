@@ -45,7 +45,7 @@ from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.challenges.domain.seats import SeatPlan, Side
 from app.modules.challenges.domain.standing import Standing
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 
 ORGANISER = new_uuid()

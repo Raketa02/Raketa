@@ -907,9 +907,9 @@ class ClubGroupSchema(BaseModel):
     )
     games: int = Field(
         description=(
-            "How many games **the group gave birth to** — never a game two of its "
-            "members arranged elsewhere. No group picks a game yet, so `0`; the "
-            "day one can, it counts them and means the same."
+            "How many games **were booked in the group** — every game its deck "
+            "filled into a booking at a court — never a game two of its members "
+            "arranged elsewhere."
         )
     )
 

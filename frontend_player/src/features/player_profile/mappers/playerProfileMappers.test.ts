@@ -16,8 +16,8 @@ import {
   toPlayerProfileSurface,
   toProfileOptions,
   toUploadedPhoto,
-  toWeekCells,
-  toWireSlots,
+  toWeeklyHours,
+  toWireWeeklyHours,
 } from './playerProfileMappers';
 
 const SERVED: Wire['PlayerProfileOptionsResponse'] = {
@@ -126,9 +126,9 @@ describe('the body that ends the part', () => {
   const COMMIT: ProfileCommit = {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
     photoIds: ['photo-a', 'photo-b'],
-    availability: [
-      { day: 1, part: 'morning' },
-      { day: 7, part: 'evening' },
+    weeklyHours: [
+      { day: 1, hour: 7 },
+      { day: 7, hour: 22 },
     ],
     location: { latitude: 41.39, longitude: 2.16 },
     searchRadiusKm: 12,
@@ -141,9 +141,9 @@ describe('the body that ends the part', () => {
     expect(toCommitRequest(COMMIT)).toEqual({
       social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
       photo_ids: ['photo-a', 'photo-b'],
-      availability: [
-        { day: 1, part: 'MORNING' },
-        { day: 7, part: 'EVENING' },
+      weekly_hours: [
+        { day: 1, hour: 7 },
+        { day: 7, hour: 22 },
       ],
       location: { latitude: 41.39, longitude: 2.16 },
       search_radius_km: 12,
@@ -171,10 +171,10 @@ describe('the body that ends the part', () => {
   it('sends an empty week and no photos as themselves, never as an omission', () => {
     // Both are answers. A body that dropped either field would let the server default it,
     // which is the same value arrived at by two routes — and one of them a guess.
-    const blank = toCommitRequest({ ...COMMIT, photoIds: [], availability: [] });
+    const blank = toCommitRequest({ ...COMMIT, photoIds: [], weeklyHours: [] });
 
     expect(blank.photo_ids).toEqual([]);
-    expect(blank.availability).toEqual([]);
+    expect(blank.weekly_hours).toEqual([]);
   });
 
   it('sends a declined opt-in as a recorded no, with its copy version', () => {
@@ -192,8 +192,7 @@ describe('the body that ends the part', () => {
   });
 
   it('spells each gender answer the way the contract does', () => {
-    // A table and not a cast, for the day parts' reason: `prefer-not-to-say` would not
-    // survive one, and a fourth value on either side must stop the mapper compiling rather
+    // A table and not a cast: `prefer-not-to-say` would not survive one, and a fourth value on either side must stop the mapper compiling rather
     // than produce a string the other end has never heard of.
     expect(toCommitRequest({ ...COMMIT, gender: 'man' }).gender).toBe('MAN');
     expect(toCommitRequest({ ...COMMIT, gender: 'prefer-not-to-say' }).gender).toBe(
@@ -215,15 +214,6 @@ describe('the body that ends the part', () => {
     expect(toCommitRequest({ ...COMMIT, genderPreference: 'men-only' }).gender_preference).toBe(
       'MEN_ONLY',
     );
-  });
-
-  it('spells each part of the day the way the contract does', () => {
-    const afternoon = toCommitRequest({
-      ...COMMIT,
-      availability: [{ day: 3, part: 'afternoon' }],
-    });
-
-    expect(afternoon.availability).toEqual([{ day: 3, part: 'AFTERNOON' }]);
   });
 });
 
@@ -300,32 +290,47 @@ describe('the week, in the two spellings that exist', () => {
     // The list *is* the week and what is absent from it is unticked, so nothing here sorts
     // and nothing deduplicates — the write path collapses repeats itself.
     expect(
-      toWireSlots([
-        { day: 6, part: 'morning' },
-        { day: 2, part: 'evening' },
+      toWireWeeklyHours([
+        { day: 6, hour: 9 },
+        { day: 2, hour: 19 },
       ]),
     ).toEqual([
-      { day: 6, part: 'MORNING' },
-      { day: 2, part: 'EVENING' },
+      { day: 6, hour: 9 },
+      { day: 2, hour: 19 },
     ]);
   });
 
   it('reads one back', () => {
-    expect(toWeekCells([{ day: 2, part: 'AFTERNOON' }])).toEqual([{ day: 2, part: 'afternoon' }]);
+    expect(toWeeklyHours([{ day: 2, hour: 14 }])).toEqual([{ day: 2, hour: 14 }]);
   });
 
   it('drops a cell naming a day that is not one of the seven', () => {
     // The wire types `day` as a bare integer, so seven is a promise rather than a
     // compiler's guarantee — and there is no honest eighth day to draw.
-    const eighth = [{ day: 8, part: 'MORNING' }] as unknown as Wire['AvailabilitySlotResource'][];
+    expect(toWeeklyHours([{ day: 8, hour: 9 }])).toEqual([]);
+  });
 
-    expect(toWeekCells(eighth)).toEqual([]);
+  it('drops an hour the grid does not draw, keeping the ones either side of it', () => {
+    // The same promise about `hour`: the week runs 07:00 to 23:00, so its first cell starts
+    // at 7 and its last at 22, and a 23 or a 6 is a cell there is no row for.
+    expect(
+      toWeeklyHours([
+        { day: 3, hour: 6 },
+        { day: 3, hour: 7 },
+        { day: 3, hour: 22 },
+        { day: 3, hour: 23 },
+        { day: 3, hour: 19.5 },
+      ]),
+    ).toEqual([
+      { day: 3, hour: 7 },
+      { day: 3, hour: 22 },
+    ]);
   });
 });
 
 describe('the profile surface Play and You read', () => {
   const SERVED_SURFACE: Wire['PlayerProfileReadResponse'] = {
-    availability: [{ day: 2, part: 'EVENING' }],
+    weekly_hours: [{ day: 2, hour: 19 }],
     search_radius_km: 12,
     play_intents: { PADEL: 'FOR_FUN', TENNIS: 'NO_PREFERENCE' },
     social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
@@ -343,7 +348,7 @@ describe('the profile surface Play and You read', () => {
 
   it('carries every fact the tab draws — the three Play reads, the three social ones, and the three that gate the matcher', () => {
     expect(toPlayerProfileSurface(SERVED_SURFACE)).toEqual({
-      week: [{ day: 2, part: 'evening' }],
+      week: [{ day: 2, hour: 19 }],
       searchRadiusKm: 12,
       playIntents: { padel: 'FOR_FUN', tennis: 'NO_PREFERENCE' },
       socialTagIds: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
@@ -425,7 +430,7 @@ describe('the profile surface Play and You read', () => {
   it('reads a cleared week as an answer rather than as a missing one', () => {
     // A player may clear their week. It means *we do not know when they play*, never
     // *never*, and it is what the search screen seeds a blank working copy from.
-    expect(toPlayerProfileSurface({ ...SERVED_SURFACE, availability: [] }).week).toEqual([]);
+    expect(toPlayerProfileSurface({ ...SERVED_SURFACE, weekly_hours: [] }).week).toEqual([]);
   });
 
   it('leaves an undeclared sport absent, which is what the interstitial reads', () => {

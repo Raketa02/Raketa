@@ -26,14 +26,14 @@ describe('the floor, in words', () => {
     const eyebrow = availabilityEyebrow();
 
     expect(eyebrow).toMatch(/Step 4 of 8/);
-    expect(eyebrow).toMatch(/at least one/i);
+    expect(eyebrow).toMatch(/at least one hour/i);
   });
 
   it('names what is missing on the control, rather than leaving it merely grey', () => {
-    expect(availabilityContinueLabel({ kind: 'empty' })).toMatch(/at least one/i);
+    expect(availabilityContinueLabel({ kind: 'empty' })).toBe('Pick at least one hour to continue');
   });
 
-  it('says nothing but Continue once the floor is met, at one slot or at twenty-one', () => {
+  it('says nothing but Continue once the floor is met, at one hour or at the whole week', () => {
     // No countdown to run and no ceiling to warn about: the floor is one, so the control is
     // either asking for a tick or it is not.
     expect(availabilityContinueLabel({ kind: 'ticked', count: 1 })).toBe('Continue');
@@ -53,8 +53,8 @@ describe('the footnote', () => {
   });
 
   it('names the count once anything is ticked', () => {
-    expect(availabilityFootnote({ kind: 'ticked', count: 1 })).toMatch(/^1 slot ticked/);
-    expect(availabilityFootnote({ kind: 'ticked', count: 4 })).toMatch(/^4 slots ticked/);
+    expect(availabilityFootnote({ kind: 'ticked', count: 1 })).toMatch(/^1 hour ticked/);
+    expect(availabilityFootnote({ kind: 'ticked', count: 4 })).toMatch(/^4 hours ticked/);
   });
 
   it('stays inside the two lines the slot reserves', () => {

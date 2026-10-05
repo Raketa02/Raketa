@@ -53,6 +53,16 @@ describe('the sport a group page opens on', () => {
     expect(openingSport([], 'padel')).toBeUndefined();
   });
 
+  // #559: a notice about a padel card opens the group on padel, whatever was picked last.
+  it('is the sport a notice opened the page in, while the filter lists it', () => {
+    expect(openingSport(['padel', 'tennis'], 'tennis', undefined, 'padel')).toBe('padel');
+  });
+
+  it('is the one picked as ever when the notice’s sport is not on the filter', () => {
+    expect(openingSport(['padel', 'tennis'], 'tennis', undefined, 'squash')).toBe('tennis');
+    expect(openingSport(['padel', 'tennis'], 'tennis', ['tennis'], 'padel')).toBe('tennis');
+  });
+
   it('is a sport an official group plays, whatever was picked elsewhere', () => {
     expect(openingSport(['padel', 'tennis'], 'tennis', ['padel'])).toBe('padel');
     expect(openingSport(['padel', 'tennis', 'squash'], 'squash', ['squash', 'padel'])).toBe(

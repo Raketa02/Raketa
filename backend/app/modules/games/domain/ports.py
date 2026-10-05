@@ -253,7 +253,7 @@ class ResultAnswering:
 
     **It is the same shape as ``Attendance`` above and is deliberately not the
     same type.** Three counts and a moment is what an opportunity record looks
-    like — ``challenges``' ``AnsweringRecord`` is a third one — and a shared
+    like — ``bookings``' ``KeepingRecord`` is a third one (#544) — and a shared
     ``Opportunity(good, missed, last_at)`` would be a type whose field names could
     not say *played* or *ghosted* or *ignored*. The words are the whole content of
     these rows: a reader of the fold has to know that a ghost is charged to a
@@ -491,6 +491,26 @@ class AgreedMoment(Protocol):
     async def agreed_point_of(self, challenge_id: UUID) -> Instant | None:
         """The plan's moment, or ``None`` while no day is recorded — which
         includes a court whose plan has never been written."""
+        ...
+
+
+@runtime_checkable
+class ClubCheckIns(Protocol):
+    """*Who did the club see arrive?* — this context's demand on whoever keeps
+    a booking (#547; the mechanics §15.1, §16.10).
+
+    A player the club's desk checked in **can never be reported as not
+    turning up**, and the scan is the booking's fact, recorded where the desk
+    made it; so this context asks for it rather than keeping a copy that could
+    disagree. **Keyed by the challenge id the game was opened from** — a
+    booked game's ``challenge_id`` is its booking's id — so the caller asks in
+    a currency it already holds, as ``AgreedMoment`` is asked. A game a
+    completed line-up opened has no desk, and nobody on it was checked in.
+    """
+
+    async def checked_in(self, challenge_id: UUID) -> frozenset[UUID]:
+        """Everybody the club checked in to the game opened from
+        ``challenge_id`` — empty when there is no booking behind it."""
         ...
 
 

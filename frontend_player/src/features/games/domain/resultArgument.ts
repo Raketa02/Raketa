@@ -22,6 +22,9 @@
  * | `AWAITING_ANSWER` | an agreement | who agreed, when it settles, and what is left to do |
  * | `CONFIRMED` | — | the agreed score, and what it said about you |
  * | `UNSCORED` | — | an evening, not evidence |
+ * | `STARTED_SHORT` | — | a booked game whose hour came with a seat open: no result |
+ * | `NO_SHOW_REPORTED` | a report | who was marked as not coming, and the dispute for them (#560) |
+ * | `NO_SHOW` | — | who did not come: the reports nobody disputed (#560) |
  *
  * ## Which of the three is read off the count, and never off an absence
  *
@@ -75,13 +78,19 @@ import {
   type Acceptance,
   type CalledOffBy,
   type Game,
+  type NoShowReport,
   type Score,
   type StandingProposal,
 } from './game';
 import type { GameSide, Outcome } from './vocabulary';
 
-/** The one act a screen state offers, in the order the screen draws them. */
-export type ResultAct = 'enter' | 'correct' | 'accept' | 'counter';
+/**
+ * The one act a screen state offers, in the order the screen draws them. **`dispute` is not about
+ * a score** — it is *I was there*, the reported player's answer to a no-show report (#560) — and
+ * marking somebody as not coming is not here either: it is an act per person, offered beside the
+ * entry rather than instead of it (`noShowRows` in `noShows.ts`).
+ */
+export type ResultAct = 'enter' | 'correct' | 'accept' | 'counter' | 'dispute';
 
 /**
  * **What an entry arm leads with** — the plan while it is being agreed, the score once the moment
@@ -109,7 +118,7 @@ export type EntryLead = 'the-plan' | 'the-score';
  * The three acts that open a grid. **At most one of them is ever offered at once**, which is
  * what lets {@link editingAct} read the answer off {@link actsOffered} instead of restating it.
  */
-export type EditingAct = Exclude<ResultAct, 'accept'>;
+export type EditingAct = Exclude<ResultAct, 'accept' | 'dispute'>;
 
 /** The two scores on the table, **from the reader's side of the net**. Either may be absent. */
 export interface ScoresOnTable {
@@ -183,7 +192,40 @@ export type ResultArgument =
    */
   | ({ readonly kind: 'agreed'; readonly agreement: StandingAgreement } & ScoresOnTable)
   | { readonly kind: 'confirmed'; readonly score?: Score; readonly outcome?: Outcome }
-  | { readonly kind: 'unscored' };
+  | { readonly kind: 'unscored' }
+  /** A booked game whose hour came with a seat still open: it takes no result (#544). */
+  | { readonly kind: 'started-short' }
+  /**
+   * **Somebody was marked as not coming, and a report's day still runs** (#560; the mechanics
+   * §15.3). The reader's own mark where one names them — whose `open` day is the one act this arm
+   * offers, *I was there* — and everybody else's, in the court's order.
+   */
+  | {
+      readonly kind: 'no-show-reported';
+      readonly yours?: NoShowMark;
+      readonly others: readonly NoShowMark[];
+    }
+  /**
+   * **Every report has had its day, and one stood**: the game does not count. `didNotCome` is the
+   * reports nobody disputed — a disputed one fell, and is on nobody's record.
+   */
+  | { readonly kind: 'no-show'; readonly didNotCome: readonly NamedPlayer[] };
+
+/**
+ * **One no-show report, from the reader's side** — who it marks and where it stands. *Mark* is the
+ * glossary's own verb for it: the players who came marking one who didn't.
+ */
+export interface NoShowMark {
+  /** *You* on the reader's own, the whole name, or `?` where `users` lost them. */
+  readonly who: NamedPlayer;
+  /** The end of their day to say they came — the backend's instant. */
+  readonly disputeBy: string;
+  /**
+   * `open` — undisputed, its day not over when the list was read: it may still be disputed.
+   * `disputed` — they said they came, and the report fell. `stood` — undisputed, its day over.
+   */
+  readonly state: 'open' | 'disputed' | 'stood';
+}
 
 /**
  * **How a game was called off, and by whom** — the game screen's heading and body are keyed on it.
@@ -255,17 +297,17 @@ export function othersOn(game: Game, reader: string): readonly NamedPlayer[] {
 function calledOffEnding(game: Game, reader: string): CalledOffEnding {
   const format = game.seats.length <= SINGLES_SEATS ? 'singles' : 'doubles';
   if (game.calledOffBy === undefined) return { how: 'the-hour', format };
-  return { how: 'departure', by: whoCalledItOff(game.calledOffBy, reader), format };
+  return { how: 'departure', by: namedFrom(game.calledOffBy, reader), format };
 }
 
 /**
- * `whoIs`'s three answers, off the field rather than off a seat — the leaver's seat is vacated,
- * so the name has to come with the id (ADR-0172 §4).
+ * `whoIs`'s three answers, off a field that carries its own name rather than off a seat — a
+ * leaver's seat is vacated (ADR-0172 §4), and a no-show report names its player whole (#560).
  */
-function whoCalledItOff(calledOffBy: CalledOffBy, reader: string): NamedPlayer {
-  if (calledOffBy.playerId === reader) return { kind: 'you' };
-  if (calledOffBy.name === undefined) return { kind: 'unknown' };
-  return { kind: 'player', name: calledOffBy.name };
+function namedFrom(subject: CalledOffBy | NoShowReport, reader: string): NamedPlayer {
+  if (subject.playerId === reader) return { kind: 'you' };
+  if (subject.name === undefined) return { kind: 'unknown' };
+  return { kind: 'player', name: subject.name };
 }
 
 /** How many seats a singles court has — two, and the boundary between the two words. */
@@ -305,6 +347,17 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
       return { kind: 'confirmed', score: game.score, outcome: game.outcome };
     case 'UNSCORED':
       return { kind: 'unscored' };
+    case 'STARTED_SHORT':
+      return { kind: 'started-short' };
+    case 'NO_SHOW_REPORTED':
+      return noShowReported(game, playerId);
+    case 'NO_SHOW':
+      return {
+        kind: 'no-show',
+        didNotCome: game.noShows.flatMap((report) =>
+          report.disputedAt === undefined ? [namedFrom(report, playerId)] : [],
+        ),
+      };
     case 'AWAITING_ANSWER': {
       const ours = game.proposals.find((one) => one.side === side);
       const theirs = game.proposals.find((one) => one.side !== side);
@@ -329,6 +382,35 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
         : { kind: 'both-stand', ours, theirs };
     }
   }
+}
+
+/** The reader's own mark, and everybody else's, while a report's day still runs. */
+function noShowReported(game: Game, playerId: string): ResultArgument {
+  const marks = game.noShows.map((report) => ({
+    playerId: report.playerId,
+    mark: markOf(report, playerId, game.readAt),
+  }));
+  const yours = marks.find((one) => one.playerId === playerId)?.mark;
+  return {
+    kind: 'no-show-reported',
+    ...(yours === undefined ? {} : { yours }),
+    others: marks.flatMap((one) => (one.playerId === playerId ? [] : [one.mark])),
+  };
+}
+
+/**
+ * A report in the reader's terms. **Whether its day is still open** is read off two of the
+ * backend's own instants — the report's `disputeBy` and the list's `readAt` — and never off this
+ * phone's clock: it is the server's `may_dispute`, asked of the moment the list was folded.
+ */
+function markOf(report: NoShowReport, reader: string, readAt: string): NoShowMark {
+  const state =
+    report.disputedAt !== undefined
+      ? 'disputed'
+      : Date.parse(readAt) < Date.parse(report.disputeBy)
+        ? 'open'
+        : 'stood';
+  return { who: namedFrom(report, reader), disputeBy: report.disputeBy, state };
 }
 
 /** An agreement in the reader's own terms, and `undefined` where none stands. */
@@ -380,7 +462,24 @@ export function scoresOnTable(argument: ResultArgument): ScoresOnTable {
  * correction away is written once.
  */
 export function editingAct(argument: ResultArgument): EditingAct | undefined {
-  return actsOffered(argument).find((act): act is EditingAct => act !== 'accept');
+  return actsOffered(argument).find(
+    (act): act is EditingAct => act !== 'accept' && act !== 'dispute',
+  );
+}
+
+/**
+ * **Whether a score is waiting on this player's agreement** — the *result to confirm* that makes a
+ * game one of those Home's badge counts ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
+ *
+ * Read off {@link actsOffered} rather than off the state's name, for the reason `editingAct` is: a
+ * score waits on you exactly when agreeing with one is an act you may take, so the two cannot
+ * disagree about a state. Your own score waiting on the other side is not yours to clear, and an
+ * agreement already running out its grace is settled unless somebody disagrees — which is a right
+ * the screen still offers, not a task the badge should nag about.
+ */
+export function awaitsYourAgreement(game: Game, playerId: string): boolean {
+  return actsOffered(resultArgument(game, playerId)).includes('accept');
 }
 
 /**
@@ -411,12 +510,18 @@ export function actsOffered(argument: ResultArgument): readonly ResultAct[] {
       // and only the side that has not spoken may make one — two scores standing means neither
       // can, which is the aggregate's cap rather than a rule invented here.
       return argument.ours === undefined ? ['counter'] : [];
+    case 'no-show-reported':
+      // *I was there* — the reported player's alone, inside their own day (#560). Nobody else
+      // answers a report: the platform does not arbitrate, and a dispute falls the report whole.
+      return argument.yours?.state === 'open' ? ['dispute'] : [];
     case 'not-yours':
     case 'unreadable':
     case 'never-played':
     case 'called-off':
     case 'confirmed':
     case 'unscored':
+    case 'started-short':
+    case 'no-show':
       return [];
   }
 }

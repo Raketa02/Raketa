@@ -2,8 +2,10 @@
 
 Three rules decide everything below.
 
-**The standing is derived and travels as a code.** ``GameStanding`` is six values and
-the words for them are the client's (``docs/adr/0022``). It is on the response
+**The standing is derived and travels as a code.** ``GameStanding`` is nine values —
+``STARTED_SHORT`` arrived with leaving a booked game (#544), ``NO_SHOW_REPORTED`` and
+``NO_SHOW`` with reporting a player who did not come to one (#547) — and the words for
+them are the client's (``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
 stale. **The one thing a reader's own act changes about this list is which games
@@ -46,7 +48,7 @@ from app.modules.games.domain.results import (
     Outcome,
 )
 from app.modules.games.domain.standing import GameStanding
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 
 
 class SetScoreSchema(BaseModel):
@@ -234,6 +236,40 @@ class AcceptanceSchema(BaseModel):
     )
 
 
+class NoShowSchema(BaseModel):
+    """A player reported as not coming to this booked game (#547; the
+    mechanics §15.3) — and what became of it. **Who reported them is not
+    here**: the report is the game's, said by the people who came, and a name
+    on it would be the platform pointing at one of them."""
+
+    player_id: UUID
+    name: str | None = Field(
+        default=None,
+        description=(
+            "Their whole name, as a seat carries it. ``null`` where ``users`` "
+            "no longer has the account."
+        ),
+    )
+    reported_at: datetime
+    dispute_by: datetime = Field(
+        ...,
+        description=(
+            "The end of their day to say they came — 24 hours from the report. "
+            "**Nothing happens at this moment**: an undisputed report simply "
+            "stands from here on, and the game reads `NO_SHOW` once every "
+            "report has had its day."
+        ),
+    )
+    disputed_at: datetime | None = Field(
+        default=None,
+        description=(
+            "When they disputed it. **Nobody arbitrates**: a disputed report "
+            "falls and is on nobody's record; a game whose every report was "
+            "disputed is `UNSCORED`."
+        ),
+    )
+
+
 class GameSchema(BaseModel):
     """One game, its court, and what it is right now."""
 
@@ -343,6 +379,23 @@ class GameSchema(BaseModel):
             "is. **A counter voids one**, so this is what still stands rather "
             "than what was once recorded."
         ),
+    )
+    no_shows: list[NoShowSchema] = Field(
+        ...,
+        description=(
+            "Everybody reported as not coming to this **booked** game, in the "
+            "court's order (#547). Empty on every other game. A report is the "
+            "game's entry: no score is on the table beside one, and **the game "
+            "does not count** whatever it comes to."
+        ),
+    )
+
+
+class ReportANoShowRequest(BaseModel):
+    """*Kuba didn't come.*"""
+
+    player_id: UUID = Field(
+        ..., description="Who did not come — somebody else on the game's court."
     )
 
 

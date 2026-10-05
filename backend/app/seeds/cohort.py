@@ -72,13 +72,17 @@ from app.modules.sportsmanship.domain.window import (
     CARD_STAYS_OPEN_FOR,
 )
 from app.modules.matchmaking.domain.geography import Point, distance_km
-from app.modules.player_profile.domain.availability import DAYS_IN_THE_GRID, DayPart
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_SELECTION_BOUNDS,
     SocialTag,
+)
+from app.modules.player_profile.domain.weekly_hours import (
+    DAY_RANGES,
+    DAYS_IN_THE_GRID,
+    HOURS_OF_THE_DAY,
 )
 from app.seeds.clock import NEWCOMER_WINDOW_DAYS
 from app.seeds.catalog import (
@@ -125,14 +129,59 @@ SPORTS: Final = (Sport.PADEL, Sport.TENNIS)
 #: not own. This is the artifact's stable name for a row, and the file says so.
 IDS: Final = uuid5(NAMESPACE_URL, f"https://{SEED_EMAIL_DOMAIN}/cohort")
 
-#: The twenty-one cells of the availability grid, and the served tags.
+#: The 112 hours of the week, in reading order — the cells a week is **held** in
+#: — and the served tags.
 CELLS: Final = tuple(
-    f"{day}:{part.value}" for day in range(1, DAYS_IN_THE_GRID + 1) for part in DayPart
+    f"{day}:{hour}"
+    for day in range(1, DAYS_IN_THE_GRID + 1)
+    for hour in HOURS_OF_THE_DAY
 )
 TAGS: Final = tuple(tag.value for tag in SocialTag)
 
-#: The protagonist's own week, as cells, so a draw can be made to overlap it.
-PROTAGONIST_CELLS: Final = tuple(f"{day}:{part}" for day, part in PROTAGONIST_WEEK)
+#: The three ranges a day's hours are grouped into — the Player profile's own
+#: (``DAY_RANGES``; the mechanics §9.1, Q71).
+#:
+#: **A week here is drawn in ranges and painted in hours**, and that is the
+#: translation that moves nobody. The week became hours with ``docs/adr/0189``
+#: §5, and drawing it hour by hour instead moved every member's availability
+#: reading against the protagonist — a Fit here and a floor crossing there, and
+#: the one member carrying the ``SOME`` inbox fell below the floor with it. So
+#: the draw is the one the week of parts had, over the same twenty-one cells in
+#: the same order, and each range drawn is painted as a run of
+#: :data:`HOURS_PER_RANGE` hours: **her own hours** in a range she holds, a run
+#: at a drawn position in any other. A range shared is then exactly the share of
+#: her week a cell shared was, both ways round, and a member's week is still one
+#: a player could have painted.
+RANGES: Final[Mapping[str, tuple[int, ...]]] = DAY_RANGES
+
+#: How many hours a member paints in each range they drew — as many as the
+#: protagonist holds in each of hers, which is what keeps a shared range the same
+#: share of her week a shared cell was. Checked against her week at import.
+HOURS_PER_RANGE: Final = 3
+
+#: The twenty-one ranges of the week: the cells a week is **drawn** in.
+RANGE_CELLS: Final = tuple(
+    f"{day}:{name}" for day in range(1, DAYS_IN_THE_GRID + 1) for name in RANGES
+)
+
+
+def _range_cell(day: int, hour: int) -> str:
+    return next(f"{day}:{name}" for name, hours in RANGES.items() if hour in hours)
+
+
+#: The protagonist's own hours, by the range each falls in — in the order her
+#: week is written, which is the order a draw samples her ranges in.
+PROTAGONIST_HOURS_BY_RANGE: Final[Mapping[str, tuple[str, ...]]] = {
+    cell: tuple(
+        f"{day}:{hour}"
+        for day, hour in PROTAGONIST_WEEK
+        if _range_cell(day, hour) == cell
+    )
+    for cell in dict.fromkeys(_range_cell(day, hour) for day, hour in PROTAGONIST_WEEK)
+}
+
+#: The ranges she holds, so a draw can be made to overlap them.
+PROTAGONIST_CELLS: Final = tuple(PROTAGONIST_HOURS_BY_RANGE)
 
 
 # ---------------------------------------------------------------------------
@@ -374,8 +423,8 @@ EVERY_NTH_IS_LOPSIDED: Final = 9
 IS_LOPSIDED_AT: Final = 5
 
 #: Every n-th member's week misses the protagonist's entirely, so the
-#: availability term's *no shared slots* dock is reachable rather than
-#: structural. Everybody else shares at least this many cells.
+#: availability term's *no shared hours* dock is reachable rather than
+#: structural. Everybody else shares at least this many of her ranges.
 EVERY_NTH_SHARES_NO_WEEK: Final = 7
 SHARES_NO_WEEK_AT: Final = 4
 SHARED_CELLS_FLOOR: Final = 2
@@ -403,7 +452,7 @@ SHARED_CELLS_FLOOR: Final = 2
 EVERY_NTH_IS_A_CLOSE_MATCH: Final = 2
 IS_A_CLOSE_MATCH_AT: Final = 1
 
-#: How much of her six-cell week a close match covers. **Five and not six**: a
+#: How many of her six ranges a close match covers. **Five and not six**: a
 #: member matching her exactly would be a sixteenth clone, and the availability
 #: term would be back to having nothing to separate anybody by.
 CLOSE_MATCH_CELLS: Final = 5
@@ -443,11 +492,17 @@ MEMBER_RADIUS_KM: Final = (5, SEARCH_RADIUS_BOUNDS.maximum_km)
 #: How many tags a member holds, inside the selection's own served bounds.
 MEMBER_TAG_COUNT: Final = (2, 5)
 
-#: How many cells a member ticks **beyond** the ones the overlap rule already
-#: put there, and how many a member with no shared week ticks instead. Named
+#: How many ranges a member draws **beyond** the ones the overlap rule already
+#: put there, and how many a member with no shared week draws instead. Named
 #: beside the tag count rather than left inline, because both are the fixture
-#: deciding how much of the grid an ordinary player fills — which is the number
+#: deciding how much of the week an ordinary player fills — which is the number
 #: the availability term's denominator is read against.
+#:
+#: **What spreads the cohort across the posting grid** (the mechanics §9.1):
+#: her ranges are shared by many members or by few, a range outside her week is
+#: painted by others at drawn positions — so they are free at *different* hours
+#: inside one range — and most of the week's ranges on any one day are painted
+#: by nobody at all.
 MEMBER_EXTRA_CELLS: Final = (1, 4)
 MEMBER_CELLS_ELSEWHERE: Final = (2, 5)
 
@@ -713,11 +768,11 @@ SECOND_SPORT_BECAUSE_THEY_PLAYED: Final[frozenset[str]] = frozenset(
 #
 # Three properties are load-bearing and each is checked below:
 #
-# - **She is never the organiser**, and is always ``side_b[0]``. The organiser's
-#   own seat is accepted at birth, so an organiser answers no invitation and
-#   would have no *answers challenges* strand at all; and the side that *states*
-#   the score is asked nothing, so a protagonist on side A would have no *answers
-#   about results* strand either. Both strands exist because of where she sits.
+# - **She is never the organiser**, and is always ``side_b[0]``. The side that
+#   *states* the score is asked nothing, so a protagonist on side A would have no
+#   *answers about results* strand; it exists because of where she sits. (She
+#   was also never the organiser for *answers challenges*, whose organiser's own
+#   seat answered nothing — a strand that stood down with #544.)
 # - **Every opponent is a cohort member whose own drawn radius already reaches
 #   the centre**, so nothing here feeds ``_how_far_they_have_to_see`` and not one
 #   member's draw moves. That is the whole reason this list can be added without
@@ -786,9 +841,8 @@ PROTAGONISTS_ORGANISERS: Final = PROTAGONISTS_OPPONENTS
 #: - Six arrangements, five of them played: the oldest is **a ghost** — the
 #:   line-up completed, nobody ever said it happened, and the entry window closed
 #:   over it. *Shows up* reads 5 of 6.
-#: - Every invitation answered, so *answers challenges* reads 6 of 6. A lapsed
-#:   seat would dock it and there is no way to declare one here: a lapse is a
-#:   fact about a **challenge** nobody answered, and this file declares games.
+#: - Every invitation answered — once *answers challenges*' 6 of 6, a strand
+#:   that stood down with #544, so it is on her sheet no more.
 #: - Five scores put to her side and one of them ignored — the three-day-old
 #:   row, which confirms by silence anyway and still draws its square. *Answers
 #:   about results* reads 4 of 5.
@@ -1048,7 +1102,7 @@ class CohortMember:
     latitude: float
     longitude: float
     radius_km: int
-    #: Grid cells, as the boundary spells one.
+    #: The hours of the week, as ``WeeklyHour.code`` spells one — ``"2:19"``.
     slots: tuple[str, ...]
     tags: tuple[str, ...]
     #: One per sport this member plays, in the order the run declares them.
@@ -1137,13 +1191,13 @@ class CohortMember:
         return uuid5(IDS, self.handle)
 
     @property
-    def availability(self) -> tuple[tuple[int, str], ...]:
+    def weekly_hours(self) -> tuple[tuple[int, int], ...]:
         return tuple(_cell(code) for code in self.slots)
 
 
-def _cell(code: str) -> tuple[int, str]:
-    day, _, part = code.partition(":")
-    return int(day), part
+def _cell(code: str) -> tuple[int, int]:
+    day, _, hour = code.partition(":")
+    return int(day), int(hour)
 
 
 @final
@@ -1354,14 +1408,21 @@ def _rng(handle: str, axis: str, seed: int) -> random.Random:
 
 
 def _slots(handle: str, position: int, seed: int) -> tuple[str, ...]:
-    """A week that overlaps the protagonist's, unless this member is the n-th.
+    """A week of hours that overlaps the protagonist's, unless this member is
+    the n-th — drawn in ranges, painted in hours (:data:`RANGES`)."""
+
+    return _painted(_ranges(handle, position, seed), handle, seed)
+
+
+def _ranges(handle: str, position: int, seed: int) -> frozenset[str]:
+    """Which of the week's twenty-one ranges this member plays in.
 
     The overlap is a **rule** and the rest of the week is a draw: a drawn overlap
     at this size is a fixture where the availability term sometimes has nothing
     to read, and *sometimes* is the one thing a workbench may not be.
 
     **How much** overlap is a rule too, and the floor is not the ceiling: a close
-    match covers five of her six cells where everybody else is guaranteed two.
+    match covers five of her six ranges where everybody else is guaranteed two.
     Two is enough for the term to *read*; it is not enough for it to ever score
     well, and a fixture whose availability term only ever docks is a fixture
     where nobody outranks the named accounts.
@@ -1369,19 +1430,43 @@ def _slots(handle: str, position: int, seed: int) -> tuple[str, ...]:
 
     rng = _rng(handle, "slots", seed)
     if _is_lopsided(position):
-        return CELLS
+        return frozenset(RANGE_CELLS)
     if position % EVERY_NTH_SHARES_NO_WEEK == SHARES_NO_WEEK_AT:
-        elsewhere = [cell for cell in CELLS if cell not in PROTAGONIST_CELLS]
-        return tuple(
-            sorted(rng.sample(elsewhere, rng.randint(*MEMBER_CELLS_ELSEWHERE)))
-        )
+        elsewhere = [cell for cell in RANGE_CELLS if cell not in PROTAGONIST_CELLS]
+        return frozenset(rng.sample(elsewhere, rng.randint(*MEMBER_CELLS_ELSEWHERE)))
     wanted = (
         CLOSE_MATCH_CELLS if _is_a_close_match(position) else SHARED_CELLS_FLOOR
     )
     shared = rng.sample(PROTAGONIST_CELLS, wanted)
-    rest = [cell for cell in CELLS if cell not in shared]
+    rest = [cell for cell in RANGE_CELLS if cell not in shared]
     extra = rng.sample(rest, rng.randint(*MEMBER_EXTRA_CELLS))
-    return tuple(sorted(set(shared) | set(extra)))
+    return frozenset(shared) | frozenset(extra)
+
+
+def _painted(ranges: frozenset[str], handle: str, seed: int) -> tuple[str, ...]:
+    """Each range as the run of hours a player would paint in it.
+
+    **Her own hours in a range she holds**, so a range shared is exactly the
+    share of her week a cell shared was; a run of :data:`HOURS_PER_RANGE` at a
+    drawn position anywhere else, on an axis of its own so the ranges drawn are
+    the ones the week of parts drew. Returned in the week's reading order —
+    Monday 07:00 first — never the codes' text order, which files ``"1:10"``
+    before ``"1:7"``.
+    """
+
+    rng = _rng(handle, "hours", seed)
+    hours: set[str] = set()
+    for cell in RANGE_CELLS:
+        if cell not in ranges:
+            continue
+        if cell in PROTAGONIST_HOURS_BY_RANGE:
+            hours.update(PROTAGONIST_HOURS_BY_RANGE[cell])
+            continue
+        day, _, name = cell.partition(":")
+        span = RANGES[name]
+        start = rng.randint(span[0], span[-1] - HOURS_PER_RANGE + 1)
+        hours.update(f"{day}:{hour}" for hour in range(start, start + HOURS_PER_RANGE))
+    return tuple(cell for cell in CELLS if cell in hours)
 
 
 def _is_lopsided(position: int) -> bool:
@@ -1656,6 +1741,19 @@ def _refuse_an_impossible_cohort(cohort: "Cohort") -> None:
     the ladder puts it, an archetype without a band, two members at one handle.
     """
 
+    uneven = {
+        cell: len(hours)
+        for cell, hours in PROTAGONIST_HOURS_BY_RANGE.items()
+        if len(hours) != HOURS_PER_RANGE
+    }
+    if uneven:
+        raise RuntimeError(
+            f"the protagonist holds {uneven} hour(s) in those ranges, and a member "
+            f"paints {HOURS_PER_RANGE} in every range they draw. A shared range "
+            f"is only the share of her week a shared cell was while the two "
+            f"agree — `PROTAGONIST_WEEK` in `app/seeds/catalog.py`."
+        )
+
     names = [archetype.name for archetype in ARCHETYPES]
     if len(names) != len(set(names)):
         raise RuntimeError("two cohort archetypes share a name")
@@ -1710,7 +1808,7 @@ def _refuse_an_impossible_cohort(cohort: "Cohort") -> None:
     _refuse_an_opinion_nobody_was_on_a_court_to_have(cohort)
     _refuse_a_photograph_set_with_a_state_missing(cohort)
     for member in cohort.members:
-        if not SHARED_CELLS_FLOOR <= len(member.slots) <= len(CELLS):
+        if not HOURS_PER_RANGE * SHARED_CELLS_FLOOR <= len(member.slots) <= len(CELLS):
             raise RuntimeError(f"'{member.handle}' has a week of {len(member.slots)}")
         if not SEARCH_RADIUS_BOUNDS.contains(member.radius_km):
             raise RuntimeError(

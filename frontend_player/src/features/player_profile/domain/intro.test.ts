@@ -132,9 +132,7 @@ describe('the refusal a failed commit carries', () => {
   });
 
   it('is nothing for a code that is not the intro’s, whatever its details say', () => {
-    expect(
-      introRefusal(refusal('availability_grid_empty', { reason: 'too_long' })),
-    ).toBeUndefined();
+    expect(introRefusal(refusal('weekly_hours_empty', { reason: 'too_long' }))).toBeUndefined();
     expect(introRefusal(networkUnavailable())).toBeUndefined();
   });
 });

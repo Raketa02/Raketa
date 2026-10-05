@@ -115,7 +115,7 @@ export const MISSING_ANSWER_COPY: Readonly<
 > = {
   availability: {
     title: 'We still need your ordinary week',
-    body: 'One ticked slot of the twenty-one is enough. Without any there is nothing to compare with another player’s week — and a week nobody gave is never read as never free, so we would rather ask than guess it.',
+    body: 'One hour of the week is enough. Without any there is nothing to compare with another player’s week — and a week nobody gave is never read as never free, so we would rather ask than guess it.',
     label: 'Set when you usually play',
     finishHint: 'Set when you usually play to finish',
   },
@@ -185,7 +185,7 @@ export function answerStillWanted(
 const ANSWER_THE_COMMIT_REFUSED: Readonly<
   Record<string, Exclude<MissingAnswer, 'proposals-opt-in'>>
 > = {
-  availability_grid_empty: 'availability',
+  weekly_hours_empty: 'availability',
 };
 
 /**
@@ -210,7 +210,7 @@ export interface CommitRefusal {
  *
  * **The commit re-validates what the picker already enforced**, exactly as it does for
  * tags: a disabled button is absent from a replayed request and from an older build, so
- * `availability_grid_empty` is reachable even though the availability step will not
+ * `weekly_hours_empty` is reachable even though the availability step will not
  * continue without a tick. When it arrives, *try again* is the wrong sentence — retrying the
  * same body fails identically — so the screen asks for the answer and offers the step that
  * takes it, in the same words as an answer the draft is short of. Which side noticed is not

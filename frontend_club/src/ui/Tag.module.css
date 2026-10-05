@@ -23,3 +23,8 @@
   background: var(--colour-red-soft);
   color: var(--colour-red);
 }
+
+.neutral {
+  background: var(--colour-selected);
+  color: var(--colour-muted);
+}

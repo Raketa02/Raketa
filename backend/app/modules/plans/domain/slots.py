@@ -48,7 +48,7 @@ from app.modules.plans.domain.errors import (
 #: The one zone this platform reads a day and an hour in.
 #:
 #: **A locale assumption, recorded as one rather than as a constant to tune** —
-#: the shape ``availability.py``'s ``_WEEKEND`` already uses. It is not a number
+#: the shape ``weekly_hours.py``'s ``WEEKEND_DAYS`` already uses. It is not a number
 #: and there is nothing to try a different value of: **its falsifier is the first
 #: shard whose players are somewhere else**, and on that day this becomes a fact
 #: about a club or a court rather than about the platform.

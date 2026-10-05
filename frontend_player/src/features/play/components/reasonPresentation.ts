@@ -65,7 +65,7 @@ import type {
 } from '../domain/evidence';
 import type { SearchMode } from '../domain/vocabulary';
 
-import { NO_SHARED_SLOTS, balanceRowValue } from './playerCardPresentation';
+import { NO_SHARED_HOURS, balanceRowValue } from './playerCardPresentation';
 
 /**
  * How far apart the two levels are, in the direction the engine measured it.
@@ -141,10 +141,10 @@ export function reliabilityReason(evidence: ReliabilityEvidence): string {
  */
 export function availabilityOverlapReason(evidence: AvailabilityOverlapEvidence): string {
   // One string, two registers — the row is the only surface that can reach it (§6.2).
-  if (evidence.sharedCount === 0) return NO_SHARED_SLOTS;
+  if (evidence.sharedCount === 0) return NO_SHARED_HOURS;
 
   // Through the one pluralisation helper, so that no sentence here assumes English's plural.
-  const both = `${counted(evidence.sharedCount, 'slot', 'slots')} you both ticked`;
+  const both = `${counted(evidence.sharedCount, 'hour', 'hours')} you both ticked`;
 
   return evidence.nextSlot === null ? both : `${both} · next ${slotName(evidence.nextSlot)}`;
 }

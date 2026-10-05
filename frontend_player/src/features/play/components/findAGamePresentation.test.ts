@@ -139,7 +139,7 @@ describe('what the screen says about a temporary week and a permanent answer', (
 
   /**
    * `takenRungLine`'s rule, read on the other screen: the control that offered the widening
-   * says *look outside your week* rather than naming a Saturday morning, and the plus on the
+   * says *look outside your week* rather than naming a Saturday 09:00, and the plus on the
    * grid is what says which square it was. Naming it in prose as well would be the one place
    * the feature prints a slot the player never chose.
    */

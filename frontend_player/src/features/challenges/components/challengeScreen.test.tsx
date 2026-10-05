@@ -19,13 +19,13 @@ import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
-import { gameKeys } from '@/features/games/types';
-import { planKeys } from '@/features/plans/types';
 import { AppError, offlineMessage } from '@/shared/errors';
 import {
   CHALLENGES_PATH,
+  GAMES_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
+  PLANS_PATH,
   stubChallenges,
   stubConversation,
   stubConversations,
@@ -159,8 +159,8 @@ beforeEach(() => {
   onlineManager.setOnline(true);
   transport = installTransport();
   stubGate(transport, { ratings: [PADEL_RATING], hasPlayerProfile: true });
-  // Now draws the games list, and one test asserts that answering marks it out of date — which
-  // needs an entry in the cache to mark.
+  // Home's badge holds the games list on every screen, and one test asserts that answering re-reads
+  // it — which needs the list served to count the reads of.
   stubGames(transport);
   // The screen reads the reader's own yeses for the invitee's line; nobody, unless a test says.
   stubInterest(transport);
@@ -173,15 +173,6 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/**
- * An empty list in the cache that no timer will collect — for the two walks that assert a mark
- * on an entry nothing is observing. `queryClient.clear()` in `afterEach` still takes it away.
- */
-function seedUncollected(queryKey: readonly unknown[]): void {
-  queryClient.getQueryCache().build(queryClient, { queryKey, gcTime: Infinity });
-  queryClient.setQueryData(queryKey, []);
-}
-
 /** Land in the app, open Chats, and tap the one row — the walk every assertion here starts with. */
 async function openTheChallenge(
   answer: Wire['ChallengeDetailResponse'] = detail(),
@@ -190,7 +181,7 @@ async function openTheChallenge(
   stubChallenges(transport, [listed], READ_AT);
   transport.on('GET', DETAIL_PATH, () => json(answer));
 
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -209,7 +200,7 @@ async function openTheChallengeByRoute(
   stubChallenges(transport, [listed], READ_AT);
   transport.on('GET', DETAIL_PATH, () => json(answer));
 
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -556,7 +547,7 @@ describe('the ended court', () => {
       json(detail({ sport: 'PADEL', standing, seats: [...court] })),
     );
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -654,19 +645,13 @@ describe('the two refusals that are not a sentence', () => {
    * list is marked out of date rather than assembled here from a row the server has not
    * described.
    *
-   * What is asserted is the **invalidation** and not a request: `GET /games` is not mounted from
-   * behind this screen, so it is marked stale and refetches when Now next draws it. Asserting a
-   * socket call here would be asserting that the wrong thing happens.
+   * What is asserted is **a read**: `GET /games` was only marked stale here while nothing behind
+   * this screen held it, and Home's badge in the bar holds it on every screen now (#550) — so the
+   * mark is a re-read, and the re-read is what the player gets.
    */
-  it('marks the games list out of date, because an accept can have opened one', async () => {
+  it('re-reads the games list, because an accept can have opened one', async () => {
     await openTheChallenge();
-
-    // Seeded rather than mounted: Now is not on screen from behind a pushed challenge, and what
-    // is under test is the hook's cache effect rather than which tab happened to draw the list.
-    // Built with no collection time, because the yes screen's push runs every pending timer
-    // under the router harness — the entry's own collection included — and a seeded entry
-    // that was collected before it could be looked at would read as never marked.
-    seedUncollected(gameKeys.list());
+    const before = transport.requestsTo('GET', GAMES_PATH).length;
 
     transport.on('POST', `${DETAIL_PATH}/accept`, () =>
       json<Wire['ChallengeSchema']>(
@@ -683,7 +668,7 @@ describe('the two refusals that are not a sentence', () => {
     fireEvent.press(await screen.findByRole('button', { name: IM_IN }));
 
     await waitFor(() =>
-      expect(queryClient.getQueryState(gameKeys.list())?.isInvalidated).toBe(true),
+      expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(before),
     );
   });
 
@@ -691,13 +676,11 @@ describe('the two refusals that are not a sentence', () => {
    * **And the plan list**, on the same reasoning: a yes is what gives the reader an accepted seat
    * and so a row on `GET /plans` (ADR-0164 §3), and the list read before the yes held none for a
    * court they were still deciding about. The room this lands in pins the card from its first
-   * frame because the list is marked here, rather than thirty seconds later when it goes stale.
+   * frame because the list is re-read here, rather than thirty seconds later when it goes stale.
    */
-  it('marks the plan list out of date, because a yes gives the reader a row on it', async () => {
+  it('re-reads the plan list, because a yes gives the reader a row on it', async () => {
     await openTheChallenge();
-
-    seedUncollected(planKeys.list());
-    expect(queryClient.getQueryState(planKeys.list())?.isInvalidated).toBe(false);
+    const before = transport.requestsTo('GET', PLANS_PATH).length;
 
     transport.on('POST', `${DETAIL_PATH}/accept`, () =>
       json<Wire['ChallengeSchema']>(
@@ -714,7 +697,7 @@ describe('the two refusals that are not a sentence', () => {
     fireEvent.press(await screen.findByRole('button', { name: IM_IN }));
 
     await waitFor(() =>
-      expect(queryClient.getQueryState(planKeys.list())?.isInvalidated).toBe(true),
+      expect(transport.requestsTo('GET', PLANS_PATH).length).toBeGreaterThan(before),
     );
   });
 });
@@ -813,7 +796,7 @@ describe('the door on later visits', () => {
     stubConversations(transport, [listed(EWA_AND_ME)]);
     opened(EWA_AND_ME);
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     // The room's own row is on the tab beside the challenge's, spoken in the same dialect up to
@@ -839,7 +822,7 @@ describe('the door on later visits', () => {
     transport.on('GET', DETAIL_PATH, () => json(detail(everybodyIn)));
     stubConversations(transport, [listed(EWA_AND_ME)]);
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(await screen.findByLabelText(/^ewa\.m, Squash, You/));
@@ -888,7 +871,7 @@ describe('no *Leave the game* on the arranging arm', () => {
     stubChallenges(transport, [row(waitingOnTwo)], READ_AT);
     transport.on('GET', DETAIL_PATH, () => json(detail(waitingOnTwo)));
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(await screen.findByLabelText(/^ewa\.m.*, Padel, You/));
@@ -905,7 +888,7 @@ describe('no *Leave the game* on the arranging arm', () => {
     stubChallenges(transport, [row(joined)], READ_AT);
     transport.on('GET', DETAIL_PATH, () => json(detail(joined)));
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(await screen.findByLabelText(/, Padel, Waiting/));
@@ -971,7 +954,7 @@ describe('*Remove the challenge* on the arranging arm', () => {
     stubChallenges(transport, [row(court)], READ_AT);
     transport.on('GET', DETAIL_PATH, () => json(detail(court)));
 
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText(/^Chats/));
     await waitFor(() => expect(screen).toHavePathname('/chats'));
     fireEvent.press(await screen.findByLabelText(/, Padel, /));

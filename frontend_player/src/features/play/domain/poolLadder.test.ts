@@ -17,7 +17,7 @@ const times = (above: number): RungOffer => ({
   ask: 'TIMES',
   candidatesAboveFloor: above,
   window: 'THIS_WEEK',
-  slot: { day: 4, part: 'evening' },
+  slot: { day: 4, hour: 19 },
 });
 
 const radius = (above: number, radiusKm = 22): RungOffer => ({

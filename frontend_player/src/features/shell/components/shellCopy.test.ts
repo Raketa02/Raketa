@@ -19,7 +19,7 @@
 
 import { TAB_BAR_TABS, type TabBarKey } from '@/shared/ui';
 
-import { CHATS_COPY, NOW_COPY } from './shellCopy';
+import { CHATS_COPY, HOME_COPY } from './shellCopy';
 import { YOU_COPY } from './youCopy';
 
 /** Every sentence the shell writes — the two built tabs' own lines, and You's three group titles. */
@@ -28,8 +28,8 @@ const LINES = [
   CHATS_COPY.panel.body,
   CHATS_COPY.emptyChallenges,
   CHATS_COPY.emptyConversations,
-  NOW_COPY.empty.line,
-  NOW_COPY.empty.act,
+  HOME_COPY.empty.line,
+  HOME_COPY.empty.act,
   ...Object.values(YOU_COPY.groups),
 ];
 
@@ -38,7 +38,7 @@ describe('what the tabs are called', () => {
 
   it('titles each composed tab with the name the bar gives it', () => {
     expect(CHATS_COPY.title).toBe(label('chats'));
-    expect(NOW_COPY.title).toBe(label('now'));
+    expect(HOME_COPY.title).toBe(label('home'));
     expect(YOU_COPY.title).toBe(label('you'));
   });
 
@@ -55,21 +55,29 @@ describe('what the tabs are called', () => {
 });
 
 describe("what You's groups say", () => {
-  /** `the-words.md` §27: three groups, for the three questions the rows answer. */
-  it('names the three questions the rows answer, in the order they are asked', () => {
-    expect(Object.values(YOU_COPY.groups)).toEqual(['Playing', 'Finding players', 'On your card']);
+  /**
+   * `the-words.md` §27: three groups, for the three questions the rows answer — and a fourth, the
+   * account, since money arrived (ADR-0189 amending ADR-0179 §9; the screens A7, #552).
+   */
+  it('names the four questions the rows answer, in the order they are asked', () => {
+    expect(Object.values(YOU_COPY.groups)).toEqual([
+      'Playing',
+      'Finding players',
+      'On your card',
+      'Account',
+    ]);
   });
 });
 
-describe('what Now says when it is holding nothing', () => {
+describe('what Home says when it is holding nothing', () => {
   /**
-   * The rail replaced a placeholder, and an empty Now would otherwise be a blank screen — worse
+   * The rail replaced a placeholder, and an empty Home would otherwise be a blank screen — worse
    * than the citation it replaced. So there are two sentences and each has a job: the first says
    * what the tab **is**, in the present tense, and the second names the act that fills it.
    */
   it('says what the tab is, and points at the act', () => {
-    expect(NOW_COPY.empty.line).toMatch(/every game you arrange/i);
-    expect(NOW_COPY.empty.act).toMatch(/play/i);
+    expect(HOME_COPY.empty.line).toMatch(/every game you arrange/i);
+    expect(HOME_COPY.empty.act).toMatch(/play/i);
   });
 
   /**
@@ -78,7 +86,7 @@ describe('what Now says when it is holding nothing', () => {
    * `FILL_THE_SEATS` already made. The tab's drawn name is the word this sentence points at.
    */
   it('names Play without drawing the bolt', () => {
-    expect(NOW_COPY.empty.act).not.toContain('⚡');
+    expect(HOME_COPY.empty.act).not.toContain('⚡');
   });
 });
 

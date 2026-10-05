@@ -37,10 +37,10 @@ from app.modules.matchmaking.domain.searches import (
 )
 from app.modules.matchmaking.domain.sorting import of_record, sorts_available
 from app.modules.matchmaking.presentation.rendering import render_read_back
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 
 AT = datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc)
-GRID = ("1:EVENING", "3:EVENING")
+GRID = ("1:19", "3:19")
 NO_PHOTOS: dict[UUID, str] = {}
 
 

@@ -197,3 +197,19 @@ waiting for its answer.
   exercise the real flow; its keys are a human's to place.
 - **The pool abstraction costs a little now** — a group could have been hard-wired — and saves
   the rewrite when Explore becomes a city-wide pool.
+
+## Amendment — 2026-09-30: Proposals holds a player's Games & money
+
+§5's table gives **Proposals** one aggregate, the Proposal. Building the group deck
+([#539](https://github.com/Raketa02/Raketa/issues/539)) gave it a second: **Games & money** — a
+player's *games per week* (1–7, default 2, Monday to Sunday) and *most I'll pay* (off, 35, 45 or
+60 zł), which the mechanics §6.6 and §17.1 decide and this record placed nowhere. It is
+**event-sourced, one stream per player** under the player's own id (`proposals.games_and_money_set`
+/ v1, both values on every event), and **born by being used**: a player who never opened the
+screen is at the defaults and has written nothing. A same-valued save records nothing — a
+preference, as a Play intent is.
+
+It lives in Proposals, not in the Player profile or Payments, because every rule that reads it is
+about which games are dealt and which yeses stand: the deck (#539), the proposer (#540), the
+fill's pause (#541) and posting's guard (#546). The deck itself stays what §5 says it is — a
+projection, recomputed at every read and stored nowhere.

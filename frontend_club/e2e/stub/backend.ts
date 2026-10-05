@@ -10,13 +10,15 @@
  * `{administrator_id}` and all, and a handler reads the ids it was called with in `params`.
  *
  * It also serves the map's tiles and answers the address search as Nominatim's `jsonv2` search
- * does, so no test fetches OpenStreetMap.
+ * does, so no test fetches OpenStreetMap, and it serves Stripe's hosted pages, so *Connect with
+ * Stripe* lands somewhere and nothing reaches Stripe.
  */
 
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 import type { components, paths } from '../../src/generated/schema';
+import { STRIPE_PAGES, STRIPE_RETURN_URL } from '../suite';
 
 type Method = 'get' | 'put' | 'post' | 'delete';
 type Path = keyof paths;
@@ -58,6 +60,8 @@ export interface Received<P extends Path = Path, M extends Method = Method> {
   readonly method: M;
   /** The path as the request named it, ids and all. */
   readonly path: string;
+  /** The query string's parameters, by name: `?date=2026-10-12` is `{ date: '2026-10-12' }`. */
+  readonly query: Readonly<Record<string, string>>;
   /**
    * The path's ids, by the names the operation's template gives them: as a handler receives the
    * request, and as {@link StubBackend.requests} returns it. `all()` knows no template, so none.
@@ -71,6 +75,15 @@ export interface Received<P extends Path = Path, M extends Method = Method> {
 
 type AnyReply = { status: number | 'drop'; body?: unknown };
 type AnyHandler = (request: Received) => AnyReply | Promise<AnyReply>;
+
+/** Stripe's hosted pages, at the stub: whatever link the fake club handed out. */
+const STRIPE_PATH = new URL(STRIPE_PAGES).pathname;
+
+/** **One of Stripe's hosted pages**: its name, and the way back Stripe offers. */
+const STRIPE_PAGE =
+  '<!doctype html><title>Stripe</title>' +
+  '<h1>Set up payments with Stripe</h1>' +
+  `<a href="${STRIPE_RETURN_URL}">Return to Raketa</a>`;
 
 /** A 1 × 1 transparent PNG: every tile the map asks for. */
 const TILE = Buffer.from(
@@ -102,7 +115,11 @@ function paramsOf(template: string, path: string): Record<string, string> | null
  * An error envelope, as every backend refusal is shaped: `field` names the control it is about,
  * and `more` is whatever else the code defines (`club_sport_declared_by_group`'s group).
  */
-export function refusal(code: string, field?: string, more?: Record<string, string>): ErrorBody {
+export function refusal(
+  code: string,
+  field?: string,
+  more?: Record<string, string | number>,
+): ErrorBody {
   const details = { ...(field === undefined ? {} : { field }), ...more };
   return {
     code,
@@ -131,6 +148,8 @@ export class StubBackend {
   private readonly started = Date.now();
   /** Tiles served since the last reset. */
   tiles = 0;
+  /** Stripe's pages the browser opened since the last reset, oldest first, as full links. */
+  readonly stripePages: string[] = [];
   /** What the address search answers, best first; nothing found until a test says otherwise. */
   places: GeocodedPlace[] = [];
   /** The address search's status; a `503` is a geocoder that is down. */
@@ -166,6 +185,7 @@ export class StubBackend {
     this.handlers.clear();
     this.log.length = 0;
     this.tiles = 0;
+    this.stripePages.length = 0;
     this.places = [];
     this.geocoderStatus = 200;
     this.searches.length = 0;
@@ -220,6 +240,12 @@ export class StubBackend {
       response.end(TILE);
       return;
     }
+    if (request.method === 'GET' && url.pathname.startsWith(`${STRIPE_PATH}/`)) {
+      this.stripePages.push(new URL(url.pathname, STRIPE_PAGES).href);
+      response.writeHead(200, { 'content-type': 'text/html', 'cache-control': 'no-store' });
+      response.end(STRIPE_PAGE);
+      return;
+    }
     if (request.method === 'GET' && url.pathname === '/geocoder/search') {
       const agent = request.headers['user-agent'];
       this.searches.push({ query: url.searchParams, agent });
@@ -238,6 +264,7 @@ export class StubBackend {
     const received = {
       method: (request.method ?? 'GET').toLowerCase() as Method,
       path: url.pathname,
+      query: Object.fromEntries(url.searchParams),
       params: {},
       headers,
       body: raw === '' ? undefined : (JSON.parse(raw) as unknown),

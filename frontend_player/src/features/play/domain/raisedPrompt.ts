@@ -14,7 +14,7 @@
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Prompt, SearchMode } from './vocabulary';
 
@@ -32,8 +32,8 @@ export type RaisedPrompt =
    */
   | {
       readonly prompt: 'KEEP_THESE_TIMES';
-      readonly week: readonly WeekCell[];
-      readonly profileWeek: readonly WeekCell[];
+      readonly week: readonly WeeklyHour[];
+      readonly profileWeek: readonly WeeklyHour[];
     }
   | { readonly prompt: 'KEEP_THIS_RADIUS'; readonly radiusKm: number }
   /**

@@ -23,9 +23,6 @@ from app.kernel import Sport
 from app.modules.player_profile.application.answer_proposals_opt_in import (
     AnswerProposalsOptIn,
 )
-from app.modules.player_profile.application.change_availability import (
-    ChangeAvailability,
-)
 from app.modules.player_profile.application.change_gender import ChangeGender
 from app.modules.player_profile.application.change_gender_preference import (
     ChangeGenderPreference,
@@ -41,7 +38,7 @@ from app.modules.player_profile.application.change_social_tags import (
 )
 from app.modules.player_profile.application.commands import (
     AnswerProposalsOptInCommand,
-    ChangeAvailabilityCommand,
+    SetWeeklyHoursCommand,
     ChangeGenderCommand,
     ChangeGenderPreferenceCommand,
     ChangeIntroCommand,
@@ -61,6 +58,7 @@ from app.modules.player_profile.application.declare_play_intent import (
 from app.modules.player_profile.application.read_player_profile import (
     ReadPlayerProfile,
 )
+from app.modules.player_profile.application.set_weekly_hours import SetWeeklyHours
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
     IntroNotAdmitted,
@@ -73,7 +71,6 @@ from app.modules.player_profile.domain.errors import (
     UnknownSocialTag,
 )
 from app.modules.player_profile.domain.events import (
-    AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
     IntroChanged,
@@ -84,6 +81,7 @@ from app.modules.player_profile.domain.events import (
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+    WeeklyHoursSet,
 )
 from app.modules.player_profile.domain.gender import (
     DEFAULT_GENDER_PREFERENCE,
@@ -162,7 +160,7 @@ class Harness:
             idempotency_key=f"commit-{player_id}",
             social_tag_ids=["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
             photo_ids=[],
-            availability=[(2, "EVENING"), (6, "MORNING")],
+            weekly_hours=[(2, 19), (6, 10)],
             latitude=HOME_FIX[0],
             longitude=HOME_FIX[1],
             search_radius_km=SEARCH_RADIUS_BOUNDS.default_km,
@@ -188,12 +186,10 @@ class Harness:
         self.uow.commits = 0
         self.store.appends = 0
 
-    async def change_availability(self, cells, *, player_id=PLAYER):
-        return await ChangeAvailability(
+    async def set_weekly_hours(self, cells, *, player_id=PLAYER):
+        return await SetWeeklyHours(
             profiles=self._profiles(), uow=self.uow, clock=self.clock
-        ).execute(
-            ChangeAvailabilityCommand(player_id=player_id, availability=cells)
-        )
+        ).execute(SetWeeklyHoursCommand(player_id=player_id, weekly_hours=cells))
 
     async def change_radius(self, kilometres: int, *, player_id=PLAYER):
         return await ChangeSearchRadius(
@@ -314,19 +310,19 @@ def harness() -> Harness:
 async def test_clearing_the_week_records_a_change_rather_than_being_refused(harness):
     """The floor's named exit, exercised from the layer that reaches it.
 
-    ``AvailabilityGrid.edited`` is what this write builds through, so a player
-    who unticks everything appends an ``AvailabilityChanged`` carrying nothing —
+    ``WeeklyHours.edited`` is what this write builds through, so a player
+    who unticks everything appends a ``WeeklyHoursSet`` carrying nothing —
     which is a fact recorded, not a value missing.
     """
 
     await harness.commit_profile()
 
-    profile = await harness.change_availability([])
+    profile = await harness.set_weekly_hours([])
 
-    assert len(profile.availability) == 0
+    assert len(profile.weekly_hours) == 0
     (released,) = harness.publisher.published
-    assert isinstance(released, AvailabilityChanged)
-    assert released.availability == ()
+    assert isinstance(released, WeeklyHoursSet)
+    assert released.weekly_hours == ()
     assert harness.uow.commits == 1
 
 
@@ -335,14 +331,14 @@ async def test_the_same_week_twice_appends_once(harness):
     which is what makes the unkeyed `PUT` safe to send twice."""
 
     await harness.commit_profile()
-    week = [(4, "AFTERNOON")]
+    week = [(4, 15)]
 
-    await harness.change_availability(week)
+    await harness.set_weekly_hours(week)
     harness.publisher.published.clear()
-    profile = await harness.change_availability(week)
+    profile = await harness.set_weekly_hours(week)
 
     assert harness.publisher.published == []
-    assert profile.availability.codes == ("4:AFTERNOON",)
+    assert profile.weekly_hours.codes == ("4:15",)
     # Still committed: the transaction boundary belongs to the command, not to
     # whether the command found anything to record.
     assert harness.uow.commits == 2
@@ -350,7 +346,7 @@ async def test_the_same_week_twice_appends_once(harness):
 
 async def test_a_week_written_by_a_player_with_no_profile_is_refused(harness):
     with pytest.raises(PlayerProfileNotFound):
-        await harness.change_availability([(1, "MORNING")])
+        await harness.set_weekly_hours([(1, 10)])
 
     assert harness.publisher.published == []
     assert harness.uow.commits == 0
@@ -691,7 +687,7 @@ async def test_a_first_answer_on_a_pre_question_profile_is_a_change(harness):
                 player_id=PLAYER,
                 social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
                 photo_ids=(),
-                availability=("2:EVENING",),
+                weekly_hours=("2:19",),
                 latitude=51.51,
                 longitude=-0.13,
                 search_radius_km=10,
@@ -992,7 +988,7 @@ async def test_a_profile_from_before_the_gender_question_omits_the_answer(harnes
                 player_id=PLAYER,
                 social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
                 photo_ids=(),
-                availability=("2:EVENING",),
+                weekly_hours=("2:19",),
                 latitude=51.51,
                 longitude=-0.13,
                 search_radius_km=10,

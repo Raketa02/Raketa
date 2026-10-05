@@ -10,7 +10,7 @@
  * link that does not survive that has no origin at all, which is not a builder but Play's own
  * start.
  *
- * **Closed to a bare link while `find_a_game` is off, never to a search under way**
+ * **Closed to a bare link while `classic_play` is off, never to a search under way**
  * ([ADR-0180](../../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
  * §7). With the flag off Play's root is not Find a game, so nothing there can start a search — and
  * a link to this route with no search behind it lands on Play's root rather than on an empty court.
@@ -27,11 +27,11 @@ import { BuilderScreen, parseBuilderRouteParams, useSearchWasRun } from '@/featu
 
 export default function BuilderRoute() {
   const params = parseBuilderRouteParams(useLocalSearchParams());
-  const findAGame = useFeatureOnMount('find_a_game');
+  const classicPlay = useFeatureOnMount('classic_play');
   const searchWasRun = useSearchWasRun(params?.search);
 
   if (params === undefined) return <Redirect href="/play" />;
-  if (!findAGame && !searchWasRun) return <Redirect href="/play" />;
+  if (!classicPlay && !searchWasRun) return <Redirect href="/play" />;
 
   return <BuilderScreen arrivalSearchId={params.search} />;
 }

@@ -1,5 +1,5 @@
 /**
- * The sentences the shell writes for the tabs it composes — Chats and Now.
+ * The sentences the shell writes for the tabs it composes — Chats and Home.
  *
  * **These are citations, not filler**, and there is no placeholder among them any more. For
  * as long as a tab was unbuilt its line was one sentence naming what the tab would be plus
@@ -11,7 +11,7 @@
  * [#221](https://github.com/Raketa02/Raketa/issues/221), and `CHATS_COPY` below is that same
  * citation said properly on a tab that is built
  * ([#360](https://github.com/Raketa02/Raketa/issues/360)); **Now's died with the rail**
- * ([#367](https://github.com/Raketa02/Raketa/issues/367)), replaced by `NOW_COPY` below;
+ * ([#367](https://github.com/Raketa02/Raketa/issues/367)), replaced by `HOME_COPY` below;
  * **Around's retired with the tab** — its line promised *players and courts near you*, nothing
  * had been decided about either, and the deck moved in as **Players**
  * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
@@ -75,8 +75,14 @@ export const CHATS_COPY = {
 } as const;
 
 /**
- * **The Now tab's own sentences** — its title, and what it says when it holds no games
+ * **The Home tab's own sentences** — its title, and what it says when it holds no games
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §22.7).
+ *
+ * **Home is today's Now, renamed** ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)):
+ * the title is the bar's new word and nothing else moved. The two lines below are still true of
+ * the tab — every game you are in shows up here — and the booked game's statuses are
+ * [#556](https://github.com/Raketa02/Raketa/issues/556)'s to write.
  *
  * `PLACEHOLDER_COPY.now` **died with the rail** ([#367](https://github.com/Raketa02/Raketa/issues/367)),
  * and an empty Now would then have been a blank screen, which is worse than the citation it
@@ -95,8 +101,8 @@ export const CHATS_COPY = {
  * app's `color` has nothing to apply to. The tab's own drawn name is `Play`, and that is the word
  * this sentence points at — the same deletion `FILL_THE_SEATS` already made one screen over.
  */
-export const NOW_COPY = {
-  title: 'Now',
+export const HOME_COPY = {
+  title: 'Home',
   empty: {
     line:
       'Every game you arrange shows up here — what is agreed, what is today, and what still ' +

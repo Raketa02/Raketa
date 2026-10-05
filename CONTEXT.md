@@ -408,20 +408,24 @@ of the code because this file asks for them in that order.
   *why they are here*. A player holds **2 to 6**. Never free text, never player-authored,
   never imported from another platform, and never about the person rather than the game —
   age, looks, body and "looking for" are a different product's vocabulary.
-- **Availability grid** — a player's ordinary week as **7 days × 3 parts of the day**,
-  Monday-first. *Becomes **Weekly hours** — hours per weekday, 07:00–23:00 — with
-  [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) (Part 2).* It is the *only* way time preference is ever expressed, and it is a
-  **preference, not a promise** — a ticked slot is never a commitment, a hold, or a bookable
-  time.
-- **Availability slot** — one cell of the grid: a day and one of **morning**, **afternoon**,
-  **evening**. The finest precision the platform holds about when a player wants to play.
+- **Weekly hours** — a player's ordinary week as **hours per weekday, 07:00–23:00**: a grid of
+  7 days × 16 one-hour cells, Monday-first. It replaced the 7 days × 3 parts of the day with
+  [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, because a court
+  is booked by the hour. It is the *only* way time preference is ever expressed, and it is a
+  **preference, not a promise** — a ticked hour is never a commitment or a hold. What it now
+  also is, is the thing a court hour is read against: a player counts as **free for a game only
+  when its whole hour is inside their weekly hours**, never merely its start — one rule, in one
+  function, that every context asks. _Avoid_: availability grid, availability slot, part of the
+  day.
+- **Weekly hour** — one cell: a day and the hour it starts at, wall clock — Tuesday 19:00 is
+  19:00–20:00. The finest precision the platform holds about when a player wants to play.
 - **Availability overlap** — how much of a player's own declared week another player covers.
-  Deliberately **asymmetric**: the denominator is *your* slots, because the question it
+  Deliberately **asymmetric**: the denominator is *your* hours, because the question it
   answers is *how much of my week does this person cover*.
 - **Window** — the coarse shape of a searcher's declared week, as one of `TODAY`, `TOMORROW`,
   `WEEKEND`, `THIS_WEEK`, `ANY`. **Derived from the grid, never chosen** — there is no picker,
   because a picked window is a second availability declaration free to contradict the one the
-  whole engine just matched on. It is derived from *the grid the search actually ran on*, so a
+  whole engine just matched on. It is derived from *the week the search actually ran on*, so a
   widened search can carry a different window from the profile. It is what the person answering
   a challenge is told they are agreeing to; it is **not a proposed time**, and the players agree
   the hour themselves ([ADR-0100](docs/adr/0100-challenge-window-derived-never-chosen.md)).
@@ -507,15 +511,19 @@ of the code because this file asks for them in that order.
   by a client-supplied **idempotency key**, which the creating event carries so a retry is
   recognised from the stream itself rather than from a table beside it.
 - **Player profile events** (durable name / version):
-  - **PlayerProfileCreated** — `player_profile.created` / v1 — the commit, carrying every
+  - **PlayerProfileCreated** — `player_profile.created` / **v2** — the commit, carrying every
     preference and the idempotency key. **Not the opt-in.** It gained `gender` and
-    `gender_preference` after profiles existed and **stayed v1**: both are appended with
-    defaults so rows written before the question decode unchanged, and an absent `gender`
-    means *committed before anybody was asked* — never a quieter `PREFER_NOT_TO_SAY`, which
-    is an answer somebody chose. Nothing is backfilled.
+    `gender_preference` while it was v1, appended with defaults so the rows then in the store
+    decoded unchanged, and an absent `gender` means *committed before anybody was asked* —
+    never a quieter `PREFER_NOT_TO_SAY`, which is an answer somebody chose. Nothing is
+    backfilled. **v2 is the week becoming hours** (`weekly_hours`, [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
+    §5); v1, whose week was parts of the day, is deliberately unreadable — only `local` ever
+    ran, and a row of the old shape is a decoding error rather than a week folded wrongly.
   - **SocialTagsChanged** — `player_profile.social_tags_changed` / v1.
   - **PhotosChanged** — `player_profile.photos_changed` / v1.
-  - **AvailabilityChanged** — `player_profile.availability_changed` / v1.
+  - **WeeklyHoursSet** — `player_profile.weekly_hours_set` / v1 — the whole week, as the You
+    tab's *Save your week* leaves it; empty is a cleared week. It replaced
+    `player_profile.availability_changed`, which nothing reads.
   - **LocationChanged** — `player_profile.location_changed` / v1.
   - **SearchRadiusChanged** — `player_profile.search_radius_changed` / v1.
   - **GenderChanged** — `player_profile.gender_changed` / v1 — gender is self-declared and
@@ -533,16 +541,16 @@ of the code because this file asks for them in that order.
 **Invariants**
 - **A tag id is permanent.** Ids are persisted on accounts, so retiring a tag means hiding
   it from the picker while continuing to honour it — never reusing or renaming it.
-- **At least one slot, and blank is absent rather than zero.** The availability grid is
-  **required** at profile commit — one ticked cell of the twenty-one is a real answer, none is
-  not an answer at all. Where a blank grid is nevertheless met — cleared afterwards, or
-  committed before the rule — it means *we do not know*, and the availability term stands down;
+- **At least one hour, and blank is absent rather than zero.** Weekly hours are **required** at
+  profile commit — one ticked hour of the 112 is a real answer, none is not an answer at all.
+  Where a blank week is nevertheless met — cleared afterwards — it means *we do not know*, the
+  availability term stands down, and the player is free for no court hour;
   it is never scored as no overlap and never as any time
   ([ADR-0102](docs/adr/0102-silence-is-never-scored.md)). **An unanswered field is never a
   negative filter**, and requiring the field is how that invariant is kept rather than
   weighed.
 - **The grid is never shown to anybody as a calendar.** Not to matched players, not as
-  free/busy, not exported. Only the *count* of shared slots and the name of the next shared
+  free/busy, not exported. Only the *count* of shared hours and the name of the next shared
   one are ever rendered — overlap is a fact about a pair, a calendar is a fact about a
   person.
 - **Skipping is not consent.** The proposals opt-in is never pre-answered, and no other act
@@ -1120,16 +1128,16 @@ appears here.
   gate ships live and true-over-empty. Nobody has failed to turn up, because nobody has ever
   been due to — so a reliability strand of zero would be invented, and the term stands down
   instead ([ADR-0098](docs/adr/0098-matcher-demands-as-executable-contracts.md)).
-- **Relaxation may only relax what the searcher asked for.** Radius and their own availability
-  grid are asks, and an ask may be widened — by the player, on offer. A term, a weight, a
+- **Relaxation may only relax what the searcher asked for.** Radius and their own weekly
+  hours are asks, and an ask may be widened — by the player, on offer. A term, a weight, a
   measurement and the quality floor are the engine's judgement about what makes a good game, and
   scarcity is never a reason to move one. Raising scores until candidates clear a fixed bar is
   lowering the bar, whatever the config file calls it
   ([ADR-0099](docs/adr/0099-relaxation-offers-the-searchers-own-asks.md)).
 - **Availability overlap is evidence that a game can be arranged; it is never a proposed time.**
   The matcher matches players and stops. No court is booked and nobody can promise a slot before
-  one exists, so the soonest shared slot is a reason on a card — *"you both play Saturday
-  mornings"* — and never a booking. Who plays when is agreed by the players themselves.
+  one exists, so the soonest shared hour is a reason on a card — *"you're both free Saturday
+  at ten"* — and never a booking. Who plays when is agreed by the players themselves.
 - **A seat is never filled below the quality floor to complete a line-up.** The group is the
   objective, so one bad seat is a bad evening for all four. A partial line-up, and what is
   missing, is the honest answer.
@@ -1985,22 +1993,24 @@ every fact read through the owning context's published port, and one rule of its
 Settled by
 [ADR-0182](docs/adr/0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md)
 on [#501](https://github.com/Raketa02/Raketa/issues/501), and built by
-[#503](https://github.com/Raketa02/Raketa/issues/503).
+[#503](https://github.com/Raketa02/Raketa/issues/503). Its **Courts** and how it sells them through
+Raketa were settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)
+§3, §5 and built by [#535](https://github.com/Raketa02/Raketa/issues/535); connecting its payments
+is still to come (#537).
 
 **A place where racket sports are played, known to the platform because it signed up.** Players
 search clubs to set a group's home and to find groups; the club manages its own facts from the club
-website.
+website, and lists there the courts, hours and prices it sells through Raketa.
 
 - **Club** — an **event-sourced aggregate**: a name, a district, a city, **the sports it offers**
   (a non-empty subset of the four — they *filter* the `Sport` registry and never extend it) and
   **a precise point on the map**, stored as the club dropped it, because a club is a public place
-  and not a person's whereabouts. Its details may change at any time, except that a sport an
-  **Official group** declares cannot be taken away. **Not verified**: nothing checks that a club is
-  who it says it is. **Not a court**: *"a court at [club] is free"* speaks of physical courts, and
-  there is still no court, booking or inventory *in the code* — [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) gives a club
-  **Courts** it sells through Raketa (Part 2) — and **not a plan's venue**: a Plan's *Where*
-  stays free text. _Avoid_: venue, centre, facility, location (that is a player's **Location
-  area**).
+  and not a person's whereabouts. Its details may change at any time, except that a sport one of
+  its **Courts** plays, or an **Official group** declares, cannot be taken away — each refusal names
+  the court or the group. **Not verified**: nothing checks that a club is who it says it is. **Not
+  a court**: a club *has* Courts (below), and *"a court at [club] is free"* speaks of one of them —
+  and **not a plan's venue**: a Plan's *Where* stays free text. _Avoid_: venue, centre, facility,
+  location (that is a player's **Location area**).
 - **Club account** — the club's sign-in: **one email and one password, shared by the desk**,
   created with the club. **A separate identity from every User**: its email is unique among club
   accounts and may also be an unrelated User's, with a different password. It signs in **only on
@@ -2009,6 +2019,65 @@ website.
 - **Home club** — the Club a **Group** belongs to. **Required.** A Player group's is chosen at
   creation and never changes; an Official group's is its club. Distances to it are measured from
   the reader's Location area and printed as everywhere else. _Avoid_: base, venue, home court.
+- **Club courts** — an **event-sourced aggregate, one stream per club, filed under the club's own
+  id**: its Courts and their Raketa hours, its Exceptions, its Prices, its Way of working and
+  Raketa settings, and whether it is Paused. **Born by being used** — nothing is written at
+  sign-up, and a club that has set nothing reads no courts, no way of working and the default
+  settings. A stream of its own rather than more events on the Club's, because the Club's is what
+  every player's search is built from.
+- **Court** — one physical court at a Club: a **name** the club uses (*Court 2*, *Kort centralny*;
+  1–40 characters, unique at the club ignoring case), **one sport** from the club's own, and
+  **indoor or outdoor**, which a card shows. **Offered** to Raketa, or **switched off** — kept,
+  with its hours, selling nothing new, whatever is booked on it. **Deleted**, or given another
+  sport, only while no booking is ahead of it. Players never pick its **number**: a card or a post
+  names a court hour at a club, and the number is given at booking. _Avoid_: pitch, field.
+- **Raketa hours** — the hours of an ordinary week a Court is offered to Raketa: **the player's
+  own Weekly hours grid**, seven days by sixteen one-hour cells from 07:00 to 23:00 — an hour
+  outside it could never match anybody — with **no floor**: a court with none offers nothing yet.
+  One save may give the same week to several courts.
+- **Exception** — hours a club closes **without touching its Raketa hours**: a local day or a run
+  of days, whole or between two hours, on **every court** — one added later included — or some,
+  with a **reason** for the club's own records that no player reads. **Refused over a booking**,
+  which the club cancels instead, and allowed over hours that only have cards on them; the cards
+  move to another court or disappear. _Avoid_: closure, block (a Block is between two players).
+- **Price** — what a court-hour costs, **per sport**: a standard price, and optional **price bands**
+  — weekdays or the weekend, between two hours — that price the hours they cover differently;
+  bands of the same days never overlap. **Integer grosze**, from 10 to 1 000 zł, and it **splits**:
+  a price that does not divide into whole grosze among the sport's seats is refused rather than
+  rounded. A new price reaches **new cards only**.
+- **Share** — the court hour's price divided by the seats — four for padel and badminton, two for
+  tennis and squash — exact to the grosz, fixed on the card and never changed by a later price.
+- **Court hour** — one court at one club for **one hour**. Every game lasts exactly one hour. The
+  **sellable court hours** of a club are what it can sell through Raketa: its Raketa hours, less
+  its Exceptions, less what bookings hold, less every hour past its Book-by, each priced by its
+  band or the standard price — **derived, never stored hour by hour**, only for a club that is
+  **Live**, and published to other contexts through a port.
+- **Way of working** — how a club sells through Raketa, **one for the whole club**, chosen on its
+  own and changeable, the change applying to hours not yet booked: **Only Raketa** (Raketa sells
+  alone until the **release lead**), **Instant** (both sell; a Raketa booking is final) or **On
+  request** (the club confirms each full game within its **time to confirm**).
+- **Raketa settings** — the terms a club **confirms**, its first save doing so defaults included:
+  the release lead (Only Raketa; 1–13 days, default 3), the **Cut-off**, the **minimum notice**
+  (Instant and On request; 1–48 h, default 2), the time to confirm (On request; 5–60 min, default
+  30 — never more than the shortest minimum notice), **other clubs' courts** for its groups (off
+  by default, within 10 km), **check-in** (off) and **Paused** (off). Each bound is domain, never
+  configuration. Confirmed only once a Way of working is chosen, since which of them matter
+  depends on it.
+- **Cut-off** — the club's free-cancellation deadline, a Raketa setting (0–72 h, default 24 h
+  before). Leaving before it is free; a game still short at it is called off.
+- **Book-by** — the latest moment a proposal can still fill: the release time (Only Raketa) or the
+  start minus the club's minimum notice (Instant, On request). **Derived, never chosen** — once,
+  from the club's terms, and carried on every sellable court hour. No other clock runs on a
+  proposal.
+- **Paused** — a club taking no new cards on its courts. Booked games are played as booked, and
+  cards already dealt keep their court until their book-by, so its hours stay sellable. A paused
+  club is still **Live**.
+- **Setup checklist** — the five steps before a club's courts reach any deck: connect payments,
+  choose a Way of working, add Courts, set Raketa hours and Prices, confirm the Raketa settings.
+  Each is **done**, **to do**, **locked** behind the step it needs (hours and prices behind a
+  court, the settings behind a way of working) or **pending** — payments, until connecting Stripe
+  is built. Read off the Club courts, never stored. **Live** — every step but a pending one done.
+  _Avoid_: onboarded, active (of a club).
 
 ### Groups
 
@@ -2144,6 +2213,134 @@ Official group per WhatsApp group and post its link there.
   the club the request names, or `not_an_administrator` — the request after a removal. The
   person's player side and its sessions are untouched.
 
+### Payments
+
+Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §4–§5 and
+built by [#536](https://github.com/Raketa02/Raketa/issues/536)
+([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)). The
+**Seat charge** is still to come (#541), and so is connecting a club's account (#537).
+
+**How a player pays: a card or a wallet saved once, charged later by the club.** Every charge is
+made on the club's own account — **the club is the seller** — and a player's card is copied there
+for each one.
+
+- **Payment method** — a player's saved card or wallet: its **brand** (the network, as the
+  provider names it), its **last four digits** and the **wallet** it came through (Apple Pay,
+  Google Pay, or none). An **event-sourced aggregate, one stream per player**, born by being
+  used: a player who never opened the setup has none — *Not set up*. **Change** keeps the old
+  method working until the new one is saved; **remove** is refused while anything could still be
+  charged to it — a live yes, or a booked game ahead. A card number never reaches Raketa.
+  _Avoid_: card for the method as a whole (it may be a wallet — though a wallet saves a card, and
+  *card* is right for what the provider holds: its brand and last four), payment details, billing
+  info.
+- **Setup** — saving a method: the player chooses how to pay, types a card into the provider's
+  own fields, **accepts the payment terms**, and confirms with their bank — the step that saves.
+  One saves a card for **off-session** use, charged later without the player present. At most
+  **five a day** per player. _Avoid_: onboarding (that is the player's first run, and a club's
+  Stripe account).
+- **Payment terms** — the words that name the club as the one charging: *when a game you said yes
+  to fills, the club charges your share* (the mechanics §12.5). **Accepted before anything is
+  saved**: the setup's secret — the only way a phone can save a card — is the answer to accepting
+  them. The acceptance is recorded with **the version shown, the moment and the address**; the
+  words are the client's, the version in force the backend's. **A card whose bank moved it to
+  another brand asks for them again** before it can be charged. _Avoid_: consent screen, T&Cs.
+- **Payment provider** — where money actually moves: **Stripe**, or on a laptop and in every test
+  an in-process **fake** held to the same demands. A deployed environment refuses the fake.
+- **Payment method events** (durable name / version) — never a card number or a setup's secret:
+  - **PaymentSetupStarted** — `payments.setup_started` / v1 — a setup opened, under the player's
+    one customer at the provider; names the setup it replaced, which is then cancelled there.
+  - **PaymentTermsAccepted** — `payments.terms_accepted` / v1 — for the open setup, or again for
+    the saved method after a brand change.
+  - **PaymentMethodSaved** — `payments.method_saved` / v1 — the first method.
+  - **PaymentMethodChanged** — `payments.method_changed` / v1 — a new method over the old, which
+    is then released at the provider.
+  - **PaymentMethodRemoved** — `payments.method_removed` / v1 — released at the provider after.
+  - **PaymentMethodUpdated** — `payments.method_updated` / v1 — the bank updated the card: a new
+    number, or a new brand — as read from the provider, never off its notice.
+
+### Proposals
+
+Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §1–§2, §5
+and built by [#538](https://github.com/Raketa02/Raketa/issues/538); the group deck and a
+player's Games & money by [#539](https://github.com/Raketa02/Raketa/issues/539). The engine that
+builds proposals (#540), posting (#546) and the fill that books one (#541) are still to come.
+
+**How a game fills: dealt to a pool, answered with a silent yes.**
+
+- **Pool** — the players who may be dealt a game plus the clubs whose courts they may use. A
+  **Group** is the first kind of pool; a city (Explore) will be the next. Every proposal carries
+  its pool, and nothing names a group where it means a pool. A group's pool is filed under the
+  group's own id, and its players are the group's members **now** — somebody who left the group
+  has left its pool. _Avoid_: audience (that is an Official group's).
+- **Proposal** — a game that is still filling: a pool, a sport, a **kind** (competitive, or for
+  fun), a **court hour** at a club (never a court number, which is given at booking), the
+  **share** fixed on it, the versions it was dealt in, the yeses, and the **book-by** — read off
+  what the club sells at that hour, never chosen. **Picked for you** when the engine built it; a
+  **Post** when a member did, which is born with its poster In. An **event-sourced aggregate, one
+  stream per proposed game**. It is *filling*, then *expired* from its book-by on — read off the
+  clock, whether or not anything has recorded it — or *withdrawn*, when a poster takes their
+  post back with nobody else In; *filled* arrives with the Booking. _Avoid_: challenge (Part
+  1's aggregate), open game.
+- **Version** — one of **up to three** views of the same proposal, each dealt to different people:
+  the people In, and the names dealt for the seats still open. **Each person is dealt one.** A
+  seat a **No** left is dealt again into the same version, to at most three next best fits.
+- **Yes** — a swipe right, or *I'm in*: *"if everybody is in, book it and charge my share."*
+  Silent, free, holds nothing. **Yeses are the game's, never a version's**: a yes on any version
+  counts toward the one game. A yes needs a saved **Payment method**, and a **live yes** to
+  spare. A **No** is a swipe left, equally silent, and **final**: the card never comes back.
+  _Avoid_: vote, like.
+- **In** — a player who said yes to a proposal that has not filled. **Everybody In fits everybody
+  else In**: a version is dealt only to people who fit the people In and each other, and a yes
+  lands only from somebody who fits everybody In — *fits* being today's pair rule for one
+  court (no block either way, mutual gender preference, Levels within the kind's window).
+- **Withdraw** — taking a yes back before the game fills: free and silent, and the seat is open
+  again. Unlike a **No** it is no verdict on the card: the player may say yes again while the
+  game fills.
+- **Live yes** — a yes on a game that has not filled. At most **ten per sport**, across pools; a
+  post counts as one.
+- **Proposal events** (durable name / version) — none of them is told to anybody:
+  - **ProposalMade** — `proposals.proposal_made` / v1 — the pool and its kind, the origin and
+    poster, the sport and kind, the club and start, the share and the book-by.
+  - **VersionDealt** — `proposals.version_dealt` / v1 — its number and the people named.
+  - **YesSaid** — `proposals.yes_said` / v1.
+  - **NoSaid** — `proposals.no_said` / v1.
+  - **YesWithdrawn** — `proposals.yes_withdrawn` / v1.
+  - **ProposalWithdrawn** — `proposals.proposal_withdrawn` / v1 — a post whose poster withdrew
+    with nobody else In.
+  - **ProposalExpired** — `proposals.proposal_expired` / v1 — the record, written by the book-by
+    sweep, of an expiry that was already true.
+  - **GamesAndMoneySet** — `proposals.games_and_money_set` / v1 — a player's games per week and
+    most I'll pay, both, on their Games & money stream.
+
+**What a player is dealt: their group deck, within their Games & money.**
+
+- **Group deck** — a group's Games tab: the proposals dealt to you in one sport and one
+  **kind**, each drawn as **your own version** — everybody In, you, and the rest of your version
+  — with its sides (the evenest arrangement the engine forecasts, you on your own), the forecast
+  for that version, an overlap grid and the court block. Ordered by the seats that would be open
+  after your yes (fewest first), then **Seat open › Challenge › Picked for you**, then the
+  soonest deadline, then the best forecast; the same people only at their best hour. A card you
+  said no to never returns; one you are In on is in *You're In*; one you took your yes back from
+  is dealt again. Never dealt: a kind your Play intent does not want, a share above **Most I'll
+  pay**, a week at your **Games per week**, an hour you already have a game at, a club no longer
+  selling, or a card with somebody In you may not share a court with. A projection, recomputed
+  at every read and stored nowhere. Distinct from the Players deck of **Classic play**.
+- **Picked for you card · Challenge card · Seat open card** — the three card types: a pick, a
+  **Post** dealt to you as a best fit (its ribbon reads *"Kuba challenged you"*, or *"The group
+  challenged you"* once the poster withdrew), and a **Rescue** — dealt once rescues exist (#545).
+  A *Challenge card* is a label, never **Challenge** (Classic play's aggregate).
+- **IN tag** — the tag on the tile of a player who is **In**: the only tag that signals momentum.
+  A card dealt in versions also says how many are In on the whole proposal.
+- **Overlap grid** — the people on a card's week as 7 days × Morning 07–12 / Afternoon 12–17 /
+  Evening 17–23: *bright* where everybody is free together for one whole hour of the range, *dim*
+  where all but one are (on a card of three or more), the game's cell ringed; graded **High /
+  Good / Slim** by the hours everybody shares over the narrowest week. Never one person's week.
+- **Games & money** — a player's two limits, across sports and pools: **Games per week** (1–7,
+  default 2, counted Monday to Sunday: a week with that many games booked deals nothing more) and
+  **Most I'll pay** (off, 35, 45 or 60 zł: a card whose share is above it is never dealt). An
+  **event-sourced aggregate, one stream per player** under their own id, born by being used; the
+  same answer records nothing.
+
 ## Part 2 — Decided, not yet built: Games and Fill in
 
 Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) and
@@ -2153,48 +2350,23 @@ yet**; when a term is built, it moves into Part 1 under its context.
 
 ### The pool and the court
 
-- **Pool** — the players who may be dealt a game plus the clubs whose courts they may use. A
-  **Group** is the first kind of pool; a city (Explore) will be the next. Proposals, yeses and
-  posts belong to a pool, never to a group by name. _Avoid_: audience (that is an Official
-  group's).
-- **Court** — one physical court at a Club, with a name the club uses (*Court 2*), **one sport**,
-  and indoor or outdoor. Players never pick its **number**: a card or a post names a court hour at
-  a club, and the number is given at booking.
-- **Court hour** — one court at one club for **one hour**. Every game lasts exactly one hour.
-  The hours a club can sell are **derived** from its weekly pattern, its exceptions and its
-  bookings, never stored hour by hour.
-- **Way of working** — how a club sells through Raketa, **one for the whole club**: **Only
-  Raketa** (Raketa sells alone until the **release lead**), **Instant** (both sell; a Raketa
-  booking is final) or **On request** (the club confirms each full game within its **time to
-  confirm**).
-- **Cut-off** — the club's free-cancellation deadline, a club setting (default 24 h before). Leaving
-  before it is free; a game still short at it is called off.
-- **Book-by** — the latest moment a proposal can still fill: the release time (Only Raketa) or the
-  start minus the club's **minimum notice** (Instant, On request). Derived, never chosen. No other
-  clock runs on a proposal.
-- **Share** — the court hour's price divided by the seats, fixed on the card and never changed by
-  a later price.
+**Pool** is built, and moved to **Proposals** in Part 1 with
+[#538](https://github.com/Raketa02/Raketa/issues/538).
+
+**Court**, **Court hour**, **Way of working**, **Cut-off**, **Book-by** and **Share** are built, and
+moved to **Club** in Part 1 with [#535](https://github.com/Raketa02/Raketa/issues/535), beside the
+**Club courts** that hold them.
 
 ### Proposals and the deck
 
-- **Proposal** — a game that is still filling: a pool, a sport, a **kind**, a court hour at a club
-  (no number), the share and the yeses. **Picked for you** when the engine built it; a **Post**
-  when a member did. Ends *filled* (a Booking), *expired* (book-by passed; nobody paid) or
-  *withdrawn*. _Avoid_: challenge (Part 1's aggregate), open game.
+**Proposal**, **Version**, **Yes**, **In**, **Withdraw** and **Live yes** are built, and moved to
+**Proposals** in Part 1 with [#538](https://github.com/Raketa02/Raketa/issues/538).
+
+**Group deck**, the three **card types**, the **IN tag** and the **Overlap grid** are built, and
+moved to **Proposals** in Part 1 with [#539](https://github.com/Raketa02/Raketa/issues/539).
+
 - **Post** — a proposal a member created by picking the hour and the court. Posting is the
   poster's yes. At most two live per player.
-- **Version** — one of **up to three** views of the same proposal, each dealt to different people.
-  **All versions share their yeses**; each person is dealt one.
-- **Yes** — a swipe right, or *I'm in*: *"if everybody is in, book it and charge my share."*
-  Silent, free, holds nothing. A **No** is a swipe left, equally silent.
-- **In** — a player who said yes to a proposal that has not filled. The **IN** tag on a tile is
-  the only tag that signals momentum; a card dealt in versions also says how many are In on the
-  whole proposal.
-- **Group deck** — the group's Games tab: cards addressed to you, ordered by how few seats would
-  be open after your yes. Distinct from the Players deck of **Classic play**.
-- **Picked for you card · Challenge card · Seat open card** — the three card types: a pick, a
-  **Post** dealt to you as a best fit (its ribbon reads *"Kuba challenged you"*), and a **Rescue**.
-  A *Challenge card* is a label, never Part 1's **Challenge**.
 - **Fills** — the moment the last needed yes lands and a **Booking** opens. Every seat is then
   charged together, all or nothing — at an On request club only once the club confirms, the
   booking *waiting for the club* until it does.
@@ -2218,19 +2390,18 @@ yet**; when a term is built, it moves into Part 1 under its context.
 
 ### Money
 
-- **Payment method** — a player's saved card or wallet, saved once with the **consent** that
-  names the club as the one charging. Required before the first yes.
+**Payment method** and its **Payment terms** are built, and moved to **Payments** in Part 1 with
+[#536](https://github.com/Raketa02/Raketa/issues/536). One is required before the first yes.
+**Games per week** and **Most I'll pay** are built, as **Games & money** under **Proposals** in
+Part 1, with [#539](https://github.com/Raketa02/Raketa/issues/539).
+
 - **Seat charge** — one seat's money in one booking: authorised, captured, refunded or failed.
   Raketa's account of a Stripe payment; Stripe is the ledger of record.
 - **The club is the seller** — every charge is made on the club's own Stripe account; the club
   pays the card fee. Raketa takes no fee.
-- **Games per week** — a player's cap, 1–7, default 2, Monday to Sunday; cards in a capped week
-  are not dealt. **Most I'll pay** — an optional ceiling on the share; cards above it are not dealt.
 
 ### The player's side
 
-- **Weekly hours** — a player's availability as hours per weekday, 07:00–23:00; replaces the
-  Availability grid. You count as free for a game only if its whole hour is in your hours.
 - **Home** — the first tab of the bottom bar: your games from the moment they fill (Part 1's *Now*).
 - **Classic play** — one feature flag, off by default, behind which the Players deck, the Chats
   tab, Challenges with their Plan, and Find a game stay as they are.

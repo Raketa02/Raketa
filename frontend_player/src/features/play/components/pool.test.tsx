@@ -37,7 +37,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import {
   datafileFor,
   datafileSettled,
-  launchIntoFindAGame,
+  launchIntoClassicPlay,
   launchSignedIn,
   PROFILE_SURFACE_SERVED,
   stubDatafile,
@@ -173,7 +173,7 @@ const TIMES_RUNG: Wire['RungOfferSchema'] = {
   window: 'THIS_WEEK',
   // A cell outside the profile's own week, which is the only kind a times rung offers: the
   // engine tests the additions somebody in range has ticked and the searcher has not.
-  slot: { day: 4, part: 'EVENING' },
+  slot: { day: 4, hour: 19 },
 };
 
 const RADIUS_RUNG: Wire['RungOfferSchema'] = {
@@ -249,9 +249,9 @@ afterEach(async () => {
 
 /** Search, spend the latch, land on the court, and open the pool against its first hole. */
 async function openThePool() {
-  await launchIntoFindAGame(transport);
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
 
   fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('padel'))));
   await screen.findByText(
@@ -268,24 +268,24 @@ async function openThePool() {
 }
 
 /**
- * **A search started while Find a game was on is finished, whatever the flag says afterwards**
+ * **A search started while Classic play was on is finished, whatever the flag says afterwards**
  * ([#479](https://github.com/Raketa02/Raketa/issues/479), ADR-0180 §7, PRD #476 story 21).
  *
  * The toggle arrives the way it does on a device — the app comes back to the front with Find a
  * game on screen and fetches the datafile again — and the player then does what they were about
  * to do. The builder and the pool read the flag when they mount and find it off; what lets them
  * through is that the search they are opened on is one this player already ran. A link with no
- * search behind it still lands on Play (`feature_flags/components/theFindAGameGate.test.tsx`).
+ * search behind it still lands on Play (`feature_flags/components/theClassicPlayGate.test.tsx`).
  */
-describe('Find a game switched off in the middle of a search', () => {
+describe('Classic play switched off in the middle of a search', () => {
   it('still takes the search to the builder and on to the pool', async () => {
-    stubDatafile(transport, datafileFor({ find_a_game: 'on' }));
+    stubDatafile(transport, datafileFor({ classic_play: 'on' }));
     await launchSignedIn();
     await datafileSettled(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
-    await screen.findByLabelText('Tuesday evening');
+    await screen.findByLabelText('Tuesday 19:00');
 
-    stubDatafile(transport, datafileFor({ find_a_game: 'off' }));
+    stubDatafile(transport, datafileFor({ classic_play: 'off' }));
     act(() => {
       focusManager.setFocused(false);
       focusManager.setFocused(true);
@@ -339,9 +339,9 @@ async function openTheSinglesPool(
     json(singles() as Wire['ShortlistResponse']),
   );
 
-  await launchIntoFindAGame(transport);
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
 
   fireEvent.press(screen.getByLabelText(courtEntryLabel(courtSeatCount('tennis'))));
   await screen.findByText(
@@ -1068,9 +1068,9 @@ describe('the ladder', () => {
 
   it('is drawn on no other Play screen', async () => {
     offerRungs();
-    await launchIntoFindAGame(transport);
+    await launchIntoClassicPlay(transport);
     fireEvent.press(await screen.findByLabelText('Play'));
-    await screen.findByLabelText('Tuesday evening');
+    await screen.findByLabelText('Tuesday 19:00');
 
     // Find a game holds the same envelope and offers nothing off it.
     expect(screen.queryByLabelText(rungLabel({ ask: 'RADIUS', radiusKm: 22 }, 9))).toBeNull();
@@ -1188,7 +1188,7 @@ describe('the ladder', () => {
  * drawn where nobody is looking is not the requirement.
  */
 describe('the cell a times rung adds', () => {
-  const THURSDAY_EVENING = { day: 4, part: 'evening' } as const;
+  const THURSDAY_EVENING = { day: 4, hour: 19 } as const;
 
   async function takeTheTimesRung() {
     transport.on('POST', SEARCHES, (request) =>
@@ -1602,8 +1602,8 @@ describe('the question a climb raised', () => {
       {
         prompt: 'KEEP_THESE_TIMES',
         slots: [
-          { day: 2, part: 'EVENING' },
-          { day: 1, part: 'MORNING' },
+          { day: 2, hour: 19 },
+          { day: 1, hour: 9 },
         ],
       },
     ]);
@@ -1611,9 +1611,9 @@ describe('the question a climb raised', () => {
     await climb();
     await screen.findByText(KEEP_THESE_TIMES);
 
-    // The stub's profile week is Tuesday evening and Saturday morning.
-    expect(screen.getByLabelText('Monday morning, newly added')).toBeTruthy();
-    expect(screen.getByLabelText('Saturday morning, dropped')).toBeTruthy();
+    // The stub's profile week is Tuesday 19:00 and Saturday 09:00.
+    expect(screen.getByLabelText('Monday 09:00, newly added')).toBeTruthy();
+    expect(screen.getByLabelText('Saturday 09:00, dropped')).toBeTruthy();
   });
 
   /**

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Sequence
 from uuid import UUID
 
-from app.kernel import Sport
+from app.kernel import Instant, Sport
 from app.modules.games.domain.results import Score
 
 
@@ -25,15 +25,31 @@ class OpenPlannedGameCommand:
     counted: bool
     window: str | None
     line_up: Sequence[tuple[str, UUID]]
+    #: The hour a booking opens it for (#541) — then ``challenge_id`` is the
+    #: booking's id. ``None`` from a completed line-up.
+    starts_at: Instant | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class VacateSeatCommand:
     """Somebody left the game this challenge became. ``challenges`` sends this
-    in the transaction of the departure, and nothing else does."""
+    in the transaction of the departure — and ``bookings`` in a booked game's,
+    its booking's id where a challenge's is (#544)."""
 
     challenge_id: UUID
     player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class TakeASeatCommand:
+    """A booking's rescue took an open seat on the game it opened (#545):
+    ``bookings`` sends this in the transaction of the rescue, its booking's id
+    where a challenge's is, and the side the leaver sat on."""
+
+    challenge_id: UUID
+    player_id: UUID
+    #: ``A`` or ``B`` — the open seat's side.
+    side: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,8 +58,9 @@ class CallOffGameCommand:
     off. ``challenges`` sends this in the transaction of the departure that
     left at most one player on the court (``docs/adr/0165`` §3), or of the
     hour that found the court still short of a player (``docs/adr/0175``
-    §3), and nothing else does. ``called_by`` is the leaver, or ``None`` for
-    the hour."""
+    §3) — and ``bookings`` when a booked game is short at its cut-off, its
+    booking's id where a challenge's is (#544). ``called_by`` is the leaver, or
+    ``None`` for the hour and the cut-off."""
 
     challenge_id: UUID
     called_by: UUID | None
@@ -82,4 +99,21 @@ class DismissGameOfCourtCommand:
     on the game or not (``docs/adr/0175`` §5)."""
 
     challenge_id: UUID
+    player_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class ReportANoShowCommand:
+    """*Kuba didn't come* (#547): ``player_id`` came, ``absent_id`` did not."""
+
+    game_id: UUID
+    player_id: UUID
+    absent_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class DisputeANoShowCommand:
+    """*I was there* (#547): ``player_id`` was reported as not coming."""
+
+    game_id: UUID
     player_id: UUID

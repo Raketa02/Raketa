@@ -19,7 +19,7 @@ import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { courtSeatCount } from '@/shared/ui';
 import {
-  launchIntoFindAGame,
+  launchIntoClassicPlay,
   stubGate,
   stubProfileOptions,
   stubProfileSurface,
@@ -43,7 +43,7 @@ import { searchingFloorMs } from './searchingWait';
 
 const SEARCHES = '/api/v1/searches';
 const DECLINES = '/api/v1/prompt-declines';
-const AVAILABILITY = '/api/v1/players/me/availability';
+const AVAILABILITY = '/api/v1/players/me/weekly-hours';
 const RADIUS = '/api/v1/players/me/search-radius';
 const PADEL_INTENT = '/api/v1/play-intents/PADEL';
 
@@ -61,7 +61,7 @@ function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
   };
 }
 
-/** A search that raised these questions. The profile's own week is Tue evening + Sat morning. */
+/** A search that raised these questions. The profile's own week is Tue 19:00 + Sat 09:00. */
 function shortlist(
   prompts: Wire['PromptSchema'][],
   searchId = 'e0f1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b',
@@ -101,7 +101,7 @@ beforeEach(() => {
   stubProfileSurface(transport);
   transport.on('POST', DECLINES, () => noContent());
   transport.on('PUT', AVAILABILITY, () =>
-    json<Wire['AvailabilityResponse']>({ availability: [{ day: 1, part: 'MORNING' }] }),
+    json<Wire['WeeklyHoursResponse']>({ weekly_hours: [{ day: 1, hour: 9 }] }),
   );
   transport.on('PUT', RADIUS, () => json<Wire['SearchRadiusResponse']>({ search_radius_km: 22 }));
   transport.on('PUT', PADEL_INTENT, () =>
@@ -139,10 +139,10 @@ async function pressSearch(ran: number) {
 
 /** Sign in and stand on Find a game with the profile read landed. */
 async function openPlay() {
-  await launchIntoFindAGame(transport);
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText('Play'));
   await waitFor(() => expect(screen).toHavePathname('/play'));
-  await screen.findByLabelText('Tuesday evening');
+  await screen.findByLabelText('Tuesday 19:00');
 }
 
 /** …and run a search that raises `prompts`. */
@@ -159,10 +159,10 @@ const KEEP_THESE_TIMES = promptCopy({
   profileWeek: [],
 }).title;
 
-/** The week `stubProfileSurface` serves — Tuesday evening and Saturday morning. */
+/** The week `stubProfileSurface` serves — Tuesday 19:00 and Saturday 09:00. */
 const PROFILE_WEEK = [
-  { day: 2, part: 'evening' },
-  { day: 6, part: 'morning' },
+  { day: 2, hour: 19 },
+  { day: 6, hour: 9 },
 ] as const;
 
 const profileWrites = () => [
@@ -173,7 +173,7 @@ const profileWrites = () => [
 
 describe('the question a search raised', () => {
   it('is asked after the search has run, which is what makes it never block', async () => {
-    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] }]);
+    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, hour: 19 }] }]);
 
     // The sheet is on screen and the search it is about is already recorded. There is
     // nothing left for a dismissal to swallow, which is the whole of §F2's closer.
@@ -206,19 +206,19 @@ describe('the question a search raised', () => {
       {
         prompt: 'KEEP_THESE_TIMES',
         slots: [
-          { day: 2, part: 'EVENING' },
-          { day: 1, part: 'MORNING' },
+          { day: 2, hour: 19 },
+          { day: 1, hour: 9 },
         ],
       },
     ]);
     await screen.findByText(KEEP_THESE_TIMES);
 
-    expect(screen.getByLabelText('Monday morning, newly added')).toBeTruthy();
-    expect(screen.getByLabelText('Saturday morning, dropped')).toBeTruthy();
+    expect(screen.getByLabelText('Monday 09:00, newly added')).toBeTruthy();
+    expect(screen.getByLabelText('Saturday 09:00, dropped')).toBeTruthy();
     // The one cell both weeks hold is named and says nothing else — `checked` is the
     // editor's, and this grid is not interactive.
-    expect(screen.getByLabelText('Tuesday evening')).toBeTruthy();
-    expect(screen.queryByLabelText('Friday afternoon')).toBeNull();
+    expect(screen.getByLabelText('Tuesday 19:00')).toBeTruthy();
+    expect(screen.queryByLabelText('Friday 14:00')).toBeNull();
   });
 
   /**
@@ -247,8 +247,8 @@ describe('yes — through the route that owns the value', () => {
       {
         prompt: 'KEEP_THESE_TIMES',
         slots: [
-          { day: 2, part: 'EVENING' },
-          { day: 1, part: 'MORNING' },
+          { day: 2, hour: 19 },
+          { day: 1, hour: 9 },
         ],
       },
     ]);
@@ -258,9 +258,9 @@ describe('yes — through the route that owns the value', () => {
 
     await waitFor(() => expect(transport.requestsTo('PUT', AVAILABILITY)).toHaveLength(1));
     expect(transport.requestsTo('PUT', AVAILABILITY)[0]?.body).toEqual({
-      availability: [
-        { day: 2, part: 'EVENING' },
-        { day: 1, part: 'MORNING' },
+      weekly_hours: [
+        { day: 2, hour: 19 },
+        { day: 1, hour: 9 },
       ],
     });
     expect(transport.requestsTo('POST', DECLINES)).toEqual([]);
@@ -311,7 +311,7 @@ describe('yes — through the route that owns the value', () => {
 
     await waitFor(() => expect(screen.queryByText('Is this week still right?')).toBeNull());
     expect(screen).toHavePathname('/play');
-    expect(await screen.findByLabelText('Tuesday evening')).toBeTruthy();
+    expect(await screen.findByLabelText('Tuesday 19:00')).toBeTruthy();
     expect(profileWrites()).toEqual([]);
     expect(transport.requestsTo('POST', DECLINES)).toEqual([]);
   });
@@ -374,7 +374,7 @@ describe('not now — a row about the question, and never a value', () => {
   });
 
   it('carries no suppression sentence on the one prompt with no suppression', async () => {
-    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] }]);
+    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, hour: 19 }] }]);
     await screen.findByText(KEEP_THESE_TIMES);
 
     expect(screen.queryByText(/not for a month/)).toBeNull();
@@ -386,7 +386,7 @@ describe('not now — a row about the question, and never a value', () => {
    * closes, and the search still stands.
    */
   it('sends nothing for the prompt a decline buys nothing on', async () => {
-    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, part: 'EVENING' }] }]);
+    await search([{ prompt: 'KEEP_THESE_TIMES', slots: [{ day: 2, hour: 19 }] }]);
     await screen.findByText(KEEP_THESE_TIMES);
 
     fireEvent.press(screen.getByLabelText(promptControls('KEEP_THESE_TIMES').decline));
@@ -445,8 +445,8 @@ describe('one question, one answer', () => {
                 {
                   prompt: 'KEEP_THESE_TIMES',
                   slots: [
-                    { day: 2, part: 'EVENING' },
-                    { day: 1, part: 'MORNING' },
+                    { day: 2, hour: 19 },
+                    { day: 1, hour: 9 },
                   ],
                 },
               ],
@@ -463,7 +463,7 @@ describe('one question, one answer', () => {
     await waitFor(() => expect(screen.queryByText('Is this week still right?')).toBeNull());
 
     // Handed back to the grid, on the screen that has one: edit it and search again.
-    fireEvent.press(await screen.findByLabelText('Monday morning'));
+    fireEvent.press(await screen.findByLabelText('Monday 09:00'));
     await pressSearch(2);
 
     expect(await screen.findByText(KEEP_THESE_TIMES)).toBeTruthy();

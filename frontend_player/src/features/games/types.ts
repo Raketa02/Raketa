@@ -25,7 +25,7 @@
  * derived from the one list this feature reads. **Nothing in the app pushes it today** — the
  * list that did is composed nowhere — so the route resolves and no control reaches it.
  */
-export { GameScreen, type GameScreenProps } from './components/GameScreen';
+export { GameScreen, type BookedFacts, type GameScreenProps } from './components/GameScreen';
 
 /**
  * **The court's pairing, for the composition that fills the game screen's `court` slot.**
@@ -37,6 +37,13 @@ export { GameScreen, type GameScreenProps } from './components/GameScreen';
  * the screen draws the slot it is handed, as it draws the other two.
  */
 export { CourtPairing, type CourtPairingProps } from './components/CourtPairing';
+
+/**
+ * **The forecast block alone**, for a surface that draws its own people — a booked game's details
+ * (#556), whose tiles come from the booking with *paid* on each. The same pairing read and the
+ * same block as `CourtPairing`'s, absent on the same ground.
+ */
+export { GameForecast, type GameForecastProps } from './components/GameForecast';
 
 /**
  * **The pairing's own words, exported for the suite that walks the plan lead from `plans`.**
@@ -162,6 +169,14 @@ export { worthLine } from './components/gamePresentation';
  * a half-built module (`theActsWords.ts` says why).
  */
 export type { EntryLead } from './domain/resultArgument';
+
+/**
+ * **Whether a score is waiting on this player's agreement** — the *result to confirm* Home's badge
+ * counts ([#550](https://github.com/Raketa02/Raketa/issues/550)). `features/plans` counts the cards,
+ * and *Confirm the result* is the one card whose name cannot say whether it waits on the reader —
+ * so what crosses is this answer, read off the acts the screen would offer, and never the argument.
+ */
+export { awaitsYourAgreement } from './domain/resultArgument';
 
 /**
  * What a game is, for the feature that draws a plan beside one — and the two readings of its

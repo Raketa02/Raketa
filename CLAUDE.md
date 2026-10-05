@@ -22,7 +22,11 @@ each with its own CI lane.
 > [ADR index](docs/adr/README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). Courts,
 > bookings and money are **decided again** by
 > [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) — the group's Games
-> deck and Fill in, specified in `docs/specs/games-and-fill-in/` — and are not built yet.
+> deck and Fill in, specified in `docs/specs/games-and-fill-in/`. A club's courts, Raketa hours,
+> prices and way of working are built (#535), and so is a player's saved payment method behind
+> the payments port ([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md),
+> #536), and so are proposals — a game still filling in a pool, answered with a silent yes
+> (#538); bookings and charges are not yet.
 
 ## Start the session inside the app you are changing
 

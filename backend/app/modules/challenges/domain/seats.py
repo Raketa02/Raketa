@@ -25,7 +25,7 @@ court ended, because somebody made a judgement about these people.
 **One string per seat on the wire.** The event codec coerces scalars only: a
 ``tuple[Seat, ...]`` would come back out of storage as a list of dicts and the
 aggregate would be rebuilding the shape on every replay. This is
-``AvailabilitySlot.code``'s precedent, with more fields in it.
+``WeeklyHour.code``'s precedent, with more fields in it.
 """
 
 from __future__ import annotations

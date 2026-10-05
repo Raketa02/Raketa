@@ -13,11 +13,12 @@ import pytest
 
 from app.application.events import EventCatalog
 from app.application.events.envelope import SerializedEventEnvelope
+from app.application.ports.events import EventDecodingError
 from app.modules.player_profile.application.event_subscriptions import (
+    PROFILE_CREATED_VERSION,
     register_player_profile_events,
 )
 from app.modules.player_profile.domain.events import (
-    AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
     IntroChanged,
@@ -29,8 +30,8 @@ from app.modules.player_profile.domain.events import (
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+    WeeklyHoursSet,
 )
-from app.modules.player_profile.domain.gender import GenderPreference
 from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import domain_event_codec, utc
 
@@ -43,7 +44,7 @@ EVENTS = [
         player_id=PLAYER,
         social_tags=("PLAYS_TO_WIN", "HERE_TO_IMPROVE"),
         photo_ids=(str(PHOTO),),
-        availability=("2:EVENING",),
+        weekly_hours=("2:19",),
         latitude=51.51,
         longitude=-0.13,
         search_radius_km=10,
@@ -56,7 +57,7 @@ EVENTS = [
         player_id=PLAYER, social_tags=("QUIET_AND_FOCUSED",), occurred_at=AT
     ),
     PhotosChanged(player_id=PLAYER, photo_ids=(str(PHOTO),), occurred_at=AT),
-    AvailabilityChanged(player_id=PLAYER, availability=(), occurred_at=AT),
+    WeeklyHoursSet(player_id=PLAYER, weekly_hours=(), occurred_at=AT),
     LocationChanged(player_id=PLAYER, latitude=48.85, longitude=2.35, occurred_at=AT),
     SearchRadiusChanged(player_id=PLAYER, search_radius_km=25, occurred_at=AT),
     GenderChanged(player_id=PLAYER, gender="MAN", occurred_at=AT),
@@ -136,17 +137,24 @@ def test_every_event_this_context_records_has_a_durable_name():
     assert all(name.startswith("player_profile.") for name in names)
 
 
-def test_a_row_written_before_gender_existed_still_decodes():
-    """The whole reason ``player_profile.created`` is still version 1.
+def test_the_creating_event_is_written_under_version_2_with_its_week_in_hours():
+    """``docs/adr/0189`` §5 made the week hours, and the field ``weekly_hours`` —
+    a change to the wire shape, versioned as one rather than reinterpreted."""
 
-    Profiles were committed before ADR-0096 asked anybody about gender, and
-    those rows are in the store with the payload they were written with. This is
-    that payload, byte for byte: the two fields appended after it are absent,
-    and the class must still build from it — otherwise the addition was a silent
-    schema break that only surfaces the next time somebody logs in.
-    """
+    encoded = domain_event_codec().encode(EVENTS[0])
 
-    before_the_question_existed = {
+    assert encoded.event_type == "player_profile.created"
+    assert encoded.schema_version == 2
+    assert encoded.payload["weekly_hours"] == ["2:19"]
+    assert "availability" not in encoded.payload
+
+
+def test_a_week_of_parts_written_under_version_1_is_refused_rather_than_misread():
+    """Version 1 is deliberately unreadable, on the Plan's argument: nothing ran
+    anywhere but ``local``, whose database is disposable, and a row written under
+    the old shape is a decoding error rather than a week folded wrongly."""
+
+    written_before_the_week_became_hours = {
         "player_id": str(PLAYER),
         "social_tags": ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
         "photo_ids": [str(PHOTO)],
@@ -158,23 +166,39 @@ def test_a_row_written_before_gender_existed_still_decodes():
         "occurred_at": AT.isoformat(),
     }
 
-    decoded = domain_event_codec().decode(
-        SerializedEventEnvelope(
-            id=new_uuid(),
-            event_type="player_profile.created",
-            schema_version=1,
-            payload=before_the_question_existed,
-            occurred_at=AT,
+    with pytest.raises(EventDecodingError):
+        domain_event_codec().decode(
+            SerializedEventEnvelope(
+                id=new_uuid(),
+                event_type="player_profile.created",
+                schema_version=1,
+                payload=written_before_the_week_became_hours,
+                occurred_at=AT,
+            )
         )
-    )
 
-    # Absent, and absent means *nobody was asked* — never a quieter
-    # `PREFER_NOT_TO_SAY`, which is an answer a player chose (``docs/adr/0096``).
-    assert decoded.gender is None
-    # The preference is not symmetrical with it: it is optional, and a player
-    # who never expressed one holds `ANY`. There is no second fact for its
-    # absence to carry.
-    assert decoded.gender_preference == GenderPreference.ANY.value
+
+def test_the_part_of_day_week_edit_has_no_reader_any_more():
+    """``player_profile.availability_changed`` was replaced by
+    ``player_profile.weekly_hours_set``, not given a second class to answer to."""
+
+    codec = domain_event_codec()
+
+    assert codec.encode(EVENTS[3]).event_type == "player_profile.weekly_hours_set"
+    with pytest.raises(EventDecodingError):
+        codec.decode(
+            SerializedEventEnvelope(
+                id=new_uuid(),
+                event_type="player_profile.availability_changed",
+                schema_version=1,
+                payload={
+                    "player_id": str(PLAYER),
+                    "availability": ["2:EVENING"],
+                    "occurred_at": AT.isoformat(),
+                },
+                occurred_at=AT,
+            )
+        )
 
 
 def test_a_play_intent_declaration_carries_the_pair_and_never_its_stream_id():
@@ -234,4 +258,6 @@ def test_a_durable_name_cannot_be_claimed_by_a_second_class():
         occurred_at = AT
 
     with pytest.raises(ValueError):
-        catalog.register(Impostor, name="player_profile.created", version=1)
+        catalog.register(
+            Impostor, name="player_profile.created", version=PROFILE_CREATED_VERSION
+        )

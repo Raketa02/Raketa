@@ -1,7 +1,7 @@
 /**
  * The profile facts a Play screen reads and the You tab edits, in one round trip.
  *
- * `GET /api/v1/players/me/profile` carries the availability grid, the Search radius and the
+ * `GET /api/v1/players/me/profile` carries the weekly hours, the Search radius and the
  * per-sport Play intent, across the two aggregates that own them
  * ([#246](https://github.com/Raketa02/Raketa/issues/246)) — and, since the route grew for
  * *You* ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
@@ -15,7 +15,7 @@
  * ## Why this lives in `player_profile` and not in `play`
  *
  * Play is the only reader today, and it would have been the easier home. It loses to the
- * **writes**: `PUT /players/me/availability`, `PUT /players/me/search-radius` and
+ * **writes**: `PUT /players/me/weekly-hours`, `PUT /players/me/search-radius` and
  * `PUT /play-intents/{sport}` are *"two writes that are not matchmaking's at all"*
  * ([`the-play-screens.md`](../../../../../docs/specs/matchmaking/the-play-screens.md) §0), and
  * a read whose three paired writes live in another feature is a read in the wrong feature.
@@ -33,7 +33,7 @@
 import type { PlayIntent } from '@/shared/vocabulary/playIntent';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { Sport } from '@/shared/vocabulary/sport';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Gender, GenderPreference } from './gender';
 import type { UploadedPhoto } from './photoCollection';
@@ -57,7 +57,7 @@ export interface PlayerProfileSurface {
    * know when they play*, never *never*. It is what Play's working copy is seeded from and
    * what *changed from your profile* is compared against.
    */
-  readonly week: readonly WeekCell[];
+  readonly week: readonly WeeklyHour[];
   /** Whole kilometres. What the search screen's slider opens at. */
   readonly searchRadiusKm: number;
   readonly playIntents: PlayIntentDeclarations;

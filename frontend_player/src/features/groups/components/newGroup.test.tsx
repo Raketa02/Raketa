@@ -18,6 +18,7 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
+import { stubGroupDeck } from '@/test-support/groupDeck';
 import {
   errorResponse,
   installTransport,
@@ -394,6 +395,7 @@ describe('creating the group', () => {
   it('opens the new group’s page with Group created', async () => {
     transport.on('POST', '/api/v1/groups', () => json(CREATED, 201));
     transport.on('GET', `/api/v1/groups/${CREATED.id}`, () => json(CREATED));
+    stubGroupDeck(transport, CREATED.id);
     await openNewGroup();
     await fillIn('My raketa group');
     fireEvent.press(screen.getByRole('button', { name: COPY.peopleIApprove }));

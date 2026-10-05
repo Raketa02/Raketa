@@ -32,7 +32,6 @@ from app.modules.matchmaking.domain.candidate_projection import (
     project,
 )
 from app.modules.player_profile.domain.events import (
-    AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
     IntroChanged,
@@ -44,6 +43,7 @@ from app.modules.player_profile.domain.events import (
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+    WeeklyHoursSet,
 )
 from app.modules.rating.domain.events import (
     AssessmentCompleted,
@@ -60,7 +60,7 @@ def _created(**overrides: object) -> PlayerProfileCreated:
         "player_id": PLAYER,
         "social_tags": ("competitive_edge",),
         "photo_ids": ("a-photo",),
-        "availability": ("1:MORNING",),
+        "weekly_hours": ("1:10",),
         "latitude": 52.23,
         "longitude": 21.01,
         "search_radius_km": 12,
@@ -115,7 +115,7 @@ def test_the_creating_commit_moves_every_fact_it_carries() -> None:
             "profile_created_at": WHEN,
             "social_tags": ("competitive_edge",),
             "tags_updated_at": WHEN,
-            "availability": ("1:MORNING",),
+            "availability": ("1:10",),
             "grid_updated_at": WHEN,
             "area_latitude": 52.23,
             "area_longitude": 21.01,
@@ -162,11 +162,11 @@ def test_a_tag_change_moves_the_tags_and_says_when() -> None:
     )
 
 
-def test_an_availability_change_moves_the_grid_and_says_when() -> None:
-    moved = _only(AvailabilityChanged(PLAYER, ("3:EVENING",), LATER))
+def test_a_weekly_hours_change_moves_the_grid_and_says_when() -> None:
+    moved = _only(WeeklyHoursSet(PLAYER, ("3:19",), LATER))
     assert moved == PlayerFactsMoved(
         player_id=PLAYER,
-        changes={"availability": ("3:EVENING",), "grid_updated_at": LATER},
+        changes={"availability": ("3:19",), "grid_updated_at": LATER},
     )
 
 
@@ -367,7 +367,7 @@ def test_the_projected_contracts_are_exactly_what_projects_something() -> None:
     assert declared == {
         PlayerProfileCreated,
         SocialTagsChanged,
-        AvailabilityChanged,
+        WeeklyHoursSet,
         LocationChanged,
         SearchRadiusChanged,
         GenderChanged,

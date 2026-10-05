@@ -22,7 +22,7 @@ import { theme } from '@/shared/ui';
 import {
   CHALLENGES_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
   stubChallenges,
   stubConversation,
   stubConversations,
@@ -113,7 +113,7 @@ afterEach(async () => {
 /** Land in the app with these challenges, and open the Chats tab. */
 async function openChats(challenges: readonly Wire['ChallengeSchema'][] = []) {
   stubChallenges(transport, challenges, READ_AT);
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
 
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
@@ -782,7 +782,7 @@ describe('the badge on the bar', () => {
 
   it('draws the identical absence at zero, in flight and refused', async () => {
     transport.on('GET', CHALLENGES_PATH, () => errorResponse(500, 'boom'));
-    await launchSignedIn();
+    await launchIntoClassicPlay(transport);
 
     expect(await screen.findByLabelText('Chats')).toBeTruthy();
   });

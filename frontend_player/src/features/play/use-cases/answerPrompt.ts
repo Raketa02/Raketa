@@ -35,7 +35,7 @@
 import { toWireSport } from '@/features/onboarding/types';
 import type { PlayIntentDeclaration } from '@/features/player_profile/types';
 import type { Sport } from '@/shared/vocabulary/sport';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import { recordPromptDecline } from '../api/promptApi';
 import { intentForMode } from '../domain/playMode';
@@ -55,8 +55,8 @@ export interface PromptAnswer {
 
 /** The three routes that own the values these questions are about. */
 export interface PromptWrites {
-  /** `PUT /players/me/availability` — the whole week, and a blank one is a legal value. */
-  readonly saveWeek: (week: readonly WeekCell[]) => Promise<unknown>;
+  /** `PUT /players/me/weekly-hours` — the whole week, and a blank one is a legal value. */
+  readonly saveWeek: (week: readonly WeeklyHour[]) => Promise<unknown>;
   /** `PUT /players/me/search-radius`, with its clamp and its cache effect attached. */
   readonly saveRadius: (radiusKm: number) => Promise<unknown>;
   /** `PUT /play-intents/{sport}` — ADR-0094's route, and the third of the three. */

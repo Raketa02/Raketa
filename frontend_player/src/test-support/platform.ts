@@ -1,5 +1,5 @@
 /**
- * Hand-written fakes for the four platform ports.
+ * Hand-written fakes for the platform ports.
  *
  * Beside `transport.ts` and for the same reason: a test states what the world outside the
  * app does, and everything inside it runs for real. The socket is one such edge; the OS
@@ -40,8 +40,17 @@
  * it.
  */
 
+import { createElement, useEffect } from 'react';
+import { TextInput } from 'react-native';
+
 import type {
+  BankAnswer,
+  CardFieldsProps,
   ClipboardPort,
+  ConfirmPayment,
+  ConfirmWith,
+  PaymentsPort,
+  PhoneWallet,
   SharePort,
   FollowLive,
   HapticsPort,
@@ -53,6 +62,8 @@ import type {
   LocationPort,
   PermissionState,
   PickedImage,
+  PushNotice,
+  PushPort,
 } from '@/shared/lib/platform';
 
 /** The bits every port fake shares: what the state is, and what asking would make it. */
@@ -402,4 +413,228 @@ export function fakeShare(): FakeShare {
       return Promise.resolve();
     },
   };
+}
+
+/**
+ * **A payment provider that behaves as Stripe's test cards do** (#552) — the backend's
+ * `domain/entered_cards.py` again, from the phone's side: the number a suite types decides how the
+ * bank answers, down to the last four digits Stripe's test mode uses.
+ *
+ * | Typed | The bank |
+ * | --- | --- |
+ * | `4242 4242 4242 4242` (and any other complete number) | saves it and asks nothing |
+ * | `4000 0025 0000 3155` | checks it once — and answers as `bank` says |
+ * | `4000 0000 0000 0002` | refuses it |
+ *
+ * **The fields are one text input**, labelled `FAKE_CARD_NUMBER`, where Stripe draws three: a
+ * suite types a whole number and the entry is complete at sixteen digits — the expiry and the CVC
+ * are Stripe's business and nothing above the port ever sees them. **They mount empty**, as
+ * Stripe's do: the entry lives in the view, and a step opened again starts with nothing typed. The wallet answers as
+ * `walletSheet` says. Neither verb rejects, as the device's never does.
+ *
+ * **A refused share is confirmed the same way** (#555): with the card on file the bank's check is
+ * answered as `bank` says; with another card, the number typed decides — the declining card is
+ * declined again, any other complete number pays it. Every confirmation is recorded in `payments`.
+ */
+export interface FakePayments extends PaymentsPort {
+  /** The phone's own wallet. `null` — the default — is a phone that cannot pay with one. */
+  wallet: PhoneWallet | null;
+  /** How the player answers the bank's check, for the card that asks for one. */
+  bank: 'approves' | 'closes';
+  /** How the player answers the wallet's sheet. */
+  walletSheet: 'pays' | 'closes';
+  /** Every key the provider was handed, oldest first. */
+  readonly keys: readonly string[];
+  /** Every setup secret the bank was asked with, oldest first — what the terms' answer reached. */
+  readonly confirmed: readonly string[];
+  /** How many times the bank's own check was drawn. */
+  readonly checks: number;
+  /** Every refused share the phone confirmed, oldest first — on whose account, and with what. */
+  readonly payments: readonly Omit<ConfirmPayment, 'publishableKey'>[];
+}
+
+/** The fake fields' accessible name — the one control a suite types a card into. */
+export const FAKE_CARD_NUMBER = 'Card number (test)';
+
+/** Stripe's test cards, by what their bank does. */
+export const TEST_CARDS = {
+  saves: '4242424242424242',
+  checksOnce: '4000002500003155',
+  declines: '4000000000000002',
+} as const;
+
+export function fakePayments(initial: Partial<Pick<FakePayments, 'wallet'>> = {}): FakePayments {
+  const keys: string[] = [];
+  const confirmed: string[] = [];
+  const payments: Omit<ConfirmPayment, 'publishableKey'>[] = [];
+  let checks = 0;
+  /** What is in the fields right now — digits only. */
+  let typed = '';
+
+  const complete = () => typed.length === 16;
+
+  function CardFields({ onChange, accessibilityLabel }: CardFieldsProps) {
+    // Mounted empty, as Stripe's are: what was typed lives in the view and goes with it, so a card
+    // details step opened again after a decline holds nothing.
+    useEffect(() => {
+      typed = '';
+    }, []);
+    return createElement(TextInput, {
+      accessibilityLabel: FAKE_CARD_NUMBER,
+      accessibilityHint: accessibilityLabel,
+      onChangeText: (text: string) => {
+        typed = text.replace(/\D/g, '');
+        onChange({ complete: complete() });
+      },
+    });
+  }
+
+  function answer(via: ConfirmWith): BankAnswer {
+    if (via.kind === 'wallet') return port.walletSheet === 'pays' ? 'saved' : 'cancelled';
+    const number = via.card.reference?.replace(/^pm_fake_/, '') ?? '';
+    if (number === TEST_CARDS.declines) return 'declined';
+    if (number === TEST_CARDS.checksOnce) {
+      checks += 1;
+      return port.bank === 'approves' ? 'saved' : 'cancelled';
+    }
+    return 'saved';
+  }
+
+  const port: FakePayments = {
+    wallet: initial.wallet ?? null,
+    bank: 'approves',
+    walletSheet: 'pays',
+    get keys() {
+      return keys;
+    },
+    get confirmed() {
+      return confirmed;
+    },
+    get checks() {
+      return checks;
+    },
+    get payments() {
+      return payments;
+    },
+
+    CardFields,
+    phoneWallet: () => Promise.resolve(port.wallet),
+    takeCard: (publishableKey) => {
+      keys.push(publishableKey);
+      return Promise.resolve(
+        complete()
+          ? { kind: 'taken', card: { reference: `pm_fake_${typed}` } }
+          : { kind: 'refused' },
+      );
+    },
+    confirmSetup: ({ publishableKey, clientSecret, with: via }) => {
+      keys.push(publishableKey);
+      confirmed.push(clientSecret);
+      return Promise.resolve(answer(via));
+    },
+    confirmPayment: ({ publishableKey, ...ask }) => {
+      keys.push(publishableKey);
+      payments.push(ask);
+      if (ask.with === 'onFile') {
+        checks += 1;
+        return Promise.resolve(port.bank === 'approves' ? 'confirmed' : 'cancelled');
+      }
+      if (!complete()) return Promise.resolve('failed');
+      return Promise.resolve(typed === TEST_CARDS.declines ? 'declined' : 'confirmed');
+    },
+  };
+  return port;
+}
+
+/**
+ * **A phone whose pushes a suite decides** (#559) — the permission, the token Expo's service would
+ * address it by, a push arriving while the app is open, a push tapped, and a token replaced.
+ *
+ * Defaults to the ordinary path every port's fake starts on — never asked, says yes — and a phone
+ * that **has** a token to give, because a token withheld is the edge (no Expo project, an iPhone
+ * build without the entitlement) and a suite about one says so with `token: null`. The token is
+ * handed over whatever the permission says, as the real port does: whether a phone that may not
+ * show anything is worth registering is the caller's question.
+ *
+ * Nothing arrives on its own: `receive`, `tap` and `rotate` are the suite's, delivered to whoever
+ * is listening at that moment — and a tap made before anybody listens is the **cold start**, held
+ * until the first listener subscribes and handed to it once, as the real port reads the tap that
+ * started the app.
+ */
+export interface FakePush extends PushPort, FakePermission {
+  /** The token the phone would hand over — `null` for one that has none to give. */
+  token: string | null;
+  /** How many times a token was asked for. */
+  readonly tokenReads: number;
+  /** A push arrives while the app is open. */
+  receive: (notice: PushNotice) => void;
+  /** The player taps a push — before anybody listens, it is the tap that starts the app. */
+  tap: (data: unknown) => void;
+  /** The system hands the phone a new token. */
+  rotate: (token: string) => void;
+}
+
+/** What Expo's service mints for a phone — the shape the backend accepts. */
+export const PUSH_TOKEN = 'ExponentPushToken[fake-phone-0001]';
+
+export function fakePush(
+  initial: Partial<Pick<FakePush, 'state' | 'answer' | 'token'>> = {},
+): FakePush {
+  let tokenReads = 0;
+  const notices = new Set<(notice: PushNotice) => void>();
+  const opens = new Set<(data: unknown) => void>();
+  const tokens = new Set<() => void>();
+  /** A tap nobody was listening for — the cold start's. */
+  let launchedBy: { readonly data: unknown } | undefined;
+
+  const fake: FakePush = {
+    state: initial.state ?? 'undetermined',
+    answer: initial.answer ?? 'granted',
+    token: initial.token === undefined ? PUSH_TOKEN : initial.token,
+
+    get tokenReads() {
+      return tokenReads;
+    },
+
+    getPermission: async () => fake.state,
+    requestPermission: async () => settle(fake),
+    readToken: async () => {
+      tokenReads += 1;
+      return fake.token;
+    },
+
+    onTokenChange: (listener) => {
+      tokens.add(listener);
+      return () => tokens.delete(listener);
+    },
+    onNotice: (listener) => {
+      notices.add(listener);
+      return () => notices.delete(listener);
+    },
+    onOpen: (listener) => {
+      opens.add(listener);
+      const held = launchedBy;
+      launchedBy = undefined;
+      // Asynchronously, as the real port reads the cold start's tap.
+      if (held !== undefined) void Promise.resolve().then(() => listener(held.data));
+      return () => opens.delete(listener);
+    },
+
+    receive: (notice) => {
+      for (const listener of [...notices]) listener(notice);
+    },
+    tap: (data) => {
+      if (opens.size === 0) {
+        launchedBy = { data };
+        return;
+      }
+      for (const listener of [...opens]) listener(data);
+    },
+    rotate: (token) => {
+      fake.token = token;
+      for (const listener of [...tokens]) listener();
+    },
+  };
+
+  return fake;
 }

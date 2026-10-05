@@ -8,6 +8,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { AppError } from '@/shared/errors';
+import { usePush } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
 
 import type {
@@ -73,10 +74,13 @@ export function useSignUp() {
 /**
  * **Not retried.** The use-case already treats the server revoke as best-effort and
  * always tears the local session down, so there is nothing a retry could improve.
+ *
+ * It is handed this tree's push port: the first thing a sign-out does is let the phone go (#559).
  */
 export function useSignOut() {
+  const phone = usePush();
   return useMutation<void, AppError, void>({
-    mutationFn: signOut,
+    mutationFn: () => signOut(phone),
     retry: false,
   });
 }

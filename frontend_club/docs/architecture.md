@@ -12,8 +12,10 @@ pull request.
 src/
   app/                 routes and layouts only
     (signed-out)/      sign-in, sign-up, forgot-password/…, reset/[token]
-    (signed-in)/       layout (the frame), overview, groups, administrators, details
+    (signed-in)/       layout (the frame), overview, bookings (and bookings/check-in), courts,
+                       money, groups, administrators, details, raketa-settings
     session/           renew and end: the session's own route handlers (§3)
+    payments/continue  where Stripe sends a desk whose link is spent: a fresh one, followed
   proxy.ts             renews a lapsing session and stamps each request's path (§3)
   instrumentation.ts   refuses to start without the configuration (§6)
   server/              the only code that reaches the backend; every file `server-only`
@@ -27,13 +29,22 @@ e2e/                   the Playwright suite and its stub backend (§7)
   hands a view model to a feature's component. ESLint refuses `@/server/*` in `src/app/` and in
   components, so the backend is only ever reached through a query or an action. The exception is
   `src/app/session/`, whose two route handlers belong to the server layer as the proxy does.
+  `/payments/continue` is a route handler too, a door rather than a page, and it goes where
+  Overview's action says (`continueWithStripe`).
 - **A feature is an area of the site**: `sign-in` (signing in and up, signing out, _Forgot
-  password?_, _Set a new password_), `club-details`, `overview`, `administrators` and `groups`
-  (the Groups table, and a group's page: _Want to join_ and _Hand over_). A feature may use another feature's components, schemas,
-  copy and mappers (sign-up draws Club details' fields; Overview greets a `Club`), and never
-  another feature's actions or queries. A feature's queries and actions call the backend only
-  through the three doors of §4, and may read the session, the recovery cookie and the
-  configuration directly.
+  password?_, _Set a new password_), `club-details`, `overview` (with the setup checklist and
+  _Connect with Stripe_),
+  `bookings` (the day's Raketa bookings, answering a request, _Move_ and _Cancel_, and what
+  waits for an answer), `check-in` (_Check in_: the camera and the short code at the desk, under
+  Bookings), `courts` (_Courts & prices_: the courts, their weekly hours,
+  exceptions and prices), `money` (a month of the club's money, its payouts and its Stripe
+  dashboard), `raketa-settings`, `administrators` and `groups` (the Groups table, and a group's page:
+  _Want to join_ and _Hand over_). A feature may use another feature's components, schemas, copy and mappers
+  (sign-up draws Club details' fields; Overview greets a `Club` and lists Bookings' requests),
+  and never another feature's actions or queries: a route reads both features' queries and
+  hands each its view model. A feature's queries and actions call the backend only
+  through the three doors of §4, and may read the session, the recovery cookie, the marks of
+  §2 and the configuration directly.
 - **`mappers.ts` is the only file outside `src/server/` that imports a generated type**, besides
   the suite's stub in `e2e/`, which types its replies from the contract on purpose. It
   turns a wire type into a view model and back. A contract change then lands in one file per
@@ -56,6 +67,11 @@ longer than any refresh token, so **the backend decides when a session ends**.
   server action, a route handler, the proxy. That one constraint shapes §3.
 - **Sign out** revokes the refresh token at the backend (idempotent), then deletes the cookie,
   whatever the backend answered.
+- **What a browser was told once is a third cookie**, `raketa_club_told_live`: Overview says
+  _You're live_ once (the screens B2), and a club can go live while nobody is looking (Stripe
+  says so later), so no save could carry the news. It holds no token and nothing anybody could
+  use, has the session's attributes, and is set and cleared only by Overview's server action
+  (`src/server/marks.ts`).
 - **_Forgot password?_ keeps its own sealed cookie**, `raketa_club_recovery`, for an hour at most:
   the email asked with, and once a right code is claimed, the ticket. The ticket is a credential,
   so it never reaches the browser either. The reset link's token is the exception that proves the
@@ -98,6 +114,12 @@ deploy-time question for the day there is a deployment.
 - **`anonymously(call)`**: sign-up, sign-in, _Forgot password?_.
 - **`readAsClub(call)`**: a render's read. No session redirects to sign-in; a 401 renews by §3.
 - **`writeAsClub(call)`**: a server action's write, with the retry of §3.
+
+**A read with no render to read in is a server action too**, in `actions.ts`, through
+`writeAsClub`: a dialog that opens on a click (Bookings' _Move_ reads the free courts as it
+opens, `readFreeCourts`), and the frame asking whether its badge is out of date, since a layout
+is not drawn again as the desk moves between pages (`readRequestCount`). They write nothing;
+the door is the one that can renew in place.
 
 Each call is `openapi-fetch` over the generated `paths`, with a ten-second timeout, and each
 settles into an **outcome**: `{ ok: true, data }` or `{ ok: false, error: { status, code,
@@ -182,8 +204,12 @@ points.
 - The stub answers each operation with a handler whose reply the compiler checks against that
   operation's declared responses in the generated contract. It also accepts the envelope-bearing
   statuses the backend sends without declaring per route (a `401`, a `5xx`), and `drop`, which
-  closes the connection unanswered. It records every request, and it serves the map's tiles
-  and answers the address search (`stub.places`, `stub.geocoderStatus`, `stub.searches`).
+  closes the connection unanswered. It records every request, it serves the map's tiles and
+  answers the address search (`stub.places`, `stub.geocoderStatus`, `stub.searches`), and it
+  serves **Stripe's hosted pages**: a link the fake club hands out points at the stub, so _Connect with
+  Stripe_ and `/payments/continue` really redirect there (Playwright's `page.route` never sees a
+  redirect's target), the page offers Stripe's way back to Overview, and `stub.stripePages` lists
+  what the browser opened.
   An operation is named by its path as the contract writes it,
   `/api/v1/club/administrators/{administrator_id}`, and its handler and `stub.requests` read
   the ids in `params`.
@@ -191,10 +217,19 @@ points.
   refresh tokens are refused, whose reset signs every session out, whose administrators keep
   ADR-0184's rules, and whose official groups are run only by an active administrator, so a
   removal leaves them needing one until a handover, and each keeps its queue of join requests,
-  which the club answers whoever runs it. A test seats its people in `club.administrators` and its
-  groups in `club.groups` (`officialGroup(…)`, with `requests: [joinRequest(…)]` or just a
-  `waiting_count`), and a test about
-  one reply overrides that operation. Its tokens are unique across the run (`club.accessToken(n)`),
+  which the club answers whoever runs it. Its Raketa offer, `club.raketa`
+  (`e2e/stub/courts.ts`), keeps #535's rules for courts, hours, exceptions, prices and settings
+  and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
+  makes the club live. Its bookings, `club.bookings` (`e2e/stub/bookings.ts`), keep #543's and
+  #547's rules: each status folded from where the booking stands and the clock, as the backend
+  folds it, and a booking still to be played holds its court for Courts & prices. Its money,
+  `club.money` (`e2e/stub/money.ts`), answers a month's rows soonest first with their totals,
+  and its payouts newest first. A test seats its people in `club.administrators`, its groups in
+  `club.groups` (`officialGroup(…)`, with `requests: [joinRequest(…)]` or just a
+  `waiting_count`), its courts in `club.raketa.courts` (`court(…)`), its games
+  with `club.bookings.add(booking(…))` and its money with `club.money.add(moneyRow(…))` and
+  `club.money.payouts` (`payout(…)`), and a test about one reply overrides that operation; a handler reads the query string in
+  `query`. Its tokens are unique across the run (`club.accessToken(n)`),
   because the single flight's grace window would hand one test the pair it renewed for another.
 - **Tests assert what the desk or the backend would see**: text on the page, the URL, the
   cookie's attributes, and the requests that arrived at the stub. They never read the cookie's
@@ -204,6 +239,14 @@ points.
   bad configuration and reads its exit code and output. It also starts the suite's build with a
   **different** tile URL and start point and reads them back off `/sign-up`, which is what
   catches a page that froze the build's configuration (§6).
+- **The camera is the browser's, and the suite hands it a fake one.** _Check in_ asks for the
+  camera with `getUserMedia` and reads each frame's QR code with jsQR, a decoder in plain
+  JavaScript, because Safari, on the tablets desks use, has no `BarcodeDetector`. A spec that
+  opens the page first calls `fakeCamera(page)` (`e2e/camera.ts`): `getUserMedia` answers with a
+  canvas's stream, the test holds up a real QR code drawn as the player app draws one, and the
+  page decodes it as it would a phone's screen. The fake counts the frames the page looks at, so
+  "it kept reading that code and asked once" needs no clock; refused, it is a blocked or a
+  missing camera, and unplugged, one that stops.
 - **Every page is checked at 360 px** for sideways scrolling.
 
 No automated test crosses apps. The journey through the backend, the app and this site is a QA
@@ -218,9 +261,18 @@ from them on the four-point grid. The type is Archivo and IBM Plex Mono, self-ho
 literal anywhere else, and ESLint refuses an inline `style`. A media query's width is the one
 literal CSS allows no variable for.
 
+Money is written by `src/ui/format.ts` as the player app writes a share: `140 zł`, `142,50 zł`
+(the decimal comma, a space before the unit, and the grosze only when there are some), from the
+wire's integer grosze and never through `Intl.NumberFormat` or `toFixed`
+(`docs/value-formatting.md`, which left the rendering to the first client to draw a price). A
+sum of five figures or more is set in threes with a no-break space, `12 840 zł`, as Polish sets
+it, and a sum below nought takes U+2212, `−6 zł`: the Money page's totals and payouts are the
+first to need either.
+
 **A page works at every width, down to a phone with no sideways scrolling.** On a phone the top
 bar becomes three rows: the wordmark and _Sign out_, the club, then the pages. Every table is
 drawn by `src/ui/Table.module.css`: on a phone its rows become blocks, one cell under another,
 and its column heads are left to a screen reader. A cell that would be a bare figure there
-(Groups' _Players_, _From original group_ and _Games_) prints its column's name before it, for the eye
-only.
+(Groups' _Players_, _From original group_ and _Games_, Money's sums) takes the table's `labelled` and
+prints its column's name before it, for the eye only. Bookings' day and Money's month are one
+`PeriodBar`, _‹ its name ›_ with a `PeriodPicker` box beside it.

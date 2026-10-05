@@ -37,7 +37,7 @@
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { ScoredTerm } from './evidence';
 import type {
@@ -418,7 +418,7 @@ interface RungOfferFacts {
    * and the count are both true without it, where a radius rung with no radius has no sentence
    * left at all.
    */
-  readonly slot: WeekCell | null;
+  readonly slot: WeeklyHour | null;
 }
 
 /**

@@ -154,8 +154,11 @@ class CandidateRow:
     #: for the reason the tags are — a fact a player changes about themselves,
     #: read on the one surface that shows one person at a time.
     intro: str | None
-    #: The availability grid, as ``AvailabilitySlot.code`` writes it. Empty is a
-    #: real answer — *no preference* — and never an absent one.
+    #: The player's weekly hours, as ``WeeklyHour.code`` writes them —
+    #: ``"2:19"``. The column keeps its older name, ``availability``, because it
+    #: is a projection rebuilt from the log and a rename would be a migration
+    #: bought for a word. Empty is *we do not know when they play* — absent,
+    #: never a zero (ADR-0102).
     availability: tuple[str, ...]
     grid_updated_at: datetime
     #: Size one today. A *set*, so a row reachable from two cells at trigger 4

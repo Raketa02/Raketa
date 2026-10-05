@@ -99,6 +99,12 @@ export function gameCardName(game: Game, plan: Plan | undefined): GameCardName {
     case 'CONFIRMED':
       return 'counted';
     case 'UNSCORED':
+    // A booked game that started short is uncounted too, *a seat was empty* — and a booked game
+    // is Home's card, never this rail's (#556), so the word is only ever a fallback here. So is a
+    // booked game somebody did not come to, whatever the report comes to (#560).
+    case 'STARTED_SHORT':
+    case 'NO_SHOW_REPORTED':
+    case 'NO_SHOW':
       return 'uncounted';
     case 'NEVER_PLAYED':
       return 'never-played';
@@ -162,6 +168,81 @@ const CLEARABLE: Readonly<Record<GameCardName, boolean>> = {
 export function mayBeCleared(name: GameCardName): boolean {
   return CLEARABLE[name];
 }
+
+/**
+ * **Whether this card is one of the games that need you** — what Home's badge counts
+ * ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)):
+ * *a result to enter or confirm, a payment to confirm, a seat open in your game.* Three of those are
+ * cards this rail already draws; *a payment to confirm* is the booked game's, and arrives with it.
+ *
+ * A `Record` over the union, so a new card name is a decision here rather than a fall-through.
+ * **`confirm` is the one that cannot be read off the name**: the card is the same in all four
+ * `AWAITING_ANSWER` arms, and only two of them wait on you — so it is asked of the caller, which is
+ * handed `features/games`' fold (`awaitsYourAgreement`) and crosses it as an answer rather than an
+ * import, keeping this module the pure TypeScript it is. It is asked about that card and no other.
+ */
+const NEEDS_YOU: Readonly<Record<GameCardName, boolean | 'when-a-score-awaits-you'>> = {
+  planning: false,
+  'game-on': false,
+  // A seat open in your game — the fill is yours as much as anybody's on the court.
+  'needs-a-player': true,
+  // A result to enter: the agreed point is behind the fold.
+  'needs-result': true,
+  // A result to confirm — only where a score is waiting on your agreement.
+  confirm: 'when-a-score-awaits-you',
+  counted: false,
+  uncounted: false,
+  'never-played': false,
+  'called-off': false,
+  unreadable: false,
+};
+
+export function needsYou(name: GameCardName, scoreAwaitsYou: () => boolean): boolean {
+  const rule = NEEDS_YOU[name];
+  return rule === 'when-a-score-awaits-you' ? scoreAwaitsYou() : rule;
+}
+
+/**
+ * The plan a game is folded with — its court's row, found by the challenge the game was opened
+ * from (ADR-0164 §1), and `undefined` where the list has not landed or holds none.
+ */
+export function planOf(game: Game, plans: readonly Plan[] | undefined): Plan | undefined {
+  return plans?.find((one) => one.challengeId === game.challengeId);
+}
+
+/**
+ * **How many of the rail's cards need you** — the number on Home's column. The rail's own rows,
+ * each folded with its own plan exactly as the rail folds it, so the badge counts the cards Home
+ * draws and no others; `scoreAwaitsYou` is `awaitsYourAgreement` for the reader, handed in.
+ */
+export function gamesNeedingYou(
+  games: readonly Game[],
+  plans: readonly Plan[] | undefined,
+  scoreAwaitsYou: (game: Game) => boolean,
+  drawnElsewhere?: ReadonlySet<string>,
+): number {
+  return railGames(games, drawnElsewhere).filter((game) =>
+    needsYou(gameCardName(game, planOf(game, plans)), () => scoreAwaitsYou(game)),
+  ).length;
+}
+
+/**
+ * **The rail's own cards** — the games on the rail (`belongsOnTheRail`) that no other card stands
+ * for. A game booked through a group is on `GET /games` too, and its booking's card is drawn first
+ * on the rail and counted on Home's column by its own read
+ * ([#556](https://github.com/Raketa02/Raketa/issues/556)), so the rail and the badge leave every
+ * Game in `drawnElsewhere` out: one game is one card and one count.
+ */
+export function railGames(
+  games: readonly Game[],
+  drawnElsewhere: ReadonlySet<string> = NOTHING_ELSEWHERE,
+): readonly Game[] {
+  return games.filter((game) => belongsOnTheRail(game) && !drawnElsewhere.has(game.gameId));
+}
+
+/** Nothing drawn elsewhere: one empty set rather than one per call. */
+const NOTHING_ELSEWHERE: ReadonlySet<string> = new Set();
 
 /**
  * **What the game screen's entry arm leads with** — the card's own door, read as a landing.

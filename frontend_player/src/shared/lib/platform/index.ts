@@ -39,6 +39,17 @@
  * and the difference is what a test needs: a back press is something a suite presses, a sheet is
  * something it has to see opened.
  *
+ * **The seventh is the payment provider's phone half** (#552): Stripe's card fields and the bank's
+ * check. Both are native, and a card saved is the one walk no suite could otherwise finish — so a
+ * port, with a fake that behaves as Stripe's test cards do. It is the one port that carries a
+ * **component** beside its verbs, because what is typed stays inside the fields and is read out of
+ * them there.
+ *
+ * **The eighth is the phone's push notifications** (#559): the permission, the token Expo's push
+ * service addresses the phone by, a push arriving while the app is open, and the tap that opens
+ * one. All native, and the walks a suite has to finish — a refusal, a token registered, a banner
+ * tapped — are none it could otherwise reach.
+ *
  * `appBuild` is the one plain *reading*: which platform and which version of the app this is,
  * the two device facts a feature flag's rules may target (ADR-0180 §8). Nothing to decide and
  * nothing a test would drive, so no port.
@@ -90,3 +101,20 @@ export { deviceClipboard, type ClipboardPort } from './clipboard';
 export { ClipboardProvider, useClipboard, type ClipboardProviderProps } from './ClipboardProvider';
 export { deviceShare, type SharePort } from './share';
 export { ShareProvider, useShare, type ShareProviderProps } from './ShareProvider';
+export {
+  devicePayments,
+  type BankAnswer,
+  type CardEntry,
+  type CardFieldsProps,
+  type CardTaking,
+  type ConfirmPayment,
+  type ConfirmSetup,
+  type ConfirmWith,
+  type PaymentAnswer,
+  type PaymentsPort,
+  type PhoneWallet,
+  type TakenCard,
+} from './payments';
+export { PaymentsProvider, usePayments, type PaymentsProviderProps } from './PaymentsProvider';
+export { devicePush, type PushNotice, type PushPort } from './push';
+export { PushProvider, usePush, type PushProviderProps } from './PushProvider';

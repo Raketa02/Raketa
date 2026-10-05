@@ -143,6 +143,13 @@ review comment and a test description all use the same word.
   gate in this sense — those are routing on who the player is, not on a flag.
 - **Untrusted route input** — any param from a deep link, push payload, universal link,
   App Link or QR code. Zod-validated in the feature's `schemas/` before use.
+- **Push token** — the address Expo's push service reaches this phone by, minted per Expo
+  project and read through the push port; registered for the signed-in player and let go at
+  sign-out, in a request's body and never a path or a log line (#559). _Avoid_: device token, which
+  is the platform's own (APNs / FCM) under it.
+- **Notice banner** — a notice pushed while the app is open, drawn by the app at the top because the
+  phone presents nothing then; a press opens its game (#559). _Avoid_: toast — a toast is not a
+  control and is never pressed.
 - **Incoming link** — an address the operating system opens the app with, read by
   `+native-intent` before anything is routed. Only three are links — `join/<code>` (a **Group
   link**), `invite/<token>` and `reset/<token>` — by the app's scheme or the **link domain**
@@ -152,12 +159,22 @@ review comment and a test description all use the same word.
 - **Held link** — an incoming link not answered yet, kept in memory (one at a time) through
   sign-in and onboarding until a place that can answer it is reached: Join a group, the
   invitation sheet, or a sheet asking to sign out first. Dies with the process.
-- **The shell** — the five tabs a signed-in player is inside, and the **one stack** under
-  them. `Now · Players · ⚡Play · Chats · You`, drawn by `TabBar` and mounted once by
-  `TabShell`. Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it,
-  which is the whole of what
-  [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the tab
-  navigator" — there isn't one.
+- **The shell** — the tabs a signed-in player is inside, and the **one stack** under them.
+  `Home · ⚡Play · You` as the app ships, and `Home · Players · ⚡Play · Chats · You` with
+  **Classic play** (`classic_play`, #550), drawn by `TabBar` and mounted once by `TabShell`.
+  Deliberately **not** `<Tabs>`: that keeps a history per tab and restores it, which is the
+  whole of what [#227](https://github.com/Raketa02/Raketa/issues/227) forbids. _Avoid_: "the
+  tab navigator" — there isn't one.
+- **Home** — the first tab, route `/`: today's games rail under the tab's own words. It was
+  **Now** until [#550](https://github.com/Raketa02/Raketa/issues/550), and the rename is whole
+  — key `home`, label _Home_, `HomeScreen`, `HOME_COPY`, `landOnHome`. **Home's badge** counts the
+  games that need you — a seat open, a result to enter, a score waiting on your agreement
+  (`useGamesNeedingYou`, over `needsYou` and games' `awaitsYourAgreement`); the shell reads it on
+  every screen, so it holds `GET /games` and `GET /plans` for the session. _Avoid_: "Now" for the
+  tab — it survives only as the history of the rail's section below.
+- **A followed flag** — `useFollowedFeature`, the one flag read that answers again whenever a datafile
+  lands, for chrome mounted before any datafile is read and kept for the session: the bar's
+  Classic play columns. A **gated screen** still reads once, on mount (`useFeatureOnMount`).
 - **Players** — the second tab, and **the deck is the whole of it**
   ([ADR-0169](../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §1):
   key `players`, label _Players_, Feather `users`, route `/players`, a single-screen root like
@@ -366,7 +383,7 @@ profile editor that later edits the same values.
   unknown sport. _Avoid_: "config" and "settings"; neither is about this player, and both
   invite something per-player being added to it.
 - **Profile surface** — the **one read** this app holds about the player's declared facts:
-  the availability grid, the Search radius and the per-sport Play intent, in one round trip
+  the weekly hours, the Search radius and the per-sport Play intent, in one round trip
   across the two aggregates that own them — and, since the route **grew** the day **You** was
   built ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
   tags, the photos with their verdicts and the intro, read on #471, and the standing
@@ -390,7 +407,7 @@ profile editor that later edits the same values.
 ### The Play tab
 
 - **Play segment** — _Groups_ or _Explore_, the two pages the Play tab opens on while
-  `find_a_game` is off (#512): Groups is the player's groups, Explore the empty screen the rebuilt
+  `classic_play` is off (#512, #550): Groups is the player's groups, Explore the empty screen the rebuilt
   Find a game grows in. The shell's, remembered per account by the phone-preferences store, and
   **Groups** whenever nothing — or nothing this build recognises — was saved. _Avoid_: "tab" —
   Play is the tab and these are its segments.
@@ -953,6 +970,31 @@ another — and this is the screen a yes lands on.
   sentence** is the picture as one header, built from whole handles. _Avoid_: "the celebration"
   or "the moment" (not terms), "the match screen" (the word is copy on one face of it and never a
   noun for a game), pushing it from anywhere but a yes, and re-showing it — every exit removes it.
+- **It's a game!** — the yes screen's third face (#555), in `features/proposals/`: the yes that
+  filled a game dealt in a group's deck. The same ground, entrance, tiles, `vs` and pills, the
+  faces drawn off **the card the yes was said on**, and the doors _Open game_ (Home laid down, the
+  game pushed over it) and _Later_. Raised by the fill over the whole phone rather than pushed as
+  a route, because it answers wherever the player is by then. _Avoid_: showing it to anybody but
+  the player whose yes filled the game — the others are told by a notice.
+
+### The fill
+
+One client-only concept, in `features/proposals/` (#555; the Games & Fill in mechanics §6.5, §11,
+§12.2): what happens on the phone around the yes that may fill a game.
+
+- **The fill** — `FillProvider`, mounted by the shell around the tabs for the session, because a
+  yes said on the deck or a game's details outlives both. It holds the **Undo window**, the
+  **payment setup sheet** a first yes needs, **It's a game!** and the **confirmation** of a refused
+  share; the screens reach it through `useFill`. _Avoid_: "the booking flow" (a Booking is the
+  backend's aggregate), "checkout".
+- **A yes that waits** (`waitsForUndo`) — a yes on _Book it now_ or on any rescue: it moves money,
+  so it waits ten seconds behind **Undo** (the toast _Booking in 10 s · Undo_, a draining ring)
+  and is sent at zero; its card stays in the deck's read, **hidden**, so Undo deals it back where
+  it was. Every other yes is a free vote, sent at once.
+- **A payment to confirm** — this player's share refused when the game filled (the bank wants them
+  present, or a decline): nobody paid, their seat is open again, and confirming it on the phone —
+  on the club's account, the same payment — is their yes again. _Avoid_: "retry the payment" (the
+  server never retries it; the player confirms it).
 
 ### The plan
 
@@ -1037,7 +1079,8 @@ follows is only what this client had to invent to let a room fill one in
 
 ### Now
 
-Eight client-only concepts, all of them in `features/plans/` — the rail and its card are this
+The rail's own section, under the name the tab had when it was written — the tab is **Home** since
+#550, and nothing below changed with the name. Eight client-only concepts, all of them in `features/plans/` — the rail and its card are this
 feature's because a card needs a **plan** beside a **game** and ADR-0149 §1's arrow runs one way
 ([`the-loop-components.md`](../docs/specs/the-loop/the-loop-components.md) §3.4). What follows is
 only what this client had to invent to draw what is happening today and next

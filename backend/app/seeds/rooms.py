@@ -79,10 +79,13 @@ from app.bootstrap.composition import (
     build_destroy_ended_conversations,
     build_domain_event_store,
     build_event_publisher,
+    build_fake_payments,
+    build_recording_push,
     build_lifetime,
     build_member_faces,
     build_membership,
     build_nobody_is_following,
+    build_played_court,
     build_unit_of_work,
     build_user_repository,
 )
@@ -207,6 +210,12 @@ async def deliver_everything_told(
     ``NobodyIsFollowing`` — the correct answer, not a degraded one. The API
     process passes the real publisher (``app/core/lifespan.py``), and the
     parameter is required at both so the difference stays written down.
+
+    **Its cards are the fake's**, for the same reason: the seed saves every card
+    it saves through a fake (``app/seeds/payments.py``), so a card it replaced is
+    released at one — and a laptop's API, whose worker drains the rows it wrote
+    itself within the second, is on the fake as well unless somebody placed
+    Stripe keys.
     """
 
     runtime = get_event_runtime()
@@ -218,6 +227,10 @@ async def deliver_everything_told(
                 clock=build_clock(),
                 batch_size=200,
                 nudges=build_nobody_is_following(),
+                payments=build_fake_payments(),
+                # Nobody seeded has a phone, so nothing is pushed — and a
+                # notice is still given, and listed (#549).
+                push=build_recording_push(),
             )
             published = await batch.execute(worker_id="seed")
         if not published:
@@ -634,6 +647,7 @@ def _read_conversations(
             session=session, conversations=conversations
         ),
         arranging=arranging,
+        played=build_played_court(session),
         membership=build_membership(session, arranging=arranging),
         lifetime=build_lifetime(session, arranging=arranging),
         faces=build_member_faces(session, settings=settings),

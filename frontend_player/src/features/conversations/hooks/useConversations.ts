@@ -253,3 +253,52 @@ export function useChatDoors(): ReadonlyMap<string, RoomDoor> {
     ]),
   );
 }
+
+/**
+ * **A booked game's room, found by its game** — the same join keyed the other way
+ * ([#556](https://github.com/Raketa02/Raketa/issues/556)).
+ *
+ * A booked game's room opens with the booking and is about its game from its first moment (the
+ * mechanics §14.3), so every row of it carries the `game_id` the booking's details name — and that
+ * is the join `GET /bookings/{id}` documents: *the chat is the reader's room whose `game_id` is this
+ * game's*. No read carries a conversation id, and none should (ADR-0149 §3).
+ *
+ * `listed` says whether the list has been heard from, because the chat screen behind the details
+ * has two different things to say while it has no room: *still finding it*, and *there is none* —
+ * and `paused` and `error` the two others every read has: offline, and refused.
+ * Fails soft as the door above does — no room is no door.
+ */
+export function useGameRoom(gameId: string | undefined): {
+  readonly conversationId: string | undefined;
+  readonly listed: boolean;
+  /** The list is held while offline, to resume on reconnect. */
+  readonly paused: boolean;
+  /** The list's read was refused, and nothing was listed before it. */
+  readonly error: AppError | null;
+  readonly retry: () => void;
+} {
+  const { data, error, fetchStatus, refetch } = useConversations();
+  const room =
+    gameId === undefined ? undefined : data?.find((conversation) => conversation.gameId === gameId);
+  return {
+    conversationId: room?.conversationId,
+    listed: data !== undefined,
+    paused: fetchStatus === 'paused',
+    error: data === undefined ? error : null,
+    retry: () => void refetch(),
+  };
+}
+
+/**
+ * **Every booked game's room, by its game** — the list form of {@link useGameRoom}, for Home's rail,
+ * whose cards each say whether their game's chat is open: the join runs once at the surface, as
+ * {@link useChatDoors}' does, and each card is handed its own answer.
+ */
+export function useGameRooms(): ReadonlyMap<string, string> {
+  const { data } = useConversations();
+  return new Map(
+    (data ?? []).flatMap((room) =>
+      room.gameId === undefined ? [] : [[room.gameId, room.conversationId] as const],
+    ),
+  );
+}

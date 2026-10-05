@@ -46,7 +46,10 @@ from fastapi import FastAPI
 from app.bootstrap.composition import (
     build_background_session_factory,
     build_candidate_source,
+    close_payment_provider,
     build_nudge_publisher,
+    build_payment_provider,
+    build_push_notifications,
     build_scoring_meter,
 )
 from app.bootstrap.events import build_event_delivery_worker
@@ -59,6 +62,7 @@ from app.infrastructure.database.engine import (
     init_engine,
 )
 from app.infrastructure.jobs import BackgroundTask
+from app.modules.proposals.application.propose_games import DueForProposing
 from app.infrastructure.redis_client import (
     close_redis,
     close_redis_subscriber,
@@ -121,6 +125,16 @@ def build_lifespan(settings: Settings):
         # `PubSub` off this one, so it may not depend on any toggle either.
         app.state.redis_subscriber = get_redis_subscriber()
 
+        # **One per process, and this is where the one lives**: what the outbox
+        # this process delivers tells the proposer's short tick (#540). Only
+        # where both run — a proposer with no drain beside it is told nothing,
+        # and a drain with no proposer tells nobody.
+        proposer_due = (
+            DueForProposing()
+            if settings.PROPOSER_ENABLED and settings.EVENT_DELIVERY_WORKER_ENABLED
+            else None
+        )
+
         session_factory = None
         if (
             settings.EVENT_DELIVERY_WORKER_ENABLED
@@ -132,6 +146,12 @@ def build_lifespan(settings: Settings):
             or settings.RATING_CATCH_UP_ENABLED
             or settings.CONVERSATION_SWEEP_ENABLED
             or settings.MAIL_DELIVERY_ENABLED
+            or settings.PROPOSAL_EXPIRY_ENABLED
+            or settings.PROPOSER_ENABLED
+            or settings.REQUEST_TIMEOUT_ENABLED
+            or settings.CUT_OFF_ENABLED
+            or settings.CLUB_PAYOUTS_ENABLED
+            or settings.NEW_BOOKINGS_SUMMARY_ENABLED
         ):
             session_factory = build_background_session_factory(get_engine())
 
@@ -147,6 +167,14 @@ def build_lifespan(settings: Settings):
                     # and the parameter is required so the difference is written
                     # down rather than defaulted.
                     nudges=build_nudge_publisher(app.state.redis),
+                    # And the provider every request of this process pays
+                    # through, so a card a request replaced or removed is
+                    # released at the provider that saved it.
+                    payments=build_payment_provider(settings),
+                    # And the push service a notice reaches a player's phones
+                    # through (#549).
+                    push=build_push_notifications(settings),
+                    proposer_due=proposer_due,
                 )
                 # Kept on the application because the delivery worker's identity
                 # is the lease its batches claim outbox rows under, and a test or
@@ -165,6 +193,7 @@ def build_lifespan(settings: Settings):
             candidate_source=app.state.candidate_source,
             redis_client=app.state.redis,
             meter=app.state.scoring_meter,
+            proposer_due=proposer_due,
         )
         # Only the scheduled jobs, not the outbox drain beside them: this
         # attribute is what somebody reads to answer *which jobs is this process
@@ -197,5 +226,8 @@ def build_lifespan(settings: Settings):
             # turns a clean shutdown into an exception nobody reads.
             await close_redis()
             await close_redis_subscriber()
+            # And the payment provider's HTTP session, where it opened one —
+            # Stripe's, never the fake's — for the same reason and last.
+            await close_payment_provider()
 
     return lifespan

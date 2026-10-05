@@ -1,6 +1,6 @@
 /**
  * **Now's rail, walked the way a player walks it**: the real route tree, the real shell, the real
- * Now tab, and only `fetch` faked.
+ * Home tab, and only `fetch` faked.
  *
  * Most of [#367](https://github.com/Raketa02/Raketa/issues/367)'s and
  * [#413](https://github.com/Raketa02/Raketa/issues/413)'s acceptance criteria are assertions in
@@ -20,7 +20,7 @@ import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { REMOVE_THIS_CARD } from '@/features/games/types';
-import { NOW_COPY } from '@/features/shell/types';
+import { HOME_COPY } from '@/features/shell/types';
 import { SEAT_NAME_LETTERS, endPlaySession } from '@/features/play/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -105,6 +105,7 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
       { side: 'B', player_id: TOMEK, name: 'tomek.p' },
     ],
     proposals: [],
+    no_shows: [],
     ...over,
   };
 }
@@ -137,8 +138,8 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** Land on the Now tab with these games, these plans and — optionally — a room to open. */
-async function landOnNow({
+/** Land on the Home tab with these games, these plans and — optionally — a room to open. */
+async function landOnHome({
   games = [game()],
   plans = [],
   room = true,
@@ -197,15 +198,17 @@ const DIM = theme.color.onDarkHair;
 
 describe('the tab stops being a placeholder', () => {
   it('says what Now is and points at the act when it holds nothing', async () => {
-    await landOnNow({ games: [] });
+    await landOnHome({ games: [] });
 
-    expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
-    expect(screen.getByText(NOW_COPY.empty.act)).toBeTruthy();
+    expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
+    expect(screen.getByText(HOME_COPY.empty.act)).toBeTruthy();
     expect(screen.getByText(gamesHeading(0))).toBeTruthy();
   });
 
   it('heads the rail with its own count', async () => {
-    await landOnNow({ games: [game(), game({ game_id: 'aaaaaaaa-0000-4000-8000-00000000000a' })] });
+    await landOnHome({
+      games: [game(), game({ game_id: 'aaaaaaaa-0000-4000-8000-00000000000a' })],
+    });
 
     expect(await screen.findByText(gamesHeading(2))).toBeTruthy();
   });
@@ -221,14 +224,14 @@ describe('the Planning card, against the three mocks', () => {
   const labels = () => PLAN_SLOTS.map((slot) => SLOT_EYEBROW[slot]);
 
   it('draws the tag and the three slot labels in slot order, on every one of them', async () => {
-    await landOnNow({ plans: [plan({ place: 'Zabłocie Sport' })] });
+    await landOnHome({ plans: [plan({ place: 'Zabłocie Sport' })] });
 
     expect(await screen.findByText(CARD_TAG.planning!)).toBeTruthy();
     for (const label of labels()) expect(screen.getByText(label)).toBeTruthy();
   });
 
   it('mock 1 — where is set: the place bright, the day and the time not agreed yet', async () => {
-    await landOnNow({ plans: [plan({ place: 'Zabłocie Sport, court 3' })] });
+    await landOnHome({ plans: [plan({ place: 'Zabłocie Sport, court 3' })] });
 
     await theCard();
     expect(screen.getByText('Zabłocie Sport')).toBeTruthy();
@@ -237,7 +240,9 @@ describe('the Planning card, against the three mocks', () => {
   });
 
   it('mock 2 — day is set: the weekday whole and the date beside it, the rest not agreed', async () => {
-    await landOnNow({ plans: [plan({ day: '2026-09-13', agreed_point: '2026-09-13T22:00:00Z' })] });
+    await landOnHome({
+      plans: [plan({ day: '2026-09-13', agreed_point: '2026-09-13T22:00:00Z' })],
+    });
 
     await theCard();
     expect(screen.getByText('Sunday')).toBeTruthy();
@@ -247,7 +252,7 @@ describe('the Planning card, against the three mocks', () => {
   });
 
   it('mock 3 — where and day are set: two bright bars and one dim', async () => {
-    await landOnNow({
+    await landOnHome({
       plans: [
         plan({
           place: 'Zabłocie Sport',
@@ -266,7 +271,7 @@ describe('the Planning card, against the three mocks', () => {
 
   /** §20.4: the visible place is the shorter value, the spoken one is whole. */
   it('shortens the place for the eye and speaks it whole', async () => {
-    await landOnNow({ plans: [plan({ place: 'Zabłocie Sport, court 3' })] });
+    await landOnHome({ plans: [plan({ place: 'Zabłocie Sport, court 3' })] });
 
     const card = await theCard();
 
@@ -278,13 +283,13 @@ describe('the Planning card, against the three mocks', () => {
 
 describe('the sport word', () => {
   it('is the sport alone on a counted game', async () => {
-    await landOnNow();
+    await landOnHome();
 
     expect(await screen.findByText('Padel')).toBeTruthy();
   });
 
   it('marks a friendly, and nothing else about the game', async () => {
-    await landOnNow({ games: [game({ kind: 'FRIENDLY' })] });
+    await landOnHome({ games: [game({ kind: 'FRIENDLY' })] });
 
     expect(await screen.findByText('Padel · Friendly')).toBeTruthy();
     expect(screen.queryByText(/singles/i)).toBeNull();
@@ -294,7 +299,7 @@ describe('the sport word', () => {
 describe('the four rungs, folded at read time', () => {
   /** The instant is the games list's, never the phone's — `GET /plans` carries none. */
   const nameOf = async (agreed: Wire['PlanSchema'] | undefined) => {
-    await landOnNow({ plans: agreed === undefined ? [] : [agreed] });
+    await landOnHome({ plans: agreed === undefined ? [] : [agreed] });
     return screen;
   };
 
@@ -338,7 +343,7 @@ describe('the four rungs, folded at read time', () => {
    * not a count.
    */
   it('draws no card for a court that is not whole, whatever its plan says', async () => {
-    await landOnNow({ games: [], plans: [plan({ place: 'Zabłocie Sport', day: '2026-09-19' })] });
+    await landOnHome({ games: [], plans: [plan({ place: 'Zabłocie Sport', day: '2026-09-19' })] });
 
     expect(await screen.findByText(gamesHeading(0))).toBeTruthy();
     expect(screen.queryByText(CARD_TAG.planning!)).toBeNull();
@@ -412,7 +417,7 @@ describe('every door in the table', () => {
   const openTheGame = async () => waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
 
   it('opens the game from Finish the plan on Planning', async () => {
-    await landOnNow();
+    await landOnHome();
 
     fireEvent.press(await screen.findByText(FINISH_THE_PLAN));
     await openTheGame();
@@ -420,7 +425,7 @@ describe('every door in the table', () => {
 
   /** The body is not a door: the two buttons are the only doors, and pressing the card does nothing. */
   it('opens nothing from the body', async () => {
-    await landOnNow();
+    await landOnHome();
 
     const card = await theCard();
     fireEvent.press(card);
@@ -431,7 +436,7 @@ describe('every door in the table', () => {
   });
 
   it('opens the room from the bubble', async () => {
-    await landOnNow();
+    await landOnHome();
 
     fireEvent.press(await screen.findByLabelText(OPEN_THE_CHAT));
     await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
@@ -439,14 +444,14 @@ describe('every door in the table', () => {
 
   /** The join fails soft: a challenge with no room draws no bubble rather than a dead one. */
   it('draws no bubble where there is no room to open', async () => {
-    await landOnNow({ room: false });
+    await landOnHome({ room: false });
 
     await screen.findByText(FINISH_THE_PLAN);
     expect(screen.queryByLabelText(OPEN_THE_CHAT)).toBeNull();
   });
 
   it('names the door for the act the standing can take', async () => {
-    await landOnNow({
+    await landOnHome({
       plans: [plan({ day: '2026-09-12', hour: '08:00', agreed_point: '2026-09-12T06:00:00Z' })],
     });
 
@@ -455,7 +460,7 @@ describe('every door in the table', () => {
 
   /** *Counted* offers nothing: the app does not name an act a state cannot take. */
   it('offers no door on an ending', async () => {
-    await landOnNow({
+    await landOnHome({
       games: [game({ standing: 'CONFIRMED', played_at: READ_AT, entry_closes_at: null })],
     });
 
@@ -533,7 +538,7 @@ describe('every other name, on the same shell', () => {
       undefined,
     ],
   ] as const)('%s draws its tag, its door and its line', async (name, served, agreed, line) => {
-    await landOnNow({ games: [served], plans: agreed === undefined ? [] : [agreed] });
+    await landOnHome({ games: [served], plans: agreed === undefined ? [] : [agreed] });
 
     // `findAll`, because the word can be drawn twice: on *Confirm the result* the door says it too.
     expect((await screen.findAllByText(CARD_TAG[name]!)).length).toBeGreaterThan(0);
@@ -577,7 +582,7 @@ describe('Needs a player', () => {
   const AHEAD = plan({ ...PASSED, day: '2026-09-19', agreed_point: '2026-09-19T18:00:00Z' });
 
   it('draws its tag above the clock, and Fill the seat as its door', async () => {
-    await landOnNow({ games: [game({ seats: SHORT })], plans: [AHEAD] });
+    await landOnHome({ games: [game({ seats: SHORT })], plans: [AHEAD] });
 
     expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
     expect(screen.queryByText(CARD_TAG['game-on']!)).toBeNull();
@@ -591,7 +596,7 @@ describe('Needs a player', () => {
    * and the bubble is the card's one door.
    */
   it('draws no wide door once the agreed moment has passed, and still outranks the clock', async () => {
-    await landOnNow({ games: [game({ seats: SHORT })], plans: [PASSED] });
+    await landOnHome({ games: [game({ seats: SHORT })], plans: [PASSED] });
 
     expect(await screen.findByText(CARD_TAG['needs-a-player']!)).toBeTruthy();
     expect(screen.queryByText(CARD_TAG['needs-result']!)).toBeNull();
@@ -608,7 +613,7 @@ describe('Needs a player', () => {
    * settled green over an errand still open.
    */
   it('opens the game from Fill the seat, and mints no search on the way', async () => {
-    await landOnNow({ games: [game({ seats: SHORT })], plans: [AHEAD] });
+    await landOnHome({ games: [game({ seats: SHORT })], plans: [AHEAD] });
 
     const door = await screen.findByRole('button', { name: FILL_THE_SEAT });
     expect(StyleSheet.flatten(door.props.style as ViewStyle).backgroundColor).toBe(
@@ -622,7 +627,7 @@ describe('Needs a player', () => {
   });
 
   it('draws the open seat empty — no face, no letters — and the rest of the court as it was', async () => {
-    await landOnNow({ games: [game({ seats: SHORT })] });
+    await landOnHome({ games: [game({ seats: SHORT })] });
 
     await theCard();
     const drawn = { includeHiddenElements: true };
@@ -637,7 +642,7 @@ describe('Needs a player', () => {
   });
 
   it('says the open seat aloud, because the court is not read', async () => {
-    await landOnNow({ games: [game({ seats: SHORT })] });
+    await landOnHome({ games: [game({ seats: SHORT })] });
 
     expect(await screen.findByLabelText(/^Needs a player\. Padel\. An open seat\./)).toBeTruthy();
   });
@@ -646,7 +651,7 @@ describe('Needs a player', () => {
 describe('the court', () => {
   /** The ring is the mark; the caption is the handle's first letters on every seat, yours too. */
   it('captions your own seat with three letters of your handle, never with you', async () => {
-    await landOnNow();
+    await landOnHome();
 
     await theCard();
     // The court is drawn into a hidden subtree — the card's own name says the sport — so the
@@ -659,7 +664,7 @@ describe('the court', () => {
   });
 
   it('draws a face where the room has a photograph, and posters where it has none', async () => {
-    await landOnNow({
+    await landOnHome({
       members: [
         { player_id: ME, name: 'me_' },
         { player_id: TOMEK, name: 'tomek.p', photo_id: 'p1', photo_url: TOMEK_PHOTO },
@@ -673,7 +678,7 @@ describe('the court', () => {
   });
 
   it('draws posters in every seat where there is no room, and nothing fails', async () => {
-    await landOnNow({ room: false });
+    await landOnHome({ room: false });
 
     await theCard();
     expect(screen.UNSAFE_queryAllByType(Image)).toHaveLength(0);
@@ -685,17 +690,17 @@ describe('how long an ending keeps its card', () => {
     game({ standing: 'CONFIRMED', played_at: playedAt, entry_closes_at: null });
 
   it('keeps it for a day', async () => {
-    await landOnNow({ games: [ended('2026-09-11T10:00:00Z')] });
+    await landOnHome({ games: [ended('2026-09-11T10:00:00Z')] });
 
     expect(await screen.findByText(gamesHeading(1))).toBeTruthy();
     expect(screen.getByText(CARD_TAG.counted!)).toBeTruthy();
   });
 
   it('and then leaves, which is what keeps the day line honest', async () => {
-    await landOnNow({ games: [ended('2026-09-11T08:00:00Z')] });
+    await landOnHome({ games: [ended('2026-09-11T08:00:00Z')] });
 
     expect(await screen.findByText(gamesHeading(0))).toBeTruthy();
-    expect(screen.getByText(NOW_COPY.empty.line)).toBeTruthy();
+    expect(screen.getByText(HOME_COPY.empty.line)).toBeTruthy();
   });
 
   /**
@@ -712,14 +717,14 @@ describe('how long an ending keeps its card', () => {
     });
 
   it('keeps a called-off game for a day, with its tag', async () => {
-    await landOnNow({ games: [calledOff('2026-09-11T10:00:00Z')] });
+    await landOnHome({ games: [calledOff('2026-09-11T10:00:00Z')] });
 
     expect(await screen.findByText(gamesHeading(1))).toBeTruthy();
     expect(screen.getByText(CARD_TAG['called-off']!)).toBeTruthy();
   });
 
   it('and then the called-off card leaves too', async () => {
-    await landOnNow({ games: [calledOff('2026-09-11T08:00:00Z')] });
+    await landOnHome({ games: [calledOff('2026-09-11T08:00:00Z')] });
 
     expect(await screen.findByText(gamesHeading(0))).toBeTruthy();
   });
@@ -746,7 +751,7 @@ describe('the called-off card', () => {
   });
 
   it('draws What happened? and the trash, and no line under the slots', async () => {
-    await landOnNow({ games: [calledOff], room: false });
+    await landOnHome({ games: [calledOff], room: false });
 
     expect(await screen.findByRole('button', { name: WHAT_HAPPENED })).toBeTruthy();
     expect(screen.getByRole('button', { name: REMOVE_THIS_CARD })).toBeTruthy();
@@ -757,14 +762,14 @@ describe('the called-off card', () => {
   });
 
   it('opens the game screen from What happened?', async () => {
-    await landOnNow({ games: [calledOff], room: false });
+    await landOnHome({ games: [calledOff], room: false });
 
     fireEvent.press(await screen.findByRole('button', { name: WHAT_HAPPENED }));
     await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
   });
 
   it('sends the dismissal from the trash, and the card leaves the rail on the reply', async () => {
-    await landOnNow({ games: [calledOff], room: false });
+    await landOnHome({ games: [calledOff], room: false });
     const trash = await screen.findByRole('button', { name: REMOVE_THIS_CARD });
     transport.on('POST', DISMISSAL_PATH, () => noContent());
     // The list is held open after the act, so the card that goes went on the reply and not on
@@ -782,7 +787,7 @@ describe('the called-off card', () => {
 
   /** A refusal is a re-read and no words: the fold the re-read lands on is the answer. */
   it('re-reads the rail when the dismissal is refused, and the card stays', async () => {
-    await landOnNow({ games: [calledOff], room: false });
+    await landOnHome({ games: [calledOff], room: false });
     transport.on('POST', DISMISSAL_PATH, () => errorResponse(409, 'game_is_not_called_off'));
     const before = transport.requestsTo('GET', GAMES_PATH).length;
 
@@ -805,7 +810,7 @@ describe('the order', () => {
   it('is the one the list arrived in', async () => {
     const second = 'aaaaaaaa-0000-4000-8000-00000000000a';
 
-    await landOnNow({
+    await landOnHome({
       games: [
         game({ standing: 'UNSCORED', played_at: READ_AT, entry_closes_at: null }),
         game({ game_id: second, challenge_id: 'cccccccc-0000-4000-8000-00000000000c' }),

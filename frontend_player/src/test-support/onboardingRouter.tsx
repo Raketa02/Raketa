@@ -29,6 +29,10 @@ import OfficialGroupRoute from '@/app/(administrator)/administrator/[clubId]/gro
 import OfficialGroupMembersRoute from '@/app/(administrator)/administrator/[clubId]/group/[groupId]/members';
 import AppLayout from '@/app/(app)/_layout';
 import TabsLayout from '@/app/(app)/(tabs)/_layout';
+import BookedGameRoute from '@/app/(app)/(tabs)/booking/[bookingId]/index';
+import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
+import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
+import NoticesRoute from '@/app/(app)/(tabs)/notices';
 import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
 import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
 import YesRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/yes';
@@ -46,13 +50,19 @@ import GroupRoute from '@/app/(app)/(tabs)/play/group/[groupId]/index';
 import GroupFriendsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/friends';
 import GroupMembersRoute from '@/app/(app)/(tabs)/play/group/[groupId]/members';
 import GroupEditRoute from '@/app/(app)/(tabs)/play/group/[groupId]/edit';
+import GameDetailsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/game/[proposalId]';
+import RescueRoute from '@/app/(app)/(tabs)/play/group/[groupId]/rescue/[bookingId]';
+import PostAGameRoute from '@/app/(app)/(tabs)/play/group/[groupId]/post';
 import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
 import YouGameSuggestionsRoute from '@/app/(app)/(tabs)/you/game-suggestions';
+import YouGamesAndMoneyRoute from '@/app/(app)/(tabs)/you/games-and-money';
 import YouIntroRoute from '@/app/(app)/(tabs)/you/intro';
 import YouKindOfGameRoute from '@/app/(app)/(tabs)/you/kind-of-game';
 import YouNameRoute from '@/app/(app)/(tabs)/you/name';
+import YouNotificationsRoute from '@/app/(app)/(tabs)/you/notifications';
+import YouPaymentsRoute from '@/app/(app)/(tabs)/you/payments';
 import YouPassportRoute from '@/app/(app)/(tabs)/you/passport';
 import YouPhotosRoute from '@/app/(app)/(tabs)/you/photos';
 import YouRadiusRoute from '@/app/(app)/(tabs)/you/radius';
@@ -91,7 +101,7 @@ import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
 import { featureFlagKeys } from '@/features/feature_flags/types';
-import { NOW_COPY } from '@/features/shell/types';
+import { HOME_COPY } from '@/features/shell/types';
 import { beginSession, setSessionStatus } from '@/shared/lib/auth';
 import {
   ClipboardProvider,
@@ -100,7 +110,11 @@ import {
   ImagePickingProvider,
   LiveStreamProvider,
   LocationProvider,
+  PaymentsProvider,
+  PushProvider,
   type ClipboardPort,
+  type PaymentsPort,
+  type PushPort,
   type HapticsPort,
   type SharePort,
   type ImagePickingPort,
@@ -109,12 +123,13 @@ import {
 } from '@/shared/lib/platform';
 import { queryClient } from '@/shared/lib/query-client';
 
+import { fakePayments } from './platform';
 import { errorResponse, json, type Transport, type Wire } from './transport';
 
 /**
- * The Now tab's one line — which is what *the player is in the app* looks like on screen.
+ * The Home tab's one line — which is what *the player is in the app* looks like on screen.
  *
- * The gate's fourth destination is the shell's root, and the shell's root is the Now tab, so
+ * The gate's fourth destination is the shell's root, and the shell's root is the Home tab, so
  * every suite that asserts a launch, a finish or a commit landed in the app is asserting this
  * sentence. Taken from the shell's own copy rather than spelled here, because this is exactly the
  * kind of sentence that gets reworded and eight suites holding a string literal is eight red tests
@@ -125,7 +140,7 @@ import { errorResponse, json, type Transport, type Wire } from './transport';
  * because `stubGate` stubs the games list to nothing and a launch that arrives with no games is
  * the state they are all asserting.
  */
-export const NOW_TAB_LINE = NOW_COPY.empty.line;
+export const HOME_TAB_LINE = HOME_COPY.empty.line;
 
 export const ONBOARDING_ROUTES = {
   _layout: TestRoot,
@@ -147,9 +162,21 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/play/group/[groupId]/friends': GroupFriendsRoute,
   '(app)/(tabs)/play/group/[groupId]/members': GroupMembersRoute,
   '(app)/(tabs)/play/group/[groupId]/edit': GroupEditRoute,
-  // A game is pushed over the Now tab and is a `games/` route rather than a `now/` one,
-  // because the Now tab's root is the shell's own root and has no segment to nest under.
+  '(app)/(tabs)/play/group/[groupId]/game/[proposalId]': GameDetailsRoute,
+  // A rescue seen from outside (#557) — a Seat open card's or a Seats to fill row's details.
+  '(app)/(tabs)/play/group/[groupId]/rescue/[bookingId]': RescueRoute,
+  '(app)/(tabs)/play/group/[groupId]/post': PostAGameRoute,
+  // A game is pushed over the Home tab and is a `games/` route rather than a `now/` one,
+  // because the Home tab's root is the shell's own root and has no segment to nest under.
   '(app)/(tabs)/games/[gameId]': GameRoute,
+  // A booked game (#556) — its details pushed over Home, its chat and its result over the details,
+  // under a `booking` segment for `games/`' reason. Spelled `…/index` as the file tree spells it,
+  // because the shell names the details to give them the push transition.
+  '(app)/(tabs)/booking/[bookingId]/index': BookedGameRoute,
+  '(app)/(tabs)/booking/[bookingId]/chat': BookedGameChatRoute,
+  '(app)/(tabs)/booking/[bookingId]/result': BookedGameResultRoute,
+  // The recent notices behind Home's bell (#559), under a `notices` segment the shell counts as Home's.
+  '(app)/(tabs)/notices': NoticesRoute,
   '(app)/(tabs)/chats': ChatsRoute,
   // A challenge is pushed over the Chats tab, and the static `challenge` above the id is the
   // decision that keeps a challenge id and a conversation id from sharing one segment.
@@ -187,6 +214,9 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/tags': YouTagsRoute,
   '(app)/(tabs)/you/intro': YouIntroRoute,
   '(app)/(tabs)/you/name': YouNameRoute,
+  '(app)/(tabs)/you/games-and-money': YouGamesAndMoneyRoute,
+  '(app)/(tabs)/you/payments': YouPaymentsRoute,
+  '(app)/(tabs)/you/notifications': YouNotificationsRoute,
   // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
   // tabs: Groups at the root, You beside it, New official group and a group's page pushed over
   // Groups, and a group's settings and Start playing's first step pushed over You (#517).
@@ -367,6 +397,44 @@ export function resetShare(): void {
 }
 
 /**
+ * The payment provider this tree saves a card through, for the suite whose screen is You ›
+ * Payments (#552). **Like the live channel, it always has a fake**: the device's port would reach
+ * Stripe's SDK, which jest's setup has made answer *no error* to everything — a card saved without a
+ * bank anybody described. A suite that says nothing gets a phone with no wallet whose fields hold
+ * nothing; a suite that walks a setup says so with `stubPayments(fakePayments())` and keeps it.
+ */
+let payments: PaymentsPort | undefined;
+
+/** Run the tree against this payment provider. Call before `launchSignedIn`. */
+export function stubPayments(port: PaymentsPort): void {
+  payments = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetPayments(): void {
+  payments = undefined;
+}
+
+/**
+ * The phone this tree is pushed on, for the suites about the notices (#559). **Like the live channel
+ * and the payment provider, it always has one**: the device's port would reach `expo-notifications`,
+ * which jest's setup mocks into a phone nobody described. A suite that says nothing gets a phone that
+ * was never asked, says nothing when asked and has no token — `NO_PUSH`, which no suite can change;
+ * a suite about the notices says so with `stubPush(fakePush())` and keeps it.
+ */
+let push: PushPort | undefined;
+
+/** Run the tree against this phone. Call before `launchSignedIn`. */
+export function stubPush(port: PushPort): void {
+  push = port;
+}
+
+/** Forget it again. Called from `afterEach`, beside `transport.restore()`. */
+export function resetPush(): void {
+  push = undefined;
+}
+
+/**
  * The providers the real root layout composes, without the bootstrap sequence — fonts, the
  * splash screen and config validation are the launch path's business and have their own
  * tests.
@@ -395,15 +463,23 @@ function TestRoot() {
 }
 
 /**
- * The four ports, wrapped where a suite said what they are — and the live channel always.
+ * The ports, wrapped where a suite said what they are — and the live channel and the payment
+ * provider always.
  *
  * Composed here rather than in `TestRoot` so adding a port is one entry rather than another
  * level of nesting and another conditional. The live channel's default is a fake rather than
- * the device, for the reason `stubLiveStream` states.
+ * the device, for the reason `stubLiveStream` states; the payment provider's, for the reason
+ * `stubPayments` states.
  */
 function WithPorts({ children }: { readonly children: ReactNode }) {
+  const withPush = <PushProvider port={push ?? NO_PUSH}>{children}</PushProvider>;
+
+  const withPayments = (
+    <PaymentsProvider port={payments ?? NO_PAYMENTS}>{withPush}</PaymentsProvider>
+  );
+
   const withShare =
-    share === undefined ? children : <ShareProvider port={share}>{children}</ShareProvider>;
+    share === undefined ? withPayments : <ShareProvider port={share}>{withPayments}</ShareProvider>;
 
   const withClipboard =
     clipboard === undefined ? (
@@ -453,6 +529,28 @@ const SILENT_CHANNEL: LiveStreamPort = {
     onStatus('connecting');
     return () => {};
   },
+};
+
+/**
+ * The payment provider a suite that said nothing gets — one instance for the process, for
+ * `SILENT_CHANNEL`'s reason: a fake holds what was typed, and shared across suites it would carry
+ * one suite's card into the next. This one is a fresh fake per process that no suite types into.
+ */
+const NO_PAYMENTS: PaymentsPort = fakePayments();
+
+/**
+ * The phone a suite that said nothing gets — `SILENT_CHANNEL`'s shape, for its reason: one instance
+ * for the process, and **inert**, because a fake holds a permission a suite can change by pressing
+ * *Allow notifications* and shared across suites it would carry one suite's answer into the next.
+ * Never asked, and asking changes nothing; no token; nothing ever arrives.
+ */
+const NO_PUSH: PushPort = {
+  getPermission: async () => 'undetermined',
+  requestPermission: async () => 'undetermined',
+  readToken: async () => null,
+  onTokenChange: () => () => {},
+  onNotice: () => () => {},
+  onOpen: () => () => {},
 };
 
 /** The four sports the backend serves, as the registry route answers. */
@@ -532,9 +630,9 @@ export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';
  * You is the one screen whose question is *what did the check conclude about mine*.
  */
 export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
-  availability: [
-    { day: 2, part: 'EVENING' },
-    { day: 6, part: 'MORNING' },
+  weekly_hours: [
+    { day: 2, hour: 19 },
+    { day: 6, hour: 9 },
   ],
   search_radius_km: 12,
   play_intents: { PADEL: 'FOR_FUN' },
@@ -645,7 +743,7 @@ export const GAMES_PATH = '/api/v1/games';
  * wants a countdown to say a particular thing sets it here rather than mocking a clock: the
  * screens measure from this field and never from the device.
  *
- * Defaulted to nothing, because every launch now draws the Now tab and almost no suite is about
+ * Defaulted to nothing, because every launch now draws the Home tab and almost no suite is about
  * what is on it — an empty list renders no section at all, which is what the tab shipped with.
  */
 export function stubGames(
@@ -904,17 +1002,19 @@ export async function datafileSettled(transport: Transport, count = 1) {
 }
 
 /**
- * **Find a game, switched on** — for every suite about it, since
- * [#512](https://github.com/Raketa02/Raketa/issues/512) turned `find_a_game`'s code default off and
- * the Play tab opens on Groups without a datafile.
+ * **Classic play, switched on** — for every suite about the old loop: Find a game, the Players
+ * deck, Chats. Since [#512](https://github.com/Raketa02/Raketa/issues/512) the Play tab opens on
+ * Groups without a datafile, and since [#550](https://github.com/Raketa02/Raketa/issues/550) the
+ * bar is Home · Play · You without one; `classic_play` brings all of it back at once.
  *
  * Served, launched, and **waited on before anything presses Play**: a gate reads its flag once, when
  * its screen mounts, so a Play press that raced the datafile would land on Groups — correctly, and
- * not what the suite is about. Call it where the suite would have called `launchSignedIn`, after
+ * not what the suite is about. The bar follows the flag, so once the datafile has settled Players
+ * and Chats are there to press. Call it where the suite would have called `launchSignedIn`, after
  * `stubGate` (which serves no datafile).
  */
-export async function launchIntoFindAGame(transport: Transport, initialUrl = '/') {
-  stubDatafile(transport, datafileFor({ find_a_game: 'on' }));
+export async function launchIntoClassicPlay(transport: Transport, initialUrl = '/') {
+  stubDatafile(transport, datafileFor({ classic_play: 'on' }));
   await launchSignedIn(initialUrl);
   await datafileSettled(transport);
 }
@@ -1088,7 +1188,7 @@ export const GATE_USER: Wire['MeResponse'] = {
  *
  * **`stubGames`, `stubPlans`, `stubConversations` and `stubSportsmanship` are in here and none
  * of them is a gate read.** The gate's fourth destination is the shell's root, the shell's root is
- * the Now tab, and the Now tab draws a games list
+ * the Home tab, and the Home tab draws a games list
  * ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands in the app
  * makes that request whether or not it is about one. The rooms are one step further out: only the
  * Chats screen reads them, but a suite that walks to that tab for any reason would otherwise fail
@@ -1103,6 +1203,9 @@ export const GATE_USER: Wire['MeResponse'] = {
  * moment it opens, whatever the suite is about (ADR-0180 §6). It is defaulted to **none**, which
  * is every flag at its code default — the app as it ships. A suite about a flag calls
  * `stubDatafile` again afterwards to serve one.
+ *
+ * **So is Home's booked-games read** (#556): the bar's Home badge is its count, so the shell makes it
+ * the moment the tabs are up. Defaulted to no games.
  *
  * **The cards read is not made on that tab at all**, and it is still stubbed here. The card
  * asking how the other players were is drawn at the end of the **game screen**, one push in,
@@ -1150,6 +1253,166 @@ export function stubGate(
   stubSportsmanship(transport);
   stubDatafile(transport);
   stubMyGroups(transport);
+  stubPaymentMethod(transport);
+  stubGamesAndMoney(transport);
+  stubLiveYeses(transport);
+  stubPaymentsToConfirm(transport);
+  stubReceipts(transport);
+  stubHome(transport);
+  stubNotificationChoices(transport);
+  stubNotices(transport);
+}
+
+export const NOTIFICATION_CHOICES_PATH = '/api/v1/players/me/notifications';
+export const NOTICES_PATH = '/api/v1/players/me/notices';
+export const DEVICES_PATH = '/api/v1/players/me/devices';
+export const DEVICE_REMOVAL_PATH = '/api/v1/players/me/devices/removal';
+
+/**
+ * The three choices, as `GET /players/me/notifications` answers — **the backend's defaults**, *You
+ * complete it* and *Challenges for you* on and *Fill in alerts* off, unless the suite says otherwise.
+ * The gate stubs it, because the You tab's *Notifications* row reads it on every visit (#559).
+ */
+export function stubNotificationChoices(
+  transport: Transport,
+  choices: Partial<Wire['NotificationChoicesSchema']> = {},
+) {
+  transport.on('GET', NOTIFICATION_CHOICES_PATH, () =>
+    json<Wire['NotificationChoicesSchema']>({
+      you_complete_it: true,
+      challenges_for_you: true,
+      fill_in_alerts: false,
+      ...choices,
+    }),
+  );
+}
+
+/**
+ * The recent notices, as `GET /players/me/notices` answers — **none** unless the suite says
+ * otherwise. The gate stubs it, because a push arriving re-reads the list wherever the player is
+ * (#559); the query string is the transport's to drop.
+ */
+export function stubNotices(transport: Transport, notices: readonly Wire['NoticeSchema'][] = []) {
+  transport.on('GET', NOTICES_PATH, () =>
+    json<Wire['RecentNoticesResponse']>({ notices: [...notices] }),
+  );
+}
+
+export const HOME_PATH = '/api/v1/home';
+
+/** One booked game's details — `GET /bookings/{id}` (#556). */
+export const bookingPath = (bookingId: string) => `/api/v1/bookings/${bookingId}`;
+
+/**
+ * **Home's booked games** (#542, #556) — none by default, at a fixed read: the shell holds the read
+ * all session for the bar's badge, so every suite that lands in the app makes it. A suite about
+ * Home serves its own, and `test-support/home.ts` builds them.
+ */
+export function stubHome(transport: Transport, home: Partial<Wire['HomeResponse']> = {}) {
+  transport.on('GET', HOME_PATH, () =>
+    json<Wire['HomeResponse']>({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      games: [],
+      ...home,
+    }),
+  );
+}
+
+export const PAYMENT_METHOD_PATH = '/api/v1/players/me/payment-methods/current';
+
+export const GAMES_AND_MONEY_PATH = '/api/v1/players/me/games-and-money';
+
+/** The two limits a suite may set — the rest of the answer is the form's offer. */
+export type LimitsStub = Partial<
+  Pick<Wire['GamesAndMoneyResponse'], 'games_per_week' | 'most_ill_pay_grosze'>
+>;
+
+/**
+ * Games & money, as `GET …/games-and-money` answers — **two games a week and no ceiling**, the
+ * backend's own defaults, unless the suite says otherwise. The gate stubs it, because the You tab's
+ * *Games & money* row reads it on every visit to the tab (#554).
+ */
+export function stubGamesAndMoney(transport: Transport, limits: LimitsStub = {}) {
+  transport.on('GET', GAMES_AND_MONEY_PATH, () =>
+    json<Wire['GamesAndMoneyResponse']>(gamesAndMoney(limits)),
+  );
+}
+
+/** The whole answer, the form's offer included — the backend's range and ceilings. */
+export function gamesAndMoney(limits: LimitsStub = {}): Wire['GamesAndMoneyResponse'] {
+  return {
+    games_per_week: 2,
+    most_ill_pay_grosze: null,
+    games_per_week_range: { least: 1, most: 7 },
+    most_ill_pay_choices_grosze: [3500, 4500, 6000],
+    ...limits,
+  };
+}
+
+export const LIVE_YESES_PATH = '/api/v1/players/me/live-yeses';
+
+/**
+ * The live yeses, as `GET …/live-yeses` answers — **none** unless the suite says otherwise. The gate
+ * stubs it, because Payments' state B reads it whenever a method is saved, and a game's details
+ * read it when the deck no longer deals the game (#554).
+ */
+export function stubLiveYeses(transport: Transport, yeses: readonly Wire['LiveYesSchema'][] = []) {
+  transport.on('GET', LIVE_YESES_PATH, () =>
+    json<Wire['LiveYesesResponse']>({ yeses: [...yeses], cap_per_sport: 10 }),
+  );
+}
+
+export const PAYMENTS_TO_CONFIRM_PATH = '/api/v1/players/me/payments-to-confirm';
+
+/**
+ * The refused shares waiting for the player, as `GET …/payments-to-confirm` answers — **none**
+ * unless the suite says otherwise. The gate stubs it, because Payments' state B reads it (#555).
+ */
+export function stubPaymentsToConfirm(
+  transport: Transport,
+  payments: readonly Wire['app__modules__proposals__presentation__schemas__PaymentToConfirmSchema'][] = [],
+) {
+  transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
+    json<Wire['PaymentsToConfirmResponse']>({ payments: [...payments] }),
+  );
+}
+
+export const RECEIPTS_PATH = '/api/v1/players/me/receipts';
+
+/**
+ * The receipts, as `GET …/receipts` answers — **none** unless the suite says otherwise. The gate
+ * stubs it, because Payments' state B reads it whenever a method is saved (#555).
+ */
+export function stubReceipts(
+  transport: Transport,
+  receipts: readonly Wire['ReceiptSchema'][] = [],
+) {
+  transport.on('GET', RECEIPTS_PATH, () =>
+    json<Wire['ReceiptsResponse']>({ receipts: [...receipts] }),
+  );
+}
+
+/** The version of the payment terms the backend holds in force (#536). */
+export const PAYMENT_TERMS_IN_FORCE = '2026-09-29';
+
+/**
+ * The saved payment method, as `GET …/payment-methods/current` answers — **nothing saved** unless
+ * the suite says otherwise. The gate stubs it, because the You tab's Payments row reads it on every
+ * visit to the tab (#552).
+ */
+export function stubPaymentMethod(
+  transport: Transport,
+  method: Wire['SavedMethodSchema'] | null = null,
+  { termsNeeded = false }: { readonly termsNeeded?: boolean } = {},
+) {
+  transport.on('GET', PAYMENT_METHOD_PATH, () =>
+    json<Wire['PaymentMethodResponse']>({
+      method,
+      terms_needed: termsNeeded,
+      terms_version: PAYMENT_TERMS_IN_FORCE,
+    }),
+  );
 }
 
 /** Replace the gate's unfinished-run answer — what the server says *now*. */

@@ -52,7 +52,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import {
   CHALLENGES_PATH,
   GATE_USER,
-  launchIntoFindAGame,
+  launchIntoClassicPlay,
   OWN_RECORD_SERVED,
   PROFILE_OPTIONS_SERVED,
   PROFILE_SURFACE_SERVED,
@@ -60,6 +60,7 @@ import {
   stubConversation,
   stubConversations,
   stubEntries,
+  stubGames,
   stubGate,
   stubInterest,
   stubOwnRecord,
@@ -75,7 +76,7 @@ import {
 } from '@/test-support/transport';
 import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
 
-import { CHATS_COPY, NOW_COPY } from './shellCopy';
+import { CHATS_COPY, HOME_COPY } from './shellCopy';
 import { YOU_COPY } from './youCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
@@ -151,10 +152,14 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** A player standing on the tab the entry gate lands them on. */
+/**
+ * A player standing on the tab the entry gate lands them on — **with Classic play on**, because
+ * most of what this suite walks is the old loop's: Players, Chats and Find a game. The bar as it
+ * ships, and the flag's two sides, are `feature_flags/components/theClassicPlayGate.test.tsx`'s.
+ */
 async function launchIntoTheApp() {
-  await launchIntoFindAGame(transport);
-  expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
+  await launchIntoClassicPlay(transport);
+  expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
 }
 
 /** Press one of the five columns by the name the bar gives it. */
@@ -163,12 +168,12 @@ function pressTab(label: string) {
 }
 
 describe('what a player lands on', () => {
-  it('opens on Now, with the bar under it', async () => {
+  it('opens on Home, with the bar under it', async () => {
     await launchIntoTheApp();
 
     expect(screen).toHavePathname('/');
     expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
-      'Now',
+      'Home',
       'Players',
       'Play',
       'Chats',
@@ -185,10 +190,98 @@ describe('what a player lands on', () => {
         .filter((tab) => tab.props.accessibilityState?.selected === true)
         .map((tab) => tab.props.accessibilityLabel);
 
-    expect(selected()).toEqual(['Now']);
+    expect(selected()).toEqual(['Home']);
 
     pressTab('Chats');
     await waitFor(() => expect(selected()).toEqual(['Chats']));
+  });
+});
+
+/**
+ * **Home's badge counts the games that need you** — a seat open in your game, a result to enter, a
+ * score waiting on your agreement ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
+ * The shell reads it on every screen, so it is there before the player has looked at Home, and it
+ * is spoken in the column's own name. Which card is which is `plans/domain/gameCard.test.ts`'s and
+ * `games/domain/resultArgument.test.ts`'s; what is walked here is that the count reaches the bar.
+ */
+describe('Home’s badge', () => {
+  const OPPONENT = 'bbbbbbbb-0000-4000-8000-000000000002';
+
+  /** A court as `GET /games` answers it, the reader on side A and one opponent across the net. */
+  function game(
+    gameId: string,
+    challengeId: string,
+    over: Partial<Wire['GameSchema']> = {},
+  ): Wire['GameSchema'] {
+    return {
+      game_id: gameId,
+      challenge_id: challengeId,
+      sport: 'PADEL',
+      kind: 'COUNTED',
+      standing: 'AWAITING_ENTRY',
+      planned_at: '2026-09-01T09:00:00Z',
+      entry_closes_at: '2026-09-12T09:00:00Z',
+      seats: [
+        { side: 'A', player_id: GATE_USER.id, name: 'me_' },
+        { side: 'B', player_id: OPPONENT, name: 'tomek.p' },
+      ],
+      proposals: [],
+      no_shows: [],
+      ...over,
+    };
+  }
+
+  /** The opponent's score, up and unanswered — a result to confirm. */
+  const THEIR_SCORE: Wire['GameSchema']['proposals'][number] = {
+    side: 'B',
+    proposed_by: OPPONENT,
+    score: { sets: [{ a: 4, b: 6 }] },
+    proposed_at: '2026-09-04T20:00:00Z',
+    answer_by: '2026-09-06T20:00:00Z',
+    settles_at: '2026-09-06T20:00:00Z',
+  };
+
+  /** Three games on Home — a seat open, a score waiting on you, and one simply being planned. */
+  const THREE = [
+    game('aaaaaaaa-0000-4000-8000-000000000001', 'ffffffff-0000-4000-8000-000000000001', {
+      seats: [
+        { side: 'A', player_id: GATE_USER.id, name: 'me_' },
+        { side: 'B', player_id: null, name: null },
+      ],
+    }),
+    game('aaaaaaaa-0000-4000-8000-000000000002', 'ffffffff-0000-4000-8000-000000000002', {
+      standing: 'AWAITING_ANSWER',
+      played_at: '2026-09-04T18:00:00Z',
+      entry_closes_at: null,
+      proposals: [THEIR_SCORE],
+    }),
+    game('aaaaaaaa-0000-4000-8000-000000000003', 'ffffffff-0000-4000-8000-000000000003'),
+  ];
+
+  /** Landed on Home with games on it — so its empty line is not what says the player is there. */
+  async function landWithGames() {
+    await launchIntoClassicPlay(transport);
+    expect(await screen.findByRole('header', { name: HOME_COPY.title })).toBeTruthy();
+  }
+
+  it('counts the games that need you, on Home, wherever the player is', async () => {
+    stubGames(transport, THREE);
+    await landWithGames();
+
+    expect(await screen.findByLabelText('Home, 2 games waiting on you')).toBeTruthy();
+
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    expect(screen.getByLabelText('Home, 2 games waiting on you')).toBeTruthy();
+  });
+
+  it('draws nothing when no game needs you', async () => {
+    stubGames(transport, [THREE[2]!]);
+    await landWithGames();
+
+    expect(await screen.findByLabelText('Home')).toBeTruthy();
+    expect(screen.queryByLabelText(/^Home, /)).toBeNull();
   });
 });
 
@@ -252,8 +345,8 @@ describe('You', () => {
       doorRowLabel(
         YOUR_WEEK_TITLE,
         weekLine([
-          { day: 2, part: 'evening' },
-          { day: 6, part: 'morning' },
+          { day: 2, hour: 19 },
+          { day: 6, hour: 9 },
         ]),
       ),
     );
@@ -291,8 +384,8 @@ describe('You', () => {
         doorRowLabel(
           YOUR_WEEK_TITLE,
           weekLine([
-            { day: 2, part: 'evening' },
-            { day: 6, part: 'morning' },
+            { day: 2, hour: 19 },
+            { day: 6, hour: 9 },
           ]),
         ),
       ),
@@ -464,7 +557,7 @@ describe('⚡Play', () => {
     // to be the last screen, it has Now underneath it.
     act(() => router.back());
 
-    expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
+    expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
@@ -489,8 +582,8 @@ describe('a Play session ends exactly when the shell lays a stack down', () => {
   /** A player mid-build: a week they have edited, and two people on the court. */
   function halfwayThroughBuildingOne() {
     const session = usePlaySession.getState();
-    session.enter([{ day: 2, part: 'evening' }]);
-    session.toggleWeekCell({ day: 6, part: 'morning' });
+    session.enter([{ day: 2, hour: 19 }]);
+    session.toggleWeekCell({ day: 6, hour: 9 });
     session.seat('search-1', 'player-a');
     session.seat('search-1', 'player-b');
   }
@@ -554,8 +647,8 @@ describe('a Play session ends exactly when the shell lays a stack down', () => {
     await waitFor(() => expect(screen).toHavePathname('/play'));
     // The session the player is in the middle of is still the session they are in.
     expect(usePlaySession.getState().week).toEqual([
-      { day: 2, part: 'evening' },
-      { day: 6, part: 'morning' },
+      { day: 2, hour: 19 },
+      { day: 6, hour: 9 },
     ]);
     expect(usePlaySession.getState().lineup?.seats).toEqual(['player-a', 'player-b']);
   });
@@ -586,7 +679,7 @@ describe('the shell keeps no per-tab history', () => {
     pressTab('You');
 
     await waitFor(() => expect(screen).toHavePathname('/you'));
-    // Not `[Now, You]`: switching tabs replaces, so there is no cross-tab back to walk.
+    // Not `[Home, You]`: switching tabs replaces, so there is no cross-tab back to walk.
     expect(router.canGoBack()).toBe(false);
   });
 
@@ -705,7 +798,7 @@ describe('the shell survives the gate re-reading the player', () => {
 
     answerRatings();
 
-    expect(await screen.findByText(NOW_COPY.empty.line)).toBeTruthy();
+    expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');
     expect(screen.queryByRole('header', { name: FIND_A_GAME_TITLE })).toBeNull();
     expect(screen.getAllByRole('tab')).toHaveLength(5);

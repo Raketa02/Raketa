@@ -48,10 +48,14 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 
 from app.engines.racketskill.core import band_for, confidence_percent
 from app.kernel import Sport
-from app.modules.player_profile.domain.availability import DAYS_IN_THE_GRID, DayPart
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import SocialTag
+from app.modules.player_profile.domain.weekly_hours import (
+    DAY_RANGES,
+    DAYS_IN_THE_GRID,
+    HOURS_OF_THE_DAY,
+)
 
 #: The repository root, from ``backend/scripts/ruleset_diff/``.
 REPO: Final = Path(__file__).resolve().parents[3]
@@ -151,9 +155,26 @@ MU_FLOOR: Final = 1.0
 MU_CEILING: Final = 5.0
 PLAYER_SIGMA: Final = 0.34
 
-#: The twenty-one cells of the availability grid, and the nineteen served tags.
+#: The 112 hours of the week, in reading order, and the nineteen served tags.
 CELLS: Final = tuple(
-    f"{day}:{part.value}" for day in range(1, DAYS_IN_THE_GRID + 1) for part in DayPart
+    f"{day}:{hour}"
+    for day in range(1, DAYS_IN_THE_GRID + 1)
+    for hour in HOURS_OF_THE_DAY
+)
+
+#: The three ranges a day's hours are grouped into — the Player profile's own
+#: (``DAY_RANGES``; the mechanics §9.1). **A week here is drawn in ranges and
+#: painted in hours**, the translation the seed
+#: cohort makes too (``app/seeds/cohort.py``): the draw is the one the week of
+#: parts had — the same twenty-one cells, in the same order, off the same
+#: sequence — so everything else a member is drawn with is the member it was,
+#: and each range drawn is painted as a run of :data:`HOURS_PER_RANGE` hours at a
+#: position drawn on a stream of the member's own. That is what a player paints,
+#: and two members sharing a range now overlap by as much as their runs do.
+RANGES: Final = DAY_RANGES
+HOURS_PER_RANGE: Final = 3
+RANGE_CELLS: Final = tuple(
+    f"{day}:{name}" for day in range(1, DAYS_IN_THE_GRID + 1) for name in RANGES
 )
 TAGS: Final = tuple(tag.value for tag in SocialTag)
 
@@ -316,7 +337,7 @@ def _draw_district(
                 mu=_mu(rng),
                 sigma=PLAYER_SIGMA,
                 tags=_tags(rng),
-                slots=_slots(rng),
+                slots=_slots(rng, handle),
                 radius_km=rng.randint(RADIUS_MIN, RADIUS_MAX),
                 declared_intent=rng.choice([i.value for i in PlayIntent]),
                 gender=rng.choice([g.value for g in Gender]),
@@ -351,10 +372,27 @@ def _tags(rng: random.Random) -> tuple[str, ...]:
     return tuple(sorted(rng.sample(TAGS, rng.randint(2, 6))))
 
 
-def _slots(rng: random.Random) -> tuple[str, ...]:
-    """Uniform over the twenty-one cells, at least one (``docs/adr/0102``)."""
+def _slots(rng: random.Random, handle: str) -> tuple[str, ...]:
+    """Uniform over the twenty-one ranges, at least one (``docs/adr/0102``), and
+    each range painted as a run of hours (:data:`RANGES`).
 
-    return tuple(sorted(rng.sample(CELLS, rng.randint(1, len(CELLS)))))
+    The ranges come off the population's own sequence exactly as the cells of
+    the week of parts did, and the runs off a stream keyed on the member's
+    handle — so painting consumes nothing the next member is drawn from. Held in
+    the week's reading order, never the codes' text order.
+    """
+
+    ranges = set(rng.sample(RANGE_CELLS, rng.randint(1, len(RANGE_CELLS))))
+    paint = random.Random(f"{handle}|hours")
+    hours: set[str] = set()
+    for cell in RANGE_CELLS:
+        if cell not in ranges:
+            continue
+        day, _, name = cell.partition(":")
+        span = RANGES[name]
+        start = paint.randint(span[0], span[-1] - HOURS_PER_RANGE + 1)
+        hours.update(f"{day}:{hour}" for hour in range(start, start + HOURS_PER_RANGE))
+    return tuple(cell for cell in CELLS if cell in hours)
 
 
 def _the_tail(*, latitude: float, longitude: float) -> list[Member]:
@@ -374,7 +412,7 @@ def _the_tail(*, latitude: float, longitude: float) -> list[Member]:
             mu=2.80,
             sigma=PLAYER_SIGMA,
             tags=("HERE_TO_IMPROVE", "PLAYS_TO_WIN"),
-            slots=("1:EVENING", "3:EVENING", "5:EVENING"),
+            slots=tuple(f"{day}:{hour}" for day in (1, 3, 5) for hour in (18, 19, 20)),
             radius_km=25,
             declared_intent=PlayIntent.COMPETITIVE.value,
             gender=Gender.WOMAN.value,
@@ -412,11 +450,7 @@ def _the_tail(*, latitude: float, longitude: float) -> list[Member]:
         # is the reverse-overlap dock rather than a gate.
         one(
             "wide-week",
-            slots=tuple(
-                f"{day}:{part.value}"
-                for day in range(1, DAYS_IN_THE_GRID + 1)
-                for part in DayPart
-            ),
+            slots=CELLS,
             radius_km=2,
         ),
     ]

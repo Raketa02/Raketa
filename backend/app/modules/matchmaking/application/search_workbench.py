@@ -105,15 +105,15 @@ from app.modules.matchmaking.application.record_rows import (
     modifier_rows,
     term_rows,
 )
-from app.modules.player_profile.domain.availability import (
-    AvailabilityGrid,
-    AvailabilitySlot,
-)
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.profile import PlayerProfile
 from app.modules.player_profile.domain.ports import (
     PlayerProfileRepository,
     PlayIntentDeclarationRepository,
+)
+from app.modules.player_profile.domain.weekly_hours import (
+    WeeklyHour,
+    WeeklyHours,
 )
 from app.modules.rating.domain.ports import SkillRatingRepository
 from app.modules.rating.domain.skill_rating import SkillRating
@@ -135,7 +135,7 @@ class AskedFor:
     on one that could be written without the other.
     """
 
-    grid: AvailabilityGrid
+    grid: WeeklyHours
     radius_km: int
     rung_taken: Rung | None = None
     offered_by_search_id: UUID | None = None
@@ -474,7 +474,7 @@ class SearchWorkbench:
         self,
         searcher: SearcherFacts,
         *,
-        availability_override: tuple[tuple[int, str], ...] | None,
+        availability_override: tuple[tuple[int, int], ...] | None,
         offered_by_search_id: UUID | None,
         rung: Rung | None,
     ) -> AskedFor:
@@ -492,16 +492,16 @@ class SearchWorkbench:
         itself, on a row it wrote.
         """
 
-        # **``edited`` and never ``of_cells``.** The floor of one ticked cell
+        # **``edited`` and never ``of_cells``.** The floor of one ticked hour
         # binds *the answer a player is asked for* at commit, and an improvised
         # week is a later edit of it — so a player who clears their week
-        # searches, exactly as ``availability.py`` says they may. Building this
+        # searches, exactly as ``weekly_hours.py`` says they may. Building this
         # through the commit path's constructor enforced the floor one layer
         # past where that module puts it, and refused them a `400`.
         grid = (
             searcher.grid
             if availability_override is None
-            else AvailabilityGrid.edited(availability_override)
+            else WeeklyHours.edited(availability_override)
         )
         if rung is None and offered_by_search_id is None:
             return AskedFor(grid=grid, radius_km=searcher.radius_km)
@@ -524,11 +524,11 @@ class SearchWorkbench:
             offer.slot is not None,
             f"a {offer.ask.value} rung offering neither a radius nor a slot",
         )
-        slot = AvailabilitySlot.from_code(offer.slot or "")
+        slot = WeeklyHour.from_code(offer.slot or "")
         return AskedFor(
             # A set, so a client that also sent the widened grid as its override
             # lands in exactly the same place as one that sent nothing.
-            grid=AvailabilityGrid.of((*grid.slots, slot)),
+            grid=WeeklyHours.of((*grid.hours, slot)),
             radius_km=searcher.radius_km,
             rung_taken=rung,
             offered_by_search_id=offered_by_search_id,
@@ -987,7 +987,7 @@ def _searcher_facts(
         mu=rated.mu,
         sigma=rated.sigma,
         tags=tuple(tag.value for tag in profile.social_tags.tags),
-        grid=profile.availability,
+        grid=profile.weekly_hours,
         radius_km=profile.search_radius.kilometres,
         area=Point(
             latitude=profile.location.latitude,

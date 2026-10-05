@@ -10,7 +10,7 @@ from app.application.events import (
     EventCatalog,
 )
 from app.application.events.deliver_event_batch import EventBatch
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.events.event_delivery_worker import (
     EventWorker,
@@ -34,6 +34,10 @@ from app.modules.administrators.application.event_subscriptions import (
 from app.modules.auth.application.event_subscriptions import (
     register_auth_events,
     subscribe_auth_handlers,
+)
+from app.modules.bookings.application.event_subscriptions import (
+    register_booking_events,
+    subscribe_booking_handlers,
 )
 from app.modules.blocks.application.event_subscriptions import (
     register_block_events,
@@ -60,9 +64,32 @@ from app.modules.games.application.event_subscriptions import (
     register_game_events,
     subscribe_game_handlers,
 )
+from app.modules.payments.application.event_subscriptions import (
+    register_payment_events,
+    subscribe_payment_handlers,
+    subscribe_the_method_releaser,
+    subscribe_the_club_payout_sender,
+    subscribe_the_seat_charge_settler,
+)
+from app.modules.payments.domain.provider import PaymentProvider
+from app.modules.notifications.application.event_subscriptions import (
+    register_notification_events,
+    subscribe_notification_handlers,
+    subscribe_the_pusher,
+    subscribe_the_teller,
+)
+from app.modules.notifications.domain.ports import PushNotifications
 from app.modules.plans.application.event_subscriptions import (
     register_plan_events,
     subscribe_plan_handlers,
+)
+from app.modules.proposals.application.propose_games import DueForProposing
+from app.modules.proposals.application.event_subscriptions import (
+    register_proposal_events,
+    subscribe_proposal_handlers,
+    subscribe_the_pool_leaver,
+    subscribe_the_proposer_on_changes,
+    subscribe_the_week_resumer,
 )
 from app.modules.player_profile.application.event_subscriptions import (
     register_player_profile_events,
@@ -110,6 +137,9 @@ class EventRuntime:
         clock: Clock,
         batch_size: int,
         nudges: NudgePublisher,
+        payments: PaymentProvider,
+        push: PushNotifications,
+        proposer_due: DueForProposing | None = None,
     ) -> EventBatch:
         """One batch of the outbox, over this session.
 
@@ -121,6 +151,22 @@ class EventRuntime:
         would make the quiet answer the one nobody chose. That it is a
         conversation's port in a shared loop is a coupling this class already
         carries — ``_dispatcher_over`` below exists for the same subscriber.
+
+        **``payments`` is required on the same argument**, and reaches the one
+        subscriber that releases a replaced or removed card at the provider: the
+        API's delivery holds the provider its requests hold, a seed run's holds
+        the fake it saved its cards through, and a default here would be a
+        release sent somewhere nobody chose.
+
+        **``push`` is required on the same argument** (#549): a notice given is
+        pushed to its player's phones by the pusher this run holds — the API's
+        Expo, a seed run's recording service, whose players have no phones —
+        and a default here would be phones pushed, or not, by nobody's choice.
+
+        **``proposer_due`` is the one that may be absent**: it is where this
+        process's proposer is told what changed (#540), and a seed run or a
+        command-line drain has no proposer listening. Absent is a real answer —
+        the proposer's sweep sees every change anyway — so it defaults to it.
         """
 
         # See ``_dispatcher_over`` for why the composition root is reached at
@@ -131,14 +177,28 @@ class EventRuntime:
         return EventBatch(
             outbox=SqlAlchemyOutboxRepository(session),
             codec=self.codec,
-            dispatcher=self._dispatcher_over(session, nudges=nudges),
+            dispatcher=self._dispatcher_over(
+                session,
+                clock=clock,
+                nudges=nudges,
+                payments=payments,
+                push=push,
+                proposer_due=proposer_due,
+            ),
             uow=build_unit_of_work(session),
             clock=clock,
             batch_size=batch_size,
         )
 
     def _dispatcher_over(
-        self, session: AsyncSession, *, nudges: NudgePublisher
+        self,
+        session: AsyncSession,
+        *,
+        clock: Clock,
+        nudges: NudgePublisher,
+        payments: PaymentProvider,
+        push: PushNotifications,
+        proposer_due: DueForProposing | None = None,
     ) -> EventDispatcher:
         """The process's subscriptions, plus the ones that need this batch's session.
 
@@ -159,12 +219,73 @@ class EventRuntime:
         depends on.
         """
 
-        from app.bootstrap.composition import build_tell_the_room
+        from app.bootstrap.composition import (
+            build_push_the_notice,
+            build_resume_paused_yeses,
+            build_send_club_payout,
+            build_settle_seat_charges,
+            build_tell_the_players,
+            build_tell_the_room,
+            build_withdraw_a_leavers_yeses,
+        )
 
         dispatcher = self.dispatcher.copy()
         subscribe_the_room_teller(
             dispatcher, build_tell_the_room(session, nudges=nudges)
         )
+        subscribe_the_method_releaser(dispatcher, payments)
+        # A fill's verdict, captured or cancelled at the provider — written onto
+        # the charge in the delivery's own transaction (#541).
+        subscribe_the_seat_charge_settler(
+            dispatcher,
+            build_settle_seat_charges(
+                session, provider=payments, clock=clock, runtime=self
+            ),
+        )
+        # A club's payout, made at the provider and told to its desk in the
+        # delivery's own transaction (#548).
+        subscribe_the_club_payout_sender(
+            dispatcher,
+            build_send_club_payout(
+                session,
+                provider=payments,
+                clock=clock,
+                settings=get_settings(),
+                runtime=self,
+            ),
+        )
+        # A leaver's yeses are withdrawn in the transaction that delivers the
+        # leaving, so this one needs the batch's session too — and a request a
+        # game of theirs waits on goes with them (#543).
+        subscribe_the_pool_leaver(
+            dispatcher,
+            build_withdraw_a_leavers_yeses(
+                session, settings=get_settings(), runtime=self
+            ),
+        )
+        # A paused week comes back when a booked game stops being a player's —
+        # and a yes that comes back as a game's last seat fills it, over this
+        # run's provider (#544).
+        subscribe_the_week_resumer(
+            dispatcher,
+            build_resume_paused_yeses(
+                session, provider=payments, settings=get_settings(), runtime=self
+            ),
+        )
+        # What players are told about a game and its money, given in the
+        # delivery's own transaction — and a notice given, pushed to their
+        # phones over this run's push service (#549).
+        subscribe_the_teller(
+            dispatcher,
+            build_tell_the_players(session, settings=get_settings(), runtime=self),
+        )
+        subscribe_the_pusher(
+            dispatcher,
+            build_push_the_notice(session, push=push, clock=clock, runtime=self),
+        )
+        # And what changed, for this process's proposer, when one is listening.
+        if proposer_due is not None:
+            subscribe_the_proposer_on_changes(dispatcher, proposer_due)
         return dispatcher
 
 
@@ -182,6 +303,10 @@ def build_event_runtime() -> EventRuntime:
     register_club_events(catalog)
     register_group_events(catalog)
     register_administrator_events(catalog)
+    register_payment_events(catalog)
+    register_proposal_events(catalog)
+    register_booking_events(catalog)
+    register_notification_events(catalog)
 
     dispatcher = EventDispatcher()
     subscribe_user_handlers(dispatcher)
@@ -196,6 +321,10 @@ def build_event_runtime() -> EventRuntime:
     subscribe_club_handlers(dispatcher)
     subscribe_group_handlers(dispatcher)
     subscribe_administrator_handlers(dispatcher)
+    subscribe_payment_handlers(dispatcher)
+    subscribe_proposal_handlers(dispatcher)
+    subscribe_booking_handlers(dispatcher)
+    subscribe_notification_handlers(dispatcher)
 
     return EventRuntime(
         codec=JsonEventCodec(catalog),
@@ -232,13 +361,18 @@ def build_event_delivery_worker(
     session_factory: async_sessionmaker[AsyncSession],
     settings: Settings,
     nudges: NudgePublisher,
+    payments: PaymentProvider,
+    push: PushNotifications,
     clock: Clock | None = None,
+    proposer_due: DueForProposing | None = None,
 ) -> EventWorker:
     """The embedded outbox drain. **This is the delivery that is live.**
 
     It runs inside the API process, beside the streams, so the system lines it
     writes reach open conversations without anybody refreshing — which is what
-    ``nudges`` is, and why it has no default here either.
+    ``nudges`` is, and why it has no default here either. ``push`` is the push
+    service a notice reaches a phone through. ``proposer_due`` is this
+    process's proposer, told what the delivery changed.
     """
 
     processing_clock = clock or SystemClock()
@@ -249,6 +383,9 @@ def build_event_delivery_worker(
             clock=processing_clock,
             batch_size=settings.EVENT_DELIVERY_BATCH_SIZE,
             nudges=nudges,
+            payments=payments,
+            push=push,
+            proposer_due=proposer_due,
         ),
         poll_interval_seconds=settings.EVENT_DELIVERY_POLL_INTERVAL_SECONDS,
     )

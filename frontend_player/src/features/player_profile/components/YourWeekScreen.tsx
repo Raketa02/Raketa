@@ -3,17 +3,18 @@
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §2).
  *
- * The grid is `WeekGrid`, exactly as `SocialAvailabilityStep` draws it: days down, parts of the
- * day across, the mint tick — with the one thing the step cut and this screen was written for,
- * the footnote inside the card that counts the slots and says what a blank week means. Under
- * the card, *Save your week* and *Clear all*.
+ * The grid is `WeekGrid`, exactly as `SocialAvailabilityStep` draws it: seven days across,
+ * sixteen hours down, a tap toggling an hour and a drag painting a run (mock 36) — with the one
+ * thing the step cut and this screen was written for, the footnote inside the card that counts
+ * the hours and says what a blank week means. Under the card, *Save your week* and *Clear all*.
  *
  * ## A draft until the button
  *
- * The grid opens on the week the profile holds and every press moves a draft of it; nothing
- * is written on a press. *Save your week* sends one `PUT /players/me/availability` carrying the
- * whole week, and what the screen then draws is **the route's answer** written into the cache
- * — repeated cells collapsed, the platform's reading order — never the draft echoed back. The
+ * The grid opens on the week the profile holds and every tap and every painted run moves a
+ * draft of it; nothing is written until the button. *Save your week* sends one
+ * `PUT /players/me/weekly-hours` carrying the whole week, and what the screen then draws is
+ * **the route's answer** written into the cache — repeated hours collapsed, the platform's
+ * reading order — never the draft echoed back. The
  * draft is dropped the moment the save lands, so the grid and the row's live line are then
  * one read. The button is shut while the draft is the week already held — and **green, saying
  * *Saved***: a save that changes nothing is a round trip for an answer in hand, and the
@@ -22,9 +23,9 @@
  *
  * ## An empty week is a legal value here
  *
- * The commit's floor of one slot does not bind: `AvailabilityGridEmpty` binds the answer a
- * player is *asked for* at the end of onboarding, and a player who unticks every cell
- * afterwards has said something legal, which the matcher reads as *absent* rather than as a
+ * The commit's floor of one hour does not bind: `WeeklyHoursEmpty` binds the answer a player
+ * is *asked for* at the end of onboarding, and a player who unticks every hour afterwards has
+ * said something legal, which the matcher reads as *absent* rather than as a
  * zero ([ADR-0102](../../../../../docs/adr/0102-silence-is-never-scored.md)). So *Clear all*
  * is offered and *Save your week* is open on an empty draft, and the footnote says what the
  * empty week means.
@@ -37,9 +38,9 @@ import { ShellScreen, YOU_COPY } from '@/features/shell/types';
 import { recoveryMessage } from '@/shared/errors';
 import { Button, Note } from '@/shared/ui';
 
-import type { AvailabilitySlot } from '../domain/ProfileDraft';
-import { sameWeek, toggleCell, weekStanding } from '../domain/availabilityWeek';
-import { useChangeAvailability, useProfileSurface } from '../hooks/useProfileSurface';
+import type { WeeklyHour } from '../domain/ProfileDraft';
+import { paintCells, sameWeek, toggleCell, weekStanding } from '../domain/availabilityWeek';
+import { useChangeWeeklyHours, useProfileSurface } from '../hooks/useProfileSurface';
 
 import { availabilityFootnote } from './availabilityPresentation';
 import { ProfileReadStanding } from './ProfileReadStanding';
@@ -56,17 +57,23 @@ import {
 export function YourWeekScreen() {
   const router = useRouter();
   const profile = useProfileSurface();
-  const save = useChangeAvailability();
+  const save = useChangeWeeklyHours();
   /** The week as the player has left it — `undefined` while it is the profile's own. */
-  const [draft, setDraft] = useState<readonly AvailabilitySlot[]>();
+  const [draft, setDraft] = useState<readonly WeeklyHour[]>();
 
   const held = profile.data?.week;
   const week = draft ?? held;
   const dirty = held !== undefined && draft !== undefined && !sameWeek(draft, held);
 
-  const press = (cell: AvailabilitySlot) => {
+  const press = (cell: WeeklyHour) => {
     if (week === undefined) return;
     setDraft(toggleCell(week, cell));
+  };
+  // Painted onto the draft as it stands when the update lands, so a run reported twice before a
+  // render is still painted once onto the latest week.
+  const paintRun = (run: readonly WeeklyHour[], on: boolean) => {
+    if (held === undefined) return;
+    setDraft((current) => paintCells(current ?? held, run, on));
   };
 
   return (
@@ -118,6 +125,7 @@ export function YourWeekScreen() {
         <WeekGrid
           week={week}
           onPressCell={press}
+          onPaintCells={paintRun}
           footnote={availabilityFootnote(weekStanding(week))}
         />
       )}

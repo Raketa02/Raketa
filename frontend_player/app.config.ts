@@ -39,6 +39,9 @@ import {
   IDENTIFIED_ENVIRONMENTS,
 } from './src/shared/config/appIdentity';
 import { APP_SCHEME, nativeLinkConfig, readLinkDomain } from './src/shared/config/appLinks';
+import { APPLE_PAY_MERCHANTS } from './src/shared/config/applePay';
+import { PUSH_PROJECT } from './src/shared/config/push';
+import { withPush } from './plugins/push';
 
 export default (): ExpoConfig => {
   const environment = process.env.EXPO_PUBLIC_ENV;
@@ -55,7 +58,7 @@ export default (): ExpoConfig => {
   // here, naming the variable, for the reason the environment's does.
   const links = nativeLinkConfig(readLinkDomain(process.env.EXPO_PUBLIC_LINK_DOMAIN));
 
-  return {
+  return withPush({
     name: appIdentity(environment).displayName,
     slug: 'raketa-player',
     version: '0.1.0',
@@ -103,6 +106,16 @@ export default (): ExpoConfig => {
             'Raketa uses your photos so you can put a picture of yourself on your profile.',
         },
       ],
+      [
+        // Stripe's card fields and the bank's check, for You › Payments (#552). Google Pay is
+        // declared on Android. **No Apple Pay merchant yet** — see `shared/config/applePay.ts`:
+        // an empty list adds no entitlement.
+        '@stripe/stripe-react-native',
+        { merchantIdentifier: [...APPLE_PAY_MERCHANTS], enableGooglePay: true },
+      ],
+      // Push, for the notices (#559). **No iPhone push entitlement yet** — a personal Apple team
+      // cannot sign it, so `withPush` below takes it back out (`plugins/push.ts`).
+      'expo-notifications',
     ],
     experiments: {
       typedRoutes: true,
@@ -114,6 +127,9 @@ export default (): ExpoConfig => {
         'EXPO_PUBLIC_* and is validated by src/shared/config/env.ts; do not add a second ' +
         'copy of a value here — including the environment name, which the badge reads from ' +
         'the validated config rather than from a mirror that can drift.',
+      // The Expo project push tokens are minted for, where Expo's tooling looks for it — none
+      // until #533 creates one (`shared/config/push.ts`). An id, not a secret.
+      ...PUSH_PROJECT,
     },
-  };
+  });
 };

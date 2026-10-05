@@ -38,12 +38,21 @@
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
 
-import type { Acceptance, Game, GameSeat, Score, StandingProposal } from '../domain/game';
+import type {
+  Acceptance,
+  Game,
+  GameSeat,
+  NoShowReport,
+  Score,
+  StandingProposal,
+} from '../domain/game';
 import type { GameKind, GameSide, GameStanding, Outcome } from '../domain/vocabulary';
 
 type AcceptanceSchema = components['schemas']['AcceptanceSchema'];
 type GameListResponse = components['schemas']['GameListResponse'];
 type GameSchema = components['schemas']['GameSchema'];
+type NoShowSchema = components['schemas']['NoShowSchema'];
+type ReportANoShowRequest = components['schemas']['ReportANoShowRequest'];
 type ScoreSchema = components['schemas']['ScoreSchema'];
 type SeatingSchema = components['schemas']['SeatingSchema'];
 type StandingProposalSchema = components['schemas']['StandingProposalSchema'];
@@ -56,6 +65,9 @@ const STANDINGS: Readonly<Record<GameStanding, true>> = {
   CONFIRMED: true,
   UNSCORED: true,
   CALLED_OFF: true,
+  STARTED_SHORT: true,
+  NO_SHOW_REPORTED: true,
+  NO_SHOW: true,
 };
 
 const KINDS: Readonly<Record<GameKind, true>> = { COUNTED: true, FRIENDLY: true };
@@ -131,6 +143,17 @@ function toAcceptance(wire: AcceptanceSchema): Acceptance | undefined {
     : { agreedBy: wire.agreed_by, ofSide, settlesAt: wire.settles_at };
 }
 
+/** A no-show report, every `null` an absent field — a lost name, a report nobody disputed. */
+function toNoShowReport(wire: NoShowSchema): NoShowReport {
+  return {
+    playerId: wire.player_id,
+    ...(wire.name == null ? {} : { name: wire.name }),
+    reportedAt: wire.reported_at,
+    disputeBy: wire.dispute_by,
+    ...(wire.disputed_at == null ? {} : { disputedAt: wire.disputed_at }),
+  };
+}
+
 /** One game, or nothing when its sport, its court or a score on it is one this build cannot draw. */
 export function toGame(wire: GameSchema, readAt: string): Game | undefined {
   const sport = toSport(wire.sport);
@@ -174,6 +197,7 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
     outcome: wire.outcome == null ? undefined : member(OUTCOMES, wire.outcome),
     proposals: proposals.filter((one): one is StandingProposal => one !== undefined),
     acceptance,
+    noShows: wire.no_shows.map(toNoShowReport),
     readAt,
   };
 }
@@ -193,4 +217,9 @@ export function toGames(response: GameListResponse): readonly Game[] {
  */
 export function toStateResultRequest(score: Score): StateResultRequest {
   return { score: { sets: score.sets.map((set) => ({ a: set.a, b: set.b })) } };
+}
+
+/** *Kuba didn't come* — who, and nothing else: who says so is the reader, and the server knows it. */
+export function toReportANoShowRequest(playerId: string): ReportANoShowRequest {
+  return { player_id: playerId };
 }

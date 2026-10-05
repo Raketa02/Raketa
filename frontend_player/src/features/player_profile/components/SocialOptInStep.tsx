@@ -65,7 +65,7 @@
  * is where it is collected, with the way back one press away.
  *
  * There is a third, and it is the seam between the two: **a failure whose code names a
- * step.** The commit re-validates every rule a picker enforced, so `availability_grid_empty`
+ * step.** The commit re-validates every rule a picker enforced, so `weekly_hours_empty`
  * can arrive from a build that predates the week's floor or from a replayed request — and
  * *try again* is then the one sentence that is not true, because the identical body fails
  * identically. It is drawn as the failure it is, in the words of the answer it names, with

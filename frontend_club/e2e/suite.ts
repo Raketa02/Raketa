@@ -9,6 +9,14 @@ export const STUB_PORT = 4010;
 
 const STUB = `http://127.0.0.1:${STUB_PORT}`;
 
+/**
+ * **Where the fake club's links to Stripe's hosted pages point** (#562): the stub draws them, as
+ * it draws the map's tiles, so a redirect to Stripe lands somewhere real and nothing reaches
+ * Stripe. Stripe sends the desk back to {@link STRIPE_RETURN_URL}, as the backend asks it to.
+ */
+export const STRIPE_PAGES = `${STUB}/stripe/setup`;
+export const STRIPE_RETURN_URL = `http://127.0.0.1:${SITE_PORT}/overview`;
+
 /** Where the map opens: `MAP_START` below, as the pages will read it. */
 export const MAP_START = { latitude: 50.0614, longitude: 19.9366 };
 

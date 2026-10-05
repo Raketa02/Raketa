@@ -2,7 +2,7 @@
 
 **This context keeps no record of its own.** It has no aggregate, no table and no
 migration — every fact it publishes is folded out of ``games``' and
-``challenges``' streams at the moment somebody asks. That is not an economy; it
+``bookings``' streams at the moment somebody asks. That is not an economy; it
 is the whole shape (``docs/adr/0140``). A stored Player Score would be a second
 place for *did that game happen* to be true, and the first one to be wrong would
 be the copy every screen believed. It is the same refusal ``games``' standing and
@@ -13,18 +13,19 @@ over all of them.
 
 +---------------------+-------------------------------------------------------+
 | ``SHOWS_UP``        | live — a plan that produced a game, or a ghost         |
-| ``ANSWERS_CHALLENGES`` | live — a seat answered inside its window, or lapsed |
+| ``ANSWERS_CHALLENGES`` | stands down — challenges no longer wait (#544)      |
 | ``ANSWERS_RESULTS`` | live — a score answered inside its window, or ignored  |
-| ``KEEPS_PLANS``     | stands down — no plan on this platform has a moment    |
-| ``SETTLES_UP``      | stands down — court money is out of scope              |
+| ``KEEPS_PLANS``     | live — a booked game kept, or broken by leaving (#544) |
+| ``SETTLES_UP``      | stands down — the court money is taken up front        |
 | ``SPORTSMANSHIP``   | stands down — it is not a ratio and never was          |
 +---------------------+-------------------------------------------------------+
 
 **A strand that stands down is not a zero, and it is not a half.** It is simply
 not in the mapping, and a player with no strand at all is not in the answer —
 ``docs/adr/0098``'s test, which is whether a zero would be *measured* or
-*invented*. Nobody has failed to keep a plan, because no plan on this platform
-has a moment to be late for.
+*invented*. Nobody has failed to answer a challenge since challenges stopped
+waiting for answers, and nobody owes a court share, because a share is taken
+before the game exists.
 
 **The vocabulary is the engine's ``ReliabilityStrand`` and not a second spelling
 of it.** The strand names are the *player's* words before they are the matcher's,

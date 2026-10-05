@@ -212,8 +212,13 @@ allow_indirect_imports = true
 # it through the `Mailer` port, and that is only true while nothing on the inside
 # can reach the library — or construct the adapter over it, which the flag below
 # catches as well.
+#
+# `stripe` joined it with the payment provider (docs/adr/0189 §4, docs/adr/0190):
+# money moves through one port with two adapters, and *a fake held to the same
+# demands as Stripe* is only true while no use case can reach Stripe around it —
+# which a use case constructing `StripePayments` would, and the flag below sees.
 [importlinter:contract:a-business-layer-cannot-reach-an-imaging-or-object-store-library]
-name = No domain or application layer imports an imaging, object-store, HTTP-client or mail library
+name = No domain or application layer imports an imaging, object-store, HTTP-client, mail or payments library
 type = forbidden
 source_modules =
     app.application
@@ -228,6 +233,7 @@ forbidden_modules =
     botocore
     aiohttp
     smtplib
+    stripe
 allow_indirect_imports = false
 
 # The ephemeral store is fenced out of the business layers on exactly the argument
@@ -315,9 +321,10 @@ allow_indirect_imports = true
 # profile.
 #
 # It reads two *other* contexts on purpose and that is not what this fences: the
-# arrow runs `player_score -> games` and `player_score -> challenges`, the same
-# direction the matcher's own composing adapters take, and neither provider knows
-# this context exists.
+# arrow runs `player_score -> games` and `player_score -> bookings` (#544; it ran
+# to `challenges` while *answers challenges* stood), the same direction the
+# matcher's own composing adapters take, and neither provider knows this context
+# exists.
 #
 # `allow_indirect_imports = true`, for the reason its two neighbours set it: it
 # legitimately imports the Match Fit engine for `ReliabilityStrand`, which is the
@@ -468,15 +475,53 @@ allow_indirect_imports = false
 name = No context knows the Conversation exists
 type = forbidden
 source_modules =
+    app.modules.bookings
     app.modules.challenges
     app.modules.games
     app.modules.matchmaking
     app.modules.plans
     app.modules.player_record
     app.modules.player_score
+    app.modules.proposals
     app.modules.sportsmanship
 forbidden_modules =
     app.modules.conversations
+allow_indirect_imports = true
+
+# **Nor does any context know a player is told** (#549). Notifications is told
+# through the outbox by `proposals`, `bookings` and `payments`, exactly as a room
+# is — `notifications/application/telling.py` subscribes to their events and
+# reads what a notice says through ports of its own, signed in
+# `notifications/infrastructure/` — and nothing it tells reads back. The moment
+# a fill or a leaving pushes a phone itself, a push service that is down holds
+# up the money, and a notice is one more thing every act must remember.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:a-player-is-told-and-nothing-asks]
+name = No context knows Notifications exists
+type = forbidden
+source_modules =
+    app.modules.administrators
+    app.modules.auth
+    app.modules.blocks
+    app.modules.bookings
+    app.modules.challenges
+    app.modules.clubs
+    app.modules.conversations
+    app.modules.games
+    app.modules.groups
+    app.modules.matchmaking
+    app.modules.payments
+    app.modules.plans
+    app.modules.player_profile
+    app.modules.player_record
+    app.modules.player_score
+    app.modules.proposals
+    app.modules.rating
+    app.modules.sportsmanship
+    app.modules.users
+forbidden_modules =
+    app.modules.notifications
 allow_indirect_imports = true
 
 # **`games` cannot read a plan** (docs/adr/0145 §4). ADR-0137's sentence — *"there
@@ -530,6 +575,98 @@ source_modules =
     app.modules.clubs
 forbidden_modules =
     app.modules.groups
+allow_indirect_imports = true
+
+# Payments does not know a yes exists. `proposals` reads `payments` — whether a
+# player has a method their share could be charged to — and the one thing
+# `payments` asks back, *could anything still be charged to this method* (a
+# method with a live yes on it may not be removed, the mechanics §12.4), is a
+# port declared in `payments`' own words and **signed in
+# `proposals/infrastructure/`**, as clubs' sports question is signed in `groups`
+# (#538).
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:payments-does-not-know-proposals]
+name = The Payments context does not import Proposals
+type = forbidden
+source_modules =
+    app.modules.payments
+forbidden_modules =
+    app.modules.proposals
+allow_indirect_imports = true
+
+# A club does not know how it is paid. `payments` holds the provider, so it
+# answers the one thing a club asks of it — *open my account, a link to its
+# pages, how does it stand* (the setup checklist's first step, #537) — through a
+# port declared in `clubs`' own words and **signed in
+# `payments/infrastructure/`**; and when the provider's Connected accounts
+# notice says an account changed, `payments` tells the club through a port of
+# its **own** words, answered over the Club context's use case in that same
+# module. Both adapters live on the payments side, and the club's link route is
+# `payments`' too, mounted on the club surface — so the arrow runs
+# `payments → clubs` only, as `proposals → payments` does.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:clubs-does-not-know-payments]
+name = The Clubs context does not import Payments
+type = forbidden
+source_modules =
+    app.modules.clubs
+forbidden_modules =
+    app.modules.payments
+allow_indirect_imports = true
+
+# Nor does a group or a club know a game was proposed to it. A group is the first
+# kind of pool and a club sells the court hour, and `proposals` reads both
+# through ports of its own; neither reads back, so a pool can become a city
+# without either of them changing (docs/adr/0189 §1).
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:groups-and-clubs-do-not-know-proposals]
+name = Neither Groups nor Clubs imports Proposals
+type = forbidden
+source_modules =
+    app.modules.groups
+    app.modules.clubs
+forbidden_modules =
+    app.modules.proposals
+allow_indirect_imports = true
+
+# A booking does not know the card it was, or the money that paid for it (#541).
+# `proposals` books a full game — the court, then the booking — and reads a
+# player's booked games back, through ports of its own **signed in
+# `proposals/infrastructure/`**; the money is `payments`', taken in the same
+# transaction by the fill, which is `proposals`'. So the arrows run
+# `proposals → bookings` and `proposals → payments`, and `bookings` reads only
+# what it books on: the club's courts and the game it opens.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:bookings-does-not-know-proposals-or-payments]
+name = The Bookings context imports neither Proposals nor Payments
+type = forbidden
+source_modules =
+    app.modules.bookings
+forbidden_modules =
+    app.modules.proposals
+    app.modules.payments
+allow_indirect_imports = true
+
+# And nothing a booking is made of knows a booking exists. A club sells the court
+# hours a booking holds — the Club context asks for them through its own
+# `CourtBookings`, **signed in `bookings/infrastructure/`** — and a booked game
+# is an ordinary Game, opened through the use case a completed line-up opens
+# one with; neither reads back, and nor does the money that paid for it.
+#
+# `allow_indirect_imports = true`, for the composition-root reason above.
+[importlinter:contract:clubs-games-and-payments-do-not-know-bookings]
+name = Neither Clubs, Games nor Payments imports Bookings
+type = forbidden
+source_modules =
+    app.modules.clubs
+    app.modules.games
+    app.modules.payments
+forbidden_modules =
+    app.modules.bookings
 allow_indirect_imports = true
 
 # Nor does an administratorship know which groups it runs. `groups` reads
@@ -593,16 +730,22 @@ source_modules =
     app.modules.player_record.domain
     app.modules.player_record.application
 forbidden_modules =
+    app.modules.administrators
     app.modules.auth
     app.modules.blocks
+    app.modules.bookings
     app.modules.challenges
+    app.modules.clubs
     app.modules.conversations
     app.modules.games
     app.modules.groups
     app.modules.matchmaking
+    app.modules.notifications
+    app.modules.payments
     app.modules.plans
     app.modules.player_profile
     app.modules.player_score
+    app.modules.proposals
     app.modules.rating
     app.modules.sportsmanship
     app.modules.users

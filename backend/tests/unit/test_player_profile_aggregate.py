@@ -12,11 +12,6 @@ from __future__ import annotations
 import pytest
 
 from app.kernel import InvariantViolated, iso_weekday
-from app.modules.player_profile.domain.availability import (
-    AvailabilityGrid,
-    AvailabilitySlot,
-    DayPart,
-)
 from app.modules.player_profile.domain import search_radius, social_tags
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
@@ -26,7 +21,6 @@ from app.modules.player_profile.domain.errors import (
     TooManyPhotos,
 )
 from app.modules.player_profile.domain.events import (
-    AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
     IntroChanged,
@@ -37,6 +31,7 @@ from app.modules.player_profile.domain.events import (
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+    WeeklyHoursSet,
 )
 from app.modules.player_profile.domain.gender import (
     DEFAULT_GENDER_PREFERENCE,
@@ -57,6 +52,10 @@ from app.modules.player_profile.domain.social_tags import (
     SocialTagSelection,
     SocialTagSelectionBounds,
 )
+from app.modules.player_profile.domain.weekly_hours import (
+    WeeklyHour,
+    WeeklyHours,
+)
 from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import utc
 
@@ -73,9 +72,7 @@ def a_profile(**overrides) -> PlayerProfile:
         player_id=PLAYER,
         social_tags=SocialTagSelection.from_ids(TAGS),
         photo_ids=(),
-        availability=AvailabilityGrid.of(
-            [AvailabilitySlot(day=iso_weekday(2), part=DayPart.EVENING)]
-        ),
+        weekly_hours=WeeklyHours.of([WeeklyHour(day=iso_weekday(2), hour=19)]),
         location=LocationArea.around(51.5074, -0.1278),
         search_radius=SearchRadius.chosen(kilometres=10),
         gender=Gender.WOMAN,
@@ -140,7 +137,7 @@ def test_a_created_profile_replays_to_itself():
     profile = a_profile()
     expected = (
         profile.social_tags,
-        profile.availability,
+        profile.weekly_hours,
         profile.location,
         profile.search_radius,
         profile.proposals_opt_in,
@@ -153,7 +150,7 @@ def test_a_created_profile_replays_to_itself():
 
     assert (
         rebuilt.social_tags,
-        rebuilt.availability,
+        rebuilt.weekly_hours,
         rebuilt.location,
         rebuilt.search_radius,
         rebuilt.proposals_opt_in,
@@ -164,15 +161,16 @@ def test_a_created_profile_replays_to_itself():
     assert rebuilt.version == 2, "two events, two versions"
 
 
-def test_a_blank_availability_grid_is_committed_as_an_answer():
-    """Blank means no preference and never *leave me out*, so it is stored as an
-    empty grid rather than refused or filled in."""
+def test_a_blank_week_is_folded_as_absent_rather_than_refused():
+    """The floor is the commit *path's* (``WeeklyHours.of_cells``), never the
+    aggregate's: a blank week reaching the fold means *we do not know*, and it is
+    stored as an empty week rather than refused or filled in (ADR-0102)."""
 
-    profile = a_profile(availability=AvailabilityGrid.blank())
+    profile = a_profile(weekly_hours=WeeklyHours.blank())
     created, _ = profile.pull_events()
 
-    assert created.availability == ()
-    assert len(profile.availability) == 0
+    assert created.weekly_hours == ()
+    assert len(profile.weekly_hours) == 0
 
 
 def test_photos_keep_the_order_the_player_arranged_them_in():
@@ -215,7 +213,7 @@ def test_each_preference_has_its_own_change_event():
         occurred_at=LATER,
     )
     profile.change_photos([new_uuid()], occurred_at=LATER)
-    profile.change_availability(AvailabilityGrid.blank(), occurred_at=LATER)
+    profile.set_weekly_hours(WeeklyHours.blank(), occurred_at=LATER)
     profile.change_location(LocationArea.around(48.85, 2.35), occurred_at=LATER)
     profile.change_search_radius(SearchRadius.chosen(kilometres=25), occurred_at=LATER)
     profile.change_gender(Gender.PREFER_NOT_TO_SAY, occurred_at=LATER)
@@ -224,7 +222,7 @@ def test_each_preference_has_its_own_change_event():
     assert [type(event) for event in profile.pull_events()] == [
         SocialTagsChanged,
         PhotosChanged,
-        AvailabilityChanged,
+        WeeklyHoursSet,
         LocationChanged,
         SearchRadiusChanged,
         GenderChanged,
@@ -413,7 +411,7 @@ def test_a_profile_committed_before_the_question_existed_holds_no_gender():
         player_id=PLAYER,
         social_tags=TAGS,
         photo_ids=(),
-        availability=("2:EVENING",),
+        weekly_hours=("2:19",),
         latitude=51.51,
         longitude=-0.13,
         search_radius_km=10,
@@ -440,7 +438,7 @@ def test_answering_for_the_first_time_on_an_older_profile_is_a_change():
                 player_id=PLAYER,
                 social_tags=TAGS,
                 photo_ids=(),
-                availability=("2:EVENING",),
+                weekly_hours=("2:19",),
                 latitude=51.51,
                 longitude=-0.13,
                 search_radius_km=10,

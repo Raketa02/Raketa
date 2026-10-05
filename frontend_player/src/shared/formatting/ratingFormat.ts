@@ -144,3 +144,21 @@ export function formatRange(range: { readonly low: number; readonly high: number
 export function formatPercent(value: number): string {
   return `${Math.round(value)}%`;
 }
+
+/** Grosze in a złoty — the wire's unit is the grosz (`docs/value-formatting.md`). */
+const GROSZE = 100;
+
+/**
+ * **Money, from the wire's grosze** — `32 zł`, `27,50 zł`: the decimal comma, a space before the
+ * unit, and the grosze only when there are some.
+ *
+ * The first price the app draws is a share on a group's game card (#553), and
+ * `docs/value-formatting.md` left the rendering to that first client. A share is exact to the
+ * grosz — a price that does not split among the seats is refused — so a whole złoty is the usual
+ * case, and printing `32,00 zł` on every card would be two characters of nothing. Here for the
+ * comma's one home.
+ */
+export function formatZloty(grosze: number): string {
+  const whole = grosze % GROSZE === 0;
+  return `${whole ? String(grosze / GROSZE) : comma(grosze / GROSZE, DECIMALS)} zł`;
+}

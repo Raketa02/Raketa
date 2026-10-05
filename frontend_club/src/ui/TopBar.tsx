@@ -1,13 +1,14 @@
-import Link from 'next/link';
 import type { ReactNode } from 'react';
 
+import { MenuButton } from './MenuButton';
 import { NavLinks, type NavItem } from './NavLinks';
 import styles from './TopBar.module.css';
 import { Wordmark } from './Wordmark';
 
 /**
- * **The signed-in frame's bar** (club mock 2): the wordmark, the pages, the club it is signed in
- * as (*Ogrody 33 · Grzegórzki, Kraków*) and the way out. The club's line opens its details.
+ * **The signed-in frame's bar** (club mock 2, the screens B1): the wordmark, the pages, the club
+ * it is signed in as (*Ogrody 33 · Grzegórzki, Kraków*) and the way out. The club's line opens
+ * the pages about the club itself.
  */
 export function TopBar({
   home,
@@ -23,9 +24,8 @@ export function TopBar({
   club: {
     readonly name: string;
     readonly place: string;
-    readonly href: string;
-    /** What the club's line opens, said on hover. */
-    readonly title: string;
+    /** The pages the club's line opens: its details and its Raketa settings. */
+    readonly pages: readonly NavItem[];
   };
   signOut: ReactNode;
 }) {
@@ -39,13 +39,22 @@ export function TopBar({
           <NavLinks items={items} />
         </nav>
         <div className={styles.account}>
-          <Link href={club.href} className={styles.club} title={club.title}>
-            <strong className={styles.clubName}>{club.name}</strong>
-            <span className={styles.place}>
-              <span aria-hidden="true"> · </span>
-              {club.place}
-            </span>
-          </Link>
+          <div className={styles.clubArea}>
+            <MenuButton
+              className={styles.club}
+              name={club.name}
+              items={club.pages}
+              label={
+                <span>
+                  <strong className={styles.clubName}>{club.name}</strong>
+                  <span className={styles.place}>
+                    <span aria-hidden="true"> · </span>
+                    {club.place}
+                  </span>
+                </span>
+              }
+            />
+          </div>
           <div className={styles.signOut}>{signOut}</div>
         </div>
       </div>

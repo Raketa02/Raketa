@@ -25,9 +25,9 @@ from datetime import datetime
 from typing import Collection, final
 
 from app.kernel import IsoWeekday, invariant
-from app.modules.player_profile.domain.availability import (
+from app.modules.player_profile.domain.weekly_hours import (
     DAYS_IN_THE_GRID,
-    AvailabilitySlot,
+    WeeklyHour,
 )
 
 #: Inside this many days of a session refresh, *recent activity* reads full.
@@ -85,8 +85,8 @@ class Overlap:
 
 
 def overlap_of(
-    searcher_slots: Collection[AvailabilitySlot],
-    candidate_slots: Collection[AvailabilitySlot],
+    searcher_hours: Collection[WeeklyHour],
+    candidate_slots: Collection[WeeklyHour],
     today: IsoWeekday,
 ) -> Overlap:
     """The cells both of them ticked, and how many days to the soonest.
@@ -101,7 +101,7 @@ def overlap_of(
     ``shared_count`` and ``days_away`` columns, and the proximity reading below.
     """
 
-    shared = set(searcher_slots) & set(candidate_slots)
+    shared = set(searcher_hours) & set(candidate_slots)
     if not shared:
         return Overlap(shared_count=0, days_away=None)
     soonest = min((int(slot.day) - int(today)) % DAYS_IN_THE_GRID for slot in shared)

@@ -23,6 +23,8 @@ from app.bootstrap.jobs import (
     CHALLENGE_LAPSE_JOB,
     CONVERSATION_SWEEP_JOB,
     MAIL_DELIVERY_JOB,
+    PROPOSAL_EXPIRY_JOB,
+    PROPOSER_JOB,
     INTEREST_EXPIRY_JOB,
     PHOTO_SWEEP_JOB,
     RATING_CATCH_UP_JOB,
@@ -210,6 +212,12 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         RATING_CATCH_UP_ENABLED=False,
         CONVERSATION_SWEEP_ENABLED=False,
         MAIL_DELIVERY_ENABLED=False,
+        PROPOSAL_EXPIRY_ENABLED=False,
+        PROPOSER_ENABLED=False,
+        REQUEST_TIMEOUT_ENABLED=False,
+        CUT_OFF_ENABLED=False,
+        CLUB_PAYOUTS_ENABLED=False,
+        NEW_BOOKINGS_SUMMARY_ENABLED=False,
     )
     app = FastAPI()
     app.state.event_runtime = object()
@@ -256,6 +264,8 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         ("RATING_CATCH_UP_ENABLED", RATING_CATCH_UP_JOB),
         ("CONVERSATION_SWEEP_ENABLED", CONVERSATION_SWEEP_JOB),
         ("MAIL_DELIVERY_ENABLED", MAIL_DELIVERY_JOB),
+        ("PROPOSAL_EXPIRY_ENABLED", PROPOSAL_EXPIRY_JOB),
+        ("PROPOSER_ENABLED", PROPOSER_JOB),
     ],
 )
 async def test_a_lone_database_job_is_handed_a_session_factory(
@@ -288,6 +298,8 @@ async def test_a_lone_database_job_is_handed_a_session_factory(
             "RATING_CATCH_UP_ENABLED",
             "CONVERSATION_SWEEP_ENABLED",
             "MAIL_DELIVERY_ENABLED",
+            "PROPOSAL_EXPIRY_ENABLED",
+            "PROPOSER_ENABLED",
             "SCALE_PRESSURE_ENABLED",
         )
     }

@@ -63,6 +63,13 @@ class SqlAlchemyGroupDirectory:
             )
         ).all()
 
+    async def every(self) -> Sequence[UUID]:
+        return (
+            await self._session.scalars(
+                select(GroupORM.id).order_by(GroupORM.created_at, GroupORM.id)
+            )
+        ).all()
+
     async def listings_at(
         self, club_ids: Collection[UUID]
     ) -> Mapping[UUID, Sequence[GroupListing]]:

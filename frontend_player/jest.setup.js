@@ -118,6 +118,44 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 afterEach(() => require('@react-native-async-storage/async-storage').clear());
 
+// --- the payment provider's phone half ---------------------------------------
+// Stripe's SDK is a native module and a native view with no JS implementation under either, and
+// exactly one module imports it: `shared/lib/platform/payments.tsx` (#552). The SDK ships its own
+// jest mock of its whole surface — every call answering *no error* — which is the far side of that
+// port as the storage mock above is of its own, so it is used as it comes. Every screen above the
+// port runs against `fakePayments()` instead; this is here so the port's own suite can run, and so
+// a suite that never mentions a payment can import the platform module at all.
+jest.mock('@stripe/stripe-react-native', () => require('@stripe/stripe-react-native/jest/mock.js'));
+
+// --- the phone's push notifications --------------------------------------------
+// expo-notifications is a native module with no JS implementation under it, and exactly one module
+// imports it: `shared/lib/platform/push.ts` (#559). The default is the phone every other port's
+// default is — never asked, and once asked, says yes — with no token to give and no push arriving.
+// Every screen above the port runs against `fakePush()` instead; this is here so the port's own
+// suite can run, and so a suite that never mentions a push can import the platform module at all.
+jest.mock('expo-notifications', () => ({
+  DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
+  AndroidImportance: { MIN: 1, LOW: 2, DEFAULT: 3, HIGH: 4, MAX: 5 },
+  getPermissionsAsync: jest.fn(async () => ({
+    granted: false,
+    canAskAgain: true,
+    status: 'undetermined',
+  })),
+  requestPermissionsAsync: jest.fn(async () => ({
+    granted: true,
+    canAskAgain: false,
+    status: 'granted',
+  })),
+  setNotificationChannelAsync: jest.fn(async () => null),
+  getExpoPushTokenAsync: jest.fn(async () => {
+    throw new Error('no push service under jest');
+  }),
+  addPushTokenListener: jest.fn(() => ({ remove: jest.fn() })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  getLastNotificationResponseAsync: jest.fn(async () => null),
+}));
+
 // --- the font registry ------------------------------------------------------
 // The one partial mock in this file, and the one that is not a port's far side.
 //

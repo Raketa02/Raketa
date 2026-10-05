@@ -59,6 +59,11 @@ export interface SportFilterPageProps {
    */
   readonly declaredSports?: readonly Sport[];
   /**
+   * **The sport a notice opened the page in** (#559) — stood on until the player picks another, and
+   * never saved as a pick. Absent for a page opened by the player.
+   */
+  readonly opening?: Sport;
+  /**
    * The page's header, with the pill for its right slot — `undefined` until there is a sport — and
    * `cover`, which the header wraps round what the open bar must cover whole rather than end across:
    * the group's tile. It measures the box it is given against the header's own left edge, so the
@@ -78,8 +83,13 @@ export interface SportFilterPageProps {
   readonly children: (sport: Sport | undefined, toAdd: readonly Sport[]) => ReactNode;
 }
 
-export function SportFilterPage({ declaredSports, header, children }: SportFilterPageProps) {
-  const filter = useGroupSport(declaredSports);
+export function SportFilterPage({
+  declaredSports,
+  opening,
+  header,
+  children,
+}: SportFilterPageProps) {
+  const filter = useGroupSport(declaredSports, opening);
   return (
     <SportFilterFrame filter={filter} header={header}>
       {children}
@@ -87,7 +97,10 @@ export function SportFilterPage({ declaredSports, header, children }: SportFilte
   );
 }
 
-export interface SportFilterFrameProps extends Omit<SportFilterPageProps, 'declaredSports'> {
+export interface SportFilterFrameProps extends Omit<
+  SportFilterPageProps,
+  'declaredSports' | 'opening'
+> {
   /** The filter's state — the sports it lists, the one it is on, and picking another. */
   readonly filter: GroupSport;
 }

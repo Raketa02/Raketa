@@ -235,6 +235,79 @@ const color = {
    *  it is 1,16, which is a shape read by its contents and not by its edge. Nothing else may
    *  draw it. Derived in radarGround.test.ts. */
   radarControl: 'rgba(16,27,32,0.5)',
+
+  /** THE GAME CARD'S GROUND — the app's FOURTH dark surface: a group's Games deck card and a
+   *  game's details (#553; the screens A2.3, docs/design-system.md Part 16 2026-09-30). One linear
+   *  gradient down the card from the top value to the foot value, under the ribbon, the tiles, the
+   *  forecast, the overlap grid and the court block, and nothing else. Argued for its own record, as
+   *  ADR-0167 §2 said the next dark surface would be: a card a player answers with a swipe, drawn
+   *  the colour of the night the other three are.
+   *
+   *  MEASURED off mocks 2–10 at 1x, as the other grounds were: `#1C333F` under the ribbon and
+   *  `#101B22` at the foot, hue 199–205°, which is `night`'s family. What sits on them, computed
+   *  half-way down: white 15,34; `volt` 12,24; `gameGreen` 3,32 (the forecast's figure, large);
+   *  `gameAmber` 8,71; `gameRed` 3,39 (the figure, large). Derived in gameGround.test.ts. Nothing
+   *  else may draw these. */
+  gameGroundTop: '#1C333F',
+  gameGroundFoot: '#101B22',
+
+  /** The ribbon's band on a pick and a challenge — the mock's dark teal, measured. White 11,66 on
+   *  it; the countdown under an hour is `gameCoral` on it, 4,74. A rescue's ribbon is `coralInk`,
+   *  white 5,89 on it, where the mock's `#D34D2E` carries white at 4,31. */
+  gameRibbon: '#203C48',
+
+  /** THE CARD'S GREEN — measured off the mocks' IN tag, *Book it now* tag and forecast figure, all
+   *  one value. Hue 155°: between `mint` (163°) and `mintInk`, and neither of them, because on this
+   *  ground `mintInk` carries a figure at 2,67 and white on `mint` is 4,07. As a FILL under white,
+   *  4,62 (the two tags); as the forecast's figure on the ground, 3,32 — large text only. */
+  gameGreen: '#308361',
+
+  /** The overlap grid's two unlit shades: DARK — fewer than all but one free — and DIM — all but
+   *  one free (the olive). BRIGHT is `volt`. Measured; the dim cell against the dark is 2,07, which
+   *  is a shade read beside its neighbours and never the only signal: every cell is also spoken
+   *  (`overlapLabel`). */
+  gameCellDark: '#28363C',
+  gameCellDim: '#546A36',
+
+  /** The court block's two beds: GREY where a yes is a free vote (*Court available*, a dashed
+   *  border) and the GREEN-GREY of a court a yes books or has booked (*Book it now*, *Booked*, a
+   *  solid `voltStroke` border). Measured. Volt on them 10,93 and 10,03; white 12,57 on the green. */
+  gameCourt: '#242F35',
+  gameCourtBooked: '#28372A',
+
+  /** WARN ON THE CARD — *Slim overlap*, *no free cancellation*, and the forecast's figure between
+   *  55 and 70. Measured off the two words in mocks 3 and 6; `amber` itself is 2,73 on this ground. */
+  gameAmber: '#DFC072',
+
+  /** BAD ON THE CARD — the forecast's figure under 55. The mock's `#9E3C2B` is 2,32 on the ground,
+   *  under even large text's 3:1, so its hue is kept and ONLY the lightness is raised, to 3,44
+   *  (`arranging`'s rule: measured, then lifted); 3,39 half-way down the gradient. */
+  gameRed: '#C84F3A',
+
+  /** THE COUNTDOWN UNDER AN HOUR — coral's hue (9°), lifted to carry *45 min* on the ribbon at
+   *  4,74, where `coral` there is 2,99. A mark would take `coral`; these are words. */
+  gameCoral: '#F08975',
+
+  /** THE POSTING GRID'S TWO MIDDLE GREENS (#558; the Games & Fill in screens A5.2, A10;
+   *  docs/design-system.md 7.28, Part 16 2026-10-02). The grid's ramp runs `paper2` (nobody who
+   *  fits) → `mintSoft` (a few, no court) → `gridLight` (a full game's worth, no court) →
+   *  `gridMid` (a court, fewer than a full game) → `mintInk` (a court and a full game, ringed in
+   *  volt): brighter is more worth picking. The spec names the two middle values, and they are
+   *  its own bytes; the ends are tokens the palette already had.
+   *
+   *  EACH WITH ITS INK, and no soft and no line: 15.2 asks for a soft where a colour has a pale bed
+   *  and a line where that bed is bordered, and a cell IS the fill — the ramp's pale stage is
+   *  `mintSoft` itself — so a soft would be a token nothing references (Part 14 #1). The number
+   *  and the court glyph on each are its ink, never white: the mocks draw white, and white is
+   *  1,51 on `gridLight` and 2,15 on `gridMid`, a figure nobody can read. Each ink is the green's
+   *  own hue (152°, 156°) darkened to the first step that carries a figure: 4,65 and 4,68. As
+   *  fills on paper they are 1,35 and 1,92 — a shade read beside its neighbours and never the only
+   *  signal, `gameCellDim`'s rule: every cell carries its number and a glyph, and is spoken.
+   *  Derived in postingGrid.test.ts. Nothing else may draw these. */
+  gridLight: '#A9DEC5',
+  gridLightInk: '#266447',
+  gridMid: '#5EC39B',
+  gridMidInk: '#1C4A38',
 } as const;
 
 /**
@@ -535,10 +608,13 @@ const radius = {
   daySquare: 10,
   seg: 10,
   segThumb: 8,
-  /** The availability grid's cell. A fresh token beside the dead `daySquare`: the slot
-   *  squares of the deleted 6.7 are NOT being restored, and a cell that borrowed their
-   *  radius would be the first step back toward a booking grid. */
-  availabilityCell: 10,
+  /** The week grid's cell. A fresh token beside the dead `daySquare`: the slot squares of the
+   *  deleted 6.7 are NOT being restored, and a cell that borrowed their radius would be the
+   *  first step back toward a booking grid. 6 on a 20pt hour cell — mock 36's corner, which
+   *  at 10 would round the cell into a pill. */
+  availabilityCell: 6,
+  /** A posting grid cell (7.28, #558) — the mocks' rounded square, `daySquare`'s 10. */
+  postingCell: 10,
   /** The door row's lead square. Between `btn` and `segThumb`: a 28pt square at 10 reads as a
    *  small button, which it is not — the row is the control and the square is its glyph's
    *  ground — and at 8 reads as a chip's thumb. Named for the object, as `availabilityCell` is. */
@@ -683,23 +759,29 @@ const size = {
     currentRadius: 3,
     gap: 3,
   },
-  /** The availability grid — 6.8. Seven rows of three, days DOWN and parts of the day
-   *  ACROSS, which is a touch decision and not a taste one: seven columns want
-   *  7 x 44 = 308pt against the 290pt of content the narrowest phone has, and no
-   *  hit-slop closes that on any phone in the population. Laid out this way the cell reaches
-   *  the minimum by its own geometry — the first control in the app that does — so there is
-   *  no `hit` entry here, and `cardPadding` is subtracted before the division because the
-   *  grid now sits inside a card.
+  /** The week grid — 6.8. Seven days ACROSS and sixteen hours DOWN, as mock 36 draws it:
+   *  16 rows at the 44pt minimum would be 704pt of grid, taller than any page, so the cell is
+   *  20pt tall and a seventh of the width, the whole week fits a phone, and a press and drag
+   *  paints a run instead of each hour being hit alone. `hit.availabilityCell` grants each
+   *  cell half the gap on every side — the neighbour rule's most — so no point between two
+   *  cells presses nothing. 6.5 records the departure from the minimum.
    *
-   *  `labelMaxRatio` caps the day-label column so Dynamic Type grows the labels without
-   *  starving the cells: at the cap the three still share 59,5pt each on that phone.
-   *  `footnoteMinHeight` is two lines of `type.rlLabel`, always laid out, so ticking the
-   *  first cell never moves the grid out from under the finger; the hairline above it is
-   *  drawn only when there are words to separate. */
+   *  `paintIntent` is how far a finger travels on the cells before the touch is a paint rather
+   *  than a tap. Below the scroll view's own slop, so a drag down a column is claimed by the
+   *  grid before the page can take it as a scroll; and a tap that drifts that far paints only
+   *  the cell it is on, which is the same as tapping it.
+   *
+   *  `labelMaxRatio` caps the hour-label column so Dynamic Type grows the labels without
+   *  starving the cells. `footnoteMinHeight` is two lines of `type.rlLabel`, always laid out,
+   *  so ticking the first hour never moves the grid out from under the finger; the hairline
+   *  above it is drawn only when there are words to separate. `tick` and `tickStroke` are the
+   *  12 x 12 mark family's box — the plus a search adds and the diff's plus and dash — which
+   *  the tick box reads from here too. */
   availability: {
-    cellHeight: 44, // = minTouch, by geometry rather than by slop
-    columns: 3, // the three parts of the day, across
-    gap: 6,
+    cellHeight: 20,
+    columns: 7, // the seven days, across
+    gap: 4,
+    paintIntent: 4,
     labelGutter: 9,
     labelMaxRatio: 0.25,
     cardPadding: space.md,
@@ -855,6 +937,81 @@ const size = {
    *  emoji is taller than a line box the height of its font size. 26 is that footprint kept,
    *  so the disc's proportion is still the mock's; not a new number. */
   deckAnswer: { pass: 54, record: 42, accept: 66, ball: 26 },
+  /** A group's Games card (#553, the screens A2.3), measured off mocks 2–10 at 1x. `ribbon` is
+   *  the band's height; `tileMin` the least a tile shrinks to on a short phone, where the tiles
+   *  give the card's other parts the height they need; `detailsTile` the width:height of a tile on
+   *  a game's details, where nothing competes for it — all three on the 3pt grid. The grid's cells
+   *  are `cell` tall and `cellGap` apart — **4, off the grid on purpose**: 6.8's hour cells' own
+   *  gap (`availability.gap`), so the week is drawn with one rhythm on both surfaces — and the
+   *  game's own cell is ringed `ring` wide and grows `ringOut` (`space.xxs`) past its slot on every
+   *  side, as the mocks draw it standing proud of its row. The court block's border is
+   *  `courtStroke`, a stroke like `onCourtTick`'s, dashed on a free vote and solid on a booking. */
+  gameCard: {
+    ribbon: 30,
+    tileMin: 54,
+    detailsTile: 1.75,
+    cell: 9,
+    cellGap: 4,
+    ring: 2,
+    ringOut: space.xxs,
+    courtStroke: 1.5,
+  },
+  /** A group's Fill in rows (7.27, #557; mocks 11–13): *Seats to fill* framed in `coral`, *You're
+   *  In* in `mint`, each `stroke` wide — the mocks' 1.5pt, the game card's court stroke again. The
+   *  posters in a row are the group page's own seat (`groupPage.seat`). */
+  fillInRow: { stroke: 1.5 },
+  /** POST A GAME — the posting grid (7.28, #558; the Games & Fill in screens A5.2; mocks 2-, 20–32).
+   *  `cell` is a cell's height — its width is the column's, seven to the row after the range
+   *  labels' `label` column — 48 on the 3pt grid, which keeps the mocks' 4:5 on a 390pt phone and
+   *  clears 6.5's 44 on every one. `gap` is `space.xs` between cells both ways. The hot cell is
+   *  ringed `ring` in volt inside an `outline` of `mintInk`, because volt on paper is a line nobody
+   *  sees (2.2) and the mocks draw that dark edge; the pick stands `pickGap` off the cell in an
+   *  `ink` outline `pickRing` wide, with its white `tick` badge. A game already happening is a `dot`
+   *  in the top corner, ringed `dotRing` in `surface` so it reads on every green (coralInk is 1,01
+   *  against `mintInk` by luminance). The court glyph is `glyph` — the mocks' small court, a
+   *  rounded outline. A cell outside the poster's week is drawn at `outside` with a `dash` border;
+   *  one earlier today at `past`. `pager` is the week chevrons' square. */
+  postingGrid: {
+    cell: 48,
+    gap: space.xs,
+    label: 66,
+    ring: 2.5,
+    outline: 1,
+    pickRing: 2,
+    pickGap: 2,
+    tick: 24,
+    dot: 11,
+    dotRing: 1.5,
+    glyph: { width: 17, height: 11, stroke: 1.5, radius: 3 },
+    outside: 0.5,
+    past: 0.15,
+    dash: 1.5,
+    pager: 36,
+    /** How far a level stepper's box nudges on a bounce — `space.xs`. */
+    bounce: space.xs,
+    /** The pager's *This week* / *Next week* — the wider of the two at `cardTitle`, on the grid. */
+    weekLabel: 84,
+    /** The legend's mark column, and a swatch in it: a ramp of four swatches and their gaps fits. */
+    legendMark: 54,
+    swatch: 12,
+  },
+  /** YOU › PAYMENTS — the setup checklist and the method card (7.23, #552; mocks 41–47).
+   *  `stepMark` is a step's round mark — its number, or the tick once finished — at `fit`'s 26,
+   *  the size the mocks draw beside a `question` title. `badge` is the method card's brand square,
+   *  42 as mock 47 measures it against the card's 15pt padding. `cardFields` is Stripe's field
+   *  row, `textField.row`'s 42 plus the native border Stripe draws inside the box rather than
+   *  around it — 44, which is also 6.5's minimum for the one target the row is. */
+  payments: { stepMark: 26, badge: 42, cardFields: 44 },
+  /** THE UNDO TOAST — 9.2's toast with a draining ring and one action (#555, the Games & Fill in
+   *  screens A2.4, A10; Part 16 2026-10-01). `ring` is the ring's box, the toast's `inlineTitle`
+   *  line height plus a step, so it sits in the line rather than growing it; `ringStroke` is the
+   *  ring around a face on dark, 2. */
+  undo: { ring: 20, ringStroke: 2 },
+  /** SHOW AT THE DESK — the check-in code's QR on a booked game's day (#556, the Games & Fill in
+   *  screens A4.1, the mechanics §15.1; Part 16 2026-10-01). `code` is the drawing's side, quiet
+   *  zone included: a version-5 code is 45 modules with it, so a module is a little over 4pt —
+   *  what a desk's camera reads at arm's length — and 192 is on the 3pt grid. */
+  checkIn: { code: 192 },
   /** THE RADAR — the sizes of the field's drawn objects, every one of them the spec's own
    *  ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
    *  §7, `the-radar.md` §7.2–7.4). Points; the kilometres, the ladder and the thresholds are
@@ -1165,6 +1322,10 @@ const hit = {
    *  targets, which is the neighbour rule read vertically. No horizontal slop: the row is
    *  already the card's width. */
   peopleRow: { top: 3, bottom: 3 },
+  /** The week grid's hour cell (6.8): half the 4pt gap on every side, which is all the
+   *  neighbour rule allows and exactly enough that the reachable areas tile the grid with no
+   *  dead point between two cells. It does not reach 44 — see `size.availability`. */
+  availabilityCell: { top: 2, bottom: 2, left: 2, right: 2 },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -1327,6 +1488,10 @@ const motion = {
    * a state the eye already knows. Skipped under reduced motion, where the bar is simply open.
    */
   unfold: 280,
+  /** A level bound pushed past the engine's own (7.28, #558): the stepper's box nudges sideways
+   *  and back in four legs over this long, beside *You can narrow it, not widen it*. Skipped under
+   *  reduced motion — the words carry it alone. */
+  bounce: 240,
   /**
    * The record sheet's *Full record* opening and closing under its three blocks: the fold's
    * height runs to the content's measured height while the content fades in and slides down a
@@ -1398,6 +1563,10 @@ const motion = {
      *  Nothing surrounds it: the toast neither arrives nor leaves on an animation (1.5), so
      *  this is the whole of that component's timing and there is no reduced-motion branch. */
     toast: 2600,
+    /** The in-app banner a push draws while the app is open (#559, Part 16 2026-10-02). Long
+     *  enough to read a notice's two lines **and** reach for it — it is a control, unlike the
+     *  toast — and it closes on a press too, so a player in a hurry is not held by it. */
+    notice: 6000,
   },
 } as const;
 

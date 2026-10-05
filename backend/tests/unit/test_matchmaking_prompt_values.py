@@ -20,11 +20,11 @@ from app.modules.matchmaking.domain.prompts import (
     RaisedPrompt,
     improvised_week,
 )
-from app.modules.player_profile.domain.availability import AvailabilityGrid
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 
-A_WEEK = AvailabilityGrid.from_codes(("2:EVENING", "6:MORNING"))
-ANOTHER_WEEK = AvailabilityGrid.from_codes(("4:EVENING",))
-CLEARED = AvailabilityGrid.blank()
+A_WEEK = WeeklyHours.from_codes(("2:19", "6:10"))
+ANOTHER_WEEK = WeeklyHours.from_codes(("4:19",))
+CLEARED = WeeklyHours.blank()
 
 
 def test_a_cleared_week_is_a_legal_value_to_ask_about():
@@ -71,7 +71,7 @@ def test_a_week_that_is_not_the_profiles_is_asked_about():
 
     assert raised is not None
     assert raised.prompt is Prompt.KEEP_THESE_TIMES
-    assert raised.slots == ("4:EVENING",)
+    assert raised.slots == ("4:19",)
 
 
 def test_clearing_the_week_is_an_edit_and_is_asked_about_too():

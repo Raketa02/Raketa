@@ -25,7 +25,6 @@ from app.modules.matchmaking.infrastructure.player_card_source import (
     PlayerCardIdentities,
 )
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.photos import (
@@ -40,6 +39,7 @@ from app.modules.player_profile.domain.photos import (
 from app.modules.player_profile.domain.profile import PlayerProfile
 from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.users.domain.ports import Naming
 from datetime import datetime, timezone
 
@@ -94,7 +94,7 @@ class Profiles:
                 ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"]
             ),
             photo_ids=list(self._photos[player_id]),
-            availability=AvailabilityGrid.from_codes(["1:EVENING"]),
+            weekly_hours=WeeklyHours.from_codes(["1:19"]),
             location=LocationArea.around(41.39, 2.16),
             search_radius=SearchRadius.chosen(10),
             gender=Gender.WOMAN,

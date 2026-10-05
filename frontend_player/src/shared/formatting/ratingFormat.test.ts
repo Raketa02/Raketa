@@ -16,6 +16,7 @@ import {
   formatRange,
   formatSignedLevel,
   formatStars,
+  formatZloty,
 } from './ratingFormat';
 
 describe('levels', () => {
@@ -143,5 +144,22 @@ describe('formatWidthKm', () => {
     expect(formatWidthKm(10)).toBe('10 km');
     expect(formatWidthKm(18)).toBe('18 km');
     expect(formatWidthKm(23.4)).toBe('23 km');
+  });
+});
+
+/**
+ * **A share in złoty** — the first price this app draws (#553), so the rule is decided here, as
+ * `docs/value-formatting.md` said the first client to draw one would: the decimal comma, a space
+ * before `zł`, and the grosze only when there are some.
+ */
+describe('money', () => {
+  it('writes whole złoty without grosze, the unit after a space', () => {
+    expect(formatZloty(3200)).toBe('32 zł');
+    expect(formatZloty(0)).toBe('0 zł');
+  });
+
+  it('writes grosze to two places with the comma when there are some', () => {
+    expect(formatZloty(2750)).toBe('27,50 zł');
+    expect(formatZloty(2705)).toBe('27,05 zł');
   });
 });

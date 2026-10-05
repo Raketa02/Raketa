@@ -45,7 +45,6 @@ from uuid import UUID
 
 from app.engines.assessment import Question
 from app.kernel import Sport
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.location import LOCATION_PRECISION_DP
 from app.modules.player_profile.domain.play_intent import (
@@ -57,6 +56,7 @@ from app.modules.player_profile.domain.social_tags import (
     SocialTag,
     SocialTagSelection,
 )
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.users.domain.value_objects import (
     Email,
     Name,
@@ -454,14 +454,14 @@ class SeedProfile:
     (``app/seeds/clock.py``); this is the number it is set to.
 
     ``clear_the_week`` is the one state the commit itself cannot express: the
-    commit refuses an empty grid — the floor binds the answer a player is *asked*
-    for — while ``ChangeAvailability`` accepts one, because clearing a week
+    commit refuses an empty week — the floor binds the answer a player is *asked*
+    for — while ``SetWeeklyHours`` accepts one, because clearing a week
     afterwards is a legal edit. So a blank week is a commit followed by an edit,
     which is exactly how a player reaches it.
     """
 
-    #: ``(iso weekday 1–7, part of day)`` — one pair per cell ticked.
-    availability: tuple[tuple[int, str], ...]
+    #: ``(iso weekday 1–7, hour 7–22)`` — one pair per hour ticked.
+    weekly_hours: tuple[tuple[int, int], ...]
     social_tag_ids: tuple[str, ...]
     search_radius_km: int
     gender: Gender
@@ -783,16 +783,17 @@ RATED_IN_EVERY_SPORT = SeedAccount(
 # ly inside it would tighten the level gate on every search a developer ran and
 # nothing on the screen would say why.
 
-#: The week the protagonists tick. Six of the twenty-one cells, spread across
-#: four evenings and a weekend morning, so that a cohort member drawn against it
-#: can share two cells or none and both are ordinary rather than contrived.
-PROTAGONIST_WEEK: tuple[tuple[int, str], ...] = (
-    (2, "EVENING"),
-    (3, "EVENING"),
-    (4, "EVENING"),
-    (5, "EVENING"),
-    (6, "MORNING"),
-    (6, "AFTERNOON"),
+#: The week the protagonists tick, in hours (``docs/adr/0189`` §5): 18:00–21:00
+#: Tuesday to Friday, 09:00–13:00 and 14:00–16:00 on Saturday — eighteen of the
+#: 112, the same four evenings and a weekend morning and afternoon the week of
+#: parts held, now as the runs a player actually paints. It is runs with a gap
+#: in them on purpose: a Saturday that stops for lunch is a range (the posting
+#: grid's *Afternoon 12–17*) she is free in at some hours and not others, which
+#: is the case the grid's *best hour, never anyone overlapping* rule is about.
+PROTAGONIST_WEEK: tuple[tuple[int, int], ...] = (
+    *((day, hour) for day in (2, 3, 4, 5) for hour in (18, 19, 20)),
+    *((6, hour) for hour in (9, 10, 11, 12)),
+    *((6, hour) for hour in (14, 15)),
 )
 
 #: Three tags on the competitive side of the vocabulary's own split, so the tag
@@ -853,7 +854,7 @@ THE_POPULATED_PLAYER = SeedAccount(
         ),
     ),
     profile=SeedProfile(
-        availability=PROTAGONIST_WEEK,
+        weekly_hours=PROTAGONIST_WEEK,
         social_tag_ids=PROTAGONIST_TAGS,
         search_radius_km=PROTAGONIST_RADIUS_KM,
         gender=Gender.WOMAN,
@@ -885,7 +886,7 @@ THE_NEWCOMER = SeedAccount(
         ),
     ),
     profile=SeedProfile(
-        availability=PROTAGONIST_WEEK,
+        weekly_hours=PROTAGONIST_WEEK,
         social_tag_ids=PROTAGONIST_TAGS,
         search_radius_km=PROTAGONIST_RADIUS_KM,
         gender=Gender.WOMAN,
@@ -911,7 +912,7 @@ THE_ONE_SPORT_PLAYER = SeedAccount(
         ),
     ),
     profile=SeedProfile(
-        availability=PROTAGONIST_WEEK,
+        weekly_hours=PROTAGONIST_WEEK,
         social_tag_ids=PROTAGONIST_TAGS,
         search_radius_km=PROTAGONIST_RADIUS_KM,
         gender=Gender.MAN,
@@ -937,7 +938,7 @@ THE_BLANK_WEEK_PLAYER = SeedAccount(
         ),
     ),
     profile=SeedProfile(
-        availability=PROTAGONIST_WEEK,
+        weekly_hours=PROTAGONIST_WEEK,
         social_tag_ids=PROTAGONIST_TAGS,
         search_radius_km=PROTAGONIST_RADIUS_KM,
         gender=Gender.WOMAN,
@@ -1169,7 +1170,7 @@ def _refuse_an_impossible_profile(
 
     SocialTagSelection.from_ids(profile.social_tag_ids)
     SearchRadius.chosen(profile.search_radius_km)
-    AvailabilityGrid.of_cells(profile.availability)
+    WeeklyHours.of_cells(profile.weekly_hours)
 
     if profile.committed_days_ago < 0:
         raise RuntimeError(

@@ -45,7 +45,6 @@ from uuid import UUID
 from app.modules.auth.domain.audience import Audience
 from app.modules.auth.domain.events import RefreshTokenIssued, RefreshTokenRotated
 from app.modules.player_profile.domain.events import (
-    AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
     IntroChanged,
@@ -56,6 +55,7 @@ from app.modules.player_profile.domain.events import (
     ProposalsOptInAnswered,
     SearchRadiusChanged,
     SocialTagsChanged,
+    WeeklyHoursSet,
 )
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.rating.domain.events import RatingInitialised
@@ -121,7 +121,7 @@ def project(event: DomainEvent) -> tuple[Movement, ...]:
                         "profile_created_at": event.occurred_at,
                         "social_tags": event.social_tags,
                         "tags_updated_at": event.occurred_at,
-                        "availability": event.availability,
+                        "availability": event.weekly_hours,
                         "grid_updated_at": event.occurred_at,
                         **_area(event.latitude, event.longitude),
                         "search_radius_km": event.search_radius_km,
@@ -143,12 +143,12 @@ def project(event: DomainEvent) -> tuple[Movement, ...]:
                     },
                 ),
             )
-        case AvailabilityChanged():
+        case WeeklyHoursSet():
             return (
                 PlayerFactsMoved(
                     player_id=event.player_id,
                     changes={
-                        "availability": event.availability,
+                        "availability": event.weekly_hours,
                         "grid_updated_at": event.occurred_at,
                     },
                 ),
@@ -280,7 +280,7 @@ def _area(latitude: float, longitude: float) -> Mapping[str, object]:
 PROJECTED_CONTRACTS: tuple[Type[DomainEvent], ...] = (
     PlayerProfileCreated,
     SocialTagsChanged,
-    AvailabilityChanged,
+    WeeklyHoursSet,
     LocationChanged,
     SearchRadiusChanged,
     GenderChanged,

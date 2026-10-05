@@ -108,7 +108,8 @@ caller's. **6.15's swipe row is the first control that moves a row**
 [ADR-0165](../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
 §6): a list row that slides left on React Native's own `PanResponder` — as the radius slider
 already drags, and with neither `react-native-gesture-handler` nor `reanimated` added _(both are
-in the app since ADR-0176, for the radar's field alone; the row stays where it is)_ — to
+in the app since ADR-0176, for the radar's field, and gesture-handler since #551 for 6.8's paint
+too; the row stays where it is)_ — to
 reveal **one** control at its full height, and nothing else. The control is 6.1 `dark`'s fill,
 `night`, and **not coral**: §1.2's list is closed, and the act a swipe reveals is the one the
 screens draw `secondary`. #231 §3's argument against a swipe on the deck is kept by construction,
@@ -275,3 +276,63 @@ is full: a fourth value is a new record. `BottomSheet` takes an optional **`mark
 the top row, then the mark and the title under it, centred, the title still the heading focus lands on
 (9.1 as amended, for the invitation sheet's club tile). `theme.size.switcher` holds the switcher chip's
 drawn ⇅ — a 16pt box and a 1,5pt stroke — because Feather ships no up-and-down pair.
+
+**6.8's grid is a week of hours, and a drag across it paints**
+([#551](https://github.com/Raketa02/Raketa/issues/551),
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, mock 36).
+`AvailabilityGrid` is transposed — the days across, the hours down — and every caller builds its
+rows from `HOURS` and its cells from `WEEKDAYS`; `weeklyHoursAt` in `shared/vocabulary/week` turns
+the places the grid reports back into hours, so the orientation is read one way, once. **A tap is
+the cell's `Pressable`; a drag is `react-native-gesture-handler`'s pan** over the cells alone, the
+second use of the library after the radar's field: the grid sits in a page that scrolls, and a
+recogniser that claims the touch at a 4pt intent — under both platforms' scroll slop — is what
+keeps a drag down a column a paint, while its claiming cancels the press the cell under the finger
+had begun. The hour labels and the heads are outside the paint field, so a thumb there still
+scrolls. **The pan is built once and reads the rows and `onPaint` through a ref** — the radius
+slider's rule — and reports **the run so far, whole**, which `paintCells` lands idempotently, so a
+caller a render behind the finger drops nothing. What is decided is `availabilityGridGeometry`'s,
+tested as numbers: which cell a point is over (a gap belongs to the cell before it, a finger off
+the grid is over the edge cell), which cells a fast drag jumped (`cellsCrossed`, one step at a
+time along the longer axis), and what a run holds (`extendRun`: each cell once, in the order
+crossed). **The cell is 20pt tall and under the 44pt minimum on purpose**, granted half the gap on
+every side (`hit.availabilityCell`), and the tick stays on a ticked hour although mock 36 draws the
+fill alone — both recorded in design-system Part 16 and flagged. The router suites drag it through
+`test-support/weekGridTouch`. **Not seen on a device**: the paint against the page's scroll on
+either platform, and the press the pan is meant to cancel.
+
+**The seventh port is the payment provider's phone half, and it carries a component**
+([#552](https://github.com/Raketa02/Raketa/issues/552)). `shared/lib/platform/payments.tsx` is the only
+importer of `@stripe/stripe-react-native` — fenced in `CORE_PATTERNS` like the native ports, one file
+wide, and probed by `pnpm test:boundaries`. Stripe's card fields are a native **view** whose entry
+stays inside it, so `PaymentsPort` carries `CardFields` beside `phoneWallet`, `takeCard` (turn what
+the fields hold into a reference, while they are mounted) and `confirmSetup` (the bank's check, or the
+wallet's sheet — four answers, never a rejection). `PaymentsProvider`/`usePayments` as the other
+ports; `fakePayments()` behaves as Stripe's test cards do, and **the router harness always provides
+one** (`NO_PAYMENTS`, `stubPayments`), the live channel's rule: the device's port would reach an SDK
+jest has mocked into answering _no error_ to everything. `jest.setup.js` uses the SDK's own jest mock
+for that far side. `app.config.ts` adds Stripe's config plugin with Google Pay declared and **no
+Apple Pay merchant** — an entitlement a personal team cannot sign (O6); the one value both the
+plugin and the port read is `shared/config/applePay.ts`, which imports nothing, for
+`appIdentity.ts`'s reason. `theme.size.payments` holds
+the step mark, the method card's badge and the fields' row. The record is
+[`payments.md`](payments.md).
+
+**The eighth port is the phone's push notifications** ([#559](https://github.com/Raketa02/Raketa/issues/559)).
+`shared/lib/platform/push.ts` is the only importer of `expo-notifications` — fenced in
+`CORE_PATTERNS` like the native ports, one file wide, and probed by `pnpm test:boundaries`. Six verbs:
+the permission in the platform's vocabulary (asked through a notification channel on Android, made
+first), `readToken` (this phone's Expo push token, kept for the process until the system replaces it
+— or `null` for a build that cannot be pushed, and for an answer Expo has not given within the app's
+request timeout; it never rejects, since the sign-out waits on it), `onTokenChange`,
+`onNotice` (a push while the app is open, handed up as it came — the payload is untrusted and the
+feature checks it) and `onOpen` (a push tapped, the cold start's tap read once when the first
+listener subscribes, every tap handed over once). `PushProvider`/`usePush` as the other ports;
+`fakePush()` is a phone whose permission, token, arriving pushes and taps a suite decides, and **the
+router harness always provides one** — `NO_PUSH`, inert, so no suite's _Allow notifications_ carries
+into the next — with `stubPush` for the suites about it. `jest.setup.js` mocks the library's far
+side. `shared/config/push.ts` holds the Expo project (none yet, #533) and whether an iPhone build may
+carry the push entitlement (not yet, O6); `plugins/push.ts` takes the entitlement back out of the
+iPhone build, which `expo-notifications`' own plugin adds unasked — **the removal is applied to the
+returned config, before the plugin list, because a plugin registered earlier runs its change
+later**, and `npx expo config --type introspect` shows no `aps-environment`. `theme.motion.hold.notice`
+holds the banner's six seconds. The record is [`notifications.md`](notifications.md).

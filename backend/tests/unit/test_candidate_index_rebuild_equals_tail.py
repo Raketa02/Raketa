@@ -36,13 +36,13 @@ from app.modules.matchmaking.infrastructure.candidate_index_model import (
     CandidateRowORM,
 )
 from app.modules.player_profile.domain.events import (
-    AvailabilityChanged,
     GenderChanged,
     GenderPreferenceChanged,
     LocationChanged,
     PhotosChanged,
     SearchRadiusChanged,
     SocialTagsChanged,
+    WeeklyHoursSet,
 )
 from app.modules.auth.domain.events import RefreshTokenIssued, RefreshTokenRotated
 from tests.unit.candidate_index_fixtures import (
@@ -81,7 +81,7 @@ async def _write_the_fixture(session_factory) -> list:
         rating_initialised(bob, sport="TENNIS"),
         intent_declared(bob, sport="TENNIS", intent="SOCIAL"),
         SocialTagsChanged(alice, ("social_first", "competitive_edge"), START),
-        AvailabilityChanged(alice, ("3:EVENING", "6:MORNING"), START),
+        WeeklyHoursSet(alice, ("3:19", "6:10"), START),
         LocationChanged(alice, 50.0619, 19.9369, START),
         SearchRadiusChanged(alice, 40, START),
         GenderChanged(alice, "NON_BINARY", START),

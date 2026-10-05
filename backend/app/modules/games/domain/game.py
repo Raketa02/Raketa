@@ -35,6 +35,14 @@ evening nor a ghost, and every read that counts either leaves it out.
 game as a whole — recorded once per player and folded into a set the rail's
 read subtracts its reader from. Nothing else folds it.
 
+**A booked game can say somebody did not come** (#547; the mechanics §15.3).
+The players who came report them where they would enter the result; the
+reported player has a day to dispute it; a player the club checked in cannot be
+reported. A report is the entry for that game — no score stands beside one — and
+whatever it comes to, **the game does not count**. And **a booked game is called
+off whole** when its club takes the court back before its hour, with a seat
+open or none (``call_off_whole``).
+
 **One aggregate per game and never one per player.** Whether you won is a
 property of the game and of which side you were on; a per-player record would be
 four copies of one score, and the day two of them disagreed there would be
@@ -49,7 +57,7 @@ derived.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Collection, Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant, invariant
@@ -59,18 +67,29 @@ from app.modules.games.domain.answering import (
 )
 from app.modules.games.domain.errors import (
     AcceptingYourOwnSidesResult,
+    ANoShowIsReported,
+    AResultIsAlreadyEntered,
     AResultMustCarryAScore,
+    CheckedInAtTheClub,
     GameIsNotCalledOff,
     NobodyHasProposedAResult,
+    NobodyReportedYou,
+    NoShowsAreForBookedGames,
     NotAGameToCallOff,
+    NotOnThisCourt,
     TheCourtHasAnOpenSeat,
+    TheDisputeWindowHasClosed,
     TheEntryWindowHasClosed,
+    TheGameHasNotStarted,
     TheGameIsNotOpenToSeating,
+    TheGameStartedShort,
     TheGameWasCalledOff,
     TheOtherSideHasAnswered,
     TheResultIsAlreadyAccepted,
     TheResultIsSettled,
+    YouCannotReportYourself,
     YouWereNotOnThisCourt,
+    YouWereReportedAsANoShow,
     YourSideHasAlreadyAnswered,
 )
 from app.modules.games.domain.events import (
@@ -79,6 +98,8 @@ from app.modules.games.domain.events import (
     GamePlanned,
     GamePlayed,
     LineUpReseated,
+    NoShowDisputed,
+    NoShowReported,
     ResultAccepted,
     ResultCorrected,
     ResultCountered,
@@ -91,6 +112,7 @@ from app.modules.games.domain.standing import (
     PLAYED,
     SETTLED,
     Acceptance,
+    NoShowReport,
     Proposal,
     GameStanding,
     agreed_score,
@@ -99,7 +121,7 @@ from app.modules.games.domain.standing import (
     standing_of,
 )
 from app.modules.games.domain.windows import entry_closes_at
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 
@@ -122,6 +144,10 @@ class Game:
     window: Window | None
     line_up: LineUp
     planned_at: Instant
+    #: The hour a **booking** opened this game for (#541), or ``None`` on a game
+    #: a completed line-up opened, which has none. Its entry window runs from
+    #: the hour when there is one (``windows.entry_closes_at``).
+    starts_at: Instant | None
     #: When somebody said it happened, and ``None`` while nobody has. **This is
     #: the moment**, and there is no other one anywhere in this context.
     played_at: Instant | None
@@ -157,6 +183,10 @@ class Game:
     #: the shape: there is nowhere here to put a third score.
     proposals: dict[GameSide, Proposal]
     acceptance: Acceptance | None
+    #: Everybody reported as not turning up to this booked game, and what became
+    #: of each report (#547). Folded off ``NoShowReported`` and
+    #: ``NoShowDisputed``; empty on every game that has no such report.
+    no_shows: dict[UUID, NoShowReport]
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -184,6 +214,7 @@ class Game:
         window: Window | None,
         line_up: LineUp,
         occurred_at: Instant,
+        starts_at: Instant | None = None,
     ) -> "Game":
         """Open a game from a line-up that has just completed.
 
@@ -203,6 +234,7 @@ class Game:
                 window=None if window is None else window.value,
                 seatings=line_up.codes,
                 occurred_at=occurred_at,
+                starts_at=starts_at,
             )
         )
         return game
@@ -253,6 +285,32 @@ class Game:
             )
         )
 
+    def take_seat(
+        self, player_id: UUID, *, side: GameSide, occurred_at: Instant
+    ) -> None:
+        """A booking's rescue took an open seat on ``side`` (#545). **This is
+        the court now** — recorded as the re-seat it is, so the room, whose
+        members are the line-up, takes them in and the stream reads find them
+        on the court — but one seat at a time: a court that lost two players
+        is still short of one after the first rescue.
+
+        Told by ``bookings`` in the transaction of the rescue, which has
+        already asked whether the seat is there to take. What this refuses is
+        the aggregate's own half: a game no longer awaiting its entry — its
+        hour has come — and a side with no seat open.
+        """
+
+        line_up = self.line_up.seated(player_id, side=side)
+        if self.standing_at(occurred_at) is not GameStanding.AWAITING_ENTRY:
+            raise TheGameIsNotOpenToSeating()
+        self._record_that(
+            LineUpReseated(
+                game_id=self.game_id,
+                seatings=line_up.codes,
+                occurred_at=occurred_at,
+            )
+        )
+
     # -- ending it ---------------------------------------------------------
 
     def call_off(self, *, by: UUID | None, occurred_at: Instant) -> None:
@@ -285,6 +343,36 @@ class Game:
         self._record_that(
             GameCalledOff(
                 game_id=self.game_id, called_by=by, occurred_at=occurred_at
+            )
+        )
+
+    def call_off_whole(self, *, occurred_at: Instant) -> None:
+        """The club took back the court this booked game was on (#547; the
+        mechanics §16.9). **Its end**, called off by nobody — as the hour calls
+        off a court left short — **whole or with a seat open**: the one end of
+        a game standing whole that is somebody's act, because the court itself
+        is gone.
+
+        Told by ``bookings`` in the transaction of the club's act, which has
+        already asked whether the booking may still be called off; so everything this
+        refuses is a broken precondition — a game with no hour, one no longer
+        awaiting its entry, or one whose hour has come.
+        """
+
+        invariant(
+            self.starts_at is not None,
+            f"{self.game_id} is called off whole as a booked game, with no hour",
+        )
+        assert self.starts_at is not None
+        invariant(
+            occurred_at < self.starts_at
+            and self.standing_at(occurred_at) is GameStanding.AWAITING_ENTRY,
+            f"{self.game_id} is called off whole at {occurred_at}: "
+            f"{self.standing_at(occurred_at)}, its hour {self.starts_at}",
+        )
+        self._record_that(
+            GameCalledOff(
+                game_id=self.game_id, called_by=None, occurred_at=occurred_at
             )
         )
 
@@ -361,6 +449,11 @@ class Game:
         side = self._side_of(by)
         if score is None:
             raise AResultMustCarryAScore()
+        if self.no_shows:
+            # A report is this game's entry, and no score stands beside one.
+            if self.standing_at(occurred_at) in SETTLED:
+                raise TheResultIsSettled()
+            raise ANoShowIsReported()
 
         if self.played_at is None:
             if self.called_off_at is not None:
@@ -368,7 +461,9 @@ class Game:
                 # before the open seat: the end this game met is the answer,
                 # and its window stopped mattering the moment it was called off.
                 raise TheGameWasCalledOff()
-            if occurred_at >= entry_closes_at(self.planned_at):
+            if self.standing_at(occurred_at) is GameStanding.STARTED_SHORT:
+                raise TheGameStartedShort()
+            if occurred_at >= self.entry_closes_at:
                 raise TheEntryWindowHasClosed()
             if not self.line_up.is_complete:
                 # **A score on a court with a seat open is refused**
@@ -450,18 +545,122 @@ class Game:
             )
         )
 
+    # -- somebody did not come ----------------------------------------------
+
+    def report_no_show(
+        self,
+        *,
+        by: UUID,
+        absent: UUID,
+        checked_in: Collection[UUID],
+        occurred_at: Instant,
+    ) -> None:
+        """*Kuba didn't come* — said by somebody who came to a **booked** game,
+        where they would enter its result (#547; the mechanics §15.3).
+
+        **What it refuses, in order**: somebody off the court, a game with no
+        hour, a report of yourself or of somebody who was not on it; a game
+        called off, started short, not started yet, scored, settled, or past
+        its entry window; a reporter reported themselves, whose answer is the
+        dispute; and **a player the club checked in** — ``checked_in`` is the
+        desk's word, asked by the caller. A player already reported is
+        reported: a second report writes nothing.
+        """
+
+        self._side_of(by)
+        if self.starts_at is None:
+            raise NoShowsAreForBookedGames()
+        if absent == by:
+            raise YouCannotReportYourself()
+        if self.line_up.side_of(absent) is None:
+            raise NotOnThisCourt()
+        if self.called_off_at is not None:
+            raise TheGameWasCalledOff()
+        standing = self.standing_at(occurred_at)
+        if standing is GameStanding.STARTED_SHORT:
+            raise TheGameStartedShort()
+        if occurred_at < self.starts_at:
+            raise TheGameHasNotStarted()
+        if self.played_at is not None:
+            raise AResultIsAlreadyEntered()
+        if standing in SETTLED and standing is not GameStanding.NEVER_PLAYED:
+            raise TheResultIsSettled()
+        if occurred_at >= self.entry_closes_at:
+            raise TheEntryWindowHasClosed()
+        if by in self.no_shows:
+            raise YouWereReportedAsANoShow()
+        if absent in checked_in:
+            raise CheckedInAtTheClub()
+        if absent in self.no_shows:
+            return
+        self._record_that(
+            NoShowReported(
+                game_id=self.game_id,
+                player_id=absent,
+                reported_by=by,
+                occurred_at=occurred_at,
+            )
+        )
+
+    def dispute_no_show(self, *, by: UUID, occurred_at: Instant) -> None:
+        """*I was there* — the reported player, inside their day (#547). The
+        report falls; a second dispute writes nothing."""
+
+        report = self.no_shows.get(by)
+        if report is None:
+            raise NobodyReportedYou()
+        if report.disputed_at is not None:
+            return
+        if not self.may_dispute(by, now=occurred_at):
+            raise TheDisputeWindowHasClosed()
+        self._record_that(
+            NoShowDisputed(game_id=self.game_id, player_id=by, occurred_at=occurred_at)
+        )
+
+    def may_dispute(self, player_id: UUID, *, now: Instant) -> bool:
+        """Whether a report of this player not coming waits on their dispute at
+        ``now`` — undisputed, and inside its own day (#547)."""
+
+        report = self.no_shows.get(player_id)
+        return (
+            report is not None
+            and report.disputed_at is None
+            and now < report.dispute_closes_at
+        )
+
+    def confirmed_no_shows_at(self, now: Instant) -> frozenset[UUID]:
+        """Everybody who did not come to this game, as it stands at ``now`` —
+        **only once the game is a no-show**, every report having had its day:
+        a report still inside its day is not a verdict yet (#547)."""
+
+        if self.standing_at(now) is not GameStanding.NO_SHOW:
+            return frozenset()
+        return frozenset(
+            player for player, report in self.no_shows.items() if report.stands_at(now)
+        )
+
     # -- reading ----------------------------------------------------------
+
+    @property
+    def entry_closes_at(self) -> Instant:
+        """When *we played* stops being sayable — from the booked hour's end
+        when a booking opened this game, from its week otherwise."""
+
+        return entry_closes_at(self.planned_at, starts_at=self.starts_at)
 
     def standing_at(self, now: Instant) -> GameStanding:
         """What this game is, at this instant. **The only place a standing exists.**"""
 
         return standing_of(
             planned_at=self.planned_at,
+            starts_at=self.starts_at,
             played_at=self.played_at,
             called_off_at=self.called_off_at,
             proposals=self.proposals,
             acceptance=self.acceptance,
             now=now,
+            line_up_complete=self.line_up.is_complete,
+            no_shows=self.no_shows,
         )
 
     def was_played_at(self, now: Instant) -> bool:
@@ -496,7 +695,14 @@ class Game:
             # stream somebody else wrote.
             return self.called_off_at or now
         if standing is GameStanding.NEVER_PLAYED:
-            return entry_closes_at(self.planned_at)
+            return self.entry_closes_at
+        if standing is GameStanding.STARTED_SHORT:
+            # Set for exactly this standing, which only a booked game reaches.
+            return self.starts_at or now
+        if self.no_shows:
+            # A report is the entry of a game somebody did not come to: it is
+            # history from the first one, whatever the reports come to (#547).
+            return min(report.at for report in self.no_shows.values())
         if standing in PLAYED:
             # ``played_at`` is set for every standing in ``PLAYED`` — the entry
             # that records *we played* is the only thing that can set it.
@@ -549,6 +755,26 @@ class Game:
             acceptance=self.acceptance,
             now=now,
         )
+
+    def awaits_agreement_from(self, player_id: UUID, *, now: Instant) -> bool:
+        """Whether a score on the table waits on this player's agreement — the
+        *result to confirm* that is theirs to clear (#542; the mechanics §3).
+
+        **The other side's score is up and nobody has agreed with anything**: a
+        score of their own side's waits on the other side, and an agreement
+        running out its grace is settled unless somebody disagrees — a right
+        the screen still offers, not a task. Never true off the court, and never
+        outside ``AWAITING_ANSWER``.
+        """
+
+        side = self.line_up.side_of(player_id)
+        if (
+            side is None
+            or self.standing_at(now) is not GameStanding.AWAITING_ANSWER
+            or self.standing_acceptance() is not None
+        ):
+            return False
+        return any(proposal.side is not side for proposal in self.standing_proposals())
 
     def outcome_for(self, player_id: UUID, *, now: Instant) -> Outcome | None:
         """Win or loss for one of the people who played. **Never a draw.**
@@ -638,6 +864,7 @@ class Game:
         game.departed = frozenset()
         game.proposals = {}
         game.acceptance = None
+        game.no_shows = {}
         game._events = EventRecorder()
         return game
 
@@ -656,12 +883,18 @@ class Game:
             self.window = None if event.window is None else Window(event.window)
             self.line_up = LineUp.from_codes(event.seatings)
             self.planned_at = instant(event.occurred_at)
+            self.starts_at = (
+                None if event.starts_at is None else instant(event.starts_at)
+            )
         elif isinstance(event, SeatVacated):
             self.line_up = self.line_up.vacated_by(event.player_id)
             self.departed |= {event.player_id}
         elif isinstance(event, LineUpReseated):
             self.line_up = LineUp.from_codes(event.seatings)
-            self.departed = frozenset()
+            # A whole court has nobody's departure on it; a rescue that leaves a
+            # seat still open keeps its leavers, as the court is not whole (#545).
+            if self.line_up.is_complete:
+                self.departed = frozenset()
         elif isinstance(event, GameCalledOff):
             self.called_off_at = instant(event.occurred_at)
             self.called_off_by = event.called_by
@@ -685,6 +918,23 @@ class Game:
                 of_side=accepting.other,
                 at=instant(event.occurred_at),
             )
+        elif isinstance(event, NoShowReported):
+            self.no_shows = {
+                **self.no_shows,
+                event.player_id: NoShowReport(
+                    reported_by=event.reported_by, at=instant(event.occurred_at)
+                ),
+            }
+        elif isinstance(event, NoShowDisputed):
+            report = self.no_shows[event.player_id]
+            self.no_shows = {
+                **self.no_shows,
+                event.player_id: NoShowReport(
+                    reported_by=report.reported_by,
+                    at=report.at,
+                    disputed_at=instant(event.occurred_at),
+                ),
+            }
         else:
             raise TypeError(f"Unsupported game event {event!r}")
         self.version += 1

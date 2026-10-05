@@ -26,7 +26,7 @@ import {
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
 import {
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   ONBOARDING_ROUTES,
   launchSignedIn,
   stubGate,
@@ -65,7 +65,7 @@ const NEW_PAIR: Wire['TokenResponse'] = {
   expires_in: 900,
 };
 
-/** Tomek plays padel and is past onboarding, so a session that begins lands on the Now tab. */
+/** Tomek plays padel and is past onboarding, so a session that begins lands on the Home tab. */
 const IN_THE_APP: GateStub = {
   hasPlayerProfile: true,
   ratings: [
@@ -262,7 +262,7 @@ describe('the code, and a new password', () => {
 
     typeNewPassword();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(getSessionStatus()).toBe('authenticated');
     const [set] = transport.requestsTo('POST', NEW_PASSWORD_PATH);
     expect(set?.body).toEqual({ ticket: TICKET, password: 'forehand42' });
@@ -405,7 +405,7 @@ describe('setting the new password', () => {
     await waitFor(() => expect(screen).toHavePathname('/forgot-password/new-password'));
     typeNewPassword();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(transport.requestsTo('POST', NEW_PASSWORD_PATH).at(-1)?.body).toEqual({
       ticket: 'ticket_the-second-one',
       password: 'forehand42',
@@ -500,7 +500,7 @@ describe("the email's link", () => {
     expect(screen.getByText(RESET_COPY.newPassword.title)).toBeTruthy();
     typeNewPassword();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     const [set] = transport.requestsTo('POST', NEW_PASSWORD_PATH);
     expect(set?.body).toEqual({ token: TOKEN, password: 'forehand42' });
     await expect(readStoredTokens()).resolves.toEqual({

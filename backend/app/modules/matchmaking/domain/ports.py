@@ -213,11 +213,11 @@ class PlayerScoreQuery(Protocol):
     """The six reliability strands, each with the evidence behind it.
 
     **Three of them have a provider** — *shows up*, out of plans that settled
-    either way, *answers challenges*, out of invitations whose day is over, and
-    *answers about results*, out of the scores put in front of somebody
-    (``docs/adr/0160``). The other three are absent from every reading rather than
-    published at nought, and the term renormalises over what arrives
-    (``docs/adr/0140``).
+    either way, *keeps plans*, out of booked games kept or broken (#544, where
+    it took *answers challenges*' place), and *answers about results*, out of
+    the scores put in front of somebody (``docs/adr/0160``). The other three are
+    absent from every reading rather than published at nought, and the term
+    renormalises over what arrives (``docs/adr/0140``).
 
     **The matcher applies no decay of its own.** The score is a memory and fades
     with new evidence on the provider's side; a second decay here would

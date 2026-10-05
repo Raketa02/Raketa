@@ -1,4 +1,4 @@
-import type { WeekCell } from '@/shared/vocabulary/week';
+import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import {
   differsFromProfile,
@@ -11,8 +11,8 @@ import {
   type WorkingWeek,
 } from './workingWeek';
 
-const TUESDAY_EVENING: WeekCell = { day: 2, part: 'evening' };
-const SATURDAY_MORNING: WeekCell = { day: 6, part: 'morning' };
+const TUESDAY_EVENING: WeeklyHour = { day: 2, hour: 19 };
+const SATURDAY_MORNING: WeeklyHour = { day: 6, hour: 9 };
 const PROFILE: WorkingWeek = [TUESDAY_EVENING, SATURDAY_MORNING];
 
 describe('seeding the working copy', () => {
@@ -22,7 +22,7 @@ describe('seeding the working copy', () => {
 
   it('is a copy, so a tap on the grid is not a tap on the profile', () => {
     const profile = [...PROFILE];
-    const working = toggleCell(seedWorkingWeek(profile), { day: 1, part: 'morning' });
+    const working = toggleCell(seedWorkingWeek(profile), { day: 1, hour: 9 });
 
     expect(working).toHaveLength(3);
     expect(profile).toEqual(PROFILE);
@@ -31,24 +31,22 @@ describe('seeding the working copy', () => {
 
 describe('toggling a cell', () => {
   it('ticks a cell that is not ticked, and unticks one that is', () => {
-    const on = toggleCell(PROFILE, { day: 1, part: 'morning' });
-    expect(isTicked(on, { day: 1, part: 'morning' })).toBe(true);
+    const on = toggleCell(PROFILE, { day: 1, hour: 9 });
+    expect(isTicked(on, { day: 1, hour: 9 })).toBe(true);
 
-    expect(isTicked(toggleCell(on, { day: 1, part: 'morning' }), { day: 1, part: 'morning' })).toBe(
-      false,
-    );
+    expect(isTicked(toggleCell(on, { day: 1, hour: 9 }), { day: 1, hour: 9 })).toBe(false);
   });
 
   it('keeps press order, so a week handed back unchanged is the same list', () => {
-    expect(toggleCell(PROFILE, { day: 1, part: 'morning' })).toEqual([
+    expect(toggleCell(PROFILE, { day: 1, hour: 9 })).toEqual([
       TUESDAY_EVENING,
       SATURDAY_MORNING,
-      { day: 1, part: 'morning' },
+      { day: 1, hour: 9 },
     ]);
   });
 
   it('reads a day and a part together — the same day at another part is another cell', () => {
-    expect(isTicked(PROFILE, { day: 2, part: 'morning' })).toBe(false);
+    expect(isTicked(PROFILE, { day: 2, hour: 9 })).toBe(false);
   });
 });
 
@@ -58,16 +56,14 @@ describe('whether the week differs from the profile', () => {
   });
 
   it('reports a tick', () => {
-    expect(differsFromProfile(toggleCell(PROFILE, { day: 1, part: 'morning' }), PROFILE)).toBe(
-      true,
-    );
+    expect(differsFromProfile(toggleCell(PROFILE, { day: 1, hour: 9 }), PROFILE)).toBe(true);
   });
 
   it('AC-27: a slot ticked on and off again is no longer reported as changed', () => {
     // The case that decides the shape. `changed` cannot be a flag a toggle sets — this
     // player is back where they started and a flag would still be up.
-    const there = toggleCell(seedWorkingWeek(PROFILE), { day: 4, part: 'afternoon' });
-    const back = toggleCell(there, { day: 4, part: 'afternoon' });
+    const there = toggleCell(seedWorkingWeek(PROFILE), { day: 4, hour: 14 });
+    const back = toggleCell(there, { day: 4, hour: 14 });
 
     expect(differsFromProfile(there, PROFILE)).toBe(true);
     expect(differsFromProfile(back, PROFILE)).toBe(false);
@@ -86,8 +82,8 @@ describe('whether the week differs from the profile', () => {
   });
 
   it('compares cells, not list positions: a repeat is not a second cell', () => {
-    // A scan-based comparison reports [Tue evening, Tue evening] equal to
-    // [Tue evening, Sat morning] — same length, and every member of the first is in the
+    // A scan-based comparison reports [Tue 19:00, Tue 19:00] equal to
+    // [Tue 19:00, Sat 09:00] — same length, and every member of the first is in the
     // second. Nothing in this app's own toggle can produce a repeat, and a week off the wire
     // is not this app's own.
     expect(sameWeek([TUESDAY_EVENING, TUESDAY_EVENING], PROFILE)).toBe(false);

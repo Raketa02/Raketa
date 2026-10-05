@@ -111,19 +111,17 @@ from app.bootstrap.composition import (
 from app.core.config import Settings, get_settings
 from app.infrastructure.database.engine import create_engine
 from app.kernel import Clock, Instant, Sport, exhaustive
-from app.modules.player_profile.application.change_availability import (
-    ChangeAvailability,
-)
 from app.modules.player_profile.application.commands import (
-    ChangeAvailabilityCommand,
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
+    SetWeeklyHoursCommand,
 )
 from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
 )
 from app.modules.player_profile.application.declare_play_intent import DeclarePlayIntent
 from app.modules.player_profile.application.commands import UploadPhotoCommand
+from app.modules.player_profile.application.set_weekly_hours import SetWeeklyHours
 from app.modules.player_profile.application.upload_photo import UploadPhoto
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
@@ -185,8 +183,26 @@ from app.seeds.administrators import (
     administrator_lines,
     write_the_administrators,
 )
+from app.seeds.club_courts import (
+    SeededCourts,
+    club_courts_lines,
+    write_the_club_courts,
+)
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
+from app.seeds.bookings import SeededBookings, book_her_games, booking_lines
+from app.seeds.rescues import SeededRescues, rescue_lines, seed_the_rescues
+from app.seeds.posts import SeededPost, post_her_game, post_lines
+from app.seeds.proposals import (
+    SeededProposals,
+    proposal_lines,
+    write_the_proposals,
+)
+from app.seeds.payments import (
+    SeededPaymentMethods,
+    payment_method_lines,
+    write_the_payment_methods,
+)
 from app.seeds.official_groups import (
     SeededOfficialGroups,
     official_group_lines,
@@ -216,7 +232,13 @@ from app.seeds.photos import (
 from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 from app.seeds.plans import SeededPlans, costs as plan_costs, write_the_plans
 from app.seeds.rooms import SeededRooms, open_the_rooms
-from app.seeds.screens import assert_the_screens
+from app.seeds.screens import (
+    assert_the_club_bookings,
+    assert_the_fill_in,
+    assert_the_group_deck,
+    assert_the_posting_grid,
+    assert_the_screens,
+)
 from app.seeds.sportsmanship import SeededOpinions, write_what_players_said
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
@@ -320,7 +342,7 @@ class _UseCases:
     complete: CompleteAssessment
     abandon: AbandonAssessment
     commit_profile: CommitPlayerProfile
-    change_availability: ChangeAvailability
+    set_weekly_hours: SetWeeklyHours
     declare_intent: DeclarePlayIntent
 
 
@@ -400,9 +422,7 @@ def _build(
             uow=uow,
             clock=clock,
         ),
-        change_availability=ChangeAvailability(
-            profiles=profiles, uow=uow, clock=clock
-        ),
+        set_weekly_hours=SetWeeklyHours(profiles=profiles, uow=uow, clock=clock),
         declare_intent=DeclarePlayIntent(
             declarations=declarations, uow=uow, clock=clock
         ),
@@ -580,8 +600,8 @@ async def _ensure_profile(
     above make.
 
     **A cleared week is a commit followed by an edit**, and it has to be: the
-    commit refuses an empty grid because the floor binds the answer a player is
-    *asked* for, while ``ChangeAvailability`` accepts one because clearing a week
+    commit refuses an empty week because the floor binds the answer a player is
+    *asked* for, while ``SetWeeklyHours`` accepts one because clearing a week
     afterwards is a legal edit. Reaching a blank week any other way would be
     reaching it by a path no player has.
     """
@@ -595,7 +615,7 @@ async def _ensure_profile(
             idempotency_key=f"seed-profile-{player_id}",
             social_tag_ids=list(profile.social_tag_ids),
             photo_ids=list(profile.photo_ids),
-            availability=list(profile.availability),
+            weekly_hours=list(profile.weekly_hours),
             latitude=profile.latitude,
             longitude=profile.longitude,
             search_radius_km=profile.search_radius_km,
@@ -616,9 +636,9 @@ async def _ensure_profile(
                 surface=profile.intent_surface,
             )
         )
-    if profile.clear_the_week and result.profile.availability.slots:
-        await use_cases.change_availability.execute(
-            ChangeAvailabilityCommand(player_id=player_id, availability=[])
+    if profile.clear_the_week and result.profile.weekly_hours.hours:
+        await use_cases.set_weekly_hours.execute(
+            SetWeeklyHoursCommand(player_id=player_id, weekly_hours=[])
         )
     return result.created
 
@@ -1011,7 +1031,7 @@ def _profile_of(
     """
 
     return SeedProfile(
-        availability=member.availability,
+        weekly_hours=member.weekly_hours,
         photo_ids=photographs,
         social_tag_ids=member.tags,
         search_radius_km=member.radius_km,
@@ -1208,6 +1228,9 @@ class SeedReport:
     #: The clubs, each signed up by its own desk. ``None`` on the callers that
     #: drive the populations without the layers above them.
     clubs: SeededClubs | None = None
+    #: What each of those clubs offers Raketa, and how. ``None`` on the same
+    #: callers and for the same reason.
+    club_courts: SeededCourts | None = None
     #: The player groups at those clubs, and who is in each. ``None`` on the same
     #: callers and for the same reason.
     groups: SeededGroups | None = None
@@ -1217,6 +1240,19 @@ class SeedReport:
     #: The official groups those administrators run, and who is in each.
     #: ``None`` on the same callers and for the same reason.
     official_groups: SeededOfficialGroups | None = None
+    #: The card every seeded player but one has saved. ``None`` on the same
+    #: callers and for the same reason.
+    payment_methods: SeededPaymentMethods | None = None
+    #: The games still filling in the protagonist's games group — picks with
+    #: nought to three In. ``None`` on the same callers and for the same reason.
+    proposals: SeededProposals | None = None
+    #: Her booked games and receipts (#541). ``None`` on the same callers as
+    #: the proposals.
+    bookings: SeededBookings | None = None
+    #: The rescues on her board (#545). ``None`` on the same callers.
+    rescues: SeededRescues | None = None
+    #: Her own post (#546). ``None`` on the same callers.
+    post: SeededPost | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1270,9 +1306,24 @@ async def run(settings: Settings | None = None) -> SeedReport:
             )
             await refuse_a_cohort_that_has_aged_out(session, members, now=now)
             await refuse_a_histogram_that_has_moved(session, members)
+        # **The payment methods straight after the people**, each saved through
+        # the setup a phone runs. Nothing below reads one yet and a saved card
+        # changes nothing any other layer reads, so its place is free; it is
+        # here because every game the later layers will seed is paid for.
+        payment_methods = await write_the_payment_methods(
+            session_factory,
+            now=now,
+            cohort=[(member.member.handle, member.player_id) for member in members],
+        )
         # **The clubs next, before anything that could stand at one.** A club
         # reads nobody, and a group needs a home club.
         clubs = await write_the_clubs(session_factory, settings=settings, now=now)
+        # **Their courts straight after them**, set up by each desk. Nothing
+        # below reads a court yet and a court changes nothing any player-side
+        # layer reads, so like the groups its position after its club is free.
+        club_courts = await write_the_club_courts(
+            session_factory, settings=settings, now=now, clubs=clubs
+        )
         # **The groups straight after their clubs**, created and joined by the
         # named accounts. Nothing below reads a group and a group changes nothing
         # anybody else reads — no pair, no index row, no court — so its position
@@ -1329,6 +1380,43 @@ async def run(settings: Settings | None = None) -> SeedReport:
         written = await write_the_loop(
             session_factory, settings=settings, now=now
         )
+        # **The games still filling, after every layer that writes anything a
+        # fit reads.** A pick is made through the real pair rule, which reads
+        # blocks live, so it comes after the relationships wrote theirs; and its
+        # yeses are real ones, so it comes after the cards were saved. Nothing
+        # below reads a proposal, and its events are delivered with the rest.
+        proposals = await write_the_proposals(
+            session_factory,
+            settings=settings,
+            now=now,
+            cohort=[(member.member.handle, member.player_id) for member in members],
+        )
+        # **Her booked games, after the games still filling** (#541): seated
+        # from the crowd that layer gathered, out of the way of the yeses it
+        # seeded, and booked by the last yes as a phone's is.
+        bookings = await book_her_games(
+            session_factory, settings=settings, now=now, seeded=proposals
+        )
+        # **Her rescues, after her booked games** (#545): seated from the crowd
+        # members with no game that week, at hours of her week clear of every
+        # game and yes the layers above seeded — and one of each four leaves.
+        rescues = await seed_the_rescues(
+            session_factory,
+            settings=settings,
+            now=now,
+            seeded=proposals,
+            bookings=bookings,
+        )
+        # **Her post, after her rescues** (#546): the last game she is on, at an
+        # hour of her week clear of every game and yes the layers above seeded.
+        post = await post_her_game(
+            session_factory,
+            settings=settings,
+            now=now,
+            seeded=proposals,
+            bookings=bookings,
+            rescues=rescues,
+        )
         # **After every layer that writes and before the screens.** A room is
         # *told* through the outbox by contexts that do not know it exists
         # (``docs/adr/0146`` §5), so nothing above this line opened one — the
@@ -1357,6 +1445,25 @@ async def run(settings: Settings | None = None) -> SeedReport:
             photographs=photographs,
             photos=photos,
         )
+        # Beside the battery: the group deck is this run's proposals layer's
+        # claim, and the cohort's acceptance test builds no proposals.
+        screens = (
+            *screens,
+            await assert_the_group_deck(session_factory, settings=settings, now=now),
+            await assert_the_fill_in(
+                session_factory,
+                settings=settings,
+                now=now,
+                expects_after_the_cut_off=rescues.skipped is None,
+            ),
+            await assert_the_posting_grid(session_factory, settings=settings, now=now),
+            await assert_the_club_bookings(
+                session_factory,
+                settings=settings,
+                now=now,
+                on=bookings.bookings[0].start,
+            ),
+        )
         return SeedReport(
             accounts=accounts,
             members=members,
@@ -1369,9 +1476,15 @@ async def run(settings: Settings | None = None) -> SeedReport:
             loop=loop,
             opinions=opinions,
             clubs=clubs,
+            club_courts=club_courts,
             groups=groups,
             administrators=administrators,
             official_groups=official_groups,
+            payment_methods=payment_methods,
+            proposals=proposals,
+            bookings=bookings,
+            rescues=rescues,
+            post=post,
             photographs=photographs,
         )
     finally:
@@ -1460,8 +1573,20 @@ def report(run_report: SeedReport) -> list[str]:
                 f"assessment {seeded_scenario.assessment_id}"
             )
     lines.extend(["", *_cohort_lines(run_report.members)])
+    if run_report.payment_methods is not None:
+        lines.extend(["", *payment_method_lines(run_report.payment_methods)])
+    if run_report.proposals is not None:
+        lines.extend(["", *proposal_lines(run_report.proposals)])
+    if run_report.bookings is not None:
+        lines.extend(["", *booking_lines(run_report.bookings)])
+    if run_report.rescues is not None:
+        lines.extend(["", *rescue_lines(run_report.rescues)])
+    if run_report.post is not None:
+        lines.extend(["", *post_lines(run_report.post)])
     if run_report.clubs is not None:
         lines.extend(["", *club_lines(run_report.clubs)])
+    if run_report.club_courts is not None:
+        lines.extend(["", *club_courts_lines(run_report.club_courts)])
     if run_report.groups is not None:
         lines.extend(["", *group_lines(run_report.groups)])
     if run_report.administrators is not None:

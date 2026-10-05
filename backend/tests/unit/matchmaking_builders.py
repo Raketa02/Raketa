@@ -46,9 +46,9 @@ from app.modules.matchmaking.domain.search_context import (
 from app.modules.matchmaking.domain.searches import SearchInitiation, SearchSurface
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.kernel import Instant, Sport
-from app.modules.player_profile.domain.availability import AvailabilityGrid
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 
 #: A Wednesday, because on a Saturday *today* and *the weekend* collapse and a
 #: window assertion would stop distinguishing two rungs.
@@ -65,7 +65,7 @@ SEARCHER_MU = 2.80
 SEARCHER_SIGMA = 0.34
 
 #: Four cells of the twenty-one — the availability term's denominator.
-SEARCHER_SLOTS = ("1:EVENING", "3:EVENING", "5:EVENING", "6:MORNING")
+SEARCHER_SLOTS = ("1:19", "3:19", "5:19", "6:10")
 
 TAGS = ("PLAYS_TO_WIN", "HERE_TO_IMPROVE")
 
@@ -123,7 +123,7 @@ def searcher(
         mu=mu,
         sigma=sigma,
         tags=tags,
-        grid=AvailabilityGrid.from_codes(slots),
+        grid=WeeklyHours.from_codes(slots),
         radius_km=radius_km,
         area=area,
         gender=gender,

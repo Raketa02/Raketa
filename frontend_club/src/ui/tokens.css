@@ -82,7 +82,13 @@
   --size-control: 3.25rem;
   --size-control-small: 2.5rem;
   --size-mark: 2rem;
+  --size-badge: 1.25rem; /* the top bar's coral count */
   --size-pin: 1.5rem;
+  --size-radio: 1.125rem; /* a radio or a checkbox drawn by the browser */
+  --size-switch-width: 2.75rem;
+  --size-switch-height: 1.5rem;
+  --size-switch-knob: 1.125rem;
+  --size-switch-gap: 0.1875rem; /* between the knob and the track's edge */
   --size-bar: 0.5rem; /* From original group's bar */
   --size-bar-width: 12rem;
   --size-map: 20rem;
@@ -90,10 +96,16 @@
   --size-card-narrow: 29.75rem;
   --size-card-wide: 42rem;
   --size-dialog: 30rem;
+  --size-menu: 12rem; /* the club's menu under its name */
+  --size-step-action: 13rem; /* the setup checklist's button column */
+  --size-hour-cell: 1.75rem; /* one hour of the weekly grid */
+  --size-hour-label: 2.75rem; /* the grid's 07:00 column */
+  --size-field-narrow: 9rem; /* the narrowest a box gets in a row of them */
   --size-page: 80rem;
   --size-top-bar: 5.25rem;
 
   /* Shadow */
   --shadow-pin: 0 2px 6px #13181b40;
   --shadow-dialog: 0 16px 48px #13181b33;
+  --shadow-menu: 0 8px 24px #13181b26;
 }

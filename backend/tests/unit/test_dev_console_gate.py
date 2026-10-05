@@ -85,6 +85,11 @@ def production(**overrides) -> Settings:
         SMTP_HOST="smtp.raketa.example",
         SMTP_SECURITY="starttls",
         MAIL_SENDER="Raketa <no-reply@raketa.example>",
+        PAYMENTS_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="sk_guard_suite",
+        STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
+        STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
+        STRIPE_CONNECT_WEBHOOK_SECRET="whsec_guard_suite_connect",
         DB_SSL_MODE="require",
         ALLOW_ORIGINS=["https://raketa.example"],
         **overrides,
@@ -119,6 +124,11 @@ def test_the_other_three_are_served(clean_env, environment):
         SMTP_HOST="smtp.raketa.example",
         SMTP_SECURITY="starttls",
         MAIL_SENDER="Raketa <no-reply@raketa.example>",
+        PAYMENTS_PROVIDER="stripe",
+        STRIPE_SECRET_KEY="sk_guard_suite",
+        STRIPE_PUBLISHABLE_KEY="pk_guard_suite",
+        STRIPE_WEBHOOK_SECRET="whsec_guard_suite",
+        STRIPE_CONNECT_WEBHOOK_SECRET="whsec_guard_suite_connect",
     )
 
     refuse_unless_served(settings)  # does not raise
@@ -217,6 +227,11 @@ PRODUCTION_ENV = {
     "SMTP_HOST": "smtp.raketa.example",
     "SMTP_SECURITY": "starttls",
     "MAIL_SENDER": "Raketa <no-reply@raketa.example>",
+    "PAYMENTS_PROVIDER": "stripe",
+    "STRIPE_SECRET_KEY": "sk_guard_suite",
+    "STRIPE_PUBLISHABLE_KEY": "pk_guard_suite",
+    "STRIPE_WEBHOOK_SECRET": "whsec_guard_suite",
+    "STRIPE_CONNECT_WEBHOOK_SECRET": "whsec_guard_suite_connect",
     "DB_SSL_MODE": "require",
     "ALLOW_CREDENTIALS": "false",
 }
@@ -262,8 +277,10 @@ def test_a_production_process_builds_an_app_without_it():
     )
 
     assert result.returncode == 0, result.stderr
-    assert "/dev" not in result.stdout
-    assert "/dev/roster" not in result.stdout
+    # Exact paths, as the printed list quotes them — ``/players/me/devices``
+    # (#549) is no console.
+    assert "'/dev'" not in result.stdout
+    assert "'/dev/roster'" not in result.stdout
 
 
 #: A fifth environment, spelled as `app/core/config.py` spells the four. Patched

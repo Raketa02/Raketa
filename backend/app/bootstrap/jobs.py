@@ -28,12 +28,15 @@ port that would fix it is not built yet.
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from typing import Any
+from uuid import UUID
 
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
+    build_propose_games,
     build_candidate_index_tail,
     build_challenge_repository,
     build_clock,
@@ -41,6 +44,10 @@ from app.bootstrap.composition import (
     build_destroy_ended_conversations,
     build_domain_event_store,
     build_event_publisher,
+    build_expire_proposals,
+    build_expire_unanswered_requests,
+    build_call_off_short_games,
+    build_decide_club_payouts,
     build_exposure_ledger,
     build_image_transcoder,
     build_interest_ledger,
@@ -59,6 +66,7 @@ from app.bootstrap.composition import (
     build_scale_pressure_probe,
     build_search_store,
     build_settle_ratings_on_results,
+    build_summarise_new_bookings,
     build_unit_of_work,
 )
 from app.application.mail.deliver_queued_mail import DeliverQueuedMail
@@ -94,6 +102,11 @@ from app.modules.player_profile.application.review_unreviewed_photos import (
 )
 from app.modules.player_profile.application.sweep_uncommitted_photos import (
     SweepUncommittedPhotos,
+)
+from app.modules.proposals.application.propose_games import (
+    DueForProposing,
+    ProposeGames,
+    Proposed,
 )
 
 logger = logging.getLogger(__name__)
@@ -171,6 +184,46 @@ RATING_CATCH_UP_JOB = "rating-catch-up"
 #: end — but unlike it, what it removes is a stream rather than a row.
 CONVERSATION_SWEEP_JOB = "conversation-sweep"
 
+#: The book-by sweep (#538). It appends a ``ProposalExpired`` to every proposal
+#: whose book-by passed unfilled — **the record, not the fact**: a proposal is
+#: over from its book-by on whether or not this has run, so nobody is told and
+#: nothing a player reads waits on it.
+PROPOSAL_EXPIRY_JOB = "proposal-expiry"
+
+#: The On request timeout (#543). It calls off every request an On request club
+#: did not answer in its time to confirm — and **correctness depends on it**:
+#: every read refuses an answer past the deadline already, but only this frees
+#: the court the request held and makes its players due a new card first.
+REQUEST_TIMEOUT_JOB = "request-timeout"
+
+#: The cut-off (#544). It calls off every booked game whose cut-off came with
+#: a seat open since before it — **a game plays full or not at all** — and
+#: **correctness depends on it**: every read says *called off* from the cut-off
+#: on already, but only this gives everybody still in their money back, frees
+#: the court and emails the club.
+CUT_OFF_JOB = "cut-off"
+
+#: Club payouts (#548). At the close of every club day it decides, per club, one
+#: payout of what its games over by then left it — played, or called off with
+#: what that gives back decided; the outbox makes it and tells the desk.
+#: **Correctness depends on it**: nothing else pays a club.
+CLUB_PAYOUTS_JOB = "club-payouts"
+
+#: The club's daily summary of new bookings (#548): once a club day closes, its
+#: desk is emailed every game booked that day. The record, not the fact — the
+#: Bookings page shows a booking the moment it is made.
+NEW_BOOKINGS_SUMMARY_JOB = "new-bookings-summary"
+
+#: The proposer (#540) — **the engine that builds games**, and the second job
+#: on this list correctness depends on: nothing else deals a pick, re-deals a
+#: seat a no left or widens a pick at half In. It writes through the dealer's
+#: own acts, one transaction each, and a pick's id is its game, so N processes
+#: running it at once make each game once and count the rest as refused.
+PROPOSER_JOB = "proposer"
+#: Its short tick: the pools a change this process delivered made due. **Best
+#: effort** — a restart forgets what was due, and the sweep above sees it.
+PROPOSER_ON_CHANGES_JOB = "proposer-on-changes"
+
 #: The mail worker (``docs/adr/0186`` §2). A queue drain written as a job, like
 #: the outbox: it sends what a use case left in the mail queue and purges the
 #: body — **the purge is the control** on a live secret sitting in the database,
@@ -185,6 +238,7 @@ def build_scheduled_jobs(
     candidate_source: DatabaseCandidateSource | None = None,
     redis_client: Redis | None = None,
     meter: ScoringMeter | None = None,
+    proposer_due: DueForProposing | None = None,
 ) -> list[PeriodicJob]:
     """Every job this process should run, in the order they were registered.
 
@@ -224,6 +278,12 @@ def build_scheduled_jobs(
         or settings.RATING_CATCH_UP_ENABLED
         or settings.CONVERSATION_SWEEP_ENABLED
         or settings.MAIL_DELIVERY_ENABLED
+        or settings.PROPOSAL_EXPIRY_ENABLED
+        or settings.PROPOSER_ENABLED
+        or settings.REQUEST_TIMEOUT_ENABLED
+        or settings.CUT_OFF_ENABLED
+        or settings.CLUB_PAYOUTS_ENABLED
+        or settings.NEW_BOOKINGS_SUMMARY_ENABLED
     ):
         if session_factory is None:
             # Loudly, rather than by registering nothing. *The sweep is off* and
@@ -290,6 +350,48 @@ def build_scheduled_jobs(
                     session_factory=session_factory, settings=settings
                 )
             )
+        if settings.PROPOSAL_EXPIRY_ENABLED:
+            jobs.append(
+                build_proposal_expiry_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.REQUEST_TIMEOUT_ENABLED:
+            jobs.append(
+                build_request_timeout_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.CUT_OFF_ENABLED:
+            jobs.append(
+                build_cut_off_job(session_factory=session_factory, settings=settings)
+            )
+        if settings.CLUB_PAYOUTS_ENABLED:
+            jobs.append(
+                build_club_payouts_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.NEW_BOOKINGS_SUMMARY_ENABLED:
+            jobs.append(
+                build_new_bookings_summary_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.PROPOSER_ENABLED:
+            jobs.append(
+                build_proposer_job(session_factory=session_factory, settings=settings)
+            )
+            # The short tick only where a delivery tells it something: with no
+            # outbox drain in this process, nothing would ever be due.
+            if proposer_due is not None:
+                jobs.append(
+                    build_proposer_on_changes_job(
+                        session_factory=session_factory,
+                        settings=settings,
+                        due=proposer_due,
+                    )
+                )
     if settings.PHOTO_REVIEW_BACKFILL_ENABLED:
         # Outside the block above, because this is the second job here that
         # reads no database at all: its whole input is the object store and its
@@ -467,6 +569,294 @@ def build_mail_delivery_job(
         interval_seconds=settings.MAIL_DELIVERY_INTERVAL_SECONDS,
         run=run,
     )
+
+
+def build_proposal_expiry_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Record every proposal whose book-by passed unfilled.
+
+    **Idempotent and safe beside itself with no lock**, on the lapse loop's
+    terms: the aggregate records nothing on a proposal already ended, a genuine
+    race is caught by the stream version, and the loser steps over that one
+    proposal and keeps going.
+
+    **Correctness does not depend on it running**: a proposal is over from its
+    book-by on at every read. What it buys is the record — silently, since the
+    mechanics §5.4 tells nobody when a card simply disappears.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            expired = await build_expire_proposals(session, clock=clock).execute()
+        if expired.proposals or expired.conflicts:
+            logger.info(
+                "proposal expiry finished",
+                extra={
+                    "job": PROPOSAL_EXPIRY_JOB,
+                    "proposals": expired.proposals,
+                    "conflicts": expired.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=PROPOSAL_EXPIRY_JOB,
+        interval_seconds=settings.PROPOSAL_EXPIRY_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_request_timeout_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Call off every request an On request club did not answer in time
+    (the mechanics §16.8, §16.16).
+
+    **Idempotent and safe beside itself with no lock**: each request is one
+    transaction that locks its game first, the aggregate records nothing on a
+    request already answered, and a genuine race is caught by the stream
+    version and stepped over. **Correctness depends on it**: until it runs an
+    unanswered request holds its court and owes its players nothing.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_expire_unanswered_requests(
+                session, clock=clock, settings=settings
+            ).execute()
+        if done.requests or done.conflicts:
+            logger.info(
+                "request timeout finished",
+                extra={
+                    "job": REQUEST_TIMEOUT_JOB,
+                    "requests": done.requests,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=REQUEST_TIMEOUT_JOB,
+        interval_seconds=settings.REQUEST_TIMEOUT_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_cut_off_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Call off every booked game still short at its cut-off, and give
+    everybody still in their money back (the mechanics §12.3, §16.12).
+
+    **Idempotent and safe beside itself with no lock**: each game is one
+    transaction that locks it first, the aggregate records nothing on a game no
+    longer short, and a genuine race is caught by the stream version and
+    stepped over. **Correctness depends on it**: until it runs, the money of a
+    game called off at its cut-off has not been given back.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_call_off_short_games(
+                session, clock=clock, settings=settings
+            ).execute()
+        if done.games or done.conflicts:
+            logger.info(
+                "cut-off finished",
+                extra={
+                    "job": CUT_OFF_JOB,
+                    "games": done.games,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=CUT_OFF_JOB,
+        interval_seconds=settings.CUT_OFF_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_club_payouts_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Decide every club's payout for its games over once its day has closed
+    (the mechanics §12.6, §16.11) — the outbox then makes it at the provider
+    and tells the desk.
+
+    **Idempotent and safe beside itself with no lock**: a club day's payout is
+    one stream and a game is carried once, so a second process collides and is
+    stepped over. **Correctness depends on it**: nothing else pays a club.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_decide_club_payouts(
+                session, clock=clock, settings=settings
+            ).execute()
+        if done.decided or done.conflicts:
+            logger.info(
+                "club payouts finished",
+                extra={
+                    "job": CLUB_PAYOUTS_JOB,
+                    "decided": done.decided,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=CLUB_PAYOUTS_JOB,
+        interval_seconds=settings.CLUB_PAYOUTS_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_new_bookings_summary_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Email every club's desk the games booked at it in the day that just
+    closed (the mechanics §16.12, *a daily summary*).
+
+    **Idempotent and safe beside itself with no lock**: a club's day is summed
+    up in a stream of its own, born with the email in one transaction, so a
+    second process collides on it and its email is rolled back with it.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_summarise_new_bookings(
+                session, clock=clock, settings=settings
+            ).execute()
+        if done.clubs or done.conflicts:
+            logger.info(
+                "new bookings summary finished",
+                extra={
+                    "job": NEW_BOOKINGS_SUMMARY_JOB,
+                    "clubs": done.clubs,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=NEW_BOOKINGS_SUMMARY_JOB,
+        interval_seconds=settings.NEW_BOOKINGS_SUMMARY_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_proposer_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Walk every pool and deal what its free court hours and free, fitting
+    members make — the sweep that guarantees a change is dealt from.
+
+    **Idempotent and safe beside itself with no lock**: a batch deals nothing a
+    game already holds, a pick's id is its game so a second process making it
+    collides on the stream, and a deal the world moved past is refused by the
+    dealer's own act and counted. **One pool failing is logged and passed
+    over**, so a pool nobody can deal to never stops the others being dealt.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            proposer = build_propose_games(session, clock=clock)
+            done = await _propose_over(
+                session, proposer, await proposer.every_pool(), job=PROPOSER_JOB
+            )
+        _log_proposed(PROPOSER_JOB, done)
+
+    return PeriodicJob(
+        name=PROPOSER_JOB,
+        interval_seconds=settings.PROPOSER_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_proposer_on_changes_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+    due: DueForProposing,
+) -> PeriodicJob:
+    """Deal in the pools a change delivered in this process made due, seconds
+    after it — the same batch as the sweep's, over fewer pools. A tick with
+    nothing due opens no session."""
+
+    clock = build_clock()
+
+    async def run() -> None:
+        changed = due.take()
+        if not changed.anything:
+            return
+        async with session_factory() as session:
+            proposer = build_propose_games(session, clock=clock)
+            done = await _propose_over(
+                session,
+                proposer,
+                await proposer.pools_due(changed),
+                job=PROPOSER_ON_CHANGES_JOB,
+            )
+        _log_proposed(PROPOSER_ON_CHANGES_JOB, done)
+
+    return PeriodicJob(
+        name=PROPOSER_ON_CHANGES_JOB,
+        interval_seconds=settings.PROPOSER_ON_CHANGES_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+async def _propose_over(
+    session: AsyncSession, proposer: ProposeGames, pools: Sequence[UUID], *, job: str
+) -> Proposed:
+    done = Proposed()
+    for pool_id in pools:
+        try:
+            done += await proposer.execute(pool_id)
+        except Exception:
+            await session.rollback()
+            logger.exception(
+                "proposer failed on a pool", extra={"job": job, "pool_id": str(pool_id)}
+            )
+    return done
+
+
+def _log_proposed(job: str, done: Proposed) -> None:
+    if done.anything:
+        logger.info(
+            "proposer finished",
+            extra={
+                "job": job,
+                "pools": done.pools,
+                "made": done.made,
+                "dealt": done.dealt,
+                "lost": done.lost,
+                "redealt": done.redealt,
+                "refused": done.refused,
+            },
+        )
 
 
 def build_interest_expiry_job(

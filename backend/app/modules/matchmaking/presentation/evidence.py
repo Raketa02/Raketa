@@ -27,10 +27,10 @@ produce a kind this file does not publish refuses to load
 (``app/bootstrap/matchmaking.py``).
 
 **No display strings, anywhere.** The backend emits machine codes and never
-display text (``docs/adr/0022``): the client writes *"4 shared slots · next
-Tuesday evening"* over ``{"kind": "availability_overlap", "shared_count": 4,
-"next_slot": {…}}``, in its own copy and its own language. Sports, tags, day
-parts and intents cross as the platform's **existing** machine codes — a second
+display text (``docs/adr/0022``): the client writes *"4 shared hours · next
+Tuesday 19:00"* over ``{"kind": "availability_overlap", "shared_count": 4,
+"next_slot": {…}}``, in its own copy and its own language. Sports, tags and
+intents cross as the platform's **existing** machine codes — a second
 spelling of a closed vocabulary is how two systems begin disagreeing about the
 same word.
 
@@ -78,15 +78,19 @@ from app.engines.matchfit.core import (
     ReliabilityStrand,
     SearchMode,
 )
-from app.modules.player_profile.domain.availability import DAYS_IN_THE_GRID, DayPart
 from app.modules.player_profile.domain.play_intent import PlayIntent
+from app.modules.player_profile.domain.weekly_hours import (
+    DAYS_IN_THE_GRID,
+    FIRST_HOUR,
+    LAST_HOUR,
+)
 
 
 class SharedSlot(BaseModel):
-    """The next cell of the week both players ticked.
+    """The next hour of the week both players ticked.
 
     **The grid is never rendered to anybody as a calendar.** Only the count of
-    shared slots and the name of the next shared one are ever shown, because
+    shared hours and the name of the next shared one are ever shown, because
     overlap is a fact about a pair where a calendar is a fact about a person.
     """
 
@@ -96,7 +100,12 @@ class SharedSlot(BaseModel):
         le=DAYS_IN_THE_GRID,
         description="ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.",
     )
-    part: DayPart = Field(..., description="Which part of that day")
+    hour: int = Field(
+        ...,
+        ge=FIRST_HOUR,
+        le=LAST_HOUR,
+        description="The hour that cell starts at, wall clock — 19 is 19:00 to 20:00",
+    )
 
 
 class TagPair(BaseModel):
@@ -219,13 +228,15 @@ class AvailabilityOverlapEvidence(BaseModel):
     """
 
     kind: Literal[EvidenceKind.AVAILABILITY_OVERLAP] = EvidenceKind.AVAILABILITY_OVERLAP
-    shared_count: int = Field(..., ge=0, description="Cells both of them ticked")
+    shared_count: int = Field(
+        ..., ge=0, description="Hours of the week both of them ticked"
+    )
     #: **A measured nothing, and required-nullable for it.** ``null`` says both
     #: grids were read and there is no next shared slot — the answer a searcher
     #: with an empty intersection is owed. Omitting it instead would say *this
     #: does not apply*, which is a different and untrue claim.
     next_slot: SharedSlot | None = Field(
-        ..., description="The soonest cell both ticked, or null when there is none"
+        ..., description="The soonest hour both ticked, or null when there is none"
     )
 
 

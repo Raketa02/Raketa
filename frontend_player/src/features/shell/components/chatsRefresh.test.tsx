@@ -15,7 +15,7 @@ import {
   CHALLENGES_PATH,
   CONVERSATIONS_PATH,
   GATE_USER,
-  launchSignedIn,
+  launchIntoClassicPlay,
   stubChallenges,
   stubConversations,
   stubGames,
@@ -73,7 +73,7 @@ afterEach(async () => {
 });
 
 async function openChats() {
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 }

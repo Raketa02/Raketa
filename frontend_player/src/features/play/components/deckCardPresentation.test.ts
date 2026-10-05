@@ -75,7 +75,7 @@ describe('the three tiles', () => {
     ).toEqual([
       ['Balance', '72%'],
       ['Reliability', '88'],
-      ['Overlap', '9 slots'],
+      ['Overlap', '9 hours'],
     ]);
   });
 
@@ -84,8 +84,8 @@ describe('the three tiles', () => {
     expect(deckTiles({}).map((tile) => tile.label)).not.toContain('Shared tags');
   });
 
-  it('counts one slot without an s', () => {
-    expect(deckTiles({ sharedSlots: 1 })[2]?.value).toBe('1 slot');
+  it('counts one hour without an s', () => {
+    expect(deckTiles({ sharedSlots: 1 })[2]?.value).toBe('1 hour');
   });
 
   /** The row stays three: an absent number is a dash in place, never a missing tile. */
@@ -101,14 +101,14 @@ describe('the three tiles', () => {
   it('prints a measured nought rather than a dash', () => {
     const tiles = deckTiles({ sharedSlots: 0, playerScore: 0 });
 
-    expect(tiles[2]?.value).toBe('0 slots');
+    expect(tiles[2]?.value).toBe('0 hours');
     expect(tiles[1]?.value).toBe('0');
   });
 
   it('speaks the tiles that have a figure and skips the dashes', () => {
     expect(deckTileClauses(deckTiles({ balancePct: 72, sharedSlots: 2 }))).toEqual([
       'Balance 72%',
-      'Overlap 2 slots',
+      'Overlap 2 hours',
     ]);
   });
 });

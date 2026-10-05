@@ -74,10 +74,9 @@ side of the arrow signs it (``docs/adr/0098`` as amended — two providers sign 
 contract), reading this port and translating. The set read stays the provider's,
 exactly as ``UsersAccountStatus`` leaves ``users``' disabled-account read with
 ``users``; what crosses is this context's own vocabulary, and the adapter is where
-the two spellings meet. Its fourth read has a different consumer —
-``player_score`` (``docs/adr/0140``), which turns *did you answer inside your day*
-into a strand and publishes it, so that fact reaches the engine through a
-provider rather than through this port.
+the two spellings meet. (Its fourth read had a different consumer —
+``player_score``'s *answers challenges* strand, ``docs/adr/0140`` — until the
+strand stood down with #544.)
 
 **Nothing on it answers *did they play*.** A challenge accepted is not a game
 played (map Decision 3), so the half of the matcher's contract that is about
@@ -97,7 +96,7 @@ from app.kernel import Instant, Sport, invariant
 from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.origins import ChallengeOrigin
 from app.modules.challenges.domain.seats import SeatAnswer
-from app.modules.player_profile.domain.availability import Window
+from app.modules.player_profile.domain.weekly_hours import Window
 
 
 @runtime_checkable
@@ -835,52 +834,6 @@ class ChallengeCounterpart:
 
 @final
 @dataclass(frozen=True, slots=True)
-class AnsweringRecord:
-    """What one player did about the seats they were **asked** to sit in.
-
-    The *answers challenges* strand's whole input (``docs/adr/0140``).
-    ``answered`` is invitations that got a yes or a no inside their day;
-    ``lapsed`` is invitations whose day ran out with nothing in it. A seat still
-    inside its window is in **neither**: the answer is still wanted, and counting
-    it either way would state a conclusion the clock has not reached.
-
-    **Only a seat somebody was asked to take is an opportunity.** Three seats in
-    this context carry an answer nobody was invited to give — the organiser's,
-    accepted from birth because they are the one proposing, and both seats of a
-    challenge born from a mutual yes. They have no deadline, which is exactly
-    what makes them recognisable: an invitation is a seat with an ``answer_by``,
-    and a strand that counted the organiser's own seat would publish a hundred
-    per cent for anybody who only ever organises.
-
-    **A lapse is not a decline, and this is the shape that needs them apart.**
-    ``SeatAnswer.LAPSED`` and ``SeatAnswer.DECLINED`` do the same thing to a
-    line-up and are different facts about a person: turning somebody down inside
-    your day is answering, and it is the *only* strand on this platform where a
-    no is a good outcome.
-
-    ``last_at`` is the most recent moment one of those opportunities closed — the
-    instant an answer was given, or the deadline that passed without one.
-    """
-
-    answered: int
-    lapsed: int
-    last_at: Instant
-
-    def __post_init__(self) -> None:
-        invariant(
-            self.answered >= 0 and self.lapsed >= 0,
-            f"a negative invitation count: {self.answered} answered, "
-            f"{self.lapsed} lapsed",
-        )
-        invariant(
-            self.answered + self.lapsed >= 1,
-            "an answering record with no closed invitation behind it is an "
-            "absence, not a zero — absence is spelled by not being in the answer",
-        )
-
-
-@final
-@dataclass(frozen=True, slots=True)
 class SharedChallenge:
     """One challenge standing open between this player and one other.
 
@@ -968,14 +921,16 @@ class HalfBuiltLineUp:
 
 @runtime_checkable
 class ChallengeHistoryQuery(Protocol):
-    """Who answered, who is open, who is full, who answers at all — and one court.
+    """Who answered, who is open, who is full — and one court.
 
-    **Five reads and not one bag.** They are separate because their consumers
+    **Four reads and not one bag.** They are separate because their consumers
     are: two Liveness signals, one gate, a third signal that is a count over
-    everybody rather than a fact about a pair, one Player Score strand since
-    ``docs/adr/0140``, and — since ``docs/adr/0150`` — the fill that completes one
-    named challenge. Bundling them would make the slowest read's cost and the
-    strictest read's failure everybody's, which is the same argument
+    everybody rather than a fact about a pair, and — since ``docs/adr/0150`` —
+    the fill that completes one named challenge. (A fifth, *did you answer
+    inside your day*, fed the Player Score's *answers challenges* strand until
+    the strand stood down with #544 — the mechanics §15.4: challenges no longer
+    wait for answers — and went with it.) Bundling them would make the slowest
+    read's cost and the strictest read's failure everybody's, which is the same argument
     ``MatchHistoryQuery`` makes about carrying them as separate methods on one
     port.
 
@@ -986,19 +941,9 @@ class ChallengeHistoryQuery(Protocol):
     port with its own posture (``HalfBuiltCourtQuery``) rather than folding it
     into the soft one.
 
-    **Three of the four go to the matcher and the fourth does not**, which is why
-    the sentence above no longer says *what this context owes the matcher*.
-    ``answering_for`` is read by ``player_score``, which publishes a strand the
-    matcher then reads from its own provider — so the same fact reaches the
-    engine, one context further along, already turned into a verdict about a
-    person.
-
-    **Three of the four take the clock and one does not, and nothing here is
-    projected.** An answer is a thing that happened and reads the same at every
-    instant, so ``answered_counterparts`` has no clock to be given.
-    ``answering_for`` does, and the difference is not a contradiction: what it
-    needs the clock for is the *other* half of its answer — whether an
-    unanswered invitation's day has run out yet. *Open* is ``AWAITING_ANSWERS ∪ ON ∪
+    **Nothing here is projected.** An answer is a thing that happened and reads
+    the same at every instant, so ``answered_counterparts`` has no clock to be
+    given. *Open* is ``AWAITING_ANSWERS ∪ ON ∪
     LINE_UP_INCOMPLETE`` computed from the seats and ``now`` (``standing.py``), so
     a seat past its window has left both the open read and the count whether or
     not the sweep has been past — **the sweep exists for the record, not for
@@ -1099,35 +1044,6 @@ class ChallengeHistoryQuery(Protocol):
 
         **Every player asked about gets a count**, and a zero here is measured:
         the seats were counted and there were none.
-        """
-        ...
-
-    async def answering_for(
-        self, player_ids: Collection[UUID], *, now: Instant
-    ) -> Mapping[UUID, AnsweringRecord]:
-        """What each of these people did about the seats they were **asked** to take.
-
-        ``player_score``'s input for the *answers challenges* strand
-        (``docs/adr/0140``), and the fourth read here because its consumer is a
-        fourth one. It is deliberately not derived from ``answered_counterparts``:
-        that read is about **other people's** answers to challenges you were in,
-        because the two signals it feeds are prices on somebody else's card, and
-        a per-player rate folded out of it would be counting the same answer once
-        per person who happened to be on the court.
-
-        **A player nobody ever invited is absent from the answer**, which is the
-        opposite rule to ``seats_awaiting_answers`` above and for the reason
-        ``docs/adr/0098`` names: a count of live seats is measured and there were
-        none, where a ``0/0`` answer rate would say somebody was asked and stayed
-        silent. The two rules sit on one port so that the difference is read
-        rather than rediscovered.
-
-        **It walks the stream rather than folding the aggregate**, for the reason
-        ``answered_counterparts`` does: a declined seat can be re-offered, and
-        today's court has forgotten whoever left it. A read that asked today's
-        seats would lose every answer given by somebody who has since been
-        replaced — and the replacement's own invitation would inherit a deadline
-        that was never theirs.
         """
         ...
 

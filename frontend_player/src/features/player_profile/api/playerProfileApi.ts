@@ -14,9 +14,9 @@ type PhotoResponse = components['schemas']['PhotoResponse'];
 type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequest'];
 type PlayerProfileResponse = components['schemas']['PlayerProfileResponse'];
 type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadResponse'];
-type ChangeAvailabilityRequest = components['schemas']['ChangeAvailabilityRequest'];
-type AvailabilityResponse = components['schemas']['AvailabilityResponse'];
-type AvailabilitySlotResource = components['schemas']['AvailabilitySlotResource'];
+type SetWeeklyHoursRequest = components['schemas']['SetWeeklyHoursRequest'];
+type WeeklyHoursResponse = components['schemas']['WeeklyHoursResponse'];
+type WeeklyHourResource = components['schemas']['WeeklyHourResource'];
 type ChangeSearchRadiusRequest = components['schemas']['ChangeSearchRadiusRequest'];
 type ChangeLocationRequest = components['schemas']['ChangeLocationRequest'];
 type SearchRadiusResponse = components['schemas']['SearchRadiusResponse'];
@@ -192,20 +192,21 @@ export function readPlayerProfile({
   });
 }
 
-export interface ChangeAvailabilityOptions {
-  /** Every cell still ticked, in the app's own order. The list **is** the week. */
-  readonly availability: readonly AvailabilitySlotResource[];
+export interface ChangeWeeklyHoursOptions {
+  /** Every hour still ticked, in the app's own order. The list **is** the week. */
+  readonly weeklyHours: readonly WeeklyHourResource[];
 }
 
 /**
- * Replace this player's week. **The whole grid, every time**, and an empty list clears it.
+ * Replace this player's weekly hours — *Save your week*. **The whole week, every time**, and an
+ * empty list clears it.
  *
  * The list *is* the week and what is absent from it is unticked, so there is no per-cell
  * request and nothing to merge: a client that sent a delta would be describing a transition
  * the aggregate does not have.
  *
  * **A cleared week is a legal value here and a refusal at the commit**, and the asymmetry is
- * the route's rather than this app's to preserve: the floor of one ticked cell binds the
+ * the route's rather than this app's to preserve: the floor of one ticked hour binds the
  * answer a player is *asked for* at the end of onboarding, not every later edit of it. So
  * nothing here checks the length.
  *
@@ -218,13 +219,13 @@ export interface ChangeAvailabilityOptions {
  * the same state twice has nothing to deduplicate, and a cancelled write leaves the client
  * unable to say whether it landed.
  */
-export function changeAvailability({
-  availability,
-}: ChangeAvailabilityOptions): Promise<AvailabilityResponse> {
-  const body: ChangeAvailabilityRequest = { availability: [...availability] };
-  return httpRequest<AvailabilityResponse>({
+export function changeWeeklyHours({
+  weeklyHours,
+}: ChangeWeeklyHoursOptions): Promise<WeeklyHoursResponse> {
+  const body: SetWeeklyHoursRequest = { weekly_hours: [...weeklyHours] };
+  return httpRequest<WeeklyHoursResponse>({
     method: 'PUT',
-    path: '/api/v1/players/me/availability',
+    path: '/api/v1/players/me/weekly-hours',
     body,
     authenticated: true,
   });

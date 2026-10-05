@@ -1,20 +1,20 @@
 /**
- * The diff grid: four states over twenty-one cells, and the one week where every mark is a
- * dash.
+ * The diff grid: four states over a hundred and twelve hours, and the one week where every mark
+ * is a dash.
  */
 
-import { DAY_PARTS, WEEKDAYS, type WeekCell } from '@/shared/vocabulary/week';
+import { HOURS, WEEKDAYS, type WeeklyHour } from '@/shared/vocabulary/week';
 
 import { weekDiffRows, weekDiffState } from './weekDiffPresentation';
 
-const TUESDAY_EVENING = { day: 2, part: 'evening' } as const;
-const SATURDAY_MORNING = { day: 6, part: 'morning' } as const;
-const MONDAY_MORNING = { day: 1, part: 'morning' } as const;
+const TUESDAY_EVENING = { day: 2, hour: 19 } as const;
+const SATURDAY_MORNING = { day: 6, hour: 9 } as const;
+const MONDAY_MORNING = { day: 1, hour: 9 } as const;
 
-const stateAt = (rows: ReturnType<typeof weekDiffRows>, cell: WeekCell) =>
+const stateAt = (rows: ReturnType<typeof weekDiffRows>, cell: WeeklyHour) =>
   rows
-    .find((row) => row.key === `${cell.day}`)
-    ?.cells.find((one) => one.key === `${cell.day}-${cell.part}`);
+    .find((row) => row.key === `${cell.hour}`)
+    ?.cells.find((one) => one.key === `${cell.day}-${cell.hour}`);
 
 describe('what one cell says about itself', () => {
   const profile = [TUESDAY_EVENING, SATURDAY_MORNING];
@@ -45,11 +45,13 @@ describe('what one cell says about itself', () => {
 });
 
 describe('the grid the sheet draws', () => {
-  it('is the whole week, seven rows of three, whatever changed', () => {
+  it('is the whole week, sixteen hours of seven days, whatever changed', () => {
     const rows = weekDiffRows([TUESDAY_EVENING], [TUESDAY_EVENING]);
 
-    expect(rows).toHaveLength(WEEKDAYS.length);
-    for (const row of rows) expect(row.cells).toHaveLength(DAY_PARTS.length);
+    expect(rows).toHaveLength(HOURS.length);
+    expect(rows[0]?.label).toBe('07:00');
+    expect(rows.at(-1)?.label).toBe('22:00');
+    for (const row of rows) expect(row.cells).toHaveLength(WEEKDAYS.length);
   });
 
   it('names the cells that changed and hides the ones that did not', () => {
@@ -60,19 +62,19 @@ describe('the grid the sheet draws', () => {
 
     expect(stateAt(rows, MONDAY_MORNING)).toMatchObject({
       state: 'added',
-      accessibilityLabel: 'Monday morning, newly added',
+      accessibilityLabel: 'Monday 09:00, newly added',
     });
     expect(stateAt(rows, SATURDAY_MORNING)).toMatchObject({
       state: 'dropped',
-      accessibilityLabel: 'Saturday morning, dropped',
+      accessibilityLabel: 'Saturday 09:00, dropped',
     });
     expect(stateAt(rows, TUESDAY_EVENING)).toMatchObject({
       state: 'on',
-      accessibilityLabel: 'Tuesday evening',
+      accessibilityLabel: 'Tuesday 19:00',
     });
-    // An unchanged, unticked slot tells a listener nothing, and twenty-one of them between
-    // the ones that changed is the announcement §20.7 hides.
-    expect(stateAt(rows, { day: 4, part: 'afternoon' })?.accessibilityLabel).toBeUndefined();
+    // An unchanged, unticked hour tells a listener nothing, and a hundred of them between the
+    // ones that changed is the announcement §20.7 hides.
+    expect(stateAt(rows, { day: 4, hour: 14 })?.accessibilityLabel).toBeUndefined();
   });
 
   /** #277's second body, as a drawing: the whole grid is the dropped half. */

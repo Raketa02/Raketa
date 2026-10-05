@@ -1,6 +1,6 @@
 """The profile surface reads and writes: one read, one `PUT` per fact.
 
-The search screen edits three facts — the availability grid, the search radius
+The search screen edits three facts — the weekly hours, the search radius
 and the per-sport Play intent — and until these routes existed it could read none
 of them and write none of them. The engine has been raising `KEEP_THESE_TIMES`
 and `KEEP_THIS_RADIUS` the whole time, and `matchmaking/domain/prompts.py` names
@@ -17,11 +17,11 @@ converge and the third is decisive:
    no-op rule means the second appends nothing."* Two write shapes in one context
    is the thing worth avoiding.
 2. **Each prompt is answered by exactly one write.** `KEEP_THESE_TIMES` writes
-   the grid; `KEEP_THIS_RADIUS` writes the radius. A partial update would exist
+   the weekly hours; `KEEP_THIS_RADIUS` writes the radius. A partial update would exist
    to serve a caller that does not exist.
-3. **`null` versus absent is fatal on the grid specifically.** A blank grid is a
-   **legal value** — `change_availability` accepts one deliberately — so
-   `PATCH {"availability": null}` would mean both *leave my week alone* and
+3. **`null` versus absent is fatal on the week specifically.** A blank week is a
+   **legal value** — `set_weekly_hours` accepts one deliberately — so
+   `PATCH {"weekly_hours": null}` would mean both *leave my week alone* and
    *clear my week*, and the second is a real thing a player does. This is not a
    general dislike of `PATCH`; it is that this field has a legal empty value and
    the ambiguity therefore bites.
@@ -74,7 +74,6 @@ from fastapi import APIRouter, status
 from app.core.exception_handlers import ErrorResponse
 from app.modules.player_profile.application.commands import (
     AnswerProposalsOptInCommand,
-    ChangeAvailabilityCommand,
     ChangeGenderCommand,
     ChangeGenderPreferenceCommand,
     ChangeIntroCommand,
@@ -82,11 +81,11 @@ from app.modules.player_profile.application.commands import (
     ChangePhotosCommand,
     ChangeSearchRadiusCommand,
     ChangeSocialTagsCommand,
+    SetWeeklyHoursCommand,
 )
 from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.presentation.dependencies import (
     AnswerProposalsOptInDep,
-    ChangeAvailabilityDep,
     ChangeGenderDep,
     ChangeGenderPreferenceDep,
     ChangeIntroDep,
@@ -95,11 +94,10 @@ from app.modules.player_profile.presentation.dependencies import (
     ChangeSearchRadiusDep,
     ChangeSocialTagsDep,
     ReadPlayerProfileDep,
+    SetWeeklyHoursDep,
 )
 from app.modules.player_profile.presentation.schemas import (
     AnswerProposalsOptInRequest,
-    AvailabilityResponse,
-    ChangeAvailabilityRequest,
     ChangeGenderPreferenceRequest,
     ChangeGenderRequest,
     ChangeIntroRequest,
@@ -111,7 +109,9 @@ from app.modules.player_profile.presentation.schemas import (
     PlayerProfileReadResponse,
     ProposalsOptInResponse,
     SearchRadiusResponse,
+    SetWeeklyHoursRequest,
     SocialTagsResponse,
+    WeeklyHoursResponse,
 )
 from app.modules.users.presentation.dependencies import CurrentUserDep
 
@@ -162,7 +162,7 @@ _LOST_THE_RACE = {
         "difference against `GET /ratings`, and it is what a client uses to open "
         "the declaration interstitial **before** a search is refused with "
         "`play_intent_not_declared` rather than after.\n\n"
-        "**An empty `availability` is a real answer.** A player may clear their "
+        "**An empty `weekly_hours` is a real answer.** A player may clear their "
         "week; it means *we do not know when they play* and never *never*. "
         "**An empty `photos` list is one too**: a profile may hold none.\n\n"
         "**Absent means omitted, never `null`.** `intro` is omitted where no "
@@ -191,21 +191,22 @@ async def read_player_profile(
 
 
 @router.put(
-    "/availability",
-    response_model=AvailabilityResponse,
+    "/weekly-hours",
+    response_model=WeeklyHoursResponse,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_404_NOT_FOUND: _NO_PROFILE,
         status.HTTP_409_CONFLICT: _LOST_THE_RACE,
     },
-    summary="Replace this player's week",
+    summary="Replace this player's weekly hours — Save your week",
     description=(
-        "The whole week, every time — the list **is** the grid, and what is "
-        "absent from it is unticked. Unkeyed and safe to send twice: the same "
-        "week twice lands the same state, and a transition that changes nothing "
-        "records nothing.\n\n"
+        "The whole week, every time — the list **is** the week, and what is "
+        "absent from it is unticked. An hour is a day and the hour its cell "
+        "starts at, 7 to 22: the week runs 07:00 to 23:00. Unkeyed and safe to "
+        "send twice: the same week twice lands the same state, and a transition "
+        "that changes nothing records nothing.\n\n"
         "**An empty list is a legal value and clears the week.** The floor of "
-        "one ticked cell binds the *commit*, which is the answer a player is "
+        "one ticked hour binds the *commit*, which is the answer a player is "
         "asked for at the end of onboarding, and not every later edit of it. A "
         "cleared week is read as *absent* by the matcher, never as a zero — "
         "silence is never scored (`docs/adr/0102`).\n\n"
@@ -213,23 +214,25 @@ async def read_player_profile(
         "notices that a search ran on a week the profile does not hold and asks; "
         "nothing in the matcher writes a profile, so a *yes* is this request. "
         "Declining writes nothing anywhere.\n\n"
-        "Repeated cells are collapsed and the response carries the grid as "
+        "Repeated hours are collapsed and the response carries the week as "
         "stored, in the platform's reading order — so a client can see what the "
-        "profile now holds rather than assuming it kept what was sent."
+        "profile now holds rather than assuming it kept what was sent.\n\n"
+        "It replaced `PUT /players/me/availability`, whose week was mornings, "
+        "afternoons and evenings (`docs/adr/0189` §5)."
     ),
 )
-async def change_availability(
-    payload: ChangeAvailabilityRequest,
+async def set_weekly_hours(
+    payload: SetWeeklyHoursRequest,
     user: CurrentUserDep,
-    use_case: ChangeAvailabilityDep,
-) -> AvailabilityResponse:
+    use_case: SetWeeklyHoursDep,
+) -> WeeklyHoursResponse:
     profile = await use_case.execute(
-        ChangeAvailabilityCommand(
+        SetWeeklyHoursCommand(
             player_id=user.id,
-            availability=payload.availability_cells(),
+            weekly_hours=payload.weekly_hours_cells(),
         )
     )
-    return AvailabilityResponse.from_domain(profile)
+    return WeeklyHoursResponse.from_domain(profile)
 
 
 @router.put(

@@ -28,7 +28,7 @@ import {
 } from '@/test-support/officialGroupsServer';
 import {
   GATE_USER,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   launchSignedIn,
   stubGate,
   stubInterest,
@@ -247,7 +247,7 @@ describe('the handover sheet, for an administrator who plays', () => {
 
     await launchSignedIn();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(await screen.findByRole('header', { name: O3_TITLE })).toBeTruthy();
 
     fireEvent.press(screen.getByRole('button', { name: COPY.openGroup }));

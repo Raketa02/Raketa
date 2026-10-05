@@ -108,7 +108,6 @@ from app.modules.games.application.commands import (
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.standing import GameStanding
-from app.modules.games.domain.windows import entry_closes_at
 from app.modules.matchmaking.application.commands import RunLineupSearchCommand
 from app.modules.matchmaking.domain.lineups import LineupSeat
 from app.modules.plans.application.commands import ReadPlansCommand
@@ -1334,7 +1333,7 @@ def _on_the_rail(game: Game, standing: GameStanding, now: Instant) -> bool:
 
     if standing in (GameStanding.AWAITING_ENTRY, GameStanding.AWAITING_ANSWER):
         return True
-    ended = game.called_off_at or game.played_at or entry_closes_at(game.planned_at)
+    ended = game.called_off_at or game.played_at or game.entry_closes_at
     return now - ended < AN_ENDED_CARD_LASTS
 
 

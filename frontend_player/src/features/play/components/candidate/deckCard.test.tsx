@@ -65,7 +65,7 @@ const TERMS: readonly ScoredTerm[] = [
   scored('AVAILABILITY_OVERLAP', {
     kind: 'availability_overlap',
     sharedCount: 9,
-    nextSlot: { day: 2, part: 'evening' },
+    nextSlot: { day: 2, hour: 19 },
   }),
   scored('DISTANCE', { kind: 'distance', km: 2, areaCode: HERE, outsideTheirRadius: false }),
   scored('INTENT_ALIGNMENT', {
@@ -177,7 +177,7 @@ describe('what the deck card draws, in the mock’s order', () => {
       'Reliability',
       '88',
       'Overlap',
-      '9 slots',
+      '9 hours',
     ];
     const seen = order.map((line) => texts.indexOf(line));
 
@@ -191,7 +191,7 @@ describe('what the deck card draws, in the mock’s order', () => {
 
     expect(screen.queryByText('Shared tags')).toBeNull();
     expect(screen.queryByText(/Drag the card|long-press/)).toBeNull();
-    expect(textsInOrder().at(-1)).toBe('9 slots');
+    expect(textsInOrder().at(-1)).toBe('9 hours');
   });
 
   it('prints the level in the existing 40pt figure and the name in the card’s own role', () => {
@@ -298,10 +298,10 @@ describe('the three tiles', () => {
     expect(screen.getAllByText(NO_VALUE)).toHaveLength(2);
     expect(screen.getByText('Balance')).toBeTruthy();
     expect(screen.getByText('Reliability')).toBeTruthy();
-    expect(screen.getByText('9 slots')).toBeTruthy();
+    expect(screen.getByText('9 hours')).toBeTruthy();
     // The dashes say nothing to a listener; the one figure does.
     expect(spokenBody()).not.toContain('Balance');
-    expect(spokenBody()).toContain('Overlap 9 slots');
+    expect(spokenBody()).toContain('Overlap 9 hours');
   });
 
   it('speaks the tiles that have a figure', () => {
@@ -309,7 +309,7 @@ describe('the three tiles', () => {
 
     expect(spokenBody()).toContain('Balance 72%');
     expect(spokenBody()).toContain('Reliability 88');
-    expect(spokenBody()).toContain('Overlap 9 slots');
+    expect(spokenBody()).toContain('Overlap 9 hours');
     expect(spokenBody()).not.toContain('Shared tags');
   });
 });
@@ -386,7 +386,14 @@ describe('the one element', () => {
 
 describe('the three buttons under the stage', () => {
   it('are named for the person, and the ball stays out of the spoken name', () => {
-    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} />);
+    render(
+      <DeckAnswers
+        labels={deckAnswerLabels('Filip N.')}
+        onPass={noop}
+        onAccept={noop}
+        onRecord={noop}
+      />,
+    );
 
     const labels = deckAnswerLabels('Filip N.');
     expect(screen.getByRole('button', { name: labels.pass })).toBeTruthy();
@@ -399,7 +406,14 @@ describe('the three buttons under the stage', () => {
 
   /** A drawing and not an emoji: the platform's ball was its own colours, and clipped above. */
   it('draw the yes’s ball as a white outline with its two seams, in one stroke weight', () => {
-    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} />);
+    render(
+      <DeckAnswers
+        labels={deckAnswerLabels('Filip N.')}
+        onPass={noop}
+        onAccept={noop}
+        onRecord={noop}
+      />,
+    );
 
     const drawn = screen.UNSAFE_getAllByType(Path).map((path) => path.props);
     const ball = Object.values(BALL_PATHS).map((d) => drawn.find((path) => path.d === d));
@@ -429,7 +443,14 @@ describe('the three buttons under the stage', () => {
   });
 
   it('are circles at the mock’s three sizes, the yes the largest', () => {
-    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} />);
+    render(
+      <DeckAnswers
+        labels={deckAnswerLabels('Filip N.')}
+        onPass={noop}
+        onAccept={noop}
+        onRecord={noop}
+      />,
+    );
 
     const labels = deckAnswerLabels('Filip N.');
     const size = (name: string) =>
@@ -447,7 +468,15 @@ describe('the three buttons under the stage', () => {
   });
 
   it('lock the two answers while a card is leaving, and never the record', () => {
-    render(<DeckAnswers name="Filip N." onPass={noop} onAccept={noop} onRecord={noop} answering />);
+    render(
+      <DeckAnswers
+        labels={deckAnswerLabels('Filip N.')}
+        onPass={noop}
+        onAccept={noop}
+        onRecord={noop}
+        answering
+      />,
+    );
 
     const labels = deckAnswerLabels('Filip N.');
     expect(

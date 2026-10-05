@@ -26,8 +26,8 @@ import { Card } from '@/shared/ui';
 import { FILL_THE_SEAT, WE_PLAYED } from '@/shared/vocabulary/theActsWords';
 import {
   GATE_USER,
+  launchIntoClassicPlay,
   PLANS_PATH,
-  launchSignedIn,
   planSlotPath,
   stubConversation,
   stubConversations,
@@ -119,6 +119,7 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
     entry_closes_at: '2026-09-20T09:00:00Z',
     seats: SINGLES_SEATS,
     proposals: [],
+    no_shows: [],
     ...over,
   };
 }
@@ -218,7 +219,7 @@ function stubTheWorld({
 async function openFromNow(over: Parameters<typeof stubTheWorld>[0] = {}) {
   stubTheWorld(over);
 
-  await launchSignedIn(`/games/${GAME}`);
+  await launchIntoClassicPlay(transport, `/games/${GAME}`);
   await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
   await screen.findByLabelText('Back');
 }
@@ -227,7 +228,7 @@ async function openFromNow(over: Parameters<typeof stubTheWorld>[0] = {}) {
 async function openFromTheRoom(over: Parameters<typeof stubTheWorld>[0] = {}) {
   stubTheWorld(over);
 
-  await launchSignedIn();
+  await launchIntoClassicPlay(transport);
   fireEvent.press(await screen.findByLabelText(/^Chats/));
   await waitFor(() => expect(screen).toHavePathname('/chats'));
 
@@ -342,7 +343,7 @@ describe('the plan card, editable here', () => {
       await listLands;
       return json<Wire['PlanListResponse']>({ plans: [plan()] });
     });
-    await launchSignedIn(`/games/${GAME}`);
+    await launchIntoClassicPlay(transport, `/games/${GAME}`);
     await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
 
     // The card, with the lock greyed under it and the horizon the game's: the last day offered

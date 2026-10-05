@@ -14,7 +14,7 @@ import { act, screen, waitFor } from 'expo-router/testing-library';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   launchSignedIn,
   resetLocation,
   stubGate,
@@ -73,7 +73,7 @@ const puts = () => transport.requestsTo('PUT', LOCATION_PATH);
 /** A cold start into the app, for a player with a committed profile. */
 async function coldStart() {
   await launchSignedIn();
-  expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+  expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
 }
 
 /** What the OS does when the player leaves the app and comes back to it. */

@@ -5,12 +5,13 @@ import { sealData, unsealData } from 'iron-session';
 import { loadConfig } from './config';
 
 /**
- * **The seal both of the site's cookies use**: iron-session's, keyed by `SESSION_SECRET`, and the
- * attributes they share. `httpOnly`, so the browser carries them without reading them;
- * `SameSite=Lax`; `Secure` everywhere but `local` (ADR-0187 §6).
+ * **The seal the session and the recovery cookies use**: iron-session's, keyed by
+ * `SESSION_SECRET`; and **the attributes every cookie of the site shares**, sealed or not.
+ * `httpOnly`, so the browser carries them without reading them; `SameSite=Lax`; `Secure`
+ * everywhere but `local` (ADR-0187 §6).
  */
 
-export function sealedCookieOptions(maxAge: number) {
+export function cookieOptions(maxAge: number) {
   return {
     httpOnly: true,
     sameSite: 'lax' as const,

@@ -25,7 +25,7 @@ import { useToastQueue } from '@/shared/store/toast.store';
 import { rating } from '@/test-support/officialGroupsServer';
 import {
   GATE_USER,
-  NOW_TAB_LINE,
+  HOME_TAB_LINE,
   ONBOARDING_ROUTES,
   launchByLink,
   launchSignedIn,
@@ -102,7 +102,7 @@ describe('a reset link, with nobody signed in', () => {
 
     typeANewPassword();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(transport.requestsTo('POST', NEW_PASSWORD_PATH)[0]?.body).toEqual({
       token: TOKEN,
       password: 'forehand42',
@@ -120,7 +120,7 @@ describe('a reset link, with nobody signed in', () => {
 describe('a reset link, on a phone that is signed in', () => {
   it('asks to sign out first, naming who is signed in, over wherever the person is', async () => {
     await launchSignedIn();
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
 
     openLink(`raketa://reset/${TOKEN}`);
 
@@ -154,7 +154,7 @@ describe('a reset link, on a phone that is signed in', () => {
 
     typeANewPassword();
 
-    expect(await screen.findByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(await screen.findByText(HOME_TAB_LINE)).toBeTruthy();
     expect(transport.requestsTo('POST', NEW_PASSWORD_PATH)[0]?.body).toEqual({
       token: TOKEN,
       password: 'forehand42',
@@ -170,6 +170,6 @@ describe('a reset link, on a phone that is signed in', () => {
 
     await waitFor(() => expect(screen.queryByRole('header', { name: SHEET_TITLE })).toBeNull());
     expect(getSessionStatus()).toBe('authenticated');
-    expect(screen.getByText(NOW_TAB_LINE)).toBeTruthy();
+    expect(screen.getByText(HOME_TAB_LINE)).toBeTruthy();
   });
 });

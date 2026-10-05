@@ -57,14 +57,14 @@ nothing. `commitStanding` and `mayFinish` own when the finish opens — a rule, 
 unrepresentable. Three things hold the finish shut. **No Location area**: location is a core
 requirement for discovery, `CommitPlayerProfileRequest` requires it, and the last step asks
 once more with the way back one press away rather than trapping a player on step five behind
-an OS prompt. **A blank availability grid**: the week has a floor of one cell since
+an OS prompt. **A blank week**: the week has a floor of one hour since
 ADR-0102, so silence about when somebody plays is asked for rather than scored as a zero —
 step four already refuses to continue on one, and this is the same rule read at the end.
 **A photo still going up**: uploads outlive the step that started them, and the
 body names photos by the ids the server gave back, so committing mid-upload would silently
 drop a picture the player watched arrive. That one asks for nothing and opens itself.
 
-A failed commit whose `code` names an answer — `availability_grid_empty` today — is drawn as
+A failed commit whose `code` names an answer — `weekly_hours_empty` today — is drawn as
 that answer rather than as _try again_, with the control back to the step that takes it: the
 commit re-validates every rule a picker enforced, and re-sending the identical body would
 fail identically.
@@ -167,7 +167,7 @@ foreground. `locationPresentation` splits each refusal into `ACCESS_HOW_TO` (how
 true on every screen) and the step's cost clause about finishing setting up, which the tab does
 not cite because it is not true of anybody on it. The steps' behaviour, copy and suites are
 unchanged. **The rows** (`YouRows.tsx`) read their fact off `GET /players/me/profile` or
-`GET /ratings` and say it through `youProfilePresentation` — _10 slots ticked_, _12 km · Across
+`GET /ratings` and say it through `youProfilePresentation` — _10 hours ticked_, _12 km · Across
 your town_, _Padel Competitive · Squash not set_, the area's one static line — and `liveLine`
 says the recovery sentence where a read failed rather than going quiet. **Your week** is
 `WeekGrid` as the step draws it plus the footnote, a draft until _Save your week_, _Clear all_
@@ -326,3 +326,28 @@ gains the arrival fade for free. The four You suites read the fill beside the wo
 seen on a device**: the cross-fade's length against the busy dim it follows — `Saving…` is
 dimmed coral and `Saved` is whole mint, and the jump in opacity lands on the same frame the
 fade starts.
+
+**Your week is a week of hours: seven days across, sixteen hours down, a tap toggling one hour and
+a press and drag painting a run** ([#551](https://github.com/Raketa02/Raketa/issues/551),
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5, the
+mechanics §4.2, the screens A6, mock 36). One grid serves the availability step and You's _Your
+week_ — `WeekGrid`, now `MON … SUN` across and `07:00 … 22:00` down, over design-system 6.8 as
+amended the same day. **A drag is a paint, not a toggle of a run**: the hour it began on decides
+what it does — it ticks, or it clears if that hour was ticked — and every hour the finger then
+crosses gets the same, the ones a fast finger jumped between two samples included. The grid
+reports **the run so far, whole, on every move**, and `paintCells` in `shared/vocabulary/week` is
+idempotent, so a screen a render behind the finger still lands every hour: the step answers
+`paintCells(week, run, on)` into the draft, and _Your week_ paints onto its draft through a
+functional update. **The floor is unchanged and still one**: the step will not continue on an
+empty week, whether the last hour came off by a tap or by a drag, and its eyebrow and control say
+_Pick at least one hour_; the tab still saves an empty week as a legal value. **The wire moved
+with #534**: `PUT /players/me/weekly-hours` and `weekly_hours` on the commit, its response and
+the read, the refusal `weekly_hours_empty`; the draft's and the commit's field is `weeklyHours`,
+the cell is the glossary's **Weekly hour** (`WeeklyHour`, `{ day, hour }`, replacing `WeekCell`
+and the `AvailabilitySlot` alias the glossary now avoids), and the mapper drops an hour outside
+07–22 as it drops a day outside 1–7. A cell is named _Monday 19:00_ and counted in hours —
+_2 hours ticked_. The grid's own decisions — the gesture, the geometry, the cell under 44pt — are
+[`_shared.md`](_shared.md)'s. The router suites drive the drag through `test-support/weekGridTouch`, which
+lays the paint field out and fires the pan with samples hours apart. **Not seen on a device**:
+that a drag down a column paints rather than scrolls the page on both platforms, the 20pt cell
+under a thumb, and the tick at that size — the three things this change could not prove in Jest.

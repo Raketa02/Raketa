@@ -13,8 +13,8 @@
  * from a side that has already made one.
  */
 
-import type { Acceptance, Game, StandingProposal } from './game';
-import { actsOffered, editingAct, resultArgument } from './resultArgument';
+import type { Acceptance, Game, NoShowReport, StandingProposal } from './game';
+import { actsOffered, awaitsYourAgreement, editingAct, resultArgument } from './resultArgument';
 
 const ME = 'me-1111-4444-8888-000000000001';
 const PARTNER = 'partner-11-4444-8888-000000002';
@@ -68,6 +68,7 @@ function game(over: Partial<Game> = {}): Game {
     plannedAt: '2026-09-01T18:00:00Z',
     entryClosesAt: '2026-09-09T18:00:00Z',
     proposals: [],
+    noShows: [],
     readAt: '2026-09-05T09:00:00Z',
     ...over,
   };
@@ -393,6 +394,154 @@ describe('a state this build cannot name', () => {
     );
 
     expect(argument).toEqual({ kind: 'unreadable' });
+    expect(actsOffered(argument)).toEqual([]);
+  });
+});
+
+/**
+ * **A score waiting on your agreement** — the *result to confirm* Home's badge counts
+ * ([#550](https://github.com/Raketa02/Raketa/issues/550),
+ * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
+ * It is a game where agreeing is yours to do: the other side's score is up and nobody has settled
+ * it. Your own score waiting on them is not, and neither is an agreement already running out its
+ * grace — the disagreement it leaves is a right, not a task.
+ */
+describe('whether a score is waiting on your agreement', () => {
+  const played = {
+    standing: 'AWAITING_ANSWER',
+    playedAt: '2026-09-04T20:12:00Z',
+    entryClosesAt: undefined,
+  } as const;
+
+  it('is, across the net from a score nobody has answered', () => {
+    expect(awaitsYourAgreement(game({ ...played, proposals: [PROPOSAL] }), OPPONENT)).toBe(true);
+  });
+
+  it('is not on the side whose score it is — that one waits on the other side', () => {
+    expect(awaitsYourAgreement(game({ ...played, proposals: [PROPOSAL] }), ME)).toBe(false);
+    expect(awaitsYourAgreement(game({ ...played, proposals: [PROPOSAL] }), PARTNER)).toBe(false);
+  });
+
+  it('is, on both sides, while two scores stand and nobody has agreed', () => {
+    const arguing = game({ ...played, proposals: [PROPOSAL, COUNTER] });
+
+    expect(awaitsYourAgreement(arguing, ME)).toBe(true);
+    expect(awaitsYourAgreement(arguing, OPPONENT)).toBe(true);
+  });
+
+  it('is not once somebody has agreed, on either side', () => {
+    const settling = game({ ...played, proposals: [PROPOSAL], acceptance: agreed('A') });
+
+    expect(awaitsYourAgreement(settling, ME)).toBe(false);
+    expect(awaitsYourAgreement(settling, OPPONENT)).toBe(false);
+  });
+
+  it('is not before anybody has said the game happened, nor after it ended', () => {
+    expect(awaitsYourAgreement(game(), ME)).toBe(false);
+    expect(awaitsYourAgreement(game({ standing: 'CONFIRMED' }), ME)).toBe(false);
+  });
+
+  it('is not for somebody who was not on the court', () => {
+    const stranger = 'stranger-1111-4444-8888-00000009';
+
+    expect(awaitsYourAgreement(game({ ...played, proposals: [PROPOSAL] }), stranger)).toBe(false);
+  });
+});
+
+/**
+ * **Somebody didn't come** ([#560](https://github.com/Raketa02/Raketa/issues/560); the Games & Fill
+ * in mechanics §15.3). A report has a day: while one runs the game waits, and the player it names
+ * may say they came — the one act this arm offers, and only to them, only inside their own day,
+ * measured against the instant the list was read. Once every report has had its day, the ones
+ * nobody disputed are who did not come.
+ */
+describe('a no-show report', () => {
+  /** A report made last night, whose day runs to tonight — named as the seat names them. */
+  function report(playerId: string, over: Partial<NoShowReport> = {}): NoShowReport {
+    const name = game().seats.find((seat) => seat.playerId === playerId)?.name;
+    return {
+      playerId,
+      ...(name === undefined ? {} : { name }),
+      reportedAt: '2026-09-04T20:00:00Z',
+      disputeBy: '2026-09-05T20:00:00Z',
+      ...over,
+    };
+  }
+
+  const reported = (...noShows: NoShowReport[]) =>
+    game({ standing: 'NO_SHOW_REPORTED', entryClosesAt: undefined, noShows });
+
+  it('offers the dispute to the player it names, inside their day', () => {
+    const argument = resultArgument(reported(report(ME)), ME);
+
+    expect(argument).toEqual({
+      kind: 'no-show-reported',
+      yours: { who: { kind: 'you' }, disputeBy: '2026-09-05T20:00:00Z', state: 'open' },
+      others: [],
+    });
+    expect(actsOffered(argument)).toEqual(['dispute']);
+  });
+
+  it('names who was reported to everybody else, and offers them nothing to answer', () => {
+    const argument = resultArgument(reported(report(OPPONENT)), PARTNER);
+
+    expect(argument).toEqual({
+      kind: 'no-show-reported',
+      others: [
+        {
+          who: { kind: 'player', name: 'tomek.p' },
+          disputeBy: '2026-09-05T20:00:00Z',
+          state: 'open',
+        },
+      ],
+    });
+    expect(actsOffered(argument)).toEqual([]);
+  });
+
+  it('offers no second dispute once the player has said they came', () => {
+    const argument = resultArgument(
+      reported(report(ME, { disputedAt: '2026-09-05T08:00:00Z' }), report(OPPONENT)),
+      ME,
+    );
+
+    expect(argument).toMatchObject({
+      kind: 'no-show-reported',
+      yours: { who: { kind: 'you' }, state: 'disputed' },
+      others: [{ who: { kind: 'player', name: 'tomek.p' }, state: 'open' }],
+    });
+    expect(actsOffered(argument)).toEqual([]);
+  });
+
+  /** Another report's day can keep the game waiting after the reader's own day has ended. */
+  it('offers no dispute once the reader’s own day has passed, though another still runs', () => {
+    const argument = resultArgument(
+      reported(
+        report(ME, { reportedAt: '2026-09-04T08:00:00Z', disputeBy: '2026-09-05T08:00:00Z' }),
+        report(OPPONENT),
+      ),
+      ME,
+    );
+
+    expect(argument).toMatchObject({
+      kind: 'no-show-reported',
+      yours: { state: 'stood' },
+      others: [{ state: 'open' }],
+    });
+    expect(actsOffered(argument)).toEqual([]);
+  });
+
+  it('ends naming who did not come — the reports nobody disputed — and offers nothing', () => {
+    const argument = resultArgument(
+      game({
+        standing: 'NO_SHOW',
+        entryClosesAt: undefined,
+        noShows: [report(ME), report(OPPONENT, { disputedAt: '2026-09-05T08:00:00Z' })],
+        readAt: '2026-09-06T09:00:00Z',
+      }),
+      PARTNER,
+    );
+
+    expect(argument).toEqual({ kind: 'no-show', didNotCome: [{ kind: 'player', name: 'me_' }] });
     expect(actsOffered(argument)).toEqual([]);
   });
 });

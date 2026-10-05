@@ -50,7 +50,7 @@ class RunShortlistSearchCommand:
     #: week on the search screen is asking about a different evening, not
     #: correcting the record — nothing here writes the profile, and the app
     #: offers to save it afterwards (``docs/adr/0099`` §3).
-    availability_override: tuple[tuple[int, str], ...] | None
+    availability_override: tuple[tuple[int, int], ...] | None
     #: The search whose offer this one accepts, and which rung of it. They travel
     #: together or not at all: a rung with nothing to cite would be a widening
     #: the engine never offered, and a citation with no rung would be a search
@@ -108,7 +108,7 @@ class RunDeckDealCommand:
     sport: Sport
     #: The grid to run **this one deal** on, exactly as the shortlist spells it.
     #: ``None`` is *use the profile's own*, and it is not an empty grid.
-    availability_override: tuple[tuple[int, str], ...] | None
+    availability_override: tuple[tuple[int, int], ...] | None
     trace_id: str
 
 
@@ -261,7 +261,7 @@ class RunLineupSearchCommand:
     #: open-challenge gate steps aside for, and it is the whole of what makes the
     #: people who accepted your court visible to the search meant to finish it.
     completing_challenge_id: UUID | None
-    availability_override: tuple[tuple[int, str], ...] | None
+    availability_override: tuple[tuple[int, int], ...] | None
     offered_by_search_id: UUID | None
     rung: Rung | None
     trace_id: str
