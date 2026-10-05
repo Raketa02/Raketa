@@ -5,8 +5,7 @@
  *
  * The server's read (`ReadLiveYeses`, #539) lists them soonest game first and drops a game past its
  * book-by, whether or not its expiry has been recorded — so nothing here re-derives which yeses are
- * live. The cap comes with the list, so *up to 10 per sport* is said without the client holding
- * the number.
+ * live. There is no cap on how many (removed 2026-10-05).
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -26,9 +25,7 @@ export interface LiveYes extends Pick<
   readonly sport: Sport;
 }
 
-/** The whole list, and the cap it is counted against. */
+/** The whole list. */
 export interface LiveYeses {
   readonly yeses: readonly LiveYes[];
-  /** How many live yeses a player may hold in one sport. */
-  readonly capPerSport: number;
 }

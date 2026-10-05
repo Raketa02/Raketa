@@ -5,7 +5,6 @@
  *
  * ```
  * LIVE YESES · 3
- * up to 10 per sport
  * ┌─────────────────────────────────────────┐
  * │ Padel · Saturday 15:00            28 zł │   the share in grey mono
  * │ Bonarka Arena                           │
@@ -19,8 +18,8 @@
  * offline says it resumes, since a missing list would read as *nothing live*.
  *
  * **A row opens the game's details** — the deck's own screen, under Play, for the group, sport and
- * kind the yes was said in. The count is every yes across sports; the cap under it is per sport
- * (the server's number, `cap_per_sport`).
+ * kind the yes was said in. The count is every yes across sports, and there is no cap on it
+ * (removed 2026-10-05).
  *
  * The rows are the deck's words for a game (`liveYesesPresentation`): *Saturday* as the court block
  * says it, against the instant the list was read.
@@ -43,7 +42,6 @@ import {
   LIVE_YESES_TITLE,
   liveYesLabel,
   liveYesTitle,
-  liveYesesCapLine,
   liveYesesHeader,
 } from './liveYesesPresentation';
 import { gameRoute } from './proposalRoutes';
@@ -75,14 +73,12 @@ export function LiveYeses() {
 
   const readAt = read.dataUpdatedAt;
   const header = liveYesesHeader(list.yeses.length);
-  const cap = liveYesesCapLine(list.capPerSport);
 
   return (
     <View style={s.section}>
-      <View accessible accessibilityRole="header" accessibilityLabel={`${header}, ${cap}`}>
-        <Text style={s.head}>{header}</Text>
-        <Text style={s.cap}>{cap}</Text>
-      </View>
+      <Text accessibilityRole="header" style={s.head}>
+        {header}
+      </Text>
       <Card style={s.rows}>
         {list.yeses.map((yes, at) => (
           <LiveYesRow
@@ -135,7 +131,6 @@ const s = StyleSheet.create({
   // A section apart from the method above it, as the You tab's groups are from each other.
   section: { gap: theme.space.xs, paddingTop: theme.space.xs },
   head: { ...theme.type.eyebrow, color: theme.color.muted, textTransform: 'uppercase' },
-  cap: { ...theme.type.tiny, color: theme.color.muted },
   // The rows carry their own padding, so the card's is a step smaller (the You tab's groups').
   rows: { paddingVertical: theme.space.xxs },
   row: {

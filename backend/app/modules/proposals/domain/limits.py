@@ -16,10 +16,6 @@ VERSIONS_PER_PROPOSAL: Final = 3
 #: How many next best fits one open seat is dealt to at once, after a no.
 NEXT_BEST_FITS_PER_SEAT: Final = 3
 
-#: How many yeses a player may have on games that have not filled, **per sport**.
-#: A post counts as one: posting is the poster's yes.
-LIVE_YESES_PER_SPORT: Final = 10
-
 #: How many of a player's posts may be live at once — until each fills, is
 #: withdrawn, or reaches its book-by (the mechanics §9.3, §18).
 LIVE_POSTS: Final = 2

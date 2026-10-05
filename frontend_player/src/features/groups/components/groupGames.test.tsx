@@ -700,30 +700,6 @@ describe('answering', () => {
     await waitFor(() => expect(toasts()).toEqual([[COPY.refused.proposal_is_full, 'bad']]));
     expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
   });
-
-  it('says the live-yes cap with its count and sport', async () => {
-    const first = deckCard();
-    transport.on('POST', yesPath(first.proposal_id), () =>
-      json(
-        {
-          code: 'live_yeses_exhausted',
-          message: 'cap',
-          trace_id: 'trace-test',
-          details: { cap: 10, sport: 'PADEL' },
-        },
-        409,
-      ),
-    );
-    await openGames(groupDeck({ cards: [first] }));
-    await screen.findByTestId(`game-card-${first.proposal_id}`);
-
-    fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
-    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
-
-    await waitFor(() =>
-      expect(toasts()).toEqual([['You already have 10 live yeses in padel.', 'bad']]),
-    );
-  });
 });
 
 describe('the game’s details', () => {

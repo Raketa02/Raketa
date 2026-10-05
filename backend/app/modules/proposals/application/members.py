@@ -3,13 +3,12 @@
 
 **One reading, two readers**: the proposer deals a pool's games from it, and a
 member posting a game counts their best fits from it — the same Level, week,
-gender, intent, Games & money, booked games and live yeses, so the grid's
-number and the post's versions are dealt from what the proposer would deal.
+gender, intent, Games & money and booked games, so the grid's number and the
+post's versions are dealt from what the proposer would deal.
 
 **Read once per provider where the provider allows**: every member's Level,
-week and gender in one question, then each member's intent, Games & money,
-booked games and live yeses — in the pool's order, which is the order a tie
-is broken in.
+week and gender in one question, then each member's intent, Games & money and
+booked games — in the pool's order, which is the order a tie is broken in.
 """
 
 from __future__ import annotations
@@ -26,7 +25,6 @@ from app.modules.proposals.domain.ports import (
     BookedGames,
     GamesAndMoneyRepository,
     PlayersInPlay,
-    ProposalDirectory,
     WantedKinds,
 )
 from app.modules.proposals.domain.post import Who
@@ -43,13 +41,11 @@ class ReadMembers:
         wanted: WantedKinds,
         settings: GamesAndMoneyRepository,
         booked: BookedGames,
-        directory: ProposalDirectory,
     ) -> None:
         self._players = players
         self._wanted = wanted
         self._settings = settings
         self._booked = booked
-        self._directory = directory
 
     async def of(
         self, members: Sequence[UUID], *, sport: Sport, now: Instant
@@ -58,9 +54,7 @@ class ReadMembers:
         in their order."""
 
         limits, booked = await self.limits_and_games(members, now=now)
-        return await self.in_sport(
-            members, sport=sport, now=now, limits=limits, booked=booked
-        )
+        return await self.in_sport(members, sport=sport, limits=limits, booked=booked)
 
     async def limits_and_games(
         self, members: Sequence[UUID], *, now: Instant
@@ -82,7 +76,6 @@ class ReadMembers:
         members: Sequence[UUID],
         *,
         sport: Sport,
-        now: Instant,
         limits: Mapping[UUID, GamesAndMoney],
         booked: Mapping[UUID, tuple[Instant, ...]],
     ) -> list[Member]:
@@ -102,9 +95,6 @@ class ReadMembers:
                     wants=wanted or frozenset(),
                     limits=limits[player],
                     booked=booked[player],
-                    live_yeses=await self._directory.live_yes_count(
-                        player, sport=sport, now=now
-                    ),
                     gender=facts.gender,
                     preference=facts.preference,
                 )

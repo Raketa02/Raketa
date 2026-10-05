@@ -127,12 +127,6 @@ describe('a refused answer', () => {
   it('says the route’s code in words', () => {
     expect(refusalMessage(refusal('proposal_is_full'))).toBe('That game just filled.');
   });
-
-  it('says the live-yes cap with its count and sport', () => {
-    expect(refusalMessage(refusal('live_yeses_exhausted', { cap: 10, sport: 'PADEL' }))).toBe(
-      'You already have 10 live yeses in padel.',
-    );
-  });
 });
 
 describe('a game’s details', () => {

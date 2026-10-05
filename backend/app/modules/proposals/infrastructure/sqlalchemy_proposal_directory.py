@@ -72,17 +72,6 @@ class SqlAlchemyProposalDirectory:
             for row in rows
         ]
 
-    async def live_yes_count(
-        self, player_id: UUID, *, sport: Sport, now: Instant
-    ) -> int:
-        counted = await self._session.scalar(
-            select(func.count())
-            .select_from(ProposalORM)
-            .join(ProposalPersonORM, _saying_yes(player_id))
-            .where(_filling(now), ProposalORM.sport == sport.value)
-        )
-        return int(counted or 0)
-
     async def paused_for(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
         return (
             await self._session.scalars(

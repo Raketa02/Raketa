@@ -206,16 +206,10 @@ class LiveYesesResponse(BaseModel):
     has not filled, across groups, soonest game first."""
 
     yeses: list[LiveYesSchema]
-    cap_per_sport: int = Field(
-        description="How many live yeses a player may have in one sport."
-    )
 
     @classmethod
     def from_live(cls, live: LiveYeses) -> "LiveYesesResponse":
-        return cls(
-            yeses=[LiveYesSchema.from_named(named) for named in live.yeses],
-            cap_per_sport=live.cap_per_sport,
-        )
+        return cls(yeses=[LiveYesSchema.from_named(named) for named in live.yeses])
 
 
 # --------------------------------------------------------------------------- #

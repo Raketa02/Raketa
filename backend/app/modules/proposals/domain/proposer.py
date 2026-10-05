@@ -21,8 +21,8 @@ sides, so a tie goes to **the closest Levels**, then to whoever joined first.
 
 **A court hour is dealt the most even four (or two)** of the members who may
 play it: rated in the sport, wanting the kind, free for the whole hour, able to
-afford it, with no game then, a week under their cap and a live yes to spare —
-and who fit every pair among them. As many cards as the club has courts free at
+afford it, with no game then and a week under their cap — and who fit every
+pair among them. As many cards as the club has courts free at
 that hour, **of either kind**, each for different people, and **never the same
 people twice in one batch**: hours are walked soonest first, so a four is dealt
 at its best hour and the next hour deals the next best, and within an hour the
@@ -110,7 +110,6 @@ from app.modules.proposals.domain.deck import (
 )
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.limits import (
-    LIVE_YESES_PER_SPORT,
     NEXT_BEST_FITS_PER_SEAT,
     VERSIONS_PER_PROPOSAL,
 )
@@ -152,8 +151,6 @@ class Member:
     limits: GamesAndMoney
     #: When each game they have booked starts.
     booked: tuple[Instant, ...] = ()
-    #: Their yeses in the sport on games still filling.
-    live_yeses: int = 0
     #: Their gender and gender preference, read only for whom a post is for
     #: (#546) — ``None`` where it cannot be read, which a post for anybody but
     #: *Anyone* does not take.
@@ -183,14 +180,13 @@ def may_play(
 ) -> bool:
     """Whether this member may be dealt a game of ``kind`` from ``start`` at
     ``share_grosze`` a seat — ``None`` where no court, and so no price, is
-    asked about: rated, wanting the kind, a live yes to spare, the share within
-    their *most I'll pay*, a week under their cap (``capped``), no game then,
-    and free for the whole hour."""
+    asked about: rated, wanting the kind, the share within their *most I'll
+    pay*, a week under their cap (``capped``), no game then, and free for the
+    whole hour."""
 
     return (
         member.level is not None
         and kind in member.wants
-        and member.live_yeses < LIVE_YESES_PER_SPORT
         and (share_grosze is None or member.limits.shows(share_grosze=share_grosze))
         and week_of(start) not in capped
         and not hour_taken(start, member.booked)

@@ -220,7 +220,7 @@ describe('while an On request club decides (A4.2, §13)', () => {
     queryClient
       .getQueryCache()
       .build(queryClient, { queryKey: ['proposals', 'live-yeses'], gcTime: Infinity })
-      .setData({ yeses: [], capPerSport: 10 });
+      .setData({ yeses: [] });
 
     leave();
     await confirm();

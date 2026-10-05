@@ -3470,8 +3470,8 @@ ceiling      6.2 chips, gap xs, wrapping — Off · 35 zł · 45 zł · 60 zł, 
              the head wraps them under the title on a phone too narrow for both
 bound        rlLabel muted, centred, under the cards · the limits in sans 700 ("4 games",
              "180 zł") · a refusal or an offline hold: 5.4 note under it
-live yeses   eyebrow muted uppercase "LIVE YESES · 3" over tiny muted "up to 10 per sport", one
-             header to a listener · one 5.1 card, padding-y xxs, of rows divided by line2 (5.5)
+live yeses   eyebrow muted uppercase "LIVE YESES · 3", the header (no cap line: the live-yes cap
+             was removed 2026-10-05) · one 5.1 card, padding-y xxs, of rows divided by line2 (5.5)
 live yes row pressable, padding-y sm, gap sm: cardTitle ink "Padel · Saturday 15:00" over tiny
              muted club · the share num.s muted, tabular, right · no chevron (mock 48) · pressed .7
 yes details  a game's details (7.22) drawn from a yes the deck no longer deals: the club as the
@@ -3481,8 +3481,8 @@ yes details  a game's details (7.22) drawn from a yes the deck no longer deals: 
 **Games & money is two cards and a line** ([#554](https://github.com/Raketa02/Raketa/issues/554),
 the Games & Fill in screens A7.1; mocks 38, 39), and **LIVE YESES is a titled group of rows on
 Payments' state B** (A7.3; mock 48). Drawn from the mocks with three departures, each a Part 16
-row: the live yeses' head counts every live yes (_LIVE YESES · 3_) with the cap on a line under
-it, as A7.3 words it, where mock 48 draws _LIVE YESES · 1 OF 10_; the bound's limits are **sans
+row: the live yeses' head counts every live yes (_LIVE YESES · 3_), where mock 48 draws
+_LIVE YESES · 1 OF 10_ — and since 2026-10-05 there is no cap to put under it (the mechanics Q97); the bound's limits are **sans
 700 in a sentence**, as the mock sets them — a sentence's figures are words, and 1.4's mono is for
 the display figure, which the stepper's is; and **a yes's details** are the one view no mock
 draws.

@@ -36,7 +36,7 @@ import {
 import type { DayRange } from '../domain/vocabulary';
 import { calendarDayOf, gameDayOf } from '../domain/when';
 
-import { LINE_JOIN, clubName, gameDayWords, refusalMessage, shortMoment } from './deckPresentation';
+import { LINE_JOIN, clubName, gameDayWords, shortMoment } from './deckPresentation';
 import { rowTitle } from './fillInPresentation';
 import { POSTING_COPY } from './postingCopy';
 
@@ -276,12 +276,11 @@ export function pickLine(
 }
 
 /**
- * **Why a post was refused** (A5.4) — under the button, in the helper's place. The cap's own count
- * and sport for the live yeses; the week the poster's games are booked for; otherwise the route's
- * code over the recovery sentence every screen shares.
+ * **Why a post was refused** (A5.4) — under the button, in the helper's place. The week the
+ * poster's games are booked for; otherwise the route's code over the recovery sentence every
+ * screen shares.
  */
 export function postRefusal(error: AppError): string {
-  if (error.code === 'live_yeses_exhausted') return refusalMessage(error);
   if (error.code === 'games_per_week_booked') {
     const week = typeof error.details?.week === 'string' ? error.details.week : undefined;
     return week === undefined

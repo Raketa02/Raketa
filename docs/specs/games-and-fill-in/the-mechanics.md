@@ -258,7 +258,8 @@ it free from **Fill in › You're In** until its game fills.
 
 ### 6.6 Limits
 
-- **Live yeses:** at most **10 per sport** at once (yeses on games that have not filled yet).
+- **Live yeses:** **no cap** (Q97). A yes can only book within your games per week and one
+  game per hour, so how many games you are In on at once is not limited.
 - **Games per week:** a free setting, **1–7, default 2**, counted Monday to Sunday. When you
   have that many booked games in a week, your other yeses for that week pause; they come back
   if one of those games is called off. **Cards for a capped week are not dealt at all** (Q73) —
@@ -426,8 +427,7 @@ The **Post a game** button in Fill in walks through:
 ### 9.3 Limits and withdrawing
 
 - At most **2 posts live at once** (live = until it fills, you withdraw it, or book-by passes).
-- A post counts as **one of your yeses** (the cap of 10 per sport) and, if it fills, as **one
-  of your games that week**. With your weekly games already booked, you cannot post for that
+- A post is **your yes** and, if it fills, counts as **one of your games that week**. With your weekly games already booked, you cannot post for that
   week.
 - **Withdrawing before it fills** is free, like any yes. If others are already In, the game
   carries on without you — their yeses stand — and its ribbon drops your name.
@@ -955,9 +955,8 @@ The You tab gains an **Account** group of three rows (screens in [the-screens.md
   at most 2 games · up to 70 zł a week"* (the money half only when a ceiling is set), and the
   row's subtitle repeats it. Settings apply across sports.
 - **Payments** — the setup ([§12.5](#125-saving-a-payment-method-and-the-terms)) until a method is
-  saved; then the method card, **LIVE YESES · n** (every yes that hasn't filled, across groups,
-  with *"up to 10 per sport"* once under the header) and **RECEIPTS** (charges and refunds, the
-  club named as the seller).
+  saved; then the method card, **LIVE YESES · n** (every yes that hasn't filled, across groups)
+  and **RECEIPTS** (charges and refunds, the club named as the seller).
 - **Notifications** — the always-on list and the three choices ([§17.2](#172-notifications)).
 
 **Your week** stays in *Finding players* ([§4.2](#42-weekly-hours-availability)).
@@ -998,7 +997,7 @@ No notification is ever sent for a single swipe.
 | Versions per game | at most 3 · each person one |
 | Next best fits after a no | up to 3 per open seat |
 | When a picked game widens | at half its seats In |
-| Live yeses | 10 per sport |
+| Live yeses | no cap (Q97) |
 | Games per week | 1–7, default 2, Monday to Sunday |
 | Live posts | 2 |
 | Undo | 10 seconds, on every action that moves money: the yes that fills a game and every rescue join |
@@ -1263,7 +1262,7 @@ Aug–Sep 2026).
 | 10 | A card promises a court at a club and an hour; the number comes at booking. |
 | 11 | The only deadline is the court's book-by; no clocks. |
 | 12 | Three ways to work with Raketa, a per-club setting in the club website. |
-| 13 | A live-yes cap plus games per week; never two games at one hour; a list of your yeses. |
+| 13 | A live-yes cap plus games per week; never two games at one hour; a list of your yeses. → cap removed by Q97 |
 | 14 | A game plays full or not at all; nobody pays more for an empty seat. → read at the cut-off since Q58 |
 | 15 | Relaxing the level filter: out of scope. |
 | 16 | No lightweight engine, no toggle; distance stands down inside groups. |
@@ -1346,3 +1345,4 @@ Aug–Sep 2026).
 | 94 | Push now; every money event also emailed. |
 | 95 | The setup checklist sits on Overview until the club is live. |
 | 96 | The empty deck keeps today's cards plus Post a game; rescue details for non-members; public site unchanged; payment not in onboarding; the product owner runs to-spec and to-tickets. |
+| 97 | (2026-10-05, amends Q13) No live-yes cap: games per week and one game per hour already bound what a yes can book. The LIVE YESES list stays. |

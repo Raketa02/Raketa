@@ -12,8 +12,7 @@ what the club sells at that hour (``SellableCourtHours``, through
 the deadline, and a club that is not live or is paused cannot be proposed at.
 
 **A post is its poster's yes**, so posting asks what every yes asks of the
-poster's own account — a method to charge and a live yes to spare — before the
-game exists.
+poster's own account — a method to charge — before the game exists.
 """
 
 from __future__ import annotations
@@ -91,9 +90,7 @@ class MakeProposal:
             posted_for=command.posted_for,
         )
         if poster is not None:
-            await self._guards.refuse_an_unchargeable_yes(
-                poster, sport=proposal.sport, now=now
-            )
+            await self._guards.refuse_an_unchargeable_yes(poster)
         for named in command.versions:
             await _deal(self._guards, proposal, named, at=now)
         await self._proposals.save(proposal)

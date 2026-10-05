@@ -1489,8 +1489,7 @@ def build_proposal_guards(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> Guards:
     """The checks a version and a yes are held to outside the aggregate: the
-    pool, the fit, a method to charge, a live yes to spare — and, on a post,
-    who it is for (#546)."""
+    pool, the fit, a method to charge — and, on a post, who it is for (#546)."""
     return Guards(
         pools=build_pools(session),
         fit=build_player_fit(session, runtime=runtime),
@@ -1499,7 +1498,6 @@ def build_proposal_guards(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        directory=build_proposal_directory(session),
         players=build_players_in_play(session, runtime=runtime),
         members=build_read_members(session, runtime=runtime),
     )
@@ -2513,7 +2511,6 @@ def build_read_members(
             events=build_event_publisher(session, runtime=runtime),
         ),
         booked=booked if booked is not None else build_booked_games(session),
-        directory=build_proposal_directory(session),
     )
 
 

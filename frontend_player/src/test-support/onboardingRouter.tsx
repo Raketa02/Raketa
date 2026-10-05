@@ -1359,7 +1359,7 @@ export const LIVE_YESES_PATH = '/api/v1/players/me/live-yeses';
  */
 export function stubLiveYeses(transport: Transport, yeses: readonly Wire['LiveYesSchema'][] = []) {
   transport.on('GET', LIVE_YESES_PATH, () =>
-    json<Wire['LiveYesesResponse']>({ yeses: [...yeses], cap_per_sport: 10 }),
+    json<Wire['LiveYesesResponse']>({ yeses: [...yeses] }),
   );
 }
 

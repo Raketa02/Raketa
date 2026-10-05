@@ -1000,11 +1000,6 @@ describe('Post — you’re In (mock 33, A5.4)', () => {
   it.each([
     ['live_posts_exhausted', { cap: 2 }, COPY.refused.live_posts_exhausted],
     [
-      'live_yeses_exhausted',
-      { cap: 10, sport: 'PADEL' },
-      'You already have 10 live yeses in padel.',
-    ],
-    [
       'games_per_week_booked',
       { week: '2026-09-28' },
       'Your games for the week from 28 Sep are already booked.',

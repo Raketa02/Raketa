@@ -216,9 +216,6 @@ describe('the pick and the button', () => {
 
   it('says each guard in the button’s order, with the cap and the week where the server names them', () => {
     expect(postRefusal(refused('payment_method_required'))).toMatch(/saved way to pay/);
-    expect(postRefusal(refused('live_yeses_exhausted', { cap: 10, sport: 'PADEL' }))).toBe(
-      'You already have 10 live yeses in padel.',
-    );
     expect(postRefusal(refused('live_posts_exhausted', { cap: 2 }))).toMatch(/2 posts live/);
     expect(postRefusal(refused('games_per_week_booked', { week: '2026-10-05' }))).toBe(
       'Your games for the week from 5 Oct are already booked.',

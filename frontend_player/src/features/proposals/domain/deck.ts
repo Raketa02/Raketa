@@ -433,7 +433,7 @@ export function withoutCard(deck: GroupDeck, proposalId: string): GroupDeck {
 
 /**
  * **What a refused answer does to the card** — `returns` to the deck, because the answer can be
- * given again once the reason is gone (a saved method, a live yes to spare, a read that failed), or
+ * given again once the reason is gone (a saved method, a read that failed), or
  * is `gone`, because the game is: over, full, already answered, or no longer one for you.
  *
  * Keyed by the refusal's code; a code this build does not know returns the card, which is the

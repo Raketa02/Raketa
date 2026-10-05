@@ -11,9 +11,11 @@ blocked each other after saying yes — is not the newcomer's refusal to carry,
 and it is the fill's to read: the later of the two yeses stops counting
 (``fill.py``).
 
-**A yes needs three facts about the player's own account first**, in the order
-the phone meets them: a method to charge (the setup opens), a live yes to spare
-(the card springs back), and then the fit (the card has gone).
+**A yes needs two facts about the player's own account first**, in the order
+the phone meets them: a method to charge (the setup opens), and then the fit
+(the card has gone). How many yeses a player has on games still filling is not
+one of them: games per week and one game per hour already bound what a yes can
+book.
 
 **A yes on a post is held to who the post is for** (#546): its *Who* and the
 range of the others' Levels, and on *Mixed pairs* never a third of a gender —
@@ -31,23 +33,20 @@ from collections.abc import Collection
 from typing import final
 from uuid import UUID
 
-from app.kernel import Instant, Sport
+from app.kernel import Instant
 from app.modules.proposals.application.members import ReadMembers
 from app.modules.proposals.domain.errors import (
-    LiveYesesExhausted,
     NotInThePool,
     NoLongerFits,
     PaymentMethodRequired,
     PostNotOpenToYou,
     VersionDoesNotFit,
 )
-from app.modules.proposals.domain.limits import LIVE_YESES_PER_SPORT
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.ports import (
     PlayerFit,
     PlayersInPlay,
     Pools,
-    ProposalDirectory,
     SavedMethods,
 )
 from app.modules.proposals.domain.post import stand_together
@@ -63,14 +62,12 @@ class Guards:
         pools: Pools,
         fit: PlayerFit,
         methods: SavedMethods,
-        directory: ProposalDirectory,
         players: PlayersInPlay,
         members: ReadMembers,
     ) -> None:
         self._pools = pools
         self._fit = fit
         self._methods = methods
-        self._directory = directory
         self._players = players
         self._members = members
 
@@ -89,16 +86,11 @@ class Guards:
         if await self._misfits(proposal, named, at=at):
             raise VersionDoesNotFit()
 
-    async def refuse_an_unchargeable_yes(
-        self, player_id: UUID, *, sport: Sport, now: Instant
-    ) -> None:
-        """A method to charge, then a live yes to spare in the sport."""
+    async def refuse_an_unchargeable_yes(self, player_id: UUID) -> None:
+        """A method to charge."""
 
         if not await self._methods.saved_for(player_id):
             raise PaymentMethodRequired()
-        live = await self._directory.live_yes_count(player_id, sport=sport, now=now)
-        if live >= LIVE_YESES_PER_SPORT:
-            raise LiveYesesExhausted(cap=LIVE_YESES_PER_SPORT, sport=sport.value)
 
     async def refuse_a_join_dealing_would_not_make(
         self, player_id: UUID, proposal: Proposal, *, now: Instant

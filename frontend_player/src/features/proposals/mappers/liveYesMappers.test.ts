@@ -33,13 +33,12 @@ describe('a live yes', () => {
 });
 
 describe('the list', () => {
-  it('keeps the server’s order and its cap', () => {
+  it('keeps the server’s order', () => {
     const first = liveYes();
     const second = liveYes({ sport: 'TENNIS' });
 
-    const read = toLiveYeses({ yeses: [first, second], cap_per_sport: 10 });
+    const read = toLiveYeses({ yeses: [first, second] });
 
-    expect(read.capPerSport).toBe(10);
     expect(read.yeses.map((yes) => [yes.proposalId, yes.sport])).toEqual([
       [first.proposal_id, 'padel'],
       [second.proposal_id, 'tennis'],
@@ -49,6 +48,6 @@ describe('the list', () => {
   it('drops a yes in a sport this build cannot name', () => {
     const unknown = { ...liveYes(), sport: 'PICKLEBALL' } as unknown as ReturnType<typeof liveYes>;
 
-    expect(toLiveYeses({ yeses: [unknown, liveYes()], cap_per_sport: 10 }).yeses).toHaveLength(1);
+    expect(toLiveYeses({ yeses: [unknown, liveYes()] }).yeses).toHaveLength(1);
   });
 });

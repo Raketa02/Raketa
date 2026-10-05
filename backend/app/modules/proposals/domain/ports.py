@@ -116,12 +116,6 @@ class ProposalDirectory(Protocol):
         **soonest game first**, and by proposal id among games at one hour."""
         ...
 
-    async def live_yes_count(
-        self, player_id: UUID, *, sport: Sport, now: Instant
-    ) -> int:
-        """How many of those are in ``sport`` — what the cap counts."""
-        ...
-
     async def paused_for(self, player_id: UUID, *, now: Instant) -> Sequence[UUID]:
         """Every proposal still filling on which another booking paused this
         player's yes — **soonest first** (#544). Candidates: the aggregate says

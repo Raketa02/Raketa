@@ -43,7 +43,7 @@ is dropped from the cached read (`withoutCard`, its segment's count and the badg
 answer settling re-reads every deck of the group. **A refusal is a toast**, handled on the mutation
 rather than on the call — TanStack drops a `mutate` call's own callbacks when a later call is made,
 and a player answers the next card before the last reply lands — and `refusalOutcome` decides the
-card: a reason the player can mend (no saved way to pay, the live-yes cap, a read that failed) puts it
+card: a reason the player can mend (no saved way to pay, a read that failed) puts it
 back, and a game over, full, already answered or no longer theirs lets it go. Offline, the answer is
 held and the card stays gone, with the amber _resumes_ note.
 
@@ -119,8 +119,8 @@ deck's answers and their details are the deck's screen, and the deck will open t
 a sheet (A2.4) — so `payments` importing this feature would point the edge the wrong way.
 `PaymentsScreen` takes a `liveYeses` slot and draws it in state B only (a yes needs a saved method,
 and a method is not removed while a yes needs it), so state A never asks for the list. The head
-counts every yes across sports with _up to 10 per sport_ under it — the server's `cap_per_sport` —
-where mock 48 drew _1 OF 10_, a fraction of two different wholes (Part 16). A row is _Padel ·
+counts every yes across sports, with no cap under it — the live-yes cap was removed on 2026-10-05
+(the mechanics Q97); mock 48 drew _1 OF 10_ before that. A row is _Padel ·
 Saturday 15:00_ in the court block's day words, the club under it, the share in grey mono; it opens
 the game's details for the group, sport and kind the yes was said in. **Hidden when empty and while
 the first read is on its way**; a read that failed says so under the section's name with the retry,
@@ -510,7 +510,7 @@ map first._ under it; once picked, the line says the post (_Saturday 17:00 · Og
 if it fills_). With nothing saved the setup opens (the fill's) and the post goes once a card is; a
 guard the server answers with is said in the helper's place, announced, **for the pick it was said
 about** — a new pick, a removed one or a new sport clears it: `payment_method_required` (and the
-setup), `live_yeses_exhausted` (the cap and sport), `live_posts_exhausted`, `games_per_week_booked`
+setup), `live_posts_exhausted`, `games_per_week_booked`
 (the week), `you_play_then`, `nobody_fits_then`, `court_hour_not_for_sale`. Posted, the draft is
 forgotten, _Posted — 5 of your best fits have it._ is toasted, and the player is back on the page on
 **Fill in › You're In** — the page turned to Fill in under the screen when it opened

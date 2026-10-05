@@ -1,7 +1,7 @@
 /**
  * **A player's answers to a card** — *I'm in*, *Not this time*, *Withdraw*, and the yes again on a
  * payment confirmed in the app. Pass-throughs: the
- * rules that make an answer land — a saved method, a live yes to spare, a game still filling,
+ * rules that make an answer land — a saved method, a game still filling,
  * everybody In fitting everybody else — are the server's, and each refusal is named in its code.
  */
 

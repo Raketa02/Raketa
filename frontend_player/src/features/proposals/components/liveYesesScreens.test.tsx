@@ -54,7 +54,7 @@ import {
   type Wire,
 } from '@/test-support/transport';
 
-import { liveYesesCapLine, liveYesesHeader, LIVE_YESES_TITLE } from './liveYesesPresentation';
+import { liveYesesHeader, LIVE_YESES_TITLE } from './liveYesesPresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = PROPOSALS_COPY;
@@ -120,11 +120,9 @@ describe('the section on Payments — mock 48', () => {
     ]);
     await onPayments();
 
-    expect(await screen.findByText(liveYesesHeader(2))).toBeTruthy();
-    expect(screen.getByText(liveYesesCapLine(10))).toBeTruthy();
-    expect(
-      screen.getByRole('header', { name: `${liveYesesHeader(2)}, up to 10 per sport` }),
-    ).toBeTruthy();
+    expect(await screen.findByRole('header', { name: liveYesesHeader(2) })).toBeTruthy();
+    // There is no live-yes cap (removed 2026-10-05), so nothing counts against one.
+    expect(screen.queryByText(/per sport/)).toBeNull();
 
     const rows = screen.getAllByRole('button', { name: /if it fills$/ });
     expect(rows.map((row) => row.props.accessibilityLabel)).toEqual([

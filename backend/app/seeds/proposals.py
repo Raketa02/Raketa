@@ -8,7 +8,7 @@ clock — so what a developer's decks hold is what the engine deals: the most ev
 four at every hour a club sells and its members are free for, dealt at their
 best hour. Nothing here chooses who is on a card. Each yes is then said by
 ``SayYes``, the use case the phone's swipe runs, so a seeded yes needed a saved
-card and a live yes to spare exactly as a real one does. Nothing here opens a
+card exactly as a real one does. Nothing here opens a
 table.
 
 **Its own group, because none of the others can seat a four.** Every Play

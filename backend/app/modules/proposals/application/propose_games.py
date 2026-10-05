@@ -211,7 +211,7 @@ class ProposeGames:
             batch = await self._batch(
                 sport,
                 members=await self._members_in_play.in_sport(
-                    members, sport=sport, now=now, limits=limits, booked=booked
+                    members, sport=sport, limits=limits, booked=booked
                 ),
                 clubs=clubs,
                 hours=[hour for hour in hours if hour.sport is sport],

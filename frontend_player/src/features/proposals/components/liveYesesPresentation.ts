@@ -1,5 +1,5 @@
 /**
- * **Every sentence You › Payments' LIVE YESES composes** — the head, the cap under it, and a row
+ * **Every sentence You › Payments' LIVE YESES composes** — the head and a row
  * ([#554](https://github.com/Raketa02/Raketa/issues/554); the screens A7.3; mock 48).
  *
  * A row names its game the way the deck's court block does — *Today*, *Tomorrow*, *Saturday*, or a
@@ -22,11 +22,6 @@ export const LIVE_YESES_TITLE = 'Live yeses';
 /** *Live yeses · 3* — every live yes, across sports; the eyebrow's style uppercases it. */
 export function liveYesesHeader(count: number): string {
   return `${LIVE_YESES_TITLE}${LINE_JOIN}${count}`;
-}
-
-/** *up to 10 per sport* — under the head, the cap the count runs against. */
-export function liveYesesCapLine(capPerSport: number): string {
-  return `up to ${capPerSport} per sport`;
 }
 
 /** *Padel · Saturday 15:00* — the row's title. */

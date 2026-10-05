@@ -35,6 +35,5 @@ export function toLiveYes(wire: Schemas['LiveYesSchema']): LiveYes | undefined {
 export function toLiveYeses(wire: Schemas['LiveYesesResponse']): LiveYeses {
   return {
     yeses: wire.yeses.map(toLiveYes).filter((yes): yes is LiveYes => yes !== undefined),
-    capPerSport: wire.cap_per_sport,
   };
 }

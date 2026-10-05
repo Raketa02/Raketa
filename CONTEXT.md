@@ -2286,8 +2286,7 @@ builds proposals (#540), posting (#546) and the fill that books one (#541) are s
   seat a **No** left is dealt again into the same version, to at most three next best fits.
 - **Yes** — a swipe right, or *I'm in*: *"if everybody is in, book it and charge my share."*
   Silent, free, holds nothing. **Yeses are the game's, never a version's**: a yes on any version
-  counts toward the one game. A yes needs a saved **Payment method**, and a **live yes** to
-  spare. A **No** is a swipe left, equally silent, and **final**: the card never comes back.
+  counts toward the one game. A yes needs a saved **Payment method**. A **No** is a swipe left, equally silent, and **final**: the card never comes back.
   _Avoid_: vote, like.
 - **In** — a player who said yes to a proposal that has not filled. **Everybody In fits everybody
   else In**: a version is dealt only to people who fit the people In and each other, and a yes
@@ -2296,8 +2295,9 @@ builds proposals (#540), posting (#546) and the fill that books one (#541) are s
 - **Withdraw** — taking a yes back before the game fills: free and silent, and the seat is open
   again. Unlike a **No** it is no verdict on the card: the player may say yes again while the
   game fills.
-- **Live yes** — a yes on a game that has not filled. At most **ten per sport**, across pools; a
-  post counts as one.
+- **Live yes** — a yes on a game that has not filled, across pools; a post counts as one. **No
+  cap** on how many (removed 2026-10-05): games per week and one game per hour bound what they
+  can book.
 - **Proposal events** (durable name / version) — none of them is told to anybody:
   - **ProposalMade** — `proposals.proposal_made` / v1 — the pool and its kind, the origin and
     poster, the sport and kind, the club and start, the share and the book-by.

@@ -19,8 +19,8 @@ hours* — still counted, at its best hour regardless, and still pickable.
 **A best fit is somebody the post could be dealt to then**: who it is for
 (``PostedFor``) and fitting the poster — the caller's, read once — and, hour by
 hour, the proposer's own *may play*: rated, wanting the kind, free for the whole
-hour, no game then, a week under their cap, a live yes to spare, and the court's
-share within their *most I'll pay* (with no court, there is no share to ask
+hour, no game then, a week under their cap, and the court's share within their
+*most I'll pay* (with no court, there is no share to ask
 about). A full game's worth is the seats besides the poster — on *Mixed pairs*,
 the men and the women beside them a mixed game needs, never three of one.
 

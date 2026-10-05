@@ -324,7 +324,6 @@ describe('answering', () => {
 
   it('returns the card on a refusal whose reason can go, and lets it go with the game', () => {
     expect(refusalOutcome('payment_method_required')).toBe('returns');
-    expect(refusalOutcome('live_yeses_exhausted')).toBe('returns');
     expect(refusalOutcome('block_state_unavailable')).toBe('returns');
     expect(refusalOutcome(undefined)).toBe('returns');
     expect(refusalOutcome('something_new')).toBe('returns');

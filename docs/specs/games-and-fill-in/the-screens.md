@@ -104,7 +104,6 @@ this game* — counting the yeses on every version.
 | right | *Book it now* | Toast **"Booking in 10 s · Undo"** with a draining ring. At zero: everyone charged together → **It's a game!** At an On request club, at zero the game goes to the club (*waiting for the club*); the charge and **It's a game!** follow when it confirms ([the mechanics §11](the-mechanics.md#11-the-moment-a-game-fills)). |
 | right | a rescue | The same toast; at zero your share is charged → **It's a game!**; the game is in **Home**. |
 | right | without a saved method | The **payment setup** ([A7.3](#a73-payments)) opens as a sheet; the yes lands when it finishes, or is dropped if you close it. |
-| right | at your live-yes cap (10 per sport) | The card springs back; a toast says why. |
 | left | anything | The card leaves; silent; never on your record. |
 
 - **It's a game!** — today's yes screen (ADR-0167): full screen, the faces, the one word *It's a
@@ -313,7 +312,7 @@ rest grey. **The order is changed from the mocks** (Q82):
   club when a game fills*, **Change** (reopens the setup; the old method keeps working until the
   new one is saved). Under it a small **Remove this method** link, refused with its reason while
   anything is live (Q83).
-- **LIVE YESES · 3** — *up to 10 per sport* under the header; rows *Padel · Saturday 15:00 ·
+- **LIVE YESES · 3** — every live yes, with no cap (the mechanics Q97); rows *Padel · Saturday 15:00 ·
   Bonarka Arena* with the share in grey; tap → the game's details. Hidden when empty.
 - **RECEIPTS** — newest first; ✓ grey circle for a charge (*−28 zł*, dark), ↩ mint circle for a
   refund (*+26,58 zł*, mint — the 28 zł less its 1,42 zł card fee); the **club's name** as the

@@ -10,7 +10,6 @@ import {
   LIVE_YES_HINT,
   liveYesLabel,
   liveYesTitle,
-  liveYesesCapLine,
   liveYesesHeader,
 } from './liveYesesPresentation';
 
@@ -27,9 +26,8 @@ const YES: LiveYes = {
 };
 
 describe('the section’s head', () => {
-  it('counts the yeses, and says the cap under it', () => {
+  it('counts the yeses', () => {
     expect(liveYesesHeader(3)).toBe('Live yeses · 3');
-    expect(liveYesesCapLine(10)).toBe('up to 10 per sport');
   });
 });
 

@@ -12,7 +12,7 @@
  * - **A counted phrase goes through `counted()`**, so *1 person is In* is never *1 people are In*.
  */
 
-import { sportLabel, toSport } from '@/features/onboarding/types';
+import { sportLabel } from '@/features/onboarding/types';
 import { balanceWord } from '@/features/play/types';
 import { codeMessage, type AppError } from '@/shared/errors';
 import { counted } from '@/shared/formatting/counted';
@@ -353,19 +353,9 @@ export const ANSWER_LABELS = { pass: COPY.no, accept: COPY.yes, record: COPY.det
 
 /**
  * **What a refused answer says** — the route's code over the recovery sentence every screen
- * shares, and the cap's own count and sport when the live yeses have run out.
+ * shares.
  */
 export function refusalMessage(error: AppError): string {
-  if (error.code === 'live_yeses_exhausted') {
-    const cap = typeof error.details?.cap === 'number' ? error.details.cap : undefined;
-    const wire =
-      typeof error.details?.sport === 'string' ? toSport(error.details.sport) : undefined;
-    // Mid-sentence, the sport is written lower case — the group page's own rule.
-    const sport = wire === undefined ? undefined : sportLabel(wire).toLowerCase();
-    return cap === undefined || sport === undefined
-      ? 'You have as many live yeses as a sport allows.'
-      : `You already have ${counted(cap, 'live yes', 'live yeses')} in ${sport}.`;
-  }
   return codeMessage(COPY.refused, error);
 }
 

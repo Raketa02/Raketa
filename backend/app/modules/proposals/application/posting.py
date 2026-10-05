@@ -515,11 +515,9 @@ class PostAGame:
         hour = read.grid.court_hour(command.club_id, command.start)
         if hour is None:
             raise CourtHourNotForSale()
-        # The three the button says, in its order: a method (and a live yes to
-        # spare), two live posts, the week.
-        await self._guards.refuse_an_unchargeable_yes(
-            poster.player_id, sport=read.sport, now=now
-        )
+        # The three the button says, in its order: a method, two live posts,
+        # the week.
+        await self._guards.refuse_an_unchargeable_yes(poster.player_id)
         if await self._directory.live_posts_of(poster.player_id, now=now) >= LIVE_POSTS:
             raise LivePostsExhausted(cap=LIVE_POSTS)
         week = week_of(hour.start)

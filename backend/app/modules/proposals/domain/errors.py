@@ -2,8 +2,10 @@
 
 **A player meets four of them from a card** — the game is over, the answer was
 already given, every seat is In, or the people In now include somebody they do
-not fit — and three from what their own account is missing: a payment method,
-a live yes to spare. None of them names another person: *somebody you do not
+not fit — and one from what their own account is missing: a payment method.
+There is no cap on live yeses (removed 2026-10-05): games per week and one
+game per hour already bound what a player can be charged for. None of them
+names another person: *somebody you do not
 fit* is said without saying who, as a withheld row is (``docs/adr/0130``).
 
 The next four are **the dealer's**, met by whoever makes and deals proposals —
@@ -89,20 +91,6 @@ class NoLongerFits(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("the people in on this game no longer fit this player")
-
-
-class LiveYesesExhausted(ConflictError):
-    """``details.cap`` live yeses in ``details.sport`` already — yeses on games
-    that have not filled (the mechanics §6.6). The card springs back; one of
-    them has to fill, expire or be withdrawn first."""
-
-    code = "live_yeses_exhausted"
-
-    def __init__(self, *, cap: int, sport: str) -> None:
-        super().__init__(
-            f"{cap} live yeses in this sport already",
-            details={"cap": cap, "sport": sport},
-        )
 
 
 class PaymentMethodRequired(ConflictError):

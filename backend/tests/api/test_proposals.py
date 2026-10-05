@@ -124,7 +124,6 @@ async def test_a_yes_lands_on_the_game_and_in_the_player_s_live_yeses(
         "your_payment": None,
     }
     assert await live_yeses(client, ola) == {
-        "cap_per_sport": 10,
         "yeses": [
             {
                 "proposal_id": str(proposal),
@@ -545,15 +544,17 @@ async def test_nobody_outside_the_pool_is_dealt_a_game_from_it(
 
 
 # --------------------------------------------------------------------------- #
-# Ten live yeses per sport
+# No cap on live yeses
 # --------------------------------------------------------------------------- #
 
 
-async def test_the_eleventh_live_yes_in_a_sport_is_refused(
-    client, session_factory, clock, payments, club, four, group
+async def test_a_player_may_be_in_on_any_number_of_games_still_filling(
+    client, session_factory, clock, club, four, group
 ):
+    """There is no live-yes cap (removed 2026-10-05): games per week and one
+    game per hour already bound what a yes can book."""
+
     ola = four[0]
-    await world.rate(client, ola["token"], Sport.TENNIS)
     games = [
         await makes(
             session_factory,
@@ -565,27 +566,12 @@ async def test_the_eleventh_live_yes_in_a_sport_is_refused(
         )
         for hour in range(11)
     ]
-    for game in games[:10]:
-        assert (await says_yes(client, ola, game)).status_code == 200
 
-    refused = await says_yes(client, ola, games[10])
+    for game in games:
+        said = await says_yes(client, ola, game)
+        assert said.status_code == 200, said.text
 
-    assert refused.status_code == 409
-    assert refused.json()["code"] == "live_yeses_exhausted"
-    assert refused.json()["details"] == {"cap": 10, "sport": "PADEL"}
-    # Another sport has a cap of its own.
-    tennis = await makes(
-        session_factory,
-        clock,
-        pool_id=group,
-        club_id=club,
-        sport=Sport.TENNIS,
-        versions=((ola,),),
-    )
-    assert (await says_yes(client, ola, tennis)).status_code == 200
-    # And one withdrawn frees one.
-    await withdraws(client, ola, games[0])
-    assert (await says_yes(client, ola, games[10])).status_code == 200
+    assert await live_ids(client, ola) == [str(game) for game in games]
 
 
 # --------------------------------------------------------------------------- #

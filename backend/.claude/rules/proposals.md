@@ -35,8 +35,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   recording nothing, a no final and a withdrawn yes free to be said again, a post withdrawn by
   its poster with nobody else In ending it (`ProposalWithdrawn`) — and
   `GET /players/me/live-yeses`, across
-  pools, soonest first, with `cap_per_sport`. A yes needs a saved method
-  (`payment_method_required`) and a live yes to spare (`live_yeses_exhausted`, ten per sport).
+  pools, soonest first. A yes needs a saved method (`payment_method_required`); **there is no
+  live-yes cap** (removed 2026-10-05, the mechanics Q97 — games per week and one game per hour
+  already bound what a yes can book).
   **No route makes a proposal**: `MakeProposal` and `DealVersion` are the dealer's, built by
   the composition root for the proposer (#540), seeds and tests; **the yes that leaves
   `open_seats` at nought books the game** — `FILLED`, every version gone — or reopens the seat
@@ -71,7 +72,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
 - **The proposer builds the games, and its rules are one pure batch** (#540, the mechanics
   §4.3, §5, §6.2–§6.3, §7): `domain/proposer.py`'s `propose` — one pool, one sport, one
   instant; members (Level and σ off rating's estimates, weekly hours, intent, Games & money,
-  booked games, live yeses), the `PlayerFit` mask per kind, the clubs the pool plays at
+  booked games), the `PlayerFit` mask per kind, the clubs the pool plays at
   (`PoolClubs` — not *Reach*, which is the Radar's word), the court hours on sale and the
   hours still **held** in → the cards that **lost** their court hour, the **picks** and the
   **deals**. Tested at that seam (`tests/unit/test_the_proposer.py`) and over HTTP
@@ -144,7 +145,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `domain/posting_grid.py` (the grid's and the sheet's rules). Six things are load-bearing.
   **One reading, the proposer's**: `ReadMembers` (`application/members.py`) is how both the
   proposer and posting read a pool's members — Level, week, **gender and preference** (now on
-  `InPlay`), intent, Games & money, booked games, live yeses — and a best fit is the
+  `InPlay`), intent, Games & money, booked games — and a best fit is the
   proposer's own `may_play` at the hour, so the grid's number is who the post would be dealt
   to. **A cell counts at one hour**: the best hour in its range that has a free court (else
   the best of the range), an hour the poster is free for first — never people overlapping the
@@ -177,8 +178,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   and a price within their Games & money, the kind they want
   (`Guards.refuse_a_join_dealing_would_not_make`, `post_not_open_to_you`) — so what the
   sheet lists (`open_to_join`) and what the yes accepts are one rule.
-  The guards on *Post — you're In*, in the button's order: a method and a live yes
-  (`payment_method_required`, `live_yeses_exhausted`), `LIVE_POSTS` (two,
+  The guards on *Post — you're In*, in the button's order: a method
+  (`payment_method_required`), `LIVE_POSTS` (two,
   `live_posts_exhausted`, counted by `ProposalDirectory.live_posts_of` — filling, poster In),
   `games_per_week_booked`; then `you_play_then` and `nobody_fits_then`. **Telling the
   poster *your post didn't fill* is #549's push**, from `proposals.proposal_expired` on a

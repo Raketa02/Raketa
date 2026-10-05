@@ -11,8 +11,8 @@ Four families:
 
 **Evenness and fit.** A court hour is dealt the most even four (or two) of the
 members who are rated in its sport, want its kind, are free for the whole hour,
-can afford it, have no game then and a week and a live yes to spare — and who
-fit every pair among them. *Most even* is the engine's own forecast.
+can afford it, have no game then and a week to spare — and who fit every pair
+among them. *Most even* is the engine's own forecast.
 
 **Courts.** A player group's home club first, then the other clubs it plays
 at; an official group only its own club, unless the club lets others' courts
@@ -92,7 +92,6 @@ def member(
     games_per_week: int = 2,
     most_ill_pay_grosze: int | None = None,
     booked: tuple[Instant, ...] = (),
-    live_yeses: int = 0,
 ) -> Member:
     return Member(
         player_id=player,
@@ -105,7 +104,6 @@ def member(
             most_ill_pay_grosze=most_ill_pay_grosze,
         ),
         booked=booked,
-        live_yeses=live_yeses,
     )
 
 
@@ -322,15 +320,6 @@ def test_nobody_is_dealt_a_card_at_an_hour_they_have_a_game_or_in_a_week_at_its_
 
     assert [people(pick) for pick in dealt.picks] == [{"C", "D", "E", "F"}]
     assert [people(pick) for pick in next_week.picks] == [{"A", "B", "C", "D"}]
-
-
-def test_somebody_with_no_live_yes_to_spare_is_dealt_nothing_new():
-    dealt = batch(
-        [member(A, live_yeses=10), *four_even_and_one_apart()[1:]],
-        [on_sale(SAT_17)],
-    )
-
-    assert [people(pick) for pick in dealt.picks] == [{"B", "C", "D", "E"}]
 
 
 def test_fewer_than_a_full_game_free_is_no_card():

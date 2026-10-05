@@ -311,7 +311,7 @@ export function getPostingSlot(
 /**
  * ***Post — you're In*** (#546): the poster's yes, dealt as up to three versions to their best fits
  * free then. The guards, in the button's order (409): `payment_method_required`,
- * `live_yeses_exhausted`, `live_posts_exhausted`, `games_per_week_booked`; then `you_play_then`,
+ * `live_posts_exhausted`, `games_per_week_booked`; then `you_play_then`,
  * `nobody_fits_then` and `court_hour_not_for_sale`. **Not retried**: a second post is a second game.
  * **No `Idempotency-Key`**: the button is busy while one is in flight, and a second post at an hour
  * the poster already plays is refused (`you_play_then`) — a duplicate is refused, never booked.

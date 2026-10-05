@@ -2,9 +2,10 @@
 mock 48): every yes on a game that has not filled, **across pools**, each with
 the share it would charge.
 
-**Across pools** because the cap is the player's and not a group's: ten per
-sport, wherever they were said. **Soonest game first**, which is the order a
-player would withdraw them in.
+**Across pools** because what a yes can book is the player's and not a
+group's: games per week and one game per hour bind them wherever they were
+said. There is no cap on how many (removed 2026-10-05). **Soonest game first**,
+which is the order a player would withdraw them in.
 """
 
 from __future__ import annotations
@@ -14,7 +15,6 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Clock, instant
-from app.modules.proposals.domain.limits import LIVE_YESES_PER_SPORT
 from app.modules.proposals.domain.ports import ClubNames, LiveYes, ProposalDirectory
 
 
@@ -32,9 +32,6 @@ class NamedLiveYes:
 @dataclass(frozen=True, slots=True)
 class LiveYeses:
     yeses: tuple[NamedLiveYes, ...]
-    #: The cap per sport, so a client can say *up to 10 per sport* without
-    #: holding the number.
-    cap_per_sport: int
 
 
 @final
@@ -55,5 +52,4 @@ class ReadLiveYeses:
             yeses=tuple(
                 NamedLiveYes(yes=yes, club_name=names.get(yes.club_id)) for yes in yeses
             ),
-            cap_per_sport=LIVE_YESES_PER_SPORT,
         )
