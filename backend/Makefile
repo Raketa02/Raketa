@@ -155,7 +155,22 @@ migrate:           ## run alembic upgrade head inside the api container
 ## executes (app/seeds/). Needs the schema to exist — `make up` migrates on
 ## start. The production guard is in the seed module and runs on import, not
 ## here: a make target is not what runs inside a container.
+##
+## It waits for the API to report healthy before writing anything. Every job's
+## first run is at startup, and two of them rewrite what a seed has just
+## written: the rating catch-up moves the played history's Levels, and the
+## photo backfill reviews the photograph the seed declares nobody looked at.
+## Seeding straight after `make up` raced both (2026-10-05). For the same
+## reason, a database the API has started on since its seed cannot be seeded
+## again. `make down-v && make up && make seed` is the reset.
 seed:              ## seed deterministic dev accounts into the running stack's database
+	@api=$$($(COMPOSE_LOCAL) ps -q api); \
+	if [ -z "$$api" ]; then echo "The API is not running. make up first." >&2; exit 1; fi; \
+	for _ in $$(seq 120); do \
+	  [ "$$(docker inspect -f '{{.State.Health.Status}}' $$api)" = healthy ] && exit 0; \
+	  sleep 1; \
+	done; \
+	echo "The API did not report healthy within 120 s. See make logs." >&2; exit 1
 	$(COMPOSE_LOCAL) exec api python -m app.seeds
 
 seed-host:         ## the same seed from the host — needs .env, like host-run uvicorn

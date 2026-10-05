@@ -40,9 +40,11 @@ from __future__ import annotations
 
 import struct
 import zlib
+from collections.abc import Collection
+from contextlib import aclosing
 from enum import Enum
 from typing import Final, final
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from app.modules.player_profile.domain.photos import (
     ACCEPTED_MEDIA_TYPES,
@@ -52,6 +54,7 @@ from app.modules.player_profile.domain.photos import (
     PhotoReviewUnavailability,
     PhotoReviewVerdict,
     TranscodedImage,
+    recorded_score_in,
     verdict_from_similarities,
     verdict_when_unreviewable,
 )
@@ -260,6 +263,37 @@ async def the_store_answers(photos: PhotoStorage) -> bool:
     return True
 
 
+async def reviewed_since_the_seed(
+    photos: PhotoStorage, photo_ids: Collection[UUID]
+) -> tuple[str, ...]:
+    """The reviewers other than this seed that have scored one of these
+    photographs, by model name. **Empty while every note is still the seed's.**
+
+    *Nobody looked* is not a state this fixture can keep. ``SEED_REVIEW_OUTAGE``
+    is the code ``docs/adr/0132``'s backfill finds unexamined photos by, and the
+    backfill is a job in the API process whose first run is at startup — every
+    uvicorn reload included — and then hourly. Whichever of those comes first
+    after the commit asks the real sidecar, and the note then names that model.
+    So the store, and never the card, is what tells *the backfill has been
+    round* from *this database predates the photographs*: the card draws the
+    same decision either way.
+
+    A note the seed wrote with a declared decision is never in the answer. The
+    backfill does not rewrite a note that proves a score, so ``seed-declared``
+    stays on those for good.
+    """
+
+    models: set[str] = set()
+    async with aclosing(photos.with_review_notes()) as listing:
+        async for photo in listing:
+            if photo.ref.photo_id not in photo_ids:
+                continue
+            score = recorded_score_in(photo.note)
+            if score is not None and score.model != SEED_REVIEW_MODEL:
+                models.add(score.model)
+    return tuple(sorted(models))
+
+
 #: What the seed declares its bytes are, checked against the served list at
 #: import rather than trusted: the upload rejects a declared type it does not
 #: serve without decoding anything, and that refusal would name the media type
@@ -279,6 +313,7 @@ __all__ = [
     "SEED_IMAGE_MEDIA_TYPE",
     "SEED_REVIEW_MODEL",
     "an_image",
+    "reviewed_since_the_seed",
     "the_store_answers",
     "verdict_for",
 ]

@@ -128,6 +128,7 @@ from app.seeds.catalog import (
 from app.seeds.clock import FixedClock
 from app.seeds.cohort import COHORT, PLAYED_GAMES, Cohort, PlayedGame
 from app.seeds.pairs import SeededPairs
+from app.seeds.photos import reviewed_since_the_seed
 from app.modules.clubs.domain.court_hours import local_day
 from app.modules.proposals.domain.club_bookings import ClubFilter
 from app.seeds.proposals import (
@@ -259,6 +260,7 @@ async def assert_the_screens(
                     cohort=cohort,
                     now=now,
                     photographs=photographs,
+                    photos=photos,
                 )
             )
             lines.extend(await _the_three_named_states(paths))
@@ -1160,6 +1162,7 @@ async def _the_record_block(
     cohort: Cohort,
     now: Instant,
     photographs: bool,
+    photos: PhotoStorage | None,
 ) -> list[str]:
     """Everything the played history and the photographs promise, off real cards.
 
@@ -1181,8 +1184,8 @@ async def _the_record_block(
         _refuse_a_player_score_with_only_one_answer(pool),
         await _refuse_an_unscored_game_that_reads_as_evidence(paths, cohort),
         await _refuse_a_pair_with_nothing_between_them(paths, cohort, now=now),
-        _refuse_a_shield_whose_absence_has_only_one_cause(
-            pool, photographs=photographs
+        await _refuse_a_shield_whose_absence_has_only_one_cause(
+            pool, photographs=photographs, photos=photos
         ),
     ]
 
@@ -1410,8 +1413,8 @@ async def _refuse_a_pair_with_nothing_between_them(
     )
 
 
-def _refuse_a_shield_whose_absence_has_only_one_cause(
-    pool: SearchRecord, *, photographs: bool
+async def _refuse_a_shield_whose_absence_has_only_one_cause(
+    pool: SearchRecord, *, photographs: bool, photos: PhotoStorage | None
 ) -> str:
     """*All three of ``docs/adr/0138``'s answers are on this screen.*
 
@@ -1419,6 +1422,15 @@ def _refuse_a_shield_whose_absence_has_only_one_cause(
     shield, and so does one nothing ever looked at. They differ only in the
     store, so a fixture holding one of them proves nothing whatever about the
     other — and the state a shield must never be drawn on is the second.
+
+    **The second is the one state here the platform takes back on its own.**
+    ``docs/adr/0132``'s backfill re-reviews every unexamined photo at the API's
+    start — every reload included — and hourly, so the carrier holds *nobody
+    looked* only until the first tick after the commit. A tick that lands
+    mid-run, or any run after one, finds a decision on that card. That is the
+    platform doing its job and not a rotted database, so it is reported rather
+    than refused, and the store is what tells the two apart
+    (``reviewed_since_the_seed``): the card draws a decision either way.
     """
 
     if not photographs:
@@ -1449,6 +1461,21 @@ def _refuse_a_shield_whose_absence_has_only_one_cause(
         ],
     }
     missing = sorted(name for name, found in by_verdict.items() if not found)
+    if missing == ["a photograph nobody looked at"] and photos is not None:
+        reviewers = await reviewed_since_the_seed(
+            photos,
+            {card.photo_id for card in with_photo if card.photo_id is not None},
+        )
+        if reviewers:
+            return (
+                "photo verdict · **two of three** — the photograph nobody looked "
+                f"at has since been scored by {', '.join(reviewers)}. That is "
+                "`docs/adr/0132`'s backfill, which re-reviews every unexamined "
+                "photo at the API's start, on every reload and hourly, and no "
+                "seed can keep the state against it. To draw it again: "
+                "`make down-v && make up`, wait until the API is healthy, seed "
+                "once, and save nothing under `app/` while you look."
+            )
     if missing:
         raise ScreenIsEmpty(
             f"{THE_POPULATED_PLAYER.slug}'s padel pool draws "

@@ -12,6 +12,8 @@ seed's own writer produced.
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 
 from app.modules.player_profile.infrastructure.pillow_image_transcoder import (
@@ -22,10 +24,12 @@ from app.modules.player_profile.domain.photos import (
     STORED_MEDIA_TYPE,
     ON_COURT_CONFIDENCE_THRESHOLD,
     PHOTO_REVIEW_PROMPTS,
+    PhotoRef,
     PhotoReviewDecision,
     decision_on_record,
     on_court_confidence,
     review_metadata,
+    verdict_from_similarities,
 )
 from app.seeds.photos import (
     SEED_IMAGE_EDGE_PX,
@@ -33,6 +37,7 @@ from app.seeds.photos import (
     DeclaredPhotoReview,
     DeclaredVerdict,
     an_image,
+    reviewed_since_the_seed,
     the_store_answers,
     verdict_for,
 )
@@ -145,3 +150,38 @@ async def test_a_store_that_answers_is_told_apart_from_one_that_cannot():
 
     assert await the_store_answers(InMemoryPhotoStorage()) is True
     assert await the_store_answers(_Unreachable()) is False
+
+
+async def test_a_photograph_the_backfill_has_since_scored_is_told_apart():
+    """*Nobody looked* lasts until ``docs/adr/0132``'s backfill looks, and the
+    store is what says that it has: the note then names a real reviewer rather
+    than this seed. A photograph the seed declared reviewed keeps the seed's
+    name, because the backfill never rewrites a note that proves a score."""
+
+    storage = InMemoryPhotoStorage()
+    unlooked = PhotoRef(owner_id=uuid4(), photo_id=uuid4())
+    declared = PhotoRef(owner_id=uuid4(), photo_id=uuid4())
+    storage.already_holding(
+        unlooked, review_metadata(verdict_for(DeclaredVerdict.NOBODY_LOOKED))
+    )
+    storage.already_holding(
+        declared, review_metadata(verdict_for(DeclaredVerdict.ON_A_COURT))
+    )
+    both = {unlooked.photo_id, declared.photo_id}
+
+    assert await reviewed_since_the_seed(storage, both) == ()
+
+    await storage.replace_metadata(
+        unlooked,
+        review_metadata(
+            verdict_from_similarities(
+                model="openai/clip-vit-base-patch32",
+                similarities=(0.0,) * len(PHOTO_REVIEW_PROMPTS),
+            )
+        ),
+    )
+
+    assert await reviewed_since_the_seed(storage, both) == (
+        "openai/clip-vit-base-patch32",
+    )
+    assert await reviewed_since_the_seed(storage, {declared.photo_id}) == ()
