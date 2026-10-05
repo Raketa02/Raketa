@@ -52,6 +52,28 @@ pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.json
 pnpm check        # lint + format check + typecheck + test — the local gate
 ```
 
+## Running on a real phone
+
+`pnpm ios --device` and `pnpm android --device` build the development build (`Raketa local`),
+install it over USB and serve it from Metro on 8081. What has stopped them:
+
+- **A Metro already listening on 8081 is reused, however old.** `expo run:*` finds this project's
+  server, prints `Skipping dev server` and starts none. One started before a `pnpm install`
+  cannot resolve the new package and answers every bundle with a 500, so the phone sits on the
+  splash screen (Android's logcat: `Unable to resolve module …`). Stop it —
+  `lsof -ti tcp:8081 -sTCP:LISTEN | xargs kill` — and run the command again. Do the same after
+  switching branches.
+- **A config plugin added after `android/` or `ios/` was generated is not applied.** Its native
+  code is autolinked, but what its plugin writes into the manifest or Info.plist is not. Run
+  `EXPO_PUBLIC_ENV=local npx expo prebuild --platform <android|ios> --no-install`. Leave out
+  `--clean`, which drops the iOS signing team.
+- **Android's `--device` takes the model name** that `adb devices -l` prints (`SM_A556B`), not
+  the serial. With no value it asks.
+- **iOS:** a free Apple team's profile lasts 7 days, so rebuild to renew it. If the install fails
+  with `InvalidHostID`, install the built `.app` with `xcrun devicectl device install app`. The
+  Mac's LAN IP is baked into the build, so after the IP changes, update `.env.local` and rebuild.
+  `No script URL provided` means the phone's Local Network permission for the app is off.
+
 ## Environment
 
 Copy `.env.example` → `.env.local`. `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_FEATURES_URL` and
