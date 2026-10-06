@@ -21,10 +21,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   being disclosures with #575, and the challenges are gone (#578). Each
   strand is a `PriorDisclosure` answering **yes or no** (`GamesTheyPlayed`, `GroupsTheyShare`,
   `GroupsTheReaderRuns`), asked in turn and stopped at the first yes. A game discloses for as
-  long as the pair are both on its court, played or not; a group is membership as it stands. **The gates run live, and they read no candidate index**: the three about accounts
+  long as the pair are both on its court, played or not; a group is membership as it stands. **The gates run live**: the three about accounts
   — a block in either direction, the subject's hold, an account that may not be shown —
-  through `matchmaking`'s `AccountGates` (the same three `FailClosedGates` asks beside the
-  preference, so there is one spelling), plus the reader's **own** hold, because a hold points
+  through `matchmaking`'s `AccountGates`, plus the reader's **own** hold, because a hold points
   both ways. **No gender preference is asked of any strand**: a preference says who a player is
   willing to be *matched* with, and every strand here already put the pair in front of each
   other (#575; it had been dropped for whoever runs the group by ADR-0159's 2026-10-02
@@ -71,9 +70,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   argument the metered rows beside it print their fractions for, and the division is a
   client's. Absence is the same absence everything else here spells — no counted game means
   the row is **omitted**, never `0` and never `0 / 0` — and it is a *different* absence from
-  `skill`'s, so the assembler asks for it whatever sport resolved. Its denominator is
-  `counted_games_for`'s own predicate, written once in `games` and read by both, so the sheet
-  cannot print a pair that disagrees with the card beside it.
+  `skill`'s, so the assembler asks for it whatever sport resolved. Which games count is
+  `games`' own predicate (`_counted_and_played`), written once and read by both halves of the
+  pair, so the sheet cannot print two ideas of a counted game.
   **The metered rows are the fourth fact, and they are `player_score`'s live strands put
   on a wire for the first time** (#381, and a third of them with #383). Nothing new is
   computed: the raw counts already existed in that domain and the caller stopped throwing

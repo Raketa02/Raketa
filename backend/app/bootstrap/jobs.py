@@ -29,16 +29,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
     build_propose_games,
-    build_candidate_index_tail,
     build_clock,
-    build_container_memory_limit,
     build_destroy_ended_conversations,
     build_domain_event_store,
     build_event_publisher,
@@ -59,15 +56,6 @@ from app.bootstrap.composition import (
 from app.application.mail.deliver_queued_mail import DeliverQueuedMail
 from app.core.config import Settings
 from app.infrastructure.jobs import PeriodicJob
-from app.kernel import Clock
-from app.modules.matchmaking.domain.index_staleness import (
-    freshness_of,
-    misses_refresh_target,
-)
-from app.modules.matchmaking.domain.scale_triggers import footprint_of
-from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
-    DatabaseCandidateSource,
-)
 from app.modules.player_profile.application.review_unreviewed_photos import (
     ReviewUnreviewedPhotos,
 )
@@ -82,12 +70,6 @@ from app.modules.proposals.application.propose_games import (
 
 logger = logging.getLogger(__name__)
 
-#: *Nobody passed one*, which is not the same as ``None`` — and ``None`` is a
-#: real answer here, meaning **this host has no limit to be half of**. A sentinel
-#: rather than a boolean beside the value, because two fields that must agree are
-#: two fields that eventually do not.
-_UNREAD: Any = object()
-
 #: The sweep's name in the logs and on its asyncio task.
 PHOTO_SWEEP_JOB = "uncommitted-photo-sweep"
 
@@ -95,14 +77,6 @@ PHOTO_SWEEP_JOB = "uncommitted-photo-sweep"
 #: and the two have no lock between them, which is a race each of them handles
 #: rather than one they coordinate over (``docs/adr/0132``).
 PHOTO_REVIEW_BACKFILL_JOB = "photo-review-backfill"
-
-#: The candidate index's two loops. They are **not** one job with two phases:
-#: the tail reader writes the shared tables and is safe beside itself because a
-#: single cursor row serialises it, while the refresh is **per worker by
-#: design** — the one place ``docs/adr/0092``'s *N processes, N runs* is the
-#: behaviour wanted rather than the cost paid.
-CANDIDATE_INDEX_TAIL_JOB = "candidate-index-tail"
-CANDIDATE_INDEX_REFRESH_JOB = "candidate-index-refresh"
 
 #: The rating catch-up. The **first** job that writes a domain event, and the
 #: only one on this list whose output a player would miss: a confirmation is a
@@ -171,18 +145,12 @@ def build_scheduled_jobs(
     *,
     session_factory: async_sessionmaker[AsyncSession] | None,
     settings: Settings,
-    candidate_source: DatabaseCandidateSource | None = None,
     proposer_due: DueForProposing | None = None,
 ) -> list[PeriodicJob]:
     """Every job this process should run, in the order they were registered.
 
     A list rather than a single object, so adding the next one is appending a
     line here and changing nothing in the lifespan that starts them.
-
-    ``candidate_source`` is passed in rather than built here because it is the
-    process's one index container, held by the lifespan. Absent, the refresh
-    loop is simply not registered — a process with no index has nothing to
-    refresh.
 
     ``session_factory`` is optional because **the photo re-review backfill wants
     none** — its whole input and output are the object store. It is still
@@ -193,7 +161,6 @@ def build_scheduled_jobs(
     jobs: list[PeriodicJob] = []
     if (
         settings.PHOTO_SWEEP_ENABLED
-        or settings.CANDIDATE_INDEX_ENABLED
         or settings.RATING_CATCH_UP_ENABLED
         or settings.CONVERSATION_SWEEP_ENABLED
         or settings.MAIL_DELIVERY_ENABLED
@@ -221,18 +188,6 @@ def build_scheduled_jobs(
                     session_factory=session_factory, settings=settings
                 )
             )
-        if settings.CANDIDATE_INDEX_ENABLED:
-            jobs.append(
-                build_candidate_index_tail_job(
-                    session_factory=session_factory, settings=settings
-                )
-            )
-            if candidate_source is not None:
-                jobs.append(
-                    build_candidate_index_refresh_job(
-                        source=candidate_source, settings=settings
-                    )
-                )
         if settings.RATING_CATCH_UP_ENABLED:
             jobs.append(
                 build_rating_catch_up_job(
@@ -736,154 +691,6 @@ def build_conversation_sweep_job(
     return PeriodicJob(
         name=CONVERSATION_SWEEP_JOB,
         interval_seconds=settings.CONVERSATION_SWEEP_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
-def build_candidate_index_tail_job(
-    *,
-    session_factory: async_sessionmaker[AsyncSession],
-    settings: Settings,
-) -> PeriodicJob:
-    """Fold the log into the candidate index, once a second.
-
-    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): the
-    single cursor row is taken ``FOR UPDATE`` for the tick, so a concurrent run
-    blocks, then reads the advanced cursor and finds nothing to do. The lock is
-    the transaction, so there is nothing to leak behind a dead process and
-    nothing to expire mid-run — which is the exact property that let ADR-0092
-    refuse leader election.
-    """
-
-    tail = build_candidate_index_tail(settings=settings)
-
-    async def run() -> None:
-        async with session_factory() as session:
-            report = await tail.tick(session)
-        # Logged at info even when it did nothing: *the reader ran and found
-        # nothing* and *the reader did not run* are the two states this has to
-        # be able to tell apart from outside, and a stalled projection is
-        # otherwise silent where a stalled outbox is eventually visible as a
-        # missing side effect.
-        logger.info(
-            "candidate index tail",
-            extra={
-                "job": CANDIDATE_INDEX_TAIL_JOB,
-                "events_applied": report.events_applied,
-                "rows_moved": report.rows_moved,
-                "snapshot_version": report.snapshot_version,
-                "waiting_on_hole": report.waiting_on_hole,
-            },
-        )
-
-    return PeriodicJob(
-        name=CANDIDATE_INDEX_TAIL_JOB,
-        interval_seconds=settings.CANDIDATE_INDEX_TAIL_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
-def build_candidate_index_refresh_job(
-    *,
-    source: DatabaseCandidateSource,
-    settings: Settings,
-    clock: Clock | None = None,
-    memory_limit_bytes: int | None = _UNREAD,
-) -> PeriodicJob:
-    """Rebuild this worker's containers from what moved, every two seconds.
-
-    **Two readings of one lag, and they do different things.** Missing §17's p99
-    raises the log level and **changes nothing about what a search does**; the
-    ladder's rung is recorded beside it, which is the *internal* half of
-    ``index_stale`` — on the structured logs and on the search record, never on
-    the wire envelope (``docs/adr/0111``). What the ladder does not do here is
-    decide anything: the refusal belongs where a search reads a container, and
-    that caller does not exist yet.
-
-    **And a third reading, which is trigger 4** (``scale-posture.md`` §4): the
-    memory arithmetic, recomputed at every load from the rows held, the workers
-    configured and the container's own limit. It raises the level and changes
-    nothing — *warning and never refusing* — and it rides on this record rather
-    than on one of its own, because it is a fact about the index this tick just
-    published and a second line would have to say which load it was about.
-
-    **There is nowhere to read any of it.** These are structured log records with
-    no metrics stack behind them, which is the third of the three signals this
-    build ships unread and is stated here rather than papered over.
-    """
-
-    reading = clock or build_clock()
-    # Read **once**, at registration, and through the composition root — a
-    # container's memory limit does not change while the container runs, and
-    # re-reading a cgroup file every two seconds would be a syscall per tick to
-    # learn the same number. A caller may pass one instead, which is how a test
-    # states the container it is talking about rather than the runner's.
-    limit_bytes = (
-        build_container_memory_limit()
-        if memory_limit_bytes is _UNREAD
-        else memory_limit_bytes
-    )
-
-    async def run() -> None:
-        report = await source.refresh()
-        # **Trigger 4, recomputed at every index load** (`scale-posture.md` §4),
-        # from the rows this worker actually holds, the workers this container
-        # actually runs and the limit it actually has. It **warns and never
-        # refuses**: an index that has outgrown half its container is a capacity
-        # decision — `scale-posture.md` §5's memory ladder, sharing the
-        # closed-vocabulary strings first and `array`-packed columns at 43 bytes
-        # a row second — and a process that refused to load its index over it
-        # would take the platform down to avoid using memory it had been given.
-        footprint = footprint_of(
-            rows=report.rows_held,
-            workers=settings.GUNICORN_WORKERS,
-            limit_bytes=limit_bytes,
-        )
-        # The real lag a search would read, not the interval this loop is
-        # configured at: what §17 alerts on is *how far behind the log the
-        # containers are*, and a loop that reported its own cadence back would
-        # be alerting on a constant.
-        lag = reading.now() - report.caught_up_at
-        missed = misses_refresh_target(lag)
-        logger.log(
-            # A miss is an **alert**, so it leaves the level every healthy tick
-            # writes at. A boolean field on an INFO line is a thing nobody is
-            # paged by, which is the same as not raising one.
-            logging.WARNING if missed or footprint.fires else logging.INFO,
-            "candidate index refreshed",
-            extra={
-                "job": CANDIDATE_INDEX_REFRESH_JOB,
-                "snapshot_version": report.snapshot_version,
-                "partitions": report.partitions,
-                "rows_held": report.rows_held,
-                "rows_decoded": report.rows_decoded,
-                "index_lag_seconds": lag.total_seconds(),
-                "misses_refresh_target": missed,
-                # §18's rung, recorded rather than acted on. `index_stale` is
-                # this field being anything but FRESH.
-                "index_freshness": freshness_of(lag).value,
-                # Trigger 4. `None` where there is no limit to be half of — a
-                # laptop, or a host with no cgroup — because **unknown is not
-                # unlimited**, and reporting a comfortable fraction of a
-                # made-up limit would be the invented measurement this map
-                # refuses everywhere else.
-                "index_bytes_held": footprint.bytes_held,
-                "container_memory_limit_bytes": footprint.limit_bytes,
-                "workers": footprint.workers,
-                "memory_budget_fraction": (
-                    None
-                    if footprint.fraction_of_budget is None
-                    else round(footprint.fraction_of_budget, 4)
-                ),
-                "trigger_4_rows_at": footprint.rows_at_trigger,
-                "trigger_4_players_at": footprint.players_at_trigger,
-                "trigger_4_fires": footprint.fires,
-            },
-        )
-
-    return PeriodicJob(
-        name=CANDIDATE_INDEX_REFRESH_JOB,
-        interval_seconds=settings.CANDIDATE_INDEX_REFRESH_INTERVAL_SECONDS,
         run=run,
     )
 

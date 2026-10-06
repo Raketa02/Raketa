@@ -25,10 +25,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   is what makes *not rating leaves no record of the omission* structural, so the closure
   cannot live on the answers. **You rate everybody else on the court**, partner included, so
   there is no *side* in this context and rating yourself is refused by the same rule that
-  refuses a stranger. **The matcher never reads it — the floor and the term** — and that is
-  held by an `.importlinter` contract rather than by a test, because a Match Fit term
-  reading a star average would look like every term beside it and nothing would go red;
-  it is also why the reliability pill stays the counted-only number. And **no individual
+  refuses a stranger. **The matcher never reads it** — held by an `.importlinter` contract
+  rather than by a test — and that is also why the reliability pill stays the counted-only
+  number. And **no individual
   rating reaches anybody in any shape**: the write answers `204`, the use case returns
   `None`, and `SportsmanshipLedger` has no method that answers *what did somebody say about
   me* — only *which of these cards are closed*, which is a fact about an act. **What this

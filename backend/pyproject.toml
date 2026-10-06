@@ -95,11 +95,6 @@ module = [
     "app.kernel.*",
     "app.engines",
     "app.engines.*",
-    # The judged-pairings harness derives Fits and writes them into the specs.
-    # An implicit `Any` in the machine that re-derives the quality floor is the
-    # same defect it is one directory over, so it takes the same settings.
-    "scripts.judged_pairings",
-    "scripts.judged_pairings.*",
 ]
 warn_unused_ignores = true
 warn_return_any = true

@@ -103,13 +103,10 @@ class EventRuntime:
     dispatcher: EventDispatcher
     #: The durable-name register the codec was built over.
     #:
-    #: Carried beside the codec rather than left inside it because a **reader of
-    #: the log** needs the mapping in the other direction: the candidate index
-    #: projects a fixed list of *event classes* and has to know which durable
-    #: names those are before it decides whether to decode a row at all
-    #: (``docs/adr/0110``). Re-declaring those names beside the projection would
-    #: be a second copy of a published contract, and the drift would be silent
-    #: for exactly as long as nobody renamed one.
+    #: Carried beside the codec rather than left inside it so a reader can walk
+    #: every registered event class — ``test_every_event_has_a_subscriber`` asks
+    #: it which classes exist and the dispatcher who hears each. The candidate
+    #: index that first needed the mapping went with the ranking (#580).
     catalog: EventCatalog
 
     def create_publisher_for(self, *, session: AsyncSession) -> EventPublisher:

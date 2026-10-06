@@ -15,15 +15,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Fourteen jobs today — two went with the challenges (#578), and five with the
-  searches (#579): the **exposure roll**, the two **prompt loops** (intent drift,
-  availability staleness), the **interest expiry loop** and the **scale-pressure probe**,
-  with their settings. The ordinals below are the register's, so the gaps are those. The
-  first is the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Twelve jobs today — two went with the challenges (#578), five
+  with the searches (#579): the **exposure roll**, the two **prompt loops** (intent drift,
+  availability staleness), the **interest expiry loop** and the **scale-pressure probe** —
+  and two with the ranking (#580): the **candidate index's tail and refresh**, with trigger 4
+  that the refresh recomputed; all with their settings. The ordinals below are the
+  register's, so the gaps are those. The first is the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
-  swap places), then the candidate index's two loops below — which nothing reads since the
-  searches went, and which go with the ranking (#580); the refresh still recomputes
-  trigger 4 at every load. The ninth is the **photo re-review backfill**
+  swap places). The ninth is the **photo re-review backfill**
   ([ADR-0132](../../../docs/adr/0132-a-re-review-is-the-same-reviewer-and-a-stale-prompt-set-is-not-one.md)),
   the job that takes no session — its whole input and output are the object store.
   Every photo uploaded before ADR-0129's checker landed carries `review: allowed` written
@@ -70,10 +69,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   whole difference between a room that is over and a record with no end. Its read names
   **candidates rather than conclusions**, and here it could not do
   otherwise: a store that could answer *which rooms have ended* would be the stored
-  `ends_at` ADR-0153 §5 refuses. It leaves a hole in `event_store.sequence_no`, which the
-  candidate index's tail is built for — a gap is stepped over once the snapshot horizon
-  proves it permanent, so a destruction costs that projection a tick of lag and never an
-  event. `CONVERSATION_GRACE` is domain; only the cadence is a setting.
+  `ends_at` ADR-0153 §5 refuses. It leaves a hole in `event_store.sequence_no`; nothing
+  tails the log by position since the candidate index went (#580). `CONVERSATION_GRACE` is
+  domain; only the cadence is a setting.
   The thirteenth is the **mail worker** (`mail-delivery`,
   [ADR-0186](../../../docs/adr/0186-email-goes-through-a-port-and-a-purged-queue.md) §2), a queue
   drain written as a job the way the outbox's is, and one **correctness depends on**: nobody

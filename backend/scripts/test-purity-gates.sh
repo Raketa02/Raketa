@@ -187,9 +187,9 @@ clean
 # because the fence is two contracts and not one — a single contract with
 # overlapping source and forbidden lists would also forbid each package from
 # importing itself, so half of it going missing is a live way to lose the rule.
-probe "$RACKETSKILL_PROBE" 'from app.engines.matchfit.core import K_CEILING
+probe "$RACKETSKILL_PROBE" 'from app.engines.matchfit.core import SearchMode
 
-CAP = K_CEILING
+MODE = SearchMode
 '
 expect red imports "RacketSkill reaching Match Fit is refused" \
   "app.engines.racketskill is not allowed to import app.engines.matchfit"

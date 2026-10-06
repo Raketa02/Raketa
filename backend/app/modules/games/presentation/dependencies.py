@@ -137,9 +137,8 @@ def get_court_pairing(db: DbSession) -> CourtPairing:
     request.
 
     **Over the request's session and nothing else** (#575): the court is read
-    side against side from the people's Levels, so neither the candidate index
-    nor the Redis store is asked for — a game screen is not gated on the
-    matcher (``docs/adr/0161``), and now it does not reach for one either.
+    side against side from the people's Levels, so the Redis store is not asked
+    for — a game screen is not gated on the matcher (``docs/adr/0161``).
     """
 
     return build_game_court_pairing(db)

@@ -6,9 +6,8 @@ forecast, the split, what is at stake, and each seat's Level — computed when
 read, behind a port ``games`` publishes and the matcher answers.
 
 **It answers from the balance forecast directly** (#575). A booked game's court
-is already seated, so it is read side against side from the people's Levels —
-no search, no candidate index, no interest ledger. Nothing here searches, and
-nothing overrides the port: what is exercised is the production wiring.
+is already seated, so it is read side against side from the people's Levels.
+Nothing overrides the port: what is exercised is the production wiring.
 
 Seven things are asserted here and nowhere else.
 
@@ -128,9 +127,9 @@ def _without_the_trace(response) -> str:
 
 async def test_the_pairing_answers_straight_from_the_levels(client, session_factory):
     """**The forecast straight from the Levels** (#575). There is no search on
-    this platform any more (#579), and the process holds no candidate index —
-    and the game screen still draws its forecast, its split, its stakes and four
-    Levels, because the court is read side against side and nothing else."""
+    this platform any more (#579) and no candidate index (#580) — and the game
+    screen still draws its forecast, its split, its stakes and four Levels,
+    because the court is read side against side and nothing else."""
 
     four = await _four(client)
     game_id = await _a_padel_four(session_factory, four)

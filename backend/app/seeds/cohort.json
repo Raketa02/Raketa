@@ -1,5 +1,5 @@
 {
-  "what_this_is": "A development workbench: a population chosen so that every Play screen state is reachable. It stands for nothing outside itself and describes no real market. The comparator corpus is docs/specs/matchmaking/ruleset-diff/, and it answers a different question.",
+  "what_this_is": "A development workbench: a population chosen so that every screen the games draw is reachable. It stands for nothing outside itself and describes no real market.",
   "inputs_only": "No member's level, uncertainty or band is recorded here: those are the engine's answers to the questionnaire each member sits, and a committed copy of an answer is a number nothing keeps honest. The band names that do appear are declarations \u2014 which band an archetype aims at, and the histogram the run checks the engine's answers against.",
   "seed": 20260830,
   "sports": [

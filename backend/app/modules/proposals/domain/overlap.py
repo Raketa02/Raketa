@@ -16,9 +16,9 @@ on a card with three people or more: on a singles card it would be *one of the
 two*, which is a fact about one person's week, so a two-person card is bright or
 dark.
 
-**The grade is today's engine reading, cut three ways.** ``group_availability``
-is how Match Fit already reads a four's week — the hours everybody shares, over
-the week of whoever has least to give — and a card reads the same number rather
+**The grade is the engine's reading, cut three ways.** ``group_availability``
+is the engine's reading of a court's week — the hours everybody shares, over
+the week of whoever has least to give — and a card reads that number rather
 than inventing a second measure of *overlap*. *High* from half, *Good* from a
 quarter, *Slim* below; a blank week on the card stands the engine's reading down,
 and a card with nothing known about somebody's week is *Slim*, never *High*.

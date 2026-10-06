@@ -17,9 +17,8 @@ now, and running one is running it now.
 **And the gates run live on every open**, because a disclosure made in August is
 not a permission to show somebody in December. The disclosure entitles a reader
 to *ask*; the gates decide. They are the three about accounts and the reader's
-own hold — **no preference and no partition**: every strand here is a court or a
-group that already put the pair in front of each other, so no candidate index is
-read to open a record.
+own hold — **no preference**: every strand here is a court or a group that
+already put the pair in front of each other.
 
 **What this costs, stated rather than discovered.** At most one read per strand,
 asked one after another and stopped at the first that answers yes — a group the

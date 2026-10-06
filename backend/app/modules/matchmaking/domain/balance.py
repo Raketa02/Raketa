@@ -81,7 +81,7 @@ def combine_group_sigma(sigmas: Sequence[float]) -> float:
     """A group's spread, **on the two-player basis its coefficient is calibrated
     against** — ``√2 · rms(σ)``, which at two players *is* ``combine_sigma``.
 
-    The group objective needs one Uncertainty over four Levels and may not derive
+    The forecast needs one Uncertainty over four Levels and may not derive
     it: ``combine_sigma`` is *the single place any engine is allowed to combine
     two standard deviations*, ``.importlinter`` forbids one engine to import the
     other, and ``√(Σσ²)`` written inside Match Fit would be a second definition of
@@ -97,9 +97,9 @@ def combine_group_sigma(sigmas: Sequence[float]) -> float:
     side strengths, and the four's gap **was** re-based for that. Its σ was not:
     ``√(Σσᵢ²)`` grows with ``√n``, so a four was handed a number ``√2`` larger than
     the pair the constant was priced for, and paid 1.41× for the identical
-    per-player doubt. A level four of unsettled players read 46 % — the floor's own
-    neighbourhood — with a gap of exactly zero, and above σ 2.03 the clamp swallowed
-    the gap entirely and the forecast stopped answering the question it is about.
+    per-player doubt. A level four of unsettled players read 46 % with a gap of
+    exactly zero, and above σ 2.03 the clamp swallowed the gap entirely and the
+    forecast stopped answering the question it is about.
 
     So the fold is normalised to the basis: ``√(2·Σσᵢ²/n)``. At ``n = 2`` it is
     ``√(σ₁²+σ₂²)`` exactly — the pair's own combination, unchanged, so singles and
@@ -114,8 +114,8 @@ def combine_group_sigma(sigmas: Sequence[float]) -> float:
     ``docs/handovers/the-forecast-percentage.md`` holds that question.
 
     It is a **function** where a pair's combination is a value, because the
-    enumeration that decides *which* four is inside the engine — nothing out here
-    could have precomputed the spread of a combination it has not seen.
+    engine fills an empty seat before it combines — nothing out here could have
+    precomputed the spread of a side it has not seated.
     """
 
     invariant(bool(sigmas), "a spread over nobody at all")

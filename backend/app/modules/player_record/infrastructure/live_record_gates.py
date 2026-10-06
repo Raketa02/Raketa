@@ -7,10 +7,10 @@ shown, evaluated over a reader and a set of subjects. A second spelling of a
 safety gate is the defect the whole fail-closed rule exists to prevent, so what
 lives here is a **translation and never a copy** — this file contains no gate.
 
-**No preference and no partition** (#575). Every strand a record opens on is a
-court or a group that already put the pair in front of each other, so the
-mutual gender preference — which says who a player is willing to be *matched*
-with — is not asked, no profile is loaded and no candidate index is bound.
+**No preference** (#575). Every strand a record opens on is a court or a group
+that already put the pair in front of each other, so the mutual gender
+preference — which says who a player is willing to be *matched* with — is not
+asked and no profile is loaded.
 
 **The reader's own hold is added here, and it is the one thing this adapter
 decides.** The three answer about *subjects*; whether the person asking may be

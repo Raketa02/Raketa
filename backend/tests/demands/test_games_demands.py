@@ -55,7 +55,6 @@ from app.modules.games.domain.ports import (
     GameHistoryQuery,
     OpponentVariety,
     OpponentVarietyQuery,
-    PlayedOutcome,
 )
 from app.modules.games.domain.results import Outcome, Score, SetScore
 from app.modules.games.domain.standing import GameStanding
@@ -180,13 +179,13 @@ def _called_off(*, line_up: LineUp, at: Instant, leaver: UUID, caller: UUID) -> 
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_counted_game_with_a_confirmed_result_counts_and_has_an_outcome(
+async def test_a_counted_game_with_a_confirmed_result_was_played_and_has_an_outcome(
     implementation, session
 ):
     """The end everything else in this batch is waiting on.
 
-    Somebody entered a score, nobody disagreed, its day passed: the game counts,
-    it has a winner, and both facts are readable about both people.
+    Somebody entered a score, nobody disagreed, its day passed: the game was
+    played, it has a winner, and both facts are readable about both people.
     """
 
     port = implementation.build(session)
@@ -199,12 +198,14 @@ async def test_a_counted_game_with_a_confirmed_result_counts_and_has_an_outcome(
 
     assert game.standing_at(now) is GameStanding.CONFIRMED
 
-    counts = await port.counted_games_for([winner, loser], now=now)
-    results = await port.recent_results_for([winner, loser], now=now)
+    attendance = await port.attendance_for([winner, loser], now=now)
+    won = await port.recent_results_in(winner, sport=Sport.TENNIS, now=now)
+    lost = await port.recent_results_in(loser, sport=Sport.TENNIS, now=now)
 
-    assert counts == {winner: 1, loser: 1}
-    assert [one.outcome for one in results[winner]] == [Outcome.WIN]
-    assert [one.outcome for one in results[loser]] == [Outcome.LOSS]
+    assert (attendance[winner].played, attendance[winner].ghosts) == (1, 0)
+    assert attendance[winner] == attendance[loser]
+    assert [one.outcome for one in won] == [Outcome.WIN]
+    assert [one.outcome for one in lost] == [Outcome.LOSS]
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
@@ -214,7 +215,7 @@ async def test_a_counted_game_nobody_agreed_is_an_evening_and_never_evidence(
     """Two scores, nobody accepted either, both days gone.
 
     ``docs/adr/0049``: it counts toward how much these people have played and it
-    **moves nobody's Level**. So it is in ``counted_games`` and it is not in the
+    **moves nobody's Level**. So they turned up for it and it is not in their
     results — and neither of those is a special case anywhere, they fall out of
     *played* and *confirmed* being two different questions.
     """
@@ -242,11 +243,11 @@ async def test_a_counted_game_nobody_agreed_is_an_evening_and_never_evidence(
 
     assert game.standing_at(now) is GameStanding.UNSCORED
 
-    counts = await port.counted_games_for([one, other], now=now)
-    results = await port.recent_results_for([one, other], now=now)
+    attendance = await port.attendance_for([one, other], now=now)
 
-    assert counts == {one: 1, other: 1}
-    assert results == {}
+    assert (attendance[one].played, attendance[other].played) == (1, 1)
+    assert await port.recent_results_in(one, sport=Sport.TENNIS, now=now) == ()
+    assert await port.recent_results_in(other, sport=Sport.TENNIS, now=now) == ()
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
@@ -255,9 +256,9 @@ async def test_a_plan_nobody_claimed_becomes_a_ghost_and_never_a_played_game(
 ):
     """The end that only exists because a game is opened by a **plan**.
 
-    Nobody ever said it happened, the entry window closed, and the pair now
-    carries ``PLANNED_NEVER_PLAYED`` — kept apart from ``PLAYED`` because
-    familiarity must be able to tell a ghost from a game.
+    Nobody ever said it happened and the entry window closed: a ghost for both
+    of them, kept apart from a played game because *shows up* must be able to
+    tell the two apart.
     """
 
     port = implementation.build(session)
@@ -272,13 +273,10 @@ async def test_a_plan_nobody_claimed_becomes_a_ghost_and_never_a_played_game(
 
     assert game.standing_at(now) is GameStanding.NEVER_PLAYED
 
-    counterparts = await port.played_counterparts(one, now=now)
-    counts = await port.counted_games_for([one, other], now=now)
+    attendance = await port.attendance_for([one, other], now=now)
 
-    assert [one.player_id for one in counterparts] == [other]
-    assert set(counterparts[0].outcomes) == {PlayedOutcome.PLANNED_NEVER_PLAYED}
-    assert counterparts[0].games_played_together == 0
-    assert counts == {one: 0, other: 0}
+    assert (attendance[one].played, attendance[one].ghosts) == (0, 1)
+    assert attendance[one] == attendance[other]
 
 
 # ---------------------------------------------------------------------------
@@ -509,33 +507,15 @@ async def test_a_settled_result_is_final():
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_counted_games_zero_is_measured_and_everybody_asked_is_answered(
-    implementation, session
-):
-    """The opposite of a Player Score, and deliberately.
-
-    The games ledger exists, so *this person has played none* is a real answer —
-    and it is the answer §9.10's newcomer predicate has been waiting for. A
-    player is never absent from this read.
-    """
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    stranger = new_uuid()
-
-    assert await port.counted_games_for([stranger], now=now) == {stranger: 0}
-
-
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_friendly_is_never_evidence_and_is_still_an_acquaintance(
+async def test_a_friendly_is_never_evidence_and_is_still_an_evening(
     implementation, session
 ):
     """The two halves of what a friendly is, in one demand.
 
-    It is out of ``counted_games`` and out of the results, because the people who
-    arranged it said it was not evidence. It is **in** the pairwise history,
-    because a friendly puts two people on a court exactly as a counted game does
-    — it is the Level a friendly leaves alone, not the acquaintance.
+    It is out of the results, because the people who arranged it said it was
+    not evidence. It is **in** what they turned up for, because a friendly puts
+    two people on a court exactly as a counted game does — it is the Level a
+    friendly leaves alone, not the evening.
     """
 
     port = implementation.build(session)
@@ -554,13 +534,11 @@ async def test_a_friendly_is_never_evidence_and_is_still_an_acquaintance(
     )
     await _saved(session, game)
 
-    counts = await port.counted_games_for([one, other], now=now)
-    results = await port.recent_results_for([one, other], now=now)
-    counterparts = await port.played_counterparts(one, now=now)
+    attendance = await port.attendance_for([one, other], now=now)
 
-    assert counts == {one: 0, other: 0}
-    assert results == {}
-    assert counterparts[0].games_played_together == 1
+    assert await port.recent_results_in(one, sport=Sport.TENNIS, now=now) == ()
+    assert await port.recent_results_in(other, sport=Sport.TENNIS, now=now) == ()
+    assert (attendance[one].played, attendance[other].played) == (1, 1)
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
@@ -599,8 +577,8 @@ async def test_the_last_results_are_oldest_first_bounded_and_never_padded(
         )
         await _saved(session, game)
 
-    results = await port.recent_results_for([player], now=now)
-    outcomes = [one.outcome for one in results[player]]
+    results = await port.recent_results_in(player, sport=Sport.TENNIS, now=now)
+    outcomes = [one.outcome for one in results]
 
     assert len(outcomes) == RECENT_RESULTS
     assert outcomes == [
@@ -610,8 +588,8 @@ async def test_the_last_results_are_oldest_first_bounded_and_never_padded(
         Outcome.LOSS,
         Outcome.WIN,
     ]
-    assert [one.played_at for one in results[player]] == sorted(
-        one.played_at for one in results[player]
+    assert [one.played_at for one in results] == sorted(
+        one.played_at for one in results
     )
 
 
@@ -619,12 +597,12 @@ async def test_the_last_results_are_oldest_first_bounded_and_never_padded(
 async def test_a_run_in_one_sport_is_filtered_before_it_is_trimmed(
     implementation, session
 ):
-    """**The whole reason this read exists beside the set one.**
+    """**Filtered first, then trimmed.**
 
-    Six padel games and then six tennis ones. The set read answers the last five
-    of everything — all tennis — and a consumer narrowing that afterwards would
-    show a padel Level with an empty run under it. This one filters first, so a
-    player who has played thirty in a sport gets five.
+    Six padel games and then six tennis ones. The last five of everything are
+    all tennis, and a read narrowing that afterwards would show a padel Level
+    with an empty run under it. This one filters first, so a player who has
+    played thirty in a sport gets five.
     """
 
     port = implementation.build(session)
@@ -641,10 +619,11 @@ async def test_a_run_in_one_sport_is_filtered_before_it_is_trimmed(
         game.state_result(by=player, score=_score((6, 4)), occurred_at=played)
         await _saved(session, game)
 
-    everything = await port.recent_results_for([player], now=now)
+    tennis = await port.recent_results_in(player, sport=Sport.TENNIS, now=now)
     padel = await port.recent_results_in(player, sport=Sport.PADEL, now=now)
 
-    assert {one.sport for one in everything[player]} == {Sport.TENNIS}
+    assert len(tennis) == RECENT_RESULTS
+    assert {one.sport for one in tennis} == {Sport.TENNIS}
     assert len(padel) == RECENT_RESULTS
     assert {one.sport for one in padel} == {Sport.PADEL}
     assert [one.played_at for one in padel] == sorted(one.played_at for one in padel)
@@ -683,9 +662,8 @@ async def test_a_run_shorter_than_five_in_that_sport_is_never_padded(
 async def test_a_sport_they_have_played_nothing_counted_in_is_an_empty_run(
     implementation, session
 ):
-    """**Empty and not absent**, unlike the mapping beside it: this read answers
-    about one player, so a short tuple already says the whole of *there is less
-    to show* and a second spelling would be one to get wrong."""
+    """**Empty**: this read answers about one player, so a short tuple already
+    says the whole of *there is less to show*."""
 
     port = implementation.build(session)
     now = instant(datetime.now(timezone.utc))
@@ -693,110 +671,6 @@ async def test_a_sport_they_have_played_nothing_counted_in_is_an_empty_run(
     assert (
         await port.recent_results_in(new_uuid(), sport=Sport.BADMINTON, now=now) == ()
     )
-
-
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_player_with_no_results_is_absent_rather_than_empty(
-    implementation, session
-):
-    """One spelling for *nothing to show*.
-
-    Two — an absent key and an empty tuple — is how a measured nothing and an
-    unasked question start being confused.
-    """
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    stranger = new_uuid()
-
-    assert await port.recent_results_for([stranger], now=now) == {}
-
-
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_played_game_and_a_ghost_stay_apart_in_one_counterpart(
-    implementation, session
-):
-    """One row per person, with both outcomes inside it.
-
-    A pair who played once and ghosted once are not a ghost. Collapsing to a
-    latest outcome would erase the history the depth term counts.
-    """
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    one, other = new_uuid(), new_uuid()
-
-    played = _planned(line_up=_singles(one, other), at=_ago(days=2))
-    played.state_result(
-        by=one,
-        score=_score(
-            (6, 4),
-        ),
-        occurred_at=_ago(days=1),
-    )
-    await _saved(session, played)
-    await _saved(
-        session,
-        _planned(
-            line_up=_singles(one, other),
-            at=instant(now - PLAN_HORIZON - ENTRY_GRACE - timedelta(hours=1)),
-        ),
-    )
-
-    (counterpart,) = await port.played_counterparts(one, now=now)
-
-    assert set(counterpart.outcomes) == {
-        PlayedOutcome.PLAYED,
-        PlayedOutcome.PLANNED_NEVER_PLAYED,
-    }
-    assert counterpart.games_played_together == 1
-
-
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_plan_still_inside_its_entry_window_says_nothing_about_the_pair(
-    implementation, session
-):
-    """Three answers and not two.
-
-    A game nobody has claimed yet is not a ghost — its window is still open — and
-    it is not a played game either. It is left out, because filing it either way
-    would publish a conclusion the clock has not reached.
-    """
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    one, other = new_uuid(), new_uuid()
-
-    await _saved(session, _planned(line_up=_singles(one, other), at=_ago(hours=1)))
-
-    assert await port.played_counterparts(one, now=now) == ()
-
-
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_called_off_game_says_nothing_about_the_pair_for_good(
-    implementation, session
-):
-    """``docs/adr/0163`` §3 — the fourth end is neither an evening nor a ghost.
-
-    Nobody played, so it is not ``PLAYED``; and nobody let a window close on it,
-    so it is not ``PLANNED_NEVER_PLAYED`` either — somebody ended it. It is left
-    out, and it stays out however far the clock runs, because the act is read
-    before the window.
-    """
-
-    port = implementation.build(session)
-    one, other = new_uuid(), new_uuid()
-
-    await _saved(
-        session,
-        _called_off(
-            line_up=_singles(one, other), at=_ago(days=30), leaver=other, caller=one
-        ),
-    )
-
-    now = instant(datetime.now(timezone.utc))
-    assert await port.played_counterparts(one, now=now) == ()
-    assert await port.counted_games_for([one, other], now=now) == {one: 0, other: 0}
 
 
 # ---------------------------------------------------------------------------
@@ -870,19 +744,16 @@ async def test_a_called_off_game_charges_nobody_with_a_ghost(implementation, ses
 async def test_a_player_nobody_arranged_anything_for_is_absent_from_attendance(
     implementation, session
 ):
-    """The one read here whose zero would be **invented**.
+    """A zero here would be **invented**.
 
-    ``counted_games_for`` answers ``0`` for a stranger, because the games were
-    counted and none of them was theirs. A ``0/0`` here would say somebody was
-    due on a court and did not come, about a person nothing ever arranged
-    anything for.
+    A ``0/0`` would say somebody was due on a court and did not come, about a
+    person nothing ever arranged anything for.
     """
 
     port = implementation.build(session)
     now = instant(datetime.now(timezone.utc))
     stranger = new_uuid()
 
-    assert await port.counted_games_for([stranger], now=now) == {stranger: 0}
     assert await port.attendance_for([stranger], now=now) == {}
 
 
@@ -910,12 +781,12 @@ async def test_a_plan_still_inside_its_entry_window_is_not_yet_an_opportunity(
 async def test_a_four_that_played_once_is_one_opportunity_for_each_of_them(
     implementation, session
 ):
-    """**Per person, never a sum of the pairwise read.**
+    """**Per person, never a sum over pairs.**
 
-    A doubles evening is one game and three counterparts, so a strand folded out
-    of ``played_counterparts`` would charge each of these four for turning up
-    three times — and would make *shows up* a statement about how many people
-    somebody plays with.
+    A doubles evening is one game and three counterparts, so a strand folded
+    pair by pair would charge each of these four for turning up three times —
+    and would make *shows up* a statement about how many people somebody plays
+    with.
     """
 
     port = implementation.build(session)
@@ -934,42 +805,10 @@ async def test_a_four_that_played_once_is_one_opportunity_for_each_of_them(
 
     attendance = await port.attendance_for([a, b, c, d], now=now)
 
-    assert len(await port.played_counterparts(a, now=now)) == 3
     assert all(
         (attendance[one].played, attendance[one].ghosts) == (1, 0)
         for one in (a, b, c, d)
     )
-
-
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_a_friendly_counts_towards_turning_up_like_any_other_game(
-    implementation, session
-):
-    """Turning up is not evidence about a Level, so the kind has nothing to say.
-
-    A friendly is out of ``counted_games`` by the choice of the people who
-    arranged it, and that choice was about their ratings — not about whether they
-    came.
-    """
-
-    port = implementation.build(session)
-    now = instant(datetime.now(timezone.utc))
-    one, other = new_uuid(), new_uuid()
-
-    game = _planned(
-        line_up=_singles(one, other), at=_ago(days=3), kind=GameKind.FRIENDLY
-    )
-    game.state_result(
-        by=one,
-        score=_score(
-            (6, 4),
-        ),
-        occurred_at=_ago(days=2),
-    )
-    await _saved(session, game)
-
-    assert await port.counted_games_for([one], now=now) == {one: 0}
-    assert (await port.attendance_for([one], now=now))[one].played == 1
 
 
 # ---------------------------------------------------------------------------
@@ -1255,22 +1094,6 @@ async def test_the_moment_is_when_the_opportunity_closed_and_not_when_it_opened(
     answering = await port.result_answering_for([other], since=_forever_ago(), now=now)
 
     assert answering[other].last_at == instant(proposed_at + PROPOSAL_WINDOW)
-
-
-@pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_late_is_a_fact_about_a_plan_and_this_context_has_no_number(
-    implementation, session
-):
-    """``None``, and absent rather than defaulted.
-
-    A plan here is a line-up with a window and no time in it: nothing can be
-    changed late because nothing can be changed at all. A number nobody measured
-    is a number somebody picked.
-    """
-
-    port = implementation.build(session)
-
-    assert await port.late_change_threshold() is None
 
 
 # ---------------------------------------------------------------------------
@@ -1799,20 +1622,16 @@ async def test_somebody_who_left_is_no_longer_on_the_court_the_directory_answers
 
 
 @pytest.mark.parametrize("implementation", registered(GameHistoryQuery))
-async def test_somebody_who_left_is_nobodys_counterpart_and_nobodys_attendee(
-    implementation, session
-):
+async def test_somebody_who_left_is_nobodys_attendee(implementation, session):
     """``docs/adr/0162`` §3 and §8 — recorded, not scored. A court left open
     until its window closed is a ghost for the one who stayed, and the leaver is
-    neither a counterpart nor an attendee of it."""
+    not an attendee of it."""
 
     port = implementation.build(session)
     now = instant(datetime.now(timezone.utc))
     game, ana, bo = await _a_game_somebody_left(session, at=_ago(days=30))
     assert game.standing_at(now) is GameStanding.NEVER_PLAYED
 
-    assert await port.played_counterparts(bo, now=now) == ()
-    assert await port.played_counterparts(ana, now=now) == ()
     attendance = await port.attendance_for([ana, bo], now=now)
     assert bo not in attendance
     assert attendance[ana].ghosts == 1

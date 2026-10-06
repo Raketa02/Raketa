@@ -19,8 +19,9 @@ Games deck books it — and nothing here searches for anybody.
 - ``domain/geography.py`` and ``domain/areas.py`` — distances to clubs and the
   areas a record is drawn with;
 - the three outward ports in ``domain/ports.py`` — two account gates the player
-  record asks, and the at-stake read a booked game's pairing prints.
+  record asks, and the at-stake read a booked game's pairing prints;
+- the released ruleset (``infrastructure/rulesets/``) those readings run on.
 
-**The candidate index is still here and reads nothing to anybody**; it goes with
-the ranking in #580.
+**The ranking and the candidate index went too** (#580): nothing scores one
+player against another, and nothing keeps a picture of the city to search.
 """

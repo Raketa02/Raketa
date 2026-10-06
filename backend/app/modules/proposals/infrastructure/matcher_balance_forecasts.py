@@ -9,8 +9,7 @@ is read **as if the missing player matched the one there**, which is what the
 engine's ``provisional`` means, and the card says so.
 
 **Levels off rating's estimates, live** — the engine's currency, the one
-``PlayerFit`` gates on beside it — and never the candidate index, so a card
-needs no index to draw its forecast. Somebody not rated in the sport leaves the
+``PlayerFit`` gates on beside it. Somebody not rated in the sport leaves the
 forecast absent rather than guessed, the rule every read here applies to a fact
 nobody measured.
 """

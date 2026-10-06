@@ -47,10 +47,9 @@ from app.engines.matchfit.core import ReliabilityStrand
 from app.kernel import Instant, instant, invariant
 
 #: What each strand is worth in the number **the player is shown**, and nothing
-#: else. It is not the matcher's vector and may never be mistaken for it: the two
-#: mode vectors in the ruleset order people oppositely, which is the entire
-#: argument for the matcher reading strands separately, and this one exists
-#: because the player reads *one* number on their own screen.
+#: else. The matcher's two per-mode vectors over the same strands went with the
+#: ranking (#580), so this is the only blend of them left — it exists because the
+#: player reads *one* number on their own screen.
 #:
 #: **Six names, and the numbers are the original vector's own.** The published
 #: blend was 35/20/15/12/10/8 while *confirms results* was a strand; it was struck
@@ -62,24 +61,21 @@ from app.kernel import Instant, instant, invariant
 #: evidence behind the move.
 #:
 #: **It sums to a hundred again, and that is an accident of arithmetic rather
-#: than a rule.** A ruleset weight vector is *required* to sum to a hundred, so
-#: that each number reads as a share of its term's budget. This one is not a
-#: budget: its basis is *the strands the player actually has*, which is three
-#: today and was two yesterday, and the blend renormalises over whatever is
-#: there. It summed to 85 while a name was missing and nobody rescaled it; it
-#: sums to 100 now because the missing name came back at its own share. What the
-#: numbers state is the ratios between the names, and those have never moved.
+#: than a rule.** It is not a budget: its basis is *the strands the player
+#: actually has*, which is three today and was two yesterday, and the blend
+#: renormalises over whatever is there. It summed to 85 while a name was
+#: missing and nobody rescaled it; it sums to 100 now because the missing name
+#: came back at its own share. What the numbers state is the ratios between the
+#: names, and those have never moved.
 #:
 #: **They live here rather than in the ruleset**, and that is a boundary rather
-#: than a convenience. The ruleset is the matcher's release, versioned and frozen
-#: per search; this is what a player sees about themselves on a screen the
-#: matcher does not own. A number the matcher could re-release would let a weight
-#: release change what somebody's own profile says about them.
+#: than a convenience: this is what a player sees about themselves, and a number
+#: a ruleset release could move would let a release change what somebody's own
+#: profile says about them.
 #:
-#: Falsified the way every other weight vector here is: if two players the same
-#: distance apart on this blend are indistinguishable on ghost rate, challenge
-#: answer rate and result answer rate, the split between the three live names is
-#: wrong.
+#: Falsified if two players the same distance apart on this blend are
+#: indistinguishable on ghost rate, challenge answer rate and result answer
+#: rate: then the split between the three live names is wrong.
 PUBLISHED_WEIGHTS: Mapping[ReliabilityStrand, int] = MappingProxyType(
     {
         ReliabilityStrand.SHOWS_UP: 35,
@@ -106,13 +102,9 @@ PUBLISHED_WEIGHTS: Mapping[ReliabilityStrand, int] = MappingProxyType(
 #: fail by accident, and that never lapses, is a mark a player cannot work off —
 #: so this is the only strand where the platform forgets.
 #:
-#: **Twelve months, chosen to equal the matcher's ``horizon_days``**, which is
-#: the other place this platform decides a record has gone stale. They are two
-#: spellings of one judgement and this context may not read the other one — a
-#: provider importing the matcher's ruleset is the arrow every port here keeps —
-#: so the cost is named rather than hidden: the day somebody moves the horizon,
-#: this number has to move with it, and ``tests/unit/test_player_score_strands.py``
-#: is what says so.
+#: **Twelve months.** It was chosen to equal the matcher's ``horizon_days`` — the
+#: other place this platform decided a record had gone stale — and that horizon
+#: went with the ranking (#580), so this is now the only one.
 ANSWERED_RESULTS_WINDOW: Final = timedelta(days=365)
 
 

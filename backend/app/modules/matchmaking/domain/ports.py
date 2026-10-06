@@ -184,7 +184,7 @@ class AccountStatusQuery(Protocol):
     | --- | --- |
     | **Direction** | **Candidate-side only** |
     | **On failure** | **Closed** — the read refuses |
-    | **Freshness** | Live. **Never an index column** |
+    | **Freshness** | Live. **Never a stored copy** |
     | **Told** | **Nobody** — invisible to the reader, like a block |
 
     **Candidate-side only is a fact, not a leniency.** ``docs/adr/0095`` makes the
@@ -193,10 +193,10 @@ class AccountStatusQuery(Protocol):
     reader's side before the matcher is reached, and a second check here would
     assert something the request could not have carried.
 
-    **Never an index column.** A stale *active* flag means a disabled account is
-    shown to a stranger, which makes staleness cost **safety** — the one thing
-    ``docs/adr/0111`` exists to prevent. Account state is also not a fact a player
-    changes *about themselves*: an administrator may change it.
+    **Never a stored copy.** A stale *active* flag means a disabled account is
+    shown to a stranger, which makes staleness cost **safety**. Account state is
+    also not a fact a player changes *about themselves*: an administrator may
+    change it.
 
     **What this does not cover.** Account **erasure** — nothing in this repository
     deletes an account, and erasure is a platform-wide obligation rather than a

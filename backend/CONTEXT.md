@@ -424,127 +424,16 @@ there; they are not repeated here.
   make happen sooner is exactly that. _Avoid_: a configurable retention window, a cadence
   hard-coded in the domain.
 
-- **Judged-pairings harness** — `scripts/judged_pairings/`, the package that reads
-  `docs/specs/matchmaking/judged-pairings.json`, scores its six cases against the **live
-  ruleset**, and writes every derived number back: the fixture's own readings, the tables
-  in `the-judged-pairings.md`, and `ranking-weights.md` §10. The fixture holds **inputs and
-  one verdict per case** and nothing derived is typed into it
-  ([ADR-0122](../docs/adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md)),
-  so a formula change re-derives the whole thing and arrives as a diff a reviewer must
-  argue for. It does one thing a diff cannot: it re-derives the **floor bound**,
-  `max(Fit | not shown) < QUALITY_FLOOR ≤ min(Fit | shown)`, and exits red when the
-  configured integer leaves it — which is what `ranking-weights.md` §11 always demanded of
-  a ruleset release and could not enforce against prose. It is the **only** scorer in the
-  loop: `tests/unit/test_matchfit_judged_pairings.py` scores through it too, because a
-  second harness is a second answer and the tables would agree with the tests while both
-  disagreed with the engine. _Avoid_: calling it a corpus or a replay — it is pass/fail
-  against named verdicts over six pairings, where the **synthetic corpus** above asks how a
-  ruleset moves a population and has no floor in it
-  ([ADR-0121](../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md) bars
-  the six from that corpus as circular).
-
-- **Ruleset store** — where the released **Ruleset** datasets live:
+- **Ruleset store** — where the released **Ruleset** dataset lives:
   `app/modules/matchmaking/infrastructure/rulesets/`, a package rather than a table,
   because a ruleset ships embedded with the code and the runtime store is deferred
   ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
-  **The engine owns the shape and the module owns the data**, and the fence forces the
-  split rather than taste: a ruleset names Social tag ids, an engine may not import a
-  module, and retyping the nineteen inside `app/engines/matchfit/` would be a second copy
-  of a closed vocabulary — which `tests/unit/test_social_tag_vocabulary.py` refuses
-  outright. So `Ruleset` and `validate_ruleset` are the engine's, every dataset is here,
-  and the day the runtime store lands it replaces this package rather than growing beside
-  it. _Avoid_: "config", "settings" — the environment may select configuration and may
-  never select a ruleset.
-- **Scorable candidate** — the type the **Match Fit** scorer is handed, in
-  `app/engines/matchfit/scorable.py`. It carries **no gender, no name, no photo, no
-  birthdate, no precise location and no shard key**, which is what makes *a term cannot
-  read a protected characteristic* literally true rather than aspirational: the value is
-  not in the process. `tests/unit/test_scorable_candidate_fence.py` **walks the source
-  transitively**, through every type a field is annotated with, and fails the build on a
-  forbidden word — a shallow check would pass a candidate holding a whole player profile
-  behind one innocent field name. Three kinds of fact live on it and the difference is
-  load-bearing: the candidate's own facts, the **pair's** facts measured outside because
-  the fence puts them there (`combine_sigma` is RacketSkill's and one engine may not import
-  another), and the facts a pure process cannot have — today's weekday, and how old a
-  Player Score is, because `datetime` is forbidden to this layer outright. _Avoid_:
-  "candidate row" for it — that is the index's, on the other side of the fence, and it
-  legitimately holds gender.
-- **Tail reader** — `CandidateIndexTail`, the **candidate index's only writer**. It
-  subscribes to `event_store` in `sequence_no` order and **not** to the outbox, and the two
-  are different subscriptions with different guarantees
-  ([ADR-0110](../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)):
-  the outbox delivers side effects once, eventually, out of append order and under a row id
-  unrelated to the event's, so an outbox subscriber could never name the number
-  **snapshot version** is. It takes the single **index cursor** row `FOR UPDATE` for the tick,
-  so a concurrent run **blocks, then reads the advanced cursor and finds nothing to do** —
-  which is how ADR-0092's *idempotent and safe beside itself* stays literally true with no
-  leader election and no lease to leak. _Avoid_: "consumer", "subscriber", "handler" — a
-  **handler** is an outbox subscriber and is the other subscription.
-- **Contiguous prefix** — how far one tick may advance the watermark. `sequence_no` is
-  assigned at `INSERT` and not at `COMMIT`, so a transaction holding 100 may commit after one
-  holding 101, and a reader that consumed to `max(sequence_no)` would record a watermark that
-  is a lie about what it has seen. The tick applies rows up to the last *contiguous* number
-  and no further, which is what makes *everything up to and including this is applied* true by
-  construction rather than by argument. _Avoid_: "high-water mark" for the raw maximum — that
-  number is exactly what this refuses to record.
-- **Snapshot horizon** — what tells an in-flight append apart from an aborted one. A hole in
-  the log is either, and the two are indistinguishable from a reader's side, so the cursor
-  records `pg_snapshot_xmin(pg_current_snapshot())` when it first sees the hole and steps over
-  it once the horizon has moved past that value — every transaction running then has ended, so
-  nothing can fill it. **`None` on SQLite**, where there is no horizon and no concurrent
-  appender: the suite asserts contiguity and the gap-stepping path is exercised against
-  PostgreSQL or not at all, which is a place the suite is **weaker than production** and is
-  recorded rather than papered over. _Avoid_: a wall-clock safety lag — it spends the whole
-  freshness budget on a race whose real duration is milliseconds.
-- **Candidate row** vs **player facts** — the index is two tables because a search reads
-  `(player, sport)` and a player edits their profile once. `candidate_player_facts` holds what
-  a person says about themselves; `candidate_row` holds what is true of them in one sport, and
-  a row **enters a snapshot only when both halves exist** — a player rated before onboarding
-  finished has no grid and no area, and one who onboarded and rated nothing has no Level.
-  Said with a join, never with columns full of nulls a term would eventually read as a
-  measured zero. `CandidateRow` (the in-memory join) is `slots=True`, frozen, primitive and
-  **cycle-free**, which is what makes `gc.freeze()` safe
-  ([ADR-0112](../docs/adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md)) and is
-  walked by `tests/unit/test_candidate_row_fence.py`. It legitimately holds **gender** — the
-  mutual gate reads it and the engine never sees it — which is the one place this fence and the
-  **Scorable candidate**'s differ. _Avoid_: "scorable candidate" for it, and vice versa.
-- **`applied_through_sequence_no`** — the stamp on every projected row, and ADR-0110's
-  replacement for §7.3's four-field row stamp (which was designed against at-least-once HTTP
-  delivery this design does not have). It is written with **the sequence number of the event
-  that moved the row**, never with the batch's own end, so it is independent of how the log
-  happened to be cut into batches — which is what makes **rebuild == tail** an equality over
-  whole tables rather than over the columns somebody remembered to exclude. A profile edit
-  restamps every one of that player's rows, so a delta refresh asks one question of one table.
-- **`rebuild == tail`** — the property the whole projection rests on
-  (`tests/unit/test_candidate_index_rebuild_equals_tail.py`). Tail a fixture incrementally,
-  empty the tables, rebuild the same fixture from zero, require the two identical. It proves
-  the projection is a **pure function of the log**, that **append order** does the job it was
-  written for, and that determinism has a stable input — and it is what would actually be false
-  if a projection had a bug. **Never a wall-clock bound**: a five-minute assertion on a shared
-  runner is a flaky test that gets muted, so the timing figure stays a metric the rebuild
-  command logs. The repair is `make rebuild-candidate-index` and **there is no admin route**,
-  asserted by a walk over `app/api/` and every `presentation/`.
-- **Candidate source** — `DatabaseCandidateSource`, **one per process**, holding one immutable
-  container per **partition**. A refresh rebuilds the containers from the rows whose stamp
-  moved — never past its own `snapshot_version`, or the container would not *be* the index at
-  the version it claims — **copying references** for the rest, and publishing them by rebinding
-  one attribute —
-  atomic under the GIL, which is what `atomic.Pointer` means in this process model. A search
-  binds a container **once, at entry**, so a refresh mid-search cannot move the index
-  underneath it. Because the steady state never holds two copies of a row, ADR-0093's and
-  ADR-0101's **trigger 4 loses its `× 2`**. _Avoid_: a per-request source, or a port that
-  answers questions *about* rows — per-row granularity was priced at **+0.58 ms** and doubles
-  the walk, and this shape exists to make it unavailable.
-- **Index staleness: two budgets** — a **target** and a **ladder**, and reading them as one
-  number is the mistake `matchmaking/domain/index_staleness.py` exists to prevent. The target is
-  the refresh loop's p50 2 s / p99 15 s: missing it raises an alert and **changes no
-  behaviour**. The ladder is serve under 15 minutes, serve and record `index_stale` to 24
-  hours, **refuse** past it — and the refusal stands on **quality**, not safety, because every
-  live-truth fact was taken out of the index by ADR-0095, ADR-0098 and ADR-0109. Anyone who
-  later moves a live-truth fact in has to come back and re-argue that, which is why the reason
-  is written down rather than the number. The ladder is **domain and never configuration**; the
-  two cadences are configuration. _Avoid_: putting the ladder in `config.py`, or `index_stale`
-  on the wire — §18 itself says the player sees nothing at that rung.
+  **The engine owns the shape and the module owns the data**: `Ruleset` and
+  `validate_ruleset` are the engine's, the dataset is here, and the day the runtime store
+  lands it replaces this package rather than growing beside it. Since the ranking went
+  (#580) a ruleset is two sections — the balance rules and each kind of game's level
+  tolerance — and one release is carried. _Avoid_: "config", "settings" — the environment
+  may select configuration and may never select a ruleset.
 
 - **Ephemeral store** — the process's Redis, holding a room's **live channel** and its
   **typing roster** and nothing else. Every message is a durable row before anything is

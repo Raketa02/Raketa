@@ -14,9 +14,7 @@ read **side against side** from the people's Levels, through the engine's own
 ``forecast_and_split`` under the released ruleset's balance rules and the group
 σ as the matcher composes it. That is the reading a Games card makes of the same
 people (``proposals``' ``MatcherBalanceForecasts``), so the card and the game
-come to one number for one court because they are one engine function — and no
-search workbench, candidate index, match history or interest ledger sits behind
-it.
+come to one number for one court because they are one engine function.
 
 **Levels off rating's estimates, live** — the engine's currency — and the seats'
 printed figures off ``rating``'s **published** read, beside them. Both are the

@@ -314,7 +314,6 @@ serving HTTP.
 | `RATING_CATCH_UP_INTERVAL_SECONDS` | How often it runs. **Not the update rule**, which is `engines/racketskill/results.py` and is domain — an environment that could pick a K-factor decides how a marketplace rates people. |
 | `CONVERSATION_SWEEP_ENABLED` | Enables the hourly conversation sweep, which destroys every room whose episode is over. **Destroyed, not delisted** — turning it off changes no answer, because the end is derived and every route already refuses past it; what stops is the rows going away. |
 | `CONVERSATION_SWEEP_INTERVAL_SECONDS` | How often it runs. **Not `CONVERSATION_GRACE`**, which is how long a room outlives its game and is domain. |
-| `GUNICORN_WORKERS` | How many workers this container runs. Read by `docker/api/startup.prod.sh` and by trigger 4's arithmetic, so the memory reading is about the fleet that exists. It selects no behaviour: it is a multiplier inside a log record. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
 
 PostgreSQL URLs using `postgresql://` or `postgres://` are normalized to the
@@ -460,11 +459,11 @@ members, generated from a seed and committed as `app/seeds/cohort.json`. It exis
 one search over eleven accounts finds them all in one ring, and every Play screen would be
 developed against an empty result.
 
-It is a **workbench and it says so on its own report**: chosen so that every Play screen
-state is *reachable*, standing for nothing outside itself, describing no real market. The
-comparator corpus under `docs/specs/matchmaking/ruleset-diff/` answers a different question
-and is not this — the cohort borrows its mechanics (seeded draws keyed off a handle,
-assignment by rule rather than by rate) and none of its numbers.
+It is a **workbench and it says so on its own report**: chosen so that every screen the
+games draw is *reachable*, standing for nothing outside itself, describing no real market.
+It borrowed the mechanics of the ruleset comparator that went with the ranking (#580) —
+seeded draws keyed off a handle, assignment by rule rather than by rate — and none of its
+numbers.
 
 Two lists, and they are asymmetric. `app/seeds/cohort.py` holds the **declarations** — the
 generator's inputs: rings cut by the relaxation ladder's own ×1.5 and ×2.0 plus a handful
@@ -541,12 +540,8 @@ wrong:
   wrote them and a re-run re-commits nothing, so a fortnight on every newcomer ages out at
   once — and `make seed` **fails by name, with the age in days**, rather than handing a
   developer a newcomer path with no newcomers in it.
-- **The assertions read the screens, and the seed ticks the tail first.** They read the
-  candidate index, which has not seen what the run just wrote — so the run folds the log in
-  **in this process** before asserting. That is safe by ADR-0110's own design: the index is
-  a projection behind one `FOR UPDATE` cursor, so a concurrent API tick blocks and then
-  finds nothing to do. Half the gate is a signature: none of this runs in CI, because it
-  needs a database with the seed in it.
+- **The assertions read the screens.** Half the gate is a signature: none of this runs in
+  CI, because it needs a database with the seed in it.
 - **Production is refused, on import.** `app/seeds/__init__.py` calls the guard, so
   importing anything in the package under `APP_ENV=production` raises `SeedRefused`
   before a database is opened. The guard is not in the make target: a make target is not
@@ -703,20 +698,19 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and fourteen jobs are in it today: the
+  `app/bootstrap/jobs.py` is the register, and twelve jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
   held for more than 24 hours that no committed profile currently names; the
   **photo re-review backfill**, which asks the reviewer about the photos nobody
-  ever asked it about; the candidate index's **tail reader** and **snapshot
-  refresh**, which nothing reads since the searches went and which go with the
-  ranking (#580); the **rating catch-up**, which is the whole path a confirmed
+  ever asked it about; the **rating catch-up**, which is the whole path a confirmed
   result has to a Level; the **conversation sweep**, which destroys every room
   whose episode is over; the **mail worker**; and the new loop's jobs — the
   proposer's sweep and its tick, the book-by sweep, the On request timeout, the
   cut-off, the club payouts and the new-bookings summary. The challenge lapse loop
   and the hour loop went with the challenges (#578); the exposure roll, the two
   prompt loops, the interest expiry loop and the scale-pressure probe went with
-  the searches (#579). The backfill takes no database session: its whole input and
+  the searches (#579); the candidate index's tail reader and snapshot refresh went
+  with the ranking (#580). The backfill takes no database session: its whole input and
   output are the object store.
 
   **The conversation sweep deletes an aggregate** — a room and its whole stream,

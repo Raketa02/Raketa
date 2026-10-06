@@ -132,7 +132,7 @@ changing code that calls into another context, read its rule.**
 | `kernel-and-engines.md` | the purity gates and the kernel's surface |
 | `demands.md` | the demand registers and which one a new port belongs in |
 | `player-profile-and-photos.md` | photo storage, the on-court check, profile reads and writes |
-| `matchmaking.md` | what the new games kept (the balance forecast, the level window), the three outward demands, the candidate index until #580 |
+| `matchmaking.md` | what the new games kept (the balance forecast, the level window, the overlap), the engine and ruleset that are left, the three outward demands |
 | `games.md` | the booked game: opening, a seat left and taken, call-offs, results, the pairing |
 | `conversations.md` | rooms, their end and the live channel |
 | `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record |

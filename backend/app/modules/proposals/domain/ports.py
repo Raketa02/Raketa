@@ -372,8 +372,8 @@ class DeckPeople(Protocol):
 @runtime_checkable
 class BalanceForecasts(Protocol):
     """**How even the engine forecasts a game**, for each way its people could
-    stand — the Match Fit forecast a line-up and a game screen print, over the
-    same Levels, never a second one."""
+    stand — the forecast a booked game's screen prints too, over the same
+    Levels, never a second one."""
 
     async def forecasts(
         self, options: Sequence[Sides], *, sport: Sport

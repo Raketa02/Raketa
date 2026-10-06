@@ -29,8 +29,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   refusals are one function, `auth/application/access.py`, shared by both surfaces.
   `RefreshAuthTokens` and `Logout` are **built once per audience**, each context answers
   `SessionHolders` for its own accounts, and a `refresh_tokens` row records whose it is by
-  filling **exactly one** of `user_id` and `club_account_id` (a check constraint). The
-  candidate index counts only a **player-app** refresh as liveness. Seeded by
+  filling **exactly one** of `user_id` and `club_account_id` (a check constraint). Seeded by
   `app/seeds/clubs.py` — eight Kraków clubs placed as offsets from the seed centre, each
   signed up through `SignUpClub`, each desk at `desk.<name>@raketa.example` on the seed
   password.

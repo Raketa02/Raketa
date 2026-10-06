@@ -5,7 +5,6 @@ A player taps a face and is told who that person is. The rule the route runs on
 person** — the pair played together, share a group, or the reader runs a group
 the subject is in (#575) — and the gates about accounts are re-evaluated live on
 every open, so a disclosure entitles a reader to ask and never to be answered.
-Nothing here searches and nothing reads a candidate index.
 
 **The refusal is the thing most worth testing here**, and it is tested as a
 *sameness* rather than as four statuses: never disclosed, blocked, held and no
@@ -440,7 +439,7 @@ async def test_leaving_the_group_closes_the_record_it_opened(
 
 
 async def test_a_preference_gates_no_record(client, session_factory, searcher):
-    """**No candidate index and no preference** (#575). A gender preference says
+    """**No preference** (#575). A gender preference says
     who a player is willing to be *matched* with; the group already put these
     two in front of each other, and its Members lists each to the other — so
     the record opens whichever way the preference points."""

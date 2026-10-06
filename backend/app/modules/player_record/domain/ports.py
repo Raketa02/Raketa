@@ -137,10 +137,10 @@ class RecordGates(Protocol):
     spelled **once** on this platform; a second spelling of a safety gate is the
     defect the whole fail-closed rule exists to prevent.
 
-    **No preference and no partition** (#575). The mutual gender preference says
-    who a player is willing to be *matched* with, and every strand here is a
-    court shared or a group shared or run — the pair have already been put in
-    front of each other — so no candidate index is read to open a record.
+    **No preference** (#575). The mutual gender preference says who a player is
+    willing to be *matched* with, and every strand here is a court shared or a
+    group shared or run — the pair have already been put in front of each
+    other.
 
     **A hold points both ways.** The subject's is one of the three; the
     reader's own is this surface's entry rule, and it is here rather than in
@@ -313,8 +313,7 @@ class SubjectSportsmanship(Protocol):
     deliberate tap. A set-shaped version would be a fold over fifty rows per
     candidate offered to a caller that walks five hundred of them — and the
     matcher must never read this in any shape at all, which is held by an import
-    contract rather than by a signature, because a Match Fit term reading a star
-    average would look like every term beside it.
+    contract rather than by a signature.
 
     **No clock.** Nothing here decays: the window is fifty **people**, so an
     opinion falls out of the record when fifty others have since had one and

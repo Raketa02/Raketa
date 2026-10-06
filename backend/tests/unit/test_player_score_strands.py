@@ -181,22 +181,6 @@ def test_every_strand_the_platform_has_a_word_for_carries_a_published_weight(
     assert set(PUBLISHED_WEIGHTS) == set(ReliabilityStrand)
 
 
-def test_the_published_weights_are_not_the_matchers_weights() -> None:
-    """Two vectors over one vocabulary, and confusing them is a live risk.
-
-    The matcher weighs the strands **per mode** and the two mode vectors order
-    people oppositely; this one is what a player reads about themselves on their
-    own screen. If these ever became the same numbers it would be a coincidence,
-    and a reader would be entitled to assume it was a rule.
-    """
-
-    from app.engines.matchfit.core import SearchMode
-    from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-
-    for mode in SearchMode:
-        assert dict(LIVE_RULESET.modes[mode].strand_weights) != dict(PUBLISHED_WEIGHTS)
-
-
 def test_the_struck_strand_has_no_weight_because_it_has_no_name() -> None:
     """*Confirms results* was withdrawn, not deferred (``docs/adr/0137``).
 
@@ -227,22 +211,6 @@ def test_the_struck_strands_share_came_back_under_a_different_name() -> None:
         ReliabilityStrand.SETTLES_UP: 10,
         ReliabilityStrand.SPORTSMANSHIP: 8,
     }
-
-
-def test_the_one_window_here_agrees_with_the_matchers_horizon() -> None:
-    """**Two spellings of one judgement, and the cost is named** (``docs/adr/0160``).
-
-    This context may not read the matcher's ruleset — a provider importing the
-    consumer it serves is the arrow every port here keeps — so the twelve months
-    *answers about results* forgets after is written on this side and the
-    ``horizon_days`` past which the whole term stands down is written on the
-    other. Nothing at runtime makes them agree. This is what does, and it is the
-    reason the number cannot quietly drift.
-    """
-
-    from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-
-    assert ANSWERED_RESULTS_WINDOW.days == LIVE_RULESET.reliability.horizon_days
 
 
 def test_the_window_narrows_and_never_widens_what_it_is_asked_about() -> None:

@@ -158,11 +158,10 @@ async def test_every_port_is_built_from_a_session_and_the_settings(session_facto
             build_assessment_repository(event_store=store, events=events),
             build_skill_rating_repository(event_store=store, events=events),
             build_player_profile_repository(event_store=store, events=events),
-            # Declared before its first caller exists: the aggregate and its
-            # durable contract landed with #182 so the candidate index has an
-            # event to read, while ADR-0094's write path is its own build.
+            # The aggregate and its durable contract landed with #182; ADR-0094's
+            # write path is its own build.
             build_play_intent_declaration_repository(event_store=store, events=events),
-            # Also declared before their first caller: every surface that shows
+            # Declared before their first caller: every surface that shows
             # one player to another consults `BlockQuery` (`docs/adr/0095` §7),
             # and none of those surfaces is built.
             build_block_repository(event_store=store, events=events),

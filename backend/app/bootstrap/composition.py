@@ -49,8 +49,6 @@ from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import PushProvider, Settings
 from app.engines.assessment import AssessmentEngine
 from app.engines.matchfit.ruleset import Ruleset
-from app.engines.matchfit.scoring import MatchFit
-from app.engines.matchfit.v1 import MatchFitV1
 from app.engines.racketskill.v3 import RacketSkillEngineV3
 from app.infrastructure.clock import SystemClock
 from app.infrastructure.database.unit_of_work import AsyncSqlAlchemyUnitOfWork
@@ -536,9 +534,6 @@ from app.modules.matchmaking.domain.ports import (
     AtStakeQuery,
 )
 from app.modules.matchmaking.application.fail_closed_gates import AccountGates
-from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
-    RebuildCandidateIndex,
-)
 from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
 )
@@ -546,22 +541,7 @@ from app.modules.player_score.domain.ports import PublishedScoreQuery
 from app.modules.player_score.infrastructure.three_strands_from_the_record import (
     ThreeStrandsFromTheRecord,
 )
-from app.modules.matchmaking.infrastructure.candidate_index_tail import (
-    CandidateIndexTail,
-)
-from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
-    DatabaseCandidateSource,
-)
-from app.modules.matchmaking.infrastructure.snapshot_horizon import (
-    DialectSnapshotHorizon,
-    NoSnapshotHorizon,
-    PostgresSnapshotHorizon,
-    SnapshotHorizon,
-)
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-from app.modules.matchmaking.infrastructure.scale_instruments import (
-    container_memory_limit_bytes,
-)
 from app.modules.matchmaking.infrastructure.games_court_pairing import (
     GamesCourtPairing,
 )
@@ -1466,7 +1446,7 @@ def build_balance_forecasts(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> BalanceForecasts:
     """How even a card's game is forecast: the engine's own forecast under the
-    live ruleset, over rating's estimates — no candidate index."""
+    live ruleset, over rating's estimates."""
     return MatcherBalanceForecasts(
         ratings=build_rated_player_query(session, runtime=runtime),
         ruleset=build_ruleset(),
@@ -2954,11 +2934,10 @@ def build_block_query(
 ) -> BlockQuery:
     """The one place a block is read, and the only implementation there will be.
 
-    Over the **log**, because ``docs/adr/0095`` §4 dropped the advisory copy: the
-    candidate index holds no block data at all, so there is no projection to
-    choose between. It takes the codec from the event runtime rather than
-    declaring the durable names a second time, for the reason the candidate index
-    tail does — a re-declared published contract drifts silently.
+    Over the **log**, because ``docs/adr/0095`` §4 dropped the advisory copy, so
+    there is no projection to choose between. It takes the codec from the event
+    runtime rather than declaring the durable names a second time — a
+    re-declared published contract drifts silently.
 
     **Declared before its first caller exists**, deliberately: every surface that
     shows one player to another consults this port (``docs/adr/0095`` §7) and
@@ -3184,8 +3163,6 @@ def build_game_court_pairing(
     against side from the people's Levels under the live ruleset — the reading
     a Games card makes of the same people (:func:`build_balance_forecasts`) —
     and from ``rating``'s published figures and result-update rule beside it.
-    No search workbench, candidate index or ledger sits behind it, so a process
-    with none of them still draws the whole screen.
     """
 
     return GamesCourtPairing(
@@ -3338,8 +3315,8 @@ def build_subject_variety(
 
     Built over ``games``' **variety port** and never over the history read beside
     it, which is the fence rather than tidiness: this fold is unbounded, and the
-    narrow type is what stops it being reachable from a caller that walks five
-    hundred candidates.
+    narrow type is what stops it being reachable from a caller that walks a
+    list of people.
     """
 
     return GamesSubjectVariety(
@@ -3435,17 +3412,16 @@ def build_settle_ratings_on_results(
 
 
 def build_ruleset() -> Ruleset:
-    """Which numbers the matcher runs on. **Chosen here and nowhere else.**
+    """Which numbers the forecast and the level window run on. **Chosen here
+    and nowhere else.**
 
     ``docs/adr/0093`` ships a ruleset with the code and defers the runtime store
-    until there is enough traffic for an experiment to mean anything — *its
-    arrival changes only where the file is read from, never what the stamp
-    guarantees*, and this is the line it changes.
+    — *its arrival changes only where the file is read from, never what the
+    stamp guarantees*, and this is the line it changes.
 
-    **Nothing here reads the environment.** A weight is not a setting: it is the
-    product's opinion about who a player should meet, which is behaviour a domain
-    test can observe, and `local`, `development`, `staging` and `production` run
-    the same numbers.
+    **Nothing here reads the environment.** A tolerance is not a setting: who
+    may share a court is behaviour a domain test can observe, and `local`,
+    `development`, `staging` and `production` run the same numbers.
     """
     return LIVE_RULESET
 
@@ -3542,8 +3518,8 @@ def build_account_gates(
 def build_record_gates(
     *, accounts: AccountGates, holds: AccountHoldQuery
 ) -> RecordGates:
-    """The three about accounts, plus the reader's own hold — no preference and
-    no candidate index (#575).
+    """The three about accounts, plus the reader's own hold — no preference
+    (#575).
 
     The three are **not built here**: they are ``matchmaking``'s collaborator,
     already assembled per request, and this line composes rather than copies. A
@@ -3554,25 +3530,9 @@ def build_record_gates(
     return LiveRecordGates(accounts=accounts, holds=holds)
 
 
-def build_match_fit_engine() -> MatchFit:
-    """The concrete scorer version is chosen here, and nowhere else.
-
-    The same rule the assessment engine follows (``docs/adr/0015``): a caller
-    depends on the ``MatchFit`` abstraction, so swapping ``v1`` for a version
-    that computes a term differently is this line and no other. **Nothing asks
-    for one since the searches went** (#579); it goes with the ranking (#580).
-    """
-    return MatchFitV1()
-
-
 # --------------------------------------------------------------------------
-# Matchmaking — the candidate index
+# Background runs
 # --------------------------------------------------------------------------
-#
-# The index has one writer, one per-worker reader and one one-shot repair, and
-# all three are built here so that a rebuild run from a ``make`` target gets the
-# wiring the API's own tail reader gets rather than a second opinion about it —
-# which is the whole reason this module exists (``docs/adr/0110``).
 
 
 def build_background_session_factory(
@@ -3588,85 +3548,6 @@ def build_background_session_factory(
     """
 
     return async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
-
-
-def build_snapshot_horizon() -> SnapshotHorizon:
-    """Whether a hole in the log can be proven permanent, on this database.
-
-    **The two implementations are chosen here**; the dispatcher only routes, per
-    session, on the dialect the session is bound to. Never on the environment —
-    which holes a reader steps over is behaviour a test can observe, and
-    ``docs/adr/0028`` reserves the environment for configuration.
-    """
-
-    return DialectSnapshotHorizon(
-        by_dialect={"postgresql": PostgresSnapshotHorizon()},
-        otherwise=NoSnapshotHorizon(),
-    )
-
-
-def build_candidate_index_tail(*, settings: Settings) -> CandidateIndexTail:
-    """The index's only writer.
-
-    It reads the **log**, not the outbox: the outbox orders by
-    ``(created_at, id)`` and mints a row id unrelated to the event's, so an
-    outbox subscriber could never name the ``sequence_no`` that
-    ``snapshot_version`` is (``docs/adr/0110``). Two subscriptions, two
-    guarantees.
-    """
-
-    runtime = get_event_runtime()
-    return CandidateIndexTail(
-        codec=runtime.codec,
-        catalog=runtime.catalog,
-        horizon=build_snapshot_horizon(),
-        clock=build_clock(),
-        batch_size=settings.CANDIDATE_INDEX_BATCH_SIZE,
-    )
-
-
-def build_candidate_source(
-    *, session_factory: async_sessionmaker[AsyncSession]
-) -> DatabaseCandidateSource:
-    """This worker's own index. **One per process**, and never per request.
-
-    A per-request source would rebuild the container a search was supposed to
-    bind once, which is the whole of what ``docs/adr/0112`` buys.
-    """
-
-    return DatabaseCandidateSource(
-        session_factory=session_factory, empty_at=build_clock().now()
-    )
-
-
-def build_container_memory_limit() -> int | None:
-    """This container's memory limit, or ``None`` where there is not one.
-
-    Read through the root rather than by a job reaching at ``/sys`` itself, and
-    read **once** per process by its caller: a limit does not change while a
-    container runs, and re-reading a cgroup file every two seconds is a syscall
-    per tick to learn the same number.
-    """
-
-    return container_memory_limit_bytes()
-
-
-def build_rebuild_candidate_index(
-    *,
-    session_factory: async_sessionmaker[AsyncSession],
-    settings: Settings,
-) -> RebuildCandidateIndex:
-    """The repair, reached by a ``make`` target and never by a route.
-
-    A button that drops and rebuilds the index is a button eventually pressed in
-    the wrong place.
-    """
-
-    return RebuildCandidateIndex(
-        session_factory=session_factory,
-        tail=build_candidate_index_tail(settings=settings),
-        clock=build_clock(),
-    )
 
 
 # --------------------------------------------------------------------------

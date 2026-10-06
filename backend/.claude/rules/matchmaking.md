@@ -2,58 +2,47 @@
 paths:
   - "app/modules/matchmaking/**"
   - "app/engines/matchfit/**"
-  - "scripts/judged_pairings/**"
 ---
 
-# Matchmaking — what the new games kept, and the index until #580
+# Matchmaking — what the new games kept
 
 Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-bearing and not obvious from the code.
 
-- **The searches, the deck and the radar are gone** (#579, PRD #569). Every route —
-  `POST/GET /searches`, `/lineups`, `/forecasts`, `POST/GET /interest`, `/deck`,
-  `/deck/reset`, `/passes`, `/prompt-declines`, `/radar` — answers *not found*
-  (`tests/api/test_the_old_loop_is_gone.py`). With them went their use cases, the search
-  workbench, the shortlist pipeline and its golden walkthroughs, the three Redis ledgers
-  (exposure, suppression, prompts) with their fail-soft wrappers, the five durable
-  ledgers' tables (`search`, `search_candidate`, `interest`, `player_pass`,
-  `prompt_decline`, `deck_reset` — dropped by migration `0047`), the five jobs that served
-  them (interest expiry, exposure roll, intent drift, grid staleness, scale pressure) and
-  `scripts/ruleset_diff/`. A game is made one way now — a group's Games deck books it.
+- **The searches, the deck, the radar, the ranking and the candidate index are gone**
+  (#579, #580, PRD #569). Every old route — `POST/GET /searches`, `/lineups`,
+  `/forecasts`, `POST/GET /interest`, `/deck`, `/deck/reset`, `/passes`,
+  `/prompt-declines`, `/radar` — answers *not found* (`tests/api/test_the_old_loop_is_gone.py`).
+  With them went the search workbench, the shortlist pipeline, the ledgers and their
+  tables (migration `0047`), the "who fits whom" ranking (scoring, its eight terms and
+  evidence, the modifiers, Liveness, the quality floor, the line-up enumeration and the
+  group objective `G`), the candidate index with its projection, cursor, tail and refresh
+  jobs, `make rebuild-candidate-index` and trigger 4 (its three tables dropped by migration
+  `0048`), the judged-pairings and ruleset-diff scripts, and the golden walkthroughs. A
+  game is made one way now — a group's Games deck books it — and **nothing scores one
+  player against another**.
 - **What the new games call is pure and small.** `domain/balance.py` is how even a game
   between two sides is forecast to be (`forecast_the_sides`, over the engine's
   `forecast_and_split`), read once for the Games card (`proposals`'
   `MatcherBalanceForecasts`) and the booked game's screen (`GamesCourtPairing`, #575); it
-  holds the group σ (`combine_group_sigma`, also read by the proposer) and the sport's
-  `seats_per_side`. `domain/level_window.py` is the level window — `|Δμ| < LEVEL_TOL` at the
-  tolerance the curve uses — and the newcomer window that narrows it to the competitive one
-  while either side is new (ADR-0113), asked of every pair the proposer, the fill and a
-  rescue would seat (`proposals`' `MatcherPlayerFit`). `domain/geography.py` and
+  holds the group σ (`combine_group_sigma`, also read by the proposer, which ranks a
+  court's possible sides by the engine's `forecast`) and the sport's `seats_per_side`.
+  `domain/level_window.py` is the level window — `|Δμ| < LEVEL_TOL` at each kind of
+  game's tolerance — and the newcomer window that narrows it to the competitive one while
+  either side is new (ADR-0113), asked of every pair the proposer, the fill and a rescue
+  would seat (`proposals`' `MatcherPlayerFit`). The engine's `group_availability` is a
+  Games card's overlap grade (`proposals/domain/overlap.py`). `domain/geography.py` and
   `domain/areas.py` are distances to clubs and the areas a record is drawn with.
+- **The engine is what those call and nothing else.** `app/engines/matchfit/` holds
+  `SearchMode` (the kind of game), `ReliabilityStrand` (the Player Score's six strands),
+  the forecast's shapes (`Forecast`, `Split`, `SigmaCombiner`), `LevelReading`,
+  `GridCell`, and `v1/group.py`'s `forecast`, `forecast_and_split`, `forecast_pct` and
+  `group_availability`. **The ruleset is two sections**: the balance rules and each kind
+  of game's level tolerance, in one released dataset
+  (`infrastructure/rulesets/r2026_09_15_a.py`), validated at import and never selected by
+  the environment. A new number is a new dataset with a new name, never an edit.
 - **Three outward demands, contracted in `tests/demands/test_matcher_demands.py`.**
   `AccountHoldQuery` (`NoHoldsExist`) and `AccountStatusQuery` (`UsersAccountStatus`) fail
   **closed** and are the player record's gates (`AccountGates`); `AtStakeQuery`
   (`RatingResultUpdateRule`) fails **soft** and prices a booked game's court side against
   side. `PlayerScoreQuery`, `MatchHistoryQuery`, `HalfBuiltCourtQuery` and
   `SharedCourtQuery` were read by the searches alone and went with them.
-- **The candidate index tails the log; the outbox delivers side effects**
-  ([ADR-0110](../../../docs/adr/0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md),
-  [ADR-0111](../../../docs/adr/0111-the-index-holds-only-what-a-player-changes-about-themselves.md),
-  [ADR-0112](../../../docs/adr/0112-the-snapshot-is-a-per-partition-container-bound-once.md)).
-  **Nothing reads it since the searches went**, and it goes with the ranking (#580); until
-  then it still runs, so hold both consumers of a domain event in your head.
-  `CandidateIndexTail` reads `event_store` by `sequence_no`, takes the one cursor row
-  `FOR UPDATE`, and applies **only the contiguous prefix**, because a position is assigned at
-  `INSERT` and not at `COMMIT`. A hole is stepped over only once the snapshot horizon proves
-  it permanent — **and never on SQLite**, which has neither a horizon nor a concurrent
-  appender, so that path is exercised against Postgres or not at all.
-  `DatabaseCandidateSource` holds one immutable container per partition per process,
-  refreshes it by copying row references, and calls `gc.freeze()` after every load and after
-  every refresh that decoded a row — **not** after one that decoded none, because the freeze
-  promotes everything tracked and would otherwise leak whatever was in flight, every two
-  seconds, for ever. The refresh recomputes trigger 4 (`domain/scale_triggers.py`) at every
-  load. Repair is `make rebuild-candidate-index` and **there is no admin route** — a walk
-  over `app/api/` and every `presentation/` fails the build if one appears.
-- **The Match Fit ranking is still in the engine and nothing calls it** — scoring, terms,
-  modifiers, liveness, the floor, the ruleset's weights and the startup checks in
-  `app/bootstrap/matchmaking.py` (its evidence-kind check went with the wire union, #579).
-  All of it goes in #580; the balance rules and each mode's level tolerance stay.

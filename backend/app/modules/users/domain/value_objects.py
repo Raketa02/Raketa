@@ -131,9 +131,9 @@ class AdultAttestation:
 
     **One boolean, and never a date of birth.** Nothing downstream asks *how
     old* — only *may they be here* — so a date would satisfy the rule by
-    breaking the reason it exists, and the candidate index asserts its absence
-    at build time. **This is not age verification** and claims to be nothing of
-    the sort: it records that the question was asked and answered.
+    breaking the reason it exists. **This is not age verification** and claims
+    to be nothing of the sort: it records that the question was asked and
+    answered.
 
     It refuses with a typed error rather than the ``ValueError`` its neighbours
     raise, because a refused attestation is a sentence the player has to be

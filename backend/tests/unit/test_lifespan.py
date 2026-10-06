@@ -19,7 +19,6 @@ import pytest
 
 import app.core.lifespan as lifespan_module
 from app.bootstrap.jobs import (
-    CANDIDATE_INDEX_TAIL_JOB,
     CONVERSATION_SWEEP_JOB,
     MAIL_DELIVERY_JOB,
     PROPOSAL_EXPIRY_JOB,
@@ -198,7 +197,6 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         EVENT_DELIVERY_WORKER_ENABLED=False,
         PHOTO_SWEEP_ENABLED=False,
         PHOTO_REVIEW_BACKFILL_ENABLED=False,
-        CANDIDATE_INDEX_ENABLED=False,
         RATING_CATCH_UP_ENABLED=False,
         CONVERSATION_SWEEP_ENABLED=False,
         MAIL_DELIVERY_ENABLED=False,
@@ -226,10 +224,6 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     async with lifespan_module.build_lifespan(settings)(app):
         # Nothing is registered, and nothing reached for a factory to get there.
         assert app.state.scheduled_jobs == []
-        # The index's own source is one of the things that must not have been
-        # built: it takes a session factory, and building one is what this test
-        # exists to prove did not happen.
-        assert app.state.candidate_source is None
         # The ephemeral store is **not** the same claim, and the difference is
         # the point: it needs no session, so it is opened whatever is switched
         # off. A room's live channel publishes through this client, and a job's
@@ -243,7 +237,6 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     ("flag", "job"),
     [
         ("PHOTO_SWEEP_ENABLED", PHOTO_SWEEP_JOB),
-        ("CANDIDATE_INDEX_ENABLED", CANDIDATE_INDEX_TAIL_JOB),
         ("RATING_CATCH_UP_ENABLED", RATING_CATCH_UP_JOB),
         ("CONVERSATION_SWEEP_ENABLED", CONVERSATION_SWEEP_JOB),
         ("MAIL_DELIVERY_ENABLED", MAIL_DELIVERY_JOB),
@@ -271,7 +264,6 @@ async def test_a_lone_database_job_is_handed_a_session_factory(
             "EVENT_DELIVERY_WORKER_ENABLED",
             "PHOTO_SWEEP_ENABLED",
             "PHOTO_REVIEW_BACKFILL_ENABLED",
-            "CANDIDATE_INDEX_ENABLED",
             "RATING_CATCH_UP_ENABLED",
             "CONVERSATION_SWEEP_ENABLED",
             "MAIL_DELIVERY_ENABLED",

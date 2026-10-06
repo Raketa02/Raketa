@@ -567,30 +567,6 @@ class Settings(BaseSettings):
     PHOTO_REVIEW_BACKFILL_BATCH_LIMIT: int = 100
     PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS: float = 1.0
 
-    # --- the candidate index (docs/adr/0110, docs/adr/0112)
-    #
-    # **Two loops with two different jobs, and both cadences are configuration.**
-    # The tail reader folds the log into the index; the snapshot refresh rebuilds
-    # this worker's containers from what moved. Turning either off changes no
-    # rule a domain test could observe — the index simply stops moving, which is
-    # the state the platform was in before it existed.
-    #
-    # **What is emphatically not here is the staleness ladder.** Serve under
-    # 15 minutes, flag to 24 hours, refuse past it — those live in
-    # `matchmaking/domain/index_staleness.py`, because a refusal the environment
-    # could switch off is a rule that is true on a laptop and false in
-    # production. The two must not swap places, exactly as the photo sweep's
-    # retention window and cadence must not.
-    CANDIDATE_INDEX_ENABLED: bool = True
-    #: The cadence `EventWorker` already runs at, so no new number is invented.
-    #: Its falsifier is batches consistently hitting the bound below.
-    CANDIDATE_INDEX_TAIL_INTERVAL_SECONDS: float = 1.0
-    #: §17's p50 index-staleness target, matched directly.
-    CANDIDATE_INDEX_REFRESH_INTERVAL_SECONDS: float = 2.0
-    #: How many log rows one tick may look at, so a projection restarted against
-    #: a long log does bounded work per tick rather than one huge transaction.
-    CANDIDATE_INDEX_BATCH_SIZE: int = 500
-
     # --- the ephemeral store (docs/adr/0093)
     #
     # **Redis holds only what is allowed to be lossy** — since the searches went
@@ -648,20 +624,6 @@ class Settings(BaseSettings):
     # and pay for it in a walk that folds every live room's stream.
     CONVERSATION_SWEEP_ENABLED: bool = True
     CONVERSATION_SWEEP_INTERVAL_SECONDS: float = 60 * 60
-
-    # --- trigger 4 (scale-posture.md §4)
-    #
-    # The index refresh recomputes trigger 4 at every load — *half the container
-    # memory* — and the threshold lives in `matchmaking/domain/scale_triggers.py`:
-    # an environment that could widen a trigger is an environment that decides
-    # when the platform is in trouble. What is here is a fact about the
-    # deployment. Trigger 1 and its probe went with the searches (#579).
-    #
-    #: How many workers this container runs, read from the variable
-    #: `docker/api/startup.prod.sh` already passes to gunicorn — so trigger 4's
-    #: arithmetic reads the fleet that exists rather than one somebody typed
-    #: twice. It selects no behaviour: it is a multiplier inside a log record.
-    GUNICORN_WORKERS: int = 1
 
     @field_validator("APP_ENV", mode="before")
     @classmethod

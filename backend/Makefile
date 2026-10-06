@@ -18,7 +18,6 @@ ECS_SERVICE      ?= raketa-service
 .PHONY: help install test test-affected test-group test-durations split-partition coverage lint lint-imports format typecheck check test-gates openapi \
         gen-cohort \
         build-dev up down down-v logs ps shell migrate seed seed-host sim-location \
-        rebuild-candidate-index rebuild-candidate-index-host \
         photo-flag-rate photo-flag-rate-host tester tester-host \
         build-prod ecr-login ecr-push ecs-deploy
 
@@ -90,9 +89,9 @@ test-gates:        ## verify the kernel/engines purity gates still fire
 format:            ## ruff format
 	poetry run ruff format .
 
-# `scripts` as well as `app`: the judged-pairings harness runs the engine over a
-# spec and writes tables back into it, and an implicit `Any` in the machine that
-# derives a Fit is the same defect there as it is one directory over.
+# `scripts` as well as `app`: the cohort generator, the shard split and its
+# arithmetic, and the taskdef proof are code the build leans on, and a type
+# error there is a gate that silently stops checking.
 typecheck:         ## mypy
 	poetry run mypy app scripts
 
@@ -179,17 +178,6 @@ sim-location:      ## pin the booted iOS simulator to the seed's centre (SEED_CE
 	  "from app.seeds.catalog import CENTRE; print(f'{CENTRE.latitude},{CENTRE.longitude}')" 2>/dev/null) \
 	  && xcrun simctl location booted set "$$centre" \
 	  && echo "iOS simulator pinned to $$centre — the seed's centre. Re-run after every simulator boot."
-
-## ----- the candidate index (docs/adr/0110)
-## The index is a projection of the event log, so a corrupt one is a command and
-## not an incident: this empties the tables and folds the whole log back in.
-## There is deliberately no admin route — a button that drops and rebuilds an
-## index is a button eventually pressed in the wrong place.
-rebuild-candidate-index:  ## rebuild the candidate index from the event log, in the running stack
-	$(COMPOSE_LOCAL) exec api python -m app.modules.matchmaking.infrastructure.rebuild_cli
-
-rebuild-candidate-index-host: ## the same rebuild from the host — needs .env, like seed-host
-	poetry run python -m app.modules.matchmaking.infrastructure.rebuild_cli
 
 ## ----- the on-court threshold (#316)
 ## Read-only. Every verdict recorded the similarity vector it was taken from, so

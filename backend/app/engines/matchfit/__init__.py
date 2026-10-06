@@ -1,61 +1,36 @@
-"""The Match Fit engine — the pure half of the matcher.
+"""The Match Fit engine — the pure half of what the new games read about a court.
 
-``docs/adr/0093`` splits the matcher across the fence this layer already draws:
-the stateful half (the candidate index, the ledgers, the telemetry) is a module
-at ``app/modules/matchmaking/``, and everything that is *arithmetic* is here,
-under ADR-0015's rules unchanged — no clock, no randomness, no hidden state, no
-module, no framework, no I/O library.
+``docs/adr/0093`` split the matcher across the fence this layer already draws:
+the stateful half is a module at ``app/modules/matchmaking/``, and everything
+that is *arithmetic* is here, under ADR-0015's rules unchanged — no clock, no
+randomness, no hidden state, no module, no framework, no I/O library.
 
-**The name is taken back.** An engine called Match Fit was removed in the
-2026-08-25 reset; inventing a synonym to avoid a ghost would have cost the
-correct domain term permanently (``docs/adr/0093``).
-
-Three things live here, and the split between them is the point:
+**The "who fits whom" ranking is gone** (#580, PRD #569). Scoring, its eight
+terms and their evidence, the modifiers, Liveness, the quality floor, the fit
+ranking, the line-up enumeration and the group objective were what the searches,
+the deck and the radar called, and those went in #579. What is left is what the
+Games deck, the fill, rescues, posting and the booked game call:
 
 ``core``
-    The vocabulary that outlives both version stamps — the two search modes, the
-    eight terms, the evidence kinds they emit, the six reliability strands, the
-    tag-relationship shape. A ruleset names these; a version computes with them;
-    neither may redefine one.
+    The vocabulary: the kind of game (``SearchMode``), the six reliability
+    strands a Player Score is read in, and the one assumption a provisional
+    forecast makes.
 
 ``ruleset``
-    What a ruleset *is*, and what makes one malformed. A ruleset is a named,
-    dated, frozen dataset of every number the engine uses, validated on load.
-    **The type is here; the datasets are not.** A ruleset names Social tag ids
-    and an engine may not import the module that owns them, so the released
-    datasets live at ``app/modules/matchmaking/infrastructure/rulesets/`` — which
-    is also where the deferred runtime store will land, since *its arrival
-    changes only where the file is read from*.
+    What a ruleset *is* and what makes one malformed — now the balance rules and
+    each kind of game's level tolerance. **The type is here; the dataset is
+    not**: the released one lives at
+    ``app/modules/matchmaking/infrastructure/rulesets/``.
 
-``scoring``, ``ranking`` and ``grouping``
-    The three answers a version returns and the one quantity it never
-    serialises. ``Fit`` is the printed number and the whole of the working
-    behind it; ``ranking`` holds the modifier stack that adjusts it, the
-    Liveness offset that reorders without entering it, and the ``rank_key``
-    where the two meet — a bare ``float``, because a quantity with no shape has
-    no field it could be written to. ``grouping`` holds what comes back when the
-    engine seats **four** people rather than ranking one: the arrangement, the
-    forecast, and a ``G`` that is a property of its own terms rather than a
-    field, so there is nothing a serialiser could reach for.
+``scorable`` and ``grouping``
+    What crosses in — a Level, an hour of the week — and what comes back: a
+    forecast and the two side strengths it was read from.
 
-``v1`` and its successors
-    A version is a directory that is never deleted, because the maths a result
-    was computed with must stay readable forever. It holds the scorer: what
-    crosses the privacy fence, the evidence a term explains itself in, the eight
-    terms, the renormalisation that turns them into one printed number, and the
-    three stages either side of it — the modifiers, the floor and Liveness.
+``v1``
+    The arithmetic: the forecast between two sides and the hours a court shares.
 
-**Two version stamps ride on every result and they mean different things**
-(``docs/adr/0093``, ``docs/adr/0106``): the **engine version** says how the maths
-works, the **ruleset version** says what the numbers were. **Neither is ever
-selected by the environment** — `local`, `development`, `staging` and
-`production` run the same numbers (``docs/adr/0028``). A weight is not a setting:
-it is the product's opinion about who a player should meet, which is behaviour a
-domain test can observe.
-
-**Where the line falls between them is ``docs/adr/0106``:** a number is ruleset,
-a *shape* is the API contract. Moving a weight is a ruleset release and free.
-Adding or reshaping an evidence variant is an API release, because the client
-generates an exhaustive renderer per variant and must never be handed a shape it
-cannot draw.
+**Neither the ruleset nor anything here is ever selected by the environment** —
+`local`, `development`, `staging` and `production` run the same numbers
+(``docs/adr/0028``). Who may share a court is behaviour a domain test can
+observe.
 """

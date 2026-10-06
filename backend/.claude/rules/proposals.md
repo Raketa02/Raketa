@@ -52,7 +52,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `GET /pools/{id}/deck?sport&kind` deals each card as **the reader's own version** — In,
   the reader, the rest of their version in dealt order (`domain/deck.py`) — with the sides
   drawn as the evenest arrangement **the engine's own `forecast`** gives over rating's
-  estimates (`BalanceForecasts`, no candidate index), an overlap grid graded off the
+  estimates (`BalanceForecasts`), an overlap grid graded off the
   engine's `group_availability` (`domain/overlap.py`), and the court block. The order is
   §8.2's four keys, the fourth read as **the forecast of the reader's version**; the same
   people only at their best hour, per segment. Every filter is read live: `PlayerFit` for

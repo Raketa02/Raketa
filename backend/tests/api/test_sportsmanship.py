@@ -82,9 +82,7 @@ def clock(client):
     """Overridden on the running app, so every request in the test agrees.
 
     Started in the past rather than at ``now`` so that moving forward a day
-    still lands before the wall clock — the candidate index the search walks is
-    stamped from real time, and a search running in the future would read as
-    ahead of the log it is being answered from.
+    still lands before the wall clock.
     """
 
     movable = MovableClock(datetime.now(timezone.utc) - timedelta(days=2))

@@ -8,26 +8,18 @@ every other context in
 contracted in ``tests/demands/`` in ADR-0098's shape, over every registered
 implementation, because *a demand nobody executes is a demand satisfied by
 accident*. Its readers today are ``player_score`` (attendance and result
-answering) and the player record (a sport's run of form). **Four of its reads
-have no reader since the searches went** (#579) — ``played_counterparts``, the
-matcher's familiarity; ``counted_games_for`` and ``recent_results_for``, a
-search card's count and *Last 5*; and ``late_change_threshold``, the matcher's
-history — and they go with the ranking (#580).
-
-**Every count here is measured and none is invented** (``docs/adr/0098``). The
-games ledger exists now, so ``counted_games == 0`` means *we looked and this
-person has played none*, which is a real answer and the one §9.10's newcomer
-predicate has been waiting for. That is the opposite of a Player Score, where a
-zero would be a claim about a record nobody keeps and the player is absent from
-the answer instead.
+answering) and the player record (a sport's run of form). **Four reads went with
+the ranking** (#580): who a player had arranged games with, how many counted
+games each of a list had played, the last five results across every sport, and
+the threshold a late change would be measured against — read by the matcher and
+a search card alone.
 
 **Fewer than five results is a real answer and is never padded.** The card draws
 a gap; a fifth invented row would be the same mistake in a smaller place.
 
-**``OpponentVarietyQuery`` is a separate port and not a sixth fact on the history
-read**, and the split is a fence rather than a filing decision. Every read there
-is bounded — five results, five hundred counterparts — because its caller holds
-twenty rows and asks once; that one is deliberately unbounded, because *how
+**``OpponentVarietyQuery`` is a separate port and not a fourth fact on the history
+read**, and the split is a fence rather than a filing decision. The run of form
+there is bounded at five; that one is deliberately unbounded, because *how
 widely do they spread their games* is a career statistic and a window would be a
 second horizon nothing keeps in step with the others. An unbounded fold on a
 port a caller already holds is one somebody eventually calls inside a walk, so it
@@ -70,15 +62,10 @@ from enum import Enum
 from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.kernel import Instant, Minutes, Sport, invariant
+from app.kernel import Instant, Sport, invariant
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, LineUp
 from app.modules.games.domain.results import Outcome
-
-#: How many counterparts travel with one read of the pairwise history. It was
-#: spelled to match the matcher's own bound, read by a composing adapter that
-#: went with the searches (#579); nothing reads it now, and it goes with #580.
-PLAYED_COUNTERPART_BOUND = 500
 
 #: How many results *Last 5* draws. The card's own number, and the only place it
 #: is written on this side of the wire.
@@ -87,69 +74,14 @@ RECENT_RESULTS = 5
 
 @final
 class PlayedOutcome(str, Enum):
-    """How a game between two people ended, as a fact about the pair.
+    """How an arrangement settled for the people on its court.
 
-    **A ghost is kept distinguishable from a game**, because familiarity is a
-    statement about people who have actually played and the depth term counts
-    games rather than arrangements.
+    **A ghost is kept distinguishable from a game**, because *shows up* charges
+    a ghost and credits a game (``Attendance``).
     """
 
     PLAYED = "PLAYED"
     PLANNED_NEVER_PLAYED = "PLANNED_NEVER_PLAYED"
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class PlayedTally:
-    """How many times one outcome happened between two people, and when it last did.
-
-    The count is the half a latest-outcome row cannot carry: familiarity decays
-    on *days since last* and deepens on *games played together*, and a shape with
-    one moment and no count feeds the first and never the second.
-    """
-
-    count: int
-    last_at: Instant
-
-    def __post_init__(self) -> None:
-        invariant(
-            self.count >= 1,
-            f"a tally of something that never happened: count {self.count}",
-        )
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class GameCounterpart:
-    """One person this player has arranged games with, tallied by how they went.
-
-    **One row per person, and both outcomes inside it.** A pair who played four
-    times and ghosted once are not a ghost, and collapsing to a latest outcome
-    would erase the history the depth term is counting.
-    """
-
-    player_id: UUID
-    outcomes: Mapping[PlayedOutcome, PlayedTally]
-
-    def __post_init__(self) -> None:
-        invariant(
-            bool(self.outcomes),
-            "a counterpart with nothing between you is not a counterpart — "
-            "absence is spelled by not being in the list at all",
-        )
-
-    @property
-    def last_at(self) -> Instant:
-        """The most recent thing that happened between you, of any kind."""
-
-        return max(tally.last_at for tally in self.outcomes.values())
-
-    @property
-    def games_played_together(self) -> int:
-        """``n``. Zero for a pair who arranged games and never played one."""
-
-        played = self.outcomes.get(PlayedOutcome.PLAYED)
-        return played.count if played else 0
 
 
 @final
@@ -160,18 +92,17 @@ class Attendance:
     The *shows up* strand's whole input (``docs/adr/0140``). ``played`` is games
     somebody on that court said had happened; ``ghosts`` is plans whose entry
     window closed with nobody ever saying so. A game still inside its entry
-    window is in **neither**, for the reason the pairwise fold gives: it is not a
-    ghost until the clock says so, and claiming it either way would publish a
-    conclusion nothing has reached.
+    window is in **neither**: it is not a ghost until the clock says so, and
+    claiming it either way would publish a conclusion nothing has reached.
 
     **Counted and friendly games are both here.** Turning up is not evidence
     about anybody's Level, so the choice that makes a game a friendly has nothing
     to say about whether the people who arranged it came.
 
-    **This is a per-player read and never a sum of the pairwise one.** A four
-    played once is one game and three counterparts, so adding up
-    ``played_counterparts`` would charge a doubles player three times for one
-    evening and make *shows up* a statement about how many people they play with.
+    **This is a per-player read and never a sum over pairs.** A four played once
+    is one game and three counterparts, so adding up pairs would charge a doubles
+    player three times for one evening and make *shows up* a statement about how
+    many people they play with.
 
     ``last_at`` is when the most recent of those opportunities **closed** — the
     moment a game was played, or the moment a plan's entry window shut on
@@ -370,14 +301,12 @@ class OpponentVariety:
 class OpponentVarietyQuery(Protocol):
     """*How widely does this person spread their games?* — over the whole record.
 
-    **A second port rather than a sixth fact on ``GameHistoryQuery``, and the
-    split is the fence.** That port is held by a caller that walks twenty rows
-    and, for the pairwise read, five hundred counterparts; this fold is
-    deliberately **unbounded**, because a career statistic that stopped at a
-    window would be a second horizon that must not disagree with the matcher's.
-    An unbounded fold on the same port a search already holds is an invitation to
-    call it inside that walk. So it is handed only to the consumer that opens one
-    person at a time.
+    **A second port rather than a fourth fact on ``GameHistoryQuery``, and the
+    split is the fence.** That port's set reads are asked about lists of people;
+    this fold is deliberately **unbounded**, because a career statistic that
+    stopped at a window would be a second horizon. An unbounded fold on a port a
+    caller already holds for a list is an invitation to call it inside that
+    walk. So it is handed only to the consumer that opens one person at a time.
 
     **One player and never a collection**, stated in the signature and asserted
     there. There is no set-shaped version of this to reach for.
@@ -709,83 +638,26 @@ class CourtPairing(Protocol):
 
 @runtime_checkable
 class GameHistoryQuery(Protocol):
-    """The six facts this context owes the rest of the platform, and the seventh
-    it owes an honest ``None``."""
-
-    async def played_counterparts(
-        self, player_id: UUID, *, now: Instant
-    ) -> tuple[GameCounterpart, ...]:
-        """Who this player has arranged games with — at most the bound, newest first.
-
-        One row per person, ordered on ``last_at``: this is *who*, not *every
-        time*. The order is part of the demand rather than a convenience — it is
-        what makes a counterpart cut off by the bound indistinguishable from one
-        fully decayed by time.
-
-        **Both outcomes come from the same fold**, which is why they are one
-        method: a plan is a ghost only once its entry window has closed, and a
-        read that answered about played games alone would leave whoever wanted
-        ghosts re-deriving the window somewhere else.
-        """
-        ...
-
-    async def counted_games_for(
-        self, player_ids: Collection[UUID], *, now: Instant
-    ) -> Mapping[UUID, int]:
-        """How many counted games each of these people has played.
-
-        **Played, not proved.** An unscored game is in this count, because *an
-        unscored game is an evening, not evidence*: it says these people were on
-        a court and it moves nobody's Level. A friendly is not, because it was
-        never evidence about anybody by the choice of the people who arranged it.
-
-        **Every player asked about gets a count, and a zero is measured**: the
-        games were counted and none of them was theirs.
-        """
-        ...
-
-    async def recent_results_for(
-        self, player_ids: Collection[UUID], *, now: Instant
-    ) -> Mapping[UUID, tuple[CountedResult, ...]]:
-        """The last few counted results per player, **oldest to newest**.
-
-        At most ``RECENT_RESULTS``, and fewer is a real answer that is **never
-        padded** — the card draws a gap. Oldest first because the row is read
-        left to right as a run of form, and a client reversing a list is a client
-        that can reverse it wrongly.
-
-        A player with none is **absent from the answer** rather than carrying an
-        empty tuple: one spelling for *nothing to show*, so a measured nothing
-        and an unasked question cannot start being confused.
-        """
-        ...
+    """The three facts this context owes the rest of the platform about what
+    became of a player's games."""
 
     async def recent_results_in(
         self, player_id: UUID, *, sport: Sport, now: Instant
     ) -> tuple[CountedResult, ...]:
         """One player's last few counted results **in one sport**, oldest first.
 
-        **A second read and not a parameter on the one above**, because the two
-        answer for different callers and one of them must not move. The set read
-        is what a *search* attaches to twenty rows and freezes into a record kept
-        for ever; narrowing it to a sport would make the same person's card read
-        differently before and after, which is a change worth making deliberately
-        rather than as a side effect. This one is what a record sheet draws
-        beneath a single sport's Level, where a run built across every sport is
-        squash results under a padel number.
+        What a record sheet draws beneath a single sport's Level, where a run
+        built across every sport would be squash results under a padel number.
 
-        **Filtered before it is trimmed**, which is the whole reason a caller
-        cannot build this from the set read: that one answers at most
-        ``RECENT_RESULTS`` across every sport, so a consumer filtering afterwards
-        would show three results to somebody who has played thirty.
+        **Filtered before it is trimmed**: a read that answered the last
+        ``RECENT_RESULTS`` across every sport and was narrowed afterwards would
+        show three results to somebody who has played thirty.
 
         **One player and never a collection.** A record is one person opened by a
-        deliberate tap; a set-shaped version of this would be an invitation to
-        call it inside a walk over five hundred candidates.
+        deliberate tap.
 
         At most ``RECENT_RESULTS``, and **fewer is a real answer that is never
-        padded**. Empty for a player with none — which needs no second spelling
-        here, unlike the mapping above, because a short tuple already says the
+        padded**. Empty for a player with none — a short tuple already says the
         whole of *there is less to show*.
         """
         ...
@@ -795,13 +667,10 @@ class GameHistoryQuery(Protocol):
     ) -> Mapping[UUID, Attendance]:
         """What became of each of these people's arrangements — played, or ghosted.
 
-        **A player with none is absent from the answer, and this is the one read
-        here whose zero would be invented.** ``counted_games_for`` beside it
-        answers ``0`` for everybody it was asked about, because the games were
-        counted and none of them was theirs; here a ``0/0`` would say *this
-        person was due somewhere and did not come*, which is a claim about a
-        record nobody keeps. The two rules sit in one class deliberately, so the
-        difference is read rather than rediscovered (``docs/adr/0098``).
+        **A player with none is absent from the answer, because a zero here would
+        be invented**: a ``0/0`` would say *this person was due somewhere and did
+        not come*, which is a claim about a record nobody keeps
+        (``docs/adr/0098``).
 
         Its reader is ``player_score``, which turns it into the *shows up*
         strand. The strand's arithmetic is not here: this context knows what
@@ -833,27 +702,8 @@ class GameHistoryQuery(Protocol):
         """
         ...
 
-    async def late_change_threshold(self) -> Minutes | None:
-        """How close to its moment a change has to be to count as **late**.
-
-        ``None`` — **recorded, not yet scored** (``docs/adr/0162`` §8). A seat
-        can be left now and the game has a moment, so *late* has a referent for
-        the first time; what a departure an hour before it should cost is a
-        product judgement no record has made. The departure is written with its
-        instant so that a later record can weigh it without rewriting history,
-        and until one does there is no number — absent rather than defaulted,
-        because a number nobody measured is a number somebody picked.
-
-        It is demanded of the context that owns plans even though ``player_score``
-        computes the strand, and this is that context. The record that answers it
-        amends ``docs/adr/0098`` — it is not a licence to publish a different
-        number under the same name.
-        """
-        ...
-
 
 __all__ = [
-    "PLAYED_COUNTERPART_BOUND",
     "RECENT_RESULTS",
     "Attendance",
     "ConfirmedGame",
@@ -865,7 +715,6 @@ __all__ = [
     "LevelDeltas",
     "Pairing",
     "SeatLevel",
-    "GameCounterpart",
     "GameDirectory",
     "GameHistoryQuery",
     "GameRepository",
@@ -873,6 +722,5 @@ __all__ = [
     "OpponentVarietyQuery",
     "PlayedOutcome",
     "PlayerNames",
-    "PlayedTally",
     "ResultAnswering",
 ]

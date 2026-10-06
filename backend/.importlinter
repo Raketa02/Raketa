@@ -266,10 +266,10 @@ allow_indirect_imports = false
 # `games` is a **provider**: it signs `CourtPairing` through an adapter that
 # lives in the matcher's own infrastructure (`games_court_pairing.py`), and it
 # does not know a matcher exists (docs/adr/0137, docs/adr/0161). It holds second
-# spellings — `GameSide` against the matcher's own sides, `PLAYED_COUNTERPART_BOUND`
-# for a history the matcher once read — and each of them is a type with the right
-# shape sitting one directory over, which is exactly what somebody in a hurry
-# reaches for. This guards the **direction**, which is the half a constant cannot
+# spellings — `GameSide` against the matcher's own sides, and the court's
+# forecast and split against the engine's — and each of them is a type with the
+# right shape sitting one directory over, which is exactly what somebody in a
+# hurry reaches for. This guards the **direction**, which is the half a constant cannot
 # check.
 #
 # `allow_indirect_imports = true`: `games` legitimately imports `player_profile`
@@ -364,11 +364,11 @@ forbidden_modules =
     app.modules.sportsmanship
 allow_indirect_imports = true
 
-# `scripts/` holds the offline machines — the ones that read a document, run the
-# engine over it and write the answer back. `scripts/__init__.py` says nothing
-# under `app/` may import from here, and this is what makes that true: the
-# harness reaches into `docs/` and shells out at a shape no shipped code should
-# depend on, and a use case importing it would put a repository path in a
+# `scripts/` holds the offline machines — the cohort generator, the shard split
+# and its arithmetic, and the taskdef proof. `scripts/__init__.py` says nothing
+# under `app/` may import from here, and this is what makes that true: they read
+# and write repository files and shell out at a shape no shipped code should
+# depend on, and a use case importing one would put a repository path in a
 # request. The direction it forbids is the only one that is wrong — `scripts`
 # imports `app` on every line, which is the whole point of it.
 [importlinter:contract:the-app-never-imports-its-offline-tooling]

@@ -19,8 +19,7 @@ Four claims, and each fails differently.
 
 The suite drives its own SQLite fixture, exactly as `test_seed_runner.py` does.
 The `make seed` gate proper needs a real database and does not run in CI, which
-is the same half-a-gate the ruleset diff ships with and is stated here rather
-than discovered.
+is half a gate, stated here rather than discovered.
 """
 
 from __future__ import annotations
@@ -441,8 +440,8 @@ def test_a_moved_cohort_is_the_same_figure_somewhere_else():
     new centre as they were from the old one — because a degree of latitude is
     the same length everywhere, which is the fact the rings are built on. This
     is what lets a developer in Kraków seed around their own phone without a
-    single distance in the ring table, the walkthroughs or the assertions
-    changing underneath them.
+    single distance in the ring table or the assertions changing underneath
+    them.
     """
 
     krakow = Centre(latitude=50.06, longitude=19.94)
@@ -930,9 +929,8 @@ async def test_backdated_events_are_not_monotonic_with_the_log(
 def test_the_report_says_the_cohort_stands_for_nothing(a_seeded_world):
     """Said on the report and not only in a docstring.
 
-    The ruleset-diff corpus prints its own disclaimer for the same reason: a
-    fixture that stands for nothing outside itself has to say so where somebody
-    reading its output will see it, or the numbers get quoted.
+    A fixture that stands for nothing outside itself has to say so where
+    somebody reading its output will see it, or the numbers get quoted.
     """
     from app.seeds.runner import SeedReport
 
@@ -948,7 +946,9 @@ def test_the_report_says_the_cohort_stands_for_nothing(a_seeded_world):
     )
 
     assert COHORT_DISCLAIMER in text
-    assert "ruleset-diff" in text
+    assert "stands for nothing outside itself" in text
+    # The comparator corpus it once pointed at went with the ranking (#580).
+    assert "ruleset-diff" not in text
     assert THE_POPULATED_PLAYER.email in text
     assert THE_BLANK_WEEK_PLAYER.email in text
     assert "ring a:" in text

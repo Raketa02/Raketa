@@ -40,8 +40,7 @@ class UserRegistered:
     # boolean is.
     #
     # It is a claim of adulthood and **never a date of birth**: nothing
-    # downstream asks how old, and the candidate index fails its build if a date
-    # ever appears.
+    # downstream asks how old.
     adult_attested: Optional[bool] = None
 
 

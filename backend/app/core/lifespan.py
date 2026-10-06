@@ -29,12 +29,6 @@ it, and a blocking read with no deadline has no business in the pool a player's
 critical path draws its commands from. It is opened here for the same reason the
 first is: an open stream must not be the thing that decides a pool exists.
 
-**One thing here starts nothing and is a refusal.** The matcher's ruleset is
-validated before anything else runs, so that a malformed one **fails the deploy**
-rather than serving — with an embedded ruleset there is no hot reload to fall
-back through, so *the previous one keeps serving* means the old pods are still up
-(``docs/adr/0119``). It never falls back to defaults, because a matcher that
-silently falls back is one that quietly A/B tests against itself.
 """
 
 import logging
@@ -45,7 +39,6 @@ from fastapi import FastAPI
 
 from app.bootstrap.composition import (
     build_background_session_factory,
-    build_candidate_source,
     close_payment_provider,
     build_nudge_publisher,
     build_payment_provider,
@@ -53,7 +46,6 @@ from app.bootstrap.composition import (
 )
 from app.bootstrap.events import build_event_delivery_worker
 from app.bootstrap.jobs import build_scheduled_jobs
-from app.bootstrap.matchmaking import verify_ruleset
 from app.core.config import Settings
 from app.infrastructure.database.engine import (
     dispose_engine,
@@ -77,12 +69,6 @@ logger = logging.getLogger(__name__)
 def build_lifespan(settings: Settings):
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        # Before the database, before any background work: a ruleset that cannot
-        # be believed must stop this process rather than start beside it. It
-        # reads no setting and takes no argument from here — the four
-        # environments run the same numbers.
-        verify_ruleset()
-
         init_engine(settings)
         # The other pool, on the same terms and in the same place. It opens no
         # socket — `redis-py` connects on the first command — so this cannot
@@ -103,11 +89,6 @@ def build_lifespan(settings: Settings):
         # Assigned whether or not anything is registered: an attribute that only
         # sometimes exists is one every reader has to guard against.
         app.state.scheduled_jobs = []
-        # Likewise. **One per process, and this is where the one lives**
-        # (``docs/adr/0112``): the refresh loop rebuilds it, so a second
-        # instance anywhere would be a second index that nothing keeps in step
-        # with the first.
-        app.state.candidate_source = None
         # Likewise — one connection pool, and this is where the one lives. It
         # is whatever `init_redis` above returned, unconditionally: a room's
         # live channel publishes on it, so this attribute may not depend on any
@@ -131,7 +112,6 @@ def build_lifespan(settings: Settings):
         if (
             settings.EVENT_DELIVERY_WORKER_ENABLED
             or settings.PHOTO_SWEEP_ENABLED
-            or settings.CANDIDATE_INDEX_ENABLED
             or settings.RATING_CATCH_UP_ENABLED
             or settings.CONVERSATION_SWEEP_ENABLED
             or settings.MAIL_DELIVERY_ENABLED
@@ -171,15 +151,9 @@ def build_lifespan(settings: Settings):
                 app.state.event_delivery_worker = worker
                 background.append(worker)
 
-            if settings.CANDIDATE_INDEX_ENABLED:
-                app.state.candidate_source = build_candidate_source(
-                    session_factory=session_factory
-                )
-
         jobs = build_scheduled_jobs(
             session_factory=session_factory,
             settings=settings,
-            candidate_source=app.state.candidate_source,
             proposer_due=proposer_due,
         )
         # Only the scheduled jobs, not the outbox drain beside them: this

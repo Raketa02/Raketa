@@ -9,17 +9,14 @@ is what a city looks like. A realistic launch draw reaches a full court only by
 luck, and an honestly-modelled 100%-newcomer launch leaves the protagonist's pool
 nearly empty — a true fact about launch and a useless screen.
 
-That is why this was **not** the ruleset corpus's population
-(``scripts/ruleset_diff/``, gone with the searches, #579) with different numbers,
-and why it could exist beside it without disturbing
-[ADR-0121](../../../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md).
-That corpus is a **comparator**: it orders two rulesets over one population and
-prints on its own report that it cannot tell you what the empty-result rate *is*.
-This one's job is to **reach states**. Two fixtures, two questions, and saying so
-on the face of each is what keeps them from being confused — so the seed's report
-says it too, not only this docstring.
+It was never the ruleset corpus's population with different numbers
+([ADR-0121](../../../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md)).
+That corpus was a **comparator** — it ordered two rulesets over one population —
+and it went with the ranking (#579, #580). This one's job is to **reach
+states**, and saying so on its face is what keeps its numbers from being quoted —
+so the seed's report says it too, not only this docstring.
 
-What is borrowed is that generator's **mechanics** and none of its numbers:
+What was borrowed is that generator's **mechanics** and none of its numbers:
 seeded draws, ``uuid5``-from-handle ids, and assignment **by rule rather than by
 rate**, because a rule survives a population resize where a percentage does not.
 Not 2.8 ± 0.6, not twenty per sport per area, not the 100% newcomer share — those
@@ -29,7 +26,7 @@ answer a different question.
 *declarations*, which are this generator's own inputs. The second — the
 *assertions* — is in ``app/seeds/screens.py``, and every one of them is an
 outcome of a **real read path executed as the protagonist**. Nothing is asserted
-about a number this file chose: a tightened ``QUALITY_FLOOR`` moves no
+about a number this file chose: a tightened level window moves no
 distribution at all and still empties every screen, so a check computed from the
 population could only ever pass.
 
@@ -297,7 +294,7 @@ class Ring:
 
 #: **How big, and why that big.** The number was found by raising it until the
 #: assertions in ``screens.py`` passed and then written down here, which is the
-#: only defensible way to choose it: a figure taken from the ruleset-diff corpus
+#: only defensible way to choose it: a figure taken from another fixture
 #: would be indefensible the day ``make seed`` starts taking two minutes, and a
 #: figure chosen because it felt right is a figure nobody can argue with.
 #:
@@ -1418,11 +1415,9 @@ def as_document(cohort: Cohort) -> dict[str, object]:
 
     return {
         "what_this_is": (
-            "A development workbench: a population chosen so that every Play "
-            "screen state is reachable. It stands for nothing outside itself "
-            "and describes no real market. The comparator corpus is "
-            "docs/specs/matchmaking/ruleset-diff/, and it answers a different "
-            "question."
+            "A development workbench: a population chosen so that every screen "
+            "the games draw is reachable. It stands for nothing outside itself "
+            "and describes no real market."
         ),
         "inputs_only": (
             "No member's level, uncertainty or band is recorded here: those are "

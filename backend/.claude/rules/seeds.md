@@ -23,9 +23,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `app/seeds/cohort.json` — **inputs only**, never a level, an uncertainty or a band, and
   every draw keyed off the member's own handle so adding one changes that row and nobody
   else's (`make gen-cohort`, and a test asserts byte-identity). It borrowed the ruleset
-  corpus's mechanics (`scripts/ruleset_diff/`, gone with the searches, #579) and **none of
-  its numbers**: that corpus was a comparator and this one's job is to *reach* states,
-  which is why ADR-0121 is undisturbed. It is the crowd the Games deck, Fill in and posting deal from. It fails
+  corpus's mechanics (gone with the ranking, #579/#580) and **none of its numbers**: that
+  corpus was a comparator and this one's job is to *reach* states, which is why ADR-0121 is
+  undisturbed. It is the crowd the Games deck, Fill in and posting deal from. It fails
   `make seed` on **two clocks**: an engine retune moves the band histogram (a range per
   band, never a μ — a μ would pin the engine), and the calendar walks every newcomer out of
   ADR-0113's window, which fails **by name with the age in days**. The run injects a

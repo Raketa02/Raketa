@@ -24,8 +24,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `ConversationOpenedUnderAChallengeId` and still folds, because stored history outlives code.
   Five things about it are load-bearing and none is obvious from the code alone.
   **It is the outbox's first *writing* subscriber**, and that is ADR-0110's second
-  guarantee: the candidate index went to the log because an outbox subscriber *"could never
-  name the `sequence_no`"*, and a room names no event's sequence — only its own. Two
+  guarantee: a reader that needs an event's `sequence_no` tails the log, because an outbox
+  subscriber *"could never name the `sequence_no`"* — and a room names no event's sequence,
+  only its own. Two
   consequences fell out of being first. `EventBatch` now takes a unit of work and **rolls
   back a failed delivery before recording the attempt**, because `mark_failed` commits the
   session the handlers ran in; and the teller is subscribed **per batch, over that batch's

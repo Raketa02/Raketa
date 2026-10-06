@@ -51,19 +51,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **surrender**, which is docking somebody for disagreeing by a later route. **It is the only
   strand that forgets** — twelve months, a named exception to ADR-0140 §4, because turning up is
   a commitment somebody made and answering a score is a habit of opening an app; the window is
-  `player_score`'s (`ANSWERED_RESULTS_WINDOW`) and crosses to `games` as an instant, it equals
-  the matcher's `horizon_days` by choice, and since a provider may not read the consumer's
-  ruleset the two spellings are held together by a **test** rather than by construction.
-  **`min_observations` is a bar per strand** — five here, three everywhere else, exhaustive and
-  refused if a key is missing — because raising the single number instead would take a newcomer
-  with three games and three turn-ups from a full score to no score at all; the bar is the
-  *matcher's* and the published figure still has none, which is deliberate: on the sheet the
-  honesty mechanism is printing the fraction, and inside a ranking nobody can see it. And it is
-  a **ruleset release**, `2026.09.08-a`, with the six-name vectors **restored rather than
-  retuned** — ADR-0140 §7's rescaling of five survivors is undone exactly, the two offline gates
-  move nothing but a version stamp because no corpus has a Player Score, and the whole claim is
-  the one the report cannot print: every player with a record is re-mixed on deploy.
-  `2026.08.26-a` is edited once more to say **nought** about a word it never knew.
+  `player_score`'s (`ANSWERED_RESULTS_WINDOW`) and crosses to `games` as an instant. It was
+  chosen to equal the matcher's `horizon_days`, which went with the ranking (#580), so it is the
+  only staleness horizon left. **The published figure has no observation bar**, which is
+  deliberate: on the sheet the honesty mechanism is printing the fraction. The per-strand bars
+  and the two per-mode strand vectors were the matcher's ruleset and went with it (#580).
 - **A confirmed no-show is the strongest mark because it is two** (#547; the mechanics §15.4):
   a miss on *shows up* (`attendance_for` reads a `NO_SHOW` game per player) and a broken booked
   game on *keeps plans* (`keeping_of(…, no_shows=)` over `bookings`' `GameNoShows`), where an

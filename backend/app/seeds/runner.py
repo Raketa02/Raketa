@@ -463,9 +463,8 @@ async def _seed_account(
 
     **The whole account is written at that instant, not only the profile.** An
     account whose profile was committed forty days ago and whose registration
-    happened a second ago is a history no player has; and the gate that reads
-    ``profile_created_at`` is not the only thing a stale instant is visible in —
-    the index's own liveness reads one too.
+    happened a second ago is a history no player has, and the newcomer window
+    reads ``profile_created_at``.
     """
 
     use_cases = _build(
@@ -890,7 +889,7 @@ async def seed_the_cohort(
     earned by answering the questionnaire, a profile commit, a declaration per
     sport. There is no faster path and there is deliberately none: a member
     written any other way is a member whose Level nothing produced, whose
-    transcript no review screen can render, and whose index row is a fold of
+    transcript no review screen can render, and whose record is a fold of
     events that were never appended.
     """
 
@@ -1304,7 +1303,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
         )
         # **The groups straight after their clubs**, created and joined by the
         # named accounts. Nothing below reads a group and a group changes nothing
-        # anybody else reads — no pair, no index row, no court — so its position
+        # anybody else reads — no pair, no court — so its position
         # among the later layers is free.
         groups = await write_the_groups(session_factory, settings=settings, now=now)
         # **The administrators after their club and the accounts they name.**
@@ -1441,16 +1440,13 @@ def _state_of(scenario: Scenario) -> str:
             exhaustive(scenario)
 
 
-#: Said on the report and not only in a docstring, for the reason the ruleset
-#: diff says its own disclaimer on its own report: a fixture that stands for
+#: Said on the report and not only in a docstring: a fixture that stands for
 #: nothing outside itself has to say so where somebody reading its output will
 #: see it, or the numbers get quoted.
 COHORT_DISCLAIMER = (
-    "The cohort is a development workbench. It is chosen so that every Play "
-    "screen state is reachable, it stands for nothing outside itself, and it "
-    "describes no real market — no rate here is evidence about anything. The "
-    "comparator corpus is docs/specs/matchmaking/ruleset-diff/, and it answers "
-    "a different question."
+    "The cohort is a development workbench. It is chosen so that every screen "
+    "the games draw is reachable, it stands for nothing outside itself, and it "
+    "describes no real market — no rate here is evidence about anything."
 )
 
 

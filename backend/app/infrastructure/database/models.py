@@ -25,11 +25,6 @@ from app.modules.conversations.infrastructure.conversation_model import (
     ConversationORM,
 )
 from app.modules.groups.infrastructure.group_model import GroupMemberORM, GroupORM
-from app.modules.matchmaking.infrastructure.candidate_index_model import (
-    CandidateIndexCursorORM,
-    CandidatePlayerFactsORM,
-    CandidateRowORM,
-)
 from app.modules.notifications.infrastructure.notification_models import (
     NoticeORM,
     NotificationPreferencesORM,
@@ -55,9 +50,6 @@ __all__ = [
     "AdministratorORM",
     "BookingORM",
     "BookingSeatORM",
-    "CandidateIndexCursorORM",
-    "CandidatePlayerFactsORM",
-    "CandidateRowORM",
     "ClubAccountORM",
     "ClubORM",
     "ClubPaymentsAccountORM",

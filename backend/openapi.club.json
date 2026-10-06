@@ -4454,7 +4454,7 @@
           "FOR_FUN"
         ],
         "title": "SearchMode",
-        "description": "What kind of evening this search is for. **Two values, never three.**\n\n``PlayIntent`` is the *candidate's* declaration and has three values;\n``SearchMode`` is the *searcher's* setting \u2014 which tab they are on, right\nnow \u2014 and has two. ``app/modules/player_profile/domain/play_intent.py`` says\nwhere this type belongs when it arrives: *\"it belongs to the matcher and not\nto this module\"*. Here it is.\n\n**There is never a ``NO_PREFERENCE`` weight vector.** A candidate who\ndeclared ``NO_PREFERENCE`` is indifferent about the kind of evening, so their\nreverse fit runs under the *searcher's* mode: ``NO_PREFERENCE`` never selects\na weight vector, it inherits one (``ranking-weights.md`` \u00a79). The arities\ndiffer on purpose, so the likeliest bug in the matcher is a type error rather\nthan a paragraph in a document."
+        "description": "What kind of game this is. **Two values, never three.**\n\n``PlayIntent`` is a player's declaration and has three values; this is the\n*game's* kind \u2014 a Games card is competitive or for fun \u2014 and has two. The\narities differ on purpose, so the likeliest bug in reading one as the other\nis a type error rather than a paragraph in a document.\n\nIt picks the level window's tolerance (``matchmaking/domain/level_window.py``)\nand nothing else here."
       },
       "SetupResponse": {
         "properties": {

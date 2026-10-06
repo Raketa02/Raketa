@@ -2,8 +2,7 @@
 from the Player profile.
 
 **The engine's currency**: rating's estimates, Level and Uncertainty, the ones
-``PlayerFit`` gates on and the forecasts read — never the candidate index, so
-the proposer needs no index to deal. One set read of the estimates and one
+``PlayerFit`` gates on and the forecasts read. One set read of the estimates and one
 profile stream per member, sorted so every process reads in one order
 (``docs/adr/0105``).
 """

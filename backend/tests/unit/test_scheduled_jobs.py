@@ -14,7 +14,7 @@ out of SQLite.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 import pytest
 from uuid import UUID
@@ -24,8 +24,6 @@ from app.bootstrap.composition import build_clock
 from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
-    CANDIDATE_INDEX_REFRESH_JOB,
-    CANDIDATE_INDEX_TAIL_JOB,
     CONVERSATION_SWEEP_JOB,
     MAIL_DELIVERY_JOB,
     RATING_CATCH_UP_JOB,
@@ -38,13 +36,6 @@ from app.bootstrap.jobs import (
 )
 from app.core.config import get_settings
 from app.kernel import instant
-from app.modules.matchmaking.domain.scale_triggers import (
-    BYTES_PER_ROW,
-    footprint_of,
-)
-from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
-    RefreshReport,
-)
 from app.modules.player_profile.domain.photos import (
     REVIEW_NOTE_METADATA_KEY,
     PhotoRef,
@@ -54,7 +45,6 @@ from app.modules.player_profile.domain.photos import (
 )
 from app.shared.ids import new_uuid
 from tests.unit import image_fixtures as fixtures
-from tests.unit.fake_event_store import FrozenClock
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
 #: Stands in for a session factory a job is built with and never runs against.
@@ -91,46 +81,6 @@ def test_a_job_that_is_turned_off_is_not_registered():
     assert build_scheduled_jobs(session_factory=None, settings=_nothing_but()) == []
 
 
-def test_the_candidate_index_registers_two_loops_and_not_one():
-    """The tail writes the shared tables; the refresh rebuilds this worker's own.
-
-    Two jobs rather than one with two phases, because they are safe beside
-    themselves for opposite reasons: the tail because a single cursor row taken
-    ``FOR UPDATE`` serialises it, the refresh because being **per worker** is the
-    behaviour wanted rather than the cost paid (``docs/adr/0092``,
-    ``docs/adr/0112``).
-    """
-
-    settings = _nothing_but(CANDIDATE_INDEX_ENABLED=True)
-    source = object()
-
-    jobs = build_scheduled_jobs(
-        session_factory=UNUSED_SESSIONS, settings=settings, candidate_source=source
-    )
-
-    assert [job.name for job in jobs] == [
-        CANDIDATE_INDEX_TAIL_JOB,
-        CANDIDATE_INDEX_REFRESH_JOB,
-    ]
-    assert [job.interval_seconds for job in jobs] == [1.0, 2.0]
-
-
-def test_the_refresh_is_not_registered_without_an_index_to_refresh():
-    """A process holding no source has nothing to rebuild.
-
-    The tail still runs: writing the tables is shared work and does not depend on
-    this process serving a search from them.
-    """
-
-    settings = _nothing_but(CANDIDATE_INDEX_ENABLED=True)
-
-    jobs = build_scheduled_jobs(
-        session_factory=UNUSED_SESSIONS, settings=settings, candidate_source=None
-    )
-
-    assert [job.name for job in jobs] == [CANDIDATE_INDEX_TAIL_JOB]
-
-
 def test_a_database_job_without_a_session_factory_refuses_to_be_registered():
     """Loudly, rather than by registering nothing.
 
@@ -159,7 +109,6 @@ def _nothing_but(**overrides):
         update={
             "PHOTO_SWEEP_ENABLED": False,
             "PHOTO_REVIEW_BACKFILL_ENABLED": False,
-            "CANDIDATE_INDEX_ENABLED": False,
             "RATING_CATCH_UP_ENABLED": False,
             "CONVERSATION_SWEEP_ENABLED": False,
             "MAIL_DELIVERY_ENABLED": False,
@@ -306,104 +255,6 @@ async def test_the_backfill_job_runs_end_to_end_through_the_real_wiring(
         and record.photos_updated == 1
         for record in caplog.records
     )
-
-
-# ---------------------------------------------------------------------------
-# Trigger 4, on the index refresh (scale-posture.md §4)
-#
-# What is asserted is that the record is emitted and carries the fields the
-# trigger is stated in. **No wall-clock, no p99 and no rate of this machine's
-# own** — those are metrics, and a metric asserted on a shared runner is a mute
-# waiting to happen.
-# ---------------------------------------------------------------------------
-
-
-async def test_the_refresh_record_carries_trigger_fours_arithmetic(caplog):
-    """*Recomputed at every index load*, from the rows this worker holds, the
-    workers configured and the container's own limit — and it rides on the
-    refresh's own record, because a second line would have to say which load it
-    was about."""
-
-    settings = _nothing_but(CANDIDATE_INDEX_ENABLED=True, GUNICORN_WORKERS=4)
-    now = instant(datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc))
-
-    class OneRow:
-        async def refresh(self):
-            return RefreshReport(
-                snapshot_version=7,
-                partitions=1,
-                rows_held=1_000,
-                rows_decoded=1,
-                caught_up_at=now,
-            )
-
-    # **A gigabyte, stated by the test and not read off the runner.** The
-    # container this asserts about has to be one this suite chose: a CI machine
-    # has whatever cgroup it has, and an assertion about its memory is an
-    # assertion about the runner.
-    job = jobs_module.build_candidate_index_refresh_job(
-        source=OneRow(),
-        settings=settings,
-        clock=FrozenClock(now),
-        memory_limit_bytes=1_000_000_000,
-    )
-    with caplog.at_level(logging.INFO, logger="app.bootstrap.jobs"):
-        await job.run_once()
-
-    record = [r for r in caplog.records if r.msg == "candidate index refreshed"][0]
-    assert record.levelno == logging.INFO
-    assert record.workers == 4
-    assert record.container_memory_limit_bytes == 1_000_000_000
-    assert record.index_bytes_held == BYTES_PER_ROW * 1_000 * 4
-    # §4's own stated bound, reached through the job rather than restated —
-    # and moved with `BYTES_PER_ROW`, which is the whole point of reaching it.
-    assert record.trigger_4_players_at == 24_801
-    assert record.trigger_4_fires is False
-
-
-async def test_an_index_over_half_its_container_warns_and_still_refreshes(caplog):
-    """**Warning and never refusing.** An index that has outgrown half the
-    container is a capacity decision — `array`-packed columns at 43 bytes a row
-    — and a process that refused to load it would take the platform down to
-    avoid using memory it had been given."""
-
-    settings = _nothing_but(CANDIDATE_INDEX_ENABLED=True, GUNICORN_WORKERS=4)
-    now = instant(datetime(2026, 8, 26, 18, 0, tzinfo=timezone.utc))
-
-    class ACityTooBig:
-        async def refresh(self):
-            return RefreshReport(
-                snapshot_version=7,
-                partitions=1,
-                rows_held=200_000,
-                rows_decoded=1,
-                caught_up_at=now,
-            )
-
-    job = jobs_module.build_candidate_index_refresh_job(
-        source=ACityTooBig(),
-        settings=settings,
-        clock=FrozenClock(now),
-        memory_limit_bytes=1_000_000_000,
-    )
-    with caplog.at_level(logging.INFO, logger="app.bootstrap.jobs"):
-        await job.run_once()
-
-    record = [r for r in caplog.records if r.msg == "candidate index refreshed"][0]
-    assert record.trigger_4_fires is True
-    assert record.levelno == logging.WARNING
-    # The refresh itself is untouched: the index was published either way.
-    assert record.snapshot_version == 7
-
-
-def test_a_host_with_no_container_limit_reports_unknown_rather_than_roomy() -> None:
-    """Trigger 4 cannot fire where there is no limit to be half of, and
-    **unknown is not unlimited** — which is a laptop, and every run of this
-    suite."""
-
-    footprint = footprint_of(rows=10_000_000, workers=4, limit_bytes=None)
-    assert footprint.fraction_of_budget is None
-    assert not footprint.fires
 
 
 # ---------------------------------------------------------------------------
