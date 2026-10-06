@@ -1,17 +1,19 @@
 /**
- * **Who you play with and Game suggestions, walked the way a player walks them** — the real
- * route tree, the real bar, and only `fetch` faked
+ * **Who you play with, walked the way a player walks it** — the real route tree, the real bar,
+ * and only `fetch` faked
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
- * §2, §4, §8; [#472](https://github.com/Raketa02/Raketa/issues/472)).
+ * §2, §4; [#472](https://github.com/Raketa02/Raketa/issues/472)).
  *
- * Each screen is an onboarding step's controls under the tab's chrome, and the steps' own
- * suites already prove the controls — the three answers, the reach sentence, the promises.
- * What is proved here is what the tab added: each group **pre-selects from the read** and
- * **saves alone** through its own route; the reach sentence is said at the press and never for
- * *Anyone*; the row says the preference and **never the gender**; and the opt-in **sends on
- * every press** with the version on screen, the card following the reply rather than the press.
- * And, since 2026-09-18, that each group's *Save* is green and saying *Saved* while its draft
- * is the profile's own — so the group just saved turns green and the other stays as it was.
+ * The screen is the onboarding step's two groups under the tab's chrome, and the step's own
+ * suite already proves the controls — the three answers and the reach sentence. What is
+ * proved here is what the tab added: each group **pre-selects from the read** and **saves
+ * alone** through its own route; the reach sentence is said at the press and never for
+ * *Anyone*; and the row says the preference and **never the gender**. And, since 2026-09-18,
+ * that each group's *Save* is green and saying *Saved* while its draft is the profile's own —
+ * so the group just saved turns green and the other stays as it was.
+ *
+ * *Game suggestions* beside it is gone, with the proposals question it answered again
+ * ([#582](https://github.com/Raketa02/Raketa/issues/582)).
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
@@ -32,14 +34,12 @@ import {
 import {
   errorResponse,
   installTransport,
-  json,
   noContent,
   type Transport,
   type Wire,
 } from '@/test-support/transport';
 
 import { reachOf } from '../domain/gender';
-import { toRecordedProposalsOptIn } from '../mappers/playerProfileMappers';
 
 import {
   GENDER_HEADING,
@@ -50,24 +50,10 @@ import {
   reachNote,
 } from './genderPresentation';
 import {
-  OPT_IN_EYEBROW,
-  OPT_IN_NEVER_PRE_TICKED,
-  OPT_IN_PROMISES,
-  OPT_IN_PROMISES_ON_PROFILE,
-  OPT_IN_PROMISE_HEADING,
-  OPT_IN_SCOPE,
-  PROPOSALS_OPT_IN_COPY_VERSION,
-  optInAnswerLabel,
-} from './optInPresentation';
-import {
-  GAME_SUGGESTIONS_TITLE,
   SAVE,
   SAVED,
   WHO_YOU_PLAY_WITH_TITLE,
-  YOUR_ANSWER,
   YOUR_WEEK_TITLE,
-  answerGivenLine,
-  gameSuggestionsLine,
   groupSaveLabel,
   weekLine,
   whoYouPlayWithLine,
@@ -84,9 +70,6 @@ const RATING: Wire['RatingResponse'] = {
   engine_version: 'racketskill-v3',
   updated_at: '2026-08-14T09:00:00Z',
 };
-
-/** The answer the served profile holds: a yes from setting up, on the twelfth of August. */
-const HELD_ANSWER = toRecordedProposalsOptIn(PROFILE_SURFACE_SERVED.proposals_opt_in);
 
 let transport: Transport;
 
@@ -126,24 +109,21 @@ const isGreen = (label: string) => fillOf(control(label)) === theme.color.mintIn
 
 const GENDER_PATH = '/api/v1/players/me/gender';
 const PREFERENCE_PATH = '/api/v1/players/me/gender-preference';
-const OPT_IN_PATH = '/api/v1/players/me/proposals-opt-in';
 
 const puts = (path: string) => transport.requestsTo('PUT', path);
 
 // ---------------------------------------------------------------------------
-// The two rows
+// The row
 // ---------------------------------------------------------------------------
 
-describe('the two rows under Finding players', () => {
-  it('draw the preference and the standing answer from the read', async () => {
+describe('the row under Finding players', () => {
+  it('draws the preference from the read', async () => {
     await onYou();
 
     expect(row(WHO_YOU_PLAY_WITH_TITLE, whoYouPlayWithLine('any'))).toBeTruthy();
-    expect(row(GAME_SUGGESTIONS_TITLE, gameSuggestionsLine(HELD_ANSWER))).toBeTruthy();
-    expect(gameSuggestionsLine(HELD_ANSWER)).toBe('Yes — since 12 Aug');
   });
 
-  it('never carry the gender — the row says who the player is matched with, and nothing about them', async () => {
+  it('never carries the gender — the row says who the player is matched with, and nothing about them', async () => {
     stubProfileSurface(
       transport,
       profileSurface({ gender: 'WOMAN', gender_preference: 'MEN_ONLY' }),
@@ -309,139 +289,5 @@ describe('Who you play with', () => {
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(isSelected('Men only')).toBe(true);
     expect(isDisabled(SAVE_PREFERENCE)).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Game suggestions
-// ---------------------------------------------------------------------------
-
-describe('Game suggestions', () => {
-  const YES = optInAnswerLabel(true);
-  const NO = optInAnswerLabel(false);
-
-  async function openGameSuggestions(answer = HELD_ANSWER) {
-    await onYou();
-    fireEvent.press(row(GAME_SUGGESTIONS_TITLE, gameSuggestionsLine(answer)));
-    await screen.findByRole('header', { name: GAME_SUGGESTIONS_TITLE });
-    await screen.findByLabelText(YES);
-  }
-
-  it('draws the promises with the third said from here, the scope line, and the standing answer with its evidence', async () => {
-    await openGameSuggestions();
-
-    expect(screen.getByText(OPT_IN_PROMISE_HEADING)).toBeTruthy();
-    for (const promise of OPT_IN_PROMISES_ON_PROFILE) {
-      expect(screen.getByLabelText(`${promise.term} ${promise.detail}`)).toBeTruthy();
-    }
-    expect(screen.getByText('any time, from here')).toBeTruthy();
-    // The step's third reads *from your profile*; on the profile it says *here*, and nothing else
-    // about the three changed.
-    expect(screen.queryByText(OPT_IN_PROMISES[2]?.detail ?? '')).toBeNull();
-    expect(screen.getByText(OPT_IN_SCOPE)).toBeTruthy();
-
-    expect(screen.getByText(YOUR_ANSWER)).toBeTruthy();
-    expect(screen.getByText('Yes')).toBeTruthy();
-    expect(
-      screen.getByText('Given 12 Aug, against these words (proposals-opt-in.v3), from setting up.'),
-    ).toBeTruthy();
-    expect(isSelected(YES)).toBe(true);
-    expect(isSelected(NO)).toBe(false);
-
-    // The step's chrome and its claim about its own controls are not drawn: here the answer
-    // **is** pre-selected, because it was given.
-    expect(screen.queryByText(OPT_IN_EYEBROW)).toBeNull();
-    expect(screen.queryByText(OPT_IN_NEVER_PRE_TICKED)).toBeNull();
-    expect(screen.queryByLabelText(/finish/i)).toBeNull();
-  });
-
-  /** What the route answers with: the record it made, stamped by the server, from this screen. */
-  function stubRecorded() {
-    transport.on('PUT', OPT_IN_PATH, (request) =>
-      json<Wire['ProposalsOptInResponse']>({
-        accepted: (request.body as Wire['AnswerProposalsOptInRequest']).accepted,
-        copy_version: (request.body as Wire['AnswerProposalsOptInRequest']).copy_version,
-        surface: 'PROFILE',
-        answered_at: '2026-09-18T08:30:00Z',
-      }),
-    );
-  }
-
-  it('records the same answer again on a press, with the version on screen, and the card follows the reply', async () => {
-    stubRecorded();
-    await openGameSuggestions();
-
-    fireEvent.press(control(YES));
-
-    // The press is the answer — no Save, no draft — and a re-affirmation is a record.
-    await waitFor(() => expect(puts(OPT_IN_PATH)).toHaveLength(1));
-    expect(puts(OPT_IN_PATH)[0]?.body).toEqual({
-      accepted: true,
-      copy_version: PROPOSALS_OPT_IN_COPY_VERSION,
-    });
-    // The card draws the record the route made — its clock, its surface — never the press.
-    expect(
-      await screen.findByText(
-        'Given 18 Sep, against these words (proposals-opt-in.v3), from this screen.',
-      ),
-    ).toBeTruthy();
-    expect(isSelected(YES)).toBe(true);
-
-    fireEvent.press(control('Back'));
-    expect(
-      await screen.findByLabelText(doorRowLabel(GAME_SUGGESTIONS_TITLE, 'Yes — since 18 Sep')),
-    ).toBeTruthy();
-  });
-
-  it('records a no, and the answer card and the row say so', async () => {
-    stubRecorded();
-    await openGameSuggestions();
-
-    fireEvent.press(control(NO));
-
-    await waitFor(() => expect(puts(OPT_IN_PATH)).toHaveLength(1));
-    expect(puts(OPT_IN_PATH)[0]?.body).toEqual({
-      accepted: false,
-      copy_version: PROPOSALS_OPT_IN_COPY_VERSION,
-    });
-    expect(await screen.findByText('No')).toBeTruthy();
-    expect(screen.queryByText('Yes')).toBeNull();
-    expect(isSelected(NO)).toBe(true);
-    expect(isSelected(YES)).toBe(false);
-
-    // And once more: two presses are two records, not one.
-    fireEvent.press(control(NO));
-    await waitFor(() => expect(puts(OPT_IN_PATH)).toHaveLength(2));
-  });
-
-  it('keeps the standing answer and says why when the record is refused', async () => {
-    transport.on('PUT', OPT_IN_PATH, () => errorResponse(403, 'forbidden'));
-    await openGameSuggestions();
-
-    fireEvent.press(control(NO));
-
-    expect(await screen.findByRole('alert')).toBeTruthy();
-    expect(screen.getByText('Yes')).toBeTruthy();
-    expect(isSelected(YES)).toBe(true);
-    expect(isSelected(NO)).toBe(false);
-    expect(screen.getByText(answerGivenLine(HELD_ANSWER))).toBeTruthy();
-  });
-
-  it('opens on a standing no, given from this screen', async () => {
-    const no: Wire['ProposalsOptInResponse'] = {
-      accepted: false,
-      copy_version: 'proposals-opt-in.v2',
-      surface: 'PROFILE',
-      answered_at: '2026-09-01T12:00:00Z',
-    };
-    stubProfileSurface(transport, profileSurface({ proposals_opt_in: no }));
-    await openGameSuggestions(toRecordedProposalsOptIn(no));
-
-    expect(screen.getByText('No')).toBeTruthy();
-    expect(
-      screen.getByText('Given 1 Sep, against these words (proposals-opt-in.v2), from this screen.'),
-    ).toBeTruthy();
-    expect(isSelected(NO)).toBe(true);
-    expect(isSelected(YES)).toBe(false);
   });
 });

@@ -338,7 +338,7 @@ describe('a pass begun at the passport', () => {
 
       await expectThePassport();
       expect(screen.queryByText('Your starting ratings')).toBeNull();
-      expect(screen.queryByText(/Step 1 of 8/)).toBeNull();
+      expect(screen.queryByText(/Step 1 of 6/)).toBeNull();
     },
     WALK_TIMEOUT,
   );

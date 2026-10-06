@@ -116,7 +116,7 @@ function room(
 function game(standing: Wire['GameSchema']['standing'] = 'AWAITING_ENTRY'): Wire['GameSchema'] {
   return {
     game_id: GAME,
-    challenge_id: BOOKING,
+    booking_id: BOOKING,
     sport: 'PADEL',
     kind: 'COUNTED',
     standing,

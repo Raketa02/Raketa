@@ -15,8 +15,7 @@
  * and appears in unconstrained searches only. Nothing here adjudicates anything.
  *
  * `prefer-not-to-say` is **an answer**, not a blank. The draft's `undefined` is *not asked
- * yet* and is a different thing entirely — the same distinction `proposalsOptIn` draws, and
- * for the same reason: the two are never quietly folded together.
+ * yet* and is a different thing entirely, and the two are never quietly folded together.
  *
  * ## The preference is mutual, and that is the whole reason it is durable
  *
@@ -44,8 +43,8 @@ export type Gender = 'woman' | 'man' | 'prefer-not-to-say';
  * The two named answers come in the record's own order, and **`prefer-not-to-say` is last
  * because it is not one of them**: it is the answer that declines the question, and an
  * answer that declines a question belongs after the question's answers rather than among
- * them. Nothing about the order is a recommendation — unlike the opt-in's, where *No*
- * leading is load-bearing, there is no answer here the product could be seen to prefer.
+ * them. Nothing about the order is a recommendation: there is no answer here the product
+ * could be seen to prefer.
  */
 export const GENDERS: readonly Gender[] = ['woman', 'man', 'prefer-not-to-say'];
 

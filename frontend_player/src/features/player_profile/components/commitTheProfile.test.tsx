@@ -1,14 +1,18 @@
 /**
- * The end of onboarding: the eight steps, the one write that ends them, and the app.
+ * The end of onboarding: the six steps, the one write that ends them, and the app.
  *
  * Driven through the real route tree with only the socket faked, like every other flow suite
  * here — the router, the http client, the mappers, the use case, the hooks, the draft and the
  * screens all run for real. What is being proved is the **part as a unit**: a player arrives
- * from the last result, answers seven screens, changes their mind and finds their answers
- * where they left them, presses finish once, and every one of those answers reaches the
- * server in a single request that cannot be made twice.
+ * from the last result, answers six screens, changes their mind and finds their answers
+ * where they left them, presses finish once on *Who you play with*, and every one of those
+ * answers reaches the server in a single request that cannot be made twice.
  *
- * The walk itself — the order of the eight, the back control, the draft surviving a round
+ * **The finish is on *Who you play with*** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
+ * the radius and the proposals question left the part, so the step that asks who a player is
+ * matched with is the last one, and it carries the finish the opt-in used to.
+ *
+ * The walk itself — the order of the six, the back control, the draft surviving a round
  * trip — is `socialSteps.test.tsx`. This one is about the commit: what is in the body, what
  * the key protects, what a failure leaves behind, and where the player ends up. The intro's
  * three refusals are here too, because they are the commit's: the line is fenced at the
@@ -44,8 +48,8 @@ import {
 
 import { useProfileDraft } from '../store/profileDraft.store';
 
+import { FINISH_LABEL } from './commitPresentation';
 import { CHANGE_INTRO_LABEL, INTRO_FIELD_LABEL } from './introPresentation';
-import { OPT_IN_ANSWERS, OPT_IN_FINISH_LABEL } from './optInPresentation';
 
 const COMMIT_PATH = '/api/v1/players/me/profile';
 const PADEL_ID = '1f0e5d1e-2b3c-4d5e-8f60-71829304a5b6';
@@ -73,8 +77,6 @@ const RATING: Wire['RatingResponse'] = {
 const FIX = { latitude: 41.3874, longitude: 2.1686, accuracyMetres: 12 };
 const AREA = { latitude: 41.39, longitude: 2.17 };
 
-const YES = OPT_IN_ANSWERS.find((answer) => answer.accepted)?.label ?? '';
-
 /** What the commit answers with. Nothing in the app reads it; the status is what differs. */
 const PROFILE: Wire['PlayerProfileResponse'] = {
   player_id: '11111111-2222-4333-8444-555555555555',
@@ -82,13 +84,6 @@ const PROFILE: Wire['PlayerProfileResponse'] = {
   photo_ids: [],
   weekly_hours: [{ day: 3, hour: 19 }],
   location: AREA,
-  search_radius_km: 10,
-  proposals_opt_in: {
-    accepted: true,
-    copy_version: 'proposals-opt-in.v2',
-    surface: 'ONBOARDING',
-    answered_at: '2026-08-25T10:00:00Z',
-  },
   created_at: '2026-08-25T10:00:00Z',
   updated_at: '2026-08-25T10:00:00Z',
 };
@@ -145,7 +140,7 @@ async function enterTheSocialSteps() {
   await waitFor(() => expect(screen).toHavePathname('/tags'));
 }
 
-/** Two tags at the floor, which is the only step of the eight that insists on an answer. */
+/** Two tags at the floor — the first of the three steps that insist on an answer. */
 async function answerTheTags() {
   fireEvent.press(await screen.findByLabelText('Plays to win'));
   fireEvent.press(screen.getByLabelText('Here to improve'));
@@ -154,16 +149,13 @@ async function answerTheTags() {
 }
 
 /**
- * From the intro step to the last one, answering each screen the way that screen wants.
+ * From the intro step to the last one, answering each screen on the way the way that screen
+ * wants, and leaving the last one for the caller.
  *
  * No intro, unless the walk wrote one before calling this: *Next* on an empty box carries
  * nothing, which is the ordinary end of that step. No photo, because this walk adds none and
- * none is a complete answer. One cell of the week, because a blank one is an answer too and
- * a body carrying an empty list proves less than one carrying the cell that was actually
- * ticked. The area from the device. The radius left at the served default, which is an
- * answer the step wrote when it opened. *Woman* on the gender step, because that half of it
- * has no default and the part cannot finish without an answer; the preference beside it is
- * left at its opening `Anyone`, which is what every player holds until somebody narrows it.
+ * none is a complete answer. One cell of the week: the floor is one, and a body carrying the
+ * cell that was actually ticked proves more than a count. The area from the device.
  */
 async function walkOnToTheLastStep() {
   fireEvent.press(screen.getByLabelText('Next'));
@@ -178,14 +170,16 @@ async function walkOnToTheLastStep() {
 
   fireEvent.press(screen.getByLabelText('Use my location'));
   fireEvent.press(await screen.findByLabelText('Continue'));
-  await waitFor(() => expect(screen).toHavePathname('/radius'));
-
-  fireEvent.press(await screen.findByLabelText('Continue'));
   await waitFor(() => expect(screen).toHavePathname('/gender'));
+}
 
+/**
+ * *Woman* on the last step, because that half of it has no default and the part cannot finish
+ * without an answer. The preference beside it is left at its opening `Anyone`, which is what
+ * every player holds until somebody narrows it.
+ */
+function answerAboutYou() {
   fireEvent.press(screen.getByLabelText('Woman'));
-  fireEvent.press(screen.getByLabelText('Continue'));
-  await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 }
 
 /** The whole part, answered and standing on the finish with it open. */
@@ -193,10 +187,10 @@ async function reachTheFinish() {
   await enterTheSocialSteps();
   await answerTheTags();
   await walkOnToTheLastStep();
-  fireEvent.press(screen.getByLabelText(YES));
+  answerAboutYou();
 }
 
-const finish = () => screen.getByLabelText(OPT_IN_FINISH_LABEL);
+const finish = () => screen.getByLabelText(FINISH_LABEL);
 
 beforeEach(async () => {
   transport = installTransport();
@@ -221,14 +215,14 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('finishing the part', () => {
-  it('sends every answer from all eight steps in one request', async () => {
+  it('sends every answer from all six steps in one request', async () => {
     await reachTheFinish();
 
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
 
-    // One write, not eight. A partial commit — the tags saved and the consent lost — is the
-    // worst outcome this part has available to it, which is why the whole of it is one body.
+    // One write, not six. A partial commit — the tags saved and the week lost — is the worst
+    // outcome this part has available to it, which is why the whole of it is one body.
     //
     // **No `intro` key at all.** This walk pressed *Next* on an empty box, and a player who
     // wrote nothing has no intro rather than an empty one — so the field is left out, never
@@ -242,10 +236,7 @@ describe('finishing the part', () => {
       // The area, not the fix. The metres the device reported were discarded on the way in
       // and there is nothing above `locationArea` that ever held them.
       location: AREA,
-      // The served default, written into the draft when the step opened — so a screen the
-      // player walked straight past is still a screen they answered.
-      search_radius_km: 10,
-      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v3' },
+      // No radius and no proposals answer: neither is asked any more, and neither is sent.
       gender: 'WOMAN',
       // The widest preference, sent as itself for the reason the empty photo list is: the
       // field has a default on the wire, and an omission would land the same value by a
@@ -265,7 +256,7 @@ describe('finishing the part', () => {
       '  Moved from Wrocław in May. Needs opponents. ',
     );
     await walkOnToTheLastStep();
-    fireEvent.press(screen.getByLabelText(YES));
+    answerAboutYou();
 
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
@@ -288,49 +279,52 @@ describe('finishing the part', () => {
     expect(screen.getByLabelText(INTRO_FIELD_LABEL).props.value).toBe('');
 
     await walkOnToTheLastStep();
-    fireEvent.press(screen.getByLabelText(YES));
+    answerAboutYou();
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(2));
     expect(bodyOf(commits()[1])).not.toHaveProperty('intro');
   });
 
-  it('sends the opt-in with the copy version the player was shown', async () => {
-    // The evidence half of the answer. Consent gathered against one sentence is not consent
-    // to a different one, so a record that cannot name its words evidences nothing.
-    await reachTheFinish();
-
-    fireEvent.press(finish());
-    await waitFor(() => expect(commits()).toHaveLength(1));
-
-    expect(bodyOf(commits()[0])?.proposals_opt_in.copy_version).toBe('proposals-opt-in.v3');
-  });
-
-  it('sends a declined opt-in as a recorded no, and finishes just the same', async () => {
-    // No is a whole answer, and it must reach the server as one. Sending nothing, or sending
-    // the player to a different ending, would be the product treating a refusal as a failure.
+  it('holds the finish shut until the player answers about themselves', async () => {
+    // The question on this very screen, and the one half of it with no default: `prefer not
+    // to say` is a choice somebody makes, never one made for them. So the step's own hint
+    // says what is missing, rather than one of the hints that send a player back.
     await enterTheSocialSteps();
     await answerTheTags();
     await walkOnToTheLastStep();
-    fireEvent.press(screen.getByLabelText(OPT_IN_ANSWERS.find((a) => !a.accepted)?.label ?? ''));
+
+    expect(finish().props.accessibilityState?.disabled).toBe(true);
+    expect(finish().props.accessibilityHint).toBe('Choose an answer about you to finish');
+    expect(screen.queryByLabelText(/^Set /)).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('Man'));
+
+    expect(finish().props.accessibilityState?.disabled).toBe(false);
+  });
+
+  it('sends prefer not to say as an answer, and finishes just the same', async () => {
+    // A whole answer, and it must reach the server as one. Sending nothing, or sending the
+    // player to a different ending, would be the product treating it as a refusal.
+    await enterTheSocialSteps();
+    await answerTheTags();
+    await walkOnToTheLastStep();
+    fireEvent.press(screen.getByLabelText('Prefer not to say'));
 
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
 
-    expect(bodyOf(commits()[0])?.proposals_opt_in).toEqual({
-      accepted: false,
-      copy_version: 'proposals-opt-in.v3',
-    });
+    expect(bodyOf(commits()[0])?.gender).toBe('PREFER_NOT_TO_SAY');
     // The data screen, not the summary: a player reaches the second part *from* the
     // summary now, so landing back on it would show the same account of the same walk
-    // twice — the second time after seven questions that had nothing to do with it.
+    // twice — the second time after six questions that had nothing to do with it.
     await waitFor(() => expect(screen).toHavePathname('/data'));
   });
 
   it('says it is finishing rather than announcing itself disabled, while it is in flight', async () => {
     // A busy button is not a disabled button (design-system 6.1). A request going out is not
-    // a part that is short of an answer, and a control that announced *choose yes or no
-    // above to finish* while the answer was already on its way would be describing a screen
-    // that does not exist.
+    // a part that is short of an answer, and a control that announced *choose an answer
+    // about you to finish* while the answer was already on its way would be describing a
+    // screen that does not exist.
     await reachTheFinish();
     transport.on('POST', COMMIT_PATH, neverResponds());
 
@@ -361,24 +355,21 @@ describe('finishing the part', () => {
     // way back has to be the one that reaches the server.
     await reachTheFinish();
 
-    fireEvent.press(screen.getByLabelText('Back to Who do you want to play with?'));
+    fireEvent.press(screen.getByLabelText('Back to Where do you play?'));
+    await waitFor(() => expect(screen).toHavePathname('/location'));
+    fireEvent.press(await screen.findByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/gender'));
-    fireEvent.press(screen.getByLabelText('Back to How far should we look for players?'));
-    await waitFor(() => expect(screen).toHavePathname('/radius'));
-    // One served step further out, through the control a player who cannot drag uses.
-    fireEvent(await screen.findByLabelText('How far to look'), 'accessibilityAction', {
-      nativeEvent: { actionName: 'increment' },
-    });
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/gender'));
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/opt-in'));
 
-    // Still answered, still open: walking back cost nothing.
+    // Still answered after the round trip — and then changed, both halves of it.
+    expect(screen.getByLabelText('Woman').props.accessibilityState?.selected).toBe(true);
+    fireEvent.press(screen.getByLabelText('Man'));
+    fireEvent.press(screen.getByLabelText('Men only'));
+
     fireEvent.press(finish());
     await waitFor(() => expect(commits()).toHaveLength(1));
 
-    expect(bodyOf(commits()[0])?.search_radius_km).toBe(11);
+    expect(bodyOf(commits()[0])?.gender).toBe('MAN');
+    expect(bodyOf(commits()[0])?.gender_preference).toBe('MEN_ONLY');
     expect(bodyOf(commits()[0])?.social_tag_ids).toEqual(['PLAYS_TO_WIN', 'HERE_TO_IMPROVE']);
   });
 });
@@ -396,7 +387,7 @@ describe('a photo still on its way up when the player reaches the finish', () =>
    * jest's fake timers and every `waitFor` runs the pending ones, so an upload that has not
    * answered by the next navigation is timed out by the app's own timeout policy. In
    * production an upload outlives the screen it was started from — that is the photos step's
-   * whole design — so reaching step seven with one still in flight is an ordinary thing to do
+   * whole design — so reaching the last step with one still in flight is an ordinary thing to do
    * and an impossible thing to stage here.
    *
    * `changePhotos` is the same call the photos step makes, and it derives `photoIds` from
@@ -493,14 +484,14 @@ describe('a failed commit', () => {
     ).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     // Nothing was lost, and the screen says so — the one question a player who just answered
-    // seven screens actually has.
+    // six screens actually has.
     expect(screen.getByText(/Nothing you answered was lost/)).toBeTruthy();
 
     // Still here. The prototype navigated away unconditionally, which is exactly the
     // behaviour not to inherit: it would have told a player they were set up when nothing
     // had been written at all.
-    expect(screen).toHavePathname('/opt-in');
-    expect(screen.getByLabelText(YES).props.accessibilityState?.selected).toBe(true);
+    expect(screen).toHavePathname('/gender');
+    expect(screen.getByLabelText('Woman').props.accessibilityState?.selected).toBe(true);
     expect(screen.queryByText(HOME_TAB_LINE)).toBeNull();
 
     // And the retry is the control that failed, open rather than stuck busy.
@@ -535,7 +526,7 @@ describe('a failed commit', () => {
     fireEvent.press(finish());
 
     expect(await screen.findByText(/Check the details above and try again./)).toBeTruthy();
-    expect(screen).toHavePathname('/opt-in');
+    expect(screen).toHavePathname('/gender');
     expect(commits()).toHaveLength(1);
   });
 
@@ -544,7 +535,7 @@ describe('a failed commit', () => {
    * (ADR-0170 §2, [#445](https://github.com/Raketa02/Raketa/issues/445)).
    *
    * The fence is the server's pattern, so a phone number typed on step two is refused here,
-   * six screens later. What the player reads is the *reason's* sentence — what to change —
+   * four screens later. What the player reads is the *reason's* sentence — what to change —
    * and never what was matched; the control under it is back to the intro, with the line
    * still in the box, because the draft was never touched by a failure.
    */
@@ -564,7 +555,7 @@ describe('a failed commit', () => {
       // the reason names.
       fireEvent.changeText(screen.getByLabelText(INTRO_FIELD_LABEL), 'Call me on 600 700 800');
       await walkOnToTheLastStep();
-      fireEvent.press(screen.getByLabelText(YES));
+      answerAboutYou();
       transport.on('POST', COMMIT_PATH, () =>
         json(
           {
@@ -583,7 +574,7 @@ describe('a failed commit', () => {
       expect(await screen.findByText(sentence)).toBeTruthy();
       expect(screen.getByRole('alert')).toBeTruthy();
       expect(screen.queryByText(/Try again — this can only ever set you up once/)).toBeNull();
-      expect(screen).toHavePathname('/opt-in');
+      expect(screen).toHavePathname('/gender');
 
       // And the way back, to the step that takes the line — with the line still in the box.
       fireEvent.press(screen.getByLabelText(CHANGE_INTRO_LABEL));
@@ -639,7 +630,7 @@ describe('once the commit has landed', () => {
     await commitAndLeave();
 
     // Nothing behind the data screen: every move inside the part replaced, so there is no
-    // history entry holding one of the eight, and the part itself is over.
+    // history entry holding one of the six, and the part itself is over.
     expect(screen.queryByLabelText(/^Back to /)).toBeNull();
 
     fireEvent.press(screen.getByLabelText('Start playing'));
@@ -723,11 +714,11 @@ describe('arriving from the last result', () => {
     result: RESULT,
   };
 
-  it('shows the ratings the walk produced, and only then the eight steps', async () => {
-    // The one walk that proves the order. A player is owed the number they just spent a
-    // minute per sport producing **before** anything else is asked of them, so the result
-    // leads to the summary, the summary is the door into the second part, and the commit at
-    // the end of the eight lands on what Raketa keeps.
+  it('shows the ratings the walk produced, then the six steps, and finishes on who you play with', async () => {
+    // The one walk that proves the order — a new player's sign-up, end to end. A player is
+    // owed the number they just spent a minute per sport producing **before** anything else
+    // is asked of them, so the result leads to the summary, the summary is the door into the
+    // second part, and the finish on *Who you play with* lands on what Raketa keeps.
     stubGate();
     stubProfileOptions(transport);
     stubLocation(fakeLocation({ fix: FIX }));
@@ -757,11 +748,11 @@ describe('arriving from the last result', () => {
     await waitFor(() => expect(screen).toHavePathname('/done'));
 
     // With the rating this walk produced on it — the account the player earned, given to
-    // them at the moment they earned it rather than seven screens later.
+    // them at the moment they earned it rather than six screens later.
     expect(await screen.findByLabelText('Padel level: 2,71')).toBeTruthy();
 
     // And the summary is the door into the second part. The control says so, rather than
-    // saying *Continue* to somebody about to answer seven more questions.
+    // saying *Continue* to somebody about to answer six more questions.
     //
     // Awaited, because *does this player still owe a profile* is a read, and until it lands
     // the screen takes the fail-safe answer — *they are set up* — and offers the plain
@@ -772,11 +763,15 @@ describe('arriving from the last result', () => {
 
     await answerTheTags();
     await walkOnToTheLastStep();
-    fireEvent.press(screen.getByLabelText(YES));
+    expect(screen.getByText('Who do you want to play with?')).toBeTruthy();
+    answerAboutYou();
     fireEvent.press(finish());
 
     // The commit lands on what is kept, not back on the summary they have already read.
     await waitFor(() => expect(screen).toHavePathname('/data'));
     expect(commits()).toHaveLength(1);
+    // And the body is the six steps' and nothing else: no radius, no proposals answer.
+    expect(bodyOf(commits()[0])).not.toHaveProperty('search_radius_km');
+    expect(bodyOf(commits()[0])).not.toHaveProperty('proposals_opt_in');
   });
 });

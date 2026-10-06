@@ -32,9 +32,9 @@ export interface PlayIntentDeclaration {
  * **What the profile now holds**, and never what was sent.
  *
  * The route answers with the declaration as recorded, and that is the value a caller may put
- * in a cache — the same discipline the radius write runs, where the response carries the
- * radius after the range and the step were re-checked. Echoing the request back would make
- * every write self-confirming, which is the one shape a cache cannot be corrected out of.
+ * in a cache — the same discipline the week write runs, where the response carries the week
+ * in the platform's reading order. Echoing the request back would make every write
+ * self-confirming, which is the one shape a cache cannot be corrected out of.
  *
  * `undefined` where the answer names a sport or an intent this build cannot read: there is
  * nothing honest to record, and re-reading is the caller's remedy.

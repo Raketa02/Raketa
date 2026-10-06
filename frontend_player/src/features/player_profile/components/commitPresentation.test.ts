@@ -2,11 +2,7 @@
  * What the end of the part says when it cannot finish.
  *
  * The area is the case a player actually meets — the location step names the cost of
- * leaving without one and this is where it is collected. The radius is the case they
- * cannot: that step writes the served default into the draft the moment it knows it. Both
- * are covered here anyway, because a screen that only handles the case somebody predicted
- * is a screen with a blank state, and the way to keep the unpredicted one honest is to
- * drive it.
+ * leaving without one and this is where it is collected.
  *
  * The week arrives from **both** directions since ADR-0102 gave it a floor: a draft that
  * holds no ticked cell, and a commit the server refused with `weekly_hours_empty`.
@@ -38,14 +34,14 @@ describe('the answer the last step asks for', () => {
   it('is the week, when nothing was ticked on it', () => {
     // ADR-0102 gave the grid a floor of one, so a blank week is an answer still wanted
     // rather than an answer of *no preference*.
-    const wanted = answerStillWanted(['availability', 'proposals-opt-in']);
+    const wanted = answerStillWanted(['availability', 'gender']);
 
     expect(wanted?.answer).toBe('availability');
     expect(wanted?.copy.label).toBe('Set when you usually play');
   });
 
   it('is the area, when that is what the player continued past', () => {
-    const wanted = answerStillWanted(['location', 'proposals-opt-in']);
+    const wanted = answerStillWanted(['location', 'gender']);
 
     expect(wanted?.answer).toBe('location');
     expect(wanted?.copy.label).toBe('Set the area you play in');
@@ -54,22 +50,15 @@ describe('the answer the last step asks for', () => {
   it('is the earliest one, so two outstanding answers are not two round trips', () => {
     // `missing` is in step order. Sending the player to the later one would bounce them back
     // here only to be sent to the earlier one next.
-    const wanted = answerStillWanted(['location', 'search-radius']);
+    const wanted = answerStillWanted(['availability', 'location']);
 
-    expect(wanted?.answer).toBe('location');
-  });
-
-  it('is the radius when that is the only one outstanding, rather than nothing at all', () => {
-    const wanted = answerStillWanted(['search-radius']);
-
-    expect(wanted?.answer).toBe('search-radius');
-    expect(wanted?.copy.label).toBe('Set how far you will travel');
+    expect(wanted?.answer).toBe('availability');
   });
 
   it('is nothing when the only question left is the one this step asks', () => {
-    // There is no step to go back to: the two controls are immediately above the finish, and
-    // what says so is the consent copy's own hint.
-    expect(answerStillWanted(['proposals-opt-in'])).toBeUndefined();
+    // There is no step to go back to: the three answers about the player are immediately
+    // above the finish, and what says so is the step's own hint.
+    expect(answerStillWanted(['gender'])).toBeUndefined();
   });
 
   it('is nothing when nothing is outstanding', () => {
@@ -79,7 +68,7 @@ describe('the answer the last step asks for', () => {
   it('names a step to go back to for every answer that has one', () => {
     // The exhaustiveness the table is typed for, driven rather than asserted by the compiler
     // alone: a further answer added to `MissingAnswer` arrives here as a missing entry.
-    const goesBack: readonly MissingAnswer[] = ['availability', 'location', 'search-radius'];
+    const goesBack: readonly MissingAnswer[] = ['availability', 'location'];
 
     for (const answer of goesBack) {
       const wanted = answerStillWanted([answer]);

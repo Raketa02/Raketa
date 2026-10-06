@@ -17,7 +17,7 @@ const READ_AT = '2026-09-05T09:00:00Z';
 function wireGame(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return {
     game_id: 'game-1',
-    challenge_id: 'ask-1',
+    booking_id: 'booking-1',
     sport: 'PADEL',
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',

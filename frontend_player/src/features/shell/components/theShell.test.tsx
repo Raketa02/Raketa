@@ -20,8 +20,6 @@ import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { onboardingKeys } from '@/features/onboarding/types';
 import {
   AREA_LINE,
-  GAME_SUGGESTIONS_TITLE,
-  HOW_FAR_TO_LOOK_TITLE,
   INTRO_TITLE,
   PHOTOS_TITLE,
   TAGS_TITLE,
@@ -32,7 +30,6 @@ import {
   introLine,
   kindOfGameLine,
   photosLine,
-  radiusLine,
   tagsLine,
   weekLine,
   whoYouPlayWithLine,
@@ -283,8 +280,8 @@ describe('You', () => {
     expect(
       screen.getByLabelText(doorRowLabel(WHAT_KIND_OF_GAME_TITLE, DECLARED_LINE)),
     ).toBeTruthy();
-    // Finding players — the five declarations, each off the profile read; the two that gate the
-    // matcher say the preference and the standing answer, and never the gender.
+    // Finding players — the three declarations, each off the profile read; the one that gates
+    // the matcher says the preference, and never the gender.
     expect(
       screen.getByLabelText(
         doorRowLabel(
@@ -296,18 +293,9 @@ describe('You', () => {
         ),
       ),
     ).toBeTruthy();
-    expect(
-      screen.getByLabelText(
-        doorRowLabel(HOW_FAR_TO_LOOK_TITLE, radiusLine(PROFILE_SURFACE_SERVED.search_radius_km)),
-      ),
-    ).toBeTruthy();
     expect(screen.getByLabelText(doorRowLabel(WHERE_YOU_PLAY_TITLE, AREA_LINE))).toBeTruthy();
     expect(
       screen.getByLabelText(doorRowLabel(WHO_YOU_PLAY_WITH_TITLE, whoYouPlayWithLine('any'))),
-    ).toBeTruthy();
-    // The served answer is a yes from setting up, on the twelfth of August.
-    expect(
-      screen.getByLabelText(doorRowLabel(GAME_SUGGESTIONS_TITLE, 'Yes — since 12 Aug')),
     ).toBeTruthy();
     // On your card — the door to the sheet, the three social facts off the read, and the name.
     expect(
@@ -343,9 +331,33 @@ describe('You', () => {
   });
 
   /**
+   * **Two rows left with the questions that set them** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
+   * *How far to look* and *Game suggestions* were read only by the old loop's ranking, so a
+   * player who changed either changed nothing they would ever see. *Finding players* is the
+   * week, the area and who they play with — every one of them read when a game is proposed.
+   */
+  it('lists neither How far to look nor Game suggestions under Finding players', async () => {
+    await openYou();
+
+    expect(screen.queryByText('How far to look')).toBeNull();
+    expect(screen.queryByText('Game suggestions')).toBeNull();
+
+    const drawn = screen.getAllByText(/./);
+    const at = (text: string) => drawn.indexOf(screen.getByText(text));
+    const finding = [
+      YOU_COPY.groups.findingPlayers,
+      YOUR_WEEK_TITLE,
+      WHERE_YOU_PLAY_TITLE,
+      WHO_YOU_PLAY_WITH_TITLE,
+      YOU_COPY.groups.onYourCard,
+    ].map(at);
+    expect(finding).toEqual([...finding].sort((a, b) => a - b));
+  });
+
+  /**
    * The rows are the features' and the groups are the shell's: *which row sits in which
    * group* is the one thing this file decides, so it is asserted as an order rather than as
-   * thirteen presences.
+   * eleven presences.
    */
   it('lays the groups down in the order the three questions are asked', async () => {
     await openYou();

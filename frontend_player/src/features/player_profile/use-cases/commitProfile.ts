@@ -6,13 +6,12 @@
  *
  * ## What comes back stops here, and that is deliberate
  *
- * The commit answers with the whole profile — the tags, the photo ids, the week, the area,
- * the radius and the consent record with its moment and its copy version. **None of it is
- * carried out of this function.** Nothing in the app reads a Player profile yet: the last
- * step needs to know the commit landed, and the entry gate needs to know a profile exists,
- * and neither of those is a field of the response. Mapping it into a domain object nobody
- * renders would be inventing a second, stale copy of a profile the server owns — the same
- * answer `toUploadedPhotoId` gives the signed URL it drops.
+ * The commit answers with the whole profile — the tags, the photo ids, the week and the area.
+ * **None of it is carried out of this function.** Nothing in the app reads a Player profile
+ * yet: the last step needs to know the commit landed, and the entry gate needs to know a
+ * profile exists, and neither of those is a field of the response. Mapping it into a domain
+ * object nobody renders would be inventing a second, stale copy of a profile the server owns
+ * — the same answer `toUploadedPhotoId` gives the signed URL it drops.
  *
  * The profile screen is what will want this body, and it will want it read back through its
  * own read rather than remembered from the moment onboarding ended.

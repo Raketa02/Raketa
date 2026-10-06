@@ -29,7 +29,6 @@ const SERVED: Wire['PlayerProfileOptionsResponse'] = {
     { group: 'ON_THE_COURT', tags: [{ id: 'PLAYS_TO_WIN' }] },
   ],
   social_tag_selection: { minimum_tags: 2, maximum_tags: 6 },
-  search_radius: { minimum_km: 1, maximum_km: 50, step_km: 1, default_km: 10 },
 };
 
 describe('the served tag vocabulary', () => {
@@ -102,26 +101,10 @@ describe('the served selection bounds', () => {
   });
 });
 
-describe('the served radius bounds', () => {
-  /**
-   * The unit stays on every field, unlike the tag counts above. A bare `minimum` beside a
-   * distance is one refactor away from being read as metres — which is the same reason the
-   * backend spells it on the wire.
-   */
-  it('reads the range, the step and where the control opens', () => {
-    expect(toProfileOptions(SERVED).searchRadius).toEqual({
-      minimumKm: 1,
-      maximumKm: 50,
-      stepKm: 1,
-      defaultKm: 10,
-    });
-  });
-});
-
 describe('the body that ends the part', () => {
   /**
-   * A whole part's worth of answers: two tags, two photos, two cells, an area, an answer
-   * about the player and a yes — and no intro, which is what most parts will carry.
+   * A whole part's worth of answers: two tags, two photos, two cells, an area and an answer
+   * about the player — and no intro, which is what most parts will carry.
    */
   const COMMIT: ProfileCommit = {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
@@ -131,13 +114,11 @@ describe('the body that ends the part', () => {
       { day: 7, hour: 22 },
     ],
     location: { latitude: 41.39, longitude: 2.16 },
-    searchRadiusKm: 12,
-    proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
     gender: 'woman',
     genderPreference: 'any',
   };
 
-  it('carries every answer the eight steps collected, in one body', () => {
+  it('carries every answer the six steps collected, in one body', () => {
     expect(toCommitRequest(COMMIT)).toEqual({
       social_tag_ids: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
       photo_ids: ['photo-a', 'photo-b'],
@@ -146,8 +127,6 @@ describe('the body that ends the part', () => {
         { day: 7, hour: 22 },
       ],
       location: { latitude: 41.39, longitude: 2.16 },
-      search_radius_km: 12,
-      proposals_opt_in: { accepted: true, copy_version: 'proposals-opt-in.v1' },
       gender: 'WOMAN',
       gender_preference: 'ANY',
     });
@@ -175,20 +154,6 @@ describe('the body that ends the part', () => {
 
     expect(blank.photo_ids).toEqual([]);
     expect(blank.weekly_hours).toEqual([]);
-  });
-
-  it('sends a declined opt-in as a recorded no, with its copy version', () => {
-    // `false` here is a refusal the player gave. It is never what an unanswered question
-    // becomes — that one cannot reach this function at all.
-    const declined = toCommitRequest({
-      ...COMMIT,
-      proposalsOptIn: { accepted: false, copyVersion: 'proposals-opt-in.v1' },
-    });
-
-    expect(declined.proposals_opt_in).toEqual({
-      accepted: false,
-      copy_version: 'proposals-opt-in.v1',
-    });
   });
 
   it('spells each gender answer the way the contract does', () => {
@@ -328,38 +293,24 @@ describe('the week, in the two spellings that exist', () => {
   });
 });
 
-describe('the profile surface Play and You read', () => {
+describe('the profile surface You reads', () => {
   const SERVED_SURFACE: Wire['PlayerProfileReadResponse'] = {
     weekly_hours: [{ day: 2, hour: 19 }],
-    search_radius_km: 12,
     play_intents: { PADEL: 'FOR_FUN', TENNIS: 'NO_PREFERENCE' },
     social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
     photos: [{ photo_id: 'photo-1', review: 'allowed' }, { photo_id: 'photo-2' }],
     intro: 'Will travel for a hard game.',
-    proposals_opt_in: {
-      accepted: true,
-      copy_version: 'proposals-opt-in.v3',
-      surface: 'ONBOARDING',
-      answered_at: '2026-08-12T10:00:00Z',
-    },
     gender: 'MAN',
     gender_preference: 'ANY',
   };
 
-  it('carries every fact the tab draws — the three Play reads, the three social ones, and the three that gate the matcher', () => {
+  it('carries every fact the tab draws — the week and the declarations, the three social ones, and the two that gate the matcher', () => {
     expect(toPlayerProfileSurface(SERVED_SURFACE)).toEqual({
       week: [{ day: 2, hour: 19 }],
-      searchRadiusKm: 12,
       playIntents: { padel: 'FOR_FUN', tennis: 'NO_PREFERENCE' },
       socialTagIds: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN'],
       photos: [{ photoId: 'photo-1', review: 'allowed' }, { photoId: 'photo-2' }],
       intro: 'Will travel for a hard game.',
-      proposalsOptIn: {
-        accepted: true,
-        copyVersion: 'proposals-opt-in.v3',
-        surface: 'onboarding',
-        answeredAt: '2026-08-12T10:00:00Z',
-      },
       gender: 'man',
       genderPreference: 'any',
     });
@@ -382,25 +333,6 @@ describe('the profile surface Play and You read', () => {
     const { gender: _served, ...neverAsked } = SERVED_SURFACE;
 
     expect(toPlayerProfileSurface(neverAsked)).not.toHaveProperty('gender');
-  });
-
-  it('reads the standing answer with where it was given, in the app’s spelling of the surface', () => {
-    const fromTheProfile = toPlayerProfileSurface({
-      ...SERVED_SURFACE,
-      proposals_opt_in: {
-        accepted: false,
-        copy_version: 'proposals-opt-in.v3',
-        surface: 'PROFILE',
-        answered_at: '2026-09-18T08:30:00Z',
-      },
-    });
-
-    expect(fromTheProfile.proposalsOptIn).toEqual({
-      accepted: false,
-      copyVersion: 'proposals-opt-in.v3',
-      surface: 'profile',
-      answeredAt: '2026-09-18T08:30:00Z',
-    });
   });
 
   it('leaves the intro absent where none was written, never an empty string', () => {

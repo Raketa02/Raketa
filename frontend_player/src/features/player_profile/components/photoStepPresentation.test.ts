@@ -73,7 +73,7 @@ describe('the ceiling', () => {
 
 describe('the eyebrow', () => {
   it('carries the rule beside the position', () => {
-    expect(photosEyebrow()).toBe('Setting up · Step 3 of 8 · On-court only — up to three');
+    expect(photosEyebrow()).toBe('Setting up · Step 3 of 6 · On-court only — up to three');
   });
 });
 

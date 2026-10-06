@@ -1,16 +1,13 @@
 /**
  * What a You screen draws while the read it edits is not in — **and nothing once it is.**
  *
- * *Your week* and *How far to look* each open on a fact off `GET /players/me/profile`, and a
- * control drawn before that fact has landed would be a control over a value nobody has: a grid
- * with nothing ticked reads as an empty week, a slider at nothing reads as a radius. So each
- * screen draws this instead until the read answers, and it says which of the three states the
- * read is in — paused, because `networkMode: 'online'` holds a query rather than failing it and
- * an offline player would otherwise watch a spinner forever; on its way; or refused, with the
- * control the failure belongs to, which is the read itself.
- *
- * The radius step draws the same three states for the options it waits on, spelled there
- * rather than here because that screen's read is a different read with a different sentence.
+ * *Your week* and the screens beside it each open on a fact off `GET /players/me/profile`, and
+ * a control drawn before that fact has landed would be a control over a value nobody has: a
+ * grid with nothing ticked reads as an empty week. So each screen draws this instead until the
+ * read answers, and it says which of the three states the read is in — paused, because
+ * `networkMode: 'online'` holds a query rather than failing it and an offline player would
+ * otherwise watch a spinner forever; on its way; or refused, with the control the failure
+ * belongs to, which is the read itself.
  */
 
 import { ActivityIndicator, StyleSheet, View } from 'react-native';

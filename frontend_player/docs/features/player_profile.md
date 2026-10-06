@@ -36,16 +36,6 @@ one player to another carries either. The one shape that does is the owner's own
 (ADR-0179 §4, since #472), so the You tab's _Who you play with_ can open on the answer already
 given — the second surface either value is seen on, and both to its owner only.
 
-**The consent step's copy is frozen and versioned.** `optInPresentation.ts` owns every
-sentence the Proposals opt-in card shows, together with the `copy_version` stamped beside
-the answer in the draft — consent gathered against one sentence is not consent to a
-different one, so re-wording that card is a **new version with the old one retained**,
-never an edit. It is the only file in this app whose strings are evidence. It stands at
-**`proposals-opt-in.v3`**, which rewrote two of the three promises and the scope note and
-moved that note above the card; `v2` dropped the line under the title, and both it and `v1`
-are retired and kept in the same file, because a version identifier with no record of what it
-named evidences nothing.
-
 **The commit is the one mutation in this app a retry may repeat.** Its **commit key** is
 minted when the part is entered and lives exactly as long as the draft, so a double tap and a
 retry after a failure both carry the key the first attempt carried — the disabled control is
@@ -351,3 +341,28 @@ _2 hours ticked_. The grid's own decisions — the gesture, the geometry, the ce
 lays the paint field out and fires the pan with samples hours apart. **Not seen on a device**:
 that a drag down a column paints rather than scrolls the page on both platforms, the 20pt cell
 under a thumb, and the tick at that size — the three things this change could not prove in Jest.
+
+**Setting up ends on _Who you play with_, and You loses _How far to look_ and _Game
+suggestions_** ([#582](https://github.com/Raketa02/Raketa/issues/582), PRD
+[#569](https://github.com/Raketa02/Raketa/issues/569)). The Search radius and the Proposals
+opt-in were read only by the old loop's ranking, and both left the server with it (#581), so a
+player who answered either changed nothing they would ever see. `SOCIAL_STEPS` is **six** —
+tags, intro, photos, availability, location, gender — and `/radius` and `/opt-in` are gone, with
+`search_radius_km` and `proposals_opt_in` off the commit body. **The finish moved onto the gender
+step without a sentence changing**: it is `ProfileFinish`, which the opt-in step used to draw
+inline — the failure note, an answer still wanted and the way back to it, a refusal that names a
+step, the photo still arriving, and the busy finish under the part's one key — handed the step's
+own hint for the one answer asked on that screen (`GENDER_FINISH_BLOCKED_HINT`, _Choose an answer
+about you to finish_). The gender answer is that screen's question now, as the opt-in was, so
+`answerStillWanted` leaves it out and `MISSING_ANSWER_COPY` lost its entry along with the
+radius's. **The control says _Finish_**: _Finish — show me players_ named a Players deck that no
+longer exists, and what follows the commit is _What Raketa keeps_ and then the app. **The consent
+copy went with the question** — `optInPresentation` and its three versions, `OptInPromises`,
+`domain/proposalsOptIn` (`ConsentSurface`, `RecordedProposalsOptIn`), `useAnswerProposalsOptIn`
+— and so did the radius's pieces: `domain/searchRadius`, `radiusPresentation`,
+`SearchRadiusControl`, `useChangeSearchRadius`. `GET /player-profile/options` serves the tags
+alone and the profile read lost both fields. Onboarding's _What Raketa keeps_ says _who you want
+to play with_ where it said _how far you will travel_, and its paragraph about suggestions is
+gone. **Left for a design-system ticket**: `RadiusSlider` (6.10) and `theme.size.radiusSlider`
+have no caller. **Not seen on a device**: the finish's notes stacked under the gender step's two
+groups.

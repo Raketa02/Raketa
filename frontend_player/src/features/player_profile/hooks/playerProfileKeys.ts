@@ -8,7 +8,7 @@
 export const playerProfileKeys = {
   all: ['player-profile'] as const,
   /**
-   * The tag vocabulary and the bounds, under **one** key.
+   * The tag vocabulary and its bounds, under **one** key.
    *
    * They arrive in one response because they are needed by the same part of onboarding at
    * the same moment, and splitting the key would turn one round trip into two while
@@ -16,11 +16,12 @@ export const playerProfileKeys = {
    */
   options: () => [...playerProfileKeys.all, 'options'] as const,
   /**
-   * The three facts `GET /players/me/profile` carries: the week, the radius, the declaration.
+   * Every fact `GET /players/me/profile` carries: the week, the declarations, and what You
+   * draws beside them.
    *
-   * **One key for the three**, because they arrive in one response and are invalidated by the
-   * same acts — the radius write and the declaration write each change one of them, and a key
-   * per fact would mean three cache entries a single response has to be split across.
+   * **One key for all of them**, because they arrive in one response and are changed by the
+   * same acts — the week write and the declaration write each change one of them, and a key
+   * per fact would mean cache entries a single response has to be split across.
    *
    * It is on the **ordinary defaults** and refetches, unlike anything in Play holding a ranked
    * list: `searchKeys.ts` names *"the profile and the week grid behind the working copy"* among

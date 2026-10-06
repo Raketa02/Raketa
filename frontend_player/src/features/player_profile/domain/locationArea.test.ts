@@ -10,7 +10,7 @@
 import { areaAround, sameArea, LOCATION_AREA_DECIMALS } from './locationArea';
 
 describe('the area a fix falls in', () => {
-  it('keeps two decimal places, which is the resolution the radius is expressed in', () => {
+  it('keeps two decimal places, which is the resolution distances are expressed in', () => {
     expect(areaAround(41.3874, 2.1686)).toEqual({ latitude: 41.39, longitude: 2.17 });
     expect(LOCATION_AREA_DECIMALS).toBe(2);
   });

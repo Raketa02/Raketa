@@ -8,8 +8,9 @@
  * the backend records **the version** beside the moment and the address — never the words, which
  * are the client's (`payments/domain/terms.py`, #536). So **changing a word below is a new version,
  * not an edit**: bump the identifier with the backend's, keep the retired words, and leave every
- * acceptance already recorded pointing at what it was shown — `optInPresentation`'s rule, for its
- * reason. The version is the day the words were settled.
+ * acceptance already recorded pointing at what it was shown: a silent re-word turns every
+ * recorded acceptance into a record of something nobody agreed to. The version is the day the
+ * words were settled.
  *
  * They are §12.5 compressed, as the screens ask, from the mock's own sentences (45): who charges,
  * when, what leaving costs before and after the cut-off — and the one promise the mock dropped and

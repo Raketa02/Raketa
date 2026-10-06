@@ -184,7 +184,7 @@ export function bookedRoom(): Wire['ConversationResponse'] {
 export function bookedGameOnTheList(extra: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return {
     game_id: BOOKED_GAME,
-    challenge_id: BOOKING,
+    booking_id: BOOKING,
     sport: 'PADEL',
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',

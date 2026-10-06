@@ -16,8 +16,8 @@
  * Because a paused query produces **no `AppError` at all** — nothing was attempted, so there
  * is no failure to categorise, and neither `recoveryMessage` nor any feature's `code` table
  * can reach this state. And because the app had answered the question three times before it
- * was asked: `SocialRadiusStep`, `SocialTagsStep` and `SportsPickerScreen` each rendered their
- * own copy of it inline. Three copies is precisely the threshold `recoveryMessage.ts`
+ * was asked: the radius step (since removed), `SocialTagsStep` and `SportsPickerScreen` each
+ * rendered their own copy of it inline. Three copies is precisely the threshold `recoveryMessage.ts`
  * documents as the signal to promote.
  *
  * ## The split is resumption, never the HTTP verb

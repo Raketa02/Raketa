@@ -1,9 +1,8 @@
 /**
  * The words on the gender step — including **the one sentence the record requires be said.**
  *
- * These are copy and not evidence: unlike `optInPresentation`, re-wording anything here
- * makes nothing that was true yesterday false, and no version identifier travels with the
- * answer. What is not merely copy is that *something* saying the mutuality cost is shown
+ * These are copy and not evidence: re-wording anything here makes nothing that was true
+ * yesterday false, and no version identifier travels with the answer. What is not merely copy is that *something* saying the mutuality cost is shown
  * at the moment of setting — the rule that decides when is `gender.reachOf`, and that is
  * where the obligation lives.
  *
@@ -35,9 +34,9 @@ export const PREFERENCE_HEADING = 'Who we should match you with';
 /**
  * What the platform does with both answers, said **before either is given**.
  *
- * It is the honest scope note this step needs for the reason the opt-in card needs one: a
- * player asked a question about themselves is entitled to know what is done with the answer,
- * and *never shown on your profile* is the part that is least guessable.
+ * It is the honest scope note this step needs: a player asked a question about themselves is
+ * entitled to know what is done with the answer, and *never shown on your profile* is the
+ * part that is least guessable.
  *
  * It sits at the top of the screen rather than between the two controls. A player deciding
  * whether to answer at all is deciding it **before** they press anything, so a reassurance
@@ -102,5 +101,10 @@ export function reachNote(reach: PreferenceReach): string | undefined {
 export const PREFERENCE_IS_DURABLE =
   'You can change this later in your preferences. It applies to every search.';
 
-/** Why the continue will not move, for whoever cannot see that it will not. */
-export const GENDER_CONTINUE_BLOCKED_HINT = 'Choose an answer above to continue';
+/**
+ * Why the finish will not move, for whoever cannot see that it will not — **this step's own
+ * reason, and only this one.** The finish is also closed for a part short of an answer an
+ * earlier step asks for, and that sentence is `commitPresentation`'s: reaching for this one
+ * there would ask a player for an answer about themselves they have already given.
+ */
+export const GENDER_FINISH_BLOCKED_HINT = 'Choose an answer about you to finish';

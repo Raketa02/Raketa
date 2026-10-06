@@ -26,7 +26,7 @@
  *
  * Location is what search and matchmaking are worked out from, so this step insists — but a
  * refusal still continues, without an area, and the screen says what that means. The player
- * is not held hostage on step five of eight by a permission they can change at any time.
+ * is not held hostage on step five of six by a permission they can change at any time.
  */
 
 import { useCallback, useEffect } from 'react';

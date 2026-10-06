@@ -14,7 +14,7 @@
  * The three writes behind the profile surface are this feature's — *"a read whose three paired
  * writes live in another feature is a read in the wrong feature"* — and
  * `PlayerProfileSurface`'s own docblock has said since it was written that *You* would draw the
- * same three facts from the same route. The week and the radius follow. It also cannot be in
+ * same three facts from the same route. The week follows. It also cannot be in
  * Play: `player_profile` does not import that feature, and `playIntent.ts` records what
  * happened the last time this vocabulary travelled through a feature's front door.
  *

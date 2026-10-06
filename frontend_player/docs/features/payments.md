@@ -59,7 +59,8 @@ rather than resume a setup minutes later.
 **The terms are evidence.** `PAYMENT_TERMS` (version `2026-09-29`, the backend's) is §12.5 compressed
 from the mock's own sentences (45), plus the one promise the mock dropped — a game still short at the
 cut-off is called off with everything back. The backend records the version, never the words, so a
-changed word is a new version with the backend's, the old words kept (`optInPresentation`'s rule). A
+changed word is a new version with the backend's, the old words kept, so every recorded acceptance
+still points at the words it was shown. A
 setup that answers another version shuts _Accept_ and says the app needs updating. Reviewed by a
 lawyer before launch (O3).
 

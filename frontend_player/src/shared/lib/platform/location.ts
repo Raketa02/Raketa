@@ -59,8 +59,8 @@ export interface LocationPort {
 /**
  * `Balanced` is roughly a city block, reached without spinning up GPS.
  *
- * The product question is which area someone plays in and how far out they will travel —
- * both answered in kilometres. `High` would cost battery and seconds to sharpen a number
+ * The product question is which area someone plays in and how far it is to a club — both
+ * answered in kilometres. `High` would cost battery and seconds to sharpen a number
  * nothing reads at that precision.
  */
 const ACCURACY = Location.Accuracy.Balanced;

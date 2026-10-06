@@ -61,7 +61,6 @@ function rating(sport: Wire['Sport']): Wire['RatingResponse'] {
 const THREE_RATED = [rating('PADEL'), rating('TENNIS'), rating('SQUASH')];
 const DECLARED_IN_TWO = profileSurface({
   weekly_hours: [{ day: 2, hour: 19 }],
-  search_radius_km: 12,
   play_intents: { PADEL: 'COMPETITIVE', TENNIS: 'NO_PREFERENCE' },
 });
 

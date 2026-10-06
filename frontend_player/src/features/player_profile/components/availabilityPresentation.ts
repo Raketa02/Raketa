@@ -45,10 +45,9 @@ import { stepEyebrow } from './socialStepPresentation';
 export const AVAILABILITY_PROMISE_TITLE = 'A preference, not a promise';
 
 /**
- * **It promises nothing the step has not been given.** Saying that games would be put in
- * front of the player would state as settled the consent step eight has yet to collect — so
- * this names what the week is *for* (how much of it another player shares) rather than what
- * the platform will do about it, and the overlap is the only thing anybody is ever shown.
+ * **It promises nothing the step has not been given.** It names what the week is *for* (how
+ * much of it another player shares) rather than what the platform will do about it, and the
+ * overlap is the only thing anybody is ever shown.
  */
 export const AVAILABILITY_PROMISE_BODY =
   'Nobody ever sees this as a calendar and nothing here books anything. It says when you ' +

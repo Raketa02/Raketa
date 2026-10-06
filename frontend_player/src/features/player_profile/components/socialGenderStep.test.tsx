@@ -4,10 +4,14 @@
  * The router, the http client, the domain rules, the draft and the screen all run for real,
  * and every assertion is about what a player can see, operate or be told.
  *
+ * **It is the last step and carries the finish** ([#582](https://github.com/Raketa02/Raketa/issues/582)).
+ * What the finish sends, and what a failed commit leaves behind, is `commitTheProfile.test.tsx`;
+ * this suite is about the two questions and when the finish opens on them.
+ *
  * **Three things here are the record rather than the screen.**
  *
  * The answer about the player is **required and never pre-selected** — `prefer not to say`
- * is a choice somebody makes, not a default given on their behalf, and the continue stays
+ * is a choice somebody makes, not a default given on their behalf, and the finish stays
  * shut until one of the three is pressed.
  *
  * The preference beside it opens at **Anyone**, and that is the opposite decision made for
@@ -41,7 +45,13 @@ import { installTransport, type Transport, type Wire } from '@/test-support/tran
 import { reachOf } from '../domain/gender';
 import { useProfileDraft } from '../store/profileDraft.store';
 
-import { GENDER_SCOPE, PREFER_NOT_TO_SAY_COST, reachNote } from './genderPresentation';
+import { FINISH_LABEL } from './commitPresentation';
+import {
+  GENDER_FINISH_BLOCKED_HINT,
+  GENDER_SCOPE,
+  PREFER_NOT_TO_SAY_COST,
+  reachNote,
+} from './genderPresentation';
 
 /** One rating: the first part is behind this player, and the second one is not. */
 const RATING: Wire['RatingResponse'] = {
@@ -65,18 +75,25 @@ const isDisabled = (label: string) => control(label).props.accessibilityState?.d
 /**
  * What the part is holding.
  *
- * Read here for the reason the opt-in suite reads its copy version: **neither value is ever
- * drawn back to the player anywhere in this app**, because no response shape carries a
- * gender out (ADR-0096 §6). There is no on-screen form of *what was recorded* to assert
- * against, and the alternative to reading the draft is to assert nothing.
+ * Read here because **neither value is drawn back to the player anywhere in onboarding**: no
+ * response shape that describes one player to another carries a gender out (ADR-0096 §6), and
+ * the owner's own read is *Who you play with* on You, after the part. There is no on-screen
+ * form of *what was recorded* to assert against here, and the alternative to reading the
+ * draft is to assert nothing.
  */
 const held = () => useProfileDraft.getState().draft;
 
-/** A launch by a player the gate owes the second part to, walked as far as step six. */
+/**
+ * A launch by a player the gate owes the second part to, walked as far as the last step.
+ *
+ * **With the area set**, because this is the step that carries the finish: a walk that passed
+ * the location step empty would hold the finish shut on that, and every assertion below about
+ * what opens it would be about the wrong answer.
+ */
 async function reachTheGenderStep() {
   stubGateWith(transport, { ratings: [RATING], hasPlayerProfile: false });
   stubProfileOptions(transport);
-  stubLocation(fakeLocation());
+  stubLocation(fakeLocation({ fix: { latitude: 41.3874, longitude: 2.1686, accuracyMetres: 12 } }));
 
   await launchSignedIn();
 
@@ -96,9 +113,7 @@ async function reachTheGenderStep() {
   fireEvent.press(screen.getByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/location'));
-  fireEvent.press(screen.getByLabelText('Continue without matching'));
-
-  await waitFor(() => expect(screen).toHavePathname('/radius'));
+  fireEvent.press(screen.getByLabelText('Use my location'));
   fireEvent.press(await screen.findByLabelText('Continue'));
 
   await waitFor(() => expect(screen).toHavePathname('/gender'));
@@ -141,14 +156,25 @@ describe('what the step opens with', () => {
     expect(held()?.genderPreference).toBe('any');
   });
 
-  it('keeps the continue shut until the player answers about themselves', async () => {
+  it('keeps the finish shut until the player answers about themselves', async () => {
     await reachTheGenderStep();
 
-    expect(isDisabled('Continue')).toBe(true);
+    expect(isDisabled(FINISH_LABEL)).toBe(true);
+    // The reason is this screen's own question, said without sight — not one of the hints
+    // that send a player back to an earlier step.
+    expect(control(FINISH_LABEL).props.accessibilityHint).toBe(GENDER_FINISH_BLOCKED_HINT);
 
     fireEvent.press(control('Man'));
 
-    expect(isDisabled('Continue')).toBeFalsy();
+    expect(isDisabled(FINISH_LABEL)).toBeFalsy();
+  });
+
+  it('finishes rather than continuing, because nothing is in front of it', async () => {
+    // What follows the last step is the commit, and a commit is not a screen.
+    await reachTheGenderStep();
+
+    expect(screen.queryByLabelText('Continue')).toBeNull();
+    expect(control(FINISH_LABEL)).toBeTruthy();
   });
 
   it('says what both answers are used for above both of them', async () => {
@@ -222,7 +248,7 @@ describe('answering about the player', () => {
     fireEvent.press(control('Prefer not to say'));
 
     expect(held()?.gender).toBe('prefer-not-to-say');
-    expect(isDisabled('Continue')).toBeFalsy();
+    expect(isDisabled(FINISH_LABEL)).toBeFalsy();
     expect(screen.getByText(PREFER_NOT_TO_SAY_COST)).toBeTruthy();
   });
 });
@@ -260,15 +286,15 @@ describe('narrowing who the player is matched with', () => {
     expect(screen.queryByText(reachNote(reachOf('men-only')) ?? '')).toBeNull();
   });
 
-  it('does not let a narrowed preference hold the continue shut', async () => {
-    // Narrowing is an answer, not a problem to resolve before continuing. What it costs is
+  it('does not let a narrowed preference hold the finish shut', async () => {
+    // Narrowing is an answer, not a problem to resolve before finishing. What it costs is
     // said; nothing about it is treated as an error.
     await reachTheGenderStep();
 
     fireEvent.press(control('Woman'));
     fireEvent.press(control('Women only'));
 
-    expect(isDisabled('Continue')).toBeFalsy();
+    expect(isDisabled(FINISH_LABEL)).toBeFalsy();
   });
 });
 
@@ -279,8 +305,8 @@ describe('the answers the part holds', () => {
     fireEvent.press(control('Man'));
     fireEvent.press(control('Men only'));
 
-    fireEvent.press(control('Back to How far should we look for players?'));
-    await waitFor(() => expect(screen).toHavePathname('/radius'));
+    fireEvent.press(control('Back to Where do you play?'));
+    await waitFor(() => expect(screen).toHavePathname('/location'));
     fireEvent.press(await screen.findByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/gender'));
 
@@ -289,9 +315,9 @@ describe('the answers the part holds', () => {
     expect(screen.getByText(reachNote(reachOf('men-only')) ?? '')).toBeTruthy();
   });
 
-  it('reach the server nowhere in the step itself', async () => {
+  it('reach the server nowhere until the finish is pressed', async () => {
     // The part writes once, at the end. Every answer here is client-held until the commit,
-    // so this step makes no request of its own — and neither value ever comes back.
+    // so answering makes no request of its own — the finish is the one press that does.
     await reachTheGenderStep();
     const before = transport.requests.length;
 

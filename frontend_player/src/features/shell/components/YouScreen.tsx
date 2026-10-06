@@ -6,8 +6,7 @@
  * ```
  * header card       the record's header, compact — tapping it opens How others see you
  * PLAYING           Skill passport · Player reliability · What kind of game
- * FINDING PLAYERS   Your week · How far to look · Where you play · Who you play with ·
- *                   Game suggestions
+ * FINDING PLAYERS   Your week · Where you play · Who you play with
  * ON YOUR CARD      How others see you · Photos · Tags · Intro · Name
  * ACCOUNT           Games & money · Payments · Notifications
  * ─────────────
@@ -32,6 +31,10 @@
  * after *On your card* and before *Sign out*, and holds *Games & money* (#554), *Payments*
  * (#552) and *Notifications* (#559), in that order (mock 50). *Sign out* stays at the foot as the
  * account panel draws it, pinned under the scroller.
+ *
+ * **Finding players lost two rows** with the old loop's ranking, the only thing that read them:
+ * *How far to look* and *Game suggestions* ([#582](https://github.com/Raketa02/Raketa/issues/582)).
+ * A setting on this tab is one a proposed game still reads.
  *
  * ## The switcher chip
  *
@@ -61,8 +64,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { AccountPanel, NameRow } from '@/features/auth/types';
 import {
-  GameSuggestionsRow,
-  HowFarToLookRow,
   IntroRow,
   PhotosRow,
   TagsRow,
@@ -117,10 +118,8 @@ export function YouScreen({ headerRight }: YouScreenProps) {
 
           <YouGroup title={YOU_COPY.groups.findingPlayers}>
             <YourWeekRow />
-            <HowFarToLookRow divided />
             <WhereYouPlayRow divided />
             <WhoYouPlayWithRow divided />
-            <GameSuggestionsRow divided />
           </YouGroup>
 
           <YouGroup title={YOU_COPY.groups.onYourCard}>

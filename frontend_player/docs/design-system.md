@@ -4379,9 +4379,8 @@ onboarding says.
 copy and one control.
 
 **It is not a consent form and must never become one.** Nothing here is recorded and there
-is no control that means yes. The match-proposals opt-in is its own explicit, skippable
-step whenever it arrives; folding it into a screen the player passes through on the way out
-would collect an agreement nobody read.
+is no control that means yes; folding a consent into a screen the player passes through on
+the way out would collect an agreement nobody read.
 
 ---
 

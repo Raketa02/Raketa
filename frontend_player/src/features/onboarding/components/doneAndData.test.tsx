@@ -493,18 +493,30 @@ describe('the data screen', () => {
 
   it('accounts for what the second part collected, not only the questionnaire', async () => {
     // Onboarding is two parts, and this screen is the account of both. A player who handed
-    // over tags, photos, a week, an area and a distance ten screens ago and read a screen
-    // that mentioned none of them would have been told a half-truth on the way out.
+    // over tags, photos, a week, an area and who they play with a few screens ago and read a
+    // screen that mentioned none of them would have been told a half-truth on the way out.
     await reachTheDataScreen();
 
     expect(await screen.findByText('What we keep from setting up')).toBeTruthy();
     expect(screen.getByText(/tags you picked, the photos you added/)).toBeTruthy();
+    expect(screen.getByText(/who you want to play with/)).toBeTruthy();
 
-    // Each of the four promises the steps themselves made, kept on the way out.
+    // Each of the three promises the steps themselves made, kept on the way out.
     expect(screen.getByText(/never shown to anybody as a calendar/)).toBeTruthy();
     expect(screen.getByText(/rounded before anything is written down/)).toBeTruthy();
     expect(screen.getByText(/re-encoded when it reaches Raketa/)).toBeTruthy();
-    expect(screen.getByText(/the exact wording you were shown/)).toBeTruthy();
+  });
+
+  it('accounts for nothing the second part no longer asks', async () => {
+    // #582: setting up stopped asking how far a player will travel and whether games may be
+    // suggested, so this screen keeps no account of either — a record of an answer nobody
+    // gave is the one untrue thing this screen could say.
+    await reachTheDataScreen();
+
+    expect(await screen.findByText('What we keep from setting up')).toBeTruthy();
+    expect(screen.queryByText(/how far you will travel/)).toBeNull();
+    expect(screen.queryByText(/suggest/i)).toBeNull();
+    expect(screen.queryByText(/the exact wording you were shown/)).toBeNull();
   });
 
   it('says nothing about checking a photo, because nothing checks one', async () => {
@@ -519,21 +531,19 @@ describe('the data screen', () => {
 
   it('promises no profile editor, because there is not one', async () => {
     // The same class of claim. Editing a Player profile is a screen this app does not have,
-    // and #135 puts it outside this spec — so the only withdrawal promise here is the one
-    // the consent card already made, in its own words.
+    // and #135 puts it outside this spec.
     await reachTheDataScreen();
 
+    expect(await screen.findByText('What we keep from setting up')).toBeTruthy();
     expect(screen.queryByText(/editable from your profile/)).toBeNull();
-    expect(screen.getByText(/You can stop any time, from your profile/)).toBeTruthy();
   });
 
-  it('is still not a consent form, and offers nothing here that means yes', async () => {
-    // It now says what the opt-in recorded, which is an account of a decision already
-    // taken. That is the opposite of asking for one: the only control on the screen is the
-    // way out, and it says so.
+  it('is not a consent form, and offers nothing here that means yes', async () => {
+    // An account of what was kept is the opposite of asking for anything: the only control
+    // on the screen is the way out, and it says so.
     await reachTheDataScreen();
 
-    expect(screen.getByText(/nothing on this screen changes it/)).toBeTruthy();
+    expect(await screen.findByText('What we keep from setting up')).toBeTruthy();
 
     const controls = screen.getAllByRole('button');
     expect(controls.map((control) => control.props.accessibilityLabel)).toEqual(['Start playing']);
@@ -555,10 +565,9 @@ describe('the data screen', () => {
 
     // Every write this flow makes, from welcome to the app: two runs started and two
     // answers submitted. Nothing here is a consent — what a consent covers is a legal
-    // question this flow cannot answer — and the Proposals opt-in is its own explicit step
-    // with no skip and no default, never folded into this one. (This player was already
-    // set up, which is why the second part is not in the list; the walk that commits one
-    // is `commitTheProfile.test.tsx`.)
+    // question this flow cannot answer. (This player was already set up, which is why the
+    // second part is not in the list; the walk that commits one is
+    // `commitTheProfile.test.tsx`.)
     const writes = transport.requests.filter((request) => request.method !== 'GET');
     expect(writes.map((request) => `${request.method} ${request.path}`)).toEqual([
       'POST /api/v1/assessments',

@@ -8,12 +8,10 @@
 
 import { PHOTO_CEILING } from '../domain/photoCollection';
 
-import { RADIUS_LABEL, radiusWords } from './radiusPresentation';
 import {
   AREA_LINE,
   AREA_SET,
   CLEAR_ALL,
-  HOW_FAR_TO_LOOK_TITLE,
   KIND_OF_GAME_LINE,
   NO_INTRO_LINE,
   READ_AGAIN,
@@ -21,14 +19,9 @@ import {
   SAVE,
   SAVED,
   SAVE_YOUR_WEEK,
-  YOUR_ANSWER,
-  answerGivenLine,
-  answerWord,
-  gameSuggestionsLine,
   introLine,
   kindOfGameLine,
   photosLine,
-  radiusLine,
   tagsLine,
   weekLine,
   whoYouPlayWithLine,
@@ -44,10 +37,6 @@ describe('the live lines', () => {
         { day: 6, hour: 19 },
       ]),
     ).toBe('2 hours ticked');
-  });
-
-  it('reads the radius with the figure and the step’s own words', () => {
-    expect(radiusLine(12)).toBe(`12 km · ${radiusWords(12)}`);
   });
 
   it('names the area’s one state, because a profile cannot be committed without one', () => {
@@ -71,50 +60,6 @@ describe('the live lines that gate the matcher', () => {
     expect(whoYouPlayWithLine('any')).toBe('Matched with anyone');
     expect(whoYouPlayWithLine('women-only')).toBe('Matched with women only');
     expect(whoYouPlayWithLine('men-only')).toBe('Matched with men only');
-  });
-
-  it('says the standing answer and since when, the day in the platform’s zone', () => {
-    expect(
-      gameSuggestionsLine({
-        accepted: true,
-        copyVersion: 'proposals-opt-in.v3',
-        surface: 'onboarding',
-        answeredAt: '2026-08-12T10:00:00Z',
-      }),
-    ).toBe('Yes — since 12 Aug');
-    // 23:30 UTC on the 17th is already the 18th in Warsaw — the platform's day, not the phone's.
-    expect(
-      gameSuggestionsLine({
-        accepted: false,
-        copyVersion: 'proposals-opt-in.v3',
-        surface: 'profile',
-        answeredAt: '2026-09-17T23:30:00Z',
-      }),
-    ).toBe('No — since 18 Sep');
-  });
-});
-
-describe('the answer card on Game suggestions', () => {
-  it('names the answer, and says when, against which words, and from where it was given', () => {
-    expect(YOUR_ANSWER).toBe('Your answer');
-    expect(answerWord(true)).toBe('Yes');
-    expect(answerWord(false)).toBe('No');
-    expect(
-      answerGivenLine({
-        accepted: true,
-        copyVersion: 'proposals-opt-in.v3',
-        surface: 'onboarding',
-        answeredAt: '2026-08-12T10:00:00Z',
-      }),
-    ).toBe('Given 12 Aug, against these words (proposals-opt-in.v3), from setting up.');
-    expect(
-      answerGivenLine({
-        accepted: false,
-        copyVersion: 'proposals-opt-in.v2',
-        surface: 'profile',
-        answeredAt: '2026-09-18T08:30:00Z',
-      }),
-    ).toBe('Given 18 Sep, against these words (proposals-opt-in.v2), from this screen.');
   });
 });
 
@@ -157,10 +102,6 @@ describe('the live lines on your card', () => {
 });
 
 describe('the titles and the buttons', () => {
-  it('names the radius row with the step’s own label', () => {
-    expect(HOW_FAR_TO_LOOK_TITLE).toBe(RADIUS_LABEL);
-  });
-
   it('says the one thing the declaration section’s heading and body said', () => {
     expect(KIND_OF_GAME_LINE).toBe('This changes how people find you');
   });

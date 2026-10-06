@@ -11,7 +11,6 @@
  * before anything reads it.
  */
 
-import type { SearchRadiusBounds } from './searchRadius';
 import type { SocialTagSelectionBounds } from './socialTagSelection';
 import type { SocialTagVocabulary } from './SocialTag';
 
@@ -20,6 +19,4 @@ export interface ProfileOptions {
   readonly socialTagGroups: SocialTagVocabulary;
   /** How many of them a profile must hold. Both ends included. */
   readonly socialTagSelection: SocialTagSelectionBounds;
-  /** How far out a player may ask to look, and where the slider opens. */
-  readonly searchRadius: SearchRadiusBounds;
 }

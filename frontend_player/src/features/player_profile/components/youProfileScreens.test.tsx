@@ -6,7 +6,7 @@
  *
  * Each screen is an onboarding step's control under the tab's chrome, and the steps' own
  * suites already prove the controls. What is proved here is what the tab added: **a draft
- * until the button** — the week and the radius write only on *Save*, and the route's answer is
+ * until the button** — the week writes only on *Save*, and the route's answer is
  * what the row's live line then says — and the area's press ending in the cold start's route,
  * with the step's permission states behind it. And, since 2026-09-18, that a *Save* with
  * nothing to send is drawn green and saying *Saved* (6.1 `settled`) — on opening, and again the
@@ -50,19 +50,15 @@ import {
   OPEN_SETTINGS,
   USE_MY_LOCATION,
 } from './locationPresentation';
-import { RADIUS_LABEL } from './radiusPresentation';
 import {
   AREA_LINE,
   AREA_SET,
   CLEAR_ALL,
-  HOW_FAR_TO_LOOK_TITLE,
   READ_AGAIN,
-  SAVE,
   SAVED,
   SAVE_YOUR_WEEK,
   WHERE_YOU_PLAY_TITLE,
   YOUR_WEEK_TITLE,
-  radiusLine,
   weekLine,
 } from './youProfilePresentation';
 
@@ -78,18 +74,16 @@ const RATING: Wire['RatingResponse'] = {
   updated_at: '2026-08-14T09:00:00Z',
 };
 
-/** Two hours and a twelve-kilometre radius — the profile as the tab opens on it. */
+/** Two hours and one declaration — the profile as the tab opens on it. */
 const SURFACE = profileSurface({
   weekly_hours: [
     { day: 2, hour: 19 },
     { day: 6, hour: 9 },
   ],
-  search_radius_km: 12,
   play_intents: { PADEL: 'FOR_FUN' },
 });
 
 const WEEKLY_HOURS_PATH = '/api/v1/players/me/weekly-hours';
-const RADIUS_PATH = '/api/v1/players/me/search-radius';
 const LOCATION_PATH = '/api/v1/players/me/location';
 
 const PRECISE = { latitude: 41.3874, longitude: 2.1686, accuracyMetres: 12 };
@@ -305,70 +299,6 @@ describe('Your week', () => {
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(ticked()).toContain('Wednesday 19:00');
     expect(screen.getByLabelText(SAVE_YOUR_WEEK)).toBeTruthy();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// How far to look
-// ---------------------------------------------------------------------------
-
-describe('How far to look', () => {
-  const theSlider = () => screen.getByLabelText(RADIUS_LABEL);
-  const step = (action: 'increment' | 'decrement') =>
-    fireEvent(theSlider(), 'accessibilityAction', { nativeEvent: { actionName: action } });
-
-  async function openTheRadius() {
-    await onYou();
-    fireEvent.press(row(HOW_FAR_TO_LOOK_TITLE, radiusLine(12)));
-    await screen.findByRole('header', { name: HOW_FAR_TO_LOOK_TITLE });
-    await screen.findByLabelText(RADIUS_LABEL);
-  }
-
-  it('opens at the profile’s radius, with Saved shut', async () => {
-    await openTheRadius();
-
-    expect(theSlider().props.accessibilityValue.now).toBe(12);
-    expect(screen.getByLabelText(SAVED).props.accessibilityState?.disabled).toBe(true);
-    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
-  });
-
-  it('writes nothing as the slider moves, and the number on Save — then draws the route’s answer', async () => {
-    // The write path re-snaps: it answers with the radius as held, which is what is drawn.
-    transport.on('PUT', RADIUS_PATH, () =>
-      json<Wire['SearchRadiusResponse']>({ search_radius_km: 15 }),
-    );
-    await openTheRadius();
-
-    step('increment');
-    step('increment');
-    expect(theSlider().props.accessibilityValue.now).toBe(14);
-    expect(transport.requestsTo('PUT', RADIUS_PATH)).toHaveLength(0);
-
-    fireEvent.press(screen.getByLabelText(SAVE));
-
-    await waitFor(() => expect(transport.requestsTo('PUT', RADIUS_PATH)).toHaveLength(1));
-    expect(transport.requestsTo('PUT', RADIUS_PATH)[0]?.body).toEqual({ search_radius_km: 14 });
-    expect(await screen.findByLabelText(SAVED)).toBeTruthy();
-    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
-    expect(theSlider().props.accessibilityValue.now).toBe(15);
-
-    fireEvent.press(screen.getByLabelText('Back'));
-    expect(
-      await screen.findByLabelText(doorRowLabel(HOW_FAR_TO_LOOK_TITLE, radiusLine(15))),
-    ).toBeTruthy();
-  });
-
-  it('shuts Save again when the slider is moved back to the number held', async () => {
-    await openTheRadius();
-
-    step('increment');
-    expect(screen.getByLabelText(SAVE)).toBeTruthy();
-    expect(fillOf(screen.getByLabelText(SAVE))).toBe(theme.color.coralInk);
-    step('decrement');
-
-    expect(screen.getByLabelText(SAVED).props.accessibilityState?.disabled).toBe(true);
-    expect(fillOf(screen.getByLabelText(SAVED))).toBe(theme.color.mintInk);
-    expect(transport.requestsTo('PUT', RADIUS_PATH)).toHaveLength(0);
   });
 });
 

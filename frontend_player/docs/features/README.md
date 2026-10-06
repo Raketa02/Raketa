@@ -34,7 +34,7 @@ is referenced from the other by a sentence, not copied.
 | [`onboarding.md`](onboarding.md)             | The two parts, the hardware back button, the ratings summary, the gate                         |
 | [`payments.md`](payments.md)                 | You › Payments: the four-step setup, the method card, Change and Remove, the Stripe port       |
 | [`proposals.md`](proposals.md)               | A group's Games deck and details; Games & money; the fill; Home's games; Fill in; posting      |
-| [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step, the consent copy, the commit                               |
+| [`player_profile.md`](player_profile.md)     | The flagged photo, the gender step that ends setting up, the commit                            |
 | [`player_record.md`](player_record.md)       | The record sheet a face opens, the metered rows, what opponents said                           |
 | [`shell.md`](shell.md)                       | Three tabs over one stack, the reset, Home, the bar standing down                              |
 | [`sportsmanship.md`](sportsmanship.md)       | The star card at the foot of a booked game's result screen                                     |
@@ -61,7 +61,7 @@ startup sequence. Above that: the HTTP client with its 401 → refresh → retry
   Forgot password and invitations.
 - `onboarding` — the entry gate, welcome, the sports picker, the adaptive question loop, the
   explained result, and the summary and data screens a player leaves through.
-- `player_profile` — onboarding's **second part**: eight steps over a client-held draft and the
+- `player_profile` — onboarding's **second part**: six steps over a client-held draft and the
   one idempotent `POST /players/me/profile` that ends them, and the You tab's rows that edit the
   same facts afterwards.
 - `groups` — Play › Groups: New group, Join a group, a group's page, Friends, Members.

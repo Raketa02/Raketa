@@ -1,23 +1,19 @@
 /**
- * The profile surface — the read Play's search screen and the You tab are drawn from — and
- * the writes that change it.
+ * The profile surface — the read the You tab is drawn from — and the writes that change it.
  *
- * **Ordinary defaults, deliberately.** Nothing in Play background-refetches a *ranked list*,
- * because foregrounding would reorder the pool under the player's finger; this is not one, and
- * `searchKeys.ts` puts *"the profile and the week grid behind the working copy"* among the
- * reads that should move. A radius widened in *You* on another device should be the radius the
- * next search runs at.
+ * **Ordinary defaults, deliberately.** This is not a ranked list that foregrounding would
+ * reorder under the player's finger, so it moves like any other read: a week changed in *You*
+ * on another device should be the week this one draws.
  *
  * **The mutations write the response into the cache rather than invalidating it.** Each
- * route answers with the value **as the profile now holds it** — the radius after the range
- * and the step were re-checked, the tags in the vocabulary's order — so a refetch would be a
- * round trip for an answer already in hand, and Part 7's *"don't immediately refetch what you
+ * route answers with the value **as the profile now holds it** — the week in the platform's
+ * reading order, the tags in the vocabulary's — so a refetch would be a round trip for an
+ * answer already in hand, and Part 7's *"don't immediately refetch what you
  * were just handed"* is the rule. What they must not do is write the number the client *sent*:
  * a client that assumed its own value landed would be re-deciding a bound the server owns.
  * The intro's route answers nothing by design, and its use case says why the line sent is the
  * line held; the two gender writes answer nothing for the same reason and are held the same
- * way. The opt-in's route answers with **the record it just made**, and that is what the cache
- * holds — the answer, its moment and its surface, never the press.
+ * way.
  *
  * **The three social writes also invalidate the player's own record**
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
@@ -40,15 +36,11 @@ import type { WeeklyHour } from '@/shared/vocabulary/week';
 import type { Gender, GenderPreference } from '../domain/gender';
 import type { PlayerProfileSurface } from '../domain/PlayerProfileSurface';
 import type { UploadedPhoto } from '../domain/photoCollection';
-import type { ProposalsOptIn } from '../domain/ProfileDraft';
-import type { RecordedProposalsOptIn } from '../domain/proposalsOptIn';
-import { answerProposalsOptIn } from '../use-cases/answerProposalsOptIn';
 import { changeWeeklyHours } from '../use-cases/changeWeeklyHours';
 import { changeGender } from '../use-cases/changeGender';
 import { changeGenderPreference } from '../use-cases/changeGenderPreference';
 import { changeIntro } from '../use-cases/changeIntro';
 import { changePhotos } from '../use-cases/changePhotos';
-import { changeSearchRadius } from '../use-cases/changeSearchRadius';
 import { changeSocialTags } from '../use-cases/changeSocialTags';
 import { declarePlayIntent, type PlayIntentDeclaration } from '../use-cases/declarePlayIntent';
 import { readProfileSurface } from '../use-cases/readProfileSurface';
@@ -70,8 +62,7 @@ export function useProfileSurface() {
  *
  * The week written into the cache is the **route's**, not the request's: repeated cells are
  * collapsed and the order is the platform's reading order, so a client that kept what it sent
- * would draw a week the profile does not hold. It is the radius write's rule, on the fact
- * beside it.
+ * would draw a week the profile does not hold.
  *
  * The one caller today is the prompt sheet's *yes* to `KEEP_THESE_TIMES`
  * ([#275](https://github.com/Raketa02/Raketa/issues/275)); *You* will be the second.
@@ -84,25 +75,6 @@ export function useChangeWeeklyHours() {
     onSuccess: (week) => {
       client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
         held === undefined ? held : { ...held, week },
-      );
-    },
-  });
-}
-
-/**
- * Widen or narrow the profile's own radius.
- *
- * `retry: false` is the app's mutation default and is right here for the ordinary reason: this
- * is a write, and a retry the player cannot see is a retry they cannot reach.
- */
-export function useChangeSearchRadius() {
-  const client = useQueryClient();
-
-  return useMutation<number, AppError, number>({
-    mutationFn: (radiusKm) => changeSearchRadius(radiusKm),
-    onSuccess: (searchRadiusKm) => {
-      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
-        held === undefined ? held : { ...held, searchRadiusKm },
       );
     },
   });
@@ -236,27 +208,6 @@ export function useChangeGenderPreference() {
     onSuccess: (genderPreference) => {
       client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
         held === undefined ? held : { ...held, genderPreference },
-      );
-    },
-  });
-}
-
-/**
- * Answer the proposals question again, from the profile — the You tab's press on either
- * answer (ADR-0179 §2). **Every press sends**, the same answer included; the use case says why.
- *
- * The record written into the cache is **the route's** — its moment and its surface are the
- * server's to stamp, and a client that wrote its own clock and *this screen* into the cache
- * would be asserting a consent it had only requested.
- */
-export function useAnswerProposalsOptIn() {
-  const client = useQueryClient();
-
-  return useMutation<RecordedProposalsOptIn, AppError, ProposalsOptIn>({
-    mutationFn: (answer) => answerProposalsOptIn(answer),
-    onSuccess: (proposalsOptIn) => {
-      client.setQueryData<PlayerProfileSurface>(playerProfileKeys.surface(), (held) =>
-        held === undefined ? held : { ...held, proposalsOptIn },
       );
     },
   });

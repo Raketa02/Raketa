@@ -37,7 +37,6 @@ describe('toAuthenticatedUser', () => {
       authority: 'player',
       is_admin: true,
       is_active: true,
-      is_tester: false,
       has_player_profile: false,
       adult_attested: true,
       profiles: PLAYER_PROFILES,
@@ -72,7 +71,6 @@ describe('toAuthenticatedUser', () => {
       authority: 'player',
       is_admin: false,
       is_active: true,
-      is_tester: false,
       has_player_profile: false,
       adult_attested: true,
       profiles: PLAYER_PROFILES,
@@ -95,7 +93,6 @@ describe('toAuthenticatedUser', () => {
       authority: 'player',
       is_admin: false,
       is_active: true,
-      is_tester: false,
       has_player_profile: true,
       adult_attested: true,
       profiles: PLAYER_PROFILES,
@@ -103,30 +100,6 @@ describe('toAuthenticatedUser', () => {
     });
 
     expect(user.hasPlayerProfile).toBe(true);
-  });
-
-  /**
-   * **The tester mark is not read** (#576): its one reader was feature-flag evaluation, which left
-   * with the flags. The wire still carries `is_tester` until the backend drops it (#581), and the
-   * app drops it here, as it drops `is_admin`.
-   */
-  it('does not carry the tester mark, though the wire still sends it', () => {
-    const user = toAuthenticatedUser({
-      id: 'e2b1c0d4-0000-4000-8000-000000000001',
-      email: 'ada@example.com',
-      name: 'Ada Lovelace',
-      nickname: 'ada',
-      authority: 'player',
-      is_admin: false,
-      is_active: true,
-      is_tester: true,
-      has_player_profile: true,
-      adult_attested: true,
-      profiles: PLAYER_PROFILES,
-      created_at: '2026-08-13T10:00:00Z',
-    });
-
-    expect(user).not.toHaveProperty('isTester');
   });
 
   /**
@@ -144,7 +117,6 @@ describe('toAuthenticatedUser', () => {
       authority: 'player',
       is_admin: false,
       is_active: true,
-      is_tester: false,
       has_player_profile: false,
       adult_attested: false,
       profiles: {
@@ -183,7 +155,6 @@ describe('the invitations an account is offered', () => {
       authority: 'player',
       is_admin: false,
       is_active: true,
-      is_tester: false,
       has_player_profile: true,
       adult_attested: true,
       profiles: {
@@ -222,7 +193,6 @@ describe('the groups a club handed the account', () => {
       authority: 'player',
       is_admin: false,
       is_active: true,
-      is_tester: false,
       has_player_profile: true,
       adult_attested: true,
       profiles: {

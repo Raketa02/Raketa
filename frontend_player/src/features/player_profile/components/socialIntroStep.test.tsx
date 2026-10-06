@@ -76,7 +76,7 @@ describe('what the step offers', () => {
     await reachTheIntroStep();
 
     expect(screen.getByText('Say it in your own words')).toBeTruthy();
-    expect(screen.getByText('Setting up · Step 2 of 8')).toBeTruthy();
+    expect(screen.getByText('Setting up · Step 2 of 6')).toBeTruthy();
     // The label is drawn and is the name, never a placeholder that vanishes on the first
     // keystroke.
     expect(screen.getByText('Your intro')).toBeTruthy();

@@ -47,7 +47,6 @@ import type { PlayerProfileSurface, PlayIntentDeclarations } from '../domain/Pla
 import type { PhotoReview, UploadedPhoto } from '../domain/photoCollection';
 import type { ProfileOptions } from '../domain/ProfileOptions';
 import type { ProfileCommit } from '../domain/profileCommit';
-import type { ConsentSurface, RecordedProposalsOptIn } from '../domain/proposalsOptIn';
 
 type PlayerProfileOptionsResponse = components['schemas']['PlayerProfileOptionsResponse'];
 type PhotoResponse = components['schemas']['PhotoResponse'];
@@ -56,8 +55,6 @@ type WireSocialTagGroup = components['schemas']['SocialTagGroup'];
 type CommitPlayerProfileRequest = components['schemas']['CommitPlayerProfileRequest'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
-type WireConsentSurface = components['schemas']['ConsentSurface'];
-type ProposalsOptInResponse = components['schemas']['ProposalsOptInResponse'];
 type WirePhotoReview = components['schemas']['PhotoReviewDecision'];
 type ProfilePhotoResource = components['schemas']['ProfilePhotoResource'];
 type WeeklyHourResource = components['schemas']['WeeklyHourResource'];
@@ -112,15 +109,6 @@ export function toProfileOptions(response: PlayerProfileOptionsResponse): Profil
     socialTagSelection: {
       minimum: response.social_tag_selection.minimum_tags,
       maximum: response.social_tag_selection.maximum_tags,
-    },
-    // The unit stays on every one of these, where the tag counts above lose theirs: inside
-    // the app a `minimum` beside a list of eighteen can only be a count, and a `minimum`
-    // beside a distance is one refactor away from being read as metres.
-    searchRadius: {
-      minimumKm: response.search_radius.minimum_km,
-      maximumKm: response.search_radius.maximum_km,
-      stepKm: response.search_radius.step_km,
-      defaultKm: response.search_radius.default_km,
     },
   };
 }
@@ -291,38 +279,12 @@ export function toPlayIntentDeclared(response: {
 export function toPlayerProfileSurface(response: PlayerProfileReadResponse): PlayerProfileSurface {
   return {
     week: toWeeklyHours(response.weekly_hours),
-    searchRadiusKm: response.search_radius_km,
     playIntents: toPlayIntentDeclarations(response.play_intents),
     socialTagIds: toSocialTagIds(response.social_tags),
     photos: response.photos.map(toProfilePhotoHeld),
     ...(response.intro === undefined ? {} : { intro: response.intro }),
-    proposalsOptIn: toRecordedProposalsOptIn(response.proposals_opt_in),
     ...(response.gender === undefined ? {} : { gender: GENDER[response.gender] }),
     genderPreference: GENDER_PREFERENCE[response.gender_preference],
-  };
-}
-
-/**
- * The two screens that ask the proposals question, in the two spellings that exist — a table
- * for the gender tables' reason: the profile screen keys a sentence by it, so a third surface on
- * the wire stops this file compiling instead of producing a code the screen has no words for.
- */
-const CONSENT_SURFACE: Readonly<Record<WireConsentSurface, ConsentSurface>> = {
-  ONBOARDING: 'onboarding',
-  PROFILE: 'profile',
-};
-
-/**
- * The standing answer as the profile holds it — off the read, and off the opt-in write's own
- * answer, which is the same shape: the route answers with the record it just made, moment and
- * surface included, and that is what the screen draws rather than the press it sent.
- */
-export function toRecordedProposalsOptIn(served: ProposalsOptInResponse): RecordedProposalsOptIn {
-  return {
-    accepted: served.accepted,
-    copyVersion: served.copy_version,
-    answeredAt: served.answered_at,
-    surface: CONSENT_SURFACE[served.surface],
   };
 }
 
@@ -385,19 +347,14 @@ export function toWireGenderPreference(preference: GenderPreference): WireGender
  * Everything the second part collected, as the one body that ends it.
  *
  * It takes a `ProfileCommit` and not a draft, which is the whole of what keeps a partial
- * commit off the wire: the three answers that may legitimately be absent while a player is
- * walking the part have already been proved present by `readyToCommit`, so there is nothing
- * here to default, skip or guess at.
+ * commit off the wire: the answers that may legitimately be absent while a player is walking
+ * the part have already been proved present by `readyToCommit`, so there is nothing here to
+ * default, skip or guess at.
  *
  * **Order is carried, never imposed.** The photo ids are the order the player arranged —
  * the first one leads — and the tag ids and the ticked cells go as they are held. Nothing
  * is sorted and nothing is deduplicated: the picker cannot produce a repeat, and the commit
  * collapses repeated cells itself.
- *
- * **The opt-in travels with the words it was given against.** `copy_version` is the client's
- * identifier for the exact wording shown; the sentences themselves stay here and are never
- * sent. An answer with no wording beside it is not a value this app can build, so there is
- * nothing to check for at this boundary.
  */
 export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileRequest {
   return {
@@ -409,11 +366,6 @@ export function toCommitRequest(commit: ProfileCommit): CommitPlayerProfileReque
     photo_ids: [...commit.photoIds],
     weekly_hours: toWireWeeklyHours(commit.weeklyHours),
     location: { latitude: commit.location.latitude, longitude: commit.location.longitude },
-    search_radius_km: commit.searchRadiusKm,
-    proposals_opt_in: {
-      accepted: commit.proposalsOptIn.accepted,
-      copy_version: commit.proposalsOptIn.copyVersion,
-    },
     gender: WIRE_GENDER[commit.gender],
     // Sent always, including when it is `ANY`. The field has a default on the wire and the
     // app could omit it — it does not, because *what an unconstrained player sends* would

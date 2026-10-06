@@ -75,8 +75,8 @@
  * *Does a Player profile exist* is a per-player question with a per-player answer, which is
  * why it is allowed to be one. The glossary bans a per-player flag standing in for a fact
  * that is genuinely per sport, and its own test — *is this really asking whether a rating
- * exists for this sport?* — answers no here: tags, photos, a week, a location and a consent
- * have no sport dimension at all.
+ * exists for this sport?* — answers no here: tags, photos, a week, a location and who a
+ * player plays with have no sport dimension at all.
  *
  * **It is read after ratings, never before.** The second part is only reachable once the
  * first has produced something, so a brand-new account — no ratings, no profile — belongs

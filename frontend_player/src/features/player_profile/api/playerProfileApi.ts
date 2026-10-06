@@ -17,9 +17,7 @@ type PlayerProfileReadResponse = components['schemas']['PlayerProfileReadRespons
 type SetWeeklyHoursRequest = components['schemas']['SetWeeklyHoursRequest'];
 type WeeklyHoursResponse = components['schemas']['WeeklyHoursResponse'];
 type WeeklyHourResource = components['schemas']['WeeklyHourResource'];
-type ChangeSearchRadiusRequest = components['schemas']['ChangeSearchRadiusRequest'];
 type ChangeLocationRequest = components['schemas']['ChangeLocationRequest'];
-type SearchRadiusResponse = components['schemas']['SearchRadiusResponse'];
 type ChangeSocialTagsRequest = components['schemas']['ChangeSocialTagsRequest'];
 type SocialTagsResponse = components['schemas']['SocialTagsResponse'];
 type ChangePhotosRequest = components['schemas']['ChangePhotosRequest'];
@@ -27,8 +25,6 @@ type PhotosResponse = components['schemas']['PhotosResponse'];
 type ChangeIntroRequest = components['schemas']['ChangeIntroRequest'];
 type ChangeGenderRequest = components['schemas']['ChangeGenderRequest'];
 type ChangeGenderPreferenceRequest = components['schemas']['ChangeGenderPreferenceRequest'];
-type AnswerProposalsOptInRequest = components['schemas']['AnswerProposalsOptInRequest'];
-type ProposalsOptInResponse = components['schemas']['ProposalsOptInResponse'];
 type WireGender = components['schemas']['Gender'];
 type WireGenderPreference = components['schemas']['GenderPreference'];
 type WirePlayIntent = components['schemas']['PlayIntent'];
@@ -51,9 +47,9 @@ export interface PlayerProfileApiOptions {
 }
 
 /**
- * The Social tag vocabulary, how many of them a profile must hold, and the Search radius
- * bounds — in one round trip, because they are the same kind of thing and the same part of
- * onboarding needs them at the same moment.
+ * The Social tag vocabulary and how many of them a profile must hold — in one round trip,
+ * because they are the same kind of thing and the same step of onboarding needs them at the
+ * same moment.
  *
  * **Unauthenticated**, as the route is: it is closed reference data about the platform and
  * carries nothing about the player. `authenticated` is stated rather than inferred here for
@@ -143,7 +139,7 @@ export interface CommitPlayerProfileOptions {
 /**
  * Every answer from onboarding's second part, in one request.
  *
- * **One write, not six.** A partial commit — the tags saved and the consent lost — is the
+ * **One write, not six.** A partial commit — the tags saved and the week lost — is the
  * worst outcome this part has available to it, so the whole of it is one body and one
  * transaction ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)).
  *
@@ -172,7 +168,7 @@ export function commitPlayerProfile({
 }
 
 /**
- * The week, the radius and the per-sport Play intent — the three facts the Play screens read.
+ * The player's own profile — the week, the per-sport Play intent and every fact You draws.
  *
  * **One round trip across two aggregates**, which is the cheaper half of a precedent ADR-0090
  * already set on `GET /users/me`: two round trips are two things that can fail on a bad
@@ -215,9 +211,10 @@ export interface ChangeWeeklyHoursOptions {
  * so a *yes* is this request and a *not now* is a different one entirely
  * ([#275](https://github.com/Raketa02/Raketa/issues/275)).
  *
- * **Unkeyed, and no `signal`** — the radius write's two reasons, unchanged: a `PUT` that lands
- * the same state twice has nothing to deduplicate, and a cancelled write leaves the client
- * unable to say whether it landed.
+ * **Unkeyed, and no `signal`**, unlike the commit: that request *creates* an aggregate and a
+ * duplicate would be a second profile, where a `PUT` that lands the same state twice has
+ * nothing to deduplicate. And a cancelled write leaves the client unable to say whether it
+ * landed. Every write below takes this one's two reasons.
  */
 export function changeWeeklyHours({
   weeklyHours,
@@ -226,37 +223,6 @@ export function changeWeeklyHours({
   return httpRequest<WeeklyHoursResponse>({
     method: 'PUT',
     path: '/api/v1/players/me/weekly-hours',
-    body,
-    authenticated: true,
-  });
-}
-
-export interface ChangeSearchRadiusOptions {
-  readonly radiusKm: number;
-}
-
-/**
- * Replace this player's Search radius. **Whole kilometres, unkeyed, and idempotent.**
- *
- * A `PUT` rather than a `PATCH`, which is the shape ADR-0094 fixed for the third changeable
- * fact in this context and the shape the week beside it takes for a sharper reason: a blank
- * grid is a legal value, so `null` there would mean both *leave it alone* and *clear it*. Two
- * write shapes in one context is the thing worth avoiding, so the radius takes the same one.
- *
- * **No idempotency key**, unlike the commit: that request *creates* an aggregate out of six
- * answers and a duplicate would be a second profile, where a `PUT` that lands the same state
- * twice has nothing to deduplicate.
- *
- * **No `signal`**, for the reason the commit has none: a cancelled write leaves the client
- * unable to say whether it landed, and a search runs against whatever the profile now holds.
- */
-export function changeSearchRadius({
-  radiusKm,
-}: ChangeSearchRadiusOptions): Promise<SearchRadiusResponse> {
-  const body: ChangeSearchRadiusRequest = { search_radius_km: radiusKm };
-  return httpRequest<SearchRadiusResponse>({
-    method: 'PUT',
-    path: '/api/v1/players/me/search-radius',
     body,
     authenticated: true,
   });
@@ -278,7 +244,7 @@ export interface ChangeLocationOptions {
  * sends is already that cell — `areaAround` is applied the moment the fix is read, as it is
  * for the commit — so the precise fix does not cross the wire either.
  *
- * **Unkeyed, and no `signal`**, for the radius write's two reasons: a `PUT` that lands the
+ * **Unkeyed, and no `signal`**, for the week write's two reasons: a `PUT` that lands the
  * same state twice has nothing to deduplicate — which is what makes a write on every launch
  * free — and a cancelled write leaves the client unable to say whether it landed.
  */
@@ -307,7 +273,7 @@ export interface ChangeSocialTagsOptions {
  * is what a caller may draw — the week's rule, on the fact beside it: a client that kept what
  * it sent would hold a selection in an order the profile does not.
  *
- * **Unkeyed, and no `signal`**, for the radius write's two reasons.
+ * **Unkeyed, and no `signal`**, for the week write's two reasons.
  */
 export function changeSocialTags({
   socialTagIds,
@@ -368,7 +334,7 @@ export interface ChangeIntroOptions {
  * own profile read and nowhere else, and a response that echoed the line would be a fourth
  * shape. The author reads it back from the profile read.
  *
- * **Unkeyed, and no `signal`**, for the radius write's two reasons.
+ * **Unkeyed, and no `signal`**, for the week write's two reasons.
  */
 export function changeIntro({ intro }: ChangeIntroOptions): Promise<void> {
   const body: ChangeIntroRequest = { intro };
@@ -394,7 +360,7 @@ export interface ChangeGenderOptions {
  * answer back from the read — which its cache already holds, so the use case says why the
  * value sent is the value held.
  *
- * **Unkeyed, and no `signal`**, for the radius write's two reasons.
+ * **Unkeyed, and no `signal`**, for the week write's two reasons.
  */
 export function changeGender({ gender }: ChangeGenderOptions): Promise<void> {
   const body: ChangeGenderRequest = { gender };
@@ -418,7 +384,7 @@ export interface ChangeGenderPreferenceOptions {
  * **`204` and no body**, for the gender write's reason: the setting is served on the owner's
  * profile read and on no other shape. It gates the next search in both directions.
  *
- * **Unkeyed, and no `signal`**, for the radius write's two reasons.
+ * **Unkeyed, and no `signal`**, for the week write's two reasons.
  */
 export function changeGenderPreference({
   genderPreference,
@@ -427,41 +393,6 @@ export function changeGenderPreference({
   return httpRequest<void>({
     method: 'PUT',
     path: '/api/v1/players/me/gender-preference',
-    body,
-    authenticated: true,
-  });
-}
-
-export interface AnswerProposalsOptInOptions {
-  readonly accepted: boolean;
-  /** The identifier of the exact copy on screen at the press — never the words. */
-  readonly copyVersion: string;
-}
-
-/**
- * Answer the proposals question again, from the profile — the You tab's press on either
- * answer (ADR-0179 §8). **Every press records**, the same answer included: consent is
- * evidenced, and a re-affirmation against these words is a fact the stream keeps.
- *
- * **The surface is not a field.** It is the route's — `PROFILE` — and a body naming one is
- * ignored, because a client that could assert where a consent was gathered could assert one it
- * never gathered. `accepted` is required and not nullable here, unlike the commit's: the screen
- * **is** the question and pressing is the answer.
- *
- * It answers with **the record it just made** — the answer, its moment, its words and its
- * surface — which is what the screen then draws, never the press it sent.
- *
- * **Unkeyed, and no `signal`.** Not idempotent by design — twice is two records on purpose —
- * and a cancelled write leaves the client unable to say whether a consent was recorded.
- */
-export function answerProposalsOptIn({
-  accepted,
-  copyVersion,
-}: AnswerProposalsOptInOptions): Promise<ProposalsOptInResponse> {
-  const body: AnswerProposalsOptInRequest = { accepted, copy_version: copyVersion };
-  return httpRequest<ProposalsOptInResponse>({
-    method: 'PUT',
-    path: '/api/v1/players/me/proposals-opt-in',
     body,
     authenticated: true,
   });

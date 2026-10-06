@@ -1,25 +1,24 @@
 /**
  * The profile facts a Play screen reads and the You tab edits, in one round trip.
  *
- * `GET /api/v1/players/me/profile` carries the weekly hours, the Search radius and the
- * per-sport Play intent, across the two aggregates that own them
+ * `GET /api/v1/players/me/profile` carries the weekly hours and the per-sport Play intent,
+ * across the two aggregates that own them
  * ([#246](https://github.com/Raketa02/Raketa/issues/246)) — and, since the route grew for
  * *You* ([#466](https://github.com/Raketa02/Raketa/issues/466), ADR-0179 §4, §8), the Social
  * tags, the photos with their verdicts and the intro
- * ([#471](https://github.com/Raketa02/Raketa/issues/471)), the standing proposals answer with
- * its evidence, and the owner's own gender and preference
- * ([#472](https://github.com/Raketa02/Raketa/issues/472)). There is no `has_location`,
+ * ([#471](https://github.com/Raketa02/Raketa/issues/471)), and the owner's own gender and
+ * preference ([#472](https://github.com/Raketa02/Raketa/issues/472)). The Search radius and
+ * the proposals answer left it with the old loop
+ * ([#581](https://github.com/Raketa02/Raketa/issues/581)). There is no `has_location`,
  * because a profile cannot be committed without an area. This type is what the route serves
  * and this client reads, and a field appears the day both are true.
  *
  * ## Why this lives in `player_profile` and not in `play`
  *
  * Play is the only reader today, and it would have been the easier home. It loses to the
- * **writes**: `PUT /players/me/weekly-hours`, `PUT /players/me/search-radius` and
- * `PUT /play-intents/{sport}` are *"two writes that are not matchmaking's at all"*
- * ([`the-play-screens.md`](../../../../../docs/specs/matchmaking/the-play-screens.md) §0), and
- * a read whose three paired writes live in another feature is a read in the wrong feature.
- * *You* will draw the same three facts from the same route.
+ * **writes**: `PUT /players/me/weekly-hours` and `PUT /play-intents/{sport}` are writes that
+ * are not matchmaking's at all, and a read whose paired writes live in another feature is a
+ * read in the wrong feature. *You* draws the same facts from the same route.
  *
  * ## The one vocabulary this feature does not own
  *
@@ -37,7 +36,6 @@ import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Gender, GenderPreference } from './gender';
 import type { UploadedPhoto } from './photoCollection';
-import type { RecordedProposalsOptIn } from './proposalsOptIn';
 
 /**
  * What was **declared**, per sport — and absence means *undeclared*, never `NO_PREFERENCE`.
@@ -58,8 +56,6 @@ export interface PlayerProfileSurface {
    * what *changed from your profile* is compared against.
    */
   readonly week: readonly WeeklyHour[];
-  /** Whole kilometres. What the search screen's slider opens at. */
-  readonly searchRadiusKm: number;
   readonly playIntents: PlayIntentDeclarations;
   /**
    * The Social tags this player holds, **in the vocabulary's order** whatever order the
@@ -75,12 +71,6 @@ export interface PlayerProfileSurface {
   readonly photos: readonly UploadedPhoto[];
   /** The line this player wrote about themselves, or absent where none was written. Never `''`. */
   readonly intro?: string;
-  /**
-   * The standing answer to the proposals question, with its evidence. **Always present** — a
-   * profile cannot be committed without one — and the current answer only: a re-affirmation
-   * from the You tab replaces it, and the stream keeps the one it replaced.
-   */
-  readonly proposalsOptIn: RecordedProposalsOptIn;
   /**
    * The owner's own answer to the gender question — served on this one shape and on no other
    * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)

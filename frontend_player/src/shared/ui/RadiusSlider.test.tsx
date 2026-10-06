@@ -15,9 +15,10 @@
  *
  * The third is the reserved figure box, which is a `Text` nobody can see.
  *
- * Everything else — what the figure says, what the words say, what an increment does — is
- * asserted where a player meets it, in
- * `features/player_profile/components/socialRadiusStep.test.tsx`.
+ * Everything else — what the figure says, what the words say, what an increment does — was
+ * asserted where a player met it, on the radius step. That step left with the Search radius
+ * ([#582](https://github.com/Raketa02/Raketa/issues/582)), and this primitive has no caller
+ * until the design system decides whether it stays.
  */
 
 import { fireEvent, render, screen } from '@testing-library/react-native';

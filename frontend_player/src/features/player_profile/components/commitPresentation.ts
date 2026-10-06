@@ -2,17 +2,14 @@
  * The words the **end of the part** says: what finishing does, what is still wanted, and
  * what to do when it did not land.
  *
- * ## Why these are not in `optInPresentation`
+ * ## Why these are not in `genderPresentation`
  *
- * They are shown on the same screen, and they are a different kind of string. The consent
- * card's sentences are **evidence** — they are stamped with a version because what a player
- * agreed to is the wording they were shown, and re-wording one is a new version with the old
- * one retained. Nothing below is part of any agreement: it describes the state of a setup
- * flow, it is shown conditionally, and improving a sentence here changes what nobody
- * consented to. Putting it in the pinned file would either freeze copy that has no business
- * being frozen, or blur what the version identifier names.
- *
- * This is the file the note about the commit not existing yet was always going to become.
+ * They are shown on the same screen — *Who you play with* is the last step and carries the
+ * finish ([#582](https://github.com/Raketa02/Raketa/issues/582)) — and they are about a
+ * different thing. Nothing below is about who a player is or who they play with: it describes
+ * the state of a setup flow, it is shown conditionally, and it would say the same words on
+ * whichever step happened to end the part. That is how it moved here once already, from the
+ * proposals question that used to be last, without one sentence changing.
  *
  * ## What is deliberately not said
  *
@@ -29,6 +26,13 @@ import { STEP_THAT_ASKS, type MissingAnswer } from '../domain/profileCommit';
 import type { SocialStep } from '../domain/socialSteps';
 
 import { CHANGE_INTRO_LABEL, introRefusalSentence } from './introPresentation';
+
+/**
+ * The finish itself — **the act, and nothing promised past it.** It used to name what was on
+ * the other side (*show me players*); the Players deck that promise pointed at is gone, and
+ * what follows the commit is what Raketa keeps and then the app.
+ */
+export const FINISH_LABEL = 'Finish';
 
 /** What the finish promises, once there is something for it to promise. */
 export const FINISH_HINT = 'Sends everything you answered and finishes setting up';
@@ -47,7 +51,7 @@ export const COMMIT_FAILED_TITLE = "That didn't go through";
 /**
  * Said under the recovery sentence, and it is the load-bearing half.
  *
- * A player who has just answered seven screens and seen a failure has one question, and it is
+ * A player who has just answered six screens and seen a failure has one question, and it is
  * not *what went wrong*. Nothing was lost, and pressing again is safe — the retry carries
  * the same key as the attempt that failed, so it cannot produce a second profile.
  */
@@ -68,6 +72,15 @@ export const UPLOADING_TITLE = 'One moment — a photo is still arriving';
 export const UPLOADING_BODY =
   'Finishing now would leave it out, so we are waiting for it. Nothing else is holding this up.';
 export const UPLOADING_HINT = 'Waiting for a photo to finish uploading';
+
+/**
+ * The one answer the last step asks itself — so it is never *still wanted* from somewhere
+ * behind, and has no way back to name.
+ */
+const ASKED_ON_THE_LAST_STEP = 'gender' satisfies MissingAnswer;
+
+/** An answer a step behind the last one asks for — the ones a player is sent back to. */
+type AnswerAskedBehind = Exclude<MissingAnswer, typeof ASKED_ON_THE_LAST_STEP>;
 
 /** An answer the commit still needs, and the words that ask for it. */
 export interface MissingAnswerCopy {
@@ -92,27 +105,14 @@ export interface MissingAnswerCopy {
  * it names that cost on the control that leaves it, and this is where the cost is
  * collected: search and matchmaking have one spatial input, and a profile without it takes
  * part in neither. The step insists here rather than earlier because being trapped on step
- * four behind an OS prompt is not a setup flow; being asked once more at the end, with the
+ * five behind an OS prompt is not a setup flow; being asked once more at the end, with the
  * way back one press away, is.
  *
- * The radius is here for completeness rather than because a player can reach it: the radius
- * step writes the served default into the draft the moment it knows it, so an unanswered
- * radius means that step was never reached at all. It gets a real sentence anyway, because a
- * screen that only handles the case somebody predicted is a screen with a blank state.
- *
- * **The gender answer is here for the reason the week is**: the gender step will not
- * continue without one, so an absent answer at the end means the draft reached this screen
- * some other way. It names the answer about the player and never the preference beside it —
- * that one is unconstrained until somebody narrows it, so there is no version of this part
- * in which it can be outstanding.
- *
- * The proposals question has no entry: it is asked on this very screen, so what is missing
- * is not a step to go back to but the two controls immediately above the finish. That is
- * `optInPresentation`'s hint, and it stays there with the rest of the consent copy.
+ * **The gender answer has no entry**: it is asked on this very screen, so what is missing is
+ * not a step to go back to but the three controls above the finish. That is
+ * `genderPresentation`'s hint, and it stays there with the rest of the step's words.
  */
-export const MISSING_ANSWER_COPY: Readonly<
-  Record<Exclude<MissingAnswer, 'proposals-opt-in'>, MissingAnswerCopy>
-> = {
+export const MISSING_ANSWER_COPY: Readonly<Record<AnswerAskedBehind, MissingAnswerCopy>> = {
   availability: {
     title: 'We still need your ordinary week',
     body: 'One hour of the week is enough. Without any there is nothing to compare with another player’s week — and a week nobody gave is never read as never free, so we would rather ask than guess it.',
@@ -125,23 +125,11 @@ export const MISSING_ANSWER_COPY: Readonly<
     label: 'Set the area you play in',
     finishHint: 'Set the area you play in to finish',
   },
-  'search-radius': {
-    title: 'We still need how far you will travel',
-    body: 'How far out to look is what turns your area into a set of players. Setting up finishes once you have chosen a distance.',
-    label: 'Set how far you will travel',
-    finishHint: 'Set how far you will travel to finish',
-  },
-  gender: {
-    title: 'We still need one answer about you',
-    body: 'Matching you with the right players starts with who you are playing as. Prefer not to say is an answer too — it is never shown on your profile either way.',
-    label: 'Answer who you play as',
-    finishHint: 'Answer who you play as to finish',
-  },
 };
 
 /** An outstanding answer, and its words. The pair, so no caller has to re-derive one. */
 export interface AnswerStillWanted {
-  readonly answer: Exclude<MissingAnswer, 'proposals-opt-in'>;
+  readonly answer: AnswerAskedBehind;
   readonly copy: MissingAnswerCopy;
 }
 
@@ -158,8 +146,7 @@ export function answerStillWanted(
   missing: readonly MissingAnswer[],
 ): AnswerStillWanted | undefined {
   const answer = missing.find(
-    (candidate): candidate is Exclude<MissingAnswer, 'proposals-opt-in'> =>
-      candidate !== 'proposals-opt-in',
+    (candidate): candidate is AnswerAskedBehind => candidate !== ASKED_ON_THE_LAST_STEP,
   );
   return answer === undefined ? undefined : { answer, copy: MISSING_ANSWER_COPY[answer] };
 }
@@ -169,22 +156,20 @@ export function answerStillWanted(
  *
  * **The feature's own `code` table**, which is the half `recoveryMessage` deliberately
  * leaves to whoever owns the endpoint: a recovery category can say *check the details above
- * and try again*, and a screen with eight steps behind it has to say **which** detail and
+ * and try again*, and a screen with five steps behind it has to say **which** detail and
  * offer the way back.
  *
  * It is keyed by the wire code and never by the message — the message is a diagnostic the
  * backend writes for a log, and branching on it would ship English into every locale and
  * let a copy edit on the server change what an installed app does.
  *
- * One entry today. It is a table rather than an `if` because the commit has eight refusals
+ * One entry today. It is a table rather than an `if` because the commit has several refusals
  * and the others will want their own sentences the moment a screen can produce one. The
  * intro's refusal is **not** in it, and that is the point of the next function: nothing is
  * missing when a line is refused, so it is not an answer still wanted and does not take
  * those words.
  */
-const ANSWER_THE_COMMIT_REFUSED: Readonly<
-  Record<string, Exclude<MissingAnswer, 'proposals-opt-in'>>
-> = {
+const ANSWER_THE_COMMIT_REFUSED: Readonly<Record<string, AnswerAskedBehind>> = {
   weekly_hours_empty: 'availability',
 };
 

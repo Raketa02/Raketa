@@ -378,7 +378,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The Social tag vocabulary and how many to pick, and the Search radius bounds
+         * The Social tag vocabulary and how many to pick
          * @description Read-only, unauthenticated, no request body. Tag **ids** and their grouping cross the wire; the label a player reads is the client's own copy.
          *
          *     A tag id is permanent — it is persisted on profiles, so retiring a tag means dropping it from this response while continuing to honour it on the profiles that hold it. Ids are never reused and never renamed.
@@ -405,9 +405,9 @@ export interface paths {
         };
         /**
          * Every fact this player declared — what the Play screens and You read
-         * @description One read for everything a player declared, across the two aggregates that own it: the week, the radius and the per-sport Play intent the Play screens edit, and — since the *You* tab — the tags, the photos with their verdicts, the intro, the standing proposals answer, and the owner's own gender and preference. The one fact a search screen still needs from elsewhere — **which sports am I rated in** — is `GET /api/v1/ratings` and is not re-served here.
+         * @description One read for everything a player declared, across the two aggregates that own it: the week and the per-sport Play intent the Play screens edit, and — since the *You* tab — the tags, the photos with their verdicts, the intro, and the owner's own gender and preference. The one fact a Play screen still needs from elsewhere — **which sports am I rated in** — is `GET /api/v1/ratings` and is not re-served here.
          *
-         *     **`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial **before** a search is refused with `play_intent_not_declared` rather than after.
+         *     **`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial for a sport still undeclared.
          *
          *     **An empty `weekly_hours` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.
          *
@@ -425,11 +425,11 @@ export interface paths {
          * Commit every answer from onboarding's second part
          * @description Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body — the second call answers 200 and records nothing.
          *
-         *     **Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value — and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.
+         *     **Every rule the picker enforced is re-validated here.** The tag vocabulary and the tag floor and ceiling are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value — and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.
          *
          *     **`weekly_hours` are required**, at least one hour of the 7 × 16 week (07:00 to 23:00). Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served — it is fixed, and a client holds it as a constant.
          *
-         *     **The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.
+         *     **No search radius and no proposals opt-in.** Both were asked here and went with the ranking that read them (#581); a body that still carries either commits, and the two are ignored.
          *
          *     **`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer — there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.
          *
@@ -456,35 +456,11 @@ export interface paths {
          *
          *     **An empty list is a legal value and clears the week.** The floor of one ticked hour binds the *commit*, which is the answer a player is asked for at the end of onboarding, and not every later edit of it. A cleared week is read as *absent* by the matcher, never as a zero — silence is never scored (`docs/adr/0102`).
          *
-         *     **This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine notices that a search ran on a week the profile does not hold and asks; nothing in the matcher writes a profile, so a *yes* is this request. Declining writes nothing anywhere.
-         *
          *     Repeated hours are collapsed and the response carries the week as stored, in the platform's reading order — so a client can see what the profile now holds rather than assuming it kept what was sent.
          *
          *     It replaced `PUT /players/me/availability`, whose week was mornings, afternoons and evenings (`docs/adr/0189` §5).
          */
         put: operations["set_weekly_hours_api_v1_players_me_weekly_hours_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/players/me/search-radius": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Replace this player's Search radius
-         * @description Whole kilometres, unkeyed, and idempotent for the reason the week is.
-         *
-         *     **This is where a `KEEP_THIS_RADIUS` prompt is answered**, and where taking a relaxation rung becomes durable. A rung is *"an ask and never a correction"* — running a wider search writes nothing — and this is the request the offer to keep it turns into. Accepting is also what stops the prompt: a profile that holds the wider radius takes no rung on the next search, so the condition that raised the question is gone rather than suppressed.
-         */
-        put: operations["change_search_radius_api_v1_players_me_search_radius_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -506,7 +482,7 @@ export interface paths {
          *
          *     **What is sent is never what is kept.** The fix is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A fix that rounds to the cell already stored records nothing and still answers `204` — which is what makes a write on every launch free, and why there is no `Idempotency-Key`.
          *
-         *     **Nothing else moves.** A trip is a trip: the next deal deals around the new area, the radar refetches, *In your area* answers for the new cell — and nothing is reset, no radius changes and no prompt is raised. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.
+         *     **Nothing else moves.** A trip is a trip: whatever reads the area reads the new cell — and nothing is reset. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.
          */
         put: operations["change_location_api_v1_players_me_location_put"];
         post?: never;
@@ -530,7 +506,7 @@ export interface paths {
          *
          *     **Re-validated exactly as the commit re-validates** — against the served vocabulary and the served floor and ceiling — so the tab's picker and onboarding's cannot disagree about what a selection may be (`docs/adr/0179` §6).
          *
-         *     The response carries the tags **in the vocabulary's order**, which is what the profile read serves and what a card draws, so a client can see what the profile now holds rather than assuming it kept the order it sent. The next deal anybody runs reads the new tags off the candidate index, as it always has.
+         *     The response carries the tags **in the vocabulary's order**, which is what the profile read serves and what a card draws, so a client can see what the profile now holds rather than assuming it kept the order it sent. The next read of their record shows the new tags.
          */
         put: operations["change_social_tags_api_v1_players_me_social_tags_put"];
         post?: never;
@@ -580,7 +556,7 @@ export interface paths {
          *
          *     **`204` and no body.** The intro reaches the card, the record and its author's own profile read and nowhere else (`docs/adr/0170` §3), and the write does not become a fourth shape: read the line as stored — trimmed — back from `GET /players/me/profile`, as the two gender writes are read back.
          *
-         *     Unkeyed and safe to send twice: the same line twice records nothing, and so does withdrawing a line that was never written. The next deal reads the new line — or none — off the candidate index; search records already kept quote the line as it stood at the deal (`docs/adr/0104`).
+         *     Unkeyed and safe to send twice: the same line twice records nothing, and so does withdrawing a line that was never written. The next read of their record shows the new line — or none.
          */
         put: operations["change_intro_api_v1_players_me_intro_put"];
         post?: never;
@@ -604,7 +580,7 @@ export interface paths {
          *
          *     **`204` and no body, deliberately.** The owner's own profile read is the one response shape that carries a gender value out (`docs/adr/0179` §4), and the contract walk holds it to being the only one; the write answers nothing rather than becoming a second. Read the answer back from `GET /players/me/profile`.
          *
-         *     The mutual gate reads the new answer on the next search either side runs: the searcher's own live, everybody else's off the candidate index, which follows the event as it always has.
+         *     The mutual gate reads the new answer live, the next time the proposer, the fill or a rescue asks it of a pair.
          */
         put: operations["change_gender_api_v1_players_me_gender_put"];
         post?: never;
@@ -626,35 +602,11 @@ export interface paths {
          * Change who this player is willing to play with
          * @description A new durable answer to *who am I willing to play with* (`docs/adr/0096` §3). Unkeyed; an unchanged value records nothing.
          *
-         *     **It is mutual and durable, and narrowing it has an effect the player must be told about at the moment of setting**: they become invisible to the excluded side entirely — including to searchers who asked for anybody. The client says so from a reason code; learning it from silence is not acceptable. Seats already accepted are facts, not candidates: nothing already agreed is undone.
+         *     **It is mutual and durable, and narrowing it has an effect the player must be told about at the moment of setting**: they become kept off courts with the excluded side entirely — including with players who asked for anybody. The client says so from a reason code; learning it from silence is not acceptable. Seats already accepted are facts, not candidates: nothing already agreed is undone.
          *
-         *     **`204` and no body**, for the gender write's reason: the setting is served on the owner's profile read and on no other shape (`docs/adr/0179` §4). It gates the next search in both directions — this player's own, read live, and everybody else's, off the candidate index once the projection has followed the event.
+         *     **`204` and no body**, for the gender write's reason: the setting is served on the owner's profile read and on no other shape (`docs/adr/0179` §4). It is read live, in both directions, the next time the proposer, the fill or a rescue asks it of a pair.
          */
         put: operations["change_gender_preference_api_v1_players_me_gender_preference_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/players/me/proposals-opt-in": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Answer the proposals question again, from the profile screen
-         * @description **The one write on this surface that always records.** Every other `PUT` here is a preference and a no-op when nothing changed; this one is a consent, and *the player was asked again, against these words, on this surface, and answered the same way* is a fact a consent log has to evidence (`docs/adr/0089`). So the same yes twice appends two answers, and there is deliberately nothing to deduplicate.
-         *
-         *     **The surface is this route's — `PROFILE` — and never the body's.** The commit records `ONBOARDING` because the commit is the end of onboarding; a client that could assert where a consent was gathered could assert one it never gathered. `copy_version` is the client's, because the words are.
-         *
-         *     `accepted` is required and **not** nullable, unlike the commit's: there, *unanswered* is a state a client can be in and is refused with a code that says *ask the question*; here the screen is the question and pressing is the answer. The response is the standing answer as the profile read serves it, with the moment it was recorded.
-         */
-        put: operations["answer_proposals_opt_in_api_v1_players_me_proposals_opt_in_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -676,7 +628,7 @@ export interface paths {
          *
          *     **There is no null and no unanswered state.** `NO_PREFERENCE` is an explicit answer — *either kind of evening suits me* — and the matcher must be able to tell it from *I never opened that screen*, which is what an absent declaration means. Nobody is ever backfilled to it.
          *
-         *     **A declaration is not a search mode.** Mode is which tab you are on right now and has two values; intent is what you told the platform about this sport and has three. Switching the toggle for one search changes nothing here — this route is what *make this my intent* means.
+         *     **A declaration is not a game's kind.** A game is counted or for fun; intent is what you told the platform about this sport and has three values — this route is what *make this my intent* means.
          *
          *     **It needs no profile.** Intent is asked for at the tail of a rating run, which happens before onboarding's second part, so a declaration with no profile behind it is the ordinary first case.
          */
@@ -794,550 +746,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/searches": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Find me a game
-         * @description Returns a ranked shortlist of at most **twenty** people worth messaging, **unpaginated** — there is no page two, and past the last row there is an honest empty state.
-         *
-         *     **The breakdown ships with the search, not behind a tap.** Every term, its weight, its value, its contribution and the evidence it read ride on every row, because *Why 78?* has to open instantly.
-         *
-         *     **Send asks, never facts.** Your radius, grid, tags, rating, intent and gender preference are read from your profile at request time. There is no per-search radius input.
-         *
-         *     **Relaxation is offered, never applied.** When the shortlist comes back short the envelope carries `rung_offers` — your times, then your radius x1.5, then x2.0 — each with a **real** count from a genuine re-run and its own window. Taking one is a **new search citing this one**: post again with `offered_by_search_id` and `rung`. Your saved preferences stay yours, and **the quality floor is never relaxed**, so *nobody tonight* stays a real answer.
-         *
-         *     **Competitive and for fun select different weight vectors**, and the list visibly inverts between them.
-         *
-         *     **Deliberately not idempotent.** Two taps are two searches.
-         *
-         *     **Re-sorting costs no round trip:** `search.sorts_available` says which controls to draw, and a sort that would reorder nothing is not in it.
-         */
-        post: operations["run_search_api_v1_searches_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/searches/{search_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Read a shortlist back
-         * @description Returns a search you ran earlier, in **the same shape the `POST` returned it**, so *Why 78?* opens as fast a month later as it did on the day.
-         *
-         *     **The record is immutable; the gates are live.** Blocks, holds, account state and the mutual gender preference are re-evaluated at read time, and nothing is rewritten by doing so.
-         *
-         *     **A row those gates now exclude is stated as withheld** — it keeps its place in the list, carries no person, and does not say which gate fired. Branch on `withheld`.
-         *
-         *     **A searcher may read their own search and nobody else's.**
-         */
-        get: operations["read_search_back_api_v1_searches__search_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/lineups": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Fill the seats
-         * @description Seats a four — you and three others — chosen together rather than one at a time, and returns **all three arrangements** with a forecast each.
-         *
-         *     **Every gate binds all six pairs.** A block, a gender preference and the level tolerance are checked between *every two* of the four, not just between you and each of them. That is stricter than a shortlist and it compounds: a four can be impossible where candidates are plentiful, and the honest answer is a partial line-up carrying `NO_ADMISSIBLE_COMBINATION`.
-         *
-         *     **A seat is never filled below the quality floor** to complete a four, a newcomer least of all. *Three of four* is a real answer.
-         *
-         *     **Swapping sides costs no round trip.** All three arrangements cross, each with `is_best` and `is_evenest` — two separate booleans, because they can differ, which happens precisely when the four's levels are near-equal and balance has nothing left to say.
-         *
-         *     **Send `locked_seats` to hand-seat people.** From that moment the engine optimises **for the group** and says so in `search.optimised_for`, because you may end up with a worse individual match than an empty court would have given you.
-         *
-         *     **Send `completing_challenge_id` to finish a half-built court**, and send nothing else about it: the sport, the kind of evening and the locked seats are read off that challenge. **Any live member may fill it** — only the withdraw is the organiser's. The people who accepted come back as ordinary rows so the builder can draw them, everybody who has already answered that challenge is out of its own pool, and the window is never re-stamped.
-         *
-         *     **Somebody who let your invitation run out is out of that court's own pool, and out of nothing else.** Nobody is asked twice on one challenge, so they are not a candidate for this fill for as long as that court stands. Every **other** search of yours reaches them immediately, in any sport: their seat reopened and the open-challenge rule released them with it, because that rule holds the people still arranging a game and they are not one of them.
-         *
-         *     **A seated card shows the same number the shortlist showed.** Nothing is re-scored when somebody sits down.
-         *
-         *     **`candidates` is the pool the four were drawn from**, in Fit order, with the seated among them — look a seat's `player_id` up there. It is the list a pool opened on this answer draws, and the list `POST /forecasts` and the send resolve a pick against, so a court reached from a challenge has people to offer for its open seats without a shortlist of its own.
-         */
-        post: operations["run_lineup_api_v1_lineups_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/forecasts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Forecast a line-up you composed
-         * @description Returns every arrangement of a four **you** put together, each with its own forecast — for the builder, where you swap somebody in and the number has to move.
-         *
-         *     **This creates no search and records nothing.** Six swaps are not six searches, and recording them as such would put a lie in the one table the product judges itself by. There is no `search_id` in the response and nothing to read back.
-         *
-         *     **Seats may be empty.** A side with one player is read as if the missing player matched the one already there; the forecast comes back `provisional` with its `assumption`, and the moment you fill the seat the number is **exactly** the same as the final one.
-         *
-         *     **It is bound to a search you ran.** Every player you name must have appeared in that search's returned rows.
-         *
-         *     **No forecast arithmetic belongs on the client.** Every figure the builder can show comes from here or from `/lineups`.
-         */
-        post: operations["forecast_lineup_api_v1_forecasts_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/interest": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Your Let's play yeses
-         * @description **Outgoing and mutuals only.** There is no inbox: a yes nobody has answered stays silent, in both directions, which is what makes saying yes low-stakes. You are never told that somebody declined you, and you are never shown who said yes to you unless you said it back.
-         *
-         *     **Every outgoing row carries its own `expires_at`**, so the screen can show what is still live without knowing the window.
-         *
-         *     **`outstanding` carries the count, the cap and `ttl_days` for every sport**, before you are near either — a cap you cannot see is a refusal you cannot predict, and how long a yes lives is the number the deck's ending prints. Render these; never hardcode the numbers.
-         */
-        get: operations["read_interest_api_v1_interest_get"];
-        put?: never;
-        /**
-         * Let's play
-         * @description One tap, costing nothing — and it actually does something: you rise in that player's next search for this sport, **with the reason printed**, so the lift is never mistaken for a match.
-         *
-         *     **Nobody is notified.** A one-sided yes is silent and stays silent. It becomes visible only when the other person goes looking for a game.
-         *
-         *     **`search_id` is required.** It says which search surfaced this person — a yes citing a search that is unknown, that is somebody else's or that never showed them is refused, never recorded with an empty link.
-         *
-         *     **Idempotent.** Tapping again returns the same yes with the same expiry, at `200`.
-         *
-         *     **It lapses.** Every yes carries its own `expires_at`; when it passes the yes is simply gone, and that person may be dealt to you again. **Never compute the expiry yourself** — the window is ruleset configuration and does not cross the wire as a number.
-         */
-        post: operations["express_interest_api_v1_interest_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/deck": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Deal the deck
-         * @description Deals one batch of cards: one judgement at a time, no mode to pick and no setup.
-         *
-         *     **No mode, in either direction, and no declaration read.** Every deal scores under the same ruler for every viewer — shared tags lead, overlap second, a wide level window — whatever either of you declared, and a player who never declared is dealt without being asked to. On every card `INTENT_ALIGNMENT` is in `degraded_terms` as `NOT_READ_ON_THIS_SURFACE`, which is the surface's doing and says nothing about the person.
-         *
-         *     **Send `availability_override` if the player edited their week**, and the deal runs on it; omit it and the grid on the profile is used. It writes nothing: the deal comes back with a `KEEP_THESE_TIMES` prompt, and saving is a separate request the player makes. **A cleared week is a legal value** — unticking every cell deals a deck rather than being refused.
-         *
-         *     **A spent deal deals again.** Post again for a new deal with a new `search_id`; running out of cards is not running out of people, and only a fresh deal that comes back empty means the pool is thin. `pool.remaining` says how many eligible people are beyond this hand, and drops as hands are dealt.
-         *
-         *     **`pool.want_to_play_you`** says how many people have a live *Let's play* towards you that would be dealt — a count, never a list, and `0` when nobody is waiting. Somebody who said yes to you is dealt **unmarked**: they carry `inclusion_reason: INTEREST_LIFT` and nothing else says so, and they sit where their lift puts them rather than first by rule.
-         *
-         *     **Somebody you already have a court with is not dealt** — a live challenge or game, and for the cool-off after it is behind you, which is a ruleset window (thirty days at release) and never crosses the wire. Find a game still lists them.
-         *
-         *     **The order is the deck's variety**: the people Liveness lifted, the ones who said yes among them, then the rest. There is no re-sort — `sorts_available` is empty here, because a deck is one card at a time.
-         *
-         *     **No widening is offered.** `rung_offers` is `null` on a deal: the relaxation ladder belongs to the shortlist.
-         *
-         *     **Read it back** through `GET /api/v1/searches/{id}`, in this same shape, minus the two counts — they are true of the moment the hand was dealt.
-         */
-        post: operations["deal_the_deck_api_v1_deck_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/deck/reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Show them again
-         * @description Deals your deck whole again, for one sport.
-         *
-         *     **Three things lift at once, and only for this sport**: every *Not today* you gave, the people you were dealt today, and the cool-off on anybody you have had a court with. The next `POST /deck` deals all of them. What stays: the people you have a live *Let's play* on are still yours to wait on, another sport's deck is untouched, and the record that you once passed on somebody is kept — a card you see again is still one you have seen.
-         *
-         *     **Idempotent.** Pressing it twice in a row is one press.
-         *
-         *     **Nobody is told**, and nothing is returned. The only place a reset shows is your own next deal.
-         */
-        post: operations["show_them_again_api_v1_deck_reset_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/radar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Read the radar
-         * @description Every player rated in this sport inside your reach, at their distance and bearing — the population the deck deals from, with the deck's reach and none of its judgement.
-         *
-         *     **The sport is the whole ask.** No mode (every pairing scores under the deck's ruler), no radius (the reach is your own Search radius — there is no city), no position (the server holds your area), no week.
-         *
-         *     **Five gates and nothing after them.** Blocked either way, under a hold, disabled, a gender preference either way, and rated in the sport — then everyone inside the circle is drawn, each with a `fit` printed as served. No level band, no quality floor, no cool-off, no pass memory, no dealt memory: somebody you have a court with, somebody you said *not today* to and somebody you are matched with are all on the radar.
-         *
-         *     **Each row carries `bearing_deg` beside `distance_km`** — north `0`, clockwise, spot to spot, served and never derived — and `ratings[]`, every sport the player is rated in with their Level. Both are on the row and never inside `player_card`. The rows are ordered by distance and then by id, so a position means something.
-         *
-         *     **`pool.want_to_play_you` is the deck's number.** Computed by the deck's own rule — its gates and its exclusions — so the chip here and the chip on the deck are one number; omitted at zero. Somebody who said yes to you whom the deck would never deal is still drawn, carrying `inclusion_reason: INTEREST_LIFT`, and is not counted.
-         *
-         *     **A reading is not a deal.** It never enters the dealt memory: browse on Monday and do nothing, and Tuesday's deck deals the same people. Only an answer reaches the deck — `POST /interest` and `POST /passes` take this `search_id` exactly as they take a deal's — and after either the person **stays on the radar**.
-         *
-         *     **Read it back** through `GET /api/v1/searches/{id}`, in this same shape, minus the chip — it is true of the moment the reading ran.
-         */
-        post: operations["read_the_radar_api_v1_radar_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/passes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Not today
-         * @description Keeps somebody out of **your deck** for a while, and reaches nothing else.
-         *
-         *     **It is not a block, and it never becomes one.** You will still find that person in a shortlist tomorrow if you change your mind; it never touches their deck, and passing twice buys exactly the same window as passing once. The control that removes a person from a person is `POST /api/v1/blocks`, and it is meant to be the heavier gesture.
-         *
-         *     **Nobody is told.** Not them, not you: no count, no list, no *show them again*.
-         *
-         *     **`search_id` is required** — it says which deal this card came from.
-         */
-        post: operations["record_a_pass_api_v1_passes_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/prompt-declines": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Not now
-         * @description Stops a question being raised at you again for a while, and reaches nothing else.
-         *
-         *     **It changes no value.** Saying *yes* to one of these is a `PUT` through the route that owns the value — your radius, your week, your play intent — and this is what the other button does.
-         *
-         *     **It retires nothing**, including itself: the question standing right now still expires on its own, and this is about the next time it would have been asked.
-         *
-         *     **It is keyed by the question and never by the value quoted at you.** Declining *keep 22 km?* also answers *keep 32 km?* — you answered about a habit, not about a number. Which sport it goes quiet for depends on the question: a play intent is declared per sport, while your radius and your week are one fact each.
-         *
-         *     **There is no `search_id`** and no window to name.
-         */
-        post: operations["decline_a_prompt_api_v1_prompt_declines_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Your challenges
-         * @description **Sent and received in one list.** *Challenge sent* and *Challenge for you* are one standing read from two sides; tell them apart by whether `organiser_id` is yours.
-         *
-         *     **The standing is derived, never stored.** It is folded from the seats and the clock at the moment you asked, so a seat whose day ran out reads as lapsed whether or not anything has swept it yet.
-         *
-         *     **Ended challenges are here too**, carrying `DECLINED`, `LAPSED`, `WITHDRAWN` or `CALLED_OFF`. A list that quietly dropped this morning's is a list that lies.
-         *
-         *     **Except the one you cleared yourself.** A `CALLED_OFF` row whose game you dismissed (`POST /games/{game_id}/dismissal`) is left off this list as it is left off `GET /games`: one court, one act, and both of your lists read the same set. Nobody else's list moves.
-         *
-         *     **This is also the remedy for `open_challenge_stands`.** A refused send names nobody; read this to find out which of your own open games is in the way.
-         */
-        get: operations["read_challenges_api_v1_challenges_get"];
-        put?: never;
-        /**
-         * Send the challenge
-         * @description **One act, everybody at once.** A doubles send is one challenge containing four people, answered by each of them separately — never three separate invitations.
-         *
-         *     **Your own seat is accepted from birth.** You are the one proposing, so nothing asks whether you want to play the game you just built.
-         *
-         *     **Each invitee gets 48 hours from when *their* seat was invited**, so a seat filled later is not already half expired.
-         *
-         *     **The arrangement you built is what is recorded**, and it is what they answer — never a better one worked out afterwards.
-         *
-         *     **Everything is re-checked here**, in one transaction, because your line-up may be an hour old and nothing refetches it in the background. The send either happens whole or writes nothing at all: there is no partial send that quietly drops one person.
-         *
-         *     **The sport, the kind of evening and the week come from the search**, not from this request. There is no window picker anywhere — you change your window by changing your grid.
-         */
-        post: operations["send_challenge_api_v1_challenges_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges/{challenge_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * One challenge
-         * @description **The screen you answer on.** The list tells you what you have been asked; this tells you who is asking and what this platform makes of playing them.
-         *
-         *     **The pairing is computed when you open this, in your own direction.** Nothing is copied at send and nothing is replayed from the organiser's search — which is why a challenge born of a mutual yes draws the same screen as one built from a shortlist, and why the Fit here is genuinely yours.
-         *
-         *     **The card block is drawn while the arrangement is being decided and at no other time.** A challenge that ended draws its arrangement and the names alone, and so does the seat of somebody who declined or lapsed inside one that is still open: they have left, and that person is a stranger to you again.
-         *
-         *     **Answering is never gated on any of it.** If the pairing cannot be computed — you hold no rating in this sport, or something the matcher needs could not be read — `pairing_absence` says which, the arrangement answers as always, and the buttons are drawn from the standing.
-         *
-         *     **Nothing here is re-checked against who is reading.** The safety gates ran when this challenge was minted, in both directions, and they are not run again.
-         */
-        get: operations["read_challenge_api_v1_challenges__challenge_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges/{challenge_id}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Accept your seat
-         * @description **Your yes matters on its own**, and is not conditional on the other seats: the conversation opens on the *first* acceptance and grows with each one, so there is no waiting room and no single moment where the game becomes real.
-         *
-         *     **The seat is not in the path** because you hold at most one in any challenge — and nobody may answer for anybody else.
-         *
-         *     The challenge reads `ON` once **every** seat is accepted, with no special case for the organiser and none for singles.
-         */
-        post: operations["accept_seat_api_v1_challenges__challenge_id__accept_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges/{challenge_id}/decline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Decline your seat
-         * @description **Your no is about you.** It reopens exactly your seat and disturbs nothing else: the people who already agreed did nothing wrong and are still in the game, and the organiser may offer your seat to somebody else.
-         *
-         *     **Nobody is told you declined**, and no response anywhere names you as having done so.
-         *
-         *     **Saying nothing is not this.** Silence past your day is a *lapse*, which is a different fact and is counted apart — the platform never files it as a judgement you made.
-         */
-        post: operations["decline_seat_api_v1_challenges__challenge_id__decline_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges/{challenge_id}/seats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Fill the open seats
-         * @description **Grows a court that is already standing**, from a line-up you just built. The people who accepted keep their places and their answers; the open seats are offered to the people you name.
-         *
-         *     **Any live member may do this** — growing a court and ending one are different acts: removing a challenge is the organiser's while nobody has joined and nobody's once somebody has, and calling off the game a court became is any player's on it. A challenge born of two mutual yeses has an organiser who is only whoever said yes second, and leaving the other one unable to finish the four would make an arbitrary tiebreak decide whose game it is. Somebody who declined or let their day run out is **not** a live member.
-         *
-         *     **Post the whole court, not the new seats.** An acceptance is to the game and not to the side, so you may move somebody across the net — and you may never take them out.
-         *
-         *     **Each newly seated player gets their own 48 hours**, dated from this moment. A seat filled later is not already half expired, and nobody's existing deadline moves.
-         *
-         *     **The window is not re-stamped.** The week this challenge was proposed for was fixed when it was sent, and a challenge born of a mutual yes has none at all — the plan, not the window, is what says when anybody actually plays.
-         *
-         *     **Everything is re-checked here**, in one transaction, exactly as a send is: the four fail-closed gates over the whole court, and the open-challenge rule with **this** challenge excepted and no other. The fill either happens whole or writes nothing.
-         *
-         *     **Somebody who let your invitation run out is out of this court's own pool, and out of nothing else.** Nobody is asked twice on one challenge, so they are not a candidate for this fill for as long as this court stands — and asking them again is a **new** challenge rather than a seat on this one. Every **other** search of yours reaches them immediately, in any sport: their seat reopened and the open-challenge rule released them with it.
-         */
-        post: operations["fill_seats_api_v1_challenges__challenge_id__seats_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges/{challenge_id}/withdrawal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Remove the challenge
-         * @description **Remove the challenge** — the organiser's act on a court that was never a game, and admitted exactly while **nobody besides the organiser holds an accepted seat**: before anybody has answered, and again once everybody who joined has left — whatever seats are still deciding. The moment somebody has joined it is refused: a court somebody has joined is nobody's to end for the others, so from then on the organiser leaves it like anybody else, and it is over by itself when nobody is on it, or one player is and nobody is still deciding. The invitees' challenges read `WITHDRAWN` and offer no answer — a yes or a no on a removed challenge is refused with `challenge_is_over` — and an invitation whose day was still running is neither answered nor unanswered: it leaves the record that prices silence, and the lapse loop writes nothing for it.
-         *
-         *     **A court that has been a game has no exit anybody presses.** *Call it off* lived on this route and is gone: no player's single decision ends a game for the others. Such a court is called off by the departure that leaves at most one player on it, or by its hour when it is still short of a player — `CALLED_OFF`, with `ended_by` the leaver or nobody — and asking this of it is refused with `court_has_been_a_game`.
-         *
-         *     **Whole-challenge, and it never removes one person.** A withdraw ends the arrangement for everybody on it, and taking one person out of a court that still stands is refused here as it is everywhere else.
-         *
-         *     **Irreversible.** There is no route back. Asking the same people again is a **new** challenge, with fresh deadlines and its own record of who has answered — which is what it actually is. That a removal can be followed by a resend to the same person, on a fresh clock, is a named and accepted risk with its falsifier written down.
-         *
-         *     **What this releases is the people on the court.** A send holds its pairs for as long as an answer is owed; this is that exit. Somebody who let their day run out needed none: their seat reopened and the open-challenge rule released them with it.
-         *
-         *     **A noun and not a verb**, because what this creates is the ending — the withdrawal, one of the two things in this context that a fold of the seats could never produce. The conversation is destroyed in the act where one exists: there is none before anybody has answered, and there may be one the organiser is alone in again.
-         */
-        post: operations["withdraw_challenge_api_v1_challenges__challenge_id__withdrawal_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges/{challenge_id}/departure": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Leave the game
-         * @description **You are out of a court you had agreed to** — a game, or a court that is not whole yet. Your seat reopens on the challenge; where the court had become a game, that game survives with your seat drawn empty, and the people still on it keep what they agreed — the plan, the room, the record. Anyone still on the court may fill your seat the way a half-built court is filled, and the newcomer's yes re-seats the **same** game.
-         *
-         *     **Any player on the court, the organiser included**, while the court stands — and, on a game, while it is awaiting its entry and its agreed moment is ahead or no moment is agreed yet. Once the moment has passed, leaving means nothing and is refused; a court that is not a game has no moment to guard.
-         *
-         *     **A court is over when at most one player is on it and no seat is awaiting an answer**, and the organiser is a player in that rule. Before a game the challenge ends by itself — as `DECLINED`, because a departure is a no — and its room with it. On a game, the departure that leaves one player on it **ends the court with its game** in this request: the challenge reads `CALLED_OFF` naming you, `GET /games` reads `CALLED_OFF` naming you, and the room is gone. Singles included: an opponent who leaves calls the game off — for the person they leave, too.
-         *
-         *     **You are out of this court's own pool for as long as it stands.** Nobody is asked twice on one challenge; being asked again is a **new** challenge. Every other search reaches you at once — the pair rule released you the moment you left.
-         *
-         *     **The others are told**: the room draws *{name} left — that seat is open again*, and your own list and inbox no longer hold the game or the room.
-         *
-         *     **Two people may leave**, and two seats may be open. Nothing here prices a departure yet — it is recorded, with its moment, and that is all.
-         *
-         *     **A noun and not a verb**, like the withdrawal: what this creates is the departure.
-         */
-        post: operations["leave_game_api_v1_challenges__challenge_id__departure_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/challenges/{challenge_id}/dismissal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Remove this row
-         * @description **Clear a called-off court from your own two lists**, met from the Chats row — the same act `POST /games/{game_id}/dismissal` is from the Now card, recorded on the same game, read by both lists (`docs/adr/0173`, `docs/adr/0175` §5). Yours alone: nobody else's lists move, and the game, its record and the challenge are untouched. It is instant and there is no undo — a mis-tap loses the row and the card and nothing else, which is why there is no sheet.
-         *
-         *     **For everybody the court asked.** The card's trash is admitted for players on the game; the row is drawn for everybody with a seat on the challenge, answered or not — an invitee still deciding on a fill when the court was called off has a row and never had a card — so this door admits anybody holding a seat, and hands the act to the game on the court's word.
-         *
-         *     **Only on a court that is `CALLED_OFF`**, refused with its own code on every other standing.
-         *
-         *     **A noun and not a verb**, like the card's: what this creates is the dismissal, and it answers nothing because the thing a redraw would draw is the thing you removed.
-         */
-        post: operations["dismiss_court_api_v1_challenges__challenge_id__dismissal_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/conversations": {
         parameters: {
             query?: never;
@@ -1355,7 +763,7 @@ export interface paths {
          *
          *     **Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over. The difference is the difference between a record and a room.
          *
-         *     **A game's details find its chat here**, by the row whose `game_id` is the game's.
+         *     **A game's details find its chat here**, by the row whose `booking_id` is the booking's.
          */
         get: operations["read_conversations_api_v1_conversations_get"];
         put?: never;
@@ -1520,8 +928,6 @@ export interface paths {
          *     **The standing is derived, never stored.** It is folded from the record and the clock at the moment you asked, so a game whose entry window ran out reads as never played whether or not anything has swept it — nothing sweeps it, because there is nothing for a sweep to correct.
          *
          *     **`read_at` is the instant every standing and deadline here was folded against.** Render your countdowns from it, so they cannot disagree with the standing beside them.
-         *
-         *     **A called-off game you have dismissed is not here** (`POST /games/{id}/dismissal`), on this device and every other — the dismissal is recorded on the game, once, and subtracted on every read.
          */
         get: operations["read_games_api_v1_games_get"];
         put?: never;
@@ -1654,162 +1060,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/games/{game_id}/dismissal": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Remove this card
-         * @description **Clear a called-off court from your own two lists** — the game's card from Now and the challenge's row from Chats (`docs/adr/0172` §5, `docs/adr/0173`). Yours alone: nobody else's lists move, and the game, its record and the challenge are untouched. It is instant and there is no undo — a mis-tap loses the card and the row and nothing else, which is why there is no sheet.
-         *
-         *     **Recorded on the game, once per player**, so the card and the row are gone on your other phone and after a reinstall; `GET /games` and `GET /challenges` each subtract it on every read rather than keeping a list.
-         *
-         *     **Only on a game that is `CALLED_OFF`**, and only for somebody on its court — the presser, or the players the leaver left; the leaver's seat is open and the card was never on their rail.
-         *
-         *     **A noun and not a verb**, like the departure: what this creates is the dismissal, and it answers nothing because the thing a redraw would draw is the thing you removed.
-         */
-        post: operations["dismiss_game_api_v1_games__game_id__dismissal_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/plans": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Your plans
-         * @description **A plan is one challenge's, and this is the only plan read.** One row for every court you hold an accepted seat on — arranging, whole, or over — keyed by `challenge_id`. The room draws it by its own `challenge_id` from the moment it opens; Now joins it to a game by the game's `challenge_id`. The plan is not a field on either, because a game is a record of an evening and a plan is an agreement about a future, and the contexts do not read each other.
-         *
-         *     **A court with nothing agreed is a row with three nulls, and it carries the anchor.** Absence means one thing only: you hold no accepted seat on that court. An invitee still deciding gets no row; somebody who left gets no row.
-         *
-         *     **`anchor` is what the day chips run from** — the challenge's send until the game exists, then the game's `planned_at`, only ever later.
-         *
-         *     **There is no `read_at` here, deliberately.** A plan folds nothing against the clock — its day and hour are wall-clock facts, drawn literally and never counted down — so there is no instant for it to have been folded against. Fold the card against `GET /games`' `read_at`, which keeps every clock on that screen the same one.
-         *
-         *     **`agreed_point` is derived and sent**: the agreed instant when the day and the hour are both recorded, the start of the following local day when only the day is, and `null` when no day is.
-         */
-        get: operations["read_plans_api_v1_plans_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/plans/{challenge_id}/place": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Set where you are meeting
-         * @description **Any member may fill or change any slot, any number of times.** There is no lock and no rate limit — every change writes a system line naming who and what, and **the line is the friction**.
-         *
-         *     **Writing the value already there records nothing and answers `200`.** Without that the room fills with *Tomek set the place* three times over.
-         *
-         *     **This is a note and never a court.** No id, no lookup, no autocomplete, no reuse, no geocode — and nothing anywhere reads it. One club will be spelled four ways and nothing will notice, which is what refusing a venue record costs.
-         */
-        put: operations["set_place_api_v1_plans__challenge_id__place_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/plans/{challenge_id}/day": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Set the day you are playing
-         * @description **A local day in the platform's one zone**, so one arrangement reads the same on every phone in it.
-         *
-         *     **Clamped to 7 days past the row's `anchor`** — the send until the game exists, then `planned_at` — which is what keeps a plan from naming a day on which *we played* can no longer be said, and what leaves every plannable day at least twenty-four hours to say it once there is a game. The anchor only moves later, so a day set before the court was whole stays valid after.
-         *
-         *     **Writing the day already there records nothing and answers `200`.**
-         */
-        put: operations["set_day_api_v1_plans__challenge_id__day_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/plans/{challenge_id}/hour": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Set the time you are playing
-         * @description **The hour is the agreement, not a guess at a booking.** Nothing on this platform will ever hold a court, so nothing can ever contradict it — there is no un-agreeing to fear, only re-agreeing, and any member may do that at any time.
-         *
-         *     **Thirty-minute steps between 06:00 and 23:00, validated here.**
-         *
-         *     **Writing the hour already there records nothing and answers `200`.**
-         */
-        put: operations["set_hour_api_v1_plans__challenge_id__hour_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/plans/{challenge_id}/lock": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Agree the plan
-         * @description **We are agreed.** Any member may lock, once the court is whole and all three slots are set — and locking is an **act** rather than a fourth slot: a complete plan is one everybody *could* agree, and this says somebody did. It writes a system line into the room, which is the whole of what it does.
-         *
-         *     **The lock waits for the court.** Two of four may set where, day and hour; they may not agree them for four. While a seat is open or unanswered the answer is `the_court_is_not_whole`, and the card draws the count line where this button will be.
-         *
-         *     **It takes no body.** The value is the three slots and they are already recorded; sending one back would be the second place that fact is true.
-         *
-         *     **A locked plan is not a frozen one.** Any member may still move any slot afterwards, the plan stays locked, and every move writes its own line — there is no un-agreeing to fear, only re-agreeing. **The game leaving its entry window is still the only thing that freezes a slot.**
-         *
-         *     **There is no unlock**, for the same reason a slot is never emptied: the lock is a thing that happened.
-         *
-         *     **Locking a plan that is already locked answers `200` and records nothing**, and the first lock's `locked_at` is the one that stands.
-         */
-        put: operations["lock_the_plan_api_v1_plans__challenge_id__lock_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/sportsmanship": {
         parameters: {
             query?: never;
@@ -1859,7 +1109,7 @@ export interface paths {
          *
          *     **Only your most recent rating of a given person counts.** Rating somebody again after another game replaces what you said last time rather than adding to it, so partners who play every week cannot inflate each other by volume.
          *
-         *     **A low rating feeds the average and nothing else.** It does not pass, hide or block, and it will not stop you being matched with that person again. `POST /api/v1/passes` and `POST /api/v1/blocks` are the controls that do those things, and both are meant to be deliberate.
+         *     **A low rating feeds the average and nothing else.** It does not hide or block, and it will not stop you being matched with that person again. `POST /api/v1/blocks` is the control that does, and it is meant to be deliberate.
          *
          *     **Nobody is told, and no individual answer is ever shown to anybody.** What reaches every reader — the person you rated included — is an average out of five beside how many different people it rests on, over their fifty most recent raters (ADR-0179 §5).
          */
@@ -1909,11 +1159,11 @@ export interface paths {
          * One player's record
          * @description Who this person is, as of the moment you opened it.
          *
-         *     **Read through a prior disclosure, never about a person.** It opens for somebody a search of yours returned, somebody you share a live challenge, a game or a group with, somebody in a group you run, and yourself — and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.
+         *     **Read through a prior disclosure, never about a person.** It opens for somebody you were on a game with, somebody you share a group with, somebody in a group you run, and yourself — and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.
          *
-         *     **Nothing expires but a group.** A search record is kept for ever, so a sheet you could open this morning opens next year — any shorter window could only refuse a face the app is currently showing. A group opens it while you are both in it, because its Members lists who is in it now — and while you run an official group they are in.
+         *     **Nothing expires but a group.** A game you were both on discloses for as long as you are both on it, so a sheet you could open this morning opens next year. A group opens it while you are both in it, because its Members lists who is in it now — and while you run a group they are in.
          *
-         *     **The gates are live.** A block placed since the search, a hold, an account that may not be shown and the mutual gender preference are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered. **The gender preference is the one gate that does not reach whoever runs the group they are in**: it says who a player is willing to be matched with, and running their group is not that.
+         *     **The gates are live.** A block placed since, a hold and an account that may not be shown are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.
          *
          *     **Asking about yourself is allowed** and answers `is_self: true` — the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.
          *
@@ -2836,7 +2086,7 @@ export interface paths {
         };
         /**
          * A booked game
-         * @description The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** — a QR payload and a short code, theirs alone. **The chat is the reader's room whose `game_id` is this game's**, in `GET /conversations`.
+         * @description The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** — a QR payload and a short code, theirs alone. **The chat is the reader's room whose `booking_id` is this booking's**, in `GET /conversations`.
          *
          *     **A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid — *You?*), with `rescue` — no check-in code, no `leaving`. Nothing is recorded.
          */
@@ -3125,32 +2375,6 @@ export interface components {
             text: string;
         };
         /**
-         * AnswerProposalsOptInRequest
-         * @description The proposals question, answered again from the profile screen.
-         *
-         *     ``accepted`` is a required ``bool`` and **not** nullable, which is the one
-         *     place this differs from the commit's `ProposalsOptInRequest`: there,
-         *     *unanswered* is a state a client can legitimately be in and is refused with
-         *     a code that says *ask the question*; here the screen **is** the question
-         *     and pressing is the answer, so ``null`` is a 422 rather than a fact.
-         *
-         *     **The surface is not a field.** It is the route's — ``PROFILE`` — and a
-         *     body naming one is ignored, because a client that could assert where a
-         *     consent was gathered could assert one it never gathered.
-         */
-        AnswerProposalsOptInRequest: {
-            /**
-             * Accepted
-             * @description The player's answer, pressed again.
-             */
-            accepted: boolean;
-            /**
-             * Copy Version
-             * @description Identifier of the exact copy the player was shown. Not the copy itself — the words are the client's and are never stored here.
-             */
-            copy_version: string;
-        };
-        /**
          * AnswerTheCardRequest
          * @description A whole card, answered once.
          *
@@ -3163,72 +2387,6 @@ export interface components {
              * @description The players you are rating. **Leave somebody out to leave them blank**, and send an empty list to answer the card without rating anybody — both are answers, and both close the card for ever.
              */
             ratings?: components["schemas"]["StarsGivenSchema"][];
-        };
-        /**
-         * ArrangementSchema
-         * @description One way round, with its own forecast. **All of them cross.**
-         *
-         *     There are exactly three pairings of four people and the engine walks all
-         *     three to choose. Returning what it already knows costs nothing and makes
-         *     *Even it out* a **selection** rather than a calculation — every swap the
-         *     builder permits is one of these, so there is no arithmetic left for a client
-         *     to be tempted by.
-         */
-        ArrangementSchema: {
-            /**
-             * Pairing Id
-             * @description Which of the arrangements, stable within one answer
-             */
-            pairing_id: number;
-            /**
-             * Is Current
-             * @description The one being drawn: **the evenest on a line-up**, and the seat order you sent on a forecast.
-             *
-             *     A line-up opens on the closest game of the three, in both modes — the same re-seating *Even it out* performs by hand. **Who is on the court is still the group objective's choice** and `group_reason` still says why; what this decides is only which way round they sit. `lineup.seats` follows it.
-             */
-            is_current: boolean;
-            /**
-             * Is Best
-             * @description Best by the group objective. **The objective itself is never returned** — a second score you would have to trust is worse than none — so `group_reason` names what decided it instead.
-             *
-             *     **Omitted on every arrangement when no objective was computed**, rather than pointed at something else: a line-up with a seat still open, a singles line-up, and every forecast. There is nothing to be best *by* in any of them — no cross pairs, no seat delta, no mean over three Fits — and *Even it out* is then the only selection there is. Draw `is_evenest`.
-             */
-            is_best?: boolean;
-            /**
-             * Is Evenest
-             * @description The closest game of the three — what *Even it out* selects. **A separate boolean from `is_best` because the two can differ**, which happens precisely when the four's levels are near-equal and balance has nothing left to say.
-             */
-            is_evenest: boolean;
-            sides: components["schemas"]["SidesSchema"];
-            forecast: components["schemas"]["ForecastSchema"];
-            /**
-             * @description The two side strengths the forecast was computed from, and the signed difference between them. **The same computation `pct` is** — an arrangement whose sides are equal reads `gap` 0 and the evenest `pct` of the three.
-             *
-             *     **A provisional arrangement carries one like any other**, under the same assumption `pct` is carried under: the empty seat is read as if the missing player matched the one already there, and `provisional` carries that caveat for all four numbers at once.
-             */
-            split: components["schemas"]["SplitSchema"];
-        };
-        /**
-         * ArrangementSeatSchema
-         * @description One seat within one arrangement: where it is, and who is in it.
-         *
-         *     `relationship` is **stated and never inferred from the side** — the whole
-         *     partner/opponent asymmetry hangs on it, and a client deriving it would be a
-         *     second implementation of a domain rule.
-         */
-        ArrangementSeatSchema: {
-            /**
-             * Seat Index
-             * @description Which seat, stable across all three arrangements: 0 is you, 1 is beside you, 2 and 3 are across the net.
-             */
-            seat_index: number;
-            relationship: components["schemas"]["Relationship"];
-            /**
-             * Player Id
-             * Format: uuid
-             * @description Who is in this seat. **Omitted on an open seat** — the top-level `seats` list says why that one is open.
-             */
-            player_id?: string;
         };
         /**
          * AssessmentStepResponse
@@ -3261,52 +2419,6 @@ export interface components {
             transcript: components["schemas"]["TranscriptEntryResponse"][];
             question?: components["schemas"]["QuestionResponse"] | null;
             result?: components["schemas"]["ResultResponse"] | null;
-        };
-        /**
-         * AtStakeSchema
-         * @description What a **counted** game against this opponent would do to your Level.
-         *
-         *     Filled by the backend, never by the matcher and never by the client — it is
-         *     the rating engine's own update rule read forward (``docs/adr/0139``), so the
-         *     pair printed here is the pair the game will deliver if it is played. Omitted
-         *     in for-fun, where a counted result is meaningless rather than unavailable.
-         *
-         *     **Neither figure is ever zero**, and it is priced head-to-head: in a doubles
-         *     sport the game will be a four and the other two seats are unknown when the
-         *     card is drawn, so the magnitude carries that sport's weighting while the
-         *     pairing is the one you are looking at.
-         */
-        AtStakeSchema: {
-            /** Win Delta */
-            win_delta: number;
-            /** Loss Delta */
-            loss_delta: number;
-        };
-        /**
-         * AvailabilityOverlapEvidence
-         * @description How much of the searcher's week the candidate is free in.
-         *
-         *     The term is ``|shared| / |mine|`` and has **no constants at all** — the
-         *     denominator is the searcher's own ticked cells, which is what makes the
-         *     reading asymmetric and what makes it a fact about the pair.
-         *
-         *     Overlap is evidence a game can be *arranged*, never a proposed time, which is
-         *     why a candidate sharing no slot at all is still shown: the times rung exists
-         *     for exactly that pairing.
-         */
-        AvailabilityOverlapEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "availability_overlap";
-            /**
-             * Shared Count
-             * @description Hours of the week both of them ticked
-             */
-            shared_count: number;
-            /** @description The soonest hour both ticked, or null when there is none */
-            next_slot: components["schemas"]["SharedSlot"] | null;
         };
         /** BandResponse */
         BandResponse: {
@@ -3561,85 +2673,6 @@ export interface components {
          */
         CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB";
         /**
-         * CandidateSchema
-         * @description One row of the shortlist: the pairing, and the person.
-         *
-         *     Three field families have a **different author** from the rest and are
-         *     attached by the backend after the scorer returns — the card, the at-stake
-         *     block and the distance. None of them is a fact the scorer may see, and none
-         *     may be computed by the client. **On a reading two more join them**, the
-         *     bearing and the sport chips, on the same argument.
-         *
-         *     On a read-back this row means *the live gates still admit this person*, and
-         *     it says so: ``withheld`` is ``false``, positively, rather than absent. A row
-         *     the gates no longer admit is a :class:`WithheldRowSchema` instead, and the
-         *     two are a union precisely so that **rendering a person the product has agreed
-         *     not to show is not a shape this contract can hold** (``docs/adr/0109``).
-         */
-        CandidateSchema: {
-            /**
-             * Withheld
-             * @description Present only on a read-back, where it is always `false`: the fail-closed gates were re-evaluated and this row still stands. A row they no longer admit arrives as the withheld shape instead.
-             * @constant
-             */
-            withheld?: false;
-            /**
-             * Player Id
-             * Format: uuid
-             */
-            player_id: string;
-            /**
-             * Fit
-             * @description The printed number, out of a hundred, and the only one a player is asked to trust. It contains no Liveness.
-             */
-            fit: number;
-            /**
-             * Distance Km
-             * @description Kilometres to one decimal, measured between the two **drawn spots** — one fixed point inside each player's coarse area, the same for every viewer — and never below `0.1`. The Fit does not read it: the distance term and the radius gate measure cell to cell, so a player at the very edge may print `10.3` inside a 10 km reach. **Promoted out of the distance evidence** so the *Closest* sort reads a field rather than reaching into a variant, and **omitted** rather than sent as zero when the distance term stood down — which is what lets a stood-down row sort last instead of first.
-             */
-            distance_km?: number;
-            /**
-             * Bearing Deg
-             * @description **On a reading only.** The compass bearing from your drawn spot to theirs — north `0`, east `90`, clockwise, a whole degree — measured spot to spot beside `distance_km`, so the two place one point on the radar. **Served, never derived**: the client computes no geometry beyond scaling. On the row and never inside `player_card`, because its value depends on who is looking. Omitted on every other surface.
-             */
-            bearing_deg?: number;
-            /**
-             * Ratings
-             * @description **On a reading only.** Every sport this player is rated in, with the Level held there, in the sport registry's order — the card's sport chips. `player_card.level` is the same number for the reading's own sport. Omitted on every other surface.
-             */
-            ratings?: components["schemas"]["RatedSportSchema"][];
-            player_card: components["schemas"]["PlayerCardSchema"];
-            /** Concerns */
-            concerns: components["schemas"]["ConcernSchema"][];
-            /**
-             * Terms
-             * @description Every term that fired, **ranked by contribution** — the reasons, in the order the arithmetic puts them in. The cap is the client's.
-             */
-            terms: components["schemas"]["ScoredTermSchema"][];
-            /**
-             * Degraded Terms
-             * @description The terms that stood down, each with **whose gap it is**: the renormalisation basis. Without it a Fit is uninterpretable — a 78 built on four terms and a 78 built on seven are different readings of the same number — and without the reason beside it, *reliability is not a thing here yet* and *they have not said what kind of evening they want* arrive as one flat list.
-             */
-            degraded_terms: components["schemas"]["DegradedTermSchema"][];
-            /** Modifiers */
-            modifiers: components["schemas"]["ModifierSchema"][];
-            /**
-             * Liveness Reasons
-             * @description Why this person moved, ranked by how far. **Codes only** — there is no field here a Liveness number could be written to.
-             */
-            liveness_reasons: components["schemas"]["LivenessReason"][];
-            /** @description Why this person is in the list at all, when the reason is one the searcher is owed. **A union of one**: only an interest lift *admits* anybody, and the two reasons that merely reorder stay in the store — one reaches you as a liveness reason instead, and the other is a third party's unpopularity you are owed no version of. Omitted otherwise. */
-            inclusion_reason?: components["schemas"]["WireInclusionReason"];
-            /**
-             * @description What a counted game against this person would do to your Level — the rating engine's own update rule read forward, so the pair printed here is the pair the game will deliver if it is played.
-             *
-             *     **Omitted in for fun**, where a counted result is meaningless rather than unavailable, and **omitted in competitive when either of you holds no rating in this sport** — never drawn as a pair of zeros.
-             */
-            at_stake?: components["schemas"]["AtStakeSchema"];
-            /** @description What this candidate would leave on court. Precomputed only when a line-up has exactly one seat open, so **omitted on every shortlist**. */
-            would_be_forecast?: components["schemas"]["ForecastSchema"];
-        };
-        /**
          * CappedWeekSchema
          * @description A week the player has as many games booked in as they allow: nothing is
          *     dealt for it.
@@ -3661,177 +2694,6 @@ export interface components {
          */
         CardType: "SEAT_OPEN" | "CHALLENGE" | "PICKED_FOR_YOU";
         /**
-         * ChallengeDetailResponse
-         * @description One challenge, richly — the arrangement, the people and the pairing.
-         *
-         *     **Its own ``read_at``**, because it is its own fold against its own instant:
-         *     the standing, every seat's deadline and which seats are still in were all
-         *     read against this one moment.
-         *
-         *     **The card block is drawn while the arrangement is being decided and at no
-         *     other time** (``docs/adr/0143`` §8) — one rule stated on the two standings
-         *     that draw one, so a standing added later is silent by default. `DECLINED` and
-         *     `LAPSED` draw the arrangement and the names alone; `ON` draws neither,
-         *     because the game's own screen owns it the moment a game exists.
-         *
-         *     **Nothing here is re-gated against who is reading** (§2). The four
-         *     fail-closed gates ran over every pair of this court when it was minted, and a
-         *     card that vanished from behind two buttons that still work would be the one
-         *     disclosure a safety gate may never make.
-         *
-         *     **A reader who has left is a different question and is not that** (§8's
-         *     amendment, on [#394](https://github.com/Raketa02/Raketa/issues/394)). The card
-         *     block is a **decision aid**, so a reader with no answer left to give is drawn
-         *     none — which settles what the block is *for* rather than who may read a
-         *     challenge. They still get the arrangement, every seat and every name, and
-         *     the buttons are drawn from the standing as they always were.
-         */
-        ChallengeDetailResponse: {
-            /**
-             * Read At
-             * Format: date-time
-             * @description The instant this whole answer was folded against — the standing, every deadline on it, and which seats are still in.
-             */
-            read_at: string;
-            /**
-             * Challenge Id
-             * Format: uuid
-             */
-            challenge_id: string;
-            sport: components["schemas"]["Sport"];
-            /** @description The kind of evening it was sent for. ``null`` when the surface it came from has none; on a challenge born of a mutual yes, `FOR_FUN` when either of the pair declared *for fun* for the sport and `null` otherwise (ADR-0169 §8). */
-            mode?: components["schemas"]["SearchMode"] | null;
-            /** @description How soon the week this was proposed for comes round. ``null`` on a mutual-born challenge: no grid was proposed from. */
-            window?: components["schemas"]["Window"] | null;
-            /**
-             * Organiser Id
-             * Format: uuid
-             * @description Whose proposal this is. Their seat is **accepted from birth** — they are the one asking.
-             */
-            organiser_id: string;
-            /** @description What this challenge is at ``read_at``. **Derived from the seats and the clock, never stored.** */
-            standing: components["schemas"]["Standing"];
-            /**
-             * Opened At
-             * Format: date-time
-             */
-            opened_at: string;
-            /**
-             * Seats
-             * @description The court in its fixed order — every **A** seat, then every **B**. Empty seats are in the list, because which side is short is part of what a court is.
-             */
-            seats: components["schemas"]["DetailSeatSchema"][];
-            /**
-             * @description Why no seat carries a card, when the arrangement is still being decided and none was drawn. **Omitted when there is no absence to report** — either the cards are on the seats, or this standing draws no card block at all and the standing already says so.
-             *
-             *     `NOTHING_TO_COMPUTE` — you hold no rating, have declared no Play intent, or have committed no player profile in the sport you were challenged in. Being asked to play a sport you never declared for is how this works rather than a corner of it, and the screen does not apologise for it.
-             *
-             *     `COULD_NOT_BE_READ` — somebody else's outage. **Three answers and not two**, because an outage drawing the identical absence as an unrated sport is indistinguishable from four erased accounts.
-             *
-             *     **Answering is never gated on any of this.** The arrangement always answers and the buttons are drawn from the standing, so a matchmaking outage never becomes *you cannot answer your challenge*.
-             */
-            pairing_absence?: components["schemas"]["PairingAbsence"];
-        };
-        /**
-         * ChallengeListResponse
-         * @description Your challenges, newest first.
-         *
-         *     **One list and not two.** *Challenge sent* and *Challenge for you* are one
-         *     standing read from two sides, so nothing here splits them: the client tells
-         *     them apart by whether ``organiser_id`` is yours.
-         *
-         *     **Ended challenges are in it, and their standing says so.** A list that
-         *     quietly dropped this morning's lapse would be the same class of lie as a
-         *     read-back that got shorter.
-         *
-         *     ``read_at`` is the instant every standing and deadline here was folded
-         *     against. It travels so a client's countdowns and the standings beside them
-         *     cannot come from two different readings of the clock — ``GameListResponse``'s
-         *     field verbatim, for its written reason (``docs/adr/0143`` §7). The detail
-         *     read carries **its own**, because it is its own fold against its own instant.
-         */
-        ChallengeListResponse: {
-            /**
-             * Read At
-             * Format: date-time
-             */
-            read_at: string;
-            /** Challenges */
-            challenges: components["schemas"]["ChallengeSchema"][];
-        };
-        /**
-         * ChallengeSchema
-         * @description One challenge, with its whole court and what it is right now.
-         */
-        ChallengeSchema: {
-            /**
-             * Challenge Id
-             * Format: uuid
-             */
-            challenge_id: string;
-            sport: components["schemas"]["Sport"];
-            /** @description The kind of evening it was sent for. ``null`` when the surface it came from has none — the deck asks nobody to pick one. **A challenge born of a mutual yes is `FOR_FUN` when either of the pair declared *for fun* for the sport, and `null` otherwise** (ADR-0169 §8) — never `COMPETITIVE`, because two competitive declarers get a counted game by the absence and not by a stamp. */
-            mode?: components["schemas"]["SearchMode"] | null;
-            /** @description How soon the week this was proposed for comes round. **Derived at send from the grid the search ran on** and never asked for. ``null`` on a mutual-born challenge: no grid was proposed from. */
-            window?: components["schemas"]["Window"] | null;
-            /**
-             * Organiser Id
-             * Format: uuid
-             * @description Whose proposal this is. Their seat is **accepted from birth** — they are the one asking.
-             */
-            organiser_id: string;
-            /** @description What this challenge is at the instant it was read. **Derived from the seats and the clock, never stored**, so it is right for the whole gap between a deadline and anything noticing. */
-            standing: components["schemas"]["Standing"];
-            /**
-             * Opened At
-             * Format: date-time
-             */
-            opened_at: string;
-            /**
-             * Ended At
-             * @description When this challenge ended. ``null`` on the three standings that are not endings, and that is the whole of what the absence means: *this challenge has not ended*.
-             *
-             *     **It is what a shelf life is subtracted from** — an ended row keeps its place for a day and then goes, which is `read_at` minus this and nothing else. **Not `read_at`**, which means the opposite: the instant every standing and deadline here was folded against.
-             *
-             *     **The ending is the last departure, not the ending's own name.** A refusal outranks silence whatever order the two arrived in, so a `DECLINED` court may have gone on standing for days after the no — until the last seat still deciding ran out. This is when that happened.
-             *
-             *     **A departure is dated exactly unless it was a decline**, and that is the whole of the precision here:
-             *
-             *     - **A lapse is exact.** It *is* a deadline passing, so the instant is on the seat already and no sweep needs to have run.
-             *     - **A withdrawal is exact.** A decision somebody took, carrying its own moment.
-             *     - **A decline is an upper bound**, at or before which that person left. Nothing records when somebody said no, so it is bounded by the tighter of the two facts that are recorded: that seat's own deadline, and the last thing that happened to the challenge.
-             *
-             *     So `LAPSED`, `WITHDRAWN` and `CALLED_OFF` are always exact, and `DECLINED` is exact whenever the seat that left **last** was one that ran out — which a mixed court often is — and a bound otherwise. The bound is late rather than early, which is the safe direction for a shelf life: a row that outstays it is news gone stale, and one retired early is somebody never learning a seat reopened.
-             *
-             *     **`CALLED_OFF` is exact too**: the act's own instant, a departure's or a press's (`docs/adr/0172` §2).
-             */
-            ended_at?: string | null;
-            /**
-             * Ended By
-             * @description The player whose act ended this challenge (`docs/adr/0172` §3). ``null`` on the three standings that are not endings, and that is the whole of what the absence means.
-             *
-             *     **Always the occupant of one of the court's seats**, never a second copy of a name — the face and the name a row draws are that seat's. Which seat, by standing:
-             *
-             *     - `CALLED_OFF` — the last leaver, or whoever pressed *Call it off*; told apart by their seat, which reads `LEFT` for a leaver and `ACCEPTED` for a presser.
-             *     - `WITHDRAWN` — the organiser.
-             *     - `DECLINED` — the seat whose *no* or departure completed the desertion: a seat that `LEFT` or `DECLINED`, never one that ran out, because a no outranks silence. Between two nos dated alike, court order.
-             *     - `LAPSED` — the seat whose window was the last to run out.
-             *
-             *     Read from the same per-seat instants `ended_at` is made from, so the name and the date cannot come from two clocks.
-             */
-            ended_by?: string | null;
-            /**
-             * Game Id
-             * @description The game this court became, and ``null`` until its line-up first completed — the same id ever after, through a re-seat and through the ending (`docs/adr/0172` §4). What lets a row and the leaver's sheet tell a court that has been a game from one that has not: leaving the last other player on one *calls the game off*, and on one that has not it *closes the court*. Read from `games` and never recorded on the challenge.
-             */
-            game_id?: string | null;
-            /**
-             * Seats
-             * @description The court in its fixed order — every **A** seat, then every **B**. Empty seats are in the list, because which side is short is part of what a court is: an A-side full with a B-side short is a different court from the reverse.
-             */
-            seats: components["schemas"]["SeatSchema"][];
-        };
-        /**
          * ChangeGenderPreferenceRequest
          * @description A new durable answer to *who am I willing to play with*.
          */
@@ -3848,7 +2710,7 @@ export interface components {
          * @description A new answer to the gender question — *self-declared, freely changed*.
          */
         ChangeGenderRequest: {
-            /** @description The player's own answer. `PREFER_NOT_TO_SAY` is a first-class answer; it matches only unconstrained searches, which costs its holder reach, and the client is what says so at the moment of asking (`docs/adr/0096`). */
+            /** @description The player's own answer. `PREFER_NOT_TO_SAY` is a first-class answer; it matches only unconstrained preferences, which costs its holder reach, and the client is what says so at the moment of asking (`docs/adr/0096`). */
             gender: components["schemas"]["Gender"];
         };
         /**
@@ -3912,17 +2774,6 @@ export interface components {
              * @description Ids returned by `POST /photos`, in the order the player arranged them — the first is the one a player card shows. At most 3; **an empty list is valid and clears**. Every id is checked to exist and to belong to this player, exactly as the commit checks it, and the same id twice is refused with `duplicate_photo`.
              */
             photo_ids: string[];
-        };
-        /**
-         * ChangeSearchRadiusRequest
-         * @description The Search radius, replaced whole.
-         */
-        ChangeSearchRadiusRequest: {
-            /**
-             * Search Radius Km
-             * @description Whole kilometres, re-checked against the range and step served by `GET /player-profile/options`. Refused with `search_radius_out_of_bounds` — a disabled slider is not a validation.
-             */
-            search_radius_km: number;
         };
         /**
          * ChangeSocialTagsRequest
@@ -4058,8 +2909,8 @@ export interface components {
          *     photograph is a legitimate answer to *add some photos* and writing nothing
          *     is a legitimate answer to *say it in your own words* (``docs/adr/0170``).
          *     Everything else is something this request must actually carry — a
-         *     location, a radius, a tag selection, an answer to the proposals question,
-         *     and **a week with something ticked in it** (``docs/adr/0102``).
+         *     location, a tag selection, a gender answer, and **a week with something
+         *     ticked in it** (``docs/adr/0102``).
          *
          *     The week's *floor* is not spelled here, and that is the same decision the tag
          *     selection's is: an empty list passes this schema and is refused by the domain
@@ -4084,13 +2935,7 @@ export interface components {
              */
             weekly_hours: components["schemas"]["WeeklyHourResource"][];
             location: components["schemas"]["LocationAreaResource"];
-            /**
-             * Search Radius Km
-             * @description Whole kilometres, re-checked against the range and step served by `GET /player-profile/options`.
-             */
-            search_radius_km: number;
-            proposals_opt_in: components["schemas"]["ProposalsOptInRequest"];
-            /** @description The player's own answer, asked once. Required — `PREFER_NOT_TO_SAY` is a first-class answer and is what a player who does not want to say sends; there is no way to send nothing. It matches only unconstrained searches, which costs its holder reach, and the client is what says so at the moment of asking. */
+            /** @description The player's own answer, asked once. Required — `PREFER_NOT_TO_SAY` is a first-class answer and is what a player who does not want to say sends; there is no way to send nothing. It matches only unconstrained preferences, which costs its holder reach, and the client is what says so at the moment of asking. */
             gender: components["schemas"]["Gender"];
             /**
              * @description Who this player is willing to be matched with. Optional, and `ANY` when it is not sent.
@@ -4110,22 +2955,6 @@ export interface components {
             intro?: string | null;
         };
         /**
-         * ConcernSchema
-         * @description The engine's own statement that a term is genuinely weak.
-         *
-         *     Judged where the weights and the curves are, over **points forgone** rather
-         *     than over a raw value — a social vibe of 0.20 costs under four points of a
-         *     competitive match and nearly twenty of a friendly, and only one of those is
-         *     worth warning anybody about. A client thresholding a value would be that
-         *     judgement in TypeScript, written differently in every client.
-         *
-         *     **Ranked by the engine, capped by the client**: a card shows one, *Why 78?*
-         *     shows all of them.
-         */
-        ConcernSchema: {
-            term: components["schemas"]["Term"];
-        };
-        /**
          * ConfidenceReasonResponse
          * @description Why confidence landed where it did: a stable key and the sentence shown.
          */
@@ -4135,19 +2964,6 @@ export interface components {
             /** Sentence */
             sentence: string;
         };
-        /**
-         * ConsentSurface
-         * @description Where a player was standing when they answered.
-         *
-         *     Two values, and both are reachable. ``ONBOARDING`` is the only one the commit
-         *     can record — the commit *is* the end of onboarding's second part. ``PROFILE``
-         *     is the You tab's ``PUT /players/me/proposals-opt-in`` (``docs/adr/0179`` §8),
-         *     where the same question is answered again and every press records: the
-         *     surface is the **route's** and never the body's, because a client that could
-         *     assert where a consent was gathered could assert one it never gathered.
-         * @enum {string}
-         */
-        ConsentSurface: "ONBOARDING" | "PROFILE";
         /**
          * ConversationListResponse
          * @description Every room you are a member of, the ones that moved last first.
@@ -4302,7 +3118,7 @@ export interface components {
             booking_id: string;
             /**
              * Game Id
-             * @description The booked game this room is about — the join a game's details make to find its chat. A booked game's room is born about it; `null` only on a room nothing opens any more, which is never served.
+             * @description The booked game this room is about. A booked game's room is born about it; `null` only on a room nothing opens any more, which is never served. The join a game's details make to find its chat is `booking_id`.
              */
             game_id: string | null;
             /** @description What the game is */
@@ -4326,530 +3142,11 @@ export interface components {
             last_entry: (components["schemas"]["MessageSchema"] | components["schemas"]["SystemLineSchema"]) | null;
         };
         /**
-         * CourtAtStakeSchema
-         * @description What a **counted** game against this person would do to your Level.
-         */
-        CourtAtStakeSchema: {
-            /** Win Delta */
-            win_delta: number;
-            /** Loss Delta */
-            loss_delta: number;
-        };
-        /**
-         * CourtAvailabilityOverlapEvidence
-         * @description How much of the searcher's week the candidate is free in.
-         *
-         *     The term is ``|shared| / |mine|`` and has **no constants at all** — the
-         *     denominator is the searcher's own ticked cells, which is what makes the
-         *     reading asymmetric and what makes it a fact about the pair.
-         *
-         *     Overlap is evidence a game can be *arranged*, never a proposed time, which is
-         *     why a candidate sharing no slot at all is still shown: the times rung exists
-         *     for exactly that pairing.
-         */
-        CourtAvailabilityOverlapEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "availability_overlap";
-            /**
-             * Shared Count
-             * @description Hours of the week both of them ticked
-             */
-            shared_count: number;
-            /** @description The soonest hour both ticked, or null when there is none */
-            next_slot: components["schemas"]["CourtSharedSlot"] | null;
-        };
-        /**
-         * CourtConcernSchema
-         * @description One term the platform is not comfortable about on this pairing.
-         */
-        CourtConcernSchema: {
-            term: components["schemas"]["Term"];
-        };
-        /**
-         * CourtDegradedTermSchema
-         * @description One term that stood down, and **whose gap that is**.
-         *
-         *     A pair rather than a bare ``Term``, because a flat list holds two different
-         *     sentences as one fact: *reliability is not a thing on this platform yet* and
-         *     *they have not said what kind of evening they want*.
-         *
-         *     **It ships even though no *Why?* sheet is drawn over it**, and its own
-         *     contract is the reason: without the renormalisation basis a Fit is
-         *     uninterpretable — a 78 built on four terms and a 78 built on seven are
-         *     different readings of one number. Printing a Fit without it is the exact
-         *     failure this field exists to prevent, and the alternative — printing no Fit —
-         *     throws away the number the screen exists to give.
-         */
-        CourtDegradedTermSchema: {
-            term: components["schemas"]["Term"];
-            /** @description Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), or theirs (`NOTHING_FROM_THEM`). The last deliberately covers every reason a record could not be read, because separating them would publish activity recency. */
-            reason: components["schemas"]["DegradedReason"];
-        };
-        /**
-         * CourtDistanceEvidence
-         * @description How far away they are, and whether the searcher is outside *their* ring.
-         *
-         *     A candidate's own radius is a Liveness dock and **never a gate**: somebody
-         *     who set a small radius is not refusing to be found, and the searcher is
-         *     shown the fact rather than having the person removed. The standalone flat
-         *     dock for it is struck — the reciprocal reading already prices it, and
-         *     proportionately.
-         */
-        CourtDistanceEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "distance";
-            /**
-             * Km
-             * @description Whole kilometres between the two areas
-             */
-            km: number;
-            /**
-             * Area Code
-             * @description The candidate's coarse area, as a machine code
-             */
-            area_code: string;
-            /**
-             * Outside Their Radius
-             * @description Whether the searcher sits outside the candidate's own ring
-             */
-            outside_their_radius: boolean;
-        };
-        /**
-         * CourtForecastSchema
-         * @description How even a game against this person is forecast to be.
-         *
-         *     ``provisional`` travels **inside** the forecast rather than beside it: the
-         *     failure being guarded against is a screen showing the number without its
-         *     caveat, and a sibling boolean is exactly how the two get separated in a
-         *     refactor.
-         *
-         *     **One seat a side, whatever the sport's court seats.** The block is drawn per
-         *     person, and *how would a game against **you** go* is the question somebody
-         *     answering an invitation is asking; a four-way figure would be one answer
-         *     printed once per seat.
-         */
-        CourtForecastSchema: {
-            /** Pct */
-            pct: number;
-            /**
-             * Sigma Group
-             * @description The confidence is part of the claim, so it crosses with it
-             */
-            sigma_group: number;
-            /** Provisional */
-            provisional: boolean;
-            /**
-             * Assumption
-             * @description What the provisional figure assumed, as a code the client renders in its own words. Null when nothing was assumed.
-             */
-            assumption: string | null;
-        };
-        /**
-         * CourtIntentAlignmentEvidence
-         * @description What kind of evening each of them is after.
-         *
-         *     **Intent is a weight and not a gate.** A candidate who declared the opposite
-         *     loses the term's entire weight and takes no further charge — the zero is the
-         *     whole answer, and a second dock would be a gate wearing a modifier's clothes.
-         *     A candidate who has *not* declared has the term dropped and renormalised away
-         *     instead, so declaring against the searcher already costs strictly more than
-         *     saying nothing.
-         */
-        CourtIntentAlignmentEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "intent_alignment";
-            /** @description The searcher's mode, this search */
-            my_mode: components["schemas"]["SearchMode"];
-            /** @description The candidate's declaration for this sport */
-            their_intent: components["schemas"]["PlayIntent"];
-            /**
-             * Aligned
-             * @description Whether the two read the same evening
-             */
-            aligned: boolean;
-        };
-        /**
-         * CourtLevelFitEvidence
-         * @description How far apart the two levels are, and which way.
-         *
-         *     The tolerance behind the curve is absolute on μ and never reads a band: the
-         *     shipped bands are deliberately uneven because *evidence* is unevenly
-         *     available down the scale, not because a tenth of a point means less at the
-         *     top.
-         */
-        CourtLevelFitEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "level_fit";
-            /**
-             * My Mu
-             * @description The searcher's Level
-             */
-            my_mu: number;
-            /**
-             * Their Mu
-             * @description The candidate's Level
-             */
-            their_mu: number;
-            /**
-             * Delta
-             * @description The gap, unsigned
-             */
-            delta: number;
-            /** @description Which side of the searcher */
-            direction: components["schemas"]["LevelDirection"];
-        };
-        /**
-         * CourtLikelyRangeSchema
-         * @description The **likely range** — μ ± σ, clamped to the scale — as `rating` published it.
-         *
-         *     Nested rather than two flat fields, because a range is one value with two
-         *     edges. **The client computes nothing here**: the rounding lives in the
-         *     engine, and a range derived anywhere else is a second set of drawing
-         *     constants.
-         */
-        CourtLikelyRangeSchema: {
-            /** Low */
-            low: number;
-            /** High */
-            high: number;
-        };
-        /**
-         * CourtPairingSchema
-         * @description What this platform makes of you **against** this person.
-         *
-         *     **Recomputed when the screen is opened, in your own direction** — never
-         *     copied at send and never replayed from the organiser's search
-         *     (``docs/adr/0143`` §3). That is the only shape under which *Match score for
-         *     you* is true: neither stored Fit is publishable, because one is the
-         *     organiser's reading of the invitee and the other was scored with the
-         *     searcher's own reliability deliberately set to null.
-         */
-        CourtPairingSchema: {
-            /**
-             * Fit
-             * @description The Fit, in your own direction. **The only number here you are asked to trust**, and it contains no Liveness offset.
-             */
-            fit: number;
-            /**
-             * Distance Km
-             * @description Kilometres to one decimal, measured between your two **drawn spots** — the same number every other candidate prints, never below `0.1`. **Omitted and never zero** when the distance term stood down: somebody whose distance could not be read is not next door.
-             */
-            distance_km?: number;
-            /**
-             * Terms
-             * @description Every term that fired, **ranked by contribution**, each with the evidence behind it. The contributions sum to the Fit **before the modifiers** — see `contribution`, which is where that gap is explained rather than being two sentences that disagree.
-             */
-            terms: components["schemas"]["CourtScoredTermSchema"][];
-            /**
-             * Degraded Terms
-             * @description Every term that stood down, and whose gap each one is. **The Fit's renormalisation basis**, without which the number above cannot be read.
-             */
-            degraded_terms: components["schemas"]["CourtDegradedTermSchema"][];
-            /**
-             * Concerns
-             * @description Terms the platform is not comfortable about on this pairing.
-             */
-            concerns: components["schemas"]["CourtConcernSchema"][];
-            /**
-             * @description What the court **as it stands** would leave on court, read in your direction — everybody still in, placed where they actually sit.
-             *
-             *     **The same figure rides on every card**, because a forecast is a fact about the game rather than about one person. A seat still open reads as if whoever fills it matched the player already on that side, which is what `provisional` says.
-             *
-             *     **Omitted where no game can be arranged out of what is left.** A side with nobody on it is not a side, so a court whose far side has all declined leaves nothing to forecast against — and an invented number would be worse than the absence.
-             */
-            forecast?: components["schemas"]["CourtForecastSchema"];
-            /**
-             * @description What a counted game against this person would do to your Level — the rating engine's own update rule read forward.
-             *
-             *     **Omitted in for fun**, where a counted result is meaningless rather than unavailable, and **omitted when either of you holds no rating in this sport** — never drawn as a pair of zeros.
-             */
-            at_stake?: components["schemas"]["CourtAtStakeSchema"];
-        };
-        /**
-         * CourtPersonSchema
-         * @description Who one person on this court is. **A closed list with two permanent gaps.**
-         *
-         *     No bio and no free text of any kind, ever; and **no activity recency at any
-         *     granularity** — not a timestamp, not *active today*, not a green dot.
-         *
-         *     **``photo_id`` and ``photo_url`` are present exactly together.** An id with
-         *     no link beside it is a photograph nothing can draw; neither means the client
-         *     draws the generated court poster, which chooses by hash and needs nothing
-         *     from the wire (``docs/adr/0134``). Refusing the photograph outright would
-         *     make the person who asked you to play more anonymous than a stranger in your
-         *     deck, which is the wrong way round.
-         */
-        CourtPersonSchema: {
-            /**
-             * Name
-             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole name or names nobody (``docs/adr/0171``). Never the nickname: a handle is drawn on a record and said nowhere.
-             */
-            name: string;
-            /**
-             * Photo Id
-             * Format: uuid
-             * @description Their current photograph. Omitted when they have none, and omitted together with `photo_url` — the two travel as a pair or not at all.
-             */
-            photo_id?: string;
-            /**
-             * Photo Url
-             * @description A short-lived signed link to that photograph, minted for **this response**. It expires within minutes and is not a stored value: a client that keeps one keeps a dead link.
-             */
-            photo_url?: string;
-            /**
-             * Area Code
-             * @description Their coarse area, as a machine code
-             */
-            area_code: string;
-            /**
-             * Level
-             * @description Their Level, as RacketSkill published it
-             */
-            level: number;
-            /**
-             * Band
-             * @description The Level band's published name
-             */
-            band: string;
-            /** @description Where their Level most likely sits */
-            range: components["schemas"]["CourtLikelyRangeSchema"];
-            /**
-             * Player Score
-             * @description Their **published** Player Score, and never a re-derivation of one (`docs/adr/0140`).
-             *
-             *     **Omitted where the platform has watched nothing**, which is most people today — the segment disappears rather than reading `Score 0`, because a nought printed for somebody nothing was watched of is a claim where there is a gap.
-             */
-            player_score?: number;
-        };
-        /**
-         * CourtPlayingStyleEvidence
-         * @description What the two of them are like during the hour on court.
-         *
-         *     The split from social vibe is **by relationship, not by tag group**: every
-         *     matrix row carries its own column, so a tag can be read for the hour on court
-         *     in one row and for the evening around it in another.
-         *
-         *     A pair with nothing firing is *different, not incompatible* — the term's zero
-         *     is a real clash, never an absence of relationship.
-         */
-        CourtPlayingStyleEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "playing_style";
-            /**
-             * Matched
-             * @description Tag ids they both hold, in this column
-             */
-            matched: string[];
-            /**
-             * Complementary
-             * @description Pairs product claims fit together
-             */
-            complementary: components["schemas"]["CourtTagPair"][];
-            /**
-             * Clashing
-             * @description Pairs product claims do not
-             */
-            clashing: components["schemas"]["CourtTagPair"][];
-        };
-        /**
-         * CourtPredictedBalanceEvidence
-         * @description How even the game is forecast to be, and how sure of that the platform is.
-         *
-         *     ``pct`` is the forecast the player is shown; ``confidence`` is the platform's
-         *     existing σ transform and never a second spelling of certainty.
-         */
-        CourtPredictedBalanceEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "predicted_balance";
-            /**
-             * Pct
-             * @description The evenness forecast
-             */
-            pct: number;
-            /**
-             * My Sigma
-             * @description The searcher's Uncertainty
-             */
-            my_sigma: number;
-            /**
-             * Their Sigma
-             * @description The candidate's Uncertainty
-             */
-            their_sigma: number;
-            /**
-             * Confidence
-             * @description The platform's confidence transform over the combined σ, as a whole percent. Never 100: the platform cannot tell a player it is certain.
-             */
-            confidence: number;
-        };
-        /**
-         * CourtReliabilityEvidence
-         * @description What the candidate's record says about turning up and following through.
-         *
-         *     ``score`` is the **published Player Score** — the number on the player's own
-         *     profile — and never the matcher's private per-mode blend of the same six
-         *     strands. A penalty justified by a figure that exists nowhere a human can look
-         *     is unexplainable, and a player who works their visible score back up must be
-         *     able to see the penalty lift.
-         */
-        CourtReliabilityEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "reliability";
-            /**
-             * Score
-             * @description The published Player Score
-             */
-            score: number;
-            /**
-             * Strands
-             * @description The strands that produced a reading, over the closed six
-             */
-            strands: components["schemas"]["CourtStrandReading"][];
-            /**
-             * Floor Breached
-             * @description Whether the published score sits under the reliability bar
-             */
-            floor_breached: boolean;
-        };
-        /**
-         * CourtScoredTermSchema
-         * @description One term that produced a reading, and what it was worth here.
-         */
-        CourtScoredTermSchema: {
-            term: components["schemas"]["Term"];
-            /**
-             * Weight
-             * @description The **renormalised** weight — this term's share of a hundred over the terms that actually fired.
-             */
-            weight: number;
-            /** Value */
-            value: number;
-            /**
-             * Contribution
-             * @description The weight times the value.
-             *
-             *     **The contributions sum to the Fit before the modifiers**, and `fit` above is the figure after them — the same number every other surface prints for this pairing. Those are the reliability dock and its neighbours, engine internals this screen does not draw, so the breakdown explains the pairing rather than reconstructing the total to the decimal.
-             */
-            contribution: number;
-            /** Evidence */
-            evidence: components["schemas"]["CourtLevelFitEvidence"] | components["schemas"]["CourtPredictedBalanceEvidence"] | components["schemas"]["CourtIntentAlignmentEvidence"] | components["schemas"]["CourtReliabilityEvidence"] | components["schemas"]["CourtAvailabilityOverlapEvidence"] | components["schemas"]["CourtPlayingStyleEvidence"] | components["schemas"]["CourtSocialVibeEvidence"] | components["schemas"]["CourtDistanceEvidence"];
-        };
-        /**
-         * CourtSharedSlot
-         * @description The next hour of the week both players ticked.
-         *
-         *     **The grid is never rendered to anybody as a calendar.** Only the count of
-         *     shared hours and the name of the next shared one are ever shown, because
-         *     overlap is a fact about a pair where a calendar is a fact about a person.
-         */
-        CourtSharedSlot: {
-            /**
-             * Day
-             * @description ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
-             */
-            day: number;
-            /**
-             * Hour
-             * @description The hour that cell starts at, wall clock — 19 is 19:00 to 20:00
-             */
-            hour: number;
-        };
-        /**
-         * CourtSocialVibeEvidence
-         * @description What the two of them are like around the game.
-         *
-         *     The same shape as playing style and deliberately a **separate variant**: the
-         *     two terms carry different weights, invert between the modes, and a client
-         *     renders them under different headings. One variant with a column field would
-         *     make *which term is this* a value the client has to branch on rather than a
-         *     type it can dispatch over.
-         */
-        CourtSocialVibeEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "social_vibe";
-            /**
-             * Matched
-             * @description Tag ids they both hold, in this column
-             */
-            matched: string[];
-            /**
-             * Complementary
-             * @description Pairs product claims fit together
-             */
-            complementary: components["schemas"]["CourtTagPair"][];
-            /**
-             * Clashing
-             * @description Pairs product claims do not
-             */
-            clashing: components["schemas"]["CourtTagPair"][];
-        };
-        /**
          * CourtState
          * @description What a yes on the card does (the screens A2.3).
          * @enum {string}
          */
         CourtState: "COURT_AVAILABLE" | "BOOK_IT_NOW" | "BOOKED";
-        /**
-         * CourtStrandReading
-         * @description One reliability strand that produced a reading.
-         *
-         *     A strand with too few observations **stands down and is absent from the
-         *     list** rather than present at zero: *we have not seen enough* and *they are
-         *     bad at this* are different facts, and a term may never be honestly neutral.
-         */
-        CourtStrandReading: {
-            /** @description Which of the six */
-            strand: components["schemas"]["ReliabilityStrand"];
-            /**
-             * Value
-             * @description The strand's own reading
-             */
-            value: number;
-        };
-        /**
-         * CourtTagPair
-         * @description Two tag ids one relationship row fired on.
-         *
-         *     Ids only. The row's kind is the field it sits under, its column is the term
-         *     it sits under, and its strength or severity is a ruleset number the player is
-         *     not shown — what is owed here is *which two things about you two this reads*.
-         */
-        CourtTagPair: {
-            /**
-             * A
-             * @description A Social tag id
-             */
-            a: string;
-            /**
-             * B
-             * @description The other Social tag id
-             */
-            b: string;
-        };
         /** CreateAssessmentRequest */
         CreateAssessmentRequest: {
             sport: components["schemas"]["Sport"];
@@ -4904,47 +3201,6 @@ export interface components {
          * @enum {string}
          */
         DayRange: "MORNING" | "AFTERNOON" | "EVENING";
-        /**
-         * DealDeckRequest
-         * @description What a deal is asked for. **The sport, and the week you are asking about.**
-         *
-         *     This said *one field, and that is the whole contract* until the week was
-         *     added, and the three refusals it was written to protect are untouched by
-         *     that: **a mode, a widening and a pass window** may not arrive here, and a
-         *     grid is none of the three.
-         *
-         *     **There is no `mode` here and there never will be.** The deck reads your own
-         *     declared Play intent for this sport, resolved backend-side, and *no
-         *     preference* is a working deck rather than a blocked one — indecision is not a
-         *     state this product refuses. A mode on this body would be the field the
-         *     telemetry constraint refuses: `mode` is null exactly when the surface is the
-         *     deck.
-         *
-         *     **There is no widening here either.** The relaxation ladder does not reach
-         *     the deck, so a deal carries no rung offers and there is no offer for one to
-         *     cite.
-         *
-         *     **There is nothing about a pass.** The suppression window crosses the wire in
-         *     no shape at all — no field, no code, no timestamp — which is what makes a
-         *     pass unable to become something stronger by way of a request.
-         *
-         *     **The week is an ask and never a correction**, exactly as it is on a search.
-         *     It is here because the alternative was a deck that silently ranks on a week
-         *     the player has just replaced, and because a client cannot compute the
-         *     difference itself: a search that took a times rung ran on a grid with a slot
-         *     the player never ticked, and only this backend knows that.
-         */
-        DealDeckRequest: {
-            /** @description Which sport this deal is for */
-            sport: components["schemas"]["Sport"];
-            /**
-             * Availability Override
-             * @description The week to run **this one deal** against, when the player edited it on the Play screen. Omit to use the grid on your profile — **omit it, never send `null`**.
-             *
-             *     **It is an ask and never a correction.** Nothing here writes your profile; the app offers to save it afterwards.
-             */
-            availability_override?: components["schemas"]["WeeklyHourResource"][];
-        };
         /**
          * DeckCardSchema
          * @description One card, as the reader is dealt it: **their own version** of the game.
@@ -5146,158 +3402,12 @@ export interface components {
             surface: components["schemas"]["PlayIntentSurface"];
         };
         /**
-         * DegradedReason
-         * @description Whose gap a stood-down term is. **Four values, and one line drawn twice.**
-         *
-         *     ``floor.py`` draws that line to decide a number — *the gate counts
-         *     person-specific gaps and never platform-wide absence* — and until now it was
-         *     drawn nowhere else, so the one list that crosses the wire held *reliability
-         *     is not a thing here yet* and *they have not said what kind of evening they
-         *     want* as the same fact, twenty times a search.
-         *
-         *     The fourth value is the line drawn a second time, from the other side: a
-         *     term the **search** declined to read is nobody's gap either — not the
-         *     platform's, which has the provider, and not the person's, who may well have
-         *     declared — and the deck is the surface that does it (``docs/adr/0169`` §2).
-         *     Filing that under either existing code would print a sentence about a person
-         *     that is false of them.
-         *
-         *     **It is a code and not a sentence**, on ``docs/adr/0106``'s rule: a client
-         *     writing *"they haven't declared"* off a bare ``Term`` would be an engine rule
-         *     in TypeScript, and *"nobody has a record yet"* becomes silently false the day
-         *     ``matches`` ships, with no gate that catches it.
-         *
-         *     **``NOTHING_FROM_THEM`` deliberately swallows reliability's three causes** —
-         *     no record, the last observation past the horizon, no strand clearing the
-         *     observation bar. Separating them would publish activity recency, which
-         *     ``docs/adr/0106`` §5 refuses by name, so the refusal is held by the shape of
-         *     this vocabulary rather than by a reviewer noticing it in a later ticket.
-         *
-         *     **``NOTHING_FROM_YOU`` wins a tie** — both grids blank, neither side tagged —
-         *     because it is the only one of the two a reader can act on.
-         * @enum {string}
-         */
-        DegradedReason: "NOT_YET_ON_THIS_PLATFORM" | "NOTHING_FROM_YOU" | "NOTHING_FROM_THEM" | "NOT_READ_ON_THIS_SURFACE";
-        /**
-         * DegradedTermSchema
-         * @description One term that stood down, and **whose gap that is**.
-         *
-         *     A pair rather than a bare ``Term``, because the flat list held two different
-         *     sentences as one fact: *reliability is not a thing on this platform yet* and
-         *     *they have not said what kind of evening they want*. The engine draws that
-         *     line to decide a number — the evidence gate counts person-specific gaps and
-         *     never platform-wide absence — and it now survives the wire.
-         *
-         *     **The reason is a code and the client writes the sentence** (``docs/adr/0106``).
-         *     A client deriving *"they haven't declared"* from ``INTENT_ALIGNMENT`` alone
-         *     would be an engine rule in TypeScript, and *"nobody has a record yet"* is a
-         *     sentence that goes silently false the day ``matches`` ships. The term supplies
-         *     the other half: ``INTENT_ALIGNMENT`` and ``SOCIAL_VIBE`` under one code are two
-         *     different sentences.
-         *
-         *     **The platform tier repeats on every row and is drawn once.** It is here
-         *     because it is this candidate's renormalisation basis — a 78 built on four
-         *     terms and a 78 built on seven are different readings of the same number, and
-         *     dropping it would make the row's own arithmetic unreadable — and
-         *     ``NOT_YET_ON_THIS_PLATFORM`` is a fact about the platform rather than about
-         *     twenty people, so the sheet states it once beside the version stamps
-         *     (``the-play-screens.md`` §8). Suppressing it on the wire instead was refused:
-         *     the basis is not decoration.
-         */
-        DegradedTermSchema: {
-            term: components["schemas"]["Term"];
-            /** @description Whose gap this is: nobody's (`NOT_YET_ON_THIS_PLATFORM` — the term has no provider on this platform at all), yours (`NOTHING_FROM_YOU`), theirs (`NOTHING_FROM_THEM`), or the surface's (`NOT_READ_ON_THIS_SURFACE` — the deck reads no intent for anybody, so the term stood down for every card and says nothing about either of you). `NOTHING_FROM_THEM` deliberately covers every reason a record could not be read, because separating them would publish activity recency. */
-            reason: components["schemas"]["DegradedReason"];
-        };
-        /**
          * DepartureResponse
          * @description *Leave the game*, done.
          */
         DepartureResponse: {
             /** @description `BEFORE_THE_CUT_OFF` — refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again. */
             left: components["schemas"]["Leaving"];
-        };
-        /**
-         * DetailSeatSchema
-         * @description One seat on the detail read — the list's seat, and a card where one is drawn.
-         *
-         *     **The card is per seat as well as per challenge** (``docs/adr/0143`` §8).
-         *     Somebody who declined or lapsed inside a still-open court gets none: the pair
-         *     releases the moment a seat leaves, and *that person is a stranger to you once
-         *     more.* Their seat stays and keeps its name, because the standing sentences
-         *     name them.
-         *
-         *     **Your own seat never carries one either.** A pairing with yourself is not a
-         *     question.
-         *
-         *     **And a reader who has left is drawn none at all**
-         *     ([#394](https://github.com/Raketa02/Raketa/issues/394)). The rule above is
-         *     asked about the reader as well as about the court: their seat has left, so
-         *     everybody still arranging is a stranger to them once more. It is the whole
-         *     card block that goes rather than one seat's card, and it goes without a
-         *     `pairing_absence` — the same absence an ended standing produces.
-         */
-        DetailSeatSchema: {
-            side: components["schemas"]["app__modules__challenges__domain__seats__Side"];
-            /**
-             * Player Id
-             * @description Who holds this seat. ``null`` on a seat nobody was put in.
-             */
-            player_id?: string | null;
-            /** @description What they did about being asked. ``null`` while they have not answered, and on a seat nobody was put in. **A lapse is not a refusal** — they are different facts and the platform counts them apart. */
-            answer?: components["schemas"]["SeatAnswer"] | null;
-            /**
-             * Answer By
-             * @description When this seat's answer stops being wanted. Past it the seat reads as lapsed whether or not anything has swept it, and a late answer is refused rather than accepted late. ``null`` exactly when nobody was asked: an empty seat, the organiser's, and both seats of a challenge born from a mutual yes.
-             */
-            answer_by?: string | null;
-            /**
-             * Name
-             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname, which is a handle drawn on a record and said nowhere.
-             *
-             *     ``null`` on a seat nobody was put in, and ``null`` where ``users`` no longer has the account — never for an unnamed player, whom the entry gate holds at the naming step. The seat stays either way: a seat with no name is still a position on the court, and the screen has a side to name instead.
-             *
-             *     **A name is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
-             */
-            name?: string | null;
-            /**
-             * @description Who this person is and what you make of them, drawn only while the arrangement is still being decided and only for somebody still in it. Omitted on your own seat, on an empty one, on a seat that declined or lapsed, on **every** seat when you yourself have declined or lapsed, and on every seat when `pairing_absence` says there is no pairing to draw.
-             *
-             *     **Having answered is not having left.** A reader who **accepted** keeps their cards: they have no answer left to give either, and they are still on the court.
-             */
-            card?: components["schemas"]["SeatCardSchema"];
-        };
-        /**
-         * DistanceEvidence
-         * @description How far away they are, and whether the searcher is outside *their* ring.
-         *
-         *     A candidate's own radius is a Liveness dock and **never a gate**: somebody
-         *     who set a small radius is not refusing to be found, and the searcher is
-         *     shown the fact rather than having the person removed. The standalone flat
-         *     dock for it is struck — the reciprocal reading already prices it, and
-         *     proportionately.
-         */
-        DistanceEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "distance";
-            /**
-             * Km
-             * @description Whole kilometres between the two areas
-             */
-            km: number;
-            /**
-             * Area Code
-             * @description The candidate's coarse area, as a machine code
-             */
-            area_code: string;
-            /**
-             * Outside Their Radius
-             * @description Whether the searcher sits outside the candidate's own ring
-             */
-            outside_their_radius: boolean;
         };
         /**
          * EditGroupRequest
@@ -5378,63 +3488,6 @@ export interface components {
             } | null;
         };
         /**
-         * ExpressInterestRequest
-         * @description One tap. **Three fields, and the third is not optional.**
-         *
-         *     ``search_id`` is the **origin key**: it says which search surfaced this
-         *     person, and an interest citing a search that is unknown, that belongs to
-         *     somebody else or that never showed them is **refused, never linked as null**.
-         *     A silently dropped link is a denominator that lies, and *interests per search*
-         *     is how this engine is judged.
-         *
-         *     **The position is not sent.** The backend reads it off the cited search's own
-         *     returned rows, so the origin key is true by construction rather than by a
-         *     client being honest about where it was scrolled to.
-         */
-        ExpressInterestRequest: {
-            /** @description Which sport this yes is for */
-            sport: components["schemas"]["Sport"];
-            /**
-             * Player Id
-             * Format: uuid
-             * @description Who you would like to play
-             */
-            player_id: string;
-            /**
-             * Search Id
-             * Format: uuid
-             * @description The search this person was shown to you in. **Required** — a yes with no origin is refused rather than recorded with a null link.
-             */
-            search_id: string;
-        };
-        /**
-         * ExpressedInterestResponse
-         * @description What one tap answers with.
-         *
-         *     ``mutual`` is the one thing this tells you about the other person, and you
-         *     have earned it by them having said yes to you first. Nobody is notified of a
-         *     one-sided yes, in either direction.
-         */
-        ExpressedInterestResponse: {
-            interest: components["schemas"]["OutgoingInterestSchema"];
-            /**
-             * Mutual
-             * @description `true` when they had already said *Let's play* to you for this sport. **A mutual is told to both sides.** A one-sided yes is told to nobody, ever.
-             */
-            mutual: boolean;
-            /**
-             * Challenge Id
-             * @description **The game the two of you have**, when there is one — the challenge this tap opened, or the one an earlier mutual between you opened that is not finished with.
-             *
-             *     **`null` is one answer covering two causes, and it does not say which.** You may already have a game *being arranged* together, or the platform may have declined to open one. That distinction does not cross this wire and will not — so a client that reported the absence as a state of its own would be reporting the second, which is a fact about the other person no refusal here is allowed to disclose.
-             *
-             *     `mutual` is unaffected either way: it is what the two yeses say.
-             */
-            challenge_id: string | null;
-            /** @description Where this sport now stands against its cap, after this tap. */
-            outstanding: components["schemas"]["OutstandingSchema"];
-        };
-        /**
          * FactorResponse
          * @description One evidence category's row: what it says, and which way it pulled.
          *
@@ -5486,113 +3539,6 @@ export interface components {
              * @description Every rescue in the group the reader fits — the pair rule, the kind their intent wants, free for the hour in their week, no game of theirs then, within their Games & money — **soonest first**, before or after the cut-off. Never a game still filling: that is the deck's. *You're In* is `GET /players/me/live-yeses`.
              */
             seats_to_fill: components["schemas"]["SeatToFillSchema"][];
-        };
-        /**
-         * FillSeatsRequest
-         * @description **The send's shape minus the mint**: the court, and the search behind it.
-         *
-         *     The challenge is in the path, so what is left is the two things a fill has to
-         *     say — and the two the send says. Everything else about the game is already on
-         *     the challenge: the sport, the kind of evening, and the **window**, which is
-         *     stamped when a challenge is sent and never again. A challenge born of two
-         *     mutual yeses has no window at all and keeps none.
-         *
-         *     ``court`` is the **whole** arrangement and not the seats being filled. An
-         *     acceptance is to the game and not to the side, so the people already in may
-         *     be moved across the net — and may not be taken out. A court that omitted one
-         *     of them is refused.
-         */
-        FillSeatsRequest: {
-            /**
-             * Search Id
-             * Format: uuid
-             * @description The search this fill was built from — **yours, and run just now**. Everybody being newly asked must have appeared in it, and each new seat cites where they sat. The people already on the court are not looked up in it: they came from somewhere else, possibly weeks ago.
-             */
-            search_id: string;
-            /**
-             * Court
-             * @description The whole court as it will stand, in the court's own order: every **A** seat, then every **B**. It must be the sport's shape, you must be in it, and **everybody already on the court must still be in it** — they may change sides and they may not lose their place.
-             */
-            court: components["schemas"]["SeatChoiceSchema"][];
-        };
-        /**
-         * ForecastRequest
-         * @description What a four you composed yourself would leave on court.
-         *
-         *     **This route creates no search and records nothing.** Re-posting `/lineups`
-         *     per swap would enter a six-edit builder session into *searches run* as six
-         *     searches, which is a lie in the one table the product uses to judge itself.
-         *
-         *     `search_id` is **required**, and every player named must have appeared in
-         *     that search's returned rows. Unbounded, this would be a level lookup for any
-         *     player in the city reachable by id; bounded, it tells you nothing the
-         *     shortlist did not already show you.
-         */
-        ForecastRequest: {
-            /** @description Which sport this four would play */
-            sport: components["schemas"]["Sport"];
-            /** @description Competitive or for fun — the vector this reads under */
-            mode: components["schemas"]["SearchMode"];
-            /**
-             * Search Id
-             * Format: uuid
-             * @description The search these people came off. **Required** — a forecast about somebody no search of yours showed is refused, not computed.
-             */
-            search_id: string;
-            /**
-             * Players
-             * @description The people beside you, **in seat order**: the first is your partner in the arrangement the response marks `is_current`. One, two or three — a seat may be empty, and the forecast comes back **provisional** when one is.
-             *
-             *     Nobody twice, and never more than the sport seats. An empty seat is read *as if the missing player matched the one already there*, which is a claim about somebody who is not there — sending the same person twice would make that assumption look like a fact.
-             */
-            players: string[];
-        };
-        /**
-         * ForecastResponse
-         * @description Three arrangements of a four you composed. **And no `search_id`.**
-         *
-         *     Nothing was searched and nothing was recorded, so there is no id to read this
-         *     back by and no breakdown to open. The two version stamps cross because a
-         *     forecast nobody can reproduce is a number nobody should trust.
-         */
-        ForecastResponse: {
-            /** Arrangements */
-            arrangements: components["schemas"]["ArrangementSchema"][];
-            /**
-             * Engine Version
-             * @description How the maths works
-             */
-            engine_version: string;
-            /**
-             * Ruleset Version
-             * @description What the numbers were
-             */
-            ruleset_version: string;
-        };
-        /**
-         * ForecastSchema
-         * @description How even a game is forecast to be. One type, everywhere it appears.
-         *
-         *     ``provisional`` travels **inside** the forecast rather than beside it: the
-         *     failure being guarded against is a screen showing the number without its
-         *     caveat, and a sibling boolean is exactly how the two get separated in a
-         *     refactor.
-         */
-        ForecastSchema: {
-            /** Pct */
-            pct: number;
-            /**
-             * Sigma Group
-             * @description The confidence is part of the claim, so it crosses with it
-             */
-            sigma_group: number;
-            /** Provisional */
-            provisional: boolean;
-            /**
-             * Assumption
-             * @description What the provisional figure assumed, as a code the client renders in its own words. Null when nothing was assumed.
-             */
-            assumption: string | null;
         };
         /**
          * ForgotPasswordRequest
@@ -5847,22 +3793,6 @@ export interface components {
             gap: number;
         };
         /**
-         * GameResult
-         * @description How one counted game went for one of the people who played it.
-         *
-         *     **The matcher's own word for it**, as ``PairwiseOutcome`` is for the
-         *     familiarity term's tallies, and mapped from ``games``' own ``Outcome`` at the
-         *     adapter that reads it. Two values and never a third: a game with no agreed
-         *     result produces no result for anybody, and absence is spelled by not being in
-         *     the run at all (``docs/adr/0137``).
-         *
-         *     It is here rather than beside the port that answers it because a run of form
-         *     is **recorded**, and every other word a row is written in is declared in this
-         *     file.
-         * @enum {string}
-         */
-        GameResult: "WIN" | "LOSS";
-        /**
          * GameSchema
          * @description One game, its court, and what it is right now.
          */
@@ -5873,22 +3803,22 @@ export interface components {
              */
             game_id: string;
             /**
-             * Challenge Id
+             * Booking Id
              * Format: uuid
-             * @description The ask whose line-up completed into this game
+             * @description The booking this game was opened for. **A game is opened only by a booking**, so every game has one — and its chat is the room filed under the same `booking_id` in `GET /conversations`.
              */
-            challenge_id: string;
+            booking_id: string;
             sport: components["schemas"]["Sport"];
             /** @description Whether this evening is evidence. **Chosen when the game was arranged and never derived at the end** — a game nobody scored stays counted, because a friendly is a thing people choose. */
             kind: components["schemas"]["GameKind"];
-            /** @description How soon the week this was arranged for came round. ``null`` on a game born of a mutual yes: no grid was proposed from. */
+            /** @description How soon the week this was arranged for came round. ``null`` on every booked game, which has an hour instead. */
             window?: components["schemas"]["Window"] | null;
             /** @description What this game is at the instant it was read. **Derived from the record and the clock, never stored**, so it is right for the whole gap between a deadline and anything noticing. */
             standing: components["schemas"]["GameStanding"];
             /**
              * Planned At
              * Format: date-time
-             * @description When the last seat accepted and this became a game
+             * @description When the court was booked and this became a game
              */
             planned_at: string;
             /**
@@ -5903,14 +3833,14 @@ export interface components {
             entry_closes_at?: string | null;
             /**
              * Called Off At
-             * @description When somebody called it off, while a seat was open (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from — a day later, as `played_at` and `entry_closes_at` already shelve the other endings. Who is `called_off_by`.
+             * @description When it was called off — at the club's cut-off with a seat open, or by the club taking the court back (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from — a day later, as `played_at` and `entry_closes_at` already shelve the other endings. Who is `called_off_by`.
              */
             called_off_at?: string | null;
-            /** @description The player who called it off, and their name (``docs/adr/0172`` §4). ``null`` on every standing but `CALLED_OFF`. The last leaver, whose seat is drawn open — or whoever pressed *Call it off*, who still holds one; which of the two is read off the seats, and the game screen's heading is keyed on it. */
+            /** @description The player who called it off, and their name (``docs/adr/0172`` §4). ``null`` on every standing but `CALLED_OFF` — and on a booked game called off by its cut-off or its club, which nobody did. */
             called_off_by?: components["schemas"]["CalledOffBySchema"] | null;
             /**
              * Seats
-             * @description The court, in the order the challenge handed it over
+             * @description The court, in the order the booking handed it over
              */
             seats: components["schemas"]["SeatingSchema"][];
             /** @description The agreed score. ``null`` until something settles on one — including while a lone score is still waiting, because a score nobody has answered yet is not the result. */
@@ -5997,22 +3927,21 @@ export interface components {
          *     Per person and never per sport, which is what keeps it on ``PlayerProfile``
          *     rather than beside a rating (ADR-0089's cardinality, unchanged).
          *
-         *     This is **a statement about which searches a player wishes to appear in**,
-         *     not a ruling by the platform on who anybody is. A player whose identity is
-         *     not on this list picks the answer that puts them where they want to be seen,
-         *     or takes ``PREFER_NOT_TO_SAY`` and appears in unconstrained searches only.
+         *     This is **a statement about which games a player wishes to be put in**, not
+         *     a ruling by the platform on who anybody is. A player whose identity is not on
+         *     this list picks the answer that puts them where they want to be, or takes
+         *     ``PREFER_NOT_TO_SAY`` and is paired only with players who asked for anybody.
          *     The platform adjudicates nothing.
          * @enum {string}
          */
         Gender: "WOMAN" | "MAN" | "PREFER_NOT_TO_SAY";
         /**
          * GenderPreference
-         * @description Who a player is willing to be matched with — durable, not per search.
+         * @description Who a player is willing to be matched with — durable, never per game.
          *
-         *     **Durable rather than per-search because the gate is mutual.** It has to be
-         *     evaluated against a player when somebody *else* searches and they are not
-         *     present, and a per-search setting cannot bind that direction at all. A
-         *     per-search override may **narrow** this, never widen past it.
+         *     **Durable because the gate is mutual.** It has to be evaluated against a
+         *     player when somebody *else's* game is being made and they are not present,
+         *     and a setting made at the moment could not bind that direction at all.
          * @enum {string}
          */
         GenderPreference: "WOMEN_ONLY" | "MEN_ONLY" | "ANY";
@@ -6232,23 +4161,6 @@ export interface components {
              */
             joined_at: string;
         };
-        /**
-         * GroupReason
-         * @description Why this four beat the runner-up. **One closed code, never a number.**
-         *
-         *     ``G`` chose these four over the other combinations and the third refusal —
-         *     *never a number it cannot explain in one sentence with the evidence named* —
-         *     applies. A second score the player must trust is worse than none: it competes
-         *     with Fit and nobody can act on it. So the evidence half is paid here, by the
-         *     term with the largest margin between the winning combination and the
-         *     runner-up — the group analogue of the card's top three reasons
-         *     (``docs/adr/0117``).
-         *
-         *     Closed vocabulary and ``docs/adr/0106``-shaped: **the client writes the
-         *     sentence, the engine names which.**
-         * @enum {string}
-         */
-        GroupReason: "EVENEST_ARRANGEMENT" | "STRONGEST_WEAKEST_SEAT" | "BEST_AVERAGE_FIT" | "MOST_SHARED_SLOTS" | "GROUP_RAPPORT";
         /**
          * GroupRelation
          * @description What a group is to the person reading it (``docs/adr/0183`` §9): they
@@ -6510,59 +4422,6 @@ export interface components {
             assessments: components["schemas"]["InProgressAssessmentResponse"][];
         };
         /**
-         * IntentAlignmentEvidence
-         * @description What kind of evening each of them is after.
-         *
-         *     **Intent is a weight and not a gate.** A candidate who declared the opposite
-         *     loses the term's entire weight and takes no further charge — the zero is the
-         *     whole answer, and a second dock would be a gate wearing a modifier's clothes.
-         *     A candidate who has *not* declared has the term dropped and renormalised away
-         *     instead, so declaring against the searcher already costs strictly more than
-         *     saying nothing.
-         */
-        IntentAlignmentEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "intent_alignment";
-            /** @description The searcher's mode, this search */
-            my_mode: components["schemas"]["SearchMode"];
-            /** @description The candidate's declaration for this sport */
-            their_intent: components["schemas"]["PlayIntent"];
-            /**
-             * Aligned
-             * @description Whether the two read the same evening
-             */
-            aligned: boolean;
-        };
-        /**
-         * InterestListResponse
-         * @description Your own *Let's play* screen. **Outgoing and mutuals only.**
-         *
-         *     There is no incoming list and there will not be one: a yes nobody has
-         *     answered stays silent, which is what makes saying yes low-stakes. The two
-         *     lists are disjoint — a yes that came back is in `mutual` and not in
-         *     `outgoing` — so a client renders both without deriving either.
-         */
-        InterestListResponse: {
-            /**
-             * Outgoing
-             * @description Yeses you sent that are still in flight, newest first. Every one carries its own `expires_at`.
-             */
-            outgoing: components["schemas"]["OutgoingInterestSchema"][];
-            /**
-             * Mutual
-             * @description Yeses you sent that came back. **Both of you said it**, which is the only way somebody else's yes reaches you at all.
-             */
-            mutual: components["schemas"]["OutgoingInterestSchema"][];
-            /**
-             * Outstanding
-             * @description One entry per sport, always — the count and the cap in force. Sent before you are near the limit, on purpose.
-             */
-            outstanding: components["schemas"]["OutstandingSchema"][];
-        };
-        /**
          * InvitationByTokenRequest
          * @description The token off an invitation's link. In a body rather than a path, so it
          *     is in no access log.
@@ -6708,54 +4567,6 @@ export interface components {
             card_fee_grosze: number;
         };
         /**
-         * LevelDirection
-         * @description Which side of the searcher a candidate's Level sits on.
-         *
-         *     A code and not a sign on ``delta``, because the client's sentence differs in
-         *     all three cases and a renderer deriving *"above"* from a sign is the display
-         *     logic the presentation boundary exists to keep out.
-         *
-         *     It lives here rather than beside the wire shape for the reason
-         *     ``EvidenceKind`` does: the engine computes it and the schema publishes it, so
-         *     a second spelling on the schema's side would be two answers to *which way is
-         *     up*. A module may import an engine; the reverse is the fence.
-         * @enum {string}
-         */
-        LevelDirection: "ABOVE" | "LEVEL" | "BELOW";
-        /**
-         * LevelFitEvidence
-         * @description How far apart the two levels are, and which way.
-         *
-         *     The tolerance behind the curve is absolute on μ and never reads a band: the
-         *     shipped bands are deliberately uneven because *evidence* is unevenly
-         *     available down the scale, not because a tenth of a point means less at the
-         *     top.
-         */
-        LevelFitEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "level_fit";
-            /**
-             * My Mu
-             * @description The searcher's Level
-             */
-            my_mu: number;
-            /**
-             * Their Mu
-             * @description The candidate's Level
-             */
-            their_mu: number;
-            /**
-             * Delta
-             * @description The gap, unsigned
-             */
-            delta: number;
-            /** @description Which side of the searcher */
-            direction: components["schemas"]["LevelDirection"];
-        };
-        /**
          * LevelRangeSchema
          * @description A range of Levels, both bounds included.
          */
@@ -6764,101 +4575,6 @@ export interface components {
             low: number;
             /** High */
             high: number;
-        };
-        /**
-         * LikelyRangeSchema
-         * @description The **likely range** — μ ± σ, clamped to the scale — as `rating` published it.
-         *
-         *     Nested rather than two flat fields, because a range is one value with two
-         *     edges and the rating routes already spell it this way; a card that carried
-         *     ``range_low`` and ``range_high`` loose beside ``level`` would be the same
-         *     fact in a second shape.
-         *
-         *     **The client computes nothing here.** It is projected onto the index row
-         *     from ``rating.rating_initialised`` and copied onto the card, because
-         *     ``likely_range()`` returns unrounded values and the rounding lives in the
-         *     engine — a range derived anywhere else is a second set of drawing constants.
-         */
-        LikelyRangeSchema: {
-            /** Low */
-            low: number;
-            /** High */
-            high: number;
-        };
-        /**
-         * LineupResponse
-         * @description The shortlist's envelope, the pool, and the court seated out of it.
-         *
-         *     One envelope and one row shape across every surface, so the read-back has one
-         *     renderer to reproduce: what a line-up adds is the seating, not a second way
-         *     of describing a person. `candidates` is the **pool** ⚡ seated from — in Fit
-         *     order, up to the ruleset's own candidate cap, the seated among them — and
-         *     not the seated alone, so *Pick players myself* on this answer has the rest
-         *     of the ranking to offer ([#407](https://github.com/Raketa02/Raketa/issues/407)).
-         */
-        LineupResponse: {
-            search: components["schemas"]["SearchEnvelope"];
-            /**
-             * Candidates
-             * @description Ranked. **An empty list is a `200`** — the honest empty state is an answer, not a failure.
-             *
-             *     A read-back may carry withheld rows: the record is immutable and the gates are live, so a row the product has since agreed not to show keeps its place and states that it is withheld. Branch on `withheld` — a fresh search never carries one.
-             */
-            candidates: (components["schemas"]["CandidateSchema"] | components["schemas"]["WithheldRowSchema"])[];
-            lineup: components["schemas"]["LineupSchema"];
-        };
-        /**
-         * LineupSchema
-         * @description The court, every way round it can sit, and one reason it won.
-         *
-         *     **A partial line-up is this shape with fewer people in it** — never a
-         *     different one, and never an error. *Nobody* is this shape with every seat
-         *     carrying a reason, so a client renders one thing.
-         */
-        LineupSchema: {
-            /**
-             * Seats
-             * @description The court as it currently stands, seat by seat, in the arrangement marked `is_current`.
-             */
-            seats: components["schemas"]["LineupSeatSchema"][];
-            /**
-             * Arrangements
-             * @description Every way round, each with its own forecast. Empty only when nobody could be seated at all.
-             */
-            arrangements: components["schemas"]["ArrangementSchema"][];
-            /** @description Why this four beat the runner-up, as one closed code the client writes the sentence for. **Omitted when there was no runner-up** — one admissible four is not a four that won an argument. */
-            group_reason?: components["schemas"]["GroupReason"];
-            /** @description `NO_SHARED_SLOTS` when the four of you have no hour in common. **A dock, never a refusal**: nobody is removed from the court for it, and the honest line is that you would all have to bend. */
-            dock?: components["schemas"]["UnfilledReason"];
-        };
-        /**
-         * LineupSeatSchema
-         * @description One place on the court, with the person in it or the reason it is empty.
-         *
-         *     **The person is named by id and their breakdown rides once**, in
-         *     `candidates[]` — the same list every other surface returns, carrying **the
-         *     same number the shortlist showed**, because nothing is re-scored behind your
-         *     back when somebody sits down. Four breakdowns repeated across a court and
-         *     three arrangements is four chances for two copies to disagree, on a payload
-         *     that is already tens of kilobytes.
-         */
-        LineupSeatSchema: {
-            side: components["schemas"]["app__modules__matchmaking__domain__lineups__Side"];
-            /** Seat Index */
-            seat_index: number;
-            relationship: components["schemas"]["Relationship"];
-            /**
-             * Player Id
-             * Format: uuid
-             * @description Who is in this seat, to look up in `candidates[]`. **Omitted on an open seat**, and on your own — you are not a row of your own search.
-             */
-            player_id?: string;
-            /**
-             * @description Why this seat is empty. **A seat is never filled below the quality floor to complete a four**, a newcomer least of all — *three of four* is an honest answer, and so is nobody.
-             *
-             *     `NO_ADMISSIBLE_COMBINATION` is the one worth reading twice: there were people, and no four of you could share a court. Omitted on a seat that is taken.
-             */
-            unfilled_reason?: components["schemas"]["UnfilledReason"];
         };
         /**
          * LiveNudgeSchema
@@ -7010,22 +4726,6 @@ export interface components {
             yeses: components["schemas"]["LiveYesSchema"][];
         };
         /**
-         * LivenessReason
-         * @description Why somebody moved, as a code. **Never as a number.**
-         *
-         *     Ten values: the eight printable signals, with the full inbox spelled as its
-         *     three coarse rungs instead of its own name. Their inbox depth is theirs — the
-         *     rung crosses and the count does not — and each rung names its own code, so a
-         *     threshold moving does not silently re-point a code at a different depth.
-         *
-         *     The two **silent** signals are absent by construction rather than by
-         *     omission: a silent move carries points and no code, so there is no name on
-         *     the value to print. ``tests/unit/test_matchmaking_shortlist_contract.py``
-         *     holds this enum to exactly the printable roster.
-         * @enum {string}
-         */
-        LivenessReason: "INTEREST_RECEIVED" | "PREVIOUS_ACCEPT" | "ANSWER_RATE_AND_SPEED" | "RECENT_ACTIVITY" | "OVERLAP_PROXIMITY" | "RECIPROCAL_ASYMMETRY" | "NEWCOMER_LIFT" | "CHALLENGE_LOAD_SOME" | "CHALLENGE_LOAD_BUSY" | "CHALLENGE_LOAD_FULL";
-        /**
          * LocationAreaResource
          * @description Where a player plays.
          *
@@ -7102,11 +4802,6 @@ export interface components {
             is_admin: boolean;
             /** Is Active */
             is_active: boolean;
-            /**
-             * Is Tester
-             * @description Whether this account carries the **tester mark**: a real player who may be given a feature before anyone else. Set and cleared by an admin command, never by the player, and `false` for every account until then. **Not a role** — `authority` does not move with it. The player app passes it to flag evaluation as `isTester`, so no published datafile ever has to name a tester.
-             */
-            is_tester: boolean;
             /** Created At */
             created_at?: string | null;
             /**
@@ -7160,25 +4855,6 @@ export interface components {
              * @description The id the sending client generated, echoed back. It does **two jobs**: the idempotency key for a resumed send, and the key an optimistic bubble is replaced on.
              */
             client_message_id: string;
-        };
-        /**
-         * ModifierCode
-         * @description The three modifiers inside the budget, and the dock outside it.
-         *
-         *     Every one of them **prints**: a modifier that could move a score without
-         *     owing a sentence would be Liveness wearing stage 4's clothes, and Liveness
-         *     has a budget for exactly that.
-         * @enum {string}
-         */
-        ModifierCode: "CALIBRATION_VALUE" | "FAMILIARITY" | "WELCOMING_RECORD" | "RELIABILITY_FLOOR_BREACH";
-        /**
-         * ModifierSchema
-         * @description One modifier that fired, and what it was worth on this pairing.
-         */
-        ModifierSchema: {
-            code: components["schemas"]["ModifierCode"];
-            /** Points */
-            points: number;
         };
         /**
          * MonogramSchema
@@ -7562,18 +5238,6 @@ export interface components {
             times_on_court: number;
         };
         /**
-         * OptimisedFor
-         * @description Whom this search was run for.
-         *
-         *     ``GROUP`` exists because a line-up with seats locked is no longer optimising
-         *     for the searcher, who may end up with a worse individual match than an empty
-         *     builder would have given them — and the screen has to say so. A shortlist is
-         *     always ``SEARCHER``, and the field is on the envelope rather than implied by
-         *     the surface so that one renderer reads one fact.
-         * @enum {string}
-         */
-        OptimisedFor: "SEARCHER" | "GROUP";
-        /**
          * Outcome
          * @description What a confirmed result says about one of the people who played.
          *
@@ -7584,58 +5248,6 @@ export interface components {
          * @enum {string}
          */
         Outcome: "WIN" | "LOSS";
-        /**
-         * OutgoingInterestSchema
-         * @description One yes you sent, and when it lapses.
-         *
-         *     ``expires_at`` is on the row from the moment it was created, and the client
-         *     **renders** it rather than computing it: the TTL behind it is ruleset
-         *     configuration and never crosses as a number.
-         */
-        OutgoingInterestSchema: {
-            /**
-             * Player Id
-             * Format: uuid
-             * @description Who you said *Let's play* to
-             */
-            player_id: string;
-            sport: components["schemas"]["Sport"];
-            /**
-             * At
-             * Format: date-time
-             * @description When you said it
-             */
-            at: string;
-            /**
-             * Expires At
-             * Format: date-time
-             * @description When this yes lapses. **Dated when it was created** and never extended by tapping again — a second tap changes nothing. On expiry the row is simply gone: there is no *expired* state and no archive.
-             */
-            expires_at: string;
-        };
-        /**
-         * OutstandingSchema
-         * @description How many yeses you have in flight for one sport, and the cap in force.
-         *
-         *     **Outstanding means sent, unexpired and not yet mutual** — a mutual has been
-         *     answered and is no longer in flight. The pair travels together on every read,
-         *     because a cap you cannot see is a refusal you cannot predict.
-         */
-        OutstandingSchema: {
-            sport: components["schemas"]["Sport"];
-            /** Outstanding */
-            outstanding: number;
-            /**
-             * Cap
-             * @description The most you may have in flight for this sport at once. **Read it from here, never hardcode it** — it is ruleset configuration and may move between releases.
-             */
-            cap: number;
-            /**
-             * Ttl Days
-             * @description How many days a yes you send in this sport stays live before it lapses. **Read it from here, never hardcode it** — it is the same ruleset number that dates every `expires_at`, sent so a screen can say *your yeses stay live for N days* without holding N. Every yes still carries its own `expires_at`; render that for a row, and this for the sentence.
-             */
-            ttl_days: number;
-        };
         /** OverlapCellSchema */
         OverlapCellSchema: {
             /**
@@ -7668,22 +5280,6 @@ export interface components {
          * @enum {string}
          */
         OverlapShade: "BRIGHT" | "DIM" | "DARK";
-        /**
-         * PairingAbsence
-         * @description Why a court came back with no cards on it. **Two codes, and a third
-         *     answer that is their absence** (``docs/adr/0143`` §6).
-         *
-         *     Three answers rather than two, because an outage drawing the *identical*
-         *     absence as an unrated sport is the collapse ADR-0141's Consequences refused
-         *     in as many words. And refusing the whole read with a 503 is worse than
-         *     either: it turns an unrelated matchmaking outage into *you cannot answer your
-         *     challenge*, and answering is not gated.
-         *
-         *     **The codes are the contract and the client writes both sentences**
-         *     (``docs/adr/0106``).
-         * @enum {string}
-         */
-        PairingAbsence: "NOTHING_TO_COMPUTE" | "COULD_NOT_BE_READ";
         /**
          * PaymentMethodResponse
          * @description The player's payment method, as You › Payments draws it.
@@ -7884,88 +5480,6 @@ export interface components {
             photo_ids: string[];
         };
         /**
-         * PlanListResponse
-         * @description One row for every court you may plan, written or not.
-         *
-         *     **No `read_at`, and that is deliberate.** A plan folds nothing against the
-         *     clock, so there is no instant for it to have been folded against — the card
-         *     is folded against `GET /games`' own `read_at`, which is what keeps Now on one
-         *     clock by construction (``docs/adr/0148`` §10).
-         *
-         *     **A court with nothing agreed is a row with three nulls** (``docs/adr/0164``
-         *     §4), not an absence: a row is what says there is a plan to draw and what
-         *     carries the anchor to draw it with, and absence is reserved for one thing —
-         *     a court you hold no accepted seat on.
-         */
-        PlanListResponse: {
-            /** Plans */
-            plans: components["schemas"]["PlanSchema"][];
-        };
-        /**
-         * PlanSchema
-         * @description One court's plan: three slots, the moment they name, and the anchor.
-         *
-         *     **Keyed on the challenge and on nothing else.** A plan has no id of its own —
-         *     ``challenge_id`` identifies it, for ever, and a second identity beside that
-         *     would be a second name for one thing. The game the challenge becomes carries
-         *     the same id, which is how Now joins the two.
-         *
-         *     Each slot is nullable and an empty one is spelled ``null``. **A slot is never
-         *     emptied**, so a ``null`` here is a slot that has never been filled and never a
-         *     slot somebody cleared; the client draws the slot's name in its place. A row
-         *     with all three ``null`` is a court nobody has written on yet, and it is a row
-         *     because the court is one the reader may plan.
-         */
-        PlanSchema: {
-            /**
-             * Challenge Id
-             * Format: uuid
-             * @description The challenge this plan is for. **A plan is one challenge's, for ever**, and the game it becomes inherits it — join it against `GET /conversations` by `challenge_id` and against `GET /games` by the game's own `challenge_id`.
-             */
-            challenge_id: string;
-            /**
-             * Place
-             * @description Where these people are meeting, as somebody typed it. **Short free text, one line** — never an id, a lookup, an autocomplete, a reuse or a geocode, and **nothing anywhere reads it**. It is a note between the people on the court and never a place the platform knows.
-             */
-            place?: string | null;
-            /**
-             * Day
-             * @description The local day, in the platform's one zone (`Europe/Warsaw`). **A wall-clock fact, drawn literally and never counted down** — nothing expires at the end of it.
-             */
-            day?: string | null;
-            /**
-             * Hour
-             * @description The local clock time. **The agreement itself, not a guess at a booking**: nothing on this platform will ever hold a court, so nothing can contradict it.
-             */
-            hour?: string | null;
-            /**
-             * Agreed Point
-             * @description The moment this plan names, **derived and never stored**. The agreed instant when the day and the hour are both recorded; the **start of the following local day** when only the day is; `null` when no day is.
-             *
-             *     Coarsened **later, never earlier**, so nobody is asked for a result before they could have played. It is sent because it is a timezone conversion the client must not redo.
-             */
-            agreed_point?: string | null;
-            /**
-             * Anchor
-             * Format: date-time
-             * @description The instant this plan's horizon runs from: a day may be set up to **7 days past it**, and the row of day chips is clamped to that. **The challenge's send until the game exists, then the game's `planned_at`** — it only ever moves later, so a day chosen under the first is still valid under the second and the chips widen when the court fills rather than shrinking.
-             *
-             *     Sent rather than derived on the client because the client would otherwise need the game to draw a plan, and a court that is not whole has none.
-             */
-            anchor: string;
-            /**
-             * Locked At
-             * @description The moment somebody agreed this plan, or `null` while nobody has.
-             *
-             *     **A locked plan is not a frozen one.** Any member may still move any slot afterwards, and each move writes its own system line — there is no un-agreeing to fear, only re-agreeing. The plan stays locked and the line trail is the friction, as it already is for every change.
-             *
-             *     **There is no unlock**, and this never returns to `null`. The lock is a thing that happened.
-             *
-             *     **It is not the slot count under another name**: a plan with all three slots filled is one everybody *could* agree, and this says somebody did.
-             */
-            locked_at?: string | null;
-        };
-        /**
          * PlayIntent
          * @description What kind of game a player wants, in one sport.
          *
@@ -7990,14 +5504,18 @@ export interface components {
          * PlayIntentSurface
          * @description Which screen a declaration was made on.
          *
-         *     ``ConsentSurface``'s precedent in this same context, and it obeys the same
-         *     rule about what it is *for*: it is context recorded beside a fact, never a
-         *     thing any decision branches on.
+         *     It is context recorded beside a fact, never a thing any decision branches
+         *     on.
          *
          *     **It is client-asserted and a client could lie about it** (ADR-0094). That
          *     is accepted because the client is the only party that knows which screen it
          *     was, and nothing load-bearing reads it — which is exactly the condition
          *     under which a self-reported field is safe to keep.
+         *
+         *     **Three of its five screens are gone** — the search screen's toggle, the
+         *     deck and the drift prompt went with the searches (#579) — and their codes
+         *     stay, because a code already in a stream has to keep meaning what it meant
+         *     when it was written. Nothing emits them any more.
          *
          *     **It widened rather than renaming, and the reason was cost** (#280). The
          *     deck earned the fifth member: ``POST /deck`` has no mode to read, so it
@@ -8016,119 +5534,6 @@ export interface components {
          */
         PlayIntentSurface: "RATING_TAIL" | "SEARCH_SWITCH" | "DECK" | "DRIFT_PROMPT" | "PROFILE_SCREEN";
         /**
-         * PlayerCardSchema
-         * @description Who this person is, on a card. **A closed list with one permanent gap.**
-         *
-         *     **No activity recency at any granularity** — not a timestamp, not *active
-         *     today*, not a green dot. Liveness reaches a screen the one way it is
-         *     sanctioned to: as a reason code. The other gap the list was closed with —
-         *     *no bio, and no free-text field of any kind* — was opened by exactly one
-         *     field, `intro`, on the terms that refusal set: its own decision with a
-         *     moderation story attached (``docs/adr/0170``). Still no bio, no paragraph,
-         *     no second field, and no free text that is scored.
-         *
-         *     **The last three fields are the record block, and every one of them is
-         *     omitted rather than nought.** They are what the platform has watched this
-         *     person do — a Player Score, a count of counted games and a run of form — and
-         *     a nought printed for somebody it has watched do nothing would be a claim
-         *     where there is a gap. ``last_five`` is the one that has to keep the recency
-         *     rule while carrying five events: it is **outcomes in order and no dates**,
-         *     which is a run of form rather than a statement about when anybody was last
-         *     here.
-         */
-        PlayerCardSchema: {
-            /**
-             * Name
-             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole name or names nobody (``docs/adr/0171``). Never the nickname: a handle is drawn on a record and their own You tab, and said nowhere.
-             */
-            name: string;
-            /**
-             * Photo Id
-             * Format: uuid
-             * @description The first photo — order is meaning in a photo list. **The id is what is stored**: a presigned link cannot live in a record kept for ever, so the record keeps this one and the link beside it is minted per response. **Omitted** when the player has no photo, and the client draws the generated court poster.
-             */
-            photo_id?: string;
-            /**
-             * Photo Url
-             * @description Short-lived signed URL that draws that photo. **Minted per response and stored nowhere**: it dies within minutes, and two reads of the same search carry two different links to the same photograph.
-             *
-             *     **You cannot sign one yourself.** `GET /photos/{photo_id}` signs only *your own* photos and refuses a stranger's id deliberately, and a card's photo is by definition somebody else's — so this is the only address this photograph has.
-             *
-             *     **Present exactly when `photo_id` is.** A link that has expired is not an error to report: draw the generated court poster, which is what a player with no photo gets in any case.
-             */
-            photo_url?: string;
-            /**
-             * @description What the on-court check concluded about `photo_id`, or **omitted** where this photograph has not been checked.
-             *
-             *     **Omitted is not `allowed`, and only `allowed` earns a shield.** Three answers, not two: checked and passed, checked and flagged, and *nobody looked* — a photo that arrived while the reviewer could not be reached, or before the check existed at all. A client that drew a tick on the absence would be claiming a check happened on every photograph on the platform.
-             *
-             *     **A fact about this photograph and not about the player.** It is present only beside `photo_id`, it is search-time like every other fact on this card, and `flagged` blocks nothing — the photo is stored, it is shown, and the check is wrong sometimes.
-             *
-             *     **The evidence never crosses.** No confidence, no similarity vector, no model, no prompt-set fingerprint: those are collected so the threshold can be re-derived, and they are not a number a player can do anything with. A code, not copy — the words belong to the client.
-             */
-            review?: components["schemas"]["PhotoReviewDecision"];
-            /**
-             * Area Code
-             * @description Their coarse area, as a machine code
-             */
-            area_code: string;
-            /**
-             * Social Tags
-             * @description The Social tag ids they hold
-             */
-            social_tags: string[];
-            /**
-             * Intro
-             * @description One line this player wrote about themselves — their **intro** — verbatim: at most 100 characters, no line breaks, in whatever language they wrote it. **Omitted where they wrote none**, and never an empty string: the intro is optional and a player who skipped has no line, so the card closes up rather than drawing a blank quotation.
-             *
-             *     **A fact about the person, assembled by `player_profile`** — the one field this closed list has gained, under its own admission rule: it is what its subject published, it does not change with who is looking, and it is projected to the candidate index like the tags. It is **never scored**: no term reads it and the scorer's fence refuses the word.
-             *
-             *     **Fenced at the write, not here.** A line carrying a phone number, an email, a URL or an `@handle` was refused before it was stored, so what arrives is a line about a player and not a way to reach one. What it says is theirs; a line you object to is what a block is for.
-             *
-             *     **Drawn on the deck card and the record sheet, and not on Find a game's cards** — those are about the game, and the line is about the person. Never spoken as the player's name and never truncated: the cap is what makes an ellipsis unnecessary.
-             */
-            intro?: string;
-            /**
-             * Level
-             * @description Their Level, as RacketSkill published it
-             */
-            level: number;
-            /**
-             * Band
-             * @description The Level band's published name
-             */
-            band: string;
-            /** @description The **likely range** their Level sits in, μ ± σ as RacketSkill published it. Always present: a card that stated a Level without it would show two players at the same Level with no way to tell that one of them is a guess. **The band's numeric edges are not here** — they are not a second range to compare this one against. */
-            range: components["schemas"]["LikelyRangeSchema"];
-            /**
-             * Player Score
-             * @description Their **Player Score** out of a hundred — reliability, as the platform watched it: whether games arranged for them were played, and whether challenges sent to them were answered inside their window.
-             *
-             *     **The published figure and never a re-derivation of it.** It is the same number this player's own profile prints, at the same player-facing weights, because a card explaining a match with a figure their own screen disagrees with is worse than a card that says nothing.
-             *
-             *     **Omitted where the platform has watched nothing**, which is most people today. Never `0`: somebody nothing was ever arranged for has not failed to turn up, and the absence is what lets *Most reliable* sort them last instead of first.
-             */
-            player_score?: number;
-            /**
-             * Counted Games
-             * @description How many **counted** games they have played. A friendly is not one — it was never evidence about anybody, by the choice of the people who arranged it — and a game nobody agreed a score for **is**: an unscored game is an evening rather than evidence, so it says these people were on a court and it moves nobody's Level.
-             *
-             *     **Omitted where they have played none**, and never `0`. Absence has one spelling on this card.
-             */
-            counted_games?: number;
-            /**
-             * Last Five
-             * @description Their last five counted results, **oldest to newest** — the run of form a card draws left to right. Only games whose result was agreed are here; an unscored one moved nobody's Level and is in `counted_games` instead.
-             *
-             *     **Fewer than five is a real answer and it is never padded.** Three entries means three counted results, and the client draws the gap rather than filling it.
-             *
-             *     **There are no dates here, at any granularity.** This is a run of outcomes in order, and a moment beside one of them would be activity recency, which no card carries in any shape.
-             *
-             *     **Omitted where nothing of theirs has been counted and agreed.**
-             */
-            last_five?: components["schemas"]["GameResult"][];
-        };
-        /**
          * PlayerProfileOptionsResponse
          * @description Everything a client needs to *render* the profile steps, in one round trip.
          *
@@ -8138,12 +5543,13 @@ export interface components {
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
          *     months after it stops being built, so a new field goes on the end and the
-         *     ones already here keep their names and their types.
+         *     ones already here keep their names and their types. ``search_radius`` is the
+         *     one removal, with the radius itself (#581), made while no build had shipped
+         *     anywhere but ``local``.
          */
         PlayerProfileOptionsResponse: {
             /** Social Tag Groups */
             social_tag_groups: components["schemas"]["SocialTagGroupResource"][];
-            search_radius: components["schemas"]["SearchRadiusBoundsResource"];
             social_tag_selection: components["schemas"]["SocialTagSelectionBoundsResource"];
         };
         /**
@@ -8177,8 +5583,9 @@ export interface components {
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
          *     months after it stops being built. ``weekly_hours`` is the one replacement,
-         *     of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), made
-         *     while no build had shipped anywhere but ``local``.
+         *     of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), and
+         *     ``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each
+         *     made while no build had shipped anywhere but ``local``.
          */
         PlayerProfileReadResponse: {
             /**
@@ -8187,15 +5594,10 @@ export interface components {
              */
             weekly_hours: components["schemas"]["WeeklyHourResource"][];
             /**
-             * Search Radius Km
-             * @description Whole kilometres. What the search screen's slider opens at.
-             */
-            search_radius_km: number;
-            /**
              * Play Intents
              * @description What this player declared, per sport. **Only sports they have declared in appear** — an undeclared sport is absent and is never a `null` value, because there is no unanswered Play intent (`NO_PREFERENCE` is an explicit answer).
              *
-             *     *Rated but not yet declared* is a set difference the client computes against `GET /ratings`, which it is already fetching to build the sport chips. A search by a player with no declaration for that sport is refused with `play_intent_not_declared`, so this is what lets a client open the one-tap interstitial before the refusal rather than after it.
+             *     *Rated but not yet declared* is a set difference the client computes against `GET /ratings`, which it is already fetching to build the sport chips, and it is what lets a client open the one-tap interstitial for a sport still undeclared.
              */
             play_intents: {
                 [key: string]: components["schemas"]["PlayIntent"];
@@ -8215,8 +5617,6 @@ export interface components {
              * @description The line this player wrote about themselves, as recorded, or **omitted** where none was written. Never an empty string (`docs/adr/0170`).
              */
             intro?: string;
-            /** @description The standing answer to the proposals question: what was answered, when, against which words and from which surface. Always present — a profile cannot be committed without one. */
-            proposals_opt_in: components["schemas"]["ProposalsOptInResponse"];
             /**
              * @description The owner's own answer to the gender question. **Served here and on no other response shape** (`docs/adr/0179` §4) — what one player is told about another never carries it.
              *
@@ -8235,7 +5635,7 @@ export interface components {
          *
          *     **No gender value comes back out of this body**, and that is a rule rather
          *     than an oversight (``docs/adr/0096`` §6): a preference crosses the wire
-         *     *in*, on a search; no response that describes one player to another carries
+         *     *in*, on a write; no response that describes one player to another carries
          *     a gender out and no card renders one. This body is only ever the caller's
          *     own profile, so nothing here would leak a third party's answer — the field
          *     is left off anyway, because *which* shapes may carry it is a line rather
@@ -8246,8 +5646,9 @@ export interface components {
          *
          *     **Fields are only ever added.** A shipped mobile app parses this document for
          *     months after it stops being built. ``weekly_hours`` is the one replacement,
-         *     of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), made
-         *     while no build had shipped anywhere but ``local``.
+         *     of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), and
+         *     ``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each
+         *     made while no build had shipped anywhere but ``local``.
          */
         PlayerProfileResponse: {
             /**
@@ -8262,9 +5663,6 @@ export interface components {
             /** Weekly Hours */
             weekly_hours: components["schemas"]["WeeklyHourResource"][];
             location: components["schemas"]["LocationAreaResource"];
-            /** Search Radius Km */
-            search_radius_km: number;
-            proposals_opt_in: components["schemas"]["ProposalsOptInResponse"];
             /**
              * Created At
              * Format: date-time
@@ -8281,8 +5679,8 @@ export interface components {
          * @description Everything the platform will say about one person, to this reader.
          *
          *     **Read through a prior disclosure and never about a person at large.** A
-         *     record opens for somebody a search of yours returned, somebody you share an
-         *     open challenge, a game or a group with, and yourself. Anybody else — and
+         *     record opens for somebody you were on a game with, somebody you share a
+         *     group with, somebody in a group you run, and yourself. Anybody else — and
          *     anybody a live gate no longer admits — is `404`, in one shape that names
          *     nothing.
          */
@@ -8334,14 +5732,14 @@ export interface components {
             area_code: string;
             /**
              * Social Tags
-             * @description The Social tag ids they hold, in the vocabulary's own order. **Which of them the reader also holds is the client's own comparison** — the platform states no overlap here, so a record opened without a search behind it draws them untinted and claims nothing about common ground.
+             * @description The Social tag ids they hold, in the vocabulary's own order. **Which of them the reader also holds is the client's own comparison** — the platform states no overlap here, so a record draws them untinted and claims nothing about common ground.
              */
             social_tags: string[];
             /**
              * Intro
              * @description One line this player wrote about themselves — their **intro** — verbatim, drawn under the name. **Omitted where they wrote none**, and never an empty string: the intro is optional, and a player who skipped has no line rather than an empty one.
              *
-             *     The same field the player card carries (`player_card.intro`), read off the profile as it stands rather than off a search record; today the two cannot differ, since the line is written once at onboarding and not editable yet. Fenced at the write against a phone number, an email, a URL or an `@handle`, so what arrives is a line about a player and never a way to reach one. Present on your own record as on anybody else's — it is what strangers read, shown back to you.
+             *     Read off the profile as it stands. Fenced at the write against a phone number, an email, a URL or an `@handle`, so what arrives is a line about a player and never a way to reach one. Present on your own record as on anybody else's — it is what strangers read, shown back to you.
              */
             intro?: string;
             /**
@@ -8391,77 +5789,6 @@ export interface components {
              *     **The matcher never reads it.** A low figure hides nobody and demotes nobody — Pass and Block are the controls that act, and both are deliberate.
              */
             sportsmanship?: components["schemas"]["RecordSportsmanshipSchema"];
-        };
-        /**
-         * PlayingStyleEvidence
-         * @description What the two of them are like during the hour on court.
-         *
-         *     The split from social vibe is **by relationship, not by tag group**: every
-         *     matrix row carries its own column, so a tag can be read for the hour on court
-         *     in one row and for the evening around it in another.
-         *
-         *     A pair with nothing firing is *different, not incompatible* — the term's zero
-         *     is a real clash, never an absence of relationship.
-         */
-        PlayingStyleEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "playing_style";
-            /**
-             * Matched
-             * @description Tag ids they both hold, in this column
-             */
-            matched: string[];
-            /**
-             * Complementary
-             * @description Pairs product claims fit together
-             */
-            complementary: components["schemas"]["TagPair"][];
-            /**
-             * Clashing
-             * @description Pairs product claims do not
-             */
-            clashing: components["schemas"]["TagPair"][];
-        };
-        /**
-         * PoolSchema
-         * @description What the searcher is told about the pool this answer came from.
-         *
-         *     Sent on **every** search and not only on empty ones: a thin pool and a broken
-         *     floor are indistinguishable without it.
-         */
-        PoolSchema: {
-            sport: components["schemas"]["Sport"];
-            /**
-             * Radius Km Used
-             * @description The searcher's own radius, in whole kilometres
-             */
-            radius_km_used: number;
-            /**
-             * Players In Range
-             * @description How many candidates cleared every gate. **Post-gate, always** — a pre-gate count beside this one would be the delta a mutual preference hid, per searcher.
-             */
-            players_in_range: number;
-            /** @description When a game found on this grid would plausibly be played, as a code. Derived by the backend from the grid the search ran on; there is no window picker anywhere. */
-            window: components["schemas"]["Window"];
-            /**
-             * Post Gate
-             * @description Always true. It travels so the count cannot be misread.
-             * @default true
-             */
-            post_gate: boolean;
-            /**
-             * Remaining
-             * @description **On a deal only.** How many people are eligible for your deck beyond this hand — after every deck exclusion, and not in the cards you were just dealt. It is what lets a counter say *N left* and be true of the whole pool rather than of ten; it drops by a hand as hands are dealt. Omitted on every other surface and on a read-back, where a count about a pool that has moved on would be a number about nothing.
-             */
-            remaining?: number;
-            /**
-             * Want To Play You
-             * @description **On a deal, and on a reading.** How many people have a live *Let's play* towards you in this sport that **the deck would deal** to you: every one of the deck's gates passed, not passed on by you within the pass window, not cooling off after a court you shared, and not already mutual. Somebody dealt this morning and unanswered still counts — the dealt memory is not applied. **On a reading it is the deck's number, computed by the deck's rule**, so the chip on either pane of Players is one number — and somebody the radar draws whom the deck would never deal is not in it, though their card says they said yes. **A count and never a list**: nothing on any route names who. On a deal `0` is a measured nought; on a reading it is omitted at zero, so a chip is drawn at one and above either way.
-             */
-            want_to_play_you?: number;
         };
         /**
          * PostRequest
@@ -8715,40 +6042,6 @@ export interface components {
             posts: components["schemas"]["PostStillFillingSchema"][];
         };
         /**
-         * PredictedBalanceEvidence
-         * @description How even the game is forecast to be, and how sure of that the platform is.
-         *
-         *     ``pct`` is the forecast the player is shown; ``confidence`` is the platform's
-         *     existing σ transform and never a second spelling of certainty.
-         */
-        PredictedBalanceEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "predicted_balance";
-            /**
-             * Pct
-             * @description The evenness forecast
-             */
-            pct: number;
-            /**
-             * My Sigma
-             * @description The searcher's Uncertainty
-             */
-            my_sigma: number;
-            /**
-             * Their Sigma
-             * @description The candidate's Uncertainty
-             */
-            their_sigma: number;
-            /**
-             * Confidence
-             * @description The platform's confidence transform over the combined σ, as a whole percent. Never 100: the platform cannot tell a player it is certain.
-             */
-            confidence: number;
-        };
-        /**
          * ProfilePhotoResource
          * @description One of the owner's photographs, and what the on-court check said about it.
          *
@@ -8784,43 +6077,6 @@ export interface components {
              *     **Omitted is not `allowed`.** Three answers, not two: checked and passed, checked and flagged, and *nobody looked* — a photo that arrived while the reviewer could not be reached, or before the check existed. This is the owner's own reading of the verdict the upload showed them once; `GET /photos/{id}` deliberately carries none. `flagged` blocks nothing — the photo is stored and shown, and the check is wrong sometimes. The evidence behind the verdict never crosses on any route.
              */
             review?: components["schemas"]["PhotoReviewDecision"];
-        };
-        /**
-         * Prompt
-         * @description What the app is offering to ask. **Codes, never sentences.**
-         *
-         *     The kernel's rule reaches the matcher unchanged (``docs/adr/0022``): the
-         *     backend emits a code and the client writes the words. *"Keep 15 km?"* is one
-         *     phrasing of ``KEEP_THIS_RADIUS`` in one language, and a backend that shipped
-         *     it would own the copy for every client that ever exists.
-         * @enum {string}
-         */
-        Prompt: "KEEP_THESE_TIMES" | "KEEP_THIS_RADIUS" | "UPDATE_PLAY_INTENT" | "REFRESH_YOUR_TIMES";
-        /**
-         * PromptSchema
-         * @description A question the app is offering to ask. **It never changes a value.**
-         *
-         *     The platform notices that you improvised a week, that you keep widening to
-         *     the same radius, that your searches disagree with what you declared, or that
-         *     the week on your profile is months old — and in every case it asks. The
-         *     payload is the value already in play, so the sheet can show the change rather
-         *     than describe it.
-         */
-        PromptSchema: {
-            /** @description Which question, as a code */
-            prompt: components["schemas"]["Prompt"];
-            /**
-             * Radius Km
-             * @description The widening you keep taking
-             */
-            radius_km?: number;
-            /**
-             * Slots
-             * @description The week this search actually ran on, in the same two named fields every other week on the wire crosses in — because the sheet **draws** this one on the seven-by-sixteen grid beside the profile's own and quotes its count off the same list. **An empty list is a cleared week** — the player unticked every hour, which is a legal edit and a legal thing to be offered — where the field being absent means this is not the times prompt at all.
-             */
-            slots?: components["schemas"]["WeeklyHourResource"][];
-            /** @description The mode your recent searches keep choosing */
-            mode?: components["schemas"]["SearchMode"];
         };
         /**
          * ProposalDetailsResponse
@@ -8909,59 +6165,6 @@ export interface components {
          * @enum {string}
          */
         ProposalStatus: "FILLING" | "WAITING_FOR_THE_CLUB" | "FILLED" | "EXPIRED" | "WITHDRAWN" | "COURT_HOUR_LOST" | "TURNED_DOWN";
-        /**
-         * ProposalsOptInRequest
-         * @description The answer to the proposals question, and the words it was given against.
-         *
-         *     ``accepted`` is **nullable and required**, which is the shape of a question
-         *     that has no default. Null means *not answered* and is refused by the commit
-         *     with ``proposals_opt_in_not_answered``; it is not a quiet ``false``, because
-         *     a recorded refusal and an unanswered question are different facts and only
-         *     one of them is consent (``../../../../CONTEXT.md`` — *Skipping is not
-         *     consent*).
-         *
-         *     ``copy_version`` identifies the exact wording the player was shown. It is
-         *     required because consent gathered against one sentence is not consent to a
-         *     different one, and a consent record that cannot name its words cannot
-         *     evidence anything.
-         */
-        ProposalsOptInRequest: {
-            /**
-             * Accepted
-             * @description The player's answer. `null` means the question was not answered, which is refused — it is never read as `false`.
-             */
-            accepted: boolean | null;
-            /**
-             * Copy Version
-             * @description Identifier of the exact copy the player was shown. Not the copy itself — the words are the client's and are never stored here.
-             */
-            copy_version: string;
-        };
-        /**
-         * ProposalsOptInResponse
-         * @description The standing answer, and the evidence recorded with it.
-         *
-         *     This is the *current* answer. The **history** — every answer this player ever
-         *     gave, against which words and on which surface — is the stream, and nothing
-         *     serves it yet because nothing has asked for it.
-         */
-        ProposalsOptInResponse: {
-            /** Accepted */
-            accepted: boolean;
-            /**
-             * Copy Version
-             * @description The copy this answer was given against
-             */
-            copy_version: string;
-            /** @description Where it was answered */
-            surface: components["schemas"]["ConsentSurface"];
-            /**
-             * Answered At
-             * Format: date-time
-             * @description When it was answered
-             */
-            answered_at: string;
-        };
         /** PushDeviceRequest */
         PushDeviceRequest: {
             /**
@@ -8996,20 +6199,6 @@ export interface components {
             low: number;
             /** High */
             high: number;
-        };
-        /**
-         * RatedSportSchema
-         * @description One sport somebody is rated in, and the Level they hold there — a card's
-         *     sport chip (``docs/adr/0174`` §2). The Level and nothing else: the record
-         *     is where a band, a range and a certainty are drawn.
-         */
-        RatedSportSchema: {
-            sport: components["schemas"]["Sport"];
-            /**
-             * Level
-             * @description Their Level in that sport, as published
-             */
-            level: number;
         };
         /**
          * RatingResponse
@@ -9056,23 +6245,6 @@ export interface components {
          * @enum {string}
          */
         ReadAs: "TEXT" | "LINK";
-        /**
-         * ReadRadarRequest
-         * @description What a reading is asked for. **The sport, and that is the whole
-         *     contract** (``the-radar.md`` §2).
-         *
-         *     **There is no `mode`**, because there is none: the radar scores every
-         *     pairing under the deck's ruler, and a mode on this body would be the field
-         *     the telemetry constraint refuses. **There is no radius**, because the reach
-         *     is your own Search radius and there is no city; the slider on Find a game
-         *     is where it moves. **There is no position**, because the server holds your
-         *     area and puts it on a cold start. And **there is no week**: a reading ranks
-         *     nobody, so there is nothing for a grid to rank on.
-         */
-        ReadRadarRequest: {
-            /** @description Which sport this reading is for */
-            sport: components["schemas"]["Sport"];
-        };
         /**
          * ReaderAction
          * @description What the reader may do from the details.
@@ -9159,72 +6331,6 @@ export interface components {
             high: number;
         };
         /**
-         * RecordPassRequest
-         * @description One *not today*, and where the card came from. **Write-only.**
-         *
-         *     Nothing is returned by this route and no route anywhere returns a pass — not
-         *     to you, not as a count, not as *"you have passed on twelve people"*.
-         *
-         *     `search_id` is the **Origin key** and is required, exactly as it is for a
-         *     yes: a pass citing a search that is unknown, that belongs to somebody else or
-         *     that never showed that person is refused rather than recorded with an empty
-         *     link. **The position is not sent** — the backend reads it off the cited
-         *     search's own rows.
-         *
-         *     **How long it lasts is not yours to name**, and there is no field here for
-         *     it. A pass keeps somebody out of *your deck* only, for a window this backend
-         *     decides; it never reaches a shortlist, a line-up or a forecast, it never
-         *     touches their deck, and a second pass buys exactly the same window and no
-         *     more. The control that removes a person from a person is a **block**, and it
-         *     is deliberately a heavier gesture.
-         */
-        RecordPassRequest: {
-            /** @description Which sport this card was for */
-            sport: components["schemas"]["Sport"];
-            /**
-             * Player Id
-             * Format: uuid
-             * @description Whose card you are passing on
-             */
-            player_id: string;
-            /**
-             * Search Id
-             * Format: uuid
-             * @description The deal this person was dealt to you in. **Required** — a pass with no origin is refused rather than recorded with a null link.
-             */
-            search_id: string;
-        };
-        /**
-         * RecordPromptDeclineRequest
-         * @description One *not now*, about a question. **Write-only.**
-         *
-         *     Nothing is returned by this route and no route anywhere returns a decline —
-         *     not to you, not as a count, not as *"you have said no to this four times"*.
-         *
-         *     **There is no `search_id` and no idempotency key.** A pass carries an origin
-         *     because *pass rate on re-shown profiles* is unmeasurable without one; nothing
-         *     a decline is measured by needs one, and two of these questions are raised by
-         *     a background loop that has no search to cite. A second *not now* is a second
-         *     row with its own moment, exactly as a second pass is, and it buys the same
-         *     month the first did.
-         *
-         *     **How long it lasts is not yours to name**, and there is no field here for
-         *     it. What it buys is that this question is not raised at you again for a
-         *     while; it retires nothing — the standing prompt still expires on its own —
-         *     and it changes no value on your profile. Saying *yes* is a write through the
-         *     route that owns the value, and it is a different request entirely.
-         */
-        RecordPromptDeclineRequest: {
-            /**
-             * @description Which question you are answering, as the code the search sent you.
-             *
-             *     **`KEEP_THESE_TIMES` is refused** — an improvised week is a different week next Tuesday, so that one is asked again and the app does not offer *not now* for it.
-             */
-            prompt: components["schemas"]["Prompt"];
-            /** @description Which sport's screen raised it. **It is not the key**: a play intent is declared per sport, so declining that one is per sport, while a search radius and an availability grid are one fact each for the whole player — those go quiet everywhere. */
-            sport: components["schemas"]["Sport"];
-        };
-        /**
          * RecordSportsmanshipSchema
          * @description What other players said — **the one thing here nobody counted.**
          *
@@ -9256,9 +6362,9 @@ export interface components {
          *     is a larger claim than publishing the number.
          *
          *     **The matcher does not read it, and you should say so if you draw it beside
-         *     the pill.** A low figure here does not hide anybody, demote anybody or narrow
-         *     anybody's search results — the reliability pill is the counted-only number
-         *     and is exactly what the platform acts on.
+         *     the pill.** A low figure here does not hide anybody, demote anybody or keep
+         *     anybody out of a game — the reliability pill is the counted-only number and
+         *     is exactly what the platform acts on.
          *
          *     **On your own record too, at this resolution.** The person it is about
          *     reads the same figure and the same count a stranger does; the coarse band
@@ -9287,59 +6393,6 @@ export interface components {
         RefreshRequest: {
             /** Refresh Token */
             refresh_token: string;
-        };
-        /**
-         * Relationship
-         * @description What one seat is to the searcher. **Stated, never inferred from a side.**
-         *
-         *     ``the-two-contracts.md`` §5: the whole partner/opponent asymmetry hangs on
-         *     it, and a client deriving it from which side somebody sits on would be a
-         *     second implementation of a domain rule.
-         * @enum {string}
-         */
-        Relationship: "SELF" | "PARTNER" | "OPPONENT";
-        /**
-         * RelaxationAsk
-         * @description Which of the searcher's own asks a rung relaxes.
-         *
-         *     The vocabulary is closed at two because there are exactly two asks a searcher
-         *     makes: when they can play, and how far they will go. A third value would be
-         *     the engine relaxing something the player never asked for, which is the line
-         *     ``docs/adr/0099`` draws.
-         * @enum {string}
-         */
-        RelaxationAsk: "TIMES" | "RADIUS";
-        /**
-         * ReliabilityEvidence
-         * @description What the candidate's record says about turning up and following through.
-         *
-         *     ``score`` is the **published Player Score** — the number on the player's own
-         *     profile — and never the matcher's private per-mode blend of the same six
-         *     strands. A penalty justified by a figure that exists nowhere a human can look
-         *     is unexplainable, and a player who works their visible score back up must be
-         *     able to see the penalty lift.
-         */
-        ReliabilityEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "reliability";
-            /**
-             * Score
-             * @description The published Player Score
-             */
-            score: number;
-            /**
-             * Strands
-             * @description The strands that produced a reading, over the closed six
-             */
-            strands: components["schemas"]["StrandReading"][];
-            /**
-             * Floor Breached
-             * @description Whether the published score sits under the reliability bar
-             */
-            floor_breached: boolean;
         };
         /**
          * ReliabilitySchema
@@ -9377,20 +6430,10 @@ export interface components {
          * ReliabilityStrand
          * @description The six strands a reliability reading is built from, read separately.
          *
-         *     They are weighted **per mode** and the two vectors order people oppositely —
-         *     a candidate strong on *answers about results* and weak on *sportsmanship*
-         *     wins in competitive and loses in for fun. A single blended score cannot
-         *     express that, which is the whole argument for the decomposition, and it is
-         *     justified for exactly as long as such a pair exists (``ranking-weights.md``
-         *     §6).
-         *
-         *     **The inversion is watched rather than assumed, and it widened again.** It
-         *     was 24/4 against sportsmanship's 5/16 while *confirms results* was here; the
-         *     strike left 18/7 against 15/17, and *answers about results* restores the wide
-         *     pair at 24/4 against 5/16 (``docs/adr/0160``). It is asserted in
-         *     ``tests/unit/test_matchfit_terms.py``, and the day no pair inverts, the
-         *     decomposition has stopped paying for itself and the argument for it is due
-         *     again.
+         *     The published Player Score blends them at 35/20/15/12/10/8 and the player
+         *     record prints each (``docs/adr/0140``). The two per-mode blends the ranking
+         *     weighed them by went with it (#580), so the published one is the only blend
+         *     left.
          *
          *     **The sixth name is not the one that was struck, and the difference is the
          *     whole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached
@@ -9400,12 +6443,6 @@ export interface components {
          *     whether **this person** replied to a score put in front of them, and a
          *     counter is as good an answer as an acceptance, so disagreeing costs nothing
          *     and only silence is priced.
-         *
-         *     **Three different blends of these six exist in this system and confusing
-         *     them is a live risk:** the published Player Score at 35/20/15/12/10/8, and
-         *     these two. The reliability *floor* reads the published one — the one
-         *     deliberate exception, because a penalty justified by a figure that exists
-         *     nowhere a human can look is unexplainable.
          * @enum {string}
          */
         ReliabilityStrand: "SHOWS_UP" | "ANSWERS_CHALLENGES" | "ANSWERS_RESULTS" | "KEEPS_PLANS" | "SETTLES_UP" | "SPORTSMANSHIP";
@@ -9438,23 +6475,6 @@ export interface components {
              */
             fills_by_the_cut_off: boolean;
         };
-        /**
-         * ResetDeckRequest
-         * @description One *Show them again*, for one sport. **Write-only.**
-         *
-         *     Nothing is returned by this route and no route anywhere returns a reset.
-         *
-         *     **The sport is the whole ask.** The button is on a deck and a deck is one
-         *     sport, so a padel reset says nothing about tennis. There is no field for
-         *     *what* to clear: the three things a reset lifts — every pass suppression,
-         *     the day's dealt memory and the cool-off — lift together, and a client that
-         *     could pick would be a client that could clear the cool-off and keep its
-         *     passes, which is not a thing the product offers.
-         */
-        ResetDeckRequest: {
-            /** @description Which sport's deck to deal whole again */
-            sport: components["schemas"]["Sport"];
-        };
         /** ResultResponse */
         ResultResponse: {
             /** Mu */
@@ -9483,146 +6503,6 @@ export interface components {
             factors?: components["schemas"]["FactorResponse"][];
             /** Uncertainty Factors */
             uncertainty_factors?: components["schemas"]["UncertaintyFactorResponse"][];
-        };
-        /**
-         * RunLineupRequest
-         * @description ⚡ *Fill the seats.* **The line-up and fill-seats are one request.**
-         *
-         *     They differ by `locked_seats` being non-empty, which is a property of what
-         *     you send rather than of where you send it — so hand-seating somebody and
-         *     pressing ⚡ is the same shape as ⚡ on an empty court, and there is no second
-         *     route for a client to get wrong.
-         *
-         *     There is **no seat count** here and there never will be: how many people sit
-         *     down is the sport's own fact. There is no radius either, for the reason the
-         *     shortlist has none.
-         *
-         *     **A fill names the challenge it completes and says nothing else about the
-         *     court** (`ADR-0150`). Send `completing_challenge_id` and `sport`, `mode` and
-         *     `locked_seats` are **refused** beside it rather than made optional: all three
-         *     are facts that challenge already holds, and a caller supplying one is
-         *     offering a second place for a fact to be true — which is how somebody who is
-         *     not in the challenge gets locked, or somebody who is gets forgotten.
-         */
-        RunLineupRequest: {
-            /** @description Which sport this line-up is for. **Required, except beside `completing_challenge_id`** — a challenge already knows what game is being arranged, and sending both is refused. */
-            sport?: components["schemas"]["Sport"];
-            /**
-             * @description Competitive or for fun — the weight vector for this one search. It selects the **group** vector too, which inverts against the shortlist's: for fun puts more weight on how the four get on than on how even the sides are.
-             *
-             *     **Required, except beside `completing_challenge_id`**, and refused there. A challenge sent with a mode keeps it — a competitive court must not have its last seat filled by a for-fun search — and one sent without a mode takes yours, resolved from your declared Play intent. **There is no mode picker anywhere.**
-             */
-            mode?: components["schemas"]["SearchMode"];
-            /**
-             * Locked Seats
-             * @description Players you have already seated by hand, **in seat order**. Send none and the engine fills every seat; send one or two and it fills the rest **around them**, which is when it starts optimising for the group rather than for you — `search.optimised_for` says so.
-             *
-             *     Everybody named must be somebody this search can still seat, and they must be able to share a court **with each other** — every gate binds all six pairs. Either refusal is `locked_seat_not_available`, naming nobody, rather than a quiet replacement.
-             *
-             *     Nobody twice, and never more than the sport seats.
-             *
-             *     **Refused beside `completing_challenge_id`.** The people already on that court are its locked seats, read off the challenge.
-             */
-            locked_seats?: string[];
-            /**
-             * Completing Challenge Id
-             * Format: uuid
-             * @description The half-built challenge this fill completes. **Send it and send nothing else about the court**: the sport, the kind of evening and the locked seats are all read off it.
-             *
-             *     **Any live member may fill; ending a court is a different act** — removing one that was never a game is the organiser's while nobody has joined and nobody's once somebody has, and calling off the game a court became is any player's on it. A challenge born of two mutual yeses has an organiser who is only whoever said yes second, and leaving the other one unable to finish the four would be an arbitrary tiebreak deciding whose game it is.
-             *
-             *     The people who accepted come back as **ordinary candidate rows**, so the builder can draw them; the open-challenge gate steps aside for this one challenge and for nothing else, and the four fail-closed gates are untouched — so somebody blocked, held or deactivated since they accepted is still `locked_seat_not_available`.
-             *
-             *     Everybody who has already **answered** this challenge is out of its own pool, including the people who declined it.
-             *
-             *     **The window is never re-stamped**, and a challenge born of a mutual yes has none at all: a newly-invited player answers against the label the original send derived, and the plan is the authority on when anybody actually plays.
-             */
-            completing_challenge_id?: string;
-            /**
-             * Availability Override
-             * @description The week to run **this one line-up** against. Omit to use the grid on your profile — **omit it, never send `null`**.
-             */
-            availability_override?: components["schemas"]["WeeklyHourResource"][];
-            /**
-             * Offered By Search Id
-             * Format: uuid
-             * @description The search whose relaxation offer this one accepts. Taking a rung is a **new search citing the one that offered it**.
-             */
-            offered_by_search_id?: string;
-            /** @description Which rung of that search's offer you are taking. Sent with `offered_by_search_id` or not at all. */
-            rung?: components["schemas"]["Rung"];
-        };
-        /**
-         * RunSearchRequest
-         * @description What a client may send. **Asks only, never a fact about the searcher.**
-         *
-         *     There is deliberately **no radius here, and there never will be.** The
-         *     searcher's ask *is* their profile radius, read at request time; widening
-         *     happens only by taking a rung offer. A radius supplied by a phone is a gate
-         *     evaluated on a lie, and this is the field it would arrive through.
-         */
-        RunSearchRequest: {
-            /** @description Which sport this search is for */
-            sport: components["schemas"]["Sport"];
-            /** @description Competitive or for fun — the weight vector for this one search, and nothing else. Two values, where a Play intent has three. */
-            mode: components["schemas"]["SearchMode"];
-            /**
-             * Availability Override
-             * @description The week to run **this one search** against, when the player edited it on the search screen. Omit to use the grid on your profile — **omit it, never send `null`**.
-             *
-             *     **It is an ask and never a correction.** Nothing here writes your profile; the app offers to save it afterwards.
-             */
-            availability_override?: components["schemas"]["WeeklyHourResource"][];
-            /**
-             * Offered By Search Id
-             * Format: uuid
-             * @description The search whose relaxation offer this one accepts. **Taking a rung is a new search citing the one that offered it**, never a silent change to your saved preferences.
-             */
-            offered_by_search_id?: string;
-            /** @description Which rung of that search's offer you are taking. Sent with `offered_by_search_id` or not at all — and the widening itself is **not** sent: the backend reads it off the offer it made. */
-            rung?: components["schemas"]["Rung"];
-        };
-        /**
-         * Rung
-         * @description Which rung of the ladder an offer is.
-         *
-         *     Three values and no more. They are letters rather than numbers because
-         *     ``docs/adr/0099`` rebuilt the ladder from scratch and a rung ``1`` would
-         *     invite a reader to line it up against §9.8's struck rung 1, which relaxed
-         *     something else entirely.
-         * @enum {string}
-         */
-        Rung: "A" | "B" | "C";
-        /**
-         * RungOfferSchema
-         * @description One rung of the relaxation ladder, priced. **Offered, never applied.**
-         *
-         *     The engine computes what relaxing one of *your own* asks would be worth and
-         *     hands you the number; it never takes the offer for you, because only you can
-         *     say truthfully that you are free on a Saturday.
-         *
-         *     **The count is real.** It comes from re-running the whole search at this
-         *     rung — not from an estimate, and not from the strict count plus something.
-         */
-        RungOfferSchema: {
-            /** @description Which rung. The list is in the engine's recommended order — times first, because a slot you were already free in costs nothing where distance costs travel on every game forever — but the order is a recommendation and any rung may be taken directly. */
-            rung: components["schemas"]["Rung"];
-            /** @description Which of **your own** asks it relaxes. A rung never touches a measurement, a term, a weight, or the quality floor. */
-            ask: components["schemas"]["RelaxationAsk"];
-            /**
-             * Candidates Above Floor
-             * @description How many people would clear the quality floor at this rung, from a genuine re-run. The number on the button is true.
-             */
-            candidates_above_floor: number;
-            /** @description This rung's **own** window. A challenge sliding from `WEEKEND` to `THIS_WEEK` is part of what widening costs, and you see it before you pay it. */
-            window: components["schemas"]["Window"];
-            /**
-             * Radius Km
-             * @description The widened radius, on a `RADIUS` rung. Always inside the same 1-50 km your own slider holds: a relaxation never offers a radius you could not have set yourself, so a searcher already at 50 km is offered no radius rung at all.
-             */
-            radius_km?: number;
-            /** @description The one hour this rung would add to your week, on a `TIMES` rung, and **for this search only**. The same two named fields every other hour crosses in, because this one is drawn on the same seven-by-sixteen grid the player just filled in — ticked there as belonging to this search and to no later one. */
-            slot?: components["schemas"]["WeeklyHourResource"];
         };
         /** SavedMethodSchema */
         SavedMethodSchema: {
@@ -9665,201 +6545,19 @@ export interface components {
             sets: components["schemas"]["SetScoreSchema"][];
         };
         /**
-         * ScoredTermSchema
-         * @description One term that produced a reading, and what it was worth here.
-         */
-        ScoredTermSchema: {
-            term: components["schemas"]["Term"];
-            /**
-             * Weight
-             * @description The **renormalised** weight — this term's share of a hundred over the terms that actually fired.
-             */
-            weight: number;
-            /** Value */
-            value: number;
-            /**
-             * Contribution
-             * @description The weight times the value. The contributions sum to the Fit.
-             */
-            contribution: number;
-            /** Evidence */
-            evidence: components["schemas"]["LevelFitEvidence"] | components["schemas"]["PredictedBalanceEvidence"] | components["schemas"]["IntentAlignmentEvidence"] | components["schemas"]["ReliabilityEvidence"] | components["schemas"]["AvailabilityOverlapEvidence"] | components["schemas"]["PlayingStyleEvidence"] | components["schemas"]["SocialVibeEvidence"] | components["schemas"]["DistanceEvidence"];
-        };
-        /**
-         * SearchEnvelope
-         * @description Every fact about *the search*, as opposed to about a candidate.
-         *
-         *     One object, identical on every route that creates a search: one renderer, one
-         *     type.
-         */
-        SearchEnvelope: {
-            /**
-             * Search Id
-             * Format: uuid
-             * @description The answer's identity. Minted server-side and recorded before this response was returned.
-             */
-            search_id: string;
-            /**
-             * At
-             * Format: date-time
-             */
-            at: string;
-            surface: components["schemas"]["SearchSurface"];
-            /** @description Null exactly on the deck and the radar, which have no mode and score every pairing under one ruler. */
-            mode: components["schemas"]["SearchMode"] | null;
-            /**
-             * My Area Code
-             * @description **Your own** coarse area, as the code the candidate's card carries one in, and as this search ran on it.
-             *
-             *     It is here so a card can say *in your area* — a comparison between two codes, which is the one sentence an `area_code` licenses a client to write. The card is handed both codes rather than reading the profile for the second: a card that reached for a value nobody passed it would be drawing from global state.
-             *
-             *     **Omitted on a search recorded before it was kept**, and on those only. It is the search's area rather than the profile's current one, so a read-back reproduces the answer that was given rather than the one that would be given now — and an absent code drops the sentence, where an empty one would quietly claim *never in your area*.
-             */
-            my_area_code?: string;
-            /**
-             * Ruleset Version
-             * @description What the numbers were
-             */
-            ruleset_version: string;
-            /**
-             * Engine Version
-             * @description How the maths works
-             */
-            engine_version: string;
-            optimised_for: components["schemas"]["OptimisedFor"];
-            /**
-             * Index Stale
-             * @description Whether the candidate index was more than fifteen minutes behind the log. The search was served either way; past a day it would have been refused instead.
-             */
-            index_stale: boolean;
-            pool: components["schemas"]["PoolSchema"];
-            /**
-             * Radius Clamp
-             * @description Whether a widening offer hit the profile slider's own ceiling. False on a search that widened nothing.
-             */
-            radius_clamp: boolean;
-            /**
-             * Sorts Available
-             * @description Which re-sorts the client may draw over rows it already holds. **A sort that would reorder nothing is not in this list**, and the control is not drawn — a visible control that does nothing is the product lying quietly. Re-sorting costs no round trip.
-             */
-            sorts_available: components["schemas"]["SortOption"][];
-            /**
-             * Rung Offers
-             * @description What relaxing your own asks would be worth, each with a real count from a genuine re-run.
-             *
-             *     **`null` means the offers were not computed at all** — your shortlist was long enough that nobody needed them. An empty list means they were computed and there is nothing left to offer, which is the honest empty state: the pool beside it is the whole answer.
-             *
-             *     **A search that took a rung is offered none**: one climb per search screen, so the widest any accepted offer reaches is twice the radius you saved. That search's list is empty rather than `null`, and `rung_taken` beside it is what tells the two empties apart.
-             */
-            rung_offers: components["schemas"]["RungOfferSchema"][] | null;
-            /**
-             * Prompts
-             * @description Questions this search raises, each of which changes nothing until you answer it. Present on a search and **omitted on a read-back**, where a month-old question would be asked about a value that has since moved.
-             */
-            prompts?: components["schemas"]["PromptSchema"][];
-        };
-        /**
          * SearchMode
-         * @description What kind of evening this search is for. **Two values, never three.**
+         * @description What kind of game this is. **Two values, never three.**
          *
-         *     ``PlayIntent`` is the *candidate's* declaration and has three values;
-         *     ``SearchMode`` is the *searcher's* setting — which tab they are on, right
-         *     now — and has two. ``app/modules/player_profile/domain/play_intent.py`` says
-         *     where this type belongs when it arrives: *"it belongs to the matcher and not
-         *     to this module"*. Here it is.
+         *     ``PlayIntent`` is a player's declaration and has three values; this is the
+         *     *game's* kind — a Games card is competitive or for fun — and has two. The
+         *     arities differ on purpose, so the likeliest bug in reading one as the other
+         *     is a type error rather than a paragraph in a document.
          *
-         *     **There is never a ``NO_PREFERENCE`` weight vector.** A candidate who
-         *     declared ``NO_PREFERENCE`` is indifferent about the kind of evening, so their
-         *     reverse fit runs under the *searcher's* mode: ``NO_PREFERENCE`` never selects
-         *     a weight vector, it inherits one (``ranking-weights.md`` §9). The arities
-         *     differ on purpose, so the likeliest bug in the matcher is a type error rather
-         *     than a paragraph in a document.
+         *     It picks the level window's tolerance (``matchmaking/domain/level_window.py``)
+         *     and nothing else here.
          * @enum {string}
          */
         SearchMode: "COMPETITIVE" | "FOR_FUN";
-        /**
-         * SearchRadiusBoundsResource
-         * @description The range a Search radius may take, in whole kilometres.
-         *
-         *     The unit is in every field name on purpose: a bare ``minimum`` is one
-         *     refactor away from being read as metres.
-         */
-        SearchRadiusBoundsResource: {
-            /**
-             * Minimum Km
-             * @description Smallest radius a player may hold
-             */
-            minimum_km: number;
-            /**
-             * Maximum Km
-             * @description Largest radius a player may hold
-             */
-            maximum_km: number;
-            /**
-             * Step Km
-             * @description Granularity — whole kilometres
-             */
-            step_km: number;
-            /**
-             * Default Km
-             * @description What the control opens at
-             */
-            default_km: number;
-        };
-        /**
-         * SearchRadiusResponse
-         * @description The radius as the profile now holds it.
-         */
-        SearchRadiusResponse: {
-            /** Search Radius Km */
-            search_radius_km: number;
-        };
-        /**
-         * SearchSurface
-         * @description Which terminal stage ran. Five values, and pooling their rates is how
-         *     every number the engine is judged by becomes meaningless — ``FILL_SEATS`` is
-         *     not even optimising for the searcher, and ``RADAR`` ranks nobody at all.
-         *
-         *     ``SHORTLIST`` and ``DECK`` could be written from the start; the two line-up
-         *     surfaces arrived with their route, and the **reading** with the radar
-         *     (``docs/adr/0174`` §1). The first four were declared before any of them
-         *     could be written, because ``surface`` is a stored column and a vocabulary
-         *     that grows one value per ticket is a vocabulary whose old rows cannot be
-         *     read against the new ones — and the fifth is the one surface that was
-         *     argued for after the column existed, which is what an ADR is for.
-         * @enum {string}
-         */
-        SearchSurface: "SHORTLIST" | "LINEUP" | "DECK" | "FILL_SEATS" | "RADAR";
-        /**
-         * SeatAnswer
-         * @description What the person in this seat did about being asked — or, having said yes,
-         *     about the game.
-         *
-         *     Four values and not five: *awaiting* is the absence of an answer, and giving
-         *     it a name would make ``None`` and ``AWAITING`` two spellings of one state
-         *     with nothing to choose between them.
-         *
-         *     ``LAPSED`` is recorded by the sweep and is **never** a decline. They do the
-         *     same thing to the line-up and they are different facts: *answers challenges*
-         *     is a Strand over challenges that got an answer inside their window, and it is
-         *     unmeasurable if silence is filed as judgement.
-         *
-         *     ``LEFT`` is the one answer written **over** another (``docs/adr/0162``,
-         *     ``docs/adr/0165`` §1): an accepted seat whose occupant has since left it,
-         *     on a court that had become a game or on one that had not. It opens the
-         *     seat exactly as the other two do and is neither of them — leaving a court
-         *     you agreed to is not declining an invitation, and nothing prices it yet.
-         * @enum {string}
-         */
-        SeatAnswer: "ACCEPTED" | "DECLINED" | "LAPSED" | "LEFT";
-        /**
-         * SeatCardSchema
-         * @description The card for one seat: who they are, and what you make of them.
-         */
-        SeatCardSchema: {
-            person: components["schemas"]["CourtPersonSchema"];
-            pairing: components["schemas"]["CourtPairingSchema"];
-        };
         /**
          * SeatChargeResponse
          * @description One of the reader's own seat charges.
@@ -9898,61 +6596,6 @@ export interface components {
          * @enum {string}
          */
         SeatChargeStatus: "AUTHORISED" | "FAILED" | "TAKING" | "CAPTURED" | "RELEASING" | "CANCELLED";
-        /**
-         * SeatChoiceSchema
-         * @description One position on the court as the organiser left it.
-         *
-         *     **An empty seat is a seat**, so ``player_id`` is genuinely optional: an A-side
-         *     full with a B-side short is a different court from the reverse, and the next
-         *     invitee's side is not a free choice.
-         *
-         *     There is no origin field and no position. Where each invitation came from is
-         *     resolved server-side against the cited search, because a position a client
-         *     sent would be true only while the client was honest about where it had
-         *     scrolled to.
-         */
-        SeatChoiceSchema: {
-            /** @description Which side of the net this seat is on */
-            side: components["schemas"]["Side-Input"];
-            /**
-             * Player Id
-             * @description Who is to sit here, or omitted for a seat nobody was put in. The organiser holds one of these like anybody else.
-             */
-            player_id?: string | null;
-        };
-        /**
-         * SeatSchema
-         * @description One seat: a side, its occupant, their answer and their own deadline.
-         *
-         *     ``answer_by`` is **this seat's own**, dated when this seat was invited — a
-         *     seat filled later starts its own day and cannot inherit a deadline from a send
-         *     it was not part of. It is absent exactly when nobody was asked: an empty seat,
-         *     the organiser's, and both seats of a challenge born from a mutual yes.
-         */
-        SeatSchema: {
-            side: components["schemas"]["app__modules__challenges__domain__seats__Side"];
-            /**
-             * Player Id
-             * @description Who holds this seat. ``null`` on a seat nobody was put in.
-             */
-            player_id?: string | null;
-            /** @description What they did about being asked. ``null`` while they have not answered, and on a seat nobody was put in. **A lapse is not a refusal** — they are different facts and the platform counts them apart. */
-            answer?: components["schemas"]["SeatAnswer"] | null;
-            /**
-             * Answer By
-             * @description When this seat's answer stops being wanted. Past it the seat reads as lapsed whether or not anything has swept it, and a late answer is refused rather than accepted late. ``null`` exactly when nobody was asked: an empty seat, the organiser's, and both seats of a challenge born from a mutual yes.
-             */
-            answer_by?: string | null;
-            /**
-             * Name
-             * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname, which is a handle drawn on a record and said nowhere.
-             *
-             *     ``null`` on a seat nobody was put in, and ``null`` where ``users`` no longer has the account — never for an unnamed player, whom the entry gate holds at the naming step. The seat stays either way: a seat with no name is still a position on the court, and the screen has a side to name instead.
-             *
-             *     **A name is the whole of what a challenge borrows about a person here.** A Level, a band, an area and a photograph are a card's, and a card is drawn on the detail read alone.
-             */
-            name?: string | null;
-        };
         /**
          * SeatToFillSchema
          * @description One *Seats to fill* row: a booked game that lost a player, and the
@@ -10056,31 +6699,6 @@ export interface components {
             name: string | null;
         };
         /**
-         * SendChallengeRequest
-         * @description One press. **The court, and the search it was built on.**
-         *
-         *     ``search_id`` is the origin, and it is one search for the whole court: the
-         *     arrangement was built and forecast against a single answer, and a court
-         *     assembled out of two searches is a court no forecast was ever computed for.
-         *
-         *     **The sport, the kind of evening and the week are not sent.** All three are
-         *     read off that search's own record — there is no window picker anywhere
-         *     (``docs/adr/0100``), and a player changes their window by changing their grid.
-         */
-        SendChallengeRequest: {
-            /**
-             * Search Id
-             * Format: uuid
-             * @description The search this court was built from. **Required** — every invitee must have appeared in it, and each seat cites where they sat.
-             */
-            search_id: string;
-            /**
-             * Court
-             * @description The sides as you arranged them, in the court's own order: every **A** seat, then every **B**. It must be the sport's shape and you must be in it.
-             */
-            court: components["schemas"]["SeatChoiceSchema"][];
-        };
-        /**
          * SendMessageRequest
          * @description One player's own words.
          */
@@ -10098,59 +6716,6 @@ export interface components {
              *     **Send the same one on a retry.** A repeat answers `200` with the same message and the same `seq`, and records nothing — so a send that paused offline and resumed can never become two messages.
              */
             client_message_id: string;
-        };
-        /**
-         * SentChallengeResponse
-         * @description What a send answers with. **An id, and deliberately nothing else.**
-         *
-         *     Not the challenge: nobody has answered it yet, so every seat says exactly
-         *     what the organiser just sent, and a body repeating their own arrangement back
-         *     at them is a round trip that says nothing. The id is what the client keeps.
-         */
-        SentChallengeResponse: {
-            /**
-             * Challenge Id
-             * Format: uuid
-             * @description The challenge that now stands
-             */
-            challenge_id: string;
-        };
-        /**
-         * SetDayRequest
-         * @description *We are playing on this day.*
-         */
-        SetDayRequest: {
-            /**
-             * Day
-             * Format: date
-             * @description A local day in the platform zone, **clamped to 7 days past the row's `anchor`** — so a plan can never name a day past the entry window once there is a game, and the row of days a client offers shrinks as the week runs out.
-             */
-            day: string;
-        };
-        /**
-         * SetHourRequest
-         * @description *We are playing at this time.*
-         */
-        SetHourRequest: {
-            /**
-             * Hour
-             * Format: time
-             * @description A local clock time in **30-minute steps between 06:00 and 23:00**, validated server-side. Bounded chips the platform offered, never a free instant: the grid a client draws is a convention, and this is what makes it true.
-             */
-            hour: string;
-        };
-        /**
-         * SetPlaceRequest
-         * @description *We are meeting here.*
-         */
-        SetPlaceRequest: {
-            /**
-             * Place
-             * @description Where you are meeting. Runs of whitespace collapse to one space, so the value is one line; empty after that is `the_place_is_empty`, and past 120 characters is `the_place_is_too_long`. **Neither is silently fixed** — a shortened note is one the person who typed it believes they wrote whole, in front of the other people on the court.
-             *
-             *     **The cap is not declared here on purpose.** A `maxLength` would make an over-long note a `422` about a field, where it is a refusal this context owns and names — the same shape `POST /conversations/{id}/messages` already takes.
-             */
-            place: string;
         };
         /**
          * SetScoreSchema
@@ -10190,77 +6755,6 @@ export interface components {
              * @description Every hour still ticked. **The list is the week** — what is absent is unticked — and an empty list clears it, which is a legal value rather than a refusal.
              */
             weekly_hours: components["schemas"]["WeeklyHourResource"][];
-        };
-        /**
-         * SharedSlot
-         * @description The next hour of the week both players ticked.
-         *
-         *     **The grid is never rendered to anybody as a calendar.** Only the count of
-         *     shared hours and the name of the next shared one are ever shown, because
-         *     overlap is a fact about a pair where a calendar is a fact about a person.
-         */
-        SharedSlot: {
-            /**
-             * Day
-             * @description ISO weekday — 1 is Monday, 7 is Sunday. The grid is Monday-first.
-             */
-            day: number;
-            /**
-             * Hour
-             * @description The hour that cell starts at, wall clock — 19 is 19:00 to 20:00
-             */
-            hour: number;
-        };
-        /**
-         * ShortlistResponse
-         * @description The whole answer: one envelope, and at most twenty rows.
-         *
-         *     **Bounded and unpaginated.** There is no page two; past the last row there
-         *     are rung offers or an honest empty state. The bound is ruleset data, so a
-         *     client never reads twenty from anywhere — it renders the rows it is given.
-         */
-        ShortlistResponse: {
-            search: components["schemas"]["SearchEnvelope"];
-            /**
-             * Candidates
-             * @description Ranked. **An empty list is a `200`** — the honest empty state is an answer, not a failure.
-             *
-             *     A read-back may carry withheld rows: the record is immutable and the gates are live, so a row the product has since agreed not to show keeps its place and states that it is withheld. Branch on `withheld` — a fresh search never carries one.
-             */
-            candidates: (components["schemas"]["CandidateSchema"] | components["schemas"]["WithheldRowSchema"])[];
-        };
-        /**
-         * Side
-         * @description Which side of the net. The organiser is always on ``A``.
-         *
-         *     This context's own, and deliberately a second spelling of
-         *     ``matchmaking.domain.lineups.Side``: the matcher's is *the searcher's side of
-         *     a line-up it is ranking*, this one is *a position on a court somebody has
-         *     been asked to sit in*, and ``challenges`` may not import ``matchmaking``.
-         *     The two strings are equal on purpose, so the mapping at the seam is identity
-         *     rather than a table.
-         * @enum {string}
-         */
-        "Side-Input": "A" | "B";
-        /**
-         * SidesSchema
-         * @description The two sides of the net. **You are always on `A`.**
-         *
-         *     There is no arrangement in which the searcher crosses the net, because
-         *     *which side am I on* is not a question a builder asks: what varies is who is
-         *     beside you.
-         */
-        SidesSchema: {
-            /**
-             * A
-             * @description Your own side, you first
-             */
-            A: components["schemas"]["ArrangementSeatSchema"][];
-            /**
-             * B
-             * @description The opposition
-             */
-            B: components["schemas"]["ArrangementSeatSchema"][];
         };
         /**
          * SkillPanelSchema
@@ -10377,9 +6871,9 @@ export interface components {
          * SocialTagSelectionBoundsResource
          * @description How many Social tags a selection must hold to be one.
          *
-         *     The unit is in both field names for the reason it is on the radius bounds:
-         *     a bare ``minimum`` beside a list of eighteen tags reads as a count of
-         *     something, and which something is exactly what a client would guess wrong.
+         *     The unit is in both field names: a bare ``minimum`` beside a list of
+         *     nineteen tags reads as a count of something, and which something is exactly
+         *     what a client would guess wrong.
          */
         SocialTagSelectionBoundsResource: {
             /**
@@ -10407,97 +6901,6 @@ export interface components {
              * @description In the vocabulary's order, whatever order was sent.
              */
             social_tags: components["schemas"]["SocialTag"][];
-        };
-        /**
-         * SocialVibeEvidence
-         * @description What the two of them are like around the game.
-         *
-         *     The same shape as playing style and deliberately a **separate variant**: the
-         *     two terms carry different weights, invert between the modes, and a client
-         *     renders them under different headings. One variant with a column field would
-         *     make *which term is this* a value the client has to branch on rather than a
-         *     type it can dispatch over.
-         */
-        SocialVibeEvidence: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            kind: "social_vibe";
-            /**
-             * Matched
-             * @description Tag ids they both hold, in this column
-             */
-            matched: string[];
-            /**
-             * Complementary
-             * @description Pairs product claims fit together
-             */
-            complementary: components["schemas"]["TagPair"][];
-            /**
-             * Clashing
-             * @description Pairs product claims do not
-             */
-            clashing: components["schemas"]["TagPair"][];
-        };
-        /**
-         * SortOption
-         * @description The re-sorts a client may offer over rows it already holds.
-         *
-         *     **Server-driven, and a sort that would reorder nothing is not drawn.** A
-         *     client deriving offerability from ``degraded_terms`` would be encoding a
-         *     sort-to-term mapping, which is the objection that promoted ``distance_km``
-         *     out of the distance evidence in the first place.
-         *
-         *     ``MOST_RELIABLE`` reads the **published** Player Score, and it is offered on
-         *     a search whose candidates have one and withheld on a search whose candidates
-         *     do not — a fact about *that* search, re-derived per search rather than
-         *     hardcoded. Most people have no record yet, so most searches still do not draw
-         *     it, and that is the derivation working rather than a gap. ``EVENEST`` reads
-         *     ``would_be_forecast``, which no shortlist carries.
-         * @enum {string}
-         */
-        SortOption: "BEST_FIT" | "CLOSEST" | "EVENEST" | "MOST_RELIABLE";
-        /**
-         * SplitSchema
-         * @description The two side strengths this arrangement's forecast was read from.
-         *
-         *     **The evidence behind the percentage**, and never a second score
-         *     (``docs/adr/0136``). ``pct`` says *how even*; this says *between what and
-         *     what*, on the Skill scale a player already reads levels on — which is
-         *     ``matchmaking-engine.md`` §12 rule 1 applied to the figure that was already
-         *     crossing, exactly as it put ``sigma_group`` beside ``pct``. The group
-         *     objective stays where ADR-0117 left it: recorded, and never returned.
-         *
-         *     **On the arrangement rather than on the forecast.** ``ForecastSchema`` is
-         *     *one type, everywhere it appears* and rides on every shortlist row's
-         *     ``would_be_forecast``; a response carries at most three arrangements and tens
-         *     of candidate rows, and this is a fact about an arrangement.
-         *
-         *     **These are numbers only the engine has.** A side's strength is not the mean
-         *     of the two people on it, so a client averaging seated levels would print a
-         *     different pair — which is the arithmetic ``the-play-screens.md`` §11.3
-         *     refuses, in the one check that looks for arithmetic rather than reading
-         *     intent.
-         */
-        SplitSchema: {
-            /**
-             * Your Side
-             * @description Your half's combined strength, on the Skill scale. **You are always side `A`** — there is no arrangement in which you cross the net.
-             */
-            your_side: number;
-            /**
-             * Their Side
-             * @description Theirs, on the same scale
-             */
-            their_side: number;
-            /**
-             * Gap
-             * @description `your_side` − `their_side`, **signed**. Served rather than left to a subtraction: a client subtracting two rounded figures and an engine subtracting two unrounded ones disagree at the boundary, and the card prints all three.
-             *
-             *     Signed because the bar takes an *advantage* — an unsigned gap would leave the client deciding which half of it is bigger, which is the same arithmetic in a smaller disguise.
-             */
-            gap: number;
         };
         /**
          * Sport
@@ -10562,12 +6965,6 @@ export interface components {
             /** Sports */
             sports: components["schemas"]["SportResource"][];
         };
-        /**
-         * Standing
-         * @description The seven standings, as codes. A client's words are the client's own.
-         * @enum {string}
-         */
-        Standing: "AWAITING_ANSWERS" | "ON" | "LINE_UP_INCOMPLETE" | "DECLINED" | "LAPSED" | "WITHDRAWN" | "CALLED_OFF";
         /**
          * StandingProposalSchema
          * @description One side's score, on the table and not yet settled on.
@@ -10645,23 +7042,6 @@ export interface components {
         StateResultRequest: {
             /** @description The score you say was played */
             score: components["schemas"]["ScoreSchema"];
-        };
-        /**
-         * StrandReading
-         * @description One reliability strand that produced a reading.
-         *
-         *     A strand with too few observations **stands down and is absent from the
-         *     list** rather than present at zero: *we have not seen enough* and *they are
-         *     bad at this* are different facts, and a term may never be honestly neutral.
-         */
-        StrandReading: {
-            /** @description Which of the six */
-            strand: components["schemas"]["ReliabilityStrand"];
-            /**
-             * Value
-             * @description The strand's own reading
-             */
-            value: number;
         };
         /**
          * StrandRowSchema
@@ -10752,41 +7132,6 @@ export interface components {
                 [key: string]: string;
             };
         };
-        /**
-         * TagPair
-         * @description Two tag ids one relationship row fired on.
-         *
-         *     Ids only. The row's kind is the field it sits under, its column is the term
-         *     it sits under, and its strength or severity is a ruleset number the player is
-         *     not shown — what is owed here is *which two things about you two this reads*.
-         */
-        TagPair: {
-            /**
-             * A
-             * @description A Social tag id
-             */
-            a: string;
-            /**
-             * B
-             * @description The other Social tag id
-             */
-            b: string;
-        };
-        /**
-         * Term
-         * @description The eight terms of Fit, weighted per mode and renormalised per comparison.
-         *
-         *     Eight and not seven: the prototype's single ``vibe`` merges what the split
-         *     below keeps apart, and intent alignment is the term the prototype never had.
-         *     **The split between playing style and social vibe is by *relationship*, not
-         *     by tag group** — every matrix row carries its own column
-         *     (``ranking-weights.md`` §1).
-         *
-         *     Day one **reliability stands down** and the live seven renormalise; that is
-         *     the basis every judged reading and the quality floor were computed on.
-         * @enum {string}
-         */
-        Term: "LEVEL_FIT" | "PREDICTED_BALANCE" | "INTENT_ALIGNMENT" | "RELIABILITY" | "AVAILABILITY_OVERLAP" | "PLAYING_STYLE" | "DISTANCE" | "SOCIAL_VIBE";
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */
@@ -10830,23 +7175,6 @@ export interface components {
          * @enum {string}
          */
         UncountedReason: "SEAT_EMPTY" | "NO_SHOW";
-        /**
-         * UnfilledReason
-         * @description Why a seat is empty, and why the four-way week is.
-         *
-         *     ``the-group-objective.md`` §5.1's closed vocabulary. **A partial line-up is
-         *     always a `200`**: *three of four* is an honest answer, and *nobody* is the
-         *     same shape with three seats carrying a reason rather than a separate empty
-         *     state.
-         *
-         *     ``NO_ADMISSIBLE_COMBINATION`` is the one ``docs/adr/0116`` added and it is
-         *     load-bearing: without it a six-pair gate is indistinguishable from a thin
-         *     pool, on the screen and in the telemetry — and after
-         *     ``docs/adr/0113`` it is also how a screen says *nobody at their level yet*
-         *     about a newcomer's first four rather than *nobody*.
-         * @enum {string}
-         */
-        UnfilledReason: "NO_CANDIDATE_ABOVE_FLOOR" | "NO_ADMISSIBLE_COMBINATION" | "POOL_EXHAUSTED" | "NO_SHARED_SLOTS";
         /**
          * UserCreateRequest
          * @description Sign-up: credentials and the attestation, and nothing about who you are.
@@ -10924,11 +7252,6 @@ export interface components {
             is_admin: boolean;
             /** Is Active */
             is_active: boolean;
-            /**
-             * Is Tester
-             * @description Whether this account carries the **tester mark**: a real player who may be given a feature before anyone else. Set and cleared by an admin command, never by the player, and `false` for every account until then. **Not a role** — `authority` does not move with it. The player app passes it to flag evaluation as `isTester`, so no published datafile ever has to name a tester.
-             */
-            is_tester: boolean;
             /** Created At */
             created_at?: string | null;
             /**
@@ -11046,57 +7369,6 @@ export interface components {
          */
         Window: "TODAY" | "TOMORROW" | "WEEKEND" | "THIS_WEEK" | "ANY";
         /**
-         * WireInclusionReason
-         * @description Why this person is in the list at all — **and it is a union of one.**
-         *
-         *     The store keeps three values and the wire publishes this one, which is the
-         *     whole of ``the-two-contracts.md`` §4's *the store is open where the wire is
-         *     closed*. Only an **interest lift** admits anybody; the other two **reorder**,
-         *     and a reorder is not a reason a searcher is owed:
-         *
-         *     - ``NEWCOMER_WINDOW`` reaches the client as a Liveness reason instead, which
-         *       is where a printable reorder belongs.
-         *     - ``ZERO_EXPOSURE`` never crosses at all. *You are seeing this person because
-         *       nobody has been shown them all week* is a third party's unpopularity, and
-         *       the searcher is owed no version of it.
-         *
-         *     It stays an enum of one rather than a bare literal so the next reason that
-         *     genuinely **admits** somebody has somewhere to go.
-         * @enum {string}
-         */
-        WireInclusionReason: "INTEREST_LIFT";
-        /**
-         * WithheldRowSchema
-         * @description A row that was recorded, and that the live gates no longer admit.
-         *
-         *     **Stated, never vanished.** A read-back that quietly returned nineteen rows
-         *     where twenty were recorded is the same class of lie as a breakdown that
-         *     quietly stops adding up, and worse for being invisible — so the row keeps its
-         *     place in the list and says what happened to it.
-         *
-         *     **It names no gate, and it carries no person.** The four fail-closed gates
-         *     are a block either way, a hold, an account that may not be shown, and the
-         *     mutual gender preference; naming which one fired would tell a searcher that a
-         *     particular person blocked them, was suspended, or changed a safety setting.
-         *     ``docs/adr/0095`` is explicit that *neither party is ever notified and the
-         *     other side sees no trace anywhere in any response*, and that rule does not
-         *     weaken because the surface has a longer memory. So this shape has one field,
-         *     and there is nowhere on it for a reason, an id, a card or a breakdown to be
-         *     written.
-         *
-         *     The searcher loses nothing they are owed: they saw this row when they ran the
-         *     search, and what has changed since is only that the product will no longer
-         *     show it to them.
-         */
-        WithheldRowSchema: {
-            /**
-             * Withheld
-             * @description Always `true`. This row was recorded and is no longer shown: the fail-closed gates were re-evaluated at read time and one of them excludes it now. **Which one is deliberately not said.**
-             * @constant
-             */
-            withheld: true;
-        };
-        /**
          * YesAnswerResponse
          * @description What a yes left on the game — and, when it was the last, what the fill
          *     did.
@@ -11138,25 +7410,6 @@ export interface components {
             /** @description `AUTHENTICATION_REQUIRED` — the bank wants the player to confirm; `DECLINED` — confirm with another card; `TERMS_NEEDED` — accept the terms again, then say yes; `NO_METHOD` — save a method, then say yes. */
             refusal: components["schemas"]["PaymentRefusal"];
         };
-        /**
-         * Side
-         * @description Which side of the net. The organiser is always on ``A``.
-         *
-         *     This context's own, and deliberately a second spelling of
-         *     ``matchmaking.domain.lineups.Side``: the matcher's is *the searcher's side of
-         *     a line-up it is ranking*, this one is *a position on a court somebody has
-         *     been asked to sit in*, and ``challenges`` may not import ``matchmaking``.
-         *     The two strings are equal on purpose, so the mapping at the seam is identity
-         *     rather than a table.
-         * @enum {string}
-         */
-        app__modules__challenges__domain__seats__Side: "A" | "B";
-        /**
-         * Side
-         * @description Which side of the net. The searcher is always on ``A``.
-         * @enum {string}
-         */
-        app__modules__matchmaking__domain__lineups__Side: "A" | "B";
         /**
          * PaymentToConfirmSchema
          * @description What the phone confirms a refused payment with, on the club's account:
@@ -11949,7 +8202,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description What the client calls this commit. Sending the same key again returns the profile the first call created, with a 200 — one profile, one consent answer, whatever a flaky connection does to the response. */
+                /** @description What the client calls this commit. Sending the same key again returns the profile the first call created, with a 200 — one profile, whatever a flaky connection does to the response. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -11986,11 +8239,7 @@ export interface operations {
              *
              *     `duplicate_social_tag` — the same tag id arrived twice.
              *
-             *     `search_radius_out_of_bounds` — outside the served range, or off its step.
-             *
              *     `weekly_hours_empty` — nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.
-             *
-             *     `proposals_opt_in_not_answered` — the answer was `null`. Ask the question; do not send `false` on the player's behalf.
              *
              *     `too_many_photos` / `duplicate_photo` — the photo list is not one a profile may hold.
              *
@@ -12066,66 +8315,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WeeklyHoursResponse"];
-                };
-            };
-            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    change_search_radius_api_v1_players_me_search_radius_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChangeSearchRadiusRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchRadiusResponse"];
-                };
-            };
-            /** @description `search_radius_out_of_bounds` — outside the range served by `GET /player-profile/options`, or off its step. Re-checked here even though a slider built from those numbers cannot produce one: a control is not a validation. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
@@ -12494,57 +8683,6 @@ export interface operations {
             };
         };
     };
-    answer_proposals_opt_in_api_v1_players_me_proposals_opt_in_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AnswerProposalsOptInRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProposalsOptInResponse"];
-                };
-            };
-            /** @description `player_profile_not_found` — this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `concurrent_modification` — two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     declare_play_intent_api_v1_play_intents__sport__put: {
         parameters: {
             query?: never;
@@ -12714,1170 +8852,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    run_search_api_v1_searches_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RunSearchRequest"];
-            };
-        };
-        responses: {
-            /** @description A ranked shortlist of at most twenty, each row carrying a Fit out of a hundred and the complete breakdown that produced it. **An empty list is also a 200** — the honest empty state is an answer, and the pool it came from is described either way. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShortlistResponse"];
-                };
-            };
-            /** @description `account_held` — this account is under a live hold. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `sport_not_rated` — you hold no rating for this sport.
-             *
-             *     `play_intent_not_declared` — you have not said what kind of evening you are after for it.
-             *
-             *     `player_profile_not_committed` — there is no profile to read a radius, a grid or an area from.
-             *
-             *     `rung_offer_not_found` — you cited a rung no search of yours offered. The widening is read off the offer, never off the request, so an unknown citation is refused rather than run narrow and recorded as widened.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*: `matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded`. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    read_search_back_api_v1_searches__search_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The answer's identity, from the POST */
-                search_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The recorded answer, **plus live gate state**. The same schema the `POST` returned — not a fuller one and not a slimmer one — with any row the fail-closed gates no longer admit **stated as withheld** rather than quietly missing. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShortlistResponse"];
-                };
-            };
-            /** @description `account_held` — this account is under a live hold. The hold points both ways, and it points at old answers too. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `search_not_found` — no search of **yours** has that id. A search belonging to somebody else answers exactly as one that never existed. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /**
-             * @description `gate_data_unavailable` — a fail-closed gate could not be re-evaluated, so the answer is refused rather than served unverified.
-             *
-             *     `matchmaking_unavailable` — there is no index in this process to read the other side of the gender gate from.
-             */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    run_lineup_api_v1_lineups_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RunLineupRequest"];
-            };
-        };
-        responses: {
-            /** @description A seated line-up, every arrangement with its own forecast, and one reason this four beat the runner-up. **A seat may be unfilled and this is still a 200** — the empty seat says why. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LineupResponse"];
-                };
-            };
-            /** @description `account_held` — this account is under a live hold. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `sport_not_rated` — you hold no rating for this sport.
-             *
-             *     `play_intent_not_declared` — you have not said what kind of evening you are after for it.
-             *
-             *     `player_profile_not_committed` — there is no profile to read a radius, a grid or an area from.
-             *
-             *     `rung_offer_not_found` — you cited a rung no search of yours offered.
-             *
-             *     `locked_seat_not_available` — somebody you seated by hand cannot be seated in this line-up. **Which one is deliberately not said.** Completing a challenge, this means somebody on your court has been blocked, held or deactivated since they accepted — re-read the challenge.
-             *
-             *     `challenge_not_yours_to_fill` — the challenge you named is not one of yours to complete. **One code for three cases**: no such challenge, you hold no live seat on it, or nobody is arranging it any more.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded`. The second one covers the **pairwise block mask**: a four is never seated on a gate that could not be evaluated. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    forecast_lineup_api_v1_forecasts_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ForecastRequest"];
-            };
-        };
-        responses: {
-            /** @description Every arrangement of the four you composed, each with its own forecast. **Provisional while a seat is empty**, and the provisional figure becomes exactly the final figure the moment the seat fills. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForecastResponse"];
-                };
-            };
-            /** @description `account_held` — this account is under a live hold. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `search_not_found` — no search of yours showed all of those players. **One code for four cases**: the search does not exist, it is somebody else's, it was for another sport, or it never showed one of these people. Telling them apart would answer questions about strangers one probe at a time. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `sport_not_rated`, `play_intent_not_declared`, `player_profile_not_committed` — the same three the search route owes, for the same reason: a forecast puts **you** on the court. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /**
-             * @description `gate_data_unavailable` — blocks and holds are re-read live and a gate that cannot be evaluated excludes.
-             *
-             *     `matchmaking_unavailable` — the engine raised.
-             */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    read_interest_api_v1_interest_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Your outgoing yeses, the ones that came back, and where each sport stands against its cap. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InterestListResponse"];
-                };
-            };
-            /** @description `gate_data_unavailable` — the block set could not be evaluated, so the list is refused rather than served unverified. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    express_interest_api_v1_interest_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ExpressInterestRequest"];
-            };
-        };
-        responses: {
-            /** @description You had already said this. **Nothing was created and nothing was extended** — the yes comes back with the expiry it was born with. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExpressedInterestResponse"];
-                };
-            };
-            /** @description The yes stands, and it is new. It lapses at `expires_at`, which was dated the moment it was created. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExpressedInterestResponse"];
-                };
-            };
-            /**
-             * @description `origin_search_not_found` — no search of **yours** showed that player for that sport. The origin key is refused rather than linked as null.
-             *
-             *     `outstanding_interest_cap_reached` — you already have the most yeses in flight this sport allows. **Nothing of yours is shortened to make room**; wait, or one of them comes back. The count and the cap are on `GET /api/v1/interest`.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    deal_the_deck_api_v1_deck_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DealDeckRequest"];
-            };
-        };
-        responses: {
-            /** @description One deal: an ordered batch of at most ten cards, sharing one `search_id`. **An empty deal is also a 200** — a fresh deal that came back with nothing is the honest empty state, and the pool it came from is described either way. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShortlistResponse"];
-                };
-            };
-            /** @description `account_held` — this account is under a live hold. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `sport_not_rated` — you hold no rating for this sport.
-             *
-             *     `player_profile_not_committed` — there is no profile to read a radius, a grid or an area from.
-             *
-             *     **Never `play_intent_not_declared`**: the deck reads no declaration, so a player who never made one is dealt without being asked to.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded` — four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    show_them_again_api_v1_deck_reset_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResetDeckRequest"];
-            };
-        };
-        responses: {
-            /** @description Cleared. **Nothing is returned** — the next deal is where the difference shows. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description `account_held` — this account is under a live hold. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `sport_not_rated` — you hold no rating for this sport, so there is no deck of yours to deal again. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_the_radar_api_v1_radar_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReadRadarRequest"];
-            };
-        };
-        responses: {
-            /** @description One reading: every player the radar may draw for you in this sport, ordered by distance and then id, sharing one `search_id`. **An empty reading is also a 200** — nobody rated in this sport inside your reach is an answer, and the pool it came from is described either way. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShortlistResponse"];
-                };
-            };
-            /** @description `account_held` — this account is under a live hold. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `sport_not_rated` — you hold no rating for this sport.
-             *
-             *     `player_profile_not_committed` — there is no profile to read a radius or an area from.
-             *
-             *     **Never `play_intent_not_declared`**: like the deck, the radar reads no declaration.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `matchmaking_unavailable`, `gate_data_unavailable`, `index_too_stale`, `search_not_recorded` — four distinct codes at one status, so a client can tell a transient outage from a refusal about *you*. A gate that cannot be evaluated refuses the whole reading rather than drawing anybody it could not check. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    record_a_pass_api_v1_passes_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RecordPassRequest"];
-            };
-        };
-        responses: {
-            /** @description Recorded. **Nothing is returned, and nothing ever will be** — there is no route through which a pass reaches anybody, including you. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description `origin_search_not_found` — no search of **yours** showed that player for that sport. The origin is refused rather than linked as null. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    decline_a_prompt_api_v1_prompt_declines_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RecordPromptDeclineRequest"];
-            };
-        };
-        responses: {
-            /** @description Recorded. **Nothing is returned** — there is no route through which a decline reaches anybody, including you. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description `prompt_does_not_suppress` — *Keep these times?* is asked again on the next search, because the week you improvised is a different week next Tuesday. It is the one prompt with no *not now*. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_challenges_api_v1_challenges_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Every challenge you hold a seat in, newest first, each with what it is right now. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeListResponse"];
-                };
-            };
-        };
-    };
-    send_challenge_api_v1_challenges_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SendChallengeRequest"];
-            };
-        };
-        responses: {
-            /** @description The challenge stands, and everybody on the court has been asked. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SentChallengeResponse"];
-                };
-            };
-            /**
-             * @description `challenge_with_no_invitee`, `organiser_holds_a_seat`, `one_person_to_a_seat`, `cannot_challenge_yourself` — who is on the court, and every one of them a caller's bug. Checked **first, before anything is read**, because they are true regardless of anybody else's state: telling an organiser their line-up went stale when they invited nobody sends them refreshing a screen that was never wrong.
-             *
-             *     `court_is_not_the_sports` — the seats are not `2 x seats_per_side`, evenly split, in the court's own order. The one refusal in that family that cannot come first: the shape is the sport's, and the sport is the search's to say.
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `account_held` — **your** account is under a live hold. The same code a search returns, and refused at the entry point: a hold that stops you searching but lets you send invitations is the same hole with the blast radius pointed at other people. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `court_origin_not_found` — no search of yours showed all of those players. One code for four cases, on purpose.
-             *
-             *     `line_up_no_longer_sendable` — somebody on this court can no longer be invited to it. **Which one is deliberately not said, and neither is why.** Re-read the origin search: its read-back re-evaluates the same gates and marks the seats. **Do not re-run the search** — that mints a new `search_id` the whole line-up must adopt, and its untouched seats are only *probably* in the new answer.
-             *
-             *     `open_challenge_stands` — two people on this court already have a game between them, **in any sport**. Read your own challenges to find out who; an open game of yours was always yours to read.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `challenge_gates_unavailable` — a safety gate could not be read, so nothing was minted. Transient and about the platform: retry the same request. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    read_challenge_api_v1_challenges__challenge_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The arrangement, the people on it, and what you make of each of them. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeDetailResponse"];
-                };
-            };
-            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    accept_seat_api_v1_challenges__challenge_id__accept_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Your seat is accepted, and the challenge as it now stands. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeSchema"];
-                };
-            };
-            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `seat_already_answered` — you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.
-             *
-             *     `answer_window_has_passed` — your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.
-             *
-             *     `game_moment_has_passed` — **on a court somebody left**, the moment the plan agreed has passed, so a yes now would seat you into a game whose moment is gone. `game_is_history` — that game has happened, or never will. Neither is reachable on a court that was never a game.
-             *
-             *     `challenge_is_over` — the organiser removed this challenge while your day was still running. Your seat has nothing of its own to refuse, and the court is over; the answer is refused rather than recorded on a challenge nobody is arranging any more.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    decline_seat_api_v1_challenges__challenge_id__decline_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Your seat is open again, and the challenge as it now stands. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeSchema"];
-                };
-            };
-            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `seat_already_answered` — you have answered this one. **Not idempotent, deliberately**: *yes* after *no* is a different answer and not a repeat of one.
-             *
-             *     `answer_window_has_passed` — your day ran out. The seat already reads as lapsed and may have been offered to somebody else, so an answer that resurrected it would contradict a card the platform has already drawn.
-             *
-             *     `game_moment_has_passed` — **on a court somebody left**, the moment the plan agreed has passed, so a yes now would seat you into a game whose moment is gone. `game_is_history` — that game has happened, or never will. Neither is reachable on a court that was never a game.
-             *
-             *     `challenge_is_over` — the organiser removed this challenge while your day was still running. Your seat has nothing of its own to refuse, and the court is over; the answer is refused rather than recorded on a challenge nobody is arranging any more.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    fill_seats_api_v1_challenges__challenge_id__seats_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FillSeatsRequest"];
-            };
-        };
-        responses: {
-            /** @description The seats are filled and the court is returned as it now stands. Everybody newly seated has their **own** day from this moment. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeSchema"];
-                };
-            };
-            /**
-             * @description `challenge_with_no_invitee`, `organiser_holds_a_seat`, `one_person_to_a_seat`, `cannot_challenge_yourself` — who is on the court, and every one of them a caller's bug. Checked **first, before anything is read**, because they are true regardless of anybody else's state: telling an organiser their line-up went stale when they invited nobody sends them refreshing a screen that was never wrong.
-             *
-             *     `court_is_not_the_sports` — the seats are not `2 x seats_per_side`, evenly split, in the court's own order. The one refusal in that family that cannot come first: the shape is the sport's, and the sport is the search's to say.
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `account_held` — **your** account is under a live hold, and a hold that let you invite people would be the same hole with the blast radius pointed at them.
-             *
-             *     `fill_is_the_live_members` — you hold a seat on this court and you have left it. **Not a 404**: your own seat is still drawn on the challenge, so pretending it is not there would be the wrong lie.
-             */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `court_origin_not_found` — no search of yours showed all of the people you are newly asking. One code for four cases, on purpose. **The people already on the court are not looked up in it**, so a court that keeps them is not refused for them.
-             *
-             *     `line_up_no_longer_sendable` — somebody on this court can no longer be invited to it. **Which one is deliberately not said, and neither is why.** Re-read the challenge and the origin search.
-             *
-             *     `open_challenge_stands` — two people on this court already have a game between them **in any sport**, and it is not this one: this court's own pairs are excepted, and no other challenge is.
-             *
-             *     `nobody_new_to_invite` — every seat on the court you posted is already taken by somebody in the game. **The court is not grown, and nothing is written.**
-             *
-             *     `nobody_is_asked_twice` — somebody on that court has already answered this challenge. Unreachable through the builder, which does not offer them; this is the aggregate's backstop.
-             *
-             *     `accepted_player_may_not_be_removed` — a court that dropped somebody who is already in.
-             *
-             *     `challenge_is_over` — this challenge has ended.
-             *
-             *     `game_moment_has_passed`, `game_is_history` — **on a court somebody left**: the game's agreed moment has passed, or the game has happened or never will, so nobody may be seated into it. Neither is reachable on a court that was never a game.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `challenge_gates_unavailable` — a safety gate could not be read, so nothing was minted. Transient and about the platform: retry the same request. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    withdraw_challenge_api_v1_challenges__challenge_id__withdrawal_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The challenge is over, and it is returned as it now stands — `WITHDRAWN`, `ended_by` naming you — with every seat exactly as it was: a seat still awaiting an answer keeps its question and its deadline, and the standing is read before either. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeSchema"];
-                };
-            };
-            /** @description `withdraw_is_the_organisers` — you hold a seat on this court and the act is not yours: removing the challenge is the organiser's alone, and an organiser who left their own seat holds none. **Not a 404**: you can already see this challenge, so pretending it is not there while your own seat is drawn on it would be the wrong lie. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `court_has_been_a_game` — this court became a game, and such a court is nobody's to end for the others, its organiser included. It ends by its players leaving — the departure that leaves at most one player on it calls the game off — or by its hour, when it is still short of a player as its moment passes.
-             *
-             *     `somebody_has_joined` — somebody besides you holds an accepted seat, so it is no longer yours to remove for the others. Leave it instead (`POST /challenges/{id}/departure`); it ends by itself when nobody is on it, or one is with nobody deciding.
-             *
-             *     `challenge_is_over` — this challenge has ended, this act included: a second press meets it.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    leave_game_api_v1_challenges__challenge_id__departure_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Your seat is open again, and the challenge as it now stands. `LINE_UP_INCOMPLETE` where the others are in — on a game, that game survives with your seat empty; `AWAITING_ANSWERS` where somebody is still deciding; `DECLINED` where the court was never a game and your leaving deserted it — **a court is over when nobody is on it, or one player is and no seat is awaiting an answer** — and a departure is a no; and `CALLED_OFF` where your leaving deserted a court that has been a game: the last but one with nobody deciding, or the last, whoever is still deciding — the court ends with its game, `ended_by` you, and the game is called off in this same request — `GET /games` reads it `CALLED_OFF` with `called_off_by` you, and the room is gone. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChallengeSchema"];
-                };
-            };
-            /** @description `account_held` — **your** account is under a live hold. A departure writes a line into a room other people are in, which is reach. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `challenge_not_found` — no challenge of **yours** has that id, or you hold no **accepted** seat on it. One code for three cases: it does not exist, you are not on its court, or your seat is awaiting, declined, lapsed or already left — because a departure is the one act whose refusal must not confirm that you *were* on this court a moment ago. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `challenge_is_over` — this challenge has ended.
-             *
-             *     `game_is_history` — the game has happened, was called off, or its entry window closed on silence. The line-up is the record of an evening, and nothing on it moves.
-             *
-             *     `game_moment_has_passed` — the moment the plan agreed has passed. Leaving would mean nothing now, and a no-show cannot vacate a seat to block the result. **Only where there is a game**: a half-built court may carry a plan naming a moment, and has no moment to guard.
-             *
-             *     There is no `not_a_game_yet` any more: a yes can be taken back before the court is whole.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `challenge_gates_unavailable` — a safety gate could not be read, so nothing was minted. Transient and about the platform: retry the same request. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    dismiss_court_api_v1_challenges__challenge_id__dismissal_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The court is cleared from your Chats — and its card from your Now, where it had one — on this device and every other, and nothing else moves. A second press answers the same and writes nothing. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description `challenge_not_found` — no challenge of **yours** has that id. One code for two cases — it does not exist, or you are not on its court — because separating them would answer *is this id real* about a stranger's evening. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `court_is_not_called_off` — only a called-off court's row can be removed. A live court's row is the court, and the other endings' rows are the record for the day they stay. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
             };
             /** @description Validation Error */
             422: {
@@ -14489,362 +9463,6 @@ export interface operations {
              * @description `nobody_reported_you` — there is nothing of yours to dispute.
              *
              *     `the_dispute_window_has_closed` — your day to say you came has passed: the report stands.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    dismiss_game_api_v1_games__game_id__dismissal_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                game_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The card is cleared from your rail — on this device and every other — and nothing else moves. A second press answers the same and writes nothing. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description `you_were_not_on_this_court` — no game of **yours** has that id. One code for two cases — it does not exist, or you did not play in it — because separating them would answer *is this id real* about four strangers' evening. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `game_is_not_called_off` — only a called-off game's card can be cleared. The other endings' cards carry a score or a strand's verdict and are the record for the day they stay; a live game's card is the game. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    read_plans_api_v1_plans_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description One row for every court you may plan, written or not, newest arrangement first. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanListResponse"];
-                };
-            };
-        };
-    };
-    set_place_api_v1_plans__challenge_id__place_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetPlaceRequest"];
-            };
-        };
-        responses: {
-            /** @description The plan as it now stands. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanSchema"];
-                };
-            };
-            /**
-             * @description `the_place_is_empty` — nothing but whitespace. **A slot is never emptied**, so a blank value is not a way of clearing one.
-             *
-             *     `the_place_is_too_long` — past the cap. **Refused, never truncated.**
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `plan_not_found` — **one code for three cases**: there is no challenge with that id, there is one and you were never on its court, or you were asked and have not said yes. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening — and an invitee still deciding is not shown the plan at all. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `plan_is_history` — the court is over, so its slots are frozen: its game left its entry window, or, before any game, the challenge itself ended. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    set_day_api_v1_plans__challenge_id__day_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetDayRequest"];
-            };
-        };
-        responses: {
-            /** @description The plan as it now stands. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanSchema"];
-                };
-            };
-            /** @description `the_day_is_past_the_horizon` — past 7 days from the row's `anchor`. The days a client offers are clamped to the same bound and shrink as the week runs out; once there is a game, **inside the entry grace there is no day left to set at all**, and the only act remaining is *We played*. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `plan_not_found` — **one code for three cases**: there is no challenge with that id, there is one and you were never on its court, or you were asked and have not said yes. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening — and an invitee still deciding is not shown the plan at all. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `plan_is_history` — the court is over, so its slots are frozen: its game left its entry window, or, before any game, the challenge itself ended. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
-             *
-             *     `that_moment_has_already_passed` — the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    set_hour_api_v1_plans__challenge_id__hour_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetHourRequest"];
-            };
-        };
-        responses: {
-            /** @description The plan as it now stands. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanSchema"];
-                };
-            };
-            /** @description `the_hour_is_not_offered` — outside the grid, between two of its steps, or carrying seconds. **Bounded chips the platform offered, never a free instant**: the grid a client draws is a convention, and this refusal is what makes it true. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `plan_not_found` — **one code for three cases**: there is no challenge with that id, there is one and you were never on its court, or you were asked and have not said yes. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening — and an invitee still deciding is not shown the plan at all. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `plan_is_history` — the court is over, so its slots are frozen: its game left its entry window, or, before any game, the challenge itself ended. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
-             *
-             *     `that_moment_has_already_passed` — the day and the hour together name a moment that has gone. **Raised when the second of the two is filled, in either order**, and it names neither: the platform has no opinion about which one is wrong, so change whichever you meant.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    lock_the_plan_api_v1_plans__challenge_id__lock_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                challenge_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The plan as it now stands. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanSchema"];
-                };
-            };
-            /** @description `account_held` — your account is under a live hold. **A hold stops you writing anywhere another player sees it, and never stops you reading**: `GET /plans` stays open to you, because a hold must not erase an arrangement other people are already inside. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `plan_not_found` — **one code for three cases**: there is no challenge with that id, there is one and you were never on its court, or you were asked and have not said yes. They are not told apart on purpose, because a 403 would answer *is this id real* about four strangers' evening — and an invitee still deciding is not shown the plan at all. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /**
-             * @description `plan_is_history` — the court is over, so its slots are frozen: its game left its entry window, or, before any game, the challenge itself ended. **That is the only thing that freezes them, and locking is not it**: a locked plan is still fully editable by any member. Once *we played* can no longer be said, the plan is a note about an evening that is over.
-             *
-             *     `the_court_is_not_whole` — a seat is still open or unanswered. **The lock waits for the court**: where, day and hour may be set by whoever is in, and *we are agreed* is said only once everybody who will have to keep it is in. The card draws the count line where the lock button will be — `2 of 4 in — you can plan now, lock when everyone's here` — and never a greyed button, which is why this is its own code. Asked before the count. A lock already taken survives a later departure and answers `200` again.
-             *
-             *     `the_plan_is_not_complete` — a slot is still empty. **A refusal and not a silent `200`**, which is deliberately the opposite shape from locking a plan that is already locked: a no-op here would leave you believing you had agreed one. It is a conflict rather than a `400` because the request carried nothing at all — what is wrong is the state of the plan.
              */
             409: {
                 headers: {

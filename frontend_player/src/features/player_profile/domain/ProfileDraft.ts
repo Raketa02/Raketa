@@ -7,7 +7,7 @@
  * That is what makes back and forward free — moving between steps costs nothing because
  * nothing has been recorded anywhere — and it is also why leaving mid-part restarts at step
  * one: there is nothing on the server to come back to. The asymmetry with part one is
- * deliberate. Eight adaptive answers are expensive and event-sourced, so a run resumes; eight
+ * deliberate. Eight adaptive answers are expensive and event-sourced, so a run resumes; six
  * short steps are cheap, and buying resume for them would mean a server-owned draft with a
  * version token, a second aggregate built before a single player exists.
  *
@@ -22,10 +22,10 @@
  *
  * Photos, the weekly hours and the intro start **empty**, because empty is a real answer to all
  * three: a player may hold no photos, *a blank week means "no preference", never "leave me
- * out"*, and a player who skips the intro has no line rather than a missing one. The other
- * three start **absent**, because they are questions that must actually be answered — and
- * the opt-in most of all, which has no default in either direction. `undefined` there means
- * *not asked yet*, and it is never quietly read as no.
+ * out"*, and a player who skips the intro has no line rather than a missing one. The area and
+ * the gender answer start **absent**, because they are questions that must actually be
+ * answered. `undefined` there means *not asked yet*, and it is never quietly read as an
+ * answer.
  */
 
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
@@ -55,19 +55,6 @@ export interface LocationArea {
   readonly longitude: number;
 }
 
-/**
- * The **Proposals opt-in**: the answer to the proposals question, and the words it was
- * given against.
- *
- * The copy version travels with the answer because **consent gathered against one sentence
- * is not consent to a different one** — a consent record that cannot name its words cannot
- * evidence anything. The words themselves stay the client's and are never sent.
- */
-export interface ProposalsOptIn {
-  readonly accepted: boolean;
-  readonly copyVersion: string;
-}
-
 export interface ProfileDraft {
   /**
    * Tag ids as the platform serves them. Ids are persisted forever; labels are copy.
@@ -89,10 +76,6 @@ export interface ProfileDraft {
   /** The hours of the week that were ticked. Empty is an answer. */
   readonly weeklyHours: readonly WeeklyHour[];
   readonly location: LocationArea | undefined;
-  /** Whole kilometres. Absent until the player has been shown the served bounds. */
-  readonly searchRadiusKm: number | undefined;
-  /** Absent means *not answered*, which is neither yes nor no. */
-  readonly proposalsOptIn: ProposalsOptIn | undefined;
   /**
    * The player's own answer. Absent until the step asks, and **never read as
    * `prefer-not-to-say`** — that is an answer somebody chose, and this is the question not
@@ -115,8 +98,6 @@ export function emptyDraft(): ProfileDraft {
     photoIds: [],
     weeklyHours: [],
     location: undefined,
-    searchRadiusKm: undefined,
-    proposalsOptIn: undefined,
     gender: undefined,
     // Not `undefined`: unconstrained is a real answer and it is the one every player starts
     // from, so there is nothing here for a step to have failed to collect.
@@ -127,7 +108,7 @@ export function emptyDraft(): ProfileDraft {
 /**
  * Record what one step answered, leaving every other answer where it was.
  *
- * A patch rather than eight setters: each step owns exactly one field, and the one thing
+ * A patch rather than six setters: each step owns exactly one field, and the one thing
  * this must guarantee is that writing that field never disturbs the others — which is the
  * promise the part makes when it says walking back to check something is free.
  */

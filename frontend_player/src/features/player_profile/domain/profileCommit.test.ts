@@ -10,7 +10,7 @@ import {
   STEP_THAT_ASKS,
 } from './profileCommit';
 
-/** Everything the eight steps collect, all of it answered. The ordinary end of the part. */
+/** Everything the six steps collect, all of it answered. The ordinary end of the part. */
 function answeredDraft(): ProfileDraft {
   return recordAnswer(emptyDraft(), {
     socialTagIds: ['PLAYS_TO_WIN', 'HERE_TO_IMPROVE'],
@@ -18,8 +18,6 @@ function answeredDraft(): ProfileDraft {
     photoIds: ['photo-1'],
     weeklyHours: [{ day: 3, hour: 19 }],
     location: { latitude: 41.39, longitude: 2.16 },
-    searchRadiusKm: 10,
-    proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
     gender: 'woman',
     // Not written by `answeredDraft` because a player never has to: `emptyDraft` already
     // holds `any`. It is named here anyway, so a test that narrows it is visibly changing
@@ -40,8 +38,6 @@ describe('a draft with every answer given', () => {
         photoIds: ['photo-1'],
         weeklyHours: [{ day: 3, hour: 19 }],
         location: { latitude: 41.39, longitude: 2.16 },
-        searchRadiusKm: 10,
-        proposalsOptIn: { accepted: true, copyVersion: 'proposals-opt-in.v1' },
         gender: 'woman',
         genderPreference: 'any',
       },
@@ -83,18 +79,6 @@ describe('a draft with every answer given', () => {
 
     expect(standing.kind).toBe('ready');
   });
-
-  it('is ready with the opt-in declined', () => {
-    // No is a whole answer. A readiness rule that opened only on yes would be the product
-    // withholding the rest of itself until it got the answer it wanted.
-    const standing = readyToCommit(
-      recordAnswer(answeredDraft(), {
-        proposalsOptIn: { accepted: false, copyVersion: 'proposals-opt-in.v1' },
-      }),
-    );
-
-    expect(standing.kind).toBe('ready');
-  });
 });
 
 describe('a draft still missing an answer', () => {
@@ -107,12 +91,6 @@ describe('a draft still missing an answer', () => {
     expect(standing).toEqual({ kind: 'incomplete', missing: ['location'] });
   });
 
-  it('names an unanswered proposals question', () => {
-    const standing = readyToCommit(recordAnswer(answeredDraft(), { proposalsOptIn: undefined }));
-
-    expect(standing).toEqual({ kind: 'incomplete', missing: ['proposals-opt-in'] });
-  });
-
   it('names a week with nothing ticked', () => {
     // The week stopped being a genuinely empty answer when ADR-0102 gave it a floor:
     // silence about when a player usually plays is never scored, so it is asked for.
@@ -122,20 +100,12 @@ describe('a draft still missing an answer', () => {
     expect(standing).toEqual({ kind: 'incomplete', missing: ['availability'] });
   });
 
-  it('names a radius that was never seeded', () => {
-    // The radius step writes the served default the moment it knows it, so this is the
-    // step that was never reached rather than a player who declined to choose.
-    const standing = readyToCommit(recordAnswer(answeredDraft(), { searchRadiusKm: undefined }));
-
-    expect(standing).toEqual({ kind: 'incomplete', missing: ['search-radius'] });
-  });
-
   it('names all of them, in the order the steps asked', () => {
     const standing = readyToCommit(emptyDraft());
 
     expect(standing).toEqual({
       kind: 'incomplete',
-      missing: ['availability', 'location', 'search-radius', 'gender', 'proposals-opt-in'],
+      missing: ['availability', 'location', 'gender'],
     });
   });
 
@@ -166,7 +136,7 @@ describe('no part running at all', () => {
     // the part. Committing one would create a profile nobody was asked for.
     expect(readyToCommit(undefined)).toEqual({
       kind: 'incomplete',
-      missing: ['availability', 'location', 'search-radius', 'gender', 'proposals-opt-in'],
+      missing: ['availability', 'location', 'gender'],
     });
   });
 });
@@ -174,12 +144,10 @@ describe('no part running at all', () => {
 describe('where a missing answer is fixed', () => {
   it('names the step that asked for it, never the one that noticed', () => {
     // The commit is only ever attempted from the last step, and the last step can fix
-    // exactly one of the five. The other four are somewhere behind it.
+    // exactly one of the three. The other two are somewhere behind it.
     expect(STEP_THAT_ASKS.availability).toBe('availability');
-    expect(STEP_THAT_ASKS.gender).toBe('gender');
     expect(STEP_THAT_ASKS.location).toBe('location');
-    expect(STEP_THAT_ASKS['search-radius']).toBe('radius');
-    expect(STEP_THAT_ASKS['proposals-opt-in']).toBe('opt-in');
+    expect(STEP_THAT_ASKS.gender).toBe('gender');
   });
 });
 
@@ -299,19 +267,16 @@ describe('the standing the last step renders from', () => {
     expect(mayFinish(standing)).toBe(true);
   });
 
-  it('opens the finish on a declined opt-in exactly as on an accepted one', () => {
-    // No is a whole answer. A gate that opened only on yes would be the product withholding
-    // the rest of itself until it got the answer it wanted.
-    const declined = recordAnswer(answeredDraft(), {
-      proposalsOptIn: { accepted: false, copyVersion: 'proposals-opt-in.v1' },
-    });
-
-    expect(mayFinish(commitStanding(declined, NO_PHOTOS, IDLE))).toBe(true);
-  });
-
-  it('holds it shut while the proposals question has no answer at all', () => {
-    const unanswered = recordAnswer(answeredDraft(), { proposalsOptIn: undefined });
+  it('holds it shut while the player has not answered about themselves', () => {
+    // The question on the last step itself. `prefer not to say` is an answer; nothing is.
+    const unanswered = recordAnswer(answeredDraft(), { gender: undefined });
 
     expect(mayFinish(commitStanding(unanswered, NO_PHOTOS, IDLE))).toBe(false);
+  });
+
+  it('opens it on a narrowed preference exactly as on the widest one', () => {
+    const narrowed = recordAnswer(answeredDraft(), { genderPreference: 'men-only' });
+
+    expect(mayFinish(commitStanding(narrowed, NO_PHOTOS, IDLE))).toBe(true);
   });
 });

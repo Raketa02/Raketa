@@ -31,7 +31,7 @@
  *
  * ## The end of the queue is the end of the **first part**, and nothing further
  *
- * Whatever a player still owes — the eight social steps, if they have no Player profile yet —
+ * Whatever a player still owes — the six social steps, if they have no Player profile yet —
  * they are owed their ratings first: the last sport leads to the summary of what this walk
  * produced, and the done screen is where the second part is entered from. So this hook no
  * longer reads whether a profile exists, and does not route into `player_profile/` at all.

@@ -58,7 +58,7 @@ export function NameScreen() {
       avoidsKeyboard
       action={
         // *Saved*, in green, while the boxes are as they opened — the button says why it is
-        // shut, as the week's and the radius' do (Part 16, 2026-09-17 and 2026-09-18).
+        // shut, as the week's does (Part 16, 2026-09-17 and 2026-09-18).
         <Button
           label={form.changed ? SAVE_NAME.label : SAVE_NAME.savedLabel}
           variant={form.changed ? 'primary' : 'settled'}

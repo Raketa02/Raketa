@@ -6,7 +6,7 @@
  * ([ADR-0090](../../../../../docs/adr/0090-onboarding-per-player-checkpoint.md)). Killing
  * the app takes the draft with it, and the next launch starts the part again at step one
  * with nothing in it. That is the accepted cost of not building a server-owned draft, and
- * it is bounded by eight short steps.
+ * it is bounded by six short steps.
  *
  * **The rules live in `domain/ProfileDraft`**, so they are testable without a store and
  * without a renderer. This holds values and nothing else — the same split the onboarding
@@ -29,8 +29,8 @@
  *
  * `draft` is `undefined` when the player is not in the part, exactly as `pass` is undefined
  * between walks. That absence is what a step other than the first checks: a link naming
- * `/radius` with no part running is not a shortcut into the middle of a flow, it is a
- * player about to commit a profile built from six screens they never saw. Turning them
+ * `/location` with no part running is not a shortcut into the middle of a flow, it is a
+ * player about to commit a profile built from four screens they never saw. Turning them
  * away needs a way to tell *not in the part* from *in the part, having answered nothing* —
  * and an empty draft cannot tell those apart, which is why entering is explicit.
  *
@@ -40,15 +40,15 @@
  * entered and lives exactly as long as the draft, which is the property the whole defence
  * rests on: a double tap and a retry after a failure both send the key the *first* attempt
  * sent, so the server serves one profile whatever the finger and the connection do. Minting
- * one per press would be eight presses and eight profiles waiting to happen; a disabled button
+ * one per press would be six presses and six profiles waiting to happen; a disabled button
  * is only the courtesy.
  *
  * It goes with the draft when the part ends, for the same reason the workbench does: a new
  * part is a new commit, and a key held over from the last one would ask the server to
  * replay a profile built from answers nobody gave this time.
  *
- * Nothing from the backend enters this store. The served tag vocabulary and radius bounds
- * are TanStack Query's; what is here is only what the player has said.
+ * Nothing from the backend enters this store. The served tag vocabulary and its bounds are
+ * TanStack Query's; what is here is only what the player has said.
  */
 
 import { create } from 'zustand';

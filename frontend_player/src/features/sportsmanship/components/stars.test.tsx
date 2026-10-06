@@ -73,7 +73,7 @@ const READ_AT = '2026-09-05T09:00:00Z';
 /** A settled doubles padel game: me and my partner on A, two opponents on B. */
 const DOUBLES: Wire['GameSchema'] = {
   game_id: GAME,
-  challenge_id: 'dddddddd-0000-4000-8000-000000000004',
+  booking_id: 'dddddddd-0000-4000-8000-000000000004',
   sport: 'PADEL',
   kind: 'COUNTED',
   standing: 'CONFIRMED',

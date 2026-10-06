@@ -1,15 +1,21 @@
 /**
- * Step seven of onboarding's second part: **who do you want to play with?**
+ * Step six of onboarding's second part, and the last: **who do you want to play with?**
  *
  * Two controls and one decision. The first asks the player their own answer; the second
- * asks who they are willing to be matched with, and the second is unanswerable in isolation
- * — which is the same relationship *where do you play* and *how far out* have, and the
- * reason those are two steps and these are one. Splitting them would be an eighth screen
- * carrying a radio group.
+ * asks who they are willing to be matched with, and the second is unanswerable in isolation.
+ * Splitting them would be a seventh screen carrying a radio group.
  *
- * It sits after the radius rather than beside the tags, and that is the order's decision
+ * It sits after the area rather than beside the tags, and that is the order's decision
  * (`socialSteps`): the tags step says what kind of player somebody is, and the week, the
- * area, the radius and this one narrow who the platform will put in front of them.
+ * area and this one narrow who the platform will put in front of them.
+ *
+ * ## It carries the finish
+ *
+ * The radius and the proposals question used to follow it, and both left the part with the
+ * old loop's ranking, the only thing that read them
+ * ([#582](https://github.com/Raketa02/Raketa/issues/582)). So this step ends the part, and
+ * its control is the finish rather than *Continue*: `ProfileFinish`, which sends the one
+ * request and draws every state around it. What is left in this file is the two questions.
  *
  * ## The preference has a cost, and the screen says it at the moment of the press
  *
@@ -22,7 +28,7 @@
  *
  * The rule that decides whether there is a cost is `reachOf`'s, the sentence is
  * `genderPresentation`'s, and the two groups themselves are `GenderControls` — which is the
- * split the five steps before it made, and for the reason they made it: the profile editor
+ * split the steps before it made, and for the reason they made it: the profile editor
  * obeys these rules from a screen that looks nothing like this one. *Who you play with* on
  * the You tab is that screen, and it draws the same two groups under a *Save* each
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
@@ -30,13 +36,13 @@
  *
  * ## Required, and pre-answered in exactly one place
  *
- * **Nothing about the player is pre-selected.** The continue is closed until they answer,
+ * **Nothing about the player is pre-selected.** The finish is closed until they answer,
  * because there is no answer here the product may give on their behalf — `prefer not to
  * say` is a choice somebody makes, never a default somebody is given.
  *
  * **The preference is the opposite, and deliberately.** It opens on *Anyone* because that
  * is what every player already holds: unconstrained is not a blank to be filled but the
- * value a profile carries until somebody narrows it. A player who continues without
+ * value a profile carries until somebody narrows it. A player who finishes without
  * touching the second control has answered it, at the widest setting, which is the only
  * default that takes nothing away from anybody.
  *
@@ -51,53 +57,34 @@
  * before the first press, not after it.
  */
 
-import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Button, Note, theme } from '@/shared/ui';
+import { Note, theme } from '@/shared/ui';
 
-import { stepAfter } from '../domain/socialSteps';
 import { useProfileDraft } from '../store/profileDraft.store';
 
 import { GenderControl, GenderPreferenceControl } from './GenderControls';
 import {
-  GENDER_CONTINUE_BLOCKED_HINT,
+  GENDER_FINISH_BLOCKED_HINT,
   GENDER_SCOPE,
   PREFERENCE_IS_DURABLE,
 } from './genderPresentation';
+import { ProfileFinish } from './ProfileFinish';
 import { SocialStepLayout } from './SocialStepLayout';
-import { SOCIAL_STEP_PATH } from './socialStepRoutes';
-import { stepCopy } from './socialStepPresentation';
 
 export function SocialGenderStep() {
-  const router = useRouter();
   const draft = useProfileDraft((state) => state.draft);
   const answer = useProfileDraft((state) => state.answer);
 
-  // Where continuing leads is the step order's answer, not this screen's.
-  const next = stepAfter('gender');
   const gender = draft?.gender;
 
   return (
     <SocialStepLayout
       step="gender"
-      action={
-        next === undefined ? null : (
-          <Button
-            label="Continue"
-            size="lg"
-            // Closed on the answer about the player and on nothing else. The preference
-            // below cannot hold this shut — it is already answered, at its widest.
-            disabled={gender === undefined}
-            onPress={() => router.replace(SOCIAL_STEP_PATH[next])}
-            accessibilityHint={
-              gender === undefined
-                ? GENDER_CONTINUE_BLOCKED_HINT
-                : `Goes to ${stepCopy(next).title}`
-            }
-          />
-        )
-      }
+      // The finish, closed on the answer about the player and on every answer behind this
+      // step. The preference below cannot hold it shut — it is already answered, at its
+      // widest — and the hint for this step's own question is the one only it can word.
+      action={<ProfileFinish unansweredHint={GENDER_FINISH_BLOCKED_HINT} />}
     >
       {/* At the top, above the first question rather than between the two.
 

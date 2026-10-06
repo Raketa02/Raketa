@@ -15,9 +15,7 @@ export const SOCIAL_STEP_PATH = {
   photos: '/photos',
   availability: '/availability',
   location: '/location',
-  radius: '/radius',
   gender: '/gender',
-  'opt-in': '/opt-in',
 } as const satisfies Record<SocialStep, string>;
 
 /**

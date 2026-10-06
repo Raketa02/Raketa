@@ -1,8 +1,8 @@
 /**
  * The shell's own sentences, held to the test a tab's line has to pass.
  *
- * Copy is not usually worth a suite. These are, for the same reason `optInPresentation.ts`
- * is: some of them are **citations** of decisions taken elsewhere, and one of them is a refusal.
+ * Copy is not usually worth a suite. These are: some of them are **citations** of decisions
+ * taken elsewhere, and one of them is a refusal.
  * A later edit that made a tab say *coming soon* or Now say *nothing is happening* would be a
  * product change wearing the clothes of a wording tweak.
  *

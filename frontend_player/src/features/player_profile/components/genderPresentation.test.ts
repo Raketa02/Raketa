@@ -2,8 +2,8 @@
  * The words on the gender step, and the one of them that is a **requirement** rather than
  * copy.
  *
- * Nothing here is evidence the way `optInPresentation`'s sentences are — there is no version
- * identifier, and re-wording any of it makes nothing that was true yesterday false. What is
+ * Nothing here is evidence — there is no version identifier, and re-wording any of it makes
+ * nothing that was true yesterday false. What is
  * pinned instead is the *shape* of the mutuality note: that a narrowed preference always
  * produces one, that it names **both** directions, and that an unconstrained one produces
  * none at all.

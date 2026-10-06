@@ -322,13 +322,6 @@ describe('a group link, before the account is in the app', () => {
           photo_ids: [],
           weekly_hours: [{ day: 3, hour: 19 }],
           location: { latitude: 50.06, longitude: 19.94 },
-          search_radius_km: 10,
-          proposals_opt_in: {
-            accepted: true,
-            copy_version: 'proposals-opt-in.v2',
-            surface: 'ONBOARDING',
-            answered_at: '2026-09-26T10:00:00Z',
-          },
           created_at: '2026-09-26T10:00:00Z',
           updated_at: '2026-09-26T10:00:00Z',
         },
@@ -384,14 +377,9 @@ describe('a group link, before the account is in the app', () => {
     await waitFor(() => expect(screen).toHavePathname('/location'));
     fireEvent.press(screen.getByLabelText('Use my location'));
     fireEvent.press(await screen.findByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/radius'));
-    fireEvent.press(await screen.findByLabelText('Continue'));
     await waitFor(() => expect(screen).toHavePathname('/gender'));
     fireEvent.press(screen.getByLabelText('Woman'));
-    fireEvent.press(screen.getByLabelText('Continue'));
-    await waitFor(() => expect(screen).toHavePathname('/opt-in'));
-    fireEvent.press(screen.getByLabelText('Yes — suggest games'));
-    fireEvent.press(screen.getByLabelText('Finish — show me players'));
+    fireEvent.press(screen.getByLabelText('Finish'));
     await waitFor(() => expect(screen).toHavePathname('/data'));
 
     // Nothing was searched for on the way: the link waited.

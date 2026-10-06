@@ -8,16 +8,17 @@
  *
  * **It accounts for the whole of what onboarding collected**, which is now two parts rather
  * than one. A screen that listed the questionnaire's answers and said nothing about the
- * tags, the photos, the week, the area, the distance and the consent that the second part
- * collects would be a lie by omission — the player handed those over ten screens ago and
- * this is the screen that says what became of them.
+ * tags, the photos, the week, the area and who the player wants to play with that the second
+ * part collects would be a lie by omission — the player handed those over a few screens ago
+ * and this is the screen that says what became of them. The second part stopped asking how
+ * far a player will travel and whether games may be suggested
+ * ([#582](https://github.com/Raketa02/Raketa/issues/582)), so this screen keeps no account of
+ * either.
  *
  * **It is not a consent form and must never become one.** Nothing is recorded, nothing is
  * agreed to, and there is no control here that means yes. What a consent covers —
- * retention, withdrawal, jurisdiction — is a legal question, and the Proposals opt-in is its
- * own explicit step, with no skip and no default, several screens back. Saying here what
- * that answer was recorded with is an account of a decision already taken; asking for it
- * again on the way out would be collecting an agreement nobody read.
+ * retention, withdrawal, jurisdiction — is a legal question, and asking for one on the way
+ * out would be collecting an agreement nobody read.
  *
  * **"No one can hand-edit a Level" is an invariant, not reassurance** (`CONTEXT.md`): a
  * level is proved, never declared, and the domain refuses a manual write rather than
@@ -44,10 +45,9 @@ import { useHardwareBack } from '@/shared/lib/platform';
  *
  * Every claim below is one the app can be held to. The photos really are re-encoded on
  * arrival, which is why nothing they carried survives; the area really is rounded before
- * anything is written, on the phone and again on the platform; the consent record really is
- * stamped with the wording that was shown. **Nothing here claims a check nobody performs** —
- * there is no sentence saying a photo is reviewed, because a promise about moderation is a
- * promise, not a description — and **nothing here promises a screen that does not exist**:
+ * anything is written, on the phone and again on the platform. **Nothing here claims a check
+ * nobody performs** — there is no sentence saying a photo is reviewed, because a promise
+ * about moderation is a promise, not a description — and **nothing here promises a screen that does not exist**:
  * editing a Player profile is not built, so this table says what was kept rather than what
  * a player may go and change.
  */
@@ -58,7 +58,7 @@ const POINTS = [
   },
   {
     title: 'What we keep from setting up',
-    body: 'The tags you picked, the photos you added, the parts of the week you ticked, the area you play in and how far you will travel. That is what lets another player see who they would be playing, and what lets Raketa look for them near you.',
+    body: 'The tags you picked, the photos you added, the parts of the week you ticked, the area you play in and who you want to play with. That is what lets another player see who they would be playing, and what lets Raketa look for them near you.',
   },
   {
     title: 'Your week is a preference, not a diary',
@@ -71,14 +71,6 @@ const POINTS = [
   {
     title: 'A photo arrives without the data behind it',
     body: 'Phones write the place and time into a picture. Every photo is re-encoded when it reaches Raketa, so what is stored is the picture and none of what was attached to it.',
-  },
-  {
-    title: 'What you said about suggestions is on the record',
-    // The withdrawal half is the consent card's own promise, word for word — *You can stop
-    // any time, from your profile*. Echoing it is repeating a promise the product has
-    // already made on the screen where it counts; inventing a *new* one here would be the
-    // class of claim the note above this table bans.
-    body: 'Your answer to whether Raketa may suggest games is kept with the moment you gave it and the exact wording you were shown, so what you agreed to can be read back rather than assumed. You can stop any time, from your profile — and nothing on this screen changes it.',
   },
   {
     title: 'What we never do with any of it',

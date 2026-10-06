@@ -76,7 +76,7 @@ const THEIR_HANDLE = 'tomek.p';
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return {
     game_id: GAME_ID,
-    challenge_id: BOOKING_ID,
+    booking_id: BOOKING_ID,
     sport: 'PADEL',
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',

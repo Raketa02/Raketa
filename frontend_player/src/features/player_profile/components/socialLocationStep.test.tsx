@@ -243,7 +243,7 @@ describe('granting the permission', () => {
 
     fireEvent.press(screen.getByLabelText(WITH_AN_AREA_LABEL));
 
-    await waitFor(() => expect(screen).toHavePathname('/radius'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
   });
 });
 
@@ -269,7 +269,7 @@ describe('refusing the permission', () => {
   });
 
   /**
-   * The step insists; it does not hold anybody hostage. A player stuck on step five of eight
+   * The step insists; it does not hold anybody hostage. A player stuck on step five of six
    * behind a permission they can change at any time is not a setup flow — and the label is
    * where the cost is stated, because a note beside it is a note they may not read.
    */
@@ -280,7 +280,7 @@ describe('refusing the permission', () => {
 
     fireEvent.press(screen.getByLabelText(WITHOUT_AN_AREA_LABEL));
 
-    await waitFor(() => expect(screen).toHavePathname('/radius'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
     // Nothing was claimed on their behalf. An unanswered location is absent, never a zero
     // pair, and the commit will find it exactly as the player left it.
     expect(areaKept()).toBeUndefined();
@@ -342,7 +342,7 @@ describe('a permission that was turned off in Settings', () => {
 
     fireEvent.press(screen.getByLabelText(WITHOUT_AN_AREA_LABEL));
 
-    await waitFor(() => expect(screen).toHavePathname('/radius'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
   });
 });
 
@@ -423,7 +423,7 @@ describe('walking away from the step and back', () => {
     await screen.findByLabelText(LOCATION_SAVED);
 
     fireEvent.press(screen.getByLabelText(WITH_AN_AREA_LABEL));
-    await waitFor(() => expect(screen).toHavePathname('/radius'));
+    await waitFor(() => expect(screen).toHavePathname('/gender'));
 
     fireEvent.press(screen.getByLabelText('Back to Where do you play?'));
     await waitFor(() => expect(screen).toHavePathname('/location'));

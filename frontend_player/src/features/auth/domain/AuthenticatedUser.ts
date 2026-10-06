@@ -19,8 +19,9 @@
  * differently for an admin has invented an authorization decision it cannot enforce.
  *
  * `hasPlayerProfile` and `name` are the two fields kept for the opposite reason — the client
- * is *required* to branch on them, at launch, before any route tree exists. `is_tester` is
- * dropped too: its one reader was feature-flag evaluation, which left with the flags (#576).
+ * is *required* to branch on them, at launch, before any route tree exists. The wire no
+ * longer carries `is_tester` at all: its one reader was feature-flag evaluation, which left
+ * with the flags (#576), and the mark left the server after it (#581).
  */
 export interface AuthenticatedUser {
   readonly id: string;

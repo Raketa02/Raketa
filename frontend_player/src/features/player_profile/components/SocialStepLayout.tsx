@@ -7,7 +7,7 @@
  * behind step one is a rated Assessment's review, and an answer is revisable for as long as
  * its run is and no longer.
  *
- * **Back `replace`s**, so the part is a flat sequence of eight screens with no stack behind
+ * **Back `replace`s**, so the part is a flat sequence of six screens with no stack behind
  * it: back can only ever reach the previous step, never the result or the review, because
  * there is no history entry holding one.
  *
@@ -33,8 +33,8 @@
  *
  * Forward is **not** here. Every step continues on its own terms — one is blocked until a
  * floor is met, one may be passed with nothing answered at all — and a shared control that
- * took a `disabled` and a `label` would be the eight steps' differences squeezed through one
- * prop list.
+ * took a `disabled` and a `label` would be the six steps' differences squeezed through one
+ * prop list — and the last one does not continue at all: it finishes (`ProfileFinish`).
  *
  * ## The chrome gets out of the keyboard's way, because one step types
  *
@@ -43,7 +43,7 @@
  * refusal under the box for exactly as long as the player is typing. So the layout wraps the
  * scroller and the bar in `KeyboardAvoidingView`, with `KEYBOARD_AVOIDANCE` deciding the
  * platform — the same value the sign-in, sign-up and conversation screens use — and taps on
- * the bar land while the keyboard is up rather than first dismissing it. On the seven steps
+ * the bar land while the keyboard is up rather than first dismissing it. On the five steps
  * with no keyboard it does nothing.
  */
 

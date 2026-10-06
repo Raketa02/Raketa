@@ -4,8 +4,7 @@
  * **The week as the profile now holds it comes back**, and that is what a caller may draw: the
  * write path collapses repeated hours and answers in the platform's own reading order, so a
  * client that kept what it sent would hold a week the profile does not — the same discipline
- * the radius write runs, where the response carries the distance after the range and the step
- * were re-checked.
+ * the tags write runs, where the response carries the tags in the vocabulary's order.
  *
  * **A cleared week is a value and not a refusal.** `WeeklyHoursEmpty` binds the commit at
  * the end of onboarding, which is the answer a player is *asked for*; a player who unticks

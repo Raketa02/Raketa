@@ -719,7 +719,7 @@ acceptable for a product flow. Build the reusable states — `LoadingState`, `Em
 > beside. A banner over correct data teaches the player to ignore banners.
 >
 > The app had already answered this three times before the question was asked:
-> `SocialRadiusStep`, `SocialTagsStep` and `SportsPickerScreen` each render an inline
+> the radius step (removed by #582), `SocialTagsStep` and `SportsPickerScreen` each rendered an inline
 > `<Note variant="amber">` at the paused thing. Three copies is the threshold
 > `recoveryMessage.ts` names as the signal to promote, so the sentence moves to **one
 > shared function beside `recoveryMessage`** — and it has exactly **two** values, because

@@ -17,8 +17,8 @@
  * ## Two decimal places, and deliberately not three
  *
  * Two is about 1,1 km of latitude and less of longitude away from the equator — the
- * resolution the **Search radius** is expressed in, which is whole kilometres. A finer
- * location would be precision the only consumer cannot use, bought with a fact about the
+ * resolution the platform's distances are expressed in, which is whole kilometres. A finer
+ * location would be precision no consumer can use, bought with a fact about the
  * player nobody needed. The number matches the backend's `LOCATION_PRECISION_DP` because it
  * is the same decision, not because one copied the other: rounding twice at the same
  * resolution is a no-op, which is what lets the rule live at both ends without the second
@@ -27,7 +27,7 @@
 
 import type { LocationArea } from './ProfileDraft';
 
-/** Decimal places kept. See above — this is the radius's own resolution, not one better. */
+/** Decimal places kept. See above — this is a distance's own resolution, not one better. */
 export const LOCATION_AREA_DECIMALS = 2;
 
 /**

@@ -6,9 +6,8 @@
  *
  * The shell composes the tab — its title, the three group titles, which rows sit in which
  * group — and every row from *Skill passport* down is the feature's whose fact it is. These
- * are the profile's: the declaration, the week, the radius, the area, who the player is
- * matched with, the standing answer to the proposals question, the photos, the tags and the
- * intro. Each reads the fact off the read that carries it, says it in one line through
+ * are the profile's: the declaration, the week, the area, who the player is matched with, the
+ * photos, the tags and the intro. Each reads the fact off the read that carries it, says it in one line through
  * `youProfilePresentation`, and pushes its own screen.
  *
  * ## A live line is a read, and a read has three states
@@ -24,10 +23,8 @@
  * | --- | --- |
  * | What kind of game | `GET /ratings` ∩ `GET /players/me/profile`.play_intents |
  * | Your week | `GET /players/me/profile`.weekly_hours |
- * | How far to look | `GET /players/me/profile`.search_radius_km |
  * | Where you play | nothing — the one state, because a profile cannot be committed without an area |
  * | Who you play with | `GET /players/me/profile`.gender_preference — **the preference only**, never the gender (ADR-0179 §4) |
- * | Game suggestions | `GET /players/me/profile`.proposals_opt_in — the answer and its day |
  * | Photos | `GET /players/me/profile`.photos — the count, and the profile photo's verdict |
  * | Tags | `GET /players/me/profile`.social_tags ∩ `GET /player-profile/options`.social_tag_selection — the ceiling is served |
  * | Intro | `GET /players/me/profile`.intro |
@@ -45,19 +42,15 @@ import { useProfileSurface } from '../hooks/useProfileSurface';
 
 import {
   YOU_AREA_ROUTE,
-  YOU_GAME_SUGGESTIONS_ROUTE,
   YOU_INTRO_ROUTE,
   YOU_KIND_OF_GAME_ROUTE,
   YOU_PHOTOS_ROUTE,
-  YOU_RADIUS_ROUTE,
   YOU_TAGS_ROUTE,
   YOU_WEEK_ROUTE,
   YOU_WHO_YOU_PLAY_WITH_ROUTE,
 } from './youProfileRoutes';
 import {
   AREA_LINE,
-  GAME_SUGGESTIONS_TITLE,
-  HOW_FAR_TO_LOOK_TITLE,
   INTRO_TITLE,
   PHOTOS_TITLE,
   TAGS_TITLE,
@@ -65,11 +58,9 @@ import {
   WHERE_YOU_PLAY_TITLE,
   WHO_YOU_PLAY_WITH_TITLE,
   YOUR_WEEK_TITLE,
-  gameSuggestionsLine,
   introLine,
   kindOfGameLine,
   photosLine,
-  radiusLine,
   tagsLine,
   weekLine,
   whoYouPlayWithLine,
@@ -119,21 +110,6 @@ export function YourWeekRow({ divided }: YouRowProps) {
   );
 }
 
-export function HowFarToLookRow({ divided }: YouRowProps) {
-  const router = useRouter();
-  const profile = useProfileSurface();
-
-  return (
-    <DoorRow
-      glyph="target"
-      title={HOW_FAR_TO_LOOK_TITLE}
-      line={liveLine(profile, (surface) => radiusLine(surface.searchRadiusKm))}
-      divided={divided}
-      onPress={() => router.push(YOU_RADIUS_ROUTE)}
-    />
-  );
-}
-
 export function WhereYouPlayRow({ divided }: YouRowProps) {
   const router = useRouter();
 
@@ -161,21 +137,6 @@ export function WhoYouPlayWithRow({ divided }: YouRowProps) {
       line={liveLine(profile, (surface) => whoYouPlayWithLine(surface.genderPreference))}
       divided={divided}
       onPress={() => router.push(YOU_WHO_YOU_PLAY_WITH_ROUTE)}
-    />
-  );
-}
-
-export function GameSuggestionsRow({ divided }: YouRowProps) {
-  const router = useRouter();
-  const profile = useProfileSurface();
-
-  return (
-    <DoorRow
-      glyph="check-circle"
-      title={GAME_SUGGESTIONS_TITLE}
-      line={liveLine(profile, (surface) => gameSuggestionsLine(surface.proposalsOptIn))}
-      divided={divided}
-      onPress={() => router.push(YOU_GAME_SUGGESTIONS_ROUTE)}
     />
   );
 }

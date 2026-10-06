@@ -1,17 +1,17 @@
 /**
  * The end of the part: **every answer at once, or nothing at all.**
  *
- * The draft is the answers a player builds up over eight screens, and four of its fields are
+ * The draft is the answers a player builds up over six screens, and two of its fields are
  * legitimately absent while they are doing it. A commit is the opposite kind of value —
- * it is what `POST /players/me/profile` carries, and every one of those three has to be
- * there. `ProfileCommit` is that value, and `readyToCommit` is the only way to build one.
+ * it is what `POST /players/me/profile` carries, and both of those have to be there.
+ * `ProfileCommit` is that value, and `readyToCommit` is the only way to build one.
  *
- * **A partial commit is unrepresentable rather than merely avoided.** Tags saved and consent
+ * **A partial commit is unrepresentable rather than merely avoided.** Tags saved and the week
  * lost is the worst outcome this part has available to it, so the type that reaches the
  * mapper simply cannot hold a missing answer — nothing downstream has to remember to check,
  * and no future caller can assemble a body out of a half-answered draft.
  *
- * ## Four are the fields the draft spells `| undefined`, and the fifth is the week
+ * ## Two are the fields the draft spells `| undefined`, and the third is the week
  *
  * **Photos and the intro are the genuinely empty answers.** A player may hold no photograph
  * and may write no line, and reading an empty list or an empty box as *unanswered* would
@@ -36,7 +36,7 @@
  *
  * ## What is missing is a list, not a boolean
  *
- * A screen that can only say *something is missing* has to send the player back through six
+ * A screen that can only say *something is missing* has to send the player back through five
  * steps to find out which. The names below are what let the last step say the one true
  * sentence and offer the one control that fixes it.
  *
@@ -48,11 +48,6 @@
  * it is what stands between a player and a Player profile, and a rule living in a
  * `disabled={…}` expression is a rule with no test and no name.
  *
- * It also supersedes `proposalsOptIn.mayFinish`, which answered the same question when
- * consent was the only thing that could hold the finish shut. *An answer that has not been
- * given is not an answer* is not dropped — it is one of the three `readyToCommit` reports,
- * so the finish still opens on either answer and on neither absence.
- *
  * No renderer, no store, no wire type: the profile editor will assemble the same value out
  * of the same rules from a screen that looks nothing like the step that ends this part.
  */
@@ -63,14 +58,14 @@ import { weekStanding } from './availabilityWeek';
 import { introToSend } from './intro';
 import { uploadsInFlight, type ProfilePhoto } from './photoCollection';
 import type { Gender, GenderPreference } from './gender';
-import type { WeeklyHour, LocationArea, ProfileDraft, ProposalsOptIn } from './ProfileDraft';
+import type { WeeklyHour, LocationArea, ProfileDraft } from './ProfileDraft';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 import type { SocialStep } from './socialSteps';
 
 /**
  * Every answer the second part collects, with nothing left to be absent.
  *
- * The same fields as `ProfileDraft` and four of them narrowed — which is the whole
+ * The same fields as `ProfileDraft` and two of them narrowed — which is the whole
  * difference between *what a player is part-way through saying* and *what is sent*.
  */
 export interface ProfileCommit {
@@ -84,8 +79,6 @@ export interface ProfileCommit {
   readonly photoIds: readonly string[];
   readonly weeklyHours: readonly WeeklyHour[];
   readonly location: LocationArea;
-  readonly searchRadiusKm: number;
-  readonly proposalsOptIn: ProposalsOptIn;
   /** Narrowed from the draft's `| undefined`: the commit requires an answer. */
   readonly gender: Gender;
   /**
@@ -97,8 +90,7 @@ export interface ProfileCommit {
 }
 
 /** An answer the commit needs and the draft has not got. Named for the step that asks it. */
-export type MissingAnswer =
-  'availability' | 'location' | 'search-radius' | 'gender' | 'proposals-opt-in';
+export type MissingAnswer = 'availability' | 'location' | 'gender';
 
 export type CommitReadiness =
   /** Every answer is in. `commit` is the body, and it could not have been built without them. */
@@ -107,13 +99,13 @@ export type CommitReadiness =
   | { readonly kind: 'incomplete'; readonly missing: readonly MissingAnswer[] };
 
 /**
- * The five, in the order the steps ask for them, and how to tell whether a draft holds one.
+ * The three, in the order the steps ask for them, and how to tell whether a draft holds one.
  *
  * **One list and one order**, which is what the `missing` report is filtered out of — the
- * alternative was the four names written twice, kept in step by hand, and one edit away
- * from a screen sending a player back to the wrong step.
+ * alternative was the names written twice, kept in step by hand, and one edit away from a
+ * screen sending a player back to the wrong step.
  *
- * Four of them are a field being present. The week is a **standing**, which is why this is
+ * Two of them are a field being present. The week is a **standing**, which is why this is
  * a table of predicates rather than a list of keys: an answer the draft can hold and still
  * be short of needs somewhere to say so. It asks `weekStanding` rather than counting the
  * list itself, so the floor is one function's answer — the same one the availability step's
@@ -122,11 +114,9 @@ export type CommitReadiness =
 const ANSWER_HELD: Readonly<Record<MissingAnswer, (draft: ProfileDraft) => boolean>> = {
   availability: (draft) => weekStanding(draft.weeklyHours).kind === 'ticked',
   location: (draft) => draft.location !== undefined,
-  'search-radius': (draft) => draft.searchRadiusKm !== undefined,
   // The gender answer, and **not** the preference beside it: `any` is what having narrowed
   // nothing means, so the preference cannot be absent and has nothing to report here.
   gender: (draft) => draft.gender !== undefined,
-  'proposals-opt-in': (draft) => draft.proposalsOptIn !== undefined,
 };
 
 const EVERY_ANSWER = Object.keys(ANSWER_HELD) as readonly MissingAnswer[];
@@ -142,20 +132,14 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
   if (draft === undefined) return { kind: 'incomplete', missing: EVERY_ANSWER };
 
   const missing = EVERY_ANSWER.filter((answer) => !ANSWER_HELD[answer](draft));
-  const { location, searchRadiusKm, proposalsOptIn, gender } = draft;
+  const { location, gender } = draft;
 
-  // **One guard, because it is one question.** The four narrowings say to the compiler what
+  // **One guard, because it is one question.** The two narrowings say to the compiler what
   // the filter above just said to a screen — and they are what make `ProfileCommit`
   // constructible at all. The week has no narrowing to do, since `readonly
   // WeeklyHour[]` is already the commit's type, so it is carried by `missing` alone;
   // counting the list a second time here would be the floor decided twice.
-  if (
-    missing.length > 0 ||
-    location === undefined ||
-    searchRadiusKm === undefined ||
-    proposalsOptIn === undefined ||
-    gender === undefined
-  ) {
+  if (missing.length > 0 || location === undefined || gender === undefined) {
     return { kind: 'incomplete', missing };
   }
 
@@ -164,7 +148,7 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
   return {
     kind: 'ready',
     commit: {
-      // Named one by one rather than spread: a ninth answer added to the draft should
+      // Named one by one rather than spread: another answer added to the draft should
       // have to be carried here deliberately, not arrive at the wire because a spread
       // picked it up.
       socialTagIds: draft.socialTagIds,
@@ -173,8 +157,6 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
       photoIds: draft.photoIds,
       weeklyHours: draft.weeklyHours,
       location,
-      searchRadiusKm,
-      proposalsOptIn,
       gender,
       // Carried, never defaulted here: the draft holds `any` from the moment the part is
       // entered, so this is the player's answer whether or not they touched the control.
@@ -186,8 +168,7 @@ export function readyToCommit(draft: ProfileDraft | undefined): CommitReadiness 
 /**
  * How the one request is going. The half of the part's standing a draft cannot answer.
  *
- * Four states rather than a pair of booleans, for the reason `ProposalsOptInStanding` is a
- * shape rather than `boolean | undefined`: *not sent yet*, *in flight*, *refused* and
+ * Four states rather than a pair of booleans: *not sent yet*, *in flight*, *refused* and
  * *landed* are four different situations, and reading one of them should be a decision
  * rather than the first `if` that happens to match.
  */
@@ -268,10 +249,10 @@ export function commitStanding(
  * Whether the finish may be pressed.
  *
  * **Open on everything the part must carry having been answered, and on nothing else.** It
- * is deliberately blind to *which* answer the proposals question got: a gate that opened
- * only on yes would be the product withholding the rest of itself until it got the answer
- * it wanted, and a player who declines has finished that step as completely as one who
- * accepts.
+ * is deliberately blind to *which* answers were given: `prefer not to say` and a narrowed
+ * preference finish the part exactly as `woman` and `anyone` do, because a gate that opened
+ * only on some answers would be the product withholding the rest of itself until it got the
+ * one it wanted.
  *
  * A commit in flight, one that failed and one that landed all leave it open — the first
  * because *busy* is the control's own state and not a closed door, the second because the
@@ -311,14 +292,11 @@ export function commitToSend(standing: CommitStanding): ProfileCommit | undefine
  * the step that asked*, and where that is has to be a fact rather than a sentence a screen
  * guesses at.
  *
- * `proposals-opt-in` maps to the last step itself, which is not a special case: it really is
- * the step that asks it, and a player who has not answered it is standing on the control
- * that does.
+ * `gender` maps to the last step itself, which is not a special case: it really is the step
+ * that asks it, and a player who has not answered it is standing on the controls that do.
  */
 export const STEP_THAT_ASKS: Readonly<Record<MissingAnswer, SocialStep>> = {
   availability: 'availability',
   location: 'location',
-  'search-radius': 'radius',
   gender: 'gender',
-  'proposals-opt-in': 'opt-in',
 };

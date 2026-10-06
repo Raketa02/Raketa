@@ -46,7 +46,6 @@ import RescueRoute from '@/app/(app)/(tabs)/play/group/[groupId]/rescue/[booking
 import PostAGameRoute from '@/app/(app)/(tabs)/play/group/[groupId]/post';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
-import YouGameSuggestionsRoute from '@/app/(app)/(tabs)/you/game-suggestions';
 import YouGamesAndMoneyRoute from '@/app/(app)/(tabs)/you/games-and-money';
 import YouIntroRoute from '@/app/(app)/(tabs)/you/intro';
 import YouKindOfGameRoute from '@/app/(app)/(tabs)/you/kind-of-game';
@@ -55,7 +54,6 @@ import YouNotificationsRoute from '@/app/(app)/(tabs)/you/notifications';
 import YouPaymentsRoute from '@/app/(app)/(tabs)/you/payments';
 import YouPassportRoute from '@/app/(app)/(tabs)/you/passport';
 import YouPhotosRoute from '@/app/(app)/(tabs)/you/photos';
-import YouRadiusRoute from '@/app/(app)/(tabs)/you/radius';
 import YouReliabilityRoute from '@/app/(app)/(tabs)/you/reliability';
 import YouTagsRoute from '@/app/(app)/(tabs)/you/tags';
 import YouWeekRoute from '@/app/(app)/(tabs)/you/week';
@@ -80,11 +78,9 @@ import LocationRoute from '@/app/(onboarding)/location';
 import NameRoute from '@/app/(onboarding)/name';
 import StartPlayingRoute from '@/app/(onboarding)/start-playing';
 import OnboardingLayout from '@/app/(onboarding)/_layout';
-import OptInRoute from '@/app/(onboarding)/opt-in';
 import PhotosRoute from '@/app/(onboarding)/photos';
 import QuestionRoute from '@/app/(onboarding)/question/[assessmentId]';
 import GenderRoute from '@/app/(onboarding)/gender';
-import RadiusRoute from '@/app/(onboarding)/radius';
 import ResultRoute from '@/app/(onboarding)/result/[assessmentId]';
 import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
@@ -169,10 +165,8 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/reliability': YouReliabilityRoute,
   '(app)/(tabs)/you/kind-of-game': YouKindOfGameRoute,
   '(app)/(tabs)/you/week': YouWeekRoute,
-  '(app)/(tabs)/you/radius': YouRadiusRoute,
   '(app)/(tabs)/you/area': YouAreaRoute,
   '(app)/(tabs)/you/who-you-play-with': YouWhoYouPlayWithRoute,
-  '(app)/(tabs)/you/game-suggestions': YouGameSuggestionsRoute,
   '(app)/(tabs)/you/photos': YouPhotosRoute,
   '(app)/(tabs)/you/tags': YouTagsRoute,
   '(app)/(tabs)/you/intro': YouIntroRoute,
@@ -231,9 +225,7 @@ export const ONBOARDING_ROUTES = {
   '(onboarding)/photos': PhotosRoute,
   '(onboarding)/availability': AvailabilityRoute,
   '(onboarding)/location': LocationRoute,
-  '(onboarding)/radius': RadiusRoute,
   '(onboarding)/gender': GenderRoute,
-  '(onboarding)/opt-in': OptInRoute,
 };
 
 /**
@@ -531,8 +523,8 @@ export const RUNS_IN_PROGRESS_PATH = '/api/v1/assessments/in-progress';
 export const PROFILE_OPTIONS_PATH = '/api/v1/player-profile/options';
 
 /**
- * The nineteen Social tags in their three groups, the selection bounds and the radius
- * bounds — as `GET /player-profile/options` answers.
+ * The nineteen Social tags in their three groups and the selection bounds — as
+ * `GET /player-profile/options` answers.
  *
  * The order here is the order the picker must render, because the picker renders what it
  * is served and sorts nothing. A suite that wants a shorter vocabulary passes its own.
@@ -575,16 +567,15 @@ export const PROFILE_OPTIONS_SERVED: Wire['PlayerProfileOptionsResponse'] = {
     },
   ],
   social_tag_selection: { minimum_tags: 2, maximum_tags: 6 },
-  search_radius: { minimum_km: 1, maximum_km: 50, step_km: 1, default_km: 10 },
 };
 
 export const PROFILE_SURFACE_PATH = '/api/v1/players/me/profile';
 
 /**
- * The profile as `GET /players/me/profile` serves it: the three facts Play's search screen
- * opens on — a week, a radius and one declaration — and the facts the read grew for the You
- * tab ([#466](https://github.com/Raketa02/Raketa/issues/466)): the tags, the photos with their
- * verdicts, the intro, the opt-in and the owner's own gender and preference.
+ * The profile as `GET /players/me/profile` serves it: a week and one declaration, and the
+ * facts the read grew for the You tab ([#466](https://github.com/Raketa02/Raketa/issues/466)):
+ * the tags, the photos with their verdicts, the intro and the owner's own gender and
+ * preference.
  *
  * A padel declaration is in it because *rated and undeclared* is a **different screen** —
  * ADR-0094's one-tap interstitial — so a suite that wants the ordinary case has to say a
@@ -597,7 +588,6 @@ export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
     { day: 2, hour: 19 },
     { day: 6, hour: 9 },
   ],
-  search_radius_km: 12,
   play_intents: { PADEL: 'FOR_FUN' },
   social_tags: ['STAYS_FOR_A_DRINK', 'PLAYS_TO_WIN', 'WARMS_UP_PROPERLY', 'HERE_TO_IMPROVE'],
   photos: [
@@ -605,19 +595,13 @@ export const PROFILE_SURFACE_SERVED: Wire['PlayerProfileReadResponse'] = {
     { photo_id: 'photo-held-2', review: 'flagged' },
   ],
   intro: 'Will travel for a hard game.',
-  proposals_opt_in: {
-    accepted: true,
-    copy_version: 'proposals-opt-in.v3',
-    surface: 'ONBOARDING',
-    answered_at: '2026-08-12T10:00:00Z',
-  },
   gender: 'MAN',
   gender_preference: 'ANY',
 };
 
 /**
- * The served surface with some facts replaced — for the suites about the week, the radius or
- * the declaration, which vary those three and have nothing to say about the rest.
+ * The served surface with some facts replaced — for the suites about the week or the
+ * declaration, which vary those and have nothing to say about the rest.
  */
 export function profileSurface(
   overrides: Partial<Wire['PlayerProfileReadResponse']>,
@@ -919,8 +903,7 @@ export const PLAYER_ONLY: Wire['AccountProfilesSchema'] = {
 
 /**
  * The signed-in player, as `GET /users/me` answers. Identity is filler; the name is not: it is
- * what every screen says about her, and its absence is where a launch is sent first. `is_tester`
- * is still on the wire until the backend drops it (#581), and the app no longer reads it.
+ * what every screen says about her, and its absence is where a launch is sent first.
  */
 export const GATE_USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
@@ -930,7 +913,6 @@ export const GATE_USER: Wire['MeResponse'] = {
   authority: 'player',
   is_admin: false,
   is_active: true,
-  is_tester: false,
   has_player_profile: false,
   created_at: '2026-08-13T10:00:00Z',
   adult_attested: true,

@@ -43,7 +43,6 @@ const USER: Wire['MeResponse'] = {
   authority: 'player',
   is_admin: false,
   is_active: true,
-  is_tester: false,
   has_player_profile: false,
   adult_attested: true,
   profiles: { acts_as_player: true, administers: [], pending_invitations: [], handovers: [] },

@@ -17,9 +17,7 @@ export { SocialIntroStep } from './components/SocialIntroStep';
 export { SocialPhotosStep } from './components/SocialPhotosStep';
 export { SocialAvailabilityStep } from './components/SocialAvailabilityStep';
 export { SocialLocationStep } from './components/SocialLocationStep';
-export { SocialRadiusStep } from './components/SocialRadiusStep';
 export { SocialGenderStep } from './components/SocialGenderStep';
-export { SocialOptInStep } from './components/SocialOptInStep';
 
 export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';
 /**
@@ -30,7 +28,7 @@ export { SOCIAL_STEPS, type SocialStep } from './domain/socialSteps';
  * client-held and starts empty, so the middle of the part is not a place anyone can be sent.
  */
 export { SOCIAL_STEPS_ENTRY } from './components/socialStepRoutes';
-export type { WeeklyHour, LocationArea, ProfileDraft, ProposalsOptIn } from './domain/ProfileDraft';
+export type { WeeklyHour, LocationArea, ProfileDraft } from './domain/ProfileDraft';
 export type { Gender, GenderPreference } from './domain/gender';
 
 /**
@@ -65,9 +63,8 @@ export { useLocationRefresh } from './hooks/useLocationRefresh';
  * §1–§2). The shell composes the tab and names the rows; the route files under
  * `(app)/(tabs)/you/` name the screens. Each row is a title, a live line off the read that
  * carries the fact, and a door; each screen is the onboarding step's control under the tab's
- * chrome with a *Save* — the week, the radius, the tags, the intro, each of the two gender
- * groups — or written on every change to the row — the photos — or on every press — the
- * opt-in — or the section as built, behind a row.
+ * chrome with a *Save* — the week, the tags, the intro, each of the two gender groups — or
+ * written on every change to the row — the photos — or the section as built, behind a row.
  *
  * `PlayIntentsSection` ([#296](https://github.com/Raketa02/Raketa/issues/296)) is drawn by
  * `WhatKindOfGameScreen` and stays internal; `AreaUpdatesNote` moved into *Where you play*
@@ -76,8 +73,6 @@ export { useLocationRefresh } from './hooks/useLocationRefresh';
  * its words, as the rows' words are.
  */
 export {
-  GameSuggestionsRow,
-  HowFarToLookRow,
   IntroRow,
   PhotosRow,
   TagsRow,
@@ -88,21 +83,17 @@ export {
   type YouRowProps,
 } from './components/YouRows';
 export { YourWeekScreen } from './components/YourWeekScreen';
-export { HowFarToLookScreen } from './components/HowFarToLookScreen';
 export { WhereYouPlayScreen } from './components/WhereYouPlayScreen';
 export { WhatKindOfGameScreen } from './components/WhatKindOfGameScreen';
 export { PhotosScreen } from './components/PhotosScreen';
 export { TagsScreen } from './components/TagsScreen';
 export { IntroScreen } from './components/IntroScreen';
 export { WhoYouPlayWithScreen } from './components/WhoYouPlayWithScreen';
-export { GameSuggestionsScreen } from './components/GameSuggestionsScreen';
 export { AREA_UPDATES_LINE } from './components/locationPresentation';
 export {
   AREA_LINE,
   AREA_SET,
   CLEAR_ALL,
-  GAME_SUGGESTIONS_TITLE,
-  HOW_FAR_TO_LOOK_TITLE,
   INTRO_TITLE,
   KIND_OF_GAME_LINE,
   PHOTOS_TITLE,
@@ -116,11 +107,9 @@ export {
   WHERE_YOU_PLAY_TITLE,
   WHO_YOU_PLAY_WITH_TITLE,
   YOUR_WEEK_TITLE,
-  gameSuggestionsLine,
   introLine,
   kindOfGameLine,
   photosLine,
-  radiusLine,
   tagsLine,
   weekLine,
   whoYouPlayWithLine,
