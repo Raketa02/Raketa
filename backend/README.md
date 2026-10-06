@@ -653,6 +653,12 @@ or declines seats, all through the player API, as that player.
 
 What it is, stated because each half is load-bearing:
 
+> **Replaced by the games test console of
+> [ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)**
+> (#590, after #578 removes this one). It acts as seed accounts without signing in, refuses a
+> non-seed account and is served in `local` only. What follows describes the console that exists
+> until then.
+
 - **It is not a third app.** It is `app/api/dev/`, one no-build `console.html` behind a
   `FileResponse` and one route. No npm, no bundler, no codegen, no lint lane. The day it
   wants a component tree it has become a product, and the placement is re-argued rather

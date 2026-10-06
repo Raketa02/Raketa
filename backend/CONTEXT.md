@@ -289,7 +289,10 @@ there; they are not repeated here.
   wrong gender preference* look like. _Avoid_: asserting an absence on its own, reading the
   edge back out of the store that wrote it.
 - **Dev console** — the backend-served development tool at `/dev`: surface `dev`, contract
-  `openapi.dev.json`, code in `app/api/dev/`. Two things a reader would otherwise assume
+  `openapi.dev.json`, code in `app/api/dev/`. **[ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md) replaces it** with the games
+  test console (#590, after #578 removes this one). That console acts as seed accounts without
+  signing in, in `local` only, and three of the rules below are reversed. Until then, this
+  entry describes the console that exists. Two things a reader would otherwise assume
   wrongly. **It is not a client** — nothing generates types from its contract, which is why
   that document is gated by a *freshness* check and not by `check-contract-drift.sh`. And
   it acts as another player **only by signing in as one**, through the ordinary
@@ -305,7 +308,8 @@ there; they are not repeated here.
   panel.
 - **Console gate** — `CONSOLE_SERVED` in `app/api/dev/gate.py`: where the dev console is
   served, written out per environment with the same `_undecided` refusal the **Seed guard**
-  carries. **A second table, and never `SEEDABLE`** — the same answer today to a different
+  carries. ADR-0194 narrows it to `local` and makes the data half a refusal
+  (#590). **A second table, and never `SEEDABLE`** — the same answer today to a different
   question, and deriving one refusal from another is what `guard.py`'s own comment argues
   against. The refusal sits at the top of `routes.py` rather than in the package's
   `__init__`, which is where the seed system puts its own and is **wrong here**:

@@ -9,6 +9,13 @@ paths:
 
 Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-bearing and not obvious from the code.
 
+> **The dev console below is replaced by the games test console of
+> [ADR-0194](../../../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)**
+> (#590, after #578 removes it). That console acts as seed accounts **without signing in**,
+> refuses a non-seed account, is served in `local` only, and builds situations from `app/seeds/`.
+> Each action runs the player's or club's own use case. What follows describes the console that
+> exists until then.
+
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix, and mount
   them on **the surface whose client calls them**: `app/api/v1/player.py` for the player
   app, `app/api/v1/club.py` — everything under `/api/v1/club` — for the club website, and

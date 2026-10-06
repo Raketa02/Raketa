@@ -52,13 +52,17 @@ the hooks themselves, `make gen-api`.
   mirroring a backend response ([ADR-0006](docs/adr/0006-backend-owns-api-contract.md)).
   There are four (ADR-0187 §5): `backend/openapi.player.json` for the player app,
   `openapi.club.json` for the club website, `openapi.public.json` for the public site, and
-  the **dev console**'s `openapi.dev.json` (#256). Regenerate with `make gen-api`, which
-  regenerates all three clients, and commit the result — CI regenerates and diffs each
+  the **dev console**'s `openapi.dev.json`
+  ([ADR-0194](docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)).
+  Regenerate with `make gen-api`, which regenerates all three clients, and commit the
+  result — CI regenerates and diffs each
   client, so a contract change shipped without its client types fails the build
   ([`.github/scripts/check-contract-drift.sh`](.github/scripts/check-contract-drift.sh),
   which takes any app whose `package.json` declares `gen:api`, proven still to fire by
   `make test-drift`).
-  **The dev console has one path and no client**, so nothing generates types from it. Its
+  **The dev console grows more than one path and still has no client**: today its one
+  roster route, and from #590 a route per action, situation and job the games test console
+  presses. Its one page is their only caller, so nothing generates types from it. Its
   analogue of the drift check is a **freshness** check: re-emit every document and diff the
   JSON, which is also the only thing that would catch a stale client document — that
   client's drift check regenerates its types *from* the document and finds them in perfect
