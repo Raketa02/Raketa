@@ -15,6 +15,8 @@ import type { ResultAct } from '../domain/home';
 import type { CalledOffReason, ClubCancelReason, HomeStatus } from '../domain/vocabulary';
 
 export const HOME_GAME_COPY = {
+  /** The heading over Home's rail, before its count — `homePresentation.gamesHeading`. */
+  heading: 'Your games',
   /** The status tag on a card and on the details — the mechanics §14.1's names. */
   status: {
     WAITING_FOR_THE_CLUB: 'Waiting for the club',

@@ -6,38 +6,26 @@
  * A later edit that made a tab say *coming soon* or Now say *nothing is happening* would be a
  * product change wearing the clothes of a wording tweak.
  *
- * **The refusal outlived every placeholder it was written for.** Chats' line left the
- * placeholder table when the tab was built ([#360](https://github.com/Raketa02/Raketa/issues/360))
- * and `CONVERSATIONS`' own line joined it with the section that draws it
- * ([#363](https://github.com/Raketa02/Raketa/issues/363)); **Now's went the same way when the rail
- * replaced it** ([#367](https://github.com/Raketa02/Raketa/issues/367)); and You's, the last,
- * went with the tab ADR-0179 built. *Never says nothing is happening* was Now's refusal in the
- * first place — it is where a send lands — so a build that deleted the row along with the last
- * placeholder would have dropped the one assertion the whole rule came from. Every sentence the
- * shell still writes is in `LINES` below, under the identical two refusals.
+ * **The refusal outlived every placeholder it was written for.** Now's line left the
+ * placeholder table when the rail replaced it ([#367](https://github.com/Raketa02/Raketa/issues/367)),
+ * and You's, the last, went with the tab ADR-0179 built. *Never says nothing is happening* was
+ * Now's refusal in the first place — it is where a game lands — so a build that deleted the row
+ * along with the last placeholder would have dropped the one assertion the whole rule came from.
+ * Every sentence the shell still writes is in `LINES` below, under the identical two refusals.
  */
 
 import { TAB_BAR_TABS, type TabBarKey } from '@/shared/ui';
 
-import { CHATS_COPY, HOME_COPY } from './shellCopy';
+import { HOME_COPY, PLAY_COPY } from './shellCopy';
 import { YOU_COPY } from './youCopy';
 
-/** Every sentence the shell writes — the two built tabs' own lines, and You's three group titles. */
-const LINES = [
-  CHATS_COPY.panel.title,
-  CHATS_COPY.panel.body,
-  CHATS_COPY.emptyChallenges,
-  CHATS_COPY.emptyConversations,
-  HOME_COPY.empty.line,
-  HOME_COPY.empty.act,
-  ...Object.values(YOU_COPY.groups),
-];
+/** Every sentence the shell writes — Home's own lines, and You's group titles. */
+const LINES = [HOME_COPY.empty.line, HOME_COPY.empty.act, ...Object.values(YOU_COPY.groups)];
 
 describe('what the tabs are called', () => {
   const label = (key: TabBarKey) => TAB_BAR_TABS.find((tab) => tab.key === key)?.label;
 
   it('titles each composed tab with the name the bar gives it', () => {
-    expect(CHATS_COPY.title).toBe(label('chats'));
     expect(HOME_COPY.title).toBe(label('home'));
     expect(YOU_COPY.title).toBe(label('you'));
   });
@@ -90,25 +78,18 @@ describe('what Home says when it is holding nothing', () => {
   });
 });
 
-describe("what each of the Chats tab's two empty lines points at", () => {
-  /**
-   * They are one screen apart and are filled by two different acts, so neither may be the other's
-   * sentence: a challenge lands in the first when it is sent or received, and a room opens in the
-   * second only when somebody **accepts**.
-   */
-  it('names the act that fills its own section, in the present tense', () => {
-    expect(CHATS_COPY.emptyChallenges).toMatch(/challenges/i);
-    expect(CHATS_COPY.emptyConversations).toMatch(/accepts/i);
-    expect(CHATS_COPY.emptyConversations).not.toBe(CHATS_COPY.emptyChallenges);
+describe("what Play's segment says", () => {
+  it('names its two pages, Groups first', () => {
+    expect(Object.values(PLAY_COPY.segment)).toEqual(['Groups', 'Explore']);
   });
 });
 
 describe('what they refuse to say', () => {
   it('never says nothing is happening', () => {
-    // Now is where a send lands, and so is Chats. Asserting emptiness would be a lie one tap
-    // after a challenge went out — and the same sentence is wrong on the others for the
-    // simpler reason that a player cannot tell it from a broken screen. **This is the row the
-    // rail had to keep**: it was Now's refusal first, and Now's own line is in `LINES` above.
+    // Home is where a game lands. Asserting emptiness would be a lie one tap after one was
+    // booked — and the same sentence is wrong elsewhere for the simpler reason that a player
+    // cannot tell it from a broken screen. **This is the row the rail had to keep**: it was
+    // Now's refusal first, and Home's own line is in `LINES` above.
     for (const line of LINES) {
       expect(line).not.toMatch(/nothing/i);
       expect(line).not.toMatch(/empty/i);

@@ -89,17 +89,18 @@ with `Tick`; and by sign-up's age question: `TickBox`; and by Play: `TabBar`, `S
 chat map: `TextField` (6.13, which auth's four boxes moved onto in the same commit) and
 `PagerDots` (7.18, Now's rail); ahead of the record sheet: `SocialTagRow`, `RunOfForm`, and
 `PhotoPanel` with `PlayerPhoto`, `OnCourtMark` and `courtPosterFor` under it; and by the
-sportsmanship card: `StarRow` with `Star`; and by the Chats list's _Leave the game_: `SwipeRow`
-(6.15), a row that slides left on `PanResponder` to reveal one control, with its arithmetic in
-`swipeRowGeometry.ts`; and by the You tab: `DoorRow` (5.5 as amended, Part 16 2026-09-17), a
+sportsmanship card: `StarRow` with `Star`; and by the old loop's Chats list: `SwipeRow` (6.15), a
+row that slides left on `PanResponder` to reveal one control, with its arithmetic in
+`swipeRowGeometry.ts` — **drawn by nothing since that list was removed** (#576), and kept with
+6.15 until the design system decides whether a swipe row stays in it; and by the You tab: `DoorRow` (5.5 as amended, Part 16 2026-09-17), a
 fact with a screen behind it — a `paper2` lead square with a Feather glyph, a title, a **live**
 line off a read and a chevron, spoken as _title, live line_; what a row says while its read is
 on its way or has failed is `shared/errors`' `liveLine`, because a read's standing turned into a
 sentence is an errors concern and not a drawing. `DarkCard` gained `PressableDarkCard` for the
 tab's header card, as `Card` has `PressableCard`. And by promotion out of Play's courts
 ([#574](https://github.com/Raketa02/Raketa/issues/574)): `SeatFace` with `SeatCaption` and the
-seat's ring, which the group page, Fill in and a booked game's players card draw — none of which
-may import `features/play/`, the loop #569 removes. Import them from `@/shared/ui`.
+seat's ring, which the group page, Fill in and a booked game's players card draw. Import them from
+`@/shared/ui`.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with
@@ -117,11 +118,11 @@ card's and one was the profile photos step's, and the record sheet draws all six
 thing to keep in step — `RunOfForm`'s three contrast ratios are **pinned** in
 `recordSquares.test.ts` and `OnCourtMark`'s cap is derived per panel in `onCourtMarkFit.test.ts`,
 and a second copy of either would be values those tests never see — and importing them out of
-`features/play/` would point the arrow the wrong way for a feature that is not Play's sibling by
-accident. `PlayerPhoto` also **lost the word _candidate_ on the way down**: a candidate is Play's
+the old loop's Play feature would have pointed the arrow the wrong way for a feature that was not
+Play's sibling by accident. `PlayerPhoto` also **lost the word _candidate_ on the way down**: a candidate is Play's
 name for a row a search returned, and what the switch draws is a player. **What came down is the drawing and the shape it takes; what stayed is the
-rule.** `play/domain/socialTagOverlap` reads the row's four answers off a **candidate**, which is
-a search result and Play's alone, and hands the value down — so a second surface serves its own
+rule.** Play read the row's four answers off a **candidate**, which was a search result and Play's
+alone, and handed the value down — so a second surface serves its own
 and neither re-derives the other's. `RUN_OF_FORM_FILL` is exported for the same reason
 `BALANCE_INK` and `FIT_HIGH` are: the ratio a drawn object is held to is derived off the drawn
 object, never off the token it happens to use today.
@@ -328,14 +329,12 @@ for 6.13, and the placeholder button before that for `Button`.
 
 **The tab bar** (10.2) is the app's bottom chrome, and it is the drawn object only — it
 takes the active tab and a press handler and knows nothing about routes or stacks. **Its
-inventory of five is its own** rather than a prop, because
+inventory of three is its own** — Home · ⚡Play · You — rather than a prop, because
 [ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
-fixes the family and the five names, and because `theme.size.tabBar.labelMaxScale` is derived
-from exactly those five words in exactly five columns — a caller that could pass a sixth tab
-could invalidate the cap without anything saying so. **It draws three of the five** — Home ·
-⚡Play · You — unless the caller says Classic play is on (`classicPlay`, #550), which brings
-Players and Chats back; a switch, not a list, and three columns are wider than the five the cap
-is derived over. Feather from `@expo/vector-icons`,
+fixes the family and the names, and because `theme.size.tabBar.labelMaxScale` is held against
+exactly those words in exactly three columns — a caller that could pass a fourth tab could break
+the fit without anything saying so. It drew five, with the old loop's Players and Chats behind a
+switch, until that loop was removed (#576). Feather from `@expo/vector-icons`,
 selection **in tone alone**, and the ⚡ is Feather `zap` rather than the character `⚡`,
 which carries `Emoji_Presentation=Yes` and would render in a colour this app does not choose.
 The bar owns the bottom safe-area inset; a CTA above it owns none.

@@ -1,29 +1,16 @@
 /**
- * **The composer is one block: the quick chips, the field and Send**
- * ([#402](https://github.com/Raketa02/Raketa/issues/402)).
+ * **The composer: the field and Send** ([#402](https://github.com/Raketa02/Raketa/issues/402)).
  *
  * The field is 6.13's, which arrived with this surface — *"two more surfaces need a field, and a
  * third implementation is exactly the drift a shared primitive exists to prevent"*. What this
- * component owns is the block: the chips row above the field, the cap, the one control beside it,
- * and when that control is open.
+ * component owns is the block: the field, the cap, the one control beside it, and when that
+ * control is open. It drew a row of quick chips above the field too, asking about an old-loop
+ * plan's empty slots, until a booked game's room became the only room
+ * ([#576](https://github.com/Raketa02/Raketa/issues/576)): the booking is the plan, so there is
+ * nothing left to ask.
  *
- * ## One block rather than two strips, and it is this component that grew
- *
- * The chips and the field were two siblings the screen emitted one after the other — two strips
- * competing for the foot of a screen the keyboard already has half of. The design draws them as
- * one surface: the chips are the row above the field, on the same ground, under one hairline and
- * one set of paddings. It is `Composer` that grew a chips row rather than a third component
- * owning both, because everything the block shares — the ground, the hairline, the paddings and
- * the bottom edge — was already this component's, and a component owning two children whose only
- * job was to hold them would be a wrapper with nothing of its own to say. `QuickChips` stays a
- * component: it is the row and knows nothing about the field, and the block composes it.
- *
- * **The block has one door out, `onPost`, and both the chips and Send go through it** — the
- * screen's `post()`, so a chip send is an ordinary send, optimistic and reconciled on
- * `client_message_id` like anything typed, and *chips post through the composer's own send* is
- * true by construction rather than by two callbacks agreeing. Which chips there are is
- * `features/plans`' rule — one per unfilled slot, plus *On my way* on the day — and the row draws
- * whatever that rule answers, never the mock's three.
+ * **The block has one door out, `onPost`** — the screen's `post()`, optimistic and reconciled on
+ * `client_message_id`.
  *
  * ## The label is spoken and not drawn, and the hint is not the label
  *
@@ -54,8 +41,8 @@
  *
  * ## The one other thing that closes it is the account, and it greys the whole block
  *
- * A **held** account may read here and may not write (ADR-0148 §9), so every chip, the field and
- * Send refuse together, and the field is greyed rather than merely `editable={false}` — the busy
+ * A **held** account may read here and may not write (ADR-0148 §9), so the field and Send refuse
+ * together, and the field is greyed rather than merely `editable={false}` — the busy
  * shape would say *waiting* about something that is not going to happen. It is only acceptable
  * because the note above the block has already said why, which is the condition 6.2 and 6.13 both
  * attach to a greyed control and the whole of why the screen puts **one** note above this block
@@ -83,23 +70,17 @@
  * once, and it is applied under it.
  *
  * **No device drew these numbers, and none of them is new.** The paddings are the gutter and
- * `space.sm`, the gap between the row and the strip is `space.xs`, the line is 1pt — every one an
- * existing step, which is why there is no Part 16 row: that table is the diff against the design
- * system, and nothing in it changed. The gutter is spelled once in the chips row and once in the
- * strip because a horizontal `ScrollView` pads its content and not its box; the two are one value.
- * The mock this block is drawn for was not in front of the session that built it, and the block
- * is asked for a look rather than asserted right.
+ * `space.sm`, the line is 1pt — every one an existing step, which is why there is no Part 16 row:
+ * that table is the diff against the design system, and nothing in it changed.
  */
 
 import { StyleSheet, View } from 'react-native';
 
-import type { QuickChip } from '@/features/plans/types';
 import { Button, TextField, theme } from '@/shared/ui';
 
 import { mayPost } from '../domain/stream';
 
 import { COMPOSER_LABEL, COMPOSER_PLACEHOLDER, SEND } from './conversationPresentation';
-import { QuickChips } from './QuickChips';
 
 /**
  * How far the box may grow before it scrolls, in lines.
@@ -116,27 +97,17 @@ const COMPOSER_LINES = 5;
 export interface ComposerProps {
   readonly text: string;
   readonly onChange: (text: string) => void;
-  /**
-   * The questions the room still has to ask, in the row above the field — `features/plans`' rule,
-   * and none where everything is agreed and the day is not today.
-   */
-  readonly chips: readonly QuickChip[];
-  /**
-   * **The block's one door out.** Send posts what is in the box and a chip posts its own words,
-   * through the same call — the screen's send, which is what makes a chip an ordinary message.
-   */
+  /** **The block's one door out.** Send posts what is in the box, through the screen's send. */
   readonly onPost: (words: string) => void;
   /** The account may not write here. Every part of the block refuses, and the screen owns the note. */
   readonly refused?: boolean;
 }
 
-export function Composer({ text, onChange, chips, onPost, refused = false }: ComposerProps) {
+export function Composer({ text, onChange, onPost, refused = false }: ComposerProps) {
   return (
     // Named so a suite can say *one block*: a claim about what contains what, which nothing a
     // listener hears can carry.
     <View style={s.block} testID="conversation-composer">
-      <QuickChips chips={chips} onPost={onPost} refused={refused} />
-
       <View style={s.strip}>
         <View style={s.field}>
           <TextField
@@ -167,7 +138,6 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.color.line,
     paddingVertical: theme.space.sm,
-    gap: theme.space.xs,
   },
   strip: {
     flexDirection: 'row',

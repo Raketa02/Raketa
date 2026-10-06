@@ -98,20 +98,3 @@ function stepped<T>(breaks: readonly (readonly [number, T])[], floor: T, pct: nu
 export function balanceLabel(pct: number): string {
   return `${balanceWord(pct)}, ${formatPercent(pct)}`;
 }
-
-/**
- * The same two facts **drawn**, and the reason a bar is never alone on a surface.
- *
- * [Part 13](../../../docs/design-system.md#part-13--accessibility)'s *never colour alone*
- * bites on the sighted half as hard as on the spoken one: a bar is a tint, its three tones
- * step at 70 and 55, and a reader who has not been told what the tint means has read a
- * colour. So every surface that draws the bar draws this beside it — which is also what makes
- * `PREDICTED_BALANCE` a term the card **renders a value for** rather than one it tints.
- *
- * It is a separate function from `balanceLabel` and the difference is one separator, which is
- * the difference between the two registers: a middot is a visual join that a screen reader
- * reads as a word or not at all, and a comma is the pause a spoken clause needs.
- */
-export function balanceReading(pct: number): string {
-  return `${balanceWord(pct)} · ${formatPercent(pct)}`;
-}

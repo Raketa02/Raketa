@@ -14,6 +14,7 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { gameKeys } from '@/features/games/types';
 import { PAYMENTS_COPY } from '@/features/payments/types';
 import { FILL_COPY, LEAVE_THE_GAME, PROPOSALS_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -38,7 +39,6 @@ import {
 } from '@/test-support/groupDeck';
 import { bookingDetails, stubBooking } from '@/test-support/home';
 import {
-  GAMES_PATH,
   HOME_PATH,
   PAYMENTS_TO_CONFIRM_PATH,
   PAYMENT_TERMS_IN_FORCE,
@@ -399,23 +399,29 @@ describe('It’s a game! — for the player whose yes filled the game (§11.3)',
     expect(await screen.findByText(FILL.itsAGame.word)).toBeTruthy();
   });
 
-  it('re-reads Home’s games, so the booked game is there', async () => {
+  /**
+   * Home's read is held by the shell all session, so it is re-read at once. The games list is
+   * read only by a booked game's result screen, which nothing holds here — so what is asserted for
+   * it is the cache flag, on an entry seeded where the navigation's timer flush cannot collect it.
+   */
+  it('re-reads Home’s games, and marks the games list stale, so the booked game is there', async () => {
     const card = bookItNow();
     await openGames([card], booked);
-    const before = transport.requestsTo('GET', GAMES_PATH).length;
+    queryClient
+      .getQueryCache()
+      .build(queryClient, { queryKey: gameKeys.list(), gcTime: Infinity })
+      .setData([]);
     const homeBefore = transport.requestsTo('GET', HOME_PATH).length;
 
     sayYes();
     theRestOfTheTenSeconds();
     await screen.findByText(FILL.itsAGame.word);
 
-    await waitFor(() =>
-      expect(transport.requestsTo('GET', GAMES_PATH).length).toBeGreaterThan(before),
-    );
     // The booking itself is Home's own read (#556).
     await waitFor(() =>
       expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(homeBefore),
     );
+    expect(queryClient.getQueryState(gameKeys.list())?.isInvalidated).toBe(true);
   });
 });
 

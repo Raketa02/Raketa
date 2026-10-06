@@ -136,25 +136,24 @@ src/app/
 ├── (administrator)/       the administrator area: one club's Groups · You, its own stack and bar
 └── (app)/                 authenticated tree
     ├── _layout.tsx        the redirect guard
-    └── (tabs)/            the shell: one Stack; Home · Play · You, five tabs with Classic play
+    └── (tabs)/            the shell: one Stack; Home · Play · You
         ├── _layout.tsx    TabShell — the navigator and the bar, mounted once
         ├── index.tsx      Home, and the app's landing
-        ├── around.tsx  chats.tsx  you.tsx
-        └── play/          the one tab with depth
+        ├── booking/       a booked game's details, chat and result, pushed over Home
+        ├── notices.tsx    the recent notices behind Home's bell
+        ├── play/          Groups | Explore, and a group's screens under it
+        └── you/           You, and a screen per row pushed over it
 ```
 
 Route groups exist so the **authorization boundary is visible in the file tree**.
 
 ### The shell is a `Stack`, and never `<Tabs>`
 
-Four of the five tabs are single-screen roots and only Play has depth, which is thrown away
-every time a player leaves it. `<Tabs>` keeps a history per tab and restores it on return —
-so built out of the box, a player who leaves the deck and comes back lands on the deck, and
-the rule fails with **no symptom at all**. Switching tabs **replaces**; entering Play lays
-down `[Home, Play's root]`; and both go through one function, `resetShellStack`, which is also
-where a Play session ends
-([#227](https://github.com/Raketa02/Raketa/issues/227),
-[#261](https://github.com/Raketa02/Raketa/issues/261)).
+Every tab's depth is thrown away when a player leaves it. `<Tabs>` keeps a history per tab and
+restores it on return — so built out of the box, a player who leaves a group's page and comes back
+lands on it, and the rule fails with **no symptom at all**. Switching tabs **replaces**; entering
+Play lays down `[Home, Play's root]`; and both go through one function, `resetShellStack`
+([#227](https://github.com/Raketa02/Raketa/issues/227)).
 
 A route file may own: the route declaration, its params, a layout, a redirect, navigation
 options, route-scoped provider composition, and a very small adapter. That is the entire
@@ -319,16 +318,6 @@ has been sent; `XMLHttpRequest` and a native uploader can, and either would be a
 transport with its own headers, timeout and rotation. So an upload reports the two stages
 it genuinely passes through — the bytes are read, then they are sent — and a screen drawing
 that never claims a percentage nobody measured.
-
-### The features host
-
-`httpGetFromFeaturesHost` is the module's third verb, and the only request the app makes to a
-host that is not the API: the feature-flag datafile, served from `EXPO_PUBLIC_FEATURES_URL`
-([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §4). It goes
-through the same `sendOnce` — timeout, correlation id, cancellation, error model — and is a verb
-rather than a flag on `httpRequest` because of what it must never send: the call is built
-unauthenticated, so no bearer token can reach a laptop on the LAN or a public bucket. It takes
-the `background` timeout class; nobody is waiting on it.
 
 ### Retry
 
@@ -918,18 +907,14 @@ budget making it short.
   already takes for mutations. _Nothing in Play background-refetches_ is a **scope
   clarification, not an exception**: that rule is about a ranked list reordering under a
   finger, and a conversation is append-ordered.
-- **A nudge re-reads what the room draws, and nothing it does not.** The room's query,
-  `planKeys.list()` and `gameKeys.list()` — the plan card is `(game, plan)`, read off `GET /plans`
-  and `GET /games`, two lists beside the room, and a slot another member set reaches this phone
-  as a line on the same frame ([#405](https://github.com/Raketa02/Raketa/issues/405)); a court
-  that completes while the room is open, and a standing that moves on a _we played_ line, reach
-  it through the games list ([#406](https://github.com/Raketa02/Raketa/issues/406)). On every
-  nudge, never on sighting a plan line, because a trigger keyed on the line vocabulary goes stale
-  on exactly the build too old to read a new code. The Chats list is not re-read: the room draws
-  nothing from it. And because a plan write is written in rather than refetched, every plan write
-  first **cancels** the plan list's in-flight read — not optimism, a read that can only be older
-  than the reply; the games list needs none, because a result write invalidates rather than
-  writes in.
+- **A nudge re-reads the room and the game it is about, and nothing else.** The room's query and
+  `gameKeys.list()` — a standing that moves on a _we played_ line reaches the result screen behind
+  the details through the games list ([#406](https://github.com/Raketa02/Raketa/issues/406)). On
+  every nudge, never on sighting a line, because a trigger keyed on the line vocabulary goes stale
+  on exactly the build too old to read a new code. The rooms list is not re-read: the room draws
+  nothing from it. The games list needs no cancel, because a result write invalidates rather than
+  writes in. (The old loop's plan card was the other reader, re-read off `GET /plans` on the same
+  nudge, until that loop was removed — [#576](https://github.com/Raketa02/Raketa/issues/576).)
 - **One stream per open conversation, and never one for a list.** The port opens while a room
   is on screen and closes when it leaves. ADR-0147's _never build_ list says the rest.
 - **The port owns the route as well as the transport.** A port taking an arbitrary path
@@ -960,7 +945,6 @@ budget making it short.
 ```ts
 const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
-  EXPO_PUBLIC_FEATURES_URL: z.string().url(),
   EXPO_PUBLIC_ENV: z.enum(['local', 'development', 'staging', 'production']),
   EXPO_PUBLIC_LINK_DOMAIN: z.string().optional(), // a bare host, or nothing
 });
@@ -973,13 +957,6 @@ an associated domain and Android a verified intent filter for the three link pat
 use the app's scheme alone. The native document and the runtime read it through one pure function,
 `src/shared/config/appLinks.ts`, so the binary and the running app cannot disagree about which links
 are the app's.
-
-`EXPO_PUBLIC_FEATURES_URL` is the base the feature-flag datafile is fetched from —
-`<base>/<environment>/featurevisor-player.json` — the Mac's LAN address today, a bucket later
-([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
-§4). It obeys the scheme rule below exactly as the API URL does, for the same reason: it is
-reached from a phone, and a datafile read in the clear is one somebody on the network can
-rewrite.
 
 The four names are the platform's, shared verbatim with the backend.
 `local` is a developer's own machine and is the only one that runs today; `development`
@@ -1198,15 +1175,7 @@ adapter, a cache version with migrations, a maximum age, exclusion of sensitive 
 user-scoped clearing on logout, and schema-change handling. **Never store a query cache in
 SecureStore** — it is for small secrets.
 
-**The one thing persisted outside the keychain is the feature-flag datafile**
-([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §6): the last one the app
-could read, kept raw in AsyncStorage by `features/feature_flags/api/datafileCache.ts` and read
-back at launch, so a player offline keeps the flags they last saw. It is not a query-cache
-persistence and none of the rules above are waived for it: it is public-read by design, names no
-player, is checked on the way out as it was on the way in, and a read that fails is simply no
-cache.
-
-**The second is the phone-preferences store**
+**The one thing persisted outside the keychain is the phone-preferences store**
 ([ADR-0188](../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)):
 `src/shared/lib/preferences/phonePreferences.ts` keeps the choices a player made on this phone —
 the Play segment since [#512](https://github.com/Raketa02/Raketa/issues/512), the last sport and
@@ -1231,11 +1200,9 @@ encodes:
 - `domain/` and `use-cases/` import no React, React Native, Expo or wire types
 - no imports from `../backend/` or any sibling app
 - `@react-native-async-storage/async-storage` is importable only by
-  `features/feature_flags/api/datafileCache.ts`, which keeps the public flag datafile, and by
   `shared/lib/preferences/phonePreferences.ts`, which keeps the per-account choices ADR-0188
-  lists — never a credential (ADR-0008, ADR-0180 §6, ADR-0188 §1)
-- `@featurevisor/sdk` is importable only by `features/feature_flags/api/featurevisor.ts`, the
-  one module that holds the instance (ADR-0180 §5)
+  lists — never a credential (ADR-0008, ADR-0188 §1). The feature flags' saved datafile was its
+  other owner until the flags were removed (#576)
 - `expo-secure-store` is importable only inside `src/shared/lib/auth/`
 - `expo-location`, `expo-image-picker`, `react-native-sse`, `expo-haptics` and `expo-clipboard`
   are importable only by the port that owns each — `platform/location.ts`,
@@ -1260,12 +1227,6 @@ encodes:
 - `src/shared/**` may not import `src/features/**`
 - a feature may not deep-import another feature's internals
 - `src/app/**` may not import a feature's internals — only its `types.ts` surface
-- nothing imports `features/play`, `features/challenges` or `features/plans` — the old loop
-  #569 removes and #576 deletes whole — except those three and the files `OLD_LOOP_SURFACES`
-  names, each a part of it that #576 takes out too. The pieces the new games share moved out
-  first (#574): the deck's stage, the yes screen's parts and the leave sheet to
-  `features/proposals`, the level row to `features/games`, the seat face to `shared/ui`, the seat
-  and balance words to `shared/vocabulary`
 
 Circular dependencies fail CI.
 
@@ -1395,15 +1356,12 @@ when the code that needs them is written — not preemptively:
 > `react-native-sse`, with the app's first live surface — pure JS over `XMLHttpRequest`, no
 > native module, and therefore nothing for an SDK bump to break
 > ([ADR-0147](../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
-> §4, [the live surface](#the-live-surface)). And so has a feature-flag service —
-> Featurevisor, pinned exactly, with AsyncStorage for its saved datafile — with the first gate,
-> `find_a_game` ([ADR-0180](../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)),
-> folded into `classic_play` by [#550](https://github.com/Raketa02/Raketa/issues/550). The rule it
-> carried here still stands, whole: build-time config and runtime product flags stay separate,
-> no `if (env === 'production')` is a rollout mechanism, and every flag has an owner, purpose,
-> default, rollout strategy and a removal condition — the first three and the last beside its key
-> in `features/feature_flags/domain/featureFlags.ts`, the rollout in the flags repo — and is
-> deleted after rollout. All of them are
+> §4, [the live surface](#the-live-surface)). A feature-flag service — Featurevisor — arrived
+> with ADR-0180 and left with the one loop it hid (#576); a later one arrives on its own decision.
+> The rule it carried here still stands: build-time config and runtime product flags stay
+> separate, no `if (env === 'production')` is a rollout mechanism, and every flag has an owner,
+> purpose, default, rollout strategy and a removal condition, and is deleted after rollout. All
+> of them are
 > listed as present rather than pending — this list is what is _missing_, and an entry that
 > outlives its own arrival makes the list untrustworthy.
 

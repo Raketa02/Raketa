@@ -22,7 +22,6 @@ import {
   SPORTS_SERVED,
   launchSignedIn,
   stubGate as stubGateWith,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
@@ -174,7 +173,6 @@ async function onThePassport() {
   stubGate({ ratings: THREE_RATED, hasPlayerProfile: true });
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
   transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
 

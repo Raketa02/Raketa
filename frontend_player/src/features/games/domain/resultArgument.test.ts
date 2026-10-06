@@ -14,7 +14,7 @@
  */
 
 import type { Acceptance, Game, NoShowReport, StandingProposal } from './game';
-import { actsOffered, awaitsYourAgreement, editingAct, resultArgument } from './resultArgument';
+import { actsOffered, editingAct, resultArgument } from './resultArgument';
 
 const ME = 'me-1111-4444-8888-000000000001';
 const PARTNER = 'partner-11-4444-8888-000000002';
@@ -395,56 +395,6 @@ describe('a state this build cannot name', () => {
 
     expect(argument).toEqual({ kind: 'unreadable' });
     expect(actsOffered(argument)).toEqual([]);
-  });
-});
-
-/**
- * **A score waiting on your agreement** — the *result to confirm* Home's badge counts
- * ([#550](https://github.com/Raketa02/Raketa/issues/550),
- * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
- * It is a game where agreeing is yours to do: the other side's score is up and nobody has settled
- * it. Your own score waiting on them is not, and neither is an agreement already running out its
- * grace — the disagreement it leaves is a right, not a task.
- */
-describe('whether a score is waiting on your agreement', () => {
-  const played = {
-    standing: 'AWAITING_ANSWER',
-    playedAt: '2026-09-04T20:12:00Z',
-    entryClosesAt: undefined,
-  } as const;
-
-  it('is, across the net from a score nobody has answered', () => {
-    expect(awaitsYourAgreement(game({ ...played, proposals: [PROPOSAL] }), OPPONENT)).toBe(true);
-  });
-
-  it('is not on the side whose score it is — that one waits on the other side', () => {
-    expect(awaitsYourAgreement(game({ ...played, proposals: [PROPOSAL] }), ME)).toBe(false);
-    expect(awaitsYourAgreement(game({ ...played, proposals: [PROPOSAL] }), PARTNER)).toBe(false);
-  });
-
-  it('is, on both sides, while two scores stand and nobody has agreed', () => {
-    const arguing = game({ ...played, proposals: [PROPOSAL, COUNTER] });
-
-    expect(awaitsYourAgreement(arguing, ME)).toBe(true);
-    expect(awaitsYourAgreement(arguing, OPPONENT)).toBe(true);
-  });
-
-  it('is not once somebody has agreed, on either side', () => {
-    const settling = game({ ...played, proposals: [PROPOSAL], acceptance: agreed('A') });
-
-    expect(awaitsYourAgreement(settling, ME)).toBe(false);
-    expect(awaitsYourAgreement(settling, OPPONENT)).toBe(false);
-  });
-
-  it('is not before anybody has said the game happened, nor after it ended', () => {
-    expect(awaitsYourAgreement(game(), ME)).toBe(false);
-    expect(awaitsYourAgreement(game({ standing: 'CONFIRMED' }), ME)).toBe(false);
-  });
-
-  it('is not for somebody who was not on the court', () => {
-    const stranger = 'stranger-1111-4444-8888-00000009';
-
-    expect(awaitsYourAgreement(game({ ...played, proposals: [PROPOSAL] }), stranger)).toBe(false);
   });
 });
 

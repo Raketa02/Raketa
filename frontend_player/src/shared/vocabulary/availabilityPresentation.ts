@@ -87,15 +87,3 @@ export function hourLabel(hour: Hour): string {
 export function cellLabel(cell: WeeklyHour): string {
   return `${DAY_NAME[cell.day]} ${hourLabel(cell.hour)}`;
 }
-
-/**
- * A cell **named inside a sentence** — *Tue 19:00*.
- *
- * The short day, because this one is read in a line of prose beside other facts rather than
- * alone in a grid. The caller is the availability-overlap reason line's *next {slot}*, which is
- * why it is built from these two tables rather than from a third list of names
- * ([`the-words.md`](../../../../docs/specs/matchmaking/the-words.md) §6.2).
- */
-export function slotName(cell: WeeklyHour): string {
-  return `${DAY_SHORT[cell.day]} ${hourLabel(cell.hour)}`;
-}

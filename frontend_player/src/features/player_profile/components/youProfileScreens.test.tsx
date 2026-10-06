@@ -25,7 +25,6 @@ import {
   profileSurface,
   resetLocation,
   stubGate,
-  stubInterest,
   stubLocation,
   stubOwnRecord,
   stubProfileOptions,
@@ -104,7 +103,6 @@ beforeEach(() => {
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
   stubProfileSurface(transport, SURFACE);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
   device = fakeLocation({ state: 'granted', fix: PRECISE });
   stubLocation(device);

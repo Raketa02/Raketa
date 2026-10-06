@@ -31,21 +31,3 @@
  * both is the same promise: *the verb names what you arrive at.*
  */
 export const WE_PLAYED = 'We played';
-
-/**
- * **The door to filling a seat somebody left** — the Now card's wide door on *Needs a player*,
- * and the primary act on the game screen's arm for it
- * ([#419](https://github.com/Raketa02/Raketa/issues/419)).
- *
- * The two surfaces are `features/plans`' card and `features/challenges`' control, and the
- * control is composed into the card — so the word cannot live in either: read from `plans` by
- * `challenges` it crosses the `plans → challenges` edge backwards at load time, which is the
- * half-built module `WE_PLAYED` is here to avoid.
- *
- * **Singular, where the challenge screen's is plural.** `⚡ Fill the seats` is that screen's word
- * for the identical act, and both stand in `the-words.md` §22.7, one per surface: a challenge
- * screen is about a court still being built, with as many seats open as the send left, and this
- * door is about a game that had every seat and lost one. Two people may leave and two seats may
- * be open (#411 rule 3) — the door still names the errand one seat at a time, as the tag does.
- */
-export const FILL_THE_SEAT = 'Fill the seat';

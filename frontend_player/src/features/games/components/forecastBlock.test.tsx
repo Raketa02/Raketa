@@ -1,14 +1,17 @@
 /**
- * **The forecast block on the game screen's plan lead, walked the way a player walks it**: the
- * real route tree, the real shell, and only `fetch` faked.
+ * **The forecast block on a booked game's details, walked the way a player walks it**: the real
+ * route tree, the real shell, and only `fetch` faked.
  *
  * [#415](https://github.com/Raketa02/Raketa/issues/415)'s acceptance criteria for the block are
  * assertions in this file and opinions nowhere else — present with a forecast and absent without
  * one with no sentence saying why, the gap's sign as served, the bar's labels for doubles and
  * singles, the word and the tone per band, the counted and the friendly sentence, two stake tiles
- * or none, and a read that never fires on a result arm. The words are the deck's
- * (`gamePresentation.ts`, Play's `balancePresentation.ts`); the players card beside it is
- * `playersCard.test.tsx`'s.
+ * or none, and a read that never fires on a result arm. The words are `gamePresentation.ts`' and
+ * `shared/vocabulary/balancePresentation.ts`'.
+ *
+ * It walked the old loop's game screen at `/games/[id]` until that route was removed
+ * ([#576](https://github.com/Raketa02/Raketa/issues/576)); the block is the same one, drawn on a
+ * booked game's details (#556), so the walk is the details' now.
  */
 
 import { screen, waitFor } from 'expo-router/testing-library';
@@ -18,16 +21,20 @@ import { queryClient } from '@/shared/lib/query-client';
 import { BALANCE_INK } from '@/shared/ui/BalanceBar';
 import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
 import {
+  BOOKED_GAME,
+  BOOKING,
+  bookingDetails,
+  homeGame,
+  stubBooking,
+  stubHomeGames,
+} from '@/test-support/home';
+import {
   GATE_USER,
   launchSignedIn,
   pairingPath,
-  stubConversation,
-  stubConversations,
-  stubEntries,
   stubGames,
   stubGate,
   stubPairing,
-  stubPlans,
 } from '@/test-support/onboardingRouter';
 import { installTransport, type Transport, type Wire } from '@/test-support/transport';
 
@@ -44,9 +51,7 @@ const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
 const KASIA = 'cccccccc-0000-4000-8000-000000000003';
 const MAREK = 'dddddddd-0000-4000-8000-000000000004';
 
-const GAME = 'aaaaaaaa-0000-4000-8000-000000000009';
-const CHALLENGE = 'ffffffff-0000-4000-8000-000000000006';
-const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
+const GAME = BOOKED_GAME;
 
 /** Saturday the 12th of September 2026, 11:00 in Warsaw — the instant every fold here is against. */
 const READ_AT = '2026-09-12T09:00:00Z';
@@ -64,11 +69,6 @@ const PADEL_RATING: Wire['RatingResponse'] = {
   updated_at: '2026-08-14T09:00:00Z',
 };
 
-const PAIR: Wire['ConversationMemberSchema'][] = [
-  { player_id: ME, name: 'me_' },
-  { player_id: TOMEK, name: 'tomek.p' },
-];
-
 const SINGLES_SEATS: Wire['GameSchema']['seats'] = [
   { side: 'A', player_id: ME, name: 'me_' },
   { side: 'B', player_id: TOMEK, name: 'tomek.p' },
@@ -84,7 +84,7 @@ const DOUBLES_SEATS: Wire['GameSchema']['seats'] = [
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return {
     game_id: GAME,
-    challenge_id: CHALLENGE,
+    challenge_id: BOOKING,
     sport: 'PADEL',
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',
@@ -131,7 +131,7 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
-/** Every list this screen reads, the room behind its door, and the pairing beside the game. */
+/** The booking, the Game behind it on the games list, and the pairing beside the game. */
 function stubTheWorld({
   games = [game()],
   court = pairing(),
@@ -139,39 +139,18 @@ function stubTheWorld({
   readonly games?: readonly Wire['GameSchema'][];
   readonly court?: Parameters<typeof stubPairing>[2];
 } = {}) {
+  stubHomeGames(transport, [homeGame()]);
+  stubBooking(transport, bookingDetails({ shows_forecast: true }));
   stubGames(transport, games, READ_AT);
-  stubPlans(transport, []);
-  stubConversations(transport, [
-    {
-      conversation_id: ROOM,
-      challenge_id: CHALLENGE,
-      game_id: GAME,
-      sport: 'PADEL',
-      members: PAIR,
-      people: PAIR,
-      last_entry: null,
-    },
-  ]);
-  stubConversation(transport, {
-    read_at: READ_AT,
-    conversation_id: ROOM,
-    challenge_id: CHALLENGE,
-    game_id: GAME,
-    sport: 'PADEL',
-    members: PAIR,
-    people: PAIR,
-    entries: [],
-  });
-  stubEntries(transport, ROOM);
   stubPairing(transport, GAME, court);
 }
 
-/** In at the screen's own address under Now, on the *Planning* rung: no plan, the plan lead. */
+/** In at the booked game's details, which draw the forecast while the booking shows one. */
 async function openTheGame(over: Parameters<typeof stubTheWorld>[0] = {}) {
   stubTheWorld(over);
 
-  await launchSignedIn(`/games/${GAME}`);
-  await waitFor(() => expect(screen).toHavePathname(`/games/${GAME}`));
+  await launchSignedIn(`/booking/${BOOKING}`);
+  await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
   await screen.findByLabelText('Back');
 }
 
@@ -293,8 +272,9 @@ describe('the bar', () => {
     await openTheGame();
 
     await screen.findByText(BALANCE_FORECAST);
-    // Two *You*s on the screen: the bar's label and the tab. The bar's is the hidden one.
-    expect(screen.getAllByText('You', drawn)).toHaveLength(2);
+    // Three *You*s on the screen: the reader's tile on the details, the bar's label and the tab.
+    // The bar's is the hidden one.
+    expect(screen.getAllByText('You', drawn)).toHaveLength(3);
     expect(screen.getByText('tomek', drawn)).toBeTruthy();
     expect(screen.getByLabelText('You 2,70, tomek.p 2,71, gap −0,01')).toBeTruthy();
   });
@@ -367,7 +347,7 @@ describe('when the read is made', () => {
       ],
     });
 
-    expect(await screen.findByText('You won.')).toBeTruthy();
+    await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/games')).toHaveLength(1));
     expect(transport.requestsTo('GET', pairingPath(GAME))).toHaveLength(0);
     expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
   });

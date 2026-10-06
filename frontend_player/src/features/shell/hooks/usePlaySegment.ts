@@ -29,7 +29,7 @@ export interface PlaySegmentState {
 
 export function usePlaySegment(): PlaySegmentState {
   const client = useQueryClient();
-  // Whose choice this is — read from the cache once, as `useFeatureOnMount` reads it, and never
+  // Whose choice this is — read from the cache once, and never
   // observed: an observer here would refetch `/users/me` on every entry to Play once it was stale.
   // The entry gate has always read the player before a tab can mount, and the account cannot
   // change under a mounted tab — a sign-out tears the tree down.

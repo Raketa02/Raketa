@@ -9,8 +9,7 @@
  *   gap** rather than a drop, and the room keeps its row either way.
  * - **Structure is refused whole.** The **sport** is what the row calls the room, so a
  *   conversation carrying one this build cannot read is a row with a hole where the identifying
- *   fact goes. It is dropped, which is `gameMappers`' and `challengeMappers`' rule for the same
- *   field.
+ *   fact goes. It is dropped, which is `gameMappers`' rule for the same field.
  *
  * An **entry shape** this build has never seen goes the third way and is neither: the row simply
  * has no last entry, which is a state the wire already has (`last_entry: null`, a room where
@@ -24,18 +23,15 @@
  *
  * ## What is not mapped, and why that is the rule rather than an omission
  *
- * `challengeMappers` states the rule this follows — *"these fields are mapped by the ticket that
- * draws them"* — and [#364](https://github.com/Raketa02/Raketa/issues/364) is that ticket for two
- * of the three. **`challenge_id` is now mapped on the row**, because the challenge screen joins on
- * it to find its own way into the room; **`game_id` is mapped on the room**, because what it
- * decides there is whether the header draws *Details* — and, since the accept started going to
- * the room, **on the row as well**, for exactly one reader: a reply of `ON` says a game exists
- * before the teller has told the room which, and the push waits for the row to say so rather
- * than land in a room that draws no plan card yet (`useAwaitedChatDoor`). No row draws it.
- * `read_at` stays off the row and is on the room: it earns its place wherever something is
- * folded against an instant, and **a row draws no clock at all** while the room asks whether an
- * agreed day is today. A field mapped ahead of its reader is a shape somebody has to keep true
- * of a screen nobody has written.
+ * The rule is *"these fields are mapped by the screen that draws them"*. **`game_id` is mapped on
+ * the row and the room**, because it is the join a booked game's chat and Home's cards find their
+ * room by, and how a room that ended is told (`domain/roomOver.ts`). **`challenge_id` is not
+ * mapped**: it was the old loop's join from a challenge screen into its room, and no screen reads
+ * it since that loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)) — the wire
+ * names it `booking_id` from #575, and #577 follows. `read_at` stays off the row and is on the
+ * room: it earns its place wherever something is folded against an instant, and **a row draws no
+ * clock at all**. A field mapped ahead of its reader is a shape somebody has to keep true of a
+ * screen nobody has written.
  *
  * **An entry is mapped whole, and that is not the same call.** `sent_at`, `author_id` and
  * `client_message_id` have no reader on the row either — the row draws a message's text — but the
@@ -85,7 +81,6 @@ function toConversation(row: ConversationRowSchema): readonly Conversation[] {
   return [
     {
       conversationId: row.conversation_id,
-      challengeId: row.challenge_id,
       ...(row.game_id == null ? {} : { gameId: row.game_id }),
       sport,
       members: row.members.map(toPerson),
@@ -134,8 +129,8 @@ function toEntry(entry: MessageSchema | SystemLineSchema): Entry | undefined {
  *
  * The whole record is refused for the same reason a row is dropped for it: the sport is what the
  * header calls the room, and a screen with a hole where its identifying fact goes is worse than
- * the sentence a screen with no room draws. `challengeMappers` and `gameMappers` refuse the same
- * field the same way, and the screen says the one thing true of every cause — *no conversation of
+ * the sentence a screen with no room draws. `gameMappers` refuses the same field the same way,
+ * and the screen says the one thing true of every cause — *no conversation of
  * yours has this address*.
  *
  * **The entries are narrowed one at a time and a shape this build has never seen is dropped**,
@@ -152,7 +147,6 @@ export function toConversationRoom(response: ConversationResponse): OpenConversa
     ...toEntryPage(response),
     room: {
       conversationId: response.conversation_id,
-      challengeId: response.challenge_id,
       ...(response.game_id == null ? {} : { gameId: response.game_id }),
       readAt: response.read_at,
       sport,

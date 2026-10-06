@@ -52,14 +52,12 @@ const httpUrlField = z
   });
 
 /**
- * The scheme both URLs must use, per environment — `null` where either is legitimate.
+ * The scheme the API URL must use, per environment — `null` where either is legitimate.
  *
- * This is the **public-network** form of the rule, and it is the strict one: both URLs are
- * reached from a phone, over the internet, so a deployed environment carrying the API in the
- * clear is a session and a bearer token on someone's café Wi-Fi, and one carrying the datafile
- * in the clear is a file somebody on that Wi-Fi can rewrite to turn a screen on or off
- * (ADR-0180 §4). `https://` there is not a deployment-topology preference, it is the security
- * invariant.
+ * This is the **public-network** form of the rule, and it is the strict one: the API is reached
+ * from a phone, over the internet, so a deployed environment carrying it in the clear is a
+ * session and a bearer token on someone's café Wi-Fi. `https://` there is not a
+ * deployment-topology preference, it is the security invariant.
  *
  * `local` is `null`, and that is the correction #102 asked for. The rule used to require
  * `http://` on the reasoning that `local` is "a laptop, a LAN IP or a tunnel" — but
@@ -79,13 +77,6 @@ const REQUIRED_SCHEME: Readonly<Record<AppEnvironment, 'https://' | null>> = {
 
 const EnvFields = z.object({
   EXPO_PUBLIC_API_URL: httpUrlField,
-  /**
-   * The base the feature-flag datafile is fetched from — `<base>/<environment>/featurevisor-player.json`
-   * ([ADR-0180](../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
-   * §4). Today the Mac's LAN address, served by the flags repo's own script; later a bucket.
-   * Moving between the two changes this value and no code.
-   */
-  EXPO_PUBLIC_FEATURES_URL: httpUrlField,
   /**
    * The message is replaced rather than left to zod, whose `invalid_enum_value` text ends
    * `received '…'`. Config lands in logs and crash reports, and a variable's value is
@@ -114,13 +105,17 @@ const EnvFields = z.object({
     }),
 });
 
-/** The variables the scheme rule governs — each one a URL a phone reaches over the internet. */
-const SCHEMED_URLS = ['EXPO_PUBLIC_API_URL', 'EXPO_PUBLIC_FEATURES_URL'] as const;
+/**
+ * The variables the scheme rule governs — each one a URL a phone reaches over the internet. One
+ * since the feature-flag datafile's host left with the flags (#576); a list still, so a second URL
+ * joins the rule by being named here.
+ */
+const SCHEMED_URLS = ['EXPO_PUBLIC_API_URL'] as const;
 
 /**
  * The scheme rule is a claim about a URL and the environment *together*, so it is checked on
- * the object rather than on either field — once per URL, by one loop, so the guard below cannot
- * be written for the first URL and forgotten for the second.
+ * the object rather than on the field — once per URL, by one loop, so the guard below cannot be
+ * written for one URL and forgotten for the next.
  *
  * **It stays silent when the field itself already refused the value**, and that guard is
  * measured rather than assumed. The docstring here used to claim zod "runs it only once
@@ -159,9 +154,6 @@ export interface Env {
   /** FastAPI base URL. On a physical device this is a LAN IP or tunnel — a phone's
    *  `localhost` is the phone. Either scheme in `local`, `https://` everywhere else. */
   readonly apiUrl: string;
-  /** The feature-flag datafiles' base URL. The same scheme rule as `apiUrl`, and the same
-   *  device caveat: on a phone it is the Mac's LAN IP, never `localhost`. */
-  readonly featuresUrl: string;
   readonly environment: AppEnvironment;
   /** The web domain the app's links live on, bare — `null` while none is set, which is today. */
   readonly linkDomain: string | null;
@@ -199,7 +191,6 @@ export function parseEnv(raw: RawEnv): Env {
 
   return {
     apiUrl: result.data.EXPO_PUBLIC_API_URL,
-    featuresUrl: result.data.EXPO_PUBLIC_FEATURES_URL,
     environment: result.data.EXPO_PUBLIC_ENV,
     linkDomain: result.data.EXPO_PUBLIC_LINK_DOMAIN,
   };
@@ -214,7 +205,6 @@ export function parseEnv(raw: RawEnv): Env {
 function readRawEnv(): RawEnv {
   return {
     EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
-    EXPO_PUBLIC_FEATURES_URL: process.env.EXPO_PUBLIC_FEATURES_URL,
     EXPO_PUBLIC_ENV: process.env.EXPO_PUBLIC_ENV,
     EXPO_PUBLIC_LINK_DOMAIN: process.env.EXPO_PUBLIC_LINK_DOMAIN,
   };

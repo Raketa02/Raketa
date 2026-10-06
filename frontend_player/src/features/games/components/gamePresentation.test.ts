@@ -26,11 +26,8 @@ import {
   formatEyebrow,
   gameEyebrow,
   outcomeLine,
-  playerRowName,
-  recordLabel,
   resultBody,
   scoreProblemLine,
-  seatLevelLine,
   setLabel,
   sideLabels,
   spokenScore,
@@ -610,37 +607,6 @@ describe('the court’s pairing, in words', () => {
         'me',
       ),
     ).toEqual(['You', '?']);
-  });
-
-  /**
-   * The level row is `the-words.md` §6.4's — `{level} · {band} · likely {low}–{high}` — with the
-   * confidence as a fourth clause, `{n}% sure`. Two decimals, decimal comma, on every figure; the
-   * band's published name as it came; the percentage whole.
-   */
-  it('prints the level row as a fixture reads it', () => {
-    expect(
-      seatLevelLine({
-        playerId: 'me',
-        level: 2.71,
-        band: 'Established',
-        range: { low: 2.55, high: 2.87 },
-        confidence: 74,
-      }),
-    ).toBe('2,71 · Established · likely 2,55 – 2,87 · 74% sure');
-  });
-
-  /** The row's own name: the handle whole with the one mark that says it is yours. */
-  it('names a row by the whole handle, and marks yours', () => {
-    expect(playerRowName({ name: 'tomek.p', yours: false })).toBe('tomek.p');
-    expect(playerRowName({ name: 'tomek.p', yours: true })).toBe('tomek.p (you)');
-    expect(playerRowName({ yours: false })).toBe('?');
-  });
-
-  /** What the tap is called: the record it opens, by whose it is. */
-  it('names the control by the record it opens', () => {
-    expect(recordLabel({ name: 'tomek.p', yours: false })).toBe('tomek.p’s record');
-    expect(recordLabel({ name: 'tomek.p', yours: true })).toBe('Your record');
-    expect(recordLabel({ yours: false })).toBe('?’s record');
   });
 });
 

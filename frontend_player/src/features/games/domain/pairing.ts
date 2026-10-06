@@ -80,20 +80,6 @@ export interface Pairing {
   readonly seats: readonly PairingSeat[];
 }
 
-/**
- * The court **as the players card reads it**: your side first — you, then your partner — then
- * the other side, each side in the court's own order.
- *
- * The one re-ordering this feature makes, and it is a rule rather than a drawing decision: a
- * list of people is read from the reader outward, and the court arrives in whatever order the
- * challenge seated it. A reader holding no seat is a stale link the screen has already answered
- * for, so the court is handed back as it came rather than given an order about nobody.
- */
-export function courtForReader(seats: readonly GameSeat[], playerId: string): readonly GameSeat[] {
-  const sides = sidesForReader(seats, playerId);
-  return sides === undefined ? seats : [...sides.yours, ...sides.theirs];
-}
-
 /** The court split in two, each half in the reader's order. */
 export interface CourtSides {
   /** You first, then whoever else is on your side. */

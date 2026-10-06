@@ -8,7 +8,7 @@
  */
 
 import type { GameSeat } from './game';
-import { openSeats, seatedOthers } from './game';
+import { openSeats } from './game';
 
 const ME = 'me';
 const KASIA = 'kasia';
@@ -26,20 +26,5 @@ describe('the seats nobody is in', () => {
   it('are the ones with no player, and a full court has none', () => {
     expect(openSeats(SHORT)).toEqual([{ side: 'B' }]);
     expect(openSeats(SHORT.slice(0, 3))).toEqual([]);
-  });
-});
-
-/**
- * **What a fill is told about the court it completes** (#419): everybody in a seat but the reader,
- * because the reader's own seat is what the court is composed around and the builder puts it back
- * at the send — `acceptedPlayers`' shape on the challenge screen, read off a game instead.
- */
-describe('everybody seated but the reader', () => {
-  it('names the others in the court’s order, and skips the open seat', () => {
-    expect(seatedOthers(SHORT, ME)).toEqual([KASIA, TOMEK]);
-  });
-
-  it('is nobody on a court where only the reader is left', () => {
-    expect(seatedOthers([{ side: 'A', playerId: ME }, { side: 'B' }], ME)).toEqual([]);
   });
 });

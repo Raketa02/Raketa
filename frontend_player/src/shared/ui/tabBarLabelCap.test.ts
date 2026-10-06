@@ -1,31 +1,27 @@
 /**
- * `theme.size.tabBar.labelMaxScale`, derived rather than chosen.
+ * `theme.size.tabBar.labelMaxScale`, held against the words it caps.
  *
  * The tab bar has exactly one Dynamic Type mechanism. Part 13 requires text to scale with the
  * OS setting, names the tab bar as the one place a **fixed height** is the design, and permits
  * `allowFontScaling={false}` only inside the level bar's drawn geometry — so the label may
  * neither be frozen nor grow without bound, and `maxFontSizeMultiplier` is what is left.
  *
- * The number it is set to is the whole question. Pick it by eye and it is a guess that fails
- * on one word, on one phone, at one OS setting, as an ellipsis nobody who built the bar will
- * ever see. So it is **measured**: this file reads the advance widths out of the Archivo Bold
- * that ships in the bundle, lays the five shipped labels out at `type.tag`'s size in the
- * narrowest phone's column, and computes the largest step that still fits. `theme.ts` carries
- * the answer and this file is where it comes from — the same arrangement `bandEdges.test.ts`
- * and `textOnMedia.test.ts` use, and for the same reason: a `theme.ts` that checked its own
- * arithmetic would be the app refusing to launch over a drawing detail, and a red build is
- * where a human reconciles it.
+ * **1,6 was derived over five columns** — the largest step at which *Players*, the longest of
+ * five labels, still fit a 64pt column on the narrowest phone. The bar is three columns since
+ * the old loop's Players and Chats left it ([#576](https://github.com/Raketa02/Raketa/issues/576)),
+ * and the five-column fit went with them: at a third of the screen every word fits at more than
+ * twice the cap, so the column's width no longer decides the number. **The cap stays where the
+ * five left it** — the bar's height is what the cap bounds now, and `TabBar.test.tsx` holds that —
+ * and this file holds the three words inside their columns at it, measured, so a fourth tab or a
+ * longer word goes red here rather than truncating on somebody's phone.
  *
- * **What makes it go red:** a sixth tab, a longer label, a different type role, a different
+ * **What makes it go red:** a fourth tab, a longer label, a different type role, a different
  * weight, a change to the grid step between the columns, or an Archivo release that redraws
- * the letters. Every one of those is a real change to the answer, and none of them announces
- * itself at 9,5pt.
+ * the letters. None of them announces itself at 9,5pt.
  *
  * Font metrics are read straight from the `.ttf`, by `test-support/fontMetrics.ts` — the
  * alternative is a hard-coded *"about 0,6em per character"*, which is the guess that file
- * exists to replace. It moved there when the photo panel's ON COURT mark needed the same
- * measurement ([#313](https://github.com/Raketa02/Raketa/issues/313)): two derived caps and
- * one `cmap` walk, on `contrast.ts`'s argument for the luminance formula.
+ * exists to replace.
  */
 
 import {
@@ -40,7 +36,7 @@ import { theme } from './theme';
 
 /**
  * The bar is equal columns edge to edge — no gutter, unlike every scrolling screen — so a
- * column is the screen divided by the number of tabs. 64pt on the narrowest phone.
+ * column is the screen divided by the number of tabs. A third of 320pt on the narrowest phone.
  */
 const COLUMN = NARROWEST_SCREEN / TAB_BAR_TABS.length;
 
@@ -63,7 +59,7 @@ const FONT_FILE = `@expo-google-fonts/archivo/${theme.type.tag.fontFamily}.ttf`;
 
 const archivoBold = readFace(FONT_FILE);
 
-/** This file's five labels, at this file's face — the two the shared helper takes every time. */
+/** This file's three labels, at this file's face — the two the shared helper takes every time. */
 const width = (word: string, size: number, tracking = 0): number =>
   widthOf(archivoBold, word, size, tracking);
 
@@ -81,7 +77,7 @@ describe('the face being measured', () => {
     expect(Object.values(theme.font.sans)).toContain(theme.type.tag.fontFamily);
   });
 
-  it('reads a 1000-unit em and draws every character the five labels use', () => {
+  it('reads a 1000-unit em and draws every character the three labels use', () => {
     expect(archivoBold.unitsPerEm).toBe(1000);
     for (const { label } of TAB_BAR_TABS) {
       for (const character of label) {
@@ -92,31 +88,25 @@ describe('the face being measured', () => {
 });
 
 describe('the column the label has to fit', () => {
-  it('is the screen divided five ways, with no gutter', () => {
-    expect(COLUMN).toBe(64);
-    expect(AVAILABLE).toBe(58);
+  it('is the screen divided three ways, with no gutter', () => {
+    expect(TAB_BAR_TABS).toHaveLength(3);
+    expect(COLUMN).toBeCloseTo(106.67, 2);
   });
 });
 
 describe('the cap', () => {
-  it('is derived from the longest shipped label', () => {
-    expect(LONGEST).toBe('Players');
-    expect(theme.size.tabBar.labelMaxScale).toBe(
-      largestStepThatFits(width(LONGEST, theme.type.tag.fontSize), AVAILABLE),
-    );
-  });
-
-  it('keeps every one of the five inside its column at the cap', () => {
+  it('keeps every one of the three inside its column at the cap', () => {
     for (const { label } of TAB_BAR_TABS) {
       const scaled = width(label, theme.type.tag.fontSize) * theme.size.tabBar.labelMaxScale;
       expect(scaled).toBeLessThanOrEqual(AVAILABLE);
     }
   });
 
-  it('is the largest step that does: one more overflows the column', () => {
-    const overflowing =
-      width(LONGEST, theme.type.tag.fontSize) * (theme.size.tabBar.labelMaxScale + 0.1);
-    expect(overflowing).toBeGreaterThan(AVAILABLE);
+  it('is no longer the width’s answer: the longest word fits at more than twice it', () => {
+    expect(LONGEST).toBe('Home');
+    expect(largestStepThatFits(width(LONGEST, theme.type.tag.fontSize), AVAILABLE)).toBeGreaterThan(
+      2 * theme.size.tabBar.labelMaxScale,
+    );
   });
 
   it('is a scale and not a licence — the bar is still bounded', () => {
@@ -130,16 +120,12 @@ describe('why the label is `tag` and not `eyebrow`', () => {
     expect(theme.type.tag).not.toHaveProperty('letterSpacing');
   });
 
-  it('would lose 10pt of a 64pt column to eyebrow tracking, and cap lower for it', () => {
+  it('would spend 1,43pt a letter on air under eyebrow tracking', () => {
     // The other member of the 9.5 pair, drawn the way an eyebrow is drawn: uppercase, tracked.
-    // Seven letters at 1,43pt each — it was 8,6pt over the six of *Around*.
     const tracking = theme.type.eyebrow.letterSpacing;
     const eyebrowWidth = width(LONGEST.toUpperCase(), theme.type.eyebrow.fontSize, tracking);
     const flat = width(LONGEST.toUpperCase(), theme.type.eyebrow.fontSize);
 
-    expect(eyebrowWidth - flat).toBeCloseTo(10.0, 1);
-    expect(largestStepThatFits(eyebrowWidth, AVAILABLE)).toBeLessThan(
-      theme.size.tabBar.labelMaxScale,
-    );
+    expect(eyebrowWidth - flat).toBeCloseTo(LONGEST.length * tracking, 1);
   });
 });

@@ -1,12 +1,17 @@
 /**
- * **The room** — the header, the stream, the quick chips and the composer.
+ * **A booked game's room** — the header, the stream and the composer
+ * ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.4, the mechanics §14.3).
  *
- * *The place two people who have agreed to play talk about it*
- * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §3): opened by
- * the first acceptance, growing with each one, and **destroyed** once the episode it names is
- * over. That is why nothing here has a shelf life to apply and why there is no *ended* state to
- * draw — a room that is over is a `404`, which is the same sentence as a room that was never
- * yours ([ADR-0153](../../../../../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md) §5).
+ * *The place the people on a court talk about it*: opened with the booking and reached **only from
+ * the game's details**, and **destroyed** once the game it names is over. That is why nothing here
+ * has a shelf life to apply and why there is no *ended* state to draw — a room that is over is a
+ * `404`, which is the same sentence as a room that was never yours
+ * ([ADR-0153](../../../../../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md) §5).
+ *
+ * It was the old loop's room too, with a plan card pinned under its header, quick chips asking
+ * about the plan's empty slots and a *Details* door into the old game screen, until that loop was
+ * removed ([#576](https://github.com/Raketa02/Raketa/issues/576)). A booked game has no plan to
+ * fill — the booking is the plan — and *back* is the details it was opened from, by the stack.
  *
  * ## The stream opens at its newest entry and pages backward
  *
@@ -49,64 +54,23 @@
  * reconnects — and only a sentence carries two.
  *
  * **Held is the other way round**: the account may read and may not write (ADR-0148 §9), so the
- * composer, every quick chip and the plan's three slot chips all grey out behind **one**
- * pre-emptive note. One note for all of them, because it is one fact about the account and saying
- * it five times on one screen is the failure §1.6 names about counts. A greyed text field is
- * acceptable **only** because that note is above it and arrives first; absent the note it would be
- * exactly the dead end #324 refused.
+ * composer greys out behind **one** pre-emptive note. A greyed text field is acceptable **only**
+ * because that note is above it and arrives first; absent the note it would be exactly the dead
+ * end #324 refused.
  *
  * **A hold never removes the room**, and it never removes a control's explanation either: the
  * `account_held` refusal draws as the amber note rather than as a coral one, so the player is told
  * what their account is rather than told off for having tapped.
  *
- * ## The plan card is pinned under the header, and this feature imports the one that draws it
+ * ## The header's second line is the booking's word
  *
- * Three slot chips from `features/plans` ([#366](https://github.com/Raketa02/Raketa/issues/366)),
- * pinned rather than emitted into the stream: every chat opens at its newest entry, so a card in
- * the scroll is a card you have to hunt for — and the plan is the thing the room exists to fill.
- * **Pinned in every room, from its opening**
- * ([ADR-0164](../../../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
- * §2, [#425](https://github.com/Raketa02/Raketa/issues/425)): the plan is the challenge's, the room
- * has carried `challengeId` since it opened, so two of four can start on where and when without
- * waiting on the others. What the room hands down beside the id is its own clock — *today* on the
- * day chips is this read's `read_at` — and **its line-up**, folded by `domain/room.ts`: complete
- * once the room has its game, still filling until then with its members over the sport's seats,
- * which the card draws as the line where the lock will be.
- * The lock waits for the court, and the header's second line and the *Details* door still wait
- * with it: those are the game's (ADR-0157), and a room without one draws the sport alone above a
- * card it now has.
- *
- * **#364 anticipated a slot the route would fill and that shape was not taken**, which is recorded
- * here rather than left to be re-derived. The facts about the room that reach the card are not
- * knowable outside this component: which court it is arranging and whether that court has its
- * game, which come off the read this screen mounts, and whether the account is **held**, which is
- * the fold below. A slot filled from the route would therefore have had to be a render prop taking
- * a boolean, over a route that had joined the room itself — several props and a second join to
- * avoid one import through a feature's public surface, which this feature already makes to
- * `features/games` for the *Details* door.
- *
- * **The arrow that matters is a different one and is untouched.** ADR-0149 §1 fixes
- * `features/plans` → `features/games` and refuses the reverse; nothing anywhere refuses a room
- * composing the card that edits its own plan, and `plans` learns nothing about a conversation.
- *
- * The same read answers the quick chips: *one chip per unfilled slot, in slot order, plus `On my
- * way` when the agreed day is today* — read off the room's challenge, so a room whose line-up has
- * not completed asks about exactly the slots its card shows empty.
- *
- * ## A booked game's room is the conversation alone
- *
- * ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.4.) A game booked through
- * a group has one chat, opened with the booking and reached **only from the game's details**: the
- * same screen, without the plan card, the plan's quick chips or the *Details* door, because the
- * booking is the plan and the details are what *back* returns to. Everything else — the stream,
- * the composer, the live channel, a hold, a room that ends — is the room as above. The header's
- * second line is handed in (`booked.state`, the booking's word) rather than folded off the Classic
- * games and plans lists, which name a booked Game by a rung it never stands on.
+ * Handed in (`state`, the booking's word — *booked*, *needs result*), because the room knows its
+ * game and not the booking's standing; the details that open it have just read that.
  *
  * ## The room owns its chrome: the top inset, and the bottom one because the bar stands down
  *
- * This screen does not go through `ShellScreen` — it is a header, a pinned card, an inverted
- * list and a composer over a keyboard, not a header over a scroller — and for a while it went
+ * This screen does not go through `ShellScreen` — it is a header, an inverted list and a
+ * composer over a keyboard, not a header over a scroller — and for a while it went
  * through nothing at all: a bare `KeyboardAvoidingView` at the root, with the header under the
  * status bar on Android and under the clock on iOS
  * ([#400](https://github.com/Raketa02/Raketa/issues/400)). The frame is now the same
@@ -140,24 +104,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
-import {
-  cardStateWord,
-  quickChips,
-  RoomPlan,
-  type QuickChip,
-  useGameCardName,
-  usePlan,
-  usePlanWriteRefusals,
-} from '@/features/plans/types';
 import { KEYBOARD_AVOIDANCE } from '@/shared/lib/platform';
 import { playerName } from '@/shared/formatting/playerName';
-import { Note, courtSeatCount, theme } from '@/shared/ui';
+import { Note, theme } from '@/shared/ui';
 
 import { liveState, writeStanding } from '../domain/liveState';
 import { personNamed, type ConversationPerson } from '../domain/membership';
-import { lineUpOf, namesItsAuthors, type OpenConversation } from '../domain/room';
+import { namesItsAuthors, type OpenConversation } from '../domain/room';
 import { roomIsGone } from '../domain/roomGone';
-import { roomEnding } from '../domain/roomOver';
 import {
   mayPost,
   newClientMessageId,
@@ -177,7 +131,7 @@ import { ConversationHeader } from './ConversationHeader';
 import { conversationErrorMessage } from './conversationErrorMessage';
 import {
   LIVE_NOTE,
-  roomOverLine,
+  ROOM_OVER_LINE,
   systemLineSentence,
   typingLine,
 } from './conversationPresentation';
@@ -186,32 +140,17 @@ import { RoomAbsent } from './RoomAbsent';
 import { SystemLine } from './SystemLine';
 import { TypingBubble } from './TypingBubble';
 
-/**
- * The game behind this room, under the room's own address.
- *
- * Two routes over one screen component, which is ADR-0149 §9's shape: each lights its own column
- * and *back* is correct in both directions by construction, with no `from` parameter to make
- * `tabForPathname` impure. What is behind it grows three plan arms with
- * [#368](https://github.com/Raketa02/Raketa/issues/368); what this ticket owes it is a
- * destination, because a door that resolves to nothing is the dead control this map refuses.
- */
-export const GAME_DETAILS_ROUTE = '/chats/conversation/[conversationId]/details';
-
 export interface ConversationScreenProps {
-  /** Validated by `schemas/routeParams.ts` before it reaches here; the route does that. */
+  /** The room the booked game's join found — `useGameRoom`, over the booking's game. */
   readonly conversationId: string;
   /**
-   * **A booked game's room** ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens
-   * A4.4, the mechanics §14.3) — reached from the game's details and nowhere else, so it is the
-   * conversation alone: **no plan card, no plan chips and no *Details* door**. A booked game has
-   * no plan to fill — the booking is the plan — and *back* is the details it was opened from, by the
-   * stack. `state` is the header's second line in the booking's own word (*booked*), where a
-   * Classic room folds a card's rung off the games and plans lists.
+   * The header's second line after the sport — the booking's own word (*booked*), handed in by the
+   * booked game's chat, which has just read the booking.
    */
-  readonly booked?: { readonly state: string };
+  readonly state: string;
 }
 
-export function ConversationScreen({ conversationId, booked }: ConversationScreenProps) {
+export function ConversationScreen({ conversationId, state }: ConversationScreenProps) {
   const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useConversation(conversationId);
   const me = useCurrentUser().data?.id;
@@ -226,8 +165,7 @@ export function ConversationScreen({ conversationId, booked }: ConversationScree
    * a player reading a room was on the list a moment later with the room gone from under them
    * ([#429](https://github.com/Raketa02/Raketa/issues/429)). What is held is still the
    * room as it last was, so it is drawn as it was, closed, with one sentence in the composer's
-   * place (`domain/roomOver.ts`); the rows are gone when the player goes back, which is the
-   * return's own re-read. Only a room nothing was ever read from has nothing to keep on screen,
+   * place (`ROOM_OVER_LINE`). Only a room nothing was ever read from has nothing to keep on screen,
    * and leaves — a stale row opened into a room that is not there. In an effect because it is a
    * **navigation**, and a router call made during a render is a side effect in the one place
    * React does not allow one.
@@ -238,9 +176,9 @@ export function ConversationScreen({ conversationId, booked }: ConversationScree
   }, [over, data]);
 
   if (data === undefined || me === undefined) {
-    // **Who the reader is counts as still coming**, exactly as it does on the challenge screen:
-    // drawn while `useCurrentUser` is in flight, the terminal sentence says no room of yours has
-    // this address about a room that is on screen a frame later.
+    // **Who the reader is counts as still coming**: drawn while `useCurrentUser` is in flight,
+    // the terminal sentence says no room of yours has this address about a room that is on
+    // screen a frame later.
     return (
       <RoomAbsent arriving={isPending || (me === undefined && error === null)} error={error} />
     );
@@ -251,7 +189,7 @@ export function ConversationScreen({ conversationId, booked }: ConversationScree
       opened={data}
       playerId={me}
       over={over}
-      booked={booked}
+      gameState={state}
       onPageBack={() => {
         if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
       }}
@@ -263,15 +201,15 @@ function Room({
   opened,
   playerId,
   over,
-  booked,
+  gameState,
   onPageBack,
 }: {
   readonly opened: OpenConversation;
   readonly playerId: string;
   /** The room has ended since this was read. Drawn as it was, and nothing here writes. */
   readonly over: boolean;
-  /** A booked game's room: the conversation alone, its header's word the booking's (#556). */
-  readonly booked: ConversationScreenProps['booked'];
+  /** The header's word, the booking's (#556). */
+  readonly gameState: string;
   readonly onPageBack: () => void;
 }) {
   const { room, entries, people } = opened;
@@ -279,33 +217,6 @@ function Room({
   const client = useQueryClient();
   const send = useSendMessage(room.conversationId);
   const sending = useSendingMessages(room.conversationId, playerId);
-
-  /**
-   * What has been agreed — read here for the **quick chips**, which ask about the slots that are
-   * still empty. The card below reads it again through its own join, and that is one query and
-   * one cache: `GET /plans` is a list, and both readers are looking up the same row in it — by
-   * the room's challenge, which it has from its opening (ADR-0164 §1).
-   */
-  const { plan } = usePlan(room.challengeId);
-
-  /**
-   * **The court's line-up, for the card's lock** (ADR-0164 §5) — complete once the room has its
-   * game, still filling until then with who is in against the sport's seats. `domain/room.ts` is
-   * the fold; what this screen adds is the one fact it cannot hold, how many stand on a court of
-   * this sport, which is drawn knowledge.
-   */
-  const lineUp = lineUpOf(room, courtSeatCount(room.sport));
-
-  /**
-   * Where the game stands, for the header's second line — *the same state as the card in Now*
-   * ([#401](https://github.com/Raketa02/Raketa/issues/401)). Folded by `features/plans` over the
-   * two lists this screen already reads for the card and the chips, so it costs no request and
-   * cannot disagree with the card three taps away. A room with no game has no name to fold and
-   * the header draws the sport alone.
-   */
-  const card = useGameCardName(room.gameId);
-  const gameState =
-    booked !== undefined ? booked.state : card === undefined ? undefined : cardStateWord(card);
 
   /**
    * **What the room says about itself** — one fold, read once, over the channel and the account.
@@ -317,12 +228,9 @@ function Room({
    * nudge arriving during the first read would invalidate a query that is already in flight.
    */
   const { status: channel, typing } = useLiveConversation(room.conversationId);
-  // Every write on this screen is a producer of *held*, and four of the five are the plan card's.
-  const planRefusals = usePlanWriteRefusals();
-  const state = liveState(channel, writeStanding([send.error, ...planRefusals]));
+  // The send is the one write on this screen, and so the one producer of *held*.
+  const state = liveState(channel, writeStanding([send.error]));
   const held = state === 'held';
-  /** What the reader is told in the composer's place once the room has ended. */
-  const ending = over ? roomEnding(room, playerId) : undefined;
 
   /**
    * **Somebody is typing**, as a sentence — or nothing, which is how the bubble goes away.
@@ -402,33 +310,9 @@ function Room({
         <ConversationHeader
           room={room}
           playerId={playerId}
-          {...(gameState === undefined ? {} : { gameState })}
+          gameState={gameState}
           onBack={router.back}
-          // A booked game's room is reached from its details, and has no door back into them but
-          // *back* (#556): a second way to the same screen would stack the details on themselves.
-          {...(booked !== undefined
-            ? {}
-            : {
-                onOpenGame: () =>
-                  router.push({
-                    pathname: GAME_DETAILS_ROUTE,
-                    params: { conversationId: room.conversationId },
-                  }),
-              })}
         />
-
-        {/* Pinned under the header rather than emitted into the stream, which is the whole of
-          §3.2's finding: the chat opens at its newest entry, so a card in the scroll is the first
-          thing off-screen. In every room, from its opening — the plan is the challenge's — and
-          the count where the lock will be until the room has its game. */}
-        {over || booked !== undefined ? null : (
-          <RoomPlan
-            challengeId={room.challengeId}
-            readAt={room.readAt}
-            lineUp={lineUp}
-            refused={held}
-          />
-        )}
 
         <FlatList
           // Named so a suite can scroll it: paging backward is a fact about what reaching the end
@@ -471,10 +355,9 @@ function Room({
           </View>
         )}
 
-        {/* Above every control it is about — the chips as well as the composer — because it is one
-          fact about the screen rather than one per control, and because a greyed field is only
-          acceptable where the sentence explaining it arrives first. `amber` on 1.3's reading:
-          *watch this — reversible, not yet wrong*.
+        {/* Above the control it is about, because a greyed field is only acceptable where the
+          sentence explaining it arrives first. `amber` on 1.3's reading: *watch this —
+          reversible, not yet wrong*.
 
           **Only the hold is announced, and the split is what the player just did.** A hold arrives
           here as the answer to a send somebody pressed — no read serves it, so there is nothing to
@@ -494,21 +377,17 @@ function Room({
         {/* The room has ended: the stream stays as it was, and where the composer stood one
             sentence says so — a fact, so neither amber nor coral, and announced, because it is
             the one thing that happened while the reader was looking and it happened to them. */}
-        {ending !== undefined ? (
+        {over ? (
           <View style={s.standing}>
-            <Note accessibilityRole="alert">{roomOverLine(ending)}</Note>
+            <Note accessibilityRole="alert">{ROOM_OVER_LINE}</Note>
           </View>
         ) : (
-          /* One block — the chips, the field and Send — with one door out: Send and every chip
-             post through the same `post`, so a chip send is an ordinary send (#402). */
           <Composer
             text={draft}
             onChange={(text) => {
               setDraft(text);
               heartbeat.beat();
             }}
-            // The chips ask about the plan's empty slots, and a booked game has no plan (#556).
-            chips={booked !== undefined ? NO_CHIPS : quickChips(plan, room.readAt)}
             onPost={post}
             refused={held}
           />
@@ -517,9 +396,6 @@ function Room({
     </SafeAreaView>
   );
 }
-
-/** A booked game's room asks nothing about a plan: one empty row rather than one per render. */
-const NO_CHIPS: readonly QuickChip[] = [];
 
 /**
  * One row of the stream: the separator that belongs above it, and the entry itself.
@@ -550,7 +426,7 @@ function StreamRow({
       {day === undefined ? null : <DaySeparator day={day} />}
 
       {entry.kind === 'system-line' ? (
-        <SystemLine sentence={systemLineSentence(entry, people, 'full')} />
+        <SystemLine sentence={systemLineSentence(entry, people)} />
       ) : (
         <Bubble
           text={entry.text}

@@ -1,13 +1,18 @@
 /**
- * **The room, walked the way a member walks it**: the real route tree, the real shell, the real
- * row it is opened from, and only `fetch` faked.
+ * **A booked game's room, walked the way a member walks it**: the real route tree, the real shell,
+ * the booked game's details it is opened from, and only `fetch` faked.
  *
  * Most of [#364](https://github.com/Raketa02/Raketa/issues/364)'s acceptance criteria are
- * assertions in this file and opinions nowhere else — the header names the people and the sport
- * and nothing else, *Details* is drawn only where there is a game, the stream is two components,
- * the author's handle is drawn only in a room of more than two, there is no timestamp and there
- * is a day separator, the stream pages backward by cursor, a send is optimistic and reconciled on
- * `client_message_id`, and every entry is one element a listener can move through.
+ * assertions in this file and opinions nowhere else — the header names the people, the sport and
+ * the booking's word, the stream is two components, the author's handle is drawn only in a room
+ * of more than two, there is no timestamp and there is a day separator, the stream pages backward
+ * by cursor, a send is optimistic and reconciled on `client_message_id`, and every entry is one
+ * element a listener can move through.
+ *
+ * It walked the old loop's room from the Chats tab until that loop was removed
+ * ([#576](https://github.com/Raketa02/Raketa/issues/576)); the room is a booked game's now, reached
+ * from its details, with no plan card, no quick chips and no *Details* door — and this file says
+ * so.
  *
  * It asserts against the **copy deck** rather than against strings wherever a sentence has one,
  * because the wording is the deck's to change and the rules are not.
@@ -18,17 +23,17 @@ import { KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
+import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
+import { BOOKING, bookingDetails, homeGame, stubBooking, stubHomeGames } from '@/test-support/home';
 import {
   conversationPath,
   GATE_USER,
-  launchIntoClassicPlay,
+  launchSignedIn,
   stubConversation,
   stubConversations,
   stubEntries,
-  stubGames,
   stubGate,
-  stubPlans,
 } from '@/test-support/onboardingRouter';
 import {
   errorResponse,
@@ -48,17 +53,17 @@ import {
   systemLineSentence,
 } from './conversationPresentation';
 import { sportLabel } from '@/features/onboarding/types';
-import { QUICK_CHIP, cardStateWord } from '@/features/plans/types';
 
 import {
   COMPOSER_LABEL,
   COMPOSER_PLACEHOLDER,
   CONVERSATION_SCREEN_TITLE,
-  DETAILS,
+  OPEN_THE_CHAT,
+  ROOM_OVER_LINE,
   SEND,
   WAITING_FOR_OTHERS,
 } from './conversationPresentation';
-import { OPEN_THE_GAME, conversationHeaderLabel } from './conversationAccessibility';
+import { conversationHeaderLabel } from './conversationAccessibility';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -67,8 +72,10 @@ const OLA = 'cccccccc-0000-4000-8000-000000000003';
 const BO = 'dddddddd-0000-4000-8000-000000000004';
 
 const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
-const CHALLENGE = 'ffffffff-0000-4000-8000-000000000006';
 const GAME = 'aaaaaaaa-0000-4000-8000-000000000009';
+
+/** The header's second line in a booked room: the sport, and the booking's word. */
+const BOOKED = 'booked';
 
 /** 09:00 UTC on Saturday the 12th, which is Saturday in Warsaw whatever the phone thinks. */
 const READ_AT = '2026-09-12T09:00:00Z';
@@ -117,38 +124,6 @@ function saidNo(seq: number): Wire['SystemLineSchema'] {
   return { ...line(seq, 'SEAT_LEFT'), actor_id: BO, values: { departure: 'DECLINED' } };
 }
 
-/** A room's game, as `GET /games` lists it — arranged, nothing agreed, the day still ahead. */
-function game(): Wire['GameSchema'] {
-  return {
-    game_id: GAME,
-    challenge_id: CHALLENGE,
-    sport: 'PADEL',
-    kind: 'COUNTED',
-    standing: 'AWAITING_ENTRY',
-    planned_at: '2026-09-08T09:00:00Z',
-    entry_closes_at: '2026-09-20T07:00:00Z',
-    seats: [
-      { side: 'A', player_id: ME, name: 'me_' },
-      { side: 'B', player_id: TOMEK, name: 'tomek.p' },
-    ],
-    proposals: [],
-    no_shows: [],
-  };
-}
-
-/** The court's row on `GET /plans` — the challenge's, there from the room's opening. */
-function plan(over: Partial<Wire['PlanSchema']> = {}): Wire['PlanSchema'] {
-  return {
-    challenge_id: CHALLENGE,
-    anchor: READ_AT,
-    place: null,
-    day: null,
-    hour: null,
-    agreed_point: null,
-    ...over,
-  };
-}
-
 /** A title budget no room in these tests needs, so a line is asserted on its words alone. */
 const ROOM_ENOUGH = 80;
 
@@ -162,8 +137,8 @@ function room(over: Partial<Wire['ConversationResponse']> = {}): Wire['Conversat
   return {
     read_at: READ_AT,
     conversation_id: ROOM,
-    challenge_id: CHALLENGE,
-    game_id: null,
+    challenge_id: BOOKING,
+    game_id: GAME,
     sport: 'PADEL',
     members,
     people: members,
@@ -177,8 +152,8 @@ function listed(over: Partial<Wire['ConversationRowSchema']> = {}): Wire['Conver
 
   return {
     conversation_id: ROOM,
-    challenge_id: CHALLENGE,
-    game_id: null,
+    challenge_id: BOOKING,
+    game_id: GAME,
     sport: 'PADEL',
     members,
     people: members,
@@ -199,20 +174,30 @@ afterEach(async () => {
   queryClient.clear();
   resetSessionStatus();
   await clearStoredTokens();
+  await forgetPhonePreferences();
 });
 
-/** Land in the app, open Chats, tap the one row — the walk every assertion here starts with. */
-async function openTheRoom(answer: Wire['ConversationResponse'] = room(), row = /^tomek\.p/) {
-  stubConversations(transport, [listed({ members: answer.members, game_id: answer.game_id })]);
+/** Where the booked game's room is — pushed over its details, the only way in. */
+const CHAT_ROUTE = `/booking/${BOOKING}/chat`;
+
+/**
+ * Land on the booked game's details and press *Open the chat* — the walk every assertion here
+ * starts with. `listedAs` is the room the rooms list holds, which is what the details find the
+ * room by; the room's own read is `answer`.
+ */
+async function openTheRoom(
+  answer: Wire['ConversationResponse'] = room(),
+  listedAs: Wire['ConversationRowSchema'] = listed({ members: answer.members }),
+) {
+  stubHomeGames(transport, [homeGame({ game_id: GAME })]);
+  stubBooking(transport, bookingDetails({ game_id: GAME }));
+  stubConversations(transport, [listedAs]);
   stubConversation(transport, answer);
   stubEntries(transport, ROOM);
 
-  await launchIntoClassicPlay(transport);
-  fireEvent.press(await screen.findByLabelText(/^Chats/));
-  await waitFor(() => expect(screen).toHavePathname('/chats'));
-
-  fireEvent.press(await screen.findByLabelText(row));
-  await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+  await launchSignedIn(`/booking/${BOOKING}`);
+  fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+  await waitFor(() => expect(screen).toHavePathname(CHAT_ROUTE));
 }
 
 describe('the header', () => {
@@ -225,7 +210,7 @@ describe('the header', () => {
   it('draws the stems and speaks the whole handles, in one element', async () => {
     await openTheRoom(room({ members: THREE }));
 
-    const spoken = conversationHeaderLabel(['tomek.p', 'ola.k'], sportLabel('padel'), undefined);
+    const spoken = conversationHeaderLabel(['tomek.p', 'ola.k'], sportLabel('padel'), BOOKED);
     const header = await screen.findByRole('header', { name: spoken });
 
     expect(within(header).getByText(headerTitle(['tomek.p', 'ola.k'], ROOM_ENOUGH))).toBeTruthy();
@@ -236,45 +221,34 @@ describe('the header', () => {
    * **A name is cut at its space, and it is still not a first name**
    * ([ADR-0171](../../../../../docs/adr/0171-a-player-has-a-name-and-a-nickname-and-the-name-is-what-is-said.md)
    * §4): *Diego* is a prefix the owner typed, cut at a character the owner typed, drawn only in
-   * this box. The Chats row it was opened from and the header's own spoken name say the whole
-   * thing, and nothing anywhere says the nickname.
+   * this box. The header's own spoken name says the whole thing, and nothing anywhere says the
+   * nickname.
    */
   it('draws a name’s stem at its space, and speaks the whole name', async () => {
     await openTheRoom(
       room({ members: [member(ME, 'Ola Nowak'), member(TOMEK, 'Diego Fabregat')] }),
-      /^Diego Fabregat/,
     );
 
-    const spoken = conversationHeaderLabel(['Diego Fabregat'], sportLabel('padel'), undefined);
+    const spoken = conversationHeaderLabel(['Diego Fabregat'], sportLabel('padel'), BOOKED);
     const header = await screen.findByRole('header', { name: spoken });
 
     expect(within(header).getByText('Diego')).toBeTruthy();
     expect(within(header).queryByText(/Fabregat/)).toBeNull();
-    // Whole on the row behind it, and whole in the header's own name; `@` nowhere.
-    expect(screen.getByLabelText(/^Diego Fabregat/)).toBeTruthy();
     expect(screen.queryByText(/@/)).toBeNull();
   });
 
   /**
-   * A `LINE_UP_INCOMPLETE` room has no game, and the line says the sport and stops — **over the
-   * plan card**, which is the challenge's and pinned under this header from the opening
-   * (ADR-0164 §2; what the card draws there is `planCard.test.tsx`'s). The rung is the game's.
+   * **The booking's word after the sport** (#556): the details have just read the booking, and the
+   * room says where the game stands in the word its card says — drawn and spoken.
    */
-  it('draws the sport alone under the people where there is no game, over the card', async () => {
-    stubPlans(transport, [plan()]);
+  it('says where the game stands, in the booking’s own word', async () => {
     await openTheRoom();
 
-    // The card is up — its own *Where* chip, and not the composer's question about it.
-    expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
-
-    // Scoped to the header, because the row it was opened from is still mounted under it and
-    // says the sport too.
-    const header = screen.getByRole('header', {
-      name: conversationHeaderLabel(['tomek.p'], sportLabel('padel'), undefined),
+    const header = await screen.findByRole('header', {
+      name: conversationHeaderLabel(['tomek.p'], sportLabel('padel'), BOOKED),
     });
 
-    expect(within(header).getByText(headerSubline(sportLabel('padel'), undefined))).toBeTruthy();
-    expect(within(header).queryByText(/·/)).toBeNull();
+    expect(within(header).getByText(headerSubline(sportLabel('padel'), BOOKED))).toBeTruthy();
   });
 
   /**
@@ -285,73 +259,32 @@ describe('the header', () => {
    * pair, so there is a row to open; what is asserted is the room's own read.
    */
   it('says it is waiting for others where the reader is alone in the room', async () => {
-    stubConversations(transport, [listed()]);
-    stubConversation(transport, room({ members: [member(ME, 'me_')] }));
-    stubEntries(transport, ROOM);
-
-    await launchIntoClassicPlay(transport);
-    fireEvent.press(await screen.findByLabelText(/^Chats/));
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
-    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+    await openTheRoom(room({ members: [member(ME, 'me_')] }), listed());
 
     const header = await screen.findByRole('header', {
-      name: conversationHeaderLabel([], sportLabel('padel'), undefined),
+      name: conversationHeaderLabel([], sportLabel('padel'), BOOKED),
     });
 
     expect(within(header).getByText(WAITING_FOR_OTHERS)).toBeTruthy();
-    expect(within(header).getByText(headerSubline(sportLabel('padel'), undefined))).toBeTruthy();
+    expect(within(header).getByText(headerSubline(sportLabel('padel'), BOOKED))).toBeTruthy();
     expect(within(header).queryByText(/me_/)).toBeNull();
   });
 
   /**
-   * *The same state as the card in Now*: the game's card name, folded from the two lists the
-   * room already reads, drawn in lower case after the sport — and spoken after it too.
+   * **No door back into the details** (#556): the room is reached from them, and *back* is them —
+   * a second way to the same screen would stack the details on themselves.
    */
-  it('says where the game stands, in the Now card’s own word, where there is one', async () => {
-    stubGames(transport, [game()], READ_AT);
-    stubPlans(transport, [plan({ place: 'Zabłocie Sport', day: null, hour: null })]);
-    await openTheRoom(room({ game_id: GAME }));
-
-    const word = cardStateWord('planning');
-    expect(await screen.findByText(headerSubline(sportLabel('padel'), word))).toBeTruthy();
-    expect(
-      screen.getByRole('header', {
-        name: conversationHeaderLabel(['tomek.p'], sportLabel('padel'), word),
-      }),
-    ).toBeTruthy();
-  });
-
-  /**
-   * The game id is nullable, so a room whose line-up is still filling has no game — nothing for
-   * this door to open, and a drawn dead control is the disabled control #324 refused. It has a
-   * plan, and `planCard.test.tsx` holds what the card draws in its place: the count line where
-   * the lock will be.
-   */
-  it('draws no Details where there is no game, over the card', async () => {
-    stubPlans(transport, [plan()]);
+  it('draws no Details door, and back is the details it was opened from', async () => {
     await openTheRoom();
 
-    // The card is up — its own chip — and the door is not.
-    expect(await screen.findByLabelText('Where: Not agreed yet')).toBeTruthy();
-    expect(screen.queryByLabelText(OPEN_THE_GAME)).toBeNull();
-  });
+    const header = await screen.findByRole('header', {
+      name: conversationHeaderLabel(['tomek.p'], sportLabel('padel'), BOOKED),
+    });
+    expect(within(header).queryByText('Details')).toBeNull();
+    expect(screen.queryByLabelText('Open the game')).toBeNull();
 
-  it('draws Details where there is one, named for what is behind it', async () => {
-    await openTheRoom(room({ game_id: GAME }));
-
-    const details = await screen.findByLabelText(OPEN_THE_GAME);
-
-    expect(details).toBeTruthy();
-    expect(screen.getByText(DETAILS)).toBeTruthy();
-  });
-
-  it('opens the game under the room’s own address, so the Chats column stays lit', async () => {
-    await openTheRoom(room({ game_id: GAME }));
-
-    fireEvent.press(await screen.findByLabelText(OPEN_THE_GAME));
-
-    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}/details`));
+    fireEvent.press(screen.getAllByLabelText('Back').at(-1)!);
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
   });
 });
 
@@ -374,7 +307,6 @@ describe('the stream', () => {
         values: {},
       },
       [{ playerId: TOMEK, name: 'tomek.p' }],
-      'full',
     );
 
     expect(await screen.findByText(sentence)).toBeTruthy();
@@ -382,11 +314,11 @@ describe('the stream', () => {
   });
 
   /**
-   * The lock's confirmation is a line like every slot's, rendered from the copy deck with `{name}`
-   * filled from the people the room names — and it quotes no value, because the three slots are
-   * the value and the room already holds a line for each (ADR-0155).
+   * The old loop's lock line, which no room writes any more (#576) and a stored room may still
+   * hold: rendered from the copy deck with `{name}` filled from the people the room names, and
+   * quoting no value (ADR-0155). A stored line folds; a code with no words would not compile.
    */
-  it('draws the lock as the sentence the deck writes, and quotes no value', async () => {
+  it('draws a stored lock line as the sentence the deck writes, and quotes no value', async () => {
     await openTheRoom(room({ entries: [line(1, 'PLAN_LOCKED')] }));
 
     const sentence = systemLineSentence(
@@ -399,20 +331,17 @@ describe('the stream', () => {
         values: {},
       },
       [{ playerId: TOMEK, name: 'tomek.p' }],
-      'full',
     );
 
     expect(await screen.findByText(sentence)).toBeTruthy();
   });
 
   /**
-   * **The doubles room's first words** — the one line a room is born with, at `seq` 1 with no
-   * actor, drawn as every other system line is
-   * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
-   * §8). Which rooms carry it is the server's: a padel mutual's does, a tennis mutual's does not,
-   * and the client draws what the stream holds without reading the sport.
+   * **The old doubles room's first words** — a line the old loop's rooms were born with, at
+   * `seq` 1 with no actor, drawn as every other system line is (ADR-0169 §8). Which rooms carry it
+   * is the stream's, and the client draws what the stream holds without reading the sport.
    */
-  it('opens a doubles mutual’s room on You two are a side, named by nobody', async () => {
+  it('draws a stored You two are a side, named by nobody', async () => {
     const born: Wire['SystemLineSchema'] = { ...line(1, 'SIDE_FORMED'), actor_id: null };
     await openTheRoom(room({ entries: [born, message(2, TOMEK, 'who do we ask?')] }));
 
@@ -423,7 +352,7 @@ describe('the stream', () => {
   it('draws no such line in a room the stream did not open with one', async () => {
     await openTheRoom(room({ sport: 'TENNIS', entries: [line(1, 'SEAT_ACCEPTED')] }));
 
-    await screen.findByLabelText(/^tomek\.p/);
+    await screen.findByText('tomek.p is in');
     expect(screen.queryByText(SIDE_FORMED_LINE)).toBeNull();
   });
 
@@ -681,108 +610,42 @@ describe('a refused send', () => {
     fireEvent.changeText(screen.getByLabelText(COMPOSER_LABEL), 'anyone there?');
     fireEvent.press(screen.getByRole('button', { name: SEND }));
 
-    expect(await screen.findByText(/left — this chat has ended\.$/)).toBeTruthy();
-    expect(screen).toHavePathname(`/chats/conversation/${ROOM}`);
+    expect(await screen.findByText(ROOM_OVER_LINE)).toBeTruthy();
+    expect(screen).toHavePathname(CHAT_ROUTE);
     expect(screen.queryByLabelText(COMPOSER_LABEL)).toBeNull();
   });
 
   it('leaves the screen when the read finds the room has gone', async () => {
+    stubHomeGames(transport, [homeGame({ game_id: GAME })]);
+    stubBooking(transport, bookingDetails({ game_id: GAME }));
     stubConversations(transport, [listed()]);
     transport.on('GET', conversationPath(ROOM), () => errorResponse(404, 'conversation_not_found'));
     stubEntries(transport, ROOM);
 
-    await launchIntoClassicPlay(transport);
-    fireEvent.press(await screen.findByLabelText(/^Chats/));
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-
-    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
+    await launchSignedIn(`/booking/${BOOKING}`);
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
 
     // It gets as far as the route and comes straight back, rather than sitting on a sentence
     // about a room that is not there.
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-  });
-});
-
-describe('the quick chips', () => {
-  /**
-   * One per unfilled slot in slot order, and no *On my way*: a room with nothing agreed is a row
-   * with three nulls on `GET /plans`, and the chips read the same row the card does.
-   */
-  it('asks the three questions and names nothing', async () => {
-    stubPlans(transport, [plan()]);
-    await openTheRoom();
-
-    expect(await screen.findByRole('button', { name: QUICK_CHIP.where })).toBeTruthy();
-    expect(screen.getByRole('button', { name: QUICK_CHIP.day })).toBeTruthy();
-    expect(screen.getByRole('button', { name: QUICK_CHIP.hour })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: QUICK_CHIP['on-my-way'] })).toBeNull();
-  });
-
-  /**
-   * **The rule's chips, not a fixed list** ([#402](https://github.com/Raketa02/Raketa/issues/402)):
-   * the mock draws three hard-coded chips, and the block draws whatever `quickChips` answers —
-   * so a day that is agreed takes its question away, and *On my way* appears only on the day.
-   * `READ_AT` is Saturday the 12th in Warsaw, which is the zone the day is read in.
-   */
-  it('offers On my way on the agreed day, and drops the question the day answered', async () => {
-    stubGames(transport, [game()], READ_AT);
-    stubPlans(transport, [plan({ day: '2026-09-12' })]);
-    await openTheRoom(room({ game_id: GAME }));
-
-    expect(await screen.findByRole('button', { name: QUICK_CHIP['on-my-way'] })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: QUICK_CHIP.day })).toBeNull();
-    expect(screen.getByRole('button', { name: QUICK_CHIP.where })).toBeTruthy();
-    expect(screen.getByRole('button', { name: QUICK_CHIP.hour })).toBeTruthy();
-  });
-
-  it('offers no On my way for a day that is not today', async () => {
-    stubGames(transport, [game()], READ_AT);
-    stubPlans(transport, [plan({ day: '2026-09-13' })]);
-    await openTheRoom(room({ game_id: GAME }));
-
-    // The plan lands a beat after the room: the day's question is the thing that goes.
-    await screen.findByRole('button', { name: QUICK_CHIP.where });
-    await waitFor(() => expect(screen.queryByRole('button', { name: QUICK_CHIP.day })).toBeNull());
-    expect(screen.queryByRole('button', { name: QUICK_CHIP['on-my-way'] })).toBeNull();
-    expect(screen.getByRole('button', { name: QUICK_CHIP.hour })).toBeTruthy();
-  });
-
-  /** A chip posts words and changes nothing — ADR-0144, and the whole of what a chip does. */
-  it('posts its own words as a message', async () => {
-    await openTheRoom();
-
-    transport.on('POST', `${conversationPath(ROOM)}/messages`, (request) => {
-      const body = request.body as Wire['SendMessageRequest'];
-      return json<Wire['MessageSchema']>({
-        type: 'message',
-        seq: 1,
-        author_id: ME,
-        sent_at: READ_AT,
-        text: body.text,
-        client_message_id: body.client_message_id,
-      });
-    });
-
-    fireEvent.press(await screen.findByRole('button', { name: QUICK_CHIP.hour }));
-
-    expect(await screen.findByLabelText(`You: ${QUICK_CHIP.hour}`)).toBeTruthy();
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
   });
 });
 
 /**
- * **The chips, the field and Send are one block**
- * ([#402](https://github.com/Raketa02/Raketa/issues/402)) — asserted structurally, because *one
- * block* is a claim about what contains what and a renderer cannot see a ground or a hairline.
+ * **The field and Send are one block** ([#402](https://github.com/Raketa02/Raketa/issues/402)) —
+ * asserted structurally, because *one block* is a claim about what contains what and a renderer
+ * cannot see a ground or a hairline. A booked game has no plan, so the block asks no questions
+ * about one: no quick chip is drawn (#576).
  */
 describe('the composer block', () => {
-  it('holds the chips row, the field and Send together', async () => {
+  it('holds the field and Send together, and no chip', async () => {
     await openTheRoom();
 
     const block = await screen.findByTestId('conversation-composer');
 
-    expect(within(block).getByRole('button', { name: QUICK_CHIP.where })).toBeTruthy();
     expect(within(block).getByLabelText(COMPOSER_LABEL)).toBeTruthy();
     expect(within(block).getByRole('button', { name: SEND })).toBeTruthy();
+    expect(within(block).getAllByRole('button')).toHaveLength(1);
   });
 
   /** The hint is the deck's, and the name a listener gets is still `Message` — 6.13's own rule. */
@@ -805,7 +668,7 @@ describe('the composer block', () => {
  */
 describe('the frame', () => {
   /**
-   * The safe area around one thing — the stack keeps the inbox mounted under the room, so there
+   * The safe area around one thing — the stack keeps the details mounted under the room, so there
    * is more than one frame in the tree and the assertion has to say which.
    */
   function safeAreaAround(inside: (scope: ReturnType<typeof within>) => unknown) {
@@ -842,15 +705,15 @@ describe('the frame', () => {
     // The read in flight draws 10.3's header over a title the room has before it can be named,
     // and a header that collided with the clock for the length of a read is the same bug for
     // the length of a read.
+    stubHomeGames(transport, [homeGame({ game_id: GAME })]);
+    stubBooking(transport, bookingDetails({ game_id: GAME }));
     stubConversations(transport, [listed()]);
     transport.on('GET', conversationPath(ROOM), () => new Promise(() => {}));
     stubEntries(transport, ROOM);
 
-    await launchIntoClassicPlay(transport);
-    fireEvent.press(await screen.findByLabelText(/^Chats/));
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
-    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+    await launchSignedIn(`/booking/${BOOKING}`);
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+    await waitFor(() => expect(screen).toHavePathname(CHAT_ROUTE));
 
     await screen.findByRole('header', { name: CONVERSATION_SCREEN_TITLE });
     const around = safeAreaAround((scope) =>

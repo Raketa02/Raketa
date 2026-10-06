@@ -671,12 +671,12 @@ const size = {
   chip: 27,
   chipSm: 25,
   seg: 25,
-  /** A segment's count — the Chats badge (`tabBar.badge`) at the segment's size (#529): the
+  /** A segment's count — the tab bar's badge (`tabBar.badge`) at the segment's size (#529): the
    *  group page's Info tab, counting the requests waiting on an Owner. **16, and it is
    *  `num.tiny`'s own line box**, the digit role one step under the tab bar's `num.xs` — the
    *  segment's label is 10,5 where the tab bar's is 12, so the mark comes down with it rather
    *  than standing a size above the word it sits on. The fill, the white digit, the pill and the
-   *  missing cap are the Chats badge's; only the size is the segment's. */
+   *  missing cap are the tab bar badge's; only the size is the segment's. */
   segmentBadge: 16,
   tag: 19,
   /** The fit pill — 7.10. **26, which is the height every call site drew.** The prototype's
@@ -1242,19 +1242,20 @@ const size = {
    *
    *  `labelMaxScale` is the only Dynamic Type mechanism this surface has: Part 13 names the
    *  tab bar as the fixed-height exception AND permits `allowFontScaling={false}` only
-   *  inside the level bar, which leaves a bounded multiplier and nothing else. **Derived,
-   *  never chosen** — `tabBarLabelCap.test.ts` measures the five shipped labels against the
-   *  real Archivo 700 advances in the narrowest phone's column and recomputes it, so a
-   *  sixth tab or a longer word goes red rather than truncating on somebody's phone. It was
-   *  1.7 over *Around* and is 1.6 over *Players*, the longer word that replaced it
-   *  (ADR-0169 §1) — the one step the seventh letter costs. */
+   *  inside the level bar, which leaves a bounded multiplier and nothing else. It was
+   *  **derived** over five columns — 1.7 over *Around*, 1.6 over *Players* (ADR-0169 §1) — and
+   *  the bar is three since the old loop's two columns left it (#576): at a third of the screen
+   *  every word fits at more than twice this, so the width no longer decides it and it stays
+   *  where the five left it, bounding the bar's height. `tabBarLabelCap.test.ts` measures the
+   *  three shipped labels against the real Archivo 700 advances in the narrowest phone's column,
+   *  so a fourth tab or a longer word goes red rather than truncating on somebody's phone. */
   tabBar: {
     /** ADR-0135: Feather `zap`, inside the disc, smaller than the 16pt box the flanks use. */
     bolt: 15,
     ringGap: 2,
     ringStroke: 2,
     labelMaxScale: 1.6,
-    /** The Chats badge — 10.2, and the one badge the bar carries.
+    /** Home's badge — 10.2, and the one badge the bar carries.
      *
      *  **18, and it is the digit's own box rounded to the grid.** The count is mono and tabular
      *  (1.4: numbers are monospaced always), and the smallest mono role is `num.xs`, whose line
@@ -1271,7 +1272,7 @@ const size = {
      *  announce the one that did.
      *
      *  Everything else is borrowed rather than invented: `coralInk` fill and a white mark at
-     *  5,89, which is 6.1 `primary`'s treatment and the correction the Play disc three columns
+     *  5,89, which is 6.1 `primary`'s treatment and the correction the Play disc one column
      *  away already took once; the horizontal padding and the overlap over the icon are
      *  `space.xxs`. **No device has drawn this**, and `tabBadgeFit.test.ts` is what holds the
      *  arithmetic that a device would otherwise have to. */
@@ -1289,7 +1290,7 @@ const size = {
    *  These two numbers did not move; what moved is what draws them. Part 8 had them as
    *  decoration on a strip, in `coral`. A full-width card leaves the rail with no peek, so the
    *  dots became the affordance — and the fill is `color.ink`, because 1.2's coral list closes
-   *  at five plus the Chats badge and a coral FILL there means *attend to this*, which a page
+   *  at five plus the tab bar's badge and a coral FILL there means *attend to this*, which a page
    *  indicator is not. **Not pressable** — 7.9's own hitSlop arithmetic, one section over. */
   pagerDot: 5,
   pagerDotActive: 14,

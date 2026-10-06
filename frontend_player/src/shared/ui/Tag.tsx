@@ -45,9 +45,10 @@ export interface TagProps {
    * the label has already rendered. Urgency is the **whole tag**: `warn` for a live window,
    * `ok` for a settled one, with the word beside it (6.4, Part 13).
    *
-   * The one surface is the Now card, where the dot is **the stage's** and the sport is the
-   * word beside the pill (`STAGE_DOT`, 6.4 as amended by #413). The argument above holds
-   * there too: the sport left the dot for a word, so the token has one meaning on that card.
+   * The one surface is Home's game card, where the dot is **the status's** and the sport is the
+   * word beside the pill (`STATUS_INK`; the old loop's Now card's `STAGE_DOT` before it, 6.4 as
+   * amended by #413). The argument above holds there too: the sport left the dot for a word, so
+   * the token has one meaning on that card.
    */
   readonly dot?: string;
   /** Defaults to `label`. Set it when the word alone is cryptic out of context. */

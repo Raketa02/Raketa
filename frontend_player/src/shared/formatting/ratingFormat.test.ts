@@ -10,7 +10,6 @@
 
 import {
   formatDistanceKm,
-  formatWidthKm,
   formatLevel,
   formatPercent,
   formatRange,
@@ -132,18 +131,6 @@ describe('a distance', () => {
    */
   it('prints the floor as served', () => {
     expect(formatDistanceKm(0.1)).toBe('0,1 km');
-  });
-});
-
-describe('formatWidthKm', () => {
-  it('writes one decimal below ten kilometres and a whole number from ten', () => {
-    expect(formatWidthKm(1.5)).toBe('1,5 km');
-    expect(formatWidthKm(3)).toBe('3,0 km');
-    expect(formatWidthKm(5.4)).toBe('5,4 km');
-    expect(formatWidthKm(7.83)).toBe('7,8 km');
-    expect(formatWidthKm(10)).toBe('10 km');
-    expect(formatWidthKm(18)).toBe('18 km');
-    expect(formatWidthKm(23.4)).toBe('23 km');
   });
 });
 

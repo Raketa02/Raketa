@@ -224,25 +224,24 @@ describe('one room, opened', () => {
     };
   }
 
-  /** Three fields the row deliberately leaves off, each mapped by the screen that draws it. */
-  it('carries the instant it was folded and both ids', () => {
+  /** The instant it was folded, and the game it is about — the booked game's join. */
+  it('carries the instant it was folded and the game', () => {
     const room = toConversationRoom(
       opened({ game_id: 'eeeeeeee-0000-4000-8000-000000000005' }),
     )?.room;
 
     expect(room?.readAt).toBe('2026-09-08T12:00:00Z');
-    expect(room?.challengeId).toBe('dddddddd-0000-4000-8000-000000000004');
     expect(room?.gameId).toBe('eeeeeeee-0000-4000-8000-000000000005');
   });
 
-  /** A room with no game is a room with no *Details*, and `null` collapses to absent. */
+  /** `null` collapses to absent. */
   it('has no game where the wire says none', () => {
     expect(toConversationRoom(opened())?.room.gameId).toBeUndefined();
   });
 
   /**
-   * The identifying fact is missing, so the record is refused whole — `challengeMappers`' and
-   * `gameMappers`' answer for the same field, and the screen says the one thing true of every
+   * The identifying fact is missing, so the record is refused whole — `gameMappers`' answer for
+   * the same field, and the screen says the one thing true of every
    * cause it shares an answer with.
    */
   it('refuses the whole room where its sport is one this build cannot name', () => {

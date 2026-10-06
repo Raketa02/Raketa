@@ -1,7 +1,6 @@
 import type { DeckPerson } from './deck';
 import {
   ENDED_HOME_SHELF_LIFE_MS,
-  bookedGameIds,
   chatIsOpen,
   completesTheRescue,
   courtIsGiven,
@@ -268,20 +267,6 @@ describe('courtIsGiven — a court number once the club has said yes (A4.2)', ()
     ['CALLED_OFF', true],
   ])('%s → %s', (status, given) => {
     expect(courtIsGiven(status)).toBe(given);
-  });
-});
-
-describe('bookedGameIds — the Games Home’s cards stand for', () => {
-  it('is every card’s Game, the shelved ones too', () => {
-    expect(
-      bookedGameIds([game({ gameId: 'g-1' }), game({ gameId: 'g-2', status: 'COUNTED' })]),
-    ).toEqual(new Set(['g-1', 'g-2']));
-  });
-
-  it('leaves out a game waiting for the club, which has no Game yet', () => {
-    const { gameId: _none, ...rest } = game({ status: 'WAITING_FOR_THE_CLUB' });
-    const waiting: HomeGame = rest;
-    expect(bookedGameIds([game({ gameId: 'g-1' }), waiting])).toEqual(new Set(['g-1']));
   });
 });
 

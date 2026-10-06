@@ -24,7 +24,6 @@ import {
   launchSignedIn,
   profileSurface,
   stubGate,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
@@ -77,7 +76,6 @@ beforeEach(() => {
   stubGate(transport, { ratings: THREE_RATED, hasPlayerProfile: true });
   stubProfileSurface(transport, DECLARED_IN_TWO);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
 });
 

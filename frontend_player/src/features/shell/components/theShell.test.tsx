@@ -5,16 +5,19 @@
  * **The one rule here that cannot be seen is the one this suite exists for.** A shell built
  * out of `<Tabs>` passes every visible assertion below and still fails *back goes where I
  * came from* — the tab bar looks right, every screen is reachable, nothing throws, and a
- * player who left the deck and came back lands on the deck. So the assertions are about the
+ * player who left a screen and came back lands on it. So the assertions are about the
  * **stack**: what is underneath, and whether there is anything underneath at all.
+ *
+ * **The bar is Home · ⚡Play · You, for good** ([#576](https://github.com/Raketa02/Raketa/issues/576)):
+ * the old loop's Players and Chats columns, and the flag that brought them back, are gone.
  */
 
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { authKeys, NAME_ROW_TITLE, nameLine } from '@/features/auth/types';
+import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { onboardingKeys } from '@/features/onboarding/types';
-import { FIND_A_GAME_TITLE, modeControlLabel, usePlaySession } from '@/features/play/types';
 import {
   AREA_LINE,
   GAME_SUGGESTIONS_TITLE,
@@ -44,39 +47,40 @@ import {
   reliabilityLine,
   scoreRingLabel,
 } from '@/features/player_record/types';
+import { HOME_GAME_COPY } from '@/features/proposals/types';
 import { doorRowLabel } from '@/shared/ui';
+import {
+  BOOKED_ROOM,
+  BOOKING,
+  bookedRoom,
+  bookedRoomRow,
+  bookingDetails,
+  homeGame,
+  stubBooking,
+  stubHomeGames,
+} from '@/test-support/home';
 import { scrollerOf } from '@/test-support/pinned';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
+import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
 import {
-  CHALLENGES_PATH,
   GATE_USER,
-  launchIntoClassicPlay,
+  launchSignedIn,
   OWN_RECORD_SERVED,
   PROFILE_OPTIONS_SERVED,
   PROFILE_SURFACE_SERVED,
-  stubChallenges,
   stubConversation,
   stubConversations,
   stubEntries,
-  stubGames,
   stubGate,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
-import {
-  errorResponse,
-  installTransport,
-  json,
-  type Transport,
-  type Wire,
-} from '@/test-support/transport';
-import { declarationOptionLabel } from '@/shared/vocabulary/playIntentPresentation';
+import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
-import { CHATS_COPY, HOME_COPY } from './shellCopy';
+import { HOME_COPY, PLAY_COPY } from './shellCopy';
 import { YOU_COPY } from './youCopy';
 
 /** One rating and a committed profile: the gate's fourth answer is *the app*. */
@@ -94,55 +98,17 @@ const RATING: Wire['RatingResponse'] = {
 
 let transport: Transport;
 
-/**
- * *The player is on Find a game*, asserted on the **header** rather than on the words.
- *
- * The screen's title and Play's segment now say the same thing — the segment is a view
- * switch and the view it switches to is this screen — so the string alone matches twice.
- * The header is the one of the two that means *this is where you are*.
- */
-const onFindAGame = () => screen.findByRole('header', { name: FIND_A_GAME_TITLE });
-
-/** An empty deal with nobody in range: Players draws its ending, and this suite is not about it. */
-const NOBODY_DEALT: Wire['ShortlistResponse'] = {
-  search: {
-    search_id: 'd0d1a2b3-c4d5-4e6f-8a9b-0c1d2e3f4a5b',
-    at: '2026-09-01T18:00:00Z',
-    surface: 'DECK',
-    mode: null,
-    ruleset_version: 'ruleset-v1',
-    engine_version: 'matchfit-v1',
-    optimised_for: 'SEARCHER',
-    index_stale: false,
-    pool: {
-      sport: 'PADEL',
-      radius_km_used: 12,
-      players_in_range: 0,
-      window: 'THIS_WEEK',
-      post_gate: true,
-    },
-    radius_clamp: false,
-    sorts_available: [],
-    rung_offers: null,
-    prompts: [],
-  },
-  candidates: [],
-};
+/** *The player is on Play*: its *Groups* segment, which is what the tab opens on. */
+const onPlay = () => screen.findByRole('button', { name: PLAY_COPY.segment.groups });
 
 beforeEach(() => {
   transport = installTransport();
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
-  // ⚡Play is a screen now, and it reads three routes; Players deals on arrival and reads the
-  // same three. Stubbed here rather than in the tests that press either tab, because an
-  // unstubbed route throws at the socket and the failure would name `fetch` rather than the
-  // screen.
+  // You reads the profile, its options and your own record on arrival — the rows' lines, the
+  // header card's face and score, and the reliability row's line.
   stubProfileSurface(transport);
-  stubInterest(transport);
   stubProfileOptions(transport);
-  // You reads your own record on arrival — the header card's face and score, and the
-  // reliability row's line.
   stubOwnRecord(transport);
-  transport.on('POST', '/api/v1/deck', () => json(NOBODY_DEALT));
 });
 
 afterEach(async () => {
@@ -150,35 +116,29 @@ afterEach(async () => {
   queryClient.clear();
   resetSessionStatus();
   await clearStoredTokens();
+  // Play's segment and the games opened are kept on the phone per account.
+  await forgetPhonePreferences();
 });
 
-/**
- * A player standing on the tab the entry gate lands them on — **with Classic play on**, because
- * most of what this suite walks is the old loop's: Players, Chats and Find a game. The bar as it
- * ships, and the flag's two sides, are `feature_flags/components/theClassicPlayGate.test.tsx`'s.
- */
+/** A player standing on the tab the entry gate lands them on. */
 async function launchIntoTheApp() {
-  await launchIntoClassicPlay(transport);
+  await launchSignedIn();
   expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
 }
 
-/** Press one of the five columns by the name the bar gives it. */
+/** Press one of the three columns by the name the bar gives it. */
 function pressTab(label: string) {
   fireEvent.press(screen.getByLabelText(label));
 }
 
+const columns = () => screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel);
+
 describe('what a player lands on', () => {
-  it('opens on Home, with the bar under it', async () => {
+  it('opens on Home, with the bar under it — three columns, and no switch for more', async () => {
     await launchIntoTheApp();
 
     expect(screen).toHavePathname('/');
-    expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
-      'Home',
-      'Players',
-      'Play',
-      'Chats',
-      'You',
-    ]);
+    expect(columns()).toEqual(['Home', 'Play', 'You']);
   });
 
   it('lights the tab the player is on, and only that one', async () => {
@@ -192,125 +152,71 @@ describe('what a player lands on', () => {
 
     expect(selected()).toEqual(['Home']);
 
-    pressTab('Chats');
-    await waitFor(() => expect(selected()).toEqual(['Chats']));
+    pressTab('You');
+    await waitFor(() => expect(selected()).toEqual(['You']));
+
+    pressTab('Play');
+    await waitFor(() => expect(selected()).toEqual(['Play']));
+  });
+
+  /**
+   * **The old loop asks the server nothing** — the bar used to hold its challenges, games and
+   * plans for the session, and a flags host's datafile was fetched the moment the app opened.
+   */
+  it('reads none of the old loop’s lists, and no datafile', async () => {
+    await launchIntoTheApp();
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
+    pressTab('Play');
+    await onPlay();
+
+    const asked = transport.requests.map((request) => request.path);
+    for (const old of [
+      '/api/v1/challenges',
+      '/api/v1/plans',
+      '/api/v1/games',
+      '/api/v1/interest',
+    ]) {
+      expect(asked).not.toContain(old);
+    }
+    expect(asked.filter((path) => path.includes('featurevisor'))).toEqual([]);
   });
 });
 
 /**
- * **Home's badge counts the games that need you** — a seat open in your game, a result to enter, a
- * score waiting on your agreement ([#550](https://github.com/Raketa02/Raketa/issues/550),
- * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
- * The shell reads it on every screen, so it is there before the player has looked at Home, and it
- * is spoken in the column's own name. Which card is which is `plans/domain/gameCard.test.ts`'s and
- * `games/domain/resultArgument.test.ts`'s; what is walked here is that the count reaches the bar.
+ * **Home's badge counts the booked games that need you** — a seat open, a result to enter or
+ * confirm, a no-show against you, a payment to confirm
+ * ([the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
+ * The count is the server's `needing_you` on Home's own read, which the shell holds on every
+ * screen, so it is there before the player has looked at Home, and it is spoken in the column's
+ * own name. Which games are counted is the server's; what is walked here is that the count reaches
+ * the bar, and that nothing else is added to it.
  */
 describe('Home’s badge', () => {
-  const OPPONENT = 'bbbbbbbb-0000-4000-8000-000000000002';
-
-  /** A court as `GET /games` answers it, the reader on side A and one opponent across the net. */
-  function game(
-    gameId: string,
-    challengeId: string,
-    over: Partial<Wire['GameSchema']> = {},
-  ): Wire['GameSchema'] {
-    return {
-      game_id: gameId,
-      challenge_id: challengeId,
-      sport: 'PADEL',
-      kind: 'COUNTED',
-      standing: 'AWAITING_ENTRY',
-      planned_at: '2026-09-01T09:00:00Z',
-      entry_closes_at: '2026-09-12T09:00:00Z',
-      seats: [
-        { side: 'A', player_id: GATE_USER.id, name: 'me_' },
-        { side: 'B', player_id: OPPONENT, name: 'tomek.p' },
-      ],
-      proposals: [],
-      no_shows: [],
-      ...over,
-    };
-  }
-
-  /** The opponent's score, up and unanswered — a result to confirm. */
-  const THEIR_SCORE: Wire['GameSchema']['proposals'][number] = {
-    side: 'B',
-    proposed_by: OPPONENT,
-    score: { sets: [{ a: 4, b: 6 }] },
-    proposed_at: '2026-09-04T20:00:00Z',
-    answer_by: '2026-09-06T20:00:00Z',
-    settles_at: '2026-09-06T20:00:00Z',
-  };
-
-  /** Three games on Home — a seat open, a score waiting on you, and one simply being planned. */
-  const THREE = [
-    game('aaaaaaaa-0000-4000-8000-000000000001', 'ffffffff-0000-4000-8000-000000000001', {
-      seats: [
-        { side: 'A', player_id: GATE_USER.id, name: 'me_' },
-        { side: 'B', player_id: null, name: null },
-      ],
-    }),
-    game('aaaaaaaa-0000-4000-8000-000000000002', 'ffffffff-0000-4000-8000-000000000002', {
-      standing: 'AWAITING_ANSWER',
-      played_at: '2026-09-04T18:00:00Z',
-      entry_closes_at: null,
-      proposals: [THEIR_SCORE],
-    }),
-    game('aaaaaaaa-0000-4000-8000-000000000003', 'ffffffff-0000-4000-8000-000000000003'),
-  ];
-
-  /** Landed on Home with games on it — so its empty line is not what says the player is there. */
-  async function landWithGames() {
-    await launchIntoClassicPlay(transport);
-    expect(await screen.findByRole('header', { name: HOME_COPY.title })).toBeTruthy();
-  }
-
-  it('counts the games that need you, on Home, wherever the player is', async () => {
-    stubGames(transport, THREE);
-    await landWithGames();
+  it('counts the booked games that need you, on Home, wherever the player is', async () => {
+    stubHomeGames(transport, [homeGame({ status: 'NEEDS_RESULT', needs_you: true })], {
+      needing_you: 2,
+    });
+    await launchSignedIn();
 
     expect(await screen.findByLabelText('Home, 2 games waiting on you')).toBeTruthy();
 
     pressTab('You');
     await waitFor(() => expect(screen).toHavePathname('/you'));
     expect(screen.getByLabelText('Home, 2 games waiting on you')).toBeTruthy();
+
+    pressTab('Play');
+    await onPlay();
+    expect(screen.getByLabelText('Home, 2 games waiting on you')).toBeTruthy();
   });
 
   it('draws nothing when no game needs you', async () => {
-    stubGames(transport, [THREE[2]!]);
-    await landWithGames();
+    stubHomeGames(transport, [homeGame()], { needing_you: 0 });
+    await launchSignedIn();
 
-    expect(await screen.findByLabelText('Home')).toBeTruthy();
+    await screen.findByTestId(`home-game-${BOOKING}`);
+    expect(screen.getByLabelText('Home')).toBeTruthy();
     expect(screen.queryByLabelText(/^Home, /)).toBeNull();
-  });
-});
-
-/**
- * **The second column is Players, and it is a root like the other flanking tabs**
- * ([ADR-0169](../../../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md)
- * §1). What the deck does there is `deck.test.tsx`'s; what the shell owes it is a route, a lit
- * column, and nothing behind it.
- */
-describe('Players', () => {
-  it('opens at its root with nothing behind it, and lights its own column', async () => {
-    await launchIntoTheApp();
-
-    pressTab('Players');
-
-    await waitFor(() => expect(screen).toHavePathname('/players'));
-    expect(router.canGoBack()).toBe(false);
-    expect(screen.getByRole('tab', { name: 'Players', selected: true })).toBeTruthy();
-  });
-
-  it('is nowhere under Play any more', async () => {
-    await launchIntoTheApp();
-    pressTab('Play');
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-
-    // The old route is gone: nothing on Find a game names the deck, and the bar's second
-    // column is the only door to it.
-    expect(screen.queryByLabelText('Match me')).toBeNull();
-    expect(screen.queryByText('Match me')).toBeNull();
   });
 });
 
@@ -493,9 +399,9 @@ describe('You', () => {
   });
 
   it('never tells the player nothing is happening', async () => {
-    // Now is where a send lands, so a placeholder asserting emptiness would be lying one tap
-    // after a challenge went out. What the lines *say* is `shellCopy.test.ts`'s; this is the
-    // rendered half — the tab a launch actually opens on, with the sentence on it.
+    // Home is where a game lands, so a placeholder asserting emptiness would be lying one tap
+    // after one was booked. What the lines *say* is `shellCopy.test.ts`'s; this is the rendered
+    // half — the tab a launch actually opens on, with the sentence on it.
     await launchIntoTheApp();
 
     expect(screen.queryByText(/nothing is happening/i)).toBeNull();
@@ -525,7 +431,7 @@ describe('You', () => {
 });
 
 describe('⚡Play', () => {
-  it('always opens Find a game, from whichever tab the player was on', async () => {
+  it('always opens Play’s root, from whichever tab the player was on', async () => {
     await launchIntoTheApp();
 
     pressTab('You');
@@ -533,7 +439,7 @@ describe('⚡Play', () => {
 
     pressTab('Play');
 
-    expect(await onFindAGame()).toBeTruthy();
+    expect(await onPlay()).toBeTruthy();
     expect(screen).toHavePathname('/play');
   });
 
@@ -543,25 +449,24 @@ describe('⚡Play', () => {
     pressTab('Play');
 
     await waitFor(() => expect(screen).toHavePathname('/play'));
-    const play = screen.getAllByRole('tab')[2];
-    expect(play?.props.accessibilityState?.selected).toBe(true);
+    expect(screen.getByRole('tab', { name: 'Play', selected: true })).toBeTruthy();
   });
 
-  it('leaves Now underneath, so back leaves Play entirely', async () => {
+  it('leaves Home underneath, so back leaves Play entirely', async () => {
     await launchIntoTheApp();
 
     pressTab('Play');
     await waitFor(() => expect(screen).toHavePathname('/play'));
 
-    // The platform's own back, which is what the rule is about: Find a game does not refuse
-    // to be the last screen, it has Now underneath it.
+    // The platform's own back, which is what the rule is about: Play does not refuse to be the
+    // last screen, it has Home underneath it.
     act(() => router.back());
 
     expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');
   });
 
-  it('re-enters rather than going back when it is pressed from inside Play', async () => {
+  it('does nothing at all when the tab pressed is the one already on screen', async () => {
     await launchIntoTheApp();
 
     pressTab('Play');
@@ -570,105 +475,11 @@ describe('⚡Play', () => {
     pressTab('Play');
 
     await waitFor(() => expect(screen).toHavePathname('/play'));
-    // And the stack has not grown a second Find a game to walk back through.
+    // And the stack has not grown a second Play to walk back through.
     expect(router.canGoBack()).toBe(true);
     act(() => router.back());
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(router.canGoBack()).toBe(false);
-  });
-});
-
-describe('a Play session ends exactly when the shell lays a stack down', () => {
-  /** A player mid-build: a week they have edited, and two people on the court. */
-  function halfwayThroughBuildingOne() {
-    const session = usePlaySession.getState();
-    session.enter([{ day: 2, hour: 19 }]);
-    session.toggleWeekCell({ day: 6, hour: 9 });
-    session.seat('search-1', 'player-a');
-    session.seat('search-1', 'player-b');
-  }
-
-  it('clears the working copy and the line-up when the player leaves for another tab', async () => {
-    // The definition, walked rather than called: nothing in Play tidies up after itself, and
-    // the only thing that clears a session is arriving somewhere.
-    await launchIntoTheApp();
-    pressTab('Play');
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    halfwayThroughBuildingOne();
-
-    pressTab('Chats');
-
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-    expect(usePlaySession.getState().week).toBeUndefined();
-    expect(usePlaySession.getState().lineup).toBeUndefined();
-  });
-
-  it('clears it on the way back in too, so ⚡ opens on a week seeded from the profile', async () => {
-    // AC-2 lands a returning player on Find a game. A line-up that survived would sit
-    // invisible behind a screen whose week no longer matches the search it was built on.
-    //
-    // **Read on a player who actually left**, which is what *returning* means. This walked
-    // out and back through one press of Play on Find a game until 2026-09-10 — and that
-    // press is not a return, it is a player who never went anywhere (see below).
-    await launchIntoTheApp();
-    pressTab('Play');
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    halfwayThroughBuildingOne();
-    pressTab('Chats');
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-    halfwayThroughBuildingOne();
-
-    pressTab('Play');
-
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    expect(usePlaySession.getState().lineup).toBeUndefined();
-  });
-
-  /**
-   * **A tab you are already at the start of is not a place to be sent to.**
-   *
-   * Every press of the bar laid the stack down again, so a player tapping Play on Find a game
-   * got the screen rebuilt underneath them: the session ended, the working week went back to
-   * the profile's, and whatever they had ticked was gone — a reload with no cause, on the
-   * gesture people press twice when a screen is slow.
-   *
-   * The rule the reset is for is *pressing a tab goes to that tab's start*, and a player
-   * already standing on it is already there. Nothing about leaving changes: the press still
-   * resets from anywhere else in Play, which is the test below this one.
-   */
-  it('does nothing at all when the tab pressed is the one already on screen', async () => {
-    await launchIntoTheApp();
-    pressTab('Play');
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    halfwayThroughBuildingOne();
-
-    pressTab('Play');
-
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    // The session the player is in the middle of is still the session they are in.
-    expect(usePlaySession.getState().week).toEqual([
-      { day: 2, hour: 19 },
-      { day: 6, hour: 9 },
-    ]);
-    expect(usePlaySession.getState().lineup?.seats).toEqual(['player-a', 'player-b']);
-  });
-
-  it('still lays the stack down again from anywhere else inside the tab', async () => {
-    // The builder, one screen deeper. Its search is a record this suite does not hold, and the
-    // screen draws the gap rather than the court — which is all the depth this rule needs.
-    const SEARCH = '5b1d0a3c-7e2f-4a9b-8c6d-1e0f2a3b4c5d';
-    transport.on('GET', `/api/v1/searches/${SEARCH}`, () => errorResponse(404, 'search_not_found'));
-    await launchIntoTheApp();
-    pressTab('Play');
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    halfwayThroughBuildingOne();
-    act(() => router.push(`/play/builder?search=${SEARCH}`));
-    await waitFor(() => expect(screen).toHavePathname('/play/builder'));
-
-    pressTab('Play');
-
-    await waitFor(() => expect(screen).toHavePathname('/play'));
-    expect(usePlaySession.getState().lineup).toBeUndefined();
   });
 });
 
@@ -689,8 +500,8 @@ describe('the shell keeps no per-tab history', () => {
     pressTab('Play');
     await waitFor(() => expect(screen).toHavePathname('/play'));
 
-    pressTab('Chats');
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
     // Play's two screens went with it. This is the assertion `<Tabs>` fails silently.
     expect(router.canGoBack()).toBe(false);
 
@@ -704,14 +515,14 @@ describe('the shell keeps no per-tab history', () => {
 
 /**
  * **The shell outlives the entry gate re-reading the player, and a shell built from nothing opens
- * on Now.** Two facts, and the first press after a cold start on a device was where they were both
+ * on Home.** Two facts, and the first press after a cold start on a device was where they were both
  * found false at once: bootstrap **seeds** the player into the cache, so the gate's own read of
  * them never fetched at mount; thirty seconds later that seed is stale, and the first screen to
  * mount `useCurrentUser()` refetches it — which the gate took for *a read this mount is in the
  * middle of replacing* and answered `pending`, rendering nothing and tearing the authenticated
  * tree down for the length of the round trip. The tree came back with a fresh stack, and a fresh
  * stack opens on the **first route name it holds**, which was `play/index` — so every first press
- * landed on Find a game with ⚡Play lit, whichever column had been pressed.
+ * landed on Play with ⚡Play lit, whichever column had been pressed.
  *
  * `launchSignedIn` never seeded the player, which is why every suite here stayed green while a
  * device did that on every launch. The first test puts the cache the way bootstrap leaves it.
@@ -743,7 +554,7 @@ describe('the shell survives the gate re-reading the player', () => {
     jest.advanceTimersByTime(31_000);
     act(() => {});
 
-    pressTab('Chats');
+    pressTab('You');
 
     await waitFor(() => expect(transport.requestsTo('GET', '/api/v1/users/me')).toHaveLength(1));
     await waitFor(() =>
@@ -753,13 +564,13 @@ describe('the shell survives the gate re-reading the player', () => {
     jest.advanceTimersByTime(50);
     act(() => {});
 
-    expect(screen).toHavePathname('/chats');
-    expect(await screen.findByRole('header', { name: CHATS_COPY.title })).toBeTruthy();
-    expect(screen.queryByRole('header', { name: FIND_A_GAME_TITLE })).toBeNull();
-    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    expect(screen).toHavePathname('/you');
+    expect(await screen.findByRole('header', { name: YOU_COPY.title })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: PLAY_COPY.segment.groups })).toBeNull();
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
   });
 
-  it('opens on Now, never on the first route it happens to list, when rebuilt from nothing', async () => {
+  it('opens on Home, never on the first route it happens to list, when rebuilt from nothing', async () => {
     // The gate genuinely losing its answer is the one way the tree is rebuilt, and the stack it
     // comes back with holds no history — so what it opens on is the initial route, which has to
     // be the tab the gate lands on rather than whichever screen the shell listed first for its
@@ -767,11 +578,11 @@ describe('the shell survives the gate re-reading the player', () => {
     //
     // The re-read is **held open**, for the reason the gate's own suite holds its own: a
     // navigator torn down forgets its state one tick later, and on a device the round trip is
-    // longer than that tick. Answered at once, the stack would come back rehydrated onto Chats
+    // longer than that tick. Answered at once, the stack would come back rehydrated onto You
     // and prove nothing about a stack that holds no history at all.
     await launchIntoTheApp();
-    pressTab('Chats');
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
+    pressTab('You');
+    await waitFor(() => expect(screen).toHavePathname('/you'));
 
     let answerRatings = () => {};
     const held = new Promise<void>((resolve) => {
@@ -800,176 +611,43 @@ describe('the shell survives the gate re-reading the player', () => {
 
     expect(await screen.findByText(HOME_COPY.empty.line)).toBeTruthy();
     expect(screen).toHavePathname('/');
-    expect(screen.queryByRole('header', { name: FIND_A_GAME_TITLE })).toBeNull();
-    expect(screen.getAllByRole('tab')).toHaveLength(5);
+    expect(screen.queryByRole('button', { name: PLAY_COPY.segment.groups })).toBeNull();
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
   });
 });
 
 /**
- * **Two tabs, and the one rule that spans them** — asserted here because the shell is the one
- * feature allowed to read across that boundary, and neither of the two features it names may
- * import the other.
- *
- * *You* now lists what a player has declared per sport and writes it
- * ([#296](https://github.com/Raketa02/Raketa/issues/296)). It must not move the mode Play
- * opens in: the two values have to be able to disagree, which is what ADR-0094's drift
- * backstop is written for, and a declaration edited on another tab quietly re-seeding the
- * segment would leave it nothing to catch.
- */
-describe('what a declaration changed on You does to Play', () => {
-  const PADEL_INTENT = '/api/v1/play-intents/PADEL';
-
-  /**
-   * Which half of the mode segment is on, whichever it is.
-   *
-   * The assertion is *unchanged* rather than *competitive*, and it has to be: `playPreferences`
-   * is scoped to the **process**, so the mode a suite finds is whatever an earlier test in the
-   * same file seeded — and the rule under test is about the value not moving, not about which
-   * value it is.
-   */
-  const selectedMode = () =>
-    (['COMPETITIVE', 'FOR_FUN'] as const).find(
-      (mode) =>
-        screen.getByLabelText(modeControlLabel(mode)).props.accessibilityState?.selected === true,
-    );
-
-  it('leaves the mode the segment is on exactly where it was', async () => {
-    await launchIntoTheApp();
-
-    pressTab('Play');
-    await screen.findByLabelText(modeControlLabel('COMPETITIVE'));
-    const before = selectedMode();
-    expect(before).toBeDefined();
-
-    // Declare the **other** answer, so a segment re-seeded from the declaration would move.
-    const other = before === 'COMPETITIVE' ? 'FOR_FUN' : 'COMPETITIVE';
-    transport.on('PUT', PADEL_INTENT, () =>
-      json<Wire['PlayIntentDeclarationResponse']>({ sport: 'PADEL', intent: other }),
-    );
-
-    pressTab('You');
-    // The declaration is behind its row now (ADR-0179 §2): the row, then the sport, then the
-    // answer.
-    fireEvent.press(
-      await screen.findByLabelText(
-        doorRowLabel(
-          WHAT_KIND_OF_GAME_TITLE,
-          kindOfGameLine([{ sport: 'padel', intent: 'FOR_FUN' }]),
-        ),
-      ),
-    );
-    fireEvent.press(await screen.findByText('Padel'));
-    fireEvent.press(await screen.findByLabelText(declarationOptionLabel(other, 'Padel')));
-    await waitFor(() => expect(transport.requestsTo('PUT', PADEL_INTENT)).toHaveLength(1));
-
-    pressTab('Play');
-    await screen.findByLabelText(modeControlLabel('COMPETITIVE'));
-    expect(selectedMode()).toBe(before);
-  });
-});
-
-/**
- * **The bar stands down inside a conversation, and nowhere else under Chats.** The composer
- * replaces it there so the keyboard and the stream get the whole screen
+ * **The bar stands down inside a booked game's chat, and nowhere else.** The composer replaces it
+ * there so the keyboard and the stream get the whole screen
  * ([#400](https://github.com/Raketa02/Raketa/issues/400)) — and it is *not rendered* rather than
  * hidden, because the bar is a flex sibling of the navigator and a hidden one would still take its
- * height and the bottom inset. The two neighbours are asserted beside it because a `/chats/*`
- * match is the mistake this shape invites: the inbox the room is pushed over and the challenge
- * screen beside it both keep their bar.
+ * height and the bottom inset. The details the room is pushed over keep their bar, which is what a
+ * prefix match under `/booking/…` would get wrong.
  */
-describe('the bar stands down inside a conversation', () => {
-  const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';
-  const ROOM = 'eeeeeeee-0000-4000-8000-000000000005';
-  const CHALLENGE = 'aaaaaaaa-0000-4000-8000-000000000001';
-  const READ_AT = '2026-09-08T12:00:00Z';
-
-  const MEMBERS: Wire['ConversationMemberSchema'][] = [
-    { player_id: GATE_USER.id, name: 'me_' },
-    { player_id: TOMEK, name: 'tomek.p' },
-  ];
-
-  /** One squash challenge addressed to you, with its detail — enough for the screen to draw. */
-  const CHALLENGE_ROW: Wire['ChallengeSchema'] = {
-    challenge_id: CHALLENGE,
-    sport: 'SQUASH',
-    organiser_id: TOMEK,
-    standing: 'AWAITING_ANSWERS',
-    opened_at: '2026-09-08T08:00:00Z',
-    seats: [
-      { side: 'A', player_id: TOMEK, answer: 'ACCEPTED', name: 'tomek.p' },
-      {
-        side: 'B',
-        player_id: GATE_USER.id,
-        answer: null,
-        answer_by: '2026-09-09T08:00:00Z',
-        name: 'me_',
-      },
-    ],
-  };
-
+describe('the bar stands down inside a booked game’s chat', () => {
   const tabs = () => screen.queryAllByRole('tab');
 
-  /** By the start of the name: with a challenge waiting, the column's label carries the count. */
-  async function openChats() {
-    await launchIntoTheApp();
-    fireEvent.press(screen.getByLabelText(/^Chats/));
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-  }
+  it('draws no bar in the room, and draws it again on the way back to the details', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    stubBooking(transport, bookingDetails());
+    stubConversations(transport, [bookedRoomRow()]);
+    stubConversation(transport, bookedRoom());
+    stubEntries(transport, BOOKED_ROOM);
+    await launchSignedIn();
 
-  it('draws no bar in the room, and draws it again on the way back out', async () => {
-    stubConversations(transport, [
-      {
-        conversation_id: ROOM,
-        challenge_id: CHALLENGE,
-        game_id: null,
-        sport: 'PADEL',
-        members: MEMBERS,
-        people: MEMBERS,
-        last_entry: null,
-      },
-    ]);
-    stubConversation(transport, {
-      read_at: READ_AT,
-      conversation_id: ROOM,
-      challenge_id: CHALLENGE,
-      game_id: null,
-      sport: 'PADEL',
-      members: MEMBERS,
-      people: MEMBERS,
-      entries: [],
-    });
-    stubEntries(transport, ROOM);
-    await openChats();
-    expect(tabs()).toHaveLength(5);
+    fireEvent.press(await screen.findByRole('button', { name: HOME_GAME_COPY.openGame }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(tabs()).toHaveLength(3);
+    expect(screen.getByRole('tab', { name: 'Home', selected: true })).toBeTruthy();
 
-    fireEvent.press(await screen.findByLabelText(/^tomek\.p/));
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
 
-    await waitFor(() => expect(screen).toHavePathname(`/chats/conversation/${ROOM}`));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
     expect(tabs()).toHaveLength(0);
 
     act(() => router.back());
 
-    await waitFor(() => expect(screen).toHavePathname('/chats'));
-    expect(tabs()).toHaveLength(5);
-  });
-
-  it('keeps the bar on the challenge screen, which is under the same tab', async () => {
-    stubChallenges(transport, [CHALLENGE_ROW], READ_AT);
-    transport.on('GET', `${CHALLENGES_PATH}/${CHALLENGE}`, () =>
-      json<Wire['ChallengeDetailResponse']>({ read_at: READ_AT, ...CHALLENGE_ROW }),
-    );
-    await openChats();
-
-    fireEvent.press(await screen.findByLabelText(/^tomek\.p, Squash/));
-
-    await waitFor(() => expect(screen).toHavePathname(`/chats/challenge/${CHALLENGE}`));
-    expect(tabs()).toHaveLength(5);
-    expect(tabs().map((tab) => tab.props.accessibilityState?.selected)).toEqual([
-      false,
-      false,
-      false,
-      true,
-      false,
-    ]);
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(tabs()).toHaveLength(3);
   });
 });

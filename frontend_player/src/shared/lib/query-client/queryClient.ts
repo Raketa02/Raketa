@@ -65,18 +65,17 @@ export function createQueryClient(): QueryClient {
         // retry of "book this court" is a double booking. See Part 4.
         retry: false,
         // Paused while offline and resumed on reconnect, which is what nearly every
-        // mutation in this app wants — including Play's deck, whose pass is an
-        // append-only row with no deadline, so a queue of them draining on reconnect is
-        // the behaviour you want.
+        // mutation in this app wants — a deck's answer, a message, a saved limit: a queue
+        // of them draining on reconnect is the behaviour you want.
         //
-        // **One feature overrides this**, and the asymmetry is deliberate:
-        // `features/challenges/` sets `networkMode: 'always'` on every act it makes,
-        // because a challenge's answer window is derived *at the act*, so a tap deferred
-        // to the next reconnect would carry a deadline the player did not choose. The
-        // test is *does this act carry a deadline the player chose*, never the HTTP verb
-        // — see `features/challenges/hooks/challengeMutationOptions.ts`. Written here as
-        // well as there, because two values for one option, left unexplained, is
-        // something the next reader unifies.
+        // **The acts that cannot wait override this**, and the asymmetry is deliberate: a
+        // yes that can book a game and charge everybody on it, and each step of the payment
+        // setup, set `networkMode: 'always'` (`proposals`' `useFillWrites`, `payments`'
+        // `usePaymentSetup`), because one landing on a reconnect the player never saw is
+        // worse than a sentence saying it did not go. The test is *may this act happen at a
+        // moment the player did not choose*, never the HTTP verb. Written here as well as
+        // there, because two values for one option, left unexplained, is something the next
+        // reader unifies.
         networkMode: 'online',
       },
     },

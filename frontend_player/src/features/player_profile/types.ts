@@ -41,28 +41,14 @@ export type { Gender, GenderPreference } from './domain/gender';
 export { useSocialStepAdmission, type SocialStepAdmission } from './hooks/useSocialStepAdmission';
 
 /**
- * **The profile surface Play reads, and the two writes beside it.**
- *
- * One read of the week, the radius and the per-sport declaration
- * ([#246](https://github.com/Raketa02/Raketa/issues/246)), and one unkeyed `PUT` per fact.
- * They are this feature's rather than Play's because the writes are:
- * [`the-play-screens.md`](../../../../docs/specs/matchmaking/the-play-screens.md) §0 calls
- * them *"two writes that are not matchmaking's at all"*, and a read whose paired writes live
- * elsewhere is a read in the wrong feature. *You* will draw the same three facts.
- *
- * `useDeclarePlayIntent` is the one-tap interstitial's, which ADR-0094 calls *"permanent, not
- * a migration path"*: a searcher with a rating and no declaration is gated by it, and that is
- * what makes every searcher having declared true rather than intended.
+ * **The one-tap declaration's write** — the Games deck's interstitial asks it
+ * ([ADR-0094](../../../../docs/adr/0094-play-intent-declared-per-sport-in-its-own-aggregate.md): *"permanent,
+ * not a migration path"*). The profile surface's read and its other writes were Play's too,
+ * until the old loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)); You
+ * reads and writes them inside this feature.
  */
-export type { PlayerProfileSurface, PlayIntentDeclarations } from './domain/PlayerProfileSurface';
 export type { PlayIntentSurface } from './api/playerProfileApi';
-export type { PlayIntentDeclaration } from './use-cases/declarePlayIntent';
-export {
-  useChangeWeeklyHours,
-  useChangeSearchRadius,
-  useDeclarePlayIntent,
-  useProfileSurface,
-} from './hooks/useProfileSurface';
+export { useDeclarePlayIntent } from './hooks/useProfileSurface';
 
 /**
  * **The location moves on a cold start** — silently, after a day in the background, never on
@@ -139,47 +125,3 @@ export {
   weekLine,
   whoYouPlayWithLine,
 } from './components/youProfilePresentation';
-
-/**
- * The bounds a Search radius is held inside, and the words the figure is read with.
- *
- * Exported because **Play edits the same number against the same rules**, which is this
- * feature's founding argument in the direction it was written for: *"the profile editor will
- * obey these rules from a screen that looks nothing like this one."* The onboarding step was
- * the first such screen and Find a game is the second — the served minimum, maximum, step and
- * default are product's to retune, so a second copy of the snapping anywhere would be a
- * staler one in builds already on phones.
- */
-export { useProfileOptions } from './hooks/useProfileOptions';
-export {
-  openingRadius,
-  radiusAtFraction,
-  radiusFraction,
-  steppedRadius,
-  topOfScale,
-  type SearchRadiusBounds,
-} from './domain/searchRadius';
-export {
-  RADIUS_LABEL,
-  radiusFigure,
-  radiusWords,
-  spokenRadius,
-  widestRadiusFigure,
-} from './components/radiusPresentation';
-
-/**
- * The week's two spellings, exported for the weeks Play meets that this feature does not own:
- * the search's `availability_override` on the way out, and the week a raised
- * `KEEP_THESE_TIMES` quotes back on the way in.
- *
- * `sport.ts`'s rule is the shape — *the two spellings meet in `mappers/`, and only there* —
- * so this is a re-export rather than a second table in `play/mappers/`, which would be the
- * drift `week.ts` was promoted to stop arriving one layer lower.
- *
- * **There is no third spelling.** A raised `KEEP_THESE_TIMES` used to carry the week as the
- * joined codes the event stream stores, and this feature owned a `toWeekFromCodes` that split
- * them; the contract now sends the same `WeeklyHourResource` every other week on the
- * wire does, so `toWeeklyHours` reads that one too and no client parses our persistence format
- * ([#286](https://github.com/Raketa02/Raketa/issues/286)).
- */
-export { toWeeklyHours, toWireWeeklyHours } from './mappers/playerProfileMappers';

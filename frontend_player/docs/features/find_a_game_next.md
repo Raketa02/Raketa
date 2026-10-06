@@ -8,12 +8,12 @@
 ([#479](https://github.com/Raketa02/Raketa/issues/479),
 [ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
 §7). Find a game is about to be rebuilt, and the rebuild needs somewhere to live while the current
-one keeps working. `FindAGameNextScreen` is what the Play tab's root draws while `find_a_game` is
+one keeps working. `FindAGameNextScreen` was what the Play tab's root drew while `find_a_game` was
 off: the app's `paper` ground and nothing else, under the shell's tab bar. **No copy** — nothing
 says _coming soon_, because there is no promise to make yet and a sentence written now is one the
-rebuild would inherit without anybody deciding it. It is its own feature rather than a file in
-`features/play` so the new version grows in a folder that never held the old one, and retiring the
-old one later is deleting a folder; it carries the full layer set, empty, for that reason.
+rebuild would inherit without anybody deciding it. It is its own feature rather than a file in the
+old Play feature so the new version grows in a folder that never held the old one, and retiring the
+old one was deleting a folder (#576); it carries the full layer set, empty, for that reason.
 `FIND_A_GAME_NEXT_TEST_ID` is exported because a screen with nothing on it has nothing else a suite
 could find it by. **Seen on a device on 2026-09-23.**
 
@@ -28,3 +28,7 @@ for it sits under the name it will have. Still no copy, for the reason above, an
 **Behind `classic_play` now** ([#550](https://github.com/Raketa02/Raketa/issues/550)). The flag
 that decides whether Play › Explore draws this screen or the old Find a game is the old loop's one
 flag; nothing about the screen changed.
+
+**No flag decides it any more** ([#576](https://github.com/Raketa02/Raketa/issues/576)). The old
+Find a game and the flag that could bring it back are gone, so Play › Explore is this screen
+always, still empty, until the rebuilt Find a game grows here.

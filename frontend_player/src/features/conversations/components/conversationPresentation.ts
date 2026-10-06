@@ -1,30 +1,15 @@
 /**
- * **What a conversation says** — the nine system-line sentences, the section's name, the line a
- * row draws, and every word on the screen behind it.
+ * **What a conversation says** — the system-line sentences, and every word on the room's screen.
  *
  * The words are the client's because a code is all that crosses
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §23,
- * [ADR-0146](../../../../../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md)).
- * §22 assigns this file §23 by **vocabulary owner** rather than by screen: the tab's own
- * sentences are the shell's, the plan's are `planPresentation.ts`'s — **including §22.4's quick
- * chips**, which lived here until there was a `features/plans` to hold them
- * ([#366](https://github.com/Raketa02/Raketa/issues/366)) — and what happened in a room is this
- * feature's.
+ * [ADR-0146](../../../../../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md)),
+ * and what happened in a room is this feature's.
  *
- * ## One module, two surfaces, and the difference is a prop
- *
- * The Chats row draws `last_entry`, which is one of the same two shapes the stream draws, and it
- * renders **through this module rather than a second copy** — a row that formatted a system line
- * its own way is the drift a shared presentation module exists to prevent, and it would be found
- * the first time a code gained a value
- * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §2.2).
- * What the row does differently is a **prop**: {@link LineRoom}, and nothing else.
- *
- * **The prop exists because *when it does not fit* is not something a copy deck can measure.**
- * #335's answer to a system line overflowing a Chats row is *a shorter value, not a second line*
- * — one rule for both row kinds instead of two — and the value it names is the place, drawn
- * without the court. So how much room there is arrives as an argument: a row has one line and
- * asks for the short place, and a stream has the width and prints what somebody typed.
+ * It wrote the Chats tab's rows too — the last entry on one line, a place drawn without its court —
+ * until that tab was removed with the old loop ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+ * The plan's lines (*set the place*, *locked the plan*) stay in the table below although no room
+ * writes them any more: a stored line still folds, and a code with no words would not compile.
  *
  * ## `{name}` comes from the people the response names, and never from `values`
  *
@@ -39,9 +24,8 @@
  *
  * ## A line this build cannot read is a named gap, and so is one whose values it cannot read
  *
- * §3 owes a **named gap** wherever the code *is* the content, and here it is: a row's second line
- * is the last entry and nothing else, so a dropped sentence is a blank slot rather than a shorter
- * list. **The same answer covers an unreadable value**, and that is one rule rather than two: a
+ * §3 owes a **named gap** wherever the code *is* the content, and here it is: a system line is
+ * its sentence and nothing else, so a dropped one is a blank slot rather than a shorter list. **The same answer covers an unreadable value**, and that is one rule rather than two: a
  * `SEAT_LEFT` whose departure this build has no word for, or a `DAY_RECORDED` whose value is not
  * a calendar date, leaves exactly the same nothing behind as a code with no sentence. Guessing —
  * *that seat is open again* with no answer, a raw `2026-13-40` — would be the app stating a fact
@@ -73,44 +57,29 @@ import { weekdayOf } from '@/shared/date/platformZone';
 import { counted } from '@/shared/formatting/counted';
 import { handleLine } from '@/shared/formatting/handleList';
 import { sentenceList } from '@/shared/formatting/sentenceList';
-import { placeWithoutTheCourt } from '@/shared/formatting/placeName';
 import { handleStem, playerName } from '@/shared/formatting/playerName';
 import { dayName } from '@/shared/vocabulary/availabilityPresentation';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 
-import type { Conversation } from '../domain/conversation';
 import type { LiveState } from '../domain/liveState';
 import {
   departureOf,
   invitedCount,
-  type Entry,
   type EntryValues,
   type SystemLine,
   type SystemLineCode,
 } from '../domain/entry';
 import {
-  personName,
   personNamed,
   type ConversationMember,
   type ConversationPerson,
 } from '../domain/membership';
-import type { RoomEnding } from '../domain/roomOver';
-
-/**
- * How much room the surface drawing this line has — **the whole of what the row does
- * differently.**
- *
- * `one-line` is a Chats row: one line, tail-truncated, and a place drawn without its court.
- * `full` is the stream, which has the width and prints the value as it was typed.
- */
-export type LineRoom = 'one-line' | 'full';
 
 /** Everything a sentence in the table below is allowed to read. */
 interface SystemLineFacts {
   /** The actor, already named off `people`. Never *You*, and never read from `values`. */
   readonly name: string;
   readonly values: EntryValues;
-  readonly room: LineRoom;
 }
 
 /**
@@ -151,12 +120,8 @@ const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => s
 
   GAME_PLAYED: ({ name }) => `${name} said you played`,
 
-  PLACE_RECORDED: ({ name, values, room }) => {
-    const place = values.value;
-    return place === undefined
-      ? OUT_OF_DATE_GAP
-      : `${name} set the place · ${room === 'one-line' ? placeWithoutTheCourt(place) : place}`;
-  },
+  PLACE_RECORDED: ({ name, values }) =>
+    values.value === undefined ? OUT_OF_DATE_GAP : `${name} set the place · ${values.value}`,
 
   DAY_RECORDED: ({ name, values }) => {
     const day = values.value === undefined ? undefined : weekdayOf(values.value);
@@ -175,89 +140,30 @@ const SYSTEM_LINE: Readonly<Record<SystemLineCode, (facts: SystemLineFacts) => s
   SIDE_FORMED: () => SIDE_FORMED_LINE,
 };
 
-/**
- * One system line, as a sentence — the stream's and the row's, keyed by code.
- *
- * Exported because the stream draws it directly ([#364](https://github.com/Raketa02/Raketa/issues/364));
- * the row reaches it through {@link entryLine}, which is the same call with the message arm in
- * front of it.
- */
+/** One system line, as a sentence — the stream's, keyed by code ([#364](https://github.com/Raketa02/Raketa/issues/364)). */
 export function systemLineSentence(
   line: SystemLine,
   people: readonly ConversationPerson[],
-  room: LineRoom,
 ): string {
   if (line.code === undefined) return OUT_OF_DATE_GAP;
 
   return SYSTEM_LINE[line.code]({
     name: playerName(personNamed(people, line.actorId)),
     values: line.values,
-    room,
   });
 }
-
-/**
- * What one entry says — **a message as its text, a system line from its code and values.**
- *
- * A message is drawn as the words somebody typed and nothing else: there is no copy in that arm,
- * which is why the author is not in it. On a bubble the handle is a **label beside** the text and
- * conditional on the room having more than two members; on a row it is already in the handle line
- * above, and repeating it would name the same person twice in two type roles.
- */
-export function entryLine(
-  entry: Entry,
-  people: readonly ConversationPerson[],
-  room: LineRoom,
-): string {
-  return entry.kind === 'message' ? entry.text : systemLineSentence(entry, people, room);
-}
-
-/**
- * **The conversation row's line**, or nothing where the room has no history.
- *
- * `undefined` rather than a sentence, because there is no true one to write: the opening writes no
- * line, so a room whose first acceptance is its whole history has genuinely had nothing happen in
- * it — and *nothing has happened yet* is the assertion both sections of this tab refuse. The row
- * draws its sport alone and says nothing more, which is the same answer 10.1's empty-state rule
- * gives one level up.
- *
- * **The row asks for it twice**, which is what {@link LineRoom} is for: `one-line` for the eye and
- * `full` for the spoken name, because §20.4 is *"the visible label truncates, the spoken one never
- * does"* and a place drawn without its court is exactly that truncation one register over.
- */
-export function conversationRowLine(
-  conversation: Conversation,
-  room: LineRoom,
-): string | undefined {
-  return conversation.lastEntry === undefined
-    ? undefined
-    : entryLine(conversation.lastEntry, conversation.people, room);
-}
-
-/**
- * The section's own name, and **it carries no count**.
- *
- * The badge is the only number on this screen ([#326](https://github.com/Raketa02/Raketa/issues/326)
- * §6), and it counts unanswered challenges addressed to you — a second number beside it counting
- * rooms would be two numbers meaning different things on one screen, which is that record's own
- * named failure.
- *
- * Stored as a word rather than as `CONVERSATIONS`: the heading is uppercased by 3.3's `eyebrow`
- * role, and a listener should hear a section name rather than a shout.
- */
-export const CONVERSATIONS_HEADING = 'Conversations';
 
 /**
  * What the screen is called **before it knows who is in it.**
  *
  * The header's real title is the handles, which is a fact off the read — so this is the word over
  * the three states that have no room to name: the read is still coming, it failed, or no room of
- * yours has that address. `ChallengeScreen` holds the same constant for the same three.
+ * yours has that address.
  */
 export const CONVERSATION_SCREEN_TITLE = 'Conversation';
 
 /**
- * **One sentence for three states**, exactly as the challenge screen's is.
+ * **One sentence for three states.**
  *
  * `conversation_not_found` is one code for three cases — there is no such room, there is one and
  * you are not in it, or it is past its end whether or not the sweep has run
@@ -306,20 +212,14 @@ export function headerTitle(handles: readonly string[], budget: number): string 
 export const WAITING_FOR_OTHERS = 'Waiting for others to join';
 
 /**
- * **The second line — the sport, and the game's state where there is a game.**
+ * **The second line — the sport, and where the game stands.**
  *
- * `Padel · planning`: the state is the Now card's own name in lower case, `features/plans`'
- * `cardStateWord`, so the chat says where the game actually stands without a trip back to Now.
- * It is the four-rung client-side ladder and its endings, folded from data the screen already
- * holds — **not** the twenty-state standing ADR-0148 §6 refused on a conversation row, and
- * [ADR-0157](../../../../../docs/adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)
- * says why that is a different thing.
- *
- * **A room with no game draws the sport alone.** `game_id` is nullable, a `LINE_UP_INCOMPLETE`
- * room has no game — a plan, since ADR-0164, but no rung to name — and that is the same nothing
- * the absent *Details* door draws from the same field; no state is drawn for it and none is
- * invented. The same is true while the
- * games list is still coming, and for a standing this build cannot name.
+ * `Padel · booked`: the booking's own word in lower case, handed in by the booked game's chat, so
+ * the room says where the game stands without a trip back to its details — the word the player
+ * already reads on the game's card, and **not** the twenty-state standing ADR-0148 §6 refused
+ * ([ADR-0157](../../../../../docs/adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)
+ * says why that is a different thing). With no word, the line is the sport alone, and none is
+ * invented.
  */
 export function headerSubline(sportName: string, state: string | undefined): string {
   return state === undefined ? sportName : `${sportName}${LINE_JOIN}${state}`;
@@ -329,23 +229,12 @@ export function headerSubline(sportName: string, state: string | undefined): str
 const LINE_JOIN = ' · ';
 
 /**
- * **The door to the game**, and the visible half of it is the design's word.
- *
- * Drawn only where there is a game: a `LINE_UP_INCOMPLETE` room has no game, so there is
- * nothing to open and **no door is drawn rather than a dead one** — its plan is on the card
- * pinned under this header. The spoken half is
- * `conversationAccessibility.ts`', and the two differ on purpose.
- */
-export const DETAILS = 'Details';
-
-/**
  * **The chat door, wherever it is drawn** — *"the same words as every other chat door"*
  * ([`the-words.md`](../../../../../docs/specs/matchmaking/the-words.md) §24.5).
  *
  * It lives here rather than in the feature that draws it, because what it opens is a
- * conversation and three surfaces will draw it: the challenge screen's half-built court is the
- * first, and the game screen's planning arms and Now's ✉ are the other two. One constant is what
- * makes *the same words* true by construction rather than by three people remembering.
+ * conversation: a booked game's details draw it today, and one constant is what makes *the same
+ * words* true by construction wherever the next one is drawn.
  */
 export const OPEN_THE_CHAT = 'Open the chat';
 
@@ -445,23 +334,13 @@ const TYPISTS_NAMED_UP_TO = 2;
  * **The chat has ended, and the room is still on screen** — §22.5's fourth state, one sentence
  * in the composer's place ([#429](https://github.com/Raketa02/Raketa/issues/429)).
  *
- * It names who left where the room can say so (`domain/roomOver.ts` says when it can), in the
- * words the stream's own line would have used — *{name} left* is §23's — and finishes with what
- * the room can no longer do. It does **not** say *that seat is open again*, because it is not:
- * the court is over. Where the reader was alone the sentence says the other true thing, that
- * nobody else is coming; and a room with a game says only that the chat has ended, because why
- * is the game card's to say.
+ * A booked game's room ends with its game — the grace after its hour running out, or the game
+ * called off — and why is the game's card to say, so the room says only that the chat has ended.
+ * It named who had left, or that nobody else was coming, in the old loop's rooms, which could end
+ * before they had a game; no room can since that loop was removed
+ * ([#576](https://github.com/Raketa02/Raketa/issues/576)).
  *
  * The register is a fact, not a warning and not a refusal: nothing here is reversible and nothing
  * was refused, so it is neither amber nor coral.
  */
-export function roomOverLine(ending: RoomEnding): string {
-  switch (ending.kind) {
-    case 'they-left':
-      return `${sentenceList(ending.members.map((member) => playerName(personName(member))))} left — this chat has ended.`;
-    case 'nobody-else-coming':
-      return 'Nobody else is coming — this chat has ended.';
-    case 'ended':
-      return 'This chat has ended.';
-  }
-}
+export const ROOM_OVER_LINE = 'This chat has ended.';

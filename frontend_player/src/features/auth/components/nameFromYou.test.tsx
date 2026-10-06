@@ -22,7 +22,6 @@ import {
   GATE_USER,
   launchSignedIn,
   stubGate,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
@@ -64,7 +63,6 @@ beforeEach(async () => {
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
 });
 

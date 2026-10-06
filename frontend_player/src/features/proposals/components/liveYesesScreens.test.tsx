@@ -36,7 +36,6 @@ import {
   launchSignedIn,
   resetPayments,
   stubGate,
-  stubInterest,
   stubLiveYeses,
   stubOwnRecord,
   stubPaymentMethod,
@@ -83,7 +82,6 @@ beforeEach(() => {
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
   stubPayments(fakePayments());
   stubPaymentMethod(transport, VISA_4312);

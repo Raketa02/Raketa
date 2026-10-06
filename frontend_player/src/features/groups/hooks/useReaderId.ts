@@ -1,6 +1,6 @@
 /**
  * **Who is reading the page** — the signed-in player's id, read from the cache once, as
- * `usePlaySegment` and `useFeatureOnMount` read it, and never observed: an observer would refetch
+ * `usePlaySegment` reads it, and never observed: an observer would refetch
  * `/users/me` on every entry once it was stale. The entry gate has always read the player before
  * a tab can mount, and the account cannot change under a mounted page — a sign-out tears the tree
  * down.

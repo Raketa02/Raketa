@@ -27,7 +27,6 @@ import {
   resetImagePicking,
   stubGate,
   stubImagePicking,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
@@ -126,7 +125,6 @@ beforeEach(() => {
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
   stubAddresses();
   library = fakeImagePicking({

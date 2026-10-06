@@ -23,14 +23,11 @@
  * ## The split is resumption, never the HTTP verb
  *
  * `networkMode: 'online'` **pauses** rather than fails, so nearly everything in this app
- * resumes on reconnect and can say so. `features/challenges/` overrides that and therefore
- * cannot, for the reason written at its own site
- * (`features/challenges/hooks/challengeMutationOptions.ts`), which is where that argument lives
- * rather than here. That is the whole distinction, and it is one distinction — hence exactly
- * two values.
- *
- * Mapping it onto GET-versus-POST gets it wrong: the line-up **forecast is a `POST` that
- * pauses**, and it takes the first sentence.
+ * resumes on reconnect and can say so. The acts that override that — a yes that can book a game
+ * and charge everybody on it, and the payment setup's steps — cannot, for the reasons written at
+ * their own sites (`proposals`' `useFillWrites`, `payments`' `usePaymentSetup`); and a departure is
+ * not sent offline at all, its sheet closing the control. That is the whole distinction, and it is one distinction — hence exactly two values. Mapping it onto
+ * GET-versus-POST gets it wrong: the verb says nothing about whether an act may wait.
  */
 
 /** Does this act come back by itself when the connection does? */
@@ -38,15 +35,16 @@ export type Resumption = 'resumes' | 'does-not-resume';
 
 const BY_RESUMPTION: Readonly<Record<Resumption, string>> = {
   /**
-   * Everything the global `networkMode: 'online'` holds — every read, and every mutation but
-   * one. It really will run itself on reconnect, which is why the sentence promises it.
+   * Everything the global `networkMode: 'online'` holds — every read, and every mutation that
+   * does not override it. It really will run itself on reconnect, which is why the sentence
+   * promises it.
    */
   resumes: "You're offline. This will load as soon as you're back.",
   /**
-   * The send, and only the send. A challenge's answer window is derived **at send**, so a tap
-   * deferred to the next reconnect would carry a deadline the player did not choose — the tap
-   * and the send have to be one moment. It fails now, and the sentence says so rather than
-   * promising a queue that does not exist.
+   * An act that has to happen when it is pressed or not at all — a yes that books, a step of the
+   * payment setup, a departure the sheet will not send offline — so a tap deferred to the next
+   * reconnect would land at a moment the player did not choose. It fails now, and the sentence says so rather than promising a
+   * queue that does not exist.
    */
   'does-not-resume': "You're offline. This can't be sent until you're back.",
 };

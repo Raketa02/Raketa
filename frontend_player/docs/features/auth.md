@@ -81,13 +81,10 @@ fade. `onSaved` is optional: the naming step still passes `router.replace('/')`,
 passes nothing, and the way back is the header's. `nameFromYou.test.tsx` walks it. **Not seen
 on a device**: the boxes re-drawn from the re-read under a green button.
 
-**The signed-in player carries the tester mark, and nothing in the app branches on it**
-([#479](https://github.com/Raketa02/Raketa/issues/479), [ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §9). `/users/me` gained a
-required `is_tester` (#478), and `AuthenticatedUser.isTester` carries it where `is_admin` is still
-dropped — for the opposite reason: it grants nothing. Its one reader is flag evaluation, which
-sends it as the `isTester` attribute so the flags repo's `testers` segment can reach a player
-without the public datafile ever naming one. A screen that drew differently for a tester would be
-the second, unreviewed flag system the ADR exists to prevent.
+**The tester mark is not read** ([#576](https://github.com/Raketa02/Raketa/issues/576)). It was
+carried as `AuthenticatedUser.isTester` for one reader, feature-flag evaluation (#479, ADR-0180
+§9), which left with the flags. `/users/me` still sends `is_tester` until the backend drops it
+(#581), and the mapper drops it as it drops `is_admin`.
 
 **_Forgot password?_ is four screens and a toast, made of the sign-in screen's pieces**
 ([#515](https://github.com/Raketa02/Raketa/issues/515),

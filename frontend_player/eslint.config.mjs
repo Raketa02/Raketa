@@ -125,15 +125,6 @@ const pushImport = {
     'a test. See #559.',
 };
 
-const featurevisorImport = {
-  group: ['@featurevisor/*'],
-  message:
-    'Only src/features/feature_flags/api/featurevisor.ts may import the Featurevisor SDK. A gate ' +
-    'asks useFeatureOnMount from @/features/feature_flags/types; one module holding the SDK is ' +
-    'what keeps its instance, its major and what a silent datafile means in one place — and ' +
-    'the flags repo pins its CLI major to this one. See docs/adr/0180 §5, §10.',
-};
-
 const observabilityVendorImports = {
   group: ['@sentry/*', 'posthog-*', '@amplitude/*', 'mixpanel-*'],
   message:
@@ -154,68 +145,12 @@ const featureImportsFromShared = {
     'src/shared/ must never import a feature — that reverses the dependency arrow and couples every future feature to this one. See docs/architecture.md Part 1.',
 };
 
-/**
- * `features/games` never learns a plan exists — the one **one-way** edge between two features.
- *
- * [ADR-0145](../docs/adr/0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §4
- * made *"`games` importing the Plan"* the **checkable** statement of ADR-0137's scoping, and
- * [ADR-0149](../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
- * §1 carried it onto the client: `features/plans` may import `features/games`, and *"if
- * `features/games` ever imports `features/plans`, the clause is broken — a grep, not a
- * judgement."* This is that grep, and `pnpm test:boundaries` is what proves it still fires.
- *
- * It is one direction and not a wall: the card is composed at the **surface**, so the plan
- * renders **into** the game screen as a child and neither type crosses.
- */
-const planImportFromGames = {
-  group: ['@/features/plans', '@/features/plans/**', '**/features/plans/**', '../../plans/**'],
-  message:
-    'features/games must never import features/plans. A plan is composed at the surface and ' +
-    'renders into the game screen as a child, so games never learns a plan exists — that is ' +
-    'the client half of ADR-0145 §4, kept checkable by ADR-0149 §1. The arrow runs the other ' +
-    'way: features/plans may import features/games.',
-};
-
-/**
- * **The old loop — Players, Chats, Find a game, challenges and plans — is fenced while it is taken
- * out** ([#569](https://github.com/Raketa02/Raketa/issues/569)).
- *
- * Its three features are deleted whole by [#576](https://github.com/Raketa02/Raketa/issues/576),
- * and a whole-folder delete is only safe if nothing that ships reaches into one of them. So every
- * piece the new games share was moved out first — the deck's stage and the yes screen's parts to
- * `features/proposals`, the level row to `features/games`, the seat face to `shared/ui`, the seat
- * and balance words to `shared/vocabulary` ([#574](https://github.com/Raketa02/Raketa/issues/574))
- * — and this ban keeps it that way: **nothing imports `features/play`, `features/challenges` or
- * `features/plans` except those three and `OLD_LOOP_SURFACES` below**, the old loop's own screens
- * and the parts of live screens #576 deletes with it. A new edge into the old loop is a file that list does not name,
- * which is the point: the list is #576's inventory, and it can only shrink.
- */
-const OLD_LOOP_FEATURES = ['play', 'challenges', 'plans'];
-
-const oldLoopImports = {
-  group: OLD_LOOP_FEATURES.flatMap((feature) => [
-    `@/features/${feature}`,
-    `@/features/${feature}/**`,
-    `**/features/${feature}/**`,
-    // The relative climbs out of a feature, from its layer folders and from one folder below.
-    `../../${feature}/**`,
-    `../../../${feature}/**`,
-  ]),
-  message:
-    'Nothing that ships imports features/play, features/challenges or features/plans — the old ' +
-    'loop #569 removes, which #576 deletes whole. A piece the new games share lives with them: ' +
-    "the deck's stage, the yes screen's parts and the leave sheet in features/proposals, the level " +
-    'row in features/games, the seat face in src/shared/ui, the seat and balance words in ' +
-    'src/shared/vocabulary (#574). See OLD_LOOP_SURFACES in eslint.config.mjs.',
-};
-
 const asyncStoragePath = {
-  // Tokens belong in the OS keychain, not in JS-readable storage. The two exemptions are files,
-  // not directories: one holds a public datafile, the other three choices a player made — see
-  // their blocks below.
+  // Tokens belong in the OS keychain, not in JS-readable storage. The one exemption is a file,
+  // not a directory: it holds the choices a player made — see its block below.
   name: '@react-native-async-storage/async-storage',
   message:
-    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importers are src/features/feature_flags/api/datafileCache.ts, which keeps the public feature-flag datafile (docs/adr/0180 §6), and src/shared/lib/preferences/phonePreferences.ts, which keeps the per-account choices ADR-0188 lists (docs/adr/0188); a third need joins that allow-list by decision, not by import.',
+    'AsyncStorage is unencrypted: never store credentials in it — use expo-secure-store through src/shared/lib/auth (docs/adr/0008). Its only importer is src/shared/lib/preferences/phonePreferences.ts, which keeps the per-account choices ADR-0188 lists (docs/adr/0188); a second need joins that allow-list by decision, not by import.',
 };
 
 /**
@@ -245,18 +180,10 @@ const CORE_PATTERNS = [
   clipboardImport,
   stripeImport,
   pushImport,
-  featurevisorImport,
   observabilityVendorImports,
-  oldLoopImports,
 ];
 
-/**
- * The two layers that stay pure TypeScript, as constants rather than as an inline literal.
- *
- * Named because a second block now needs exactly this set plus one ban — `features/games`' own —
- * and a re-listing there is how the exemptions above go quietly out of date, which is the failure
- * `sharedPatternsExcept` was written against one section down.
- */
+/** The two layers that stay pure TypeScript, as constants rather than as an inline literal. */
 const PURE_PATTERNS = [
   ...CORE_PATTERNS,
   generatedImports,
@@ -309,8 +236,8 @@ const fontWeightProperty = {
 const SYNTAX_BANS = [literalHexColour, literalFunctionalColour, fontWeightProperty];
 
 /**
- * Every `Pressable` under `features/play/`, `features/games/` and `features/proposals/` names
- * itself, or says it is hidden.
+ * Every `Pressable` under `features/games/` and `features/proposals/` names itself, or says it is
+ * hidden.
  *
  * `the-words.md` §20.12 books **two** gates over this contract, and this is the half a type
  * cannot give. Label coverage is already a compile error — §1's copy tables are `Record`s
@@ -353,7 +280,7 @@ const pressableNeedsAName = {
     `${unnamedPressable}:not(:has(> JSXAttribute[name.name='importantForAccessibility']))`,
   ].join(', '),
   message:
-    "Every Pressable in features/play/, features/games/ and features/proposals/ carries an accessibilityLabel, or hides itself explicitly with accessibilityElementsHidden AND importantForAccessibility — one of the two hides it on one platform only. The sentence is never written here: compose it from the-words.md §20 through that feature's own accessibility presentation. See the-words.md §20.12.",
+    "Every Pressable in features/games/ and features/proposals/ carries an accessibilityLabel, or hides itself explicitly with accessibilityElementsHidden AND importantForAccessibility — one of the two hides it on one platform only. The sentence is never written here: compose it from the-words.md §20 through that feature's own accessibility presentation. See the-words.md §20.12.",
 };
 
 /** Every ban that applies to a file under `src/shared/`, which is the strictest set. */
@@ -374,63 +301,6 @@ const SHARED_PATTERNS = [...CORE_PATTERNS, generatedImports, featureImportsFromS
  */
 const sharedPatternsExcept = (...exemptions) =>
   SHARED_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
-
-/** The same subtraction over a feature's wire layer, whose baseline is `CORE_PATTERNS`. */
-const corePatternsExcept = (...exemptions) =>
-  CORE_PATTERNS.filter((pattern) => !exemptions.includes(pattern));
-
-/** Any block's set, minus the old loop's fence — for the old loop and `OLD_LOOP_SURFACES` alone. */
-const withoutOldLoop = (patterns) => patterns.filter((pattern) => pattern !== oldLoopImports);
-
-/**
- * **The live files that still reach the old loop**, each of them a part of it that
- * [#576](https://github.com/Raketa02/Raketa/issues/576) deletes or rewrites — and nothing else.
- *
- * Files, not folders: an exemption one directory wide is how a new import into the old loop would
- * arrive unseen beside an old one. The two route folders below are the one exception: every file
- * in them is an old screen's route, and #576 deletes both whole.
- */
-const OLD_LOOP_SURFACES = [
-  // The old loop's own routes: Players, Find a game behind the flag, its builder and pool, a
-  // challenge with its yes screen and fill, and the old game screen.
-  'src/app/(app)/(tabs)/players.tsx',
-  'src/app/(app)/(tabs)/play/index.tsx',
-  'src/app/(app)/(tabs)/play/builder.tsx',
-  'src/app/(app)/(tabs)/play/pool.tsx',
-  'src/app/(app)/(tabs)/chats/challenge/**',
-  'src/app/(app)/(tabs)/games/**',
-  // The shell's Chats tab, the bar's Chats and Home badges, Home's old rail, and the Play session
-  // a shell reset ends.
-  'src/features/shell/components/ChatsScreen.tsx',
-  'src/features/shell/components/TabShell.tsx',
-  'src/features/shell/components/tabScreens.tsx',
-  'src/features/shell/components/shellNavigation.ts',
-  // The chat's room plan, its quick chips, and the details door into the old game screen.
-  'src/features/conversations/components/Composer.tsx',
-  'src/features/conversations/components/ConversationGameDetails.tsx',
-  'src/features/conversations/components/ConversationScreen.tsx',
-  'src/features/conversations/components/QuickChips.tsx',
-  'src/features/conversations/hooks/useLiveConversation.ts',
-];
-
-/** The same, in a pure layer — the room's line-up type, which the room plan's card reads. */
-const OLD_LOOP_PURE_SURFACES = ['src/features/conversations/domain/room.ts'];
-
-/** The old game's dismissal — one file in `features/games`, so it keeps that feature's own ban. */
-const OLD_LOOP_GAMES_SURFACES = ['src/features/games/hooks/useDismissGame.ts'];
-
-/** The suites that walk those parts, and the flag's suite that #576 deletes with the flag. */
-const OLD_LOOP_SUITES = [
-  'src/features/shell/components/theShell.test.tsx',
-  'src/features/conversations/components/conversationPresentation.test.ts',
-  'src/features/conversations/components/conversationScreen.test.tsx',
-  'src/features/conversations/components/roomLiveness.test.tsx',
-  'src/features/feature_flags/components/theClassicPlayGate.test.tsx',
-];
-
-/** `src/features/{play,challenges,plans}/<rest>` for each of the old loop's three features. */
-const inOldLoop = (...rests) =>
-  OLD_LOOP_FEATURES.flatMap((feature) => rests.map((rest) => `src/features/${feature}/${rest}`));
 
 export default [
   ...expoConfig,
@@ -545,24 +415,11 @@ export default [
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [asyncStoragePath]) },
   },
   {
-    // The feature flags' saved datafile — the one module in the app that may import AsyncStorage
-    // (ADR-0180 §6). The path ban is subtracted and nothing else: this file is a feature's api/
-    // layer, so its baseline is `CORE_PATTERNS`, and every one of those still applies.
-    files: ['src/features/feature_flags/api/datafileCache.ts'],
-    rules: { 'no-restricted-imports': restrict(CORE_PATTERNS, [shareImportPath]) },
-  },
-  {
-    // The phone-preferences store — the second module that may import AsyncStorage (ADR-0188
-    // §1), and one file wide for the datafile cache's reason. It sits under `shared/`, so its
-    // baseline is `SHARED_PATTERNS`, and only the path ban is subtracted.
+    // The phone-preferences store — the one module that may import AsyncStorage (ADR-0188 §1),
+    // one file wide like the native ports. It sits under `shared/`, so its baseline is
+    // `SHARED_PATTERNS`, and only the path ban is subtracted.
     files: ['src/shared/lib/preferences/phonePreferences.ts'],
     rules: { 'no-restricted-imports': restrict(SHARED_PATTERNS, [shareImportPath]) },
-  },
-  {
-    // The one module that wraps the Featurevisor SDK (ADR-0180 §5) — one file wide, like the
-    // native ports: the cache beside it may not evaluate a flag, and this may not read storage.
-    files: ['src/features/feature_flags/api/featurevisor.ts'],
-    rules: { 'no-restricted-imports': restrict(corePatternsExcept(featurevisorImport)) },
   },
   {
     // The single place fetch is configured.
@@ -599,42 +456,6 @@ export default [
     rules: { 'no-restricted-syntax': 'off' },
   },
 
-  // --- the one one-way edge between two features ------------------------------
-  //
-  // `features/plans` may import `features/games`; `features/games` may never import
-  // `features/plans` (ADR-0149 §1, keeping ADR-0145 §4's clause checkable on this side of the
-  // wire). It is **three blocks and not one**, because flat config replaces a rule rather than
-  // adding to it: a single `src/features/games/**` block would put the wire-type ban back over
-  // that feature's own api/ and mappers/, and would drop the purity ban from its domain/. Each
-  // block therefore restates the baseline block it shadows — by its constant, never by hand —
-  // with this one ban added.
-  //
-  // **`features/games` → `features/player_record` is a declared edge, and not a ban's mirror.**
-  // The players card opens `player_record`'s `PlayerRecordSheet` — a screen, on the same seam
-  // Play's builder already crosses — and borrows its `(you)` mark. Nothing here forbids it,
-  // because feature-to-feature imports through a `types.ts` are the sanctioned shape; it is
-  // written down so the next reader of this block does not take the one-way ban above for a rule
-  // that `games` imports nothing, and `scripts/test-import-boundaries.sh` asserts it stays open.
-  // Its other edge, into Play's balance words and level row (#415), is gone: since #574 the words
-  // are `shared/vocabulary`'s and the row is this feature's own, and the old loop's fence now
-  // refuses the import.
-  {
-    files: ['src/features/games/**'],
-    rules: {
-      'no-restricted-imports': restrict([...CORE_PATTERNS, generatedImports, planImportFromGames]),
-    },
-  },
-  {
-    files: ['src/features/games/api/**', 'src/features/games/mappers/**'],
-    rules: { 'no-restricted-imports': restrict([...CORE_PATTERNS, planImportFromGames]) },
-  },
-  {
-    files: ['src/features/games/domain/**', 'src/features/games/use-cases/**'],
-    rules: {
-      'no-restricted-imports': restrict([...PURE_PATTERNS, planImportFromGames], PURE_PATHS),
-    },
-  },
-
   // --- tests may describe the wire, because that is what makes drift fail ------
   {
     // A test's fake responses are typed from the generated schema on purpose: a
@@ -659,22 +480,21 @@ export default [
     // the configuration's too: what `jest.config.js` maps reanimated's mock to.
     //
     // `afterEach` for the one hook the setup file registers for every suite: emptying the
-    // device storage a flag suite saved a datafile into (ADR-0180 §6).
+    // device storage a suite's walk left a player's choices in (ADR-0188).
     files: ['jest.setup.js', 'src/test-support/reanimatedActual.js'],
     languageOptions: { globals: { jest: 'readonly', afterEach: 'readonly' } },
   },
 
-  // --- Play, games and proposals: nothing tappable ships without a name -------
+  // --- games and proposals: nothing tappable ships without a name -------------
   {
     // Scoped to the features that hold the contract, exactly as §20.12 scopes it, rather than
     // to `src/**` — which would make it a design-system rule, which is Part 13's job and a
-    // different amendment. `features/games/` joins Play because it is the second feature built
-    // words-first: every sentence it says comes off a copy deck, its labels are composed the
-    // same way, and its score grid is the app's second surface made of raw `Pressable`s — the
-    // one shape the compiler cannot see a missing name on. `features/proposals/` joins them with
-    // the deck's three answers (#574): they were Play's raw `Pressable`s, named by the deck's
-    // caller, and moving them to the Games deck must not move them out from under the rule —
-    // every other raw `Pressable` in that feature already carried its name.
+    // different amendment. `features/games/` is built words-first: every sentence it says comes
+    // off a copy deck, its labels are composed the same way, and its score grid is a surface made
+    // of raw `Pressable`s — the one shape the compiler cannot see a missing name on.
+    // `features/proposals/` holds the deck's three answers (#574), raw `Pressable`s named by the
+    // deck's caller. The rule was written for the old loop's Play, which was its first feature
+    // and left with that loop (#576).
     //
     // **Widening this list is not the answer to a new tappable primitive**; a required
     // `accessibilityLabel` prop on that primitive is. What belongs here is a feature that draws
@@ -684,7 +504,7 @@ export default [
     // rule when a later block names it — so the three baseline bans are spread back in. A
     // block that listed only the new one would switch off the colour and fontWeight rules
     // for these features, silently.
-    files: ['src/features/play/**', 'src/features/games/**', 'src/features/proposals/**'],
+    files: ['src/features/games/**', 'src/features/proposals/**'],
     rules: { 'no-restricted-syntax': ['error', ...SYNTAX_BANS, pressableNeedsAName] },
   },
 
@@ -694,40 +514,5 @@ export default [
     rules: {
       'no-restricted-imports': restrict([...CORE_PATTERNS, generatedImports]),
     },
-  },
-
-  // --- the old loop, until #576 deletes it -------------------------------------
-  //
-  // The one place `oldLoopImports` is lifted: inside `features/play`, `features/challenges` and
-  // `features/plans`, which import each other, and in `OLD_LOOP_SURFACES`. Last in the file because
-  // the last matching block wins, and **one block per layer**, each restating the baseline it
-  // shadows minus that one ban — the wire layer keeps its wire types, the pure layers their purity,
-  // a test its test baseline, and `features/games` its own ban on plans. A single block over all of
-  // them would quietly hand every layer the route files' set.
-  {
-    files: [...inOldLoop('**'), ...OLD_LOOP_SURFACES],
-    rules: {
-      'no-restricted-imports': restrict(withoutOldLoop([...CORE_PATTERNS, generatedImports])),
-    },
-  },
-  {
-    files: inOldLoop('api/**', 'mappers/**'),
-    rules: { 'no-restricted-imports': restrict(withoutOldLoop(CORE_PATTERNS)) },
-  },
-  {
-    files: [...inOldLoop('domain/**', 'use-cases/**'), ...OLD_LOOP_PURE_SURFACES],
-    rules: { 'no-restricted-imports': restrict(withoutOldLoop(PURE_PATTERNS), PURE_PATHS) },
-  },
-  {
-    files: OLD_LOOP_GAMES_SURFACES,
-    rules: {
-      'no-restricted-imports': restrict(
-        withoutOldLoop([...CORE_PATTERNS, generatedImports, planImportFromGames]),
-      ),
-    },
-  },
-  {
-    files: [...inOldLoop('**/*.test.ts', '**/*.test.tsx'), ...OLD_LOOP_SUITES],
-    rules: { 'no-restricted-imports': restrict(withoutOldLoop(CORE_PATTERNS)) },
   },
 ];

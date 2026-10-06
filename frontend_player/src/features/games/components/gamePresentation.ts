@@ -62,28 +62,19 @@
  * which is the same fact in the register a listener gets.
  */
 
-import { YOU_MARK } from '@/features/player_record/types';
 import { counted } from '@/shared/formatting/counted';
 import { handleStem, playerName, type NamedPlayer } from '@/shared/formatting/playerName';
-import { formatPercent } from '@/shared/formatting/ratingFormat';
 import { sentenceList } from '@/shared/formatting/sentenceList';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Game, GameSeat } from '../domain/game';
-import type { PairingSeat } from '../domain/pairing';
 import { sidesForReader } from '../domain/pairing';
-import {
-  othersOn,
-  resultArgument,
-  type CalledOffEnding,
-  type ResultArgument,
-} from '../domain/resultArgument';
+import { othersOn, type CalledOffEnding, type ResultArgument } from '../domain/resultArgument';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
 
 import type { ScoreView } from './gameAccessibility';
-import { levelRow } from './levelRow';
 
 import { durationLeft, durationSince } from '@/shared/formatting/durations';
 
@@ -175,25 +166,6 @@ function withWhom(others: readonly NamedPlayer[]): string {
  * different deadline.
  */
 export const NOT_YOURS_LINE = 'No game of yours has this address.';
-
-/**
- * **The same sentence, for a surface that holds a game and not an argument** — the one thing
- * this deck says outside its own feature.
- *
- * Now's card is `features/plans`' ([#367](https://github.com/Raketa02/Raketa/issues/367)) and the
- * gloss it draws under an ended or argued game is this line: what the card adds for the four
- * `AWAITING_ENTRY` rungs is written there, and for everything else the sentence already exists,
- * has a test, and is the one the screen behind the card says. So what crosses the seam is the
- * **sentence** rather than the fold and the deck — a surface that reached for `resultArgument`
- * would be reading a `GameStanding` outside the one file allowed to
- * ([`resultArgument.ts`](../domain/resultArgument.ts)).
- *
- * It takes the game rather than the pair because the instant is the game's: `readAt` travels on
- * every row precisely so a screen holding one game does not have to be handed the list's fold.
- */
-export function gameStandingLine(game: Game, playerId: string): string {
-  return standingLine(resultArgument(game, playerId), game.readAt);
-}
 
 export function standingLine(argument: ResultArgument, readAt: string): string {
   switch (argument.kind) {
@@ -302,14 +274,6 @@ const NOBODY_IS_MARKED_FOR_THAT = 'Nobody is marked for that. Not you, not any o
  * ended court one feature over.
  */
 export const CALLED_OFF_FOR_LACK_OF_PLAYERS = 'The game was called off for lack of players';
-
-/**
- * **The trash's spoken name** — the one control on a called-off card besides *What happened?*,
- * a glyph with its word spoken ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
- * §8). *This card* and not *this game*: the act removes a card and nothing else, and the name
- * says exactly that much.
- */
-export const REMOVE_THIS_CARD = 'Remove this card';
 
 /**
  * The ending's body: a departure names who left and says the shape of the game it ended; the
@@ -902,70 +866,4 @@ function halves(
 ): readonly [readonly GameSeat[], readonly GameSeat[]] {
   const sides = sidesForReader(seats, playerId);
   return sides === undefined ? [[], []] : [sides.yours, sides.theirs];
-}
-
-/**
- * One seat's Level, in the row under the handle — `the-words.md` §6.4's level row with the
- * confidence as a fourth clause: `2,71 · Established · likely 2,55 – 2,87 · 74% sure`.
- *
- * The first three clauses are `levelRow`'s, cited rather than re-spelled, so the band's name, the
- * range's dash and the two-decimal comma cannot drift between a card and this row. The fourth
- * is the engine's own whole percentage through the one formatter, and the word *sure* is this
- * screen's — the challenge card says `{n}% sure` the same way.
- */
-export function seatLevelLine(seat: PairingSeat): string {
-  return `${levelRow(seat)} · ${formatPercent(seat.confidence)} sure`;
-}
-
-/**
- * The players card's footer — the promise the record sheet keeps, and the gesture that opens it.
- *
- * **Tap, not hold**: the design's *press and hold* is refused on #285's argument — a hold has no
- * affordance, no announcement and no equivalent in the accessibility API — and the sentence says
- * the gesture that is actually there. The second sentence is the record's own authorship promise,
- * said where the reader is about to open one.
- */
-export const PLAYERS_FOOTER =
-  'Tap anyone for their record — level, form and how they behave. Counted by the system; nobody writes text about people here.';
-
-/** The players card's eyebrow. Stored as words, drawn uppercase — `BALANCE_FORECAST`'s rule. */
-export const PLAYERS = 'Players';
-
-/**
- * **The row for a seat somebody left** (ADR-0162, #411 rule 6) — the words where a handle would
- * be, an empty face beside them, no level row, and nothing to press: there is no record to open
- * for nobody. The seat is drawn rather than dropped, because a players card that listed three
- * people on a doubles court would be describing a different game.
- */
-export const OPEN_SEAT = 'Open seat';
-
-/**
- * Who a row is about: the name where the account still has one, and whether it is yours.
- *
- * Not `NamedPlayer`, because that formatter's *you* is a sentence's word for its reader and this
- * row draws the name **whole** with the mark after it — `recordHandle`'s shape on the record
- * sheet, for the same reason: a panel with your face on it and a stranger's name under it.
- */
-export interface PlayerRowPerson {
-  /** Absent where `users` no longer has the account, which draws the unknown player's `?`. */
-  readonly name?: string;
-  readonly yours: boolean;
-}
-
-/** The whole name, with the one mark that says it is yours. */
-export function playerRowName(person: PlayerRowPerson): string {
-  const name =
-    person.name === undefined
-      ? playerName({ kind: 'unknown' })
-      : playerName({ kind: 'player', name: person.name });
-  return person.yours ? `${name} ${YOU_MARK}` : name;
-}
-
-/**
- * What the row's tap is called — **the record it opens, by whose it is.** *Your record* for your
- * own, because a control named *me_'s record* on a screen addressed to *me_* has read the reader
- * their own handle; the sheet it opens is retitled the same way.
- */
-export function recordLabel(person: PlayerRowPerson): string {
-  return person.yours ? 'Your record' : `${playerRowName(person)}’s record`;
 }

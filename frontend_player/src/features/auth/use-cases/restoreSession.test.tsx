@@ -85,7 +85,6 @@ describe('relaunching', () => {
       name: USER.name,
       nickname: USER.nickname,
       hasPlayerProfile: USER.has_player_profile,
-      isTester: USER.is_tester,
       profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [], handovers: [] },
     });
   });
@@ -261,7 +260,6 @@ describe('the launch sequence', () => {
         name: USER.name,
         nickname: USER.nickname,
         hasPlayerProfile: USER.has_player_profile,
-        isTester: USER.is_tester,
         profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [], handovers: [] },
       }),
     );

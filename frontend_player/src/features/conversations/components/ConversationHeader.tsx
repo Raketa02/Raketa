@@ -1,5 +1,5 @@
 /**
- * **Back · the faces · the handles' stems · the sport and the game's state · Details.**
+ * **Back · the faces · the handles' stems · the sport and the booking's word.**
  *
  * 10.3's header with a `lead` slot, which arrived for this: a room is named by the people in it,
  * so their faces belong beside their handles rather than in the page under them, where the stream
@@ -27,30 +27,21 @@
  *
  * The stems are shorter inputs to the rule that was already here: `handleLine` still gives way by
  * **dropping whole names** at a separator, never by cutting one (§15), against the header's own
- * budget — the row's arithmetic with a chevron on one side and the `Details` control reserved on
- * the other **whether or not it is drawn**, so a header does not reflow its handles the moment a
- * line-up completes. That budget is now counted at `h1`, which is what the title is set in; it
+ * budget — the row's arithmetic with a chevron on one side and the width of the old loop's
+ * `Details` control still reserved on the other, though nothing draws it any more (#576): giving
+ * that width back would reflow every booked room's title, which is a change to look at on a device
+ * rather than one to make in a removal. That budget is now counted at `h1`, which is what the title is set in; it
  * was counted at the rows' `cardTitle`, which promised a one-line title that wrapped, and
  * `conversationGeometry.ts` says so.
  *
- * ## The second line is the sport and the game's state — the Now card's, in lower case
+ * ## The second line is the sport and the game's state
  *
- * `Padel · planning`. This is a **reversal**, and it is recorded rather than absorbed: this
- * file's own docstring, `the-loop-screens.md` §3.1 and ADR-0148 §6 all refused a state here,
- * because the prototype's subtitle was the sport plus the **card-state tag** — the twenty-state
- * backend vocabulary leaking into the chat, read by making the room ask `challenges` and `games`
- * what it is. What lands is not that. It is the **four-rung client-side ladder Now already
- * draws**, plus its endings — `gameCardName`, folded from the two lists the screen already holds
- * for its plan card — and the word for it is `features/plans`' own, lowered where the words are
- * rather than at this call site. The design wins, and
+ * `Padel · booked` — the booking's own word, lowered where the words are, and handed in by the
+ * booked game's chat, which has just read the booking. A state here was refused once, because the
+ * prototype's subtitle was the backend's twenty-state vocabulary leaking into the chat;
  * [ADR-0157](../../../../../docs/adr/0157-the-conversation-header-names-its-people-by-their-stems-and-says-which-rung-the-game-is-on.md)
- * supersedes §6 for this one surface with that distinction as its argument.
- *
- * **A room with no game draws the sport alone.** `game_id` is nullable, so a `LINE_UP_INCOMPLETE`
- * room has no game — it has a plan, since ADR-0164, but the rung ladder is the game's — so no
- * state is drawn for it and none is invented, which is the same nothing the absent *Details* door
- * draws from the same field. The state is handed in as a word by the screen, which is where the
- * two reads it is folded from are already made.
+ * reversed that for a word the player already reads on the game's own card, and the booking's
+ * status is that word.
  *
  * ## The two lines are the other way up from 10.3's eyebrow
  *
@@ -59,64 +50,36 @@
  * a slot is the shape `lead` and `right` already have, and 10.3's own argument for `lead` is that
  * *the header holds an arrangement and the screen holds what goes in it*. `tiny` in `muted`, drawn
  * as given, and no new type role.
- *
- * ## Details is drawn only when there is a game
- *
- * `game_id` is nullable, so a `LINE_UP_INCOMPLETE` room has no game — **nothing for this door
- * to open**, whatever its plan says, and a control drawn over that nothing is the disabled control
- * [#324](https://github.com/Raketa02/Raketa/issues/324) refused. The rule lives beside the
- * drawing rather than at the call site so there is no arrangement of props that draws a dead one.
- *
- * The visible word is the design's and the spoken one is the destination's — *Open the game*,
- * because *Details* is a word about a screen and every other door on this map is named by its act
- * (§24.4).
  */
 
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
 import { playerName } from '@/shared/formatting/playerName';
-import { Button, PlayerPhoto, ScreenHeader } from '@/shared/ui';
+import { PlayerPhoto, ScreenHeader } from '@/shared/ui';
 
 import { othersIn, personName } from '../domain/membership';
 import type { ConversationRoom } from '../domain/room';
 
-import { OPEN_THE_GAME, conversationHeaderLabel } from './conversationAccessibility';
+import { conversationHeaderLabel } from './conversationAccessibility';
 import { FACE_OVERLAP, ROW_FACE, headerHandleBudget } from './conversationGeometry';
-import { DETAILS, headerSubline, headerTitle } from './conversationPresentation';
+import { headerSubline, headerTitle } from './conversationPresentation';
 
 export interface ConversationHeaderProps {
   readonly room: ConversationRoom;
   /** The reader. A header names **the others**, exactly as the row it was opened from does. */
   readonly playerId: string;
   readonly onBack: () => void;
-  /**
-   * Called with the game this room completed into. Never called where there is none — and **absent
-   * in a booked game's room** (#556), which is reached from the game's details and draws no
-   * *Details* door back into them.
-   */
-  readonly onOpenGame?: (gameId: string) => void;
-  /**
-   * Where the game stands, as the Now card's own word in lower case — `features/plans`'
-   * `cardStateWord`. Absent where there is no game, or no card to name yet; the line then says
-   * the sport and stops.
-   */
-  readonly gameState?: string;
+  /** Where the game stands — the booking's own word, in lower case (*booked*). */
+  readonly gameState: string;
 }
 
-export function ConversationHeader({
-  room,
-  playerId,
-  onBack,
-  onOpenGame,
-  gameState,
-}: ConversationHeaderProps) {
+export function ConversationHeader({ room, playerId, onBack, gameState }: ConversationHeaderProps) {
   const { width } = useWindowDimensions();
 
   const others = othersIn(room.members, playerId);
   const handles = others.map((member) => playerName(personName(member)));
   const sport = sportLabel(room.sport);
-  const gameId = room.gameId;
 
   return (
     <ScreenHeader
@@ -137,19 +100,6 @@ export function ConversationHeader({
           ))}
         </View>
       }
-      {...(gameId === undefined || onOpenGame === undefined
-        ? {}
-        : {
-            right: (
-              <Button
-                label={DETAILS}
-                accessibilityLabel={OPEN_THE_GAME}
-                variant="secondary"
-                size="sm"
-                onPress={() => onOpenGame(gameId)}
-              />
-            ),
-          })}
     />
   );
 }

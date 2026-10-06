@@ -13,7 +13,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Slot, router, type Href } from 'expo-router';
-import { act, renderRouter, waitFor } from 'expo-router/testing-library';
+import { act, renderRouter } from 'expo-router/testing-library';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ReducedMotionProvider } from '@/shared/ui';
@@ -33,16 +33,7 @@ import BookedGameRoute from '@/app/(app)/(tabs)/booking/[bookingId]/index';
 import BookedGameChatRoute from '@/app/(app)/(tabs)/booking/[bookingId]/chat';
 import BookedGameResultRoute from '@/app/(app)/(tabs)/booking/[bookingId]/result';
 import NoticesRoute from '@/app/(app)/(tabs)/notices';
-import ChallengeRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/index';
-import ChallengeFillRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/fill';
-import YesRoute from '@/app/(app)/(tabs)/chats/challenge/[challengeId]/yes';
-import ChatsRoute from '@/app/(app)/(tabs)/chats';
-import ConversationRoute from '@/app/(app)/(tabs)/chats/conversation/[conversationId]';
-import ConversationGameRoute from '@/app/(app)/(tabs)/chats/conversation/[conversationId]/details';
-import GameRoute from '@/app/(app)/(tabs)/games/[gameId]';
-import NowRoute from '@/app/(app)/(tabs)/index';
-import BuilderRoute from '@/app/(app)/(tabs)/play/builder';
-import PoolRoute from '@/app/(app)/(tabs)/play/pool';
+import HomeRoute from '@/app/(app)/(tabs)/index';
 import PlayRoute from '@/app/(app)/(tabs)/play/index';
 import NewGroupRoute from '@/app/(app)/(tabs)/play/new-group';
 import JoinGroupRoute from '@/app/(app)/(tabs)/play/join';
@@ -53,7 +44,6 @@ import GroupEditRoute from '@/app/(app)/(tabs)/play/group/[groupId]/edit';
 import GameDetailsRoute from '@/app/(app)/(tabs)/play/group/[groupId]/game/[proposalId]';
 import RescueRoute from '@/app/(app)/(tabs)/play/group/[groupId]/rescue/[bookingId]';
 import PostAGameRoute from '@/app/(app)/(tabs)/play/group/[groupId]/post';
-import PlayersRoute from '@/app/(app)/(tabs)/players';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
 import YouGameSuggestionsRoute from '@/app/(app)/(tabs)/you/game-suggestions';
@@ -100,7 +90,6 @@ import ReviewRoute from '@/app/(onboarding)/review/[assessmentId]';
 import SportsRoute from '@/app/(onboarding)/sports';
 import TagsRoute from '@/app/(onboarding)/tags';
 import WelcomeRoute from '@/app/(onboarding)/welcome';
-import { featureFlagKeys } from '@/features/feature_flags/types';
 import { HOME_COPY } from '@/features/shell/types';
 import { beginSession, setSessionStatus } from '@/shared/lib/auth';
 import {
@@ -146,14 +135,10 @@ export const ONBOARDING_ROUTES = {
   _layout: TestRoot,
   '(app)/_layout': AppLayout,
   '(app)/(tabs)/_layout': TabsLayout,
-  // The five-tab shell. Play is a directory because the builder and the pool land under it,
-  // and the bar reads its active column off that first segment. Players is a single-screen
-  // root: the deck is the whole tab (ADR-0169 §1).
-  '(app)/(tabs)/index': NowRoute,
-  '(app)/(tabs)/players': PlayersRoute,
+  // The three-tab shell. Play is a directory because its groups screens land under it, and the bar
+  // reads its active column off that first segment.
+  '(app)/(tabs)/index': HomeRoute,
   '(app)/(tabs)/play/index': PlayRoute,
-  '(app)/(tabs)/play/builder': BuilderRoute,
-  '(app)/(tabs)/play/pool': PoolRoute,
   // Play › Groups' screens (#512–#514), under Play so the column stays lit and *back* is the list —
   // and Friends, Members and Edit group over a group's page, so *back* is the page.
   '(app)/(tabs)/play/new-group': NewGroupRoute,
@@ -166,37 +151,15 @@ export const ONBOARDING_ROUTES = {
   // A rescue seen from outside (#557) — a Seat open card's or a Seats to fill row's details.
   '(app)/(tabs)/play/group/[groupId]/rescue/[bookingId]': RescueRoute,
   '(app)/(tabs)/play/group/[groupId]/post': PostAGameRoute,
-  // A game is pushed over the Home tab and is a `games/` route rather than a `now/` one,
-  // because the Home tab's root is the shell's own root and has no segment to nest under.
-  '(app)/(tabs)/games/[gameId]': GameRoute,
   // A booked game (#556) — its details pushed over Home, its chat and its result over the details,
-  // under a `booking` segment for `games/`' reason. Spelled `…/index` as the file tree spells it,
+  // under a `booking` segment: the Home tab's root is the shell's own root and has no segment to
+  // nest under. Spelled `…/index` as the file tree spells it,
   // because the shell names the details to give them the push transition.
   '(app)/(tabs)/booking/[bookingId]/index': BookedGameRoute,
   '(app)/(tabs)/booking/[bookingId]/chat': BookedGameChatRoute,
   '(app)/(tabs)/booking/[bookingId]/result': BookedGameResultRoute,
   // The recent notices behind Home's bell (#559), under a `notices` segment the shell counts as Home's.
   '(app)/(tabs)/notices': NoticesRoute,
-  '(app)/(tabs)/chats': ChatsRoute,
-  // A challenge is pushed over the Chats tab, and the static `challenge` above the id is the
-  // decision that keeps a challenge id and a conversation id from sharing one segment.
-  '(app)/(tabs)/chats/challenge/[challengeId]/index': ChallengeRoute,
-  // The builder, at its **second route** — `features/play`'s own screen under the challenge it
-  // is completing, so the Chats column stays lit and *back* is correct by construction.
-  '(app)/(tabs)/chats/challenge/[challengeId]/fill': ChallengeFillRoute,
-  // The yes screen, under the challenge it is about — pushed the instant *I'm in* is answered,
-  // and the second route the bar stands down on (ADR-0167).
-  '(app)/(tabs)/chats/challenge/[challengeId]/yes': YesRoute,
-  // And a conversation beside it, under its own static segment for the same reason: two ids of
-  // two different things cannot share one `/chats/[id]`. Spelled `…/index` exactly as the file
-  // tree spells it, because the shell names this route to give it the push transition and
-  // `Stack.Screen` matches on the name: a table that shortened it would leave the option on a
-  // route that does not exist, and the warning saying so on every suite that walks the shell.
-  '(app)/(tabs)/chats/conversation/[conversationId]/index': ConversationRoute,
-  // The game screen, at its **second route** — one component and two addresses, so the Chats
-  // column stays lit behind the room's *Details* and *back* is correct in both directions
-  // ([#368](https://github.com/Raketa02/Raketa/issues/368), ADR-0149 §5).
-  '(app)/(tabs)/chats/conversation/[conversationId]/details': ConversationGameRoute,
   // You is a directory since the tab was built (ADR-0179): the root, and one screen per row
   // pushed over it, each under the tab's first segment so the column stays lit. Spelled
   // `you/index` as the file tree spells it, because the shell names the pushed screens to give
@@ -689,51 +652,6 @@ export function stubProfileOptions(
   transport.on('GET', PROFILE_OPTIONS_PATH, () => json(served));
 }
 
-/**
- * Your own *Let's play* yeses — the read behind the count in the deck's ending sentence.
- *
- * Separate from the three above and defaulted to nothing outstanding, because almost no suite
- * is about the number: `outgoingYeses` has a sentence for nought as well as for a count, so a
- * read that has not landed still draws something true.
- */
-export function stubInterest(
-  transport: Transport,
-  served: Wire['InterestListResponse'] = { outgoing: [], mutual: [], outstanding: [] },
-) {
-  transport.on('GET', '/api/v1/interest', () => json(served));
-}
-
-/**
- * One yes of the reader's own, as `GET /interest` lists it under `outgoing` — the row *You said
- * yes* and the challenge screen's invitee's line are drawn from (ADR-0169 §8).
- *
- * The two dates are the server's and no suite reads them, so they are fixed here rather than
- * spelled per test.
- */
-export function outgoingYes(
-  playerId: string,
-  sport: Wire['Sport'],
-): Wire['OutgoingInterestSchema'] {
-  return {
-    player_id: playerId,
-    sport,
-    at: '2026-08-30T18:00:00Z',
-    expires_at: '2026-09-20T18:00:00Z',
-  };
-}
-
-/** The reader's own yeses, as the server would list them — who, per sport. Nothing else served. */
-export function stubOutgoingYeses(
-  transport: Transport,
-  ...yeses: readonly (readonly [playerId: string, sport: Wire['Sport']])[]
-) {
-  stubInterest(transport, {
-    outgoing: yeses.map(([playerId, sport]) => outgoingYes(playerId, sport)),
-    mutual: [],
-    outstanding: [],
-  });
-}
-
 export const GAMES_PATH = '/api/v1/games';
 
 /**
@@ -743,8 +661,9 @@ export const GAMES_PATH = '/api/v1/games';
  * wants a countdown to say a particular thing sets it here rather than mocking a clock: the
  * screens measure from this field and never from the device.
  *
- * Defaulted to nothing, because every launch now draws the Home tab and almost no suite is about
- * what is on it — an empty list renders no section at all, which is what the tab shipped with.
+ * Read by a booked game's result screen and the stars card at its foot — never by Home, which is
+ * booked games only (#576). Defaulted to nothing; a suite about one of those screens serves its
+ * game.
  */
 export function stubGames(
   transport: Transport,
@@ -762,11 +681,11 @@ export const pairingPath = (gameId: string) => `/api/v1/games/${gameId}/pairing`
  * One game's pairing, as `GET /games/{game_id}/pairing` answers — **or the refusal it gives by
  * name**, `pairing_is_history` once the game has happened.
  *
- * Not stubbed on every launch: the read is made on the game screen's plan lead and nowhere else,
- * and a suite about that screen says what the court is worth. A suite that reaches the plan lead
- * without stubbing it gets the transport's *no stub* failure folded to nothing drawn, which is the
- * block's own answer to an outage — so nothing breaks, and a suite asserting the block is present
- * has to say so.
+ * Not stubbed on every launch: the read is made by a booked game's forecast and nowhere else, and
+ * a suite about that block says what the court is worth. A suite that reaches it without stubbing
+ * it gets the transport's *no stub* failure folded to nothing drawn, which is the block's own
+ * answer to an outage — so nothing breaks, and a suite asserting the block is present has to say
+ * so.
  */
 export function stubPairing(
   transport: Transport,
@@ -779,80 +698,17 @@ export function stubPairing(
   );
 }
 
-export const PLANS_PATH = '/api/v1/plans';
-
-/**
- * Your plans, as `GET /plans` answers — **one row per court you hold an accepted seat on, written
- * or not**, keyed by `challenge_id` and carrying the anchor its day row runs from (ADR-0164).
- *
- * There is **no `read_at` on this envelope**, deliberately: a plan folds nothing against the clock,
- * so a suite that wants *today* to be a particular day sets the surface's own instant instead —
- * the room's `read_at` in the chat, `stubGames`' on the game screen — which is what keeps every
- * clock on a surface the same one. The row's `anchor` is not a clock: it is where the day row's
- * horizon runs from.
- *
- * Stubbed on every launch beside the games and the rooms, for the reason those two are: the plan
- * card is pinned in every room from its opening, so a suite that opens one would otherwise fail at
- * the socket with a name that points at `fetch` rather than at the card
- * ([#366](https://github.com/Raketa02/Raketa/issues/366)).
- *
- * **Defaulted to no rows, and the two surfaces read that differently.** The room draws nothing
- * until its row lands — the row is what says there is a plan to draw, and carries the anchor to
- * draw it with — so a suite that wants the card in a room stubs the court's row. The game screen
- * draws the card off the game's own `planned_at` meanwhile, which is what the row's anchor is once
- * a game exists (ADR-0164 §4), so its suites get three empty slots with nothing stubbed.
- */
-export function stubPlans(transport: Transport, plans: readonly Wire['PlanSchema'][] = []) {
-  transport.on('GET', PLANS_PATH, () => json<Wire['PlanListResponse']>({ plans: [...plans] }));
-}
-
-/** The path one court's slot answers on — addressed by its challenge — for a suite that records one. */
-export const planSlotPath = (challengeId: string, slot: 'place' | 'day' | 'hour') =>
-  `${PLANS_PATH}/${challengeId}/${slot}`;
-
-/** The path `GET /challenges` answers on, for a suite that wants to say what is in the list. */
-export const CHALLENGES_PATH = '/api/v1/challenges';
-
-/**
- * Your challenges, as `GET /challenges` answers — **sent and received in one list.**
- *
- * Stubbed on every launch because the **shell** reads it now: the tab bar carries a count of
- * unanswered challenges addressed to you, so a route left unstubbed is a failure at the socket
- * on every app-level suite, named after `fetch` rather than after the bar
- * ([#360](https://github.com/Raketa02/Raketa/issues/360)).
- *
- * `read_at` is the instant every standing and deadline in it was folded against — a suite that
- * wants a countdown to say a particular thing sets it here rather than mocking a clock.
- *
- * Defaulted to nothing, exactly as the games list is: an empty list draws no badge and a section
- * with one line in it, which is what a player with nothing outstanding should see.
- */
-export function stubChallenges(
-  transport: Transport,
-  challenges: readonly Wire['ChallengeSchema'][] = [],
-  readAt = '2026-09-05T09:00:00Z',
-) {
-  transport.on('GET', CHALLENGES_PATH, () =>
-    json<Wire['ChallengeListResponse']>({ read_at: readAt, challenges: [...challenges] }),
-  );
-}
-
 /** The path `GET /conversations` answers on, for a suite that wants to say what rooms exist. */
 export const CONVERSATIONS_PATH = '/api/v1/conversations';
 
 /**
  * Your rooms, as `GET /conversations` answers — **every one you are a member of, newest first.**
  *
- * Stubbed on every launch beside the challenge list, though for a weaker reason than that one's:
- * the shell does not read this, the **Chats screen** does, and a suite that walks to the tab for
- * any reason at all would otherwise fail at the socket with a name that points at `fetch` rather
- * than at the section ([#363](https://github.com/Raketa02/Raketa/issues/363)).
+ * Stubbed on every launch: Home reads it to say whether a booked game's chat is open, and a booked
+ * game's details and chat find their room through it.
  *
- * `read_at` is on the envelope and is deliberately not mapped — no row here draws a clock — so it
- * is a constant rather than a parameter.
- *
- * Defaulted to nothing, exactly as the other two lists are: an empty list draws a section with one
- * line in it, which is what a player who has agreed to play nothing yet should see.
+ * `read_at` is on the envelope and is deliberately not mapped — nothing drawn from the list is a
+ * clock — so it is a constant rather than a parameter. Defaulted to nothing.
  */
 export function stubConversations(
   transport: Transport,
@@ -925,98 +781,6 @@ export function stubSportsmanship(
   transport.on('GET', SPORTSMANSHIP_PATH, () =>
     json<Wire['OpenCardsResponse']>({ cards: [...cards] }),
   );
-}
-
-/**
- * Where the feature-flag datafile is fetched from, as the fake socket sees it: the features host
- * is stripped from the URL exactly as the API's is, and `development` is the environment
- * `jest.config.js` sets (ADR-0180 §3, §4).
- */
-export const DATAFILE_PATH = '/development/featurevisor-player.json';
-
-/**
- * **The datafile the flags host serves — or none.**
- *
- * Not a wire type: the file is the flags repo's, not the API's, and the app checks its envelope
- * rather than generating one. So it is described as the object it is, and a suite about a flag
- * builds the one it needs.
- *
- * `'none'` is a 404 — what the flags repo's serve script answers for a file it has not built, and
- * a failure the app does not retry, so a suite that says nothing about flags is not left with a
- * read going round underneath it.
- */
-export function stubDatafile(
-  transport: Transport,
-  served: Readonly<Record<string, unknown>> | 'none' = 'none',
-) {
-  transport.on('GET', DATAFILE_PATH, () =>
-    served === 'none' ? new Response('Not Found', { status: 404 }) : json(served),
-  );
-}
-
-/**
- * **A datafile as the flags repo builds one** — each named feature on or off for everybody, which
- * is `percentage: 100` or `0` on one `everyone` rule in the repo's YAML. Enough for every walk
- * about a gate; a walk about *who* a rule reaches spells its own traffic.
- *
- * The rest is what CLI 3.11.0 emits today. `schemaVersion` is the one fact the app refuses a
- * datafile on, so a walk about that refusal overrides it.
- */
-export function datafileFor(
-  features: Readonly<Record<string, 'on' | 'off'>>,
-  overrides: Readonly<Record<string, unknown>> = {},
-): Readonly<Record<string, unknown>> {
-  return {
-    schemaVersion: '2',
-    featurevisorVersion: '3.11.0',
-    revision: '1',
-    segments: {},
-    features: Object.fromEntries(
-      Object.entries(features).map(([key, state]) => [
-        key,
-        {
-          bucketBy: 'playerId',
-          traffic: [{ key: 'everyone', segments: '*', percentage: state === 'on' ? 100000 : 0 }],
-        },
-      ]),
-    ),
-    variables: {},
-    ...overrides,
-  };
-}
-
-/**
- * **The datafile has been answered, and the answer is in hand** — the moment a toggle has
- * *reached the app* (ADR-0180 §6).
- *
- * Nothing on screen says so, by design: a gate reads its flag once, when it mounts, so a datafile
- * landing under a mounted screen changes nothing a player could see. A walk about a gate therefore
- * waits on the read itself — `count` requests made, and no flag read still running — before it
- * mounts the screen it is asking about.
- */
-export async function datafileSettled(transport: Transport, count = 1) {
-  await waitFor(() =>
-    expect(transport.requestsTo('GET', DATAFILE_PATH).length).toBeGreaterThanOrEqual(count),
-  );
-  await waitFor(() => expect(queryClient.isFetching({ queryKey: featureFlagKeys.all })).toBe(0));
-}
-
-/**
- * **Classic play, switched on** — for every suite about the old loop: Find a game, the Players
- * deck, Chats. Since [#512](https://github.com/Raketa02/Raketa/issues/512) the Play tab opens on
- * Groups without a datafile, and since [#550](https://github.com/Raketa02/Raketa/issues/550) the
- * bar is Home · Play · You without one; `classic_play` brings all of it back at once.
- *
- * Served, launched, and **waited on before anything presses Play**: a gate reads its flag once, when
- * its screen mounts, so a Play press that raced the datafile would land on Groups — correctly, and
- * not what the suite is about. The bar follows the flag, so once the datafile has settled Players
- * and Chats are there to press. Call it where the suite would have called `launchSignedIn`, after
- * `stubGate` (which serves no datafile).
- */
-export async function launchIntoClassicPlay(transport: Transport, initialUrl = '/') {
-  stubDatafile(transport, datafileFor({ classic_play: 'on' }));
-  await launchSignedIn(initialUrl);
-  await datafileSettled(transport);
 }
 
 export const MY_GROUPS_PATH = '/api/v1/groups';
@@ -1096,9 +860,8 @@ export interface GateStub {
    * Who this player **is** — the id `GET /users/me` answers with, which is the same id every
    * route reads off the bearer token and the one a court draws your own seat from.
    *
-   * Defaulted, because almost no suite is about identity. A suite that seats you beside
-   * candidates has to state it: the poster in your seat is a function of this id, and so is
-   * the court a challenge is sent with.
+   * Defaulted, because almost no suite is about identity. A suite that seats you on a court has
+   * to state it: the face in your seat is a function of this id.
    */
   readonly id?: string;
   /**
@@ -1139,11 +902,6 @@ export interface GateStub {
    */
   readonly nickname?: string | null;
   /**
-   * Whether the account carries the **tester mark** (ADR-0180 §9) — the one thing on this read the
-   * flag seam sends on. Defaults to **false**, which is every account until an admin marks it.
-   */
-  readonly isTester?: boolean;
-  /**
    * **Which profiles the account holds** — the gate's first read (ADR-0185 §3). Defaults to a
    * player's: every sign-up acts as a player and administers nothing. A suite about the
    * administrator area passes `ADMINISTRATOR_ONLY` or its own.
@@ -1160,9 +918,9 @@ export const PLAYER_ONLY: Wire['AccountProfilesSchema'] = {
 };
 
 /**
- * The signed-in player, as `GET /users/me` answers. Identity is filler; the flag is not, and
- * neither is the name: it is what every screen says about her, and its absence is where a
- * launch is sent first.
+ * The signed-in player, as `GET /users/me` answers. Identity is filler; the name is not: it is
+ * what every screen says about her, and its absence is where a launch is sent first. `is_tester`
+ * is still on the wire until the backend drops it (#581), and the app no longer reads it.
  */
 export const GATE_USER: Wire['MeResponse'] = {
   id: '11111111-2222-4333-8444-555555555555',
@@ -1186,32 +944,19 @@ export const GATE_USER: Wire['MeResponse'] = {
  * The unfinished-run read is **one** request covering every sport. An empty list is the
  * answer for a player with nothing outstanding — a 200, not a 204 and not a failure.
  *
- * **`stubGames`, `stubPlans`, `stubConversations` and `stubSportsmanship` are in here and none
- * of them is a gate read.** The gate's fourth destination is the shell's root, the shell's root is
- * the Home tab, and the Home tab draws a games list
- * ([#314](https://github.com/Raketa02/Raketa/issues/314)) — so every suite that lands in the app
- * makes that request whether or not it is about one. The rooms are one step further out: only the
- * Chats screen reads them, but a suite that walks to that tab for any reason would otherwise fail
- * at the socket, and the plan card pinned in every room with a game reads a third list on the way.
- * All three are defaulted to nothing, and a suite with any of them calls the stub again afterwards
- * to replace it.
+ * **`stubGames`, `stubConversations` and `stubSportsmanship` are in here and none of them is a gate
+ * read.** The gate's fourth destination is the shell's root, the shell's root is the Home tab, and
+ * Home reads the rooms to say whether a booked game's chat is open; the games list and the stars
+ * are read one push in, by a booked game's result screen, and every suite that opens one lands
+ * through here first. All three are defaulted to nothing, and a suite with any of them calls the
+ * stub again afterwards to replace it.
  *
  * **So is the Groups list** ([#512](https://github.com/Raketa02/Raketa/issues/512)): the Play tab
- * opens on Groups with the code defaults, so a suite that presses Play for any reason reads it.
- *
- * **So is the feature-flag datafile**, and for the same reason: the signed-in app fetches it the
- * moment it opens, whatever the suite is about (ADR-0180 §6). It is defaulted to **none**, which
- * is every flag at its code default — the app as it ships. A suite about a flag calls
- * `stubDatafile` again afterwards to serve one.
+ * opens on Groups, so a suite that presses Play for any reason reads it.
  *
  * **So is Home's booked-games read** (#556): the bar's Home badge is its count, so the shell makes it
  * the moment the tabs are up. Defaulted to no games.
  *
- * **The cards read is not made on that tab at all**, and it is still stubbed here. The card
- * asking how the other players were is drawn at the end of the **game screen**, one push in,
- * so landing in the app never asks for the list — but a suite that opens a game does, and
- * every one of those lands through here first. Defaulted to nothing for the reason the games
- * list is: a suite that is not about a card should not have to know one exists.
  */
 export function stubGate(
   transport: Transport,
@@ -1223,7 +968,6 @@ export function stubGate(
     email = GATE_USER.email,
     name = GATE_USER.name ?? null,
     nickname = name === null ? null : (GATE_USER.nickname ?? null),
-    isTester = false,
     profiles = PLAYER_ONLY,
   }: GateStub = {},
 ) {
@@ -1239,7 +983,6 @@ export function stubGate(
       name,
       nickname,
       has_player_profile: hasPlayerProfile,
-      is_tester: isTester,
       adult_attested: profiles.acts_as_player,
       profiles,
     }),
@@ -1247,11 +990,8 @@ export function stubGate(
 
   stubRunsInProgress(transport, runs);
   stubGames(transport);
-  stubPlans(transport);
-  stubChallenges(transport);
   stubConversations(transport);
   stubSportsmanship(transport);
-  stubDatafile(transport);
   stubMyGroups(transport);
   stubPaymentMethod(transport);
   stubGamesAndMoney(transport);

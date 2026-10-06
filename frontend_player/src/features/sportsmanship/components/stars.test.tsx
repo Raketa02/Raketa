@@ -11,10 +11,10 @@
  * server's list and nothing on this side re-derives it, and ignoring a card costs nothing, so
  * there is nothing anywhere that counts what a player has not answered.
  *
- * **Every walk opens a game**, because the card is drawn at the end of the **result screen**
- * rather than above the games list on Now. That is the one structural thing this suite says
- * about where the card lives, and it says it twice: every test reaches the card through a row,
- * and one asserts that the Home tab does not so much as **ask** for the list any more.
+ * **Every walk opens a game**, because the card is drawn at the end of a booked game's **result
+ * screen** (`/booking/[id]/result`) rather than on Home. That is the one structural thing this
+ * suite says about where the card lives, and it says it twice: every test reaches the card on that
+ * screen, and one asserts that the Home tab does not so much as **ask** for the list.
  *
  * It asserts against the **copy deck** rather than against strings, because the wording is the
  * deck's to change and the rules are not.
@@ -27,6 +27,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { AppError, offlineMessage } from '@/shared/errors';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
+import { BOOKING, bookingDetails, stubBooking } from '@/test-support/home';
 import {
   GAMES_PATH,
   GATE_USER,
@@ -121,7 +122,7 @@ const MAREK: StarSubject = {
 
 const EVERYBODY = [KASIA, TOMEK, MAREK];
 
-/** One rating, because the entry gate sends an unrated player to onboarding rather than Now. */
+/** One rating, because the entry gate sends an unrated player to onboarding rather than Home. */
 const PADEL_RATING: Wire['RatingResponse'] = {
   sport: 'PADEL',
   mu: 2.71,
@@ -150,18 +151,17 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
+/** Where a booked game's result screen is, and so where the card is drawn. */
+const RESULT_ROUTE = `/booking/${BOOKING}/result`;
+
 /**
- * Land in the app with these evenings and these cards waiting, and **open one game** — the
- * card is drawn at the end of the result screen, so getting to it is a tap on a row rather
- * than an arrival.
+ * Land in the app with these evenings and these cards waiting, and **open one game's result** —
+ * the card is drawn at the end of the result screen, so getting to it is a push rather than an
+ * arrival.
  *
  * `opening` defaults to the first game, and is passed only where the point is that this
- * screen draws *its own* card and not somebody else's.
- *
- * **The push is direct, because there is no longer a door.** The games list came off the Now
- * tab with the rest of that placeholder's furniture, so nothing a player can tap reaches this
- * route today — which is what the Now assertion below is about, and why every other test here
- * arrives by pushing.
+ * screen draws *its own* card and not somebody else's: it is the Game behind the booking whose
+ * result screen is opened.
  */
 async function land(
   games: readonly Wire['GameSchema'][],
@@ -174,10 +174,11 @@ async function land(
 
   if (opening === undefined) return;
 
+  stubBooking(transport, bookingDetails({ game_id: opening.game_id }));
   act(() => {
-    router.push({ pathname: '/games/[gameId]', params: { gameId: opening.game_id } });
+    router.push({ pathname: '/booking/[bookingId]/result', params: { bookingId: BOOKING } });
   });
-  await waitFor(() => expect(screen).toHavePathname(`/games/${opening.game_id}`));
+  await waitFor(() => expect(screen).toHavePathname(RESULT_ROUTE));
 }
 
 /** Press one star on one person's row. */
@@ -266,7 +267,7 @@ describe('the card at the end of the result screen', () => {
   });
 
   /**
-   * **Now no longer carries it**, which is the cost of moving the card to the evening it is
+   * **Home does not carry it**, which is the cost of the card living on the evening it is
    * about: the rail draws the games and nothing above them, and a player who never re-opens a
    * settled game never sees it. Asserted rather than left to a docstring, because a card
    * quietly reappearing above the rail is exactly the regression this move makes easy.
@@ -276,7 +277,7 @@ describe('the card at the end of the result screen', () => {
     stubSportsmanship(transport, [DOUBLES_CARD]);
     await launchSignedIn();
 
-    // Now is the rail — a heading with a count and a card per game — and the card asking about
+    // Home is the rail — a heading with a count and a card per game — and the card asking about
     // an evening is not among the things it draws.
     await screen.findByText(/^Your games · \d+$/);
     expect(screen.queryByText(STARS_HEADING)).toBeNull();
@@ -359,7 +360,7 @@ describe('answering it', () => {
     // The evening itself is untouched — the screen the card was drawn on is still the screen
     // this player is on. A card is a question **about** a game and never the game, so closing
     // one takes nothing away and moves nobody.
-    expect(screen).toHavePathname(`/games/${GAME}`);
+    expect(screen).toHavePathname(RESULT_ROUTE);
   });
 
   it('says the card is closed when it was already answered, and does not pretend otherwise', async () => {

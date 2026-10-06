@@ -1,5 +1,5 @@
 /**
- * The Chats badge's geometry, derived rather than chosen — **because no device has drawn it.**
+ * The tab bar's badge geometry, derived rather than chosen — **because no device has drawn it.**
  *
  * [10.2](../../docs/design-system.md#102-the-tab-bar) decided the badge whole and deliberately
  * wrote no number: #338 §1's rule for this map is *ownership now, a number only for what a
@@ -10,7 +10,7 @@
  * narrowest phone's column, so a mark that would truncate or overflow goes red here rather than
  * on somebody's home screen.
  *
- * **What makes it go red:** a sixth tab, a different type role for the digit, a change to the
+ * **What makes it go red:** a fourth tab, a different type role for the digit, a change to the
  * bar's top padding, or a Plex release that redraws the figures. Every one of those is a real
  * change to the answer, and none of them announces itself at 13pt.
  *
@@ -24,7 +24,7 @@ import { NARROWEST_SCREEN, readFace, widthOf } from '@/test-support/fontMetrics'
 import { TAB_BAR_TABS } from './TabBar';
 import { theme } from './theme';
 
-/** The bar is equal columns edge to edge, so a column is the screen over the five tabs. */
+/** The bar is equal columns edge to edge, so a column is the screen over the three tabs. */
 const COLUMN = NARROWEST_SCREEN / TAB_BAR_TABS.length;
 
 const { badge, badgeRise } = theme.size.tabBar;
@@ -101,7 +101,7 @@ describe('the mark against the bar it sits on', () => {
 describe('the fill', () => {
   it('is the disc’s own treatment rather than a colour added to the palette', () => {
     // White on `coral` is 3,89 — the one pairing Rule C refuses outright, and the correction
-    // the Play disc three columns away already took once. `coralInk` publishes 5,89.
+    // the Play disc one column away already took once. `coralInk` publishes 5,89.
     expect(theme.color.coralInk).not.toBe(theme.color.coral);
   });
 });

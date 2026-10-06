@@ -10,9 +10,9 @@
  * ## `read_at` is on this one, and it is what the room is folded against
  *
  * *"One instant for both, so members and entries can never disagree"* (ADR-0148 §10). It is what
- * every clock-shaped question on this screen is asked of — today's is whether the plan's agreed
- * day is **today** — and never `Date.now()`, on `durationLeft`'s own rule one context over: a
- * screen that mixed the two would state one fact against two readings of the clock.
+ * every clock-shaped question on this screen is asked of — a day separator's *today* — and never
+ * `Date.now()`: a screen that mixed the two would state one fact against two readings of the
+ * clock.
  *
  * ## The beginning is `seq` 1, and there is no `has_more`
  *
@@ -27,7 +27,6 @@
  * feature that reads a `seq` at all.
  */
 
-import type { LineUp } from '@/features/plans/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Entry } from './entry';
@@ -36,20 +35,8 @@ import type { ConversationMember, ConversationPerson } from './membership';
 export interface ConversationRoom {
   readonly conversationId: string;
   /**
-   * The challenge whose first acceptance opened it.
-   *
-   * Mapped here and not on the row's twin, because this is where it has a reader: it is the id
-   * a challenge screen joins on to find its own door back into the room.
-   */
-  readonly challengeId: string;
-  /**
-   * The game its line-up completed into, and **absent until it does**.
-   *
-   * The whole of what decides whether the header draws *Details* and its state word, and whether
-   * the plan card draws its lock: a `LINE_UP_INCOMPLETE` room has no game, so there is nothing for
-   * that door to open and **no door is drawn rather than a dead one**
-   * ([#324](https://github.com/Raketa02/Raketa/issues/324)). It does have a plan — the
-   * challenge's, drawn from the room's opening (ADR-0164 §2) — whose lock waits for the court.
+   * The booked game it is about — absent only on a room the old loop opened before its court
+   * became a game, which no booked room is. `domain/roomOver.ts` reads it for how a room ended.
    */
   readonly gameId?: string;
   /** The instant the header and the page were folded — **one instant for both**. */
@@ -85,29 +72,6 @@ export interface EntryPage {
  */
 export interface OpenConversation extends EntryPage {
   readonly room: ConversationRoom;
-}
-
-/**
- * **The court's line-up, as the plan card reads it** — complete the moment the room has its game,
- * and still filling until then, with who is in against how many the court takes.
- *
- * The room is the one surface that holds the two facts the card's count line needs beside the one
- * that decides whether to say them at all: its members are the challenge's accepted seats, `gameId`
- * is whether the court has become a game, and the seat count is the sport's — handed in, because
- * how many people stand on a court is drawn knowledge (`courtSeatCount`, `shared/ui`) and this
- * file is pure. **The game is the fact and never the count**
- * ([ADR-0165](../../../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
- * §1: *has this court become a game* is the line-up having completed): three of four with a game
- * is a seat left open on a complete line-up, and the lock is offered there, where the server's
- * refusal is a sentence rather than an absent button (ADR-0164 §5).
- */
-export function lineUpOf(
-  room: Pick<ConversationRoom, 'gameId'> & { readonly members: readonly unknown[] },
-  seats: number,
-): LineUp {
-  return room.gameId === undefined
-    ? { complete: false, members: room.members.length, seats }
-    : { complete: true };
 }
 
 /**

@@ -70,7 +70,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 
 import { sportLabel } from '@/features/onboarding/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
-import { offlineMessage, recoveryMessage, type AppError } from '@/shared/errors';
+import { offlineMessage, type AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
 import {
   behindOverlay,
@@ -266,9 +266,7 @@ export function GamesDeck({ groupId, sport, chosen, onChoose, empty, onTop }: Ga
         <DeclarationInterstitial
           sport={sport}
           sportName={sportLabel(sport)}
-          declaredOn="DECK"
           onDeclared={() => void reread()}
-          refusalMessage={recoveryMessage}
         />
       </ScrollView>
     );

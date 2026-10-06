@@ -6,8 +6,8 @@
 
 **Play opens on Groups, and the feature is four screens over six routes**
 ([#512](https://github.com/Raketa02/Raketa/issues/512), PRD
-[#500](https://github.com/Raketa02/Raketa/issues/500), ADR-0182, ADR-0183). With `find_a_game`
-off — the code default since #512 — the Play tab draws the shell's _Groups | Explore_ segment
+[#500](https://github.com/Raketa02/Raketa/issues/500), ADR-0182, ADR-0183). The Play tab draws
+the shell's _Groups | Explore_ segment
 ([`shell.md`](shell.md)), and _Groups_ is `GroupsSection`: the groups the player belongs to,
 newest joined first, with **+ New** (outlined, `secondary`) and **Join** (coral, `primary`)
 above them in every state. **New group**, **Join a group** and **a group's page** are pushed
@@ -462,9 +462,9 @@ for the screen's field, so the answer is exactly the group a paste would have fo
 there is nothing to type, and a keyboard over the one result would hide the button the link is for. What
 opens the screen, and when, is [`links.md`](links.md)'s.
 
-**`find_a_game` became `classic_play`** ([#550](https://github.com/Raketa02/Raketa/issues/550)).
-Nothing here changed: Play opens on Groups whenever the old loop's one flag is off, which is the
-default.
+**`find_a_game` became `classic_play`** ([#550](https://github.com/Raketa02/Raketa/issues/550)),
+and then went with the old loop ([#576](https://github.com/Raketa02/Raketa/issues/576)). Nothing
+here changed either time: Play opens on Groups, and no flag decides it any more.
 
 **Games is the deck** ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A1–A2).
 `GamesTab` hands `proposals`' `GamesDeck` the kind the page's switch stands on — the game-intent

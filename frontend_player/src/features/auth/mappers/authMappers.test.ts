@@ -50,7 +50,6 @@ describe('toAuthenticatedUser', () => {
       name: 'Ada Lovelace',
       nickname: 'ada',
       hasPlayerProfile: false,
-      isTester: false,
       profiles: { actsAsPlayer: true, administers: [], pendingInvitations: [], handovers: [] },
     });
     // A client that renders differently for an admin has invented an authorization
@@ -107,13 +106,11 @@ describe('toAuthenticatedUser', () => {
   });
 
   /**
-   * **The tester mark is carried, and it is not a role**
-   * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
-   * §9). Kept where `is_admin` is dropped because the app has one use for it — flag evaluation's
-   * `isTester` — and that use decides which build of a screen a player is shown, never what they
-   * are allowed to do.
+   * **The tester mark is not read** (#576): its one reader was feature-flag evaluation, which left
+   * with the flags. The wire still carries `is_tester` until the backend drops it (#581), and the
+   * app drops it here, as it drops `is_admin`.
    */
-  it('carries whether the account carries the tester mark', () => {
+  it('does not carry the tester mark, though the wire still sends it', () => {
     const user = toAuthenticatedUser({
       id: 'e2b1c0d4-0000-4000-8000-000000000001',
       email: 'ada@example.com',
@@ -129,7 +126,7 @@ describe('toAuthenticatedUser', () => {
       created_at: '2026-08-13T10:00:00Z',
     });
 
-    expect(user.isTester).toBe(true);
+    expect(user).not.toHaveProperty('isTester');
   });
 
   /**

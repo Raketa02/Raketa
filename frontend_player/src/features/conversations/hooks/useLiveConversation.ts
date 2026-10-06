@@ -34,88 +34,39 @@
  * port reads `last_seq` to know a frame is a nudge and drops it. The one field this hook reads is
  * `conversationId`, and it reads it to **check**, never to fetch.
  *
- * ## A nudge re-reads what the room draws — the stream, the plan and the game
+ * ## A nudge re-reads the stream, and the game it is about
  *
- * The plan card pinned under the header is read off `GET /plans`, a list beside the room and never
- * inside it (ADR-0148 §7), and a slot another member set reaches this phone as a system line on
- * this very frame. A nudge that re-read the stream alone left the card saying `Where` under
- * *tomek.p set the place* until the app was next foregrounded
- * ([#405](https://github.com/Raketa02/Raketa/issues/405)) — which is the state ADR-0147 §12 had
- * written down as *free*, true of the line and not yet of the card. So the nudge invalidates
- * `planKeys.list()` beside the room, and the card, the quick chips and the header's state word all
- * follow the line, because all three are readers of that one list.
+ * The room is a booked game's ([#556](https://github.com/Raketa02/Raketa/issues/556)), and its
+ * stream is what it draws. **The game is the other read a nudge marks stale**
+ * ([#406](https://github.com/Raketa02/Raketa/issues/406)): a *we played* line moves the Game's
+ * standing on `GET /games`, which the booked game's result screen reads the moment it is opened
+ * from the details beneath this room — so the line and the screen it points at cannot disagree.
+ * `features/games`' result writes **invalidate** that list rather than writing a reply in, so a
+ * nudge's re-read and a result's re-read are the same read and cannot cross; there is nothing to
+ * cancel. It drew the old loop's plan card too, and re-read `GET /plans` on every nudge for it,
+ * until that loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)).
  *
- * **The card is `(game, plan)`, and the game is the other half**
- * ([#406](https://github.com/Raketa02/Raketa/issues/406)). It is looked up in `GET /games`, which
- * was last read on the way into the room — so a doubles court that completed while the room was
- * open re-read a room that now carried a game and drew no card, no *Details* and no state word,
- * because the list had no game born a second ago; and a *we played* line moved a standing the
- * header reads off that list and not the plan's. The nudge invalidates `gameKeys.list()` too.
- * `readAt` — the card's one clock (ADR-0148 §10) — comes off the same read, so it is now as old
- * as the last nudge rather than the last focus, which is the fresher of the two. **One rule for
- * the three keys, and it is stated as one so they are not three precedents**: a nudge re-reads
- * what the room draws, and nothing it does not. One residual on this half is the backend's and is
- * stated in ADR-0147's amendment rather than here: across an outbox batch boundary the game can be
- * noted on the room after the line's frame went out, and the next nudge or focus repairs it.
- *
- * **There is no cancel for the games list, and the asymmetry with the plan's is not an oversight.**
- * `usePlanWrite` cancels the plan list's in-flight read because a plan write **writes its reply
- * in**, and a nudge-started read landing after it would roll a slot back. `features/games`' two
- * result writes **invalidate** `gameKeys.list()` instead (`useGames.ts`), so a nudge's re-read and a
- * result's re-read are the same read and cannot cross; there is nothing to cancel.
- *
- * **On every nudge, and not on sighting a plan line.** The alternative — read the re-fetched
- * stream for a new `PLACE_RECORDED | DAY_RECORDED | HOUR_RECORDED | PLAN_LOCKED` above the last
- * `seq` held, and invalidate the plan only then — was considered and is refused. A nudge carries
- * no content by construction and the port drops the number; a trigger derived from the stream's
- * codes would couple the card's liveness to the line vocabulary, so a fifth plan line this build
- * cannot read — the one case an old phone most needs a re-read for — would leave the card stale
- * precisely there. *A build too old to read a code says so*; it must not also go quietly stale.
- * `GET /plans` is one short list the room already holds an observer on, so an invalidation is one
- * request and re-renders nothing that did not change. And the stream's opening frame is a nudge
- * too (ADR-0147 §4), so every connect and every fifteen-minute reconnect re-reads the plan for
+ * **On every nudge, and not on sighting a line.** A nudge carries no content by construction and
+ * the port drops the number; a trigger derived from the stream's codes would couple the game's
+ * liveness to the line vocabulary, so a line this build cannot read — the one case an old phone
+ * most needs a re-read for — would leave it stale precisely there. And the stream's opening frame
+ * is a nudge too (ADR-0147 §4), so every connect and every fifteen-minute reconnect re-reads for
  * free, which is the catch-up after a stretch out of the room.
  *
- * ## What the invalidation costs, and what it deliberately does not touch
+ * ## What the invalidation costs
  *
  * The room is an **infinite** query, so invalidating it re-reads every page the client is holding
  * rather than only the newest. On a room somebody has paged back through three times that is four
  * requests for one message. It is the honest price of the cache being the single copy — the
  * alternative is a client assembling the newest page itself, which is the second store this whole
- * design refuses — and at two-to-four members it is nothing. The plan list and the games list are
- * two short requests more, on every nudge including the ones that were a message: ADR-0147 priced
- * *one extra round trip per delivered message*, and inside a room it is three, all to lists the
- * room draws. The games list is the only one of the three folded against a clock, and re-reading
- * it is what keeps the room's clock the freshest reading rather than the oldest. **The other
- * reader of that re-read is the game screen**, which `/chats/conversation/[id]/details` pushes
- * *over* this room: the room stays mounted beneath it and this channel stays open, so a nudge
- * re-folds that screen's standing and clock while it is on top — which is what a screen keyed on a
- * standing wants, and is said here so nobody is surprised by it. The Play rule (ADR-0147 §10) is
- * about a ranked list reordering under a finger, and none of the three lists is one; Now's rail is
- * not under this screen at all, because switching tabs replaces the stack.
+ * design refuses — and at four members it is nothing. The games list is one short request more:
+ * ADR-0147 priced *one extra round trip per delivered message*, and inside a room it is two.
  *
- * **The Chats list is not invalidated, and the cost of that is stated rather than glossed.** A
- * send does invalidate it, because the reply says nothing about the row's order and the player is
- * the one who moved it. A nudge is not an act: the list sits **mounted** under this screen in the
- * stack, so invalidating it would refetch every room's row on every inbound message, for a line
- * nobody is looking at — and it is the same shape of cost ADR-0147 already prices per message.
- *
- * What that left was real and, it turned out, not small: **a row was one line behind when a
- * player came back to the list** — *Waiting on 2 answers* under a room that had just said one of
- * the two was in ([#429](https://github.com/Raketa02/Raketa/issues/429) A5, A6) — because popping
- * the stack is not a focus event and an active query does not refetch on staleness alone. The
- * answer was not to reverse the line above. **The return re-reads the list**: each section's hook
- * marks its own list stale on `useOnReturn` (`useChallengeInbox`, `useConversationRows`), which
- * is one request at the moment somebody is looking at the row again, where re-reading on the
- * nudge would be one per inbound message for a row nobody is looking at. The nudge still touches
- * nothing but what the room draws, and `roomLiveness.test.tsx` still says so.
- *
- * ## Play's posture is not in question here
- *
- * *Nothing in Play background-refetches* is a **scope clarification rather than an exception**
- * ([`the-loop-components.md`](../../../../../docs/specs/the-loop/the-loop-components.md) §2.4):
- * that rule is written about a ranked list reordering under a finger, and a conversation is
- * append-ordered — there is no ordering to lose, and the two rules never touch.
+ * **The rooms list is not invalidated.** A send does invalidate it, because the reply says
+ * nothing about the list's order and the player is the one who moved it. A nudge is not an act,
+ * and nothing under this screen draws the list as rows — Home reads it only to say whether a
+ * game's chat is open, which a message does not change. `roomLiveness.test.tsx` holds it.
+
  */
 
 import { useEffect, useState } from 'react';
@@ -123,7 +74,6 @@ import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { gameKeys } from '@/features/games/types';
-import { planKeys } from '@/features/plans/types';
 import { useLiveStream, type LiveStreamStatus } from '@/shared/lib/platform';
 
 import { shownTypists } from '../domain/typing';
@@ -161,12 +111,9 @@ export function useLiveConversation(conversationId: string): LiveConversation {
           // another one, which nothing on screen would show.
           if (nudge.conversationId !== conversationId) return;
 
-          // What the room draws: the stream, the plan pinned over it, and the game the two are
-          // about. Never the Chats list.
+          // The stream, and the game it is about. Never the rooms list. The games' writes
+          // invalidate rather than write in, so this one needs no cancel. See the module note.
           void client.invalidateQueries({ queryKey: conversationKeys.room(conversationId) });
-          void client.invalidateQueries({ queryKey: planKeys.list() });
-          // The plan's writes cancel this list's read before writing a reply in; the games' writes
-          // invalidate rather than write in, so this one needs no such cancel. See the module note.
           void client.invalidateQueries({ queryKey: gameKeys.list() });
         },
         onTyping: (typing) => {

@@ -59,8 +59,8 @@
  * §3): one begun at the Skill passport's *Add a sport* enters the app the way every pass
  * does — *See your ratings*, *continue later* and *abandon* all replace to `/` — and it is
  * this file, told the origin as the pass ends, that lays the You tab down and pushes the
- * passport over it. The shell's own move, as the yes screen lands a room: the tab beneath,
- * so *back* from the passport goes where it came from. Which route the passport is belongs to
+ * passport over it. The shell's own move: the tab beneath, so *back* from the passport goes
+ * where it came from. Which route the passport is belongs to
  * the feature that owns the screen, not to this file — the same seam `NAMING_STEP` and
  * `SOCIAL_STEPS_ENTRY` cross.
  */
@@ -70,7 +70,6 @@ import { useCallback } from 'react';
 
 import { administratorHome, HandoverSheet, InvitationSheet } from '@/features/administrator/types';
 import { NAMING_STEP, PLAYER_PROFILE, START_PLAYING_STEP } from '@/features/auth/types';
-import { useFeatureDatafile } from '@/features/feature_flags/types';
 import {
   EntryUnavailableScreen,
   useEndOnboardingPass,
@@ -109,10 +108,6 @@ export default function AppLayout() {
   // the one site that knows a player is signed in and past onboarding. The feature owns what
   // happens; this file owns the moment (ADR-0174 §6).
   useLocationRefresh(entry.kind === 'app');
-  // And the feature flags are fetched, for the same branch: only a player in the app can reach a
-  // gated screen, and this is the site that knows one is. From here on the datafile is fetched
-  // again at every return to the foreground; nothing waits for it (ADR-0180 §6).
-  useFeatureDatafile(entry.kind === 'app');
 
   // Can't happen in practice — `BootstrapGate` renders nothing until the sequence
   // resolves, so no route tree exists while the status is still `bootstrapping`. It is

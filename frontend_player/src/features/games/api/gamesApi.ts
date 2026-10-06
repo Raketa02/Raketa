@@ -83,22 +83,6 @@ export function postResultAcceptance(gameId: string): Promise<GameSchema> {
 }
 
 /**
- * ***Remove this card*** — clear a called-off game's card from your own rail
- * ([ADR-0172](../../../../../docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md)
- * §5). A `204`: the dismissal is recorded on the game once per player, `GET /games` subtracts it
- * on every read, and nothing is answered because the thing a redraw would draw is the thing
- * removed. Admitted on `CALLED_OFF` and refused with `game_is_not_called_off` on every other
- * standing; a second press writes nothing and answers the same.
- */
-export function postDismissal(gameId: string): Promise<void> {
-  return httpRequest<void>({
-    method: 'POST',
-    path: `/api/v1/games/${gameId}/dismissal`,
-    authenticated: true,
-  });
-}
-
-/**
  * ***Kuba didn't come*** — on a booked game whose hour has come, by somebody who came, about
  * somebody else on the court (#560; the backend's #547). The game does not count from here on, and
  * the reported player has a day to dispute it. A second report of the same player answers the same

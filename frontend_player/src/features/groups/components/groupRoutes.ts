@@ -10,7 +10,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckArrival } from '../schemas/groupRouteParams';
 
-/** **The Groups list** — Play's root while `classic_play` is off; where leaving a group lands. */
+/** **The Groups list** — Play's root, on its *Groups* segment; where leaving a group lands. */
 export const GROUPS_LIST_ROUTE = '/play';
 
 export const NEW_GROUP_ROUTE = '/play/new-group';

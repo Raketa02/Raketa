@@ -468,21 +468,6 @@ export function editingAct(argument: ResultArgument): EditingAct | undefined {
 }
 
 /**
- * **Whether a score is waiting on this player's agreement** — the *result to confirm* that makes a
- * game one of those Home's badge counts ([#550](https://github.com/Raketa02/Raketa/issues/550),
- * [the mechanics §3](../../../../../docs/specs/games-and-fill-in/the-mechanics.md#3-where-everything-lives)).
- *
- * Read off {@link actsOffered} rather than off the state's name, for the reason `editingAct` is: a
- * score waits on you exactly when agreeing with one is an act you may take, so the two cannot
- * disagree about a state. Your own score waiting on the other side is not yours to clear, and an
- * agreement already running out its grace is settled unless somebody disagrees — which is a right
- * the screen still offers, not a task the badge should nag about.
- */
-export function awaitsYourAgreement(game: Game, playerId: string): boolean {
-  return actsOffered(resultArgument(game, playerId)).includes('accept');
-}
-
-/**
  * The acts this state offers, **in the order the screen draws them**.
  *
  * `accept` leads `counter` because agreeing is the ordinary answer and disagreeing is the one

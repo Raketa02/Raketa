@@ -389,15 +389,6 @@ export function courtIsGiven(status: HomeStatus): boolean {
 }
 
 /**
- * **The Games Home's cards stand for** — every booked game's, the shelved ones too. Each is on
- * `GET /games` as well (#542), and the Classic rail and its half of the badge leave them out, so a
- * game is drawn and counted once, as its booking. A game waiting for the club has no Game yet.
- */
-export function bookedGameIds(games: readonly Pick<HomeGame, 'gameId'>[]): ReadonlySet<string> {
-  return new Set(games.flatMap((game) => (game.gameId === undefined ? [] : [game.gameId])));
-}
-
-/**
  * The result act the details lead to — today's game screen, which tells and agrees a result, and
  * where a player marked as not coming says they were there (#560).
  */

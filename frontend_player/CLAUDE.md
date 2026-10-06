@@ -27,7 +27,7 @@ pnpm typecheck    # tsc --noEmit (strict)
 pnpm test         # Jest (jest-expo)
 pnpm test:affected     # while iterating: only the suites the branch's changes reach — never the gate
 pnpm test:boundaries   # drive ESLint at code breaking each module ban; it must go red
-pnpm test:labels       # drive ESLint at an unnamed Pressable in Play; it must go red
+pnpm test:labels       # drive ESLint at an unnamed Pressable in games/proposals; it must go red
 pnpm format       # Prettier --write   pnpm format:check → --check
 pnpm gen:api      # regenerate src/generated/ from ../backend/openapi.player.json
 pnpm doctor       # npx expo-doctor — checks dependency/SDK agreement
@@ -59,16 +59,15 @@ asserting it renders correctly.
 
 ## Environment
 
-- **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL`,
-  `EXPO_PUBLIC_FEATURES_URL` (the feature-flag datafiles' host, ADR-0180) and
-  `EXPO_PUBLIC_ENV` are all required, validated once at launch by `src/shared/config/env.ts`.
+- **Copy `.env.example` → `.env.local` before the first run.** `EXPO_PUBLIC_API_URL` and
+  `EXPO_PUBLIC_ENV` are both required, validated once at launch by `src/shared/config/env.ts`.
   A missing or malformed value stops the app on a startup screen naming it — that is the
   guardrail working, not a bug. `EXPO_PUBLIC_LINK_DOMAIN` is the one optional value — the web
   domain the app's links live on, empty until a domain exists (`docs/features/links.md`).
 - `EXPO_PUBLIC_ENV` is `local | development | staging | production`, the backend's four names,
-  and **only `local` runs today.** The environment fixes the URL scheme — `https://` for the
-  three deployed ones, for both URLs — so a laptop URL under a deployed name fails at launch
-  naming both variables.
+  and **only `local` runs today.** The environment fixes the API URL's scheme — `https://` for
+  the three deployed ones — so a laptop URL under a deployed name fails at launch naming both
+  variables.
 - `app.config.ts` is a function of that environment (it replaced `app.json`) and holds no
   logic: `src/shared/config/appIdentity.ts` is the table it calls. Expo evaluates it in
   **Node**, before Metro, so it registers sucrase's TS require hook first — delete that line and
@@ -139,25 +138,19 @@ src/
 - **The wire boundary is `api/` + `mappers/`.** A feature that keys copy by a wire code spells
   the union itself in `domain/vocabulary.ts` and holds it equal to the generated one with a
   compile-time assertion in `mappers/wireVocabulary.ts`, so a contract change fails
-  `pnpm typecheck` in the one file whose job is saying so (`play`, `challenges`, `games`,
-  `player_record`, `groups` and `auth` do this).
+  `pnpm typecheck` in the one file whose job is saying so (`games`, `proposals`, `groups`,
+  `player_record`, `payments`, `notifications` and `auth` do this).
 - **One chokepoint per capability**, each the only importer of its module: `shared/lib/auth`
   (keychain), `shared/lib/http` (`fetch`, the 401 → refresh → retry rotation, timeouts as named
   classes), and six platform ports in `shared/lib/platform/` — `location.ts`,
   `imagePicking.ts`, `liveStream.ts`, `haptics.ts`, `clipboard.ts`, `share.ts` (React Native's
   `Share`, the one fenced name out of that module). Features depend on the port
-  and drive the fakes in `src/test-support/platform.ts`. The flag seam adds two, one file each in
-  `features/feature_flags/api/`: `featurevisor.ts` (the SDK) and `datafileCache.ts`
-  (AsyncStorage — a public datafile, never a credential; ADR-0180). AsyncStorage's second and
-  last importer is `shared/lib/preferences/phonePreferences.ts` — three per-account choices,
-  wiped at sign-out (ADR-0188). _(lint)_
+  and drive the fakes in `src/test-support/platform.ts`. AsyncStorage's one importer is
+  `shared/lib/preferences/phonePreferences.ts` — per-account choices, wiped at sign-out
+  (ADR-0188). _(lint)_
 - **`shared/` never imports a feature; a feature never deep-imports another** — go through its
-  `types.ts`. `features/plans` may import `features/games`, never the reverse. _(lint)_ But do
-  not move code to `shared/` because two files use it; keep it local until cross-feature
-  ownership is proven (the third caller).
-- **Nothing new imports `features/play`, `challenges` or `plans`** — the old loop #576 deletes
-  whole. Only those three and `OLD_LOOP_SURFACES` in `eslint.config.mjs` may; what the new games
-  share lives in `proposals`, `games`, `shared/ui` and `shared/vocabulary` (#574). _(lint)_
+  `types.ts`. _(lint)_ But do not move code to `shared/` because two files use it; keep it local
+  until cross-feature ownership is proven (the third caller).
 - **No global `services/`, `utils/`, `types/` or `hooks/` bucket.** Utilities get semantic
   homes (`formatting/`, `date/`, `vocabulary/`).
 - **Copy is code**: every sentence a screen says lives in a copy module beside it

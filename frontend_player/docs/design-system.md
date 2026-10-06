@@ -3902,17 +3902,13 @@ centre column: a 30pt disc, radius 11, 6.1 `primary`, shadow.fab
 active Play:   a 2pt `coral` ring, 2pt clear of the disc, ABSOLUTELY POSITIONED
 ```
 
-**Three columns as the app ships** — `Home · ⚡Play · You` — **and five with Classic play**,
-`Home · Players · ⚡Play · Chats · You`, the old loop's two columns back where they were
-([ADR-0189](../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6,
-[#550](https://github.com/Raketa02/Raketa/issues/550)). The centre one is raised, and it is
+**Three columns** — `Home · ⚡Play · You`
+([#576](https://github.com/Raketa02/Raketa/issues/576)). The centre one is raised, and it is
 both an action and a destination: pressing it always opens Play's entry, and the screens that
 entry leads to are somewhere a player can be for a whole flow. That is what the ring is for.
-(Four, until the deck left for Players — ADR-0169 §1; five until Classic play took two of them
-behind its flag. Home was **Now** until then, renamed whole — key, label, copy — on its own
-route, `/`.) The caller says whether Classic play is on and the bar decides which columns that
-means, so no caller passes tabs; a player standing on a route whose column is not drawn — a
-Home card's chat door leads into Chats — sees no column lit.
+(Four, until the deck left for Players — ADR-0169 §1; five, with the old loop's Players and
+Chats behind the `classic_play` flag (#550), until that loop was removed. Home was **Now** until
+#550, renamed whole — key, label, copy — on its own route, `/`.) No caller passes tabs.
 
 ### The disc is [6.1](#61-button) `primary` in a squircle
 
@@ -3942,33 +3938,31 @@ in Play would move the four things that did not change in order to announce the 
 The 4pt the ring needs above the disc comes out of the 6pt top padding, leaving 2pt of
 clearance to the hairline.
 
-### Two badges, on Home and on Chats, and on no other column
+### One badge, on Home, and on no other column
 
-**The bar carries two badges, one per column, and the badge inventory is fixed at two for the
-reason the glyph inventory is fixed at five** ([#326](https://github.com/Raketa02/Raketa/issues/326),
-[#550](https://github.com/Raketa02/Raketa/issues/550)). **Home's** counts **the games that need
-you** — a result to enter or confirm, a seat open in your game, and (when booked games arrive) a
-payment to confirm. **Chats'** counts **unanswered challenges addressed to you**, and it is
-Classic play's: it goes with its column. Each counts things only you can clear, which is what
-makes it an obligation a player can discharge rather than a number that nags. Home's is spoken
-_Home, 2 games waiting on you_; Chats' _Chats, 3 challenges waiting_.
+**The bar carries one badge, and the badge inventory is fixed at one for the reason the glyph
+inventory is fixed at three** ([#326](https://github.com/Raketa02/Raketa/issues/326),
+[#550](https://github.com/Raketa02/Raketa/issues/550), [#576](https://github.com/Raketa02/Raketa/issues/576)).
+**Home's** counts **the booked games that need you** — a seat open, a result to enter or confirm,
+a no-show against you, a payment to confirm. It counts things only you can clear, which is what
+makes it an obligation a player can discharge rather than a number that nags, and it is spoken
+_Home, 2 games waiting on you_. Chats carried the first badge — _unanswered challenges addressed
+to you_ — until that tab left with the old loop.
 
 **The refusal it replaces was right about its own case, and it is kept as the test.** _A count
 that is not filtered the way the surface it labels is filtered would be an unfiltered number on
 permanent chrome._ Play's outstanding yeses are filtered by the sport on screen and this bar
-has no sport, so that count still cannot come here. A challenge addressed to you is filtered by
-nothing, and Chats is where it opens.
+has no sport, so that count still cannot come here.
 
 **`coralInk` fill, white mark, 5.89.** The design drew a white `1` on a `coral` disc at
 **3.89** — the one pairing [Rule C](#rule-c--text-on-a-saturated-fill) refuses outright, and
-the precise correction the ⚡Play disc three columns away already took once
+the precise correction the ⚡Play disc one column away already took once
 ([2.5](#25-contrast--computed)). The disc's own treatment is borrowed rather than reinvented,
 and no colour is added to the palette.
 
 **The digit is mono and tabular** ([1.4](#14-numbers-are-monospaced-always)), so 1 → 2 does not
-reflow the column. **There is no cap**: the pair rule allows at most one open challenge per
-organiser, so a double-digit badge means something genuinely unusual and `9+` would hide the
-one case worth seeing.
+reflow the column. **There is no cap**: a double-digit badge means something genuinely unusual,
+and `9+` would hide the one case worth seeing.
 
 **The count is spoken on the column's own `accessibilityLabel`.** Each column is `accessible`
 with an explicit label, so a `<Text>` dropped inside is swallowed rather than announced — **the
@@ -4003,16 +3997,14 @@ on the narrowest phone, and the rise against the padding the bar has to spend �
 ### Feather, and selection in tone alone
 
 The glyph set is **Feather from `@expo/vector-icons`**, declared in `package.json` rather than
-inherited transitively, and the inventory is these five
+inherited transitively, and the inventory is these three
 ([ADR-0135](../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)):
 
-| Tab       | Glyph            | Box                              |
-| --------- | ---------------- | -------------------------------- |
-| `home`    | `home`           | 16pt                             |
-| `players` | `users`          | 16pt                             |
-| `play`    | `zap`            | **15pt**, white, inside the disc |
-| `chats`   | `message-circle` | 16pt                             |
-| `you`     | `user`           | 16pt                             |
+| Tab    | Glyph  | Box                              |
+| ------ | ------ | -------------------------------- |
+| `home` | `home` | 16pt                             |
+| `play` | `zap`  | **15pt**, white, inside the disc |
+| `you`  | `user` | 16pt                             |
 
 **Selection changes tone and never shape**: `ink` selected, `muted` resting — 3.25:1, and a
 _lightness_ difference rather than a hue one, so it survives greyscale and a red-green
@@ -4028,20 +4020,21 @@ whole argument is a white mark.
 **Every glyph name is typed against its own family's `glyphMap`,** so a name the package does
 not ship is a compile error rather than a blank column nobody notices at 16pt.
 
-### The label is `tag`, under a derived cap
+### The label is `tag`, under a bounded cap
 
 `tag` — 9,5/700 and **flat**. A tab label is a _name_, and `eyebrow`, the other member of the
-9,5 pair, is tracked: 1,43pt per character spends **10pt** of a 64pt column on air over the
-seven letters of _Players_.
+9,5 pair, is tracked: 1,43pt per character on air — **10pt** of a 64pt column over the seven
+letters of _Players_ when the bar had five columns.
 
 [Part 13](#part-13--accessibility) names this bar as the fixed-height exception **and** permits
 `allowFontScaling={false}` only inside the level bar, so a bounded `maxFontSizeMultiplier` is
-the only mechanism left. **Its value is derived, never chosen** — from the longest shipped
-label, at `tag`'s size, in the narrowest phone's column, with the grid's smallest step held on
-each side. `theme.size.tabBar.labelMaxScale` carries the answer and
-[`tabBarLabelCap.test.ts`](../src/shared/ui/tabBarLabelCap.test.ts) re-derives it from the real
-Archivo Bold metrics, so a sixth tab or a longer word goes red rather than truncating on
-somebody's phone.
+the only mechanism left. **Its value, 1,6, was derived over five columns** — the largest step at
+which the longest label, _Players_, still fit the narrowest phone's column with the grid's
+smallest step held on each side. At three columns every word fits at more than twice that, so
+the width no longer decides it, and **it stays where the five left it**, bounding the bar's
+height (#576). [`tabBarLabelCap.test.ts`](../src/shared/ui/tabBarLabelCap.test.ts) holds the
+three labels inside their columns at it from the real Archivo Bold metrics, so a fourth tab or a
+longer word goes red rather than truncating on somebody's phone.
 
 **The bar's height is fixed against _state_, not against the OS text size**, and the two claims
 on this page are not the same claim. Nothing about being in Play changes the height — that is
@@ -4842,6 +4835,7 @@ unchangeable one; it is one whose changes are recorded rather than absorbed.
 | 2026-10-02 | [7.29](#729-notifications-the-always-on-rows-the-onoff-chip-the-bell-the-recent-list-and-the-banner) · [`NotificationsScreen.tsx`](../src/features/notifications/components/NotificationsScreen.tsx) `PermissionLine`                                                                                                                                                                    | A7.2: _the first time the screen opens on a phone that hasn't granted notification permission, a line at the top offers Allow notifications_                                                                                                                                                                                                                 | A 5.1 card at the top with one `rlLabel` line and a 6.1 `primary` `sm` button, **whenever** the phone may not show a notice — _Allow notifications_ while it can still be asked, _Open settings_ once it will not ask again                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | #559: the line is the one way back to pushes, so it is offered every time the screen opens while the answer is missing, not only the first; a blocked permission has one remedy, and it is not a prompt (Part 13)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | 2026-10-02 | [7.29](#729-notifications-the-always-on-rows-the-onoff-chip-the-bell-the-recent-list-and-the-banner) · [`NoticeBell.tsx`](../src/features/notifications/components/NoticeBell.tsx) · [`NoticesScreen.tsx`](../src/features/notifications/components/NoticesScreen.tsx)                                                                                                                   | A9: _the recent notices are a list reached from a bell on Home_ — no mock                                                                                                                                                                                                                                                                                    | A Feather `bell` in Home's header right slot, **with no count**; behind it one card of rows on the receipts' shape — title, body, the time in mono at the trailing edge, a chevron where the row opens a game                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | #559: the backend keeps no seen marker (#549), so a count could only be everything ever told — a badge that never clears; Home's bar badge already counts what needs the player                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | 2026-10-02 | [7.29](#729-notifications-the-always-on-rows-the-onoff-chip-the-bell-the-recent-list-and-the-banner) · [9.2](#92-toast) · [`NoticeBanner.tsx`](../src/features/notifications/components/NoticeBanner.tsx) · [`theme.ts`](../src/shared/ui/theme.ts) `motion.hold.notice`                                                                                                                 | A9: _an in-app banner when the app is open_ — no mock                                                                                                                                                                                                                                                                                                        | **The banner**: 9.2's toast surface at the **top**, under the status bar, a press opening the notice's game and a close `×`; held **`motion.hold.notice: 6000`**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | #559: the phone draws nothing while the app is open, so the app draws where the phone's own banner would come down; it is a control, unlike the toast, so it may not be a timer only — and six seconds is two lines read and a thumb moved, where 2,6 is one sentence read                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 2026-10-06 | [10.2](#102-the-tab-bar) · [`TabBar.tsx`](../src/shared/ui/TabBar.tsx) · [`theme.ts`](../src/shared/ui/theme.ts) `size.tabBar` (comments only)                                                                                                                                                                                                                                           | Three columns as the app shipped and five with Classic play; two badges, Home's and Chats'; `labelMaxScale` derived over five columns                                                                                                                                                                                                                        | **Three columns, fixed** — `Home · ⚡Play · You`, no switch; **one badge**, Home's, counting the booked games that need you; `labelMaxScale` stays 1,6, held as a fit over three columns rather than derived from them                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | [#576](https://github.com/Raketa02/Raketa/issues/576): the old loop and the flag that drew its two columns were removed. A cap re-derived from three columns would be 3,7, and a bar that grew ~32pt at the largest text sizes is not the fixed-height exception Part 13 names — so the number did not move. Not seen on a device                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 # Part 17 — What the reset removed
 

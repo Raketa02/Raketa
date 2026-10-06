@@ -3,9 +3,7 @@
  * left it on ([#512](https://github.com/Raketa02/Raketa/issues/512),
  * [ADR-0188](../../../../../docs/adr/0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)).
  *
- * The real route tree and the real shell, with only the socket faked. Every walk here runs on the
- * code defaults — `stubGate` serves no datafile — which since #512 puts Groups on the Play tab.
- * *A relaunch* is the process ending and a new one starting: the Query cache and the session go,
+ * The real route tree and the real shell, with only the socket faked. *A relaunch* is the process ending and a new one starting: the Query cache and the session go,
  * and what is saved on the device — the keychain, and the phone's preferences — stays.
  */
 

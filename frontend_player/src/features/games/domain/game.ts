@@ -99,22 +99,6 @@ export function openSeats(seats: readonly GameSeat[]): readonly GameSeat[] {
 }
 
 /**
- * **Everybody in a seat but the reader**, by id and in the court's order — what the fill is told
- * about the court it completes ([#419](https://github.com/Raketa02/Raketa/issues/419)).
- *
- * The seats a fill may never take out, on `acceptedPlayers`' shape one feature over: *in seat
- * order and without the reader*, because the reader's own seat is what the court is composed
- * around and the builder puts it back at the send. Read off the game rather than the challenge
- * because the game's seats are the court as it stands **now** — the challenge's are the
- * arrangement as it was sent, and a re-seat has moved on from it.
- */
-export function seatedOthers(seats: readonly GameSeat[], reader: string): readonly string[] {
-  return seats.flatMap((seat) =>
-    seat.playerId === undefined || seat.playerId === reader ? [] : [seat.playerId],
-  );
-}
-
-/**
  * One side's score, on the table and not yet settled on.
  *
  * **At most one per side**, which is what bounds an argument to two rounds. Two of them is the

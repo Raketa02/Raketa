@@ -33,15 +33,6 @@ import { spokenHandles } from '@/shared/formatting/handleList';
 
 import { WAITING_FOR_OTHERS } from './conversationPresentation';
 
-/** A row under `CONVERSATIONS`: who, which sport, and the last thing that happened in it. */
-export function conversationRowLabel(
-  handles: readonly string[],
-  sportName: string,
-  line: string | undefined,
-): string {
-  return roomSaid(spokenHandles(handles), sportName, line);
-}
-
 /**
  * **The one dialect a room is spoken in**, on the row and in the header alike: who — the handles
  * whole with a final *and* — the sport, then whatever that surface has to add — the last entry on
@@ -106,11 +97,3 @@ export function conversationHeaderLabel(
 export function bubbleLabel(author: string, text: string): string {
   return `${author}: ${text}`;
 }
-
-/**
- * **The `Details` door names the destination rather than the screen** (§24.4).
- *
- * *Details* is a word about a screen, and every other door on this map is named by its act. The
- * visible label is the design's and stays; this is what a listener arrives on.
- */
-export const OPEN_THE_GAME = 'Open the game';

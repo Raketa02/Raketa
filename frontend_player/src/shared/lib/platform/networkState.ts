@@ -53,14 +53,11 @@ export function wireOnlineManager(): () => void {
  * `navigator.onLine` — so a second source here would be a second opinion, and the two would
  * first disagree during the moment a screen is deciding what to say about the first one.
  *
- * **It has exactly one caller, and that caller is not a correctness mechanism.** The send is
- * the one act in this app that fails now rather than pausing
- * (`features/challenges/hooks/challengeMutationOptions.ts`), and `docs/architecture.md` Part 11
- * is explicit that *"button disabling is UX, not correctness"* — so this closes the control and
- * states the reason beside it, while the
- * `networkMode` override is what actually keeps a deadline the player did not choose out of the
- * queue. Everything else in the app pauses and says so from `isPaused`, which needs no hook at
- * all: a paused request reports its own state.
+ * **Its callers are not a correctness mechanism.** An act a screen will not send offline —
+ * leaving a game, say — closes its control and states the reason beside it, and
+ * `docs/architecture.md` Part 11 is explicit that *"button disabling is UX, not correctness"*.
+ * Everything else in the app pauses and says so from `isPaused`, which needs no hook at all: a
+ * paused request reports its own state.
  *
  * `useSyncExternalStore` rather than an effect and a `useState`, because the manager is an
  * external store and the first paint has to be right: an effect would render one frame of *you

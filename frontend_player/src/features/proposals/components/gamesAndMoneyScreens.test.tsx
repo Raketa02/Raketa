@@ -22,7 +22,6 @@ import {
   launchSignedIn,
   stubGamesAndMoney,
   stubGate,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
@@ -69,7 +68,6 @@ beforeEach(() => {
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
 });
 

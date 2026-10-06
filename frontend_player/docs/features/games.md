@@ -336,3 +336,15 @@ agreement too, which before #560 left Home's status and badge stale until the ne
 hooks take an `AfterAWrite` and run its `reread` from the mutation, so a write that waited out a lost
 connection still re-reads after the screen has gone. A game whose every report was disputed is the
 backend's `UNSCORED` and reads as today's evening. **Not seen on a device.**
+
+**The old loop's game screen, its card and its dismissal left** ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+The `/games/[id]` route and `GAME_ROUTE`, the players card and `CourtPairing` (with `levelRow`, the
+row's words and `courtForReader`), the dismissal (`dismissGame`, `useDismissGame`, `RemoveCard`,
+`dropCardOfGame`), `awaitsYourAgreement` and `seatedOthers` went with the old loop's rail, cards and
+challenge screen they served, and so did this feature's edge into `player_record`. **`GameScreen`
+stays** — a booked game's result screen mounts it, on the score lead with its other slots empty —
+and so do `GameForecast` and the result writes. `result.test.tsx` and `forecastBlock.test.tsx` walk
+the booked routes now (`/booking/[id]/result` and the details), with the same assertions. **The
+plan lead, the `card`, `court`, `plan` and `fill` slots and `entryLead` are still on the screen**
+and nothing fills them: simplifying the screen to the one lead it now has is left for a ticket of
+its own rather than folded into a removal.

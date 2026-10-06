@@ -32,7 +32,6 @@ import {
   PLAYER_ONLY,
   launchSignedIn,
   stubGate,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
@@ -79,7 +78,6 @@ function serve(account: GateStub) {
   stubGate(transport, account);
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
   club([O3_CLUB_GROUP]).install(transport);
   transport.on('GET', `/api/v1/administrator/clubs/${BONARKA_ID}/groups`, () =>

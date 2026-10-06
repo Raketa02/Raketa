@@ -1,6 +1,9 @@
 /**
  * **The result argument, walked the way a player walks it**: the real route tree, the real
- * shell, and only `fetch` faked.
+ * shell, and only `fetch` faked — on a booked game's result screen (`/booking/[id]/result`, #556),
+ * which is where *We played* on the details leads. It walked the old loop's `/games/[id]` until that
+ * route was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)); the screen is the same
+ * one, on its score lead.
  *
  * Four of the ticket's acceptance criteria are assertions in this file and not opinions
  * anywhere else — a player can enter, correct, agree and disagree; every refusal the aggregate
@@ -20,12 +23,12 @@ import type { ResultArgument } from '../domain/resultArgument';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { WE_PLAYED } from '@/shared/vocabulary/theActsWords';
+import { BOOKING, bookingDetails, homeGame, stubBooking, stubHomeGames } from '@/test-support/home';
 import {
   GAMES_PATH,
   GATE_USER,
   launchSignedIn,
   stubGames,
-  stubPlans,
   stubGate,
 } from '@/test-support/onboardingRouter';
 import {
@@ -180,67 +183,33 @@ afterEach(async () => {
   await clearStoredTokens();
 });
 
+/** Where the booked game's result screen is — the one route this screen is mounted at. */
+const RESULT_ROUTE = `/booking/${BOOKING}/result`;
+
 /**
- * Land in the app with these games, on the first of them — **at the screen's own address**.
+ * Land on a booked game's result screen, with this Game behind the booking.
  *
- * It used to walk in from Now's card, and the card is no longer a door: since
- * [#413](https://github.com/Raketa02/Raketa/issues/413) the body is not pressable and an ending
- * carries no door at all, so two of the arms this file walks cannot be reached from the rail. The
- * rail's doors are the rail's tests' (`nowRail.test.tsx`, `gamePlan.test.tsx`); what this file is
- * about is the screen's eight states, and `GameScreen` is state-keyed — the arm is the standing's
- * wherever it is entered from, which is §5.2's own reason there is no deep-link parameter.
+ * `GameScreen` is state-keyed — the arm is the standing's wherever it is entered from — so what
+ * this file is about is the screen's states, entered at the route that mounts it.
  */
 async function openGame(served: Wire['GameSchema']) {
+  stubHomeGames(transport, [homeGame({ game_id: GAME_ID })]);
+  stubBooking(transport, bookingDetails({ game_id: GAME_ID }));
   stubGames(transport, [served], READ_AT);
-  await launchSignedIn(`/games/${GAME_ID}`);
-  await waitFor(() => expect(screen).toHavePathname(`/games/${GAME_ID}`));
-  // The route resolves before the screen is drawn; the back control is on every arm.
+  await launchSignedIn(RESULT_ROUTE);
+  await waitFor(() => expect(screen).toHavePathname(RESULT_ROUTE));
+  // The booking is read first and the Game after it, and the screen wears *Not your game*'s
+  // title while the Game is still coming — so what is waited on is that title going.
   await screen.findByLabelText('Back');
+  await waitFor(() => expect(screen.queryByText(resultTitle({ kind: 'not-yours' }))).toBeNull());
 }
 
 /**
- * The same walk, and then the press that reveals the grid.
- *
- * **An entry arm with nothing agreed leads with the plan**, so the grid is one press away rather
- * than the screen ([#368](https://github.com/Raketa02/Raketa/issues/368),
- * `the-loop-screens.md` §5.2). Nothing in this file stubs a plan, so every `AWAITING_ENTRY` game
- * it walks arrives on the Planning arm — and the press is `We played`, the same verb the card's
- * own door carries. It is a second helper rather than a branch inside the first, so every
- * assertion below says which arm it is standing on.
- */
-async function openTheGrid(served: Wire['GameSchema']) {
-  await openGame(served);
-
-  fireEvent.press(screen.getByText(WE_PLAYED));
-}
-
-/**
- * **The grid closes only where something is behind it**, which is the two entry landings §5.2
- * names: on the plan lead it opened over the plan, so `Leave it as it is` puts it back; on the
- * score lead it *is* the screen, so there is nothing to go back to and no cancel is drawn. Both
- * halves are asserted here because the footer is this screen's, and the fold that chooses between
- * them is `features/plans`' (`gamePlan.test.tsx`).
+ * **The grid is the screen on an entry arm**: a booked game's result leads with the score, so
+ * there is nothing behind the grid and no cancel is drawn.
  */
 describe('the grid on an entry arm', () => {
-  it('offers a way back where it opened over the plan', async () => {
-    await openTheGrid(game());
-
-    expect(screen.getByText(ENTER_LABEL)).toBeTruthy();
-    expect(screen.getByText(CANCEL_LABEL)).toBeTruthy();
-  });
-
-  it('is the screen itself once the agreed point has passed, so nothing closes it', async () => {
-    // The agreed point is behind the fold, which is the rung that lands a card on the grid.
-    stubPlans(transport, [
-      {
-        challenge_id: CHALLENGE_ID,
-        anchor: '2026-09-01T09:00:00Z',
-        place: 'Zabłocie Sport',
-        day: '2026-09-04',
-        hour: '20:00',
-        agreed_point: '2026-09-04T18:00:00Z',
-      },
-    ]);
+  it('is the screen itself, so nothing closes it', async () => {
     await openGame(game());
 
     expect(screen.getByText(ENTER_LABEL)).toBeTruthy();
@@ -270,41 +239,8 @@ const bodies = (path: string) => transport.requestsTo('POST', path).map((request
 const refusal = (code: string) =>
   new AppError('conflict', 'business-conflict', 'test failure', { code });
 
-describe("the card on Now's rail", () => {
-  /**
-   * **The card's sentence is the screen's sentence**, still — the rail is `features/plans`' since
-   * [#367](https://github.com/Raketa02/Raketa/issues/367), but the gloss it draws under a game that
-   * is not being arranged is this feature's `gameStandingLine`, so a player who reads a card, taps
-   * it and finds a different deadline is the state one caller exists to prevent.
-   *
-   * What the empty rail draws is the rail's own suite's, and moved there with it.
-   */
-  it('says what each game is asking, and the screen says the same sentence', async () => {
-    const served = awaitingAnswer('B');
-    stubGames(transport, [served], READ_AT);
-    await launchSignedIn();
-
-    const line = await screen.findByText(/If you say nothing for 23 hours/);
-
-    expect(line).toBeTruthy();
-  });
-});
-
 describe('entering a result', () => {
   it('says when saying nothing stops being possible, before the clock runs', async () => {
-    // On the score lead: the agreed point is behind the fold. The plan lead draws no standing
-    // line since #414 — the card and the counter carry it — so the window is asserted where it
-    // is still said.
-    stubPlans(transport, [
-      {
-        challenge_id: CHALLENGE_ID,
-        anchor: '2026-09-01T09:00:00Z',
-        place: 'Zabłocie Sport',
-        day: '2026-09-04',
-        hour: '20:00',
-        agreed_point: '2026-09-04T18:00:00Z',
-      },
-    ]);
     await openGame(game());
 
     const said = standingLine(
@@ -313,13 +249,13 @@ describe('entering a result', () => {
     );
 
     expect(screen.getByText(said)).toBeTruthy();
-    // Four days: the plan's horizon is one ordinary week and entry stays open a day past it.
+    // Four days, from the read to the entry's close.
     expect(said).toContain('4 days');
   });
 
   it('sends the score absolutely, with no act named on it', async () => {
     transport.on('POST', RESULT_PATH, () => json(game()));
-    await openTheGrid(game());
+    await openGame(game());
 
     fillIn(
       [
@@ -336,7 +272,7 @@ describe('entering a result', () => {
   });
 
   it('refuses a level set with a sentence rather than a closed control', async () => {
-    await openTheGrid(game());
+    await openGame(game());
 
     fillIn([['6', '6']], ['You', 'Them']);
     fireEvent.press(screen.getByText(ENTER_LABEL));
@@ -346,7 +282,7 @@ describe('entering a result', () => {
   });
 
   it('refuses a score that names nobody, which is the invariant and not a sanity check', async () => {
-    await openTheGrid(game());
+    await openGame(game());
 
     fillIn(
       [
@@ -514,7 +450,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
    */
   it('counts past its own ceiling rather than refusing a real evening', async () => {
     transport.on('POST', RESULT_PATH, () => json(game()));
-    await openTheGrid(game());
+    await openGame(game());
 
     fillIn(
       [
@@ -548,7 +484,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
   });
 
   it('moves the caret across the row and then down, so a score is four taps', async () => {
-    await openTheGrid(game());
+    await openGame(game());
 
     type('6');
 
@@ -561,7 +497,7 @@ describe('the score-entry instrument, which is the prototype’s', () => {
   });
 
   it('draws the sport’s own grid, in the sport’s own word for a row', async () => {
-    await openTheGrid(game({ sport: 'SQUASH' }));
+    await openGame(game({ sport: 'SQUASH' }));
 
     expect(screen.getByLabelText('Game 5, You, empty')).toBeTruthy();
     expect(screen.queryByLabelText('Set 1, You, empty')).toBeNull();
@@ -584,7 +520,7 @@ describe('the ends', () => {
   /**
    * **The fourth end, drawn as the ghost is** (#419 §3, ADR-0163): the title and the standing
    * line the ticket fixes, the ghost's own body — nothing anybody is measured on moves — and
-   * nothing to press: no plan, no doors, no act on the court, and no pairing asked for, because
+   * nothing to press: no doors, no act on the court, and no pairing asked for, because
    * the read is `enabled` on `AWAITING_ENTRY` alone and answers `pairing_is_history` anyway.
    * With `called_off_by` null it is the hour's (ADR-0175 §3), and the body says so.
    */
@@ -786,7 +722,7 @@ describe('what the aggregate refuses, on screen', () => {
     ['a_score_must_name_a_winner', 400],
   ])('says what happened when it refuses with %s', async (code, status) => {
     transport.on('POST', RESULT_PATH, () => errorResponse(status, code));
-    await openTheGrid(game());
+    await openGame(game());
 
     fillIn([['6', '4']], ['You', 'Them']);
     fireEvent.press(screen.getByText(ENTER_LABEL));
@@ -806,10 +742,11 @@ describe('what the aggregate refuses, on screen', () => {
   });
 });
 
-describe('a link that goes nowhere', () => {
+describe('a Game the list does not hold', () => {
   it('says no game of yours has this address rather than inventing a screen', async () => {
+    stubBooking(transport, bookingDetails({ game_id: GAME_ID }));
     stubGames(transport, [], READ_AT);
-    await launchSignedIn(`/games/${GAME_ID}`);
+    await launchSignedIn(RESULT_ROUTE);
 
     await screen.findByText(NOT_YOURS_LINE);
   });

@@ -1,25 +1,17 @@
 /**
  * This feature's query-key factory — the list, and one room under its own id.
  *
- * `GET /conversations` is a **query** and not a mutation, for `challengeKeys`' own reason: there
- * is no id to mint one under and asking again is asking the same question — *your rooms, right
- * now*.
+ * `GET /conversations` is a **query** and not a mutation: there is no id to mint one under and
+ * asking again is asking the same question — *your rooms, right now*.
  *
- * **It takes the app-wide defaults whole**, which is the opposite of the challenge list beside it
- * and the difference is the badge. That list overrides `staleTime` to nought because a count sits
- * on permanent chrome and thirty seconds of staleness is a number saying something is waiting when
- * it is not; **nothing on this screen is a number, and no row here draws a clock**. What is left
- * is a list of rooms the player is reading, where the app's own focus refetch — already wired from
- * `AppState` — is what makes it current when they open the app.
- *
- * Play's two postures do not reach here either, and for the reason `the-loop-components.md` §2.4
- * states as a **scope clarification rather than an exception**: *nothing in Play
- * background-refetches* is written about a ranked list moving under a finger, and a conversation
- * is append-ordered.
+ * **It takes the app-wide defaults whole**: nothing drawn from it is a number or a clock, and the
+ * app's own focus refetch — already wired from `AppState` — is what makes it current when the
+ * player opens the app. A conversation is append-ordered, so there is no ordering for a
+ * background re-read to move under a finger.
  *
  * **And there is never a stream behind this list.** ADR-0147's *never build* list says so
  * outright: the live channel is one stream per **open** conversation, and a tab that opened one
- * per room would be a socket per row for a nudge nothing on this screen would redraw.
+ * per room would be a socket per room for a nudge nothing would redraw.
  */
 
 export const conversationKeys = {

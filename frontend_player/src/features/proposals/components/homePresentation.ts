@@ -47,9 +47,19 @@ const COPY = HOME_GAME_COPY;
 const SPOKEN_JOIN = ', ';
 
 /**
+ * `YOUR GAMES · n` — **the heading over Home's rail and its count**, which is the one number on
+ * that screen. A rail pages through everything it holds, so the count is what says how much there
+ * is; the dots under it say where you are, and neither is the other. Drawn uppercase by 3.3's
+ * section rule, and never `h2`.
+ */
+export function gamesHeading(count: number): string {
+  return `${COPY.heading} · ${count}`;
+}
+
+/**
  * **The status's colour** — the tag's dot and the facts' accent line (A4.1, A8): *Waiting for the
- * club* and *Seat open* amber, *Booked* mint, *Called off* red, and the result states as today's
- * cards draw them (`STAGE_DOT`: needs a result and confirm amber, counted mint, the other two ends
+ * club* and *Seat open* amber, *Booked* mint, *Called off* red, and the result states as the old
+ * loop's cards drew them (needs a result and confirm amber, counted mint, the other two ends
  * hairline). On the dark card the amber is `arranging` and the red `gameRed`, each the shade that
  * carries on that ground.
  */

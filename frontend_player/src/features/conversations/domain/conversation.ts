@@ -34,26 +34,8 @@ import type { ConversationMember, ConversationPerson } from './membership';
 export interface Conversation {
   readonly conversationId: string;
   /**
-   * The challenge whose first acceptance opened it.
-   *
-   * **Nothing on the row draws it, and that is not what it is for.** It is the id the *challenge*
-   * screen joins on to find its own door into the room: no route serves a challenge its
-   * conversation, ADR-0146 forbids one context knowing the other's ids, and
-   * [ADR-0149](../../../../../docs/adr/0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md)
-   * §3 settles the shape for the same question one context over — **a client join over this list,
-   * failing soft.** Finding no room draws no door, which is the ordinary state rather than an
-   * error: a room opens on the first acceptance, so a challenge nobody has answered has none.
-   */
-  readonly challengeId: string;
-  /**
-   * The game this room's line-up completed into, once the teller has noted it — absent until
-   * then, and on every room whose court is still filling.
-   *
-   * On the row for one reader: the screen that has just said *I'm in* and been told `ON`. That
-   * reply means a game exists — it is opened inline with the accept — while the room learns which
-   * off the outbox a moment later, so a push that waited only for the room would land in one that
-   * draws no plan card yet (`useAwaitedChatDoor`). No row draws it; the header's *Details* reads
-   * the room's own copy.
+   * The booked game this room is about — the join a booked game's details and Home's cards find
+   * their chat by (`useGameRoom`, `useGameRooms`), which is the join `GET /bookings/{id}` documents.
    */
   readonly gameId?: string;
   /** What they are arranging. The row's own identifying fact, beside the handles. */

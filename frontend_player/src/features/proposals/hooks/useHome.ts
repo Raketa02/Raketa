@@ -16,7 +16,7 @@ import { currentUserQuery } from '@/features/auth/types';
 import type { AppError } from '@/shared/errors';
 import { phonePreferenceKeys } from '@/shared/lib/preferences';
 
-import { bookedGameIds, openedToKeep, type BookedGame, type Home } from '../domain/home';
+import { openedToKeep, type BookedGame, type Home } from '../domain/home';
 import { keepOpenedGames, readBooking, readHome, readOpenedGames } from '../use-cases/home';
 
 import { proposalKeys } from './proposalKeys';
@@ -59,17 +59,14 @@ export function bookingReadState(read: ReturnType<typeof useBooking>) {
 }
 
 /**
- * **Home's badge, and the Games its cards stand for** — what the shell reads for the bar. The count
- * is the server's (`needing_you`: the cards that need the reader and every payment they have to
- * confirm); the ids are every booked game's Game, which is in `GET /games` too, so the Classic half
- * of the badge — and of the rail — leaves them out rather than counting one game twice.
+ * **Home's badge** — what the shell reads for the bar: the server's `needing_you` (the cards that
+ * need the reader and every payment they have to confirm), and `undefined` — nothing drawn — when
+ * it is nought, still in flight or refused. The bar is told nothing about which: a spinner or a
+ * `?` on permanent chrome is anxiety with no act behind it.
  */
-export function useHomeBadge(): {
-  readonly needingYou: number;
-  readonly gameIds: ReadonlySet<string>;
-} {
-  const { data } = useHome();
-  return { needingYou: data?.needingYou ?? 0, gameIds: bookedGameIds(data?.games ?? []) };
+export function useHomeBadge(): number | undefined {
+  const needingYou = useHome().data?.needingYou ?? 0;
+  return needingYou === 0 ? undefined : needingYou;
 }
 
 /**

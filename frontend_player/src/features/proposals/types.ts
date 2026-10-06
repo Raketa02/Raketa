@@ -17,7 +17,7 @@
  * (A2.4), so the edge between the two features points from here to there.
  *
  * Since #556 it is Home's too: the booked games on the rail, a booked game's details, its chat and
- * its result — see the last block below.
+ * its result — see the block below on Home.
  */
 
 export { GamesDeck, type GamesDeckProps } from './components/GamesDeck';
@@ -67,13 +67,12 @@ export { POSTING_COPY } from './components/postingCopy';
  * **Home's booked games, and a booked game in detail** (#556; the screens A4.1, A4.4, A8) — over
  * `GET /home` and `GET /bookings/{id}` (#542).
  *
- * Home is one rail and the rail is `plans`': the shell fills its booked slot with `useBookedCards`
- * — the cards, and the Games they stand for, which the Classic half leaves out — and adds
- * `useHomeBadge`'s count to the Classic one on the bar. The details, the game's chat and its result
- * are each mounted by a route file under `booking/[bookingId]/`, which checks its param here first;
- * the routes themselves are this feature's to spell.
+ * Home is one rail of booked games (#576): the shell draws `HomeRail` under its own heading and
+ * empty sentences, and puts `useHomeBadge`'s count on the bar. The details, the game's chat and its
+ * result are each mounted by a route file under `booking/[bookingId]/`, which checks its param here
+ * first; the routes themselves are this feature's to spell.
  */
-export { useBookedCards, type BookedCards } from './components/homeRail';
+export { HomeRail, type HomeRailProps } from './components/HomeRail';
 export { useHomeBadge } from './hooks/useHome';
 export { BookedGameScreen, type BookedGameScreenProps } from './components/BookedGameScreen';
 export { BookedGameChat, type BookedGameChatProps } from './components/BookedGameChat';
@@ -98,49 +97,3 @@ export { LEAVE_THE_GAME } from './components/leaveSheetCopy';
  */
 export { gameRoute, rescueRoute } from './components/proposalRoutes';
 export { proposalKeys } from './hooks/proposalKeys';
-
-/**
- * **The Games deck's stage, its three buttons and the intent question** — the pan gesture, the
- * stamps, the fly-off, the arrival and the haptic tick, the ✕ / i / ball row, and the one-time
- * *Your usual game* card a group's Games tab stands on (#553). They were Play's until
- * [#574](https://github.com/Raketa02/Raketa/issues/574) brought them to the deck that stays, and
- * each still takes its words from its caller where two decks differ.
- *
- * **Crossed only for the old loop** — Players' deck and Find a game draw the same three, and their
- * suites hold the ball's drawing and the card's words — until
- * [#576](https://github.com/Raketa02/Raketa/issues/576) deletes them, and this block with them.
- */
-export {
-  DeckStage,
-  type DeckExit,
-  type DragVerdict,
-  type StampWords,
-} from './components/DeckStage';
-export { DeckAnswers, type DeckAnswerLabels } from './components/DeckAnswers';
-export { BALL_PATHS, BALL_STROKE } from './components/DeckBall';
-export {
-  DeclarationInterstitial,
-  type PlayDeclarationSurface,
-} from './components/DeclarationInterstitial';
-export {
-  DECLARATION_BODY,
-  DECLARATION_EYEBROW,
-  declarationTitle,
-} from './components/declarationPresentation';
-
-/**
- * ***It's a game!*'s drawn parts** — the ground, the entrance's one beat and the tile — crossed only
- * for the old loop's yes screen (`challenges`' *Challenge!* and *Matched!*), which draws the same
- * three until [#576](https://github.com/Raketa02/Raketa/issues/576) deletes it.
- */
-export { YesEntrance } from './components/YesEntrance';
-export { YesGround } from './components/YesGround';
-export { YesTile, type YesSeat } from './components/YesTile';
-
-/**
- * **The departure's sheet, and the words its suite holds it to** — crossed only for the old loop's
- * Chats row door (`challenges`' `DepartureDoor`), which opens the same sheet with its own line
- * until [#576](https://github.com/Raketa02/Raketa/issues/576) deletes it.
- */
-export { LeaveSheet } from './components/LeaveSheet';
-export { LEAVE_SHEET_CLOSE_LABEL, LEAVE_SHEET_TITLE, LEAVING } from './components/leaveSheetCopy';

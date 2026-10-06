@@ -605,3 +605,19 @@ exports cross for the notices: `gameRoute`, so a notice about a game still filli
 the deck's **i** opens, and `proposalKeys`, so a tap re-reads the read behind the screen it opens and a
 push arriving re-reads Home's — `paymentKeys`' reason. The record is
 [`notifications.md`](notifications.md).
+
+**Home is this feature's rail now, and the old loop's exports went** ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+`HomeRail` is Home's whole rail — the heading's count (`gamesHeading`, `YOUR GAMES · n`), the pager
+and its dots, the empty sentences the shell hands down and the error note — over `GET /home` alone:
+the old loop's rail that took the booked cards as a slot, and `useBookedCards` with its `gameIds`
+for leaving booked Games out of it, are gone, and `useHomeBadge` answers the count to draw (or
+nothing at nought). #556's owed item about a booked room in the Chats tab closed with that tab.
+**What #574 crossed only for the old loop is no longer exported**: the deck's stage and answers,
+the ball, the declaration interstitial and its words, the yes screen's three parts and the leave
+sheet are this feature's internals again. **The interstitial has one caller**, so Find a game's
+`SEARCH_SWITCH`, its line (`DECLARATION_BODY`) and the two props that let two callers differ
+(`declaredOn`, `refusalMessage`) went: it reports `DECK` and says a refusal in the app's recovery
+sentence. **The deck's stage still takes its stamp words and labels from its caller**, a seam cut
+for two decks with one left; folding them in is left for a ticket of its own. `theFill.test.tsx`
+asserts the fill marks the games list stale rather than counting a re-read, since nothing holds
+that list on the group page any more.

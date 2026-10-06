@@ -25,7 +25,6 @@ import {
   SPORTS_SERVED,
   launchSignedIn,
   stubGate,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
@@ -97,7 +96,6 @@ beforeEach(() => {
   stubGate(transport, { ratings: [PADEL, TENNIS], hasPlayerProfile: true });
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
   transport.on('GET', '/api/v1/sports', () => json(SPORTS_SERVED));
 });

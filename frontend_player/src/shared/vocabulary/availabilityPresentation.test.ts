@@ -11,7 +11,7 @@
  * day is Thursday or what 19:00 is written as.
  */
 
-import { cellLabel, dayLabel, hourLabel, slotName } from './availabilityPresentation';
+import { cellLabel, dayLabel, hourLabel } from './availabilityPresentation';
 import { HOURS, WEEKDAYS, type WeeklyHour } from './week';
 
 const EVERY_CELL: readonly WeeklyHour[] = HOURS.flatMap((hour) =>
@@ -55,19 +55,5 @@ describe('the labels around the grid', () => {
       '21:00',
       '22:00',
     ]);
-  });
-});
-
-describe('a cell inside a sentence', () => {
-  it('is the short day and the hour', () => {
-    // `the-words.md` §6.2's `next {slot}`: a phrase in a line of prose, not a heading over
-    // a column.
-    expect(slotName({ day: 2, hour: 19 })).toBe('Tue 19:00');
-  });
-
-  it('writes the day and the hour as the grid heads them, never a third spelling', () => {
-    // The whole reason the tables were promoted rather than copied: one Thursday, one 07:00.
-    expect(slotName({ day: 4, hour: 7 })).toBe('Thu 07:00');
-    expect(slotName({ day: 7, hour: 22 })).toBe('Sun 22:00');
   });
 });

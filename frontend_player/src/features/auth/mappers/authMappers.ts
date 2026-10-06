@@ -48,10 +48,6 @@ export function toAuthenticatedUser(wire: MeResponse): AuthenticatedUser {
     // false on the wire for responses that are not about the authenticated player — such
     // as the one registration returns — and a brand-new account has no profile anyway.
     hasPlayerProfile: wire.has_player_profile,
-    // Kept where `is_admin` is dropped for the opposite reason to theirs: it grants nothing.
-    // Its one reader is flag evaluation, which decides which build of a screen is drawn and
-    // never what anybody may do (ADR-0180 §9).
-    isTester: wire.is_tester,
     // Kept for `hasPlayerProfile`'s reason, one read earlier: the gate routes an account that
     // only runs a club's groups to its administrator area before it asks anything about playing
     // (ADR-0185 §3), and the invitations waiting for it are what the invitation sheet offers.

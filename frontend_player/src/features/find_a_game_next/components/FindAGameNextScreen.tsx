@@ -1,18 +1,19 @@
 /**
  * **The next Find a game — empty, for now.**
  *
- * What the Play tab's root shows when the `classic_play` flag is off
- * ([ADR-0180](../../../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
- * §7, [#479](https://github.com/Raketa02/Raketa/issues/479)). Find a game is about to be rebuilt,
- * and the rebuild needs somewhere to live while the current one keeps working: this feature is
- * that place, and this screen is where it starts.
+ * What Play › Explore shows ([#479](https://github.com/Raketa02/Raketa/issues/479),
+ * [#512](https://github.com/Raketa02/Raketa/issues/512)). Find a game is to be rebuilt, and the
+ * rebuild needs somewhere to live: this feature is that place, and this screen is where it starts.
+ * The old Find a game it once stood in for went with the old loop
+ * ([#576](https://github.com/Raketa02/Raketa/issues/576)), and the flag that chose between them
+ * with it.
  *
  * **No copy, deliberately.** Nothing here says *coming soon*, because there is no promise to make
  * yet and a sentence written now is one the rebuild inherits without anybody deciding it. The tab
  * bar is the shell's and stays drawn, so a player who lands here can leave the way they came.
  *
- * Its own feature rather than a file in `features/play`, so the new version grows in a folder
- * that has never held the old one, and deleting the old one later is deleting a folder.
+ * Its own feature rather than a file in the old Play feature, so the new version grows in a folder
+ * that never held the old one — and deleting the old one was deleting a folder.
  */
 
 import { StyleSheet, View } from 'react-native';

@@ -21,6 +21,7 @@ import { BALANCE_FORECAST } from '@/features/games/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';
+import { PagerDots } from '@/shared/ui';
 import {
   BARTEK,
   BOOKED_GAME,
@@ -41,8 +42,10 @@ import {
 } from '@/test-support/home';
 import {
   CONVERSATIONS_PATH,
+  GAMES_PATH,
   GATE_USER,
   HOME_PATH,
+  HOME_TAB_LINE,
   bookingPath,
   launchSignedIn,
   stubConversation,
@@ -96,6 +99,11 @@ afterEach(async () => {
 });
 
 const card = () => screen.findByTestId(`home-game-${BOOKING}`);
+
+/** A Game no booking stands for — what the old loop left on `GET /games`. */
+const OLD_LOOP_GAME = '3f2b8c1e-0000-4000-8000-0000000000f1';
+/** A second booking, still waiting for its club. */
+const SECOND_BOOKING = '3f2b8c1e-0000-4000-8000-0000000000b2';
 
 // ---------------------------------------------------------------------------
 // Home
@@ -261,14 +269,47 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(screen.queryByTestId('home-game-chat')).toBeNull();
   });
 
-  it('draws a booked game once, though its Game is on the games list too', async () => {
+  /**
+   * **Home is booked games only** (#576): a game on `GET /games` that no booking stands for — the
+   * old loop's — is not drawn, and Home does not even ask for that list.
+   */
+  it('draws booked games only, and never reads the old games list', async () => {
     stubHomeGames(transport, [homeGame()]);
-    stubGames(transport, [bookedGameOnTheList()], HOME_READ_AT);
+    stubGames(
+      transport,
+      [bookedGameOnTheList(), bookedGameOnTheList({ game_id: OLD_LOOP_GAME })],
+      HOME_READ_AT,
+    );
     await launchSignedIn();
 
     await card();
     expect(screen.getByText('Your games · 1')).toBeTruthy();
     expect(screen.getAllByRole('button', { name: HOME.openGame })).toHaveLength(1);
+    expect(transport.requestsTo('GET', GAMES_PATH)).toHaveLength(0);
+  });
+
+  it('says what Home is, with no booked games, and pages through none', async () => {
+    stubHomeGames(transport, []);
+    await launchSignedIn();
+
+    expect(await screen.findByText('Your games · 0')).toBeTruthy();
+    expect(screen.getByText(HOME_TAB_LINE)).toBeTruthy();
+    expect(screen.queryByTestId(`home-game-${BOOKING}`)).toBeNull();
+  });
+
+  it('pages through two booked games, one card at a time, with the dots', async () => {
+    stubHomeGames(transport, [
+      homeGame(),
+      homeGame({ booking_id: SECOND_BOOKING, game_id: null, status: 'WAITING_FOR_THE_CLUB' }),
+    ]);
+    await launchSignedIn();
+
+    await card();
+    expect(screen.getByText('Your games · 2')).toBeTruthy();
+    expect(screen.getByTestId(`home-game-${SECOND_BOOKING}`)).toBeTruthy();
+    // The dots are hidden from the reader on purpose (7.18) — the count is the heading's — so they
+    // are read off the drawn row: one per card, the first one current.
+    expect(screen.UNSAFE_getByType(PagerDots).props).toMatchObject({ count: 2, current: 0 });
   });
 
   it('leaves an ended game a day after its hour', async () => {
@@ -279,7 +320,7 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(screen.queryByTestId(`home-game-${BOOKING}`)).toBeNull();
   });
 
-  it('counts the games that need you on Home’s column, Home’s count and the Classic one added', async () => {
+  it('counts the booked games that need you on Home’s column — Home’s own count', async () => {
     stubHomeGames(transport, [homeGame({ status: 'NEEDS_RESULT', needs_you: true })], {
       needing_you: 2,
     });
@@ -288,15 +329,16 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(await screen.findByLabelText('Home, 2 games waiting on you')).toBeTruthy();
   });
 
-  it('does not count a booked Game twice: its Classic card is not drawn and not counted', async () => {
+  it('counts nothing on the old games list, though a game there has a seat open', async () => {
     stubHomeGames(transport, [homeGame({ status: 'NEEDS_RESULT', needs_you: true })], {
       needing_you: 1,
     });
-    // On the games list, an open seat is *Needs a player* — which the Classic badge counts.
+    // On the games list, an open seat was the old loop's *Needs a player* — which its badge counted.
     stubGames(
       transport,
       [
         bookedGameOnTheList({
+          game_id: OLD_LOOP_GAME,
           seats: [
             { side: 'A', player_id: GATE_USER.id, name: GATE_USER.name },
             { side: 'A', player_id: PIOTR, name: 'Piotr Sowa' },
@@ -310,6 +352,14 @@ describe('Home — a booked game’s card (A8)', () => {
     await launchSignedIn();
 
     expect(await screen.findByLabelText('Home, 1 game waiting on you')).toBeTruthy();
+  });
+
+  it('draws no count on Home’s column when nothing needs you', async () => {
+    stubHomeGames(transport, [homeGame()], { needing_you: 0 });
+    await launchSignedIn();
+
+    await card();
+    expect(screen.getByRole('tab', { name: 'Home' })).toBeTruthy();
   });
 
   it('lists a payment to confirm above the rail, since Home’s count names it', async () => {

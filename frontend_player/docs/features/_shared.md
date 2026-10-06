@@ -87,12 +87,11 @@ would be the design system owning an avatar, which #338 §5 refused by name. **T
 built there** — the **Social tag row** and 7.13's **run of form**, both the competitive card's
 until the player record sheet turned out to draw both
 ([#375](https://github.com/Raketa02/Raketa/issues/375)). A copy of either would be a second
-thing to keep in step with a **pinned** geometry test, and importing them out of
-`features/play/` would point the arrow the wrong way. **The drawing came down and the rule
-stayed**: `play/domain/socialTagOverlap` reads the row's four answers off a _candidate_, which
-is a search result and Play's alone, and hands the value down — so the union and the two words
-it draws (`socialTagChip`, `NO_TAGS_IN_COMMON`) sit in `shared/vocabulary` beside the nineteen
-labels, and `GameResult` went with the squares for `PLAY_INTENTS`' reason. **6.13's star row is
+thing to keep in step with a **pinned** geometry test, and importing them out of the old loop's
+Play feature would have pointed the arrow the wrong way. **The drawing came down and the rule
+stayed**: Play read the row's four answers off a _candidate_, which was a search result and Play's
+alone, and handed the value down — so the union and the two words it draws (`socialTagChip`,
+`NO_TAGS_IN_COMMON`) sit in `shared/vocabulary` beside the nineteen labels, and `GameResult` went with the squares for `PLAY_INTENTS`' reason. **6.13's star row is
 the newest of them and the first control since the switch** — five 44pt targets, flush, with a
 drawn 24pt pentagram inside each, because there was nothing to type: **Archivo ships no
 U+2605**, exactly as it ships no U+2713, and
@@ -201,18 +200,12 @@ sentence, sheet, toast, seat label or spoken name. It sits in the formatter's fi
 fence is a fact about how a person is named, and nothing else in that file takes a nickname, which
 is how every other surface keeps it: by never being handed one.
 
-**The third verb reads the one document that is not the API's, and never carries a token**
-([#479](https://github.com/Raketa02/Raketa/issues/479), [ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) §4, §6). The feature-flag
-datafile is served from `EXPO_PUBLIC_FEATURES_URL` — the Mac on the LAN today, a bucket later — and
-`httpGetFromFeaturesHost` fetches it through the same `sendOnce` every request uses, so the
-timeout, the correlation id, cancellation and the error model are the module's as always. It is a
-verb and not a `host` field on `httpRequest` because of the one thing it must not do: it is built
-unauthenticated, so no caller can send a bearer token to a host that has no use for it. It takes
-the `background` class. The env gained the variable with the **scheme rule applied to both URLs by
-one loop**, so the guard that stops a malformed URL being blamed on the environment cannot be
-written for one and forgotten for the other. `platform/appBuild.ts` is the platform module's one
-plain _reading_ — `platform` (`ios` / `android`) and the app's own version — the two device facts
-a flag's rules may target; each is absent rather than guessed when the build cannot say.
+**The HTTP client has two verbs again, and the env one URL** ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+The third verb, `httpGetFromFeaturesHost` — the feature-flag datafile's unauthenticated read from
+`EXPO_PUBLIC_FEATURES_URL` (#479, ADR-0180 §4, §6) — left with the flags, and so did the variable,
+its startup check and `platform/appBuild.ts`, the reading a flag's rules targeted. The env's scheme
+rule still runs as one loop over `SCHEMED_URLS`, which now names the API URL alone, so a second URL
+joins it by being named there.
 
 **The phone-preferences store, the clipboard port, and three primitives that grew a form each**
 ([#512](https://github.com/Raketa02/Raketa/issues/512)). `shared/lib/preferences` is the second

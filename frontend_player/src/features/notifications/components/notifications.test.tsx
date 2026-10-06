@@ -34,7 +34,6 @@ import {
   NOTIFICATION_CHOICES_PATH,
   resetPush,
   stubGate,
-  stubInterest,
   stubMyGroups,
   stubNotices,
   stubNotificationChoices,
@@ -138,7 +137,6 @@ beforeEach(() => {
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
   transport.on('POST', DEVICES_PATH, () => noContent());
   phone = fakePush();

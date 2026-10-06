@@ -17,7 +17,6 @@ import {
   RECEIPTS_PATH,
   launchSignedIn,
   stubGate,
-  stubInterest,
   stubOwnRecord,
   stubPaymentMethod,
   stubProfileOptions,
@@ -75,7 +74,6 @@ beforeEach(() => {
   stubGate(transport, { ratings: [RATING], hasPlayerProfile: true });
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
 });
 

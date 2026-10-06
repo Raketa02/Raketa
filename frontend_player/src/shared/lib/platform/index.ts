@@ -63,7 +63,6 @@ export { useOnForeground, wireFocusManager } from './appState';
 export { useHardwareBack } from './hardwareBack';
 export { useOnReturn } from './screenReturn';
 export { openAppSettings } from './appSettings';
-export { appBuild } from './appBuild';
 export { KEYBOARD_AVOIDANCE } from './keyboard';
 export { useIsOnline, wireOnlineManager } from './networkState';
 

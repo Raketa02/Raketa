@@ -18,7 +18,6 @@ import {
   HOME_TAB_LINE,
   launchSignedIn,
   stubGate,
-  stubInterest,
   stubOwnRecord,
   stubProfileOptions,
   stubProfileSurface,
@@ -87,7 +86,6 @@ function serve(account: GateStub) {
   stubGate(transport, account);
   stubProfileSurface(transport);
   stubProfileOptions(transport);
-  stubInterest(transport);
   stubOwnRecord(transport);
   club([O3_CLUB_GROUP]).install(transport);
 }

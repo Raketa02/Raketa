@@ -2,8 +2,7 @@
  * **A booked game's chat** — the room, opened from the game's details and from nowhere else
  * ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.4; the mechanics §14.3).
  *
- * `conversations`' own screen in its booked form: no plan card, no plan chips, no *Details* door,
- * and the header's second line the booking's word. The room is found by the join keyed by the
+ * `conversations`' own screen, the header's second line the booking's word. The room is found by the join keyed by the
  * game (`useGameRoom`) over the booking the details just read — both answered from the cache on the
  * way in — so the route carries only the booking's id, and *back* is the details by the stack.
  *
@@ -35,7 +34,7 @@ export function BookedGameChat({ bookingId }: BookedGameChatProps) {
     return (
       <ConversationScreen
         conversationId={room.conversationId}
-        booked={{ state: COPY.statusInLine[game.status] }}
+        state={COPY.statusInLine[game.status]}
       />
     );
   }
