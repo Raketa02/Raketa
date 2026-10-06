@@ -47,6 +47,17 @@ class SqlAlchemyOutboxRepository:
         rows = (await self._session.execute(stmt)).scalars().all()
         return [_to_envelope(row) for row in rows]
 
+    async def claim(self, event_id: UUID) -> bool:
+        stmt = (
+            select(EventOutboxORM.id)
+            .where(
+                EventOutboxORM.id == event_id,
+                EventOutboxORM.published_at.is_(None),
+            )
+            .with_for_update(skip_locked=True)
+        )
+        return (await self._session.execute(stmt)).scalar_one_or_none() is not None
+
     async def mark_published(self, event_id: UUID, *, at: datetime) -> None:
         await self._session.execute(
             update(EventOutboxORM)

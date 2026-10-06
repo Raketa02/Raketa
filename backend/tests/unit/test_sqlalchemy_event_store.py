@@ -132,3 +132,79 @@ async def test_postgresql_concurrent_fetchers_do_not_receive_locked_event():
             )
             await session.commit()
         await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_an_event_published_since_the_batch_was_read_cannot_be_claimed(
+    session_factory,
+):
+    now = datetime(2026, 1, 2, tzinfo=timezone.utc)
+    async with session_factory() as session:
+        store = SqlAlchemyOutboxRepository(session)
+        await store.add_many([_record(1), _record(2)])
+        await session.commit()
+        read = await store.fetch_pending(batch_size=2)
+
+        assert await store.claim(read[0].id)
+        await store.mark_published(read[0].id, at=now)
+        async with session_factory() as other:
+            await SqlAlchemyOutboxRepository(other).mark_published(read[1].id, at=now)
+
+        assert not await store.claim(read[0].id)
+        assert not await store.claim(read[1].id)
+
+
+@pytest.mark.asyncio
+async def test_postgresql_an_event_another_deliverer_holds_cannot_be_claimed():
+    """**The batch's first commit releases the rest of what it fetched**, so a
+    second deliverer can fetch those rows; the claim is what keeps the two from
+    delivering one event twice."""
+
+    url = os.environ.get("EVENT_TEST_DATABASE_URL", "")
+    if not url.startswith(("postgresql://", "postgresql+asyncpg://", "postgres://")):
+        pytest.skip("Set EVENT_TEST_DATABASE_URL to exercise PostgreSQL claim safety")
+    if url.startswith("postgresql://"):
+        url = "postgresql+asyncpg://" + url[len("postgresql://") :]
+    elif url.startswith("postgres://"):
+        url = "postgresql+asyncpg://" + url[len("postgres://") :]
+
+    engine = create_async_engine(url)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    records = [_record(record_id=uuid4()), _record(record_id=uuid4())]
+    now = datetime(2026, 1, 2, tzinfo=timezone.utc)
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        async with session_factory() as session:
+            await SqlAlchemyOutboxRepository(session).add_many(records)
+            await session.commit()
+        ids = {record.id for record in records}
+
+        async with session_factory() as first, session_factory() as second:
+            mine = SqlAlchemyOutboxRepository(first)
+            read = [
+                row for row in await mine.fetch_pending(batch_size=100) if row.id in ids
+            ]
+            assert await mine.claim(read[0].id)
+            await mine.mark_published(read[0].id, at=now)
+
+            theirs = SqlAlchemyOutboxRepository(second)
+            fetched = [
+                row
+                for row in await theirs.fetch_pending(batch_size=100)
+                if row.id in ids
+            ]
+            assert [row.id for row in fetched] == [read[1].id]
+            assert await theirs.claim(read[1].id)
+
+            assert not await mine.claim(read[1].id)
+            await second.rollback()
+    finally:
+        async with session_factory() as session:
+            await session.execute(
+                delete(EventOutboxORM).where(
+                    EventOutboxORM.id.in_([r.id for r in records])
+                )
+            )
+            await session.commit()
+        await engine.dispose()

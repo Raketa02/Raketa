@@ -79,6 +79,15 @@ class PendingOutbox(Protocol):
         self, *, batch_size: int
     ) -> list[SerializedEventEnvelope]: ...
 
+    async def claim(self, event_id: UUID) -> bool:
+        """Hold this event for delivery until the next commit — ``False`` when
+        another deliverer holds it or has published it since the batch was read.
+
+        **Asked for every event, not once per batch**, because a batch commits
+        once per event: the first commit releases every row its fetch locked,
+        and another deliverer may then take the rest."""
+        ...
+
     async def mark_published(self, event_id: UUID, *, at: datetime) -> None: ...
 
     async def mark_failed(

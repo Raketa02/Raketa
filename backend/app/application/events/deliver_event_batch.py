@@ -47,6 +47,10 @@ class EventBatch:
         records = await self._outbox.fetch_pending(batch_size=self._batch_size)
         published = 0
         for record in records:
+            # The fetch's locks went with the first commit: another deliverer
+            # may hold this one now, or have published it.
+            if not await self._outbox.claim(record.id):
+                continue
             attempt = record.attempts + 1
             try:
                 event = self._codec.decode(record)

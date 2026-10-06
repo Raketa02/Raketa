@@ -203,6 +203,14 @@ async def test_dispatcher_propagates_cancellation():
 class _InMemoryStore:
     def __init__(self, seed: list[SerializedEventEnvelope]) -> None:
         self.records = {record.id: record for record in seed}
+        #: Events another deliverer holds — read by this batch's fetch, and
+        #: taken by somebody else once its first commit released them.
+        self.taken: set[UUID] = set()
+
+    async def claim(self, event_id) -> bool:
+        return (
+            event_id not in self.taken and self.records[event_id].published_at is None
+        )
 
     async def add_many(self, records) -> None:
         self.records.update({record.id: record for record in records})
@@ -293,6 +301,29 @@ async def test_a_successful_delivery_is_not_rolled_back():
     await _batch(store, dispatcher, uow).execute(worker_id="test")
 
     assert uow.rollbacks == 0
+
+
+@pytest.mark.asyncio
+async def test_an_event_another_deliverer_has_taken_is_left_to_it():
+    """**A batch claims each event as it reaches it.** Its first commit releases
+    every row its fetch locked, so another deliverer — the API's worker beside a
+    seed run, or a second API process — can take the rest of the batch; and an
+    event delivered twice is every side effect twice."""
+
+    store = _InMemoryStore([_record()])
+    store.taken.add(UUID(int=99))
+    dispatcher = EventDispatcher()
+    delivered: list[DeliveryContext] = []
+
+    async def handler(event: _SampleEvent, context: DeliveryContext) -> None:
+        delivered.append(context)
+
+    dispatcher.subscribe(_SampleEvent, handler)
+    published = await _batch(store, dispatcher).execute(worker_id="test")
+
+    assert published == 0
+    assert delivered == []
+    assert store.records[UUID(int=99)].attempts == 0
 
 
 @pytest.mark.asyncio

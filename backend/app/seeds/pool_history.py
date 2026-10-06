@@ -1,5 +1,9 @@
 """**Everybody in her pool has played**, so every face she taps has a record.
 
+**Written as past booked games since #573**, by ``app/seeds/booked_history.py``:
+the runner hands these declarations in. The search-and-challenge reasoning below
+is why each court seats who it seats; how a court is written is that layer's.
+
 The cohort's own played history exists to reach *card states* — a full run, a gap, a
 count with no run, an absence — and reaches them with seven members. Her record sheet
 needed a second list. This is the third, and it answers a different question again:

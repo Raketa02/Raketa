@@ -773,9 +773,9 @@ PROTAGONIST_HANDLE: Final = THE_POPULATED_PLAYER.slug
 #: has is a latitude, which is all ``_distance_between`` ever reads.
 PROTAGONIST_RING: Final = "centre"
 
-#: Every arrangement the challenge loop writes, in one tuple, for the readers that
-#: do not care which list it came from: the writer, which walks it oldest first,
-#: and the refusals below, which ask *who shared a court with whom*.
+#: The cohort's own played history, in one tuple, for the readers that do not
+#: care which list it came from: the refusals below, which ask *who shared a
+#: court with whom*. Written as past booked games (``booked_history.py``).
 #:
 #: The sportsmanship layer is **not** one of them, deliberately — it asks the
 #: database which courts a rater actually has rather than re-deriving them from

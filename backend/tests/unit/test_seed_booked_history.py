@@ -22,12 +22,18 @@ from app.modules.sportsmanship.domain.window import (
 )
 from app.seeds.booked_history import (
     HER_EVENINGS,
-    RATED_AFTER,
     SETTLED_FOR,
+    _plan,
     WHAT_THEY_SAID_ABOUT_HER,
     latest_evening_ends_by,
 )
-from app.seeds.cohort import COHORT, PROTAGONIST_HANDLE, WHAT_PLAYERS_SAID
+from app.seeds.cohort import (
+    COHORT,
+    PLAYED_GAMES,
+    PROTAGONIST_HANDLE,
+    WHAT_PLAYERS_SAID,
+)
+from app.seeds.sportsmanship import RATED_AFTER
 
 SEEDS = Path(__file__).resolve().parents[2] / "app" / "seeds"
 
@@ -46,7 +52,16 @@ OLD_LAYERS = frozenset(
     }
 )
 #: The new path's layers, and the population under them.
-NEW_PATH = ("proposals", "bookings", "rescues", "posts", "cohort", "booked_history")
+NEW_PATH = (
+    "proposals",
+    "bookings",
+    "rescues",
+    "posts",
+    "cohort",
+    "booked_history",
+    "sportsmanship",
+    "payments",
+)
 
 
 def test_her_record_reaches_a_figure_that_is_not_a_full_bar():
@@ -129,3 +144,39 @@ def test_the_new_path_imports_nothing_from_the_old_loop(module):
         if name.startswith(("app.modules.challenges", "app.modules.plans"))
         or (name.startswith("app.seeds.") and name.split(".")[2] in OLD_LAYERS)
     }, sorted(imported)
+
+
+@pytest.mark.parametrize("weekday", range(7))
+def test_a_declared_game_keeps_its_day_unless_it_falls_in_her_week(weekday):
+    """**A declared game is played on the day it was declared for**, unless that
+    day is inside her week — or too recent for every window to have closed —
+    when its placement starts from the last day that is not. Her evenings walk
+    back one a day from that same day, oldest first."""
+
+    monday = datetime(2026, 10, 5, 19, tzinfo=CLUB_ZONE)
+    now = instant(monday + timedelta(days=weekday))
+    last_day = (
+        (latest_evening_ends_by(now) - timedelta(minutes=1))
+        .astimezone(CLUB_ZONE)
+        .date()
+    )
+
+    planned = _plan(PLAYED_GAMES, now=now)
+
+    declared = [one for one in planned if not one.hers]
+    assert [one.game for one in declared] == sorted(
+        PLAYED_GAMES, key=lambda game: -game.played_days_ago
+    )
+    for one in declared:
+        assert one.day == min(one.declared, last_day)
+        assert one.day < week_of(now) or one.day == last_day
+    evenings = [one for one in planned if one.hers]
+    assert [one.game for one in evenings] == [
+        evening.as_a_game() for evening in HER_EVENINGS
+    ]
+    assert [one.day for one in evenings] == [
+        last_day - timedelta(days=len(HER_EVENINGS) - 1 - index)
+        for index in range(len(HER_EVENINGS))
+    ]
+    assert all(one.day < week_of(now) for one in evenings)
+    assert len({one.order for one in planned}) == len(planned)

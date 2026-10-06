@@ -62,24 +62,36 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   a seeded shield is one `decision_on_record` agrees to believe. The object store is the
   one thing the seed writes that lives outside the database, so the run **asks it one
   question first** and reports rather than dies when it cannot answer.
-- **Her own record is past booked games, on the path the product makes games on**
-  (`app/seeds/booked_history.py`, #573). Her evenings are tennis singles at Ogrody 33, in
-  a group she runs there. Each is made, filled by its last yes, played and scored through
-  the use cases a phone runs, on a backdated clock, and her opponents rate her through
-  `AnswerTheCard`. The challenge loop's played history no longer seats her own evenings.
-  Three things are load-bearing. **Every evening is over before this week began.** A booked
-  game counts toward its week's *games per week*, so an evening this week would hold her
-  deck, her Fill in and her post to a smaller week than the layers after it seat. Every
-  evening also ends at least two days before the run, so every result window on it has
-  closed. **Her Level moves through the rating catch-up**, the API's job, as every
-  result's does. The layer only checks that the job has her results to fold.
-  **`assert_her_history` fails the run by name** if her Home draws no counted evening, if
-  no confirmed counted result of hers is there to move her Level, or if nobody has rated
-  her on one of them. **A second fence, and it is about imports rather than writes**: the
-  new-loop layers (proposals, bookings, rescues, posts, this one) and the cohort import
-  nothing from the challenge loop or its seed layers, so deleting those layers deletes
-  nothing the new path stands on. `tests/unit/test_seed_booked_history.py` walks them for
-  it. The writes-against-reads fence above is unchanged.
+- **Every played game is a past booked game, on the path the product makes games on**
+  (`app/seeds/booked_history.py`, #573). That covers her own evenings (tennis singles that
+  fill the record she reads about herself), the cohort's `PLAYED_GAMES` and the pool's
+  courts, which the runner hands in. The challenge writer above (`games.py`) is no longer
+  called. Each game is made, filled by its last yes, played and scored through the use cases
+  a phone runs, on a backdated clock, in a group she runs per sport at Ogrody 33. Four
+  things are load-bearing.
+  - **Every game is over before this week began.** A booked game counts toward its week's
+    *games per week*, so a game this week would hold the deck, Fill in and posts to a
+    smaller week. A declared game keeps its day where that is before the week, and starts
+    from the last day before it otherwise. The one exception is a game somebody could not
+    have played before the week, because they committed inside it. That game is played on
+    its declared day, and the report counts them. Every game also ends at least two days
+    before the run, so every result window on it has closed.
+  - **The fill draws the sides**, so a declared doubles row says who was on the court and
+    who won, never who partnered whom. `PREVIOUS_ACCEPT` is named in `CANNOT_BE_DRAWN`
+    again, because a booked game accepts no challenge seat.
+  - **Levels move through the rating catch-up**, the API's job. Cards are answered the day
+    after their evening (`sportsmanship.RATED_AFTER`), inside their week on any weekday.
+  - **`assert_her_history` fails the run by name** if any of these is missing:
+    - a counted evening on her Home;
+    - a confirmed counted result of hers for the catch-up to fold;
+    - a rater who rated her on one of her evenings.
+
+  **A second fence, and it is about imports rather than writes.** The new-loop layers
+  (proposals, bookings, rescues, posts, this one, sportsmanship, payments) and the cohort
+  import nothing from the challenge loop or its seed layers. The runner hands the old
+  layers' declarations in, so deleting those layers deletes nothing the new path stands
+  on. `tests/unit/test_seed_booked_history.py` walks them for it. The writes-against-reads
+  fence above is unchanged.
 - **A distribution cannot assert a pair, so eleven accounts are named for one**
   (`app/seeds/relationships.py`, `app/seeds/pairs.py`, `app/seeds/paths.py`). Five of the
   ten `LivenessSignal` codes are facts about **two people** — *they said yes to you*, *they

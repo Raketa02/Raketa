@@ -1,47 +1,56 @@
-"""Her played history: past booked games, filled, played, scored and rated (#573).
+"""The played history: past booked games, filled, played, scored and rated (#573).
 
-**The protagonist's record is written on the path the product makes games on.**
-Each evening is a game the way the Games deck makes one — ``MakeProposal`` at an
-hour Ogrody 33 sells tennis, then ``SayYes`` from her opponent and from her, hers
-last, so the last yes **books** it: the seats charged through the run's own fake
-provider, a Booking on a free court and the ordinary Game it opens. Then the
-result is stated and answered through ``games``' own two acts, and the people she
-played rate her through ``AnswerTheCard``. Nothing here opens a table, and
-nothing here imports the challenge loop.
+**Every game the seed says somebody played is written on the path the product
+makes games on.** That is the protagonist's own evenings, which fill the record
+she reads about herself, and every declared game the runner hands in: the
+cohort's own (``PLAYED_GAMES``) and, while that layer stands, the pool's. Each is
+a game the way the Games deck makes one — ``MakeProposal`` at an hour Ogrody 33
+sells, then ``SayYes`` from everybody on it, so the last yes **books** it: the
+seats charged through the run's own fake provider, a Booking on a free court and
+the ordinary Game it opens. Then the result is stated and answered through
+``games``' own two acts. Nothing here opens a table, and nothing here imports the
+challenge loop.
+
+**A game is always made in a group**, so she runs one per sport at Ogrody 33 —
+*Tenis na Ogrodach* and *Padel na Ogrodach* — and everybody a game seats joins
+the one for its sport. **The fill draws the sides** for the most even game, so a
+declared doubles partnership is a declaration of who was on the court and who
+won, never of who stood beside whom.
 
 **Every act runs on a backdated clock**, at the instant a player would have
-taken it: the game made and filled two days before its hour, the score stated
-ten minutes after the hour ends and answered ten minutes later, and the card
-answered the day after — inside the week it is open for. **Her Level moves
+taken it: the game made and filled two days before its hour — or an hour after
+the last of its players committed, where that is later — the score stated ten
+minutes after the hour ends and answered ten minutes later. **Her Level moves
 through the rating catch-up**, as every result's does: the API's job folds the
 confirmed results on its next run, and this layer only checks that there is
 something for it to fold.
 
-**Her week stays as the layers below leave it.** Every evening is played
-**before this week began** and long enough ago for every window on it to have
-closed. A booked game counts toward its week's *games per week*, so an evening
-in this week would hold her deck, her Fill in and her posts to a smaller week
-than the layers after this one seat.
+**Her week stays as the layers below leave it.** A booked game counts toward its
+week's *games per week*, so every game is played **before this week began** and
+long enough ago for every window on it to have closed. The one exception is a
+game somebody on it could not have played before the week, because they
+committed their profile inside it: that game is played this week, on the day it
+was declared, and the report says so.
 
-**Tennis singles against the three people her history has always been with**
-(``cohort-a-12``, ``cohort-c-00``, ``cohort-d-08``). They are already on her
-record, so writing her evenings here moves nobody into or out of anybody's
-pool. The game is *competitive*, so it is counted. They play in *Tenis na
-Ogrodach*, a group she runs at Ogrody 33, because a game is always made in a
-group.
+**Her evenings** are tennis singles against the three people her history has
+always been with (``cohort-a-12``, ``cohort-c-00``, ``cohort-d-08``), one a day
+walking back from the last day before her week, and the people she played rate
+her through ``AnswerTheCard`` the day after. **The declared games** keep the day
+they were declared for wherever that is before her week; the ones declared
+inside it are played on the last day before it instead.
 
-**Re-running writes nothing twice.** Once the group holds as many past games of
-hers as there are evenings, those are her evenings. Otherwise each evening is
-looked for by its hour, and each act is asked for separately off the Game's
-record, so a run that died half way picks up where it stopped — on the same
-day; a later day places the evenings on later days, beside the ones written.
+**Re-running writes nothing twice.** A game is looked for by who was on it in its
+group — the n-th declared game for the same people is the n-th booking they
+share — and each act is asked for separately off the Game's record, so a run that
+died half way picks up where it stopped. A later day places a fresh game only
+where none was written.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Final, final
 from uuid import UUID
 
@@ -81,7 +90,7 @@ from app.modules.games.domain.ports import GameRepository
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.groups.application.commands import CreatePlayerGroupCommand
 from app.modules.groups.application.create_player_group import CreatePlayerGroup
-from app.modules.groups.domain.value_objects import JoinPolicy
+from app.modules.groups.domain.value_objects import GroupName, JoinPolicy
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.proposals.domain.deck import GAME_LENGTH, week_of
 from app.modules.proposals.domain.home import HomeStatus
@@ -89,44 +98,56 @@ from app.modules.sportsmanship.application.answer_the_card import AnswerTheCard
 from app.modules.sportsmanship.application.commands import AnswerTheCardCommand
 from app.modules.sportsmanship.domain.card import StarsGiven
 from app.seeds.bookings import all_say_yes, club_id_of
-from app.seeds.catalog import THE_POPULATED_PLAYER
-from app.seeds.clock import FixedClock
+from app.seeds.catalog import THE_POPULATED_PLAYER, SeedAccount
+from app.seeds.clock import FixedClock, days_before
 from app.seeds.clubs import SEED_CLUBS
-from app.seeds.cohort import COHORT, PROTAGONIST_HANDLE, STARS_ARE_ONE_TO_FIVE
+from app.seeds.cohort import (
+    COHORT,
+    PROTAGONIST_HANDLE,
+    STARS_ARE_ONE_TO_FIVE,
+    PlayedGame,
+)
 from app.seeds.groups import group_repository, group_run_by, join_group
+from app.seeds.sportsmanship import RATED_AFTER
 
-#: Where her evenings were played: a club that sells tennis and takes a full
-#: game at once, half a kilometre from her.
+#: Where every game was played: a club that sells padel and tennis and takes a
+#: full game at once, half a kilometre from her.
 HISTORY_CLUB: Final = next(club for club in SEED_CLUBS if club.name == "Ogrody 33")
-HISTORY_GROUP: Final = "Tenis na Ogrodach"
+#: The group each sport's games are made in, run by her.
+HISTORY_GROUPS: Final[Mapping[Sport, str]] = {
+    Sport.TENNIS: "Tenis na Ogrodach",
+    Sport.PADEL: "Padel na Ogrodach",
+}
+#: Her evenings' sport.
 HISTORY_SPORT: Final = Sport.TENNIS
+# Refused on import, through the domain's own value object, as ``groups.py``'s
+# names are.
+for _name in HISTORY_GROUPS.values():
+    GroupName(_name)
 #: Competitive, so every game is counted.
 HISTORY_KIND: Final = SearchMode.COMPETITIVE
 
 #: How far ahead of its hour each game was made and filled.
 MADE_AHEAD: Final = timedelta(days=2)
+#: How soon after the last of its players committed a game could be made.
+AFTER_THE_LAST_COMMIT: Final = timedelta(hours=1)
 #: When the score is stated, after the hour ends, and when it is answered.
 STATED_AFTER: Final = timedelta(minutes=10)
 ANSWERED_AFTER: Final = timedelta(minutes=20)
-#: How long before the run the latest evening ended: past the score's day for
-#: an answer and the entry window's day for a game nobody claimed, so every
-#: evening has met its ending by the time anybody reads it.
+#: How long before the run the latest game ended: past the score's day for an
+#: answer and the entry window's day for a game nobody claimed, so every game
+#: has met its ending by the time anybody reads it.
 SETTLED_FOR: Final = timedelta(days=2)
-#: How far back the layer looks for a day with a tennis hour before it gives
-#: up — a club that sells nothing for a fortnight is a broken fixture.
+#: How far back the layer walks for a free hour before it gives up — a club
+#: that sells nothing for a fortnight is a broken fixture.
 LOOKS_BACK: Final = timedelta(days=14)
-#: When a card is answered: the day after the evening, when it opens, and an
-#: hour past the day a silence takes to confirm a score — so the court it is
-#: drawn for is settled.
-RATED_AFTER: Final = timedelta(days=1, hours=1)
-#: The furthest back anything here is written: the latest evening can end up to
-#: a week before the run, the oldest is ``LOOKS_BACK`` before that, and its game
-#: and the group were made before it. Everybody on an evening has to have
-#: committed their profile before then.
-WRITTEN_AT_MOST_DAYS_AGO: Final = 7 + LOOKS_BACK.days + MADE_AHEAD.days + 1
+#: The furthest back one of her evenings is written: the latest can end up to a
+#: week before the run, the oldest is ``LOOKS_BACK`` before that, and its game
+#: was made before it. Everybody on one has to have committed before then.
+WRITTEN_AT_MOST_DAYS_AGO: Final = 7 + LOOKS_BACK.days + MADE_AHEAD.days
 
-#: The two scores an evening is entered with, by the side that won. Absolute,
-#: as ``SetScore`` is.
+#: The two scores a game is entered with, by the side that won. Absolute, as
+#: ``SetScore`` is.
 SCORES: Final[Mapping[GameSide, Score]] = {
     GameSide.A: Score.of((SetScore(a=6, b=4), SetScore(a=6, b=3))),
     GameSide.B: Score.of((SetScore(a=4, b=6), SetScore(a=3, b=6))),
@@ -158,6 +179,20 @@ class Evening:
     def was_scored(self) -> bool:
         return self.she_won is not None
 
+    def as_a_game(self) -> PlayedGame:
+        """This evening in the shape every declared game takes: the opponent on
+        side A, who states, and her on side B, who answers."""
+
+        return PlayedGame(
+            sport=HISTORY_SPORT.value,
+            played_days_ago=0,
+            side_a=(self.opponent,),
+            side_b=(PROTAGONIST_HANDLE,),
+            won_by=None if self.she_won is None else "B" if self.she_won else "A",
+            entered=self.entered,
+            answered=self.answered,
+        )
+
 
 #: **Her evenings, oldest first, one a day.** Read down the endings rather than
 #: the scores, because they are what her record draws:
@@ -186,7 +221,7 @@ WHAT_THEY_SAID_ABOUT_HER: Final[Mapping[str, int]] = {
 
 
 class HistoryRefused(RuntimeError):
-    """An evening the run could not write, with what the platform said."""
+    """A game the run could not write, with what the platform said."""
 
 
 class HistoryIsEmpty(RuntimeError):
@@ -196,27 +231,36 @@ class HistoryIsEmpty(RuntimeError):
 
 @final
 @dataclass(frozen=True, slots=True)
-class WrittenEvening:
-    evening: Evening
+class WrittenGame:
+    game: PlayedGame
     start: Instant
     #: Whether this run booked it, or found it booked already.
     made: bool
     #: What this run did to its result, in the report's words.
     acts: tuple[str, ...]
+    #: Played this week, because somebody on it committed inside it.
+    this_week: bool = False
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class SeededHistory:
-    group_id: UUID
-    created_group: bool
-    evenings: tuple[WrittenEvening, ...]
-    #: One line per rater: the card answered, or found answered.
+    #: Her evenings, oldest first.
+    evenings: tuple[WrittenGame, ...]
+    #: Every declared game handed in, oldest first.
+    played: tuple[WrittenGame, ...]
+    #: Each group, by sport, and whether this run created it.
+    groups: tuple[tuple[Sport, UUID, bool], ...]
+    #: One line per rater of hers: the card answered, or found answered.
     cards: tuple[str, ...]
+
+    @property
+    def this_week(self) -> tuple[WrittenGame, ...]:
+        return tuple(game for game in self.played if game.this_week)
 
 
 def _refuse_evenings_she_could_not_have_played() -> None:
-    """The declarations against the population, **on import**, so a row that
+    """Her declarations against the population, **on import**, so a row that
     could not be written fails before a database is touched."""
 
     lowest, highest = STARS_ARE_ONE_TO_FIVE
@@ -270,120 +314,306 @@ def _refuse_evenings_she_could_not_have_played() -> None:
 _refuse_evenings_she_could_not_have_played()
 
 
-async def write_her_history(
+# ---------------------------------------------------------------------------
+# Who is on a game
+# ---------------------------------------------------------------------------
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class _Person:
+    handle: str
+    player_id: UUID
+    #: The latest instant their profile could have been committed at.
+    committed_at: Instant
+
+
+async def _people(
+    session: AsyncSession,
+    handles: Iterable[str],
+    *,
+    named: Sequence[SeedAccount],
+    now: Instant,
+) -> dict[str, _Person]:
+    """Everybody the games name: a cohort member by handle, anybody else by the
+    slug of a named account."""
+
+    accounts = {account.slug: account for account in (THE_POPULATED_PLAYER, *named)}
+    users = build_user_repository(session)
+    people: dict[str, _Person] = {}
+    for handle in sorted(set(handles)):
+        if handle.startswith("cohort-"):
+            member = COHORT.by_handle(handle)
+            email, days = member.email, member.committed_days_ago
+        else:
+            account = accounts.get(handle)
+            if account is None or account.profile is None:
+                raise HistoryRefused(
+                    f"'{handle}' is on a game and is neither a cohort member nor a "
+                    f"named account with a profile"
+                )
+            email, days = account.email, account.profile.committed_days_ago
+        user = await users.get_by_email(email)
+        if user is None:
+            raise RuntimeError(f"{email} is not registered — the accounts run first")
+        people[handle] = _Person(
+            handle=handle,
+            player_id=user.id,
+            committed_at=days_before(now, days).now(),
+        )
+    return people
+
+
+# ---------------------------------------------------------------------------
+# Writing every game
+# ---------------------------------------------------------------------------
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class _Planned:
+    game: PlayedGame
+    #: The day the placement starts from, walking back.
+    day: date
+    #: The day it was declared for: where a game nobody on it could have played
+    #: before her week is played instead.
+    declared: date
+    #: Her evening, which is placed before her week or not at all.
+    hers: bool
+    #: The order games for the same people are told apart by: oldest first.
+    order: int
+
+
+def _plan(games: Sequence[PlayedGame], *, now: Instant) -> list[_Planned]:
+    """Every game and where its placement starts: a declared game on its own
+    day, or the last day before her week where it was declared inside it; her
+    evenings one a day back from that day."""
+
+    # The day the latest game may end on — the last day before her week, or
+    # earlier still where the run is early in it.
+    anchor = local_day(instant(latest_evening_ends_by(now) - timedelta(minutes=1)))
+    planned: list[_Planned] = []
+    for game in sorted(games, key=lambda one: -one.played_days_ago):
+        declared = local_day(days_before(now, game.played_days_ago).now())
+        planned.append(
+            _Planned(
+                game,
+                day=min(declared, anchor),
+                declared=declared,
+                hers=False,
+                order=len(planned),
+            )
+        )
+    for index, evening in enumerate(HER_EVENINGS):
+        day = anchor - timedelta(days=len(HER_EVENINGS) - 1 - index)
+        planned.append(
+            _Planned(
+                evening.as_a_game(),
+                day=day,
+                declared=day,
+                hers=True,
+                order=len(planned),
+            )
+        )
+    return planned
+
+
+async def write_the_played_history(
     session_factory: async_sessionmaker[AsyncSession],
     *,
     settings: Settings,
     now: Instant,
+    games: Sequence[PlayedGame] = (),
+    named: Sequence[SeedAccount] = (),
 ) -> SeededHistory:
-    """Write every evening, oldest first, then what her opponents said.
+    """Write every declared game and her evenings, oldest first, then what her
+    opponents said about her.
 
-    **After the cohort, the cards, the clubs and their courts**, which it reads
-    and never writes."""
+    ``games`` are the declared games the runner hands in; ``named`` are the
+    accounts besides the cohort they may name. **After the cohort, the cards,
+    the clubs and their courts**, which it reads and never writes."""
 
+    planned = _plan(games, now=now)
     async with session_factory() as session:
-        her = await _player_id(session, THE_POPULATED_PLAYER.email)
-        opponents = {
-            handle: await _player_id(session, COHORT.by_handle(handle).email)
-            for handle in {evening.opponent for evening in HER_EVENINGS}
-        }
+        people = await _people(
+            session,
+            (handle for one in planned for handle in one.game.players),
+            named=named,
+            now=now,
+        )
+        her = people[PROTAGONIST_HANDLE]
         club_id = await club_id_of(session, HISTORY_CLUB)
-        group_id = await _history_group_of(session, her, club_id)
-        played = (
-            {}
-            if group_id is None
-            else await _her_past_games(session, settings, her, group_id, now=now)
+        groups: dict[Sport, tuple[UUID, bool]] = {}
+        for sport in Sport:
+            members = [
+                people[handle]
+                for one in planned
+                if one.game.sport == sport.value
+                for handle in one.game.players
+            ]
+            if members:
+                groups[sport] = await _the_group(
+                    session, settings, her, club_id, sport, members
+                )
+        booked = await _past_bookings(
+            session, settings, [person.player_id for person in people.values()]
         )
-        # **Written already, so the evenings are the ones on the record** rather
-        # than this run's: a later day would place them on later days.
-        written_already = group_id is not None and len(played) >= len(HER_EVENINGS)
-        starts = (
-            sorted(played)[-len(HER_EVENINGS) :]
-            if written_already
-            else await evening_starts(session, club_id, now=now)
-        )
-        created = group_id is None
-        if group_id is None:
-            group_id = await _the_group(
-                session, settings, her, club_id, opponents.values(), at=starts[0]
-            )
-        written = []
-        for evening, start in zip(HER_EVENINGS, starts, strict=True):
-            made = start not in played
-            if made:
-                played[start] = await _book(
+        busy: dict[UUID, list[Instant]] = {}
+        for _, players, start, _ in booked:
+            for player in players:
+                busy.setdefault(player, []).append(start)
+        found = _already_booked(planned, booked, groups, people)
+
+        written: dict[int, WrittenGame] = {}
+        game_ids: dict[int, UUID] = {}
+        for one in sorted(planned, key=lambda one: (one.day, one.order)):
+            on_it = [people[handle] for handle in one.game.players]
+            sport = Sport(one.game.sport)
+            if one.order in found:
+                start, game_ids[one.order] = found[one.order]
+                made = False
+            else:
+                start, made_at = await _a_free_hour(
+                    session, club_id, sport, one, on_it, busy, now=now
+                )
+                game_ids[one.order] = await _book(
                     session,
                     settings,
-                    group_id=group_id,
+                    group_id=groups[sport][0],
                     club_id=club_id,
+                    sport=sport,
                     start=start,
-                    players=(opponents[evening.opponent], her),
+                    made_at=made_at,
+                    players=tuple(person.player_id for person in on_it),
                 )
+                made = True
+                for person in on_it:
+                    busy.setdefault(person.player_id, []).append(start)
             acts = await _play(
                 session,
-                game_id=played[start],
-                evening=evening,
-                stater=opponents[evening.opponent],
-                her=her,
+                game_id=game_ids[one.order],
+                game=one.game,
+                people=people,
                 start=start,
             )
-            written.append(WrittenEvening(evening, start, made=made, acts=acts))
-        cards = await _rate_her(session, her, opponents, set(played.values()), now=now)
+            written[one.order] = WrittenGame(
+                one.game,
+                start,
+                made=made,
+                acts=acts,
+                this_week=start >= hour_start(week_of(now), 0),
+            )
+
+        cards = await _rate_her(
+            session,
+            her.player_id,
+            {handle: people[handle].player_id for handle in WHAT_THEY_SAID_ABOUT_HER},
+            {game_ids[one.order] for one in planned if one.hers},
+            now=now,
+        )
     return SeededHistory(
-        group_id=group_id,
-        created_group=created,
-        evenings=tuple(written),
+        evenings=tuple(written[one.order] for one in planned if one.hers),
+        played=tuple(
+            sorted(
+                (written[one.order] for one in planned if not one.hers),
+                key=lambda game: game.start,
+            )
+        ),
+        groups=tuple(
+            (sport, group_id, created) for sport, (group_id, created) in groups.items()
+        ),
         cards=cards,
     )
 
 
 def latest_evening_ends_by(now: Instant) -> Instant:
-    """The latest instant an evening may end: before this week began, and long
+    """The latest instant a game may end: before this week began, and long
     enough ago that every ending it can have has been reached."""
 
     return min(hour_start(week_of(now), 0), instant(now - SETTLED_FOR))
 
 
-async def evening_starts(
-    session: AsyncSession, club_id: UUID, *, now: Instant
-) -> list[Instant]:
-    """One hour a day, oldest first, walking back from the latest day an evening
-    may end on: the first tennis hour the club sold that day, read as it was on
-    sale when the game was made."""
+async def _a_free_hour(
+    session: AsyncSession,
+    club_id: UUID,
+    sport: Sport,
+    one: _Planned,
+    on_it: Sequence[_Person],
+    busy: Mapping[UUID, Sequence[Instant]],
+    *,
+    now: Instant,
+) -> tuple[Instant, Instant]:
+    """The first hour the club sold on the game's day — walking back a day at a
+    time — that ends before her week, that nobody on it is already playing at,
+    and that could have been made after the last of them committed. Where none
+    could, a declared game is played inside her week instead, on its declared
+    day or before. The hour, and when the game was made."""
 
     latest = latest_evening_ends_by(now)
-    court_hours = build_court_hours(session)
-    starts: list[Instant] = []
-    day = local_day(latest)
-    while len(starts) < len(HER_EVENINGS):
-        day_start = hour_start(day, 0)
-        if latest - day_start > LOOKS_BACK:
-            raise HistoryRefused(
-                f"{HISTORY_CLUB.name} sold {len(starts)} day(s) of "
-                f"{HISTORY_SPORT.value} in the {LOOKS_BACK.days} days before "
-                f"{latest.astimezone(CLUB_ZONE):%a %d %b %H:%M}, and her history "
-                f"needs {len(HER_EVENINGS)}"
+    earliest_made = instant(
+        max(person.committed_at for person in on_it) + AFTER_THE_LAST_COMMIT
+    )
+    attempts = [(one.day, latest)]
+    if not one.hers and one.declared > one.day:
+        attempts.append((one.declared, instant(now - SETTLED_FOR)))
+    for first, bound in attempts:
+        day = first
+        while day >= local_day(earliest_made) and first - day <= LOOKS_BACK:
+            hour = await _an_hour(
+                session,
+                club_id,
+                sport,
+                day,
+                on_it,
+                busy,
+                bound=bound,
+                earliest_made=earliest_made,
             )
-        on_sale = await court_hours.on_sale(
-            [club_id],
-            start=day_start,
-            end=day_start + timedelta(days=1),
-            now=instant(day_start - MADE_AHEAD),
-        )
-        hour = min(
-            (
-                one.start
-                for one in on_sale
-                if one.sport is HISTORY_SPORT
-                and one.taking_new_cards
-                and one.start + GAME_LENGTH <= latest
-            ),
-            default=None,
-        )
-        if hour is not None:
-            starts.append(hour)
-        day -= timedelta(days=1)
-    return sorted(starts)
+            if hour is not None:
+                return hour
+            day -= timedelta(days=1)
+    names = ", ".join(person.handle for person in on_it)
+    raise HistoryRefused(
+        f"{HISTORY_CLUB.name} sold no {sport.value} hour {names} could all play "
+        f"between {earliest_made.astimezone(CLUB_ZONE):%a %d %b %H:%M} and "
+        f"{one.declared:%a %d %b}"
+    )
+
+
+async def _an_hour(
+    session: AsyncSession,
+    club_id: UUID,
+    sport: Sport,
+    day: date,
+    on_it: Sequence[_Person],
+    busy: Mapping[UUID, Sequence[Instant]],
+    *,
+    bound: Instant,
+    earliest_made: Instant,
+) -> tuple[Instant, Instant] | None:
+    court_hours = build_court_hours(session)
+    day_start = hour_start(day, 0)
+    on_sale = await court_hours.on_sale(
+        [club_id],
+        start=day_start,
+        end=day_start + timedelta(days=1),
+        now=max(instant(day_start - MADE_AHEAD), earliest_made),
+    )
+    for start in sorted(
+        hour.start for hour in on_sale if hour.sport is sport and hour.taking_new_cards
+    ):
+        if start + GAME_LENGTH > bound or any(
+            abs(start - taken) < GAME_LENGTH
+            for person in on_it
+            for taken in busy.get(person.player_id, ())
+        ):
+            continue
+        made_at = max(instant(start - MADE_AHEAD), earliest_made)
+        if made_at < start and await court_hours.offered(
+            club_id, sport=sport, start=start, now=made_at
+        ):
+            return start, made_at
+    return None
 
 
 async def _book(
@@ -392,98 +622,107 @@ async def _book(
     *,
     group_id: UUID,
     club_id: UUID,
+    sport: Sport,
     start: Instant,
+    made_at: Instant,
     players: tuple[UUID, ...],
 ) -> UUID:
-    """The game made and every yes said, hers last, two days before its hour —
-    the fill books it. The Game it opened."""
+    """The game made and every yes said, in the order the game names them — the
+    last books it. The Game it opened."""
 
     answer = await all_say_yes(
         session,
         settings=settings,
-        clock=FixedClock(at=instant(start - MADE_AHEAD)),
+        clock=FixedClock(at=made_at),
         provider=build_fake_payments(),
         pool_id=group_id,
         club_id=club_id,
         start=start,
         players=players,
-        sport=HISTORY_SPORT,
+        sport=sport,
         kind=HISTORY_KIND,
     )
     if answer is None or answer.booked is None:
         raise HistoryRefused(
-            f"her evening at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} filled "
-            f"and did not book: {answer!r}"
+            f"the {sport.value} game at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} "
+            f"filled and did not book: {answer!r}"
         )
-    booked = {
-        game.start: game.game_id
-        for game in await build_player_bookings(session, settings=settings).of_player(
-            players[-1]
-        )
-        if game.club_id == club_id and game.game_id is not None
-    }
-    if start not in booked:
-        raise HistoryRefused(
-            f"her evening at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} booked "
-            f"and opened no Game she can read"
-        )
-    return booked[start]
+    return answer.booked.game_id
 
 
 async def _play(
     session: AsyncSession,
     *,
     game_id: UUID,
-    evening: Evening,
-    stater: UUID,
-    her: UUID,
+    game: PlayedGame,
+    people: Mapping[str, _Person],
     start: Instant,
 ) -> tuple[str, ...]:
-    """*We played, here is the score* — and whatever she did with it. **Each
-    act is asked for off the Game's record**, so a resumed run takes only the
-    ones still owed. A game nobody claimed is written by writing nothing, and so
-    is the answer she never gave."""
+    """*We played, here is the score* — and whatever the other side did with it.
 
-    if not evening.entered:
+    **The first person declared on side A states**, and the score is put to the
+    first declared person the fill seated across the net from them. **Each act is
+    asked for off the Game's record**, so a resumed run takes only the ones still
+    owed. A game nobody claimed is written by writing nothing, and so is the
+    answer nobody gave."""
+
+    if not game.entered:
         return ()
     games = build_game_repository(
         session=session,
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
-    game = await _loaded(games, game_id)
-    winner = stater if evening.she_won is False else her
-    winning_side = game.line_up.side_of(winner)
-    her_side = game.line_up.side_of(her)
-    if winning_side is None or her_side is None:
-        raise HistoryRefused(f"game {game_id} does not seat both of them")
+    played = await _loaded(games, game_id)
+    stater = people[game.side_a[0]].player_id
+    stater_side = played.line_up.side_of(stater)
+    if stater_side is None:
+        raise HistoryRefused(f"game {game_id} does not seat '{game.side_a[0]}'")
+    answerer = next(
+        (
+            people[handle].player_id
+            for handle in (*game.side_b, *game.side_a[1:])
+            if played.line_up.side_of(people[handle].player_id) is stater_side.other
+        ),
+        None,
+    )
+    if answerer is None:
+        raise HistoryRefused(f"game {game_id} seats nobody across the net")
+    # A game nobody agreed is the stater's side claiming it and the other side
+    # claiming it back.
+    winner = game.side_b[0] if game.won_by == "B" else game.side_a[0]
+    winning_side = played.line_up.side_of(people[winner].player_id) or stater_side
     ends = instant(start + GAME_LENGTH)
     acts: list[str] = []
-    if game.played_at is None:
-        await _state(session, games, ends + STATED_AFTER).execute(
+    if played.played_at is None:
+        await _state(session, games, instant(ends + STATED_AFTER)).execute(
             StateResultCommand(
-                game_id=game_id, player_id=stater, score=SCORES[winning_side]
+                game_id=game_id,
+                player_id=stater,
+                score=SCORES[winning_side],
             )
         )
         acts.append("score entered")
-        game = await _loaded(games, game_id)
-    answered_at = ends + ANSWERED_AFTER
-    if not evening.was_scored:
-        if her_side not in game.proposals:
+        played = await _loaded(games, game_id)
+    answered_at = instant(ends + ANSWERED_AFTER)
+    if not game.was_scored:
+        if stater_side.other not in played.proposals:
             # The counter names the other winner: two sides who disagree.
             await _state(session, games, answered_at).execute(
                 StateResultCommand(
-                    game_id=game_id, player_id=her, score=SCORES[her_side]
+                    game_id=game_id,
+                    player_id=answerer,
+                    score=SCORES[stater_side.other],
                 )
             )
             acts.append("countered")
-    elif evening.answered and game.acceptance is None:
+    elif game.answered and played.acceptance is None:
         await AcceptResult(
             games=games,
             names=build_player_names(session),
             uow=build_unit_of_work(session),
             clock=FixedClock(at=answered_at),
-        ).execute(AcceptResultCommand(game_id=game_id, player_id=her))
+        ).execute(AcceptResultCommand(game_id=game_id, player_id=answerer))
         acts.append("accepted")
     return tuple(acts)
 
@@ -507,8 +746,8 @@ async def _loaded(games: GameRepository, game_id: UUID) -> Game:
 async def _rate_her(
     session: AsyncSession,
     her: UUID,
-    opponents: Mapping[str, UUID],
-    history: set[UUID],
+    raters: Mapping[str, UUID],
+    evenings: set[UUID],
     *,
     now: Instant,
 ) -> tuple[str, ...]:
@@ -519,11 +758,11 @@ async def _rate_her(
     ledger = build_sportsmanship_ledger(session)
     lines: list[str] = []
     for rater, stars in sorted(WHAT_THEY_SAID_ABOUT_HER.items()):
-        rater_id = opponents[rater]
+        rater_id = raters[rater]
         shared = [
             court
             for court in await courts.courts_of(rater_id, now=now)
-            if court.game_id in history and her in court.others
+            if court.game_id in evenings and her in court.others
         ]
         if not shared:
             raise HistoryRefused(
@@ -552,68 +791,92 @@ async def _rate_her(
 async def _the_group(
     session: AsyncSession,
     settings: Settings,
-    her: UUID,
+    her: _Person,
     club_id: UUID,
-    opponents: Iterable[UUID],
-    *,
-    at: Instant,
-) -> UUID:
-    """Her group at the club, created and joined a day before her first
-    evening was made."""
+    sport: Sport,
+    members: Iterable[_Person],
+) -> tuple[UUID, bool]:
+    """Her group for the sport at the club — created half an hour after she
+    committed, and joined by everybody its games seat, each half an hour after
+    they did. Joining again records nothing."""
 
-    clock = FixedClock(at=instant(at - MADE_AHEAD - timedelta(days=1)))
-    group_id = await CreatePlayerGroup(
-        groups=group_repository(session),
-        clubs=build_home_clubs(session),
-        codes=build_group_code_minter(session),
-        uow=build_unit_of_work(session),
-        clock=clock,
-    ).execute(
-        CreatePlayerGroupCommand(
-            creator_id=her,
-            name=HISTORY_GROUP,
-            home_club_id=club_id,
-            join_policy=JoinPolicy.ANYONE,
+    name = HISTORY_GROUPS[sport]
+    opened = instant(her.committed_at + timedelta(minutes=30))
+    group_id = await group_run_by(session, her.player_id, club_id=club_id, name=name)
+    created = group_id is None
+    if group_id is None:
+        group_id = await CreatePlayerGroup(
+            groups=group_repository(session),
+            clubs=build_home_clubs(session),
+            codes=build_group_code_minter(session),
+            uow=build_unit_of_work(session),
+            clock=FixedClock(at=opened),
+        ).execute(
+            CreatePlayerGroupCommand(
+                creator_id=her.player_id,
+                name=name,
+                home_club_id=club_id,
+                join_policy=JoinPolicy.ANYONE,
+            )
         )
-    )
-    for opponent in opponents:
-        await join_group(session, settings, group_id, opponent, clock)
-    return group_id
-
-
-async def _history_group_of(
-    session: AsyncSession, her: UUID, club_id: UUID
-) -> UUID | None:
-    return await group_run_by(session, her, club_id=club_id, name=HISTORY_GROUP)
-
-
-async def _her_past_games(
-    session: AsyncSession,
-    settings: Settings,
-    her: UUID,
-    group_id: UUID,
-    *,
-    now: Instant,
-) -> dict[Instant, UUID]:
-    """Her booked games in the group that ended before this week, by hour."""
-
-    latest = latest_evening_ends_by(now)
-    return {
-        game.start: game.game_id
-        for game in await build_player_bookings(session, settings=settings).of_player(
-            her
+    for member in {person.handle: person for person in members}.values():
+        if member.player_id == her.player_id:
+            continue
+        joined = max(opened, instant(member.committed_at + timedelta(minutes=30)))
+        await join_group(
+            session, settings, group_id, member.player_id, FixedClock(at=joined)
         )
-        if game.pool_id == group_id
-        and game.game_id is not None
-        and game.start + GAME_LENGTH <= latest
-    }
+    return group_id, created
 
 
-async def _player_id(session: AsyncSession, email: str) -> UUID:
-    user = await build_user_repository(session).get_by_email(email)
-    if user is None:
-        raise RuntimeError(f"{email} is not registered — the accounts run first")
-    return user.id
+async def _past_bookings(
+    session: AsyncSession, settings: Settings, players: Iterable[UUID]
+) -> list[tuple[UUID, frozenset[UUID], Instant, UUID]]:
+    """Every booked game these players have, once each — its group, who is on
+    it, its hour and its Game."""
+
+    bookings = build_player_bookings(session, settings=settings)
+    seen: dict[UUID, tuple[UUID, frozenset[UUID], Instant, UUID]] = {}
+    for player in sorted(set(players), key=str):
+        for game in await bookings.of_player(player):
+            if game.game_id is not None:
+                seen[game.booking_id] = (
+                    game.pool_id,
+                    frozenset((*game.first_side, *game.second_side)),
+                    game.start,
+                    game.game_id,
+                )
+    return list(seen.values())
+
+
+def _already_booked(
+    planned: Sequence[_Planned],
+    booked: Sequence[tuple[UUID, frozenset[UUID], Instant, UUID]],
+    groups: Mapping[Sport, tuple[UUID, bool]],
+    people: Mapping[str, _Person],
+) -> dict[int, tuple[Instant, UUID]]:
+    """The games an earlier run wrote: the n-th declared game for the same
+    people in its group is the n-th booking they share there, oldest first."""
+
+    def key_of(one: _Planned) -> tuple[UUID, frozenset[UUID]]:
+        return (
+            groups[Sport(one.game.sport)][0],
+            frozenset(people[handle].player_id for handle in one.game.players),
+        )
+
+    existing: dict[tuple[UUID, frozenset[UUID]], list[tuple[Instant, UUID]]] = {}
+    for pool_id, players, start, game_id in booked:
+        existing.setdefault((pool_id, players), []).append((start, game_id))
+    found: dict[int, tuple[Instant, UUID]] = {}
+    seen: dict[tuple[UUID, frozenset[UUID]], int] = {}
+    for one in sorted(planned, key=lambda one: one.order):
+        key = key_of(one)
+        index = seen.get(key, 0)
+        seen[key] = index + 1
+        mine = sorted(existing.get(key, []))
+        if index < len(mine):
+            found[one.order] = mine[index]
+    return found
 
 
 async def assert_her_history(
@@ -623,7 +886,7 @@ async def assert_her_history(
     now: Instant,
 ) -> str:
     """*Her record has played games, a Level that moves, and stars* — each read
-    off her booked evenings through the paths that read them.
+    off her evenings through the paths that read them.
 
     - **played**: her Home, folded as the phone reads it, draws her evenings
       *counted*;
@@ -635,10 +898,14 @@ async def assert_her_history(
     Any of the three missing fails the run by name."""
 
     async with session_factory() as session:
-        her = await _player_id(session, THE_POPULATED_PLAYER.email)
+        her = (await _people(session, [PROTAGONIST_HANDLE], named=(), now=now))[
+            PROTAGONIST_HANDLE
+        ].player_id
         club_id = await club_id_of(session, HISTORY_CLUB)
-        group_id = await _history_group_of(session, her, club_id)
-        where = f"her record · {PROTAGONIST_HANDLE} · {HISTORY_GROUP}"
+        group_id = await group_run_by(
+            session, her, club_id=club_id, name=HISTORY_GROUPS[HISTORY_SPORT]
+        )
+        where = f"her record · {PROTAGONIST_HANDLE} · {HISTORY_GROUPS[HISTORY_SPORT]}"
         if group_id is None:
             raise HistoryIsEmpty(f"{where}: no group, so no evening was written")
         home = await build_read_home(
@@ -675,53 +942,77 @@ async def assert_her_history(
                 f"she is {'' if her in rated else 'not '}rated in "
                 f"{HISTORY_SPORT.value}"
             )
+        raters = await _people(session, WHAT_THEY_SAID_ABOUT_HER, named=(), now=now)
         ledger = build_sportsmanship_ledger(session)
-        raters = [
-            rater
-            for rater, _ in sorted(WHAT_THEY_SAID_ABOUT_HER.items())
+        answered = [
+            handle
+            for handle, rater in sorted(raters.items())
             if await ledger.answered_among(
-                rater_id=await _player_id(session, COHORT.by_handle(rater).email),
-                game_ids=tuple(history),
+                rater_id=rater.player_id, game_ids=tuple(history)
             )
         ]
         published = await build_published_sportsmanship(session).published_for(her)
-        if not raters or published is None:
+        if not answered or published is None:
             raise HistoryIsEmpty(
-                f"{where} has no stars: {len(raters)} card(s) answered about her "
+                f"{where} has no stars: {len(answered)} card(s) answered about her "
                 f"on her evenings, and her record publishes "
                 f"{'nothing' if published is None else 'a figure'}"
             )
     return (
-        f"{where}: {len(counted)} of {len(evenings)} evening(s) counted, "
+        f"{where}: {len(counted)} of {len(evenings)} game(s) counted, "
         f"{len(moving)} result(s) for the rating catch-up to move her Level on, "
-        f"{len(raters)} rater(s) on them — {published.average:.1f} / 5 over "
+        f"{len(answered)} rater(s) on them — {published.average:.1f} / 5 over "
         f"{published.raters}"
     )
 
 
-def history_lines(seeded: SeededHistory) -> list[str]:
-    """The report's section: her evenings, and what was said about her."""
+def _ending(game: PlayedGame, *, hers: bool) -> str:
+    if not game.entered:
+        return "never claimed"
+    if game.won_by is None:
+        return "nobody agreed a score"
+    won = (
+        ("she won" if game.won_by == "B" else "she lost")
+        if hers
+        else f"side {game.won_by} won"
+    )
+    return won if game.answered else f"{won}, unanswered and confirmed by silence"
 
+
+def _line(written: WrittenGame, *, hers: bool = False) -> str:
+    game = written.game
+    state = "booked" if written.made else "already booked"
+    acts = f", {', '.join(written.acts)}" if written.acts else ""
+    week = (
+        " · this week: somebody on it committed inside it" if written.this_week else ""
+    )
+    who = (
+        f"against {game.side_a[0]}"
+        if hers
+        else f"{' & '.join(game.side_a)} against {' & '.join(game.side_b)}"
+    )
+    return (
+        f"  {written.start.astimezone(CLUB_ZONE):%a %d %b %H:%M} · "
+        f"{game.sport.lower()} · {who} · {state}{acts} · "
+        f"{_ending(game, hers=hers)}{week}"
+    )
+
+
+def history_lines(seeded: SeededHistory) -> list[str]:
+    """The report's section: the groups, her evenings, what was said about her,
+    and every declared game."""
+
+    groups = ", ".join(
+        f"{HISTORY_GROUPS[sport]} ({'created' if created else 'already there'})"
+        for sport, _, created in seeded.groups
+    )
     lines = [
-        f"Her played history — booked {HISTORY_SPORT.value.lower()} at "
-        f"{HISTORY_CLUB.name} in {HISTORY_GROUP} "
-        f"({'created' if seeded.created_group else 'already there'}):"
+        f"The played history — booked at {HISTORY_CLUB.name}, in {groups}",
+        "Her evenings:",
+        *(_line(written, hers=True) for written in seeded.evenings),
+        *(f"  {line}" for line in seeded.cards),
+        f"Every declared game ({len(seeded.played)}, "
+        f"{len(seeded.this_week)} played this week):",
+        *(_line(written) for written in seeded.played),
     ]
-    for written in seeded.evenings:
-        evening = written.evening
-        ending = (
-            "never claimed"
-            if not evening.entered
-            else "nobody agreed a score"
-            if evening.she_won is None
-            else ("she won" if evening.she_won else "she lost")
-            + ("" if evening.answered else ", unanswered and confirmed by silence")
-        )
-        state = "booked" if written.made else "already booked"
-        acts = f", {', '.join(written.acts)}" if written.acts else ""
-        lines.append(
-            f"  {written.start.astimezone(CLUB_ZONE):%a %d %b %H:%M} · against "
-            f"{evening.opponent} · {state}{acts} · {ending}"
-        )
-    lines.extend(f"  {line}" for line in seeded.cards)
     return lines

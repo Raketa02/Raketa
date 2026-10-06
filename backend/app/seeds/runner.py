@@ -195,7 +195,7 @@ from app.seeds.booked_history import (
     SeededHistory,
     assert_her_history,
     history_lines,
-    write_her_history,
+    write_the_played_history,
 )
 from app.seeds.rescues import SeededRescues, rescue_lines, seed_the_rescues
 from app.seeds.posts import SeededPost, post_her_game, post_lines
@@ -217,10 +217,11 @@ from app.seeds.official_groups import (
 from app.seeds.cohort import (
     BAND_HISTOGRAM,
     COHORT,
+    PLAYED_GAMES,
+    WHAT_PLAYERS_SAID,
     Cohort,
     CohortMember,
 )
-from app.seeds.games import SeededGames, write_the_played_history
 from app.seeds.guard import refuse_unless_seedable
 from app.seeds.loop import (
     SeededLoop,
@@ -235,6 +236,7 @@ from app.seeds.photos import (
     an_image,
     the_store_answers,
 )
+from app.seeds.pool_history import THE_POOL_HAS_A_RECORD, WHAT_THE_POOL_SAID, address_of
 from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 from app.seeds.plans import SeededPlans, costs as plan_costs, write_the_plans
 from app.seeds.rooms import SeededRooms, open_the_rooms
@@ -245,7 +247,11 @@ from app.seeds.screens import (
     assert_the_posting_grid,
     assert_the_screens,
 )
-from app.seeds.sportsmanship import SeededOpinions, write_what_players_said
+from app.seeds.sportsmanship import (
+    SeededOpinions,
+    everything_said,
+    write_what_players_said,
+)
 
 #: A questionnaire the seed can no longer finish is a hang, and a hang in a
 #: developer command reads as a broken database. The engine's own ceiling is well
@@ -1213,9 +1219,6 @@ class SeedReport:
     #: costs. ``None`` only where a caller drove the two populations without the
     #: layer above them — the API suite does, and it asserts no screen.
     pairs: SeededPairs | None = None
-    #: The played history, and the pairs it spent. ``None`` on the same callers
-    #: and for the same reason.
-    played: SeededGames | None = None
     #: The four arranged-and-never-played games, and the plans on them.
     #: ``None`` on the same callers and for the same reason as the two above.
     plans: SeededPlans | None = None
@@ -1323,6 +1326,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             session_factory,
             now=now,
             cohort=[(member.member.handle, member.player_id) for member in members],
+            others=RELATIONSHIP_ACCOUNTS,
         )
         # **The clubs next, before anything that could stand at one.** A club
         # reads nobody, and a group needs a home club.
@@ -1351,27 +1355,27 @@ async def run(settings: Settings | None = None) -> SeedReport:
         official_groups = await write_the_official_groups(
             session_factory, settings=settings, now=now
         )
-        # **The played history first, and the order is load-bearing.** A game is
-        # a challenge every seat accepted, so each one spends a pair for good;
-        # the relationship layer then plans its inboxes against a world those
-        # games are already in, rather than discovering half way through that an
-        # organiser it counted on can no longer see anybody.
-        played = await write_the_played_history(
-            session_factory, settings=settings, now=now, photos=photos
+        # **The played history first, and on the path the product makes games
+        # on** (#573): her evenings, the cohort's games and the pool's, each a
+        # past booked game, played and scored. Before every layer that reads a
+        # record or a week, and placed before this week, so nothing below — her
+        # deck, her Fill in, her post — sees a week the history has filled.
+        history = await write_the_played_history(
+            session_factory,
+            settings=settings,
+            now=now,
+            games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
+            named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
         )
         # **After the games and before anything reads a record**, because a card
         # is drawn for a court that is over: nothing here arranges an evening,
         # and every rating it writes is about one the layer above just wrote.
-        # It spends no pair and runs no search, so its position relative to the
-        # relationships is free — it sits here because it belongs to the
-        # evenings rather than to the inboxes.
-        opinions = await write_what_players_said(session_factory, now=now)
-        # **Her own record, on the path the product makes games on** (#573):
-        # past booked games, played, scored and rated. Placed before this week,
-        # so nothing below — her deck, her Fill in, her post — sees a week the
-        # history has filled; and beside the challenge loop's played history,
-        # which no longer seats her.
-        history = await write_her_history(session_factory, settings=settings, now=now)
+        opinions = await write_what_players_said(
+            session_factory,
+            now=now,
+            said=everything_said(WHAT_PLAYERS_SAID, WHAT_THE_POOL_SAID),
+            address_of=address_of,
+        )
         # **After both populations and before every claim.** An edge is a real
         # search or deal run as the sender, so it needs everybody in the index —
         # and the claims are read off what the edges made true.
@@ -1486,7 +1490,6 @@ async def run(settings: Settings | None = None) -> SeedReport:
             now=now,
             screens=screens,
             pairs=pairs,
-            played=played,
             plans=plans,
             rooms=rooms,
             loop=loop,
@@ -1612,8 +1615,6 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *official_group_lines(run_report.official_groups)])
     if run_report.history is not None:
         lines.extend(["", *history_lines(run_report.history)])
-    if run_report.played is not None:
-        lines.extend(["", *_played_lines(run_report.played)])
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])
@@ -1630,7 +1631,13 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(f"  {line}" for line in run_report.screens)
     lines.extend(["", COHORT_DISCLAIMER])
     costs = list(run_report.pairs.costs if run_report.pairs else ())
-    costs.extend(run_report.played.costs if run_report.played else ())
+    if run_report.history is not None and run_report.history.this_week:
+        costs.append(
+            f"{len(run_report.history.this_week)} declared game(s) are played "
+            f"**this week**, because somebody on each committed their profile "
+            f"inside it and could not have played before; they count toward "
+            f"this week's games for everybody on them."
+        )
     costs.extend(plan_costs(run_report.plans) if run_report.plans else ())
     costs.extend(loop_costs(run_report.loop) if run_report.loop else ())
     if not run_report.photographs:
@@ -1684,20 +1691,6 @@ def _room_lines(rooms: SeededRooms) -> list[str]:
         "`SeatsInvited`, and nothing here performs a fill — which would cost a "
         "real search that seats somebody new and move the gate histogram this "
         "run asserts.",
-    ]
-
-
-def _played_lines(played: SeededGames) -> list[str]:
-    """What the platform has watched this cohort do, one line per game.
-
-    Not a claim — the claims are read off a real card in
-    ``app/seeds/screens.py`` — and it names the members so the card is findable,
-    which is the question a developer opens the report with.
-    """
-
-    return [
-        "The played history:",
-        *(f"  {one.line}" for one in played.games),
     ]
 
 

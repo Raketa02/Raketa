@@ -1,5 +1,9 @@
 """Write the played history: real challenges, really accepted, really scored.
 
+**No longer the runner's** (#573): every declared game is written as a past
+booked game by ``app/seeds/booked_history.py``. The plans and loop layers still
+borrow its court helpers, and it goes with them.
+
 **A seeded game is not a row and cannot be one** (``docs/adr/0029``). It is a
 challenge sent off a search that really showed the people it seats, every seat
 answered, the line-up completing — which is what opens the game, inline, in the

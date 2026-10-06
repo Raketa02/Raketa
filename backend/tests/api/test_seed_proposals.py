@@ -261,8 +261,11 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
     that the cohort ``make seed`` writes can seat four picks at all."""
 
     from app.seeds.clock import FixedClock
-    from app.seeds.booked_history import write_her_history
-    from app.seeds.games import write_the_played_history
+    from app.seeds.booked_history import write_the_played_history
+    from app.seeds.catalog import ACCOUNTS
+    from app.seeds.cohort import PLAYED_GAMES
+    from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
+    from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
     from app.seeds.pairs import write_the_relationships
     from app.seeds.runner import seed_the_cohort
     from tests.unit.fake_photo_storage import InMemoryPhotoStorage
@@ -276,15 +279,20 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
             session, clock=FixedClock(at=now), settings=settings, photos=photos
         )
     cohort = [(member.member.handle, member.player_id) for member in members]
-    await write_the_payment_methods(session_factory, now=now, cohort=cohort)
+    await write_the_payment_methods(
+        session_factory, now=now, cohort=cohort, others=RELATIONSHIP_ACCOUNTS
+    )
     clubs = await write_the_clubs(session_factory, settings=settings, now=now)
     await write_the_club_courts(
         session_factory, settings=settings, now=now, clubs=clubs
     )
     await write_the_played_history(
-        session_factory, settings=settings, now=now, photos=photos
+        session_factory,
+        settings=settings,
+        now=now,
+        games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
+        named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
     )
-    await write_her_history(session_factory, settings=settings, now=now)
     await write_the_relationships(
         session_factory, settings=settings, now=now, photos=photos
     )
@@ -541,8 +549,11 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
     the server decides is drawn on her two weeks, for anybody and for women."""
 
     from app.seeds.clock import FixedClock
-    from app.seeds.booked_history import write_her_history
-    from app.seeds.games import write_the_played_history
+    from app.seeds.booked_history import write_the_played_history
+    from app.seeds.catalog import ACCOUNTS
+    from app.seeds.cohort import PLAYED_GAMES
+    from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
+    from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
     from app.seeds.pairs import write_the_relationships
     from app.seeds.runner import seed_the_cohort
     from tests.unit.fake_photo_storage import InMemoryPhotoStorage
@@ -556,15 +567,20 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
             session, clock=FixedClock(at=now), settings=settings, photos=photos
         )
     cohort = [(member.member.handle, member.player_id) for member in members]
-    await write_the_payment_methods(session_factory, now=now, cohort=cohort)
+    await write_the_payment_methods(
+        session_factory, now=now, cohort=cohort, others=RELATIONSHIP_ACCOUNTS
+    )
     clubs = await write_the_clubs(session_factory, settings=settings, now=now)
     await write_the_club_courts(
         session_factory, settings=settings, now=now, clubs=clubs
     )
     await write_the_played_history(
-        session_factory, settings=settings, now=now, photos=photos
+        session_factory,
+        settings=settings,
+        now=now,
+        games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
+        named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
     )
-    await write_her_history(session_factory, settings=settings, now=now)
     await write_the_relationships(
         session_factory, settings=settings, now=now, photos=photos
     )

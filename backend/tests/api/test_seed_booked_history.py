@@ -30,13 +30,13 @@ from app.seeds.booked_history import (
     HistoryIsEmpty,
     assert_her_history,
     latest_evening_ends_by,
-    write_her_history,
+    write_the_played_history,
 )
 from app.seeds.catalog import SEED_PASSWORD, THE_POPULATED_PLAYER
 from app.seeds.clock import FixedClock
 from app.seeds.club_courts import write_the_club_courts
 from app.seeds.clubs import write_the_clubs
-from app.seeds.cohort import COHORT, Cohort
+from app.seeds.cohort import COHORT, Cohort, PlayedGame
 from app.seeds.payments import write_the_payment_methods
 from app.seeds.runner import seed, seed_the_cohort
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
@@ -50,10 +50,38 @@ def now():
     return build_clock().now()
 
 
+#: Three of the pool's padel games, none naming somebody who committed inside a
+#: week: a score accepted, the one nobody agreed, and one nobody answered.
+DECLARED = (
+    PlayedGame(
+        sport="PADEL",
+        played_days_ago=11,
+        side_a=("cohort-a-16", "cohort-a-07"),
+        side_b=("cohort-a-05", "cohort-a-13"),
+        won_by=None,
+    ),
+    PlayedGame(
+        sport="PADEL",
+        played_days_ago=10,
+        side_a=("cohort-a-16", "cohort-a-08"),
+        side_b=("cohort-a-12", "cohort-a-05"),
+        won_by="A",
+        answered=False,
+    ),
+    PlayedGame(
+        sport="PADEL",
+        played_days_ago=8,
+        side_a=("cohort-a-16", "cohort-a-08"),
+        side_b=("cohort-a-13", "cohort-a-12"),
+        won_by="A",
+    ),
+)
+
+
 @pytest.fixture
 async def her_world(session_factory, now):
-    """The named accounts, her three opponents, every card, the clubs and their
-    courts."""
+    """The named accounts, her three opponents and everybody the declared games
+    seat, every card, the clubs and their courts."""
 
     settings = get_settings()
     photos = InMemoryPhotoStorage()
@@ -61,7 +89,10 @@ async def her_world(session_factory, now):
         seed=COHORT.seed,
         members=tuple(
             COHORT.by_handle(handle)
-            for handle in sorted({evening.opponent for evening in HER_EVENINGS})
+            for handle in sorted(
+                {evening.opponent for evening in HER_EVENINGS}
+                | {handle for game in DECLARED for handle in game.players}
+            )
         ),
     )
     async with session_factory() as session:
@@ -96,7 +127,7 @@ async def signed_in_as_her(client) -> dict:
 async def test_her_evenings_are_on_her_record_with_a_mixed_run_and_her_stars(
     client, session_factory, now, her_world
 ):
-    await write_her_history(session_factory, settings=get_settings(), now=now)
+    await write_the_played_history(session_factory, settings=get_settings(), now=now)
     headers = await signed_in_as_her(client)
 
     record = await client.get(RECORD, params={"sport": "TENNIS"}, headers=headers)
@@ -117,9 +148,13 @@ async def test_every_evening_is_over_before_her_week_began(
     """A booked game counts toward its week's *games per week*, so an evening in
     this week would shrink the week every later layer seats her in."""
 
-    seeded = await write_her_history(session_factory, settings=get_settings(), now=now)
+    seeded = await write_the_played_history(
+        session_factory, settings=get_settings(), now=now
+    )
 
-    assert [written.evening for written in seeded.evenings] == list(HER_EVENINGS)
+    assert [written.game for written in seeded.evenings] == [
+        evening.as_a_game() for evening in HER_EVENINGS
+    ]
     assert all(
         written.start + GAME_LENGTH <= latest_evening_ends_by(now)
         for written in seeded.evenings
@@ -144,7 +179,7 @@ async def test_her_evenings_have_ended_on_her_home(
 ):
     """Home holds every game she ever booked, and none of these needs her."""
 
-    await write_her_history(session_factory, settings=get_settings(), now=now)
+    await write_the_played_history(session_factory, settings=get_settings(), now=now)
 
     home = await client.get(HOME, headers=await signed_in_as_her(client))
 
@@ -157,7 +192,7 @@ async def test_her_evenings_have_ended_on_her_home(
 async def test_the_rating_catch_up_moves_her_tennis_level(
     client, session_factory, now, her_world
 ):
-    await write_her_history(session_factory, settings=get_settings(), now=now)
+    await write_the_played_history(session_factory, settings=get_settings(), now=now)
     headers = await signed_in_as_her(client)
     before = (
         await client.get(RECORD, params={"sport": "TENNIS"}, headers=headers)
@@ -176,11 +211,11 @@ async def test_the_rating_catch_up_moves_her_tennis_level(
 
 
 async def test_the_check_reads_her_evenings_and_passes(session_factory, now, her_world):
-    await write_her_history(session_factory, settings=get_settings(), now=now)
+    await write_the_played_history(session_factory, settings=get_settings(), now=now)
 
     line = await assert_her_history(session_factory, settings=get_settings(), now=now)
 
-    assert "5 of 6 evening(s) counted" in line
+    assert "5 of 6 game(s) counted" in line
     assert "5 result(s) for the rating catch-up" in line
     assert "2 rater(s)" in line
 
@@ -195,12 +230,16 @@ async def test_a_record_with_no_evenings_fails_the_run_by_name(
 async def test_a_second_run_writes_nothing_twice(
     client, session_factory, now, her_world
 ):
-    first = await write_her_history(session_factory, settings=get_settings(), now=now)
+    first = await write_the_played_history(
+        session_factory, settings=get_settings(), now=now
+    )
 
-    again = await write_her_history(session_factory, settings=get_settings(), now=now)
+    again = await write_the_played_history(
+        session_factory, settings=get_settings(), now=now
+    )
 
     assert all(written.made for written in first.evenings)
-    assert not again.created_group
+    assert not any(created for _, _, created in again.groups)
     assert [written.start for written in again.evenings] == [
         written.start for written in first.evenings
     ]
@@ -208,3 +247,50 @@ async def test_a_second_run_writes_nothing_twice(
     assert all("already answered" in line for line in again.cards)
     home = await client.get(HOME, headers=await signed_in_as_her(client))
     assert len(home.json()["games"]) == len(HER_EVENINGS)
+
+
+async def signed_in_as(client, email: str) -> dict:
+    login = await client.post(
+        "/api/v1/auth/login", json={"email": email, "password": SEED_PASSWORD}
+    )
+    assert login.status_code == 200, login.text
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+async def test_declared_games_are_booked_before_her_week_and_read_as_declared(
+    client, session_factory, now, her_world
+):
+    """**The cohort's and the pool's games are booked games too**: each played
+    before her week began, with the ending it was declared with — read on the
+    Home of somebody who played all three."""
+
+    seeded = await write_the_played_history(
+        session_factory, settings=get_settings(), now=now, games=DECLARED
+    )
+
+    assert [written.game for written in seeded.played] == list(DECLARED)
+    assert not seeded.this_week
+    assert all(
+        written.start + GAME_LENGTH <= latest_evening_ends_by(now)
+        for written in seeded.played
+    )
+    home = await client.get(
+        HOME, headers=await signed_in_as(client, COHORT.by_handle("cohort-a-16").email)
+    )
+    assert home.status_code == 200, home.text
+    statuses = sorted(game["status"] for game in home.json()["games"])
+    assert statuses == ["COUNTED", "COUNTED", "UNCOUNTED"], statuses
+
+
+async def test_a_second_run_writes_no_declared_game_twice(
+    session_factory, now, her_world
+):
+    await write_the_played_history(
+        session_factory, settings=get_settings(), now=now, games=DECLARED
+    )
+
+    again = await write_the_played_history(
+        session_factory, settings=get_settings(), now=now, games=DECLARED
+    )
+
+    assert not any(written.made or written.acts for written in again.played)

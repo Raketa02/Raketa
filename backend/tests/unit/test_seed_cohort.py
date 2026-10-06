@@ -45,6 +45,7 @@ from app.modules.matchmaking.domain.searches import LAST_FIVE
 from app.modules.player_profile.domain.intro import Intro
 from app.seeds import catalog
 from app.seeds.catalog import (
+    ACCOUNTS,
     PROTAGONISTS,
     REFERENCE_CENTRE,
     SEED_CENTRE_VARIABLE,
@@ -75,10 +76,11 @@ from app.seeds.cohort import (
     latitude_of,
 )
 from app.modules.matchmaking.domain.geography import Point, distance_km
-from app.seeds.booked_history import write_her_history
+from app.seeds.booked_history import write_the_played_history
 from app.seeds.club_courts import write_the_club_courts
 from app.seeds.clubs import write_the_clubs
-from app.seeds.games import write_the_played_history
+from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
+from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 from app.seeds.payments import write_the_payment_methods
 from app.seeds.pairs import write_the_relationships
 from app.seeds.photos import DeclaredVerdict
@@ -791,24 +793,26 @@ async def a_seeded_world(session_factory):
         members = await seed_the_cohort(
             session, clock=FixedClock(at=now), settings=settings, photos=photos
         )
-    # **The played history is part of the world too**, and it comes before the
-    # relationships for the reason `runner.run` puts it there: a game spends a
-    # pair for good, and the inbox layer plans around the ones already gone.
-    played = await write_the_played_history(
-        session_factory, settings=settings, now=now, photos=photos
-    )
-    # **Her own evenings beside it**, as past booked games (#573) — so the cards,
-    # the clubs and their courts they are booked through come first.
+    # **The played history is part of the world too**, as `runner.run` writes
+    # it: past booked games (#573) — so the cards, the clubs and their courts
+    # they are booked through come first — before the relationships.
     await write_the_payment_methods(
         session_factory,
         now=now,
         cohort=[(member.member.handle, member.player_id) for member in members],
+        others=RELATIONSHIP_ACCOUNTS,
     )
     clubs = await write_the_clubs(session_factory, settings=settings, now=now)
     await write_the_club_courts(
         session_factory, settings=settings, now=now, clubs=clubs
     )
-    await write_her_history(session_factory, settings=settings, now=now)
+    played = await write_the_played_history(
+        session_factory,
+        settings=settings,
+        now=now,
+        games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
+        named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
+    )
     # **The relationships are part of the world and not a layer above it.** Five
     # of the ten `LivenessSignal` codes are facts about a pair, so a world seeded
     # without them is one where the assertions below would be reading a fixture

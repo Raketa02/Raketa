@@ -650,6 +650,12 @@ CANNOT_BE_DRAWN: Mapping[str, str] = {
         "member has ever signed in — the seed writes no session and will not "
         "fabricate one"
     ),
+    "PREVIOUS_ACCEPT": (
+        "*they said yes to you before* is a tally of accepted challenge seats, "
+        "and the played history is past **booked** games since #573 — a booked "
+        "game accepts no seat, and every accepted seat the relationship "
+        "fixtures write sits on a court still being arranged"
+    ),
 }
 
 # **`PREVIOUS_ACCEPT` was named above until the pool got a history, and it moved
@@ -665,8 +671,12 @@ CANNOT_BE_DRAWN: Mapping[str, str] = {
 # hers and the tally they leave sits on her card in *their* pools. `pool_history.py`
 # reverses that — she organises four of its five courts, so eight of the people in her
 # pool have accepted a seat **from her**, and every one of their cards carries the
-# tally. The code is promised now, and the assertion below has stopped stating an
-# absence and started requiring the witness.
+# tally. The code was promised then, and the assertion below required the witness.
+#
+# **And it moved back with #573.** The pool's courts are past booked games now, and a
+# booked game accepts no challenge seat, so nobody in her pool carries the tally and the
+# code is named above again — this time for a reason the challenge loop's removal makes
+# permanent.
 #
 
 
