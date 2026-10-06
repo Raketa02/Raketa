@@ -21,16 +21,15 @@ import pytest
 
 from app.application.events import EventCatalog
 from app.application.events.envelope import SerializedEventEnvelope
+from app.application.ports.events import EventDecodingError
 from app.infrastructure.events.json_event_codec import JsonEventCodec
 from app.modules.users.application.event_subscriptions import register_user_events
 from app.modules.users.domain.events import (
     AccountOpenedByInvitation,
     AdultAttested,
     PasswordCleared,
-    UserMarkedAsTester,
     UserNamed,
     UserRegistered,
-    UserUnmarkedAsTester,
 )
 
 NOW = datetime(2026, 8, 27, tzinfo=timezone.utc)
@@ -141,31 +140,17 @@ def test_the_naming_round_trips_under_its_own_contract() -> None:
 
 
 @pytest.mark.parametrize(
-    ("event", "event_type"),
-    [
-        (
-            UserMarkedAsTester(user_id=REGISTERED.user_id, occurred_at=NOW),
-            "users.user_marked_as_tester",
-        ),
-        (
-            UserUnmarkedAsTester(user_id=REGISTERED.user_id, occurred_at=NOW),
-            "users.user_unmarked_as_tester",
-        ),
-    ],
+    "event_type", ["users.user_marked_as_tester", "users.user_unmarked_as_tester"]
 )
-def test_the_tester_mark_round_trips_under_its_own_contracts(
-    event: object, event_type: str
-) -> None:
-    """Two events, each filed under its own name (``docs/adr/0180`` §9), so a
-    stream read years from now says *marked* and *unmarked* in those words."""
+def test_the_tester_mark_has_no_reader_any_more(event_type: str) -> None:
+    """The mark went with the feature flags it fed (#581), and neither name is
+    given a class to answer to: a stored row is a decoding error, and the local
+    store is reset with the change."""
 
-    codec = _codec()
-
-    encoded = codec.encode(event)
-
-    assert encoded.event_type == event_type
-    assert encoded.schema_version == 1
-    assert codec.decode(_envelope(encoded.payload, event_type=event_type)) == event
+    with pytest.raises(EventDecodingError):
+        _codec().decode(
+            _envelope({"user_id": str(REGISTERED.user_id)}, event_type=event_type)
+        )
 
 
 @pytest.mark.parametrize(

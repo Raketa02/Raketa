@@ -8,10 +8,8 @@ from app.modules.users.domain.events import (
     AccountOpenedByInvitation,
     PasswordChanged,
     PasswordCleared,
-    UserMarkedAsTester,
     UserNamed,
     UserRegistered,
-    UserUnmarkedAsTester,
 )
 from app.modules.users.domain.user import User
 
@@ -80,19 +78,6 @@ class UserRepository(Protocol):
         in the act's own transaction (``docs/adr/0184`` §6): sign-in reads the
         hash from the row, so a password cleared on the stream alone would
         still sign in."""
-        ...
-
-    async def project_tester_mark(
-        self, event: UserMarkedAsTester | UserUnmarkedAsTester
-    ) -> None:
-        """Write the tester mark onto the projection row, in the act's own
-        transaction (``docs/adr/0180`` §9).
-
-        On the row because every ``User`` a route is handed is read from the
-        row: a mark folded on the stream and absent from the projection would
-        answer ``is_tester: false`` about a Tester — the reason
-        ``adult_attested`` is kept off the aggregate altogether.
-        """
         ...
 
     async def find_disabled_among(

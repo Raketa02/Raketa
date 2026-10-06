@@ -1,34 +1,36 @@
 """The profile surface reads and writes: one read, one `PUT` per fact.
 
-The Play screen edits three facts — the week, the radius and the per-sport Play
-intent — and until these routes existed it could read none of them and write
-none of them. What is asserted here is the shape #226 settled: **one read
-carrying all three**, and **one unkeyed `PUT` per changeable fact**, because a
-blank grid is a legal value and a `PATCH` field that may be `null` would mean
-both *leave my week alone* and *clear my week*.
+The Play screen edited two facts here — the week and the per-sport Play intent —
+and until these routes existed it could read neither and write neither. What is
+asserted here is the shape #226 settled: **one read carrying both**, and **one
+unkeyed `PUT` per changeable fact**, because a blank grid is a legal value and a
+`PATCH` field that may be `null` would mean both *leave my week alone* and
+*clear my week*. The search radius was a third, and went with the ranking that
+read it (#581).
 
-The fourth `PUT` is the **cold start's** and no screen's: the location
+One `PUT` is the **cold start's** and no screen's: the location
 (``docs/adr/0174`` §6), put silently on every launch, which is why the
 same-cell case answering `204` with nothing appended is the assertion that
 matters most.
 
-The fourth fact a screen needs — *which sports am I rated in* — is
+The fact a screen needs from elsewhere — *which sports am I rated in* — is
 `GET /api/v1/ratings` and is not re-served here.
 
 **The read is the You tab's too** (``docs/adr/0179`` §8): it grew by the tags,
-the photos with their verdicts, the intro, the standing opt-in answer, and the
-owner's own gender and preference — the one shape those two may cross on (§4).
+the photos with their verdicts, the intro, and the owner's own gender and
+preference — the one shape those two may cross on (§4).
 What is asserted about it here is each field's spelling of absence, because
 that is what a client branches on: an empty ``photos`` list is served, an
 unwritten intro is omitted, a photograph nobody looked at carries no verdict,
 a pre-question profile carries no gender, and the location is still not there.
 
-**And the six writes the tab needs land on the same surface** (§8): the tags,
-the photos, the intro, the gender, the preference, and the opt-in answered
-again from ``PROFILE``. Each is the aggregate's own transition behind one
-unkeyed ``PUT``, and what is asserted is what a client branches on — the fact
-as stored coming back, the refusals the commit already makes arriving under the
-same codes, and the stream growing by exactly one event or by none. The two
+**And the five writes the tab needs land on the same surface** (§8): the tags,
+the photos, the intro, the gender and the preference. The opt-in answered again
+from ``PROFILE`` was a sixth, and went with the radius (#581). Each is the
+aggregate's own transition behind one unkeyed ``PUT``, and what is asserted is
+what a client branches on — the fact as stored coming back, the refusals the
+commit already makes arriving under the same codes, and the stream growing by
+exactly one event or by none. The two
 gender writes and the intro's answer ``204``, because *served on one route and
 no other* (§4) and *the card, the record and its author* (ADR-0170 §3) have to
 stay literally true of the response shapes.
@@ -50,7 +52,6 @@ from app.infrastructure.events.sqlalchemy_domain_event_store import (
 from app.kernel import Sport, Zone, instant
 from app.modules.player_profile.domain.events import (
     PlayerProfileCreated,
-    ProposalsOptInAnswered,
 )
 from app.modules.player_profile.domain.ids import play_intent_declaration_id
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
@@ -63,7 +64,6 @@ from app.modules.player_profile.domain.photos import (
     verdict_from_similarities,
     verdict_when_unreviewable,
 )
-from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 from app.modules.player_profile.domain.weekly_hours import free_for_the_hour
 
 PROFILE_URL = "/api/v1/players/me/profile"
@@ -125,11 +125,6 @@ async def a_committed_profile(
             {"day": 6, "hour": 10},
         ],
         "location": HOME_FIX,
-        "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
-        "proposals_opt_in": {
-            "accepted": True,
-            "copy_version": "proposals-2026-08",
-        },
         "gender": "WOMAN",
     }
     body.update(overrides)
@@ -192,7 +187,7 @@ async def stream_of(session_factory, aggregate_id: UUID) -> list[EventStoreORM]:
 # ---------------------------------------------------------------------------
 
 
-async def test_the_read_carries_the_week_the_radius_and_the_declaration(client):
+async def test_the_read_carries_the_week_and_the_declaration(client):
     _, headers = await a_player(client)
     await client.put(
         intents_url(Sport.PADEL),
@@ -208,8 +203,11 @@ async def test_the_read_carries_the_week_the_radius_and_the_declaration(client):
         {"day": 2, "hour": 19},
         {"day": 6, "hour": 10},
     ]
-    assert body["search_radius_km"] == SEARCH_RADIUS_BOUNDS.default_km
     assert body["play_intents"] == {"PADEL": "COMPETITIVE"}
+    # Neither a radius nor a suggestions answer: both went with the ranking
+    # that read them (#581).
+    assert "search_radius_km" not in body
+    assert "proposals_opt_in" not in body
 
 
 async def test_a_sport_with_no_declaration_is_absent_rather_than_null(client):
@@ -248,9 +246,9 @@ def a_photo_held(photo_storage, owner: UUID, metadata: dict[str, str]) -> UUID:
 
 async def test_the_read_carries_every_fact_the_you_tab_draws(client, photo_storage):
     """``docs/adr/0179`` §8: the read grows by the tags, the photos with their
-    verdicts, the intro, the standing opt-in answer, and the owner's own gender
-    and preference (§4). Every row on the tab draws its live line from this one
-    response, and *Who you play with* opens with the right radio pre-selected.
+    verdicts, the intro, and the owner's own gender and preference (§4). Every
+    row on the tab draws its live line from this one response, and *Who you
+    play with* opens with the right radio pre-selected.
     """
 
     player_id, headers = await an_account(client, "you")
@@ -286,9 +284,6 @@ async def test_the_read_carries_every_fact_the_you_tab_draws(client, photo_stora
         {"photo_id": str(flagged), "review": "flagged"},
     ]
     assert body["intro"] == "Will travel for a hard game."
-    assert body["proposals_opt_in"]["accepted"] is True
-    assert body["proposals_opt_in"]["copy_version"] == "proposals-2026-08"
-    assert body["proposals_opt_in"]["answered_at"]
     assert body["gender"] == "MAN"
     assert body["gender_preference"] == "ANY"
 
@@ -350,15 +345,7 @@ async def test_a_profile_from_before_the_gender_question_omits_the_answer(
                     weekly_hours=("2:19",),
                     latitude=51.51,
                     longitude=-0.13,
-                    search_radius_km=SEARCH_RADIUS_BOUNDS.default_km,
                     idempotency_key="commit-before-the-question",
-                    occurred_at=then,
-                ),
-                ProposalsOptInAnswered(
-                    player_id=player_id,
-                    accepted=True,
-                    copy_version="proposals-2026-08",
-                    surface="ONBOARDING",
                     occurred_at=then,
                 ),
             ],
@@ -582,59 +569,27 @@ async def test_the_week_cannot_be_written_without_a_profile(client):
 
 
 # ---------------------------------------------------------------------------
-# The radius
+# The radius and the opt-in, gone (#581)
 # ---------------------------------------------------------------------------
 
 
-async def test_the_radius_is_replaced_whole(client):
-    _, headers = await a_player(client)
-
-    response = await client.put(
-        RADIUS_URL, json={"search_radius_km": 22}, headers=headers
-    )
-
-    assert response.status_code == 200, response.text
-    assert response.json()["search_radius_km"] == 22
-    assert (await client.get(PROFILE_URL, headers=headers)).json()[
-        "search_radius_km"
-    ] == 22
-
-
-async def test_a_radius_outside_the_served_bounds_is_refused_by_its_own_code(client):
-    """The bounds are served so a client can build a slider that cannot produce
-    an illegal value — and a control is not a validation (ADR-0089)."""
+@pytest.mark.parametrize(
+    ("url", "body"),
+    [
+        (RADIUS_URL, {"search_radius_km": 22}),
+        (OPT_IN_URL, {"accepted": True, "copy_version": "proposals-opt-in.v3"}),
+    ],
+    ids=["radius", "opt-in"],
+)
+async def test_the_radius_and_the_opt_in_are_no_longer_written(client, url, body):
+    """Only the "who fits whom" ranking read either answer, and it is gone —
+    so the two writes the You tab and the old search screen used are too."""
 
     _, headers = await a_player(client)
 
-    response = await client.put(
-        RADIUS_URL,
-        json={"search_radius_km": SEARCH_RADIUS_BOUNDS.maximum_km + 1},
-        headers=headers,
-    )
+    response = await client.put(url, json=body, headers=headers)
 
-    assert response.status_code == 400, response.text
-    assert response.json()["code"] == "search_radius_out_of_bounds"
-
-
-async def test_there_is_no_patch_for_the_radius(client):
-    _, headers = await a_player(client)
-
-    response = await client.patch(
-        RADIUS_URL, json={"search_radius_km": 22}, headers=headers
-    )
-
-    assert response.status_code == 405
-
-
-async def test_the_radius_cannot_be_written_without_a_profile(client):
-    headers = await a_signed_in_player(client, "radiusless")
-
-    response = await client.put(
-        RADIUS_URL, json={"search_radius_km": 22}, headers=headers
-    )
-
-    assert response.status_code == 404
-    assert response.json()["code"] == "player_profile_not_found"
+    assert response.status_code == 404, response.text
 
 
 # ---------------------------------------------------------------------------
@@ -776,7 +731,7 @@ async def test_the_deck_is_a_surface_the_route_accepts(client):
 async def test_declaring_the_value_already_held_records_nothing(
     client, session_factory
 ):
-    """A preference, not a consent: re-declaring `COMPETITIVE` over
+    """A preference: re-declaring `COMPETITIVE` over
     `COMPETITIVE` from a different surface is the same answer, and a stream that
     grew an event for it would record that a player did not do anything."""
 
@@ -1141,88 +1096,6 @@ async def test_an_unchanged_preference_appends_no_event(client, session_factory)
     assert await stream_length(session_factory, player_id) == before
 
 
-async def test_the_opt_in_answered_again_records_every_press_from_profile(
-    client, session_factory
-):
-    """The one write on this surface that is not a no-op when nothing changed:
-    the same yes twice is two ``ProposalsOptInAnswered``, each against the
-    words the screen showed and from ``PROFILE`` — the route's surface, never
-    the body's."""
-
-    player_id, headers = await a_player(client)
-    before = await stream_length(session_factory, player_id)
-    answer = {"accepted": True, "copy_version": "proposals-opt-in.v3"}
-
-    first = await client.put(OPT_IN_URL, json=answer, headers=headers)
-    second = await client.put(OPT_IN_URL, json=answer, headers=headers)
-
-    assert first.status_code == second.status_code == 200, second.text
-    body = second.json()
-    assert body["accepted"] is True
-    assert body["copy_version"] == "proposals-opt-in.v3"
-    assert body["surface"] == "PROFILE"
-    assert body["answered_at"]
-    read = (await client.get(PROFILE_URL, headers=headers)).json()
-    assert read["proposals_opt_in"] == body
-    stream = await stream_of(session_factory, player_id)
-    assert len(stream) == before + 2
-    for row in stream[-2:]:
-        assert row.event_type == "player_profile.proposals_opt_in_answered"
-        assert row.payload["surface"] == "PROFILE"
-        assert row.payload["copy_version"] == "proposals-opt-in.v3"
-
-
-async def test_the_surface_cannot_be_asserted_from_the_body(client, session_factory):
-    """A body naming ``ONBOARDING`` is ignored rather than refused — the field
-    is not part of the request — and what is recorded is still ``PROFILE``."""
-
-    player_id, headers = await a_player(client)
-
-    response = await client.put(
-        OPT_IN_URL,
-        json={
-            "accepted": False,
-            "copy_version": "proposals-opt-in.v3",
-            "surface": "ONBOARDING",
-        },
-        headers=headers,
-    )
-
-    assert response.status_code == 200, response.text
-    assert response.json()["surface"] == "PROFILE"
-    assert (await stream_of(session_factory, player_id))[-1].payload[
-        "surface"
-    ] == "PROFILE"
-
-
-async def test_a_copy_version_that_cannot_be_recorded_is_refused_at_the_boundary(
-    client,
-):
-    """Empty, or longer than a consent record may hold: refused before the
-    aggregate, with a 422, because the words the screen showed are the
-    client's and there is no domain code that would tell it more."""
-
-    _, headers = await a_player(client)
-
-    empty = await client.put(
-        OPT_IN_URL, json={"accepted": True, "copy_version": ""}, headers=headers
-    )
-    too_long = await client.put(
-        OPT_IN_URL,
-        json={"accepted": True, "copy_version": "v" * 65},
-        headers=headers,
-    )
-    unanswered = await client.put(
-        OPT_IN_URL,
-        json={"accepted": None, "copy_version": "proposals-opt-in.v3"},
-        headers=headers,
-    )
-
-    assert empty.status_code == 422
-    assert too_long.status_code == 422
-    assert unanswered.status_code == 422, "the screen is the question; null is no press"
-
-
 @pytest.mark.parametrize(
     ("url", "body"),
     [
@@ -1231,11 +1104,10 @@ async def test_a_copy_version_that_cannot_be_recorded_is_refused_at_the_boundary
         (INTRO_URL, {"intro": "Late to the game."}),
         (GENDER_URL, {"gender": "MAN"}),
         (PREFERENCE_URL, {"gender_preference": "ANY"}),
-        (OPT_IN_URL, {"accepted": True, "copy_version": "proposals-opt-in.v3"}),
     ],
-    ids=["tags", "photos", "intro", "gender", "preference", "opt-in"],
+    ids=["tags", "photos", "intro", "gender", "preference"],
 )
-async def test_each_of_the_six_refuses_an_uncommitted_profile_and_needs_a_token(
+async def test_each_of_the_five_refuses_an_uncommitted_profile_and_needs_a_token(
     client, url, body
 ):
     """As the existing writes refuse: the recovery is onboarding's second
@@ -1251,14 +1123,15 @@ async def test_each_of_the_six_refuses_an_uncommitted_profile_and_needs_a_token(
     assert without_token.status_code == 401
 
 
-def test_the_surface_is_a_read_and_the_nine_writes_and_nothing_else():
+def test_the_surface_is_a_read_and_the_seven_writes_and_nothing_else():
     """Asserted against the routes rather than against prose.
 
-    One read; the three writes the Play screens and the cold start had; and the
-    six the You tab needed (``docs/adr/0179`` §8) — every one of the aggregate's
-    transitions under *Later changes, from the profile screen* now has its
-    route. An eleventh appearing on this router without its ticket is what this
-    test is here to catch.
+    One read; the two writes the Play screens and the cold start had; and the
+    five the You tab needed (``docs/adr/0179`` §8) — every one of the
+    aggregate's transitions under *Later changes, from the profile screen* has
+    its route. The radius and the opt-in had one each until #581. A ninth
+    appearing on this router without its ticket is what this test is here to
+    catch.
     """
 
     from app.modules.player_profile.presentation.profile_surface_routes import router
@@ -1266,14 +1139,12 @@ def test_the_surface_is_a_read_and_the_nine_writes_and_nothing_else():
     assert {(route.path, tuple(sorted(route.methods))) for route in router.routes} == {
         ("/players/me/profile", ("GET",)),
         ("/players/me/weekly-hours", ("PUT",)),
-        ("/players/me/search-radius", ("PUT",)),
         ("/players/me/location", ("PUT",)),
         ("/players/me/social-tags", ("PUT",)),
         ("/players/me/photos", ("PUT",)),
         ("/players/me/intro", ("PUT",)),
         ("/players/me/gender", ("PUT",)),
         ("/players/me/gender-preference", ("PUT",)),
-        ("/players/me/proposals-opt-in", ("PUT",)),
     }
 
 

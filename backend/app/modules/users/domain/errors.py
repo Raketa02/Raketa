@@ -2,7 +2,6 @@ from app.shared.domain import (
     BadRequestError,
     ConflictError,
     ForbiddenError,
-    NotFoundError,
     UnauthorizedError,
 )
 
@@ -110,22 +109,3 @@ class InactiveUserCannotBePromoted(ConflictError):
 
     def __init__(self) -> None:
         super().__init__("inactive user cannot be promoted")
-
-
-class UnknownPlayer(NotFoundError):
-    """No account answers to the reference an admin command was given.
-
-    Raised by ``SetTesterMark``, which takes an account id **or** an email as
-    typed (``docs/adr/0180`` §9). One refusal for every way of naming nobody —
-    an address nobody registered, an id with no account behind it, and a string
-    that is neither — because to the operator reading it all three are the same
-    typo. No route raises it today; the status is the taxonomy's, so the day one
-    does it is a 404 rather than a 500.
-    """
-
-    code = "unknown_player"
-
-    def __init__(self, reference: str) -> None:
-        super().__init__(
-            f"no account answers to {reference!r}", details={"player": reference}
-        )

@@ -33,17 +33,3 @@ class NameUserCommand:
     user_id: UUID
     name: str
     nickname: str
-
-
-@dataclass(frozen=True)
-class SetTesterMarkCommand:
-    """Mark a player as a Tester, or clear the mark (``docs/adr/0180`` §9).
-
-    ``player`` is **an account id or an email, as the operator typed it** — the
-    admin command takes either, and resolving which one it is belongs to the use
-    case, so the command line and a test ask one question. ``tester`` is the mark
-    wanted, and asking for the one already held is admitted and records nothing.
-    """
-
-    player: str
-    tester: bool

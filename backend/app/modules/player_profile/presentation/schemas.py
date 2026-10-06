@@ -5,9 +5,8 @@ backend emits machine codes and never display text (``docs/adr/0022``), so a
 client renders ``STAYS_FOR_A_DRINK`` in its own copy, in its own language.
 
 **The commit's request types are deliberately loose where the domain is strict.**
-A tag arrives as a ``str`` and a radius as an ``int``, not as an enum and a
-bounded integer, so that an id outside the vocabulary or a radius outside the
-served range is refused by the *domain* — with a code a client can branch on and
+A tag arrives as a ``str``, not as an enum, so that an id outside the vocabulary
+is refused by the *domain* — with a code a client can branch on and
 act from — rather than by schema validation, which can only say that some field
 somewhere was wrong. What is constrained here is what has no served vocabulary
 to disagree with: a weekday is 1–7 because that is what a weekday is, and
@@ -31,14 +30,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.kernel import Sport, invariant
+from app.kernel import Sport
 from app.modules.player_profile.application.read_player_profile import (
     PlayerProfileSurface,
-)
-from app.modules.player_profile.domain.consent import (
-    MAX_COPY_VERSION_LENGTH,
-    ConsentSurface,
-    ProposalsOptIn,
 )
 from app.modules.player_profile.domain.gender import (
     DEFAULT_GENDER_PREFERENCE,
@@ -68,7 +62,6 @@ from app.modules.player_profile.domain.profile import (
     MAX_PROFILE_PHOTOS,
     PlayerProfile,
 )
-from app.modules.player_profile.domain.search_radius import SearchRadiusBounds
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
     SocialTag,
@@ -121,34 +114,12 @@ class SocialTagGroupResource(BaseModel):
         return cls(group=group, tags=[SocialTagResource(id=tag) for tag in tags])
 
 
-class SearchRadiusBoundsResource(BaseModel):
-    """The range a Search radius may take, in whole kilometres.
-
-    The unit is in every field name on purpose: a bare ``minimum`` is one
-    refactor away from being read as metres.
-    """
-
-    minimum_km: int = Field(..., description="Smallest radius a player may hold")
-    maximum_km: int = Field(..., description="Largest radius a player may hold")
-    step_km: int = Field(..., description="Granularity — whole kilometres")
-    default_km: int = Field(..., description="What the control opens at")
-
-    @classmethod
-    def from_bounds(cls, bounds: SearchRadiusBounds) -> "SearchRadiusBoundsResource":
-        return cls(
-            minimum_km=bounds.minimum_km,
-            maximum_km=bounds.maximum_km,
-            step_km=bounds.step_km,
-            default_km=bounds.default_km,
-        )
-
-
 class SocialTagSelectionBoundsResource(BaseModel):
     """How many Social tags a selection must hold to be one.
 
-    The unit is in both field names for the reason it is on the radius bounds:
-    a bare ``minimum`` beside a list of eighteen tags reads as a count of
-    something, and which something is exactly what a client would guess wrong.
+    The unit is in both field names: a bare ``minimum`` beside a list of
+    nineteen tags reads as a count of something, and which something is exactly
+    what a client would guess wrong.
     """
 
     minimum_tags: int = Field(
@@ -177,17 +148,17 @@ class PlayerProfileOptionsResponse(BaseModel):
 
     **Fields are only ever added.** A shipped mobile app parses this document for
     months after it stops being built, so a new field goes on the end and the
-    ones already here keep their names and their types.
+    ones already here keep their names and their types. ``search_radius`` is the
+    one removal, with the radius itself (#581), made while no build had shipped
+    anywhere but ``local``.
     """
 
     social_tag_groups: list[SocialTagGroupResource]
-    search_radius: SearchRadiusBoundsResource
     social_tag_selection: SocialTagSelectionBoundsResource
 
     @classmethod
     def from_domain(
         cls,
-        radius_bounds: SearchRadiusBounds,
         tag_selection_bounds: SocialTagSelectionBounds,
     ) -> "PlayerProfileOptionsResponse":
         return cls(
@@ -195,7 +166,6 @@ class PlayerProfileOptionsResponse(BaseModel):
                 SocialTagGroupResource.from_group(group, tags)
                 for group, tags in SOCIAL_TAG_VOCABULARY.items()
             ],
-            search_radius=SearchRadiusBoundsResource.from_bounds(radius_bounds),
             social_tag_selection=SocialTagSelectionBoundsResource.from_bounds(
                 tag_selection_bounds
             ),
@@ -374,50 +344,6 @@ class LocationAreaResource(BaseModel):
         return cls(latitude=area.latitude, longitude=area.longitude)
 
 
-def _copy_version_field() -> Any:
-    """The words' identifier, as both the commit and the profile write take it.
-
-    One definition for the two requests that carry it, so the length a consent
-    record may hold is spelled at the boundary once.
-    """
-
-    return Field(
-        ...,
-        min_length=1,
-        max_length=MAX_COPY_VERSION_LENGTH,
-        description=(
-            "Identifier of the exact copy the player was shown. Not the copy "
-            "itself — the words are the client's and are never stored here."
-        ),
-    )
-
-
-class ProposalsOptInRequest(BaseModel):
-    """The answer to the proposals question, and the words it was given against.
-
-    ``accepted`` is **nullable and required**, which is the shape of a question
-    that has no default. Null means *not answered* and is refused by the commit
-    with ``proposals_opt_in_not_answered``; it is not a quiet ``false``, because
-    a recorded refusal and an unanswered question are different facts and only
-    one of them is consent (``../../../../CONTEXT.md`` — *Skipping is not
-    consent*).
-
-    ``copy_version`` identifies the exact wording the player was shown. It is
-    required because consent gathered against one sentence is not consent to a
-    different one, and a consent record that cannot name its words cannot
-    evidence anything.
-    """
-
-    accepted: bool | None = Field(
-        ...,
-        description=(
-            "The player's answer. `null` means the question was not answered, "
-            "which is refused — it is never read as `false`."
-        ),
-    )
-    copy_version: str = _copy_version_field()
-
-
 class CommitPlayerProfileRequest(BaseModel):
     """Every answer from onboarding's second part, in one body.
 
@@ -425,8 +351,8 @@ class CommitPlayerProfileRequest(BaseModel):
     photograph is a legitimate answer to *add some photos* and writing nothing
     is a legitimate answer to *say it in your own words* (``docs/adr/0170``).
     Everything else is something this request must actually carry — a
-    location, a radius, a tag selection, an answer to the proposals question,
-    and **a week with something ticked in it** (``docs/adr/0102``).
+    location, a tag selection, a gender answer, and **a week with something
+    ticked in it** (``docs/adr/0102``).
 
     The week's *floor* is not spelled here, and that is the same decision the tag
     selection's is: an empty list passes this schema and is refused by the domain
@@ -464,14 +390,6 @@ class CommitPlayerProfileRequest(BaseModel):
         ),
     )
     location: LocationAreaResource
-    search_radius_km: int = Field(
-        ...,
-        description=(
-            "Whole kilometres, re-checked against the range and step served by "
-            "`GET /player-profile/options`."
-        ),
-    )
-    proposals_opt_in: ProposalsOptInRequest
     gender: Gender = Field(
         ...,
         description=(
@@ -524,47 +442,6 @@ class CommitPlayerProfileRequest(BaseModel):
         return [hour.as_cell() for hour in self.weekly_hours]
 
 
-class ProposalsOptInResponse(BaseModel):
-    """The standing answer, and the evidence recorded with it.
-
-    This is the *current* answer. The **history** — every answer this player ever
-    gave, against which words and on which surface — is the stream, and nothing
-    serves it yet because nothing has asked for it.
-    """
-
-    accepted: bool
-    copy_version: str = Field(..., description="The copy this answer was given against")
-    surface: ConsentSurface = Field(..., description="Where it was answered")
-    answered_at: datetime = Field(..., description="When it was answered")
-
-    @classmethod
-    def from_domain(cls, opt_in: ProposalsOptIn) -> "ProposalsOptInResponse":
-        return cls(
-            accepted=opt_in.accepted,
-            copy_version=opt_in.copy_version,
-            surface=opt_in.surface,
-            answered_at=opt_in.answered_at,
-        )
-
-    @classmethod
-    def standing_on(cls, profile: PlayerProfile) -> "ProposalsOptInResponse":
-        """The profile's standing answer — which a committed profile always has.
-
-        `PlayerProfile.create` appends `ProposalsOptInAnswered` with the creating
-        event and there is no path to the created state without it, so every
-        shape that serves the answer asks here: if that ever stops being true
-        this raises rather than serving a profile with a hole where the consent
-        record should be.
-        """
-
-        return cls.from_domain(
-            invariant(
-                profile.proposals_opt_in,
-                f"a committed profile with no opt-in answer: {profile.player_id}",
-            )
-        )
-
-
 class PlayerProfileResponse(BaseModel):
     """A player's profile as it now stands.
 
@@ -584,8 +461,9 @@ class PlayerProfileResponse(BaseModel):
 
     **Fields are only ever added.** A shipped mobile app parses this document for
     months after it stops being built. ``weekly_hours`` is the one replacement,
-    of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), made
-    while no build had shipped anywhere but ``local``.
+    of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), and
+    ``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each
+    made while no build had shipped anywhere but ``local``.
     """
 
     player_id: UUID
@@ -593,8 +471,6 @@ class PlayerProfileResponse(BaseModel):
     photo_ids: list[UUID]
     weekly_hours: list[WeeklyHourResource]
     location: LocationAreaResource
-    search_radius_km: int
-    proposals_opt_in: ProposalsOptInResponse
     created_at: datetime
     updated_at: datetime
 
@@ -606,8 +482,6 @@ class PlayerProfileResponse(BaseModel):
             photo_ids=list(profile.photo_ids),
             weekly_hours=_weekly_hours_resource(profile.weekly_hours),
             location=LocationAreaResource.from_domain(profile.location),
-            search_radius_km=profile.search_radius.kilometres,
-            proposals_opt_in=ProposalsOptInResponse.standing_on(profile),
             created_at=profile.created_at,
             updated_at=profile.updated_at,
         )
@@ -690,8 +564,9 @@ class PlayerProfileReadResponse(BaseModel):
 
     **Fields are only ever added.** A shipped mobile app parses this document for
     months after it stops being built. ``weekly_hours`` is the one replacement,
-    of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), made
-    while no build had shipped anywhere but ``local``.
+    of the part-of-day ``availability`` it succeeded (``docs/adr/0189`` §5), and
+    ``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each
+    made while no build had shipped anywhere but ``local``.
     """
 
     weekly_hours: list[WeeklyHourResource] = Field(
@@ -702,9 +577,6 @@ class PlayerProfileReadResponse(BaseModel):
             "answer** — a player may clear their week — and it means *we do not "
             "know when they play*, never *never*."
         ),
-    )
-    search_radius_km: int = Field(
-        ..., description="Whole kilometres. What the search screen's slider opens at."
     )
     play_intents: dict[Sport, PlayIntent] = Field(
         ...,
@@ -748,14 +620,6 @@ class PlayerProfileReadResponse(BaseModel):
             "(`docs/adr/0170`)."
         ),
     )
-    proposals_opt_in: ProposalsOptInResponse = Field(
-        ...,
-        description=(
-            "The standing answer to the proposals question: what was answered, "
-            "when, against which words and from which surface. Always present "
-            "— a profile cannot be committed without one."
-        ),
-    )
     gender: Gender = Field(
         default=OMITTED,
         description=(
@@ -782,14 +646,12 @@ class PlayerProfileReadResponse(BaseModel):
         profile = surface.profile
         fields: dict[str, Any] = {
             "weekly_hours": _weekly_hours_resource(profile.weekly_hours),
-            "search_radius_km": profile.search_radius.kilometres,
             "play_intents": dict(surface.play_intents),
             "social_tags": list(profile.social_tags.tags),
             "photos": [
                 _profile_photo(photo_id, surface.photo_verdicts.get(photo_id))
                 for photo_id in profile.photo_ids
             ],
-            "proposals_opt_in": ProposalsOptInResponse.standing_on(profile),
             "gender_preference": profile.gender_preference,
         }
         if profile.intro is not None:
@@ -852,30 +714,6 @@ class WeeklyHoursResponse(BaseModel):
     @classmethod
     def from_domain(cls, profile: PlayerProfile) -> "WeeklyHoursResponse":
         return cls(weekly_hours=_weekly_hours_resource(profile.weekly_hours))
-
-
-class ChangeSearchRadiusRequest(BaseModel):
-    """The Search radius, replaced whole."""
-
-    search_radius_km: int = Field(
-        ...,
-        description=(
-            "Whole kilometres, re-checked against the range and step served by "
-            "`GET /player-profile/options`. Refused with "
-            "`search_radius_out_of_bounds` — a disabled slider is not a "
-            "validation."
-        ),
-    )
-
-
-class SearchRadiusResponse(BaseModel):
-    """The radius as the profile now holds it."""
-
-    search_radius_km: int
-
-    @classmethod
-    def from_domain(cls, profile: PlayerProfile) -> "SearchRadiusResponse":
-        return cls(search_radius_km=profile.search_radius.kilometres)
 
 
 class ChangeLocationRequest(BaseModel):
@@ -1077,21 +915,3 @@ class ChangeGenderPreferenceRequest(BaseModel):
             "are facts, not candidates: nothing already agreed is undone."
         ),
     )
-
-
-class AnswerProposalsOptInRequest(BaseModel):
-    """The proposals question, answered again from the profile screen.
-
-    ``accepted`` is a required ``bool`` and **not** nullable, which is the one
-    place this differs from the commit's `ProposalsOptInRequest`: there,
-    *unanswered* is a state a client can legitimately be in and is refused with
-    a code that says *ask the question*; here the screen **is** the question
-    and pressing is the answer, so ``null`` is a 422 rather than a fact.
-
-    **The surface is not a field.** It is the route's — ``PROFILE`` — and a
-    body naming one is ignored, because a client that could assert where a
-    consent was gathered could assert one it never gathered.
-    """
-
-    accepted: bool = Field(..., description="The player's answer, pressed again.")
-    copy_version: str = _copy_version_field()

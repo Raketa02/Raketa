@@ -67,7 +67,6 @@ from app.seeds.cohort import (
     RINGS,
     WHAT_PLAYERS_SAID,
     Cohort,
-    _distance_between,
     _distance_of,
     _ring_in,
     as_document,
@@ -294,32 +293,6 @@ def test_everybody_who_played_a_sport_holds_a_rating_in_it():
             assert Sport(game.sport) in member.sports, (handle, game.sport)
 
 
-def test_an_organiser_sees_no_further_than_the_people_they_play():
-    """A search hands back at most `shortlist_max` rows, so an organiser
-    searching wide fills that list with people this fixture never declared — and
-    the declared opponent falls off the end of it."""
-
-    organisers = {game.organiser for game in PLAYED_GAMES}
-
-    for member in COHORT.members:
-        if member.handle not in organisers:
-            continue
-        rings = {
-            _ring_in(handle)
-            for game in PLAYED_GAMES
-            if game.organiser == member.handle
-            for handle in game.players[1:]
-        }
-        furthest = max(
-            _distance_between(_ring_in(member.handle), ring) for ring in rings
-        )
-        assert member.radius_km >= furthest, member.handle
-        assert member.radius_km - 1 < furthest or furthest == 0, (
-            f"'{member.handle}' searches {member.radius_km} km to reach "
-            f"{furthest:.2f} km — wider than the opponents it was given"
-        )
-
-
 def test_every_committed_member_is_a_function_of_their_handle():
     """The keying that makes the file worth committing at all.
 
@@ -501,27 +474,26 @@ def test_every_ring_lands_on_a_cell_wherever_the_centre_is():
 # ---------------------------------------------------------------------------
 
 
-def test_the_rings_are_cut_by_the_ladders_own_multipliers():
-    """Each rung reaches a ring the one below it did not, **by construction**.
+def test_the_rings_keep_the_edges_they_were_cut_at():
+    """Ten kilometres, then ×1.5 and ×2.0 of it, then fifty — where the rings
+    were cut while a profile held a search radius. The radius went with the
+    ranking (#581); the edges stay, because a ring moved is every member in it
+    moved.
 
     Written out here rather than read from `Ring.bounds_km`, because a test that
     checks a constant against itself agrees with every value that constant could
-    take: this is the ladder's own ×1.5 and ×2.0 against the protagonist's own
-    radius, spelled from the two facts the product owns.
+    take.
     """
 
-    radius = catalog.PROTAGONIST_RADIUS_KM
+    scale = 10
     edges = [ring.bounds_km for ring in RINGS]
 
-    assert edges[0] == (0.0, float(radius))
-    assert edges[1] == (float(radius), radius * 1.5)
-    assert edges[2] == (radius * 1.5, radius * 2.0)
-    assert edges[3][0] == radius * 2.0
-    # The last ring is past the slider's ceiling, so no radius a player can set
-    # and no rung the ladder can offer reaches it.
+    assert edges[0] == (0.0, float(scale))
+    assert edges[1] == (float(scale), scale * 1.5)
+    assert edges[2] == (scale * 1.5, scale * 2.0)
+    assert edges[3] == (scale * 2.0, 50.0)
     assert edges[4][0] == 50.0
-    # And somebody lives past it, or `radius_clamp` has nobody it provably
-    # cannot reach and the ceiling is a rule with no witness.
+    # And somebody lives past the last edge.
     assert any(member.ring == RINGS[4].code for member in COHORT.members)
 
 

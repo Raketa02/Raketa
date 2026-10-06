@@ -1,8 +1,8 @@
 """How many Social tags a player must hold: the floor, the ceiling, and the rule.
 
-The two numbers are written out here rather than read from the module, for the
-reason the radius bounds are: a change to what every client's picker allows and
-what the commit accepts should have to be argued with, not absorbed. Unlike a
+The two numbers are written out here rather than read from the module: a change
+to what every client's picker allows and what the commit accepts should have to
+be argued with, not absorbed. Unlike a
 tag id they are *tunable* — nothing persists a bound — so reddening this file is
 a prompt to think, not a refusal.
 """
@@ -68,8 +68,7 @@ def test_a_negative_floor_cannot_be_declared():
 
 def test_a_collapsed_range_is_a_rule_and_can_be_declared():
     # "Exactly three tags" is an opinion a product could hold, so the type does
-    # not refuse it — the one deliberate departure from the radius bounds,
-    # which refuse a collapsed range because a one-position slider is not one.
+    # not refuse it.
     exactly_three = SocialTagSelectionBounds(minimum_tags=3, maximum_tags=3)
 
     assert exactly_three.contains(3)

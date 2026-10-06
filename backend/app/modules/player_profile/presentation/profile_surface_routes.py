@@ -1,11 +1,12 @@
 """The profile surface reads and writes: one read, one `PUT` per fact.
 
-A player edits three facts here — the weekly hours, the search radius and the
-per-sport Play intent — and the third is ADR-0094's
+A player edits two facts here that a Play screen once edited — the weekly hours
+and the per-sport Play intent — and the second is ADR-0094's
 `PUT /api/v1/play-intents/{sport}`, next door. The search screen these routes
 were first written for, and the prompts it raised (`KEEP_THESE_TIMES`,
-`KEEP_THIS_RADIUS`), went with the searches (#579); the You tab edits the same
-facts through the same writes.
+`KEEP_THIS_RADIUS`), went with the searches (#579); the search radius went with
+the ranking that read it (#581). The You tab edits the same facts through the
+same writes.
 
 **One `PUT` per fact, unkeyed, and deliberately not a `PATCH`.** Three arguments
 converge and the third is decisive:
@@ -16,7 +17,7 @@ converge and the third is decisive:
    no-op rule means the second appends nothing."* Two write shapes in one context
    is the thing worth avoiding.
 2. **Each fact is changed by exactly one write.** The weekly hours by one, the
-   radius by another. A partial update would exist to serve a caller that does
+   tags by another. A partial update would exist to serve a caller that does
    not exist.
 3. **`null` versus absent is fatal on the week specifically.** A blank week is a
    **legal value** — `set_weekly_hours` accepts one deliberately — so
@@ -32,23 +33,23 @@ to deduplicate.
 
 **The read is the You tab's too, and it grew rather than acquiring a sibling**
 (``docs/adr/0179`` §8). It was scoped to what the Play screens edit and promised
-that the deferred facts — tags, photos, the intro, the opt-in — would land on
+that the deferred facts — tags, photos, the intro — would land on
 this same route when *You* was built, and that is what happened: one read now
 carries every fact a player declared, and the tab draws every row's live line
 from it. Two of them are served to the owner and to nobody else — the gender and
 the preference, the one shape ADR-0096 §6's fence admits (ADR-0179 §4), and the
 contract walk asserts it is the only one.
 
-**And the six writes those rows need are here, on this surface's argument**
-(ADR-0179 §8): the tags, the photos, the intro, the gender, the preference, and
-the opt-in answered again from `PROFILE` — one unkeyed `PUT` per fact, each the
-aggregate's own transition, so that every transition under *Later changes, from
-the profile screen* now has the route it was written for. Three of them ADR-0170
+**And the five writes those rows need are here, on this surface's argument**
+(ADR-0179 §8): the tags, the photos, the intro, the gender and the preference —
+one unkeyed `PUT` per fact, each the aggregate's own transition, so that every
+transition under *Later changes, from the profile screen* now has the route it
+was written for. Three of them ADR-0170
 §5 held back until they could ship together — the intro, the tags and the
 photos, so that no field is editable while the two beside it are frozen — and
 this is that day. Each answers **the fact as stored** where that differs from
-what was sent (the tags in the vocabulary's order, the opt-in with its moment)
-and the photos with their ids in order; **the two gender writes and the intro's
+what was sent (the tags in the vocabulary's order) and the photos with their ids
+in order; **the two gender writes and the intro's
 answer `204`**, because *served on one route and no other* (§4) and *the card,
 the record and its author* (ADR-0170 §3) are sentences about response shapes,
 and a write must not become one more. The refusals are the commit's, under the
@@ -58,9 +59,9 @@ onboarding step reused whole.
 **The location is the exception, and it is not You's — it is the cold start's**
 (``docs/adr/0174`` §6). No screen edits it and no prompt asks for it: the client
 re-reads the phone's position on every cold start and on return from the
-background after more than a day, and puts it here silently. It is the fourth
-unkeyed `PUT` for the first three's reason, and the same-cell no-op is what
-makes a write on every launch free. It answers `204` and no body, and **the read
+background after more than a day, and puts it here silently. It is an unkeyed
+`PUT` for the others' reason, and the same-cell no-op is what makes a write on
+every launch free. It answers `204` and no body, and **the read
 does not serve the area either, nor a flag for it**: a profile cannot be
 committed without one, so `has_location` could never be false, and the tab
 branches on the phone's permission state instead.
@@ -72,42 +73,33 @@ from fastapi import APIRouter, status
 
 from app.core.exception_handlers import ErrorResponse
 from app.modules.player_profile.application.commands import (
-    AnswerProposalsOptInCommand,
     ChangeGenderCommand,
     ChangeGenderPreferenceCommand,
     ChangeIntroCommand,
     ChangeLocationCommand,
     ChangePhotosCommand,
-    ChangeSearchRadiusCommand,
     ChangeSocialTagsCommand,
     SetWeeklyHoursCommand,
 )
-from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.presentation.dependencies import (
-    AnswerProposalsOptInDep,
     ChangeGenderDep,
     ChangeGenderPreferenceDep,
     ChangeIntroDep,
     ChangeLocationDep,
     ChangePhotosDep,
-    ChangeSearchRadiusDep,
     ChangeSocialTagsDep,
     ReadPlayerProfileDep,
     SetWeeklyHoursDep,
 )
 from app.modules.player_profile.presentation.schemas import (
-    AnswerProposalsOptInRequest,
     ChangeGenderPreferenceRequest,
     ChangeGenderRequest,
     ChangeIntroRequest,
     ChangeLocationRequest,
     ChangePhotosRequest,
-    ChangeSearchRadiusRequest,
     ChangeSocialTagsRequest,
     PhotosResponse,
     PlayerProfileReadResponse,
-    ProposalsOptInResponse,
-    SearchRadiusResponse,
     SetWeeklyHoursRequest,
     SocialTagsResponse,
     WeeklyHoursResponse,
@@ -149,12 +141,12 @@ _LOST_THE_RACE = {
     summary="Every fact this player declared — what the Play screens and You read",
     description=(
         "One read for everything a player declared, across the two aggregates "
-        "that own it: the week, the radius and the per-sport Play intent the "
-        "Play screens edit, and — since the *You* tab — the tags, the photos "
-        "with their verdicts, the intro, the standing proposals answer, and "
-        "the owner's own gender and preference. The one fact a Play screen "
-        "still needs from elsewhere — **which sports am I rated in** — is "
-        "`GET /api/v1/ratings` and is not re-served here.\n\n"
+        "that own it: the week and the per-sport Play intent the Play screens "
+        "edit, and — since the *You* tab — the tags, the photos with their "
+        "verdicts, the intro, and the owner's own gender and preference. The "
+        "one fact a Play screen still needs from elsewhere — **which sports "
+        "am I rated in** — is `GET /api/v1/ratings` and is not re-served "
+        "here.\n\n"
         "**`play_intents` holds only what was declared.** An undeclared sport is "
         "absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there "
         "is no unanswered value to send. *Rated but undeclared* is a set "
@@ -230,50 +222,6 @@ async def set_weekly_hours(
 
 
 @router.put(
-    "/search-radius",
-    response_model=SearchRadiusResponse,
-    status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_400_BAD_REQUEST: {
-            "model": ErrorResponse,
-            "description": (
-                "`search_radius_out_of_bounds` — outside the range served by "
-                "`GET /player-profile/options`, or off its step. Re-checked here "
-                "even though a slider built from those numbers cannot produce "
-                "one: a control is not a validation."
-            ),
-        },
-        status.HTTP_404_NOT_FOUND: _NO_PROFILE,
-        status.HTTP_409_CONFLICT: _LOST_THE_RACE,
-    },
-    summary="Replace this player's Search radius",
-    description=(
-        "Whole kilometres, unkeyed, and idempotent for the reason the week "
-        "is.\n\n"
-        "**This is where a `KEEP_THIS_RADIUS` prompt is answered**, and where "
-        "taking a relaxation rung becomes durable. A rung is *"
-        '"an ask and never a correction"* — running a wider search writes '
-        "nothing — and this is the request the offer to keep it turns into. "
-        "Accepting is also what stops the prompt: a profile that holds the wider "
-        "radius takes no rung on the next search, so the condition that raised "
-        "the question is gone rather than suppressed."
-    ),
-)
-async def change_search_radius(
-    payload: ChangeSearchRadiusRequest,
-    user: CurrentUserDep,
-    use_case: ChangeSearchRadiusDep,
-) -> SearchRadiusResponse:
-    profile = await use_case.execute(
-        ChangeSearchRadiusCommand(
-            player_id=user.id,
-            search_radius_km=payload.search_radius_km,
-        )
-    )
-    return SearchRadiusResponse.from_domain(profile)
-
-
-@router.put(
     "/location",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
@@ -294,7 +242,7 @@ async def change_search_radius(
         "records nothing and still answers `204` — which is what makes a write "
         "on every launch free, and why there is no `Idempotency-Key`.\n\n"
         "**Nothing else moves.** A trip is a trip: whatever reads the area "
-        "reads the new cell — and nothing is reset and no radius changes. "
+        "reads the new cell — and nothing is reset. "
         "`204` and no body: no route on this surface serves the area yet, and "
         "a silent write on every launch is not the one to start."
     ),
@@ -528,47 +476,3 @@ async def change_gender_preference(
             player_id=user.id, gender_preference=payload.gender_preference
         )
     )
-
-
-@router.put(
-    "/proposals-opt-in",
-    response_model=ProposalsOptInResponse,
-    status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_404_NOT_FOUND: _NO_PROFILE,
-        status.HTTP_409_CONFLICT: _LOST_THE_RACE,
-    },
-    summary="Answer the proposals question again, from the profile screen",
-    description=(
-        "**The one write on this surface that always records.** Every other "
-        "`PUT` here is a preference and a no-op when nothing changed; this one "
-        "is a consent, and *the player was asked again, against these words, "
-        "on this surface, and answered the same way* is a fact a consent log "
-        "has to evidence (`docs/adr/0089`). So the same yes twice appends two "
-        "answers, and there is deliberately nothing to deduplicate.\n\n"
-        "**The surface is this route's — `PROFILE` — and never the body's.** "
-        "The commit records `ONBOARDING` because the commit is the end of "
-        "onboarding; a client that could assert where a consent was gathered "
-        "could assert one it never gathered. `copy_version` is the client's, "
-        "because the words are.\n\n"
-        "`accepted` is required and **not** nullable, unlike the commit's: "
-        "there, *unanswered* is a state a client can be in and is refused with "
-        "a code that says *ask the question*; here the screen is the question "
-        "and pressing is the answer. The response is the standing answer as "
-        "the profile read serves it, with the moment it was recorded."
-    ),
-)
-async def answer_proposals_opt_in(
-    payload: AnswerProposalsOptInRequest,
-    user: CurrentUserDep,
-    use_case: AnswerProposalsOptInDep,
-) -> ProposalsOptInResponse:
-    profile = await use_case.execute(
-        AnswerProposalsOptInCommand(
-            player_id=user.id,
-            accepted=payload.accepted,
-            copy_version=payload.copy_version,
-            surface=ConsentSurface.PROFILE,
-        )
-    )
-    return ProposalsOptInResponse.standing_on(profile)

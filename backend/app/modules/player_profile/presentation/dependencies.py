@@ -25,9 +25,6 @@ from app.bootstrap.composition import (
     build_play_intent_declaration_repository,
     build_player_profile_repository,
 )
-from app.modules.player_profile.application.answer_proposals_opt_in import (
-    AnswerProposalsOptIn,
-)
 from app.modules.player_profile.application.change_gender import ChangeGender
 from app.modules.player_profile.application.change_gender_preference import (
     ChangeGenderPreference,
@@ -35,9 +32,6 @@ from app.modules.player_profile.application.change_gender_preference import (
 from app.modules.player_profile.application.change_intro import ChangeIntro
 from app.modules.player_profile.application.change_location import ChangeLocation
 from app.modules.player_profile.application.change_photos import ChangePhotos
-from app.modules.player_profile.application.change_search_radius import (
-    ChangeSearchRadius,
-)
 from app.modules.player_profile.application.change_social_tags import (
     ChangeSocialTags,
 )
@@ -219,23 +213,12 @@ def get_set_weekly_hours(
 SetWeeklyHoursDep = Annotated[SetWeeklyHours, Depends(get_set_weekly_hours)]
 
 
-def get_change_search_radius(
-    profiles: PlayerProfileRepositoryDep,
-    uow: UnitOfWorkDep,
-    clock: ClockDep,
-) -> ChangeSearchRadius:
-    return ChangeSearchRadius(profiles=profiles, uow=uow, clock=clock)
-
-
-ChangeSearchRadiusDep = Annotated[ChangeSearchRadius, Depends(get_change_search_radius)]
-
-
 def get_change_location(
     profiles: PlayerProfileRepositoryDep,
     uow: UnitOfWorkDep,
     clock: ClockDep,
 ) -> ChangeLocation:
-    # The same three the radius takes: the cell is a fact on the profile's own
+    # The same three the week takes: the cell is a fact on the profile's own
     # stream and nothing else is told, because the projection follows the
     # event it has always followed (`docs/adr/0174` §6).
     return ChangeLocation(profiles=profiles, uow=uow, clock=clock)
@@ -303,19 +286,6 @@ def get_change_gender_preference(
 
 ChangeGenderPreferenceDep = Annotated[
     ChangeGenderPreference, Depends(get_change_gender_preference)
-]
-
-
-def get_answer_proposals_opt_in(
-    profiles: PlayerProfileRepositoryDep,
-    uow: UnitOfWorkDep,
-    clock: ClockDep,
-) -> AnswerProposalsOptIn:
-    return AnswerProposalsOptIn(profiles=profiles, uow=uow, clock=clock)
-
-
-AnswerProposalsOptInDep = Annotated[
-    AnswerProposalsOptIn, Depends(get_answer_proposals_opt_in)
 ]
 
 

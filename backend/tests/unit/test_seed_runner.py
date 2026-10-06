@@ -42,7 +42,6 @@ from app.bootstrap.composition import (
     build_clock,
     build_domain_event_store,
     build_event_publisher,
-    build_set_tester_mark,
     build_skill_rating_repository,
     build_user_repository,
 )
@@ -51,7 +50,6 @@ from app.infrastructure.database.base import Base
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
 from app.modules.auth.presentation.schemas import LoginRequest
-from app.modules.users.application.commands import SetTesterMarkCommand
 from app.modules.users.domain.value_objects import Email, Name, Nickname, RawPassword
 from app.modules.users.presentation.schemas import UserResponse
 from app.seeds import catalog
@@ -59,12 +57,9 @@ from app.seeds.catalog import (
     ACCOUNTS,
     BAND_ESTABLISHED,
     NAMES,
-    PROTAGONISTS,
     RESERVED_TLD,
     SEED_EMAIL_DOMAIN,
     SEED_PASSWORD,
-    TESTERS,
-    THE_POPULATED_PLAYER,
     AbandonedRun,
     AnswerPolicy,
     OpenRun,
@@ -480,22 +475,6 @@ def test_the_catalog_covers_the_states_a_screen_has_to_render():
     assert len(bands) == len(set(bands)) == len(Sport), "two sports in one band"
 
 
-def test_the_testers_are_a_few_named_accounts_and_the_device_is_signed_in_as_one():
-    """``docs/adr/0180`` §9: a tester-only rule in the flags repo can be
-    exercised on a freshly seeded database without marking anybody by hand.
-
-    **The default protagonist is one**, because she is the account a phone is
-    signed in as. And a protagonist is left on each side of the mark, so a gated
-    Play screen can be seen with and without it — a set that took every
-    protagonist would leave nobody to compare against.
-    """
-
-    assert THE_POPULATED_PLAYER in TESTERS
-    assert set(TESTERS) <= set(ACCOUNTS)
-    assert len(set(TESTERS)) == len(TESTERS)
-    assert any(account not in TESTERS for account in PROTAGONISTS)
-
-
 def test_the_catalog_is_addressable_by_the_domain():
     """The values the registration endpoint would be handed, asked of the same
     value objects it validates them with."""
@@ -701,7 +680,6 @@ def test_the_boundary_schemas_accept_every_seeded_address():
             authority="USER",
             is_admin=False,
             is_active=True,
-            is_tester=account in TESTERS,
         )
 
 
@@ -743,9 +721,8 @@ async def test_seeding_writes_an_event_stream_for_every_aggregate(session_factor
     assert len(seeded) == len(ACCOUNTS)
     # Two events per account, as a player writes them: the registration and the
     # naming (``docs/adr/0171`` §2). One would be an account seeded around the
-    # act the gate holds every real account at. And one more per Tester, the
-    # mark ``make tester`` would have appended (``docs/adr/0180`` §9).
-    assert streams.get("user", 0) == 2 * len(ACCOUNTS) + len(TESTERS)
+    # act the gate holds every real account at.
+    assert streams.get("user", 0) == 2 * len(ACCOUNTS)
     assert streams.get("assessment", 0) >= sum(
         len(account.scenarios) for account in ACCOUNTS
     )
@@ -898,31 +875,6 @@ async def test_re_running_leaves_the_same_state(session_factory):
     assert streams_after_first == streams_after_second, "a re-run appended events"
 
 
-async def test_a_mark_set_by_hand_survives_a_re_seed_and_is_reported(
-    session_factory,
-):
-    """The seed marks its testers and never clears anybody's mark, so a developer
-    who ran ``make tester`` on a seeded account keeps it — and the report says
-    so, because it reads the account rather than the catalog
-    (``docs/adr/0180`` §9)."""
-
-    hand_marked = next(account for account in PROTAGONISTS if account not in TESTERS)
-    async with session_factory() as session:
-        first = {entry.account.slug: entry for entry in await seed(session)}
-        await build_set_tester_mark(session).execute(
-            SetTesterMarkCommand(player=hand_marked.email, tester=True)
-        )
-        second = {entry.account.slug: entry for entry in await seed(session)}
-
-    assert [slug for slug, entry in first.items() if entry.tester] == [
-        account.slug for account in TESTERS
-    ]
-    assert all(first[account.slug].marked_tester for account in TESTERS)
-    assert second[hand_marked.slug].tester is True
-    assert not any(entry.marked_tester for entry in second.values())
-    assert all(entry.already_present for entry in second.values())
-
-
 def _a_run(*accounts: SeededAccount) -> SeedReport:
     """One run's report, with no cohort in it.
 
@@ -966,28 +918,6 @@ def test_the_report_names_the_address_the_password_and_every_state():
     for index, scenario in enumerate(account.scenarios):
         assert scenario.sport.value in text
         assert str(UUID(int=index + 2)) in text
-
-
-def test_the_report_says_which_accounts_are_testers():
-    tester = SeededAccount(
-        account=THE_POPULATED_PLAYER,
-        player_id=UUID(int=1),
-        registered=True,
-        scenarios=(),
-        tester=True,
-    )
-    plain = SeededAccount(
-        account=SeedAccount(slug="probe", description="probe"),
-        player_id=UUID(int=2),
-        registered=True,
-        scenarios=(),
-    )
-
-    lines = report(_a_run(tester, plain))
-
-    marked = [line for line in lines if "tester" in line.lower()]
-    assert len(marked) == 1
-    assert lines[lines.index(marked[0]) - 1].endswith(str(UUID(int=1)))
 
 
 def test_the_report_says_which_state_each_scenario_is_in():

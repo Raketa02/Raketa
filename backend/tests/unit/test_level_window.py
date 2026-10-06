@@ -27,7 +27,6 @@ from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.profile import PlayerProfile
 from app.modules.player_profile.presentation.schemas import (
     CommitPlayerProfileRequest,
-    ProposalsOptInRequest,
 )
 
 NOW = datetime(2026, 10, 6, 18, 0, tzinfo=timezone.utc)
@@ -134,7 +133,6 @@ def _ruleset_field_names() -> set[str]:
     [
         pytest.param({field.name for field in fields(PlayerProfile)}, id="the-profile"),
         pytest.param(set(CommitPlayerProfileRequest.model_fields), id="the-commit"),
-        pytest.param(set(ProposalsOptInRequest.model_fields), id="the-opt-in"),
         pytest.param(_ruleset_field_names(), id="the-ruleset"),
     ],
 )

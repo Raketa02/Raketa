@@ -27,9 +27,7 @@ nothing to transfer.
 never declared*. Putting the platform's one declared per-sport fact inside it
 invites exactly the conflation that rule exists to prevent.
 
-**A declaration that changes nothing records nothing.** Intent is a preference,
-not a consent: there is no wording to evidence it against, which is precisely
-what makes ``ProposalsOptInAnswered`` the profile's exception and this not one.
+**A declaration that changes nothing records nothing.** Intent is a preference.
 Re-declaring ``COMPETITIVE`` over ``COMPETITIVE`` from a different surface is
 still the same answer, and a stream that grew an event for it would be recording
 that a player did not do anything.
@@ -67,8 +65,7 @@ class PlayIntentDeclaration:
     sport: Sport
     intent: PlayIntent
     #: Where the *standing* declaration was made. The history of surfaces is the
-    #: stream; nothing accumulates a list here, for the reason the profile's
-    #: consent answer does not.
+    #: stream, and nothing accumulates a list here.
     surface: PlayIntentSurface
     declared_at: Instant
     updated_at: Instant

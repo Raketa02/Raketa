@@ -39,8 +39,8 @@ did. What makes the file worth committing is the keying:
 every draw is a function of the member's **handle** alone, so adding or removing
 one member changes that row and nobody else's and the diff is readable. The
 played history is the one thing that is *also* an input to a row rather than only
-a row of its own — a member's second sport and an organiser's radius follow from
-the games they are declared to play — and the keying survives it, because a game
+a row of its own — a member's second sport follows from the games they are
+declared to play — and the keying survives it, because a game
 names its players by handle: adding one moves the rows of the people in it and
 nobody else's. Under one
 global stream, inserting a member rewrites every row after it, the diff is noise,
@@ -57,7 +57,6 @@ from __future__ import annotations
 import json
 import random
 from dataclasses import asdict, dataclass, replace
-from math import ceil
 from pathlib import Path
 from typing import Final, Mapping, Sequence, final
 from uuid import NAMESPACE_URL, UUID, uuid5
@@ -71,7 +70,6 @@ from app.modules.sportsmanship.domain.window import (
 from app.modules.matchmaking.domain.geography import Point, distance_km
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import PlayIntent
-from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_SELECTION_BOUNDS,
     SocialTag,
@@ -92,7 +90,6 @@ from app.seeds.catalog import (
     BAND_NEW,
     CENTRE,
     REFERENCE_CENTRE,
-    PROTAGONIST_RADIUS_KM,
     PROTAGONIST_TAGS,
     PROTAGONIST_WEEK,
     SEED_EMAIL_DOMAIN,
@@ -257,6 +254,17 @@ STRONG_PLAYER: Final = Archetype(
 ARCHETYPES: Final = (NEW_TO_THE_SPORT, IMPROVER, CLUB_PLAYER, STRONG_PLAYER)
 
 
+#: The distance every ring is cut against: the ten kilometres the protagonists
+#: searched at, while a profile held a search radius. **The radius went with
+#: the ranking that read it** (#581); the number stays, because moving a ring
+#: moves every member in it and every game declared against them.
+RING_SCALE_KM: Final = 10
+
+#: Where ring d ends and ring e begins: the old slider's ceiling, kept for the
+#: reason :data:`RING_SCALE_KM` is.
+RING_E_STARTS_KM: Final = 50.0
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class Ring:
@@ -318,7 +326,7 @@ RINGS: Final = (
         code="a",
         reason="inside the searcher's own radius — the pool before any widening",
         north=0.04,
-        bounds_km=(0.0, float(PROTAGONIST_RADIUS_KM)),
+        bounds_km=(0.0, float(RING_SCALE_KM)),
         members={
             CLUB_PLAYER.name: 12,
             IMPROVER.name: 3,
@@ -330,14 +338,14 @@ RINGS: Final = (
         code="b",
         reason="reached only by rung B, the ×1.5 widening",
         north=0.11,
-        bounds_km=(float(PROTAGONIST_RADIUS_KM), PROTAGONIST_RADIUS_KM * 1.5),
+        bounds_km=(float(RING_SCALE_KM), RING_SCALE_KM * 1.5),
         members={CLUB_PLAYER.name: 4, IMPROVER.name: 1},
     ),
     Ring(
         code="c",
         reason="reached only by rung C, the ×2.0 widening",
         north=0.16,
-        bounds_km=(PROTAGONIST_RADIUS_KM * 1.5, PROTAGONIST_RADIUS_KM * 2.0),
+        bounds_km=(RING_SCALE_KM * 1.5, RING_SCALE_KM * 2.0),
         members={CLUB_PLAYER.name: 4, STRONG_PLAYER.name: 1},
     ),
     Ring(
@@ -347,7 +355,7 @@ RINGS: Final = (
             "which is why the played history's opponents live here"
         ),
         north=0.29,
-        bounds_km=(PROTAGONIST_RADIUS_KM * 2.0, float(SEARCH_RADIUS_BOUNDS.maximum_km)),
+        bounds_km=(RING_SCALE_KM * 2.0, RING_E_STARTS_KM),
         # **Eight club players and not three, and the five extra are the played
         # history's.** A member the cohort plays a *second sport* against holds a
         # rating in it, and a second-sport rating inside the protagonist's
@@ -369,7 +377,7 @@ RINGS: Final = (
             "cannot reach, whatever a player sets and whatever a rung offers"
         ),
         north=0.59,
-        bounds_km=(float(SEARCH_RADIUS_BOUNDS.maximum_km), 500.0),
+        bounds_km=(RING_E_STARTS_KM, 500.0),
         members={CLUB_PLAYER.name: 2, NEW_TO_THE_SPORT.name: 1},
     ),
 )
@@ -379,22 +387,16 @@ RINGS: Final = (
 #: every one of these exists so that a specific screen state is *reachable* —
 #: which a draw cannot promise.
 #:
-#: **Each rule is offset from the others**, so that the five of them do not all
-#: land on position zero and make one member carry every departure at once. A
-#: member who was simultaneously the opted-out one, the newcomer, the one the
-#: gender gate removes and the one with no shared week would be five rules with
-#: one witness — and removing that member would silently empty five assertions.
+#: **Each rule is offset from the others**, so that they do not all land on
+#: position zero and make one member carry every departure at once. A member who
+#: was simultaneously the newcomer, the one the gender gate removes and the one
+#: with no shared week would be three rules with one witness — and removing that
+#: member would silently empty three assertions.
 
 #: Every n-th member also plays the second sport. Below this, intent-per-sport
 #: has nobody to show it on; above it, every member costs a second assessment.
 EVERY_NTH_PLAYS_BOTH_SPORTS: Final = 3
 PLAYS_BOTH_SPORTS_AT: Final = 0
-
-#: Every n-th member has opted out of proposals. The searches' gate that read the
-#: opt-out went with the searches (#579); the opt-out itself goes with #581, and
-#: until then these members are an ordinary part of the crowd.
-EVERY_NTH_HAS_OPTED_OUT: Final = 5
-HAS_OPTED_OUT_AT: Final = 1
 
 #: Every n-th member is inside ADR-0113's window. Both sides of the window are
 #: present by construction, because a gate with one side present cannot be seen.
@@ -408,8 +410,9 @@ EVERY_NTH_EXCLUDES_THE_PROTAGONIST: Final = 6
 EXCLUDES_THE_PROTAGONIST_AT: Final = 3
 
 #: Every n-th member is **lopsided**: a week wide enough that the searcher's
-#: grid covers little of it, and the tightest radius the slider offers. Both
-#: halves point the same way, and that is the point — ``RECIPROCAL_ASYMMETRY``
+#: grid covers little of it. It was drawn with the tightest radius the slider
+#: offered as well, until the radius went (#581); the week points the same way,
+#: and that is the point — ``RECIPROCAL_ASYMMETRY``
 #: is a **reverse** Fit falling far short of the forward one, and neither
 #: availability's denominator nor distance's ring is symmetric between two
 #: people. It is the one printable signal a cohort of ordinary members never
@@ -439,7 +442,7 @@ SHARED_CELLS_FLOOR: Final = 2
 #: to the clone block that is **not** a copy of it, so the courts dealt differ
 #: in strength and the balance forecast has something to say. Half the
 #: population, because a court is four people and the arms above remove most of
-#: any given member: opted out, gender-gated, no shared week, too far.
+#: any given member: gender-gated, no shared week, too far.
 EVERY_NTH_IS_A_CLOSE_MATCH: Final = 2
 IS_A_CLOSE_MATCH_AT: Final = 1
 
@@ -474,11 +477,6 @@ GENDER_CYCLE: Final = (
 #: case — and neither bound is written as fourteen anywhere here.
 NEWCOMER_COMMITTED_DAYS_AGO: Final = (2, 11)
 SETTLED_COMMITTED_DAYS_AGO: Final = (21, 120)
-
-#: The radius a member sets for themselves. It gates nobody's search but their
-#: own; what it moves here is the **reverse** Fit, which is what reciprocal
-#: asymmetry is computed from.
-MEMBER_RADIUS_KM: Final = (5, SEARCH_RADIUS_BOUNDS.maximum_km)
 
 #: How many tags a member holds, inside the selection's own served bounds.
 MEMBER_TAG_COUNT: Final = (2, 5)
@@ -914,7 +912,6 @@ class CohortMember:
     archetype: str
     latitude: float
     longitude: float
-    radius_km: int
     #: The hours of the week, as ``WeeklyHour.code`` spells one — ``"2:19"``.
     slots: tuple[str, ...]
     tags: tuple[str, ...]
@@ -922,7 +919,6 @@ class CohortMember:
     intents: tuple[tuple[str, str], ...]
     gender: str
     gender_preference: str
-    proposals_opt_in: bool
     committed_days_ago: int
     #: The archetype's own draw parameters, written out per member so the file
     #: says what produced this row without a reader having to hold the archetype
@@ -1103,7 +1099,6 @@ def _draw(
         archetype=archetype.name,
         latitude=latitude_of(ring, centre),
         longitude=centre.longitude,
-        radius_km=_radius(handle, position, seed),
         slots=_slots(handle, position, seed),
         tags=_tags(handle, position, seed),
         intents=tuple(
@@ -1112,7 +1107,6 @@ def _draw(
         ),
         gender=GENDER_CYCLE[position % len(GENDER_CYCLE)].value,
         gender_preference=_preference(position),
-        proposals_opt_in=position % EVERY_NTH_HAS_OPTED_OUT != HAS_OPTED_OUT_AT,
         committed_days_ago=_rng(handle, "committed", seed).randint(low, high),
         claims=archetype.answers.claims,
         demonstrations=archetype.answers.demonstrations,
@@ -1136,55 +1130,6 @@ def _photograph(handle: str) -> str | None:
     return None if declared is None else declared.value
 
 
-def _radius(handle: str, position: int, seed: int) -> int:
-    """The radius this member sets for themselves, and who does not get a draw.
-
-    **An organiser's radius is a rule, and the rule is *your own opponents and
-    nobody else*.** A court is built from a search and a search hands back at
-    most ``shortlist_max`` rows, so an organiser searching wide fills that list
-    with people this fixture never declared — the relationship accounts sit at
-    the centre and are clones of the protagonist, and they outscore a member's
-    own ring on every term a clone can win. The declared opponent then falls off
-    the end of the list, and the send has no origin to cite. So an organiser is
-    given the **tightest radius the slider offers that still reaches everybody
-    they play**: within a ring every member sits at one coordinate, so a
-    same-ring court is searched at the slider's floor and nobody from anywhere
-    else is in the way.
-
-    Everybody else keeps what they had: the floor if they are the lopsided one,
-    and a keyed draw otherwise.
-    """
-
-    reach = _how_far_they_have_to_see(handle)
-    if reach is not None:
-        return min(
-            SEARCH_RADIUS_BOUNDS.maximum_km,
-            max(SEARCH_RADIUS_BOUNDS.minimum_km, ceil(reach)),
-        )
-    if _is_lopsided(position):
-        return SEARCH_RADIUS_BOUNDS.minimum_km
-    return _rng(handle, "radius", seed).randint(*MEMBER_RADIUS_KM)
-
-
-def _how_far_they_have_to_see(handle: str) -> float | None:
-    """The furthest opponent this member is declared to organise against.
-
-    ``None`` for the great majority, who organise nothing. The ring is read off
-    the **handle** rather than looked up, because the handle carries it — that is
-    why it is spelled ``cohort-{ring}-{position}`` and why a member's own line is
-    readable off any card they appear on.
-    """
-
-    organised = [game for game in PLAYED_GAMES if game.organiser == handle]
-    if not organised:
-        return None
-    return max(
-        _distance_between(_ring_in(handle), _ring_in(other))
-        for game in organised
-        for other in game.players[1:]
-    )
-
-
 def _ring_in(handle: str) -> str:
     """Which ring this handle names. ``cohort-a-07`` lives in ring ``a``.
 
@@ -1197,16 +1142,6 @@ def _ring_in(handle: str) -> str:
     if handle == PROTAGONIST_HANDLE:
         return PROTAGONIST_RING
     return handle.split("-")[1]
-
-
-def _position_in(handle: str) -> int:
-    """Which position in its ring this handle names. ``cohort-a-07`` is 7.
-
-    Read off the handle rather than looked up for :func:`_ring_in`'s reason: the
-    handle carries both, which is why it is spelled the way it is.
-    """
-
-    return int(handle.split("-")[2])
 
 
 def _rng(handle: str, axis: str, seed: int) -> random.Random:
@@ -1616,11 +1551,6 @@ def _refuse_an_impossible_cohort(cohort: "Cohort") -> None:
     for member in cohort.members:
         if not HOURS_PER_RANGE * SHARED_CELLS_FLOOR <= len(member.slots) <= len(CELLS):
             raise RuntimeError(f"'{member.handle}' has a week of {len(member.slots)}")
-        if not SEARCH_RADIUS_BOUNDS.contains(member.radius_km):
-            raise RuntimeError(
-                f"'{member.handle}' set a radius of {member.radius_km} km, "
-                f"which the slider does not offer."
-            )
 
 
 def _refuse_a_played_history_nobody_could_play(cohort: "Cohort") -> None:
@@ -1709,28 +1639,6 @@ def _refuse_a_played_history_nobody_could_play(cohort: "Cohort") -> None:
                     f"would be refused."
                 )
             pairs[pair] = index
-
-        organiser = known[game.organiser]
-        if _is_lopsided(_position_in(game.organiser)):
-            raise RuntimeError(
-                f"'{game.organiser}' organises played game {index} and is the "
-                f"ring's lopsided member. The two rules disagree about one "
-                f"number: lopsidedness *is* the slider's floor — a week wide "
-                f"open and a radius that reaches nobody — and an organiser's "
-                f"radius has to reach everybody they play. Whichever wins, one "
-                f"of the two witnesses is silently gone."
-            )
-        for handle in game.players[1:]:
-            reach = _distance_between(organiser.ring, known[handle].ring)
-            if reach > organiser.radius_km:
-                raise RuntimeError(
-                    f"'{game.organiser}' organises played game {index} and "
-                    f"'{handle}' is {reach:.2f} km away, outside the "
-                    f"{organiser.radius_km} km they set. A send cites the "
-                    f"search that showed the person, so an invitee the "
-                    f"organiser's own radius excludes is a court that cannot be "
-                    f"built at all. The radius is drawn off the handle."
-                )
 
 
 def _refuse_an_ending_no_evening_can_have(index: int, game: PlayedGame) -> None:

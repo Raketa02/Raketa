@@ -19,22 +19,18 @@ from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
 )
 from app.modules.player_profile.application.has_player_profile import HasPlayerProfile
-from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
     WeeklyHoursEmpty,
     IntroNotAdmitted,
     IntroRefusal,
     PhotoNotFound,
     PlayerProfileAlreadyExists,
-    ProposalsOptInNotAnswered,
-    SearchRadiusOutOfBounds,
     SocialTagSelectionOutOfBounds,
     UnknownSocialTag,
 )
 from app.modules.player_profile.domain.events import (
     IntroWritten,
     PlayerProfileCreated,
-    ProposalsOptInAnswered,
 )
 from app.modules.player_profile.domain.gender import (
     DEFAULT_GENDER_PREFERENCE,
@@ -109,12 +105,8 @@ def a_command(**overrides) -> CommitPlayerProfileCommand:
         weekly_hours=[(2, 19)],
         latitude=51.5073509,
         longitude=-0.1277583,
-        search_radius_km=10,
         gender=Gender.WOMAN,
         gender_preference=GenderPreference.WOMEN_ONLY,
-        proposals_opt_in=True,
-        consent_copy_version="proposals-2026-08",
-        consent_surface=ConsentSurface.ONBOARDING,
     )
     arguments.update(overrides)
     return CommitPlayerProfileCommand(**arguments)
@@ -137,7 +129,6 @@ async def test_a_commit_records_every_answer_in_one_transaction(harness: Harness
     assert harness.uow.commits == 1, "one transaction, not one per answer"
     assert [type(event) for event in harness.publisher.published] == [
         PlayerProfileCreated,
-        ProposalsOptInAnswered,
     ]
 
 
@@ -196,11 +187,10 @@ async def test_the_same_key_twice_creates_one_profile_and_returns_the_same_resul
     assert second.created is False
     assert second.profile.created_at == first.profile.created_at
     assert second.profile.social_tags == first.profile.social_tags
-    assert second.profile.proposals_opt_in == first.profile.proposals_opt_in
     stream = await harness.store.load_stream(
         aggregate_type="player_profile", aggregate_id=PLAYER
     )
-    assert len(stream) == 2, "the retry recorded nothing"
+    assert len(stream) == 1, "the retry recorded nothing"
     assert harness.uow.commits == 1
 
 
@@ -209,7 +199,7 @@ async def test_a_retry_carrying_different_answers_still_replays_the_first_commit
 ):
     """The key identifies the *request*. A retry of it is the same request, and
     a client that re-sent a differently-shaped body has a bug the platform must
-    not resolve by silently rewriting a consent record."""
+    not resolve by silently rewriting what was committed."""
 
     first = await harness.commit().execute(a_command(idempotency_key="draft-7"))
 
@@ -217,12 +207,12 @@ async def test_a_retry_carrying_different_answers_still_replays_the_first_commit
         a_command(
             idempotency_key="draft-7",
             social_tag_ids=["QUIET_AND_FOCUSED", "HERE_TO_COMPETE"],
-            proposals_opt_in=False,
+            gender=Gender.MAN,
         )
     )
 
     assert second.profile.social_tags == first.profile.social_tags
-    assert second.profile.proposals_opt_in == first.profile.proposals_opt_in
+    assert second.profile.gender == first.profile.gender
 
 
 async def test_a_second_commit_under_a_different_key_is_refused(harness: Harness):
@@ -253,24 +243,6 @@ async def test_two_players_commit_independently(harness: Harness):
 # ---------------------------------------------------------------------------
 
 
-async def test_a_null_opt_in_is_refused_and_nothing_is_written(harness: Harness):
-    with pytest.raises(ProposalsOptInNotAnswered):
-        await harness.commit().execute(a_command(proposals_opt_in=None))
-
-    assert harness.uow.commits == 0
-    assert harness.publisher.published == []
-
-
-async def test_an_opt_in_of_false_is_recorded_rather_than_refused(harness: Harness):
-    """A declining player is a committed profile — opting out stops the engine
-    pushing, not the player existing."""
-
-    committed = await harness.commit().execute(a_command(proposals_opt_in=False))
-
-    assert committed.profile.proposals_opt_in is not None
-    assert committed.profile.proposals_opt_in.accepted is False
-
-
 @pytest.mark.parametrize(
     "tag_ids, expected",
     [
@@ -297,11 +269,6 @@ async def test_a_tag_selection_the_vocabulary_refuses_is_refused_here(
         await harness.commit().execute(a_command(social_tag_ids=tag_ids))
 
     assert harness.uow.commits == 0
-
-
-async def test_a_radius_outside_the_served_bounds_is_refused(harness: Harness):
-    with pytest.raises(SearchRadiusOutOfBounds):
-        await harness.commit().execute(a_command(search_radius_km=500))
 
 
 async def test_a_photo_id_that_does_not_exist_is_refused(harness: Harness):
@@ -416,7 +383,6 @@ async def test_a_commit_with_an_intro_stores_it_as_its_own_event(harness: Harnes
 
     assert [type(event) for event in harness.publisher.published] == [
         PlayerProfileCreated,
-        ProposalsOptInAnswered,
         IntroWritten,
     ]
     assert harness.uow.commits == 1, "still one transaction"
@@ -429,7 +395,6 @@ async def test_a_commit_without_an_intro_stores_no_intro_event(harness: Harness)
 
     assert [type(event) for event in harness.publisher.published] == [
         PlayerProfileCreated,
-        ProposalsOptInAnswered,
     ]
     assert committed.profile.intro is None
 

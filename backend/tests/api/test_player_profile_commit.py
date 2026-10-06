@@ -15,7 +15,6 @@ from uuid import uuid4
 
 import pytest
 
-from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 from tests.unit import image_fixtures as fixtures
 
 ALICE = {
@@ -64,8 +63,6 @@ def a_body(**overrides) -> dict:
             {"day": 6, "hour": 10},
         ],
         "location": {"latitude": 51.5073509, "longitude": -0.1277583},
-        "search_radius_km": SEARCH_RADIUS_BOUNDS.default_km,
-        "proposals_opt_in": {"accepted": True, "copy_version": "proposals-2026-08"},
         "gender": "WOMAN",
     }
     body.update(overrides)
@@ -103,19 +100,44 @@ async def test_a_commit_returns_the_profile_it_created(client):
     assert response.status_code == 201, response.text
     body = response.json()
     assert body["social_tag_ids"] == ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"]
-    assert body["search_radius_km"] == SEARCH_RADIUS_BOUNDS.default_km
     assert body["weekly_hours"] == [
         {"day": 2, "hour": 19},
         {"day": 6, "hour": 10},
     ]
-    assert body["proposals_opt_in"] == {
-        "accepted": True,
-        "copy_version": "proposals-2026-08",
-        # The surface is the route's own fact, never the body's — this endpoint
-        # *is* the end of onboarding, so a client cannot declare otherwise.
-        "surface": "ONBOARDING",
-        "answered_at": body["proposals_opt_in"]["answered_at"],
-    }
+
+
+async def test_a_profile_commits_without_a_radius_or_a_suggestions_answer(client):
+    """*How far will you travel* and *may we suggest games?* are no longer
+    asked (#581): only the ranking read either answer, and it is gone. A
+    commit carries neither, and the profile it answers holds neither."""
+
+    headers = await auth_headers(client)
+
+    response = await commit(client, headers)
+
+    assert response.status_code == 201, response.text
+    assert "search_radius_km" not in response.json()
+    assert "proposals_opt_in" not in response.json()
+
+
+async def test_a_build_that_still_sends_both_answers_commits_and_records_neither(
+    client,
+):
+    """The player app drops the two steps in its own ticket (#582). Until it
+    does, its commit still carries both answers — and is admitted, because
+    this body ignores a field it does not declare, as it always has."""
+
+    headers = await auth_headers(client)
+    older = a_body(
+        search_radius_km=10,
+        proposals_opt_in={"accepted": True, "copy_version": "proposals-2026-08"},
+    )
+
+    response = await commit(client, headers, older)
+
+    assert response.status_code == 201, response.text
+    assert "search_radius_km" not in response.json()
+    assert "proposals_opt_in" not in response.json()
 
 
 async def test_the_location_that_comes_back_is_coarser_than_the_one_sent(client):
@@ -292,26 +314,6 @@ async def test_one_players_key_says_nothing_about_anothers(client):
             400,
             "duplicate_social_tag",
         ),
-        (
-            {"search_radius_km": SEARCH_RADIUS_BOUNDS.maximum_km + 1},
-            400,
-            "search_radius_out_of_bounds",
-        ),
-        (
-            {"search_radius_km": SEARCH_RADIUS_BOUNDS.minimum_km - 1},
-            400,
-            "search_radius_out_of_bounds",
-        ),
-        (
-            {
-                "proposals_opt_in": {
-                    "accepted": None,
-                    "copy_version": "proposals-2026-08",
-                }
-            },
-            400,
-            "proposals_opt_in_not_answered",
-        ),
     ],
 )
 async def test_a_rule_the_client_enforced_is_refused_with_its_own_code(
@@ -355,9 +357,7 @@ async def test_another_players_photo_id_is_refused_the_same_way(client):
 async def test_a_refused_commit_leaves_no_profile_behind(client):
     headers = await auth_headers(client)
 
-    unanswered = {"accepted": None, "copy_version": "proposals-2026-08"}
-
-    refused = await commit(client, headers, a_body(proposals_opt_in=unanswered))
+    refused = await commit(client, headers, a_body(weekly_hours=[]))
     assert refused.status_code == 400
 
     me = await client.get("/api/v1/users/me", headers=headers)

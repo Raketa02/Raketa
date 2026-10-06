@@ -6,9 +6,9 @@ client-held draft and nothing is written until the part ends
 every answer or none of them.
 
 **Every rule the client enforced is re-validated here.** The tag vocabulary, the
-floor and the ceiling, the radius bounds: all three are served so a picker can
-build a control that cannot produce an illegal value, and a control is not a
-validation (``docs/adr/0089``). A replayed request, an older build and a script
+floor and the ceiling: all three are served so a picker can build a control that
+cannot produce an illegal value, and a control is not a validation
+(``docs/adr/0089``). A replayed request, an older build and a script
 are all clients too. The photo ids are re-validated the same way and against the
 same port the upload used, because an id a player never uploaded — or one
 belonging to somebody else — must be refused rather than stored as a dangling
@@ -19,8 +19,7 @@ creating event carries the key the commit was made under, so *has this exact
 request already been served* is a question the aggregate can answer about itself.
 The alternative — an ``idempotency_keys`` table written in the same transaction —
 is a second record of one fact and so a second place for it to disagree, which is
-the dual-write shape ADR-0017 rejected and ADR-0089 declined to reintroduce for
-the consent record.
+the dual-write shape ADR-0017 rejected and ADR-0089 declined to reintroduce.
 
 A second commit with a **different** key is not a retry; it is a second attempt
 at a part that happens once, and it is refused. Editing an existing profile is
@@ -48,10 +47,7 @@ from app.modules.player_profile.application.commands import (
 from app.modules.player_profile.application.owned_photos import (
     check_photos_are_the_callers,
 )
-from app.modules.player_profile.domain.errors import (
-    PlayerProfileAlreadyExists,
-    ProposalsOptInNotAnswered,
-)
+from app.modules.player_profile.domain.errors import PlayerProfileAlreadyExists
 from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.ports import (
@@ -59,7 +55,6 @@ from app.modules.player_profile.domain.ports import (
     PlayerProfileRepository,
 )
 from app.modules.player_profile.domain.profile import PlayerProfile, photo_order
-from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 
@@ -108,11 +103,7 @@ class CommitPlayerProfile:
         # The pure refusals first, cheapest and most likely, before anything
         # asks the object store a question. A commit that was going to be
         # refused for its tags should not cost three round trips first.
-        if command.proposals_opt_in is None:
-            raise ProposalsOptInNotAnswered()
-
         selection = SocialTagSelection.from_ids(command.social_tag_ids)
-        radius = SearchRadius.chosen(command.search_radius_km)
         area = LocationArea.around(command.latitude, command.longitude)
         week = WeeklyHours.of_cells(command.weekly_hours)
         # The one free-text answer, and the fence is here with the other pure
@@ -138,20 +129,16 @@ class CommitPlayerProfile:
             photo_ids=photo_ids,
             weekly_hours=week,
             location=area,
-            search_radius=radius,
             gender=command.gender,
             gender_preference=command.gender_preference,
-            proposals_opt_in_accepted=command.proposals_opt_in,
-            consent_copy_version=command.consent_copy_version,
-            consent_surface=command.consent_surface,
             idempotency_key=command.idempotency_key,
             occurred_at=now,
             intro=intro,
         )
 
-        # One clock read, two events — three where a line was written — and
-        # one transaction. The creation, the consent answer and the line are
-        # the same moment because they *are* the same act.
+        # One clock read, one event — two where a line was written — and one
+        # transaction. The creation and the line are the same moment because
+        # they *are* the same act.
         await self._profiles.save(profile)
         await self._uow.commit()
 

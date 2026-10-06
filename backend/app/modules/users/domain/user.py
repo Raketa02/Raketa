@@ -13,11 +13,9 @@ from app.modules.users.domain.events import (
     PasswordChanged,
     PasswordCleared,
     UserDisabled,
-    UserMarkedAsTester,
     UserNamed,
     UserPromotedToAdmin,
     UserRegistered,
-    UserUnmarkedAsTester,
 )
 from app.modules.users.domain.value_objects import (
     AdultAttestation,
@@ -55,9 +53,6 @@ class User:
     authority: Authority = Authority.USER
     is_admin: bool = False
     is_active: bool = True
-    #: The **tester mark** (``docs/adr/0180`` §9): a Tester may be given a
-    #: feature before anyone else. Beside ``authority`` and never inside it.
-    is_tester: bool = False
     #: When this account's credentials last changed (``docs/adr/0185`` §7): an
     #: access token issued before it is refused. ``None`` for an account whose
     #: password is the one it registered with.
@@ -175,7 +170,6 @@ class User:
             self.authority = Authority(event.authority)
             self.is_admin = event.is_admin
             self.is_active = event.is_active
-            self.is_tester = False
             self.credentials_changed_at = None
             # Folded since ``docs/adr/0185`` §5 made the attestation something
             # an account can give later, and *Start playing* asks whether it
@@ -199,7 +193,6 @@ class User:
             self.authority = Authority.USER
             self.is_admin = False
             self.is_active = True
-            self.is_tester = False
             self.credentials_changed_at = None
             self.adult_attested = False
             self.created_at = None
@@ -232,14 +225,6 @@ class User:
         if isinstance(event, UserPromotedToAdmin):
             self.is_admin = True
             self.authority = Authority.ADMIN
-            self.version += 1
-            return
-        if isinstance(event, UserMarkedAsTester):
-            self.is_tester = True
-            self.version += 1
-            return
-        if isinstance(event, UserUnmarkedAsTester):
-            self.is_tester = False
             self.version += 1
             return
         raise TypeError(f"Unsupported user event {event!r}")
@@ -347,28 +332,4 @@ class User:
                 user_id=self.id,
                 occurred_at=occurred_at,
             )
-        )
-
-    def mark_as_tester(self, *, occurred_at: datetime) -> None:
-        """Give this account the tester mark (``docs/adr/0180`` §9).
-
-        Idempotent, as ``disable`` is: marking a Tester again records nothing,
-        because the stream records acts and this one changes nothing. A disabled
-        account is not refused — the mark grants nothing, and it cannot sign in
-        to be shown anything by it.
-        """
-
-        self._ensure_registered()
-        if self.is_tester:
-            return
-        self._record_that(UserMarkedAsTester(user_id=self.id, occurred_at=occurred_at))
-
-    def unmark_as_tester(self, *, occurred_at: datetime) -> None:
-        """Clear the tester mark. Idempotent, like :meth:`mark_as_tester`."""
-
-        self._ensure_registered()
-        if not self.is_tester:
-            return
-        self._record_that(
-            UserUnmarkedAsTester(user_id=self.id, occurred_at=occurred_at)
         )

@@ -7,7 +7,6 @@ from typing import Sequence
 from uuid import UUID
 
 from app.kernel import Sport
-from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
@@ -45,40 +44,24 @@ class CommitPlayerProfileCommand:
     **Primitives from the boundary, not domain value objects**
     (``backend/CONTEXT.md`` — *Command*). Weekly hours arrive as
     ``(iso weekday, hour)`` pairs and the domain is what turns them into
-    hours, so nothing in ``presentation/`` builds a value object. The one enum is
-    ``ConsentSurface``, which is a closed set the boundary *selects from* rather
-    than constructs — the same shape ``CreateAssessmentCommand`` carries
-    ``Sport`` in.
+    hours, so nothing in ``presentation/`` builds a value object.
 
-    The tag ids stay strings and the radius stays an ``int`` on purpose: it is
-    what lets the *domain* refuse an id outside the vocabulary and a radius
-    outside the served bounds, with the codes a client branches on, instead of a
-    schema layer refusing them as a shapeless 422.
-
-    ``proposals_opt_in`` is ``bool | None`` and the ``None`` is load-bearing.
-    Unanswered is neither yes nor no, so a client that has not asked the question
-    sends null and is refused; typing it as a required ``bool`` would push that
-    refusal into schema validation and lose the code that says *ask the
-    question*.
+    The tag ids stay strings on purpose: it is what lets the *domain* refuse an
+    id outside the vocabulary, with the code a client branches on, instead of a
+    schema layer refusing it as a shapeless 422.
 
     ``idempotency_key`` is what the client called this commit. The same key twice
     is the same commit — one profile, one answer — which is why a double-tapped
     confirm on a slow connection costs nothing (``docs/adr/0089``).
 
-    ``gender`` and ``gender_preference`` are the second and third enums, and they
-    are enums here for ``ConsentSurface``'s reason: each is a closed set the
-    boundary *selects from* rather than constructs, so there is nothing for the
-    domain to refuse that the type has not already refused. Neither is a string —
-    unlike a tag id, whose vocabulary is *served* and can therefore disagree with
-    what a client holds.
-
-    **``gender`` has no ``None`` and that is the difference from
-    ``proposals_opt_in``.** Both questions are required, and they are required
-    differently: the opt-in has a nullable type because *unanswered* is a third
-    state a client can legitimately be in and must be refused with a code that
-    says *ask the question*. Gender has ``PREFER_NOT_TO_SAY`` — a real answer to
-    the same effect — so there is no unanswered state to model and nothing to
-    refuse at this layer (``docs/adr/0096``).
+    ``gender`` and ``gender_preference`` are enums: each is a closed set the
+    boundary *selects from* rather than constructs — the same shape
+    ``CreateAssessmentCommand`` carries ``Sport`` in — so there is nothing for
+    the domain to refuse that the type has not already refused. Neither is a
+    string — unlike a tag id, whose vocabulary is *served* and can therefore
+    disagree with what a client holds. **``gender`` has no ``None``**: it has
+    ``PREFER_NOT_TO_SAY`` — a real answer — so there is no unanswered state to
+    model and nothing to refuse at this layer (``docs/adr/0096``).
 
     **``intro`` is optional, and it is a string here and not an ``Intro``** for
     the tag ids' reason: the fence — the cap, the line breaks, the contact rule
@@ -95,12 +78,8 @@ class CommitPlayerProfileCommand:
     weekly_hours: Sequence[tuple[int, int]]
     latitude: float
     longitude: float
-    search_radius_km: int
     gender: Gender
     gender_preference: GenderPreference
-    proposals_opt_in: bool | None
-    consent_copy_version: str
-    consent_surface: ConsentSurface
     #: One line about themselves, or nothing. Fenced by the domain, never here.
     intro: str | None = None
 
@@ -120,20 +99,6 @@ class SetWeeklyHoursCommand:
     player_id: UUID
     #: ``(iso weekday 1–7, hour 7–22)`` — one pair per hour still ticked.
     weekly_hours: Sequence[tuple[int, int]]
-
-
-@dataclass(frozen=True, slots=True)
-class ChangeSearchRadiusCommand:
-    """A player's Search radius, replaced whole.
-
-    ``search_radius_km`` stays an ``int`` for the commit's reason: it is what
-    lets the *domain* refuse a radius outside the served bounds with a code the
-    client can branch on, rather than a schema layer refusing it as a shapeless
-    422.
-    """
-
-    player_id: UUID
-    search_radius_km: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,7 +123,7 @@ class DeclarePlayIntentCommand:
 
     Three enums and no string: ``Sport``, ``PlayIntent`` and
     ``PlayIntentSurface`` are all closed sets the boundary *selects from* rather
-    than constructs, which is ``ConsentSurface``'s shape in this same context.
+    than constructs, which is ``Gender``'s shape in this same context.
     None of them is served, so a client cannot hold a different version of any.
 
     ``surface`` is **required and client-asserted**. The client is the only party
@@ -250,23 +215,3 @@ class ChangeGenderPreferenceCommand:
 
     player_id: UUID
     gender_preference: GenderPreference
-
-
-@dataclass(frozen=True, slots=True)
-class AnswerProposalsOptInCommand:
-    """The proposals question, answered again from the profile screen
-    (``docs/adr/0179`` §8).
-
-    ``accepted`` is a ``bool`` and **not** ``bool | None``, which is the one
-    place this differs from the commit's shape: there, *unanswered* is a third
-    state a client can legitimately be in and must be refused with a code that
-    says *ask the question*; here the screen **is** the question, and pressing
-    is the answer. ``copy_version`` is what the screen showed, and ``surface``
-    is the route's — never the body's — exactly as the commit's is
-    ``ONBOARDING`` because the commit is the end of onboarding.
-    """
-
-    player_id: UUID
-    accepted: bool
-    copy_version: str
-    surface: ConsentSurface

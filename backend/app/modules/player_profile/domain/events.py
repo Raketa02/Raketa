@@ -6,9 +6,9 @@ uuid, an hour of the week as its code, a location as two floats, a gender and an
 intent as their machine codes. Nothing here holds a value object, and nothing
 here holds display text.
 
-Twelve events. Eleven belong to the profile's own stream, keyed on the player,
-and they fall into four kinds; the twelfth belongs to a **second aggregate** in
-this context and is kept here because a context's durable names have one home.
+Ten events. Nine belong to the profile's own stream, keyed on the player, and
+they fall into three kinds; the tenth belongs to a **second aggregate** in this
+context and is kept here because a context's durable names have one home.
 
 **One creation.** ``PlayerProfileCreated`` is the single commit that ends
 onboarding's second part, carrying every preference at once (``docs/adr/0089``).
@@ -17,18 +17,10 @@ lets the same request arriving twice be recognised as the same request without a
 table beside the stream to keep in step with it. The key is evidence about a
 *write*, not about the player, and it is on the creating event only.
 
-**Seven preference changes**, for the profile screen that edits the same values
-later: tags, photos, weekly hours, location, radius, gender and gender
-preference. Each carries the whole new value rather than a delta, because a
-preference is small, replay stays a fold, and *what was it before* is answered by
-the event before it.
-
-**One consent answer.** ``ProposalsOptInAnswered`` carries the answer, the copy
-version shown and the surface — and its own ``occurred_at`` is the moment. It is
-appended by the creating commit **as well as** by every later change, so the
-consent history is one sequence with no special first case: a reader that wants
-every answer a player ever gave replays this one event type and needs to know
-nothing about how the profile began.
+**Six preference changes**, for the profile screen that edits the same values
+later: tags, photos, weekly hours, location, gender and gender preference. Each
+carries the whole new value rather than a delta, because a preference is small,
+replay stays a fold, and *what was it before* is answered by the event before it.
 
 **One line the player wrote, and its later edits.** ``IntroWritten`` carries
 the intro (``docs/adr/0170``) — text a person typed, already fenced at the write,
@@ -47,29 +39,31 @@ tab's edit of the same line (``docs/adr/0179`` §6) — the whole new value, or
 context, and it is the reason this module's first line no longer says *one
 stream*.
 
-**Adding a field to ``ProposalsOptInAnswered`` means a new catalog version.**
-Events are a published contract, and this is the event most likely to be asked to
-carry more later — a jurisdiction, a policy id, the surface's own version. The
-existing rows must keep decoding, which is what the version is for.
+**The radius and the suggestions answer are gone** (#581). *How far will you
+travel* and *may we suggest games?* were read by the "who fits whom" ranking
+alone, and it went in #580. ``player_profile.search_radius_changed`` and
+``player_profile.proposals_opt_in_answered`` are no longer registered, and
+``PlayerProfileCreated`` lost ``search_radius_km`` — which is why it is at
+version 3.
 
-**Appending an optional field to an event that already has rows does not.**
-``PlayerProfileCreated`` gained ``gender`` and ``gender_preference`` after
-profiles existed, and both are declared last, with defaults, so a row written
-before the question existed still decodes into this class — the pattern
-``UserRegistered.adult_attested`` and ``AssessmentCompleted`` already follow. The
-two are not symmetrical about what their absence *means*, and each says so on its
-own field.
+**Appending an optional field to an event that already has rows does not need
+a new version.** ``PlayerProfileCreated`` gained ``gender`` and
+``gender_preference`` after profiles existed, and both are declared last, with
+defaults, so a row written before the question existed still decodes into this
+class — the pattern ``UserRegistered.adult_attested`` and
+``AssessmentCompleted`` already follow. The two are not symmetrical about what
+their absence *means*, and each says so on its own field.
 
-**Changing what a field holds does, and ``player_profile.created`` is at version
-2 for it.** Version 1 carried ``availability``, a week of mornings, afternoons and
-evenings; ``docs/adr/0189`` §5 made the week hours, and the field became
-``weekly_hours`` — a change to the wire shape, versioned as one rather than
-reinterpreted. Version 1 is not readable, deliberately, on the Plan's own
-argument (``plans/application/event_subscriptions.py``): no environment but
-``local`` has ever run, its database is disposable, and a row written under the
-old shape is a decoding error rather than a week folded wrongly. The two appended
-fields keep their defaults, and what their absence would mean, though no version
-2 row lacks them.
+**Changing what a field holds does, and so does removing one.**
+``player_profile.created`` is at version 3. Version 1 carried ``availability``,
+a week of mornings, afternoons and evenings; ``docs/adr/0189`` §5 made the week
+hours, and the field became ``weekly_hours`` — version 2. Version 2 carried
+``search_radius_km``, and #581 removed it — version 3. Neither older version is
+readable, deliberately: no environment but ``local`` has ever run, its database
+is disposable and is reset with the change, and a row written under an old
+shape is a decoding error rather than a profile folded wrongly. The two appended fields
+keep their defaults, and what their absence would mean, though no version 3 row
+lacks them.
 """
 
 from __future__ import annotations
@@ -83,15 +77,7 @@ from app.modules.player_profile.domain.gender import DEFAULT_GENDER_PREFERENCE
 
 @dataclass(frozen=True)
 class PlayerProfileCreated:
-    """Every preference from onboarding's second part, in one event.
-
-    The opt-in is **not** here: it arrives as its own
-    ``ProposalsOptInAnswered`` appended immediately after, in the same
-    transaction. That is deliberate and is what "one sequence with no special
-    first case" means — the alternative puts the first consent answer in a
-    different shape from every one that follows it, and every reader of the
-    consent history then has two shapes to handle forever.
-    """
+    """Every preference from onboarding's second part, in one event."""
 
     player_id: UUID
     social_tags: tuple[str, ...]
@@ -102,7 +88,6 @@ class PlayerProfileCreated:
     weekly_hours: tuple[str, ...]
     latitude: float
     longitude: float
-    search_radius_km: int
     #: What the client called this commit. Recorded so a retry of the same
     #: request is answerable from the stream itself.
     idempotency_key: str
@@ -191,13 +176,6 @@ class LocationChanged:
 
 
 @dataclass(frozen=True)
-class SearchRadiusChanged:
-    player_id: UUID
-    search_radius_km: int
-    occurred_at: datetime
-
-
-@dataclass(frozen=True)
 class GenderChanged:
     """A new answer to the gender question — *"self-declared, freely changed"*.
 
@@ -206,10 +184,8 @@ class GenderChanged:
     idempotency record of a commit that happens once, and a player editing an
     answer years later is not making that commit again.
 
-    A preference and not a consent, so it obeys the preference rule: a
-    transition to the value already held records nothing. There is no wording to
-    evidence a gender against and no question of *which words did they answer* —
-    which is precisely the thing ``ProposalsOptInAnswered`` is the exception for.
+    A preference, so it obeys the preference rule: a transition to the value
+    already held records nothing.
     """
 
     player_id: UUID
@@ -276,37 +252,13 @@ class IntroChanged:
     carries one, and ``None`` is **the withdrawal**: the stream records that
     the line was taken back, and the profile folds to the same absence a player
     who skipped the step has. Fenced exactly as the commit fences
-    (``domain/intro.py``), so what is stored is what a card shows. A preference
-    and not a consent: the line already held records nothing, and neither does
+    (``domain/intro.py``), so what is stored is what a card shows. A
+    preference: the line already held records nothing, and neither does
     withdrawing a line that was never written.
     """
 
     player_id: UUID
     intro: str | None
-    occurred_at: datetime
-
-
-@dataclass(frozen=True)
-class ProposalsOptInAnswered:
-    """One answer to the proposals question, with what makes it evidence.
-
-    ``occurred_at`` is the moment, carried the way every event carries its
-    moment rather than as a second field somebody has to keep in step with it.
-    ``copy_version`` identifies the words shown — never the words themselves,
-    because freezing copy in history is how a wording change becomes a
-    migration.
-
-    **Recorded every time it is answered, including when the answer has not
-    changed.** That is the one place this stream departs from the preference
-    events above, which are no-ops when nothing moved: *the player was asked
-    again, against these words, and said yes again* is a fact about consent, and
-    a consent log that drops re-affirmations cannot evidence one.
-    """
-
-    player_id: UUID
-    accepted: bool
-    copy_version: str
-    surface: str
     occurred_at: datetime
 
 
@@ -320,15 +272,12 @@ class PlayIntentDeclared:
     that id is a pure function of the pair (``ids.py``), so carrying it would be
     a second copy of one fact and a second place for it to disagree.
 
-    ``surface`` is a ``PlayIntentSurface`` code, following ``ConsentSurface``'s
-    precedent in this same context. It is client-asserted, and it is safe to be
-    because nothing branches on it (``docs/adr/0094``).
+    ``surface`` is a ``PlayIntentSurface`` code. It is client-asserted, and it
+    is safe to be because nothing branches on it (``docs/adr/0094``).
 
     A **preference**, so a declaration of the value already held records
-    nothing. That is deliberately the opposite of ``ProposalsOptInAnswered``,
-    which is beside it in this module: there is no wording to evidence an intent
-    against, so re-declaring the same value evidences nothing that the previous
-    event did not already say.
+    nothing: re-declaring the same value says nothing that the previous event
+    did not already say.
     """
 
     player_id: UUID

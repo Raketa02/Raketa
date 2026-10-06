@@ -2,36 +2,32 @@
 
 **The first aggregate in the racket-sport domain that is not per sport.** A Skill
 rating is per ``(player, sport)`` because skill is; tags, photos, a week, a
-location and a consent are facts about a person (``docs/adr/0089``). Resisting
+location are facts about a person (``docs/adr/0089``). Resisting
 the pull toward a sport dimension here is deliberate, and ADR-0090 depends on the
 cardinality: *does a Player profile exist* is a per-player question with a
 per-player answer, and it is what onboarding's second part is checkpointed on.
 
-**Creation is two events, not one — and a third where the player wrote a
-line.** ``PlayerProfileCreated`` carries the seven preferences;
-``ProposalsOptInAnswered`` carries the consent. They are appended together, in
-one transaction, and a profile cannot be created without both — ``create`` takes
-the opt-in as a required argument and there is no way to reach the created state
-with it absent. The split is what makes the consent history one sequence with no
-special first case. ``IntroWritten`` follows them **only when there is a line**
-(``docs/adr/0170``): the intro is optional, a blank leaves nothing behind, and
-the creating event does not grow a field for it.
+**Creation is one event — and a second where the player wrote a line.**
+``PlayerProfileCreated`` carries the preferences. ``IntroWritten`` follows it,
+in the same transaction, **only when there is a line** (``docs/adr/0170``): the
+intro is optional, a blank leaves nothing behind, and the creating event does
+not grow a field for it. The search radius and the proposals opt-in were asked
+here too, and went with the ranking that read them (#581).
 
-**A preference transition that changes nothing records nothing.** Setting the
-radius to the value it already holds leaves the stream alone, which is what keeps
-an idempotent client retry from growing a stream by an event that says a player
-did not do anything. The consent transition is the deliberate exception, and
-``answer_proposals_opt_in`` says why.
+**A transition that changes nothing records nothing.** Setting the week to the
+week it already holds leaves the stream alone, which is what keeps an
+idempotent client retry from growing a stream by an event that says a player
+did not do anything.
 
 **The write path refuses; the fold accepts.** ``_apply`` rebuilds every value
 through a ``recorded`` constructor that does *not* re-check the served bounds,
 and the transitions above build through the checking ones. That asymmetry is
-load-bearing: the tag floor and ceiling, the radius bounds and the copy-version
-cap are all documented as numbers product may edit, and a fold that could refuse
-a recorded fact would make lowering any of them retroactively un-rehydrate the
-profiles outside the new range — first visible as ``GET /users/me`` failing for
-players who had done nothing wrong. A stream is a record of what happened, and
-replaying it may not second-guess it.
+load-bearing: the tag floor and ceiling and the intro's cap are documented as
+numbers product may edit, and a fold that could refuse a recorded fact would
+make lowering any of them retroactively un-rehydrate the profiles outside the
+new range — first visible as ``GET /users/me`` failing for players who had done
+nothing wrong. A stream is a record of what happened, and replaying it may not
+second-guess it.
 
 **Snapshotting is not built, and this is the aggregate that will need it.** An
 assessment is under ten events and then finished; a profile is written every time
@@ -48,11 +44,6 @@ from typing import Final, Iterable, Sequence
 from uuid import UUID
 
 from app.kernel import Instant, instant
-from app.modules.player_profile.domain.consent import (
-    ConsentSurface,
-    ProposalsOptIn,
-    answerable_copy_version,
-)
 from app.modules.player_profile.domain.errors import (
     DuplicatePhoto,
     TooManyPhotos,
@@ -65,8 +56,6 @@ from app.modules.player_profile.domain.events import (
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
-    ProposalsOptInAnswered,
-    SearchRadiusChanged,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -77,7 +66,6 @@ from app.modules.player_profile.domain.gender import (
 )
 from app.modules.player_profile.domain.intro import Intro
 from app.modules.player_profile.domain.location import LocationArea
-from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import SocialTagSelection
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.shared.domain import DomainEvent
@@ -120,7 +108,6 @@ class PlayerProfile:
     photo_ids: tuple[UUID, ...]
     weekly_hours: WeeklyHours
     location: LocationArea
-    search_radius: SearchRadius
     #: The player's own answer to the gender question (``docs/adr/0096``).
     #:
     #: ``None`` is **not** an answer and is unreachable through ``create``: it
@@ -134,10 +121,6 @@ class PlayerProfile:
     #: Who this player is willing to be matched with. Optional and defaulting to
     #: ``ANY``, so unlike ``gender`` there is nothing for its absence to mean.
     gender_preference: GenderPreference
-    #: The latest answer. Never ``None`` on a created profile — ``create``
-    #: requires one — but the field is optional because ``_empty`` exists before
-    #: any event has been applied.
-    proposals_opt_in: ProposalsOptIn | None
     #: The line the player wrote about themselves, or ``None`` where they wrote
     #: none (``docs/adr/0170``). **An absence and never an empty intro**: a
     #: player who skipped has no line, and a stream with no ``IntroWritten``
@@ -173,7 +156,6 @@ class PlayerProfile:
     def _empty(cls) -> "PlayerProfile":
         profile = cls.__new__(cls)
         profile.version = 0
-        profile.proposals_opt_in = None
         profile.intro = None
         profile._events = EventRecorder()
         return profile
@@ -187,12 +169,8 @@ class PlayerProfile:
         photo_ids: Sequence[UUID],
         weekly_hours: WeeklyHours,
         location: LocationArea,
-        search_radius: SearchRadius,
         gender: Gender,
         gender_preference: GenderPreference = DEFAULT_GENDER_PREFERENCE,
-        proposals_opt_in_accepted: bool,
-        consent_copy_version: str,
-        consent_surface: ConsentSurface,
         idempotency_key: str,
         occurred_at: Instant,
         intro: Intro | None = None,
@@ -200,14 +178,10 @@ class PlayerProfile:
         """The one commit that ends onboarding's second part.
 
         Every argument is a value object that has already refused what it
-        refuses — the count of tags, the radius against its bounds, the
-        coarsening of the location — so nothing is re-checked here except what is
-        genuinely about the *profile* rather than about one of its answers: the
-        photo list's length and its uniqueness.
-
-        The opt-in arrives as its three primitive facts rather than as a
-        ``ProposalsOptIn``, because the moment is the event's ``occurred_at`` and
-        assembling the record here is what guarantees the two cannot disagree.
+        refuses — the count of tags, the floor of the week, the coarsening of
+        the location — so nothing is re-checked here except what is genuinely
+        about the *profile* rather than about one of its answers: the photo
+        list's length and its uniqueness.
 
         **``gender`` is required and ``gender_preference`` is not**, and the
         asymmetry is ADR-0096's: the answer about oneself is asked once, here,
@@ -220,8 +194,8 @@ class PlayerProfile:
 
         **``intro`` is optional and its absence records nothing.** It arrives
         already fenced — ``Intro.written`` refused contact and the shape before
-        the commit reached here — and it is appended *after* the consent, so
-        the consent history keeps no special first case (``docs/adr/0170``).
+        the commit reached here — and it is its own event, appended after the
+        creating one (``docs/adr/0170``).
         """
 
         ordered_photos = photo_order(photo_ids)
@@ -235,22 +209,10 @@ class PlayerProfile:
                 weekly_hours=weekly_hours.codes,
                 latitude=location.latitude,
                 longitude=location.longitude,
-                search_radius_km=search_radius.kilometres,
                 idempotency_key=idempotency_key,
                 occurred_at=occurred_at,
                 gender=gender.value,
                 gender_preference=gender_preference.value,
-            )
-        )
-        # Appended by the creating commit exactly as a later change appends it,
-        # which is the whole of what "no special first case" buys.
-        profile._record_that(
-            ProposalsOptInAnswered(
-                player_id=player_id,
-                accepted=proposals_opt_in_accepted,
-                copy_version=answerable_copy_version(consent_copy_version),
-                surface=consent_surface.value,
-                occurred_at=occurred_at,
             )
         )
         if intro is not None:
@@ -266,8 +228,8 @@ class PlayerProfile:
 
     # ------------------------------------------------------------------
     # Later changes, from the profile screen — one unkeyed PUT per transition
-    # below: the You tab's (docs/adr/0179 §8), the Play screens' for the week
-    # and the radius, and the cold start's for the location (docs/adr/0174 §6)
+    # below: the You tab's (docs/adr/0179 §8), the Play screens' for the week,
+    # and the cold start's for the location (docs/adr/0174 §6)
     # ------------------------------------------------------------------
 
     def change_social_tags(
@@ -318,19 +280,6 @@ class PlayerProfile:
             )
         )
 
-    def change_search_radius(
-        self, radius: SearchRadius, *, occurred_at: Instant
-    ) -> None:
-        if radius == self.search_radius:
-            return
-        self._record_that(
-            SearchRadiusChanged(
-                player_id=self.player_id,
-                search_radius_km=radius.kilometres,
-                occurred_at=occurred_at,
-            )
-        )
-
     def change_intro(self, intro: Intro | None, *, occurred_at: Instant) -> None:
         """Replace the line the player wrote — or withdraw it.
 
@@ -340,9 +289,9 @@ class PlayerProfile:
         it got here, exactly as it does for the commit — and ``None`` is the
         withdrawal: recorded, and the profile folds to none.
 
-        A preference and not a consent, so the no-op rule holds on both sides
-        of the absence: the line already held records nothing, and withdrawing
-        a line that was never written records nothing either.
+        The no-op rule holds on both sides of the absence: the line already
+        held records nothing, and withdrawing a line that was never written
+        records nothing either.
         """
 
         if intro == self.intro:
@@ -399,34 +348,6 @@ class PlayerProfile:
             )
         )
 
-    def answer_proposals_opt_in(
-        self,
-        *,
-        accepted: bool,
-        copy_version: str,
-        surface: ConsentSurface,
-        occurred_at: Instant,
-    ) -> None:
-        """Record an answer to the proposals question — **always**.
-
-        The one transition here that is not a no-op when nothing changed, and
-        the departure is the point of the aggregate. *The player was asked
-        again, against these words, on this surface, and answered the same way*
-        is a fact about consent; a log that collapsed it could not later say
-        which wording a standing yes was given against. Consent is evidenced,
-        not asserted (``../../../../CONTEXT.md``).
-        """
-
-        self._record_that(
-            ProposalsOptInAnswered(
-                player_id=self.player_id,
-                accepted=accepted,
-                copy_version=answerable_copy_version(copy_version),
-                surface=surface.value,
-                occurred_at=occurred_at,
-            )
-        )
-
     # ------------------------------------------------------------------
     # Replay
     # ------------------------------------------------------------------
@@ -444,7 +365,6 @@ class PlayerProfile:
             self.location = LocationArea(
                 latitude=event.latitude, longitude=event.longitude
             )
-            self.search_radius = SearchRadius.recorded(event.search_radius_km)
             # Absent stays absent. A stream written before the question existed
             # decodes with ``gender`` unset, and folding that into a value would
             # make the profile claim an answer nobody gave.
@@ -472,10 +392,6 @@ class PlayerProfile:
             )
             self._touch(event.occurred_at)
             return
-        if isinstance(event, SearchRadiusChanged):
-            self.search_radius = SearchRadius.recorded(event.search_radius_km)
-            self._touch(event.occurred_at)
-            return
         if isinstance(event, GenderChanged):
             self.gender = Gender(event.gender)
             self._touch(event.occurred_at)
@@ -493,18 +409,6 @@ class PlayerProfile:
             # The latest of either event is the line; `None` is the withdrawal
             # and folds to the absence a skipped step leaves.
             self.intro = None if event.intro is None else Intro.recorded(event.intro)
-            self._touch(event.occurred_at)
-            return
-        if isinstance(event, ProposalsOptInAnswered):
-            # The *latest* answer is the state; every answer is the history, and
-            # the history is the stream. Nothing here accumulates a list — a
-            # reader that wants the sequence replays this event type.
-            self.proposals_opt_in = ProposalsOptIn(
-                accepted=event.accepted,
-                copy_version=event.copy_version,
-                surface=ConsentSurface(event.surface),
-                answered_at=instant(event.occurred_at),
-            )
             self._touch(event.occurred_at)
             return
         raise TypeError(f"Unsupported player profile event {event!r}")

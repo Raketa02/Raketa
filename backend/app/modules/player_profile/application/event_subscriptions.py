@@ -2,24 +2,31 @@
 
 A name here is a **published contract** and outlives every Python class it maps
 to: renaming ``PlayerProfileCreated`` must never change what is already in the
-store. ``player_profile.proposals_opt_in_answered`` is the one most likely to be
-asked to carry more later — a jurisdiction, a policy id — and that will be
-version 2 registered beside version 1, never an edit to it.
+store.
 
-**Twelve names, on two aggregates.** ``player_profile.play_intent_declared`` is
+**Ten names, on two aggregates.** ``player_profile.play_intent_declared`` is
 a ``PlayIntentDeclaration`` stream and not a profile one (``docs/adr/0094``); it
 is registered here because a *context* owns its durable names, and the prefix is
 therefore the context's rather than the aggregate's. Splitting the prefix would
 have made the name a statement about which class writes it, which is the one
 thing a durable name must not be.
 
-**``player_profile.created`` is at version 2, and version 1 is not
+**``player_profile.created`` is at version 3, and neither older version is
 registered.** Version 1 carried a week of mornings, afternoons and evenings;
-``docs/adr/0189`` §5 made the week hours and the field ``weekly_hours``, which
-is a change to the wire shape and is versioned as one — ``domain/events.py``
-says why version 1 is deliberately unreadable. The week's own edit is
-``player_profile.weekly_hours_set``, a new contract replacing
+``docs/adr/0189`` §5 made the week hours and the field ``weekly_hours`` —
+version 2. Version 2 carried ``search_radius_km``, which #581 removed with the
+radius — version 3. Each is a change to the wire shape and is versioned as one;
+``domain/events.py`` says why the older ones are deliberately unreadable. The
+week's own edit is ``player_profile.weekly_hours_set``, a new contract replacing
 ``player_profile.availability_changed``, which nothing reads any more.
+
+**Two names are gone with what they recorded** (#581):
+``player_profile.search_radius_changed`` and
+``player_profile.proposals_opt_in_answered``. Only the "who fits whom" ranking
+read the radius and the suggestions answer, and it went in #580. They are not
+kept decode-only, as ``games.dismissed`` is: PRD #569 resets the local store
+with the removal and only ``local`` has ever run, so a stored row under either
+name is a decoding error, like a version 2 creation.
 
 **The v1 registrations beside it are none of them an edit.**
 ``gender_changed``, ``gender_preference_changed``, ``play_intent_declared``,
@@ -32,8 +39,7 @@ be defaulted honestly would have been version 2 registered beside version 1
 instead — which is why the intro is ``intro_written`` rather than a field on
 ``created`` (``docs/adr/0170`` §1) — and why its edit is ``intro_changed``
 rather than ``intro_written`` told again: a withdrawal is a ``null`` the commit's
-event cannot carry (``docs/adr/0179`` §6). These are the contracts the candidate
-index reads (#182).
+event cannot carry (``docs/adr/0179`` §6).
 """
 
 from __future__ import annotations
@@ -49,15 +55,13 @@ from app.modules.player_profile.domain.events import (
     PhotosChanged,
     PlayerProfileCreated,
     PlayIntentDeclared,
-    ProposalsOptInAnswered,
-    SearchRadiusChanged,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
 
 #: The wire version ``player_profile.created`` is written under — see the module
-#: docstring for why it is 2 and why 1 is not readable.
-PROFILE_CREATED_VERSION = 2
+#: docstring for why it is 3 and why 1 and 2 are not readable.
+PROFILE_CREATED_VERSION = 3
 
 #: Each durable name **with the version it is written under**, so a version is
 #: read off the contract it belongs to rather than decided beside the loop.
@@ -67,12 +71,10 @@ _CONTRACTS = (
     (PhotosChanged, "player_profile.photos_changed", 1),
     (WeeklyHoursSet, "player_profile.weekly_hours_set", 1),
     (LocationChanged, "player_profile.location_changed", 1),
-    (SearchRadiusChanged, "player_profile.search_radius_changed", 1),
     (GenderChanged, "player_profile.gender_changed", 1),
     (GenderPreferenceChanged, "player_profile.gender_preference_changed", 1),
     (IntroWritten, "player_profile.intro_written", 1),
     (IntroChanged, "player_profile.intro_changed", 1),
-    (ProposalsOptInAnswered, "player_profile.proposals_opt_in_answered", 1),
     (PlayIntentDeclared, "player_profile.play_intent_declared", 1),
 )
 

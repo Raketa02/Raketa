@@ -11,10 +11,8 @@ from app.modules.users.domain.events import (
     AccountOpenedByInvitation,
     PasswordChanged,
     PasswordCleared,
-    UserMarkedAsTester,
     UserNamed,
     UserRegistered,
-    UserUnmarkedAsTester,
 )
 from app.modules.users.domain.ports import Naming
 from app.modules.users.domain.user import User
@@ -40,7 +38,6 @@ def _to_domain(row: UserORM) -> User:
         authority=Authority(row.authority),
         is_admin=row.is_admin,
         is_active=row.is_active,
-        is_tester=row.is_tester,
         credentials_changed_at=stored_instant_or_none(row.credentials_changed_at),
         created_at=row.created_at,
         updated_at=row.updated_at,
@@ -57,7 +54,6 @@ def _to_orm(user: User) -> UserORM:
         authority=user.authority.value,
         is_admin=user.is_admin,
         is_active=user.is_active,
-        is_tester=user.is_tester,
     )
 
 
@@ -194,15 +190,4 @@ class SqlAlchemyUserRepository:
             )
         row.password_hash = None
         row.credentials_changed_at = event.occurred_at
-        await self._session.flush()
-
-    async def project_tester_mark(
-        self, event: UserMarkedAsTester | UserUnmarkedAsTester
-    ) -> None:
-        row = await self._session.get(UserORM, event.user_id)
-        if row is None:
-            raise RuntimeError(
-                f"the tester mark of {event.user_id} has no projection row to land on"
-            )
-        row.is_tester = isinstance(event, UserMarkedAsTester)
         await self._session.flush()

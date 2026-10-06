@@ -82,16 +82,14 @@ async def test_nineteen_tags_are_served(client):
 
 
 @pytest.mark.asyncio
-async def test_the_search_radius_bounds_are_served_with_their_default(client):
+async def test_no_search_radius_bounds_are_served(client):
+    """The radius went with the ranking that read it (#581), and a slider has
+    nothing to be built from."""
+
     resp = await client.get(OPTIONS_PATH)
     assert resp.status_code == 200, resp.text
 
-    assert resp.json()["search_radius"] == {
-        "minimum_km": 1,
-        "maximum_km": 50,
-        "step_km": 1,
-        "default_km": 10,
-    }
+    assert set(resp.json()) == {"social_tag_groups", "social_tag_selection"}
 
 
 @pytest.mark.asyncio
@@ -157,13 +155,13 @@ def test_the_committed_contract_carries_the_route_and_its_schemas():
         "PlayerProfileOptionsResponse",
         "SocialTagGroupResource",
         "SocialTagResource",
-        "SearchRadiusBoundsResource",
         "SocialTagSelectionBoundsResource",
         "SocialTag",
         "SocialTagGroup",
     ):
         assert name in schemas, f"{name} missing from the committed contract"
 
+    assert "SearchRadiusBoundsResource" not in schemas
     assert set(schemas["SocialTag"]["enum"]) == {
         tag for _, tags in EXPECTED_GROUPS for tag in tags
     }

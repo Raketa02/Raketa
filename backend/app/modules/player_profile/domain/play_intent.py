@@ -47,9 +47,8 @@ class PlayIntent(str, Enum):
 class PlayIntentSurface(str, Enum):
     """Which screen a declaration was made on.
 
-    ``ConsentSurface``'s precedent in this same context, and it obeys the same
-    rule about what it is *for*: it is context recorded beside a fact, never a
-    thing any decision branches on.
+    It is context recorded beside a fact, never a thing any decision branches
+    on.
 
     **It is client-asserted and a client could lie about it** (ADR-0094). That
     is accepted because the client is the only party that knows which screen it

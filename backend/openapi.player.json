@@ -899,7 +899,7 @@
         "tags": [
           "player-profile"
         ],
-        "summary": "The Social tag vocabulary and how many to pick, and the Search radius bounds",
+        "summary": "The Social tag vocabulary and how many to pick",
         "description": "Read-only, unauthenticated, no request body. Tag **ids** and their grouping cross the wire; the label a player reads is the client's own copy.\n\nA tag id is permanent \u2014 it is persisted on profiles, so retiring a tag means dropping it from this response while continuing to honour it on the profiles that hold it. Ids are never reused and never renamed.\n\nBoth the group order and the tag order within a group are part of the contract: the picker renders what it is given rather than sorting.\n\n`social_tag_selection` carries how many tags a profile must hold \u2014 both ends included. The profile commit re-validates against the same numbers, so a picker that reads them here cannot disagree with it.",
         "operationId": "get_player_profile_options_api_v1_player_profile_options_get",
         "responses": {
@@ -922,7 +922,7 @@
           "player-profile"
         ],
         "summary": "Commit every answer from onboarding's second part",
-        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary, the tag floor and ceiling and the radius bounds are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**`weekly_hours` are required**, at least one hour of the 7 \u00d7 16 week (07:00 to 23:00). Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**The proposals opt-in has no default.** Send the player's actual answer; `null` is refused rather than treated as a no. The answer is recorded with the moment, the copy version shown and the surface, because consent is evidenced rather than asserted.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.\n\n**`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.",
+        "description": "Idempotent per `Idempotency-Key`. The same key twice creates one profile and returns the same body \u2014 the second call answers 200 and records nothing.\n\n**Every rule the picker enforced is re-validated here.** The tag vocabulary and the tag floor and ceiling are all served by `GET /player-profile/options` so a client can build controls that cannot produce an illegal value \u2014 and a disabled button is not a validation. Photo ids are checked to exist *and* to belong to the caller.\n\n**`weekly_hours` are required**, at least one hour of the 7 \u00d7 16 week (07:00 to 23:00). Silence about when a player usually plays is never scored as a zero, so it is asked for rather than guessed at. The minimum is exactly one and is not served \u2014 it is fixed, and a client holds it as a constant.\n\n**No search radius and no proposals opt-in.** Both were asked here and went with the ranking that read them (#581); a body that still carries either commits, and the two are ignored.\n\n**`gender` is required and `gender_preference` is not.** The first is asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer \u2014 there is no unanswered state to send, so a missing or unknown value is a 422 rather than a coded refusal. The second defaults to `ANY`, is durable, and gates **both directions**: narrowing it also hides this player from the side it excludes. Neither value ever comes back out of this API.\n\n**`intro` is optional and fenced at the write.** One line about yourself, at most a hundred characters, any language; a player who skips sends nothing and has no intro rather than an empty one. A line carrying a phone number, an email, a URL or an `@handle` is refused with `intro_not_admitted` before anything is stored. It crosses on the player card and on the record, and is not echoed here.",
         "operationId": "commit_player_profile_api_v1_players_me_profile_post",
         "security": [
           {
@@ -938,10 +938,10 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "description": "What the client calls this commit. Sending the same key again returns the profile the first call created, with a 200 \u2014 one profile, one consent answer, whatever a flaky connection does to the response.",
+              "description": "What the client calls this commit. Sending the same key again returns the profile the first call created, with a 200 \u2014 one profile, whatever a flaky connection does to the response.",
               "title": "Idempotency-Key"
             },
-            "description": "What the client calls this commit. Sending the same key again returns the profile the first call created, with a 200 \u2014 one profile, one consent answer, whatever a flaky connection does to the response."
+            "description": "What the client calls this commit. Sending the same key again returns the profile the first call created, with a 200 \u2014 one profile, whatever a flaky connection does to the response."
           }
         ],
         "requestBody": {
@@ -976,7 +976,7 @@
             }
           },
           "400": {
-            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`search_radius_out_of_bounds` \u2014 outside the served range, or off its step.\n\n`weekly_hours_empty` \u2014 nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.\n\n`proposals_opt_in_not_answered` \u2014 the answer was `null`. Ask the question; do not send `false` on the player's behalf.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
+            "description": "`unknown_social_tag` \u2014 an id this platform does not serve; re-read `GET /player-profile/options`.\n\n`social_tag_selection_out_of_bounds` \u2014 too few or too many tags for the served floor and ceiling.\n\n`duplicate_social_tag` \u2014 the same tag id arrived twice.\n\n`weekly_hours_empty` \u2014 nothing ticked on the week. At least one of its 112 hours; the minimum is exactly one and is not served.\n\n`too_many_photos` / `duplicate_photo` \u2014 the photo list is not one a profile may hold.\n\n`intro_not_admitted` \u2014 the line is not one the platform admits, with one coarse `details.reason`: `too_long` (over a hundred characters after trimming), `multiline` (a line break), or `contains_contact` (a phone number, an email, a URL or bare domain, or an `@handle`). Refused before anything is stored; the client says what to change and the server never says what it matched.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1032,7 +1032,7 @@
           "player-profile"
         ],
         "summary": "Every fact this player declared \u2014 what the Play screens and You read",
-        "description": "One read for everything a player declared, across the two aggregates that own it: the week, the radius and the per-sport Play intent the Play screens edit, and \u2014 since the *You* tab \u2014 the tags, the photos with their verdicts, the intro, the standing proposals answer, and the owner's own gender and preference. The one fact a Play screen still needs from elsewhere \u2014 **which sports am I rated in** \u2014 is `GET /api/v1/ratings` and is not re-served here.\n\n**`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial for a sport still undeclared.\n\n**An empty `weekly_hours` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.\n\n**Absent means omitted, never `null`.** `intro` is omitted where no line was written; a photo's `review` is omitted where nobody looked \u2014 which is not `allowed`; `gender` is omitted on a profile committed before the question existed \u2014 which is not `PREFER_NOT_TO_SAY`.\n\n## Who is told what\n\n**`gender` and `gender_preference` are withheld from everybody but their owner.** No response that describes one player to another carries either \u2014 not a card, not a record, not a seat \u2014 and that walk is asserted over the whole emitted contract. This route is the one shape that carries them, to the person who set them, so the screen that asks *who should we match you with* can open on the answer already given (`docs/adr/0179` \u00a74).\n\n**The location area is not served, and neither is a flag for it.** A profile cannot be committed without an area, so `has_location` could never be false; the tab branches on the phone's permission state, which is the device's.",
+        "description": "One read for everything a player declared, across the two aggregates that own it: the week and the per-sport Play intent the Play screens edit, and \u2014 since the *You* tab \u2014 the tags, the photos with their verdicts, the intro, and the owner's own gender and preference. The one fact a Play screen still needs from elsewhere \u2014 **which sports am I rated in** \u2014 is `GET /api/v1/ratings` and is not re-served here.\n\n**`play_intents` holds only what was declared.** An undeclared sport is absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there is no unanswered value to send. *Rated but undeclared* is a set difference against `GET /ratings`, and it is what a client uses to open the declaration interstitial for a sport still undeclared.\n\n**An empty `weekly_hours` is a real answer.** A player may clear their week; it means *we do not know when they play* and never *never*. **An empty `photos` list is one too**: a profile may hold none.\n\n**Absent means omitted, never `null`.** `intro` is omitted where no line was written; a photo's `review` is omitted where nobody looked \u2014 which is not `allowed`; `gender` is omitted on a profile committed before the question existed \u2014 which is not `PREFER_NOT_TO_SAY`.\n\n## Who is told what\n\n**`gender` and `gender_preference` are withheld from everybody but their owner.** No response that describes one player to another carries either \u2014 not a card, not a record, not a seat \u2014 and that walk is asserted over the whole emitted contract. This route is the one shape that carries them, to the person who set them, so the screen that asks *who should we match you with* can open on the answer already given (`docs/adr/0179` \u00a74).\n\n**The location area is not served, and neither is a flag for it.** A profile cannot be committed without an area, so `has_location` could never be false; the tab branches on the phone's permission state, which is the device's.",
         "operationId": "read_player_profile_api_v1_players_me_profile_get",
         "security": [
           {
@@ -1130,90 +1130,13 @@
         ]
       }
     },
-    "/api/v1/players/me/search-radius": {
-      "put": {
-        "tags": [
-          "player-profile"
-        ],
-        "summary": "Replace this player's Search radius",
-        "description": "Whole kilometres, unkeyed, and idempotent for the reason the week is.\n\n**This is where a `KEEP_THIS_RADIUS` prompt is answered**, and where taking a relaxation rung becomes durable. A rung is *\"an ask and never a correction\"* \u2014 running a wider search writes nothing \u2014 and this is the request the offer to keep it turns into. Accepting is also what stops the prompt: a profile that holds the wider radius takes no rung on the next search, so the condition that raised the question is gone rather than suppressed.",
-        "operationId": "change_search_radius_api_v1_players_me_search_radius_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChangeSearchRadiusRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SearchRadiusResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "`search_radius_out_of_bounds` \u2014 outside the range served by `GET /player-profile/options`, or off its step. Re-checked here even though a slider built from those numbers cannot produce one: a control is not a validation.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`concurrent_modification` \u2014 two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/api/v1/players/me/location": {
       "put": {
         "tags": [
           "player-profile"
         ],
         "summary": "Move this player's Location area to where the phone is",
-        "description": "**The cold start's write, and no screen's.** The client re-reads the phone's position on every cold start and on return from the background after more than 24 hours \u2014 never merely on foreground \u2014 with the accuracy onboarding used, and puts it here silently. A revoked permission sends nothing: the stored area stays.\n\n**What is sent is never what is kept.** The fix is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A fix that rounds to the cell already stored records nothing and still answers `204` \u2014 which is what makes a write on every launch free, and why there is no `Idempotency-Key`.\n\n**Nothing else moves.** A trip is a trip: whatever reads the area reads the new cell \u2014 and nothing is reset and no radius changes. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.",
+        "description": "**The cold start's write, and no screen's.** The client re-reads the phone's position on every cold start and on return from the background after more than 24 hours \u2014 never merely on foreground \u2014 with the accuracy onboarding used, and puts it here silently. A revoked permission sends nothing: the stored area stays.\n\n**What is sent is never what is kept.** The fix is rounded to the cell about a kilometre across before anything is recorded, exactly as the profile commit rounds it, so the precise fix never reaches the platform's records. A fix that rounds to the cell already stored records nothing and still answers `204` \u2014 which is what makes a write on every launch free, and why there is no `Idempotency-Key`.\n\n**Nothing else moves.** A trip is a trip: whatever reads the area reads the new cell \u2014 and nothing is reset. `204` and no body: no route on this surface serves the area yet, and a silent write on every launch is not the one to start.",
         "operationId": "change_location_api_v1_players_me_location_put",
         "requestBody": {
           "content": {
@@ -1572,73 +1495,6 @@
         "responses": {
           "204": {
             "description": "Successful Response"
-          },
-          "404": {
-            "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`concurrent_modification` \u2014 two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/players/me/proposals-opt-in": {
-      "put": {
-        "tags": [
-          "player-profile"
-        ],
-        "summary": "Answer the proposals question again, from the profile screen",
-        "description": "**The one write on this surface that always records.** Every other `PUT` here is a preference and a no-op when nothing changed; this one is a consent, and *the player was asked again, against these words, on this surface, and answered the same way* is a fact a consent log has to evidence (`docs/adr/0089`). So the same yes twice appends two answers, and there is deliberately nothing to deduplicate.\n\n**The surface is this route's \u2014 `PROFILE` \u2014 and never the body's.** The commit records `ONBOARDING` because the commit is the end of onboarding; a client that could assert where a consent was gathered could assert one it never gathered. `copy_version` is the client's, because the words are.\n\n`accepted` is required and **not** nullable, unlike the commit's: there, *unanswered* is a state a client can be in and is refused with a code that says *ask the question*; here the screen is the question and pressing is the answer. The response is the standing answer as the profile read serves it, with the moment it was recorded.",
-        "operationId": "answer_proposals_opt_in_api_v1_players_me_proposals_opt_in_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AnswerProposalsOptInRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProposalsOptInResponse"
-                }
-              }
-            }
           },
           "404": {
             "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
@@ -7005,29 +6861,6 @@
         ],
         "title": "AnswerOptionResponse"
       },
-      "AnswerProposalsOptInRequest": {
-        "properties": {
-          "accepted": {
-            "type": "boolean",
-            "title": "Accepted",
-            "description": "The player's answer, pressed again."
-          },
-          "copy_version": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Copy Version",
-            "description": "Identifier of the exact copy the player was shown. Not the copy itself \u2014 the words are the client's and are never stored here."
-          }
-        },
-        "type": "object",
-        "required": [
-          "accepted",
-          "copy_version"
-        ],
-        "title": "AnswerProposalsOptInRequest",
-        "description": "The proposals question, answered again from the profile screen.\n\n``accepted`` is a required ``bool`` and **not** nullable, which is the one\nplace this differs from the commit's `ProposalsOptInRequest`: there,\n*unanswered* is a state a client can legitimately be in and is refused with\na code that says *ask the question*; here the screen **is** the question\nand pressing is the answer, so ``null`` is a 422 rather than a fact.\n\n**The surface is not a field.** It is the route's \u2014 ``PROFILE`` \u2014 and a\nbody naming one is ignored, because a client that could assert where a\nconsent was gathered could assert one it never gathered."
-      },
       "AnswerTheCardRequest": {
         "properties": {
           "ratings": {
@@ -7702,21 +7535,6 @@
         "title": "ChangePhotosRequest",
         "description": "The photographs, replaced whole and **in order** (``docs/adr/0179`` \u00a78).\n\nAn empty list is a legal value and clears: a profile may hold none, and the\nposter returns. There is no *clear my photos* flag for the week's reason \u2014\nthe list is the answer."
       },
-      "ChangeSearchRadiusRequest": {
-        "properties": {
-          "search_radius_km": {
-            "type": "integer",
-            "title": "Search Radius Km",
-            "description": "Whole kilometres, re-checked against the range and step served by `GET /player-profile/options`. Refused with `search_radius_out_of_bounds` \u2014 a disabled slider is not a validation."
-          }
-        },
-        "type": "object",
-        "required": [
-          "search_radius_km"
-        ],
-        "title": "ChangeSearchRadiusRequest",
-        "description": "The Search radius, replaced whole."
-      },
       "ChangeSocialTagsRequest": {
         "properties": {
           "social_tags": {
@@ -7940,14 +7758,6 @@
           "location": {
             "$ref": "#/components/schemas/LocationAreaResource"
           },
-          "search_radius_km": {
-            "type": "integer",
-            "title": "Search Radius Km",
-            "description": "Whole kilometres, re-checked against the range and step served by `GET /player-profile/options`."
-          },
-          "proposals_opt_in": {
-            "$ref": "#/components/schemas/ProposalsOptInRequest"
-          },
           "gender": {
             "$ref": "#/components/schemas/Gender",
             "description": "The player's own answer, asked once. Required \u2014 `PREFER_NOT_TO_SAY` is a first-class answer and is what a player who does not want to say sends; there is no way to send nothing. It matches only unconstrained preferences, which costs its holder reach, and the client is what says so at the moment of asking."
@@ -7975,12 +7785,10 @@
           "social_tag_ids",
           "weekly_hours",
           "location",
-          "search_radius_km",
-          "proposals_opt_in",
           "gender"
         ],
         "title": "CommitPlayerProfileRequest",
-        "description": "Every answer from onboarding's second part, in one body.\n\n**Photos and the intro are the fields with a default**, because holding no\nphotograph is a legitimate answer to *add some photos* and writing nothing\nis a legitimate answer to *say it in your own words* (``docs/adr/0170``).\nEverything else is something this request must actually carry \u2014 a\nlocation, a radius, a tag selection, an answer to the proposals question,\nand **a week with something ticked in it** (``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``weekly_hours_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
+        "description": "Every answer from onboarding's second part, in one body.\n\n**Photos and the intro are the fields with a default**, because holding no\nphotograph is a legitimate answer to *add some photos* and writing nothing\nis a legitimate answer to *say it in your own words* (``docs/adr/0170``).\nEverything else is something this request must actually carry \u2014 a\nlocation, a tag selection, a gender answer, and **a week with something\nticked in it** (``docs/adr/0102``).\n\nThe week's *floor* is not spelled here, and that is the same decision the tag\nselection's is: an empty list passes this schema and is refused by the domain\nwith ``weekly_hours_empty``, so the client gets a code it can branch on\nand a recovery it can offer, rather than a 422 that can only say some field\nsomewhere was wrong."
       },
       "ConfidenceReasonResponse": {
         "properties": {
@@ -8000,15 +7808,6 @@
         ],
         "title": "ConfidenceReasonResponse",
         "description": "Why confidence landed where it did: a stable key and the sentence shown."
-      },
-      "ConsentSurface": {
-        "type": "string",
-        "enum": [
-          "ONBOARDING",
-          "PROFILE"
-        ],
-        "title": "ConsentSurface",
-        "description": "Where a player was standing when they answered.\n\nTwo values, and both are reachable. ``ONBOARDING`` is the only one the commit\ncan record \u2014 the commit *is* the end of onboarding's second part. ``PROFILE``\nis the You tab's ``PUT /players/me/proposals-opt-in`` (``docs/adr/0179`` \u00a78),\nwhere the same question is answered again and every press records: the\nsurface is the **route's** and never the body's, because a client that could\nassert where a consent was gathered could assert one it never gathered."
       },
       "ConversationListResponse": {
         "properties": {
@@ -10913,11 +10712,6 @@
             "type": "boolean",
             "title": "Is Active"
           },
-          "is_tester": {
-            "type": "boolean",
-            "title": "Is Tester",
-            "description": "Whether this account carries the **tester mark**: a real player who may be given a feature before anyone else. Set and cleared by an admin command, never by the player, and `false` for every account until then. **Not a role** \u2014 `authority` does not move with it. The player app passes it to flag evaluation as `isTester`, so no published datafile ever has to name a tester."
-          },
           "created_at": {
             "anyOf": [
               {
@@ -10952,7 +10746,6 @@
           "authority",
           "is_admin",
           "is_active",
-          "is_tester",
           "adult_attested",
           "profiles"
         ],
@@ -11832,7 +11625,7 @@
           "PROFILE_SCREEN"
         ],
         "title": "PlayIntentSurface",
-        "description": "Which screen a declaration was made on.\n\n``ConsentSurface``'s precedent in this same context, and it obeys the same\nrule about what it is *for*: it is context recorded beside a fact, never a\nthing any decision branches on.\n\n**It is client-asserted and a client could lie about it** (ADR-0094). That\nis accepted because the client is the only party that knows which screen it\nwas, and nothing load-bearing reads it \u2014 which is exactly the condition\nunder which a self-reported field is safe to keep.\n\n**Three of its five screens are gone** \u2014 the search screen's toggle, the\ndeck and the drift prompt went with the searches (#579) \u2014 and their codes\nstay, because a code already in a stream has to keep meaning what it meant\nwhen it was written. Nothing emits them any more.\n\n**It widened rather than renaming, and the reason was cost** (#280). The\ndeck earned the fifth member: ``POST /deck`` has no mode to read, so it\nreads the declaration, is refused with ``play_intent_not_declared`` exactly\nas a search is, and draws the same interstitial. Reporting that as\n``SEARCH_SWITCH`` was a small untruth in the one field whose whole job is to\nsay which screen it was. The alternative argued was to rename\n``SEARCH_SWITCH`` to ``PLAY_SWITCH`` \u2014 one value true of both Play surfaces\nrather than two that each name one \u2014 and it lost on cost, not on taste: the\ncode is stored verbatim in ``PlayIntentDeclared`` and read back through\n``PlayIntentSurface(event.surface)``, so a rename is an event migration\nbought on a field nothing branches on, while a widening is one member and\nleaves every code already in a stream meaning what it meant when it was\nwritten."
+        "description": "Which screen a declaration was made on.\n\nIt is context recorded beside a fact, never a thing any decision branches\non.\n\n**It is client-asserted and a client could lie about it** (ADR-0094). That\nis accepted because the client is the only party that knows which screen it\nwas, and nothing load-bearing reads it \u2014 which is exactly the condition\nunder which a self-reported field is safe to keep.\n\n**Three of its five screens are gone** \u2014 the search screen's toggle, the\ndeck and the drift prompt went with the searches (#579) \u2014 and their codes\nstay, because a code already in a stream has to keep meaning what it meant\nwhen it was written. Nothing emits them any more.\n\n**It widened rather than renaming, and the reason was cost** (#280). The\ndeck earned the fifth member: ``POST /deck`` has no mode to read, so it\nreads the declaration, is refused with ``play_intent_not_declared`` exactly\nas a search is, and draws the same interstitial. Reporting that as\n``SEARCH_SWITCH`` was a small untruth in the one field whose whole job is to\nsay which screen it was. The alternative argued was to rename\n``SEARCH_SWITCH`` to ``PLAY_SWITCH`` \u2014 one value true of both Play surfaces\nrather than two that each name one \u2014 and it lost on cost, not on taste: the\ncode is stored verbatim in ``PlayIntentDeclared`` and read back through\n``PlayIntentSurface(event.surface)``, so a rename is an event migration\nbought on a field nothing branches on, while a widening is one member and\nleaves every code already in a stream meaning what it meant when it was\nwritten."
       },
       "PlayerProfileOptionsResponse": {
         "properties": {
@@ -11843,9 +11636,6 @@
             "type": "array",
             "title": "Social Tag Groups"
           },
-          "search_radius": {
-            "$ref": "#/components/schemas/SearchRadiusBoundsResource"
-          },
           "social_tag_selection": {
             "$ref": "#/components/schemas/SocialTagSelectionBoundsResource"
           }
@@ -11853,11 +11643,10 @@
         "type": "object",
         "required": [
           "social_tag_groups",
-          "search_radius",
           "social_tag_selection"
         ],
         "title": "PlayerProfileOptionsResponse",
-        "description": "Everything a client needs to *render* the profile steps, in one round trip.\n\nA handful of facts rather than one endpoint each, because they are the same\nkind of thing \u2014 closed, read-only, and needed by the same part of onboarding\nat the same moment.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built, so a new field goes on the end and the\nones already here keep their names and their types."
+        "description": "Everything a client needs to *render* the profile steps, in one round trip.\n\nA handful of facts rather than one endpoint each, because they are the same\nkind of thing \u2014 closed, read-only, and needed by the same part of onboarding\nat the same moment.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built, so a new field goes on the end and the\nones already here keep their names and their types. ``search_radius`` is the\none removal, with the radius itself (#581), made while no build had shipped\nanywhere but ``local``."
       },
       "PlayerProfileReadResponse": {
         "properties": {
@@ -11868,11 +11657,6 @@
             "type": "array",
             "title": "Weekly Hours",
             "description": "The hours of the week this player has ticked, in the platform's own reading order \u2014 day, then hour. **An empty list is a real answer** \u2014 a player may clear their week \u2014 and it means *we do not know when they play*, never *never*."
-          },
-          "search_radius_km": {
-            "type": "integer",
-            "title": "Search Radius Km",
-            "description": "Whole kilometres. What the search screen's slider opens at."
           },
           "play_intents": {
             "additionalProperties": {
@@ -11906,10 +11690,6 @@
             "title": "Intro",
             "description": "The line this player wrote about themselves, as recorded, or **omitted** where none was written. Never an empty string (`docs/adr/0170`)."
           },
-          "proposals_opt_in": {
-            "$ref": "#/components/schemas/ProposalsOptInResponse",
-            "description": "The standing answer to the proposals question: what was answered, when, against which words and from which surface. Always present \u2014 a profile cannot be committed without one."
-          },
           "gender": {
             "$ref": "#/components/schemas/Gender",
             "description": "The owner's own answer to the gender question. **Served here and on no other response shape** (`docs/adr/0179` \u00a74) \u2014 what one player is told about another never carries it.\n\n**Omitted** on a profile committed before the question existed, and never read as `PREFER_NOT_TO_SAY`, which is an answer a player gives: a client pre-selects nothing rather than something."
@@ -11922,15 +11702,13 @@
         "type": "object",
         "required": [
           "weekly_hours",
-          "search_radius_km",
           "play_intents",
           "social_tags",
           "photos",
-          "proposals_opt_in",
           "gender_preference"
         ],
         "title": "PlayerProfileReadResponse",
-        "description": "Every fact a player declared, in one round trip \u2014 what the Play screens\nread and, since ``docs/adr/0179``, what the You tab draws its rows from.\n\n**The gender and the preference are served here, and on no other shape.**\nADR-0096 \u00a76's *no response shape carries a gender value out* is about\nresponses that describe one player to another, and its walk still refuses\nboth words on every one of those. A player reading their own answer on a\nroute scoped to ``me`` is not what that rule protects, and a screen that\nasks *who should we match you with* with nothing pre-selected is a screen a\nplayer cannot trust (``docs/adr/0179`` \u00a74). ``gender`` is **omitted** on a\nprofile committed before the question existed \u2014 never ``PREFER_NOT_TO_SAY``,\nwhich is an answer a player gives.\n\n**The one thing still withheld is the location area**, and nothing stands\nin for it: a profile cannot be committed without an area, so a\n``has_location`` could never be false, and a branch nobody can take is a\nbranch nobody tests.\n\nAbsence has one spelling here and it is **omission** (``OMITTED``): an intro\nnever written, a photograph nobody looked at, a gender never asked. The one\nabsence that is served rather than omitted is **an empty ``photos`` list**,\nbecause a profile may legally hold none and that is a real answer.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would say nothing. ``GET /users/me`` is\nwhere an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), made\nwhile no build had shipped anywhere but ``local``."
+        "description": "Every fact a player declared, in one round trip \u2014 what the Play screens\nread and, since ``docs/adr/0179``, what the You tab draws its rows from.\n\n**The gender and the preference are served here, and on no other shape.**\nADR-0096 \u00a76's *no response shape carries a gender value out* is about\nresponses that describe one player to another, and its walk still refuses\nboth words on every one of those. A player reading their own answer on a\nroute scoped to ``me`` is not what that rule protects, and a screen that\nasks *who should we match you with* with nothing pre-selected is a screen a\nplayer cannot trust (``docs/adr/0179`` \u00a74). ``gender`` is **omitted** on a\nprofile committed before the question existed \u2014 never ``PREFER_NOT_TO_SAY``,\nwhich is an answer a player gives.\n\n**The one thing still withheld is the location area**, and nothing stands\nin for it: a profile cannot be committed without an area, so a\n``has_location`` could never be false, and a branch nobody can take is a\nbranch nobody tests.\n\nAbsence has one spelling here and it is **omission** (``OMITTED``): an intro\nnever written, a photograph nobody looked at, a gender never asked. The one\nabsence that is served rather than omitted is **an empty ``photos`` list**,\nbecause a profile may legally hold none and that is a real answer.\n\n**No ``player_id``.** The resource is ``/players/me``, so the caller is the\nbearer token and echoing it back would say nothing. ``GET /users/me`` is\nwhere an id comes from.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), and\n``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each\nmade while no build had shipped anywhere but ``local``."
       },
       "PlayerProfileResponse": {
         "properties": {
@@ -11964,13 +11742,6 @@
           "location": {
             "$ref": "#/components/schemas/LocationAreaResource"
           },
-          "search_radius_km": {
-            "type": "integer",
-            "title": "Search Radius Km"
-          },
-          "proposals_opt_in": {
-            "$ref": "#/components/schemas/ProposalsOptInResponse"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -11989,13 +11760,11 @@
           "photo_ids",
           "weekly_hours",
           "location",
-          "search_radius_km",
-          "proposals_opt_in",
           "created_at",
           "updated_at"
         ],
         "title": "PlayerProfileResponse",
-        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out of this body**, and that is a rule rather\nthan an oversight (``docs/adr/0096`` \u00a76): a preference crosses the wire\n*in*, on a write; no response that describes one player to another carries\na gender out and no card renders one. This body is only ever the caller's\nown profile, so nothing here would leak a third party's answer \u2014 the field\nis left off anyway, because *which* shapes may carry it is a line rather\nthan a judgement made per endpoint, and the line is **exactly one shape**:\nthe owner's own read, ``PlayerProfileReadResponse`` (``docs/adr/0179`` \u00a74).\nThe profile editor that reads it back is the You tab, and it reads that\nroute; the commit's answer stays what it was.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), made\nwhile no build had shipped anywhere but ``local``."
+        "description": "A player's profile as it now stands.\n\nThe same body whether the commit created the profile or replayed an earlier\none, so a client that only wants its profile needs no branch on the status.\n\n**No gender value comes back out of this body**, and that is a rule rather\nthan an oversight (``docs/adr/0096`` \u00a76): a preference crosses the wire\n*in*, on a write; no response that describes one player to another carries\na gender out and no card renders one. This body is only ever the caller's\nown profile, so nothing here would leak a third party's answer \u2014 the field\nis left off anyway, because *which* shapes may carry it is a line rather\nthan a judgement made per endpoint, and the line is **exactly one shape**:\nthe owner's own read, ``PlayerProfileReadResponse`` (``docs/adr/0179`` \u00a74).\nThe profile editor that reads it back is the You tab, and it reads that\nroute; the commit's answer stays what it was.\n\n**Fields are only ever added.** A shipped mobile app parses this document for\nmonths after it stops being built. ``weekly_hours`` is the one replacement,\nof the part-of-day ``availability`` it succeeded (``docs/adr/0189`` \u00a75), and\n``search_radius_km`` and ``proposals_opt_in`` the two removals (#581), each\nmade while no build had shipped anywhere but ``local``."
       },
       "PlayerRecordResponse": {
         "properties": {
@@ -12676,68 +12445,6 @@
         "title": "ProposalStatus",
         "description": "Where a proposal stands for its details (the mechanics \u00a714.2)."
       },
-      "ProposalsOptInRequest": {
-        "properties": {
-          "accepted": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Accepted",
-            "description": "The player's answer. `null` means the question was not answered, which is refused \u2014 it is never read as `false`."
-          },
-          "copy_version": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Copy Version",
-            "description": "Identifier of the exact copy the player was shown. Not the copy itself \u2014 the words are the client's and are never stored here."
-          }
-        },
-        "type": "object",
-        "required": [
-          "accepted",
-          "copy_version"
-        ],
-        "title": "ProposalsOptInRequest",
-        "description": "The answer to the proposals question, and the words it was given against.\n\n``accepted`` is **nullable and required**, which is the shape of a question\nthat has no default. Null means *not answered* and is refused by the commit\nwith ``proposals_opt_in_not_answered``; it is not a quiet ``false``, because\na recorded refusal and an unanswered question are different facts and only\none of them is consent (``../../../../CONTEXT.md`` \u2014 *Skipping is not\nconsent*).\n\n``copy_version`` identifies the exact wording the player was shown. It is\nrequired because consent gathered against one sentence is not consent to a\ndifferent one, and a consent record that cannot name its words cannot\nevidence anything."
-      },
-      "ProposalsOptInResponse": {
-        "properties": {
-          "accepted": {
-            "type": "boolean",
-            "title": "Accepted"
-          },
-          "copy_version": {
-            "type": "string",
-            "title": "Copy Version",
-            "description": "The copy this answer was given against"
-          },
-          "surface": {
-            "$ref": "#/components/schemas/ConsentSurface",
-            "description": "Where it was answered"
-          },
-          "answered_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Answered At",
-            "description": "When it was answered"
-          }
-        },
-        "type": "object",
-        "required": [
-          "accepted",
-          "copy_version",
-          "surface",
-          "answered_at"
-        ],
-        "title": "ProposalsOptInResponse",
-        "description": "The standing answer, and the evidence recorded with it.\n\nThis is the *current* answer. The **history** \u2014 every answer this player ever\ngave, against which words and on which surface \u2014 is the stream, and nothing\nserves it yet because nothing has asked for it."
-      },
       "PushDeviceRequest": {
         "properties": {
           "token": {
@@ -13319,53 +13026,6 @@
         "title": "SearchMode",
         "description": "What kind of game this is. **Two values, never three.**\n\n``PlayIntent`` is a player's declaration and has three values; this is the\n*game's* kind \u2014 a Games card is competitive or for fun \u2014 and has two. The\narities differ on purpose, so the likeliest bug in reading one as the other\nis a type error rather than a paragraph in a document.\n\nIt picks the level window's tolerance (``matchmaking/domain/level_window.py``)\nand nothing else here."
       },
-      "SearchRadiusBoundsResource": {
-        "properties": {
-          "minimum_km": {
-            "type": "integer",
-            "title": "Minimum Km",
-            "description": "Smallest radius a player may hold"
-          },
-          "maximum_km": {
-            "type": "integer",
-            "title": "Maximum Km",
-            "description": "Largest radius a player may hold"
-          },
-          "step_km": {
-            "type": "integer",
-            "title": "Step Km",
-            "description": "Granularity \u2014 whole kilometres"
-          },
-          "default_km": {
-            "type": "integer",
-            "title": "Default Km",
-            "description": "What the control opens at"
-          }
-        },
-        "type": "object",
-        "required": [
-          "minimum_km",
-          "maximum_km",
-          "step_km",
-          "default_km"
-        ],
-        "title": "SearchRadiusBoundsResource",
-        "description": "The range a Search radius may take, in whole kilometres.\n\nThe unit is in every field name on purpose: a bare ``minimum`` is one\nrefactor away from being read as metres."
-      },
-      "SearchRadiusResponse": {
-        "properties": {
-          "search_radius_km": {
-            "type": "integer",
-            "title": "Search Radius Km"
-          }
-        },
-        "type": "object",
-        "required": [
-          "search_radius_km"
-        ],
-        "title": "SearchRadiusResponse",
-        "description": "The radius as the profile now holds it."
-      },
       "SeatChargeResponse": {
         "properties": {
           "seat_charge_id": {
@@ -13879,7 +13539,7 @@
           "maximum_tags"
         ],
         "title": "SocialTagSelectionBoundsResource",
-        "description": "How many Social tags a selection must hold to be one.\n\nThe unit is in both field names for the reason it is on the radius bounds:\na bare ``minimum`` beside a list of eighteen tags reads as a count of\nsomething, and which something is exactly what a client would guess wrong."
+        "description": "How many Social tags a selection must hold to be one.\n\nThe unit is in both field names: a bare ``minimum`` beside a list of\nnineteen tags reads as a count of something, and which something is exactly\nwhat a client would guess wrong."
       },
       "SocialTagsResponse": {
         "properties": {
@@ -14361,11 +14021,6 @@
             "type": "boolean",
             "title": "Is Active"
           },
-          "is_tester": {
-            "type": "boolean",
-            "title": "Is Tester",
-            "description": "Whether this account carries the **tester mark**: a real player who may be given a feature before anyone else. Set and cleared by an admin command, never by the player, and `false` for every account until then. **Not a role** \u2014 `authority` does not move with it. The player app passes it to flag evaluation as `isTester`, so no published datafile ever has to name a tester."
-          },
           "created_at": {
             "anyOf": [
               {
@@ -14391,8 +14046,7 @@
           "email",
           "authority",
           "is_admin",
-          "is_active",
-          "is_tester"
+          "is_active"
         ],
         "title": "UserResponse",
         "description": "The account, plus the one fact about it onboarding's entry gate needs.\n\n``has_player_profile`` is not a property of a ``User`` and the domain layer\nhas no idea it exists \u2014 it is answered by the Player profile context and\njoined here, on the response, because the gate reads it on every cold launch\nand a second round trip for one boolean would be a second thing to fail\n(``docs/adr/0090``).\n\n``name`` and ``nickname`` are **null until the naming** \u2014 and each on its\nown since ``docs/adr/0185`` \u00a74, because an account an Invitation opened\ncarries the club-typed name and no nickname \u2014 and this is the one read\nwhere either may be null (``docs/adr/0171`` \u00a72): a player on any\nsurface that names another player has necessarily been named, because the\ngate holds an unnamed account at the naming step. On ``/me`` they are read\nfrom the player's own stream, as ``has_player_profile`` is, so they are\nright the instant after the commit the gate reads them after.\n\n**It is not an \"onboarded\" flag.** The rating context's invariant against one\nstands: whether a player has been through onboarding *for a sport* is asked\nby asking whether a rating exists for that sport, and this field cannot\nanswer it. This asks a genuinely per-player question, because a profile is\none per player and has no sport dimension at all."

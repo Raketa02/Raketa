@@ -14,10 +14,8 @@ at the commit, *no line*: here that is a withdrawal rather than a skip, and the
 aggregate's no-op rule makes withdrawing a line that was never written cost
 nothing.
 
-**Search records already kept quote the line as it stood at the deal**
-(ADR-0104, as ADR-0170 accepted): nothing here rewrites a record, and the
-candidate projection follows ``IntroChanged`` so the next deal reads the new
-line — or none — off the row.
+Whatever reads the line — a card, the record — loads the profile, so it reads
+the new line, or none, on its next read.
 """
 
 from __future__ import annotations

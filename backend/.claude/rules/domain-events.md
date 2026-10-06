@@ -14,6 +14,15 @@ name, is what history is recorded under.
   default to the class name.
 - **Renaming a Python class must not change the wire format of already-stored history.**
   If the shape genuinely changes, add a new version rather than reinterpreting old rows.
+- **An event a removal retires is either kept decode-only or unregistered with a store
+  reset, and the module that registered it says which.** `games.dismissed` (#578) stays
+  registered and its fold changes nothing, because live game streams hold it. #581
+  unregistered `player_profile.search_radius_changed`,
+  `player_profile.proposals_opt_in_answered`, `users.user_marked_as_tester` and
+  `users.user_unmarked_as_tester`, and moved `player_profile.created` to version 3,
+  because PRD #569 resets the local store with the removal and only `local` has ever run:
+  a class kept only so an old row decodes would be a reader for a fact nothing reads. **Once
+  a remote environment runs, only decode-only is open** — its store is not disposable.
 - Emit events from the use case and persist them through `DomainEventStore.append`,
   enqueued on the transactional outbox **in the same transaction** as the state change.
   Side effects happen after commit, in handlers — never inline in the use case.

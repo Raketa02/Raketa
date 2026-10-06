@@ -13,9 +13,8 @@ declarations collide on version 1 and the store rejects the loser rather than
 quietly opening a second stream (``domain/ids.py``).
 
 **A declaration that changes nothing records nothing**, including one made from a
-different screen. Intent is a preference, not a consent — there is no wording to
-evidence it against, which is precisely what makes ``ProposalsOptInAnswered`` the
-profile's exception and this not one. The aggregate holds that rule; this use
+different screen. Intent is a preference: re-declaring the same value says
+nothing the previous answer did not. The aggregate holds that rule; this use
 case saves either way and the repository is a no-op with nothing pending.
 
 **It does not require a profile, and that is not an oversight.** Intent is asked

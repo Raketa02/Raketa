@@ -39,7 +39,6 @@ from app.modules.player_profile.domain.events import (
     IntroWritten,
     PlayerProfileCreated,
     PlayIntentDeclared,
-    ProposalsOptInAnswered,
 )
 from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
     PLAYER_PROFILE_AGGREGATE,
@@ -118,8 +117,6 @@ async def commit_profile(client, token: str, **overrides) -> None:
             {"day": 6, "hour": 10},
         ],
         "location": {"latitude": CENTRE[0], "longitude": CENTRE[1]},
-        "search_radius_km": 10,
-        "proposals_opt_in": {"accepted": True, "copy_version": "proposals-2026-08"},
         "gender": "WOMAN",
     }
     body.update(overrides)
@@ -207,7 +204,6 @@ async def a_player_on_the_log(
     tags: tuple[str, ...] = COMPETITIVE_TAGS,
     photo_ids: tuple[UUID, ...] = (),
     availability: tuple[str, ...] = SHARED_SLOTS,
-    radius_km: int = 25,
     gender: str = "WOMAN",
     gender_preference: str = "ANY",
     intent: str | None = "COMPETITIVE",
@@ -231,7 +227,6 @@ async def a_player_on_the_log(
             weekly_hours=availability,
             latitude=latitude,
             longitude=longitude,
-            search_radius_km=radius_km,
             idempotency_key=f"key-{player_id}",
             occurred_at=at,
             gender=gender,
@@ -244,16 +239,11 @@ async def a_player_on_the_log(
         aggregate_type=PLAYER_PROFILE_AGGREGATE,
         aggregate_id=player_id,
     )
-    await append(
-        session_factory,
-        ProposalsOptInAnswered(player_id, True, "v1", "ONBOARDING", at),
-    )
     if intro is not None:
         # Only where a line was written — and on the profile's own stream, at
         # the version after the creating event, because the record reads the
         # line off the *fold* while the card reads it off the index
-        # (`docs/adr/0170` §3). The opt-in above is filed under a random id:
-        # nothing here folds it, and the index reads it by sequence either way.
+        # (`docs/adr/0170` §3).
         await append(
             session_factory,
             IntroWritten(player_id, intro, at),

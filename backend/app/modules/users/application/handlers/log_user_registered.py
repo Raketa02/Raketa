@@ -9,11 +9,9 @@ from app.modules.users.domain.events import (
     PasswordChanged,
     PasswordCleared,
     UserDisabled,
-    UserMarkedAsTester,
     UserNamed,
     UserPromotedToAdmin,
     UserRegistered,
-    UserUnmarkedAsTester,
 )
 
 logger = logging.getLogger(__name__)
@@ -101,40 +99,6 @@ class LogUserPromotedToAdmin:
     ) -> None:
         logger.info(
             "user.promoted_to_admin",
-            extra={
-                "user_id": str(event.user_id),
-                "occurred_at": event.occurred_at.isoformat(),
-                "event_id": str(context.event_id),
-                "attempt": context.attempt,
-            },
-        )
-
-
-class LogUserMarkedAsTester:
-    """Audit trail for the tester mark (``docs/adr/0180`` §9). Nothing else
-    reacts to it: the player app reads ``is_tester`` off its own account at the
-    next launch or foreground, and no datafile is told."""
-
-    async def __call__(
-        self, event: UserMarkedAsTester, context: DeliveryContext
-    ) -> None:
-        logger.info(
-            "user.marked_as_tester",
-            extra={
-                "user_id": str(event.user_id),
-                "occurred_at": event.occurred_at.isoformat(),
-                "event_id": str(context.event_id),
-                "attempt": context.attempt,
-            },
-        )
-
-
-class LogUserUnmarkedAsTester:
-    async def __call__(
-        self, event: UserUnmarkedAsTester, context: DeliveryContext
-    ) -> None:
-        logger.info(
-            "user.unmarked_as_tester",
             extra={
                 "user_id": str(event.user_id),
                 "occurred_at": event.occurred_at.isoformat(),

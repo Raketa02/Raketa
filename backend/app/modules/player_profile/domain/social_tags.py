@@ -156,18 +156,16 @@ SOCIAL_TAG_VOCABULARY: Mapping[SocialTagGroup, tuple[SocialTag, ...]] = (
 class SocialTagSelectionBounds:
     """How many tags a selection must hold to be one.
 
-    The unit is in both field names for the reason it is on the radius bounds: a
-    bare ``minimum`` beside a vocabulary of nineteen reads as a count of
-    something, and which something is exactly what a client would guess wrong.
+    The unit is in both field names: a bare ``minimum`` beside a vocabulary of
+    nineteen reads as a count of something, and which something is exactly what
+    a client would guess wrong.
     """
 
     minimum_tags: int
     maximum_tags: int
 
     #: The range may collapse — ``minimum_tags == maximum_tags`` is "exactly N
-    #: tags", a rule a product could hold. That is the one deliberate departure
-    #: from ``SearchRadiusBounds``, which refuses a collapsed range because a
-    #: slider with one position is a control with nothing to do.
+    #: tags", a rule a product could hold.
 
     def __post_init__(self) -> None:
         invariant(

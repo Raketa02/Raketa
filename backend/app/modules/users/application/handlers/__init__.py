@@ -4,11 +4,9 @@ from app.modules.users.application.handlers.log_user_registered import (
     LogPasswordChanged,
     LogPasswordCleared,
     LogUserDisabled,
-    LogUserMarkedAsTester,
     LogUserNamed,
     LogUserPromotedToAdmin,
     LogUserRegistered,
-    LogUserUnmarkedAsTester,
 )
 
 __all__ = [
@@ -17,9 +15,7 @@ __all__ = [
     "LogPasswordChanged",
     "LogPasswordCleared",
     "LogUserDisabled",
-    "LogUserMarkedAsTester",
     "LogUserNamed",
     "LogUserPromotedToAdmin",
     "LogUserRegistered",
-    "LogUserUnmarkedAsTester",
 ]

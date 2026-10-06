@@ -1,4 +1,4 @@
-"""The profile surface the Play screens read: a week, a radius and a declaration.
+"""The profile surface a player's screens read: a week, a declaration and the rest.
 
 **One read across two aggregates**, which is the cheaper half of a precedent
 already accepted: ADR-0090 put ``has_player_profile`` on ``GET /users/me`` across
@@ -7,8 +7,8 @@ launch and two round trips is two things that can fail on a bad connection."*
 Two aggregates inside one context is strictly less than that.
 
 **A screen-shaped read was refused.** A ``GET /play-screen`` would make the second
-surface that wants a radius add a second endpoint, and the radius already has
-three readers on the Play screens alone.
+surface that wants the week add a second endpoint, where one read serves every
+screen that edits a fact.
 
 **The fourth fact a screen needs is not here.** *Which sports am I rated in* is
 ``GET /api/v1/ratings``, already served, and re-serving it would be this context

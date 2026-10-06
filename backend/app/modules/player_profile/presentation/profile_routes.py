@@ -6,7 +6,7 @@ client-held draft and nothing is written until the part ends
 either records every one of them or none.
 
 **The route is ``/players/me/profile``, not ``/users/me/profile``.** The resource
-is a *player's* profile: it holds tags, photos, a week, a location and a consent,
+is a *player's* profile: it holds tags, photos, a week and a location,
 which are facts about somebody acting in the player app, not about an account.
 The identity behind both is the same ``UserId`` (``../../../../CONTEXT.md`` —
 *Player*), and the noun is the one the domain uses for what is being described.
@@ -39,7 +39,6 @@ from app.core.exception_handlers import ErrorResponse
 from app.modules.player_profile.application.commands import (
     CommitPlayerProfileCommand,
 )
-from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.presentation.dependencies import (
     CommitPlayerProfileDep,
 )
@@ -68,8 +67,7 @@ IdempotencyKeyDep = Annotated[
         description=(
             "What the client calls this commit. Sending the same key again "
             "returns the profile the first call created, with a 200 — one "
-            "profile, one consent answer, whatever a flaky connection does to "
-            "the response."
+            "profile, whatever a flaky connection does to the response."
         ),
     ),
 ]
@@ -99,13 +97,9 @@ IdempotencyKeyDep = Annotated[
                 "`social_tag_selection_out_of_bounds` — too few or too many "
                 "tags for the served floor and ceiling.\n\n"
                 "`duplicate_social_tag` — the same tag id arrived twice.\n\n"
-                "`search_radius_out_of_bounds` — outside the served range, or "
-                "off its step.\n\n"
                 "`weekly_hours_empty` — nothing ticked on the week. At least "
                 "one of its 112 hours; the minimum is exactly one and is not "
                 "served.\n\n"
-                "`proposals_opt_in_not_answered` — the answer was `null`. Ask "
-                "the question; do not send `false` on the player's behalf.\n\n"
                 "`too_many_photos` / `duplicate_photo` — the photo list is not "
                 "one a profile may hold.\n\n"
                 "`intro_not_admitted` — the line is not one the platform "
@@ -142,8 +136,8 @@ IdempotencyKeyDep = Annotated[
         "profile and returns the same body — the second call answers 200 and "
         "records nothing.\n\n"
         "**Every rule the picker enforced is re-validated here.** The tag "
-        "vocabulary, the tag floor and ceiling and the radius bounds are all "
-        "served by `GET /player-profile/options` so a client can build controls "
+        "vocabulary and the tag floor and ceiling are all served by "
+        "`GET /player-profile/options` so a client can build controls "
         "that cannot produce an illegal value — and a disabled button is not a "
         "validation. Photo ids are checked to exist *and* to belong to the "
         "caller.\n\n"
@@ -152,10 +146,9 @@ IdempotencyKeyDep = Annotated[
         "scored as a zero, so it is asked for rather than guessed at. The "
         "minimum is exactly one and is not served — it is fixed, and a client "
         "holds it as a constant.\n\n"
-        "**The proposals opt-in has no default.** Send the player's actual "
-        "answer; `null` is refused rather than treated as a no. The answer is "
-        "recorded with the moment, the copy version shown and the surface, "
-        "because consent is evidenced rather than asserted.\n\n"
+        "**No search radius and no proposals opt-in.** Both were asked here "
+        "and went with the ranking that read them (#581); a body that still "
+        "carries either commits, and the two are ignored.\n\n"
         "**`gender` is required and `gender_preference` is not.** The first is "
         "asked once, here, with `PREFER_NOT_TO_SAY` a first-class answer — "
         "there is no unanswered state to send, so a missing or unknown value "
@@ -187,16 +180,8 @@ async def commit_player_profile(
             weekly_hours=payload.weekly_hours_cells(),
             latitude=payload.location.latitude,
             longitude=payload.location.longitude,
-            search_radius_km=payload.search_radius_km,
             gender=payload.gender,
             gender_preference=payload.gender_preference,
-            proposals_opt_in=payload.proposals_opt_in.accepted,
-            consent_copy_version=payload.proposals_opt_in.copy_version,
-            # The surface is this route's own fact, not the client's to declare.
-            # This endpoint *is* the end of onboarding's second part, so a body
-            # that could name a different surface would be a body that could lie
-            # about where a consent was gathered.
-            consent_surface=ConsentSurface.ONBOARDING,
             intro=payload.intro,
         )
     )

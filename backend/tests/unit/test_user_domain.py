@@ -1,7 +1,5 @@
 from datetime import datetime, timezone
 
-from uuid import UUID
-
 import pytest
 
 from app.modules.users.domain.errors import InactiveUserCannotBePromoted
@@ -10,15 +8,12 @@ from app.modules.users.domain.events import (
     AdultAttested,
     PasswordCleared,
     UserDisabled,
-    UserMarkedAsTester,
     UserNamed,
     UserPromotedToAdmin,
     UserRegistered,
-    UserUnmarkedAsTester,
 )
 from app.modules.users.domain.user import User
 from app.modules.users.domain.value_objects import (
-    AccountReference,
     AdultAttestation,
     Authority,
     Email,
@@ -87,23 +82,6 @@ def test_name_admits_what_a_nickname_refuses():
     assert Name("O'Neil-Ferrer").value == "O'Neil-Ferrer"
     assert Name("Zoë Núñez").value == "Zoë Núñez"
     assert Name("Diego").value == "Diego"
-
-
-def test_an_account_reference_reads_an_id_or_an_email_as_typed():
-    """How an operator names an account for the tester mark (``docs/adr/0180``
-    §9): an id, or an address normalised exactly as :class:`Email` normalises
-    one — surrounding whitespace, from a paste, included."""
-
-    account_id = UUID("5b7e1f0c-2d5a-4c1e-9d0e-6a7b8c9d0e1f")
-
-    assert AccountReference(f" {account_id} ").names == account_id
-    assert AccountReference("  Alice@Example.COM ").names == Email("alice@example.com")
-
-
-def test_an_account_reference_refuses_what_names_no_account():
-    for typed in ("", "   ", "alice", "not-a-uuid-1234"):
-        with pytest.raises(ValueError):
-            AccountReference(typed)
 
 
 def test_raw_password_requires_letter_and_digit():
@@ -397,99 +375,6 @@ def _registered(user_id, now, *later) -> User:
             *later,
         ]
     )
-
-
-def test_an_account_is_registered_without_the_tester_mark():
-    """Nobody is a Tester until an admin marks them (``docs/adr/0180`` §9)."""
-
-    user = User.register(
-        user_id=new_uuid(),
-        email=Email("alice@example.com"),
-        password_hash=HashedPassword("hash"),
-        attestation=AdultAttestation(True),
-        occurred_at=datetime.now(timezone.utc),
-    )
-
-    assert user.is_tester is False
-
-
-def test_marking_a_tester_records_one_event_and_leaves_the_authority_alone():
-    """A mark on the account, **not an ``Authority``** — being shown something
-    early grants no power over anyone."""
-
-    user_id = new_uuid()
-    now = datetime.now(timezone.utc)
-    user = _registered(user_id, now)
-
-    user.mark_as_tester(occurred_at=now)
-
-    assert user.is_tester is True
-    assert user.authority is Authority.USER and not user.is_admin
-    assert user.pull_events() == [UserMarkedAsTester(user_id=user_id, occurred_at=now)]
-
-
-def test_marking_a_tester_twice_records_nothing():
-    user_id = new_uuid()
-    now = datetime.now(timezone.utc)
-    user = _registered(
-        user_id, now, UserMarkedAsTester(user_id=user_id, occurred_at=now)
-    )
-
-    user.mark_as_tester(occurred_at=now)
-
-    assert user.is_tester is True
-    assert user.pull_events() == []
-
-
-def test_unmarking_a_tester_records_one_event():
-    user_id = new_uuid()
-    now = datetime.now(timezone.utc)
-    user = _registered(
-        user_id, now, UserMarkedAsTester(user_id=user_id, occurred_at=now)
-    )
-
-    user.unmark_as_tester(occurred_at=now)
-
-    assert user.is_tester is False
-    assert user.pull_events() == [
-        UserUnmarkedAsTester(user_id=user_id, occurred_at=now)
-    ]
-
-
-def test_unmarking_a_player_who_is_not_a_tester_records_nothing():
-    """Never marked, or marked and since unmarked: both are already the answer."""
-
-    user_id = new_uuid()
-    now = datetime.now(timezone.utc)
-    never = _registered(user_id, now)
-    since = _registered(
-        user_id,
-        now,
-        UserMarkedAsTester(user_id=user_id, occurred_at=now),
-        UserUnmarkedAsTester(user_id=user_id, occurred_at=now),
-    )
-
-    never.unmark_as_tester(occurred_at=now)
-    since.unmark_as_tester(occurred_at=now)
-
-    assert never.pull_events() == [] and since.pull_events() == []
-    assert never.is_tester is False and since.is_tester is False
-
-
-def test_the_fold_keeps_the_latest_mark():
-    user_id = new_uuid()
-    now = datetime.now(timezone.utc)
-
-    user = _registered(
-        user_id,
-        now,
-        UserMarkedAsTester(user_id=user_id, occurred_at=now),
-        UserUnmarkedAsTester(user_id=user_id, occurred_at=now),
-        UserMarkedAsTester(user_id=user_id, occurred_at=now),
-    )
-
-    assert user.is_tester is True
-    assert user.version == 4
 
 
 # ---------------------------------------------------------------------------

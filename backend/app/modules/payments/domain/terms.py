@@ -1,7 +1,6 @@
 """The payment terms: which words are in force, and how many setups a day.
 
-**The words are the client's; the version is here.** Like every consent copy in
-this repository (``player_profile/domain/consent.py``), the text a player reads
+**The words are the client's; the version is here.** The text a player reads
 is shipped with the screen that shows it, and what the backend records is the
 **identifier** of it, never the prose — freezing copy in history is how a
 wording change becomes a migration. What the backend owns is *which* version is

@@ -13,9 +13,8 @@ photo rather than scrubbing its EXIF: the honest way to not hold something is to
 not hold it.
 
 The precision is two decimal places — a bit over a kilometre of latitude, less of
-longitude away from the equator. That is the granularity the Search radius works
-at (whole kilometres, ``search_radius.py``), so a finer location would be
-precision the only consumer cannot use.
+longitude away from the equator. Every reader measures distance in whole
+kilometres, so a finer location would be precision no consumer can use.
 """
 
 from __future__ import annotations
@@ -25,8 +24,8 @@ from typing import Final
 
 from app.kernel import invariant
 
-#: Decimal places kept. Two is ≈1.1 km of latitude — the resolution the radius
-#: is expressed in, and deliberately not one place better than it.
+#: Decimal places kept. Two is ≈1.1 km of latitude — the resolution distance is
+#: read in, and deliberately not one place better than it.
 LOCATION_PRECISION_DP: Final = 2
 
 MINIMUM_LATITUDE: Final = -90.0

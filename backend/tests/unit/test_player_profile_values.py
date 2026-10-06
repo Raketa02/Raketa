@@ -10,24 +10,13 @@ from __future__ import annotations
 import pytest
 
 from app.kernel import InvariantViolated, iso_weekday
-from app.modules.player_profile.domain.consent import (
-    MAX_COPY_VERSION_LENGTH,
-    ConsentSurface,
-    ProposalsOptIn,
-    answerable_copy_version,
-)
 from app.modules.player_profile.domain.errors import (
     DuplicateSocialTag,
-    SearchRadiusOutOfBounds,
     SocialTagSelectionOutOfBounds,
     UnknownSocialTag,
     WeeklyHoursEmpty,
 )
 from app.modules.player_profile.domain.location import LocationArea
-from app.modules.player_profile.domain.search_radius import (
-    SEARCH_RADIUS_BOUNDS,
-    SearchRadius,
-)
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_SELECTION_BOUNDS,
     SOCIAL_TAG_VOCABULARY,
@@ -42,7 +31,6 @@ from app.modules.player_profile.domain.weekly_hours import (
     WeeklyHour,
     WeeklyHours,
 )
-from tests.unit.fake_event_store import utc
 
 
 def hour(day: int, at: int) -> WeeklyHour:
@@ -108,10 +96,9 @@ def test_a_selection_is_held_in_vocabulary_order_whatever_order_it_arrived_in():
 
 
 def test_a_selection_already_on_a_stream_is_not_re_counted():
-    """**The write path refuses; the fold accepts** — the same rule the radius
-    holds, and for the same reason: the ceiling is a number product may lower,
-    and a fold that could refuse a recorded fact would un-rehydrate every profile
-    above the new one."""
+    """**The write path refuses; the fold accepts**: the ceiling is a number
+    product may lower, and a fold that could refuse a recorded fact would
+    un-rehydrate every profile above the new one."""
 
     every_tag = [tag for group in SOCIAL_TAG_VOCABULARY.values() for tag in group]
     was_legal_once = [
@@ -132,44 +119,6 @@ def test_an_unparseable_tag_id_still_raises_on_replay():
 
     with pytest.raises(UnknownSocialTag):
         SocialTagSelection.recorded(["NO_SUCH_TAG"])
-
-
-# ---------------------------------------------------------------------------
-# Search radius
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "kilometres",
-    [SEARCH_RADIUS_BOUNDS.minimum_km, SEARCH_RADIUS_BOUNDS.maximum_km],
-)
-def test_both_ends_of_the_served_range_are_a_radius(kilometres: int):
-    assert SearchRadius.chosen(kilometres=kilometres).kilometres == kilometres
-
-
-@pytest.mark.parametrize(
-    "kilometres",
-    [SEARCH_RADIUS_BOUNDS.minimum_km - 1, SEARCH_RADIUS_BOUNDS.maximum_km + 1],
-)
-def test_a_radius_outside_the_served_range_is_refused(kilometres: int):
-    with pytest.raises(SearchRadiusOutOfBounds):
-        SearchRadius.chosen(kilometres=kilometres)
-
-
-def test_a_radius_already_on_a_stream_is_not_re_checked():
-    """**The write path refuses; the fold accepts.**
-
-    The bounds are documented as editable — *"a later opinion is an edit here"*.
-    If narrowing them could refuse a value already recorded, then lowering the
-    maximum would retroactively un-rehydrate every profile above it, and the
-    first symptom would be `GET /users/me` failing for players who did nothing
-    wrong. A stream is a record of what happened; replaying it may not
-    second-guess it.
-    """
-
-    was_legal_once = SEARCH_RADIUS_BOUNDS.maximum_km + 25
-
-    assert SearchRadius.recorded(was_legal_once).kilometres == was_legal_once
 
 
 # ---------------------------------------------------------------------------
@@ -217,7 +166,8 @@ def test_the_fold_still_accepts_a_blank_week():
 def test_a_later_edit_of_the_week_may_clear_it():
     """``edited`` is the floor's named exit, and it takes the same primitives.
 
-    ``SearchRadius.chosen`` / ``recorded``'s discipline, applied to the week:
+    ``SocialTagSelection.from_ids`` / ``recorded``'s discipline, applied to the
+    week:
     two named constructors, so every call site says which of the two it is. The
     commit path refuses a blank week; a player clearing theirs afterwards is a
     later edit, and the minimum binds the answer they were asked for rather
@@ -325,46 +275,3 @@ def test_two_fixes_in_the_same_area_become_the_same_area():
     assert LocationArea.around(51.5073, -0.1277) == LocationArea.around(
         51.5081, -0.1284
     )
-
-
-# ---------------------------------------------------------------------------
-# Consent
-# ---------------------------------------------------------------------------
-
-
-def test_a_consent_answer_cannot_be_recorded_without_the_words_it_was_given_against():
-    with pytest.raises(InvariantViolated):
-        answerable_copy_version("   ")
-
-
-def test_a_copy_version_longer_than_the_cap_cannot_be_recorded():
-    with pytest.raises(InvariantViolated):
-        answerable_copy_version("v" * (MAX_COPY_VERSION_LENGTH + 1))
-
-
-def test_a_consent_answer_already_on_a_stream_is_not_re_checked():
-    """The cap is a policy number somebody may lower. The fold has to accept
-    what was legal when it was written, or a shorter cap would un-rehydrate the
-    consent records that evidence the longer ones."""
-
-    already_recorded = ProposalsOptIn(
-        accepted=True,
-        copy_version="v" * (MAX_COPY_VERSION_LENGTH + 1),
-        surface=ConsentSurface.ONBOARDING,
-        answered_at=utc(2026, 8, 25),
-    )
-
-    assert already_recorded.accepted is True
-
-
-def test_an_answer_that_is_not_a_yes_or_a_no_is_a_broken_precondition():
-    """A type-level truth rather than a policy — the question has two states,
-    and it is never edited by a product decision."""
-
-    with pytest.raises(InvariantViolated):
-        ProposalsOptIn(
-            accepted="yes",  # type: ignore[arg-type]
-            copy_version="proposals-2026-08",
-            surface=ConsentSurface.ONBOARDING,
-            answered_at=utc(2026, 8, 25),
-        )

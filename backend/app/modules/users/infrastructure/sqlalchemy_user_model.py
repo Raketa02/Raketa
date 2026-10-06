@@ -39,11 +39,6 @@ class UserORM(Base):
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
-    # The tester mark (``docs/adr/0180`` §9). A column beside ``authority`` and
-    # never a value of it: a Tester is shown features early and holds no power.
-    is_tester: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
     # When the credentials last changed (``docs/adr/0185`` §7). On the row
     # because every player-surface request already reads it: an access token
     # issued before it is refused at no extra read.

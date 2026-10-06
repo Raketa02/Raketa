@@ -643,7 +643,6 @@ from app.modules.sportsmanship.infrastructure.sqlalchemy_sportsmanship_ledger im
 from app.modules.users.application.invitation_accounts import InvitationAccounts
 from app.modules.users.application.password_accounts import UserPasswordAccounts
 from app.modules.users.application.session_holders import UserSessionHolders
-from app.modules.users.application.set_tester_mark import SetTesterMark
 from app.modules.users.domain.ports import UserRepository
 from app.modules.users.infrastructure.sqlalchemy_user_repository import (
     SqlAlchemyUserRepository,
@@ -2886,25 +2885,6 @@ def build_user_password_accounts(
     (``docs/adr/0184`` §5), changed on the User's own stream."""
     return UserPasswordAccounts(
         users=build_user_repository(session), event_store=event_store, events=events
-    )
-
-
-def build_set_tester_mark(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> SetTesterMark:
-    """The tester mark, reached by ``make tester`` and never by a route
-    (``docs/adr/0180`` §9) — wired here so the command gets the wiring a request
-    would, rather than a second opinion about it."""
-
-    resolved = runtime or get_event_runtime()
-    return SetTesterMark(
-        users=build_user_repository(session),
-        event_store=build_domain_event_store(session, runtime=resolved),
-        uow=build_unit_of_work(session),
-        clock=build_clock(),
-        events=build_event_publisher(session, runtime=resolved),
     )
 
 

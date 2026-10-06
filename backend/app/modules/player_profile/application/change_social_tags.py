@@ -13,10 +13,10 @@ and cannot produce an illegal selection; it is re-checked anyway, because a
 control is not a validation (``docs/adr/0089``).
 
 **Whole, never partial**, for the week's reason — the selection is the answer —
-and **no idempotency key**, for the radius's: the same selection twice lands the
-same state, and the aggregate's no-op rule means the second appends nothing.
-The candidate projection follows ``SocialTagsChanged`` as it always has
-(``docs/adr/0110``), so the next deal reads the new tags off the row.
+and **no idempotency key**, for the week's too — the same selection twice lands
+the same state, and the aggregate's no-op rule means the second appends
+nothing. Whatever reads the tags loads the profile, so it reads the new ones on
+its next read.
 """
 
 from __future__ import annotations

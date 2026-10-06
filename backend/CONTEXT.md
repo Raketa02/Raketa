@@ -298,8 +298,8 @@ there; they are not repeated here.
 - **Served vocabulary** — a closed domain constant the platform owns, held in exactly one
   module of the context that owns it and exposed **read-only** over the player API so no
   client hardcodes it. Two exist: the `Sport` registry at `GET /api/v1/sports`, and the
-  Social tag vocabulary — with how many of it a profile must hold, and the Search
-  radius bounds — at `GET /api/v1/player-profile/options`. What crosses the wire is
+  Social tag vocabulary — with how many of it a profile must hold — at
+  `GET /api/v1/player-profile/options`. What crosses the wire is
   **ids, grouping and numbers** — never a label, because the backend emits machine codes
   and never display text, and a preformatted string can only be one rendering in one
   language. The rule is

@@ -12,9 +12,7 @@ stream rather than opening two.
 not transfer between sports* structural rather than remembered.
 
 **A declaration of the value already held records nothing.** Intent is a
-preference and not a consent — there is no wording to evidence it against — so
-this is deliberately the opposite of ``ProposalsOptInAnswered``, which is
-registered in the same context.
+preference, and re-declaring it says nothing the previous answer did not.
 """
 
 from __future__ import annotations

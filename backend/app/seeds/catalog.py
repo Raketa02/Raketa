@@ -51,7 +51,6 @@ from app.modules.player_profile.domain.play_intent import (
     PlayIntent,
     PlayIntentSurface,
 )
-from app.modules.player_profile.domain.search_radius import SearchRadius
 from app.modules.player_profile.domain.social_tags import (
     SocialTag,
     SocialTagSelection,
@@ -424,10 +423,6 @@ CENTRE = seed_centre(os.environ)
 CENTRE_LATITUDE = CENTRE.latitude
 CENTRE_LONGITUDE = CENTRE.longitude
 
-#: What a seeded profile calls its consent copy. One string, so the accounts and
-#: the cohort answer the consent question the same way.
-SEED_CONSENT_COPY_VERSION = "proposals-seed"
-
 
 @dataclass(frozen=True)
 class SeedProfile:
@@ -435,7 +430,7 @@ class SeedProfile:
 
     **A per-player axis on the account, not a fourth member of ``Scenario``.** A
     scenario is per *sport* — a rating, an open run, an abandoned one — and a
-    profile is per *player*: one week, one radius, one location, one answer about
+    profile is per *player*: one week, one location, one answer about
     photographs. Folding it into the per-sport union would make an account with
     two sports carry two profiles, which is a state the domain cannot reach.
 
@@ -459,10 +454,8 @@ class SeedProfile:
     #: ``(iso weekday 1–7, hour 7–22)`` — one pair per hour ticked.
     weekly_hours: tuple[tuple[int, int], ...]
     social_tag_ids: tuple[str, ...]
-    search_radius_km: int
     gender: Gender
     gender_preference: GenderPreference
-    proposals_opt_in: bool
     committed_days_ago: int
     intents: tuple[tuple[Sport, PlayIntent], ...] = ()
     latitude: float = CENTRE_LATITUDE
@@ -800,13 +793,6 @@ PROTAGONIST_TAGS: tuple[str, ...] = (
     SocialTag.WARMS_UP_PROPERLY.value,
 )
 
-#: The radius every ring in ``cohort.py`` is cut against. **Ten, and not the
-#: fifty the slider allows**, because the relaxation ladder multiplies what the
-#: searcher asked for: at fifty both rungs clamp to the ceiling and there is no
-#: ladder to watch. At ten the rungs land on fifteen and twenty, which is what
-#: the rings are cut by.
-PROTAGONIST_RADIUS_KM = 10
-
 #: Settled, and clear of the fourteen-day window on the far side.
 SETTLED_DAYS_AGO = 40
 
@@ -847,10 +833,8 @@ THE_POPULATED_PLAYER = SeedAccount(
     profile=SeedProfile(
         weekly_hours=PROTAGONIST_WEEK,
         social_tag_ids=PROTAGONIST_TAGS,
-        search_radius_km=PROTAGONIST_RADIUS_KM,
         gender=Gender.WOMAN,
         gender_preference=GenderPreference.ANY,
-        proposals_opt_in=True,
         committed_days_ago=SETTLED_DAYS_AGO,
         intents=(
             (Sport.PADEL, PlayIntent.COMPETITIVE),
@@ -879,10 +863,8 @@ THE_NEWCOMER = SeedAccount(
     profile=SeedProfile(
         weekly_hours=PROTAGONIST_WEEK,
         social_tag_ids=PROTAGONIST_TAGS,
-        search_radius_km=PROTAGONIST_RADIUS_KM,
         gender=Gender.WOMAN,
         gender_preference=GenderPreference.ANY,
-        proposals_opt_in=True,
         committed_days_ago=NEWCOMER_DAYS_AGO,
         intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
     ),
@@ -905,10 +887,8 @@ THE_ONE_SPORT_PLAYER = SeedAccount(
     profile=SeedProfile(
         weekly_hours=PROTAGONIST_WEEK,
         social_tag_ids=PROTAGONIST_TAGS,
-        search_radius_km=PROTAGONIST_RADIUS_KM,
         gender=Gender.MAN,
         gender_preference=GenderPreference.ANY,
-        proposals_opt_in=True,
         committed_days_ago=SETTLED_DAYS_AGO,
         intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
     ),
@@ -931,10 +911,8 @@ THE_BLANK_WEEK_PLAYER = SeedAccount(
     profile=SeedProfile(
         weekly_hours=PROTAGONIST_WEEK,
         social_tag_ids=PROTAGONIST_TAGS,
-        search_radius_km=PROTAGONIST_RADIUS_KM,
         gender=Gender.WOMAN,
         gender_preference=GenderPreference.ANY,
-        proposals_opt_in=True,
         committed_days_ago=SETTLED_DAYS_AGO,
         intents=((Sport.PADEL, PlayIntent.COMPETITIVE),),
         clear_the_week=True,
@@ -949,21 +927,6 @@ PROTAGONISTS: tuple[SeedAccount, ...] = (
     THE_NEWCOMER,
     THE_ONE_SPORT_PLAYER,
     THE_BLANK_WEEK_PLAYER,
-)
-
-#: The accounts that carry the **tester mark** (``docs/adr/0180`` §9), so a rule
-#: the flags repo gives only to its ``testers`` segment can be seen on a freshly
-#: seeded database without anybody running ``make tester`` first.
-#:
-#: **The default protagonist is one because she is the account a phone is signed
-#: in as**, and a flag is decided on the device. **Two of the four and not all of
-#: them**, so a gated Play screen can be read from either side of the mark by
-#: signing in as another protagonist — a set that marked everybody a screen is
-#: developed against would leave nothing to compare with. The mark is set through
-#: the same use case the command runs, and a re-run finds it already set.
-TESTERS: tuple[SeedAccount, ...] = (
-    THE_POPULATED_PLAYER,
-    THE_NEWCOMER,
 )
 
 #: Every account this system creates, in the order a run walks them: emptiest
@@ -1140,15 +1103,14 @@ def _refuse_an_impossible_profile(
     """A profile the commit would refuse, refused before a session is opened.
 
     Asked of the **domain's own value objects**, which is the same discipline the
-    addresses above are held to: a tag id this platform does not serve, a radius
-    off the slider or a week with nothing in it would otherwise fail half way
+    addresses above are held to: a tag id this platform does not serve or a week
+    with nothing in it would otherwise fail half way
     through a run, with some accounts written and some not — and a profile is
     written *after* the questionnaire, so the half that is already there is the
     expensive half.
     """
 
     SocialTagSelection.from_ids(profile.social_tag_ids)
-    SearchRadius.chosen(profile.search_radius_km)
     WeeklyHours.of_cells(profile.weekly_hours)
 
     if profile.committed_days_ago < 0:

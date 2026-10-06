@@ -1,10 +1,9 @@
 """The Player profile context's read-only endpoints.
 
-One route today: the Social tag vocabulary, how many of them a player picks,
-and the Search radius bounds — served so that neither the onboarding picker nor
-the profile editor that will edit the same values later holds a second copy of
-any of them (``docs/adr/0089``). It follows the precedent ``GET /api/v1/sports``
-set for the ``Sport`` registry.
+One route today: the Social tag vocabulary and how many of them a player picks —
+served so that neither the onboarding picker nor the profile editor that edits
+the same values later holds a second copy of either (``docs/adr/0089``). It
+follows the precedent ``GET /api/v1/sports`` set for the ``Sport`` registry.
 
 The floor and the ceiling are here for the same reason the vocabulary is: a
 client that hardcodes them is a client whose disabled button can disagree with
@@ -20,7 +19,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Response, status
 
-from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_SELECTION_BOUNDS,
 )
@@ -40,10 +38,7 @@ _CACHE_SECONDS = 3600
     "/options",
     response_model=PlayerProfileOptionsResponse,
     status_code=status.HTTP_200_OK,
-    summary=(
-        "The Social tag vocabulary and how many to pick, "
-        "and the Search radius bounds"
-    ),
+    summary="The Social tag vocabulary and how many to pick",
     description=(
         "Read-only, unauthenticated, no request body. Tag **ids** and their "
         "grouping cross the wire; the label a player reads is the client's own "
@@ -62,7 +57,4 @@ async def get_player_profile_options(
     response: Response,
 ) -> PlayerProfileOptionsResponse:
     response.headers["Cache-Control"] = f"public, max-age={_CACHE_SECONDS}"
-    return PlayerProfileOptionsResponse.from_domain(
-        SEARCH_RADIUS_BOUNDS,
-        SOCIAL_TAG_SELECTION_BOUNDS,
-    )
+    return PlayerProfileOptionsResponse.from_domain(SOCIAL_TAG_SELECTION_BOUNDS)

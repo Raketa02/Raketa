@@ -27,8 +27,6 @@ from app.modules.player_profile.domain.events import (
     PhotosChanged,
     PlayerProfileCreated,
     PlayIntentDeclared,
-    ProposalsOptInAnswered,
-    SearchRadiusChanged,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -47,7 +45,6 @@ EVENTS = [
         weekly_hours=("2:19",),
         latitude=51.51,
         longitude=-0.13,
-        search_radius_km=10,
         idempotency_key="commit-1",
         occurred_at=AT,
         gender="WOMAN",
@@ -59,19 +56,11 @@ EVENTS = [
     PhotosChanged(player_id=PLAYER, photo_ids=(str(PHOTO),), occurred_at=AT),
     WeeklyHoursSet(player_id=PLAYER, weekly_hours=(), occurred_at=AT),
     LocationChanged(player_id=PLAYER, latitude=48.85, longitude=2.35, occurred_at=AT),
-    SearchRadiusChanged(player_id=PLAYER, search_radius_km=25, occurred_at=AT),
     GenderChanged(player_id=PLAYER, gender="MAN", occurred_at=AT),
     GenderPreferenceChanged(player_id=PLAYER, gender_preference="ANY", occurred_at=AT),
     IntroWritten(player_id=PLAYER, intro="Moved from Wrocław in May.", occurred_at=AT),
     IntroChanged(
         player_id=PLAYER, intro="Will travel for a hard game.", occurred_at=AT
-    ),
-    ProposalsOptInAnswered(
-        player_id=PLAYER,
-        accepted=True,
-        copy_version="proposals-2026-08",
-        surface="ONBOARDING",
-        occurred_at=AT,
     ),
     PlayIntentDeclared(
         player_id=PLAYER,
@@ -137,22 +126,87 @@ def test_every_event_this_context_records_has_a_durable_name():
     assert all(name.startswith("player_profile.") for name in names)
 
 
-def test_the_creating_event_is_written_under_version_2_with_its_week_in_hours():
-    """``docs/adr/0189`` §5 made the week hours, and the field ``weekly_hours`` —
-    a change to the wire shape, versioned as one rather than reinterpreted."""
+def test_the_creating_event_is_written_under_version_3_without_a_radius():
+    """``docs/adr/0189`` §5 made the week hours (version 2), and #581 took the
+    search radius out (version 3) — each a change to the wire shape, versioned
+    as one rather than reinterpreted."""
 
     encoded = domain_event_codec().encode(EVENTS[0])
 
     assert encoded.event_type == "player_profile.created"
-    assert encoded.schema_version == 2
+    assert encoded.schema_version == 3
     assert encoded.payload["weekly_hours"] == ["2:19"]
     assert "availability" not in encoded.payload
+    assert "search_radius_km" not in encoded.payload
+
+
+def test_a_creation_with_a_radius_written_under_version_2_is_refused():
+    """Version 2 is unreadable for version 1's reason (``domain/events.py``):
+    nothing ran anywhere but ``local``, whose store is reset with the change,
+    and a row written under an old shape is a decoding error rather than a
+    profile folded wrongly."""
+
+    written_while_the_radius_was_asked = {
+        "player_id": str(PLAYER),
+        "social_tags": ["PLAYS_TO_WIN", "HERE_TO_IMPROVE"],
+        "photo_ids": [str(PHOTO)],
+        "weekly_hours": ["2:19"],
+        "latitude": 51.51,
+        "longitude": -0.13,
+        "search_radius_km": 10,
+        "idempotency_key": "commit-1",
+        "occurred_at": AT.isoformat(),
+    }
+
+    with pytest.raises(EventDecodingError):
+        domain_event_codec().decode(
+            SerializedEventEnvelope(
+                id=new_uuid(),
+                event_type="player_profile.created",
+                schema_version=2,
+                payload=written_while_the_radius_was_asked,
+                occurred_at=AT,
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    "event_type, payload",
+    [
+        (
+            "player_profile.search_radius_changed",
+            {"search_radius_km": 25},
+        ),
+        (
+            "player_profile.proposals_opt_in_answered",
+            {"accepted": True, "copy_version": "v1", "surface": "PROFILE"},
+        ),
+    ],
+)
+def test_the_radius_and_the_opt_in_have_no_reader_any_more(event_type, payload):
+    """Both went with the ranking that read them (#581), and neither name is
+    given a class to answer to."""
+
+    with pytest.raises(EventDecodingError):
+        domain_event_codec().decode(
+            SerializedEventEnvelope(
+                id=new_uuid(),
+                event_type=event_type,
+                schema_version=1,
+                payload={
+                    "player_id": str(PLAYER),
+                    **payload,
+                    "occurred_at": AT.isoformat(),
+                },
+                occurred_at=AT,
+            )
+        )
 
 
 def test_a_week_of_parts_written_under_version_1_is_refused_rather_than_misread():
-    """Version 1 is deliberately unreadable, on the Plan's argument: nothing ran
-    anywhere but ``local``, whose database is disposable, and a row written under
-    the old shape is a decoding error rather than a week folded wrongly."""
+    """Version 1 is deliberately unreadable: nothing ran anywhere but
+    ``local``, whose database is disposable, and a row written under the old
+    shape is a decoding error rather than a week folded wrongly."""
 
     written_before_the_week_became_hours = {
         "player_id": str(PLAYER),
@@ -216,24 +270,6 @@ def test_a_play_intent_declaration_carries_the_pair_and_never_its_stream_id():
         "occurred_at",
     }
     assert payload["sport"] == "PADEL"
-
-
-def test_a_consent_answer_never_carries_the_words_it_was_given_against():
-    """Only the *identifier* of the copy is stored. Freezing copy in history is
-    how a wording change becomes a migration."""
-
-    codec = domain_event_codec()
-    answer = EVENTS[-2]
-
-    payload = codec.encode(answer).payload
-
-    assert set(payload) == {
-        "player_id",
-        "accepted",
-        "copy_version",
-        "surface",
-        "occurred_at",
-    }
 
 
 def test_a_creating_event_carries_no_precise_location():

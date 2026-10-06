@@ -94,7 +94,7 @@ def test_the_walk_actually_finds_the_domain_errors():
         "EmailAlreadyRegistered",
         "AccessTokenExpired",
         "PhotoNotFound",
-        "ProposalsOptInNotAnswered",
+        "WeeklyHoursEmpty",
         "PlayerProfileAlreadyExists",
         "GateDataUnavailable",
         "TheCourtHasAnOpenSeat",
@@ -136,17 +136,17 @@ def test_the_two_conflicting_assessment_errors_are_distinguishable():
 
 
 def test_the_profile_commits_refusals_are_distinguishable():
-    """The six 400s the commit can answer with arrive on the same status from
-    the same endpoint and ask the client for six different things: re-read the
-    options, pick fewer tags, deduplicate the picker, move the slider, ask the
-    consent question that was skipped, or rewrite the line."""
+    """The 400s the commit can answer with arrive on the same status from the
+    same endpoint and ask the client for different things: re-read the options,
+    pick fewer tags, deduplicate the picker, tick an hour of the week, or
+    rewrite the line. The radius and the opt-in had a refusal each until they
+    went (#581)."""
 
     refusals = [
         profile_errors.UnknownSocialTag(),
         profile_errors.SocialTagSelectionOutOfBounds(),
         profile_errors.DuplicateSocialTag(),
-        profile_errors.SearchRadiusOutOfBounds(),
-        profile_errors.ProposalsOptInNotAnswered(),
+        profile_errors.WeeklyHoursEmpty(),
         profile_errors.IntroNotAdmitted(profile_errors.IntroRefusal.TOO_LONG),
     ]
 

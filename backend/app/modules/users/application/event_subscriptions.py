@@ -1,3 +1,12 @@
+"""The Users context's durable event names, and who hears them.
+
+**``users.user_marked_as_tester`` and ``users.user_unmarked_as_tester`` are
+gone** with the Tester mark and the feature flags it fed (#581). They are not
+kept decode-only, as ``games.dismissed`` is: PRD #569 resets the local store
+with the removal and only ``local`` has ever run, so a stored row under either
+name is a decoding error rather than a mark nothing reads.
+"""
+
 from __future__ import annotations
 
 from app.application.events import EventDispatcher, EventCatalog
@@ -7,11 +16,9 @@ from app.modules.users.application.handlers import (
     LogPasswordChanged,
     LogPasswordCleared,
     LogUserDisabled,
-    LogUserMarkedAsTester,
     LogUserNamed,
     LogUserPromotedToAdmin,
     LogUserRegistered,
-    LogUserUnmarkedAsTester,
 )
 from app.modules.users.domain.events import (
     AccountOpenedByInvitation,
@@ -19,11 +26,9 @@ from app.modules.users.domain.events import (
     PasswordChanged,
     PasswordCleared,
     UserDisabled,
-    UserMarkedAsTester,
     UserNamed,
     UserPromotedToAdmin,
     UserRegistered,
-    UserUnmarkedAsTester,
 )
 
 
@@ -34,10 +39,6 @@ def register_user_events(catalog: EventCatalog) -> None:
     catalog.register(PasswordChanged, name="users.password_changed", version=1)
     catalog.register(
         UserPromotedToAdmin, name="users.user_promoted_to_admin", version=1
-    )
-    catalog.register(UserMarkedAsTester, name="users.user_marked_as_tester", version=1)
-    catalog.register(
-        UserUnmarkedAsTester, name="users.user_unmarked_as_tester", version=1
     )
     catalog.register(
         AccountOpenedByInvitation,
@@ -54,8 +55,6 @@ def subscribe_user_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(UserDisabled, LogUserDisabled())
     dispatcher.subscribe(PasswordChanged, LogPasswordChanged())
     dispatcher.subscribe(UserPromotedToAdmin, LogUserPromotedToAdmin())
-    dispatcher.subscribe(UserMarkedAsTester, LogUserMarkedAsTester())
-    dispatcher.subscribe(UserUnmarkedAsTester, LogUserUnmarkedAsTester())
     dispatcher.subscribe(AccountOpenedByInvitation, LogAccountOpenedByInvitation())
     dispatcher.subscribe(AdultAttested, LogAdultAttested())
     dispatcher.subscribe(PasswordCleared, LogPasswordCleared())

@@ -257,9 +257,10 @@ class WeeklyHours:
         a player gave.
 
         **Named rather than a flag on ``of_cells``**, which is
-        ``SearchRadius.chosen`` / ``recorded``'s discipline applied to the week:
-        every call site says which of the two it is, where a flag re-asks the
-        question at each of them and makes the wrong answer the shorter one. It
+        ``SocialTagSelection.from_ids`` / ``recorded``'s discipline applied to
+        the week: every call site says which of the two it is, where a flag
+        re-asks the question at each of them and makes the wrong answer the
+        shorter one. It
         is not ``from_codes`` either — that is the **replay** constructor, and
         building a player's live edit through it is a category error.
 

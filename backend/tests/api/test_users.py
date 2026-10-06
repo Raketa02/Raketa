@@ -28,6 +28,8 @@ async def test_signup_success(client, valid_signup_payload):
     # Credentials only: a fresh account is unnamed (``docs/adr/0171`` §2).
     assert body["name"] is None
     assert body["nickname"] is None
+    # The Tester mark went with the feature flags it fed (#581).
+    assert "is_tester" not in body
 
 
 async def test_signup_carrying_a_nickname_is_malformed(client, valid_signup_payload):
@@ -351,3 +353,5 @@ async def test_me_with_valid_access_token(client, valid_signup_payload):
     )
     assert resp.status_code == 200
     assert resp.json()["email"] == valid_signup_payload["email"]
+    # No Tester mark: nothing reads one since the feature flags went (#581).
+    assert "is_tester" not in resp.json()

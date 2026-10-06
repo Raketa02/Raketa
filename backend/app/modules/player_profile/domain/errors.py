@@ -3,18 +3,18 @@
 Each carries its own wire code, because they arrive on the same status from the
 same endpoint and ask the client for different recoveries: pick a different file,
 pick a smaller file, the file is broken, the photo you asked for is not there —
-and, for the commit, re-read the vocabulary, drop a tag, move the slider, tick an
-hour of the week, ask the consent question you skipped, or rewrite your line.
+and, for the commit, re-read the vocabulary, drop a tag, tick an hour of the
+week, or rewrite your line.
 
 **The commit's refusals are 400s, and every one of them is something a client
 already had the information to prevent.** The tag vocabulary, the floor and the
-ceiling and the radius bounds are all served at `GET /player-profile/options`;
-the weekly-hours floor is not served but is *fixed* — exactly one hour, by
-``docs/adr/0102`` — so a client holds it as a constant and knows it just as
-surely. Either way a picker built from what it has cannot produce any of these.
-They are refused here anyway, because a disabled button is not a validation
-(``docs/adr/0089``): it is absent from a replayed request, from an older build,
-and from anything that is not the app.
+ceiling are all served at `GET /player-profile/options`; the weekly-hours floor
+is not served but is *fixed* — exactly one hour, by ``docs/adr/0102`` — so a
+client holds it as a constant and knows it just as surely. Either way a picker
+built from what it has cannot produce any of these. They are refused here anyway,
+because a disabled button is not a validation (``docs/adr/0089``): it is absent
+from a replayed request, from an older build, and from anything that is not the
+app.
 
 **The photo-format ones are 400s rather than 413 and 415**, and that is a
 decision rather than an oversight. The envelope's contract is that ``code`` is
@@ -26,8 +26,8 @@ application, its own 413 will arrive without a code and that is the moment to
 reconsider.
 
 The same reasoning puts every one of the commit's refusals on 400 and gives each
-its own code, so that nine failures of one request stay nine distinct
-recoveries on the wire — and the ninth, ``intro_not_admitted``, is the one that
+its own code, so that seven failures of one request stay seven distinct
+recoveries on the wire — and one of them, ``intro_not_admitted``, is the one that
 carries a ``reason`` beside its code, because *rewrite the line* is three
 different recoveries and a client has to know which (``docs/adr/0170`` §2).
 """
@@ -140,20 +140,6 @@ class DuplicateSocialTag(BadRequestError):
         super().__init__("A Social tag was selected more than once.")
 
 
-class SearchRadiusOutOfBounds(BadRequestError):
-    """A radius outside the served range, or off its step.
-
-    Both are one code for the reason both ends of the tag bounds are: the served
-    object carries the range *and* the step, so a client with the numbers can
-    tell which it broke, and one without them can do nothing with either answer.
-    """
-
-    code = "search_radius_out_of_bounds"
-
-    def __init__(self) -> None:
-        super().__init__("This is not a Search radius a player may hold.")
-
-
 class WeeklyHoursEmpty(BadRequestError):
     """The commit arrived with nothing ticked on the 7 × 16 week of hours.
 
@@ -229,22 +215,6 @@ class IntroNotAdmitted(BadRequestError):
             "This intro is not one the platform admits.",
             details={"reason": reason.value},
         )
-
-
-class ProposalsOptInNotAnswered(BadRequestError):
-    """The commit arrived without an answer to the proposals question.
-
-    **This is the refusal that enforces "skipping is not consent"**
-    (``../../../../CONTEXT.md``). The opt-in has no default: unanswered is
-    neither yes nor no, so a commit carrying a null cannot be completed by
-    picking one. The client's recovery is to ask the question — not to send
-    ``false``, which is a recorded refusal and a different fact.
-    """
-
-    code = "proposals_opt_in_not_answered"
-
-    def __init__(self) -> None:
-        super().__init__("The proposals opt-in has not been answered.")
 
 
 class TooManyPhotos(BadRequestError):

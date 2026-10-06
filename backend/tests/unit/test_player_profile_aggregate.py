@@ -1,22 +1,19 @@
 """The PlayerProfile aggregate: what creation records, and what a change does.
 
-Two things are being asserted throughout, and they are the two ADR-0089 turns
-on. **The consent answer is its own event, appended by the creating commit as
-well as by every later change** — so a reader of consent history has one event
-type and no special first case. And **a preference transition that changes
-nothing records nothing**, while the consent transition always records.
+Creation is **one event**, and a second only where the player wrote a line.
+**A transition that changes nothing records nothing.** The search radius and the
+proposals opt-in — and the consent answer that always recorded — went with the
+ranking that read them (#581).
 """
 
 from __future__ import annotations
 
 import pytest
 
-from app.kernel import InvariantViolated, iso_weekday
-from app.modules.player_profile.domain import search_radius, social_tags
-from app.modules.player_profile.domain.consent import ConsentSurface
+from app.kernel import iso_weekday
+from app.modules.player_profile.domain import social_tags
 from app.modules.player_profile.domain.errors import (
     DuplicatePhoto,
-    SearchRadiusOutOfBounds,
     SocialTagSelectionOutOfBounds,
     TooManyPhotos,
 )
@@ -28,8 +25,6 @@ from app.modules.player_profile.domain.events import (
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
-    ProposalsOptInAnswered,
-    SearchRadiusChanged,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -43,10 +38,6 @@ from app.modules.player_profile.domain.location import LocationArea
 from app.modules.player_profile.domain.profile import (
     MAX_PROFILE_PHOTOS,
     PlayerProfile,
-)
-from app.modules.player_profile.domain.search_radius import (
-    SearchRadius,
-    SearchRadiusBounds,
 )
 from app.modules.player_profile.domain.social_tags import (
     SocialTagSelection,
@@ -74,11 +65,7 @@ def a_profile(**overrides) -> PlayerProfile:
         photo_ids=(),
         weekly_hours=WeeklyHours.of([WeeklyHour(day=iso_weekday(2), hour=19)]),
         location=LocationArea.around(51.5074, -0.1278),
-        search_radius=SearchRadius.chosen(kilometres=10),
         gender=Gender.WOMAN,
-        proposals_opt_in_accepted=True,
-        consent_copy_version="proposals-2026-08",
-        consent_surface=ConsentSurface.ONBOARDING,
         idempotency_key="commit-1",
         occurred_at=CREATED_AT,
     )
@@ -97,38 +84,20 @@ def replayed(profile: PlayerProfile) -> PlayerProfile:
 # ---------------------------------------------------------------------------
 
 
-def test_creation_records_the_preferences_and_the_consent_as_two_events():
-    profile = a_profile()
+def test_creation_records_the_preferences_as_one_event():
+    """No consent answer beside it any more, and no radius inside it (#581)."""
 
-    recorded = profile.pull_events()
+    recorded = a_profile().pull_events()
 
-    assert [type(event) for event in recorded] == [
-        PlayerProfileCreated,
-        ProposalsOptInAnswered,
-    ]
-
-
-def test_the_creating_commit_appends_the_same_consent_event_a_later_change_does():
-    """The whole of "one sequence with no special first case": a reader after
-    every answer this player ever gave replays one event type."""
-
-    profile = a_profile()
-    created, consent = profile.pull_events()
-
-    assert isinstance(consent, ProposalsOptInAnswered)
-    assert consent.accepted is True
-    assert consent.copy_version == "proposals-2026-08"
-    assert consent.surface == ConsentSurface.ONBOARDING.value
-    # The moment is the event's own, and it is the moment of the commit — the
-    # consent and the preferences it arrived with cannot be timestamped apart.
-    assert consent.occurred_at == created.occurred_at == CREATED_AT
+    assert [type(event) for event in recorded] == [PlayerProfileCreated]
+    assert not hasattr(recorded[0], "search_radius_km")
 
 
 def test_the_creating_event_carries_the_key_the_commit_was_made_under():
     """Which is what lets a retry be recognised without a table beside the
     stream to keep in step with it."""
 
-    created, _ = a_profile(idempotency_key="draft-7").pull_events()
+    (created,) = a_profile(idempotency_key="draft-7").pull_events()
 
     assert created.idempotency_key == "draft-7"
 
@@ -139,8 +108,6 @@ def test_a_created_profile_replays_to_itself():
         profile.social_tags,
         profile.weekly_hours,
         profile.location,
-        profile.search_radius,
-        profile.proposals_opt_in,
         profile.idempotency_key,
         profile.gender,
         profile.gender_preference,
@@ -152,13 +119,11 @@ def test_a_created_profile_replays_to_itself():
         rebuilt.social_tags,
         rebuilt.weekly_hours,
         rebuilt.location,
-        rebuilt.search_radius,
-        rebuilt.proposals_opt_in,
         rebuilt.idempotency_key,
         rebuilt.gender,
         rebuilt.gender_preference,
     ) == expected
-    assert rebuilt.version == 2, "two events, two versions"
+    assert rebuilt.version == 1, "one event, one version"
 
 
 def test_a_blank_week_is_folded_as_absent_rather_than_refused():
@@ -167,7 +132,7 @@ def test_a_blank_week_is_folded_as_absent_rather_than_refused():
     stored as an empty week rather than refused or filled in (ADR-0102)."""
 
     profile = a_profile(weekly_hours=WeeklyHours.blank())
-    created, _ = profile.pull_events()
+    (created,) = profile.pull_events()
 
     assert created.weekly_hours == ()
     assert len(profile.weekly_hours) == 0
@@ -215,7 +180,6 @@ def test_each_preference_has_its_own_change_event():
     profile.change_photos([new_uuid()], occurred_at=LATER)
     profile.set_weekly_hours(WeeklyHours.blank(), occurred_at=LATER)
     profile.change_location(LocationArea.around(48.85, 2.35), occurred_at=LATER)
-    profile.change_search_radius(SearchRadius.chosen(kilometres=25), occurred_at=LATER)
     profile.change_gender(Gender.PREFER_NOT_TO_SAY, occurred_at=LATER)
     profile.change_gender_preference(GenderPreference.WOMEN_ONLY, occurred_at=LATER)
 
@@ -224,7 +188,6 @@ def test_each_preference_has_its_own_change_event():
         PhotosChanged,
         WeeklyHoursSet,
         LocationChanged,
-        SearchRadiusChanged,
         GenderChanged,
         GenderPreferenceChanged,
     ]
@@ -237,53 +200,12 @@ def test_a_preference_set_to_what_it_already_is_records_nothing():
     profile = replayed(a_profile())
 
     profile.change_social_tags(SocialTagSelection.from_ids(TAGS), occurred_at=LATER)
-    profile.change_search_radius(SearchRadius.chosen(kilometres=10), occurred_at=LATER)
     profile.change_location(LocationArea.around(51.5074, -0.1278), occurred_at=LATER)
     profile.change_photos([], occurred_at=LATER)
     profile.change_gender(Gender.WOMAN, occurred_at=LATER)
     profile.change_gender_preference(DEFAULT_GENDER_PREFERENCE, occurred_at=LATER)
 
     assert profile.pull_events() == []
-
-
-def test_re_answering_the_opt_in_with_the_same_answer_is_still_recorded():
-    """The deliberate exception, and the point of the aggregate: *asked again,
-    against these words, and said yes again* is a fact about consent."""
-
-    profile = replayed(a_profile())
-
-    profile.answer_proposals_opt_in(
-        accepted=True,
-        copy_version="proposals-2026-09",
-        surface=ConsentSurface.PROFILE,
-        occurred_at=LATER,
-    )
-
-    recorded = profile.pull_events()
-    assert [type(event) for event in recorded] == [ProposalsOptInAnswered]
-    assert recorded[0].copy_version == "proposals-2026-09"
-    assert recorded[0].surface == ConsentSurface.PROFILE.value
-
-
-def test_the_standing_answer_is_the_latest_one_and_the_history_is_the_stream():
-    profile = a_profile(proposals_opt_in_accepted=True)
-    profile.answer_proposals_opt_in(
-        accepted=False,
-        copy_version="proposals-2026-09",
-        surface=ConsentSurface.PROFILE,
-        occurred_at=LATER,
-    )
-    events = profile.pull_events()
-
-    rebuilt = PlayerProfile.from_history(events)
-
-    assert rebuilt.proposals_opt_in is not None
-    assert rebuilt.proposals_opt_in.accepted is False
-    answers = [event for event in events if isinstance(event, ProposalsOptInAnswered)]
-    assert [answer.accepted for answer in answers] == [True, False], (
-        "both answers survive — the change is appended, never applied over the "
-        "top of the one it replaces"
-    )
 
 
 def test_reordering_the_same_photos_is_a_change():
@@ -298,8 +220,8 @@ def test_reordering_the_same_photos_is_a_change():
 def test_a_profile_still_replays_after_the_served_bounds_are_narrowed(monkeypatch):
     """**The write path refuses; the fold accepts.** The regression this exists
     for: replaying through the *checking* constructors meant that the day product
-    lowered the tag ceiling or raised the minimum radius, every profile outside
-    the new range stopped rehydrating — so `GET /users/me` would 400 for players
+    lowered the tag ceiling, every profile outside the new range stopped
+    rehydrating — so `GET /users/me` would 400 for players
     who had done nothing, and the fourth branch of the entry gate ADR-0090
     depends on would fail for exactly them.
 
@@ -311,33 +233,24 @@ def test_a_profile_still_replays_after_the_served_bounds_are_narrowed(monkeypatc
         social_tags=SocialTagSelection.from_ids(
             ["PLAYS_TO_WIN", "HERE_TO_IMPROVE", "QUIET_AND_FOCUSED"]
         ),
-        search_radius=SearchRadius.chosen(kilometres=40),
     )
     stream = committed.pull_events()
 
-    # Product changes its mind: at most two tags, and never further than 20km.
+    # Product changes its mind: at most two tags.
     monkeypatch.setattr(
         social_tags,
         "SOCIAL_TAG_SELECTION_BOUNDS",
         SocialTagSelectionBounds(minimum_tags=1, maximum_tags=2),
     )
-    monkeypatch.setattr(
-        search_radius,
-        "SEARCH_RADIUS_BOUNDS",
-        SearchRadiusBounds(minimum_km=1, maximum_km=20, step_km=1, default_km=10),
-    )
 
     rebuilt = PlayerProfile.from_history(stream)
 
     assert len(rebuilt.social_tags) == 3, "the three tags they actually picked"
-    assert rebuilt.search_radius.kilometres == 40
     # And the write path has moved with the bounds, which is the other half.
     with pytest.raises(SocialTagSelectionOutOfBounds):
         SocialTagSelection.from_ids(
             ["PLAYS_TO_WIN", "HERE_TO_IMPROVE", "QUIET_AND_FOCUSED"]
         )
-    with pytest.raises(SearchRadiusOutOfBounds):
-        SearchRadius.chosen(kilometres=40)
 
 
 def test_an_event_this_aggregate_does_not_know_is_refused_rather_than_ignored():
@@ -349,14 +262,6 @@ def test_an_event_this_aggregate_does_not_know_is_refused_rather_than_ignored():
 
     with pytest.raises(TypeError):
         PlayerProfile.from_history([SomethingElse()])
-
-
-def test_a_profile_cannot_be_created_without_an_opt_in_answer():
-    """There is no path to the created state with the consent absent — the
-    argument is required, and ``None`` is not a bool."""
-
-    with pytest.raises(InvariantViolated):
-        a_profile(proposals_opt_in_accepted=None)
 
 
 # ---------------------------------------------------------------------------
@@ -371,7 +276,7 @@ def test_the_creating_event_carries_the_gender_answer_and_the_preference():
 
     profile = a_profile(gender=Gender.MAN, gender_preference=GenderPreference.MEN_ONLY)
 
-    created, _consent = profile.pull_events()
+    (created,) = profile.pull_events()
 
     assert created.gender == "MAN"
     assert created.gender_preference == "MEN_ONLY"
@@ -414,7 +319,6 @@ def test_a_profile_committed_before_the_question_existed_holds_no_gender():
         weekly_hours=("2:19",),
         latitude=51.51,
         longitude=-0.13,
-        search_radius_km=10,
         idempotency_key="commit-1",
         occurred_at=CREATED_AT,
     )
@@ -441,7 +345,6 @@ def test_answering_for_the_first_time_on_an_older_profile_is_a_change():
                 weekly_hours=("2:19",),
                 latitude=51.51,
                 longitude=-0.13,
-                search_radius_km=10,
                 idempotency_key="commit-1",
                 occurred_at=CREATED_AT,
             )
@@ -475,10 +378,9 @@ def test_gender_and_the_preference_replay_from_their_own_events():
 # ---------------------------------------------------------------------------
 
 
-def test_a_line_present_at_the_commit_is_its_own_event_after_the_two():
+def test_a_line_present_at_the_commit_is_its_own_event_after_the_creation():
     """``IntroWritten`` is emitted by the commit when the line is present —
-    after the creation and the consent, so *no special first case* for the
-    consent history stays literally true."""
+    after the creating event, which does not grow a field for it."""
 
     profile = a_profile(intro=Intro.written("Moved from Wrocław in May."))
 
@@ -486,10 +388,9 @@ def test_a_line_present_at_the_commit_is_its_own_event_after_the_two():
 
     assert [type(event) for event in recorded] == [
         PlayerProfileCreated,
-        ProposalsOptInAnswered,
         IntroWritten,
     ]
-    written = recorded[2]
+    written = recorded[1]
     assert isinstance(written, IntroWritten)
     assert written.intro == "Moved from Wrocław in May."
     assert written.player_id == PLAYER
@@ -505,10 +406,7 @@ def test_a_skipped_intro_leaves_nothing_behind():
 
     recorded = profile.pull_events()
 
-    assert [type(event) for event in recorded] == [
-        PlayerProfileCreated,
-        ProposalsOptInAnswered,
-    ]
+    assert [type(event) for event in recorded] == [PlayerProfileCreated]
     assert not hasattr(recorded[0], "intro")
     assert profile.intro is None
 
@@ -519,7 +417,7 @@ def test_an_intro_replays_from_its_own_event():
     rebuilt = replayed(profile)
 
     assert rebuilt.intro == Intro.recorded("Will travel for a hard game.")
-    assert rebuilt.version == 3, "three events, three versions"
+    assert rebuilt.version == 2, "two events, two versions"
 
 
 def test_a_stream_with_no_intro_written_folds_to_no_intro():
@@ -567,7 +465,7 @@ def test_withdrawing_the_line_records_that_and_the_profile_folds_to_none():
 
 
 def test_the_same_line_twice_records_nothing_and_so_does_no_line_over_none():
-    """A preference, not a consent: the line already held is not a change, and
+    """A preference: the line already held is not a change, and
     withdrawing a line that was never written is not one either."""
 
     with_a_line = replayed(a_profile(intro=Intro.written("Moved from Wrocław.")))
@@ -610,4 +508,4 @@ def test_the_fold_keeps_the_latest_of_written_and_changed():
     withdrawn = edited + profile.pull_events()
     rebuilt = PlayerProfile.from_history(withdrawn)
     assert rebuilt.intro is None
-    assert rebuilt.version == 5, "five events, five versions"
+    assert rebuilt.version == 4, "four events, four versions"

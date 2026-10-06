@@ -69,15 +69,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   read** ([ADR-0179](../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
   §8, #466): `GET /players/me/profile` carries `photos[].review` — the same three-valued
   reading, one `HEAD` per photograph the profile holds, at most three, gathered — beside
-  the tags, the intro, the standing opt-in answer and **the two values no other shape may
-  carry, the owner's own `gender` and `gender_preference`** (§4). That is ADR-0096 §6's
+  the tags, the intro and **the two values no other shape may carry, the owner's own
+  `gender` and `gender_preference`** (§4). That is ADR-0096 §6's
   fence moved rather than lowered: `tests/unit/test_no_response_carries_a_forbidden_fact.py`
   admits the two words on that one schema by name (`PERMITTED_ON`) and asserts from both
   sides — refused on every other shape, and *present* on that one, so the admission can
   neither widen nor lapse unnoticed. The location area is still not served, and no
   `has_location` stands in for it.
-  **And the six writes the tab needs land on the same surface** (ADR-0179 §6, §8, #467):
-  `PUT /players/me/{social-tags,photos,intro,gender,gender-preference,proposals-opt-in}`,
+  **And the five writes the tab needs land on the same surface** (ADR-0179 §6, §8, #467):
+  `PUT /players/me/{social-tags,photos,intro,gender,gender-preference}`,
   one unkeyed `PUT` per fact, each the aggregate's own transition — so *Later changes, from
   the profile screen* is now a true heading. The intro's is the one that needed a new event,
   `IntroChanged` (`player_profile.intro_changed` / v1), whose `None` is the withdrawal;
@@ -87,5 +87,6 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   checked against the same port the upload used, and an empty list clears; **the two gender
   writes and the intro's answer `204`** so that *served on one route and no other* (§4) and
   *the card, the record and its author* (ADR-0170 §3) stay literally true of the response
-  shapes — `tests/unit/test_intro.py`'s sweep is what caught the fourth; and the opt-in
-  **always records**, its surface being the route's (`PROFILE`) and never the body's.
+  shapes — `tests/unit/test_intro.py`'s sweep is what caught the fourth. **A sixth, the
+  proposals opt-in answered again from `PROFILE`, went with the search radius** (#581):
+  only the "who fits whom" ranking read either, so a profile now commits without both.

@@ -1,9 +1,10 @@
 """The use cases behind the profile surface reads and writes.
 
-One read and, since ``docs/adr/0179`` §8, nine writes: the week, the radius and
-the location the Play screens and the cold start were already writing, and the
-six the You tab writes — the tags, the photos, the intro, the gender, the
-preference and the opt-in answered again from ``PROFILE``.
+One read and, since ``docs/adr/0179`` §8, seven writes: the week and the
+location the Play screens and the cold start were already writing, and the five
+the You tab writes — the tags, the photos, the intro, the gender and the
+preference. The radius and the opt-in answered again from ``PROFILE`` went with
+the ranking that read them (#581).
 
 The **event store** is faked and both repositories are real, for the reason every
 use-case test in this suite works that way: a repository fake would leave the
@@ -20,9 +21,6 @@ from __future__ import annotations
 import pytest
 
 from app.kernel import Sport
-from app.modules.player_profile.application.answer_proposals_opt_in import (
-    AnswerProposalsOptIn,
-)
 from app.modules.player_profile.application.change_gender import ChangeGender
 from app.modules.player_profile.application.change_gender_preference import (
     ChangeGenderPreference,
@@ -30,21 +28,16 @@ from app.modules.player_profile.application.change_gender_preference import (
 from app.modules.player_profile.application.change_intro import ChangeIntro
 from app.modules.player_profile.application.change_location import ChangeLocation
 from app.modules.player_profile.application.change_photos import ChangePhotos
-from app.modules.player_profile.application.change_search_radius import (
-    ChangeSearchRadius,
-)
 from app.modules.player_profile.application.change_social_tags import (
     ChangeSocialTags,
 )
 from app.modules.player_profile.application.commands import (
-    AnswerProposalsOptInCommand,
     SetWeeklyHoursCommand,
     ChangeGenderCommand,
     ChangeGenderPreferenceCommand,
     ChangeIntroCommand,
     ChangeLocationCommand,
     ChangePhotosCommand,
-    ChangeSearchRadiusCommand,
     ChangeSocialTagsCommand,
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
@@ -59,13 +52,11 @@ from app.modules.player_profile.application.read_player_profile import (
     ReadPlayerProfile,
 )
 from app.modules.player_profile.application.set_weekly_hours import SetWeeklyHours
-from app.modules.player_profile.domain.consent import ConsentSurface
 from app.modules.player_profile.domain.errors import (
     IntroNotAdmitted,
     IntroRefusal,
     PhotoNotFound,
     PlayerProfileNotFound,
-    SearchRadiusOutOfBounds,
     SocialTagSelectionOutOfBounds,
     TooManyPhotos,
     UnknownSocialTag,
@@ -78,8 +69,6 @@ from app.modules.player_profile.domain.events import (
     PhotosChanged,
     PlayerProfileCreated,
     PlayIntentDeclared,
-    ProposalsOptInAnswered,
-    SearchRadiusChanged,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -102,7 +91,6 @@ from app.modules.player_profile.domain.play_intent import (
     PlayIntentSurface,
 )
 from app.modules.player_profile.domain.profile import MAX_PROFILE_PHOTOS
-from app.modules.player_profile.domain.search_radius import SEARCH_RADIUS_BOUNDS
 from app.modules.player_profile.infrastructure.event_sourced_play_intent_declaration_repository import (  # noqa: E501
     EventSourcedPlayIntentDeclarationRepository,
 )
@@ -163,12 +151,8 @@ class Harness:
             weekly_hours=[(2, 19), (6, 10)],
             latitude=HOME_FIX[0],
             longitude=HOME_FIX[1],
-            search_radius_km=SEARCH_RADIUS_BOUNDS.default_km,
             gender=Gender.WOMAN,
             gender_preference=DEFAULT_GENDER_PREFERENCE,
-            proposals_opt_in=True,
-            consent_copy_version="proposals-2026-08",
-            consent_surface=ConsentSurface.ONBOARDING,
         )
         arguments.update(overrides)
         await CommitPlayerProfile(
@@ -190,15 +174,6 @@ class Harness:
         return await SetWeeklyHours(
             profiles=self._profiles(), uow=self.uow, clock=self.clock
         ).execute(SetWeeklyHoursCommand(player_id=player_id, weekly_hours=cells))
-
-    async def change_radius(self, kilometres: int, *, player_id=PLAYER):
-        return await ChangeSearchRadius(
-            profiles=self._profiles(), uow=self.uow, clock=self.clock
-        ).execute(
-            ChangeSearchRadiusCommand(
-                player_id=player_id, search_radius_km=kilometres
-            )
-        )
 
     async def change_location(
         self, latitude: float, longitude: float, *, player_id=PLAYER
@@ -242,25 +217,6 @@ class Harness:
         ).execute(
             ChangeGenderPreferenceCommand(
                 player_id=player_id, gender_preference=preference
-            )
-        )
-
-    async def answer_opt_in(
-        self,
-        accepted: bool,
-        *,
-        copy_version: str = "proposals-2026-09",
-        surface: ConsentSurface = ConsentSurface.PROFILE,
-        player_id=PLAYER,
-    ):
-        return await AnswerProposalsOptIn(
-            profiles=self._profiles(), uow=self.uow, clock=self.clock
-        ).execute(
-            AnswerProposalsOptInCommand(
-                player_id=player_id,
-                accepted=accepted,
-                copy_version=copy_version,
-                surface=surface,
             )
         )
 
@@ -349,39 +305,6 @@ async def test_a_week_written_by_a_player_with_no_profile_is_refused(harness):
         await harness.set_weekly_hours([(1, 10)])
 
     assert harness.publisher.published == []
-    assert harness.uow.commits == 0
-
-
-# ---------------------------------------------------------------------------
-# The radius
-# ---------------------------------------------------------------------------
-
-
-async def test_the_radius_is_rechecked_against_the_served_bounds(harness):
-    await harness.commit_profile()
-
-    profile = await harness.change_radius(22)
-
-    (released,) = harness.publisher.published
-    assert isinstance(released, SearchRadiusChanged)
-    assert released.search_radius_km == 22
-    assert profile.search_radius.kilometres == 22
-
-
-async def test_an_illegal_radius_is_refused_before_the_store_is_asked_anything(
-    harness,
-):
-    """The refusal is pure and the replay is not, so the order is the cheap one.
-
-    A player with no profile at all still gets ``search_radius_out_of_bounds``
-    rather than ``player_profile_not_found``, which is the assertion that the
-    check really does come first.
-    """
-
-    with pytest.raises(SearchRadiusOutOfBounds):
-        await harness.change_radius(SEARCH_RADIUS_BOUNDS.maximum_km + 1)
-
-    assert harness.store.appends == 0
     assert harness.uow.commits == 0
 
 
@@ -690,15 +613,7 @@ async def test_a_first_answer_on_a_pre_question_profile_is_a_change(harness):
                 weekly_hours=("2:19",),
                 latitude=51.51,
                 longitude=-0.13,
-                search_radius_km=10,
                 idempotency_key="commit-before-the-question",
-                occurred_at=harness.clock.now(),
-            ),
-            ProposalsOptInAnswered(
-                player_id=PLAYER,
-                accepted=True,
-                copy_version="proposals-2026-08",
-                surface=ConsentSurface.ONBOARDING.value,
                 occurred_at=harness.clock.now(),
             ),
         ],
@@ -745,53 +660,6 @@ async def test_a_gender_or_a_preference_written_without_a_profile_is_refused(
 
 
 # ---------------------------------------------------------------------------
-# The opt-in, answered again from PROFILE (docs/adr/0179 §8)
-# ---------------------------------------------------------------------------
-
-
-async def test_the_same_answer_twice_is_recorded_twice_from_profile(harness):
-    """The one write here that is not a no-op when nothing changed — a consent,
-    not a preference — and each answer carries the surface the route names
-    and the words the screen showed."""
-
-    await harness.commit_profile(proposals_opt_in=True)
-
-    await harness.answer_opt_in(True, copy_version="proposals-opt-in.v3")
-    await harness.answer_opt_in(True, copy_version="proposals-opt-in.v3")
-
-    first, second = harness.publisher.published
-    for released in (first, second):
-        assert isinstance(released, ProposalsOptInAnswered)
-        assert released.accepted is True
-        assert released.copy_version == "proposals-opt-in.v3"
-        assert released.surface == ConsentSurface.PROFILE.value
-    assert harness.store.appends == 2
-    assert harness.uow.commits == 2
-
-
-async def test_the_standing_answer_is_the_latest_and_its_surface_is_profile(harness):
-    await harness.commit_profile(proposals_opt_in=True)
-
-    profile = await harness.answer_opt_in(False, copy_version="proposals-opt-in.v3")
-
-    assert profile.proposals_opt_in is not None
-    assert profile.proposals_opt_in.accepted is False
-    assert profile.proposals_opt_in.surface is ConsentSurface.PROFILE
-    assert profile.proposals_opt_in.copy_version == "proposals-opt-in.v3"
-    assert profile.proposals_opt_in.answered_at == harness.clock.now()
-
-
-async def test_an_opt_in_answered_by_a_player_with_no_profile_is_refused(harness):
-    """Always *again*: the commit is the first answer, and there is no profile
-    to answer on before it."""
-
-    with pytest.raises(PlayerProfileNotFound):
-        await harness.answer_opt_in(True)
-
-    assert harness.uow.commits == 0
-
-
-# ---------------------------------------------------------------------------
 # The declaration
 # ---------------------------------------------------------------------------
 
@@ -822,9 +690,8 @@ async def test_a_change_of_mind_appends_to_the_same_stream(harness):
 
 
 async def test_the_same_answer_from_a_different_screen_records_nothing(harness):
-    """Intent is a preference and not a consent: there is no wording to evidence
-    it against, so *where they were standing* is not a new fact about what kind
-    of game they want."""
+    """Intent is a preference: *where they were standing* is not a new fact
+    about what kind of game they want."""
 
     await harness.declare(PlayIntent.COMPETITIVE)
     harness.publisher.published.clear()
@@ -991,15 +858,7 @@ async def test_a_profile_from_before_the_gender_question_omits_the_answer(harnes
                 weekly_hours=("2:19",),
                 latitude=51.51,
                 longitude=-0.13,
-                search_radius_km=10,
                 idempotency_key="commit-before-the-question",
-                occurred_at=harness.clock.now(),
-            ),
-            ProposalsOptInAnswered(
-                player_id=PLAYER,
-                accepted=True,
-                copy_version="proposals-2026-08",
-                surface=ConsentSurface.ONBOARDING.value,
                 occurred_at=harness.clock.now(),
             ),
         ],
