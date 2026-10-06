@@ -189,8 +189,8 @@ echo
 echo "ci.yml — the groups, their reports and the check"
 
 # Asked of the workflow's steps and never of its comments, which name every one
-# of these to explain them: a grep over the file's text is how
-# test-judged-pairings.sh's filter assertion stayed green on a comment (#496).
+# of these to explain them: a grep over the file's text is how a filter
+# assertion stayed green on a comment for four weeks (#496).
 # One awk rather than `grep -v … | grep -q`: under `set -o pipefail` the first
 # grep can die of SIGPIPE when the second quits on its match, and the pipeline
 # then reads as a miss — a red that depends on the pipe buffer.

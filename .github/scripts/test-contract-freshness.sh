@@ -5,10 +5,10 @@
 #   bash .github/scripts/test-contract-freshness.sh   # or: make test-contract-freshness
 #
 # check-contract-freshness.sh was added to a tree that already satisfied it, so
-# it has never been seen to fail — the same reason test-contract-drift.sh,
-# test-judged-pairings.sh and .claude/hooks/test-hooks.sh exist. This drives it
-# against each shape of failure it claims to catch and asserts it goes red, and
-# against the committed tree and asserts it goes green.
+# it has never been seen to fail — the same reason test-contract-drift.sh and
+# .claude/hooks/test-hooks.sh exist. This drives it against each shape of
+# failure it claims to catch and asserts it goes red, and against the committed
+# tree and asserts it goes green.
 #
 # **Every document is perturbed, separately** — the player's, the dev console's,
 # the club website's and the public site's. A suite that only ever broke the

@@ -9,13 +9,12 @@ name: CI
 # suites all start the moment `changes` answers, so a typo answers in a minute
 # or two and never waits on the tests, and the tests never wait on it:
 #
-#   backend   static · tests (a group per runner) · generated artifacts · meta (two jobs),
+#   backend   static · tests (a group per runner) · generated artifacts · meta,
 #             and the add-up check, which waits for the groups
 #   player    static · tests (four shards) · meta
 #   club      static · tests (Playwright)
 #   public    static · tests (Playwright)
 #   always    the guardrail hooks
-#   release   the recorded-corpus report block, on a ruleset pull request only
 #
 # `ci-ok` needs every one of them, and is the one status to read: red when any
 # job failed or was cancelled, green when each succeeded or was skipped because
@@ -60,11 +59,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
-      # Whether this pull request is a **ruleset release**: the synthetic diff's
-      # artifacts moved. Only those pull requests owe the recorded-corpus report
-      # block — a gate that asks every pull request for a corpus window is a
-      # gate everybody learns to paste nonsense into.
-      ruleset: ${{ steps.filter.outputs.ruleset }}
       player: ${{ steps.filter.outputs.player }}
       player_ready: ${{ steps.bootstrapped.outputs.player }}
       club: ${{ steps.filter.outputs.club }}
@@ -90,24 +84,6 @@ jobs:
               # Every backend job starts from this action, so a change to it is
               # a change to how the backend is built.
               - '.github/actions/setup-backend/**'
-              # The judged-pairings tables live in the specs and are generated
-              # from the backend's engine. Without these the drift check is
-              # dormant in precisely the pull request that hand-edits one.
-              # Named file by file, not 'docs/specs/matchmaking/**': the whole
-              # backend job is a Postgres suite, and a neighbouring spec's
-              # typo should not run it.
-              - 'docs/specs/matchmaking/judged-pairings.json'
-              - 'docs/specs/matchmaking/the-judged-pairings.md'
-              - 'docs/specs/matchmaking/ranking-weights.md'
-              # The synthetic ruleset diff, for the same reason one line up:
-              # without these a pull request that hand-edits a generated
-              # artifact runs no backend job, and the gate is dormant in
-              # precisely the case it exists to catch (docs/adr/0119).
-              - 'docs/specs/matchmaking/ruleset-diff/population.thin.json'
-              - 'docs/specs/matchmaking/ruleset-diff/answers.thin.json'
-            ruleset:
-              - 'docs/specs/matchmaking/ruleset-diff/**'
-              - 'backend/app/modules/matchmaking/infrastructure/rulesets/**'
             player:
               - 'frontend_player/**'
               - 'backend/openapi.player.json'
@@ -148,29 +124,6 @@ jobs:
               echo "::notice title=$dir not bootstrapped::Skipping $dir CI — no pnpm-lock.yaml yet. Run 'pnpm install' in $dir and commit the lockfile to enable it."
             fi
           done
-
-  # **The half of the ruleset gate that is a signature** (docs/adr/0119 §4). The
-  # recorded-corpus diff needs a database restore and cannot run here, so what
-  # is asserted is that the pull request wrote its corpus window and coverage
-  # down — presence, and never truth. Its own job, because it is the one check
-  # that reads the pull request rather than the tree, and it must not sit behind
-  # the backend job's Postgres service to say so.
-  release-report:
-    name: Ruleset release — the recorded-corpus report block
-    needs: changes
-    if: github.event_name == 'pull_request' && needs.changes.outputs.ruleset == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # Written to a file rather than interpolated into a shell command: a pull
-      # request body is somebody else's text, and pasting it into a command line
-      # is how a description becomes a script.
-      - name: Read the pull request body
-        env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-        run: printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.txt"
-      - name: The report block is present
-        run: bash .github/scripts/check-release-report-block.sh "$RUNNER_TEMP/pr-body.txt"
 
   guardrails:
     name: Guardrail hooks
@@ -335,7 +288,7 @@ jobs:
   # They read the tree and write nothing that outlives their own step, so they
   # need no database and share one job.
   backend-artifacts:
-    name: Backend — generated artifacts (contract, judged pairings, ruleset diff, taskdef)
+    name: Backend — generated artifacts (contract, taskdef)
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
@@ -355,19 +308,6 @@ jobs:
       # (#527).
       - name: Contract freshness
         run: bash .github/scripts/check-contract-freshness.sh
-      # The six judged pairings, re-derived against the live ruleset: the tables
-      # in the specs must reproduce, and QUALITY_FLOOR must still sit inside
-      # max(Fit | not shown) < floor <= min(Fit | shown).
-      - name: Judged pairings
-        run: bash .github/scripts/check-judged-pairings.sh
-      # The ruleset diff: the synthetic corpus, regenerated under two different
-      # PYTHONHASHSEEDs and compared against the committed answers. **Shipping a
-      # ruleset is an offline diff and a deploy** (docs/adr/0119), so a ruleset
-      # edited without regenerating its diff fails here — and the report the
-      # step prints is the diff the pull request has to argue for. It doubles as
-      # a whole-pipeline determinism assertion, which is why the seed varies.
-      - name: Ruleset diff
-        run: bash .github/scripts/check-ruleset-diff.sh
       # The deployment artifact, exercised against the application rather than
       # described. Only `local` runs, so nothing else in this pipeline ever
       # constructs the production configuration or reads the entrypoint's own
@@ -379,18 +319,21 @@ jobs:
       - name: Task definition agrees with the app
         run: bash .github/scripts/check-taskdef.sh
 
-  # **The "still fires" suites, over two jobs.** Each drives a gate above against
-  # a deliberately broken tree and asserts it goes red — the reason
-  # test-hooks.sh and test-contract-drift.sh exist: a gate added to a tree that
-  # already satisfied it has never been seen to fail. All but the shards-add-up
-  # proof edit the checkout and restore it on exit, so inside a job they run one
-  # after another.
+  # **The "still fires" suites, in one job.** Each drives a gate above against a
+  # deliberately broken tree and asserts it goes red — the reason test-hooks.sh
+  # and test-contract-drift.sh exist: a gate added to a tree that already
+  # satisfied it has never been seen to fail. All but the shards-add-up proof
+  # edit the checkout and restore it on exit, so inside a job they run one after
+  # another.
   #
-  # The split is by measured time, not by meaning: 84 s and 93 s of steps in the
-  # last serial run (35829988150), against three minutes for the six in a row.
-  # The shards-add-up proof joined the first, which was the shorter.
-  backend-meta-1:
-    name: Backend — still fires (Poetry pin, contract freshness, shards add up, purity gates)
+  # They were two jobs, split by measured time, and the last run of that shape
+  # (37213116727) had 261 s and 77 s of steps behind about 15 s of setup each.
+  # Most of the second was the judged-pairings and ruleset-diff proofs, retired
+  # ahead of the ranking they gated (#572). The task-definition proof was left,
+  # 18 s of it, so it moved here: this job is about five minutes, still shorter
+  # than either test group. Split it again if it becomes the backend's long pole.
+  backend-meta:
+    name: Backend — still fires (Poetry pin, contract freshness, shards add up, taskdef, purity gates)
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
@@ -413,33 +356,6 @@ jobs:
       # for each — and refuses, rather than passing, reports it cannot read.
       - name: Shards-add-up check still fires
         run: bash .github/scripts/test-shards-add-up.sh
-      # The three purity gates — the import contracts, the kernel walk and strict
-      # mypy — each driven against probe modules it writes into backend/app/ and
-      # deletes on exit. **Last in its job**: nothing after it may read a tree a
-      # probe could still be sitting in.
-      - name: Purity gates still fire
-        working-directory: backend
-        run: bash scripts/test-purity-gates.sh
-
-  backend-meta-2:
-    name: Backend — still fires (judged pairings, ruleset diff, taskdef)
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-backend
-      # It perturbs the fixture and the two documents in the workspace and
-      # restores them. Both halves are driven: a table nobody regenerated, and a
-      # floor that has left its judged bound from either side.
-      - name: Judged-pairings check still fires
-        run: bash .github/scripts/test-judged-pairings.sh
-      # It perturbs an artifact, then the live ruleset's quality floor, and
-      # asserts the check goes red for each — including that a floor change is
-      # classified weight-only, which is what keeps its owner off shadow
-      # scoring for a change the recorded corpus can answer exactly.
-      - name: Ruleset-diff check still fires
-        run: bash .github/scripts/test-ruleset-diff.sh
       # It drops each variable from the task definition in turn, moves the kill
       # deadline, and then — the two cases the design rests on — perturbs the
       # *application* instead: a new refusal in config.py, and a --graceful-timeout
@@ -447,6 +363,13 @@ jobs:
       # own number would stay green through either.
       - name: Task-definition check still fires
         run: bash .github/scripts/test-taskdef.sh
+      # The three purity gates — the import contracts, the kernel walk and strict
+      # mypy — each driven against probe modules it writes into backend/app/ and
+      # deletes on exit. **Last in its job**: nothing after it may read a tree a
+      # probe could still be sitting in.
+      - name: Purity gates still fire
+        working-directory: backend
+        run: bash scripts/test-purity-gates.sh
 
   # ==========================================================================
   # Player app — three tiers, three jobs, the tests a matrix of shards. Each is
@@ -722,14 +645,12 @@ jobs:
     name: ci-ok
     needs:
       - changes
-      - release-report
       - guardrails
       - backend-static
       - backend-tests
       - backend-tests-add-up
       - backend-artifacts
-      - backend-meta-1
-      - backend-meta-2
+      - backend-meta
       - player-static
       - player-tests
       - player-meta

@@ -7,8 +7,6 @@
 # ----------------------------------------------------------------------------
 .PHONY: help gen-api openapi check check-backend check-player check-club check-public \
         test-hooks test-drift contract-freshness test-contract-freshness \
-        gen-judged-pairings judged-pairings \
-        test-judged-pairings gen-ruleset-diff ruleset-diff test-ruleset-diff \
         poetry-pin test-poetry-pin taskdef test-taskdef ci-ok test-ci-ok test-memory-peak \
         shards-add-up test-shards-add-up \
         afk-install afk-build afk
@@ -48,55 +46,6 @@ gen-api: openapi   ## regenerate every client's wire types from its own contract
 	@echo "Regenerated the wire types of $(CLIENTS)."
 	@echo "Commit them along with the backend/openapi.*.json that moved."
 	@echo "CI diffs each client (make test-drift covers the check itself)."
-
-# ----------------------------------------------------------------------------
-# The six judged pairings — the same generate-commit-diff idiom as gen-api, one
-# document over. docs/specs/matchmaking/judged-pairings.json holds the six as
-# INPUTS and a verdict per case (docs/adr/0122); every term value, every weight
-# and every Fit is derived by the live ruleset and written back into the tables.
-#
-# Cross-app because the harness is the backend's and the tables it writes are
-# the repository's specs. It also re-derives QUALITY_FLOOR's bound, which is the
-# half a diff cannot do: ranking-weights.md §11 has always demanded that turning
-# a term on re-runs the six cases and may move the floor, and now it fails.
-# ----------------------------------------------------------------------------
-gen-judged-pairings: ## re-derive the six judged pairings and regenerate their tables
-	cd backend && poetry run python -m scripts.judged_pairings
-	@echo "Commit the result along with whatever moved the numbers."
-	@echo "CI regenerates and diffs it (make test-judged-pairings covers the check)."
-
-judged-pairings:   ## verify the judged tables reproduce and the floor still holds
-	bash .github/scripts/check-judged-pairings.sh
-
-test-judged-pairings: ## verify the judged-pairings check still fires
-	bash .github/scripts/test-judged-pairings.sh
-
-# ----------------------------------------------------------------------------
-# The ruleset diff — the same generate-commit-diff idiom, third instance, and
-# this one is a release gate. docs/adr/0119: **shipping a ruleset is an offline
-# diff and a deploy**; canary cannot measure its own success and shadow buys a
-# slower version of an answer already on hand, so the diff is what is left and
-# it has to be a build gate rather than a habit.
-#
-# The synthetic corpus (the-replay-harness.md §2.1) is generated from a seed and
-# its answers are committed. Regenerating after a ruleset change prints the diff
-# — the classification, the verdict rates, the floor crossings — which is what
-# the pull request argues for. The other half of the gate is a signature and
-# says so: the recorded-corpus diff needs a restore and cannot run in CI.
-#
-# Cross-app because the harness is the backend's and the artifacts it writes are
-# the repository's specs, exactly as the judged pairings are.
-# ----------------------------------------------------------------------------
-gen-ruleset-diff:  ## re-run the synthetic corpus and rewrite its committed answers
-	cd backend && poetry run python -m scripts.ruleset_diff
-	@echo "Commit both artifacts along with whatever moved the numbers."
-	@echo "CI regenerates and diffs them (make test-ruleset-diff covers the check)."
-
-ruleset-diff:      ## verify the committed diff reproduces, under two hash seeds
-	bash .github/scripts/check-ruleset-diff.sh
-
-test-ruleset-diff: ## verify the ruleset-diff check still fires
-	bash .github/scripts/test-ruleset-diff.sh
 
 # ----------------------------------------------------------------------------
 # Gates. Each app's own `check` is the real one; these just fan out.

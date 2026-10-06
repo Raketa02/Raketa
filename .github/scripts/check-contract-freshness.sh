@@ -6,7 +6,7 @@
 #
 # The backend owns the API contract (docs/adr/0006) and `app/api/contract.py`
 # emits one document per *surface*. This regenerates them and looks for a diff,
-# the way `make gen-api` and the judged pairings do.
+# the way `make gen-api` does.
 #
 # **It is not check-contract-drift.sh, and the difference is the point.** That
 # script diffs a *client's generated types* against a regeneration with that
@@ -41,9 +41,8 @@
 #   exit 2  the check could not run (no poetry, the emit failed or wrote nothing)
 #
 # **What it compares is the file on disk against what regenerating it produces,
-# and never the working tree against HEAD** — the argument check-judged-pairings.sh
-# writes out: regeneration overwrites the evidence, so by the time git could be
-# asked the hand edit is already gone.
+# and never the working tree against HEAD**: regeneration overwrites the
+# evidence, so by the time git could be asked the hand edit is already gone.
 #
 # **It leaves the files regenerated**, which is the fix and not a side effect:
 # the failure below tells you to commit them.

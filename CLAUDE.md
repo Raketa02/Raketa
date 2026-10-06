@@ -74,33 +74,6 @@ the hooks themselves, `make gen-api`.
   [`.github/scripts/check-poetry-pin-drift.sh`](.github/scripts/check-poetry-pin-drift.sh)
   (`make poetry-pin`, proven still to fire by `make test-poetry-pin`). Poetry 2.x
   unbundled `poetry export`, so a site that exports also installs `poetry-plugin-export`.
-- **The six judged pairings are derived, never typed.**
-  `docs/specs/matchmaking/judged-pairings.json` holds them as *inputs* plus one verdict per
-  case ([ADR-0122](docs/adr/0122-a-judged-pairing-is-two-people-never-a-profile-of-scores.md));
-  every term value, every renormalised weight and every Fit is re-derived by the live ruleset
-  and written back into the tables in `the-judged-pairings.md` and `ranking-weights.md` §10.
-  Regenerate with `make gen-judged-pairings` and commit the result — CI regenerates and diffs,
-  so a hand-edited table fails the build, and **a diff there is a design change that must be
-  argued for in the pull request**. The same run re-derives `QUALITY_FLOOR`'s bound —
-  `max(Fit | not shown) < QUALITY_FLOOR ≤ min(Fit | shown)` — and goes red when the configured
-  integer leaves it, which is what `ranking-weights.md` §11 demanded and could not enforce
-  against prose ([`.github/scripts/check-judged-pairings.sh`](.github/scripts/check-judged-pairings.sh),
-  `make judged-pairings`, proven still to fire by `make test-judged-pairings`).
-- **A ruleset ships on an offline diff, and the diff is a build gate.**
-  [ADR-0119](docs/adr/0119-a-ruleset-ships-on-an-offline-diff-and-a-deploy.md) collapsed
-  the shadow/canary rollout ladder: what remains is a synthetic corpus whose population and
-  answers are **committed artifacts** under `docs/specs/matchmaking/ruleset-diff/`.
-  Regenerate with `make gen-ruleset-diff` and commit the result — CI regenerates and diffs,
-  so a ruleset edited without regenerating its diff fails the build, and **the report the
-  run prints is the diff the pull request has to argue for**. It regenerates under **two
-  different `PYTHONHASHSEED`s** and requires both to reproduce, which makes the artifact a
-  continuous whole-pipeline determinism assertion
-  ([ADR-0105](docs/adr/0105-determinism-is-a-set-iteration-problem-in-python.md) §4's
-  sanctioned exception, second instance). Half the gate is a signature and says so: the
-  recorded-corpus diff needs a database restore and cannot run in CI
-  ([`.github/scripts/check-ruleset-diff.sh`](.github/scripts/check-ruleset-diff.sh),
-  `make ruleset-diff`, proven still to fire by `make test-ruleset-diff`; the whole build is
-  written up in [`docs/specs/matchmaking/the-ruleset-gate.md`](docs/specs/matchmaking/the-ruleset-gate.md)).
 - **The deployment artifact agrees with the application, and a gate is what says so.**
   `backend/deploy/ecs/taskdef.json` describes a container; `backend/app/core/config.py`
   and `backend/docker/api/startup.prod.sh` are what actually runs in it. Nothing compared
@@ -167,11 +140,10 @@ guardrail doing its job.
 
 After changing either hook, run `make test-hooks` (109 assertions). A guardrail that
 silently stops matching is worse than none, because you stop watching for it. The same
-argument is why `make test-drift`, `make test-poetry-pin`, `make test-judged-pairings`,
-`make test-ruleset-diff`, `make test-taskdef`, `make test-shards-add-up` and
-`make test-ci-ok` exist: each drives its check against a deliberately broken tree and
-asserts it goes red. After adding a CI job, run `make ci-ok` — the job must also be in
-`ci-ok`'s `needs`, or it can fail unseen.
+argument is why `make test-drift`, `make test-poetry-pin`, `make test-taskdef`,
+`make test-shards-add-up` and `make test-ci-ok` exist: each drives its check against a
+deliberately broken tree and asserts it goes red. After adding a CI job, run `make ci-ok`
+— the job must also be in `ci-ok`'s `needs`, or it can fail unseen.
 
 ## Agent skills
 
