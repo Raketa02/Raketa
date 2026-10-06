@@ -1,9 +1,9 @@
 /**
  * **Who is in the room, who the response names, and who a `{name}` slot may name.**
  *
- * Membership is derived from whichever record is currently arranging — the challenge's accepted
- * seats until the line-up completes, the game's frozen line-up after (ADR-0146 §7) — and it is
- * **never stored**. That is the server's fold; what is here is what a client may do with it.
+ * Membership is derived from the booked game's line-up — who is on its court right now, a leaver
+ * gone and a rescue who took the seat in (ADR-0146 §7) — and it is **never stored**. That is the
+ * server's fold; what is here is what a client may do with it.
  *
  * ## Two lists, one shape, and which one a sentence reads
  *
@@ -22,7 +22,7 @@
  * narrower claim** — the two are one type here because the generated client gets two structurally
  * equal schemas and has to decide that a member *is* a person, which this file does once. The cost
  * is that the compiler cannot tell the lists apart: `othersIn(people, …)` would compile and draw a
- * declined player's face on the row. **Which list a caller reads is guarded by inspection**, and
+ * leaver's face on the row. **Which list a caller reads is guarded by inspection**, and
  * the rule is short enough to hold — faces, the author-label threshold and the typing sentence read
  * `members`; every `{name}` and every author reads `people`.
  *
@@ -30,14 +30,12 @@
  * it names nobody.** An actor `people` cannot answer for draws the unknown player's `?`, exactly as
  * an unnameable seat does everywhere else in the app, rather than a name read out of `values`.
  *
- * ## The room grows, and it draws what it has
+ * ## The room moves with the court, and it draws what it has
  *
- * A doubles room whose line-up is still filling has two members and will have four. **It draws
- * the members it has**: a row with four faces for a two-member room would be drawing the court
- * rather than the room
- * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §1.3), and
- * there is nothing here that pads a membership out to a seat count. `people` pads nothing either:
- * it is who the response *named*, and a declined player on it is a name a line needs, never a face
+ * A seat left and not yet taken is a member fewer. **It draws the members it has**: a row with
+ * four faces for a three-member room would be drawing the court rather than the room, and there is
+ * nothing here that pads a membership out to a seat count. `people` pads nothing either:
+ * it is who the response *named*, and somebody on it who left is a name a line needs, never a face
  * the row draws.
  *
  * ## `{name}` is a handle and never *You*

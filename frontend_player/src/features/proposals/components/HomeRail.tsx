@@ -25,8 +25,8 @@
  * ## Each card is handed what the surface already holds
  *
  * The read's clock, whether it is *new*, and whether its room is open, from one join over the rooms
- * (`useGameRooms`) — and reads nothing itself. *Open game* pushes the details over Home, so *back*
- * is Home.
+ * by booking (`useBookingRooms`) — and reads nothing itself. *Open game* pushes the details over
+ * Home, so *back* is Home.
  *
  * ## What it draws when it holds nothing, and when the read failed
  *
@@ -47,7 +47,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
-import { useGameRooms } from '@/features/conversations/types';
+import { useBookingRooms } from '@/features/conversations/types';
 import { recoveryMessage } from '@/shared/errors';
 import { Note, PagerDots, theme } from '@/shared/ui';
 
@@ -70,7 +70,7 @@ export interface HomeRailProps {
 
 export function HomeRail({ empty }: HomeRailProps) {
   const home = useHome();
-  const rooms = useGameRooms();
+  const rooms = useBookingRooms();
   const { opened } = useOpenedGames();
   const { width: screen } = useWindowDimensions();
 
@@ -128,9 +128,7 @@ export function HomeRail({ empty }: HomeRailProps) {
                 game={game}
                 now={now}
                 fresh={isNew(game, opened)}
-                chat={
-                  chatIsOpen(game.status) && game.gameId !== undefined && rooms.has(game.gameId)
-                }
+                chat={chatIsOpen(game.status) && rooms.has(game.bookingId)}
                 width={cardWidth}
                 onOpen={() => router.push(bookedGameRoute(game.bookingId))}
               />

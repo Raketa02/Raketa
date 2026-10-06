@@ -48,9 +48,9 @@ export interface HomeGame {
   /** The booking — the same id the game had while it filled. */
   readonly bookingId: string;
   /**
-   * The ordinary Game it opened: the result, the forecast and the room are reached by it. **Absent
-   * while an On request club decides** (#543) — there is no Game until it says yes — and on a
-   * request it never accepted.
+   * The ordinary Game it opened: the result and the forecast are reached by it, and the room by the
+   * booking (#577). **Absent while an On request club decides** (#543) — there is no Game until it
+   * says yes — and on a request it never accepted.
    */
   readonly gameId?: string;
   /** The pool it filled in — a group's id. */

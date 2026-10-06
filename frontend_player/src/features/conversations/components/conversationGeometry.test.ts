@@ -56,7 +56,7 @@ describe('the row as a target', () => {
 });
 
 describe('the cluster', () => {
-  /** A room grows one acceptance at a time, so a two-member doubles room draws one face here. */
+  /** A room draws the members it has, so a two-member doubles room draws one face here. */
   it('is one face wide for one other person, and overlaps every face after it', () => {
     expect(faceClusterWidth(0)).toBe(0);
     expect(faceClusterWidth(1)).toBe(ROW_FACE);

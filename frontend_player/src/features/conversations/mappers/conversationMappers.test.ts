@@ -29,7 +29,7 @@ function room(over: Partial<Wire['ConversationRowSchema']> = {}): Wire['Conversa
 
   return {
     conversation_id: 'cccccccc-0000-4000-8000-000000000003',
-    challenge_id: 'dddddddd-0000-4000-8000-000000000004',
+    booking_id: 'dddddddd-0000-4000-8000-000000000004',
     game_id: null,
     sport: 'PADEL',
     members,
@@ -58,14 +58,15 @@ describe('what crosses', () => {
   });
 
   /**
-   * The game the line-up completed into rides on the row for one reader — the accept told `ON`,
-   * waiting to push a room that knows its game — and `null` collapses to absent, as on the room.
+   * **The booking the room is filed under rides on the row** — the join Home's cards and a booked
+   * game's details find their chat by ([#577](https://github.com/Raketa02/Raketa/issues/577)) —
+   * and the game it names does not: nothing reads it since the join moved to the booking.
    */
-  it('carries the game once the room has been told it, and nothing before', () => {
-    expect(mapped({ game_id: 'eeeeeeee-0000-4000-8000-000000000005' })[0]?.gameId).toBe(
-      'eeeeeeee-0000-4000-8000-000000000005',
-    );
-    expect(mapped()[0]).not.toHaveProperty('gameId');
+  it('files the room under its booking, and leaves the game it names behind', () => {
+    const [conversation] = mapped({ game_id: 'eeeeeeee-0000-4000-8000-000000000005' });
+
+    expect(conversation?.bookingId).toBe('dddddddd-0000-4000-8000-000000000004');
+    expect(conversation).not.toHaveProperty('gameId');
   });
 
   /** The order is the server's — *by the last entry, newest first* — and nothing re-sorts it. */
@@ -175,8 +176,7 @@ describe('the two shapes on the stream', () => {
   });
 
   /**
-   * A room whose first acceptance is its whole history has no entry at all — the opening writes
-   * no line. It is a real state rather than an edge case, and `null` collapses to absent.
+   * A room whose game was just booked has no entry at all — the opening writes no line. It is a real state rather than an edge case, and `null` collapses to absent.
    */
   it('reads no last entry at all as an absence rather than as a blank', () => {
     expect(mapped()[0]).not.toHaveProperty('lastEntry');
@@ -214,7 +214,7 @@ describe('one room, opened', () => {
     return {
       read_at: '2026-09-08T12:00:00Z',
       conversation_id: 'cccccccc-0000-4000-8000-000000000003',
-      challenge_id: 'dddddddd-0000-4000-8000-000000000004',
+      booking_id: 'dddddddd-0000-4000-8000-000000000004',
       game_id: null,
       sport: 'PADEL',
       members,
@@ -225,15 +225,16 @@ describe('one room, opened', () => {
   }
 
   /**
-   * The instant it was folded — and not the game, which the room no longer reads: the booked
-   * game's join is the row's (`useGameRoom`), and nothing on the screen draws the room's own.
+   * The instant it was folded — and neither the booking nor the game: the booked game's join is
+   * the row's (`useBookingRoom`), and nothing on the screen draws the room's own.
    */
-  it('carries the instant it was folded, and leaves the game to the row', () => {
+  it('carries the instant it was folded, and leaves the booking and the game to the row', () => {
     const room = toConversationRoom(
       opened({ game_id: 'eeeeeeee-0000-4000-8000-000000000005' }),
     )?.room;
 
     expect(room?.readAt).toBe('2026-09-08T12:00:00Z');
+    expect(room).not.toHaveProperty('bookingId');
     expect(room).not.toHaveProperty('gameId');
   });
 

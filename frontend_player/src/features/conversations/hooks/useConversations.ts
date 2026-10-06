@@ -4,8 +4,8 @@
  * | | |
  * | --- | --- |
  * | `useConversations` | `GET /conversations` — every room you are a member of |
- * | `useGameRoom` | the room a booked game's chat is, found by its game |
- * | `useGameRooms` | every booked game's room, by its game, for Home's cards |
+ * | `useBookingRoom` | the room a booked game's chat is, found by its booking |
+ * | `useBookingRooms` | every booked game's room, by its booking, for Home's cards |
  *
  * **Nothing is re-sorted and nothing is filtered.** Every room on the list is one the reader is a
  * member of, because membership is enforced on the route. A client filter here would be this app
@@ -41,19 +41,21 @@ export function useConversations() {
 }
 
 /**
- * **A booked game's room, found by its game** ([#556](https://github.com/Raketa02/Raketa/issues/556)).
+ * **A booked game's room, found by its booking**
+ * ([#556](https://github.com/Raketa02/Raketa/issues/556),
+ * [#577](https://github.com/Raketa02/Raketa/issues/577)).
  *
- * A booked game's room opens with the booking and is about its game from its first moment (the
- * mechanics §14.3), so every row of it carries the `game_id` the booking's details name — and that
- * is the join `GET /bookings/{id}` documents: *the chat is the reader's room whose `game_id` is this
- * game's*. No read carries a conversation id, and none should (ADR-0149 §3).
+ * A booked game's room opens with the booking (the mechanics §14.3) and is filed under it: every
+ * row carries the `booking_id` it was opened for, and *a room is opened only by a booked game, so
+ * this is the booking every room is found by*. The route the details and the chat stand on carries
+ * that id already. No read carries a conversation id, and none should (ADR-0149 §3).
  *
  * `listed` says whether the list has been heard from, because the chat screen behind the details
  * has two different things to say while it has no room: *still finding it*, and *there is none* —
  * and `paused` and `error` the two others every read has: offline, and refused.
  * It fails soft — no room is no door.
  */
-export function useGameRoom(gameId: string | undefined): {
+export function useBookingRoom(bookingId: string): {
   readonly conversationId: string | undefined;
   readonly listed: boolean;
   /** The list is held while offline, to resume on reconnect. */
@@ -63,8 +65,7 @@ export function useGameRoom(gameId: string | undefined): {
   readonly retry: () => void;
 } {
   const { data, error, fetchStatus, refetch } = useConversations();
-  const room =
-    gameId === undefined ? undefined : data?.find((conversation) => conversation.gameId === gameId);
+  const room = data?.find((conversation) => conversation.bookingId === bookingId);
   return {
     conversationId: room?.conversationId,
     listed: data !== undefined,
@@ -75,15 +76,11 @@ export function useGameRoom(gameId: string | undefined): {
 }
 
 /**
- * **Every booked game's room, by its game** — the list form of {@link useGameRoom}, for Home's rail,
- * whose cards each say whether their game's chat is open: the join runs once at the surface, and
- * each card is handed its own answer.
+ * **Every booked game's room, by its booking** — the list form of {@link useBookingRoom}, for
+ * Home's rail, whose cards each say whether their game's chat is open: the join runs once at the
+ * surface, and each card is handed its own answer.
  */
-export function useGameRooms(): ReadonlyMap<string, string> {
+export function useBookingRooms(): ReadonlyMap<string, string> {
   const { data } = useConversations();
-  return new Map(
-    (data ?? []).flatMap((room) =>
-      room.gameId === undefined ? [] : [[room.gameId, room.conversationId] as const],
-    ),
-  );
+  return new Map((data ?? []).map((room) => [room.bookingId, room.conversationId] as const));
 }

@@ -141,7 +141,7 @@ import { SystemLine } from './SystemLine';
 import { TypingBubble } from './TypingBubble';
 
 export interface ConversationScreenProps {
-  /** The room the booked game's join found — `useGameRoom`, over the booking's game. */
+  /** The room the booked game's join found — `useBookingRoom`, by the booking it is filed under. */
   readonly conversationId: string;
   /**
    * The header's second line after the sport — the booking's own word (*booked*), handed in by the

@@ -2,9 +2,7 @@
  * The rooms you are in, as `GET /conversations` answers.
  *
  * One of the two layers allowed to read generated types, and the only place this path is written
- * down. **This is one of two reads for the Chats tab and they are not merged**: `GET /challenges`
- * is the other, and the tab is two sections, two contexts, two queries, two caches
- * ([`the-loop-screens.md`](../../../../../docs/specs/the-loop/the-loop-screens.md) §1.1).
+ * down. Every room here is a booked game's, filed under its booking (#575, #577).
  *
  * **Four of the five routes are here**, and the fifth is deliberately not: the live channel is
  * `text/event-stream` and belongs behind a platform port with the rest of the transports this app
@@ -43,9 +41,9 @@ export interface Cancellable {
 /**
  * **Every room you are a member of, the ones that moved last first.**
  *
- * A doubles court whose line-up is still filling draws the members it has, not the court it will
- * be — and **only live rooms are here, because there are only live rooms**: a conversation is
- * destroyed rather than delisted once the episode it was opened for is over.
+ * Each is a booked game's, its members the game's court as it stands — and **only live rooms are
+ * here, because there are only live rooms**: a conversation is destroyed rather than delisted once
+ * the episode it was opened for is over.
  */
 export function getConversations({ signal }: Cancellable = {}): Promise<ConversationListResponse> {
   return httpRequest<ConversationListResponse>({

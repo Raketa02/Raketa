@@ -37,7 +37,7 @@ export interface ConversationRoom {
   /** The instant the header and the page were folded — **one instant for both**. */
   readonly readAt: string;
   readonly sport: Sport;
-  /** Who has agreed to be on this court right now. It grows one acceptance at a time. */
+  /** Who is on the game's court right now — a leaver gone, a rescue who took the seat in. */
   readonly members: readonly ConversationMember[];
 }
 

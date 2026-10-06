@@ -591,7 +591,7 @@ describe('the chat — reached from the details only (A4.4)', () => {
         money: bookedMoney({ paid: false, free_to_leave_until: null }),
         leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
       }),
-      [],
+      [bookedRoomRow()],
     );
 
     await screen.findByText('Padel · waiting for the club');
@@ -627,5 +627,47 @@ describe('the chat — reached from the details only (A4.4)', () => {
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.queryByText(DETAILS.noRoom)).toBeNull();
+  });
+});
+
+/**
+ * **A booked game's room is found by the booking it is filed under, and by nothing else**
+ * ([#577](https://github.com/Raketa02/Raketa/issues/577)) — the wire's `booking_id`, which #575
+ * renamed from `challenge_id`. Each room here disagrees with its booking about the game, so a join
+ * still keyed by the game finds the wrong answer in both.
+ */
+describe('the chat — found by its booking', () => {
+  it('opens the room filed under the booking from Home’s card and from the details', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    stubBooking(transport, bookingDetails());
+    stubConversations(transport, [{ ...bookedRoomRow(), game_id: null }]);
+    stubConversation(transport, bookedRoom());
+    stubEntries(transport, BOOKED_ROOM);
+    await launchSignedIn();
+
+    await card();
+    expect(await screen.findByTestId('home-game-chat')).toBeTruthy();
+    expect(screen.getByLabelText(/Chat open\.$/)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: HOME.openGame }));
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
+    expect(await screen.findByTestId('conversation-stream')).toBeTruthy();
+  });
+
+  it('finds no room filed under another booking, though it names this game', async () => {
+    await openDetails(bookingDetails(), [{ ...bookedRoomRow(), booking_id: SECOND_BOOKING }]);
+    await screen.findByText('Padel · booked');
+
+    // The list has answered once the chat says it holds no room — then neither door is drawn.
+    act(() => router.push(`/booking/${BOOKING}/chat`));
+    expect(await screen.findByText(DETAILS.noRoom)).toBeTruthy();
+    act(() => router.back());
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
+    act(() => router.back());
+    await card();
+    expect(screen.queryByTestId('home-game-chat')).toBeNull();
+    expect(screen.queryByLabelText(/Chat open\.$/)).toBeNull();
   });
 });

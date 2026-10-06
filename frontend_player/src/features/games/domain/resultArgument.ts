@@ -274,7 +274,7 @@ export function whoIs(game: Game, reader: string, playerId: string): NamedPlayer
 }
 
 /**
- * Everybody on this court but you, **in the order the challenge handed it over.**
+ * Everybody on this court but you, **in the order the wire handed it over.**
  *
  * The court's order and never a re-sort: which side was short is part of what a court is, and a
  * list re-ordered here would say a different thing about the same evening on two screens.

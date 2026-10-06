@@ -261,16 +261,17 @@ spoken a character at a time). The filling details and the booked ones share `Ga
 `OthersFaces`.
 
 **The chat is reached from the details and nowhere else** (A4.4, §14.3). _Chat_ is drawn while the
-join keyed by the game finds the room (`conversations`' `useGameRoom`, the join `GET /bookings/{id}`
-documents) and the status can have one (`chatIsOpen`: not while the club decides, not once called
-off). **The room's own life decides the rest**: it closes as today — 48 hours after _we played_,
-when the result window closes — so a counted game keeps its door for as long as its room does,
-rather than leaving a room open with no way in. It pushes `/booking/[id]/chat` (`BookedGameChat`), which mounts `ConversationScreen` in
-its booked form — no plan card, no plan chips, no _Details_ door, the header's second line the
-booking's word — over the details, so the back chevron returns to them; the bar stands down there as
-in every room. Before there is a game or a room to draw, the details, the room and the result say
-the same four things (`BookingAbsent`): offline it resumes, the spinner, a refusal with the retry,
-or the one terminal sentence.
+join keyed by the booking finds the room (`conversations`' `useBookingRoom`, by the booking the room
+is filed under since [#577](https://github.com/Raketa02/Raketa/issues/577)) and the status can have
+one (`chatIsOpen`: not while the club decides, not once called off). **The room's own life decides
+the rest**: it closes as today — 48 hours after _we played_, when the result window closes — so a
+counted game keeps its door for as long as its room does, rather than leaving a room open with no
+way in. It pushes `/booking/[id]/chat` (`BookedGameChat`), which mounts `ConversationScreen` in its
+booked form — no plan card, no plan chips, no _Details_ door, the header's second line the booking's
+word — over the details, so the back chevron returns to them; the bar stands down there as in every
+room. Before there is a game or a room to draw, the details, the room and the result say the same
+four things (`BookingAbsent`): offline it resumes, the spinner, a refusal with the retry, or the one
+terminal sentence.
 
 **Calls made here, open for the product owner** (Part 16 has the drawings'):
 
@@ -398,7 +399,8 @@ goes ahead_ after the cut-off; _Called off_ with why — _A seat was still empty
 _Kazimierz Padel couldn't take it_, _… didn't answer in time_ — and what came back (_Refunded 28 zł_,
 `refunded_grosze`) or _Nobody paid_; _Uncounted_ with _A seat was empty · no Level moved_ — on Home's
 card, and beside the share on the details' money row (`moneyRow`). A booking
-waiting for its club has no Game yet (`gameId` absent): no room, no forecast, no result, and it is not
+waiting for its club has no Game yet (`gameId` absent): no room (and `chatIsOpen` keeps its door
+shut, since #577 finds a room by the booking), no forecast, no result, and it is not
 in the Classic half of the badge.
 
 **Calls made here, open for the product owner** (Part 16 has the drawings'):

@@ -181,7 +181,6 @@ export interface NoShowReport {
 
 export interface Game {
   readonly gameId: string;
-  readonly challengeId: string;
   readonly sport: GameSport;
   /**
    * Whether this evening is evidence. **Absent when this build has no word for what the wire
@@ -194,7 +193,7 @@ export interface Game {
    * of `the-words.md` §3's named gaps rather than one of its drops.
    */
   readonly standing?: GameStanding;
-  /** The court in the order the challenge handed it over. */
+  /** The court in the order the wire handed it over. */
   readonly seats: readonly GameSeat[];
   /** When the last seat accepted and this became a game. */
   readonly plannedAt: string;

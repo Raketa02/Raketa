@@ -137,7 +137,7 @@ function room(over: Partial<Wire['ConversationResponse']> = {}): Wire['Conversat
   return {
     read_at: READ_AT,
     conversation_id: ROOM,
-    challenge_id: BOOKING,
+    booking_id: BOOKING,
     game_id: GAME,
     sport: 'PADEL',
     members,
@@ -152,7 +152,7 @@ function listed(over: Partial<Wire['ConversationRowSchema']> = {}): Wire['Conver
 
   return {
     conversation_id: ROOM,
-    challenge_id: BOOKING,
+    booking_id: BOOKING,
     game_id: GAME,
     sport: 'PADEL',
     members,

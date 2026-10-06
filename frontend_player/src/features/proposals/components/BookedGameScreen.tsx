@@ -42,11 +42,11 @@
  * ## The chat is reached from here, and only from here
  *
  * **Chat** in the top bar opens the game's room (the mechanics §14.3) — found by the room join
- * keyed by the game (`useGameRoom`), drawn while the join finds the room and the status can have
- * one (`chatIsOpen`) — the room's own life closes it as today, after the result as well (§14.3). The
- * room is pushed over this screen, so its back chevron returns here. **Chat · 2's count, and its volt lit only when something is unread, are
- * owed**: no read carries an unread count, so the door is drawn volt, as the mock draws it, with
- * no number (Part 16).
+ * keyed by the booking (`useBookingRoom`, #577), drawn while the join finds the room and the
+ * status can have one (`chatIsOpen`) — the room's own life closes it as today, after the result as
+ * well (§14.3). The room is pushed over this screen, so its back chevron returns here. **Chat · 2's
+ * count, and its volt lit only when something is unread, are owed**: no read carries an unread
+ * count, so the door is drawn volt, as the mock draws it, with no number (Part 16).
  *
  * ## The result is today's
  *
@@ -70,7 +70,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useCurrentUser } from '@/features/auth/types';
-import { OPEN_THE_CHAT, useGameRoom } from '@/features/conversations/types';
+import { OPEN_THE_CHAT, useBookingRoom } from '@/features/conversations/types';
 import { GameForecast } from '@/features/games/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
@@ -145,7 +145,7 @@ export function BookedGameScreen({ bookingId, offer = false }: BookedGameScreenP
 
 function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly receivedAt: number }) {
   const me = useCurrentUser().data?.id;
-  const room = useGameRoom(game.gameId);
+  const room = useBookingRoom(game.bookingId);
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
   const leave = useLeaveBooking(game.bookingId);
 

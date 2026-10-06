@@ -1347,15 +1347,15 @@ export interface paths {
         };
         /**
          * Your conversations
-         * @description **A room opens on the first acceptance and grows with each one after it.** A doubles court whose line-up is still filling draws the members it has, not the court it will be.
+         * @description **A room is opened by a booked game**, filed under its booking, and its members are the game's court as it stands — somebody who left is not drawn, and a rescue who took the seat is.
          *
          *     **Ordered by the last entry, newest first.** A room where nothing has happened yet carries `last_entry: null` and orders on the moment it opened — the opening writes no line, so there is genuinely nothing there yet.
          *
-         *     **No state pill and no standing.** The last entry is what a pill would have said; a standing beside it would be a second place for one fact to be true. The state-keyed surfaces are the challenge screen and the game screen.
+         *     **No state pill and no standing.** The last entry is what a pill would have said; a standing beside it would be a second place for one fact to be true. The state-keyed surfaces are Home and the game's details.
          *
-         *     **Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over — deliberately the opposite of `GET /challenges`, which keeps ended challenges and says so. The difference is the difference between a record and a room.
+         *     **Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over. The difference is the difference between a record and a room.
          *
-         *     **This is one of two reads for the Chats tab, and they are not merged.** `GET /challenges` is the other. Two sections, two contexts, two queries, two caches.
+         *     **A game's details find its chat here**, by the row whose `game_id` is the game's.
          */
         get: operations["read_conversations_api_v1_conversations_get"];
         put?: never;
@@ -1379,9 +1379,9 @@ export interface paths {
          *
          *     **Open at the newest entry and page backward** from `entries[0].seq` through `/entries`. You have the whole conversation when you hold `seq` 1 — there is no `has_more`, because a gapless sequence makes `seq` 1 the beginning.
          *
-         *     **Nothing here is re-evaluated against you.** The safety gates ran when the challenge was minted; a read that re-ran them would tell you something changed about somebody else.
+         *     **Nothing here is re-evaluated against you.** The safety gates ran when the game was booked; a read that re-ran them would tell you something changed about somebody else.
          *
-         *     **`people` is everybody this response names and `members` is the roster.** Fill every `{name}` and every author label from `people`: the actor of a `SEAT_LEFT` line is by definition no longer a member, and a client naming off the roster alone drew *? said no*.
+         *     **`people` is everybody this response names and `members` is the roster.** Fill every `{name}` and every author label from `people`: the author of an old message may have left the court since, and a client naming off the roster alone draws *?*.
          */
         get: operations["read_conversation_api_v1_conversations__conversation_id__get"];
         put?: never;
@@ -4164,13 +4164,11 @@ export interface components {
         };
         /**
          * ConversationMemberSchema
-         * @description One person who has agreed to be on this court right now.
+         * @description One person on the game's court right now.
          *
-         *     **Derived from whichever record is arranging, never stored**
-         *     (``docs/adr/0146`` §7), and it **grows one acceptance at a time**: a doubles
-         *     room whose line-up is still filling draws the members it has, because a row
-         *     with four faces for a two-member room would be drawing the court rather than
-         *     the room.
+         *     **Derived from the game's line-up, never stored** (``docs/adr/0146`` §7), and
+         *     it **moves with the court**: somebody who left is not drawn, and a rescue who
+         *     took the seat is, the moment either commits.
          *
          *     **The same four fields as a person, and a narrower claim.** Being on the
          *     list is the fact; the face is `ConversationPersonSchema`'s. A member is
@@ -4206,13 +4204,14 @@ export interface components {
          * @description One person this response names — **a name and a face, and nothing else.**
          *
          *     No Level, no band, no area, no score — those are a *card*'s, and a card is
-         *     what a searcher reads to decide about a game that might happen. Everybody
+         *     what somebody reads to decide about a game that might happen. Everybody
          *     here was on this court or spoke in this room.
          *
          *     **The shape `people` is a list of, and the shape a member has.** A member is
-         *     a person who is on the court *right now*; the person a `SEAT_LEFT` line is
-         *     about is not, and is still somebody the page has to name. One shape for
-         *     both, so a client resolves every `actor_id` and `author_id` the same way.
+         *     a person who is on the court *right now*; somebody who spoke here and left
+         *     the court since is not, and is still somebody the page has to name. One
+         *     shape for both, so a client resolves every `actor_id` and `author_id` the
+         *     same way.
          */
         ConversationPersonSchema: {
             /**
@@ -4255,10 +4254,11 @@ export interface components {
              */
             conversation_id: string;
             /**
-             * Challenge Id
+             * Booking Id
              * Format: uuid
+             * @description See `ConversationRowSchema.booking_id`.
              */
-            challenge_id: string;
+            booking_id: string;
             /**
              * Game Id
              * @description See `ConversationRowSchema.game_id`.
@@ -4280,12 +4280,12 @@ export interface components {
         };
         /**
          * ConversationRowSchema
-         * @description One room, as a row in the Chats tab.
+         * @description One room, as a row in the reader's rooms.
          *
          *     **No state pill, and no standing anywhere on it** (``docs/adr/0148`` §6).
-         *     Reading one would make the conversation ask `challenges` and `games` what
-         *     they are, which it never does — and it does not need to, because **the last
-         *     entry is what a pill would have said.**
+         *     Reading one would make the conversation ask `games` what it is, which it
+         *     never does — and it does not need to, because **the last entry is what a
+         *     pill would have said.**
          */
         ConversationRowSchema: {
             /**
@@ -4295,21 +4295,21 @@ export interface components {
              */
             conversation_id: string;
             /**
-             * Challenge Id
+             * Booking Id
              * Format: uuid
-             * @description The challenge whose first acceptance opened it
+             * @description The booking whose game opened it. **A room is opened only by a booked game**, so this is the booking every room is found by.
              */
-            challenge_id: string;
+            booking_id: string;
             /**
              * Game Id
-             * @description The game its line-up completed into, and **`null` until it does**. A room whose line-up is still filling has no game and no plan, so there is nothing for a *Details* door to open — draw no door rather than a dead one.
+             * @description The booked game this room is about — the join a game's details make to find its chat. A booked game's room is born about it; `null` only on a room nothing opens any more, which is never served.
              */
             game_id: string | null;
-            /** @description What they are arranging */
+            /** @description What the game is */
             sport: components["schemas"]["Sport"];
             /**
              * Members
-             * @description Who has agreed to be on this court right now
+             * @description Who is on the game's court right now
              */
             members: components["schemas"]["ConversationMemberSchema"][];
             /**
@@ -4321,7 +4321,7 @@ export interface components {
              * Last Entry
              * @description The newest thing in the room, rendered by the same two components the stream uses — never a preview string.
              *
-             *     **`null` in a room where nothing has happened yet**, which is a real state rather than an edge case: the opening writes no line, so a room whose first acceptance is its whole history has no entry at all.
+             *     **`null` in a room where nothing has happened yet**, which is a real state rather than an edge case: the opening writes no line, so a room whose game was just booked has no entry at all.
              */
             last_entry: (components["schemas"]["MessageSchema"] | components["schemas"]["SystemLineSchema"]) | null;
         };
@@ -10728,17 +10728,9 @@ export interface components {
             seq: number;
             /**
              * Code
-             * @description What happened, as a machine code the client renders a sentence from. Nine: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**, and **`SIDE_FORMED`**.
+             * @description What happened, as a machine code the client renders a sentence from. A booked game's room is told one: **`GAME_PLAYED`** — somebody said the game was played. **Draw nothing for a code you do not know**: the codes rooms opened by challenges carried are no longer written (#575).
              *
-             *     **`SIDE_FORMED` is the one line a room is born with, and only a doubles room** (ADR-0169 §8). Two yeses that met in a doubles sport seat both people on one side with a whole side still to fill, and this says so at `seq` 1: *You two are a side. Fill the seats to find your opponents.* A singles mutual's room carries no such line. It names no actor and carries no values.
-             *
-             *     **A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way — and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.
-             *
-             *     **A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.
-             *
-             *     **`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot — a complete plan is one everybody *could* agree, and this says somebody did — and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.
-             *
-             *     **There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping — drawn, not announced.
+             *     **There is no *Game on* line.** The booked game is announced on Home and its details, and its room is born about it — a line saying so would be a second place for one fact to be true.
              */
             code: string;
             /**
@@ -10749,12 +10741,12 @@ export interface components {
             occurred_at: string;
             /**
              * Actor Id
-             * @description Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** — the name is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face. `null` on `SIDE_FORMED`, which is about both people on the side and names neither.
+             * @description Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** — the name is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: whoever said they played may have left the court since, and `people` is where the read put their face.
              */
             actor_id: string | null;
             /**
              * Values
-             * @description What the sentence needs beyond a name, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` — the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, `GAME_PLAYED` and `SIDE_FORMED` carry nothing.
+             * @description What the sentence needs beyond a name, and **nothing membership already says**. `GAME_PLAYED` carries nothing.
              */
             values: {
                 [key: string]: string;

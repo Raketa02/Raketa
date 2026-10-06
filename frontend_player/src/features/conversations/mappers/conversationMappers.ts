@@ -23,15 +23,13 @@
  *
  * ## What is not mapped, and why that is the rule rather than an omission
  *
- * The rule is *"these fields are mapped by the screen that draws them"*. **`game_id` is mapped on
- * the row**, because it is the join a booked game's chat and Home's cards find their room by, and
- * not on the opened room, which nothing reads it from since the old loop's rooms — which could end
- * before they had a game — went with that loop (#576). **`challenge_id` is not
- * mapped**: it was the old loop's join from a challenge screen into its room, and no screen reads
- * it since that loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)) — the wire
- * names it `booking_id` from #575, and #577 follows. `read_at` stays off the row and is on the
- * room: it earns its place wherever something is folded against an instant, and **a row draws no
- * clock at all**. A field mapped ahead of its reader is a shape somebody has to keep true of a
+ * The rule is *"these fields are mapped by the screen that draws them"*. **`booking_id` is mapped
+ * on the row**, because it is the join a booked game's chat and Home's cards find their room by
+ * ([#577](https://github.com/Raketa02/Raketa/issues/577)), and not on the opened room, which is
+ * reached through that join and reads nothing back from it. **`game_id` is mapped nowhere**: it was
+ * the join until the room was filed under its booking on the wire (#575), and nothing has read it
+ * since. `read_at` stays off the row and is on the room: it earns its place wherever something is
+ * folded against an instant, and **a row draws no clock at all**. A field mapped ahead of its reader is a shape somebody has to keep true of a
  * screen nobody has written.
  *
  * **An entry is mapped whole, and that is not the same call.** `sent_at`, `author_id` and
@@ -82,7 +80,7 @@ function toConversation(row: ConversationRowSchema): readonly Conversation[] {
   return [
     {
       conversationId: row.conversation_id,
-      ...(row.game_id == null ? {} : { gameId: row.game_id }),
+      bookingId: row.booking_id,
       sport,
       members: row.members.map(toPerson),
       people: row.people.map(toPerson),

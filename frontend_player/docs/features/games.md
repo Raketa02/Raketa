@@ -348,3 +348,9 @@ the booked routes now (`/booking/[id]/result` and the details), with the same as
 plan lead, the `card`, `court`, `plan` and `fill` slots and `entryLead` are still on the screen**
 and nothing fills them: simplifying the screen to the one lead it now has is left for a ticket of
 its own rather than folded into a removal.
+
+**`Game` no longer carries `challengeId`** ([#577](https://github.com/Raketa02/Raketa/issues/577)).
+It had no reader, and on a booked game it was the booking's id under the old loop's name; the wire's
+`GameSchema` still spells it `challenge_id` until the backend's removal reaches it. The record is
+[`conversations.md`](conversations.md), whose join to a booked game's room moved onto the booking in
+the same ticket.

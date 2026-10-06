@@ -40,7 +40,6 @@ const READ_AT = '2026-09-05T09:00:00Z';
 
 const GAME: Game = {
   gameId: 'g1',
-  challengeId: 'c1',
   sport: 'padel',
   kind: 'COUNTED',
   standing: 'AWAITING_ANSWER',

@@ -17,7 +17,6 @@ const INES = 'ines-11111-4444-8888-00000004';
 function game(over: Partial<Game> = {}): Game {
   return {
     gameId: 'game-1111-4444-8888-00000000001',
-    challengeId: 'booking-1-4444-8888-000000001',
     sport: 'padel',
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',

@@ -31,8 +31,8 @@ describe('who the row draws', () => {
     expect(othersIn(members, ME)).toEqual([TOMEK, OLA]);
   });
 
-  /** A room grows one acceptance at a time, and draws the members it has. */
-  it('draws two for a doubles room whose line-up is still filling', () => {
+  /** A room moves with the court, and draws the members it has. */
+  it('draws the one other in a doubles room with two seats left open', () => {
     expect(othersIn([TOMEK, { playerId: ME }], ME)).toHaveLength(1);
   });
 });

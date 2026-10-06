@@ -61,7 +61,7 @@ import {
 import { gameErrorMessage } from './gameErrorMessage';
 
 const GAME_ID = '8f14e45f-ceea-467a-9dd1-4bd9c39d4a58';
-const CHALLENGE_ID = 'cccccccc-0000-4000-8000-000000000003';
+const BOOKING_ID = 'cccccccc-0000-4000-8000-000000000003';
 const RESULT_PATH = `${GAMES_PATH}/${GAME_ID}/result`;
 const ACCEPTANCE_PATH = `${RESULT_PATH}/acceptance`;
 
@@ -76,7 +76,7 @@ const THEIR_HANDLE = 'tomek.p';
 function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return {
     game_id: GAME_ID,
-    challenge_id: CHALLENGE_ID,
+    challenge_id: BOOKING_ID,
     sport: 'PADEL',
     kind: 'COUNTED',
     standing: 'AWAITING_ENTRY',

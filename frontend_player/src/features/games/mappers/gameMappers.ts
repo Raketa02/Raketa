@@ -173,7 +173,6 @@ export function toGame(wire: GameSchema, readAt: string): Game | undefined {
 
   return {
     gameId: wire.game_id,
-    challengeId: wire.challenge_id,
     sport,
     kind: member(KINDS, wire.kind),
     standing: member(STANDINGS, wire.standing),

@@ -103,7 +103,7 @@ function room(
   return {
     read_at: READ_AT,
     conversation_id: ROOM,
-    challenge_id: BOOKING,
+    booking_id: BOOKING,
     game_id: GAME,
     sport: 'PADEL',
     members: [...members],
@@ -133,7 +133,7 @@ function game(standing: Wire['GameSchema']['standing'] = 'AWAITING_ENTRY'): Wire
 
 const LISTED: Wire['ConversationRowSchema'] = {
   conversation_id: ROOM,
-  challenge_id: BOOKING,
+  booking_id: BOOKING,
   game_id: GAME,
   sport: 'PADEL',
   members: MEMBERS,

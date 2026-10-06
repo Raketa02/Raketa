@@ -168,3 +168,19 @@ one sentence. The plan's system lines (_set the place_, _locked the plan_, _You 
 stay in the table: a stored line still folds, and a code with no words would not compile — the
 backend keeps the codes for the same reason. `roomLiveness.test.tsx` and
 `conversationScreen.test.tsx` walk the booked chat now, entered from the details' _Open the chat_.
+
+**A booked game's room is found by its booking**
+([#577](https://github.com/Raketa02/Raketa/issues/577), PRD
+[#569](https://github.com/Raketa02/Raketa/issues/569)). #575 renamed the room's `challenge_id` to
+`booking_id` — the same value, the booking whose game opened the room — and a room is opened only by
+a booked game, so every room has one. The join moved onto it: `Conversation.bookingId` replaces
+`gameId`, and `useGameRoom(gameId)` and `useGameRooms()` are `useBookingRoom(bookingId)` and
+`useBookingRooms()`, keyed by the id the details' and the chat's route already carries. So neither
+the chat's join nor a Home card's bubble reads the booking's `game_id` any more. **`game_id` is
+mapped nowhere now**: it was the join and nothing else read it. **Nothing in the app calls a booking
+a challenge**: `games`' `Game` lost `challengeId` too, which had no reader — `GameSchema` still
+names the field `challenge_id` on the wire until the backend's own removal renames or drops it, and
+only the wire fixtures spell it. `homeAndBookedGame.test.tsx` proves the join by rooms that disagree
+with their booking about the game: one filed under the booking and naming no game opens from Home's
+card and the details, and one filed under another booking but naming this game draws no bubble and
+no _Chat_.

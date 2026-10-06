@@ -156,7 +156,7 @@ export function bookedRoomRow(): Wire['ConversationRowSchema'] {
   const members = bookedMembers();
   return {
     conversation_id: BOOKED_ROOM,
-    challenge_id: BOOKING,
+    booking_id: BOOKING,
     game_id: BOOKED_GAME,
     sport: 'PADEL',
     members,
@@ -171,7 +171,7 @@ export function bookedRoom(): Wire['ConversationResponse'] {
   return {
     read_at: HOME_READ_AT,
     conversation_id: BOOKED_ROOM,
-    challenge_id: BOOKING,
+    booking_id: BOOKING,
     game_id: BOOKED_GAME,
     sport: 'PADEL',
     members,

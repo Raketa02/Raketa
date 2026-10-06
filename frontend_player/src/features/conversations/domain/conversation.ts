@@ -1,22 +1,21 @@
 /**
  * A room, as this build reads one.
  *
- * `GET /conversations` is *"every room you are a member of, the ones that moved last first"* —
- * opened by the first acceptance and grown by each one after it, and **destroyed rather than
- * delisted** once the episode it was opened for is over
+ * `GET /conversations` is *every room you are a member of, the ones that moved last first* — and
+ * **every room is a booked game's**: opened when the game is booked, filed under its booking, its
+ * members the game's court as it stands, and **destroyed rather than delisted** once the episode it
+ * was opened for is over
  * ([ADR-0153](../../../../../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)).
- * That is deliberately the opposite of `GET /challenges`, which keeps ended challenges and says
- * so: the difference is the difference between a record and a room, and it is why nothing here
- * has a shelf life to apply.
+ * So nothing here has a shelf life to apply.
  *
  * ## No standing, and no pill
  *
  * There is none on the wire and none derived here. ADR-0148 §6's *the last line is what a pill
  * would have said* is a **product** argument and not only a wire one, and the only pill this
- * client could now draw would be joined client-side off the games cache — a cross-feature join
+ * client could draw would be joined client-side off another feature's read — a cross-feature join
  * feature-first Clean Architecture otherwise refuses
  * ([ADR-0009](../../../../../docs/adr/0009-feature-first-clean-architecture-frontends.md)). The
- * state-keyed surfaces are the challenge screen and the game screen; this is a row.
+ * state-keyed surfaces are Home and the game's details; this is a row.
  *
  * ## The order is the server's
  *
@@ -34,13 +33,14 @@ import type { ConversationMember, ConversationPerson } from './membership';
 export interface Conversation {
   readonly conversationId: string;
   /**
-   * The booked game this room is about — the join a booked game's details and Home's cards find
-   * their chat by (`useGameRoom`, `useGameRooms`), which is the join `GET /bookings/{id}` documents.
+   * **The booking the room is filed under** — the join a booked game's details and Home's cards
+   * find their chat by (`useBookingRoom`, `useBookingRooms`). A room is opened only by a booked
+   * game, so every room has one ([#577](https://github.com/Raketa02/Raketa/issues/577)).
    */
-  readonly gameId?: string;
-  /** What they are arranging. The row's own identifying fact, beside the handles. */
+  readonly bookingId: string;
+  /** What the game is. The row's own identifying fact, beside the handles. */
   readonly sport: Sport;
-  /** Who has agreed to be on this court **right now** — see `membership.ts`. */
+  /** Who is on the game's court **right now** — see `membership.ts`. */
   readonly members: readonly ConversationMember[];
   /**
    * Everybody this row names — the members, and whoever `last_entry` is about — resolved in the
@@ -52,7 +52,7 @@ export interface Conversation {
    * The newest thing in the room, or nothing.
    *
    * **Absent is a real state rather than an edge case**: the opening writes no line, so a room
-   * whose first acceptance is its whole history has no entry at all.
+   * whose game was just booked has no entry at all.
    */
   readonly lastEntry?: Entry;
 }
