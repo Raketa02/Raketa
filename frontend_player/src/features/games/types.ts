@@ -140,6 +140,13 @@ export { useGames } from './hooks/useGames';
 export { gameStandingLine } from './components/gamePresentation';
 
 /**
+ * **The level row** — `2,71 · Established · likely 2,55 – 2,87` — this feature's since #574, for
+ * the players card's seat line. Crossed only for the old loop's cards and challenge screen, which
+ * print the same row until [#576](https://github.com/Raketa02/Raketa/issues/576) deletes them.
+ */
+export { levelRow, type LevelRowFacts } from './components/levelRow';
+
+/**
  * **What this evening is worth, in one sentence** — cited by the surface that draws the plan.
  *
  * The game screen's checklist is *what is true now, what is still to agree, what it moves*, and

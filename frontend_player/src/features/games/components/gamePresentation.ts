@@ -64,7 +64,6 @@
 
 import { YOU_MARK } from '@/features/player_record/types';
 import { counted } from '@/shared/formatting/counted';
-import { levelRow } from '@/shared/formatting/levelRow';
 import { handleStem, playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
 import { sentenceList } from '@/shared/formatting/sentenceList';
@@ -84,6 +83,7 @@ import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
 
 import type { ScoreView } from './gameAccessibility';
+import { levelRow } from './levelRow';
 
 import { durationLeft, durationSince } from '@/shared/formatting/durations';
 

@@ -415,7 +415,7 @@ expect_blocked react-native "$GAMES_DOMAIN" 'pure TypeScript'
 # loop's fence refuses it, below.
 expect_allowed @/features/player_record/types "$GAMES_SCREEN"
 # And the deep path is still what it always was: a feature never reaches past another's types.ts.
-expect_blocked @/features/play/components/balancePresentation "$GAMES_SCREEN" 'types.ts'
+expect_blocked @/features/play/components/DeckScreen "$GAMES_SCREEN" 'types.ts'
 # The yes screen's one new edge (ADR-0167 §3): `challenges` reads the reader's own face through
 # `player_record`'s public surface, and nothing deeper.
 expect_allowed @/features/player_record/types "$CHALLENGES_SCREEN"
@@ -447,6 +447,8 @@ done
 # The bare feature and the relative climb out of a feature, not only the public surface.
 expect_blocked @/features/plans "$LIVE_SCREEN" 'features/proposals'
 expect_blocked ../../challenges/types "$LIVE_SCREEN" 'features/proposals'
+expect_blocked ../../../plans/types 'src/features/proposals/components/court/Placeholder.tsx' \
+  'features/proposals'
 
 echo
 echo "  …and the fence is lifted inside the old loop and on OLD_LOOP_SURFACES alone"

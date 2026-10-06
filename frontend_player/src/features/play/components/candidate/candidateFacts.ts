@@ -19,10 +19,10 @@
  * all* — because that is a question about the copy and `domain/` holds none.
  */
 
+import type { LevelRowFacts } from '@/features/games/types';
 import { playerName } from '@/shared/formatting/playerName';
 import { ON_COURT_CLAUSE } from '@/shared/ui';
 import { balanceReading } from '@/shared/vocabulary/balancePresentation';
-import type { LevelRowFacts } from '@/shared/formatting/levelRow';
 
 import type { AtStake, Candidate, SearchEnvelope } from '../../domain/candidate';
 import { isTagEvidence, type Evidence, type ScoredTerm } from '../../domain/evidence';

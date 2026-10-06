@@ -30,6 +30,7 @@ import { router } from 'expo-router';
 import { StyleSheet, type TextStyle } from 'react-native';
 
 import { sportLabel } from '@/features/onboarding/types';
+import { levelRow } from '@/features/games/types';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import { queryClient } from '@/shared/lib/query-client';
 import { courtSeatCount } from '@/shared/ui';
@@ -55,7 +56,6 @@ import {
   type Wire,
 } from '@/test-support/transport';
 import { balanceLabel, balanceWord } from '@/shared/vocabulary/balancePresentation';
-import { levelRow } from '@/shared/formatting/levelRow';
 
 import { searchKeys } from '../hooks/searchKeys';
 import { usePlayPreferences } from '../store/playPreferences.store';

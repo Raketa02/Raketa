@@ -31,6 +31,10 @@ does (`resolveKind`, `useGroupDeck`'s second query) — so a For-fun player neve
 Competitive deck. No segments at all is no intent declared: `DeclarationInterstitial` replaces
 the deck, reporting `DECK` — the contract's word for a deck, since `PlayIntentSurface` has no value
 for a group's tab — with its own line about who reads the answer, and the answer re-reads the deck.
+A refused answer is said in the words the deck hands it (`refusalMessage`, since #574): the app's
+recovery sentence, because `PUT /play-intents/{sport}` answers only a lost race and a malformed
+request. Find a game hands it Play's own table instead; for this route's codes the two say the
+same thing.
 
 **The stage was built for the Players deck, and lives here.** `DeckStage`, `DeckAnswers` and the
 interstitial moved from `play` with their words in #574, since this is the deck that stays, with

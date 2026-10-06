@@ -183,11 +183,11 @@ const planImportFromGames = {
  * Its three features are deleted whole by [#576](https://github.com/Raketa02/Raketa/issues/576),
  * and a whole-folder delete is only safe if nothing that ships reaches into one of them. So every
  * piece the new games share was moved out first — the deck's stage and the yes screen's parts to
- * `features/proposals`, the seat face to `shared/ui`, the seat and balance words to
- * `shared/vocabulary` ([#574](https://github.com/Raketa02/Raketa/issues/574)) — and this ban keeps
- * it that way: **nothing imports `features/play`, `features/challenges` or `features/plans` except
- * those three and `OLD_LOOP_SURFACES` below**, the old loop's own screens and the parts of live
- * screens #576 deletes with it. A new edge into the old loop is a file that list does not name,
+ * `features/proposals`, the level row to `features/games`, the seat face to `shared/ui`, the seat
+ * and balance words to `shared/vocabulary` ([#574](https://github.com/Raketa02/Raketa/issues/574))
+ * — and this ban keeps it that way: **nothing imports `features/play`, `features/challenges` or
+ * `features/plans` except those three and `OLD_LOOP_SURFACES` below**, the old loop's own screens
+ * and the parts of live screens #576 deletes with it. A new edge into the old loop is a file that list does not name,
  * which is the point: the list is #576's inventory, and it can only shrink.
  */
 const OLD_LOOP_FEATURES = ['play', 'challenges', 'plans'];
@@ -197,14 +197,16 @@ const oldLoopImports = {
     `@/features/${feature}`,
     `@/features/${feature}/**`,
     `**/features/${feature}/**`,
+    // The relative climbs out of a feature, from its layer folders and from one folder below.
     `../../${feature}/**`,
+    `../../../${feature}/**`,
   ]),
   message:
     'Nothing that ships imports features/play, features/challenges or features/plans — the old ' +
     'loop #569 removes, which #576 deletes whole. A piece the new games share lives with them: ' +
-    "the deck's stage, the yes screen's parts and the leave sheet in features/proposals, the seat " +
-    'face in src/shared/ui, the seat and balance words in src/shared/vocabulary (#574). See ' +
-    'OLD_LOOP_SURFACES in eslint.config.mjs.',
+    "the deck's stage, the yes screen's parts and the leave sheet in features/proposals, the level " +
+    'row in features/games, the seat face in src/shared/ui, the seat and balance words in ' +
+    'src/shared/vocabulary (#574). See OLD_LOOP_SURFACES in eslint.config.mjs.',
 };
 
 const asyncStoragePath = {
@@ -613,8 +615,9 @@ export default [
   // because feature-to-feature imports through a `types.ts` are the sanctioned shape; it is
   // written down so the next reader of this block does not take the one-way ban above for a rule
   // that `games` imports nothing, and `scripts/test-import-boundaries.sh` asserts it stays open.
-  // Its other edge, into Play's balance words and level row (#415), is gone: those are
-  // `shared/`'s since #574, and the old loop's fence now refuses the import.
+  // Its other edge, into Play's balance words and level row (#415), is gone: since #574 the words
+  // are `shared/vocabulary`'s and the row is this feature's own, and the old loop's fence now
+  // refuses the import.
   {
     files: ['src/features/games/**'],
     rules: {

@@ -18,7 +18,7 @@
  * the row itself, and is asserted there against the same two registers.
  */
 
-import { levelRow } from '@/shared/formatting/levelRow';
+import { levelRow } from '@/features/games/types';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 
 import {

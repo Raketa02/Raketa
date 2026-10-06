@@ -166,9 +166,9 @@ down. **No arithmetic on the client**: the gap is printed with the sign it was s
 takes it as its `advantage` on 7.11's one fixed scale exactly as the builder's forecast card feeds
 it, and the range, the band and the percentage are the engine's. The words and the bar are
 **cited, never re-spelled** — `balanceWord`, `balanceTone`, `balanceLabel` from
-`shared/vocabulary/balancePresentation.ts` and `levelRow` from `shared/formatting/levelRow.ts`, which
-were Play's until #574 and came below every feature that draws the bar — because three copies of
-§B9's breaks is where one becomes `>`. **The forecast block is absent entirely when the pairing carries no
+`shared/vocabulary/balancePresentation.ts`, below every feature that draws the bar, and `levelRow`,
+this feature's own (`components/levelRow.ts`); all four were Play's until #574 — because three
+copies of §B9's breaks is where one becomes `>`. **The forecast block is absent entirely when the pairing carries no
 forecast, and nothing says why** (ADR-0161 §4, #410's decision): somebody unrated, a refusal, the
 read in flight or failed all draw the same nothing, the stake tiles go with the block, and a
 provisional figure — never served on a game today — is folded to the same absence in the mapper

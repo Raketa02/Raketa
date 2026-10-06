@@ -25,7 +25,7 @@
  *
  * **The empty seat differs by a shape and not by a second white.** Part 13's *never colour as
  * the only signal* reads on the sighted half too, and a dimmer white would be a value nobody
- * could name — `Tick.tsx` settled the same question one folder up with three shapes rather
+ * could name — `Tick.tsx`, beside it, settled the same question with three shapes rather
  * than three colours.
  *
  * **Volt means two things and they never share a court.** On `CourtBuild` it is the seat you

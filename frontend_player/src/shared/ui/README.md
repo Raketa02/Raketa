@@ -96,7 +96,10 @@ fact with a screen behind it — a `paper2` lead square with a Feather glyph, a 
 line off a read and a chevron, spoken as _title, live line_; what a row says while its read is
 on its way or has failed is `shared/errors`' `liveLine`, because a read's standing turned into a
 sentence is an errors concern and not a drawing. `DarkCard` gained `PressableDarkCard` for the
-tab's header card, as `Card` has `PressableCard`. Import them from `@/shared/ui`.
+tab's header card, as `Card` has `PressableCard`. And by promotion out of Play's courts
+([#574](https://github.com/Raketa02/Raketa/issues/574)): `SeatFace` with `SeatCaption` and the
+seat's ring, which the group page, Fill in and a booked game's players card draw — none of which
+may import `features/play/`, the loop #569 removes. Import them from `@/shared/ui`.
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with

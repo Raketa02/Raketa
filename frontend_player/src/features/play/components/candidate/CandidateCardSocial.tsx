@@ -68,8 +68,8 @@
 
 import { StyleSheet, View } from 'react-native';
 
+import { levelRow } from '@/features/games/types';
 import { Button, PlayerPhoto, PressableCard, theme } from '@/shared/ui';
-import { levelRow } from '@/shared/formatting/levelRow';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Term } from '../../domain/vocabulary';

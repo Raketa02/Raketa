@@ -62,8 +62,8 @@
  *   surface, and the sentences it governs are `searchingPresentation.ts`'s.
  */
 
+import { levelRow, type LevelRowFacts } from '@/features/games/types';
 import type { DeckAnswerLabels } from '@/features/proposals/types';
-import { levelRow, type LevelRowFacts } from '@/shared/formatting/levelRow';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
 import type { AvailabilityDiffState } from '@/shared/ui/AvailabilityGrid';
 import type { Announcement } from '@/shared/ui/overlay';

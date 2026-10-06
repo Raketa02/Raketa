@@ -1264,8 +1264,8 @@ encodes:
   #569 removes and #576 deletes whole — except those three and the files `OLD_LOOP_SURFACES`
   names, each a part of it that #576 takes out too. The pieces the new games share moved out
   first (#574): the deck's stage, the yes screen's parts and the leave sheet to
-  `features/proposals`, the seat face to `shared/ui`, the seat and balance words to
-  `shared/vocabulary`
+  `features/proposals`, the level row to `features/games`, the seat face to `shared/ui`, the seat
+  and balance words to `shared/vocabulary`
 
 Circular dependencies fail CI.
 

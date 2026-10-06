@@ -157,7 +157,7 @@ src/
   ownership is proven (the third caller).
 - **Nothing new imports `features/play`, `challenges` or `plans`** — the old loop #576 deletes
   whole. Only those three and `OLD_LOOP_SURFACES` in `eslint.config.mjs` may; what the new games
-  share lives in `proposals`, `shared/ui` and `shared/vocabulary` (#574). _(lint)_
+  share lives in `proposals`, `games`, `shared/ui` and `shared/vocabulary` (#574). _(lint)_
 - **No global `services/`, `utils/`, `types/` or `hooks/` bucket.** Utilities get semantic
   homes (`formatting/`, `date/`, `vocabulary/`).
 - **Copy is code**: every sentence a screen says lives in a copy module beside it
