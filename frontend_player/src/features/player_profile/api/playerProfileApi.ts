@@ -211,10 +211,10 @@ export interface ChangeWeeklyHoursOptions {
  * so a *yes* is this request and a *not now* is a different one entirely
  * ([#275](https://github.com/Raketa02/Raketa/issues/275)).
  *
- * **Unkeyed, and no `signal`**, unlike the commit: that request *creates* an aggregate and a
- * duplicate would be a second profile, where a `PUT` that lands the same state twice has
- * nothing to deduplicate. And a cancelled write leaves the client unable to say whether it
- * landed. Every write below takes this one's two reasons.
+ * **Unkeyed**, unlike the commit: that request *creates* an aggregate and a duplicate would be
+ * a second profile, where a `PUT` that lands the same state twice has nothing to deduplicate.
+ * **No `signal`**, as the commit has none: a cancelled write leaves the client unable to say
+ * whether it landed. Every write below takes this one's two reasons.
  */
 export function changeWeeklyHours({
   weeklyHours,

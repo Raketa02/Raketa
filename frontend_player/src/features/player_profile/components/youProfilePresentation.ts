@@ -4,16 +4,16 @@
  * The tab is onboarding laid out flat
  * ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)),
  * so nearly every sentence on it is a step's own, cited — the grid's footnote, the location
- * step's permission states. What is new, and here, is the tab's own
- * vocabulary: each row's title, the **live line** under it, the one line a screen gained on
- * the way from a step to a row, and the *Save* labels a step never had.
+ * step's permission states. What is new, and here, is the tab's own vocabulary: each row's
+ * title, the **live line** under it, the one line a screen gained on the way from a step to a
+ * row, and the *Save* labels a step never had.
  *
  * ## A live line is drawn from a read
  *
  * The line under a row is a fact off `GET /players/me/profile` or `GET /ratings`, never a
  * template: *10 hours ticked* is the week's count, *Matched with anyone* is the preference.
- * The one static line is the area's, because the area is the
- * one fact with a single state — a profile cannot be committed without one.
+ * The one static line is the area's, because the area is the one fact with a single state — a
+ * profile cannot be committed without one.
  *
  * ## One line says less than the read holds, on purpose
  *

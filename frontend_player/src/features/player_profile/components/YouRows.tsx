@@ -7,8 +7,8 @@
  * The shell composes the tab — its title, the three group titles, which rows sit in which
  * group — and every row from *Skill passport* down is the feature's whose fact it is. These
  * are the profile's: the declaration, the week, the area, who the player is matched with, the
- * photos, the tags and the intro. Each reads the fact off the read that carries it, says it in one line through
- * `youProfilePresentation`, and pushes its own screen.
+ * photos, the tags and the intro. Each reads the fact off the read that carries it, says it in
+ * one line through `youProfilePresentation`, and pushes its own screen.
  *
  * ## A live line is a read, and a read has three states
  *

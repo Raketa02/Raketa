@@ -5,7 +5,7 @@
  * rules: three stacked answers under *About you* with the cost line where the one answer that
  * is not free is chosen, and three under *Who we should match you with* with the reach
  * sentence the moment a narrowing one is. What differs between the two is everything
- * *around* the groups — the step's scope note, its *Continue* and the durable-setting line;
+ * *around* the groups — the step's scope note, its finish and the durable-setting line;
  * the tab's *Save* per group — so each group is here, once, and each screen composes it under
  * its own chrome ([ADR-0179](../../../../../docs/adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
  * §2, first consequence).

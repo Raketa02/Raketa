@@ -23,9 +23,8 @@ export const playerProfileKeys = {
    * same acts — the week write and the declaration write each change one of them, and a key
    * per fact would mean cache entries a single response has to be split across.
    *
-   * It is on the **ordinary defaults** and refetches, unlike anything in Play holding a ranked
-   * list: `searchKeys.ts` names *"the profile and the week grid behind the working copy"* among
-   * the reads that should move while you look at them.
+   * It is on the **ordinary defaults** and refetches: it is not a ranked list that would reorder
+   * under a player's finger, so it moves while you look at it like any other read.
    */
   surface: () => [...playerProfileKeys.all, 'surface'] as const,
   /**

@@ -162,9 +162,9 @@ columns, the booked badge, no old-loop read, the bar standing down in a booked r
 `homeAndBookedGame.test.tsx` (Home booked-only, its pager and badge). **Not seen on a device**: the
 three-column bar at a large text size.
 
-**_Finding players_ is three rows** ([#582](https://github.com/Raketa02/Raketa/issues/582)): _Your
-week · Where you play · Who you play with_. _How far to look_ and _Game suggestions_ left with the
-two questions they answered again — the Search radius and the Proposals opt-in, read only by the old
-loop's ranking — and their screens, `you/radius` and `you/game-suggestions`, left `YOU_SCREENS` with
-them. The group keeps its title: what it holds is still what a proposed game reads. The walk is
-`theShell.test.tsx`, which asserts neither title is drawn.
+**_Finding players_ is three rows** ([#582](https://github.com/Raketa02/Raketa/issues/582)):
+_Your week · Where you play · Who you play with_. _How far to look_ and _Game suggestions_ left
+with the two questions they answered again — the Search radius and the Proposals opt-in, read
+only by the old loop's ranking — and their screens, `you/radius` and `you/game-suggestions`,
+left `YOU_SCREENS` with them. The group keeps its title: what it holds is still what a proposed
+game reads. The walk is `theShell.test.tsx`, which asserts neither title is drawn.

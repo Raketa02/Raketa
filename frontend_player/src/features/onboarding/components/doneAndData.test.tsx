@@ -493,13 +493,12 @@ describe('the data screen', () => {
 
   it('accounts for what the second part collected, not only the questionnaire', async () => {
     // Onboarding is two parts, and this screen is the account of both. A player who handed
-    // over tags, photos, a week, an area and who they play with a few screens ago and read a
-    // screen that mentioned none of them would have been told a half-truth on the way out.
+    // over tags, photos, a week and an area a few screens ago and read a screen that mentioned
+    // none of them would have been told a half-truth on the way out.
     await reachTheDataScreen();
 
     expect(await screen.findByText('What we keep from setting up')).toBeTruthy();
     expect(screen.getByText(/tags you picked, the photos you added/)).toBeTruthy();
-    expect(screen.getByText(/who you want to play with/)).toBeTruthy();
 
     // Each of the three promises the steps themselves made, kept on the way out.
     expect(screen.getByText(/never shown to anybody as a calendar/)).toBeTruthy();
@@ -517,6 +516,17 @@ describe('the data screen', () => {
     expect(screen.queryByText(/how far you will travel/)).toBeNull();
     expect(screen.queryByText(/suggest/i)).toBeNull();
     expect(screen.queryByText(/the exact wording you were shown/)).toBeNull();
+  });
+
+  it('never says the gender answer lets another player see anything', async () => {
+    // The step promised it is used only to match and is never shown on a profile or shared.
+    // The card about what lets another player see who they would be playing must not list
+    // it, or this screen would break a promise made three screens earlier.
+    await reachTheDataScreen();
+
+    expect(await screen.findByText('What we keep from setting up')).toBeTruthy();
+    expect(screen.queryByText(/who you (want to )?play with/i)).toBeNull();
+    expect(screen.queryByText(/gender/i)).toBeNull();
   });
 
   it('says nothing about checking a photo, because nothing checks one', async () => {

@@ -2,9 +2,9 @@
  * The words on the gender step — including **the one sentence the record requires be said.**
  *
  * These are copy and not evidence: re-wording anything here makes nothing that was true
- * yesterday false, and no version identifier travels with the answer. What is not merely copy is that *something* saying the mutuality cost is shown
- * at the moment of setting — the rule that decides when is `gender.reachOf`, and that is
- * where the obligation lives.
+ * yesterday false, and no version identifier travels with the answer. What is not merely
+ * copy is that *something* saying the mutuality cost is shown at the moment of setting — the
+ * rule that decides when is `gender.reachOf`, and that is where the obligation lives.
  *
  * ## Why the warning exists at all
  *

@@ -349,20 +349,23 @@ opt-in were read only by the old loop's ranking, and both left the server with i
 player who answered either changed nothing they would ever see. `SOCIAL_STEPS` is **six** —
 tags, intro, photos, availability, location, gender — and `/radius` and `/opt-in` are gone, with
 `search_radius_km` and `proposals_opt_in` off the commit body. **The finish moved onto the gender
-step without a sentence changing**: it is `ProfileFinish`, which the opt-in step used to draw
-inline — the failure note, an answer still wanted and the way back to it, a refusal that names a
-step, the photo still arriving, and the busy finish under the part's one key — handed the step's
-own hint for the one answer asked on that screen (`GENDER_FINISH_BLOCKED_HINT`, _Choose an answer
-about you to finish_). The gender answer is that screen's question now, as the opt-in was, so
-`answerStillWanted` leaves it out and `MISSING_ANSWER_COPY` lost its entry along with the
-radius's. **The control says _Finish_**: _Finish — show me players_ named a Players deck that no
-longer exists, and what follows the commit is _What Raketa keeps_ and then the app. **The consent
+step whole**: it is `ProfileFinish`, which the opt-in step used to draw inline — the failure
+note, an answer still wanted and the way back to it, a refusal that names a step, the photo
+still arriving, and the busy finish under the part's one key, their sentences unchanged — handed
+the step's own hint for the one answer asked on that screen (`GENDER_FINISH_BLOCKED_HINT`,
+_Choose an answer about you to finish_). The gender answer is that screen's question now, as the
+opt-in was (`ASKED_ON_THE_LAST_STEP` in `domain/profileCommit`, held to the step order by a
+test), so `answerStillWanted` leaves it out and `MISSING_ANSWER_COPY` lost its entry along with
+the radius's. **The control says _Finish_**: _Finish — show me players_ named a Players deck
+that no longer exists, and what follows the commit is _What Raketa keeps_ and then the app. **The consent
 copy went with the question** — `optInPresentation` and its three versions, `OptInPromises`,
 `domain/proposalsOptIn` (`ConsentSurface`, `RecordedProposalsOptIn`), `useAnswerProposalsOptIn`
 — and so did the radius's pieces: `domain/searchRadius`, `radiusPresentation`,
 `SearchRadiusControl`, `useChangeSearchRadius`. `GET /player-profile/options` serves the tags
-alone and the profile read lost both fields. Onboarding's _What Raketa keeps_ says _who you want
-to play with_ where it said _how far you will travel_, and its paragraph about suggestions is
-gone. **Left for a design-system ticket**: `RadiusSlider` (6.10) and `theme.size.radiusSlider`
-have no caller. **Not seen on a device**: the finish's notes stacked under the gender step's two
-groups.
+alone and the profile read lost both fields. Onboarding's _What Raketa keeps_ lost _how far you
+will travel_ and its card about suggestions, and **does not list the gender answer in their
+place**: its card says what lets another player see who they would be playing, and the gender
+step promises that answer is never shown or shared. The paragraph that stood near the top of this
+record — _the consent step's copy is frozen and versioned_ — is gone with the file it described.
+**Left for a design-system ticket**: `RadiusSlider` (6.10) and `theme.size.radiusSlider` have no
+caller. **Not seen on a device**: the finish's notes stacked under the gender step's two groups.

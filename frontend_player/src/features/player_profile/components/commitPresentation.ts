@@ -22,7 +22,12 @@
 import type { AppError } from '@/shared/errors';
 
 import { introRefusal } from '../domain/intro';
-import { STEP_THAT_ASKS, type MissingAnswer } from '../domain/profileCommit';
+import {
+  ASKED_ON_THE_LAST_STEP,
+  STEP_THAT_ASKS,
+  type AnswerAskedBehind,
+  type MissingAnswer,
+} from '../domain/profileCommit';
 import type { SocialStep } from '../domain/socialSteps';
 
 import { CHANGE_INTRO_LABEL, introRefusalSentence } from './introPresentation';
@@ -72,15 +77,6 @@ export const UPLOADING_TITLE = 'One moment — a photo is still arriving';
 export const UPLOADING_BODY =
   'Finishing now would leave it out, so we are waiting for it. Nothing else is holding this up.';
 export const UPLOADING_HINT = 'Waiting for a photo to finish uploading';
-
-/**
- * The one answer the last step asks itself — so it is never *still wanted* from somewhere
- * behind, and has no way back to name.
- */
-const ASKED_ON_THE_LAST_STEP = 'gender' satisfies MissingAnswer;
-
-/** An answer a step behind the last one asks for — the ones a player is sent back to. */
-type AnswerAskedBehind = Exclude<MissingAnswer, typeof ASKED_ON_THE_LAST_STEP>;
 
 /** An answer the commit still needs, and the words that ask for it. */
 export interface MissingAnswerCopy {

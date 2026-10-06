@@ -8,12 +8,12 @@
  *
  * **It accounts for the whole of what onboarding collected**, which is now two parts rather
  * than one. A screen that listed the questionnaire's answers and said nothing about the
- * tags, the photos, the week, the area and who the player wants to play with that the second
- * part collects would be a lie by omission — the player handed those over a few screens ago
- * and this is the screen that says what became of them. The second part stopped asking how
- * far a player will travel and whether games may be suggested
- * ([#582](https://github.com/Raketa02/Raketa/issues/582)), so this screen keeps no account of
- * either.
+ * tags, the photos, the week and the area that the second part collects would be a lie by
+ * omission — the player handed those over a few screens ago and this is the screen that says
+ * what became of them. The second part stopped asking how far a player will travel and
+ * whether games may be suggested ([#582](https://github.com/Raketa02/Raketa/issues/582)), so
+ * this screen keeps no account of either. **The gender answer is not on the card about what
+ * another player sees**, because the step that asks it promised it never is.
  *
  * **It is not a consent form and must never become one.** Nothing is recorded, nothing is
  * agreed to, and there is no control here that means yes. What a consent covers —
@@ -47,9 +47,9 @@ import { useHardwareBack } from '@/shared/lib/platform';
  * arrival, which is why nothing they carried survives; the area really is rounded before
  * anything is written, on the phone and again on the platform. **Nothing here claims a check
  * nobody performs** — there is no sentence saying a photo is reviewed, because a promise
- * about moderation is a promise, not a description — and **nothing here promises a screen that does not exist**:
- * editing a Player profile is not built, so this table says what was kept rather than what
- * a player may go and change.
+ * about moderation is a promise, not a description — and **nothing here promises a screen
+ * that does not exist**: editing a Player profile is not built, so this table says what was
+ * kept rather than what a player may go and change.
  */
 const POINTS = [
   {
@@ -58,7 +58,7 @@ const POINTS = [
   },
   {
     title: 'What we keep from setting up',
-    body: 'The tags you picked, the photos you added, the parts of the week you ticked, the area you play in and who you want to play with. That is what lets another player see who they would be playing, and what lets Raketa look for them near you.',
+    body: 'The tags you picked, the photos you added, the parts of the week you ticked and the area you play in. That is what lets another player see who they would be playing, and what lets Raketa look for them near you.',
   },
   {
     title: 'Your week is a preference, not a diary',

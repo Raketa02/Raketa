@@ -1,5 +1,5 @@
 /**
- * The profile facts a Play screen reads and the You tab edits, in one round trip.
+ * The profile facts the You tab reads and edits, in one round trip.
  *
  * `GET /api/v1/players/me/profile` carries the weekly hours and the per-sport Play intent,
  * across the two aggregates that own them
@@ -15,7 +15,7 @@
  *
  * ## Why this lives in `player_profile` and not in `play`
  *
- * Play is the only reader today, and it would have been the easier home. It loses to the
+ * Play was its first reader, and it would have been the easier home. It lost to the
  * **writes**: `PUT /players/me/weekly-hours` and `PUT /play-intents/{sport}` are writes that
  * are not matchmaking's at all, and a read whose paired writes live in another feature is a
  * read in the wrong feature. *You* draws the same facts from the same route.

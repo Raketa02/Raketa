@@ -143,3 +143,8 @@ is made for every account, so that one gaining a club under a mounted gate — a
 from the sheet over the app — finds it long settled. A read that began only then sent the gate back to
 _pending_ and unmounted the app it was drawing, the sheet with it, which the invitation suite caught. An
 account that does not play never asks the player's reads, whichever club it opens on.
+
+**_What Raketa keeps_ lost the radius and the suggestions consent**
+([#582](https://github.com/Raketa02/Raketa/issues/582)): setting up stopped asking either, so the
+screen keeps no account of them. Why the gender answer did not take the radius's place on the
+card is in [`player_profile.md`](player_profile.md).

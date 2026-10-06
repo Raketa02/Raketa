@@ -149,8 +149,8 @@ async function answerTheTags() {
 }
 
 /**
- * From the intro step to the last one, answering each screen on the way the way that screen
- * wants, and leaving the last one for the caller.
+ * From the intro step to the last one, answering each screen on the way as that screen wants
+ * it, and leaving the last one for the caller.
  *
  * No intro, unless the walk wrote one before calling this: *Next* on an empty box carries
  * nothing, which is the ordinary end of that step. No photo, because this walk adds none and

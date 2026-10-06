@@ -60,8 +60,8 @@ rather than resume a setup minutes later.
 from the mock's own sentences (45), plus the one promise the mock dropped — a game still short at the
 cut-off is called off with everything back. The backend records the version, never the words, so a
 changed word is a new version with the backend's, the old words kept, so every recorded acceptance
-still points at the words it was shown. A
-setup that answers another version shuts _Accept_ and says the app needs updating. Reviewed by a
+still points at the words it was shown. A setup that answers another version shuts _Accept_ and
+says the app needs updating. Reviewed by a
 lawyer before launch (O3).
 
 **Change keeps the old method working; Remove is the server's to refuse** (Q83). _Change_ opens the

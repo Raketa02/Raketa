@@ -250,7 +250,7 @@ export function commitStanding(
  *
  * **Open on everything the part must carry having been answered, and on nothing else.** It
  * is deliberately blind to *which* answers were given: `prefer not to say` and a narrowed
- * preference finish the part exactly as `woman` and `anyone` do, because a gate that opened
+ * preference finish the part exactly as `woman` and `any` do, because a gate that opened
  * only on some answers would be the product withholding the rest of itself until it got the
  * one it wanted.
  *
@@ -300,3 +300,17 @@ export const STEP_THAT_ASKS: Readonly<Record<MissingAnswer, SocialStep>> = {
   location: 'location',
   gender: 'gender',
 };
+
+/**
+ * The one answer **the last step asks itself** — so it is never *still wanted* from somewhere
+ * behind, and there is no way back to name for it: a player short of it is standing on the
+ * controls that give it.
+ *
+ * Spelled as a literal rather than read off `SOCIAL_STEPS`, because the answers a screen can
+ * send a player back for are a **type** the copy table is keyed by, and a type cannot be
+ * computed from a list. What keeps the two from coming apart is the test beside this one.
+ */
+export const ASKED_ON_THE_LAST_STEP = 'gender' satisfies MissingAnswer;
+
+/** An answer a step behind the last one asks — the ones the last step sends a player back for. */
+export type AnswerAskedBehind = Exclude<MissingAnswer, typeof ASKED_ON_THE_LAST_STEP>;

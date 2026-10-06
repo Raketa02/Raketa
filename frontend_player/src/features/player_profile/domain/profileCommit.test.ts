@@ -3,12 +3,15 @@ import { networkUnavailable } from '@/shared/errors';
 import type { ProfilePhoto } from './photoCollection';
 import { emptyDraft, recordAnswer, type ProfileDraft } from './ProfileDraft';
 import {
+  ASKED_ON_THE_LAST_STEP,
   commitStanding,
   commitToSend,
   mayFinish,
   readyToCommit,
   STEP_THAT_ASKS,
+  type MissingAnswer,
 } from './profileCommit';
+import { SOCIAL_STEPS } from './socialSteps';
 
 /** Everything the six steps collect, all of it answered. The ordinary end of the part. */
 function answeredDraft(): ProfileDraft {
@@ -148,6 +151,19 @@ describe('where a missing answer is fixed', () => {
     expect(STEP_THAT_ASKS.availability).toBe('availability');
     expect(STEP_THAT_ASKS.location).toBe('location');
     expect(STEP_THAT_ASKS.gender).toBe('gender');
+  });
+
+  it('names one answer as the last step’s own, and it is the one the last step asks', () => {
+    // The last step never sends a player back for its own question — they are standing on
+    // the controls that answer it. Which answer that is follows the step order, so a step
+    // added after *Who you play with* fails here rather than leaving the finish naming the
+    // wrong question.
+    const last = SOCIAL_STEPS[SOCIAL_STEPS.length - 1];
+    const askedThere = (Object.keys(STEP_THAT_ASKS) as MissingAnswer[]).filter(
+      (answer) => STEP_THAT_ASKS[answer] === last,
+    );
+
+    expect(askedThere).toEqual([ASKED_ON_THE_LAST_STEP]);
   });
 });
 
