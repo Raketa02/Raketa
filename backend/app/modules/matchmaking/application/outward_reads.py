@@ -8,23 +8,13 @@ orchestration rather than a port.
 One function reading the table, rather than a `try` at every call site: a caller
 cannot quietly soften a gate by handing it a default, and cannot forget to soften
 a term, because the same function refuses the mismatch in both directions.
-
-:func:`live_block_set` sits beside it and does the same job for the one outward
-read whose posture is **not** in that table: ``BlockQuery`` is not a matcher
-demand, it declares its own fail-closed posture where the port lives, and what is
-left over is the translation this module already owns — somebody else's outage
-becoming the matcher's own refusal.
 """
 
 from __future__ import annotations
 
 from typing import Any, Awaitable, Callable, TypeVar
 
-from uuid import UUID
-
 from app.kernel import invariant
-from app.modules.blocks.domain.errors import BlockStateUnavailable
-from app.modules.blocks.domain.ports import BlockQuery
 from app.modules.matchmaking.domain.errors import GateDataUnavailable
 from app.modules.matchmaking.domain.ports import FAIL_POSTURE, FailPosture
 
@@ -84,26 +74,3 @@ async def read_demand(
         return await read()
     except Exception:
         return stood_down
-
-
-async def live_block_set(blocks: BlockQuery, player_id: UUID) -> frozenset[UUID]:
-    """This player's live block set, in either direction. **Fails closed.**
-
-    ``BlockQuery`` is not in ``FAIL_POSTURE`` and must not be: it is not one of
-    the matcher's outward demands, and its posture is asserted where the port
-    lives (``docs/adr/0095``) rather than re-declared in a table here. What is
-    left for this module is the same translation :func:`read_demand` performs —
-    somebody else's outage becoming the matcher's own refusal, a 503 about the
-    platform rather than a 403 about *you*.
-
-    It is a function rather than a line in a use case because a safety gate
-    that is translated in one place and swallowed in another is the failure the
-    whole fail-closed rule exists to prevent.
-    """
-
-    try:
-        return await blocks.exclusions_for(player_id)
-    except BlockStateUnavailable as unavailable:
-        raise GateDataUnavailable(
-            "the block set could not be evaluated"
-        ) from unavailable

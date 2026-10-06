@@ -56,8 +56,13 @@ from app.application.ports.events import EventCodec
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.modules.blocks.domain.block import Block
 from app.modules.blocks.domain.errors import BlockStateUnavailable
-from app.modules.blocks.domain.events import PlayerBlocked, PlayerUnblocked
+from app.modules.blocks.domain.events import (
+    PlayerBlocked,
+    PlayerBlockedNamingAScreen,
+    PlayerUnblocked,
+)
 from app.modules.blocks.domain.ids import block_id
+from app.modules.blocks.domain.ports import OwnBlock
 from app.modules.blocks.infrastructure.event_sourced_block_repository import (
     BLOCK_AGGREGATE,
 )
@@ -77,10 +82,11 @@ def _payload_key(name: str) -> str:
 
     So the spelling is taken from the event classes rather than trusted, and a
     rename stops the process from starting instead of quietly emptying a safety
-    gate. Both events are checked, because the filter matches rows of either.
+    gate. Every event class is checked — v1's too, which the store still holds —
+    because the filter matches rows of any of them.
     """
 
-    for event_cls in (PlayerBlocked, PlayerUnblocked):
+    for event_cls in (PlayerBlocked, PlayerBlockedNamingAScreen, PlayerUnblocked):
         if name not in {field.name for field in fields(event_cls)}:
             raise RuntimeError(
                 f"{event_cls.__name__} has no field {name!r}: the block "
@@ -170,17 +176,41 @@ class EventSourcedBlockQuery:
                 pairs.add(frozenset((block.blocker_id, block.blocked_id)))
         return frozenset(pairs)
 
+    async def blocks_made_by(self, blocker_id: UUID) -> tuple[OwnBlock, ...]:
+        """The blocks this player made and has not lifted, newest first.
+
+        **Matched on the blocker's field alone**, so a stream where this player
+        is the one blocked never enters the read: the direction is decided by
+        the statement, and nothing below it has the other half to leak. Ties at
+        one instant go by id, so the order is stable across reads.
+        """
+
+        streams = await self._streams(
+            EventStoreORM.payload[_BLOCKER_KEY].as_string() == str(blocker_id)
+        )
+        standing = [
+            block
+            for block in (Block.from_history(events) for events in streams.values())
+            if block.is_standing and block.blocker_id == blocker_id
+        ]
+        standing.sort(key=lambda block: str(block.blocked_id))
+        standing.sort(key=lambda block: block.blocked_at, reverse=True)
+        return tuple(
+            OwnBlock(blocked_id=block.blocked_id, blocked_at=block.blocked_at)
+            for block in standing
+        )
+
     async def _streams(
         self, condition: ColumnElement[bool]
     ) -> dict[UUID, list[DomainEvent]]:
         """The matching streams, each in version order, decoded.
 
         The whole of this adapter's contact with the database and its codec, so
-        the fail-closed translation is written once for all three reads. A
+        the fail-closed translation is written once for all four reads. A
         caller of this method cannot get an answer that is quietly empty because
         something broke.
 
-        **The fold is deliberately outside**, in the three methods above: a
+        **The fold is deliberately outside**, in the four methods above: a
         ``Block`` refusing an event it does not recognise is a bug in this
         codebase, and reporting it as *the gate is temporarily unavailable*
         would hide it behind a status a client is told to retry.

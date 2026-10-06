@@ -91,19 +91,6 @@ _FIELD_REFUSALS = (
     "club's. Nothing was recorded."
 )
 
-#: A read that leaves a blocked pair out reads the block state first, and a
-#: block state that cannot be read is not guessed at (``docs/adr/0095`` §5).
-_BLOCKS_UNREAD: dict[int | str, dict[str, Any]] = {
-    status.HTTP_503_SERVICE_UNAVAILABLE: {
-        "model": ErrorResponse,
-        "description": (
-            "`block_state_unavailable` — who is blocked could not be read for "
-            "the players list. Nothing was recorded; retry."
-        ),
-    },
-}
-
-
 @router.post(
     "",
     response_model=AdministeredGroupResponse,
@@ -171,7 +158,7 @@ async def administered_groups(
     response_model=AdministeredGroupResponse,
     response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
-    responses={**_THEIRS, **_BLOCKS_UNREAD},
+    responses=_THEIRS,
     summary="An official group I run",
     description=(
         "Its link to post, how many players it has, every player newest first "
@@ -200,7 +187,6 @@ async def administered_group(
     status_code=status.HTTP_200_OK,
     responses={
         **_THEIRS,
-        **_BLOCKS_UNREAD,
         status.HTTP_400_BAD_REQUEST: {
             "model": ErrorResponse,
             "description": _FIELD_REFUSALS,

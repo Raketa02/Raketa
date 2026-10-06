@@ -14,8 +14,7 @@ administrator which ids are real.
 **The administrator's page is not the member's page.** It is the WhatsApp
 crowd arriving: the link to post, how many are in, every player newest first
 with the day they joined, and who is waiting — and its settings. Its players
-list leaves out a blocked pair, either way round, as every Members list does
-(``docs/adr/0183`` §10), and **no count moves**.
+list hides nobody for a block, as no Members list does (``docs/adr/0193`` §2).
 """
 
 from __future__ import annotations
@@ -35,7 +34,6 @@ from app.modules.groups.application.commands import (
     CreateOfficialGroupCommand,
     NoteHandoversSeenCommand,
 )
-from app.modules.groups.application.membership import hidden_in
 from app.modules.groups.application.views import (
     GroupRow,
     NamedClub,
@@ -52,7 +50,6 @@ from app.modules.groups.domain.ports import (
     GroupFaces,
     GroupListing,
     GroupRepository,
-    HiddenMembers,
     HomeClub,
     HomeClubs,
     RatedGroupMembers,
@@ -307,9 +304,9 @@ class AdministeredGroupPages:
     what the read answers, and what the settings answer with before they
     commit.
 
-    Three reads whatever the size of the group: who the administrator and a
-    player have a block between (skipped when nobody else is in it), every
-    face the page draws in one question, and every waiting person's Levels.
+    Two reads whatever the size of the group: every face the page draws in one
+    question, and every waiting person's Levels. **A block hides nobody** from
+    whoever runs it (``docs/adr/0193`` §2).
     """
 
     def __init__(
@@ -318,20 +315,15 @@ class AdministeredGroupPages:
         clubs: HomeClubs,
         faces: GroupFaces,
         ratings: RatedGroupMembers,
-        hidden: HiddenMembers,
     ) -> None:
         self._clubs = clubs
         self._faces = faces
         self._ratings = ratings
-        self._hidden = hidden
 
     async def page(
         self, listing: GroupListing, *, administering: Administering
     ) -> AdministeredGroupPage:
-        hidden = await hidden_in(self._hidden, listing, administering.account_id)
-        newest_first = [
-            member for member in reversed(listing.members) if member not in hidden
-        ]
+        newest_first = list(reversed(listing.members))
         faces = await self._faces.faces_of({*newest_first, *listing.waiting})
         levels = await self._ratings.levels_of(listing.waiting)
         club = await _their_club(self._clubs, listing.home_club_id)
@@ -494,9 +486,9 @@ class ChangeOfficialGroupSettings:
     **Switching to *Anyone* admits everybody waiting at once**
     (``docs/adr/0183`` §7), and the answer names them, in the order they asked.
 
-    **The answer is drawn before the commit**, as *Edit group*'s is: the page
-    reads the block state, which fails closed, and a failure after the commit
-    would answer a ``503`` for a save that had happened.
+    **The answer is drawn before the commit**, as *Edit group*'s is: a read
+    that failed after the commit would answer an error for a save that had
+    happened.
     """
 
     def __init__(

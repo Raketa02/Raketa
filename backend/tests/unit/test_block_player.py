@@ -31,7 +31,6 @@ from app.modules.blocks.application.commands import (
 from app.modules.blocks.application.unblock_player import UnblockPlayer
 from app.modules.blocks.domain.errors import CannotBlockYourself
 from app.modules.blocks.domain.events import PlayerBlocked, PlayerUnblocked
-from app.modules.blocks.domain.surface import BlockSurface
 from app.modules.blocks.infrastructure.event_sourced_block_repository import (
     BLOCK_AGGREGATE,
     EventSourcedBlockRepository,
@@ -68,14 +67,10 @@ class Harness:
             event_store=self.store, events=self.events
         )
 
-    async def block(self, blocker=ALICE, blocked=BOB, surface=BlockSurface.SHORTLIST):
+    async def block(self, blocker=ALICE, blocked=BOB):
         await BlockPlayer(
             blocks=self._repository(), uow=self.uow, clock=self.clock
-        ).execute(
-            BlockPlayerCommand(
-                blocker_id=blocker, blocked_id=blocked, surface=surface
-            )
-        )
+        ).execute(BlockPlayerCommand(blocker_id=blocker, blocked_id=blocked))
 
     async def unblock(self, blocker=ALICE, blocked=BOB):
         await UnblockPlayer(
@@ -95,13 +90,12 @@ def harness() -> Harness:
 
 
 async def test_blocking_opens_the_stream_for_the_ordered_pair(harness):
-    await harness.block(surface=BlockSurface.DECK)
+    await harness.block()
 
     (record,) = await harness.stream()
     assert isinstance(record.event, PlayerBlocked)
     assert record.event.blocker_id == ALICE
     assert record.event.blocked_id == BOB
-    assert record.event.surface == "DECK"
     assert record.event.occurred_at == harness.clock.at
     assert harness.uow.commits == 1
 
@@ -110,7 +104,7 @@ async def test_blocking_again_appends_nothing_and_publishes_nothing(harness):
     await harness.block()
     published_after_first = len(harness.events.published)
 
-    await harness.block(surface=BlockSurface.LINEUP)
+    await harness.block()
 
     assert len(await harness.stream()) == 1
     assert len(harness.events.published) == published_after_first
@@ -159,14 +153,14 @@ async def test_re_blocking_after_a_lift_opens_the_next_chapter_of_one_stream(har
     await harness.block()
     await harness.unblock()
 
-    await harness.block(surface=BlockSurface.FILL_SEATS)
+    await harness.block()
 
     kinds = [type(record.event) for record in await harness.stream()]
     assert kinds == [PlayerBlocked, PlayerUnblocked, PlayerBlocked]
 
 
 async def test_nothing_but_the_two_block_events_is_ever_released(harness):
-    """Neither party is notified, in either direction (`docs/adr/0095` §8), and
+    """Neither party is notified, in either direction (`docs/adr/0193` §3), and
     the outbox is the only place a notification could be introduced. What a
     block publishes is the fact itself and nothing beside it."""
 

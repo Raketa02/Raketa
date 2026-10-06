@@ -12,10 +12,12 @@ class LogBlockEvent:
     """Audit-trail handler for both block events.
 
     The outbox carries side effects only, never a state transition a response
-    depends on — and in this context there are no side effects to carry and
-    there will not be any: **neither party is notified, in either direction**
-    (``docs/adr/0095`` §8). What a later handler here could legitimately be is a
-    moderation read model, and that is a Report's business rather than a Block's.
+    depends on. **Neither party is notified, in either direction**
+    (``docs/adr/0193`` §3); the one side effect a block has is Proposals' —
+    taking back the blocker's yeses where the blocked player is In (§4) — and it
+    is subscribed there, not here. What a later handler here could legitimately
+    be is a moderation read model, and that is a Report's business rather than a
+    Block's.
 
     **Nothing here logs a payload**, which matters more in this context than in
     any other: the payload is two people and the fact that one of them wants

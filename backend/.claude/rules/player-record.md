@@ -21,18 +21,26 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   being disclosures with #575, and the challenges are gone (#578). Each
   strand is a `PriorDisclosure` answering **yes or no** (`GamesTheyPlayed`, `GroupsTheyShare`,
   `GroupsTheReaderRuns`), asked in turn and stopped at the first yes. A game discloses for as
-  long as the pair are both on its court, played or not; a group is membership as it stands. **The gates run live**: the three about accounts
-  — a block in either direction, the subject's hold, an account that may not be shown —
-  through `matchmaking`'s `AccountGates`, plus the reader's **own** hold, because a hold points
-  both ways. **No gender preference is asked of any strand**: a preference says who a player is
+  long as the pair are both on its court, played or not; a group is membership as it stands. **The gates run live**: the two about accounts
+  — the subject's hold, an account that may not be shown — through `matchmaking`'s
+  `AccountGates`, plus the reader's **own** hold, because a hold points both ways. **A block
+  is no gate, in either direction**
+  ([ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+  §2, #586): the blocker opens the record to undo it, and the blocked person reads the
+  blocker's record byte for byte as before. What the record says of a block is the
+  **reader's own** — `blocked_by_you`, asked once admitted through the tenth demand,
+  `BlocksByTheReader` (`OwnBlocksOfTheReader`, over `BlockQuery.blocks_made_by` with the
+  reader as the blocker), a fact on the sheet that refuses nothing and is `false` on your own
+  record; nothing on any port can answer *did they block me* (§3). It is the one demand
+  here that **stands down rather than raising**: an unreadable block state omits
+  `blocked_by_you` and takes no record down (ADR-0193, Consequences). **No gender preference is asked of any strand**: a preference says who a player is
   willing to be *matched* with, and every strand here already put the pair in front of each
   other (#575; it had been dropped for whoever runs the group by ADR-0159's 2026-10-02
-  amendment, #566). ADR-0193 takes the block out of the record's gates too; that is #586's.
+  amendment, #566).
   **Your own record has no gates at all** and is a *second use case* rather than a branch, so
   the screen that tells a player how they appear cannot be taken down by the gate machinery.
-  **The refusals are one refusal, byte for byte** — never disclosed, blocked, held and no
-  such player are one `404` with one body, asserted as a sameness rather than as four
-  statuses. And **this context declares its own ports and its
+  **The refusals are one refusal, byte for byte** — never disclosed, held and no such player
+  are one `404` with one body, asserted as a sameness rather than as three statuses. And **this context declares its own ports and its
   own types**: it borrows nothing from another context's domain, held by an `.importlinter`
   contract rather than a test, because an application layer importing `CardIdentity` would
   read as sensible reuse in the diff and nothing would go red. The cost is a second

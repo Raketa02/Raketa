@@ -176,6 +176,18 @@ class Admission:
         return self.verdict
 
 
+class OwnBlocks:
+    """The reader's own blocks: ``(blocker, blocked)`` pairs standing."""
+
+    def __init__(self, *standing: tuple[UUID, UUID]) -> None:
+        self.standing = set(standing)
+        self.asked: list[tuple[UUID, UUID]] = []
+
+    async def has_blocked(self, *, reader_id: UUID, subject_id: UUID) -> bool:
+        self.asked.append((reader_id, subject_id))
+        return (reader_id, subject_id) in self.standing
+
+
 class Clock:
     def now(self) -> Instant:
         return NOW
@@ -190,10 +202,12 @@ def reading(
     reliability: Reliability | None = None,
     variety: Variety | None = None,
     sportsmanship: Opinions | None = None,
+    own_blocks: OwnBlocks | None = None,
 ):
     identities, links = Identities(identity), Links()
     use_case = ReadPlayerRecord(
         admission=Admission(admits),
+        own_blocks=own_blocks or OwnBlocks(),
         identities=identities,
         photos=links,
         ratings=ratings or Ratings(),
@@ -255,9 +269,47 @@ async def test_a_refused_read_touches_no_provider():
     assert variety.asked == []
 
 
+async def test_the_readers_own_block_is_on_the_sheet_and_refuses_nothing():
+    """``docs/adr/0193`` §2–§3: the reader's own block is a fact on the sheet,
+    asked once the record is admitted, of the reader's own blocks alone."""
+
+    own_blocks = OwnBlocks((READER, SUBJECT))
+    use_case, _, _ = reading(admits=True, identity=an_identity(), own_blocks=own_blocks)
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.blocked_by_reader is True
+    assert own_blocks.asked == [(READER, SUBJECT)]
+
+
+async def test_a_block_of_the_reader_is_never_on_the_sheet():
+    """The subject blocked the reader: the port is asked about the reader's own
+    block, and there is none."""
+
+    use_case, _, _ = reading(
+        admits=True, identity=an_identity(), own_blocks=OwnBlocks((SUBJECT, READER))
+    )
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.blocked_by_reader is False
+
+
+async def test_a_refused_read_asks_nothing_about_blocks():
+    own_blocks = OwnBlocks((READER, SUBJECT))
+    use_case, _, _ = reading(
+        admits=False, identity=an_identity(), own_blocks=own_blocks
+    )
+
+    with pytest.raises(RecordUnavailable):
+        await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert own_blocks.asked == []
+
+
 async def test_a_person_the_platform_cannot_describe_refuses_the_same_way():
-    """*No such player* is the fourth cause of the one refusal. It reaches the
-    same class, so it renders as the same body as a block does."""
+    """*No such player* is one cause of the one refusal. It reaches the same
+    class, so it renders as the same body as *never disclosed* does."""
 
     use_case, _, _ = reading(admits=True, identity=None)
 
@@ -294,6 +346,8 @@ async def test_your_own_record_is_read_with_no_admission_collaborator_at_all():
     ).execute(reader_id=READER)
 
     assert record.is_self is True
+    # Nobody can block themselves, so their own sheet never says they did.
+    assert record.blocked_by_reader is False
     assert record.identity == an_identity()
     assert identities.asked == [READER]
 
@@ -323,6 +377,7 @@ async def test_the_sport_asked_for_reaches_the_sheet_and_never_the_admission():
     form = Form()
     use_case = ReadPlayerRecord(
         admission=admission,
+        own_blocks=OwnBlocks(),
         identities=Identities(an_identity()),
         photos=Links(),
         ratings=Ratings({Sport.SQUASH: a_rating(Sport.SQUASH)}),

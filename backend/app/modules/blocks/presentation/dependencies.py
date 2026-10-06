@@ -17,12 +17,18 @@ from app.api.dependencies import (
     DomainEventStoreDep,
     EventPublisherDep,
     EventRuntimeDep,
+    SettingsDep,
     UnitOfWorkDep,
 )
-from app.bootstrap.composition import build_block_query, build_block_repository
+from app.bootstrap.composition import (
+    build_block_query,
+    build_block_repository,
+    build_blocked_faces,
+)
 from app.modules.blocks.application.block_player import BlockPlayer
+from app.modules.blocks.application.blocked_players import ReadBlockedPlayers
 from app.modules.blocks.application.unblock_player import UnblockPlayer
-from app.modules.blocks.domain.ports import BlockQuery, BlockRepository
+from app.modules.blocks.domain.ports import BlockedFaces, BlockQuery, BlockRepository
 
 
 def get_block_repository(
@@ -39,14 +45,29 @@ BlockRepositoryDep = Annotated[BlockRepository, Depends(get_block_repository)]
 
 def get_block_query(db: DbSession, runtime: EventRuntimeDep) -> BlockQuery:
     # Per request, over the request's own session, so a block taken a moment ago
-    # is visible to the read that follows it. Declared before its first caller
-    # exists — every people-listing surface will consult it (`docs/adr/0095` §7)
-    # and none of them is built — so that the surfaces wire to this line rather
-    # than each deciding where a block is read from.
+    # is visible to the read that follows it.
     return build_block_query(db, runtime=runtime)
 
 
 BlockQueryDep = Annotated[BlockQuery, Depends(get_block_query)]
+
+
+def get_blocked_faces(
+    db: DbSession, settings: SettingsDep, runtime: EventRuntimeDep
+) -> BlockedFaces:
+    return build_blocked_faces(db, settings=settings, runtime=runtime)
+
+
+BlockedFacesDep = Annotated[BlockedFaces, Depends(get_blocked_faces)]
+
+
+def get_read_blocked_players(
+    blocks: BlockQueryDep, faces: BlockedFacesDep
+) -> ReadBlockedPlayers:
+    return ReadBlockedPlayers(blocks=blocks, faces=faces)
+
+
+ReadBlockedPlayersDep = Annotated[ReadBlockedPlayers, Depends(get_read_blocked_players)]
 
 
 def get_block_player(

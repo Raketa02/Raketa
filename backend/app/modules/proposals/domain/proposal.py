@@ -525,6 +525,23 @@ class Proposal:
                 )
             )
 
+    def withdraw_paused_yes(self, player_id: UUID, *, at: Instant) -> bool:
+        """Take back a yes another booking paused — the ordinary
+        ``YesWithdrawn``, so it never comes back when the player's week frees.
+        **Only a block asks this** (``docs/adr/0193`` §4): a paused yes is still
+        the blocker's, and nothing may reappear on their behalf. Answers whether
+        anything was recorded — nothing for a yes that is not paused, or a game
+        no longer filling."""
+
+        if self.standing_at(at) is not Standing.FILLING or player_id not in self.paused:
+            return False
+        self._record_that(
+            YesWithdrawn(
+                proposal_id=self.proposal_id, player_id=player_id, occurred_at=at
+            )
+        )
+        return True
+
     def fill(
         self,
         *,
@@ -743,8 +760,12 @@ class Proposal:
                 player for player in self.withdrawn if player != event.player_id
             )
         elif isinstance(event, YesWithdrawn):
+            # A paused yes is withdrawn only by a block (`withdraw_paused_yes`).
             self.yeses = tuple(
                 player for player in self.yeses if player != event.player_id
+            )
+            self.paused = tuple(
+                player for player in self.paused if player != event.player_id
             )
             self.withdrawn = (*self.withdrawn, event.player_id)
         elif isinstance(event, SeatReopened):

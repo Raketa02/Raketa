@@ -15,17 +15,24 @@ one person.
 
 **Unblocking lifts one direction only**, which is the claim the symmetric effect
 is built on top of and the one a later "simplification" would break silently.
+
+**No screen is recorded, and a block that named one still folds**
+(``docs/adr/0193`` §5): ``blocks.player_blocked`` is v2, with the pair alone, and
+a stored v1 row reads its surface and drops it.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from app.application.events import EventCatalog
+from app.application.events.envelope import SerializedEventEnvelope
+from app.infrastructure.events.json_event_codec import JsonEventCodec
+from app.modules.blocks.application.event_subscriptions import register_block_events
 from app.modules.blocks.domain.block import Block
 from app.modules.blocks.domain.errors import CannotBlockYourself
 from app.modules.blocks.domain.events import PlayerBlocked, PlayerUnblocked
 from app.modules.blocks.domain.ids import block_id
-from app.modules.blocks.domain.surface import BlockSurface
 from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import utc
 
@@ -39,7 +46,6 @@ def a_block(**overrides) -> Block:
     arguments = dict(
         blocker_id=ALICE,
         blocked_id=BOB,
-        surface=BlockSurface.SHORTLIST,
         occurred_at=BLOCKED_AT,
     )
     arguments.update(overrides)
@@ -53,22 +59,78 @@ def test_the_stream_id_is_the_ordered_pair():
     assert block_id(ALICE, BOB) != block_id(BOB, ALICE)
 
 
-def test_blocking_records_the_pair_and_the_surface_and_nothing_else():
-    block = a_block(surface=BlockSurface.DECK)
+def test_blocking_records_the_pair_and_nothing_else():
+    block = a_block()
 
     (event,) = block.pull_events()
     assert isinstance(event, PlayerBlocked)
     assert event.blocker_id == ALICE
     assert event.blocked_id == BOB
-    assert event.surface == "DECK"
     assert event.occurred_at == BLOCKED_AT
-    # There is no reason field, and no free text of any kind, on either event.
-    assert set(vars(event)) == {
-        "blocker_id",
-        "blocked_id",
-        "surface",
-        "occurred_at",
-    }
+    # No reason, no free text and no screen, on either event.
+    assert set(vars(event)) == {"blocker_id", "blocked_id", "occurred_at"}
+
+
+def test_a_standing_block_says_when_it_was_made():
+    """What *Blocked players* draws beside each person (``docs/adr/0193`` §3)."""
+
+    block = Block.from_history(a_block().pull_events())
+
+    assert block.blocked_at == BLOCKED_AT
+
+
+def _codec() -> JsonEventCodec:
+    catalog = EventCatalog()
+    register_block_events(catalog)
+    return JsonEventCodec(catalog)
+
+
+def test_a_block_is_written_as_version_two():
+    (event,) = a_block().pull_events()
+
+    encoded = _codec().encode(event)
+
+    assert (encoded.event_type, encoded.schema_version) == (
+        "blocks.player_blocked",
+        2,
+    )
+    assert "surface" not in encoded.payload
+
+
+def test_a_stored_block_that_named_its_screen_still_folds():
+    """``blocks.player_blocked`` v1 carried which of the old loop's four screens
+    the block was made from. Rows of it are in the store, and nothing rewrites
+    them: the surface is read and dropped."""
+
+    v1 = _codec().decode(
+        SerializedEventEnvelope(
+            id=new_uuid(),
+            event_type="blocks.player_blocked",
+            schema_version=1,
+            payload={
+                "blocker_id": str(ALICE),
+                "blocked_id": str(BOB),
+                "surface": "SHORTLIST",
+                "occurred_at": BLOCKED_AT.isoformat(),
+            },
+            occurred_at=BLOCKED_AT,
+        )
+    )
+
+    block = Block.from_history([v1])
+
+    assert (block.blocker_id, block.blocked_id) == (ALICE, BOB)
+    assert block.is_standing
+    assert block.blocked_at == BLOCKED_AT
+    assert block.version == 1
+    assert not hasattr(block, "surface")
+
+    block.unblock(occurred_at=LATER)
+    block.block(occurred_at=LATER)
+
+    *_, again = block.pull_events()
+    assert isinstance(again, PlayerBlocked), "a re-block is written as v2"
+    assert block.blocked_at == LATER
 
 
 def test_blocking_yourself_raises_rather_than_no_ops():
@@ -79,14 +141,13 @@ def test_blocking_yourself_raises_rather_than_no_ops():
 def test_blocking_somebody_already_blocked_appends_nothing():
     block = Block.from_history(a_block().pull_events())
 
-    block.block(surface=BlockSurface.LINEUP, occurred_at=LATER)
+    block.block(occurred_at=LATER)
 
     assert block.pull_events() == []
     assert block.version == 1
     assert block.is_standing
-    # The surface of the standing block is the one it was made from, and a
-    # repeat from another screen does not rewrite it.
-    assert block.surface is BlockSurface.SHORTLIST
+    # A repeat is not a new block: the standing one was made when it was made.
+    assert block.blocked_at == BLOCKED_AT
 
 
 def test_unblocking_lifts_it_and_re_blocking_opens_the_next_chapter():
@@ -97,7 +158,7 @@ def test_unblocking_lifts_it_and_re_blocking_opens_the_next_chapter():
     assert isinstance(lifted, PlayerUnblocked)
     assert not block.is_standing
 
-    block.block(surface=BlockSurface.FILL_SEATS, occurred_at=LATER)
+    block.block(occurred_at=LATER)
     (again,) = block.pull_events()
     assert isinstance(again, PlayerBlocked)
     assert block.is_standing

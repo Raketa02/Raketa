@@ -420,9 +420,11 @@ async def test_marta_approves_michal_and_he_heads_the_players_newest_first(
     assert (await read(client, michal, group)).status_code == 200
 
 
-async def test_a_blocked_pair_is_left_out_of_the_players_and_no_count_moves(
-    client, ogrody
-):
+async def test_a_block_hides_nobody_from_the_players_list(client, ogrody):
+    """Kuba blocked Tomek as a player long ago, and Tomek, running the group,
+    still reads him: a block keeps two people off one court and hides nobody in
+    a group's people (``docs/adr/0193`` §2, superseding ADR-0183 §10)."""
+
     tomek = await an_administrator_who_plays(client, ogrody, "tomek")
     group = await an_official_group(client, tomek, ogrody["id"], join_policy="ANYONE")
     ewa = await a_padel_player(client, "ewa")
@@ -433,10 +435,7 @@ async def test_a_blocked_pair_is_left_out_of_the_players_and_no_count_moves(
 
     page = await page_of(client, tomek, ogrody["id"], group)
 
-    # Kuba blocked Tomek as a player long ago; the two do not see each other on
-    # any list of a group's people (docs/adr/0183 §10), and the count is the
-    # group's.
-    assert [row["name"] for row in page["players"]] == ["ewa"]
+    assert [row["name"] for row in page["players"]] == ["kuba", "ewa"]
     assert page["member_count"] == 2
 
 

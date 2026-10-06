@@ -8,13 +8,13 @@ that is growing is read from its newest faces. The members row on the Info tab
 is a preview of that list, so its faces are the same order without the reader.
 
 Pure: the members come in **joining order** (the directory's), and which of them
-are shown at all — rated in the sport, not blocked — is the caller's to have
-filtered first.
+are shown at all — rated in the sport — is the caller's to have filtered first.
+**A block filters nobody** (``docs/adr/0193`` §2).
 """
 
 from __future__ import annotations
 
-from collections.abc import Collection, Sequence
+from collections.abc import Sequence
 from typing import Final
 from uuid import UUID
 
@@ -29,9 +29,9 @@ def in_members_order(
     """``members``, given in joining order, as the Members list draws them.
 
     The reader and whoever runs the group (``run_by``) lead only when they
-    are among ``members`` — a reader not rated in the sport asked, or an Owner
-    a block hides, is not listed first for being who they are; and nobody
-    leads for an official group nobody runs.
+    are among ``members`` — a reader or an Owner not rated in the sport asked
+    is not listed first for being who they are; and nobody leads for an
+    official group nobody runs.
     """
 
     first = (reader_id,) if run_by is None else (reader_id, run_by)
@@ -46,16 +46,12 @@ def members_row(
     *,
     reader_id: UUID,
     run_by: UUID | None,
-    hidden: Collection[UUID],
 ) -> tuple[UUID, ...]:
-    """The faces the Info tab's members row stacks: everybody the reader may
-    see **but the reader**, in the Members list's order, at most
-    ``MEMBERS_ROW_FACES``. Empty for a reader alone in the group, whose row
-    draws their own face."""
+    """The faces the Info tab's members row stacks: everybody **but the
+    reader**, in the Members list's order, at most ``MEMBERS_ROW_FACES``. Empty
+    for a reader alone in the group, whose row draws their own face."""
 
-    shown = [
-        member for member in members if member != reader_id and member not in hidden
-    ]
+    shown = [member for member in members if member != reader_id]
     return in_members_order(shown, reader_id=reader_id, run_by=run_by)[
         :MEMBERS_ROW_FACES
     ]

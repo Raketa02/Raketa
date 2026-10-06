@@ -437,6 +437,22 @@ class PlayerRecordResponse(BaseModel):
             "route when a client asks about itself."
         ),
     )
+    blocked_by_you: bool = Field(
+        default=OMITTED,
+        description=(
+            "Whether **you** have blocked this person — your own block, and "
+            "never theirs of you. Draw *Unblock* when `true` and *Block* when "
+            "`false`, and no row at all when `is_self` is `true`.\n\n"
+            "**It answers one direction only, and that is the point.** Nothing "
+            "on this response, or any other, says whether they blocked you: "
+            "their record reads the same either way. If you both blocked, each "
+            "of you reads `true` about your own block and nothing about the "
+            "other's.\n\n"
+            "`false` on your own record, always. **Omitted only when your "
+            "blocks could not be read** — draw neither row then, rather than a "
+            "guess; the rest of the record is unaffected."
+        ),
+    )
     name: str = Field(
         ...,
         description=(
@@ -643,6 +659,9 @@ class PlayerRecordResponse(BaseModel):
                 for one in record.sports
             ],
         }
+        if record.blocked_by_reader is not None:
+            # Omitted when the reader's blocks could not be read (`docs/adr/0193`).
+            fields["blocked_by_you"] = record.blocked_by_reader
         if identity.intro is not None:
             # Omitted where nothing was written, never `""` (`docs/adr/0170`).
             fields["intro"] = identity.intro

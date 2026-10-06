@@ -474,6 +474,11 @@ class PlayerRecord:
     visible. So the subject's id is deliberately **not** on this type: there is
     nothing here to compare.
 
+    **One field is about the reader rather than the subject**:
+    ``blocked_by_reader``, the reader's own block (``docs/adr/0193`` §3). It is
+    the only reader-relative fact here, and it is directed so that it can never
+    say anything to the person blocked.
+
     **Nothing on this type turns on ``is_self``.** It used to hold two
     sportsmanship fields, at most one ever filled, and an invariant deciding
     which by who was reading; the figure is served to its subject now
@@ -482,6 +487,12 @@ class PlayerRecord:
 
     is_self: bool
     identity: SubjectIdentity
+    #: Whether **the reader** has blocked this person (``docs/adr/0193`` §3) —
+    #: their own block and never anybody's block of them, so the blocked
+    #: person's read of the blocker is the same either way. ``False`` on your
+    #: own record: nobody can block themselves. ``None`` when the reader's
+    #: blocks could not be read, and the sheet omits it rather than guessing.
+    blocked_by_reader: bool | None
     #: A short-lived signed URL for ``identity.photo_id``, minted for this
     #: response and stored nowhere. **Present exactly when the photo id is**:
     #: signing is a signature over a request that is never sent, so there is no

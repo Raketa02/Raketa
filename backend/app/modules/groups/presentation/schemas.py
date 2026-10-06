@@ -454,11 +454,10 @@ class GroupResponse(GroupRowSchema):
         description=(
             "The Info tab's members row: **up to five** faces of everybody but "
             "the reader, in the Members list's order — the Owner, then newest "
-            "joined first — with a blocked pair, either way round, left out, as "
-            "the list it opens leaves them out. Empty for a reader alone "
-            "(`member_count` 1), whose row draws their own face — and empty "
-            "too, with `member_count` above 1, when a block hides everybody "
-            "else. `member_count` is the group's, so its *+N* counts everybody."
+            "joined first. A block hides nobody here, as it hides nobody in the "
+            "list it opens. Empty for a reader alone (`member_count` 1), whose "
+            "row draws their own face. `member_count` is the group's, so its "
+            "*+N* counts everybody."
         )
     )
     administrator_name: str | None = Field(
@@ -633,11 +632,8 @@ class GroupMembersResponse(BaseModel):
             "**Only the members rated in `sport`**: the reader first, then the "
             "Owner — or the Administrator running an official group, once they "
             "joined it as a player — then everybody else **newest joined "
-            "first**. **A blocked "
-            "pair, either way round, is left out of each other's list** — and "
-            "nothing says so: the group's `member_count` is the same for every "
-            "reader, so it may be more than the rows here. Empty when nobody in "
-            "the group the reader may see is rated in it."
+            "first**. **A block hides nobody here**, either way round. Empty "
+            "when nobody in the group is rated in it."
         )
     )
 
@@ -782,9 +778,8 @@ class AdministeredGroupResponse(GroupRowSchema):
     players: list[GroupPlayerSchema] = Field(
         description=(
             "Every player, **newest joined first** — the Administrator too, if "
-            "they joined as a player. A blocked pair, either way round, is left "
-            "out, as every Members list leaves them out; `member_count` is the "
-            "group's."
+            "they joined as a player. A block hides nobody here, as it hides "
+            "nobody in a Members list; `member_count` is the group's."
         )
     )
     requests: list[JoinRequestSchema] = Field(

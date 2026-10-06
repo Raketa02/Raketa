@@ -11,9 +11,13 @@ in this use case that counts, and there is nothing for a later change to
 increment: friction on the one control a person has is a tax paid to solve a
 problem the platform does not have at eleven players.
 
-**Nothing is notified.** The events are appended and published like every other
-event in this codebase, and the only handler subscribed to them writes an audit
-line with no payload. There is no path from here to the blocked player.
+**Nothing is notified of the block.** The events are appended and published like
+every other event in this codebase. An audit line is written with no payload,
+and Proposals takes back the blocker's yeses where the blocked player is In,
+after commit and through the ordinary withdrawal (``docs/adr/0193`` §4). The one
+notice that can follow is that withdrawal's own: on a game waiting for its club,
+the others In are told the blocker *left*, exactly as leaving by hand tells
+them, and nothing names a block.
 
 **The blocked player is not checked for existence, deliberately.** Two reasons,
 and the second is the load-bearing one. A block of an id nobody holds costs one
@@ -66,7 +70,6 @@ class BlockPlayer:
             block = Block.first_blocked(
                 blocker_id=command.blocker_id,
                 blocked_id=command.blocked_id,
-                surface=command.surface,
                 occurred_at=at,
             )
         else:
@@ -74,7 +77,7 @@ class BlockPlayer:
             # double tap takes: it saves an aggregate with nothing pending and
             # the stream does not grow.
             block = existing
-            block.block(surface=command.surface, occurred_at=at)
+            block.block(occurred_at=at)
 
         await self._blocks.save(block)
         await self._uow.commit()

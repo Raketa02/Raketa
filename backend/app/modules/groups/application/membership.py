@@ -26,7 +26,6 @@ from app.modules.groups.domain.ports import (
     GroupDirectory,
     GroupListing,
     GroupRepository,
-    HiddenMembers,
 )
 
 
@@ -74,19 +73,3 @@ async def listing_for_a_member_or_its_runner(
     if reader_id not in listing.members and reader_id != runner:
         raise GroupNotFound()
     return listing, runner
-
-
-async def hidden_in(
-    hidden: HiddenMembers, listing: GroupListing, reader_id: UUID
-) -> frozenset[UUID]:
-    """Who in this group the reader and have a block between them.
-
-    **A reader alone in the group has nobody to hide**, so the block state is
-    not read at all — which is what keeps a group's creation, whose answer is
-    read straight after its commit, from failing closed over a question with
-    no one in it.
-    """
-
-    if all(member == reader_id for member in listing.members):
-        return frozenset()
-    return await hidden.hidden_from(reader_id)

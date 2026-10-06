@@ -81,20 +81,6 @@ _NOT_FOUND: dict[int | str, dict[str, Any]] = {
     },
 }
 
-#: A read that leaves a blocked pair out reads the block state first, and a
-#: block state that cannot be read is not guessed at (``docs/adr/0095`` §5).
-#: A reader alone in the group has nobody to hide, and is never refused this.
-_BLOCKS_UNREAD: dict[int | str, dict[str, Any]] = {
-    status.HTTP_503_SERVICE_UNAVAILABLE: {
-        "model": ErrorResponse,
-        "description": (
-            "`block_state_unavailable` — who is blocked could not be read, and "
-            "faces nobody could check are not served. Nothing was recorded; "
-            "retry."
-        ),
-    },
-}
-
 _OWNER_ONLY: dict[int | str, dict[str, Any]] = {
     status.HTTP_403_FORBIDDEN: {
         "model": ErrorResponse,
@@ -173,15 +159,15 @@ async def my_groups(user: CurrentUserDep, read: ReadMyGroupsDep) -> MyGroupsResp
     response_model=GroupResponse,
     response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
-    responses={**_NOT_FOUND, **_BLOCKS_UNREAD},
+    responses=_NOT_FOUND,
     summary="A group, for its members",
     description=(
         "Its name, monogram, dots, member count and home club; its link and "
         "join policy; whether the caller owns it; for every sport, how many "
         "members are rated in it and the first of them to join — the Games "
-        "tab's *N of M*; and the faces on the Info tab's members row, which "
-        "**leaves out a blocked pair, either way round**, as the Members list "
-        "does. No count moves."
+        "tab's *N of M*; and the faces on the Info tab's members row, in the "
+        "Members list's order. **A block hides nobody here**, either way "
+        "round."
     ),
 )
 async def read_group(
@@ -213,15 +199,6 @@ async def read_group(
             "model": ErrorResponse,
             "description": (
                 "`group_not_found` — no such group, or one the caller is not in."
-            ),
-        },
-        status.HTTP_503_SERVICE_UNAVAILABLE: {
-            "model": ErrorResponse,
-            "description": (
-                "`block_state_unavailable` — who is blocked could not be read "
-                "for the answer's members row. **Nothing was recorded**: the "
-                "answer is drawn before the save commits, so the retry is the "
-                "whole edit again."
             ),
         },
     },
@@ -357,16 +334,15 @@ async def leave_group(
     response_model=GroupMembersResponse,
     response_model_exclude_unset=True,
     status_code=status.HTTP_200_OK,
-    responses={**_NOT_FOUND, **_BLOCKS_UNREAD},
+    responses=_NOT_FOUND,
     summary="Members of a group, for one sport",
     description=(
         "**Only the members rated in `sport`** — who in the group the caller "
         "could play it with: the caller first, then the Owner, then everybody "
         "else newest joined first. Each with their face, their Level in the "
         "sport, their Player Score where they have one, whether they own the "
-        "group and when they joined. **A blocked pair, either way round, is "
-        "left out of each other's list**, and the group's member count does "
-        "not change.\n\n"
+        "group and when they joined. **A block hides nobody here**, either way "
+        "round: both stay in the group and see each other in its list.\n\n"
         "**Read by the group's members, and by whoever runs an official group "
         "now** — running one is not membership. That caller reads the same rows "
         "in the same order, and is a row only once they have joined as a "

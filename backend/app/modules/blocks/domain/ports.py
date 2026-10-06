@@ -1,4 +1,5 @@
-"""The two seams this context is built on: one to write a block, one to read one.
+"""The seams this context is built on: one to write a block, one to read one, and
+one to draw the people on *Blocked players*.
 
 They are here rather than in ``app/application/ports/`` because both are the
 Blocks context's own. ``BlockRepository`` is the **aggregate repository** kind —
@@ -7,26 +8,22 @@ event-sourced, owning the aggregate-type name, the replay and the
 optimistic-concurrency bookkeeping (``docs/adr/0018``). ``BlockQuery`` is the read
 kind, and it is the one every other context is going to hold.
 
-**One ``BlockQuery``, and every surface that shows one player to another consults
-it** (``docs/adr/0095`` §7). Two questions, because ADR-0095 §4 enforces a block
-in two places and they ask different things:
+**One ``BlockQuery``, and every route onto a court consults it**
+(``docs/adr/0193`` §1) — through Proposals' one pair rule, ``PlayerFit``. The
+surfaces that only *show* people — Members, the record — no longer ask it
+whether two people may see each other (§2). Three questions, because they have
+three shapes:
 
-- **Generation**, building the searcher's exclusion list — *whom must this
-  player never be shown* — ``exclusions_for``.
-- **Disposal**, re-verifying a row before the response leaves — *are these two
-  blocked, either way round* — ``blocked_between``.
+- **The exclusion set** — *whom must this player never share a court with* —
+  ``exclusions_for``, one bounded read keyed on the player.
+- **The pairwise question** — *are these two blocked, either way round* —
+  ``blocked_between``, two keyed reads and no scan, because the pair determines
+  both stream ids.
+- **The bulk mask** — *which of these people have a block between them* —
+  ``blocked_pairs_among``, what a four of six pairs asks (``docs/adr/0116``).
 
-Two methods rather than one, because the two reads have different shapes and
-collapsing them would make one of them wrong. The exclusion set is **one bounded
-read keyed on the searcher**, resolved once at request entry and carried in the
-``SearchContext`` — the index holds no block data at all (``docs/adr/0111``), so
-this is where a search learns it. The pairwise question is **two keyed reads and
-no scan**, because the pair determines both stream ids; it is what an
-asynchronous surface — a deck card, a standing-search notification, a read-back
-of a stored search — asks about a single row it is about to render.
-
-**Both fail closed, and that is a promise about the port rather than a hope about
-its callers** (``docs/adr/0095`` §5):
+**All three fail closed, and that is a promise about the port rather than a hope
+about its callers** (``docs/adr/0095`` §5):
 
 > A term that cannot be evaluated stands down. A gate that cannot be evaluated
 > excludes.
@@ -35,23 +32,43 @@ An implementation that cannot answer **raises ``BlockStateUnavailable``**. It ma
 never return an empty set or a ``False`` to mean *could not tell*: those are the
 answers *nobody is blocked* and *these two are fine*, and a caller cannot tell
 them from the truth. The failure is loud on purpose — it is the sentence that
-stops somebody later "fixing" a flaky query by defaulting it to empty, and it is
-what makes ADR-0095's *the search refuses and returns unavailable* the path of
-least resistance rather than a discipline.
+stops somebody later "fixing" a flaky query by defaulting it to empty.
 
-**Neither method distinguishes the two directions, and neither ever will.** The
+**None of those three distinguishes the two directions, and none ever will.** The
 record is directed so that an unblock is unambiguous; the *effect* is symmetric,
-so a reader asking *may these two see each other* must never be handed the half
-that would let it answer *which way round*. Neither party can discover that, and
-the port is where that stays true.
+so a reader asking *may these two share a court* is never handed the half that
+would let it answer *which way round*.
+
+**The fourth read is directed, and it is the reader's own** (``docs/adr/0193``
+§3). ``blocks_made_by`` answers with the blocks one player *made* — whom, and
+when — for *Blocked players* and for the record's *you blocked them*. A response
+may carry the reader's own blocks and never anyone's block of the reader, so it
+is only ever asked with the reader as the blocker; there is no method that
+answers *who blocked me*, and that absence is the design.
 """
 
 from __future__ import annotations
 
-from typing import Collection, Protocol, runtime_checkable
+from dataclasses import dataclass
+from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
+from app.kernel import Instant, invariant
 from app.modules.blocks.domain.block import Block
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class OwnBlock:
+    """One block a player made and has not lifted: whom, and when.
+
+    **Only ever the reader's own.** It names the person blocked and never the
+    blocker, because the blocker is whoever asked.
+    """
+
+    blocked_id: UUID
+    #: When the standing block was made. A repeat of it does not move this.
+    blocked_at: Instant
 
 
 @runtime_checkable
@@ -91,7 +108,8 @@ class BlockRepository(Protocol):
 
 @runtime_checkable
 class BlockQuery(Protocol):
-    """*Is either of these two blocked by the other* — the one place it is asked.
+    """*Is either of these two blocked by the other* — the one place it is asked
+    — and, for the reader alone, *whom have I blocked*.
 
     Read-only, and it answers about live state every time. There is no cache and
     no projection behind it by decision, not by omission: ADR-0095 §4 dropped the
@@ -100,7 +118,8 @@ class BlockQuery(Protocol):
     """
 
     async def exclusions_for(self, player_id: UUID) -> frozenset[UUID]:
-        """Every player this one must not be shown, **in either direction**.
+        """Every player this one must never share a court with, **in either
+        direction**.
 
         The union of *whom they have blocked* and *who has blocked them*, as one
         flat set — the searcher's live block set, resolved at request time and
@@ -153,4 +172,57 @@ class BlockQuery(Protocol):
         cannot stand behind. ``False`` means *these two are verified fine*, and a
         row shown on that basis is the exact failure this port exists to prevent.
         """
+        ...
+
+    async def blocks_made_by(self, blocker_id: UUID) -> tuple[OwnBlock, ...]:
+        """Every block this player made and has not lifted, **newest first**.
+
+        **Directed, and the only read here that is**: blocks *made by* this
+        player, never one made *of* them (``docs/adr/0193`` §3). Ask it with the
+        reader as the blocker and nobody else — what it answers about somebody
+        else's id is that person's private list.
+
+        Tens of rows, bounded by how many people this one player blocked. Raises
+        ``BlockStateUnavailable`` rather than answering an empty list it cannot
+        stand behind: *you have blocked nobody* is an answer a player acts on.
+        """
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class BlockedFace:
+    """What *Blocked players* draws for one person — a name, a photograph, and
+    nothing else.
+
+    ``name`` is the **Name** and never the nickname (``docs/adr/0171`` §4), and
+    ``None`` for an id nobody can name. ``photo_id`` and ``photo_url`` are
+    present **exactly together**, and neither means the client draws initials.
+    """
+
+    player_id: UUID
+    name: str | None = None
+    photo_id: UUID | None = None
+    photo_url: str | None = None
+
+    def __post_init__(self) -> None:
+        invariant(
+            (self.photo_id is None) == (self.photo_url is None),
+            f"a photograph with only half an address: {self!r}",
+        )
+
+
+@runtime_checkable
+class BlockedFaces(Protocol):
+    """A fifth spelling of the faces read, and the duplication is the decision:
+    two contexts needing *what do I draw for this person* is not a reason for one
+    to own the other's vocabulary (``groups``' ``GroupFaces`` says the same of the
+    four before it)."""
+
+    async def faces_of(
+        self, player_ids: Collection[UUID]
+    ) -> Mapping[UUID, BlockedFace]:
+        """Each of these players, in **one question about the union**. A player
+        absent from the answer, or with no name, is nobody the platform can
+        draw."""
         ...

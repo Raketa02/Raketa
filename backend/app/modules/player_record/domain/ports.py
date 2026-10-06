@@ -1,4 +1,4 @@
-"""What this context asks of contexts it does not write. **Nine demands.**
+"""What this context asks of contexts it does not write. **Ten demands.**
 
 ``docs/adr/0098``'s consumer-driven shape, and this is the second *consumer*
 register on the platform after the matcher's. Every port here is declared in
@@ -11,7 +11,7 @@ no aggregate, no table and no migration; every fact it publishes it reads throug
 the owning context's published port, and the one thing it decides for itself is
 whether the reader may see any of them.
 
-**Seven of the nine are single-player reads and say so in their signatures.** A
+**Eight of the ten are single-player reads and say so in their signatures.** A
 record is one person opened by a deliberate tap, so a set-shaped port here would
 be a contract nobody can honour cheaply for a caller that never batches. On
 ``SubjectVariety`` that signature is a **fence rather than a convenience**: the
@@ -130,12 +130,17 @@ class PriorDisclosure(Protocol):
 class RecordGates(Protocol):
     """May this reader be shown this person **right now**?
 
-    The three gates about accounts — a block in either direction, the subject's
-    hold, an account state that may not be shown — and the reader's own hold,
-    re-evaluated live on every open, because a disclosure made in August is not
-    a permission to show somebody in December (``docs/adr/0095``). They are
-    spelled **once** on this platform; a second spelling of a safety gate is the
-    defect the whole fail-closed rule exists to prevent.
+    The two gates about accounts — the subject's hold, an account state that may
+    not be shown — and the reader's own hold, re-evaluated live on every open,
+    because a disclosure made in August is not a permission to show somebody in
+    December (``docs/adr/0095``). They are spelled **once** on this platform; a
+    second spelling of a safety gate is the defect the whole fail-closed rule
+    exists to prevent.
+
+    **A block is not one of them, in either direction** (``docs/adr/0193`` §2).
+    It keeps two people off one court, and the record is not a court: the
+    blocker opens it to undo the block, and the blocked person reads it exactly
+    as before. What the record says about a block is ``BlocksByTheReader``'s.
 
     **No preference** (#575). The mutual gender preference says who a player is
     willing to be *matched* with, and every strand here is a court shared or a
@@ -150,6 +155,32 @@ class RecordGates(Protocol):
 
     async def admits(self, *, reader_id: UUID, subject_id: UUID) -> bool:
         """Whether the live gates still admit this pair."""
+        ...
+
+
+@runtime_checkable
+class BlocksByTheReader(Protocol):
+    """Has **the reader** blocked this person? Never the other way round.
+
+    **A response may carry the reader's own blocks, never anyone's block of the
+    reader** (``docs/adr/0193`` §3), and this is the record's half of that. The
+    question is directed and the reader is always the one asking about their own
+    block: there is no method here that could answer *did they block me*, so the
+    blocked person's read of the blocker's record cannot differ by a byte.
+
+    **A fact on the sheet and never a gate.** It is asked only once the record
+    is admitted, and its answer refuses nothing.
+
+    **The one demand here that stands down rather than raising.** A block
+    stops only what would put two people on a court (``docs/adr/0193``,
+    Consequences), so a block state that cannot be read takes no record down:
+    the answer is ``None`` — *could not tell* — and the sheet omits the fact
+    rather than drawing a guess about the reader's own block.
+    """
+
+    async def has_blocked(self, *, reader_id: UUID, subject_id: UUID) -> bool | None:
+        """Whether the reader's own block of the subject stands right now, or
+        ``None`` when the reader's blocks could not be read."""
         ...
 
 
@@ -346,6 +377,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     RecordPhotoLink,
     PriorDisclosure,
     RecordGates,
+    BlocksByTheReader,
     SubjectRatings,
     SubjectForm,
     SubjectReliability,
@@ -355,6 +387,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
 
 
 __all__ = [
+    "BlocksByTheReader",
     "PLAYER_RECORD_DEMANDS",
     "PriorDisclosure",
     "RecordGates",

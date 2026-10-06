@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from app.modules.groups.application.membership import hidden_in, listing_for_a_member
+from app.modules.groups.application.membership import listing_for_a_member
 from app.modules.groups.application.views import (
     GroupPage,
     NamedClub,
@@ -20,7 +20,6 @@ from app.modules.groups.domain.ports import (
     GroupDirectory,
     GroupFaces,
     GroupListing,
-    HiddenMembers,
     HomeClubs,
     RatedGroupMembers,
 )
@@ -35,13 +34,11 @@ class GroupPages:
     *N of M*; the faces are read once, for the union of every sport's first
     seats and the Info tab's members row.
 
-    **The members row leaves out a blocked pair, either way round** — it is the
-    row that opens the Members list, which does (``docs/adr/0183`` §10) — and
-    **no count moves**: the member count and each sport's *N* are the group's.
-    The Games tab's seats are the first rated members in joining order whoever
-    reads them (§13, #504). The block state fails closed, so a page nobody could
-    check is not served — and a reader alone has nobody to hide, so it is not
-    read for them at all.
+    **The members row hides nobody for a block** (``docs/adr/0193`` §2) — it is
+    the row that opens the Members list, which hides nobody either — and the
+    member count and each sport's *N* are the group's. The Games tab's seats
+    are the first rated members in joining order whoever reads them
+    (ADR-0183 §13, #504). No block state is read for a page.
 
     **On an official group the account running it leads the members row**, as
     an Owner does on a player group — asked of the administrators, so it is
@@ -56,17 +53,14 @@ class GroupPages:
         clubs: HomeClubs,
         ratings: RatedGroupMembers,
         faces: GroupFaces,
-        hidden: HiddenMembers,
         administrators: GroupAdministrators,
     ) -> None:
         self._clubs = clubs
         self._ratings = ratings
         self._faces = faces
-        self._hidden = hidden
         self._administrators = administrators
 
     async def page(self, listing: GroupListing, *, reader_id: UUID) -> GroupPage:
-        hidden = await hidden_in(self._hidden, listing, reader_id)
         rated = await rated_among(self._ratings, [listing])
         by_sport = rosters(listing.members, rated)
         runner = await running_it(self._administrators, listing)
@@ -75,7 +69,6 @@ class GroupPages:
             listing.members,
             reader_id=reader_id,
             run_by=who_runs_it(listing, running),
-            hidden=hidden,
         )
         names = {} if running is None else await self._faces.names_of([running])
         faces = await self._faces.faces_of(

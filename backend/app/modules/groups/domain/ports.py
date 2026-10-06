@@ -3,11 +3,11 @@
 **Two ports are this context's own store**: the aggregate repository, whose
 ``save`` writes the groups, group-members and join-requests projections in the
 caller's transaction, and the directory that reads those projections back.
-**The other nine are demands on contexts it does not write** — clubs, rating,
+**The other eight are demands on contexts it does not write** — clubs, rating,
 users with the Player profile, the Player profile again for where the reader
-is, the Player Score, blocks, administrators, and the games a group gave birth
-to — each declared here in this context's vocabulary and answered by an adapter
-in ``infrastructure/`` over that provider's own port, never its table. The last
+is, the Player Score, administrators, and the games a group gave birth to —
+each declared here in this context's vocabulary and answered by an adapter in
+``infrastructure/`` over that provider's own port, never its table. The last
 is answered from outside this context — by Proposals, which knows a group's pool
 is filed under the group's id — so ``groups`` never learns a game was booked
 (``GroupBornGames``, #542).
@@ -338,34 +338,6 @@ class GroupMemberScores(Protocol):
         the platform has watched nothing of is **absent** — never a nought,
         which would print a bad record for somebody who has none. One question
         about the set, against one instant."""
-        ...
-
-
-# --------------------------------------------------------------------------- #
-# Blocks: who a reader and a member may not see of each other
-# --------------------------------------------------------------------------- #
-
-
-@runtime_checkable
-class HiddenMembers(Protocol):
-    """Who is left out of a reader's Members list, and why is never said.
-
-    **A blocked pair, in either direction, is left out of each other's Members
-    lists in every group** (``docs/adr/0183`` §10) — ADR-0095's symmetric effect
-    on a new surface — so the answer is one flat set that cannot say which way
-    round a block was taken. **Counts never change**: *12 members* is a fact
-    about the group, and a hidden person is hidden from rows, never from a
-    number.
-    """
-
-    async def hidden_from(self, reader_id: UUID) -> frozenset[UUID]:
-        """Everybody this reader and who have a block standing between them,
-        either way round.
-
-        **Raises rather than answering empty** when the block state cannot be
-        read: an empty set is *nobody is hidden*, and a gate that cannot be
-        evaluated excludes (``docs/adr/0095`` §5) — so the list is not served.
-        """
         ...
 
 

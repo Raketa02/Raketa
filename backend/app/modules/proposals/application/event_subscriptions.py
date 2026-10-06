@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.application.events import EventCatalog, EventDispatcher
+from app.modules.blocks.domain.events import PlayerBlocked, PlayerBlockedNamingAScreen
 from app.modules.bookings.domain.events import (
     CalledOffAtCutOff,
     CancelledByClub,
@@ -12,6 +13,7 @@ from app.modules.proposals.application.handlers import (
     LogProposalEvent,
     MarkDueForProposing,
     ResumeYesesOnAFreedWeek,
+    WithdrawYesesOnBlocking,
     WithdrawYesesOnLeaving,
 )
 from app.modules.proposals.application.handlers.mark_due_for_proposing import (
@@ -20,6 +22,7 @@ from app.modules.proposals.application.handlers.mark_due_for_proposing import (
     POOL_EVENTS,
     SWIPE_EVENTS,
 )
+from app.modules.proposals.application.blocking import WithdrawABlockersYeses
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.propose_games import DueForProposing
 from app.modules.proposals.application.resume_paused_yeses import ResumePausedYeses
@@ -96,6 +99,20 @@ def subscribe_the_pool_leaver(
     leaver = WithdrawYesesOnLeaving(withdraw)
     dispatcher.subscribe(GroupLeft, leaver)
     dispatcher.subscribe(GroupDeleted, leaver)
+
+
+def subscribe_the_blocker(
+    dispatcher: EventDispatcher, withdraw: WithdrawABlockersYeses
+) -> None:
+    """The subscriber that takes back a blocker's yeses where the blocked
+    player is In (``docs/adr/0193`` §4). It **writes** — and may withdraw a
+    request to a club — so it is added per delivery run over that run's session,
+    as the pool leaver is. **Both versions of a block**: a v1 row not delivered
+    yet was still a block recorded, and is owed the same."""
+
+    blocker = WithdrawYesesOnBlocking(withdraw)
+    dispatcher.subscribe(PlayerBlocked, blocker)
+    dispatcher.subscribe(PlayerBlockedNamingAScreen, blocker)
 
 
 def subscribe_the_week_resumer(

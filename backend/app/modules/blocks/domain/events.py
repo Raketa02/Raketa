@@ -1,9 +1,8 @@
 """The Blocks context's durable events — two, and what each carries.
 
 Events carry **primitive** fields, so their wire format survives any later
-refactor of the Python types: the two players as their uuids, the surface as its
-machine code. Nothing here holds a value object and nothing here holds display
-text.
+refactor of the Python types: the two players as their uuids. Nothing here holds
+a value object and nothing here holds display text.
 
 **Two events, and there will not be a third with a reason on it.** A reason for a
 block belongs to a *Report* (``docs/adr/0095`` §2), and reporting is out of
@@ -19,10 +18,19 @@ would otherwise be holding a stream id that names nobody. Carrying both ids is
 what makes *every block this player appears in, on either side* a question the
 log itself can answer.
 
+**No screen, and a third class for the rows that named one**
+(``docs/adr/0193`` §5). ``blocks.player_blocked`` v1 recorded which of the old
+loop's four screens a block was made from, and every one of those screens is
+gone. v2 is the pair alone. ``PlayerBlockedNamingAScreen`` is v1, kept so a
+stored row still decodes; the Block reads it as the same fact and drops the
+surface, nothing writes it, and nothing in the store is rewritten. It is a
+third *class*, not a third thing a block can be.
+
 **Neither event is a notification.** They ride the outbox because every event in
-this codebase does, and the only handler subscribed to them writes an audit line
-with no payload in it. Delivering one to the blocked party would break
-ADR-0095 §8, which is the promise that makes the control usable at all.
+this codebase does. Two handlers hear a block: one writes an audit line with no
+payload in it, and Proposals takes back the blocker's yeses where the blocked
+person is In, through the ordinary withdrawal (``docs/adr/0193`` §4). Nothing
+delivers either event to the blocked party (``docs/adr/0193`` §3).
 """
 
 from __future__ import annotations
@@ -34,10 +42,25 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class PlayerBlocked:
-    """One player decided they do not want to be shown another, ever again.
+    """One player decided they will not share a court with another.
 
-    ``surface`` is where they were standing when they decided
-    (``surface.py``) — context beside the fact, and never something a rule reads.
+    ``blocks.player_blocked`` v2: the pair, and when. **No screen**
+    (``docs/adr/0193`` §5).
+    """
+
+    blocker_id: UUID
+    blocked_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class PlayerBlockedNamingAScreen:
+    """``blocks.player_blocked`` v1, **read and never written**.
+
+    The same fact as ``PlayerBlocked``, from before ``docs/adr/0193`` §5: it
+    also named which of the old loop's four screens the block was made from.
+    The Block folds it exactly as it folds v2 and drops ``surface``, which
+    nothing ever branched on.
     """
 
     blocker_id: UUID

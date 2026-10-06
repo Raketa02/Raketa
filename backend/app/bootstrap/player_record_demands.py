@@ -4,8 +4,8 @@
 ``matcher_demands.py`` holds the ports the matcher declares of contexts it does
 not write; ``games_demands.py``, ``rating_demands.py`` and
 ``player_score_demands.py`` each hold what one **provider** publishes outward.
-This one is the matcher's kind: a context that writes nothing and asks nine
-questions of seven others. Rows of the two kinds in one list would make every
+This one is the matcher's kind: a context that writes nothing and asks ten
+questions of eight others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
@@ -40,6 +40,7 @@ from app.bootstrap.composition import (
     build_account_hold_query,
     build_account_status_query,
     build_block_query,
+    build_blocks_by_the_reader,
     build_domain_event_store,
     build_event_publisher,
     build_game_disclosure,
@@ -57,6 +58,7 @@ from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
 from app.modules.player_record.domain.ports import (
     PLAYER_RECORD_DEMANDS,
+    BlocksByTheReader,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
@@ -102,17 +104,21 @@ def _photo_link(session: AsyncSession) -> RecordPhotoLink:
 
 
 def _record_gates(session: AsyncSession) -> RecordGates:
-    """The three gates about accounts and the reader's hold, over a session."""
+    """The two gates about accounts and the reader's hold, over a session."""
 
     holds = build_account_hold_query(session)
     return build_record_gates(
         accounts=build_account_gates(
-            blocks=build_block_query(session),
-            holds=holds,
-            account_status=build_account_status_query(session),
+            holds=holds, account_status=build_account_status_query(session)
         ),
         holds=holds,
     )
+
+
+def _own_blocks(session: AsyncSession) -> BlocksByTheReader:
+    """The reader's own block, over the one ``BlockQuery`` a session reads."""
+
+    return build_blocks_by_the_reader(build_block_query(session))
 
 
 PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
@@ -145,6 +151,11 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=RecordGates,
         name="LiveRecordGates",
         build=_record_gates,
+    ),
+    RegisteredImplementation(
+        port=BlocksByTheReader,
+        name="OwnBlocksOfTheReader",
+        build=_own_blocks,
     ),
     RegisteredImplementation(
         port=SubjectRatings,

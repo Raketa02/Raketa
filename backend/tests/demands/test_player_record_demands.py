@@ -28,6 +28,7 @@ import pytest_asyncio
 
 from app.bootstrap.composition import (
     build_administrator_repository,
+    build_block_repository,
     build_booking_repository,
     build_club_repository,
     build_domain_event_store,
@@ -55,6 +56,7 @@ from app.bootstrap.player_record_demands import (
 from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.administrators.domain.administrator import Administrator
+from app.modules.blocks.domain.block import Block
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.value_objects import (
@@ -78,6 +80,7 @@ from app.modules.groups.domain.value_objects import (
 )
 from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.player_record.domain.ports import (
+    BlocksByTheReader,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
@@ -414,22 +417,95 @@ async def test_a_player_group_is_run_by_nobody(session):
 
 
 # ---------------------------------------------------------------------------
-# RecordGates — the four, plus the reader's own hold
+# RecordGates — the two about accounts, plus the reader's own hold
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("implementation", registered(RecordGates))
 async def test_a_pair_nothing_withholds_is_admitted(implementation, session):
-    """**No preference and no partition** (#575): with no block between them, no
-    hold on either and no account that may not be shown, the pair is admitted —
-    a reader who never committed a profile included, because no gate here
-    reads one."""
+    """**No preference and no partition** (#575): with no hold on either and no
+    account that may not be shown, the pair is admitted — a reader who never
+    committed a profile included, because no gate here reads one."""
 
     gates = implementation.build(session)
 
     assert (
         await gates.admits(reader_id=new_uuid(), subject_id=new_uuid()) is True
     )
+
+
+@pytest.mark.parametrize("implementation", registered(RecordGates))
+async def test_a_block_either_way_round_withholds_nobody(implementation, session):
+    """**A block is not a record gate** (``docs/adr/0193`` §2): the blocker
+    opens the record to undo it, and the blocked person reads it as before."""
+
+    reader, subject = new_uuid(), new_uuid()
+    await _blocks(session, (reader, subject), (subject, reader))
+    gates = implementation.build(session)
+
+    assert await gates.admits(reader_id=reader, subject_id=subject) is True
+    assert await gates.admits(reader_id=subject, subject_id=reader) is True
+
+
+# ---------------------------------------------------------------------------
+# BlocksByTheReader — the reader's own block, and never the other direction
+# ---------------------------------------------------------------------------
+
+
+async def _blocks(session, *pairs: tuple[UUID, UUID], lifted=()) -> None:
+    """Each ``(blocker, blocked)`` blocked through the aggregate, and each pair
+    in ``lifted`` blocked and then unblocked."""
+
+    repository = build_block_repository(
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    )
+    at = _now()
+    for blocker, blocked in (*pairs, *lifted):
+        block = Block.first_blocked(
+            blocker_id=blocker, blocked_id=blocked, occurred_at=at
+        )
+        if (blocker, blocked) in lifted:
+            block.unblock(occurred_at=at)
+        await repository.save(block)
+    await session.commit()
+
+
+@pytest.mark.parametrize("implementation", registered(BlocksByTheReader))
+async def test_the_readers_own_block_is_answered(implementation, session):
+    reader, subject = new_uuid(), new_uuid()
+    await _blocks(session, (reader, subject))
+
+    own = implementation.build(session)
+
+    assert await own.has_blocked(reader_id=reader, subject_id=subject) is True
+
+
+@pytest.mark.parametrize("implementation", registered(BlocksByTheReader))
+async def test_a_block_of_the_reader_is_never_the_readers_own(
+    implementation, session
+):
+    """**Directed** (``docs/adr/0193`` §3): the subject blocking the reader is
+    nothing this port can say, so the blocked person's sheet cannot move."""
+
+    reader, subject = new_uuid(), new_uuid()
+    await _blocks(session, (subject, reader))
+
+    own = implementation.build(session)
+
+    assert await own.has_blocked(reader_id=reader, subject_id=subject) is False
+
+
+@pytest.mark.parametrize("implementation", registered(BlocksByTheReader))
+async def test_a_lifted_block_and_a_block_of_somebody_else_are_not_this_one(
+    implementation, session
+):
+    reader, subject, other = new_uuid(), new_uuid(), new_uuid()
+    await _blocks(session, (reader, other), lifted=((reader, subject),))
+
+    own = implementation.build(session)
+
+    assert await own.has_blocked(reader_id=reader, subject_id=subject) is False
 
 
 # ---------------------------------------------------------------------------
@@ -442,7 +518,7 @@ async def test_a_player_this_platform_never_issued_cannot_be_described(
     implementation, session
 ):
     """``None`` rather than a blank record: the caller refuses, and it refuses in
-    the same shape it refuses a block."""
+    the same shape it refuses a stranger."""
 
     identities = implementation.build(session)
 

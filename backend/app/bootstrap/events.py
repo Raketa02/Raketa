@@ -79,6 +79,7 @@ from app.modules.proposals.application.propose_games import DueForProposing
 from app.modules.proposals.application.event_subscriptions import (
     register_proposal_events,
     subscribe_proposal_handlers,
+    subscribe_the_blocker,
     subscribe_the_pool_leaver,
     subscribe_the_proposer_on_changes,
     subscribe_the_week_resumer,
@@ -215,6 +216,7 @@ class EventRuntime:
             build_settle_seat_charges,
             build_tell_the_players,
             build_tell_the_room,
+            build_withdraw_a_blockers_yeses,
             build_withdraw_a_leavers_yeses,
         )
 
@@ -249,6 +251,15 @@ class EventRuntime:
         subscribe_the_pool_leaver(
             dispatcher,
             build_withdraw_a_leavers_yeses(
+                session, settings=get_settings(), runtime=self
+            ),
+        )
+        # A blocker's yeses where the blocked player is In are taken back in the
+        # transaction that delivers the block — and a request a waiting game of
+        # theirs had put to its club goes with them (`docs/adr/0193` §4).
+        subscribe_the_blocker(
+            dispatcher,
+            build_withdraw_a_blockers_yeses(
                 session, settings=get_settings(), runtime=self
             ),
         )

@@ -4,7 +4,6 @@ from uuid import UUID
 
 from app.kernel import Clock, Sport
 from app.modules.groups.application.membership import (
-    hidden_in,
     listing_for_a_member_or_its_runner,
 )
 from app.modules.groups.application.views import MemberRow, face_of, who_runs_it
@@ -14,7 +13,6 @@ from app.modules.groups.domain.ports import (
     GroupDirectory,
     GroupFaces,
     GroupMemberScores,
-    HiddenMembers,
     RatedGroupMembers,
 )
 
@@ -30,22 +28,19 @@ class ReadGroupMembers:
     Player Score where they have one, whether they own the group or run it as
     its Administrator, and when they joined.
 
-    **A blocked pair is left out of each other's list, either way round**, and
-    nothing on the answer says anybody was: the count on the group is the
-    group's. The block state is read first and fails closed — a list nobody
-    could check is not served — except for a reader alone, who has nobody to
-    hide.
+    **A block hides nobody here, either way round** (``docs/adr/0193`` §2,
+    superseding ADR-0183 §10): both stay in the group and see each other in its
+    Members list, as everybody else in it does. No block state is read.
 
     **For its members, and for whoever runs an official group now** (#566):
     running one is not membership, and the administrator area opens Members from
     the group's players card. That reader is a row only once they have joined as
-    a player, and reads the rows and their order as a member does; a block
-    between them and a member hides that row, either way round. Anyone else —
+    a player, and reads the rows and their order as a member does. Anyone else —
     a removed Administrator, one the group was handed away from — meets
-    ``group_not_found``, as the group's page refuses a stranger. Four reads
-    whatever the size of the group — who is hidden, the Levels, the faces and
-    the scores — each one question about the rows it serves, and on an official
-    group a fifth, asked first: who runs it now.
+    ``group_not_found``, as the group's page refuses a stranger. Three reads
+    whatever the size of the group — the Levels, the faces and the scores —
+    each one question about the rows it serves, and on an official group a
+    fourth, asked first: who runs it now.
     """
 
     def __init__(
@@ -55,7 +50,6 @@ class ReadGroupMembers:
         ratings: RatedGroupMembers,
         faces: GroupFaces,
         scores: GroupMemberScores,
-        hidden: HiddenMembers,
         administrators: GroupAdministrators,
         clock: Clock,
     ) -> None:
@@ -63,7 +57,6 @@ class ReadGroupMembers:
         self._ratings = ratings
         self._faces = faces
         self._scores = scores
-        self._hidden = hidden
         self._administrators = administrators
         self._clock = clock
 
@@ -74,11 +67,9 @@ class ReadGroupMembers:
             self._directory, self._administrators, group_id, reader_id
         )
 
-        hidden = await hidden_in(self._hidden, listing, reader_id)
-        visible = [member for member in listing.members if member not in hidden]
-        levels = await self._ratings.levels_in(visible, sport=sport)
+        levels = await self._ratings.levels_in(listing.members, sport=sport)
         shown = in_members_order(
-            [member for member in visible if member in levels],
+            [member for member in listing.members if member in levels],
             reader_id=reader_id,
             run_by=who_runs_it(listing, runner),
         )

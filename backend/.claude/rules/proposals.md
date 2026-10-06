@@ -17,7 +17,16 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   and its row written by the first proposal made in it, and who is in it is asked of
   `GroupDirectory` through `Pools` — nothing joins through a group; a leaver has left the pool,
   and **their yeses there are withdrawn** by an outbox subscriber to `GroupLeft` and
-  `GroupDeleted`, added per delivery run over its session like the room teller. **Yeses are
+  `GroupDeleted`, added per delivery run over its session like the room teller. **A block
+  takes back the blocker's yeses** the same way
+  ([ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+  §4, #586): `application/blocking.py`, subscribed to `blocks.player_blocked`, withdraws
+  each live yes of the blocker on a game the blocked player is **In** on — picks and posts
+  alike, through `withdraw_a_yes`, so on a game waiting for its club the request goes too
+  and the others In are told *someone left* — and each yes of theirs a booking paused there
+  (`Proposal.withdraw_paused_yes`, the same `YesWithdrawn`, so it never resumes after an
+  unblock); never the blocked player's yes and never a booked game. It is owed by the block being recorded, so a block lifted before delivery still took
+  the yeses back; until delivery the fill's `NO_LONGER_FITS` re-check is the backstop. **Yeses are
   the game's, never a version's**: a version (at most three, each person in one, never more
   names than open seats — the dealer's `invariant`s) is only who was shown it, a seat a no
   left is dealt again *into* its version (at most three next best fits per open seat), and a

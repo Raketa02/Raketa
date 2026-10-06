@@ -603,12 +603,13 @@ of the code because this file asks for them in that order.
 One player keeping another off their games. Settled by
 [ADR-0095](docs/adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) and
 amended by [ADR-0193](docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md):
-**a block keeps two people off one court, and the blocker can see it.** **Built**: the aggregate,
-its two events, the `BlockQuery` port and two routes, read by the new games' pair rule. **Still to
-build** ([#586](https://github.com/Raketa02/Raketa/issues/586)): the request without a surface,
-`blocks.player_blocked` v2, Blocked players, the record's own-block fact and the withdrawal of
-filling yeses. Until then, the code also still hides a blocked pair in Members lists and refuses the
-record on a block, which ADR-0193 §2 undoes.
+**a block keeps two people off one court, and the blocker can see it.** **Built**
+([#586](https://github.com/Raketa02/Raketa/issues/586)): the aggregate and its two events
+(`blocks.player_blocked` v2, no surface), the `BlockQuery` port the new games' pair rule reads,
+three routes — block, unblock and **Blocked players** — the record's own-block fact, and the
+withdrawal of the blocker's yeses where the blocked person is In. Members lists no longer ask
+about blocks, and the record asks only about the reader's own. The player app's Block and Unblock are
+[#587](https://github.com/Raketa02/Raketa/issues/587).
 
 - **Block** — an **event-sourced aggregate**, one stream per **ordered** `(blocker, blocked)`
   pair, with a deterministic stream id derived from that pair. **The record is directed; the
@@ -629,8 +630,8 @@ record on a block, which ADR-0193 §2 undoes.
   - **PlayerUnblocked** — `blocks.player_unblocked` / v1 — the pair.
 - **BlockQuery** — the port that answers *is either of these two blocked by the other*, read by the
   one pair rule every route onto a court asks (Proposals' **PlayerFit**). It answers in two shapes:
-  a player's whole **exclusion set**, and the **pairwise** question. From #586 a third, **directed**
-  read answers own blocks, and is only ever asked with the reader as the blocker. **It fails
+  a player's whole **exclusion set**, and the **pairwise** question. A third, **directed** read
+  answers own blocks, and is only ever asked with the reader as the blocker. **It fails
   closed**: it raises rather than answering *nobody is blocked* when it cannot read the state,
   because an empty answer it cannot stand behind is a safety control switching itself off under
   load.

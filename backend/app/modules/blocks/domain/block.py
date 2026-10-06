@@ -7,7 +7,7 @@ unblocked, blocked again* is safety evidence, and it is the one thing in this
 design a human would miss if it silently vanished (``docs/adr/0095``, Context).
 
 **Directed record, symmetric effect.** This aggregate knows only its own
-direction. That ``A → B`` standing also removes A from B's view is the *reader's*
+direction. That ``A → B`` standing also keeps B off A's court is the *reader's*
 rule — ``BlockQuery`` asks about both streams — and deliberately not a fact this
 object holds, because an aggregate that tried to hold both directions would be
 one stream with two versions contending on it, and lifting one side would have to
@@ -34,9 +34,12 @@ from uuid import UUID
 
 from app.kernel import Instant, instant
 from app.modules.blocks.domain.errors import CannotBlockYourself
-from app.modules.blocks.domain.events import PlayerBlocked, PlayerUnblocked
+from app.modules.blocks.domain.events import (
+    PlayerBlocked,
+    PlayerBlockedNamingAScreen,
+    PlayerUnblocked,
+)
 from app.modules.blocks.domain.ids import block_id
-from app.modules.blocks.domain.surface import BlockSurface
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 
@@ -50,9 +53,10 @@ class Block:
     #: Whether the block is standing *right now*. The history of it is the
     #: stream; nothing accumulates a list here.
     is_standing: bool
-    #: Where the **standing** block was made from, or where the last one was if
-    #: it has since been lifted. Context, never a thing a rule reads.
-    surface: BlockSurface
+    #: When the **standing** block was made, or the last one was if it has since
+    #: been lifted — what *Blocked players* draws beside the person
+    #: (``docs/adr/0193`` §3). A repeat of a standing block does not move it.
+    blocked_at: Instant
     updated_at: Instant
     version: int = 0
     _events: EventRecorder = field(
@@ -115,7 +119,6 @@ class Block:
         *,
         blocker_id: UUID,
         blocked_id: UUID,
-        surface: BlockSurface,
         occurred_at: Instant,
     ) -> "Block":
         """Open the stream for a pair that has never been blocked this way round.
@@ -131,30 +134,25 @@ class Block:
         _refuse_self_block(blocker_id, blocked_id)
         block = cls._empty()
         block._record_that(
-            _blocked(
+            PlayerBlocked(
                 blocker_id=blocker_id,
                 blocked_id=blocked_id,
-                surface=surface,
                 occurred_at=occurred_at,
             )
         )
         return block
 
-    def block(self, *, surface: BlockSurface, occurred_at: Instant) -> None:
-        """Re-block after an unblock. **A no-op while the block is standing.**
-
-        The surface is deliberately not part of that comparison, for the reason
-        it is not part of a re-declared Play intent's: *the same decision, made
-        again, from a different screen* is not a new fact about these two people.
-        """
+    def block(self, *, occurred_at: Instant) -> None:
+        """Re-block after an unblock. **A no-op while the block is standing**:
+        the same decision, made again, is not a new fact about these two
+        people."""
 
         if self.is_standing:
             return
         self._record_that(
-            _blocked(
+            PlayerBlocked(
                 blocker_id=self.blocker_id,
                 blocked_id=self.blocked_id,
-                surface=surface,
                 occurred_at=occurred_at,
             )
         )
@@ -163,9 +161,9 @@ class Block:
         """Lift this block. **A no-op when it is not standing.**
 
         It lifts **this direction only.** If the other party has blocked back,
-        their stream is untouched and they stay invisible to each other — which
-        is what the directed record buys and why neither party can discover which
-        way it went.
+        their stream is untouched and the two are still kept off one court —
+        which is what the directed record buys, and why the blocked party can
+        never discover which way it went.
         """
 
         if not self.is_standing:
@@ -183,11 +181,13 @@ class Block:
         self._events.record(event)
 
     def _apply(self, event: DomainEvent) -> None:
-        if isinstance(event, PlayerBlocked):
+        # v1 named the screen the block was made from; it is the same fact, and
+        # the surface is dropped here (`docs/adr/0193` §5).
+        if isinstance(event, (PlayerBlocked, PlayerBlockedNamingAScreen)):
             self.blocker_id = event.blocker_id
             self.blocked_id = event.blocked_id
-            self.surface = BlockSurface(event.surface)
             self.is_standing = True
+            self.blocked_at = instant(event.occurred_at)
             self._touch(event.occurred_at)
             return
         if isinstance(event, PlayerUnblocked):
@@ -201,29 +201,6 @@ class Block:
     def _touch(self, occurred_at: datetime) -> None:
         self.updated_at = instant(occurred_at)
         self.version += 1
-
-
-def _blocked(
-    *,
-    blocker_id: UUID,
-    blocked_id: UUID,
-    surface: BlockSurface,
-    occurred_at: Instant,
-) -> PlayerBlocked:
-    """The one place a ``PlayerBlocked`` is constructed.
-
-    Opening the stream and re-blocking after a lift record the *same* fact, and
-    the two call sites above differ only in where the pair comes from. One
-    constructor is what keeps the surface's ``.value`` conversion from being
-    remembered twice.
-    """
-
-    return PlayerBlocked(
-        blocker_id=blocker_id,
-        blocked_id=blocked_id,
-        surface=surface.value,
-        occurred_at=occurred_at,
-    )
 
 
 def _refuse_self_block(blocker_id: UUID, blocked_id: UUID) -> None:

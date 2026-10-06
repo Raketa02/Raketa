@@ -407,7 +407,7 @@ async def block_between(client, token: str, player_id: UUID):
 
     return await client.post(
         "/api/v1/blocks",
-        json={"player_id": str(player_id), "surface": "SHORTLIST"},
+        json={"player_id": str(player_id)},
         headers=auth(token),
     )
 

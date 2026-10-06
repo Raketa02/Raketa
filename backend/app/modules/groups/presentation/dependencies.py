@@ -31,7 +31,6 @@ from app.bootstrap.composition import (
     build_group_faces,
     build_group_member_scores,
     build_group_repository,
-    build_hidden_members,
     build_home_clubs,
     build_rated_group_members,
     build_reader_areas,
@@ -81,7 +80,6 @@ from app.modules.groups.domain.ports import (
     GroupFaces,
     GroupMemberScores,
     GroupRepository,
-    HiddenMembers,
     HomeClubs,
     RatedGroupMembers,
     ReaderAreas,
@@ -130,13 +128,6 @@ def get_group_member_scores(db: DbSession) -> GroupMemberScores:
 
 
 GroupMemberScoresDep = Annotated[GroupMemberScores, Depends(get_group_member_scores)]
-
-
-def get_hidden_members(db: DbSession) -> HiddenMembers:
-    return build_hidden_members(db)
-
-
-HiddenMembersDep = Annotated[HiddenMembers, Depends(get_hidden_members)]
 
 
 def get_group_administrators(db: DbSession) -> GroupAdministrators:
@@ -226,14 +217,12 @@ def get_group_pages(
     clubs: HomeClubsDep,
     ratings: RatedGroupMembersDep,
     faces: GroupFacesDep,
-    hidden: HiddenMembersDep,
     administrators: GroupAdministratorsDep,
 ) -> GroupPages:
     return GroupPages(
         clubs=clubs,
         ratings=ratings,
         faces=faces,
-        hidden=hidden,
         administrators=administrators,
     )
 
@@ -365,7 +354,6 @@ def get_read_group_members(
     ratings: RatedGroupMembersDep,
     faces: GroupFacesDep,
     scores: GroupMemberScoresDep,
-    hidden: HiddenMembersDep,
     administrators: GroupAdministratorsDep,
     clock: ClockDep,
 ) -> ReadGroupMembers:
@@ -374,7 +362,6 @@ def get_read_group_members(
         ratings=ratings,
         faces=faces,
         scores=scores,
-        hidden=hidden,
         administrators=administrators,
         clock=clock,
     )
@@ -442,11 +429,8 @@ def get_administered_group_pages(
     clubs: HomeClubsDep,
     faces: GroupFacesDep,
     ratings: RatedGroupMembersDep,
-    hidden: HiddenMembersDep,
 ) -> AdministeredGroupPages:
-    return AdministeredGroupPages(
-        clubs=clubs, faces=faces, ratings=ratings, hidden=hidden
-    )
+    return AdministeredGroupPages(clubs=clubs, faces=faces, ratings=ratings)
 
 
 AdministeredGroupPagesDep = Annotated[

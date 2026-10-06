@@ -132,6 +132,7 @@ from app.modules.proposals.application.rescues import (
     Rescuer,
 )
 from app.modules.proposals.application.guards import Guards
+from app.modules.proposals.application.blocking import WithdrawABlockersYeses
 from app.modules.proposals.application.leaving import WithdrawALeaversYeses
 from app.modules.proposals.application.making import DealVersion, MakeProposal
 from app.modules.proposals.application.members import ReadMembers
@@ -371,9 +372,12 @@ from app.modules.notifications.infrastructure.told_by import (
 from app.modules.player_profile.application.has_player_profile import (
     HasPlayerProfile,
 )
-from app.modules.blocks.domain.ports import BlockQuery, BlockRepository
+from app.modules.blocks.domain.ports import BlockedFaces, BlockQuery, BlockRepository
 from app.modules.blocks.infrastructure.event_sourced_block_query import (
     EventSourcedBlockQuery,
+)
+from app.modules.blocks.infrastructure.profile_blocked_faces import (
+    ProfileBlockedFaces,
 )
 from app.modules.blocks.infrastructure.event_sourced_block_repository import (
     EventSourcedBlockRepository,
@@ -419,7 +423,6 @@ from app.modules.groups.domain.ports import (
     GroupFaces,
     GroupMemberScores,
     GroupRepository,
-    HiddenMembers,
     HomeClubs,
     RatedGroupMembers,
     ReaderAreas,
@@ -429,9 +432,6 @@ from app.modules.groups.infrastructure.administrators_group_administrators impor
 )
 from app.modules.groups.infrastructure.administrators_official_group_assignments import (  # noqa: E501
     GroupsOfficialGroupAssignments,
-)
-from app.modules.groups.infrastructure.blocks_hidden_members import (
-    BlocksHiddenMembers,
 )
 from app.modules.groups.infrastructure.clubs_home_clubs import ClubsHomeClubs
 from app.modules.groups.infrastructure.clubs_official_group_sports import (
@@ -602,6 +602,7 @@ from app.modules.player_record.infrastructure.score_subject_reliability import (
     ScoreSubjectReliability,
 )
 from app.modules.player_record.domain.ports import (
+    BlocksByTheReader,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
@@ -619,6 +620,9 @@ from app.modules.player_record.infrastructure.disclosures import (
 )
 from app.modules.player_record.infrastructure.live_record_gates import (
     LiveRecordGates,
+)
+from app.modules.player_record.infrastructure.own_blocks import (
+    OwnBlocksOfTheReader,
 )
 from app.modules.player_record.infrastructure.presigned_record_photo import (
     PresignedRecordPhoto,
@@ -1348,6 +1352,23 @@ def build_withdraw_a_leavers_yeses(
     delivery run, over the session the delivery commits in — and to a request
     a game of theirs had put to its club (#543)."""
     return WithdrawALeaversYeses(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_proposal_directory(session),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+    )
+
+
+def build_withdraw_a_blockers_yeses(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> WithdrawABlockersYeses:
+    """What a block does to the blocker's yeses where the blocked player is In
+    (``docs/adr/0193`` §4) — built per delivery run, over the session the
+    delivery commits in, with the request a waiting game had put to its club."""
+    return WithdrawABlockersYeses(
         proposals=build_proposal_repository(
             session,
             event_store=build_domain_event_store(session, runtime=runtime),
@@ -2824,15 +2845,6 @@ def build_group_member_scores(session: AsyncSession) -> GroupMemberScores:
     return PublishedGroupMemberScores(build_published_score_query(session))
 
 
-def build_hidden_members(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> HiddenMembers:
-    """Who a reader's Members list leaves out: the one block read every surface
-    that shows one player to another consults (``docs/adr/0095`` §7), which
-    fails closed."""
-    return BlocksHiddenMembers(build_block_query(session, runtime=runtime))
-
-
 def build_group_administrators(session: AsyncSession) -> GroupAdministrators:
     """Who runs each official group now: the account behind its Administrator,
     read off the administrators' own directory while that administratorship is
@@ -2919,13 +2931,31 @@ def build_block_query(
     runtime rather than declaring the durable names a second time — a
     re-declared published contract drifts silently.
 
-    **Declared before its first caller exists**, deliberately: every surface that
-    shows one player to another consults this port (``docs/adr/0095`` §7) and
-    none of them is built. This line is what those surfaces wire to rather than
-    re-deciding, and it is one line so the re-decision never happens somewhere
-    else.
+    One line, so every route onto a court (``PlayerFit``), *Blocked players* and
+    the record's *you blocked them* read a block from the same place
+    (``docs/adr/0193``).
     """
     return EventSourcedBlockQuery(session, (runtime or get_event_runtime()).codec)
+
+
+def build_blocked_faces(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> BlockedFaces:
+    """*Blocked players*' faces — a name from ``users``, a face from the Player
+    profile, a link from the store: ``build_group_faces``' three providers. The
+    window is the platform's one photo window."""
+    return ProfileBlockedFaces(
+        users=build_user_repository(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        photos=build_photo_storage(settings),
+        photo_link_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES,
+    )
 
 
 # --------------------------------------------------------------------------
@@ -3486,28 +3516,35 @@ def build_runner_disclosure(session: AsyncSession) -> PriorDisclosure:
 
 
 def build_account_gates(
-    *, blocks: BlockQuery, holds: AccountHoldQuery, account_status: AccountStatusQuery
+    *, holds: AccountHoldQuery, account_status: AccountStatusQuery
 ) -> AccountGates:
-    """The three gates about accounts — a block in either direction, a hold, an
-    account that may not be shown — over the three reads a request already
-    holds, so there is one spelling of each."""
+    """The two gates about accounts — a hold, an account that may not be shown —
+    over the two reads a request already holds, so there is one spelling of
+    each. **No block** (``docs/adr/0193`` §2)."""
 
-    return AccountGates(blocks=blocks, holds=holds, account_status=account_status)
+    return AccountGates(holds=holds, account_status=account_status)
 
 
 def build_record_gates(
     *, accounts: AccountGates, holds: AccountHoldQuery
 ) -> RecordGates:
-    """The three about accounts, plus the reader's own hold — no preference
-    (#575).
+    """The two about accounts, plus the reader's own hold — no preference
+    (#575) and no block (``docs/adr/0193`` §2).
 
-    The three are **not built here**: they are ``matchmaking``'s collaborator,
+    The two are **not built here**: they are ``matchmaking``'s collaborator,
     already assembled per request, and this line composes rather than copies. A
     second spelling of a safety gate is the defect the whole rule exists to
     prevent.
     """
 
     return LiveRecordGates(accounts=accounts, holds=holds)
+
+
+def build_blocks_by_the_reader(blocks: BlockQuery) -> BlocksByTheReader:
+    """The record's *you blocked them* — the reader's own block, over the one
+    directed read ``BlockQuery`` has (``docs/adr/0193`` §3)."""
+
+    return OwnBlocksOfTheReader(blocks)
 
 
 # --------------------------------------------------------------------------

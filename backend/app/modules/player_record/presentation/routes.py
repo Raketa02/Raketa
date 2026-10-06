@@ -18,11 +18,14 @@ the cost of that written down there rather than here. One response type, one
 sportsmanship field, whoever is reading.
 
 **One refusal, and it names nothing** (``docs/adr/0159``). Never disclosed to
-you, blocked either way, held, and no such player return the same `404` and the
-same body, byte for byte. A payload naming the gate delivers a block to the one
-person the block was meant to be invisible to; a payload separating *never
-disclosed* from *no such player* answers *is this id real* about a stranger. The
-client draws one line, and there is nothing here to draw a second one from.
+you, held, and no such player return the same `404` and the same body, byte for
+byte: a payload separating *never disclosed* from *no such player* answers *is
+this id real* about a stranger. The client draws one line, and there is nothing
+here to draw a second one from.
+
+**A block refuses nothing here, in either direction** (``docs/adr/0193`` §2).
+The blocker opens the record to undo the block and reads ``blocked_by_you``; the
+blocked person reads the blocker's record byte for byte as before (§3).
 
 **``?sport=`` says what the sheet is about and never who may be seen.** The gates
 run in the partition of the **disclosure** — a fact the platform holds — and the
@@ -54,17 +57,15 @@ _ONE_REFUSAL: dict[int | str, dict[str, Any]] = {
     status.HTTP_404_NOT_FOUND: {
         "model": ErrorResponse,
         "description": (
-            "`record_unavailable` — **one code for four causes, and the body is "
-            "identical in all four.** You were never shown this person; one of "
-            "you has blocked the other; the account is held or in a state that "
-            "may not be shown; or there is no such player.\n\n"
-            "**The indistinguishability is the feature.** A response that named "
-            "which would deliver a block to the one person a block is meant to "
-            "be invisible to, and a response that separated *never disclosed* "
-            "from *no such player* would answer *is this id real* about a "
-            "stranger. Draw one line — *This record isn't available.* — and do "
-            "not branch on anything else here, because there is nothing else "
-            "here."
+            "`record_unavailable` — **one code for three causes, and the body "
+            "is identical in all three.** You were never shown this person; the "
+            "account is held or in a state that may not be shown; or there is no "
+            "such player. **A block is not one of them**, either way round.\n\n"
+            "**The indistinguishability is the feature.** A response that "
+            "separated *never disclosed* from *no such player* would answer *is "
+            "this id real* about a stranger. Draw one line — *This record isn't "
+            "available.* — and do not branch on anything else here, because "
+            "there is nothing else here."
         ),
     }
 }
@@ -114,11 +115,12 @@ SportAsked = Annotated[
         "makes it worth having: the numbers on it have been deciding who you "
         "are offered to since you signed up, and a penalty nobody can look up "
         "is a penalty nobody can fix.\n\n"
-        "**Nothing gates it.** A block is between two people and the gender "
-        "preference is mutual; neither has anything to say about somebody "
-        "reading their own record, and a hold does not reach it either — this "
-        "is the one screen a held player has for finding out how they appear.\n\n"
-        "`is_self` is `true`. Read it rather than comparing ids.\n\n"
+        "**Nothing gates it.** The gender preference is mutual and has nothing "
+        "to say about somebody reading their own record, and a hold does not "
+        "reach it either — this is the one screen a held player has for "
+        "finding out how they appear.\n\n"
+        "`is_self` is `true`, and `blocked_by_you` is `false`: nobody can block "
+        "themselves. Read `is_self` rather than comparing ids.\n\n"
         "**What other players said comes back as the figure and its count** — "
         "`sportsmanship.average` and `sportsmanship.raters`, exactly what a "
         "stranger is served about you. The coarse band that used to stand in "
@@ -159,9 +161,13 @@ async def read_own_record(
         "morning opens next year. A group opens it while you are both in it, "
         "because its Members lists who is in it now — and while you run a "
         "group they are in.\n\n"
-        "**The gates are live.** A block placed since, a hold and an account "
-        "that may not be shown are re-evaluated on every open, so a disclosure "
-        "entitles you to *ask* and never to be answered.\n\n"
+        "**The gates are live.** A hold and an account that may not be shown "
+        "are re-evaluated on every open, so a disclosure entitles you to *ask* "
+        "and never to be answered.\n\n"
+        "**A block is not a gate**, either way round. If you blocked this "
+        "person, the record opens and says so — `blocked_by_you` — and offers "
+        "the place to unblock. If they blocked you, nothing here differs by a "
+        "byte.\n\n"
         "**Asking about yourself is allowed** and answers `is_self: true` — the "
         "client is told rather than left to compare identifiers. It draws the "
         "same sheet `/players/me/record` does, figure for figure: `is_self` "

@@ -5,11 +5,15 @@ because what is being asserted is exactly what a double would have to invent: th
 payload disjunction that finds *every stream this player appears in, on either
 side*, and the fold that decides whether each one is standing.
 
-Three claims:
+Four claims:
 
 **The exclusion set is symmetric.** Whom I blocked and who blocked me arrive as
 one flat set, because nothing downstream may branch on which side a block came
-from — neither party can discover which way it went.
+from.
+
+**Your own blocks are directed, and only yours** (``docs/adr/0193`` §3). The one
+read that knows which way round answers with the blocks a player *made*, and
+never one made of them.
 
 **It is live.** An unblock disappears from the set on the next read; there is no
 projection to lag, by decision (``docs/adr/0095`` §4).
@@ -31,8 +35,8 @@ from app.bootstrap.composition import (
 )
 from app.modules.blocks.domain.block import Block
 from app.modules.blocks.domain.errors import BlockStateUnavailable
+from app.modules.blocks.domain.ports import OwnBlock
 from app.modules.blocks.infrastructure.event_sourced_block_query import _payload_key
-from app.modules.blocks.domain.surface import BlockSurface
 from app.shared.ids import new_uuid
 from tests.unit.fake_event_store import utc
 
@@ -43,19 +47,14 @@ AT = utc(2026, 8, 27)
 LATER = utc(2026, 9, 3)
 
 
-async def _record(session, *, blocker, blocked, lifted=False):
+async def _record(session, *, blocker, blocked, lifted=False, at=AT):
     """Write a block — and optionally its lift — the way a request would."""
 
     repository = build_block_repository(
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
-    block = Block.first_blocked(
-        blocker_id=blocker,
-        blocked_id=blocked,
-        surface=BlockSurface.SHORTLIST,
-        occurred_at=AT,
-    )
+    block = Block.first_blocked(blocker_id=blocker, blocked_id=blocked, occurred_at=at)
     await repository.save(block)
     if lifted:
         block.unblock(occurred_at=LATER)
@@ -181,6 +180,55 @@ async def test_a_line_up_of_one_has_no_pair_for_a_block_to_sit_between(
         assert await query.blocked_pairs_among([]) == frozenset()
 
 
+async def test_your_own_blocks_are_the_ones_you_made_and_never_one_made_of_you(
+    session_factory,
+):
+    async with session_factory() as session:
+        await _record(session, blocker=ALICE, blocked=BOB)
+        await _record(session, blocker=CAROL, blocked=ALICE)
+
+        query = build_block_query(session)
+
+        assert await query.blocks_made_by(ALICE) == (
+            OwnBlock(blocked_id=BOB, blocked_at=AT),
+        )
+        assert await query.blocks_made_by(BOB) == ()
+        assert await query.blocks_made_by(CAROL) == (
+            OwnBlock(blocked_id=ALICE, blocked_at=AT),
+        )
+
+
+async def test_your_own_blocks_come_newest_first_and_a_lifted_one_is_gone(
+    session_factory,
+):
+    dee = new_uuid()
+    async with session_factory() as session:
+        await _record(session, blocker=ALICE, blocked=BOB, at=AT)
+        await _record(session, blocker=ALICE, blocked=CAROL, at=LATER)
+        await _record(session, blocker=ALICE, blocked=dee, lifted=True)
+
+        assert await build_block_query(session).blocks_made_by(ALICE) == (
+            OwnBlock(blocked_id=CAROL, blocked_at=LATER),
+            OwnBlock(blocked_id=BOB, blocked_at=AT),
+        )
+
+
+async def test_both_having_blocked_each_sees_only_their_own(session_factory):
+    """The record is directed, so this is per person (``docs/adr/0193`` §3)."""
+
+    async with session_factory() as session:
+        await _record(session, blocker=ALICE, blocked=BOB)
+        await _record(session, blocker=BOB, blocked=ALICE, at=LATER)
+        query = build_block_query(session)
+
+        assert await query.blocks_made_by(ALICE) == (
+            OwnBlock(blocked_id=BOB, blocked_at=AT),
+        )
+        assert await query.blocks_made_by(BOB) == (
+            OwnBlock(blocked_id=ALICE, blocked_at=LATER),
+        )
+
+
 class BrokenSession:
     """A session whose reads fail, which is the only interesting failure here."""
 
@@ -202,6 +250,8 @@ async def test_a_read_that_cannot_complete_refuses_rather_than_answering_empty()
         await query.blocked_between(ALICE, BOB)
     with pytest.raises(BlockStateUnavailable):
         await query.blocked_pairs_among([ALICE, BOB])
+    with pytest.raises(BlockStateUnavailable):
+        await query.blocks_made_by(ALICE)
 
 
 def test_the_payload_keys_are_taken_from_the_events_and_not_trusted():

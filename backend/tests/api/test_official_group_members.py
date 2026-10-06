@@ -5,9 +5,10 @@ player app's administrator area calls it (#566, ``docs/adr/0183`` §10, and
 Marta runs *Ogrody 33 Club* and has never played: running a group is not
 membership (``docs/adr/0183`` §7). She opens its players card, and Members lists
 who in it plays padel, newest first, as anybody in it would read them — and not
-her, because she is not in it. Kuba blocked her long ago, so she never sees his
-row. She taps Ewa and reads her record, though Marta has no profile and so no
-gender a preference could be read against. When the desk hands the group to
+her, because she is not in it. Kuba blocked her long ago, and his row is there
+all the same: a block hides nobody (``docs/adr/0193`` §2). She taps Ewa and
+reads her record, though Marta has no profile and so no gender a preference
+could be read against. When the desk hands the group to
 Tomek, Members and every record it opened are his to read and no longer hers.
 
 Every assertion reads what a person reads: an answer on the player surface, the
@@ -163,7 +164,10 @@ async def test_the_administrator_who_plays_is_a_row_only_once_they_join(client, 
     assert [row["is_administrator"] for row in after] == [True, False]
 
 
-async def test_a_block_either_way_round_leaves_that_row_out(client, ogrody, marta):
+async def test_a_block_either_way_round_hides_no_row(client, ogrody, marta):
+    """``docs/adr/0193`` §2, superseding ADR-0183 §10: whoever runs the group
+    reads every member, blocked or blocking, as a member does."""
+
     group = await an_official_group(client, marta, ogrody["id"], join_policy="ANYONE")
     ewa = await a_padel_player(client, "ewa")
     kuba = await a_padel_player(client, "kuba")
@@ -174,8 +178,7 @@ async def test_a_block_either_way_round_leaves_that_row_out(client, ogrody, mart
     await block(client, kuba, marta)
     await block(client, marta, zofia)
 
-    assert names(await listed(client, marta, group)) == ["ewa"]
-    # A member still sees both of them: the block is between Marta and them.
+    assert names(await listed(client, marta, group)) == ["zofia", "kuba", "ewa"]
     assert names(await listed(client, ewa, group)) == ["ewa", "zofia", "kuba"]
 
 
@@ -321,7 +324,7 @@ async def test_a_preference_gates_no_record_for_whoever_runs_the_group_or_anybod
     assert (await record(client, tomek, kuba["id"])).status_code == 200
 
 
-async def test_every_other_gate_still_refuses_whoever_runs_it(
+async def test_every_gate_still_refuses_whoever_runs_it_and_a_block_is_none(
     client, session_factory, ogrody, marta
 ):
     group = await an_official_group(client, marta, ogrody["id"], join_policy="ANYONE")
@@ -332,7 +335,8 @@ async def test_every_other_gate_still_refuses_whoever_runs_it(
         await join(client, player, group)
     await block(client, kuba, marta)
 
-    assert (await record(client, marta, kuba["id"])).status_code == 404
+    # A block is no gate (`docs/adr/0193` §2): the record opens either way.
+    assert (await record(client, marta, kuba["id"])).status_code == 200
 
     players.hold_only(client, ewa["id"])
     assert (await record(client, marta, ewa["id"])).status_code == 404

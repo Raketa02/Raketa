@@ -7,8 +7,8 @@ gate short-circuited*, and the short circuit is spelled in the **wiring** rather
 than as a branch:
 
 - the ``/me`` route declares no gate machinery, so nothing that refuses a
-  stranger's sheet — a block, a hold, a store that cannot answer — can take
-  down the one screen that tells a player how they appear.
+  stranger's sheet — a hold, a store that cannot answer — can take down the
+  one screen that tells a player how they appear.
 - there is no branch anybody can delete. A use case that took an admission and
   skipped it when ``reader == subject`` is one refactor away from skipping it
   when it should not.
@@ -18,6 +18,12 @@ one link, says whether the record is the reader's own, and resolves **which spor
 the sheet is about** — the single thing here nobody else could decide, because it
 is a question about the reader rather than about the subject. Every figure that
 lands on this sheet arrives from the context that owns it, already decided.
+
+**One fact is the reader's, and it is a fact rather than a gate**: whether the
+reader blocked the subject (``docs/adr/0193`` §3), asked once the record is
+admitted and refusing nothing. It is directed — the reader's own block, never
+anybody's block of the reader — so the blocked person's sheet does not move by
+a byte.
 
 **No zone is answered differently depending on who is reading.** What other
 players said used to be the one that was — a figure and a count for a stranger,
@@ -53,6 +59,7 @@ from app.modules.player_record.domain.errors import (
     RecordUnavailable,
 )
 from app.modules.player_record.domain.ports import (
+    BlocksByTheReader,
     RecordPhotoLink,
     SubjectForm,
     SubjectIdentitySource,
@@ -74,6 +81,7 @@ async def assemble_record(
     *,
     subject_id: UUID,
     is_self: bool,
+    blocked_by_reader: bool | None,
     arrived_from: Sport | None,
     now: Instant,
     identities: SubjectIdentitySource,
@@ -137,6 +145,7 @@ async def assemble_record(
     )
     return PlayerRecord(
         is_self=is_self,
+        blocked_by_reader=blocked_by_reader,
         identity=identity,
         photo_url=photo_url,
         sports=pills_of(held),
@@ -174,6 +183,7 @@ class ReadPlayerRecord:
         self,
         *,
         admission: RecordAdmission,
+        own_blocks: BlocksByTheReader,
         identities: SubjectIdentitySource,
         photos: RecordPhotoLink,
         ratings: SubjectRatings,
@@ -184,6 +194,7 @@ class ReadPlayerRecord:
         clock: Clock,
     ) -> None:
         self._admission = admission
+        self._own_blocks = own_blocks
         self._identities = identities
         self._photos = photos
         self._ratings = ratings
@@ -222,6 +233,11 @@ class ReadPlayerRecord:
         return await assemble_record(
             subject_id=subject_id,
             is_self=reader_id == subject_id,
+            # Asked of the reader's own blocks only, and only once admitted: a
+            # fact on the sheet, never a gate (`docs/adr/0193` §2–§3).
+            blocked_by_reader=await self._own_blocks.has_blocked(
+                reader_id=reader_id, subject_id=subject_id
+            ),
             arrived_from=arrived_from,
             now=now,
             identities=self._identities,
@@ -238,8 +254,9 @@ class ReadPlayerRecord:
 class ReadOwnRecord:
     """Your own record — *How others see you*, and nothing gates it.
 
-    A block is between two people, the gender preference is mutual, and neither
-    has anything to say about somebody reading their own sheet. A hold does not
+    A block is between two people — nobody can block themselves, so this sheet
+    never says you did — the gender preference is mutual, and neither has
+    anything to say about somebody reading their own sheet. A hold does not
     reach it either: a held player is refused every surface that would show them
     to somebody else, and this is the one that shows them to themselves.
     """
@@ -275,6 +292,7 @@ class ReadOwnRecord:
         return await assemble_record(
             subject_id=reader_id,
             is_self=True,
+            blocked_by_reader=False,
             arrived_from=arrived_from,
             now=self._clock.now(),
             ratings=self._ratings,

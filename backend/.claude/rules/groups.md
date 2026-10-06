@@ -56,21 +56,21 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   with the published Level and the Player Score — omitted, never `0`, for somebody with no
   record. It is the one read also open to **whoever runs an official group now**
   (`listing_for_a_member_or_its_runner`, #566), who reads the same rows and is one only once
-  they join as a player. **A blocked pair, either way round, is shown to neither** there
-  and on the Info tab's members row that opens it (`member_faces`, up to five, everybody
-  but the reader in the Members order) — the Games tab's seats stay the first rated in
-  joining order,
-  whoever reads them (ADR-0183 §10, §13, #504) — and **no count moves**. The block read
-  fails closed (`503 block_state_unavailable`), is skipped for a reader alone, and on
-  `PUT /details` runs **before the commit** (`GroupPages`), so a refusal records nothing.
-  And **it reads six contexts through ports it
+  they join as a player. **A block hides nobody**, either way round, there or on the Info
+  tab's members row that opens it (`member_faces`, up to five, everybody but the reader in
+  the Members order), and the Games tab's seats stay the first rated in joining order,
+  whoever reads them (ADR-0183 §13, #504): a block keeps two people off one court and
+  reaches no group read ([ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+  §2, superseding ADR-0183 §10; #586 removed `HiddenMembers`). No group read asks the block
+  state, so it can fail none of them. The answer to `PUT /details` is still drawn **before
+  the commit** (`GroupPages`), so a read that fails there records nothing.
+  And **it reads five contexts through ports it
   declares in its own words**, each adapter over the provider's own port: clubs'
   `ClubDirectory` (which `clubs` now publishes over its search projection, folding the
   query itself and escaping `LIKE`), rating's `RatedPlayerQuery` (published Levels for a
   request card and a Members row), users and the Player profile for a face or, name only,
   a group's Owner, the profile's Location area for distance, `player_score`'s
-  `PublishedScoreQuery` (`GroupMemberScores`) and blocks' `BlockQuery` (`HiddenMembers`,
-  its `exclusions_for` renamed) — and its domain
+  `PublishedScoreQuery` (`GroupMemberScores`) — and its domain
   borrows two pure functions, clubs' `fold` and the matcher's distance print, and says
   so where it does. **The two searches answer one card**, `ClubCardSchema`, built by
   `views.club_cards`, and one order — the **printed** distance (`shown_kilometres`, from
@@ -107,7 +107,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   club's name for an account an invitation opened, never cut. An official group's dots
   are what it declares, and its page carries `declared_sports`. **The administrator's
   routes are `/administrator/clubs/{club_id}/groups`** behind `AdministratorAtClubDep`
-  — create, list, read (players newest first, a blocked pair left out), approve,
+  — create, list, read (players newest first, nobody hidden for a block), approve,
   decline and `PUT …/settings` (all four fields; *Anyone* admits everybody waiting) —
   and a group that administratorship does not run is `group_not_found` whatever the
   reason. **Nothing deletes one, and its Administrator cannot stop running it**: there

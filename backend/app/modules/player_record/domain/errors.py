@@ -1,12 +1,12 @@
 """The one refusal this context has, and the whole of what it says.
 
-**Four refusals, one answer, byte for byte.** *Never disclosed to you*,
-*blocked either way*, *held*, and *no such player* return the same status and the
-same body — not four codes a client branches on, not four messages, and no
-``details``. The indistinguishability **is** the feature: a payload naming the
-gate delivers a block to the one person the block was meant to be invisible to
-(``docs/adr/0095``, ``docs/adr/0130``), and a payload separating *never disclosed*
-from *no such player* answers *is this id real* about a stranger.
+**Three refusals, one answer, byte for byte.** *Never disclosed to you*,
+*held*, and *no such player* return the same status and the same body — not three
+codes a client branches on, not three messages, and no ``details``. The
+indistinguishability **is** the feature: a payload naming the gate would say
+which (``docs/adr/0130``), and a payload separating *never disclosed* from *no
+such player* answers *is this id real* about a stranger. **A block is not one of
+them** since ``docs/adr/0193`` §2: it refuses no record, either way round.
 
 **It is a 404 rather than a 403**, and that follows from the same rule rather
 than from taste. A 403 says *there is somebody here you may not see*; a 404 says
@@ -27,9 +27,9 @@ class RecordUnavailable(NotFoundError):
     """This record cannot be opened, and the reason is not disclosed.
 
     The message is **fixed at the raise sites** rather than passed in, which is
-    what makes *byte-identical* a property of the code instead of a promise four
-    callers have to keep. ``tests/api/test_player_record.py`` drives all four
-    causes and compares the responses.
+    what makes *byte-identical* a property of the code instead of a promise
+    every caller has to keep. ``tests/api/test_player_record.py`` drives all
+    three causes and compares the responses.
     """
 
     code = "record_unavailable"

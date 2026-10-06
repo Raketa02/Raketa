@@ -245,8 +245,8 @@ class ReadClubGroupRequests:
 
     Club 20's card, as the administrator's: who is asking and every sport they
     are rated in with its Level — **what deciding needs and nothing more**. No
-    block applies: a club is in no player's block list, and nobody here is
-    hidden from it. Two reads whatever the length of the queue.
+    block applies: a block keeps two people off one court and hides nobody
+    (``docs/adr/0193`` §2). Two reads whatever the length of the queue.
     """
 
     def __init__(

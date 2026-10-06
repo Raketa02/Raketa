@@ -1709,12 +1709,47 @@
       }
     },
     "/api/v1/blocks": {
+      "get": {
+        "tags": [
+          "blocks"
+        ],
+        "summary": "Blocked players \u2014 the players you blocked",
+        "description": "**Your own blocks, and nobody else's**: each person you blocked and have not unblocked, with their name, photograph and when you blocked them, newest first. Unblock one with `DELETE /blocks/{player_id}`.\n\n**Nothing here, or anywhere, lists who blocked you.** If somebody you blocked also blocked you, you see only your own block.",
+        "operationId": "read_blocked_players_api_v1_blocks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlockedPlayersResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`block_state_unavailable` \u2014 your blocks could not be read. Retry the same request; never draw an empty list for it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
       "post": {
         "tags": [
           "blocks"
         ],
         "summary": "Block a player",
-        "description": "The two of you disappear from each other's view everywhere, immediately, silently, in **both** directions.\n\n**Idempotent.** Blocking somebody already blocked records nothing and answers 204.\n\n**No cap, no cooldown and no rate limit**, and none will be added.\n\n**There is no reason field.** A reason belongs to a report, and this is not one.\n\n**Neither side is notified**, in either direction, and no response in this API reveals a block to the blocked party.\n\n**The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs, and neither of you can discover which way one went.\n\n**It is forward-looking.** It removes each of you from the other's future listings; it does not reach into anything already agreed.",
+        "description": "**Keeps the two of you off one court**, immediately and silently, whichever of you made the block: you are never dealt a game together, never both In on one, never offered each other's seat and never joined onto each other's post. A yes that would put you together is refused without saying why.\n\n**It reaches nothing else.** You both stay in your groups and see each other in their Members lists, either of you can open the other's record, and a chat you already share keeps working.\n\n**Your yeses where they are In are taken back** \u2014 on a game still filling, as an ordinary withdrawal, and on a game waiting for its club as if you left it, so the others In are told you left. Theirs stand. A game the club confirmed is never touched: leaving it is the ordinary rule. Unblocking brings none of them back.\n\n**Idempotent.** Blocking somebody already blocked records nothing and answers 204.\n\n**No cap, no cooldown and no rate limit**, and none will be added.\n\n**There is no reason field.** A reason belongs to a report, and this is not one.\n\n**Neither side is notified.** You can read your own blocks \u2014 `GET /blocks`, and `blocked_by_you` on a record \u2014 and nothing in this API tells anybody they were blocked.\n\n**The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs.",
         "operationId": "block_player_api_v1_blocks_post",
         "requestBody": {
           "content": {
@@ -1774,7 +1809,7 @@
           "blocks"
         ],
         "summary": "Unblock a player",
-        "description": "Lifts **your** block of this player, immediately.\n\n**It lifts one direction.** If they have also blocked you, that block stands and the two of you stay invisible to each other \u2014 and nothing here tells you so.\n\n**Idempotent, and it never 404s.** Unblocking somebody you never blocked answers 204 and records nothing, because a different answer would be this API reporting on somebody else's state.",
+        "description": "Lifts **your** block of this player, immediately: the two of you may be proposed together again. **It brings back no yes** the block took back.\n\n**It lifts one direction.** If they have also blocked you, that block stands and the two of you are still kept off one court \u2014 and nothing here tells you so.\n\n**Idempotent, and it never 404s.** Unblocking somebody you never blocked answers 204 and records nothing, because a different answer would be this API reporting on somebody else's state.",
         "operationId": "unblock_player_api_v1_blocks__player_id__delete",
         "security": [
           {
@@ -2755,7 +2790,7 @@
           "player-record"
         ],
         "summary": "Your own record \u2014 how others see you",
-        "description": "**The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.\n\n**Nothing gates it.** A block is between two people and the gender preference is mutual; neither has anything to say about somebody reading their own record, and a hold does not reach it either \u2014 this is the one screen a held player has for finding out how they appear.\n\n`is_self` is `true`. Read it rather than comparing ids.\n\n**What other players said comes back as the figure and its count** \u2014 `sportsmanship.average` and `sportsmanship.raters`, exactly what a stranger is served about you. The coarse band that used to stand in for it here is retired by ADR-0179 \u00a75, which names what that costs. It changes nothing about how you are matched: the reliability pill is what the platform acts on.\n\n**`?sport=` works here too**, and picks which of your own Levels the skill card draws \u2014 the same resolution a stranger's sheet takes.",
+        "description": "**The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.\n\n**Nothing gates it.** The gender preference is mutual and has nothing to say about somebody reading their own record, and a hold does not reach it either \u2014 this is the one screen a held player has for finding out how they appear.\n\n`is_self` is `true`, and `blocked_by_you` is `false`: nobody can block themselves. Read `is_self` rather than comparing ids.\n\n**What other players said comes back as the figure and its count** \u2014 `sportsmanship.average` and `sportsmanship.raters`, exactly what a stranger is served about you. The coarse band that used to stand in for it here is retired by ADR-0179 \u00a75, which names what that costs. It changes nothing about how you are matched: the reliability pill is what the platform acts on.\n\n**`?sport=` works here too**, and picks which of your own Levels the skill card draws \u2014 the same resolution a stranger's sheet takes.",
         "operationId": "read_own_record_api_v1_players_me_record_get",
         "security": [
           {
@@ -2822,7 +2857,7 @@
           "player-record"
         ],
         "summary": "One player's record",
-        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody you were on a game with, somebody you share a group with, somebody in a group you run, and yourself \u2014 and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires but a group.** A game you were both on discloses for as long as you are both on it, so a sheet you could open this morning opens next year. A group opens it while you are both in it, because its Members lists who is in it now \u2014 and while you run a group they are in.\n\n**The gates are live.** A block placed since, a hold and an account that may not be shown are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
+        "description": "Who this person is, as of the moment you opened it.\n\n**Read through a prior disclosure, never about a person.** It opens for somebody you were on a game with, somebody you share a group with, somebody in a group you run, and yourself \u2014 and for nobody else. Without a rule of that shape this route would be a player-enumeration endpoint, and a UUID being hard to guess is not an authorization model.\n\n**Nothing expires but a group.** A game you were both on discloses for as long as you are both on it, so a sheet you could open this morning opens next year. A group opens it while you are both in it, because its Members lists who is in it now \u2014 and while you run a group they are in.\n\n**The gates are live.** A hold and an account that may not be shown are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.\n\n**A block is not a gate**, either way round. If you blocked this person, the record opens and says so \u2014 `blocked_by_you` \u2014 and offers the place to unblock. If they blocked you, nothing here differs by a byte.\n\n**Asking about yourself is allowed** and answers `is_self: true` \u2014 the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.\n\n**`?sport=` chooses what the sheet is about, never who may be seen.** Send the sport you arrived from; where they are not rated in it you get their most played, and admission is decided from what the platform already showed you regardless.",
         "operationId": "read_player_record_api_v1_players__player_id__record_get",
         "security": [
           {
@@ -2871,7 +2906,7 @@
             }
           },
           "404": {
-            "description": "`record_unavailable` \u2014 **one code for four causes, and the body is identical in all four.** You were never shown this person; one of you has blocked the other; the account is held or in a state that may not be shown; or there is no such player.\n\n**The indistinguishability is the feature.** A response that named which would deliver a block to the one person a block is meant to be invisible to, and a response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger. Draw one line \u2014 *This record isn't available.* \u2014 and do not branch on anything else here, because there is nothing else here.",
+            "description": "`record_unavailable` \u2014 **one code for three causes, and the body is identical in all three.** You were never shown this person; the account is held or in a state that may not be shown; or there is no such player. **A block is not one of them**, either way round.\n\n**The indistinguishability is the feature.** A response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger. Draw one line \u2014 *This record isn't available.* \u2014 and do not branch on anything else here, because there is nothing else here.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2980,7 +3015,7 @@
           "groups"
         ],
         "summary": "A group, for its members",
-        "description": "Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; for every sport, how many members are rated in it and the first of them to join \u2014 the Games tab's *N of M*; and the faces on the Info tab's members row, which **leaves out a blocked pair, either way round**, as the Members list does. No count moves.",
+        "description": "Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; for every sport, how many members are rated in it and the first of them to join \u2014 the Games tab's *N of M*; and the faces on the Info tab's members row, in the Members list's order. **A block hides nobody here**, either way round.",
         "operationId": "read_group_api_v1_groups__group_id__get",
         "security": [
           {
@@ -3012,16 +3047,6 @@
           },
           "404": {
             "description": "`group_not_found` \u2014 **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3189,16 +3214,6 @@
               }
             }
           },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the answer's members row. **Nothing was recorded**: the answer is drawn before the save commits, so the retry is the whole edit again.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -3337,7 +3352,7 @@
           "groups"
         ],
         "summary": "Members of a group, for one sport",
-        "description": "**Only the members rated in `sport`** \u2014 who in the group the caller could play it with: the caller first, then the Owner, then everybody else newest joined first. Each with their face, their Level in the sport, their Player Score where they have one, whether they own the group and when they joined. **A blocked pair, either way round, is left out of each other's list**, and the group's member count does not change.\n\n**Read by the group's members, and by whoever runs an official group now** \u2014 running one is not membership. That caller reads the same rows in the same order, and is a row only once they have joined as a player. A removed Administrator, and one the group was handed away from, are answered as anyone else who is not in it is.",
+        "description": "**Only the members rated in `sport`** \u2014 who in the group the caller could play it with: the caller first, then the Owner, then everybody else newest joined first. Each with their face, their Level in the sport, their Player Score where they have one, whether they own the group and when they joined. **A block hides nobody here**, either way round: both stay in the group and see each other in its list.\n\n**Read by the group's members, and by whoever runs an official group now** \u2014 running one is not membership. That caller reads the same rows in the same order, and is a row only once they have joined as a player. A removed Administrator, and one the group was handed away from, are answered as anyone else who is not in it is.",
         "operationId": "group_members_api_v1_groups__group_id__members_get",
         "security": [
           {
@@ -3379,16 +3394,6 @@
           },
           "404": {
             "description": "`group_not_found` \u2014 **one code for two cases**: no such group, and a group the reader is not a member of. Both have one remedy.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4265,16 +4270,6 @@
               }
             }
           },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the players list. Nothing was recorded; retry.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -4356,16 +4351,6 @@
           },
           "404": {
             "description": "`group_not_found` \u2014 **one code for every group that is not theirs**: no such group, a player group, one at another club, or one a colleague runs.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`block_state_unavailable` \u2014 who is blocked could not be read for the players list. Nothing was recorded; retry.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6757,7 +6742,7 @@
             },
             "type": "array",
             "title": "Players",
-            "description": "Every player, **newest joined first** \u2014 the Administrator too, if they joined as a player. A blocked pair, either way round, is left out, as every Members list leaves them out; `member_count` is the group's."
+            "description": "Every player, **newest joined first** \u2014 the Administrator too, if they joined as a player. A block hides nobody here, as it hides nobody in a Members list; `member_count` is the group's."
           },
           "requests": {
             "items": {
@@ -6961,30 +6946,72 @@
             "format": "uuid",
             "title": "Player Id",
             "description": "The player to block. The blocker is the authenticated caller and is never sent."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id"
+        ],
+        "title": "BlockPlayerRequest",
+        "description": "*Keep this person off my court.*\n\n**The other player and nothing else.** There is no reason field and there\nnever will be \u2014 a reason for a block belongs to a Report, and a request shape\nis where one would be added first \u2014 and no screen it was made from."
+      },
+      "BlockedPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who you blocked. `DELETE /blocks/{player_id}` unblocks them."
           },
-          "surface": {
-            "$ref": "#/components/schemas/BlockSurface",
-            "description": "Which screen the block was made from. Recorded as context; no rule reads it."
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "The whole Name, never the nickname."
+          },
+          "photo_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Photo Id",
+            "description": "Their current photograph. Omitted when they have none, and omitted together with `photo_url` \u2014 draw their initials."
+          },
+          "photo_url": {
+            "type": "string",
+            "title": "Photo Url",
+            "description": "A short-lived signed link to that photograph, minted for **this response**."
+          },
+          "blocked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Blocked At",
+            "description": "When you blocked them. Blocking somebody already blocked does not move it; unblocking and blocking again does."
           }
         },
         "type": "object",
         "required": [
           "player_id",
-          "surface"
+          "name",
+          "blocked_at"
         ],
-        "title": "BlockPlayerRequest",
-        "description": "*Do not show me this person again.*\n\n``surface`` is a closed set the client already holds \u2014 the four screens that\nshow one player to another \u2014 and it is validated here rather than by the\ndomain because there is no served vocabulary for a client to hold a stale\nversion of. Nothing branches on it.\n\n**There is no reason field and there never will be.** A reason for a block\nbelongs to a Report, and a request shape is where one would be added first."
+        "title": "BlockedPlayerSchema",
+        "description": "One person you blocked \u2014 a name, a photograph, and when."
       },
-      "BlockSurface": {
-        "type": "string",
-        "enum": [
-          "SHORTLIST",
-          "LINEUP",
-          "FILL_SEATS",
-          "DECK"
+      "BlockedPlayersResponse": {
+        "properties": {
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/BlockedPlayerSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Your standing blocks, **newest first**. Empty when you have blocked nobody \u2014 draw *You haven't blocked anyone.* A block you lifted is not here, and a block of an id nobody holds is not either."
+          }
+        },
+        "type": "object",
+        "required": [
+          "players"
         ],
-        "title": "BlockSurface",
-        "description": "The four surfaces of `search-telemetry.md` \u00a72, as a block records them."
+        "title": "BlockedPlayersResponse",
+        "description": "*Blocked players* \u2014 everybody **you** blocked, and nobody else's blocks."
       },
       "BookedClubSchema": {
         "properties": {
@@ -9616,7 +9643,7 @@
             },
             "type": "array",
             "title": "Members",
-            "description": "**Only the members rated in `sport`**: the reader first, then the Owner \u2014 or the Administrator running an official group, once they joined it as a player \u2014 then everybody else **newest joined first**. **A blocked pair, either way round, is left out of each other's list** \u2014 and nothing says so: the group's `member_count` is the same for every reader, so it may be more than the rows here. Empty when nobody in the group the reader may see is rated in it."
+            "description": "**Only the members rated in `sport`**: the reader first, then the Owner \u2014 or the Administrator running an official group, once they joined it as a player \u2014 then everybody else **newest joined first**. **A block hides nobody here**, either way round. Empty when nobody in the group is rated in it."
           }
         },
         "type": "object",
@@ -9790,7 +9817,7 @@
             },
             "type": "array",
             "title": "Member Faces",
-            "description": "The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order \u2014 the Owner, then newest joined first \u2014 with a blocked pair, either way round, left out, as the list it opens leaves them out. Empty for a reader alone (`member_count` 1), whose row draws their own face \u2014 and empty too, with `member_count` above 1, when a block hides everybody else. `member_count` is the group's, so its *+N* counts everybody."
+            "description": "The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order \u2014 the Owner, then newest joined first. A block hides nobody here, as it hides nobody in the list it opens. Empty for a reader alone (`member_count` 1), whose row draws their own face. `member_count` is the group's, so its *+N* counts everybody."
           },
           "administrator_name": {
             "anyOf": [
@@ -11772,6 +11799,11 @@
             "type": "boolean",
             "title": "Is Self",
             "description": "Whether this is the reader's own record. **The server's answer, and the client never derives it** by comparing the id it asked about against its session \u2014 the sheet retitles to *How others see you* and drops the distance and the fit pill, and getting that wrong is most visible on the one screen it matters on. It decides the title and nothing on the sheet: every zone, what other players said included, is the same fact whoever is reading.\n\n`true` on `/players/me/record` always, and on the parameterised route when a client asks about itself."
+          },
+          "blocked_by_you": {
+            "type": "boolean",
+            "title": "Blocked By You",
+            "description": "Whether **you** have blocked this person \u2014 your own block, and never theirs of you. Draw *Unblock* when `true` and *Block* when `false`, and no row at all when `is_self` is `true`.\n\n**It answers one direction only, and that is the point.** Nothing on this response, or any other, says whether they blocked you: their record reads the same either way. If you both blocked, each of you reads `true` about your own block and nothing about the other's.\n\n`false` on your own record, always. **Omitted only when your blocks could not be read** \u2014 draw neither row then, rather than a guess; the rest of the record is unaffected."
           },
           "name": {
             "type": "string",

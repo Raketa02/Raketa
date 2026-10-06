@@ -26,12 +26,12 @@ class EditGroup:
     **Switching to *Anyone* admits everybody waiting at once**, and the answer
     names who it let in, in the order they asked — the Edit screen shows them.
 
-    **The answer is drawn before the commit.** The page reads the block state,
-    which fails closed; read after the commit, a failure there would answer a
-    ``503`` for an edit that had happened, and the retry it invites would save
-    nothing and name nobody admitted. Drawn inside the transaction, it rolls the
-    edit back instead, and the retry is the whole edit again. ``save`` has
-    flushed everything it wrote, so the directory already reads it.
+    **The answer is drawn before the commit.** Read after the commit, a read
+    that failed there would answer an error for an edit that had happened, and
+    the retry it invites would save nothing and name nobody admitted. Drawn
+    inside the transaction, it rolls the edit back instead, and the retry is the
+    whole edit again. ``save`` has flushed everything it wrote, so the directory
+    already reads it.
     """
 
     def __init__(

@@ -1,11 +1,17 @@
-"""``RecordGates`` over the three that are spelled once on this platform.
+"""``RecordGates`` over the two that are spelled once on this platform.
 
 The collaborator this delegates to is ``matchmaking``'s
-:class:`~app.modules.matchmaking.application.fail_closed_gates.AccountGates`: a
-block in either direction, an account hold, and an account state that may not be
-shown, evaluated over a reader and a set of subjects. A second spelling of a
-safety gate is the defect the whole fail-closed rule exists to prevent, so what
-lives here is a **translation and never a copy** — this file contains no gate.
+:class:`~app.modules.matchmaking.application.fail_closed_gates.AccountGates`: an
+account hold, and an account state that may not be shown, evaluated over a set of
+subjects. A second spelling of a safety gate is the defect the whole fail-closed
+rule exists to prevent, so what lives here is a **translation and never a copy**
+— this file contains no gate.
+
+**No block** (``docs/adr/0193`` §2). A block keeps two people off one court, and
+the record is not a court: the blocker opens it to unblock, and the blocked
+person reads the blocker's exactly as before. What the record says about a block
+is the reader's own, and it is a fact on the sheet rather than a gate
+(``BlocksByTheReader``).
 
 **No preference** (#575). Every strand a record opens on is a court or a group
 that already put the pair in front of each other, so the mutual gender
@@ -13,7 +19,7 @@ preference — which says who a player is willing to be *matched* with — is no
 asked and no profile is loaded.
 
 **The reader's own hold is added here, and it is the one thing this adapter
-decides.** The three answer about *subjects*; whether the person asking may be
+decides.** The two answer about *subjects*; whether the person asking may be
 shown anybody at all is the surface's own entry rule. A hold points both ways
 (``docs/adr/0095``), so a hold that did not reach this route would end at the
 one route that remembers who a player has been shown. It is asked **first**,
@@ -37,7 +43,7 @@ from app.modules.matchmaking.domain.ports import AccountHoldQuery
 
 @final
 class LiveRecordGates:
-    """The three about accounts and the reader's own hold, asked about one
+    """The two about accounts and the reader's own hold, asked about one
     pair."""
 
     def __init__(self, *, accounts: AccountGates, holds: AccountHoldQuery) -> None:
@@ -52,9 +58,7 @@ class LiveRecordGates:
         )
         if reader_id in held:
             return False
-        withheld = await self._accounts.withheld(
-            reader_id=reader_id, subject_ids=(subject_id,)
-        )
+        withheld = await self._accounts.withheld(subject_ids=(subject_id,))
         return subject_id not in withheld
 
 

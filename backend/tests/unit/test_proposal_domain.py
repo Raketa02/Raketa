@@ -652,6 +652,37 @@ def test_only_a_paused_yes_on_a_game_still_filling_comes_back():
     assert pick.resume_yes(B, at=BOOK_BY) is False
 
 
+def test_a_block_takes_back_a_paused_yes_and_it_never_comes_back():
+    """``docs/adr/0193`` §4: a paused yes is still the blocker's, so a block
+    withdraws it — the ordinary ``YesWithdrawn`` — and a freed week finds
+    nothing to bring back."""
+
+    pick = a_pick()
+    pick.deal((B, C, D, E), at=MADE_AT)
+    pick.say_yes(B, at=MADE_AT)
+    pick.pause_yes(B, at=MADE_AT)
+    history = pick.pull_events()
+
+    assert pick.withdraw_paused_yes(B, at=LATER) is True
+
+    [event] = pick.pull_events()
+    assert isinstance(event, YesWithdrawn)
+    folded = Proposal.from_history([*history, event])
+    assert (folded.yeses, folded.paused, folded.withdrawn) == ((), (), (B,))
+    assert folded.resume_yes(B, at=LATER) is False
+
+
+def test_only_a_paused_yes_on_a_game_still_filling_is_taken_back():
+    pick = dealt(a_pick(), (B, C, D, E))
+    pick.say_yes(B, at=MADE_AT)
+
+    assert pick.withdraw_paused_yes(B, at=LATER) is False, "a live yes is not paused"
+    assert pick.withdraw_paused_yes(C, at=LATER) is False
+    pick.pause_yes(B, at=MADE_AT)
+    assert pick.withdraw_paused_yes(B, at=BOOK_BY) is False
+    assert B in pick.paused
+
+
 def test_the_stream_folds_back_into_the_proposal_it_recorded():
     proposal = a_post()
     proposal.deal((B, C, D), at=LATER)

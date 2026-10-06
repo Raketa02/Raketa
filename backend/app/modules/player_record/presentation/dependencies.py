@@ -6,12 +6,12 @@ class comes from ``app.bootstrap.composition``, and
 
 **The two use cases are declared apart, and the difference is the point.**
 ``ReadOwnRecord`` names no gate machinery at all, so nothing that refuses a
-stranger's sheet — a block, a hold, a store that cannot answer — can take down
+stranger's sheet — a hold, a store that cannot answer — can take down
 the one screen that tells a player how they appear. A single factory with a
 branch inside it would have made that a runtime accident instead of a wiring
 decision.
 
-**The gates' three reads are taken from ``matchmaking``'s own declarations**
+**The gates' two reads are taken from ``matchmaking``'s own declarations**
 rather than assembled again here. Those factories are where every surface
 showing one player to another gets them, and a surface deciding for itself
 where a gate comes from is how one of them ends up wired to a different answer.
@@ -32,6 +32,7 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_account_gates,
+    build_blocks_by_the_reader,
     build_game_disclosure,
     build_group_disclosure,
     build_record_gates,
@@ -56,6 +57,7 @@ from app.modules.player_record.application.read_player_record import (
     ReadPlayerRecord,
 )
 from app.modules.player_record.domain.ports import (
+    BlocksByTheReader,
     RecordPhotoLink,
     SubjectForm,
     SubjectIdentitySource,
@@ -140,7 +142,6 @@ SubjectSportsmanshipDep = Annotated[
 
 def get_record_admission(
     db: DbSession,
-    blocks: BlockQueryDep,
     holds: AccountHoldQueryDep,
     account_status: AccountStatusQueryDep,
 ) -> RecordAdmission:
@@ -160,9 +161,7 @@ def get_record_admission(
             build_runner_disclosure(db),
         ),
         gates=build_record_gates(
-            accounts=build_account_gates(
-                blocks=blocks, holds=holds, account_status=account_status
-            ),
+            accounts=build_account_gates(holds=holds, account_status=account_status),
             holds=holds,
         ),
     )
@@ -171,8 +170,19 @@ def get_record_admission(
 RecordAdmissionDep = Annotated[RecordAdmission, Depends(get_record_admission)]
 
 
+def get_blocks_by_the_reader(blocks: BlockQueryDep) -> BlocksByTheReader:
+    """The reader's own block, over the request's ``BlockQuery`` — so a block
+    taken a moment ago is on the next sheet (``docs/adr/0193`` §3)."""
+
+    return build_blocks_by_the_reader(blocks)
+
+
+BlocksByTheReaderDep = Annotated[BlocksByTheReader, Depends(get_blocks_by_the_reader)]
+
+
 def get_read_player_record(
     admission: RecordAdmissionDep,
+    own_blocks: BlocksByTheReaderDep,
     identities: SubjectIdentitySourceDep,
     photos: RecordPhotoLinkDep,
     ratings: SubjectRatingsDep,
@@ -184,6 +194,7 @@ def get_read_player_record(
 ) -> ReadPlayerRecord:
     return ReadPlayerRecord(
         admission=admission,
+        own_blocks=own_blocks,
         identities=identities,
         photos=photos,
         ratings=ratings,

@@ -246,9 +246,9 @@ class FailPosture(str, Enum):
 #: **Blocks are built and are deliberately not a row here** (#203). Every port
 #: below is one the *matcher* declares of a context it does not write, and its
 #: posture is the matcher's reading of somebody else's fact. ``BlockQuery`` is
-#: the other arrangement: ADR-0095 §7 makes it the Blocks context's **own** port,
-#: declared once and consulted by every surface that shows one player to another,
-#: and its fail-closed posture is asserted where the port lives
+#: the other arrangement: it is the Blocks context's **own** port, read by the
+#: one pair rule every route onto a court asks (``docs/adr/0193`` §1), and its
+#: fail-closed posture is asserted where the port lives
 #: (``modules/blocks/domain/ports.py``) rather than restated per consumer.
 #:
 #: ``AtStakeQuery``'s row is **derived rather than quoted**: an unanswerable
