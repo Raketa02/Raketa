@@ -5,19 +5,13 @@ refactor of the Python types: a player as a ``str`` uuid, a code as its value, a
 sport as its code.
 
 **The opening is not an entry.** ``ConversationOpened`` is the news that a room
-exists, and ``seq`` 1 is whatever happens next
-(``the-words.md`` §23.1). Three membership codes share that one rule: an
-acceptance, an invitation and a departure each write a line **only when there was
-already a room to write it in**, and the first acceptor is a founding member
-visible in membership rather than a sentence in the backlog.
+exists, and ``seq`` 1 is whatever happens next (``the-words.md`` §23.1).
 
 **``GameNoted`` is the other event with no line**, and it is the reason a refused
 line is not a refused telling. ``GamePlanned`` reaches this room and draws nothing
-— everybody having accepted is an arrangement of the seats, so a *Game on* line
-would announce a conclusion the record already implies — but it is where the room
-learns the game it is about, and where its own end will be derived from
-(``docs/adr/0153`` §2). Dropping the delivery because nothing renders would drop
-the anchor with it.
+— a booked game is announced on Home and its details, not in its own chat — but
+it is where the room learns the game it is about, and where its own end will be
+derived from (``docs/adr/0153`` §2).
 
 **Every entry event carries its ``seq``**, minted on append under the
 conversation row's lock (``docs/adr/0147`` §2). It is **not** the stream version
@@ -30,6 +24,13 @@ construction, so a subscriber that writes must be able to recognise a redelivery
 a line whose ``source_event_id`` is already folded is recorded a second time by
 nothing. It is not a second identity for the line — ``(conversation_id, seq)`` is
 that — it is a statement about what the line was told by.
+
+**The opening is on its second version** (#575). A room is opened by a booked
+game and filed under the **booking**, so the opening names a ``booking_id``; the
+first version named the same id ``challenge_id``, from when a challenge's first
+acceptance opened rooms too. A stored history outlives the code that wrote it, so
+``ConversationOpenedUnderAChallengeId`` still folds — the id it carries is the
+booking's for every room a booking opened, and the arrangement's for every other.
 """
 
 from __future__ import annotations
@@ -42,16 +43,31 @@ from uuid import UUID
 
 @dataclass(frozen=True)
 class ConversationOpened:
-    """A room exists, for the people who have agreed to play.
+    """A room exists, for the people booked on one game. **Version 2.**
 
-    Opened by the **first acceptance**, and by a mutual-born challenge's own
-    event — which *is* the opening and writes no line, because both seats are
-    accepted from birth and there was never a moment with one person in the room.
+    Opened by the booked game's own ``GamePlanned``, and filed under the
+    booking the game was opened from — so a redelivery finds the room it
+    already opened and records nothing.
 
-    It carries the challenge and the sport and **no members**: membership is
-    derived from whichever record the room is about (``docs/adr/0146`` §7),
-    and a roster stored here would be the copy that decides who may read the
-    messages and the first one to go wrong.
+    It carries the booking and the sport and **no members**: membership is the
+    game's current line-up (``docs/adr/0146`` §7), and a roster stored here
+    would be the copy that decides who may read the messages and the first one
+    to go wrong.
+    """
+
+    conversation_id: UUID
+    booking_id: UUID
+    sport: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ConversationOpenedUnderAChallengeId:
+    """``conversations.opened`` **version 1**, as stored — read, never written.
+
+    The same fact under the name a room's arrangement had when a challenge's
+    first acceptance could open one: ``challenge_id`` is the booking's id on a
+    room a booked game opened, and folds as the room's ``booking_id``.
     """
 
     conversation_id: UUID
@@ -62,18 +78,18 @@ class ConversationOpened:
 
 @dataclass(frozen=True)
 class GameNoted:
-    """The line-up completed, so this room is now about a game.
+    """The room is about this game — its hour, and when it was booked.
 
-    **Writes no line.** What a player sees instead is the plan card appearing and
-    membership stopping — drawn, not announced.
+    **Writes no line.** A booked game is announced on Home and its details, and
+    its room is born knowing it: the opening and this are one save.
     """
 
     conversation_id: UUID
     game_id: UUID
     occurred_at: datetime
-    #: The hour the game is booked for, on a booked game's room (#541) — what
-    #: its end is measured from. ``None`` on a game with no hour, which is every
-    #: row written before it.
+    #: The hour the game is booked for (#541) — what the room's end is measured
+    #: from. ``None`` only on a room a challenge opened, which nothing opens any
+    #: more (#575).
     starts_at: datetime | None = None
 
 

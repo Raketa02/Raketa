@@ -1,12 +1,12 @@
 """``BalanceForecasts`` by **the engine's own forecast**, never a second one.
 
-A card's percentage is the claim a line-up, a challenge card and a game screen
-already print — *how even will this be* — and it is made by one function,
-``engines/matchfit/v1``'s ``forecast``, over the two sides' Levels and
-Uncertainties, the released ruleset's balance rules and the group σ as the
-matcher composes it (``combine_group_sigma``). A side short of a seat is read
-**as if the missing player matched the one there**, which is what the engine's
-``provisional`` means, and the card says so.
+A card's percentage is the claim a booked game's screen prints too — *how even
+will this be* — and both read it through one function,
+``matchmaking/domain/balance.py``'s ``forecast_the_sides``: the engine's own
+forecast over the two sides' Levels and Uncertainties, the released ruleset's
+balance rules and the group σ as the matcher composes it. A side short of a seat
+is read **as if the missing player matched the one there**, which is what the
+engine's ``provisional`` means, and the card says so.
 
 **Levels off rating's estimates, live** — the engine's currency, the one
 ``PlayerFit`` gates on beside it — and never the candidate index, so a card
@@ -21,11 +21,8 @@ from collections.abc import Sequence
 from typing import final
 
 from app.engines.matchfit.ruleset import Ruleset
-from app.engines.matchfit.scorable import LevelReading
-from app.engines.matchfit.v1 import forecast
 from app.kernel import Sport
-from app.modules.matchmaking.domain.fence import combine_group_sigma
-from app.modules.matchmaking.domain.lineups import seats_per_side
+from app.modules.matchmaking.domain.balance import forecast_the_sides
 from app.modules.proposals.domain.deck import CardForecast, Sides
 from app.modules.rating.domain.ports import RatedPlayerQuery
 
@@ -45,33 +42,18 @@ class MatcherBalanceForecasts:
         if not people:
             return [None for _ in options]
         levels = await self._ratings.estimates_for(people, sport=sport)
-        per_side = seats_per_side(sport)
         read: list[CardForecast | None] = []
         for option in options:
-            sides = (option.yours, option.theirs)
-            if any(
-                not side
-                or len(side) > per_side
-                or any(player not in levels for player in side)
-                for side in sides
-            ):
-                read.append(None)
-                continue
-            yours, theirs = (
-                tuple(
-                    LevelReading(mu=levels[player].mu, sigma=levels[player].sigma)
-                    for player in side
-                )
-                for side in sides
-            )
-            forecast_of = forecast(
-                yours,
-                theirs,
-                self._ruleset.balance,
-                combine_group_sigma,
-                seats_per_side=per_side,
+            sides = forecast_the_sides(
+                option.yours,
+                option.theirs,
+                levels,
+                sport=sport,
+                rules=self._ruleset.balance,
             )
             read.append(
-                CardForecast(pct=forecast_of.pct, provisional=forecast_of.provisional)
+                None
+                if sides is None
+                else CardForecast(pct=sides[0].pct, provisional=sides[0].provisional)
             )
         return read

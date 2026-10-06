@@ -8,13 +8,21 @@ paths:
 
 Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-bearing and not obvious from the code.
 
-- **A room is opened by the first acceptance, and it is told by contexts that do not know
-  it exists** ([ADR-0146](../../../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md),
+- **A room is opened by a booked game, and it is told by a context that does not know it
+  exists** ([ADR-0146](../../../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md),
   [ADR-0147](../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
-  [ADR-0148](../../../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)).
-  `app/modules/conversations/` is the eighth context, the platform's first messaging of any
-  kind, and it is deliberately narrow: purpose-bound, never between strangers, never
-  permanent. Five things about it are load-bearing and none is obvious from the code alone.
+  [ADR-0148](../../../docs/adr/0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md),
+  #541, #575). `app/modules/conversations/` is the eighth context, the platform's first
+  messaging of any kind, and it is deliberately narrow: purpose-bound, never between strangers,
+  never permanent. **A booked game's `GamePlanned` — one with an hour on it — is the only thing
+  that opens a room** (`TellTheRoom._open`): filed under the booking's id (`booking_id`, on the
+  wire and in the table — it was `challenge_id` until #575 and migration `0046`), born already
+  about the game, its members the game's line-up, its end measured from the booked hour. A
+  challenge's acceptance, a mutual yes and a plan open and write nothing; a game with no hour
+  opens no room. **Its lifetime and its telling read booking and game events only.**
+  `conversations.opened` is on **v2** (`booking_id`); v1 (`challenge_id`) is kept as
+  `ConversationOpenedUnderAChallengeId` and still folds, because stored history outlives code.
+  Five things about it are load-bearing and none is obvious from the code alone.
   **It is the outbox's first *writing* subscriber**, and that is ADR-0110's second
   guarantee: the candidate index went to the log because an outbox subscriber *"could never
   name the `sequence_no`"*, and a room names no event's sequence — only its own. Two
@@ -23,7 +31,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   session the handlers ran in; and the teller is subscribed **per batch, over that batch's
   session** (`EventRuntime._dispatcher_over`), so a system line commits with the outbox row
   that caused it. Delivery is still at-least-once, so **every write here is idempotent** —
-  a room per challenge on a unique index, a line per **outbox row** on `source_event_id`,
+  a room per booking on a unique index, a line per **outbox row** on `source_event_id`,
   a message per `client_message_id`. **The sequence is gapless and it is the aggregate's
   own fact**: `last_seq + 1`, minted under the conversation row's lock inside the appending
   transaction — not a Postgres sequence object, which is documented not to be gapless, and
@@ -31,69 +39,45 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   two part company at row one because the opening event writes no entry. The lock is the
   one thing this suite cannot exercise: SQLite renders no `FOR UPDATE` and runs one
   connection, so that path meets Postgres or nothing. **Membership is derived, never
-  stored** — the challenge's accepted seats until the line-up completes, the game's
-  **current** line-up after (ADR-0162: a seat can be left and re-seated, and the roster reads
-  the game live either way), one rule read against two records, and a stored roster would be
-  the copy that decides who may read the messages. **Two shapes ride one stream and no sentence is
-  ever stored**: a Message is content, a system line is a code and its values, and `values`
-  never repeats what membership already says, so a corrected name fixes the whole backlog —
-  and **the read resolves a face for everybody the page names, not only for the roster**
-  (ADR-0148 §4 as amended, #408): the person a `SEAT_LEFT` line is about was never a member
-  — a *no* is not an accepted seat — so each of the three reads carries `people`: the roster
-  and the entries' actors and authors on the room and the row, the page's own on a page,
-  one `MemberFaces` read each. `members` stays the roster and the gate.
+  stored** — the game's **current** line-up (ADR-0162: a seat can be left and re-seated, and
+  the roster reads the game live), and a stored roster would be the copy that decides who may
+  read the messages. **Two shapes ride one stream and no sentence is ever stored**: a Message
+  is content, a system line is a code and its values, and `values` never repeats what
+  membership already says, so a corrected name fixes the whole backlog — and **the read
+  resolves a face for everybody the page names, not only for the roster** (ADR-0148 §4 as
+  amended, #408): somebody who spoke and has since left the court is not a member, so each of
+  the three reads carries `people`, one `MemberFaces` read each. `members` stays the roster
+  and the gate.
   **What is refused is a table rather than prose** — `application/telling.py` names every
-  event either half of the loop publishes and what this room does about it, including the
-  ones that write nothing and why, because a builder reading only the event list would write
-  a line for each. There is no *Game on* line. And **a refused line is not a refused
-  telling**: `GamePlanned` reaches the room, draws nothing, and is where the room learns its
-  game — as does `ChallengeWithdrawn`, whose whole effect is that the room stops existing.
-  **One row carries a code *and a condition*, and it is the only one**: a mutual is the
-  opening, and on a doubles court it is also half a game — both people on one side, a side
-  still to fill — so that room is born with `SIDE_FORMED` at `seq` 1, the first code that
-  names no actor, while a singles mutual's room gets no line (ADR-0169 §8). `Telling.only_when`
-  carries that condition as a **predicate and its sentence together**, and `line_drawn_by` is
-  how the handler asks — so the table stays the whole truth about what ships, and a row reworded
-  cannot ship the old line green. It is not a *Game on* line by the other door: it announces no
-  standing and is re-derived from nothing, an introduction written once at birth. The
-  doubles/singles fact is `challenges`' own `seats_per_side`, read off the event's sport in the
-  table and never respelled.
+  event a booked game's court publishes and what this room does about it, including the ones
+  that write nothing and why. One line is written today: `GAME_PLAYED`. `SystemLineCode` keeps
+  the eight codes rooms opened by challenges carried, so a stored line still folds and the
+  sweep can destroy those rooms; they go with the challenges and plans that wrote them. There
+  is no *Game on* line. And **a refused line is not a refused telling**: `GamePlanned` reaches
+  the room, draws nothing, and is what opens it; `GameCalledOff` draws nothing and is what
+  destroys it.
   **A room is for the episode, and its end is derived**
-  ([ADR-0153](../../../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md),
-  [ADR-0164](../../../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
-  §6). A room **with a game** ends on the earliest of `entry_closes_at(planned_at)` and
-  `GamePlayed` plus `CONVERSATION_GRACE` — both facts the room is **already told**, so it
-  costs no new event, no new field and no new telling, and the anchor is `Game.planned_at`
-  and never the plan's agreed point, which two people could walk forward by tapping a chip.
-  A room **without a game has ended exactly when its challenge is over** — `DECLINED`,
-  `LAPSED`, `WITHDRAWN` — read on every read through `ArrangingCourt.over_among`, the port
-  its membership already comes from: the adapter folds the standing with `challenges`' own
-  `ENDED` and a set of ids crosses the port, so the application layer never learns what a
-  standing is; a withdrawal destroys it in the same act. **There is no departure shelf.** ADR-0153 §3's *48 h after the last
-  membership line when it was a departure* read the order the answers arrived in — `B yes →
-  D yes → C no` closed a room under the three people still in it, `B yes → C no → D yes`
-  never did — and a fill after it opened a fresh room with no history; a fill now continues
-  the **same** room. There is no `ends_at` column: the instant moves as the room is told
-  things, so **past its end every route answers `conversation_not_found` whether or not the
-  sweep has run** — the sweep makes the destruction real, not the answer right — and
-  `application/lifetime.py` is the one seam that decides *over*, for the list, the sweep and
-  `ARoomOfYours` alike, asking the port about the rooms without a game and nothing about the
-  rest. `CONVERSATION_GRACE` is **48 h and belongs here, not to `games`**: there is no
-  interlock with `ENTRY_GRACE`, and its falsifier is written down with it.
-  Three things about the lifetime are worth holding separately from the rule.
-  **`conversations` imports `games`, and that arrow is the second one to run this way** —
-  `domain/lifetime.py` takes `entry_closes_at`, exactly as `plans` takes `PLAN_HORIZON`
-  (ADR-0148 §8); the reverse stays shut by `.importlinter`'s *No context knows the
+  ([ADR-0153](../../../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)).
+  A room ends on the earliest of `entry_closes_at(planned_at, starts_at=…)` — measured from the
+  booked hour — and `GamePlayed` plus `CONVERSATION_GRACE`: both facts the room is **already
+  told**, so it costs no new event, no new field and no new telling. **A room with no game has
+  ended**: nothing opens one any more (only a challenge's first acceptance did), so it is over,
+  every route refuses it and the sweep destroys it. There is no `ends_at` column: the instant
+  moves as the room is told things, so **past its end every route answers
+  `conversation_not_found` whether or not the sweep has run** — the sweep makes the destruction
+  real, not the answer right — and `domain/lifetime.py` (`has_ended`, `ended_among`) is the one
+  fold that decides *over*, for the list, the sweep and `ARoomOfYours` alike, off each room's
+  own stream and no port. `CONVERSATION_GRACE` is **48 h and belongs here, not to `games`**:
+  there is no interlock with `ENTRY_GRACE`, and its falsifier is written down with it.
+  Two things about the lifetime are worth holding separately from the rule.
+  **`conversations` imports `games`, and that arrow is deliberate** — `domain/lifetime.py`
+  takes `entry_closes_at`; the reverse stays shut by `.importlinter`'s *No context knows the
   Conversation exists*, and the import is why the derivation is a module rather than a method
   on the aggregate, which is folded by a repository that knows nothing about entry windows.
   **The destruction appends no event and that is not the ledgers' exemption** — it is the end
   of an event-sourced aggregate rather than one that skips event sourcing, and a
   `ConversationDestroyed` on the stream it deletes would be a record of the destruction
-  inside the thing destroyed. **And the coupling `domain/lifetime.py` used to state between
-  `ANSWER_WINDOW` and `CONVERSATION_GRACE` went with the shelf it existed for** — it kept a
-  departure from destroying a court somebody was still entitled to accept into, and a room
-  that lives as long as its challenge cannot be destroyed under an open seat by any number.
-  `lifetime.py` says so where the coupling was written down.
+  inside the thing destroyed.
 
 - **The live channel carries a nudge and a typing frame, and nothing else is on the wire**
   ([ADR-0147](../../../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md),
@@ -149,11 +133,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   deadline, asked once a second by every open stream — and failing it loud would let a merely slow
   store close every healthy stream on the platform.
 
-- **A booked game's room is opened by its game** (#541). A booking's yeses are silent and open
-  nothing, so `GamePlanned` with an hour on it opens the room (`_note_game`), filed under the
-  booking's id, born about the game — its members the game's line-up, its end measured from the
-  booked hour (`GameNoted.starts_at`). **The list finds it through the reader's games**
-  (`PlayedCourt.challenges_played_by`, #542): nobody accepted a seat on a booking, so the accepted
-  challenges never reach it, and the game details' chat door is ADR-0149 §3's join over this list
-  by `game_id`. Candidates only — membership is still the game's current line-up. With Classic
-  play on, the Chats tab lists a booked game's room too.
+- **The list finds a room through the reader's games** (`PlayedCourt.bookings_played_by`,
+  #542): a room is filed under its game's booking, and the games a player is on name their
+  bookings. Candidates only — membership is still the game's current line-up. A game's
+  details find its chat by ADR-0149 §3's join over this list by `game_id`; the client finds it
+  by `booking_id` (#577).

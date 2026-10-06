@@ -6,20 +6,15 @@ enrolled here automatically, so a second one either satisfies the demand or turn
 the build red.
 
 **This context stores nothing**, so every arrangement here is made through
-somebody else's aggregate — a profile committed, a challenge sent, a game played
+somebody else's aggregate — a profile committed, a group joined, a game played
 — and never an ``INSERT`` (``docs/adr/0029``). That is not ceremony: what these
-ports answer is folds and queries owned by five other contexts, and the only
-honest way to exercise one is to make the history it reads.
+ports answer is folds and queries owned by other contexts, and the only honest
+way to exercise one is to make the history it reads.
 
 **The rule the disclosure suite is written around is that absence is silence.** A
-pair with nothing between them answers the empty set, not an error and not a
-partial answer — because the caller turns an empty answer into the one refusal
-this route has, and any other spelling would make that refusal a different one.
-
-**One demand is deliberately run against an empty index**: a subject with no row
-in the partition asked about is a gate that *cannot be evaluated*, and a gate
-that cannot be evaluated excludes. The register's row builds a real
-``DatabaseCandidateSource`` and never refreshes it, which is exactly that state.
+pair with nothing between them answers ``False``, not an error — because the
+caller turns that answer into the one refusal this route has, and any other
+spelling would make that refusal a different one.
 """
 
 from __future__ import annotations
@@ -34,13 +29,11 @@ import pytest_asyncio
 from app.bootstrap.composition import (
     build_administrator_repository,
     build_booking_repository,
-    build_challenge_repository,
     build_club_repository,
     build_domain_event_store,
     build_event_publisher,
     build_game_repository,
     build_group_repository,
-    build_search_store,
     build_skill_rating_repository,
     build_sportsmanship_ledger,
 )
@@ -63,9 +56,6 @@ from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.administrators.domain.administrator import Administrator
 from app.modules.bookings.domain.booking import BookedCourt, Booking
-from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.origins import SentFromSearch
-from app.modules.challenges.domain.seats import SeatPlan, court_sides
 from app.modules.clubs.domain.club import Club
 from app.modules.clubs.domain.value_objects import (
     City,
@@ -86,24 +76,11 @@ from app.modules.groups.domain.value_objects import (
     JoinPolicy,
     WhatsAppSize,
 )
-from app.modules.matchmaking.domain.ports import AtStake
-from app.modules.matchmaking.domain.searches import (
-    CandidateBand,
-    InclusionReason,
-    RecordedCard,
-    PoolDescription,
-    SearchCandidateRecord,
-    SearchInitiation,
-    SearchRecord,
-    SearchSurface,
-    StagedCounts,
-)
 from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
-    RunnerDisclosure,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -204,113 +181,38 @@ def test_every_implementation_satisfies_the_protocol_it_registered_under(
 async def test_a_pair_with_nothing_between_them_disclose_nothing(
     implementation, session
 ):
-    """**The answer almost everybody gets**, and it must be an empty set rather
+    """**The answer almost everybody gets**, and it must be ``False`` rather
     than an error: the caller turns it into the one refusal this route has."""
 
     disclosure = implementation.build(session)
 
     assert (
-        await disclosure.partitions_between(
-            reader_id=new_uuid(), subject_id=new_uuid(), now=_now()
-        )
-        == frozenset()
+        await disclosure.discloses(reader_id=new_uuid(), subject_id=new_uuid())
+        is False
     )
 
 
-async def test_a_search_that_returned_them_is_a_disclosure_in_its_own_sport(
-    session,
-):
-    reader, subject = new_uuid(), new_uuid()
-    await build_search_store(session).record(_a_search(reader, subject))
-    await session.commit()
-
-    disclosure = _disclosure("SearchesThatShowedThem", session)
-
-    assert await disclosure.partitions_between(
-        reader_id=reader, subject_id=subject, now=_now()
-    ) == frozenset({SPORT})
-
-
-async def test_a_search_discloses_nobody_to_a_different_searcher(session):
-    """*The searcher may read their own rows and nobody else's* — which here is
-    the difference between a disclosure and a directory of everybody the platform
-    has ever shown to anybody."""
-
-    reader, subject = new_uuid(), new_uuid()
-    await build_search_store(session).record(_a_search(reader, subject))
-    await session.commit()
-
-    disclosure = _disclosure("SearchesThatShowedThem", session)
-
-    assert (
-        await disclosure.partitions_between(
-            reader_id=new_uuid(), subject_id=subject, now=_now()
-        )
-        == frozenset()
-    )
-
-
-async def test_a_live_challenge_discloses_both_ways(session):
-    """The organiser and the invitee are both entitled, which is the point: only
-    one of the two ran the search."""
-
-    organiser, invitee = new_uuid(), new_uuid()
-    challenge = _sent(organiser, invitee, at=_now())
-    await build_challenge_repository(
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    ).save(challenge)
-    await session.commit()
-
-    disclosure = _disclosure("ChallengesTheyShare", session)
-
-    for reader, subject in ((organiser, invitee), (invitee, organiser)):
-        assert await disclosure.partitions_between(
-            reader_id=reader, subject_id=subject, now=_now()
-        ) == frozenset({SPORT})
-
-
-async def test_a_challenge_that_has_ended_discloses_nobody(session):
-    """A lapsed seat is a seat somebody else may be offered, so the challenge
-    entitles nobody — and the sender still holds the search that made it."""
-
-    organiser, invitee = new_uuid(), new_uuid()
-    long_ago = instant(datetime.now(timezone.utc) - timedelta(days=30))
-    challenge = _sent(organiser, invitee, at=long_ago)
-    await build_challenge_repository(
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    ).save(challenge)
-    await session.commit()
-
-    disclosure = _disclosure("ChallengesTheyShare", session)
-
-    assert (
-        await disclosure.partitions_between(
-            reader_id=organiser, subject_id=invitee, now=_now()
-        )
-        == frozenset()
-    )
-
-
-async def test_a_game_they_both_played_discloses_for_ever(session):
+async def test_a_game_they_both_played_discloses_for_ever_both_ways(session):
     """An evening two people were on a court for does not stop having happened,
     so there is no window here and no standing test."""
 
     a, b = new_uuid(), new_uuid()
+    starts = instant(datetime.now(timezone.utc) - timedelta(days=400))
     game = Game.planned(
         game_id=new_uuid(),
+        # A booked game is filed under its booking's id.
         challenge_id=new_uuid(),
         sport=SPORT,
         kind=GameKind.COUNTED,
-        window=Window.TODAY,
+        window=None,
         line_up=LineUp.of(
             (
                 Seating(side=GameSide.A, player_id=a),
                 Seating(side=GameSide.B, player_id=b),
             )
         ),
-        occurred_at=instant(datetime.now(timezone.utc) - timedelta(days=400)),
+        occurred_at=instant(starts - timedelta(days=2)),
+        starts_at=starts,
     )
     await build_game_repository(
         session=session,
@@ -321,9 +223,9 @@ async def test_a_game_they_both_played_discloses_for_ever(session):
 
     disclosure = _disclosure("GamesTheyPlayed", session)
 
-    assert await disclosure.partitions_between(
-        reader_id=a, subject_id=b, now=_now()
-    ) == frozenset({SPORT})
+    assert await disclosure.discloses(reader_id=a, subject_id=b) is True
+    assert await disclosure.discloses(reader_id=b, subject_id=a) is True
+    assert await disclosure.discloses(reader_id=a, subject_id=new_uuid()) is False
 
 
 async def _a_club(session) -> UUID:
@@ -371,9 +273,9 @@ async def _a_group(session, owner: UUID, *others: UUID, policy=JoinPolicy.ANYONE
     await session.commit()
 
 
-async def test_a_group_they_are_both_in_discloses_every_sport_both_ways(session):
-    """Members lists a member in whichever sport they are rated in, so the group
-    has shown them in every partition — the gates find the one that admits."""
+async def test_a_group_they_are_both_in_discloses_both_ways(session):
+    """Members lists everybody in the group to everybody in it, so the group
+    has shown each of them to the other."""
 
     owner, member = new_uuid(), new_uuid()
     await _a_group(session, owner, member)
@@ -381,9 +283,7 @@ async def test_a_group_they_are_both_in_discloses_every_sport_both_ways(session)
     disclosure = _disclosure("GroupsTheyShare", session)
 
     for reader, subject in ((owner, member), (member, owner)):
-        assert await disclosure.partitions_between(
-            reader_id=reader, subject_id=subject, now=_now()
-        ) == frozenset(Sport)
+        assert await disclosure.discloses(reader_id=reader, subject_id=subject)
 
 
 async def test_a_join_request_that_waits_discloses_nobody(session):
@@ -397,10 +297,8 @@ async def test_a_join_request_that_waits_discloses_nobody(session):
 
     for reader, subject in ((owner, asking), (asking, owner)):
         assert (
-            await disclosure.partitions_between(
-                reader_id=reader, subject_id=subject, now=_now()
-            )
-            == frozenset()
+            await disclosure.discloses(reader_id=reader, subject_id=subject)
+            is False
         )
 
 
@@ -457,56 +355,36 @@ async def _an_official_group(
 
 
 # ---------------------------------------------------------------------------
-# RunnerDisclosure — does this reader run a group this person is in
+# GroupsTheReaderRuns — does this reader run a group this person is in
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("implementation", registered(RunnerDisclosure))
-async def test_nobody_runs_a_group_of_a_stranger(implementation, session):
-    """**The answer almost everybody gets**, and a ``False`` rather than an
-    error: the caller turns it into the one refusal this route has."""
-
-    runners = implementation.build(session)
-
-    assert (
-        await runners.runs_a_group_of(reader_id=new_uuid(), subject_id=new_uuid())
-        is False
-    )
-
-
-@pytest.mark.parametrize("implementation", registered(RunnerDisclosure))
-async def test_whoever_runs_an_official_group_runs_it_for_everybody_in_it(
-    implementation, session
-):
+async def test_whoever_runs_an_official_group_runs_it_for_everybody_in_it(session):
     """Running it is not membership, and being in it runs nothing — so this is
     one way round only, which is the whole difference from the group strand."""
 
     account, member = new_uuid(), new_uuid()
     await _an_official_group(session, run_by=account, members=(member,))
 
-    runners = implementation.build(session)
+    runners = _disclosure("GroupsTheReaderRuns", session)
 
-    assert await runners.runs_a_group_of(reader_id=account, subject_id=member)
-    assert await runners.runs_a_group_of(reader_id=member, subject_id=account) is False
+    assert await runners.discloses(reader_id=account, subject_id=member)
+    assert await runners.discloses(reader_id=member, subject_id=account) is False
 
 
-@pytest.mark.parametrize("implementation", registered(RunnerDisclosure))
-async def test_a_removed_administrator_runs_nothing(implementation, session):
+async def test_a_removed_administrator_runs_nothing(session):
     """**Running as it stands, never as it was**: a club ending the
     administratorship takes the group from them on the next read."""
 
     account, member = new_uuid(), new_uuid()
     await _an_official_group(session, run_by=account, members=(member,), removed=True)
 
-    runners = implementation.build(session)
+    runners = _disclosure("GroupsTheReaderRuns", session)
 
-    assert await runners.runs_a_group_of(reader_id=account, subject_id=member) is False
+    assert await runners.discloses(reader_id=account, subject_id=member) is False
 
 
-@pytest.mark.parametrize("implementation", registered(RunnerDisclosure))
-async def test_a_join_request_that_waits_is_not_somebody_in_the_group(
-    implementation, session
-):
+async def test_a_join_request_that_waits_is_not_somebody_in_the_group(session):
     """Asking is not membership: the Administrator reads the request card, and
     nothing there opens a record."""
 
@@ -518,22 +396,21 @@ async def test_a_join_request_that_waits_is_not_somebody_in_the_group(
         policy=JoinPolicy.PEOPLE_I_APPROVE,
     )
 
-    runners = implementation.build(session)
+    runners = _disclosure("GroupsTheReaderRuns", session)
 
-    assert await runners.runs_a_group_of(reader_id=account, subject_id=asking) is False
+    assert await runners.discloses(reader_id=account, subject_id=asking) is False
 
 
-@pytest.mark.parametrize("implementation", registered(RunnerDisclosure))
-async def test_a_player_group_is_run_by_nobody(implementation, session):
+async def test_a_player_group_is_run_by_nobody(session):
     """Its Owner is in it, and opens its members' records through the group
     strand like every other member — under every gate."""
 
     owner, member = new_uuid(), new_uuid()
     await _a_group(session, owner, member)
 
-    runners = implementation.build(session)
+    runners = _disclosure("GroupsTheReaderRuns", session)
 
-    assert await runners.runs_a_group_of(reader_id=owner, subject_id=member) is False
+    assert await runners.discloses(reader_id=owner, subject_id=member) is False
 
 
 # ---------------------------------------------------------------------------
@@ -542,39 +419,16 @@ async def test_a_player_group_is_run_by_nobody(implementation, session):
 
 
 @pytest.mark.parametrize("implementation", registered(RecordGates))
-async def test_a_subject_with_no_row_in_the_partition_is_not_admitted(
-    implementation, session
-):
-    """**A gate that cannot be evaluated excludes**, and it excludes by answering
-    rather than by raising: the reader is told the one thing this route tells
-    anybody it turns away."""
+async def test_a_pair_nothing_withholds_is_admitted(implementation, session):
+    """**No preference and no partition** (#575): with no block between them, no
+    hold on either and no account that may not be shown, the pair is admitted —
+    a reader who never committed a profile included, because no gate here
+    reads one."""
 
     gates = implementation.build(session)
 
     assert (
-        await gates.admits(
-            reader_id=new_uuid(), subject_id=new_uuid(), sport=SPORT
-        )
-        is False
-    )
-
-
-@pytest.mark.parametrize("implementation", registered(RecordGates))
-async def test_regardless_of_preference_a_reader_with_no_profile_is_answered(
-    implementation, session
-):
-    """**The preference is the one gate not asked**, so neither a reader who
-    never committed a profile nor a subject the index does not hold refuses —
-    the three gates about accounts decide, and nothing stands between these
-    two."""
-
-    gates = implementation.build(session)
-
-    assert (
-        await gates.admits_regardless_of_preference(
-            reader_id=new_uuid(), subject_id=new_uuid()
-        )
-        is True
+        await gates.admits(reader_id=new_uuid(), subject_id=new_uuid()) is True
     )
 
 
@@ -1062,141 +916,18 @@ async def _a_confirmed_game(
 
 
 def _disclosure(name: str, session) -> PriorDisclosure:
-    """One named implementation of the four-signatory port.
+    """One named implementation of the three-signatory port.
 
     Named rather than parameterised, because these arrangements are each about
-    **one** strand: a search record says nothing about a challenge, and a
-    parameterised test asserting an empty answer from the other two would be
-    asserting that they cannot see a fact that is not theirs.
+    **one** strand: a game says nothing about a group, and a parameterised test
+    asserting an empty answer from the other two would be asserting that they
+    cannot see a fact that is not theirs.
     """
 
     return next(
         one.build(session)
         for one in implementations_of(PriorDisclosure)
         if one.name == name
-    )
-
-
-def _sent(organiser: UUID, invitee: UUID, *, at: Instant) -> Challenge:
-    """One send through the aggregate, on the sport's whole fixed court.
-
-    An empty seat is a seat, so the rest of the court is spelled rather than
-    omitted — and a newly invited seat carries the origin the send read off a
-    search, because a seat that cannot say where it came from cannot be built.
-    """
-
-    sides = court_sides(SPORT)
-    occupants: list[UUID | None] = [organiser, invitee]
-    occupants += [None] * (len(sides) - len(occupants))
-    return Challenge.sent(
-        challenge_id=new_uuid(),
-        sport=SPORT,
-        mode=None,
-        window=Window.THIS_WEEK,
-        organiser_id=organiser,
-        arrangement=[
-            SeatPlan(
-                side=side,
-                player_id=occupant,
-                origin=(
-                    SentFromSearch(search_id=new_uuid(), position=seat)
-                    if occupant == invitee
-                    else None
-                ),
-            )
-            for seat, (side, occupant) in enumerate(
-                zip(sides, occupants, strict=True), 1
-            )
-        ],
-        occurred_at=at,
-    )
-
-
-def _a_search(searcher: UUID, shown: UUID) -> SearchRecord:
-    """One recorded search that returned one person, in ``SPORT``.
-
-    Written out rather than trimmed to the columns this demand reads: every fact
-    on a search record is search-time and there is no backfill, so a record
-    assembled with holes in it is not one this platform could ever have written.
-    """
-
-    return SearchRecord(
-        id=new_uuid(),
-        searcher_id=searcher,
-        sport=SPORT,
-        mode=SearchMode.COMPETITIVE,
-        intent_read=None,
-        surface=SearchSurface.SHORTLIST,
-        initiation=SearchInitiation.HUMAN,
-        at=datetime.now(timezone.utc),
-        engine_version="matchfit-v1",
-        ruleset_version="r2026-08-26-a",
-        snapshot_version=1,
-        trace_id="trace-record",
-        index_stale=False,
-        counts=StagedCounts(
-            n_generated=1,
-            excluded_by_gate={},
-            n_scored=1,
-            n_cleared_floor=1,
-            n_returned=1,
-            n_near_miss_recorded=0,
-        ),
-        best_withheld_fit=None,
-        pool_description=PoolDescription(
-            sport=SPORT,
-            radius_km_used=10,
-            players_in_range=1,
-            window=Window.THIS_WEEK,
-        ),
-        searcher_grid=("2:19",),
-        searcher_slot_count=1,
-        searcher_area_code="A+05151-000013",
-        radius_clamp_bit=False,
-        rung_offers=None,
-        offered_by_search_id=None,
-        rung_taken=None,
-        latency_ms_by_stage={"pipeline": 1},
-        candidates=(
-            SearchCandidateRecord(
-                band=CandidateBand.RETURNED,
-                position=1,
-                player_id=shown,
-                fit=80.0,
-                terms=({"term": "LEVEL_FIT", "weight": 29.9, "value": 1.0},),
-                degraded_terms=(),
-                degraded_reasons=(),
-                modifiers=(),
-                liveness_reasons=(),
-                liveness_signals={},
-                shared_count=2,
-                their_slot_count=5,
-                days_away=1,
-                inclusion_reason=InclusionReason.ZERO_EXPOSURE,
-                withheld_reason=None,
-                missing_terms=(),
-                reliability_penalty_applied=False,
-                reliability_penalty_decisive=False,
-                concerns=(),
-                distance_km=4,
-                card=RecordedCard(
-                    name="ada",
-                    photo_id=None,
-                    review=None,
-                    area_code="A+05151-000013",
-                    social_tags=("PLAYS_TO_WIN",),
-                    intro=None,
-                    level=2.7,
-                    band="Improver",
-                    range_low=2.36,
-                    range_high=3.04,
-                    player_score=None,
-                    counted_games=None,
-                    last_five=(),
-                ),
-                at_stake=AtStake(win_delta=0.07, loss_delta=-0.05),
-            ),
-        ),
     )
 
 

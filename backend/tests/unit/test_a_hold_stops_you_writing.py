@@ -15,16 +15,16 @@ cases.
 
 **It refuses the send, all three slot writes and the typing heartbeat**, and this
 file covers all five — because ADR-0148 §9 states them in one breath and the way
-that sentence goes wrong is by half of it being implemented. A slot change writes
-a system line into a room other people are in, so it is reach in exactly the
-sense a message is; a typing indicator is drawn on other people's screens, which
-is the same sense again (``docs/adr/0156``); and the plan **read** is ungated for
+that sentence goes wrong is by half of it being implemented. A slot change is
+read by the other people on the court, so it is reach in exactly the sense a
+message is; a typing indicator is drawn on other people's screens, which is the
+same sense again (``docs/adr/0156``); and the plan **read** is ungated for
 exactly the reason the conversation reads are.
 """
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Collection
 from uuid import UUID, uuid4
 
@@ -38,7 +38,6 @@ from app.modules.conversations.application.commands import (
     SendMessageCommand,
 )
 from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
-from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.application.read_conversation import ReadConversation
 from app.modules.conversations.application.read_entries import ReadEntries
@@ -64,7 +63,8 @@ NOW = instant(datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc))
 HELD = uuid4()
 BESIDE_THEM = uuid4()
 A_STRANGER = uuid4()
-CHALLENGE = uuid4()
+BOOKING = uuid4()
+GAME = uuid4()
 #: A court of its own — the plan is the challenge's (``docs/adr/0164`` §1), and
 #: the plan writes below are about a different court from the room above.
 COURT = uuid4()
@@ -88,33 +88,26 @@ class _OneRoom:
     async def load_for_append(self, conversation_id: UUID) -> Conversation | None:
         return await self.load(conversation_id)
 
-    async def for_challenge(self, challenge_id: UUID) -> Conversation | None:
-        return self.room if challenge_id == self.room.challenge_id else None
+    async def for_booking(self, booking_id: UUID) -> Conversation | None:
+        return self.room if booking_id == self.room.booking_id else None
 
     async def save(self, conversation: Conversation) -> None:
         self.saved.append(conversation)
 
 
-class _TheCourt:
-    async def accepted_on(self, challenge_ids: Collection[UUID]):
+class _TheGame:
+    """``PlayedCourt``: the booked game's court is the held player and one
+    other."""
+
+    async def line_ups_of(self, game_ids: Collection[UUID]):
         return {
-            challenge_id: frozenset({HELD, BESIDE_THEM})
-            for challenge_id in challenge_ids
+            game_id: frozenset({HELD, BESIDE_THEM})
+            for game_id in game_ids
+            if game_id == GAME
         }
 
-    async def over_among(self, challenge_ids: Collection[UUID], *, now):
-        return frozenset()
-
-    async def accepted_by(self, player_id: UUID):
-        return frozenset({CHALLENGE})
-
-    async def sport_of(self, challenge_id: UUID):
-        return Sport.PADEL
-
-
-class _NoGames:
-    async def line_ups_of(self, game_ids: Collection[UUID]):
-        return {}
+    async def bookings_played_by(self, player_id: UUID):
+        return frozenset({BOOKING})
 
 
 class _Faces:
@@ -153,9 +146,14 @@ class _Uow:
 def room() -> Conversation:
     opened = Conversation.opened(
         conversation_id=uuid4(),
-        challenge_id=CHALLENGE,
+        booking_id=BOOKING,
         sport=Sport.PADEL,
         occurred_at=NOW,
+    )
+    # Booked for tomorrow, so the room stands — the hold is what is under test,
+    # not the lifetime.
+    opened.note_game(
+        game_id=GAME, occurred_at=NOW, starts_at=instant(NOW + timedelta(days=1))
     )
     opened.say(
         author_id=BESIDE_THEM,
@@ -169,11 +167,7 @@ def room() -> Conversation:
 
 @pytest.fixture
 def membership() -> Membership:
-    return Membership(arranging=_TheCourt(), played=_NoGames())
-
-
-#: Every room here stands — the hold is what is under test, not the lifetime.
-_standing = Lifetime(arranging=_TheCourt())
+    return Membership(played=_TheGame())
 
 
 class _Nudges:
@@ -200,7 +194,6 @@ def _send(
         rooms=ARoomOfYours(
             conversations=repository,
             membership=membership,
-            lifetime=_standing,
             clock=_FrozenClock(),
         ),
         conversations=repository,
@@ -267,7 +260,6 @@ def _typing(room: Conversation, membership: Membership, holds) -> tuple:
             rooms=ARoomOfYours(
                 conversations=_OneRoom(room),
                 membership=membership,
-                lifetime=_standing,
                 clock=_FrozenClock(),
             ),
             holds=holds,
@@ -355,7 +347,6 @@ async def test_a_held_member_still_reads_the_room(room, membership):
         rooms=ARoomOfYours(
             conversations=_OneRoom(room),
             membership=membership,
-            lifetime=_standing,
             clock=_FrozenClock(),
         ),
         faces=_Faces(),
@@ -378,7 +369,6 @@ async def test_a_held_member_still_pages_backward(room, membership):
         rooms=ARoomOfYours(
             conversations=_OneRoom(room),
             membership=membership,
-            lifetime=_standing,
             clock=_FrozenClock(),
         ),
         faces=_Faces(),
@@ -482,9 +472,7 @@ class _ACourtStillArranging:
     """``PlannableCourts``, answering about one court that is open to planning."""
 
     async def plannable_for(self, player_id: UUID, *, now):
-        return {
-            COURT: PlannableCourt(anchor=NOW, open_to_planning=True, whole=True)
-        }
+        return {COURT: PlannableCourt(anchor=NOW, open_to_planning=True, whole=True)}
 
 
 class _OnePlan:

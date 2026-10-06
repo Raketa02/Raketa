@@ -5,19 +5,19 @@ Every implementation registered in ``app/bootstrap/game_demands.py`` is enrolled
 here automatically, so a second one either satisfies the demand or turns the
 build red. There is no skipped test to go stale.
 
-**The world is built the way the platform builds one**, on
-``test_challenge_demands.py``'s rule: a reader goes through sign-up, the profile
-commit, a real assessment run and the declaration route, because the pairing is
-computed **for** them and ``searcher_facts`` reads all four live; the rest of
-the court goes in through the log and is tailed as the projection tails it.
+**The world is built the way the platform builds one**: a reader goes through
+sign-up, the profile commit and a real assessment run, and the rest of the
+court is filed on the log where the rating context files a Level. Nothing is
+searched and nothing is indexed — the pairing is read side against side from
+the people's Levels (#575).
 
 **The demands this port exists for are the ones easiest to satisfy wrongly**
 (``docs/adr/0161``). The forecast and the split are read *in the reader's
 direction*, so the case that matters most is one court read by two people on
 opposite sides. The stakes are *the rule read forward*, side against side, so
-both partners get one pair. And two providers stand behind one port and fail on
-their own: a seat the matcher cannot describe empties the forecast and never
-the Levels, and a reader with nothing to compute is still told who is rated.
+both partners get one pair. And a seat nobody rated empties the forecast and
+never the Levels, and a reader with nothing to compute is still told who is
+rated.
 """
 
 from __future__ import annotations
@@ -33,7 +33,6 @@ from app.bootstrap.game_demands import (
 from app.kernel import InvariantViolated, Sport
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.ports import AgreedMoment, ClubCheckIns, CourtPairing
-from tests.api import matchmaking_world as world
 from tests.api import players_world as players
 
 
@@ -46,25 +45,19 @@ def registered(port):
     ]
 
 
-def _port(implementation, session, candidate_source, exposure_ledger):
+def _port(implementation, session):
     return implementation.build(
-        PairingSeams(
-            session=session,
-            candidates=candidate_source,
-            exposure=exposure_ledger,
-        )
+        PairingSeams(session=session, candidates=None, exposure=None)
     )
 
 
-async def _a_court(client, session_factory, candidate_source, *names, **facts):
-    """Some people in the city, folded into the index the platform reads."""
+async def _a_court(client, session_factory, *names, mu: float):
+    """Some people rated at ``mu``, their Levels filed on the log."""
 
-    ids = [
-        await world.a_candidate(client, session_factory, name, **facts)
+    return [
+        (await players.a_player_on_the_log(client, session_factory, name, mu=mu))[0]
         for name in names
     ]
-    await world.fold_the_log(session_factory, candidate_source)
-    return ids
 
 
 def _line_up(side_a, side_b) -> LineUp:
@@ -79,8 +72,6 @@ def _line_up(side_a, side_b) -> LineUp:
 async def _read(
     implementation,
     session_factory,
-    candidate_source,
-    exposure_ledger,
     *,
     reader_id,
     line_up: LineUp,
@@ -88,9 +79,9 @@ async def _read(
     sport: Sport = players.SPORT,
 ):
     async with session_factory() as session:
-        return await _port(
-            implementation, session, candidate_source, exposure_ledger
-        ).pairing_for(sport=sport, kind=kind, line_up=line_up, reader_id=reader_id)
+        return await _port(implementation, session).pairing_for(
+            sport=sport, kind=kind, line_up=line_up, reader_id=reader_id
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -121,13 +112,13 @@ def test_every_registered_implementation_is_of_a_published_port():
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
 async def test_every_implementation_satisfies_the_protocol(
-    implementation, session_factory, candidate_source, exposure_ledger
+    implementation, session_factory
 ):
     """Structural, so a method renamed on one side is red here rather than a
     runtime ``AttributeError`` on somebody's game screen."""
 
     async with session_factory() as session:
-        built = _port(implementation, session, candidate_source, exposure_ledger)
+        built = _port(implementation, session)
 
     assert isinstance(built, CourtPairing)
 
@@ -139,24 +130,20 @@ async def test_every_implementation_satisfies_the_protocol(
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
 async def test_the_seats_name_whoever_holds_a_rating_in_the_courts_own_order(
-    implementation, client, session_factory, candidate_source, exposure_ledger
+    implementation, client, session_factory
 ):
     """**A Level per rated seat, in the line-up's order, and nothing else about
     them.** The unrated seat is simply not there — absence has one spelling —
     and the figures are ``rating``'s published ones, never derived."""
 
     reader = await players.a_rated_player(client, "reader")
-    ada, bea = await _a_court(
-        client, session_factory, candidate_source, "ada", "bea", mu=reader["mu"]
-    )
+    ada, bea = await _a_court(client, session_factory, "ada", "bea", mu=reader["mu"])
     unrated_id, unrated = await players.register(client, "unrated")
     await players.commit_profile(client, unrated)
 
     answer = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=reader["id"],
         line_up=_line_up((reader["id"], ada), (bea, unrated_id)),
     )
@@ -180,7 +167,7 @@ async def test_the_seats_name_whoever_holds_a_rating_in_the_courts_own_order(
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
 async def test_the_forecast_and_the_split_are_read_in_the_readers_direction(
-    implementation, client, session_factory, candidate_source, exposure_ledger
+    implementation, client, session_factory
 ):
     """**The demand this port exists for.** One court, two readers on opposite
     sides: the same percentage — a forecast is a fact about the game — and
@@ -189,24 +176,18 @@ async def test_the_forecast_and_the_split_are_read_in_the_readers_direction(
 
     reader = await players.a_rated_player(client, "reader")
     other = await players.a_rated_player(client, "other")
-    ada, bea = await _a_court(
-        client, session_factory, candidate_source, "ada", "bea", mu=reader["mu"]
-    )
+    ada, bea = await _a_court(client, session_factory, "ada", "bea", mu=reader["mu"])
     line_up = _line_up((reader["id"], ada), (other["id"], bea))
 
     mine = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=reader["id"],
         line_up=line_up,
     )
     theirs = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=other["id"],
         line_up=line_up,
     )
@@ -223,20 +204,17 @@ async def test_the_forecast_and_the_split_are_read_in_the_readers_direction(
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
 async def test_a_singles_court_is_one_strength_a_side(
-    implementation, client, session_factory, candidate_source, exposure_ledger
+    implementation, client, session_factory
 ):
     """`seats_per_side` is the sport's: a tennis court is two people, and the
     split is two player strengths and their difference."""
 
     me = await players.a_rated_player(client, "me", sport=Sport.TENNIS)
     you = await players.a_rated_player(client, "you", sport=Sport.TENNIS)
-    await world.fold_the_log(session_factory, candidate_source)
 
     answer = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=me["id"],
         line_up=_line_up((me["id"],), (you["id"],)),
         sport=Sport.TENNIS,
@@ -250,24 +228,20 @@ async def test_a_singles_court_is_one_strength_a_side(
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
 async def test_a_reader_with_nothing_to_compute_still_gets_the_seats(
-    implementation, client, session_factory, candidate_source, exposure_ledger
+    implementation, client, session_factory
 ):
     """**Two providers, and each fails on its own.** A reader with no rating in
     the sport has nothing for the matcher to compute against, and is still told
     who on the court is rated — the Levels are ``rating``'s and not the
     pairing's. The stakes are absent too: nothing to move."""
 
-    ada, bea, cy = await _a_court(
-        client, session_factory, candidate_source, "ada", "bea", "cy", mu=2.80
-    )
+    ada, bea, cy = await _a_court(client, session_factory, "ada", "bea", "cy", mu=2.80)
     unrated_id, unrated = await players.register(client, "unrated")
     await players.commit_profile(client, unrated)
 
     answer = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=unrated_id,
         line_up=_line_up((unrated_id, ada), (bea, cy)),
     )
@@ -279,32 +253,28 @@ async def test_a_reader_with_nothing_to_compute_still_gets_the_seats(
 
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
-async def test_a_seat_the_index_cannot_describe_empties_the_forecast_not_the_levels(
-    implementation, client, session_factory, candidate_source, exposure_ledger
+async def test_an_unrated_seat_empties_the_forecast_and_not_the_levels(
+    implementation, client, session_factory
 ):
-    """**Absent, never provisional.** Somebody rated but not yet in the index —
-    the tail has not reached them — would read as a side short and price a
-    provisional figure on a court whose line-up is frozen. The forecast is
-    omitted instead; their Level, which is ``rating``'s, is still named."""
+    """**Absent, never provisional.** A seat with no Level in the sport would
+    read as a side short and price a provisional figure on a court whose
+    line-up is booked. The forecast is omitted instead; the rated seats' Levels
+    are still named, and the stakes still priced against the rated opponent."""
 
     reader = await players.a_rated_player(client, "reader")
-    ada, bea = await _a_court(
-        client, session_factory, candidate_source, "ada", "bea", mu=reader["mu"]
-    )
-    # Appended after the fold and never tailed: rated, and unknown to the index.
-    late = await world.a_candidate(client, session_factory, "late", mu=reader["mu"])
+    ada, bea = await _a_court(client, session_factory, "ada", "bea", mu=reader["mu"])
+    unrated_id, unrated = await players.register(client, "unrated")
+    await players.commit_profile(client, unrated)
 
     answer = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=reader["id"],
-        line_up=_line_up((reader["id"], ada), (bea, late)),
+        line_up=_line_up((reader["id"], ada), (bea, unrated_id)),
     )
 
     assert answer is not None
-    assert [seat.player_id for seat in answer.seats] == [reader["id"], ada, bea, late]
+    assert [seat.player_id for seat in answer.seats] == [reader["id"], ada, bea]
     assert answer.forecast is None and answer.split is None
     assert answer.at_stake is not None
 
@@ -316,22 +286,20 @@ async def test_a_seat_the_index_cannot_describe_empties_the_forecast_not_the_lev
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
 async def test_a_friendly_is_never_priced_and_a_counted_game_is(
-    implementation, client, session_factory, candidate_source, exposure_ledger
+    implementation, client, session_factory
 ):
     """*Meaningless rather than unavailable*: the forecast is drawn either way,
     and the stakes only where a result would count."""
 
     reader = await players.a_rated_player(client, "reader")
     ada, bea, cy = await _a_court(
-        client, session_factory, candidate_source, "ada", "bea", "cy", mu=reader["mu"]
+        client, session_factory, "ada", "bea", "cy", mu=reader["mu"]
     )
     line_up = _line_up((reader["id"], ada), (bea, cy))
 
     friendly = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=reader["id"],
         line_up=line_up,
         kind=GameKind.FRIENDLY,
@@ -339,8 +307,6 @@ async def test_a_friendly_is_never_priced_and_a_counted_game_is(
     counted = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=reader["id"],
         line_up=line_up,
         kind=GameKind.COUNTED,
@@ -355,7 +321,7 @@ async def test_a_friendly_is_never_priced_and_a_counted_game_is(
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
 async def test_the_stakes_are_the_sides_and_both_partners_get_one_pair(
-    implementation, client, session_factory, candidate_source, exposure_ledger
+    implementation, client, session_factory
 ):
     """**Side against side.** A result is a statement about one pair against
     another, so the two people on a side are moved by the same amount — and the
@@ -363,24 +329,18 @@ async def test_the_stakes_are_the_sides_and_both_partners_get_one_pair(
 
     reader = await players.a_rated_player(client, "reader")
     partner = await players.a_rated_player(client, "partner")
-    bea, cy = await _a_court(
-        client, session_factory, candidate_source, "bea", "cy", mu=reader["mu"]
-    )
+    bea, cy = await _a_court(client, session_factory, "bea", "cy", mu=reader["mu"])
     line_up = _line_up((reader["id"], partner["id"]), (bea, cy))
 
     mine = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=reader["id"],
         line_up=line_up,
     )
     theirs = await _read(
         implementation,
         session_factory,
-        candidate_source,
-        exposure_ledger,
         reader_id=partner["id"],
         line_up=line_up,
     )
@@ -397,23 +357,19 @@ async def test_the_stakes_are_the_sides_and_both_partners_get_one_pair(
 
 @pytest.mark.parametrize("implementation", registered(CourtPairing))
 async def test_a_reader_who_is_not_on_the_court_is_a_broken_precondition(
-    implementation, client, session_factory, candidate_source, exposure_ledger
+    implementation, client, session_factory
 ):
     """The caller decides who may read — *the court is the whole of the
     permission* — so a reader off the court reaching this port is a wrong
     branch, and it is loud rather than answered."""
 
-    ada, bea = await _a_court(
-        client, session_factory, candidate_source, "ada", "bea", mu=2.80
-    )
+    ada, bea = await _a_court(client, session_factory, "ada", "bea", mu=2.80)
     stranger_id, _ = await players.register(client, "stranger")
 
     with pytest.raises(InvariantViolated):
         await _read(
             implementation,
             session_factory,
-            candidate_source,
-            exposure_ledger,
             reader_id=stranger_id,
             line_up=_line_up((ada,), (bea,)),
         )

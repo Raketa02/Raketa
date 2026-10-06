@@ -1,64 +1,39 @@
-"""Open the rooms the seeded acceptances earned, fill one, and read them back.
+"""Open the rooms the seeded bookings earned, fill one, and read them back.
 
 **A room is not written and cannot be.** A conversation is *told*, through the
-outbox, by contexts that do not know it exists (``docs/adr/0146`` §5) — so this
-layer has no *open a room* use case to call and deliberately none. What it does
-is **deliver**: it drains the transactional outbox in process, exactly as the
-embedded worker drains it under the API, and every acceptance, decline, lapse,
-completion and *we played* the layers above already seeded arrives at the room it
-belongs to.
+outbox, by a context that does not know it exists (``docs/adr/0146`` §5) — so
+this layer has no *open a room* use case to call and deliberately none. What it
+does is **deliver**: it drains the transactional outbox in process, exactly as
+the embedded worker drains it under the API, and every booked game, *we played*
+and call-off the layers above already seeded arrives at the room it belongs to.
+**A room is opened only by a booked game** (#575): her booked games, the
+played history's past booked games, the rescues and the post.
 
-That barrier is the whole of the first half, and it is safe rather than exempt
-for the reason ``tick_the_tail_to_catch_up`` is: the batch takes its rows
-``FOR UPDATE SKIP LOCKED``, so an API worker draining at the same moment finds
-nothing left. Calling it twice is a no-op the second time.
+That barrier is the whole of the first half, and it is safe rather than exempt:
+the batch takes its rows ``FOR UPDATE SKIP LOCKED``, so an API worker draining
+at the same moment finds nothing left. Calling it twice is a no-op the second
+time.
 
 **The second half is the one thing a room cannot be told**: somebody saying
 something. Messages go through ``SendMessage``, the use case a request runs, so a
 seeded bubble has the stream position, the sequence number and the idempotency a
-real one has. They exist to reach a state no arrangement produces — **a room long
+real one has. They exist to reach a state no booking produces — **a room long
 enough to page backward through** — which is a screen state and therefore this
 fixture's business.
 
 **Every message is idempotent on its own ``client_message_id``**, derived from
 the room and the position rather than minted, so a second ``make seed`` writes
-nothing and the room does not grow by fifty every run. That is the same move
-every layer here makes and the reason none of them needs a probe.
+nothing and the room does not grow by fifty every run. The room is chosen
+**deepest first**, so a second run finds the room the first one filled.
 
 **The third thing it does is destroy**, and that is what a fixture can show and
-a test cannot: the played history is written in the past and ``CONVERSATION_GRACE``
-is forty-eight hours, so **every room it opened has ended** (``docs/adr/0153``) —
-while the game ``app/seeds/loop.py`` has played *this evening* keeps its room, and
-that pair of facts is the lifetime rather than an accident of the population. The
-run sweeps in process, exactly as it delivers in process, and then reads the list
-again: what the report prints is a count of rooms that stopped existing beside a
-count of rooms that did not, which is the only way *destroyed, not delisted* is
-visible on a laptop.
-
-**Three of the four room shapes are reached and the fourth is named**, because a
-fixture that quietly reached three would read as having reached four:
-
-- **a two-member room whose line-up completed** — one of the four tennis singles
-  games ``plans.py`` arranges and nobody plays, which is the shape a Chats row
-  draws with a *Details* door on it. It comes from **that** layer rather than
-  from the played history, and the reason is the destruction: a played game's
-  room is over before the run reads it;
-- **a doubles room whose membership is still growing** — the half-built court
-  ``pairs.py`` leaves standing, which has no game and therefore no *Details*
-  door. **It is not the protagonist's**, and that is worth knowing rather than
-  fixing here: she is *invited* to that court and has not answered, so she is not
-  a member of the room it opened. A room she is in is a state the relationship
-  layer does not currently reach, which is why the claims below read as everybody
-  rather than as her;
-- **a room long enough to page backward through** — this layer's own messages.
-
-The fourth, **a room carrying every system-line code**, is
-``app/seeds/loop.py``'s: three codes need a court that grew or shrank after its
-room opened and one needs a game played inside the grace, and that layer sends
-the courts and the game for them. The Plan's four are ``app/seeds/plans.py``'s,
-and one of those — the **lock** — has a single producer, so the claim is what
-holds that row in place. It is asserted there rather than here, beside
-the rows that reach it.
+a test cannot: the played history is written in the past and its entry windows
+have closed, so **every room it opened has ended** (``docs/adr/0153``) — while
+her games still ahead keep theirs, and that pair of facts is the lifetime rather
+than an accident of the population. The run sweeps in process, exactly as it
+delivers in process, and then reads the list again: what the report prints is a
+count of rooms that stopped existing beside a count of rooms that did not, which
+is the only way *destroyed, not delisted* is visible on a laptop.
 """
 
 from __future__ import annotations
@@ -71,7 +46,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
     build_a_room_of_yours,
-    build_arranging_court,
     build_clock,
     build_conversation_directory,
     build_conversation_repository,
@@ -81,7 +55,6 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_fake_payments,
     build_recording_push,
-    build_lifetime,
     build_member_faces,
     build_membership,
     build_nobody_is_following,
@@ -94,7 +67,6 @@ from app.core.config import Settings
 from app.kernel import Instant
 from app.modules.conversations.application.commands import (
     ReadConversationsCommand,
-    ReadEntriesCommand,
     SendMessageCommand,
 )
 from app.modules.conversations.application.destroy_ended_conversations import (
@@ -104,10 +76,8 @@ from app.modules.conversations.application.read_conversations import (
     ConversationRow,
     ReadConversations,
 )
-from app.modules.conversations.application.read_entries import ReadEntries
 from app.modules.conversations.application.send_message import SendMessage
 from app.modules.conversations.domain.entries import (
-    Entry,
     SystemLine,
     SystemLineCode,
 )
@@ -133,24 +103,24 @@ THE_PLAYED_CODE = SystemLineCode.GAME_PLAYED.value
 #: second run write nothing.
 SEEDED_MESSAGES = UUID("6f1f0f3a-0000-4000-8000-000000000000")
 
-#: What the two members of the pageable room say, cycled. Short and about
-#: arranging a game, because a room's contents are read by a person developing a
-#: screen and lorem ipsum tells them nothing about how a bubble wraps.
+#: What the members of the pageable room say, cycled. Short and about the game,
+#: because a room's contents are read by a person developing a screen and lorem
+#: ipsum tells them nothing about how a bubble wraps.
 THE_SMALL_TALK: tuple[str, ...] = (
-    "Thursday works for me",
-    "same, evening?",
-    "six or seven?",
-    "seven is easier after work",
-    "the courts by the river are usually free then",
-    "I'll check if we need to book",
-    "no booking needed apparently",
+    "see you all on Thursday",
+    "I'll bring new balls",
+    "who's taking the left side?",
+    "I can, I prefer it",
+    "court 2 again?",
+    "it's whichever the club gives us",
+    "I'll be there ten minutes early",
     "perfect — see you there",
 )
 
 
 #: Everybody this layer reads as. **The protagonist, the eleven relationship
-#: accounts, and everybody the played history seated** — which is every account
-#: that could hold a seat somebody accepted.
+#: accounts, and everybody the played history seated** — the protagonist is on
+#: every booked game of hers, which is where the standing rooms are.
 #:
 #: There is no *all the rooms* read and there should not be: membership is the
 #: gate on every route this context has, so a fixture that wanted the whole list
@@ -254,7 +224,7 @@ async def open_the_rooms(
             session,
             settings=settings,
             now=now,
-            room=_a_room_still_arranging(rooms),
+            room=_a_room_to_fill(rooms),
         )
         await session.commit()
 
@@ -266,8 +236,7 @@ async def open_the_rooms(
         rooms = await every_room_in_the_database(session, settings=settings, now=now)
         lines = [
             _refuse_a_database_with_no_rooms_in_it(rooms),
-            _refuse_a_court_that_stopped_growing(rooms),
-            _refuse_a_pair_with_no_room_of_their_own(rooms),
+            _refuse_a_booked_game_with_no_room_of_its_own(rooms),
             _refuse_a_room_too_short_to_page(rooms),
             _refuse_a_room_that_outlived_its_game(swept, rooms, now=now),
         ]
@@ -308,11 +277,9 @@ async def every_room_in_the_database(
     reads than a query would be, and it is the right cost: what the claims below
     assert is then what a **screen** draws rather than what a table holds.
 
-    **The protagonist is on the list and is not expected to be in a room.** The
-    relationship layer seats her on a court she has not answered and organises one
-    nobody has answered, so a room she is a member of is a state that layer does
-    not currently reach — and a claim written against her alone would fail here
-    for somebody else's reason.
+    **The protagonist is on the list, and her booked games are where the
+    standing rooms are**: every past game's room has ended by the time this
+    reads.
     """
 
     reader = _read_conversations(session, settings=settings, now=now)
@@ -327,68 +294,6 @@ async def every_room_in_the_database(
     # Sorted, because a mapping's iteration order is the order the claims
     # traverse in and a fixture's answer may not depend on it.
     return tuple(found[key] for key in sorted(found))
-
-
-async def read_the_entries(
-    session: AsyncSession,
-    *,
-    room: ConversationRow,
-    settings: Settings,
-    now: Instant,
-) -> tuple[Entry, ...]:
-    """One room's whole stream, read as somebody who is in it, **by paging back**.
-
-    **The newest page and then the page before it**, which is exactly what a
-    client does: the room opens at the newest entry and walks backward as somebody
-    scrolls (``docs/adr/0147``). A caller that read only the first page would be
-    asking *what does this room open on* — and the one room this fixture fills past
-    a page holds fifty messages above the lines that were written before them, so
-    that question and *what is in this room* have different answers.
-
-    The cursor is the sequence and it is gapless, so ``seq`` 1 is the beginning and
-    the walk ends when a page comes back empty. There is no ``has_more`` to read
-    and deliberately none.
-
-    Here rather than in ``app/seeds/loop.py``, beside the walk it belongs to: the
-    reader has to be a member — membership is the gate on every route this context
-    has — and *which member* is a question this module already answers for the
-    list read.
-    """
-
-    reader = room.members[0].player_id
-    conversations = build_conversation_repository(
-        session=session,
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    )
-    arranging = build_arranging_court(session)
-    entries = ReadEntries(
-        rooms=build_a_room_of_yours(
-            conversations=conversations,
-            membership=build_membership(session, arranging=arranging),
-            lifetime=build_lifetime(session, arranging=arranging),
-            clock=FixedClock(at=now),
-        ),
-        faces=build_member_faces(session, settings=settings),
-    )
-    walked: list[Entry] = []
-    cursor: int | None = None
-    while True:
-        page = (
-            await entries.execute(
-                ReadEntriesCommand(
-                    conversation_id=room.conversation_id,
-                    reader_id=reader,
-                    before_seq=cursor,
-                    limit=PAGE_LIMIT_DEFAULT,
-                )
-            )
-        ).entries
-        if not page:
-            return tuple(walked)
-        walked = [*page, *walked]
-        cursor = page[0].seq
-
 
 
 # ---------------------------------------------------------------------------
@@ -441,22 +346,26 @@ async def _say_a_page_and_a_bit(
 # ---------------------------------------------------------------------------
 
 
-def _a_room_still_arranging(rooms: Sequence[ConversationRow]) -> ConversationRow:
-    """A room whose line-up has not completed: **no game, so no *Details* door.**
+def _a_room_to_fill(rooms: Sequence[ConversationRow]) -> ConversationRow:
+    """A standing room with two or more people in it — **the deepest one.**
 
-    Found by shape rather than named, because which court ``pairs.py`` leaves
-    half-built is that layer's business — a fixture that named the challenge
-    would go looking for a uuid the day the relationship moved.
+    Deepest first, so a second run picks the room the first one filled and its
+    messages, keyed on the room and the position, write nothing. The tie the
+    first run meets is broken on the room's id, which is the order
+    :func:`every_room_in_the_database` already holds.
     """
 
-    for room in rooms:
-        if room.game_id is None and len(room.members) >= 2:
-            return room
-    raise SeedRoomMissing(
-        "no room whose line-up is still filling. A room opens on the first "
-        "acceptance and grows with each one after it, so this is a doubles court "
-        "with one seat answered and one still open — and without it the Chats "
-        "tab cannot draw a room that has no *Details* door to offer."
+    candidates = [room for room in rooms if len(room.members) >= 2]
+    if not candidates:
+        raise SeedRoomMissing(
+            "no room with two people in it. A booked game opens its room through "
+            "the outbox, and her booked games are four people a court — so this "
+            "means nothing was booked or the outbox was not delivered, and no "
+            "room can be filled past a page."
+        )
+    return max(
+        candidates,
+        key=lambda room: room.last_entry.seq if room.last_entry is not None else 0,
     )
 
 
@@ -467,23 +376,40 @@ def _refuse_a_database_with_no_rooms_in_it(
 
     if not rooms:
         raise SeedRoomMissing(
-            "no conversation in this database. A room opens on the first "
-            "acceptance, so this means either nothing was ever accepted or the "
-            "outbox was not delivered — and the Chats tab's second section is "
-            "empty on every screen."
+            "no conversation in this database. A room opens when a game is "
+            "booked, so this means either nothing was booked or the outbox was "
+            "not delivered — and a booked game's chat is empty on every screen."
         )
     return f"rooms · {len(rooms)} conversation(s), read as the people in them"
 
 
-def _refuse_a_court_that_stopped_growing(
+def _refuse_a_booked_game_with_no_room_of_its_own(
     rooms: Sequence[ConversationRow],
 ) -> str:
-    """*One room has no game and fewer members than its court will hold.*"""
+    """*A booked game still ahead has its room — the chat its details open.*
 
-    room = _a_room_still_arranging(rooms)
+    **Not from the played history, and that is the destruction showing.** Every
+    game that layer records was played days ago, so each of those rooms is over
+    before this run reads it (``docs/adr/0153``). A room a game's details can
+    open therefore has to be a game nobody has said they played.
+    """
+
+    standing = [
+        room
+        for room in rooms
+        if room.game_id is not None and _code_of(room) != THE_PLAYED_CODE
+    ]
+    if not standing:
+        raise SeedRoomMissing(
+            "no room about a game still to be played. Her booked games open "
+            "theirs when the outbox is delivered — so this means nothing was "
+            "booked, the outbox was not delivered, or the sweep destroyed a room "
+            "it should not have. Without it a booked game's chat door opens "
+            "nothing."
+        )
     return (
-        f"growing · {len(room.members)} member(s), no game — the room draws the "
-        f"members it has rather than the court it will be"
+        f"booked · {len(standing)} room(s) about a game still to be played, the "
+        f"chat a game's details open"
     )
 
 
@@ -511,51 +437,15 @@ def _refuse_a_room_too_short_to_page(rooms: Sequence[ConversationRow]) -> str:
     )
 
 
-def _refuse_a_pair_with_no_room_of_their_own(
-    rooms: Sequence[ConversationRow],
-) -> str:
-    """*One two-member room's line-up completed into a game.*
-
-    It is the shape a Chats row draws with a **Details** door on it, and it comes
-    from the games ``plans.py`` arranges and nobody plays: a singles court is two
-    people, its line-up completed, and the game is still inside its entry window.
-
-    **Not from the played history, and that is the destruction showing.** Every
-    game that layer records was played at least ``PLAYED_AT_LEAST_DAYS_AGO`` ago
-    and ``CONVERSATION_GRACE`` is forty-eight hours, so each of those rooms is
-    over before this run reads it (``docs/adr/0153``). A room with a *Details*
-    door therefore has to be a game somebody has **not** said they played.
-    """
-
-    for room in rooms:
-        if len(room.members) == 2 and room.game_id is not None:
-            return (
-                f"details · a two-member room whose game is still to be played, "
-                f"last entry {_code_of(room)}"
-            )
-    raise SeedRoomMissing(
-        "no two-member room whose line-up completed into a game. The four games "
-        "`plans.py` arranges are singles courts inside their entry window, and "
-        "each one's first acceptance opens a room — so this means the outbox was "
-        "not delivered, no game was arranged, or the sweep destroyed a room it "
-        "should not have. Without it the Chats tab draws no *Details* door at "
-        "all."
-    )
-
-
 def _refuse_a_room_that_outlived_its_game(
     swept: SweptRooms, rooms: Sequence[ConversationRow], *, now: Instant
 ) -> str:
     """*No room that was told* we played *more than a grace ago is still standing.*
 
-    **The claim is the lifetime, not the absence.** It used to be *no room
-    anywhere carries* ``GAME_PLAYED``, which was true only because every game in
-    this fixture had been played days ago — a property of the population rather
-    than of the rule, and it went red the day ``app/seeds/loop.py`` seeded a game
-    played **this** evening, which is exactly the room the seventh system-line code
-    needs. What survives is the rule itself: a room outlives *we played* by
-    ``CONVERSATION_GRACE`` and not a moment longer (``docs/adr/0153``), so what is
-    refused is a room still carrying that entry from **before** the grace.
+    **The claim is the lifetime, not the absence.** A room outlives *we played*
+    by ``CONVERSATION_GRACE`` and not a moment longer (``docs/adr/0153``), so what
+    is refused is a room still carrying that entry from **before** the grace —
+    whatever the population happens to hold.
 
     It is read off ``last_entry``, which is enough: *we played* is the last thing
     that ever happens in a room — the result argument is ``games``' own
@@ -569,10 +459,10 @@ def _refuse_a_room_that_outlived_its_game(
 
     **What stops it being vacuous is the claim beside it.** On its own this would
     pass a database in which the played history never opened a room at all — so it
-    is paired with :func:`_refuse_a_pair_with_no_room_of_their_own`, which demands
-    a **standing** two-member room whose line-up completed. **A live room is
-    required beside it** for the same reason: an ended room is only legible next to
-    one that is not, and a Chats tab that is empty on every screen proves nothing
+    is paired with :func:`_refuse_a_booked_game_with_no_room_of_its_own`, which
+    demands a **standing** room about a game still ahead. **A live room is
+    required beside it** for the same reason: an ended room is only legible next
+    to one that is not, and a chat that is empty on every screen proves nothing
     about when a room ends.
 
     **There is deliberately no before-and-after count.** The list read already
@@ -602,7 +492,7 @@ def _refuse_a_room_that_outlived_its_game(
         raise SeedRoomMissing(
             f"no room stands at all; the sweep walked {swept.walked} and "
             f"destroyed {swept.destroyed}. An ended room is only legible beside "
-            f"a live one, and a Chats tab that is empty on every screen proves "
+            f"a live one, and a chat that is empty on every screen proves "
             f"nothing about when a room ends."
         )
     told = len([room for room in rooms if _code_of(room) == THE_PLAYED_CODE])
@@ -640,16 +530,14 @@ def _read_conversations(
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
-    # One court for the three questions it is asked, exactly as a request has one.
-    arranging = build_arranging_court(session)
+    # One court for the two questions it is asked, exactly as a request has one.
+    played = build_played_court(session)
     return ReadConversations(
         directory=build_conversation_directory(
             session=session, conversations=conversations
         ),
-        arranging=arranging,
-        played=build_played_court(session),
-        membership=build_membership(session, arranging=arranging),
-        lifetime=build_lifetime(session, arranging=arranging),
+        played=played,
+        membership=build_membership(session, played=played),
         faces=build_member_faces(session, settings=settings),
         clock=FixedClock(at=now),
     )
@@ -663,12 +551,10 @@ def _send_message(
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
-    arranging = build_arranging_court(session)
     return SendMessage(
         rooms=build_a_room_of_yours(
             conversations=conversations,
-            membership=build_membership(session, arranging=arranging),
-            lifetime=build_lifetime(session, arranging=arranging),
+            membership=build_membership(session),
             clock=FixedClock(at=now),
         ),
         conversations=conversations,

@@ -6,11 +6,9 @@ collaborator to run. ``docs/adr/0159`` calls that *the same assembler with the
 gate short-circuited*, and the short circuit is spelled in the **wiring** rather
 than as a branch:
 
-- the ``/me`` route declares no gate machinery, so a process whose candidate
-  index is not running still serves a player their own record. The gates bind the
-  index once per evaluation (``docs/adr/0112``) and refuse the whole read when
-  there is none — correct for a sheet about a stranger, and absurd for the one
-  screen that tells a player how they appear.
+- the ``/me`` route declares no gate machinery, so nothing that refuses a
+  stranger's sheet — a block, a hold, a store that cannot answer — can take
+  down the one screen that tells a player how they appear.
 - there is no branch anybody can delete. A use case that took an admission and
   skipped it when ``reader == subject`` is one refactor away from skipping it
   when it should not.
@@ -30,18 +28,17 @@ not repeated here; what the assembler holds is that there is one question, put
 to one port, whoever asked.
 
 **The sport asked for reaches the sheet's contents and never its admission.** It
-selects which Level is printed; the four fail-closed gates run in the partition of
-the **disclosure**, which is a fact the platform holds. A record refused in a
-sport a client sent would be a client choosing whether it may see somebody
-(``docs/adr/0159``).
+selects which Level is printed; who may be seen is the **disclosure's** to say,
+which is a fact the platform holds. A record refused in a sport a client sent
+would be a client choosing whether it may see somebody (``docs/adr/0159``).
 
 **One clock, read once, handed down.** The run of form, the metered rows and the
-variety fold are all folded against an instant, and the record's own gate against
-the same one — two reads of the clock in one response is how a sheet ends up
-admitting a pair on one instant and describing them on another. It matters most
-on the rows: a plan is a ghost only once its entry window has closed and a seat
-has lapsed only once its day has run out, so two presents would publish a pill
-whose strands disagree with the variety beside them about which games exist.
+variety fold are all folded against an instant — two reads of the clock in one
+response is how a sheet ends up describing a pair on two instants. It matters
+most on the rows: a plan is a ghost only once its entry window has closed and a
+seat has lapsed only once its day has run out, so two presents would publish a
+pill whose strands disagree with the variety beside them about which games
+exist.
 """
 
 from __future__ import annotations
@@ -211,15 +208,15 @@ class ReadPlayerRecord:
         what the sheet is titled.
 
         ``arrived_from`` reaches the assembler and **never the admission**. It
-        says which sport the sheet is about; who may be seen is decided in the
-        partitions of the disclosure, which the platform holds and a client does
-        not send. A caller passing a sport they were never shown this person in
-        changes what is printed and nothing about whether it is.
+        says which sport the sheet is about; who may be seen is decided by the
+        disclosure, which the platform holds and a client does not send. A
+        caller passing a sport they were never shown this person in changes
+        what is printed and nothing about whether it is.
         """
 
         now = self._clock.now()
         if not await self._admission.admits(
-            reader_id=reader_id, subject_id=subject_id, now=now
+            reader_id=reader_id, subject_id=subject_id
         ):
             raise RecordUnavailable(RECORD_UNAVAILABLE)
         return await assemble_record(

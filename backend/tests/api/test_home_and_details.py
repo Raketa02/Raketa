@@ -721,7 +721,7 @@ async def test_the_booked_game_s_room_is_in_every_player_s_rooms(
         assert read.status_code == 200, read.text
         [room] = read.json()["conversations"]
         assert room["game_id"] == booked["game_id"]
-        assert room["challenge_id"] == booked["booking_id"]
+        assert room["booking_id"] == booked["booking_id"]
     stranger = await a_player(client, payments, "stranger")
     theirs = await client.get(CONVERSATIONS, headers=stranger["headers"])
     assert theirs.json()["conversations"] == []

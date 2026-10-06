@@ -35,7 +35,6 @@ from app.modules.matchmaking.infrastructure.interest_model import InterestORM
 from app.modules.matchmaking.infrastructure.search_model import SearchORM
 from tests.api import matchmaking_world as world
 from tests.api.test_deck import _a_game_between
-from tests.api.test_player_record import record_of
 
 RADAR_URL = "/api/v1/radar"
 
@@ -351,29 +350,6 @@ async def test_a_reading_is_recorded_under_its_own_surface_and_reads_back_whole(
     assert recorded.surface == SearchSurface.RADAR.value
     assert recorded.mode is None
     assert recorded.n_excluded_by_suppression is None
-
-
-async def test_the_record_opens_from_a_card_the_reading_drew(
-    client, session_factory, candidate_source, searcher
-):
-    """ADR-0159 §3's second strand: *a search of the reader's returned them*.
-    A reading is one, so the sheet opens from every card it drew — and not
-    from a face nothing of the reader's has ever shown."""
-
-    drawn = await world.a_candidate(client, session_factory, "drawn", mu=searcher["mu"])
-    never_shown = await world.a_candidate(
-        client,
-        session_factory,
-        "never-shown",
-        mu=searcher["mu"],
-        latitude=world.CENTRE[0] + 0.5,
-    )
-    await world.fold_the_log(session_factory, candidate_source)
-
-    await read_the_radar(client, searcher["token"])
-
-    assert (await record_of(client, searcher["token"], drawn)).status_code == 200
-    assert (await record_of(client, searcher["token"], never_shown)).status_code == 404
 
 
 async def test_a_reading_never_enters_the_dealt_memory(

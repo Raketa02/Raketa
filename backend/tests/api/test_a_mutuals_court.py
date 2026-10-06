@@ -1,12 +1,6 @@
 """A mutual's court, end to end over HTTP (``docs/adr/0169`` §8).
 
-Two yeses meet, and two things follow that no other route decides.
-
-**A padel mutual's room is born with a side line.** The court a doubles mutual
-opens is half a game — both of them on one side, a whole side still to fill —
-and nothing in the room said so. Its first entry is ``SIDE_FORMED``, told
-through the outbox as every line is; a tennis mutual's room carries no such
-line, because a two-seat court is whole.
+Two yeses meet, and one thing follows that no other route decides.
 
 **A mutual's game is counted unless either declared *for fun*.** The deck reads
 no declaration and moves nobody for one; the game a mutual opens honours a wish
@@ -21,8 +15,6 @@ own route wrote and the mint is the one ``express_interest`` calls inline.
 from __future__ import annotations
 
 from uuid import UUID
-
-from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.kernel import Sport
 from tests.api import matchmaking_world as world
@@ -71,22 +63,6 @@ async def _a_mutual(
     return closed
 
 
-async def _the_only_room(client, token: str) -> dict:
-    listed = await client.get("/api/v1/conversations", headers=world.auth(token))
-    assert listed.status_code == 200, listed.text
-    (room,) = listed.json()["conversations"]
-    return room
-
-
-async def _entries(client, token: str, conversation_id: str) -> list[dict]:
-    page = await client.get(
-        f"/api/v1/conversations/{conversation_id}/entries",
-        headers=world.auth(token),
-    )
-    assert page.status_code == 200, page.text
-    return page.json()["entries"]
-
-
 async def _the_challenge(client, token: str, challenge_id: str) -> dict:
     read = await client.get(
         f"/api/v1/challenges/{challenge_id}", headers=world.auth(token)
@@ -100,71 +76,6 @@ async def _the_only_game(client, token: str) -> dict:
     assert listed.status_code == 200, listed.text
     (game,) = listed.json()["games"]
     return game
-
-
-# -- the side line ----------------------------------------------------------
-
-
-def _the_sessions_the_worker_uses(db_engine):
-    """A session factory shaped like production's (``app/infrastructure/
-    database/session.py``): ``autoflush=False``.
-
-    The suite's own ``session_factory`` autoflushes, and that difference is
-    load-bearing for exactly one arm: the mutual **opens** a room and **writes
-    into it** in one delivery, and a row added but not flushed is invisible to
-    the locked ``for_challenge`` read that a second lookup would make. The line
-    has to ride the same save as the opening, and only a worker-shaped session
-    can tell the two apart.
-    """
-
-    return async_sessionmaker(db_engine, expire_on_commit=False, autoflush=False)
-
-
-async def test_a_padel_mutuals_room_is_born_with_the_side_line(
-    client, session_factory, candidate_source, db_engine
-):
-    """*You two are a side. Fill the seats to find your opponents.* — as a code,
-    at ``seq`` 1, naming nobody and carrying nothing; the words are the
-    client's. Delivered through a worker-shaped session, so *born with* is
-    asserted as one save and not as an opening followed by a lookup."""
-
-    ania = await _a_player(client, "ania", sport=Sport.PADEL, intent="COMPETITIVE")
-    marek = await _a_player(client, "marek", sport=Sport.PADEL, intent="FOR_FUN")
-    await _a_mutual(
-        client, session_factory, candidate_source, ania, marek, sport=Sport.PADEL
-    )
-
-    await world.deliver_the_outbox(_the_sessions_the_worker_uses(db_engine))
-
-    room = await _the_only_room(client, ania["token"])
-    assert room["game_id"] is None, "a padel mutual is half a game"
-    (line,) = await _entries(client, ania["token"], room["conversation_id"])
-    assert line["type"] == "system_line"
-    assert line["seq"] == 1
-    assert line["code"] == "SIDE_FORMED"
-    assert line["actor_id"] is None
-    assert line["values"] == {}
-    assert room["last_entry"]["code"] == "SIDE_FORMED"
-
-
-async def test_a_tennis_mutuals_room_carries_no_side_line(
-    client, session_factory, candidate_source
-):
-    """A two-seat court is whole the instant it exists, so the mutual is the
-    opening and nothing else — ``seq`` 1 is whatever happens next."""
-
-    ania = await _a_player(client, "ania", sport=Sport.TENNIS, intent="COMPETITIVE")
-    marek = await _a_player(client, "marek", sport=Sport.TENNIS, intent="FOR_FUN")
-    await _a_mutual(
-        client, session_factory, candidate_source, ania, marek, sport=Sport.TENNIS
-    )
-
-    await world.deliver_the_outbox(session_factory)
-
-    room = await _the_only_room(client, marek["token"])
-    assert room["game_id"] is not None, "a tennis mutual is a game from birth"
-    assert room["last_entry"] is None
-    assert await _entries(client, marek["token"], room["conversation_id"]) == []
 
 
 # -- counted unless either declared for fun -----------------------------------

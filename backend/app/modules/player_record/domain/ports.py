@@ -1,46 +1,39 @@
-"""What this context asks of contexts it does not write. **Ten demands.**
+"""What this context asks of contexts it does not write. **Nine demands.**
 
 ``docs/adr/0098``'s consumer-driven shape, and this is the second *consumer*
 register on the platform after the matcher's. Every port here is declared in
 **this context's own vocabulary** and satisfied by an adapter that translates —
-which is what keeps a record from inheriting a card's closed list, a challenge's
-seat codes or a search record's bands through a type it borrowed
-(``docs/adr/0159``).
+which is what keeps a record from inheriting a card's closed list, a seat code
+or a search record's band through a type it borrowed (``docs/adr/0159``).
 
 **This context stores nothing, so there is no repository on this list.** It has
 no aggregate, no table and no migration; every fact it publishes it reads through
 the owning context's published port, and the one thing it decides for itself is
 whether the reader may see any of them.
 
-**Eight of the ten are single-player reads and say so in their signatures.** A
+**Seven of the nine are single-player reads and say so in their signatures.** A
 record is one person opened by a deliberate tap, so a set-shaped port here would
-be a contract nobody can honour cheaply for a caller that never batches — the
-mirror of the rule every read in ``matchmaking`` takes, where the caller always
-has twenty rows and asks once. On ``SubjectVariety`` that signature is a **fence
-rather than a convenience**: the fold behind it is deliberately unbounded, and a
-set-shaped version would be an invitation to call a career statistic inside a
-walk over five hundred candidates. On ``SubjectReliability`` it runs the other
-way — the provider's own read is set-shaped for a caller that holds five hundred
-candidates, and the narrowing to one person happens in the adapter, so the shape
-of somebody else's caller does not reach a sheet that will never batch.
+be a contract nobody can honour cheaply for a caller that never batches. On
+``SubjectVariety`` that signature is a **fence rather than a convenience**: the
+fold behind it is deliberately unbounded, and a set-shaped version would be an
+invitation to call a career statistic inside a walk over five hundred
+candidates. On ``SubjectReliability`` it runs the other way — the provider's own
+read is set-shaped for a caller that holds five hundred candidates, and the
+narrowing to one person happens in the adapter, so the shape of somebody else's
+caller does not reach a sheet that will never batch.
 
 **One sport crosses two of them, and it is the same sport both times.** The sheet
 is *about* one sport, resolved in ``domain/sport_choice.py`` from what the reader
 arrived from and what the subject is rated in, and the run of form is asked for
-in it. That sport never reaches ``RecordGates``, which runs in the partition of
-the **disclosure** — what a sheet is about and who may be seen are two questions,
-and the second one is not the client's to influence.
+in it. That sport never reaches the admission: what a sheet is about and who may
+be seen are two questions, and the second one is not the client's to influence.
 
 **The disclosure port is the interesting one, and its shape is almost the whole
 admission rule.** It does not answer *may this reader see this person* — that is
 this context's decision and it is made in ``application/admission.py``. It
-answers *where has this reader already been shown this person*, in **sports**,
-because the four fail-closed gates read the other side's preference off a
-candidate index row and the index is keyed by sport. A disclosure that could not
-say which partition it happened in would leave the gate unable to be evaluated,
-and a gate that cannot be evaluated excludes. **The one strand it does not carry
-is whoever runs the subject's group** — ``RunnerDisclosure``, a boolean, because
-the preference does not reach that reader and so no partition is read (#566).
+answers *has this reader already been shown this person*, as a yes or a no, and
+three providers answer it: a court they shared, a group they are both in, and a
+group the reader runs that the subject is in (#575).
 """
 
 from __future__ import annotations
@@ -106,124 +99,57 @@ class RecordPhotoLink(Protocol):
 
 @runtime_checkable
 class PriorDisclosure(Protocol):
-    """*Where has this reader already been shown this person?* — in sports.
+    """*Has this reader already been shown this person?* — yes or no.
 
     **The credential this route runs on.** A record is read *through* a prior
     disclosure and never *about* a person: without that, a route taking a player
     id is a player-enumeration endpoint, and a UUID being hard to guess is not an
     authorization model.
 
-    **Four implementations, one question**, which is what let a fourth entry
-    point satisfy the same demand without this context learning what a group
-    is. A search of the reader's that returned them, a challenge the pair are
-    both seated in, a game they both played, a group they are both in.
+    **Three implementations, one question**, which is what lets an entry point
+    satisfy the same demand without this context learning what it is: a court
+    the pair were both on, a group they are both in, and a group the reader runs
+    that the subject is in (#575).
 
-    **The answer is sports and not booleans**, because the gates that re-run on
-    every open read a candidate index row and the index is partitioned by sport.
-    A search knows the sport it ran on; a challenge and a game know theirs. What
-    a reader *arrived from* is not on this port at all — it selects which sport a
-    sheet is about and never who may be seen.
+    **A boolean, and nothing about where.** The gates that re-run on every open
+    are about accounts and read no partition, so a disclosure has nothing to
+    say beyond *yes*. What a reader *arrived from* is not on this port at all —
+    it selects which sport a sheet is about and never who may be seen.
     """
 
-    async def partitions_between(
-        self, *, reader_id: UUID, subject_id: UUID, now: Instant
-    ) -> frozenset[Sport]:
-        """Every sport in whose partition this reader has been shown this person.
+    async def discloses(self, *, reader_id: UUID, subject_id: UUID) -> bool:
+        """Whether this reader has been shown this person.
 
-        Empty for a pair with nothing between them, which is the ordinary answer
-        about almost everybody.
-
-        ``now`` is taken rather than read for the reason every fold in this
-        codebase takes it: two sources asked at two instants could disagree about
-        whether the same challenge was still open. An implementation with nothing
-        to fold — a search record, a game that has been played — is entitled to
-        ignore it, and says so.
+        ``False`` for a pair with nothing between them, which is the ordinary
+        answer about almost everybody.
         """
         ...
 
 
 @runtime_checkable
 class RecordGates(Protocol):
-    """May this reader be shown this person **right now**, in this partition?
+    """May this reader be shown this person **right now**?
 
-    The four that fail closed — a block in either direction, an account hold, an
-    account state that may not be shown, and the mutual gender preference —
-    re-evaluated live on every open, because a disclosure made in August is not a
-    permission to show somebody in December (``docs/adr/0095``). They are spelled
-    **once** on this platform and called by name from both surfaces that show one
-    player to another; a second spelling of a safety gate is the defect the whole
-    fail-closed rule exists to prevent.
+    The three gates about accounts — a block in either direction, the subject's
+    hold, an account state that may not be shown — and the reader's own hold,
+    re-evaluated live on every open, because a disclosure made in August is not
+    a permission to show somebody in December (``docs/adr/0095``). They are
+    spelled **once** on this platform; a second spelling of a safety gate is the
+    defect the whole fail-closed rule exists to prevent.
 
-    **It answers about the pair, and a hold on either side of it refuses.** The
-    subject's hold is one of the four; the reader's own is this surface's entry
-    rule, and it is here rather than in the use case because a hold points both
-    ways and would otherwise end at the one route that remembers what a search
-    already showed.
+    **No preference and no partition** (#575). The mutual gender preference says
+    who a player is willing to be *matched* with, and every strand here is a
+    court shared or a group shared or run — the pair have already been put in
+    front of each other — so no candidate index is read to open a record.
 
-    **A gate that cannot be evaluated excludes.** A reader with no profile to
-    read a preference from, and a subject with no row in the partition asked
-    about, are both *not admitted* rather than errors — which is the fail-closed
-    rule applied to the read rather than an exception to it.
+    **A hold points both ways.** The subject's is one of the three; the
+    reader's own is this surface's entry rule, and it is here rather than in
+    the use case because a hold would otherwise end at the one route that
+    remembers who a player has been shown.
     """
 
-    async def admits(
-        self, *, reader_id: UUID, subject_id: UUID, sport: Sport
-    ) -> bool:
-        """Whether the live gates still admit this pair in this sport's partition.
-
-        Asked **per partition** rather than over a set, because a record is about
-        one person and the caller holds at most a handful of disclosures. The
-        cost of that is real and is priced in ``application/admission.py``: each
-        call is one reader profile, three set reads over a single id, and one
-        index container bound.
-        """
-        ...
-
-    async def admits_regardless_of_preference(
-        self, *, reader_id: UUID, subject_id: UUID
-    ) -> bool:
-        """Whether the live gates admit this pair **with the mutual gender
-        preference not asked** — the reader's own hold, then a block in either
-        direction, the subject's hold and an account that may not be shown.
-
-        For the one strand a preference does not reach: a reader who runs a
-        group the subject is in (``RunnerDisclosure``). A preference says who a
-        player is willing to be *matched* with, and running their group is not
-        that (``docs/adr/0159``'s amendment of 2026-10-02). It takes **no
-        sport**, because the preference is the only gate that reads a
-        partition — so this binds no index container and loads no profile, and
-        a reader who has never played is answered rather than refused for
-        having no gender to read a preference against.
-        """
-        ...
-
-
-@runtime_checkable
-class RunnerDisclosure(Protocol):
-    """*Does this reader run, right now, a group this person is in?*
-
-    **The fifth strand, and the one that is not a ``PriorDisclosure``.** An
-    official group's Members is opened by the account running it, which is not
-    a member of it (``docs/adr/0183`` §7) — so ``PriorDisclosure``'s *a group
-    they are both in* never admits it, and every row of the list it reads would
-    open on ``record_unavailable``. It is a port of its own because it is
-    admitted under **different gates**: the preference does not reach whoever
-    runs the group, so the caller has to know which strand it is asking.
-
-    **A boolean and not sports**, for the same reason: the gates this strand
-    is admitted under read no partition, so a sport here would be an answer
-    nobody asks. **Running as it stands, never as it was** — a removed
-    Administrator, and one the group was handed away from, run nothing on the
-    next read, exactly as a group left ends ``PriorDisclosure``'s group strand.
-    """
-
-    async def runs_a_group_of(self, *, reader_id: UUID, subject_id: UUID) -> bool:
-        """Whether this reader runs, now, any group this person is a member of.
-
-        ``False`` for almost everybody — a player group is run by nobody, and a
-        Join request that waits is not membership — which is the ordinary
-        answer, and never an error.
-        """
+    async def admits(self, *, reader_id: UUID, subject_id: UUID) -> bool:
+        """Whether the live gates still admit this pair."""
         ...
 
 
@@ -420,7 +346,6 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     SubjectIdentitySource,
     RecordPhotoLink,
     PriorDisclosure,
-    RunnerDisclosure,
     RecordGates,
     SubjectRatings,
     SubjectForm,
@@ -435,7 +360,6 @@ __all__ = [
     "PriorDisclosure",
     "RecordGates",
     "RecordPhotoLink",
-    "RunnerDisclosure",
     "SubjectForm",
     "SubjectIdentitySource",
     "SubjectRatings",

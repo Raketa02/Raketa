@@ -153,7 +153,7 @@ async def rooms_of(client, mailbox, player: dict) -> list[str]:
     await mailbox.drain()
     read = await client.get("/api/v1/conversations", headers=player["headers"])
     assert read.status_code == 200, read.text
-    return [room["challenge_id"] for room in read.json()["conversations"]]
+    return [room["booking_id"] for room in read.json()["conversations"]]
 
 
 async def cuts_off(session_factory, clock):

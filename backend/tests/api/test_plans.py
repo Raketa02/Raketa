@@ -5,7 +5,7 @@ somebody says yes — and from that yes there is a plan. The rest of the court
 filling is what moves the anchor and admits the lock, and that ordering is the
 point of this file rather than a set-up cost (``docs/adr/0164``).
 
-Eight things are asserted here and nowhere else:
+Seven things are asserted here and nowhere else:
 
 **A plan is the challenge's, and it exists from the first yes.** ``GET /plans``
 lists one row for every court the reader holds an accepted seat on, written or
@@ -24,13 +24,8 @@ after it does.
 may not agree them for four; the refusal has its own code; the lock is admitted
 once the last seat accepts; and a lock already taken survives a later departure.
 
-**A write of the value already there records nothing and answers 200.** From the
-outside that is indistinguishable from a write that changed something — which is
-the whole idea — so it is asserted through the room the lines land in.
-
-**The four plan codes reach the conversation**, through the outbox, written by a
-context that does not know this one exists — and into a room that has no game
-yet, because the room is the challenge's too.
+**A write of the value already there answers 200.** From the outside that is
+indistinguishable from a write that changed something — which is the whole idea.
 
 **Bounded chips the platform offered, never a free instant.** The horizon, the
 grid and the moment that has gone, each refused server-side.
@@ -135,13 +130,7 @@ async def _an_arranged_game(client, session_factory, candidate_source, searcher)
     """A game nobody asked for: four seats, all accepted, nothing played yet.
 
     **The outbox is drained before anybody plans anything**, which is what an API
-    process does on its own and what this suite has to do by hand. A slot line is
-    hung on the room *through its challenge*, so a room that has not yet been
-    opened by the first acceptance has nothing to hang one on — and, unlike the
-    room's opening, there is no second delivery to repair it. In production the
-    two are ordered by the outbox: ``SeatAccepted`` is written in the accept's
-    transaction and a slot write is a strictly later one. Here they can tie,
-    because SQLite's ``CURRENT_TIMESTAMP`` has one-second granularity.
+    process does on its own and what this suite has to do by hand.
     """
 
     people, challenge_id = await _a_padel_four_sent(
@@ -210,22 +199,6 @@ def _instant(text: str) -> datetime:
     return datetime.fromisoformat(text)
 
 
-async def _system_lines(client, token: str) -> list[dict]:
-    """Every system line in this player's one room, oldest first."""
-
-    rooms = await client.get("/api/v1/conversations", headers=world.auth(token))
-    assert rooms.status_code == 200, rooms.text
-    (room,) = rooms.json()["conversations"]
-    opened = await client.get(
-        f"/api/v1/conversations/{room['conversation_id']}",
-        headers=world.auth(token),
-    )
-    assert opened.status_code == 200, opened.text
-    return [
-        entry for entry in opened.json()["entries"] if entry["type"] == "system_line"
-    ]
-
-
 # ---------------------------------------------------------------------------
 # From the first yes
 # ---------------------------------------------------------------------------
@@ -275,9 +248,9 @@ async def test_the_first_yes_lists_the_court_for_both_with_nothing_agreed(
 async def test_slots_written_before_the_court_is_whole_are_read_back_after_it_fills(
     client, session_factory, candidate_source, searcher, clock
 ):
-    """The plan is the same plan: what two of four agreed is what four read, the
-    line landed in the room that had no game yet, and the anchor on the row moves
-    to the instant the court filled — **later, never earlier**."""
+    """The plan is the same plan: what two of four agreed is what four read, and
+    the anchor on the row moves to the instant the court filled — **later, never
+    earlier**."""
 
     people, challenge_id = await _a_padel_four_sent(
         client, session_factory, candidate_source, searcher
@@ -294,12 +267,6 @@ async def test_slots_written_before_the_court_is_whole_are_read_back_after_it_fi
     )
     assert written.status_code == 200, written.text
     assert _instant(written.json()["anchor"]) == sent_at
-    await world.deliver_the_outbox(session_factory)
-    lines = await _system_lines(client, searcher["token"])
-    assert (lines[-1]["code"], lines[-1]["values"]["value"]) == (
-        "PLACE_RECORDED",
-        "Zabłocie Sport",
-    ), "the line lands in a room that has no game yet"
 
     clock.at = sent_at + timedelta(hours=3)
     for name in ("bo", "cy"):
@@ -434,11 +401,9 @@ async def test_a_day_past_the_sends_horizon_is_admitted_once_the_court_fills_lat
 async def test_before_the_first_yes_there_is_no_plan_even_for_the_organiser(
     client, session_factory, candidate_source, searcher
 ):
-    """``docs/adr/0164`` §2 — the plan is drawn in the room, and the room opens
-    on the first yes. The organiser's own seat is accepted from birth and makes
-    no court on its own: a slot written before anybody was in would be a line
-    with no room to land in, so there is no row and the write is refused as a
-    stranger's."""
+    """``docs/adr/0164`` §2 — a plan exists from the first yes. The organiser's
+    own seat is accepted from birth and makes no court on its own, so there is
+    no row and the write is refused as a stranger's."""
 
     _, challenge_id = await _a_padel_four_sent(
         client, session_factory, candidate_source, searcher
@@ -457,7 +422,7 @@ async def test_a_court_that_ended_after_a_yes_is_history_and_still_listed(
 ):
     """B said yes, the other two said no, and the organiser left: B is alone
     with nobody deciding, so the court is over by itself (``docs/adr/0165``
-    §3). It had a room, so its plan is a row that no longer moves rather than
+    §3). It had a yes, so its plan is a row that no longer moves rather than
     an absence — for B, who is still on it; the organiser left it, and has no
     row to be history."""
 
@@ -497,8 +462,8 @@ async def test_a_court_that_ended_after_a_yes_is_history_and_still_listed(
 async def test_a_singles_court_lists_its_plan_as_before_addressed_by_the_challenge(
     client, session_factory, candidate_source
 ):
-    """Singles: the one yes completes the court, so the room opens with its
-    game and the plan is whole from birth — anchored on ``planned_at``, lockable
+    """Singles: the one yes completes the court, so the game exists at once
+    and the plan is whole from birth — anchored on ``planned_at``, lockable
     once the three slots are set, keyed by the challenge the game carries."""
 
     sender = await world.a_searcher(client, "juno", sport=Sport.TENNIS)
@@ -543,8 +508,8 @@ async def test_a_singles_court_lists_its_plan_as_before_addressed_by_the_challen
 async def test_a_mutual_interest_opening_lists_its_plan_as_before(
     client, session_factory, candidate_source
 ):
-    """The mutual-born singles is ``ON`` the instant it exists, so its room
-    opens with its game and its plan is whole from birth, addressed by the
+    """The mutual-born singles is ``ON`` the instant it exists, so its game
+    exists at once and its plan is whole from birth, addressed by the
     challenge the second yes minted (``docs/adr/0154``)."""
 
     one = await world.a_searcher(client, "juno", sport=Sport.TENNIS)
@@ -694,8 +659,7 @@ async def test_any_member_may_fill_or_change_any_slot(
 async def test_writing_the_value_already_there_answers_two_hundred(
     client, session_factory, candidate_source, searcher
 ):
-    """``docs/adr/0148`` §8 — and it records nothing, which the conversation
-    below is what actually proves."""
+    """``docs/adr/0148`` §8 — the same answer as the write that set it."""
 
     people, _, challenge_id = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
@@ -714,75 +678,6 @@ async def test_writing_the_value_already_there_answers_two_hundred(
 
     assert once.status_code == again.status_code == 200
     assert once.json() == again.json()
-
-
-# ---------------------------------------------------------------------------
-# The three codes reach the room
-# ---------------------------------------------------------------------------
-
-
-async def test_each_slot_writes_one_line_into_the_conversation(
-    client, session_factory, candidate_source, searcher
-):
-    """``the-words.md`` §23 — three codes, each carrying who and what.
-
-    **Through the outbox, by a context that does not know the room exists.** The
-    plan publishes; the conversation subscribes; and the value on the line is the
-    one thing membership could never supply.
-    """
-
-    people, game, challenge_id = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
-    day = _a_plannable_day(game)
-
-    # **Delivered after each write**, because the outbox orders on a transaction
-    # start time and this suite runs against SQLite, whose ``CURRENT_TIMESTAMP``
-    # has one-second granularity — so three requests inside one second are
-    # ordered by a minted uuid. That is a property of the harness rather than of
-    # the queue (``docs/adr/0097``), and draining between writes is also what an
-    # API process actually does.
-    for slot, body in (
-        ("place", {"place": "Zabłocie Sport"}),
-        ("day", {"day": day}),
-        ("hour", {"hour": "18:00"}),
-    ):
-        written = await _put(client, searcher["token"], challenge_id, slot, body)
-        assert written.status_code == 200, written.text
-        await world.deliver_the_outbox(session_factory)
-
-    lines = await _system_lines(client, people["ana"]["token"])
-
-    assert [(one["code"], one["values"]["value"]) for one in lines[-3:]] == [
-        ("PLACE_RECORDED", "Zabłocie Sport"),
-        ("DAY_RECORDED", day),
-        ("HOUR_RECORDED", "18:00"),
-    ]
-    assert {one["actor_id"] for one in lines[-3:]} == {str(searcher["id"])}
-
-
-async def test_a_repeat_writes_no_second_line(
-    client, session_factory, candidate_source, searcher
-):
-    """The idempotency that matters is the one a person can see. Without it the
-    room fills with *Tomek set the place* three times over."""
-
-    people, _, challenge_id = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
-
-    for _ in range(3):
-        await _put(
-            client,
-            searcher["token"],
-            challenge_id,
-            "place",
-            {"place": "Zabłocie Sport"},
-        )
-    await world.deliver_the_outbox(session_factory)
-    lines = await _system_lines(client, people["ana"]["token"])
-
-    assert [one["code"] for one in lines].count("PLACE_RECORDED") == 1
 
 
 # ---------------------------------------------------------------------------
@@ -1141,28 +1036,6 @@ async def test_an_incomplete_plan_refuses_the_lock(
     assert (await _plans(client, searcher["token"]))[0]["locked_at"] is None
 
 
-async def test_the_lock_writes_the_one_plan_line_that_carries_no_value(
-    client, session_factory, candidate_source, searcher
-):
-    """``the-words.md`` §23 — ``{name} locked the plan``, filled from membership
-    like every other line. The three slots are the value and the room already has
-    a line for each of them."""
-
-    people, _, challenge_id = await _a_complete_plan(
-        client, session_factory, candidate_source, searcher
-    )
-
-    locked = await _lock(client, challenge_id, people["bo"]["token"])
-    assert locked.status_code == 200, locked.text
-    await world.deliver_the_outbox(session_factory)
-
-    lines = await _system_lines(client, searcher["token"])
-
-    assert lines[-1]["code"] == "PLAN_LOCKED"
-    assert lines[-1]["actor_id"] == str(people["bo"]["id"])
-    assert lines[-1]["values"] == {}
-
-
 async def test_locking_an_already_locked_plan_answers_two_hundred_and_says_nothing(
     client, session_factory, candidate_source, searcher
 ):
@@ -1181,8 +1054,6 @@ async def test_locking_an_already_locked_plan_answers_two_hundred_and_says_nothi
 
     assert first.status_code == again.status_code == 200
     assert first.json()["locked_at"] == again.json()["locked_at"]
-    lines = await _system_lines(client, searcher["token"])
-    assert [one["code"] for one in lines].count("PLAN_LOCKED") == 1
 
 
 async def test_a_locked_plan_is_not_a_frozen_one(
@@ -1192,8 +1063,7 @@ async def test_a_locked_plan_is_not_a_frozen_one(
     *there is no un-agreeing to fear, only re-agreeing, and any member may do
     that at any time*.
 
-    The plan stays locked and the move writes its own line; **the line trail is
-    the friction**, as it already is for every slot change.
+    The plan stays locked, and the move is admitted as every slot change is.
     """
 
     people, _, challenge_id = await _a_complete_plan(
@@ -1210,8 +1080,6 @@ async def test_a_locked_plan_is_not_a_frozen_one(
     assert moved.status_code == 200, moved.text
     assert moved.json()["hour"] == "19:00:00"
     assert moved.json()["locked_at"] == locked.json()["locked_at"]
-    lines = await _system_lines(client, searcher["token"])
-    assert [one["code"] for one in lines[-2:]] == ["PLAN_LOCKED", "HOUR_RECORDED"]
 
 
 async def test_somebody_who_was_not_on_the_court_cannot_lock_and_is_told_nothing(
@@ -1238,7 +1106,7 @@ async def test_a_held_account_may_not_lock(
     client, session_factory, candidate_source, searcher
 ):
     """``docs/adr/0148`` §9 — **a hold refuses a lock exactly as it refuses a
-    slot write**, because a lock writes a line other people read. It refuses no
+    slot write**, because a lock is a write other people read. It refuses no
     read: the plan is still there to look at."""
 
     _, _, challenge_id = await _a_complete_plan(

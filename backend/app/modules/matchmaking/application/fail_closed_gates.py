@@ -3,11 +3,14 @@
 ``docs/adr/0095`` reaches **every surface that shows one player to another**, and
 there is now more than one: a search records an answer and re-verifies it on the
 way back out, and a player record is opened about somebody the platform has
-already introduced. Both have to run the *same* four gates — a block in either
-direction, an account hold, an account state that may not be shown, and the
-mutual gender preference — and the second copy of a safety gate is the defect the
-whole fail-closed rule exists to prevent. So they are one collaborator, called
-twice, rather than a private step inside whichever use case needed them first.
+already introduced. The search runs all four — a block in either direction, an
+account hold, an account state that may not be shown, and the mutual gender
+preference. The record runs the three about accounts and no preference (#575):
+it opens on a court shared, a group shared or a group run, and binds no index.
+The second copy of a safety gate is the defect the whole fail-closed rule exists
+to prevent, so the three are ``AccountGates``, a collaborator of their own, and
+the four are those three and the preference — never a private step inside
+whichever use case needed them first.
 
 **It answers about subjects, and the only thing it can say about the reader is
 that it cannot answer at all.** The reader appears in the question because three
@@ -23,12 +26,10 @@ reads a different direction of the same port.
 
 **The sport is an argument, and it is the partition's and not the reader's.**
 The other half of the gender gate is read off the candidate index, which is
-keyed by sport, so the caller has to say which container the row is read from. A
-search answers *the sport it ran on*; a record opened from a disclosure answers
-*the sport that disclosure happened in*, which is not necessarily the sport the
-sheet is about. Getting that wrong is not a stale answer but a refusal: a subject
-with no row in the partition asked about is a gate that **cannot be evaluated**,
-and a gate that cannot be evaluated excludes.
+keyed by sport, so the caller has to say which container the row is read from: a
+search answers *the sport it ran on*. A subject with no row in the partition
+asked about is a gate that **cannot be evaluated**, and a gate that cannot be
+evaluated excludes.
 
 **Every read is a set read over the whole list**, never one query per row — the
 same shape a search uses, for the same reason — and the index container is bound
@@ -67,10 +68,59 @@ from app.modules.player_profile.domain.ports import PlayerProfileRepository
 
 
 @final
+class AccountGates:
+    """The three gates about **accounts** — a block in either direction, a
+    hold, an account that may not be shown — and nothing that reads a
+    partition.
+
+    The three ``FailClosedGates`` asks beside the gender preference, as a
+    collaborator of their own, because one surface asks them **without** the
+    preference: the player record, which opens on a court shared, a group
+    shared or a group run (#575) and binds no candidate index to do it. One
+    class, so neither caller holds a second spelling of a gate.
+    """
+
+    def __init__(
+        self,
+        *,
+        blocks: BlockQuery,
+        holds: AccountHoldQuery,
+        account_status: AccountStatusQuery,
+    ) -> None:
+        self._blocks = blocks
+        self._holds = holds
+        self._account_status = account_status
+
+    async def withheld(
+        self, *, reader_id: UUID, subject_ids: Collection[UUID]
+    ) -> frozenset[UUID]:
+        """Which of these subjects the three withhold from this reader.
+
+        Bounded by ``subject_ids``, for ``withheld_among``'s reason: the block
+        read answers with the reader's **whole** exclusion list, and handing it
+        back unbounded would make the return value two things at once. Nobody
+        to ask about costs no outward read at all.
+        """
+
+        subjects = tuple(subject_ids)
+        if not subjects:
+            return frozenset()
+        blocked = await live_block_set(self._blocks, reader_id)
+        held = await read_demand(
+            AccountHoldQuery, lambda: self._holds.held_among(subjects)
+        )
+        unshowable = await read_demand(
+            AccountStatusQuery,
+            lambda: self._account_status.may_not_be_shown(subjects),
+        )
+        return frozenset(blocked | held | unshowable) & frozenset(subjects)
+
+
+@final
 class FailClosedGates:
-    """The four, asked about a reader and a set of subjects in one partition —
-    or the three about accounts, for the one reader a preference does not
-    reach."""
+    """The four, asked about a reader and a set of subjects in one partition:
+    the three about accounts, and the mutual gender preference read off the
+    candidate index."""
 
     def __init__(
         self,
@@ -83,9 +133,9 @@ class FailClosedGates:
     ) -> None:
         self._profiles = profiles
         self._candidates = candidates
-        self._blocks = blocks
-        self._holds = holds
-        self._account_status = account_status
+        self._accounts = AccountGates(
+            blocks=blocks, holds=holds, account_status=account_status
+        )
 
     async def withheld_among(
         self,
@@ -112,47 +162,13 @@ class FailClosedGates:
         subjects = tuple(subject_ids)
         if not subjects:
             return frozenset()
-        withheld = await self.withheld_regardless_of_preference(
+        withheld = await self._accounts.withheld(
             reader_id=reader_id, subject_ids=subjects
         )
         gendered = await self._gender_refuses(
             reader_id=reader_id, subjects=subjects, sport=sport
         )
         return withheld | (gendered & frozenset(subjects))
-
-    async def withheld_regardless_of_preference(
-        self, *, reader_id: UUID, subject_ids: Collection[UUID]
-    ) -> frozenset[UUID]:
-        """Which of these subjects the three gates about **accounts** withhold —
-        a block in either direction, a hold, an account that may not be shown —
-        with the mutual gender preference **not asked**.
-
-        For the one reader a subject's preference does not reach: whoever runs
-        a group the subject is in (``docs/adr/0159``'s amendment of 2026-10-02).
-        A preference says who a player is willing to be **matched** with, and
-        running their group is not that — the Administrator already reads
-        every member's face and Levels on their own page and lets them in. So
-        no profile is loaded and no container is bound, which is also what lets
-        an Administrator who has never played, and so has no gender to read a
-        preference against, be answered at all.
-
-        The three are the same three ``withheld_among`` asks, in the same order
-        — it is composed from this — so neither caller holds a second spelling
-        of a gate. The answer is bounded by ``subject_ids`` for the same reason.
-        """
-
-        subjects = tuple(subject_ids)
-        if not subjects:
-            return frozenset()
-        blocked = await live_block_set(self._blocks, reader_id)
-        held = await read_demand(
-            AccountHoldQuery, lambda: self._holds.held_among(subjects)
-        )
-        unshowable = await read_demand(
-            AccountStatusQuery,
-            lambda: self._account_status.may_not_be_shown(subjects),
-        )
-        return frozenset(blocked | held | unshowable) & frozenset(subjects)
 
     async def _gender_refuses(
         self, *, reader_id: UUID, subjects: tuple[UUID, ...], sport: Sport

@@ -28,14 +28,12 @@ is the plan's own id (``docs/adr/0164`` §1) — and the Plan's adapter signs it
 the consumer contracts its own demand, which is the rule ``SeatableCourt``
 states from the other side.
 
-**A row carries a builder over the two seams a suite supplies for itself**, on
-``challenge_demands.py``'s shape and for its reason: the pairing is recomputed
-through the whole scoring pipeline, so what it needs beyond a session is the
-process's candidate index and the exposure ledger behind Redis — and **no test
-in this repository needs Redis running**. The builder funnels into
-``build_game_court_pairing_over``, which is the same assembly the route's own
-builder delegates to, so the suite exercises what ships rather than a second
-construction of it.
+**A row carries a builder over the seams a suite supplies for itself**, on
+``challenge_demands.py``'s shape. None of these three needs more than the
+session now: the pairing is read side against side from the people's Levels
+(#575), so it no longer asks for the candidate index or the ledger behind Redis,
+and each builder is the one the route's own dependency calls — the suite
+exercises what ships rather than a second construction of it.
 
 **A port with nothing registered is a red build**, asserted in the suite against
 ``GAME_DEMANDS``, because a port added in a hurry would otherwise look contracted
@@ -50,14 +48,8 @@ from app.bootstrap.challenge_demands import PairingSeams, RegisteredPairing
 from app.bootstrap.composition import (
     build_agreed_moment,
     build_club_check_ins,
-    build_clock,
-    build_court_pairing_workbench,
-    build_domain_event_store,
-    build_event_publisher,
-    build_game_court_pairing_over,
-    build_unit_of_work,
+    build_game_court_pairing,
 )
-from app.core.config import get_settings
 from app.modules.games.domain.ports import AgreedMoment, ClubCheckIns, CourtPairing
 
 P = TypeVar("P")
@@ -72,26 +64,11 @@ GAME_IMPLEMENTATIONS: tuple[RegisteredPairing, ...] = (
     RegisteredPairing(
         port=CourtPairing,
         name="GamesCourtPairing",
-        build=lambda seams: build_game_court_pairing_over(
-            session=seams.session,
-            workbench=build_court_pairing_workbench(
-                session=seams.session,
-                clock=build_clock(),
-                unit_of_work=build_unit_of_work(seams.session),
-                event_store=build_domain_event_store(seams.session),
-                events=build_event_publisher(seams.session),
-                settings=get_settings(),
-                exposure=seams.exposure,
-                candidates=seams.candidates,
-            ),
-        ),
+        build=lambda seams: build_game_court_pairing(seams.session),
     ),
     RegisteredPairing(
         port=AgreedMoment,
         name="PlansAgreedMoment",
-        # Over the session alone; the two seams the pairing needs are not
-        # this port's, and the builder ignores them rather than the row taking a
-        # second shape.
         build=lambda seams: build_agreed_moment(seams.session),
     ),
     RegisteredPairing(

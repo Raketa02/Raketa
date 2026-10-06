@@ -1,19 +1,17 @@
 """``PlayedCourt``, answered by the ``games`` context.
 
-**The other half of *one rule read against two records*.** A game's line-up is
-frozen until somebody leaves it (``docs/adr/0162``) and moves only as
-``challenges`` tells it, so this is the record membership is read from once a
-line-up has completed — read live, so a departure drops its actor and a re-seat
-admits the newcomer — and it is asked only about rooms whose ``game_id`` is set,
-which means the two records never both answer about one room.
+**The record membership is read from.** A room is opened only by a booked game
+(#575), and the game's line-up moves only as somebody leaves it or a rescue
+takes the seat (``docs/adr/0162``) — read live, so a departure drops its actor
+and a re-seat admits the newcomer.
 
-**It reads through ``GameRepository``**, on the argument
-``challenges/infrastructure/games_settled_game.py`` already makes for the same
-arrow: the aggregate is where the line-up is, and a second query port declaring
-the same read would be a second place for *who was on this court* to be true.
+**It reads through ``GameRepository`` and ``GameDirectory``**, on the argument
+the other adapters over ``games`` already make for the same arrow: the
+aggregate is where the line-up is, and a second query port declaring the same
+read would be a second place for *who is on this court* to be true.
 
 **What crosses is the players and not the sides.** A room draws faces; which side
-somebody was on is a fact about a game, and a caller given it would eventually act
+somebody is on is a fact about a game, and a caller given it would eventually act
 on it.
 """
 
@@ -27,15 +25,15 @@ from app.modules.games.domain.ports import GameDirectory, GameRepository
 
 @final
 class GamesPlayedCourt:
-    """*Who was on the court of this game?*"""
+    """*Who is on the court of this game?*"""
 
     def __init__(self, games: GameRepository, directory: GameDirectory) -> None:
         self._games = games
         self._directory = directory
 
-    async def challenges_played_by(self, player_id: UUID) -> frozenset[UUID]:
-        """Read through ``playing``, the game list's own read: each game keeps
-        the challenge it was opened from."""
+    async def bookings_played_by(self, player_id: UUID) -> frozenset[UUID]:
+        """Read through ``playing``, the game list's own read: each booked game
+        keeps the booking it was opened from as the arrangement it names."""
 
         return frozenset(
             game.challenge_id for game in await self._directory.playing(player_id)
@@ -51,16 +49,3 @@ class GamesPlayedCourt:
                 continue
             line_ups[game_id] = game.line_up.players
         return line_ups
-
-    async def game_of(self, challenge_id: UUID) -> UUID | None:
-        """Read through ``for_challenge``, which is the join this already is.
-
-        That method was built to make the game's opening idempotent inside the
-        accept's own transaction — *has this challenge already opened a game* —
-        and this is the same question asked a poll later. A second read declaring
-        the same join would be a second place for *one arrangement is one game*
-        to be true.
-        """
-
-        game = await self._games.for_challenge(challenge_id)
-        return None if game is None else game.game_id

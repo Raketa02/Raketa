@@ -171,9 +171,7 @@ class Admission:
         self.verdict = verdict
         self.asked: list[tuple[UUID, UUID]] = []
 
-    async def admits(
-        self, *, reader_id: UUID, subject_id: UUID, now: Instant
-    ) -> bool:
+    async def admits(self, *, reader_id: UUID, subject_id: UUID) -> bool:
         self.asked.append((reader_id, subject_id))
         return self.verdict
 
@@ -318,8 +316,8 @@ async def test_a_reader_whose_own_identity_cannot_be_read_is_refused_alike():
 
 async def test_the_sport_asked_for_reaches_the_sheet_and_never_the_admission():
     """**Two questions, and a client may only influence one of them.** What the
-    sheet is about is the reader's arrival context; who may be seen is decided in
-    the partitions the platform already showed them in."""
+    sheet is about is the reader's arrival context; who may be seen is decided by
+    what the platform already showed them."""
 
     admission = Admission(True)
     form = Form()

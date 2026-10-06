@@ -645,7 +645,7 @@ async def test_the_organiser_removes_a_challenge_nobody_has_answered(
     `WITHDRAWN`, with every seat exactly as it was — three questions still on
     the court with their deadlines — and the invitees are told the same: the
     row reads `WITHDRAWN`, the detail draws no card, and a yes or a no meets
-    `challenge_is_over` rather than opening a room for a court that is over."""
+    `challenge_is_over` rather than seating anybody on a court that is over."""
 
     challenge_id, people = await _a_court_nobody_has_answered(
         client, session_factory, candidate_source, searcher
@@ -692,8 +692,7 @@ async def test_a_court_somebody_has_joined_is_nobodys_to_remove_for_the_others(
 ):
     """``docs/adr/0165`` §4 — B accepts and the organiser's removal is refused
     with a named code; B leaves while C and D are still deciding and the
-    organiser is alone again, so it is admitted again. The room B's yes opened
-    is destroyed in the act, though B had already left it."""
+    organiser is alone again, so it is admitted again."""
 
     challenge_id, people = await _a_court_nobody_has_answered(
         client, session_factory, candidate_source, searcher
@@ -704,11 +703,6 @@ async def test_a_court_somebody_has_joined_is_nobodys_to_remove_for_the_others(
     )
     assert accepted.status_code == 200, accepted.text
     assert accepted.json()["standing"] == "AWAITING_ANSWERS"
-    await world.deliver_the_outbox(session_factory)
-    rooms = await client.get(
-        "/api/v1/conversations", headers=world.auth(searcher["token"])
-    )
-    assert len(rooms.json()["conversations"]) == 1, rooms.text
 
     refused = await _withdraw(client, searcher["token"], challenge_id)
     assert refused.status_code == 409, refused.text
@@ -729,11 +723,6 @@ async def test_a_court_somebody_has_joined_is_nobodys_to_remove_for_the_others(
     seats = {seat["player_id"]: seat for seat in withdrawn.json()["seats"]}
     assert seats[str(people["ana"]["id"])]["answer"] == "LEFT"
     assert seats[str(people["bo"]["id"])]["answer"] is None
-    await world.deliver_the_outbox(session_factory)
-    rooms = await client.get(
-        "/api/v1/conversations", headers=world.auth(searcher["token"])
-    )
-    assert rooms.json()["conversations"] == []
 
 
 async def test_a_withdrawn_challenge_keeps_its_row_and_says_what_it_is(

@@ -1,20 +1,17 @@
 """When a room stops existing, and what it is anchored on.
 
-``docs/adr/0153``, with §3 superseded by ``docs/adr/0164`` §6. Every test here
-names the anchor it is defending, because the whole record is about *which fact
-the instant is read off* rather than about the number: an end dated from the
-plan's agreed point would be one two people could walk forward by tapping a chip,
-and an end stored in a column would be a second copy of the fact that decides
+``docs/adr/0153``. Every test here names the anchor it is defending, because the
+whole record is about *which fact the instant is read off* rather than about the
+number: an end stored in a column would be a second copy of the fact that decides
 whether a room exists at all.
 
-**There is no departure anchor, and half of this file is that absence.** A room
-without a game has no clock of its own: it lives as long as its challenge, which
-is read through a port and asserted one seam out
-(``test_a_room_lives_as_long_as_its_challenge.py``).
+**A room is about a booked game, and a room without one has ended** (#575). Only
+a booked game opens a room, and it is born knowing the game; a room with no game
+is one a challenge opened, and nothing it could still be waiting for is read.
 
-**Nothing here reads a clock.** The derivation takes the room and answers an
-instant; ``ended_by_its_game`` takes the instant as well. That is what lets a
-test say *a game played on day 1 ends its room on day 3* without moving
+**Nothing here reads a clock.** ``game_ends_it_at`` takes the room and answers an
+instant; ``has_ended`` and ``ended_among`` take the instant as well. That is what
+lets a test say *the room goes a day after the game's hour* without moving
 anything.
 """
 
@@ -23,22 +20,17 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-import pytest
-
 from app.kernel import Sport, instant
 from app.modules.conversations.domain.conversation import Conversation
-from app.modules.conversations.domain.entries import (
-    COUNT,
-    DEPARTURE,
-    SeatDeparture,
-    SystemLineCode,
-)
+from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.conversations.domain.lifetime import (
     CONVERSATION_GRACE,
-    ended_by_its_game,
+    ended_among,
     game_ends_it_at,
+    has_ended,
 )
 from app.modules.games.domain.windows import (
+    A_BOOKED_GAME,
     ENTRY_GRACE,
     PLAN_HORIZON,
     entry_closes_at,
@@ -54,28 +46,27 @@ def _later(**kwargs) -> "datetime":
 def _opened() -> Conversation:
     return Conversation.opened(
         conversation_id=uuid4(),
-        challenge_id=uuid4(),
+        booking_id=uuid4(),
         sport=Sport.PADEL,
         occurred_at=NOW,
     )
 
 
-def _line(room: Conversation, code: SystemLineCode, *, at, values=None) -> None:
+def _booked(*, hour, booked_at=NOW) -> Conversation:
+    """A room as a booked game opens it: born about the game and its hour."""
+
+    room = _opened()
+    room.note_game(game_id=uuid4(), occurred_at=booked_at, starts_at=hour)
+    return room
+
+
+def _played(room: Conversation, *, at) -> None:
     room.record_line(
-        code=code,
+        code=SystemLineCode.GAME_PLAYED,
         actor_id=uuid4(),
-        values=values or {},
+        values={},
         source_event_id=uuid4(),
         occurred_at=at,
-    )
-
-
-def _departure(room: Conversation, *, at) -> None:
-    _line(
-        room,
-        SystemLineCode.SEAT_LEFT,
-        at=at,
-        values={DEPARTURE: SeatDeparture.DECLINED.value},
     )
 
 
@@ -100,19 +91,31 @@ def test_the_grace_is_this_context_s_own_and_not_a_games_window():
 # -- the game anchor -------------------------------------------------------
 
 
-def test_a_room_whose_line_up_completed_ends_when_entry_closes():
-    """``docs/adr/0153`` §2 — the instant *we played* stops being sayable."""
+def test_a_booked_game_s_room_ends_when_entry_closes_measured_from_its_hour():
+    """``docs/adr/0153`` §2 — the instant *we played* stops being sayable, and a
+    booked game is played at its hour (#541)."""
 
-    room = _opened()
-    room.note_game(game_id=uuid4(), occurred_at=_later(hours=1))
+    hour = _later(days=2)
+    room = _booked(hour=hour)
 
-    assert game_ends_it_at(room) == entry_closes_at(_later(hours=1))
+    assert game_ends_it_at(room) == entry_closes_at(NOW, starts_at=hour)
+    assert game_ends_it_at(room) == instant(hour + A_BOOKED_GAME + ENTRY_GRACE)
 
 
-def test_the_anchor_is_the_moment_the_game_was_planned_and_never_the_room_s_own():
-    """``docs/adr/0153`` §2 — ``Game.planned_at`` **is** ``GamePlanned.occurred_at``,
-    and the room is already told it. A room opened on a first acceptance days
-    before the line-up completed must not date its end from the opening."""
+def test_a_booking_a_fortnight_ahead_does_not_end_its_room_before_the_game():
+    """A week from the booking would end the room before anybody played."""
+
+    hour = _later(days=14)
+    room = _booked(hour=hour)
+
+    assert not has_ended(room, now=instant(NOW + PLAN_HORIZON + ENTRY_GRACE))
+    assert not has_ended(room, now=hour)
+    assert has_ended(room, now=instant(hour + A_BOOKED_GAME + ENTRY_GRACE))
+
+
+def test_a_game_with_no_hour_has_its_week_from_the_moment_it_was_planned():
+    """A room told its game without an hour is one stored before #541; its end
+    is still the game's entry window, a week from ``planned_at``."""
 
     room = _opened()
     planned = _later(days=3)
@@ -122,20 +125,17 @@ def test_the_anchor_is_the_moment_the_game_was_planned_and_never_the_room_s_own(
 
 
 def test_the_end_never_moves_later_once_the_game_is_known():
-    """``docs/adr/0153`` §2 — ADR-0145 §5's refusal, put to a second job: the end
-    is fixed at birth, and messages and slot lines afterwards do not move it."""
+    """``docs/adr/0153`` §2 — the end is fixed at birth, and what is said in the
+    room afterwards does not move it."""
 
-    room = _opened()
-    planned = _later(hours=1)
-    room.note_game(game_id=uuid4(), occurred_at=planned)
+    room = _booked(hour=_later(days=1))
     fixed = game_ends_it_at(room)
 
-    _line(room, SystemLineCode.DAY_RECORDED, at=_later(days=2), values={"value": "x"})
     room.say(
         author_id=uuid4(),
         client_message_id=uuid4(),
         text="still on?",
-        occurred_at=_later(days=4),
+        occurred_at=_later(days=1, hours=2),
     )
 
     assert game_ends_it_at(room) == fixed
@@ -146,129 +146,82 @@ def test_the_end_never_moves_later_once_the_game_is_known():
 
 def test_a_game_played_on_day_one_ends_its_room_on_day_three():
     """``docs/adr/0153`` §5 — the instant moves as the room is told things, which
-    is why it is derived and never stored."""
+    is why it is derived and never stored. Shown on a game with no hour, whose
+    week leaves room for the grace to come first."""
 
     room = _opened()
     room.note_game(game_id=uuid4(), occurred_at=NOW)
     played = _later(days=1)
-    _line(room, SystemLineCode.GAME_PLAYED, at=played)
+    _played(room, at=played)
 
     assert game_ends_it_at(room) == instant(played + CONVERSATION_GRACE)
     assert game_ends_it_at(room) < entry_closes_at(NOW)
 
 
 def test_the_earliest_anchor_wins_and_entry_closing_can_be_it():
-    """A game played on the very last day it could be leaves less than a grace
-    before entry closes, and the room goes then."""
+    """A booked game played at its hour leaves less than a grace before entry
+    closes, and the room goes then."""
+
+    hour = _later(days=1)
+    room = _booked(hour=hour)
+    _played(room, at=instant(hour + A_BOOKED_GAME))
+
+    assert game_ends_it_at(room) == entry_closes_at(NOW, starts_at=hour)
+
+
+# -- the room without a game -----------------------------------------------
+
+
+def test_a_room_with_no_game_has_ended():
+    """Only a booked game opens a room, and it is born about it. A room with no
+    game is over from the moment it is read — every route answers
+    ``conversation_not_found`` and the sweep destroys it."""
 
     room = _opened()
-    room.note_game(game_id=uuid4(), occurred_at=NOW)
-    _line(room, SystemLineCode.GAME_PLAYED, at=_later(days=7, hours=23))
-
-    assert game_ends_it_at(room) == entry_closes_at(NOW)
-
-
-# -- the room without a game ------------------------------------------------
-
-
-def test_a_room_without_a_game_has_no_end_here_whatever_it_was_told():
-    """``docs/adr/0164`` §6 — there is no departure anchor. A room without a
-    game lives exactly as long as its challenge, which is a fact about somebody
-    else's record and not this stream's; so a departure line, a year on, is not
-    an end."""
-
-    room = _opened()
-    _departure(room, at=_later(hours=2))
 
     assert game_ends_it_at(room) is None
-    assert not ended_by_its_game(room, now=_later(days=365))
-
-
-@pytest.mark.parametrize(
-    "order",
-    [
-        pytest.param(
-            (SystemLineCode.SEAT_ACCEPTED, SystemLineCode.SEAT_LEFT), id="yes-then-no"
-        ),
-        pytest.param(
-            (SystemLineCode.SEAT_LEFT, SystemLineCode.SEAT_ACCEPTED), id="no-then-yes"
-        ),
-    ],
-)
-def test_the_order_the_answers_arrived_in_decides_nothing(order):
-    """The shelf read the **last** membership line, so *B yes → D yes → C no*
-    closed a room two days later while three people were still in it, and
-    *B yes → C no → D yes* never did. Neither order is an anchor now."""
-
-    room = _opened()
-    for hours, code in enumerate(order, start=1):
-        if code is SystemLineCode.SEAT_LEFT:
-            _departure(room, at=_later(hours=hours))
-        else:
-            _line(room, code, at=_later(hours=hours))
-
-    assert game_ends_it_at(room) is None
-
-
-def test_a_fill_after_a_departure_is_the_same_room_with_no_clock_either():
-    """A fill seats somebody new into the room that was already there
-    (``docs/adr/0150``, ``docs/adr/0164`` §6) — and the room it continues has
-    no end of its own to move."""
-
-    room = _opened()
-    _departure(room, at=_later(hours=2))
-    _line(room, SystemLineCode.SEATS_INVITED, at=_later(hours=3), values={COUNT: "1"})
-
-    assert game_ends_it_at(room) is None
-
-
-def test_a_game_is_the_first_anchor_a_room_gets_and_a_departure_before_it_is_not_one():
-    """A departure reopens one seat and disturbs nothing else, so a line-up that
-    completed afterwards is the arrangement having concluded **into a game** —
-    and the game's own anchor is the one that answers."""
-
-    room = _opened()
-    _departure(room, at=_later(hours=2))
-    room.note_game(game_id=uuid4(), occurred_at=_later(hours=5))
-
-    assert game_ends_it_at(room) == entry_closes_at(_later(hours=5))
-
-
-def test_a_room_still_arranging_has_no_end_and_is_not_given_a_clock_of_its_own():
-    """Its end is its challenge's end, read one seam out — and a withdrawal
-    destroys the room in the same act rather than dating it."""
-
-    room = _opened()
-    _line(room, SystemLineCode.SEAT_ACCEPTED, at=_later(hours=1))
-
-    assert game_ends_it_at(room) is None
-    assert not ended_by_its_game(room, now=_later(days=365))
+    assert has_ended(room, now=NOW)
+    assert has_ended(room, now=room.opened_at)
 
 
 # -- the boundary ----------------------------------------------------------
 
 
-def test_a_room_is_over_at_its_end_and_not_a_moment_after():
+def test_a_room_is_over_at_its_end_and_not_a_moment_before():
     """The same ``now >= closes_at`` boundary every window in this repository
     uses, so a reader does not have to remember which way one of them leans."""
 
-    room = _opened()
-    played = _later(hours=1)
-    room.note_game(game_id=uuid4(), occurred_at=NOW)
-    _line(room, SystemLineCode.GAME_PLAYED, at=played)
+    room = _booked(hour=_later(days=1))
+    end = game_ends_it_at(room)
 
-    end = instant(played + CONVERSATION_GRACE)
-    assert not ended_by_its_game(room, now=instant(end - timedelta(seconds=1)))
-    assert ended_by_its_game(room, now=end)
+    assert not has_ended(room, now=instant(end - timedelta(seconds=1)))
+    assert has_ended(room, now=end)
 
 
 def test_the_end_survives_a_replay_because_it_is_derived_from_the_stream():
     """``docs/adr/0153`` §5 — there is no ``ends_at`` column, so a room folded
     back from its own events answers identically."""
 
-    room = _opened()
-    room.note_game(game_id=uuid4(), occurred_at=_later(hours=1))
-    _line(room, SystemLineCode.GAME_PLAYED, at=_later(days=1))
+    room = _booked(hour=_later(days=1))
+    _played(room, at=_later(days=1, hours=1))
     replayed = Conversation.from_history(room.pull_events())
 
     assert game_ends_it_at(replayed) == game_ends_it_at(room)
+
+
+# -- a whole list ------------------------------------------------------------
+
+
+def test_ended_among_names_exactly_the_rooms_that_are_over():
+    """The list drops, and the sweep destroys, what this names — one fold, so the
+    two cannot come to two answers about one room."""
+
+    over = _booked(hour=_later(days=1))
+    standing = _booked(hour=_later(days=3))
+    gameless = _opened()
+    now = _later(days=2, hours=2)
+
+    assert ended_among((over, standing, gameless), now=now) == frozenset(
+        {over.conversation_id, gameless.conversation_id}
+    )
+    assert ended_among((), now=now) == frozenset()

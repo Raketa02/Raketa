@@ -48,7 +48,7 @@ class OpenedConversation:
     """A room's header and its newest page, folded together."""
 
     conversation_id: UUID
-    challenge_id: UUID
+    booking_id: UUID
     game_id: UUID | None
     sport: Sport
     members: tuple[MemberFace, ...]
@@ -89,7 +89,7 @@ class ReadConversation:
         faces = await self._faces.faces_of(named)
         return now, OpenedConversation(
             conversation_id=room.conversation_id,
-            challenge_id=room.challenge_id,
+            booking_id=room.booking_id,
             game_id=room.game_id,
             sport=room.sport,
             members=faces_in(members, faces),

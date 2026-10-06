@@ -3346,7 +3346,7 @@
           "conversations"
         ],
         "summary": "Your conversations",
-        "description": "**A room opens on the first acceptance and grows with each one after it.** A doubles court whose line-up is still filling draws the members it has, not the court it will be.\n\n**Ordered by the last entry, newest first.** A room where nothing has happened yet carries `last_entry: null` and orders on the moment it opened \u2014 the opening writes no line, so there is genuinely nothing there yet.\n\n**No state pill and no standing.** The last entry is what a pill would have said; a standing beside it would be a second place for one fact to be true. The state-keyed surfaces are the challenge screen and the game screen.\n\n**Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over \u2014 deliberately the opposite of `GET /challenges`, which keeps ended challenges and says so. The difference is the difference between a record and a room.\n\n**This is one of two reads for the Chats tab, and they are not merged.** `GET /challenges` is the other. Two sections, two contexts, two queries, two caches.",
+        "description": "**A room is opened by a booked game**, filed under its booking, and its members are the game's court as it stands \u2014 somebody who left is not drawn, and a rescue who took the seat is.\n\n**Ordered by the last entry, newest first.** A room where nothing has happened yet carries `last_entry: null` and orders on the moment it opened \u2014 the opening writes no line, so there is genuinely nothing there yet.\n\n**No state pill and no standing.** The last entry is what a pill would have said; a standing beside it would be a second place for one fact to be true. The state-keyed surfaces are Home and the game's details.\n\n**Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over. The difference is the difference between a record and a room.\n\n**A game's details find its chat here**, by the row whose `game_id` is the game's.",
         "operationId": "read_conversations_api_v1_conversations_get",
         "responses": {
           "200": {
@@ -3373,7 +3373,7 @@
           "conversations"
         ],
         "summary": "One conversation",
-        "description": "**The header and the newest page in one response**, folded against one instant, so the members you are holding and the entries you are drawing can never disagree about who is in the room.\n\n**Open at the newest entry and page backward** from `entries[0].seq` through `/entries`. You have the whole conversation when you hold `seq` 1 \u2014 there is no `has_more`, because a gapless sequence makes `seq` 1 the beginning.\n\n**Nothing here is re-evaluated against you.** The safety gates ran when the challenge was minted; a read that re-ran them would tell you something changed about somebody else.\n\n**`people` is everybody this response names and `members` is the roster.** Fill every `{name}` and every author label from `people`: the actor of a `SEAT_LEFT` line is by definition no longer a member, and a client naming off the roster alone drew *? said no*.",
+        "description": "**The header and the newest page in one response**, folded against one instant, so the members you are holding and the entries you are drawing can never disagree about who is in the room.\n\n**Open at the newest entry and page backward** from `entries[0].seq` through `/entries`. You have the whole conversation when you hold `seq` 1 \u2014 there is no `has_more`, because a gapless sequence makes `seq` 1 the beginning.\n\n**Nothing here is re-evaluated against you.** The safety gates ran when the game was booked; a read that re-ran them would tell you something changed about somebody else.\n\n**`people` is everybody this response names and `members` is the roster.** Fill every `{name}` and every author label from `people`: the author of an old message may have left the court since, and a client naming off the roster alone draws *?*.",
         "operationId": "read_conversation_api_v1_conversations__conversation_id__get",
         "security": [
           {
@@ -10376,7 +10376,7 @@
           "name"
         ],
         "title": "ConversationMemberSchema",
-        "description": "One person who has agreed to be on this court right now.\n\n**Derived from whichever record is arranging, never stored**\n(``docs/adr/0146`` \u00a77), and it **grows one acceptance at a time**: a doubles\nroom whose line-up is still filling draws the members it has, because a row\nwith four faces for a two-member room would be drawing the court rather than\nthe room.\n\n**The same four fields as a person, and a narrower claim.** Being on the\nlist is the fact; the face is `ConversationPersonSchema`'s. A member is\nalways among the response's `people` too, resolved in the same read, so the\ntwo lists cannot disagree about a current member."
+        "description": "One person on the game's court right now.\n\n**Derived from the game's line-up, never stored** (``docs/adr/0146`` \u00a77), and\nit **moves with the court**: somebody who left is not drawn, and a rescue who\ntook the seat is, the moment either commits.\n\n**The same four fields as a person, and a narrower claim.** Being on the\nlist is the fact; the face is `ConversationPersonSchema`'s. A member is\nalways among the response's `people` too, resolved in the same read, so the\ntwo lists cannot disagree about a current member."
       },
       "ConversationPersonSchema": {
         "properties": {
@@ -10416,7 +10416,7 @@
           "name"
         ],
         "title": "ConversationPersonSchema",
-        "description": "One person this response names \u2014 **a name and a face, and nothing else.**\n\nNo Level, no band, no area, no score \u2014 those are a *card*'s, and a card is\nwhat a searcher reads to decide about a game that might happen. Everybody\nhere was on this court or spoke in this room.\n\n**The shape `people` is a list of, and the shape a member has.** A member is\na person who is on the court *right now*; the person a `SEAT_LEFT` line is\nabout is not, and is still somebody the page has to name. One shape for\nboth, so a client resolves every `actor_id` and `author_id` the same way."
+        "description": "One person this response names \u2014 **a name and a face, and nothing else.**\n\nNo Level, no band, no area, no score \u2014 those are a *card*'s, and a card is\nwhat somebody reads to decide about a game that might happen. Everybody\nhere was on this court or spoke in this room.\n\n**The shape `people` is a list of, and the shape a member has.** A member is\na person who is on the court *right now*; somebody who spoke here and left\nthe court since is not, and is still somebody the page has to name. One\nshape for both, so a client resolves every `actor_id` and `author_id` the\nsame way."
       },
       "ConversationResponse": {
         "properties": {
@@ -10431,10 +10431,11 @@
             "format": "uuid",
             "title": "Conversation Id"
           },
-          "challenge_id": {
+          "booking_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Challenge Id"
+            "title": "Booking Id",
+            "description": "See `ConversationRowSchema.booking_id`."
           },
           "game_id": {
             "anyOf": [
@@ -10494,7 +10495,7 @@
         "required": [
           "read_at",
           "conversation_id",
-          "challenge_id",
+          "booking_id",
           "game_id",
           "sport",
           "members",
@@ -10512,11 +10513,11 @@
             "title": "Conversation Id",
             "description": "The room's own id"
           },
-          "challenge_id": {
+          "booking_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Challenge Id",
-            "description": "The challenge whose first acceptance opened it"
+            "title": "Booking Id",
+            "description": "The booking whose game opened it. **A room is opened only by a booked game**, so this is the booking every room is found by."
           },
           "game_id": {
             "anyOf": [
@@ -10529,11 +10530,11 @@
               }
             ],
             "title": "Game Id",
-            "description": "The game its line-up completed into, and **`null` until it does**. A room whose line-up is still filling has no game and no plan, so there is nothing for a *Details* door to open \u2014 draw no door rather than a dead one."
+            "description": "The booked game this room is about \u2014 the join a game's details make to find its chat. A booked game's room is born about it; `null` only on a room nothing opens any more, which is never served."
           },
           "sport": {
             "$ref": "#/components/schemas/Sport",
-            "description": "What they are arranging"
+            "description": "What the game is"
           },
           "members": {
             "items": {
@@ -10541,7 +10542,7 @@
             },
             "type": "array",
             "title": "Members",
-            "description": "Who has agreed to be on this court right now"
+            "description": "Who is on the game's court right now"
           },
           "people": {
             "items": {
@@ -10575,13 +10576,13 @@
               }
             ],
             "title": "Last Entry",
-            "description": "The newest thing in the room, rendered by the same two components the stream uses \u2014 never a preview string.\n\n**`null` in a room where nothing has happened yet**, which is a real state rather than an edge case: the opening writes no line, so a room whose first acceptance is its whole history has no entry at all."
+            "description": "The newest thing in the room, rendered by the same two components the stream uses \u2014 never a preview string.\n\n**`null` in a room where nothing has happened yet**, which is a real state rather than an edge case: the opening writes no line, so a room whose game was just booked has no entry at all."
           }
         },
         "type": "object",
         "required": [
           "conversation_id",
-          "challenge_id",
+          "booking_id",
           "game_id",
           "sport",
           "members",
@@ -10589,7 +10590,7 @@
           "last_entry"
         ],
         "title": "ConversationRowSchema",
-        "description": "One room, as a row in the Chats tab.\n\n**No state pill, and no standing anywhere on it** (``docs/adr/0148`` \u00a76).\nReading one would make the conversation ask `challenges` and `games` what\nthey are, which it never does \u2014 and it does not need to, because **the last\nentry is what a pill would have said.**"
+        "description": "One room, as a row in the reader's rooms.\n\n**No state pill, and no standing anywhere on it** (``docs/adr/0148`` \u00a76).\nReading one would make the conversation ask `games` what it is, which it\nnever does \u2014 and it does not need to, because **the last entry is what a\npill would have said.**"
       },
       "CourtAtStakeSchema": {
         "properties": {
@@ -19123,7 +19124,7 @@
           "code": {
             "type": "string",
             "title": "Code",
-            "description": "What happened, as a machine code the client renders a sentence from. Nine: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, **`SEAT_LEFT`**, **`GAME_PLAYED`**, the Plan's **`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and **`PLAN_LOCKED`**, and **`SIDE_FORMED`**.\n\n**`SIDE_FORMED` is the one line a room is born with, and only a doubles room** (ADR-0169 \u00a78). Two yeses that met in a doubles sport seat both people on one side with a whole side still to fill, and this says so at `seq` 1: *You two are a side. Fill the seats to find your opponents.* A singles mutual's room carries no such line. It names no actor and carries no values.\n\n**A seat leaving is one code with the answer as a value**, because *that seat is open again* is the same news each way \u2014 and a lapse is still not a decline, which is what `values.departure` keeps apart. Somebody **leaving a game they had agreed to** is the third way, since ADR-0162, and the one whose actor was a member until this very line.\n\n**A slot set and a slot moved are one code told twice**, which is the opposite rule for the opposite case: three slots are three facts, so they are three codes, and there is no value telling a first fill from a change because they are the same fact.\n\n**`PLAN_LOCKED` is the Plan's fourth and it carries no values at all.** The three slots are the value and the room already holds a line for each. It is an act rather than a slot \u2014 a complete plan is one everybody *could* agree, and this says somebody did \u2014 and there is no unlocked code, because a slot moved afterwards keeps the lock and writes its own line.\n\n**There is no *Game on* line.** Everybody having accepted is an arrangement of the seats, so a line announcing it would be a second place for a folded standing to be true. What appears instead is the plan card and membership stopping \u2014 drawn, not announced."
+            "description": "What happened, as a machine code the client renders a sentence from. A booked game's room is told one: **`GAME_PLAYED`** \u2014 somebody said the game was played. **Draw nothing for a code you do not know**: the codes rooms opened by challenges carried are no longer written (#575).\n\n**There is no *Game on* line.** The booked game is announced on Home and its details, and its room is born about it \u2014 a line saying so would be a second place for one fact to be true."
           },
           "occurred_at": {
             "type": "string",
@@ -19142,7 +19143,7 @@
               }
             ],
             "title": "Actor Id",
-            "description": "Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** \u2014 the name is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: the actor of a `SEAT_LEFT` line is by definition no longer one, and `people` is where the read put their face. `null` on `SIDE_FORMED`, which is about both people on the side and names neither."
+            "description": "Who did it, or `null`. **Render `{name}` from the `people` on the response that carried this line** \u2014 the name is never repeated here, so a corrected one fixes the whole backlog. Not from `members` alone: whoever said they played may have left the court since, and `people` is where the read put their face."
           },
           "values": {
             "additionalProperties": {
@@ -19150,7 +19151,7 @@
             },
             "type": "object",
             "title": "Values",
-            "description": "What the sentence needs beyond a name, and **nothing membership already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the three plan codes each carry `value` \u2014 the place as it was typed, the day as `YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, `GAME_PLAYED` and `SIDE_FORMED` carry nothing."
+            "description": "What the sentence needs beyond a name, and **nothing membership already says**. `GAME_PLAYED` carries nothing."
           }
         },
         "type": "object",

@@ -14,10 +14,10 @@ whole backlog for free.
 
 **And ``people`` is everybody the response names, not only the roster**
 ([#408](https://github.com/Raketa02/Raketa/issues/408)). Membership is derived
-live — the accepted seats, then the game's line-up — and a *no* is not an
-accepted seat, so the person a ``SEAT_LEFT`` line is about was never a member
-and a client that filled ``{name}`` from ``members`` alone drew *? said no — that
-seat is open again*. ``members`` is still the roster and still the gate;
+live from the game's line-up, so the author of an old message or the actor of a
+line may have left the court since, and a client that filled ``{name}`` from
+``members`` alone would draw *?* for them. ``members`` is still the roster and
+still the gate;
 ``people`` is the roster **and** every author and actor the entries name,
 resolved once. On a page it is the page's own authors and actors and nothing
 about the roster.
@@ -57,13 +57,14 @@ class ConversationPersonSchema(BaseModel):
     """One person this response names — **a name and a face, and nothing else.**
 
     No Level, no band, no area, no score — those are a *card*'s, and a card is
-    what a searcher reads to decide about a game that might happen. Everybody
+    what somebody reads to decide about a game that might happen. Everybody
     here was on this court or spoke in this room.
 
     **The shape `people` is a list of, and the shape a member has.** A member is
-    a person who is on the court *right now*; the person a `SEAT_LEFT` line is
-    about is not, and is still somebody the page has to name. One shape for
-    both, so a client resolves every `actor_id` and `author_id` the same way.
+    a person who is on the court *right now*; somebody who spoke here and left
+    the court since is not, and is still somebody the page has to name. One
+    shape for both, so a client resolves every `actor_id` and `author_id` the
+    same way.
     """
 
     player_id: UUID = Field(
@@ -103,13 +104,11 @@ class ConversationPersonSchema(BaseModel):
 
 
 class ConversationMemberSchema(ConversationPersonSchema):
-    """One person who has agreed to be on this court right now.
+    """One person on the game's court right now.
 
-    **Derived from whichever record is arranging, never stored**
-    (``docs/adr/0146`` §7), and it **grows one acceptance at a time**: a doubles
-    room whose line-up is still filling draws the members it has, because a row
-    with four faces for a two-member room would be drawing the court rather than
-    the room.
+    **Derived from the game's line-up, never stored** (``docs/adr/0146`` §7), and
+    it **moves with the court**: somebody who left is not drawn, and a rescue who
+    took the seat is, the moment either commits.
 
     **The same four fields as a person, and a narrower claim.** Being on the
     list is the fact; the face is `ConversationPersonSchema`'s. A member is
@@ -170,36 +169,13 @@ class SystemLineSchema(BaseModel):
         ...,
         description=(
             "What happened, as a machine code the client renders a sentence "
-            "from. Nine: **`SEAT_ACCEPTED`**, **`SEATS_INVITED`**, "
-            "**`SEAT_LEFT`**, **`GAME_PLAYED`**, the Plan's "
-            "**`PLACE_RECORDED`**, **`DAY_RECORDED`**, **`HOUR_RECORDED`** and "
-            "**`PLAN_LOCKED`**, and **`SIDE_FORMED`**.\n\n"
-            "**`SIDE_FORMED` is the one line a room is born with, and only a "
-            "doubles room** (ADR-0169 §8). Two yeses that met in a doubles "
-            "sport seat both people on one side with a whole side still to "
-            "fill, and this says so at `seq` 1: *You two are a side. Fill the "
-            "seats to find your opponents.* A singles mutual's room carries no "
-            "such line. It names no actor and carries no values.\n\n"
-            "**A seat leaving is one code with the answer as a value**, because "
-            "*that seat is open again* is the same news each way — and a lapse "
-            "is still not a decline, which is what `values.departure` keeps "
-            "apart. Somebody **leaving a game they had agreed to** is the third "
-            "way, since ADR-0162, and the one whose actor was a member until "
-            "this very line.\n\n"
-            "**A slot set and a slot moved are one code told twice**, which is "
-            "the opposite rule for the opposite case: three slots are three "
-            "facts, so they are three codes, and there is no value telling a "
-            "first fill from a change because they are the same fact.\n\n"
-            "**`PLAN_LOCKED` is the Plan's fourth and it carries no values at "
-            "all.** The three slots are the value and the room already holds a "
-            "line for each. It is an act rather than a slot — a complete plan is "
-            "one everybody *could* agree, and this says somebody did — and there "
-            "is no unlocked code, because a slot moved afterwards keeps the lock "
-            "and writes its own line.\n\n"
-            "**There is no *Game on* line.** Everybody having accepted is an "
-            "arrangement of the seats, so a line announcing it would be a second "
-            "place for a folded standing to be true. What appears instead is the "
-            "plan card and membership stopping — drawn, not announced."
+            "from. A booked game's room is told one: **`GAME_PLAYED`** — "
+            "somebody said the game was played. **Draw nothing for a code you "
+            "do not know**: the codes rooms opened by challenges carried are no "
+            "longer written (#575).\n\n"
+            "**There is no *Game on* line.** The booked game is announced on "
+            "Home and its details, and its room is born about it — a line "
+            "saying so would be a second place for one fact to be true."
         ),
     )
     occurred_at: datetime = Field(..., description="When it happened")
@@ -209,22 +185,15 @@ class SystemLineSchema(BaseModel):
             "Who did it, or `null`. **Render `{name}` from the `people` on the "
             "response that carried this line** — the name is never repeated "
             "here, so a corrected one fixes the whole backlog. Not from "
-            "`members` alone: the actor of a `SEAT_LEFT` line is by definition "
-            "no longer one, and `people` is where the read put their face. "
-            "`null` on `SIDE_FORMED`, which is about both people on the side "
-            "and names neither."
+            "`members` alone: whoever said they played may have left the court "
+            "since, and `people` is where the read put their face."
         ),
     )
     values: dict[str, str] = Field(
         ...,
         description=(
             "What the sentence needs beyond a name, and **nothing membership "
-            "already says**. `SEATS_INVITED` carries `count`; `SEAT_LEFT` "
-            "carries `departure`, one of `DECLINED`, `LAPSED` or `LEFT`; the "
-            "three plan "
-            "codes each carry `value` — the place as it was typed, the day as "
-            "`YYYY-MM-DD`, the hour as `HH:MM`. `SEAT_ACCEPTED`, "
-            "`GAME_PLAYED` and `SIDE_FORMED` carry nothing."
+            "already says**. `GAME_PLAYED` carries nothing."
         ),
     )
 
@@ -236,30 +205,34 @@ EntrySchema = Annotated[
 
 
 class ConversationRowSchema(BaseModel):
-    """One room, as a row in the Chats tab.
+    """One room, as a row in the reader's rooms.
 
     **No state pill, and no standing anywhere on it** (``docs/adr/0148`` §6).
-    Reading one would make the conversation ask `challenges` and `games` what
-    they are, which it never does — and it does not need to, because **the last
-    entry is what a pill would have said.**
+    Reading one would make the conversation ask `games` what it is, which it
+    never does — and it does not need to, because **the last entry is what a
+    pill would have said.**
     """
 
     conversation_id: UUID = Field(..., description="The room's own id")
-    challenge_id: UUID = Field(
-        ..., description="The challenge whose first acceptance opened it"
+    booking_id: UUID = Field(
+        ...,
+        description=(
+            "The booking whose game opened it. **A room is opened only by a "
+            "booked game**, so this is the booking every room is found by."
+        ),
     )
     game_id: UUID | None = Field(
         ...,
         description=(
-            "The game its line-up completed into, and **`null` until it does**. "
-            "A room whose line-up is still filling has no game and no plan, so "
-            "there is nothing for a *Details* door to open — draw no door rather "
-            "than a dead one."
+            "The booked game this room is about — the join a game's details "
+            "make to find its chat. A booked game's room is born about it; "
+            "`null` only on a room nothing opens any more, which is never "
+            "served."
         ),
     )
-    sport: Sport = Field(..., description="What they are arranging")
+    sport: Sport = Field(..., description="What the game is")
     members: list[ConversationMemberSchema] = Field(
-        ..., description="Who has agreed to be on this court right now"
+        ..., description="Who is on the game's court right now"
     )
     people: list[ConversationPersonSchema] = Field(
         ...,
@@ -276,8 +249,7 @@ class ConversationRowSchema(BaseModel):
             "the stream uses — never a preview string.\n\n"
             "**`null` in a room where nothing has happened yet**, which is a "
             "real state rather than an edge case: the opening writes no line, so "
-            "a room whose first acceptance is its whole history has no entry at "
-            "all."
+            "a room whose game was just booked has no entry at all."
         ),
     )
 
@@ -307,7 +279,9 @@ class ConversationResponse(BaseModel):
         ),
     )
     conversation_id: UUID
-    challenge_id: UUID
+    booking_id: UUID = Field(
+        ..., description="See `ConversationRowSchema.booking_id`."
+    )
     game_id: UUID | None = Field(
         ..., description="See `ConversationRowSchema.game_id`."
     )

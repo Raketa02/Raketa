@@ -290,12 +290,13 @@ async def test_the_record_closes_when_she_stops_running_it(
     assert (await record(client, tomek, ewa["id"])).status_code == 404
 
 
-async def test_a_preference_stands_down_for_whoever_runs_the_group_and_nobody_else(
-    client, session_factory, candidate_source, ogrody
+async def test_a_preference_gates_no_record_for_whoever_runs_the_group_or_anybody(
+    client, session_factory, ogrody
 ):
-    """Kuba plays with men only being shown to women. Piotr, a man in the same
-    group, is refused his record as any man is; Tomek, a man who runs the group,
-    is not — whether or not he has joined it as a player."""
+    """Kuba plays with women only. Piotr, a man in the same group, and Tomek, a
+    man who runs it, both open his record: a preference says who a player is
+    willing to be *matched* with, and the record reads no preference at all
+    (#575) — whether or not Tomek has joined the group as a player."""
 
     tomek = await made_an_administrator(
         client,
@@ -311,11 +312,9 @@ async def test_a_preference_stands_down_for_whoever_runs_the_group_and_nobody_el
     piotr = await a_member(client, session_factory, "piotr", gender="MAN")
     for player in (kuba, ewa, piotr):
         await join(client, player, group)
-    await world.fold_the_log(session_factory, candidate_source)
 
-    # The group opens Ewa's record to Piotr, so the index answers for them both.
     assert (await record(client, piotr, ewa["id"])).status_code == 200
-    assert (await record(client, piotr, kuba["id"])).status_code == 404
+    assert (await record(client, piotr, kuba["id"])).status_code == 200
     assert (await record(client, tomek, kuba["id"])).status_code == 200
 
     await join(client, tomek, group)

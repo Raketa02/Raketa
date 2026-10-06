@@ -201,18 +201,20 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   code for two cases) and only while the game is `AWAITING_ENTRY` (`409 pairing_is_history`),
   because a pairing means what a card means *because this game has not happened*. The port is
   declared in `games`' own types and signed by `matchmaking/infrastructure/games_court_pairing.py`
-  on the matcher's side of the arrow, so `games` still does not import the matcher; the adapter
-  reads `PairWithACourt` — the challenge card's own use case — so **the card and the game come to
-  one number for one court**, and a test says so. Three things are decided in the adapter and
-  each is an absence rather than a number: a seat the index cannot describe leaves the forecast
-  **omitted, never provisional**, with **no reason beside the absence**; `at_stake` is omitted on
-  a friendly and on a game is priced **side against side** through `AtStakeQuery`'s court-shaped
-  read, because every seat is known and that is the pair `settle_results` will deliver — which
-  is why a four's figure here is not the card's head-to-head one, and why a side with one
-  unrated seat is priced over its rated members rather than omitted; and the seats' Levels come
-  from `rating`'s **published** read (`RatedPlayerQuery.published_for`), never from the index.
-  **Two providers stand behind the one port and fail on their own**: a process with no index
-  draws no forecast and still names every Level and prices the court. `GET /games` is
+  on the matcher's side of the arrow, so `games` still does not import the matcher. **It
+  answers from the balance forecast directly** (#575): the court is read side against side
+  from `rating`'s estimates through the engine's `forecast_and_split` under the live ruleset —
+  the reading a Games card makes of the same people (`proposals`' `MatcherBalanceForecasts`),
+  so **the card and the game come to one number for one court**, and a test says so. No search
+  workbench, candidate index, match history or interest ledger sits behind it. Three things are
+  decided in the adapter and each is an absence rather than a number: a seat with no rating in
+  the sport leaves the forecast **omitted, never provisional**, with **no reason beside the
+  absence**; `at_stake` is omitted on a friendly and on a game is priced **side against side**
+  through `AtStakeQuery`'s court-shaped read, because every seat is known and that is the pair
+  `settle_results` will deliver — which is why a side with one unrated seat is priced over its
+  rated members rather than omitted; and the seats' Levels come from `rating`'s **published**
+  read (`RatedPlayerQuery.published_for`). A court whose Levels cannot be read draws nothing;
+  that is the one answer that carries nothing. `GET /games` is
   untouched: a seat there still carries a name and nothing else.
 
 - **A booked game is a game with an hour** (#541, `bookings.md`). A Booking opens it through

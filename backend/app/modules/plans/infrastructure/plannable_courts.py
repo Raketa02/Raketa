@@ -12,10 +12,9 @@ arrows, over the two providers' own ports — which is the shape ``conversations
 already takes for *one rule read against two records*.
 
 **Through ``ChallengeDirectory`` and ``GameRepository`` rather than query ports
-of its own**, on ``challenges_arranging_court.py``'s argument: the joins already
-exist there — *every challenge this player is seated in*, and *the game this
-challenge opened* — and a second read declaring the same join would be a second
-place for *who is on this court* to be true.
+of its own**: the joins already exist there — *every challenge this player is
+seated in*, and *the game this challenge opened* — and a second read declaring
+the same join would be a second place for *who is on this court* to be true.
 
 **The fold is a module-level function and it is the thing under test.** Its
 five answers — arranging, on and awaiting entry, history, not on it, left it —

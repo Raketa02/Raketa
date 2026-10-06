@@ -1,20 +1,16 @@
 """The Conversation aggregate — one room, its stream inside it, event-sourced.
 
-**The place two people who have agreed to play talk about it.** Opened by the
-first acceptance and by a mutual-born challenge's own event, growing with each
-further acceptance, and told about everything else by contexts that do not know
-it exists (``docs/adr/0146``).
+**The place the people booked on one game talk about it.** Opened by the booked
+game itself (#541, #575) and told about everything else by contexts that do not
+know it exists (``docs/adr/0146``).
 
 Three things about it are load-bearing and none is obvious from the code alone.
 
-**Membership is nowhere in here.** It is derived from whichever record the room
-is currently about — the challenge's accepted seats until the line-up completes,
-the game's frozen line-up after — and a roster stored on this aggregate would be
-the copy that decides who may read the messages and the first one to go wrong.
-*About*, and no longer *arranging*: a room outlives the arrangement now
-(``docs/adr/0153``), and the game it outlives it into is what still answers.
-That rule lives in ``application/membership.py`` because it reads two other
-contexts, and this aggregate holds only the two ids it is read against.
+**Membership is nowhere in here.** It is derived from the record the room is
+about — the game's **current** line-up — and a roster stored on this aggregate
+would be the copy that decides who may read the messages and the first one to
+go wrong. That rule lives in ``application/membership.py`` because it reads
+another context, and this aggregate holds only the ids it is read against.
 
 **The sequence is the aggregate's own fact and never the store's.** ``seq`` is
 ``last_seq + 1``, minted here and written under the conversation row's lock by
@@ -31,8 +27,8 @@ answer with the entry that already stands and record nothing, which is this
 repository's existing idempotency language.
 
 **Nothing here stores a standing and nothing announces one.** There is no *Game
-on* line: everybody having accepted is an arrangement of the seats, so a line
-saying so would be a second place for a folded fact to be true.
+on* line: a booked game is announced on Home and its details, and a line saying
+so would be a second place for a folded fact to be true.
 """
 
 from __future__ import annotations
@@ -51,6 +47,7 @@ from app.modules.conversations.domain.entries import (
 )
 from app.modules.conversations.domain.events import (
     ConversationOpened,
+    ConversationOpenedUnderAChallengeId,
     GameNoted,
     MessageSent,
     SystemLineRecorded,
@@ -64,26 +61,23 @@ class Conversation:
     """One purpose-bound room, rebuilt by folding its stream."""
 
     conversation_id: UUID
-    #: The challenge this room was opened by. **Every room has one**, including a
-    #: mutual-born one, which is why the list read can find every room a player
-    #: is in through ``challenges`` alone.
-    challenge_id: UUID
-    #: The game the line-up completed into, and ``None`` until it does. It is the
-    #: nullable half of *whichever record this room is about*, and it is what a
-    #: client draws a *Details* door from.
+    #: The booking whose game opened this room — what the room is filed under,
+    #: and what a client finds it by (#575). Every booked game carries it as the
+    #: arrangement it was opened from, so the list read finds every room a
+    #: player is in through the games they are on.
+    booking_id: UUID
+    #: The game this room is about. A booked game opens its room already about
+    #: it, so this is set from the room's first save; ``None`` only on a room
+    #: a challenge opened, which nothing opens any more and whose end has come.
     game_id: UUID | None
-    #: The moment that game became a game, and ``None`` beside a ``None``
-    #: ``game_id``. It is ``GamePlanned.occurred_at``, which **is**
-    #: ``Game.planned_at`` (``docs/adr/0153`` §2) — carried on the telling this
-    #: room already receives, so the room's own end costs no new event, no new
-    #: field on the wire and no new telling. It is emphatically **not** the plan's
-    #: agreed point: a plan is editable by any member at any time, and an end
-    #: dated from it would be one two people could walk forward by tapping a chip.
+    #: The moment that game was booked. It is ``GamePlanned.occurred_at``, which
+    #: **is** ``Game.planned_at`` (``docs/adr/0153`` §2) — carried on the telling
+    #: this room already receives, so the room's own end costs no new event, no
+    #: new field on the wire and no new telling.
     planned_at: Instant | None
-    #: The hour a **booked** game is played (#541), or ``None`` — every game a
-    #: completed line-up opened, and a room with no game. Carried on the same
-    #: telling as ``planned_at`` and read beside it: a booked game's room ends
-    #: on its hour, not on a week from its booking.
+    #: The hour the game is played (#541). Carried on the same telling as
+    #: ``planned_at`` and read beside it: a booked game's room ends on its hour,
+    #: not on a week from its booking.
     starts_at: Instant | None
     sport: Sport
     opened_at: Instant
@@ -108,9 +102,9 @@ class Conversation:
     def id(self) -> UUID:
         """The stream id. **Minted, and carried on the opening event.**
 
-        Its own id rather than the challenge's (``docs/adr/0148`` §2): keying on
-        a challenge id would foreclose a second kind of conversation, and a UUID
-        costs one column.
+        Its own id rather than the booking's (``docs/adr/0148`` §2): keying on
+        the arrangement's id would foreclose a second kind of conversation, and
+        a UUID costs one column.
         """
 
         return self.conversation_id
@@ -133,8 +127,8 @@ class Conversation:
         """What a state pill would have said (``docs/adr/0148`` §6).
 
         ``None`` in a room where nothing has happened yet, which is a real state:
-        the opening is not a line, so a room whose first acceptance is its whole
-        history has no entry at all and still has to draw a row.
+        the opening is not a line, so a room whose game was just booked has no
+        entry at all and still has to draw a row.
         """
 
         return self.entries[-1] if self.entries else None
@@ -149,24 +143,22 @@ class Conversation:
         cls,
         *,
         conversation_id: UUID,
-        challenge_id: UUID,
+        booking_id: UUID,
         sport: Sport,
         occurred_at: Instant,
     ) -> "Conversation":
         """Open the room. **The opening is the news, and it writes no line.**
 
-        ``seq`` 1 is whatever happens next. The first acceptor is a founding
-        member, visible in membership rather than announced in the backlog, and
-        one rule covers all three membership codes: an acceptance, an invitation
-        and a departure each write a line only when there was already a room to
-        write it in.
+        ``seq`` 1 is whatever happens next. The people booked on the game are
+        its members from the start, visible in membership rather than announced
+        in a backlog nobody could have been reading.
         """
 
         room = cls._empty()
         room._record_that(
             ConversationOpened(
                 conversation_id=conversation_id,
-                challenge_id=challenge_id,
+                booking_id=booking_id,
                 sport=sport.value,
                 occurred_at=occurred_at,
             )
@@ -182,18 +174,14 @@ class Conversation:
         occurred_at: Instant,
         starts_at: Instant | None = None,
     ) -> None:
-        """The line-up completed. **Told, and drawn rather than announced.**
+        """The game this room is about. **Told, and drawn rather than announced.**
 
-        ``occurred_at`` is the moment the game became a game, and it is kept:
-        it is ``Game.planned_at``, which is what this room's own end is anchored
-        on (``docs/adr/0153`` §2). Every path that completes a line-up stamps the
-        acceptance and the game from one ``now``, so the opening's fallback
-        reading — ``PlayedCourt.game_of`` when ``GamePlanned`` lost the coin flip
-        — reaches the same instant this telling carries.
+        ``occurred_at`` is the moment the game was booked, and it is kept: it is
+        ``Game.planned_at``, which is what this room's own end is anchored on
+        (``docs/adr/0153`` §2), beside the hour it is played.
 
         Told a second time, this records nothing: the outbox is at-least-once and
-        one arrangement is one game, so a second telling can only be a
-        redelivery.
+        one booking is one game, so a second telling can only be a redelivery.
         """
 
         if self.game_id is not None:
@@ -344,11 +332,18 @@ class Conversation:
         self._events.record(event)
 
     def _apply(self, event: DomainEvent) -> None:
-        """Fold one event. **Two of the four are entries**; the others are not."""
+        """Fold one event. **Two of them are entries**; the others are not."""
 
         if isinstance(event, ConversationOpened):
             self.conversation_id = event.conversation_id
-            self.challenge_id = event.challenge_id
+            self.booking_id = event.booking_id
+            self.sport = Sport(event.sport)
+            self.opened_at = instant(event.occurred_at)
+        elif isinstance(event, ConversationOpenedUnderAChallengeId):
+            # The first version, as stored: the id it carries is the booking's
+            # on every room a booked game opened (``domain/events.py``).
+            self.conversation_id = event.conversation_id
+            self.booking_id = event.challenge_id
             self.sport = Sport(event.sport)
             self.opened_at = instant(event.occurred_at)
         elif isinstance(event, GameNoted):

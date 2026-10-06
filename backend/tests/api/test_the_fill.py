@@ -629,7 +629,7 @@ async def test_the_chat_opens_with_the_players_as_members(
     async with session_factory() as session:
         conversation_id = await session.scalar(
             select(ConversationORM.conversation_id).where(
-                ConversationORM.challenge_id == proposal
+                ConversationORM.booking_id == proposal
             )
         )
     assert conversation_id is not None

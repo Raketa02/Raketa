@@ -6,10 +6,10 @@ past it, so this loop exists to make the destruction real rather than to make th
 answer right — which means the only interesting claims are *it destroys exactly
 what has ended*, *it leaves what has not*, and *it can run beside itself*.
 
-**Ended is two facts and the sweep reads both through one seam.** A room with a
-game is over on the game's clock; a room without one is over when its challenge
-is (``docs/adr/0164`` §6), which the sweep learns from the same port the reads
-do — so what it deletes is exactly what the list has already dropped.
+**Ended is read off each room's own stream, through the one fold the reads use**
+(``domain/lifetime.py``): a booked game's room is over on the game's clock, and a
+room with no game is over already — so what the sweep deletes is exactly what
+the list has already dropped.
 """
 
 from __future__ import annotations
@@ -21,16 +21,14 @@ from app.kernel import Sport, instant
 from app.modules.conversations.application.destroy_ended_conversations import (
     DestroyEndedConversations,
 )
-from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.domain.conversation import Conversation
-from app.modules.conversations.domain.entries import (
-    DEPARTURE,
-    SeatDeparture,
-    SystemLineCode,
-)
 from tests.unit.fake_event_store import FrozenClock
 
 NOW = instant(datetime(2026, 9, 8, 18, 0, tzinfo=timezone.utc))
+
+
+def _later(**kwargs):
+    return instant(NOW + timedelta(**kwargs))
 
 
 class _Rooms:
@@ -49,16 +47,6 @@ class _Rooms:
         self.by_id.pop(conversation_id, None)
 
 
-class _Court:
-    """``ArrangingCourt``, answering *which of these are over* from one set."""
-
-    def __init__(self, *over: Conversation) -> None:
-        self._over = frozenset(room.challenge_id for room in over)
-
-    async def over_among(self, challenge_ids, *, now):
-        return self._over & frozenset(challenge_ids)
-
-
 class _Uow:
     def __init__(self) -> None:
         self.commits = 0
@@ -73,7 +61,7 @@ class _Uow:
 def _room() -> Conversation:
     room = Conversation.opened(
         conversation_id=uuid4(),
-        challenge_id=uuid4(),
+        booking_id=uuid4(),
         sport=Sport.PADEL,
         occurred_at=NOW,
     )
@@ -81,116 +69,75 @@ def _room() -> Conversation:
     return room
 
 
-def _played(room: Conversation, *, days: int) -> Conversation:
-    room.note_game(game_id=uuid4(), occurred_at=NOW)
-    room.record_line(
-        code=SystemLineCode.GAME_PLAYED,
-        actor_id=uuid4(),
-        values={},
-        source_event_id=uuid4(),
-        occurred_at=instant(NOW + timedelta(days=days)),
-    )
+def _booked(*, days: int) -> Conversation:
+    """A room born about a game booked for ``days`` from now. Its end is entry
+    closing: the game's hour, plus the hour, plus a day."""
+
+    room = _room()
+    room.note_game(game_id=uuid4(), occurred_at=NOW, starts_at=_later(days=days))
     room.pull_events()
     return room
 
 
-def _told_of_a_departure(room: Conversation) -> Conversation:
-    room.record_line(
-        code=SystemLineCode.SEAT_LEFT,
-        actor_id=uuid4(),
-        values={DEPARTURE: SeatDeparture.LAPSED.value},
-        source_event_id=uuid4(),
-        occurred_at=NOW,
-    )
-    room.pull_events()
-    return room
-
-
-def _sweep(
-    rooms: _Rooms, uow: _Uow, *, at, over: tuple[Conversation, ...] = ()
-) -> DestroyEndedConversations:
+def _sweep(rooms: _Rooms, uow: _Uow, *, at) -> DestroyEndedConversations:
     return DestroyEndedConversations(
         directory=rooms,
         conversations=rooms,
-        lifetime=Lifetime(arranging=_Court(*over)),
         unit_of_work=uow,
         clock=FrozenClock(at=at),
     )
 
 
-async def test_it_destroys_a_room_whose_episode_is_over():
-    over = _played(_room(), days=1)
+async def test_it_destroys_a_room_whose_game_is_over():
+    over = _booked(days=1)
     rooms, uow = _Rooms(over), _Uow()
 
-    swept = await _sweep(rooms, uow, at=instant(NOW + timedelta(days=4))).execute()
+    swept = await _sweep(rooms, uow, at=_later(days=3)).execute()
 
     assert rooms.by_id == {}
     assert (swept.walked, swept.destroyed) == (1, 1)
     assert uow.commits == 1
 
 
-async def test_it_leaves_a_room_still_inside_its_grace():
-    recent = _played(_room(), days=1)
-    rooms, uow = _Rooms(recent), _Uow()
+async def test_it_leaves_a_room_whose_game_has_not_ended():
+    standing = _booked(days=1)
+    rooms, uow = _Rooms(standing), _Uow()
 
-    swept = await _sweep(rooms, uow, at=instant(NOW + timedelta(days=2))).execute()
+    swept = await _sweep(rooms, uow, at=_later(days=2)).execute()
 
-    assert list(rooms.by_id) == [recent.conversation_id]
+    assert list(rooms.by_id) == [standing.conversation_id]
     assert (swept.walked, swept.destroyed) == (1, 0)
 
 
-async def test_it_leaves_a_room_whose_challenge_still_stands_alone_for_ever():
-    """``docs/adr/0164`` §6 — a room without a game has no clock of its own, and
-    a departure it was told about is not one either: this loop invents nothing
-    for a court whose challenge is still arranging."""
+async def test_it_destroys_a_room_with_no_game_at_once():
+    """Only a booked game opens a room (#575), so a room with no game is over —
+    and the sweep is what makes that real."""
 
-    arranging = _told_of_a_departure(_room())
-    rooms, uow = _Rooms(arranging), _Uow()
+    gameless = _room()
+    rooms, uow = _Rooms(gameless), _Uow()
 
-    swept = await _sweep(
-        rooms, uow, at=instant(NOW + timedelta(days=3650))
-    ).execute()
-
-    assert list(rooms.by_id) == [arranging.conversation_id]
-    assert swept.destroyed == 0
-
-
-async def test_it_destroys_a_room_whose_challenge_is_over():
-    """The other half of *ended*: the challenge concluded without a game, and the
-    fold the reads already drop it on is the fold the sweep deletes on."""
-
-    concluded = _told_of_a_departure(_room())
-    rooms, uow = _Rooms(concluded), _Uow()
-
-    swept = await _sweep(rooms, uow, at=NOW, over=(concluded,)).execute()
+    swept = await _sweep(rooms, uow, at=NOW).execute()
 
     assert rooms.by_id == {}
     assert (swept.walked, swept.destroyed) == (1, 1)
 
 
 async def test_it_walks_every_room_and_destroys_only_the_ended_ones():
-    over, live, arranging, concluded = (
-        _played(_room(), days=1),
-        _played(_room(), days=3),
-        _told_of_a_departure(_room()),
-        _room(),
-    )
-    rooms, uow = _Rooms(over, live, arranging, concluded), _Uow()
+    over, standing, gameless = _booked(days=1), _booked(days=3), _room()
+    rooms, uow = _Rooms(over, standing, gameless), _Uow()
 
-    swept = await _sweep(
-        rooms, uow, at=instant(NOW + timedelta(days=4)), over=(concluded,)
-    ).execute()
+    swept = await _sweep(rooms, uow, at=_later(days=3)).execute()
 
-    assert set(rooms.by_id) == {live.conversation_id, arranging.conversation_id}
-    assert (swept.walked, swept.destroyed) == (4, 2)
+    assert set(rooms.by_id) == {standing.conversation_id}
+    assert (swept.walked, swept.destroyed) == (3, 2)
 
 
 async def test_a_second_run_destroys_nothing_and_still_commits():
     """``docs/adr/0092`` — with N API processes it runs N times per interval, and
     for a delete keyed on a fold that is exactly nothing."""
 
-    rooms, uow = _Rooms(_played(_room(), days=1)), _Uow()
-    sweep = _sweep(rooms, uow, at=instant(NOW + timedelta(days=4)))
+    rooms, uow = _Rooms(_booked(days=1)), _Uow()
+    sweep = _sweep(rooms, uow, at=_later(days=3))
 
     await sweep.execute()
     again = await sweep.execute()

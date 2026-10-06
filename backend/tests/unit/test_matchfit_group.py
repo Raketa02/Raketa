@@ -48,6 +48,7 @@ from app.engines.matchfit.v1.group import (
     deciding_reason,
     evenest,
     forecast,
+    forecast_and_split,
     group_availability,
     objective,
     seat_delta,
@@ -849,6 +850,46 @@ def test_the_split_is_the_two_strengths_the_forecast_was_read_from() -> None:
     # arithmetic in a smaller disguise.
     gaps = sorted(round(one.split.gap, 3) for one in ways)
     assert gaps == [-0.545, -0.245, 0.025]
+
+
+def test_a_court_read_side_against_side_is_the_court_arranged() -> None:
+    """**The game screen's reading is the line-up's, without a search.**
+
+    A booked game's court is read side against side from the people's Levels
+    alone (#575), and it has to come to the very figure and the very two
+    strengths the arranged court comes to — one computation, so a screen that
+    prints the split beside the percent cannot print a pair the percent was
+    not read from.
+    """
+
+    viewer = searcher(mu=3.00, sigma=0.30)
+    partner = seated(player_id="a", mu=3.20, sigma=0.25)
+    across = (
+        seated(player_id="b", mu=3.50, sigma=0.40),
+        seated(player_id="c", mu=2.80, sigma=0.35),
+    )
+    court = arranged(
+        viewer,
+        Arrangement(partner=partner, opponents=across),
+        LIVE_RULESET,
+        COMBINE,
+    )
+
+    read, split = forecast_and_split(
+        (viewer.level, partner.level),
+        tuple(one.level for one in across),
+        LIVE_RULESET.balance,
+        COMBINE,
+    )
+
+    assert read == court.forecast
+    assert split == court.split
+    assert read == forecast(
+        (viewer.level, partner.level),
+        tuple(one.level for one in across),
+        LIVE_RULESET.balance,
+        COMBINE,
+    )
 
 
 def test_the_evenest_split_is_the_one_that_reads_zero() -> None:

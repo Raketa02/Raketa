@@ -13,29 +13,27 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   at all** — no aggregate, no table, no migration, and a structural test that walks the
   package for an ORM import and the migrations for a table named after it. What separates
   it from `player_score` is that it also **enforces admission**, and that is the whole of
-  what it decides for itself. Five things are load-bearing. **A record opens on a prior
-  disclosure and never on a person**: you are the subject, a search of yours *returned*
-  them, or you share a live challenge, a game or a group — otherwise a route taking a player
-  id is a player-enumeration endpoint, and a UUID being hard to guess is not an
-  authorization model. **Whoever runs an official group they are in** is a fifth strand and
-  a port of its own, `RunnerDisclosure`, asked last and admitted **without the gender
-  preference** — the three gates about accounts and the reader's hold, through
-  `FailClosedGates.withheld_regardless_of_preference`, which `withheld_among` is composed
-  from (ADR-0159's amendment of 2026-10-02, #566). **Nothing expires**, because a search
-  record is kept for ever (ADR-0104) and a shorter window could only refuse a face the app
-  is currently showing. **The four
-  fail-closed gates run live, in the partition of the disclosure** — never in the sport
-  the reader arrived from, since the gender gate reads a candidate index row and the index
-  is keyed by sport, so a subject rated only in squash has no padel row and *a gate that
-  cannot be evaluated excludes*; that is why `PriorDisclosure` answers in **sports** and
-  why the partitions are walked in the sport registry's own order rather than a set's
-  (ADR-0105). The reader's **own** hold refuses here too, because a hold points both ways
-  and would otherwise end at the one route that remembers what a search already showed —
-  while **your own record has no gates at all** and is a *second use case* rather than a
-  branch, so the screen that tells a player how they appear cannot be taken down by the
-  gate machinery. **The four refusals are one refusal, byte for byte** — never disclosed,
-  blocked either way, held and no such player are one `404` with one body, asserted as a
-  sameness rather than as four statuses. And **this context declares its own ports and its
+  what it decides for itself. Four things are load-bearing. **A record opens on a prior
+  disclosure and never on a person**: you are the subject, you **played together** (were on
+  one court), you **share a group**, or you **run a group they are in** (#575) — otherwise a
+  route taking a player id is a player-enumeration endpoint, and a UUID being hard to guess is
+  not an authorization model. A search that showed them and a challenge you share stopped
+  being disclosures with #575; the old loop's Find a game and challenges are going. Each
+  strand is a `PriorDisclosure` answering **yes or no** (`GamesTheyPlayed`, `GroupsTheyShare`,
+  `GroupsTheReaderRuns`), asked in turn and stopped at the first yes. A game discloses for as
+  long as the pair are both on its court, played or not; a group is membership as it stands. **The gates run live, and they read no candidate index**: the three about accounts
+  — a block in either direction, the subject's hold, an account that may not be shown —
+  through `matchmaking`'s `AccountGates` (the same three `FailClosedGates` asks beside the
+  preference, so there is one spelling), plus the reader's **own** hold, because a hold points
+  both ways. **No gender preference is asked of any strand**: a preference says who a player is
+  willing to be *matched* with, and every strand here already put the pair in front of each
+  other (#575; it had been dropped for whoever runs the group by ADR-0159's 2026-10-02
+  amendment, #566). ADR-0193 takes the block out of the record's gates too; that is #586's.
+  **Your own record has no gates at all** and is a *second use case* rather than a branch, so
+  the screen that tells a player how they appear cannot be taken down by the gate machinery.
+  **The refusals are one refusal, byte for byte** — never disclosed, blocked, held and no
+  such player are one `404` with one body, asserted as a sameness rather than as four
+  statuses. And **this context declares its own ports and its
   own types**: it borrows nothing from another context's domain, held by an `.importlinter`
   contract rather than a test, because an application layer importing `CardIdentity` would
   read as sensible reuse in the diff and nothing would go red. The cost is a second
@@ -45,8 +43,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `RecordLikelyRangeSchema` is named for its surface because a second `LikelyRangeSchema`
   would not shadow the card's, it would rename it.
   **`?sport=` says what the sheet is about and never who may be seen** — it reaches the
-  assembler and never the admission, so naming a sport you were never shown somebody in
-  changes what is drawn and nothing about whether it is drawn. Resolving it is the one rule
+  assembler and never the admission, so naming a sport changes what is drawn and nothing
+  about whether it is drawn. Resolving it is the one rule
   this context owns (`domain/sport_choice.py`): the sport asked for where they hold a
   rating in it, otherwise their **most counted** — never their highest Level, which would
   make the header a boast, and never their most recent, which is activity recency wearing a

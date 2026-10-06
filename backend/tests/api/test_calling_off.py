@@ -9,9 +9,9 @@ each recording the court's own ending, ``CALLED_OFF``, beside the game's
 **The first test is the hour.** One of the four leaves, nobody fills the seat,
 and the agreed hour passes: the loop calls it off — the challenge reads
 ``CALLED_OFF`` with ``ended_by`` nobody, the game the others read is
-``CALLED_OFF`` with ``called_off_by`` nobody and its window gone, the room is
-destroyed, the plan and the pairing are history, a score is refused, and
-nobody is charged a ghost.
+``CALLED_OFF`` with ``called_off_by`` nobody and its window gone, the plan
+and the pairing are history, a score is refused, and nobody is charged a
+ghost.
 
 Everything after it is what the record decided: that the withdrawal route
 refuses a court that has been a game with its own code, its organiser
@@ -63,7 +63,6 @@ from tests.api.test_departure import (
     _plan,
     _plans,
     _refusal,
-    _rooms,
     _search_id,
     _send,
     _the_game,
@@ -156,18 +155,15 @@ async def test_the_hour_calls_off_a_reopened_four_and_that_is_the_games_end(
     The challenge is ``CALLED_OFF`` — never ``WITHDRAWN`` — with the seats as
     they were and ``ended_by`` nobody; every remaining member reads the same
     game as ``CALLED_OFF`` with the hour's instant, ``called_off_by`` nobody
-    and no entry window; the leaver still does not hold it; the room is
-    destroyed, though it already held its game; the plan and the pairing are
-    history; a score is refused with the end it met; and the row is on every
-    remaining member's inbox for its day.
+    and no entry window; the leaver still does not hold it; the plan and the
+    pairing are history; a score is refused with the end it met; and the row is
+    on every remaining member's inbox for its day.
     """
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
     await world.deliver_the_outbox(session_factory)
     before = await _the_game(client, searcher["token"], challenge_id)
-    (room,) = await _rooms(client, people["ana"]["token"])
-    assert room["game_id"] == before["game_id"], "the room already holds its game"
     agreed = await _agree_an_hour(client, searcher["token"], challenge_id, clock)
     assert (
         await _leave(client, people["cy"]["token"], challenge_id)
@@ -222,17 +218,6 @@ async def test_the_hour_calls_off_a_reopened_four_and_that_is_the_games_end(
     assert await _the_hour_passes(session_factory, clock) == CalledOff(0, 0), (
         "a second tick writes nothing"
     )
-
-    # The room is destroyed, exactly as any ending destroys it.
-    await world.deliver_the_outbox(session_factory)
-    for who in (searcher, people["ana"], people["bo"], people["cy"]):
-        assert await _rooms(client, who["token"]) == []
-    gone = await client.get(
-        f"/api/v1/conversations/{room['conversation_id']}",
-        headers=world.auth(people["ana"]["token"]),
-    )
-    assert gone.status_code == 404, gone.text
-    assert gone.json()["code"] == "conversation_not_found"
 
     # The plan and the pairing are history.
     day = local_day(clock.at) + timedelta(days=2)
@@ -345,13 +330,12 @@ async def test_a_court_that_has_been_a_game_refuses_the_press_from_everybody(
     code, whole or reopened; every other seated player, the leaver, and a
     newcomer still deciding on the open seat are told the act is not theirs —
     one code, asked before anything about the court. Nothing moves: the game
-    stays awaiting its entry and the room stands."""
+    stays awaiting its entry."""
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     challenge_id = await _a_completed_four(client, searcher, people, "ana", "bo", "cy")
     await world.deliver_the_outbox(session_factory)
     before = await _the_game(client, searcher["token"], challenge_id)
-    (room,) = await _rooms(client, people["ana"]["token"])
 
     whole = await _withdraw(client, searcher["token"], challenge_id)
     assert whole.status_code == 409, whole.text
@@ -388,10 +372,6 @@ async def test_a_court_that_has_been_a_game_refuses_the_press_from_everybody(
     assert (await _row(client, searcher["token"], challenge_id))["standing"] == (
         "AWAITING_ANSWERS"
     )
-    await world.deliver_the_outbox(session_factory)
-    assert [
-        one["conversation_id"] for one in await _rooms(client, people["ana"]["token"])
-    ] == [room["conversation_id"]], "the room stands"
 
 
 async def test_an_organiser_who_left_holds_no_press_and_nor_does_anybody_still_on_it(

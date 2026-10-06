@@ -19,24 +19,20 @@ only instant it has.
 appears at all was decided against an instant.
 
 **A room past its end is dropped here and not by the sweep** (``docs/adr/0153``
-§5). The end is derived and the sweep exists to make the destruction real rather
-than to make the answer right, so the list drops a room the moment it is over —
-and a run of the sweep changes which rows the store returns and never which rows
-this answers with. *Over* is two facts read through one seam: a room with a game
-ends on the game's clock, and a room without one ends with its challenge
-(``docs/adr/0164`` §6), which is why the drop costs a read of ``challenges``
-for those rooms and nothing for the rest.
+§5). The end is derived off the room's own stream and the sweep exists to make
+the destruction real rather than to make the answer right, so the list drops a
+room the moment it is over — and a run of the sweep changes which rows the store
+returns and never which rows this answers with.
 
-**Four set reads for a whole list.** The rooms, then which of them are over,
-then membership over two records, then the faces of everybody in any of them
-**and everybody a last entry names**. Never one question per room.
+**Four set reads for a whole list.** The reader's games, then the rooms filed
+under their bookings, then membership off those games, then the faces of
+everybody in any of them **and everybody a last entry names**. Never one
+question per room.
 
 **A row names its people, and they are not only its members**
-([#408](https://github.com/Raketa02/Raketa/issues/408)). The person a
-``SEAT_LEFT`` line is about has by definition just left the membership, and the
-row's second line is that entry more often than any other — so ``people`` is
-everybody the row names, resolved in the same read as the roster, and the
-roster stays the roster.
+([#408](https://github.com/Raketa02/Raketa/issues/408)). The person a line is
+about may have left the court since, so ``people`` is everybody the row names,
+resolved in the same read as the roster, and the roster stays the roster.
 """
 
 from __future__ import annotations
@@ -48,12 +44,11 @@ from uuid import UUID
 from app.kernel import Clock, Instant, Sport
 from app.modules.conversations.application.commands import ReadConversationsCommand
 from app.modules.conversations.application.faces import faces_in
-from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import Entry, Message, people_named
+from app.modules.conversations.domain.lifetime import ended_among
 from app.modules.conversations.domain.ports import (
-    ArrangingCourt,
     ConversationDirectory,
     MemberFace,
     MemberFaces,
@@ -64,23 +59,18 @@ from app.modules.conversations.domain.ports import (
 @final
 @dataclass(frozen=True, slots=True)
 class ConversationRow:
-    """One room, as a row in the Chats tab.
+    """One room, as a row in the reader's rooms.
 
-    **The members are the room's and never the court's.** A doubles line-up that
-    is still filling draws the two people who have accepted, because a row that
-    drew four faces for a two-member room would be drawing the court.
+    **The members are the room's — the game's court as it stands.** A seat left
+    and not yet re-seated draws three faces, not four.
 
-    ``last_entry`` is ``None`` in a room whose first acceptance is its whole
-    history. That is a real state rather than an edge case, and it is why the
-    field is nullable: the opening writes no line.
-
-    ``game_id`` is nullable because a ``LINE_UP_INCOMPLETE`` room has no game —
-    which is what a client draws its *Details* door from, and why the door is
-    absent rather than disabled.
+    ``last_entry`` is ``None`` in a room where nothing has happened yet. That is
+    a real state rather than an edge case, and it is why the field is nullable:
+    the opening writes no line.
     """
 
     conversation_id: UUID
-    challenge_id: UUID
+    booking_id: UUID
     game_id: UUID | None
     sport: Sport
     members: tuple[MemberFace, ...]
@@ -104,18 +94,14 @@ class ReadConversations:
         self,
         *,
         directory: ConversationDirectory,
-        arranging: ArrangingCourt,
         played: PlayedCourt,
         membership: Membership,
-        lifetime: Lifetime,
         faces: MemberFaces,
         clock: Clock,
     ) -> None:
         self._directory = directory
-        self._arranging = arranging
         self._played = played
         self._membership = membership
-        self._lifetime = lifetime
         self._faces = faces
         self._clock = clock
 
@@ -124,22 +110,17 @@ class ReadConversations:
     ) -> tuple[Instant, tuple[ConversationRow, ...]]:
         now = self._clock.now()
 
-        # **Found through the challenges this player accepted**, which reaches
-        # every room a challenge opened, including the ones whose line-up has
-        # completed — **and through the games they are on the court of**, which
-        # is the only way to a booked game's room: it is filed under the
-        # booking, and nobody accepted a seat on a booking (#541, #542). Which
-        # record membership is then *read from* is still the two-record rule
-        # below, so a candidate the reader is not a member of is dropped there.
-        rooms = await self._directory.for_challenges(
-            await self._arranging.accepted_by(command.reader_id)
-            | await self._played.challenges_played_by(command.reader_id)
+        # **Found through the games this player is on the court of** (#542): a
+        # room is filed under the booking its game was opened from. These are
+        # candidates — membership is still the game's current line-up, so a
+        # room the reader is no longer a member of is dropped below.
+        rooms = await self._directory.for_bookings(
+            await self._played.bookings_played_by(command.reader_id)
         )
         # **Dropped before membership is asked**, exactly as ``ARoomOfYours``
-        # drops one: a room with a game answers off its own stream, a room
-        # without one costs one question about the whole list — and a room that
-        # is over is one nobody needs membership for.
-        ended = await self._lifetime.ended_among(rooms, now=now)
+        # drops one: the end is folded off each room's own stream, and a room
+        # that is over is one nobody needs membership for.
+        ended = ended_among(rooms, now=now)
         standing = tuple(room for room in rooms if room.conversation_id not in ended)
         members = await self._membership.of(standing)
 
@@ -184,7 +165,7 @@ def _row(
     last = room.last_entry
     return ConversationRow(
         conversation_id=room.conversation_id,
-        challenge_id=room.challenge_id,
+        booking_id=room.booking_id,
         game_id=room.game_id,
         sport=room.sport,
         members=faces_in(members, faces),

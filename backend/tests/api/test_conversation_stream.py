@@ -13,7 +13,8 @@ What is asserted here and nowhere else:
 arrives the moment the stream opens carrying the room's current high-water mark.
 
 **A message and a system line both nudge**, through the one mechanism — the send
-path and the outbox path, which is the whole of *what actually goes live*.
+path and the outbox path, which is the whole of *what actually goes live*. The
+room is a booked game's (#575), opened by the outbox as every room is.
 
 **A lost frame self-heals**, because the client fetches from its own high-water
 mark and never from the number in the frame.
@@ -52,7 +53,7 @@ from app.core.config import get_settings
 from app.infrastructure.redis_client import get_redis, get_redis_subscriber
 from app.modules.conversations.domain.live import TYPING_CHECK, TYPING_TTL
 from app.modules.conversations.infrastructure.redis_live_channel import channel_for
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.unit.fake_redis import BrokenRedis
 
 #: Long enough for a couple of round trips through the in-memory app, short
@@ -63,71 +64,45 @@ A_SHORT_LIFE_SECONDS = 2
 
 
 @pytest.fixture
-async def searcher(client):
-    return await world.a_searcher(client)
-
-
-async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
-    people = {}
-    for name, delta in (("ana", 0.0), ("bo", 0.05), ("cy", -0.05)):
-        player_id, token = await world.a_signed_in_candidate(
-            client, session_factory, name, mu=mu + delta
-        )
-        people[name] = {"id": player_id, "token": token}
-    await world.fold_the_log(session_factory, candidate_source)
-    return people
-
-
-async def _a_sent_challenge(client, searcher) -> str:
-    response = await world.lineup(client, searcher["token"])
-    assert response.status_code == 200, response.text
-    body = response.json()
-    court = [
-        {
-            "side": seat["side"],
-            "player_id": seat.get("player_id", str(searcher["id"])),
-        }
-        for seat in body["lineup"]["seats"]
-    ]
-    sent = await client.post(
-        "/api/v1/challenges",
-        json={"search_id": body["search"]["search_id"], "court": court},
-        headers=world.auth(searcher["token"]),
-    )
-    assert sent.status_code == 201, sent.text
-    return sent.json()["challenge_id"]
-
-
-@pytest.fixture
-async def a_room(client, session_factory, candidate_source, searcher, live_channel):
-    """A padel four, one acceptance in, with one thing said in it.
+async def a_room(client, session_factory, live_channel):
+    """A padel four whose booked hour began an hour ago, its room opened, with
+    one thing said in it.
 
     The message is what gives the room a non-zero high-water mark, so that an
-    opening frame carrying it is distinguishable from one carrying nothing.
+    opening frame carrying it is distinguishable from one carrying nothing. The
+    hour has come, so *we played* — the line a booked room is told — is
+    sayable.
     """
 
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    challenge_id = await _a_sent_challenge(client, searcher)
-    accepted = await client.post(
-        f"/api/v1/challenges/{challenge_id}/accept",
-        headers=world.auth(people["ana"]["token"]),
+    people = {}
+    for name in ("ola", "ana", "bo", "cy"):
+        player_id, token = await players.a_player_on_the_log(
+            client, session_factory, name, mu=2.75
+        )
+        people[name] = {"id": player_id, "token": token}
+    booked = await players.a_booked_game(
+        session_factory,
+        side_a=(people["ola"]["id"], people["ana"]["id"]),
+        side_b=(people["bo"]["id"], people["cy"]["id"]),
+        starts_at=datetime.now(timezone.utc) - timedelta(hours=1),
     )
-    assert accepted.status_code == 200, accepted.text
-    await world.deliver_the_outbox(session_factory, live_channel=live_channel)
+    await players.deliver_the_outbox(session_factory, live_channel=live_channel)
 
     rooms = await client.get(
-        "/api/v1/conversations", headers=world.auth(searcher["token"])
+        "/api/v1/conversations", headers=players.auth(people["ola"]["token"])
     )
     assert rooms.status_code == 200, rooms.text
-    room = rooms.json()["conversations"][0]
+    (room,) = rooms.json()["conversations"]
 
-    said = await _say(client, room["conversation_id"], searcher["token"], "shall we")
+    said = await _say(
+        client, room["conversation_id"], people["ola"]["token"], "shall we"
+    )
     assert said.status_code == 200, said.text
 
     return {
         "people": people,
-        "searcher": searcher,
-        "challenge_id": challenge_id,
+        "speaker": people["ola"],
+        "game_id": booked["game_id"],
         "conversation_id": room["conversation_id"],
         "reader": people["ana"],
         "live_channel": live_channel,
@@ -138,7 +113,7 @@ async def _say(client, conversation_id: str, token: str, text: str):
     return await client.post(
         f"/api/v1/conversations/{conversation_id}/messages",
         json={"client_message_id": str(uuid4()), "text": text},
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
 
@@ -214,14 +189,14 @@ def _of_kind(body: str, kind: str) -> list[dict]:
 async def _type(client, conversation_id: str, token: str):
     return await client.post(
         f"/api/v1/conversations/{conversation_id}/typing",
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
 
 async def _follow(client, conversation_id: str, token: str):
     return await client.get(
         f"/api/v1/conversations/{conversation_id}/stream",
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
 
@@ -255,7 +230,7 @@ async def test_the_frame_carries_no_content_at_all(client, a_room):
 
     token = _a_token_expiring_in(A_SHORT_LIFE_SECONDS, a_room["reader"]["id"])
     said = await _say(
-        client, a_room["conversation_id"], a_room["searcher"]["token"], "seven?"
+        client, a_room["conversation_id"], a_room["speaker"]["token"], "seven?"
     )
     assert said.status_code == 200
 
@@ -305,7 +280,7 @@ async def test_a_message_from_another_member_nudges_the_room(
 ):
     async def _say_something():
         said = await _say(
-            client, a_room["conversation_id"], a_room["searcher"]["token"], "seven?"
+            client, a_room["conversation_id"], a_room["speaker"]["token"], "seven?"
         )
         assert said.status_code == 200, said.text
 
@@ -319,20 +294,24 @@ async def test_a_system_line_written_by_the_outbox_nudges_the_room(
 ):
     """**One mechanism carries messages and system lines alike.**
 
-    `challenges` publishes a seat's acceptance, the room writes a line for it in
-    a context that does not know a conversation exists, and the same nudge rides
-    out. There is no separate live-plan feature to build and none to defer.
+    `games` publishes that somebody said they played, the room writes a line
+    for it in a context that does not know a conversation exists, and the same
+    nudge rides out. There is no separate live-line feature to build and none to
+    defer.
     """
 
-    async def _another_seat_accepts():
-        accepted = await client.post(
-            f"/api/v1/challenges/{a_room['challenge_id']}/accept",
-            headers=world.auth(a_room["people"]["bo"]["token"]),
+    async def _somebody_says_they_played():
+        stated = await client.post(
+            f"/api/v1/games/{a_room['game_id']}/result",
+            json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
+            headers=players.auth(a_room["people"]["bo"]["token"]),
         )
-        assert accepted.status_code == 200, accepted.text
-        await world.deliver_the_outbox(session_factory, live_channel=live_channel)
+        assert stated.status_code == 200, stated.text
+        await players.deliver_the_outbox(session_factory, live_channel=live_channel)
 
-    frames = await _while_following(client, a_room, _another_seat_accepts, live_channel)
+    frames = await _while_following(
+        client, a_room, _somebody_says_they_played, live_channel
+    )
 
     assert [frame["last_seq"] for frame in frames] == [1, 2]
 
@@ -350,7 +329,7 @@ async def test_a_frame_published_while_nobody_follows_reaches_nobody(
     before = len(live_channel.published)
 
     said = await _say(
-        client, a_room["conversation_id"], a_room["searcher"]["token"], "anyone?"
+        client, a_room["conversation_id"], a_room["speaker"]["token"], "anyone?"
     )
     assert said.status_code == 200
 
@@ -375,7 +354,7 @@ async def test_a_dropped_frame_is_repaired_by_the_next_one(
     reader = a_room["reader"]
     held = await client.get(
         f"/api/v1/conversations/{a_room['conversation_id']}",
-        headers=world.auth(reader["token"]),
+        headers=players.auth(reader["token"]),
     )
     assert held.status_code == 200, held.text
     my_high_water_mark = held.json()["entries"][-1]["seq"]
@@ -383,7 +362,7 @@ async def test_a_dropped_frame_is_repaired_by_the_next_one(
     async def _say_two_things():
         for text in ("seven?", "or eight"):
             said = await _say(
-                client, a_room["conversation_id"], a_room["searcher"]["token"], text
+                client, a_room["conversation_id"], a_room["speaker"]["token"], text
             )
             assert said.status_code == 200, said.text
 
@@ -399,7 +378,7 @@ async def test_a_dropped_frame_is_repaired_by_the_next_one(
     acted_on = frames[-1]
     caught_up = await client.get(
         f"/api/v1/conversations/{a_room['conversation_id']}/entries",
-        headers=world.auth(reader["token"]),
+        headers=players.auth(reader["token"]),
     )
     assert caught_up.status_code == 200, caught_up.text
     missed = [
@@ -467,23 +446,19 @@ async def test_a_server_whose_subscriber_is_gone_closes_the_stream(
 
     still_readable = await client.get(
         f"/api/v1/conversations/{a_room['conversation_id']}",
-        headers=world.auth(a_room["reader"]["token"]),
+        headers=players.auth(a_room["reader"]["token"]),
     )
     assert still_readable.status_code == 200
 
 
-async def test_a_non_member_is_refused_before_the_response_starts(
-    client, a_room, session_factory
-):
+async def test_a_non_member_is_refused_before_the_response_starts(client, a_room):
     """A stranger gets `conversation_not_found` as JSON, never an empty stream.
 
     The gate runs in a dependency for exactly this: an async generator's first
     exception is raised after `200 text/event-stream` is already on the wire.
     """
 
-    _, stranger = await world.a_signed_in_candidate(
-        client, session_factory, "outsider", mu=0.0
-    )
+    _, stranger = await players.register(client, "outsider")
 
     response = await _follow(client, a_room["conversation_id"], stranger)
 
@@ -492,34 +467,22 @@ async def test_a_non_member_is_refused_before_the_response_starts(
     assert response.json()["code"] == "conversation_not_found"
 
 
-async def _ended_but_not_yet_swept(client, a_room, session_factory) -> None:
-    """The two undecided seats say no and the one who accepted leaves: the
-    organiser is alone with nobody deciding, so the challenge is over by
-    itself (``docs/adr/0165`` §3) — and the outbox is **not** delivered
-    afterwards, so the row still stands in the store while the challenge it
-    lives as long as is over (``docs/adr/0164`` §6). *Past its end but not yet
-    swept*, literally.
+async def _ended_but_not_yet_swept(client, clock, a_room) -> None:
+    """The API's clock is moved to the instant the game's own read says *we
+    played* stops being sayable — the room's end (``docs/adr/0153`` §2) — and
+    nothing sweeps. *Past its end but not yet swept*, literally.
     """
 
-    for who in ("bo", "cy"):
-        declined = await client.post(
-            f"/api/v1/challenges/{a_room['challenge_id']}/decline",
-            headers=world.auth(a_room["people"][who]["token"]),
-        )
-        assert declined.status_code == 200, declined.text
-    await world.deliver_the_outbox(
-        session_factory, live_channel=a_room["live_channel"]
+    games = await client.get(
+        "/api/v1/games", headers=players.auth(a_room["speaker"]["token"])
     )
-    left = await client.post(
-        f"/api/v1/challenges/{a_room['challenge_id']}/departure",
-        headers=world.auth(a_room["people"]["ana"]["token"]),
-    )
-    assert left.status_code == 200, left.text
-    assert left.json()["standing"] == "DECLINED"
+    assert games.status_code == 200, games.text
+    (game,) = games.json()["games"]
+    clock.at = datetime.fromisoformat(game["entry_closes_at"])
 
 
 async def test_a_room_past_its_end_is_refused_before_the_response_starts(
-    client, a_room, session_factory
+    client, clock, a_room
 ):
     """``docs/adr/0153`` §5 — **every** route on an ended room answers the same
     code, and the stream is a route.
@@ -529,10 +492,10 @@ async def test_a_room_past_its_end_is_refused_before_the_response_starts(
     text/event-stream` waiting for nudges from a room that no longer exists.
     """
 
-    await _ended_but_not_yet_swept(client, a_room, session_factory)
+    await _ended_but_not_yet_swept(client, clock, a_room)
 
     response = await _follow(
-        client, a_room["conversation_id"], a_room["searcher"]["token"]
+        client, a_room["conversation_id"], a_room["speaker"]["token"]
     )
 
     assert response.status_code == 404, response.text
@@ -549,7 +512,7 @@ async def test_a_redis_outage_takes_neither_health_nor_sign_in_nor_the_send(
     """`/health` stays about the **process** (`docs/adr/0147` §8).
 
     The obvious fix — a health check that pings Redis — would fail every task at
-    once and take sign-in, onboarding and challenges down with the chat. The
+    once and take sign-in, onboarding and games down with the chat. The
     send degrades instead: the message is committed and only the nudge is lost.
     """
 
@@ -564,7 +527,7 @@ async def test_a_redis_outage_takes_neither_health_nor_sign_in_nor_the_send(
     assert signed_in.status_code == 200, signed_in.text
 
     said = await _say(
-        client, a_room["conversation_id"], a_room["searcher"]["token"], "still here"
+        client, a_room["conversation_id"], a_room["speaker"]["token"], "still here"
     )
     assert said.status_code == 200, said.text
 
@@ -599,7 +562,7 @@ async def test_a_typing_heartbeat_reaches_a_follower_under_its_own_event_name(
 
     async def _somebody_types():
         typed = await _type(
-            client, a_room["conversation_id"], a_room["searcher"]["token"]
+            client, a_room["conversation_id"], a_room["speaker"]["token"]
         )
         assert typed.status_code == 204, typed.text
         await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
@@ -611,7 +574,7 @@ async def test_a_typing_heartbeat_reaches_a_follower_under_its_own_event_name(
     assert _of_kind(body, "typing")[0] == {
         "v": 1,
         "conversation_id": a_room["conversation_id"],
-        "player_ids": [str(a_room["searcher"]["id"])],
+        "player_ids": [str(a_room["speaker"]["id"])],
     }
 
 
@@ -629,7 +592,7 @@ async def test_a_typing_frame_carries_no_sequence_and_moves_none(
     async def _types_a_lot():
         for _ in range(5):
             typed = await _type(
-                client, a_room["conversation_id"], a_room["searcher"]["token"]
+                client, a_room["conversation_id"], a_room["speaker"]["token"]
             )
             assert typed.status_code == 204, typed.text
         await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
@@ -648,7 +611,7 @@ async def test_a_typing_frame_carries_no_sequence_and_moves_none(
     assert [frame["last_seq"] for frame in _of_kind(body, "nudge")] == [1]
     held = await client.get(
         f"/api/v1/conversations/{a_room['conversation_id']}",
-        headers=world.auth(a_room["reader"]["token"]),
+        headers=players.auth(a_room["reader"]["token"]),
     )
     assert held.json()["entries"][-1]["seq"] == 1
 
@@ -666,12 +629,12 @@ async def test_a_client_following_only_nudge_is_unaffected(
 
     async def _types_then_says_something():
         typed = await _type(
-            client, a_room["conversation_id"], a_room["searcher"]["token"]
+            client, a_room["conversation_id"], a_room["speaker"]["token"]
         )
         assert typed.status_code == 204, typed.text
         await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
         said = await _say(
-            client, a_room["conversation_id"], a_room["searcher"]["token"], "seven?"
+            client, a_room["conversation_id"], a_room["speaker"]["token"], "seven?"
         )
         assert said.status_code == 200, said.text
 
@@ -701,7 +664,7 @@ async def test_the_expiry_clears_the_indicator_with_no_stopped_signal_at_all(
 
     async def _types_and_is_killed():
         typed = await _type(
-            client, a_room["conversation_id"], a_room["searcher"]["token"]
+            client, a_room["conversation_id"], a_room["speaker"]["token"]
         )
         assert typed.status_code == 204, typed.text
         await asyncio.sleep(TYPING_CHECK.total_seconds() * 1.5)
@@ -719,7 +682,7 @@ async def test_the_expiry_clears_the_indicator_with_no_stopped_signal_at_all(
     )
 
     assert [frame["player_ids"] for frame in _of_kind(body, "typing")] == [
-        [str(a_room["searcher"]["id"])],
+        [str(a_room["speaker"]["id"])],
         [],
     ]
 
@@ -750,12 +713,10 @@ async def test_your_own_typing_is_never_echoed_back_to_you(
     assert roster == frozenset({a_room["reader"]["id"]})
 
 
-async def test_a_non_member_cannot_say_they_are_typing(client, a_room, session_factory):
+async def test_a_non_member_cannot_say_they_are_typing(client, a_room):
     """The send's own arm, verbatim: one code for *no such room* and *not yours*."""
 
-    _, stranger = await world.a_signed_in_candidate(
-        client, session_factory, "typist", mu=0.0
-    )
+    _, stranger = await players.register(client, "typist")
 
     refused = await _type(client, a_room["conversation_id"], stranger)
 
@@ -763,17 +724,13 @@ async def test_a_non_member_cannot_say_they_are_typing(client, a_room, session_f
     assert refused.json()["code"] == "conversation_not_found"
 
 
-async def test_a_room_past_its_end_refuses_the_heartbeat(
-    client, a_room, session_factory
-):
+async def test_a_room_past_its_end_refuses_the_heartbeat(client, clock, a_room):
     """`docs/adr/0153` §5 — **every** route on an ended room answers the same
     code, and this is a route."""
 
-    await _ended_but_not_yet_swept(client, a_room, session_factory)
+    await _ended_but_not_yet_swept(client, clock, a_room)
 
-    refused = await _type(
-        client, a_room["conversation_id"], a_room["searcher"]["token"]
-    )
+    refused = await _type(client, a_room["conversation_id"], a_room["speaker"]["token"])
 
     assert refused.status_code == 404, refused.text
     assert refused.json()["code"] == "conversation_not_found"
@@ -795,7 +752,7 @@ async def test_an_ephemeral_store_that_is_gone_costs_the_indicator_and_nothing_e
 
     app.dependency_overrides[get_redis] = lambda: BrokenRedis()
 
-    typed = await _type(client, a_room["conversation_id"], a_room["searcher"]["token"])
+    typed = await _type(client, a_room["conversation_id"], a_room["speaker"]["token"])
     assert typed.status_code == 204, typed.text
 
     async def _wait_for_a_check():

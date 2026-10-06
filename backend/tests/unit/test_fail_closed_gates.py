@@ -27,7 +27,10 @@ import pytest
 
 from app.kernel import Instant, Sport
 from app.modules.blocks.domain.errors import BlockStateUnavailable
-from app.modules.matchmaking.application.fail_closed_gates import FailClosedGates
+from app.modules.matchmaking.application.fail_closed_gates import (
+    AccountGates,
+    FailClosedGates,
+)
 from app.modules.matchmaking.domain.candidate_index import CandidateRow, Partition
 from app.modules.matchmaking.domain.candidate_snapshot import CandidateSnapshot
 from app.modules.matchmaking.domain.errors import (
@@ -303,55 +306,49 @@ async def test_a_reader_with_no_profile_cannot_have_the_gender_gate_evaluated():
 
 
 # --------------------------------------------------------------------------- #
-# Regardless of preference — for whoever runs a group the subject is in
+# The three about accounts, on their own — what the player record asks (#575)
 # --------------------------------------------------------------------------- #
 
 
-async def ask_regardless(collaborator: FailClosedGates, *numbers: int):
-    return await collaborator.withheld_regardless_of_preference(
+async def ask_accounts(
+    *numbers: int,
+    blocks: Blocks | None = None,
+    holds: Holds | None = None,
+    statuses: Statuses | None = None,
+) -> frozenset[UUID]:
+    return await AccountGates(
+        blocks=blocks or Blocks(),
+        holds=holds or Holds(),
+        account_status=statuses or Statuses(),
+    ).withheld(
         reader_id=READER,
         subject_ids=tuple(build.player(number) for number in numbers),
     )
 
 
-async def test_regardless_of_preference_the_three_about_accounts_still_withhold():
+async def test_the_three_about_accounts_withhold_on_their_own():
     """A block either way, a hold and an account that may not be shown are
     facts about people rather than about who wants to play with whom, so they
-    withhold here exactly as they do beside the preference (#566)."""
+    withhold here exactly as they do beside the preference — with no profile
+    loaded and no container bound, because none of them reads one."""
 
-    withheld = await ask_regardless(
-        gates(
-            blocks=Blocks(exclusions=frozenset({build.player(1)})),
-            holds=Holds(held=frozenset({build.player(2)})),
-            statuses=Statuses(hidden=frozenset({build.player(3)})),
-        ),
+    withheld = await ask_accounts(
         1,
         2,
         3,
         4,
+        blocks=Blocks(exclusions=frozenset({build.player(1)})),
+        holds=Holds(held=frozenset({build.player(2)})),
+        statuses=Statuses(hidden=frozenset({build.player(3)})),
     )
+
     assert withheld == frozenset({build.player(1), build.player(2), build.player(3)})
 
 
-async def test_regardless_of_preference_reads_no_profile_and_binds_no_container():
-    """**The preference is the one gate that is not asked**, so a reader with no
-    profile — an Administrator who has never played — is no refusal, and a
-    subject whose row would refuse the reader withholds nothing."""
-
-    snapshots = Snapshots((build.row(1, gender_preference="MEN_ONLY"),))
-
-    withheld = await ask_regardless(
-        gates(profiles=Profiles(None), snapshots=snapshots), 1, 2
-    )
-
-    assert withheld == frozenset()
-    assert snapshots.bindings == []
-
-
-async def test_regardless_of_preference_an_unreadable_block_set_still_refuses():
+async def test_the_three_about_accounts_still_refuse_an_unreadable_block_set():
     with pytest.raises(GateDataUnavailable):
-        await ask_regardless(gates(blocks=Blocks(raises=True)), 1)
+        await ask_accounts(1, blocks=Blocks(raises=True))
 
 
-async def test_regardless_of_preference_nobody_to_ask_about_reads_nothing():
-    assert await ask_regardless(gates(blocks=Blocks(raises=True))) == frozenset()
+async def test_the_three_about_accounts_read_nothing_about_nobody():
+    assert await ask_accounts(blocks=Blocks(raises=True)) == frozenset()

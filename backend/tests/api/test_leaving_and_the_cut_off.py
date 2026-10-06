@@ -289,13 +289,13 @@ async def test_the_leaver_leaves_the_game_s_chat_and_the_others_keep_it(
 ):
     ola, kuba, *_ = four
     await mailbox.drain()
-    assert [room["challenge_id"] for room in await rooms_of(client, kuba)] == [booking]
+    assert [room["booking_id"] for room in await rooms_of(client, kuba)] == [booking]
 
     assert (await leaves(client, kuba, booking)).status_code == 200
     await mailbox.drain()
 
     assert await rooms_of(client, kuba) == []
-    assert [room["challenge_id"] for room in await rooms_of(client, ola)] == [booking]
+    assert [room["booking_id"] for room in await rooms_of(client, ola)] == [booking]
 
 
 # --------------------------------------------------------------------------- #

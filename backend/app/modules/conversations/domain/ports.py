@@ -6,25 +6,18 @@ nothing (``docs/adr/0146``), so it has no consumers — which is why there is no
 provider register for it and why every port below is a demand rather than an
 offer.
 
-**Four demands, and three of them are somebody else's.** ``ArrangingCourt`` is
-``challenges``', ``PlayedCourt`` is ``games``', ``MemberFaces`` reaches the
-Player profile and ``users``, and ``AccountHoldQuery`` is the third spelling of a
-port whose provider does not exist yet. Each is contracted in ``tests/demands/``
-over every registered implementation, because *a demand nobody executes is a
-demand satisfied by accident*.
+**Three demands, and two of them are somebody else's.** ``PlayedCourt`` is
+``games``', ``MemberFaces`` reaches the Player profile and ``users``, and
+``AccountHoldQuery`` is a spelling of a port whose provider does not exist yet.
+Each is contracted in ``tests/demands/`` over every registered implementation,
+because *a demand nobody executes is a demand satisfied by accident*.
 
-**Membership is one rule read against two records, and it is two ports because
-they are two records.** The challenge's accepted seats until the line-up
-completes; the game's frozen line-up after. A single port would have to know
-which record answers, and the thing that knows is the room's own nullable
-``game_id``.
-
-**The finding read is the challenge's alone, and that is a claim worth stating.**
-A game's line-up is *frozen from* the challenge's accepted seats and nothing in
-``games`` can move anybody, so every room a player is a member of is reachable
-through the challenges they have accepted — including after the line-up
-completes. Which record membership is then *read from* is still the two-record
-rule; what the challenge supplies is only the set of rooms to ask about.
+**A room is opened only by a booked game, and both its membership and its finding
+read the game** (#575). Membership is the game's current line-up; the rooms a
+player is in are the rooms filed under the bookings of the games they are on.
+There used to be a second record — a challenge's accepted seats, until its
+line-up completed — and a second port for it; nothing opens a room that way any
+more, so nothing reads it.
 """
 
 from __future__ import annotations
@@ -33,7 +26,7 @@ from dataclasses import dataclass
 from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
-from app.kernel import Instant, Sport, invariant
+from app.kernel import invariant
 from app.modules.conversations.domain.conversation import Conversation
 
 
@@ -60,12 +53,12 @@ class ConversationRepository(Protocol):
         """The same aggregate, with the row locked for a sequence to be minted."""
         ...
 
-    async def for_challenge(self, challenge_id: UUID) -> Conversation | None:
-        """The room this challenge already opened, if it has.
+    async def for_booking(self, booking_id: UUID) -> Conversation | None:
+        """The room this booking's game already opened, if it has.
 
         **Locked like ``load_for_append``**, because its caller is the opening
-        itself: this is the read that makes *one arrangement is one room* an
-        invariant rather than a race between two acceptances arriving together.
+        itself: this is the read that makes *one booking is one room* an
+        invariant rather than a race between two deliveries arriving together.
         """
         ...
 
@@ -75,7 +68,7 @@ class ConversationRepository(Protocol):
         """Delete the room and its whole stream. **Destroyed, not delisted.**
 
         ``docs/adr/0142``, with its instant moved by ``docs/adr/0153``. Two
-        callers: the withdrawal, which destroys the room in the same act, and the
+        callers: the call-off, which destroys the room in the same act, and the
         sweep, which makes every other ending real.
 
         **There is no sequence left to have a gap in**, which is what *destroyed*
@@ -93,10 +86,10 @@ class ConversationRepository(Protocol):
 class ConversationDirectory(Protocol):
     """*Which rooms are these?* The list read's only store question."""
 
-    async def for_challenges(
-        self, challenge_ids: Collection[UUID]
+    async def for_bookings(
+        self, booking_ids: Collection[UUID]
     ) -> tuple[Conversation, ...]:
-        """Every room the store still holds that one of these challenges opened.
+        """Every room the store still holds that one of these bookings opened.
 
         **Still holds, rather than still live**, and the difference is
         ``docs/adr/0153`` §5: a room's end is a fold over its own stream, so it is
@@ -104,7 +97,7 @@ class ConversationDirectory(Protocol):
         removes the row. A store that could answer *which of these are live*
         would be the stored ``ends_at`` that record refuses.
 
-        **One set read over the whole answer**, never one per challenge, which is
+        **One set read over the whole answer**, never one per booking, which is
         the shape every set read in this codebase takes.
 
         The order is not part of the demand: the list is ordered by its last
@@ -134,142 +127,41 @@ class ConversationDirectory(Protocol):
         ...
 
     async def for_game(self, game_id: UUID) -> Conversation | None:
-        """The room whose line-up completed into this game, if it has one.
+        """The room about this game, if it has one.
 
-        **Locked like ``load_for_append``**, because its one caller is the
-        telling that writes the *played* line. ``GamePlayed`` names a game and
-        nothing else, so this is the only way back to the room — which is why
-        ``GamePlanned`` has to reach the room even though it draws nothing.
-        """
-        ...
-
-
-@runtime_checkable
-class ArrangingCourt(Protocol):
-    """Who has agreed to be on a **challenge's** court right now — and whether
-    that challenge is over. ``challenges``'.
-
-    The first half of *one rule read against two records*. Its membership read
-    answers about accepted seats: not who was invited, not who declined, and
-    never the challenge's standing — a standing is a fold this context has no
-    business performing on somebody else's record.
-
-    **The one question beside membership is *is it over*, and it is a yes or a
-    no rather than a standing** (``docs/adr/0164`` §6). A room without a game
-    has ended exactly when its challenge has, so the room's lifetime asks that
-    of the same port its membership comes from; the adapter folds the standing
-    with ``challenges``' own fold and answers with the set that is over, and
-    the six-valued standing never crosses the port.
-    """
-
-    async def accepted_on(
-        self, challenge_ids: Collection[UUID]
-    ) -> Mapping[UUID, frozenset[UUID]]:
-        """The players who have accepted each of these challenges. **One call.**
-
-        One question about the whole list rather than one per room — which is
-        what the caller promises, not what the store does: a challenge is an
-        event stream and folding one is that context's business, so an
-        implementation may well pay a replay each.
-
-        A challenge absent from the answer is one this reader may not be told
-        about, and its room is dropped rather than drawn empty.
-        """
-        ...
-
-    async def accepted_by(self, player_id: UUID) -> frozenset[UUID]:
-        """Every challenge this player has accepted a seat on, whatever it is now.
-
-        **A fact about seats and never about a standing.** Whether each of those
-        rooms is over is :meth:`over_among`'s question, asked by the lifetime
-        seam for the list and the sweep alike — so a narrowing here would be a
-        second place for one answer to be decided, and it would decide it about
-        rooms with a game too, whose end is the game's and not the challenge's.
-        """
-        ...
-
-    async def over_among(
-        self, challenge_ids: Collection[UUID], *, now: Instant
-    ) -> frozenset[UUID]:
-        """Which of these challenges are **over** at this instant — ``DECLINED``,
-        ``LAPSED``, ``WITHDRAWN`` or ``CALLED_OFF`` — as ``challenges`` folds
-        it. **One call.**
-
-        ``now`` travels with the question because a lapse is a deadline passing
-        and is true before any sweep has recorded it; a reader between the two
-        gets the same answer either side. The set rather than a mapping to a
-        standing, because the standing is that context's vocabulary and a room
-        has one question about it.
-
-        A challenge absent from the answer is one this reader may not be told
-        about, or one that still stands; the two are one answer on purpose,
-        since membership already drops the first and the second is the room
-        living.
-        """
-        ...
-
-    async def sport_of(self, challenge_id: UUID) -> Sport | None:
-        """What game this challenge is about. **The one fact a room borrows.**
-
-        A room is opened by a **seat's acceptance**, and an acceptance names a
-        challenge and a player and nothing else. The alternative was to widen
-        ``SeatAccepted`` so the sport travelled with it, which would have put a
-        field on a published event for the benefit of one subscriber — the shape
-        ``docs/adr/0146`` exists to refuse, since the publisher would then be
-        carrying something only the conversation reads.
-
-        ``None`` for a challenge this context may not be told about, and the
-        room is then not opened at all rather than opened without a sport.
+        **Locked like ``load_for_append``**, because its callers are tellings
+        that write: the *played* line, and the call-off that destroys the room.
+        ``GamePlayed`` names a game and nothing else, so this is the way back to
+        the room.
         """
         ...
 
 
 @runtime_checkable
 class PlayedCourt(Protocol):
-    """The **game's** frozen line-up. ``games``'.
+    """The **game's** current line-up. ``games``'.
 
-    The second half of the rule. It is asked only about rooms whose ``game_id``
-    is set, which is exactly the rooms whose line-up has completed — so the two
-    records never both answer about one room.
+    The record membership is read from: a seat can be left and re-seated
+    (``docs/adr/0162``), and the roster reads the game live either way.
     """
 
     async def line_ups_of(
         self, game_ids: Collection[UUID]
     ) -> Mapping[UUID, frozenset[UUID]]:
-        """Who was on the court of each of these games. **One question, one call.**
+        """Who is on the court of each of these games. **One question, one call.**
 
         A game absent from the answer is one this reader may not be told about,
         and its room is dropped rather than drawn empty.
         """
         ...
 
-    async def challenges_played_by(self, player_id: UUID) -> frozenset[UUID]:
-        """The challenge every game this player is on the court of was opened
-        from — the game's ``challenge_id``, which on a **booked** game is its
-        booking's (#541): nobody accepted a seat on a booking, so no challenge
-        answers for it (#542).
+    async def bookings_played_by(self, player_id: UUID) -> frozenset[UUID]:
+        """The booking every game this player is on the court of was opened
+        from — the arrangement the game carries, which is what its room is filed
+        under (#541, #542).
 
-        **Candidates, not conclusions**, as ``accepted_by``'s are: whether the
-        player is a member of each room is membership's question, read against
-        the game's current line-up.
-        """
-        ...
-
-    async def game_of(self, challenge_id: UUID) -> UUID | None:
-        """The game this challenge's line-up completed into, if it has one.
-
-        **This exists because the outbox has no order inside one transaction.**
-        The accept that fills the last seat writes ``SeatAccepted`` and
-        ``GamePlanned`` together, and the queue orders by ``(created_at, id)``
-        where ``created_at`` is ``func.now()`` — transaction-start time, identical
-        across a transaction (``docs/adr/0097``). The tie-break is a minted uuid,
-        so which of the two is delivered first is a coin flip.
-
-        Without this read the coin decides whether a singles room ever learns its
-        game: ``GamePlanned`` arriving first finds no room, drops, and nothing
-        ever tells the room again. With it, the **opening** asks — so both orders
-        arrive at the same room, and a client's *Details* door does not depend on
-        a uuid comparison.
+        **Candidates, not conclusions**: whether the player is a member of each
+        room is membership's question, read against the game's current line-up.
         """
         ...
 
@@ -286,8 +178,8 @@ class MemberFace:
     because a client fills ``{name}`` from one list.
 
     **A name, a photograph, and nothing else.** No Level, no band, no area, no
-    score: a card is what a *searcher* reads to decide about a game that might
-    happen, and these people have already agreed to play. ``docs/adr/0141`` §1
+    score: a card is what somebody reads to decide about a game that might
+    happen, and these people are already booked on one. ``docs/adr/0141`` §1
     fixes what may be borrowed about a person on a record of an evening, and this
     room is one.
 
@@ -361,10 +253,9 @@ class AccountHoldQuery(Protocol):
     and a message is reach — but a hold must not erase an arrangement other
     people are already inside, so every read here is ungated and the send is not.
 
-    **The matcher's port and ``challenges``' port, spelled a third time**, and
-    for the third time it is deliberate: the provider is ``cases``, which does not
-    exist, and the alternative to a third spelling is this context importing one
-    of the other two to ask a safety question.
+    **The matcher's port, spelled again here**, and deliberately: the provider is
+    ``cases``, which does not exist, and the alternative to a second spelling is
+    this context importing another to ask a safety question.
     """
 
     async def held_among(self, player_ids: Collection[UUID]) -> frozenset[UUID]:

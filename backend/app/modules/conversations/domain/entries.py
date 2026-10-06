@@ -69,6 +69,12 @@ class SystemLineCode(str, Enum):
     ``the-words.md`` §23 holds the sentence each one renders; nothing in this
     module knows any of them, which is the point.
 
+    **One of the nine is written today** (#575): ``GAME_PLAYED``, into a booked
+    game's room. The other eight were written into rooms a challenge opened,
+    and nothing opens one any more. They stay so that a stored line still
+    folds — a room whose stream will not fold is a room the sweep cannot
+    destroy — and they go with the challenges and the plans that wrote them.
+
     **``SIDE_FORMED`` is the one line a room is *born* with, and only a doubles
     room** (``docs/adr/0169`` §8). Two yeses that meet in padel seat both people
     on one side of a court with a whole side still to fill — half a game — and

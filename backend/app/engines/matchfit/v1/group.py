@@ -308,11 +308,40 @@ def forecast(
     over two side strengths instead of two players.
     """
 
-    pct, sigma, _ = _predicted(side_a, side_b, rules, combine, seats_per_side)
-    return _forecast(
-        pct,
-        sigma,
-        partial=len(side_a) < seats_per_side or len(side_b) < seats_per_side,
+    read, _ = forecast_and_split(
+        side_a, side_b, rules, combine, seats_per_side=seats_per_side
+    )
+    return read
+
+
+def forecast_and_split(
+    side_a: tuple[LevelReading, ...],
+    side_b: tuple[LevelReading, ...],
+    rules: BalanceRules,
+    combine: SigmaCombiner,
+    *,
+    seats_per_side: int = 2,
+) -> tuple[Forecast, Split]:
+    """:func:`forecast`, **and the two side strengths it was read from.**
+
+    For a caller that prints both and has no arrangement to read them off: a
+    booked game's court is already seated, so the game screen reads it side
+    against side from the people's Levels (#575), and the split it prints beside
+    the percent has to be the pair the percent was computed from — so the two
+    come out of one call to ``_predicted`` rather than two.
+
+    ``side_a`` is the reader's side, which fixes the split's orientation exactly
+    as it does in :func:`arranged`.
+    """
+
+    pct, sigma, split = _predicted(side_a, side_b, rules, combine, seats_per_side)
+    return (
+        _forecast(
+            pct,
+            sigma,
+            partial=len(side_a) < seats_per_side or len(side_b) < seats_per_side,
+        ),
+        split,
     )
 
 

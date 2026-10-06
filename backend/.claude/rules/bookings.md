@@ -137,12 +137,13 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   (`GamePlanned.starts_at`, nullable and defaulted). The hour is what moves: its entry window runs
   from the hour's end (`windows.entry_closes_at(…, starts_at=…)`), not a week from the booking,
   which would ghost a game booked a fortnight ahead — and its room's end with it. **Its chat is
-  opened by `GamePlanned`** (the room teller's `_note_game`): a booking's yeses are silent and open
-  nothing, so the game is the opening, the room born about it and its members the game's line-up.
-  **The details reach it as a join** (ADR-0149 §3): `GET /conversations` finds rooms through the
-  reader's games as well as their accepted challenges (#542), and the room's `game_id` is the
-  booked game's — no booking read carries a conversation id, and `proposals` is on the fence
-  that keeps every context from knowing a conversation exists.
+  opened by `GamePlanned`** (the room teller's `_open`) — and since #575 by nothing else: a
+  booking's yeses are silent and open nothing, so the game is the opening, the room filed under
+  the booking (`booking_id`), born about the game and its members the game's line-up. **The
+  details reach it as a join** (ADR-0149 §3): `GET /conversations` finds rooms through the
+  reader's games (#542), and the room's `game_id` is the booked game's — no booking read
+  carries a conversation id, and `proposals` is on the fence that keeps every context from
+  knowing a conversation exists.
 - **What the fill does to everybody's other yeses**: each player's other live yes at the booked
   hour is **withdrawn** (`YesWithdrawn`, as their own tap writes), and a player whose booked games
   this week reach their *games per week* has every other yes that week **paused** (`YesPaused`,

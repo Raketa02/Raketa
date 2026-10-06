@@ -1,13 +1,13 @@
-"""The four conversation routes, end to end over HTTP.
+"""The conversation routes, end to end over HTTP.
 
-The whole reachable path in one file: a court is built, sent, and answered — and
-the acceptance opens a **room**, through the outbox, in a context neither
-``challenges`` nor ``games`` knows exists.
+The whole reachable path in one file: a game is booked, and its ``GamePlanned``
+— the one with an hour on it — opens a **room** through the outbox, in a
+context ``games`` does not know exists (#575).
 
 What is asserted here and nowhere else:
 
-**The first acceptance opens the room and writes no line.** ``seq`` 1 is whatever
-happens next, and the room's first read genuinely carries ``last_entry: null``.
+**A booked game opens its room and writes no line.** The room is filed under
+the booking, born about the game, and ``seq`` 1 is whatever happens next.
 
 **Membership is the gate on every route.** A non-member reads nothing and writes
 nothing, and gets the same code a room that does not exist gets.
@@ -22,202 +22,216 @@ message and the same ``seq``.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 import pytest
 
-from app.api.dependencies import get_clock
+from app.bootstrap.composition import (
+    build_domain_event_store,
+    build_event_publisher,
+    build_game_repository,
+)
+from app.kernel import instant
 from app.modules.conversations.domain.lifetime import CONVERSATION_GRACE
-from app.modules.games.domain.windows import entry_closes_at
-from tests.api import matchmaking_world as world
-from tests.unit.fake_event_store import FrozenClock
+from tests.api import players_world as players
+
+#: Any uuid does; it is spelled rather than minted so the send below is the same
+#: send on every run.
+_A_CLIENT_MESSAGE_ID = "44444444-4444-4444-4444-444444444444"
+
+_A_SCORE = {"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}}
+_THE_OTHER_SCORE = {"score": {"sets": [{"a": 4, "b": 6}, {"a": 3, "b": 6}]}}
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 @pytest.fixture
-async def searcher(client):
-    return await world.a_searcher(client)
+async def four(client, session_factory) -> dict:
+    """``ana`` and ``bo`` against ``cy`` and ``dee``, each rated in padel."""
 
-
-async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
     people = {}
-    for name, delta in (("ana", 0.0), ("bo", 0.05), ("cy", -0.05)):
-        player_id, token = await world.a_signed_in_candidate(
-            client, session_factory, name, mu=mu + delta
+    for name in ("ana", "bo", "cy", "dee"):
+        player_id, token = await players.a_player_on_the_log(
+            client, session_factory, name, mu=2.75
         )
         people[name] = {"id": player_id, "token": token}
-    await world.fold_the_log(session_factory, candidate_source)
     return people
 
 
-async def _a_sent_challenge(client, searcher) -> str:
-    response = await world.lineup(client, searcher["token"])
-    assert response.status_code == 200, response.text
-    body = response.json()
-    court = [
-        {
-            "side": seat["side"],
-            "player_id": seat.get("player_id", str(searcher["id"])),
-        }
-        for seat in body["lineup"]["seats"]
-    ]
-    sent = await client.post(
-        "/api/v1/challenges",
-        json={"search_id": body["search"]["search_id"], "court": court},
-        headers=world.auth(searcher["token"]),
+async def _book(session_factory, four: dict, *, starts_at: datetime) -> dict:
+    return await players.a_booked_game(
+        session_factory,
+        side_a=(four["ana"]["id"], four["bo"]["id"]),
+        side_b=(four["cy"]["id"], four["dee"]["id"]),
+        starts_at=starts_at,
     )
-    assert sent.status_code == 201, sent.text
-    return sent.json()["challenge_id"]
 
 
-async def _accept(client, challenge_id: str, token: str) -> None:
-    answered = await client.post(
-        f"/api/v1/challenges/{challenge_id}/accept", headers=world.auth(token)
+async def _a_booked_room(client, session_factory, four, *, starts_at) -> dict:
+    booked = await _book(session_factory, four, starts_at=starts_at)
+    await players.deliver_the_outbox(session_factory)
+    rooms = await _rooms(client, four["ana"]["token"])
+    assert len(rooms) == 1, rooms
+    return {**booked, "people": four, "room": rooms[0], "starts_at": starts_at}
+
+
+@pytest.fixture
+async def a_room(client, session_factory, four):
+    """A padel four booked for this time tomorrow, its room opened."""
+
+    return await _a_booked_room(
+        client, session_factory, four, starts_at=_now() + timedelta(days=1)
     )
-    assert answered.status_code == 200, answered.text
+
+
+@pytest.fixture
+async def a_played_room(client, session_factory, four):
+    """A padel four whose booked hour began an hour ago — so *we played* is
+    what somebody says next."""
+
+    return await _a_booked_room(
+        client, session_factory, four, starts_at=_now() - timedelta(hours=1)
+    )
 
 
 async def _rooms(client, token: str) -> list[dict]:
-    response = await client.get("/api/v1/conversations", headers=world.auth(token))
+    response = await client.get("/api/v1/conversations", headers=players.auth(token))
     assert response.status_code == 200, response.text
     return response.json()["conversations"]
+
+
+async def _room_read(client, conversation_id: str, token: str):
+    return await client.get(
+        f"/api/v1/conversations/{conversation_id}", headers=players.auth(token)
+    )
+
+
+async def _entries(client, conversation_id: str, token: str) -> list[dict]:
+    response = await client.get(
+        f"/api/v1/conversations/{conversation_id}/entries",
+        headers=players.auth(token),
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["entries"]
 
 
 async def _say(client, conversation_id: str, token: str, text: str, client_id: str):
     return await client.post(
         f"/api/v1/conversations/{conversation_id}/messages",
         json={"text": text, "client_message_id": client_id},
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
 
-@pytest.fixture
-async def a_room(client, session_factory, candidate_source, searcher):
-    """A padel four, one acceptance in — so the room exists and is still growing."""
+async def _state(client, game_id: UUID, token: str, score: dict = _A_SCORE):
+    stated = await client.post(
+        f"/api/v1/games/{game_id}/result", json=score, headers=players.auth(token)
+    )
+    assert stated.status_code == 200, stated.text
 
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    challenge_id = await _a_sent_challenge(client, searcher)
-    await _accept(client, challenge_id, people["ana"]["token"])
-    await world.deliver_the_outbox(session_factory)
-    rooms = await _rooms(client, searcher["token"])
-    assert len(rooms) == 1, rooms
-    return {
-        "people": people,
-        "searcher": searcher,
-        "challenge_id": challenge_id,
-        "room": rooms[0],
-    }
+
+async def _on_the_game(session_factory, game_id: UUID, act) -> None:
+    """One act on the booked game, through the aggregate — as ``bookings`` tells
+    it in its own transaction; this file has no booking to leave through."""
+
+    async with session_factory() as session:
+        games = build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        )
+        game = await games.load(game_id)
+        assert game is not None
+        act(game, instant(_now()))
+        await games.save(game)
+        await session.commit()
+
+
+async def _leaves(session_factory, game_id: UUID, player_id: UUID) -> None:
+    await _on_the_game(
+        session_factory,
+        game_id,
+        lambda game, at: game.vacate(player_id, occurred_at=at),
+    )
+
+
+def _faces(people: list[dict]) -> dict[str, str | None]:
+    return {person["player_id"]: person["name"] for person in people}
 
 
 # -- the opening -----------------------------------------------------------
 
 
-async def test_the_first_acceptance_opens_a_room_and_writes_no_line(a_room):
-    """``the-words.md`` §23.1 — it **is** the opening; ``seq`` 1 is whatever
-    happens next, and the first acceptor is a founding member rather than a
-    sentence."""
+async def test_a_booked_game_opens_its_room_about_the_game_and_writes_no_line(
+    client, session_factory, four
+):
+    """#575 — the outbox opens it, not the booking's own transaction; it is
+    born about the game, and ``seq`` 1 is whatever happens next."""
 
-    row = a_room["room"]
+    booked = await _book(session_factory, four, starts_at=_now() + timedelta(days=1))
+    assert await _rooms(client, four["ana"]["token"]) == []
 
+    await players.deliver_the_outbox(session_factory)
+
+    (row,) = await _rooms(client, four["ana"]["token"])
+    assert row["game_id"] == str(booked["game_id"])
     assert row["last_entry"] is None
-    assert row["challenge_id"] == a_room["challenge_id"]
     assert row["sport"] == "PADEL"
 
 
-async def test_a_room_whose_line_up_is_still_filling_has_no_game(a_room):
-    """``docs/adr/0148`` §2 — nullable, so a client draws no *Details* door
-    rather than a dead one."""
+async def test_a_booked_room_is_found_by_its_booking(client, a_room):
+    """#575 — the row and the read both carry the booking the game was opened
+    from, and nothing a challenge named."""
 
-    assert a_room["room"]["game_id"] is None
+    row = a_room["room"]
+    read = await _room_read(
+        client, row["conversation_id"], a_room["people"]["ana"]["token"]
+    )
+
+    assert read.status_code == 200, read.text
+    assert row["booking_id"] == str(a_room["booking_id"])
+    assert read.json()["booking_id"] == str(a_room["booking_id"])
+    assert "challenge_id" not in row
+    assert "challenge_id" not in read.json()
 
 
-async def test_the_room_draws_the_members_it_has_and_not_the_court(a_room):
-    """``docs/adr/0146`` §7 — membership grows one acceptance at a time; four
-    faces on a two-member room would be drawing the court."""
+async def test_the_room_s_members_are_the_game_s_line_up(a_room):
+    """``docs/adr/0146`` §7 — the people booked on this game, read off it."""
 
     members = {member["player_id"] for member in a_room["room"]["members"]}
 
-    assert members == {
-        str(a_room["searcher"]["id"]),
-        str(a_room["people"]["ana"]["id"]),
-    }
+    assert members == {str(person["id"]) for person in a_room["people"].values()}
 
 
-async def test_the_room_grows_with_each_further_acceptance(
-    client, session_factory, a_room
-):
-    await _accept(client, a_room["challenge_id"], a_room["people"]["bo"]["token"])
-    await world.deliver_the_outbox(session_factory)
-
-    row = (await _rooms(client, a_room["searcher"]["token"]))[0]
-
-    assert len(row["members"]) == 3
-    assert row["last_entry"]["type"] == "system_line"
-    assert row["last_entry"]["code"] == "SEAT_ACCEPTED"
-    assert row["last_entry"]["actor_id"] == str(a_room["people"]["bo"]["id"])
-    assert row["last_entry"]["seq"] == 1
-
-
-async def test_a_later_acceptance_names_its_actor_and_repeats_no_handle(
-    client, session_factory, a_room
-):
-    """``docs/adr/0148`` §4 — ``values`` never repeats what membership says."""
-
-    await _accept(client, a_room["challenge_id"], a_room["people"]["bo"]["token"])
-    await world.deliver_the_outbox(session_factory)
-
-    line = (await _rooms(client, a_room["searcher"]["token"]))[0]["last_entry"]
-
-    assert line["values"] == {}
-
-
-async def test_a_decline_writes_one_code_with_the_answer_as_a_value(
-    client, session_factory, a_room
-):
-    """``the-words.md`` §23 — one leave code, and a lapse is still not a decline."""
-
-    declined = await client.post(
-        f"/api/v1/challenges/{a_room['challenge_id']}/decline",
-        headers=world.auth(a_room["people"]["bo"]["token"]),
-    )
-    assert declined.status_code == 200, declined.text
-    await world.deliver_the_outbox(session_factory)
-
-    line = (await _rooms(client, a_room["searcher"]["token"]))[0]["last_entry"]
-
-    assert line["code"] == "SEAT_LEFT"
-    assert line["values"] == {"departure": "DECLINED"}
-    assert line["actor_id"] == str(a_room["people"]["bo"]["id"])
-
-
-async def test_the_send_itself_opens_nothing(
-    client, session_factory, candidate_source, searcher
-):
-    """``the-words.md`` §23.1 — no conversation exists yet, so there is nowhere
-    to write."""
-
-    await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    await _a_sent_challenge(client, searcher)
-    await world.deliver_the_outbox(session_factory)
-
-    assert await _rooms(client, searcher["token"]) == []
+async def test_every_player_on_the_game_finds_the_same_room(client, a_room):
+    for person in a_room["people"].values():
+        (row,) = await _rooms(client, person["token"])
+        assert row["conversation_id"] == a_room["room"]["conversation_id"]
 
 
 # -- membership is the gate ------------------------------------------------
 
 
-async def test_a_non_member_reads_nothing_and_is_told_no_such_room(client, a_room):
-    """``docs/adr/0148`` §9 — 404 and not 403, on ``challenge_not_found``'s
-    argument: a 403 would answer *is this id real* about a stranger's evening."""
+@pytest.fixture
+async def stranger(client) -> dict:
+    player_id, token = await players.register(client, "eve")
+    return {"id": player_id, "token": token}
 
-    stranger = a_room["people"]["cy"]
+
+async def test_a_non_member_reads_nothing_and_is_told_no_such_room(
+    client, a_room, stranger
+):
+    """``docs/adr/0148`` §9 — 404 and not 403: a 403 would answer *is this id
+    real* about a stranger's evening."""
+
     conversation_id = a_room["room"]["conversation_id"]
 
-    detail = await client.get(
-        f"/api/v1/conversations/{conversation_id}",
-        headers=world.auth(stranger["token"]),
-    )
+    detail = await _room_read(client, conversation_id, stranger["token"])
     entries = await client.get(
         f"/api/v1/conversations/{conversation_id}/entries",
-        headers=world.auth(stranger["token"]),
+        headers=players.auth(stranger["token"]),
     )
 
     assert detail.status_code == 404
@@ -226,11 +240,11 @@ async def test_a_non_member_reads_nothing_and_is_told_no_such_room(client, a_roo
     assert await _rooms(client, stranger["token"]) == []
 
 
-async def test_a_non_member_writes_nothing(client, a_room):
+async def test_a_non_member_writes_nothing(client, a_room, stranger):
     refused = await _say(
         client,
         a_room["room"]["conversation_id"],
-        a_room["people"]["cy"]["token"],
+        stranger["token"],
         "let me in",
         "11111111-1111-1111-1111-111111111111",
     )
@@ -239,10 +253,11 @@ async def test_a_non_member_writes_nothing(client, a_room):
     assert refused.json()["code"] == "conversation_not_found"
 
 
-async def test_a_room_that_does_not_exist_answers_the_same_code(client, searcher):
-    response = await client.get(
-        "/api/v1/conversations/11111111-2222-3333-4444-555555555555",
-        headers=world.auth(searcher["token"]),
+async def test_a_room_that_does_not_exist_answers_the_same_code(client, a_room):
+    response = await _room_read(
+        client,
+        "11111111-2222-3333-4444-555555555555",
+        a_room["people"]["ana"]["token"],
     )
 
     assert response.status_code == 404
@@ -256,17 +271,17 @@ async def test_the_header_and_the_newest_page_come_back_in_one_fold(client, a_ro
     """``docs/adr/0148`` §3 — one instant, so members and entries cannot
     disagree."""
 
-    response = await client.get(
-        f"/api/v1/conversations/{a_room['room']['conversation_id']}",
-        headers=world.auth(a_room["searcher"]["token"]),
+    response = await _room_read(
+        client, a_room["room"]["conversation_id"], a_room["people"]["ana"]["token"]
     )
 
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["read_at"]
     assert body["entries"] == []
-    assert len(body["members"]) == 2
+    assert len(body["members"]) == 4
     assert body["conversation_id"] == a_room["room"]["conversation_id"]
+    assert body["game_id"] == str(a_room["game_id"])
 
 
 # -- saying something ------------------------------------------------------
@@ -278,7 +293,7 @@ async def test_a_message_lands_at_seq_one_and_carries_no_id_of_its_own(client, a
     said = await _say(
         client,
         a_room["room"]["conversation_id"],
-        a_room["searcher"]["token"],
+        a_room["people"]["ana"]["token"],
         "  six on Thursday?  ",
         "22222222-2222-2222-2222-222222222222",
     )
@@ -295,7 +310,7 @@ async def test_a_repeat_answers_the_same_message_and_records_nothing(client, a_r
     """``docs/adr/0148`` §5 — a paused send that resumes must not become two."""
 
     conversation_id = a_room["room"]["conversation_id"]
-    token = a_room["searcher"]["token"]
+    token = a_room["people"]["ana"]["token"]
     client_id = "33333333-3333-3333-3333-333333333333"
 
     first = await _say(client, conversation_id, token, "on my way", client_id)
@@ -303,18 +318,14 @@ async def test_a_repeat_answers_the_same_message_and_records_nothing(client, a_r
 
     assert first.status_code == again.status_code == 200
     assert first.json() == again.json()
-    page = await client.get(
-        f"/api/v1/conversations/{conversation_id}/entries",
-        headers=world.auth(token),
-    )
-    assert len(page.json()["entries"]) == 1
+    assert len(await _entries(client, conversation_id, token)) == 1
 
 
 async def test_an_empty_message_is_refused_rather_than_recorded(client, a_room):
     refused = await _say(
         client,
         a_room["room"]["conversation_id"],
-        a_room["searcher"]["token"],
+        a_room["people"]["ana"]["token"],
         "   ",
         "44444444-4444-4444-4444-444444444444",
     )
@@ -327,7 +338,7 @@ async def test_a_message_past_the_cap_is_refused_rather_than_truncated(client, a
     refused = await _say(
         client,
         a_room["room"]["conversation_id"],
-        a_room["searcher"]["token"],
+        a_room["people"]["ana"]["token"],
         "x" * 1001,
         "55555555-5555-5555-5555-555555555555",
     )
@@ -340,26 +351,22 @@ async def test_a_message_past_the_cap_is_refused_rather_than_truncated(client, a
 
 
 async def test_the_sequence_is_gapless_across_messages_and_lines(
-    client, session_factory, a_room
+    client, session_factory, a_played_room
 ):
-    conversation_id = a_room["room"]["conversation_id"]
-    token = a_room["searcher"]["token"]
+    conversation_id = a_played_room["room"]["conversation_id"]
+    token = a_played_room["people"]["ana"]["token"]
 
     await _say(
         client, conversation_id, token, "one", "aaaaaaaa-0000-0000-0000-000000000001"
     )
-    await _accept(client, a_room["challenge_id"], a_room["people"]["bo"]["token"])
-    await world.deliver_the_outbox(session_factory)
+    await _state(client, a_played_room["game_id"], token)
+    await players.deliver_the_outbox(session_factory)
     await _say(
         client, conversation_id, token, "two", "aaaaaaaa-0000-0000-0000-000000000002"
     )
 
-    page = await client.get(
-        f"/api/v1/conversations/{conversation_id}/entries",
-        headers=world.auth(token),
-    )
+    entries = await _entries(client, conversation_id, token)
 
-    entries = page.json()["entries"]
     assert [entry["seq"] for entry in entries] == [1, 2, 3]
     assert [entry["type"] for entry in entries] == [
         "message",
@@ -373,7 +380,7 @@ async def test_paging_is_a_cursor_over_seq_with_no_has_more_anywhere(client, a_r
     and a flag beside that is the same fact twice."""
 
     conversation_id = a_room["room"]["conversation_id"]
-    token = a_room["searcher"]["token"]
+    token = a_room["people"]["ana"]["token"]
     for n in range(1, 6):
         await _say(
             client,
@@ -385,15 +392,15 @@ async def test_paging_is_a_cursor_over_seq_with_no_has_more_anywhere(client, a_r
 
     newest = await client.get(
         f"/api/v1/conversations/{conversation_id}/entries?limit=2",
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
     older = await client.get(
         f"/api/v1/conversations/{conversation_id}/entries?before_seq=4&limit=2",
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
     beginning = await client.get(
         f"/api/v1/conversations/{conversation_id}/entries?before_seq=1",
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
     assert [entry["seq"] for entry in newest.json()["entries"]] == [4, 5]
@@ -408,51 +415,76 @@ async def test_an_over_large_limit_is_a_422_and_never_a_silent_clamp(client, a_r
 
     response = await client.get(
         f"/api/v1/conversations/{a_room['room']['conversation_id']}/entries?limit=101",
-        headers=world.auth(a_room["searcher"]["token"]),
+        headers=players.auth(a_room["people"]["ana"]["token"]),
     )
 
     assert response.status_code == 422
 
 
-# -- the people a page names ------------------------------------------------
+# -- somebody leaves the game -----------------------------------------------
 
 
 @pytest.fixture
 async def a_room_somebody_left(client, session_factory, a_room):
-    """The same room, with one invitee's *no* as its newest line.
+    """The same room, where ``bo`` said something and then left the game.
 
-    The one entry whose actor is **never** a member: membership is the accepted
-    seats, and a *no* is not one — so ``bo`` is named by the page and by nothing
-    the roster says ([#408](https://github.com/Raketa02/Raketa/issues/408)).
+    His message is the newest entry and its author is **no longer a member**:
+    membership is the game's current line-up, so ``bo`` is named by the page and
+    by nothing the roster says ([#408](https://github.com/Raketa02/Raketa/issues/408)).
     """
 
-    await _decline(client, a_room["challenge_id"], a_room["people"]["bo"]["token"])
-    await world.deliver_the_outbox(session_factory)
+    said = await _say(
+        client,
+        a_room["room"]["conversation_id"],
+        a_room["people"]["bo"]["token"],
+        "can't make it, sorry",
+        "66666666-6666-6666-6666-666666666666",
+    )
+    assert said.status_code == 200, said.text
+    await _leaves(session_factory, a_room["game_id"], a_room["people"]["bo"]["id"])
     return a_room
 
 
-def _faces(people: list[dict]) -> dict[str, str | None]:
-    return {person["player_id"]: person["name"] for person in people}
+async def test_a_leaver_drops_out_of_the_room_the_moment_they_leave(
+    client, a_room_somebody_left
+):
+    """``docs/adr/0146`` §7 — the roster moves with the court, read live, and
+    the one who left reads and writes nothing in it any more."""
+
+    room = a_room_somebody_left
+    conversation_id = room["room"]["conversation_id"]
+    bo = room["people"]["bo"]
+
+    (row,) = await _rooms(client, room["people"]["ana"]["token"])
+    assert {member["player_id"] for member in row["members"]} == {
+        str(room["people"][name]["id"]) for name in ("ana", "cy", "dee")
+    }
+    assert await _rooms(client, bo["token"]) == []
+    gone = await _room_read(client, conversation_id, bo["token"])
+    assert gone.status_code == 404, gone.text
+    assert gone.json()["code"] == "conversation_not_found"
+    said = await _say(
+        client, conversation_id, bo["token"], "wait", _A_CLIENT_MESSAGE_ID
+    )
+    assert said.status_code == 404, said.text
 
 
 async def test_the_room_names_the_person_who_left_beside_the_members(
     client, a_room_somebody_left
 ):
-    """[#408](https://github.com/Raketa02/Raketa/issues/408) — *bo said no* and
-    never *? said no*. The roster is unchanged; ``people`` is everybody the
-    response names, resolved once, and the departed are among them."""
+    """[#408](https://github.com/Raketa02/Raketa/issues/408) — *bo* and never
+    *?*. ``people`` is everybody the response names, resolved once, and the
+    departed are among them."""
 
     room = a_room_somebody_left
-    response = await client.get(
-        f"/api/v1/conversations/{room['room']['conversation_id']}",
-        headers=world.auth(room["searcher"]["token"]),
+    response = await _room_read(
+        client, room["room"]["conversation_id"], room["people"]["ana"]["token"]
     )
 
     assert response.status_code == 200, response.text
     body = response.json()
     bo = str(room["people"]["bo"]["id"])
-    assert body["entries"][-1]["code"] == "SEAT_LEFT"
-    assert body["entries"][-1]["actor_id"] == bo
+    assert body["entries"][-1]["author_id"] == bo
     assert bo not in {member["player_id"] for member in body["members"]}
     assert _faces(body["people"])[bo] == "bo"
     assert set(_faces(body["people"])) == {
@@ -463,14 +495,14 @@ async def test_the_room_names_the_person_who_left_beside_the_members(
 async def test_the_row_names_the_person_its_last_entry_is_about(
     client, a_room_somebody_left
 ):
-    """The Chats row's second line is the last entry, and a departure is the one
-    it is most often about."""
+    """The Chats row's second line is the last entry, and its author may have
+    left the court since."""
 
     room = a_room_somebody_left
-    row = (await _rooms(client, room["searcher"]["token"]))[0]
+    (row,) = await _rooms(client, room["people"]["ana"]["token"])
 
     bo = str(room["people"]["bo"]["id"])
-    assert row["last_entry"]["actor_id"] == bo
+    assert row["last_entry"]["author_id"] == bo
     assert _faces(row["people"])[bo] == "bo"
     assert {member["player_id"] for member in row["members"]} <= set(
         _faces(row["people"])
@@ -485,20 +517,20 @@ async def test_a_page_names_the_people_on_it_and_nobody_else(
 
     room = a_room_somebody_left
     conversation_id = room["room"]["conversation_id"]
-    token = room["searcher"]["token"]
+    token = room["people"]["ana"]["token"]
     await _say(client, conversation_id, token, "still on?", _A_CLIENT_MESSAGE_ID)
 
     response = await client.get(
         f"/api/v1/conversations/{conversation_id}/entries",
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert [entry["type"] for entry in body["entries"]] == ["system_line", "message"]
+    assert [entry["type"] for entry in body["entries"]] == ["message", "message"]
     assert _faces(body["people"]) == {
         str(room["people"]["bo"]["id"]): "bo",
-        str(room["searcher"]["id"]): "searcher",
+        str(room["people"]["ana"]["id"]): "ana",
     }
 
 
@@ -518,505 +550,183 @@ async def test_people_are_ordered_by_id_and_never_by_a_set(
     """``docs/adr/0105`` §1 — two identical requests answer in one order."""
 
     room = a_room_somebody_left
-    response = await client.get(
-        f"/api/v1/conversations/{room['room']['conversation_id']}",
-        headers=world.auth(room["searcher"]["token"]),
+    response = await _room_read(
+        client, room["room"]["conversation_id"], room["people"]["ana"]["token"]
     )
 
     ids = [person["player_id"] for person in response.json()["people"]]
     assert ids == sorted(ids)
 
 
-# -- the whole line-up, and the game --------------------------------------
-
-
-async def test_a_completed_line_up_gives_the_room_its_game_and_no_line(
+async def test_a_called_off_game_takes_its_room_with_it(
     client, session_factory, a_room
 ):
-    """``the-words.md`` §23.1 — the seats already imply it, so there is no *Game
-    on* line; the event still arrives, because the room learns its game from it."""
+    """``docs/adr/0165`` §3 — the club takes the court back, and the call-off
+    destroys the room and writes no line: there is nobody left to read one."""
 
-    for who in ("bo", "cy"):
-        await _accept(client, a_room["challenge_id"], a_room["people"][who]["token"])
-    await world.deliver_the_outbox(session_factory)
-
-    row = (await _rooms(client, a_room["searcher"]["token"]))[0]
-
-    assert row["game_id"] is not None
-    assert [entry["code"] for entry in await _entries(client, row, a_room)] == [
-        "SEAT_ACCEPTED",
-        "SEAT_ACCEPTED",
-    ]
-
-
-async def _entries(client, row, a_room) -> list[dict]:
-    response = await client.get(
-        f"/api/v1/conversations/{row['conversation_id']}/entries",
-        headers=world.auth(a_room["searcher"]["token"]),
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["entries"]
-
-
-async def test_the_played_line_is_the_answer_to_what_the_room_asked(
-    client, session_factory, a_room
-):
-    """``the-words.md`` §23.1 — ``GamePlayed`` is the exception and earns it."""
-
-    for who in ("bo", "cy"):
-        await _accept(client, a_room["challenge_id"], a_room["people"][who]["token"])
-    await world.deliver_the_outbox(session_factory)
-    row = (await _rooms(client, a_room["searcher"]["token"]))[0]
-
-    played = await client.post(
-        f"/api/v1/games/{row['game_id']}/result",
-        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(a_room["searcher"]["token"]),
-    )
-    assert played.status_code == 200, played.text
-    await world.deliver_the_outbox(session_factory)
-
-    last = (await _rooms(client, a_room["searcher"]["token"]))[0]["last_entry"]
-
-    assert last["code"] == "GAME_PLAYED"
-    assert last["actor_id"] == str(a_room["searcher"]["id"])
-
-
-async def test_the_result_argument_writes_no_line_because_it_is_games(
-    client, session_factory, a_room
-):
-    """``the-words.md`` §23.1 — one fact in one place; ``games`` has its own
-    conversation for the argument."""
-
-    for who in ("bo", "cy"):
-        await _accept(client, a_room["challenge_id"], a_room["people"][who]["token"])
-    await world.deliver_the_outbox(session_factory)
-    row = (await _rooms(client, a_room["searcher"]["token"]))[0]
-    await client.post(
-        f"/api/v1/games/{row['game_id']}/result",
-        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(a_room["searcher"]["token"]),
-    )
-    await world.deliver_the_outbox(session_factory)
-    before = len(await _entries(client, row, a_room))
-
-    countered = await client.post(
-        f"/api/v1/games/{row['game_id']}/result",
-        json={"score": {"sets": [{"a": 4, "b": 6}, {"a": 3, "b": 6}]}},
-        headers=world.auth(a_room["people"]["ana"]["token"]),
-    )
-    assert countered.status_code == 200, countered.text
-    await world.deliver_the_outbox(session_factory)
-
-    assert len(await _entries(client, row, a_room)) == before
-
-
-# -- the lifetime ----------------------------------------------------------
-
-#: Any uuid does; it is spelled rather than minted so the send below is the same
-#: send on every run.
-_A_CLIENT_MESSAGE_ID = "44444444-4444-4444-4444-444444444444"
-
-
-async def _decline(client, challenge_id: str, token: str) -> None:
-    answered = await client.post(
-        f"/api/v1/challenges/{challenge_id}/decline", headers=world.auth(token)
-    )
-    assert answered.status_code == 200, answered.text
-
-
-async def _room_read(client, conversation_id: str, token: str):
-    return await client.get(
-        f"/api/v1/conversations/{conversation_id}", headers=world.auth(token)
-    )
-
-
-@pytest.fixture
-def clock(client):
-    """The API's clock, stopped where the test starts and moved by hand.
-
-    A room's end is derived from what it was told, so the only way to reach it
-    is to be somewhere later. It is the **API's** clock that moves, which is what
-    a real tomorrow moves — nothing in the database is rewritten, and the room
-    that was readable a line ago is the same room.
-    """
-
-    frozen = FrozenClock(at=datetime.now(timezone.utc))
-    world.override(client, get_clock, lambda: frozen)
-    return frozen
-
-
-def _advance(clock, candidate_source, *, to: datetime) -> None:
-    """Walk the clock forward to ``to``, and the candidate index with it.
-
-    The staleness ladder reads the gap between the clock and the index's
-    *caught up at*, so a clock walked three days forward on its own would put
-    every ⚡ after it past the twenty-four-hour refusal — the fixture testing the
-    ladder rather than the room. The index is moved by the same amount, which is
-    what its own loop would have done.
-    """
-
-    # ``rewind`` moves *caught up at* backwards by its argument, so a negative
-    # gap moves it forward in step with the clock.
-    world.rewind_the_index(candidate_source, clock.at - to)
-    clock.at = to
-
-
-def _days_later(clock, candidate_source, days: int) -> None:
-    _advance(clock, candidate_source, to=clock.at + timedelta(days=days))
-
-
-@pytest.mark.parametrize(
-    "answers",
-    [
-        pytest.param((("accept", "bo"), ("decline", "cy")), id="yes-then-no"),
-        pytest.param((("decline", "cy"), ("accept", "bo")), id="no-then-yes"),
-    ],
-)
-async def test_a_no_does_not_end_a_room_with_people_still_in_it(
-    client, session_factory, candidate_source, clock, a_room, answers
-):
-    """``docs/adr/0164`` §6 — *B yes → D yes → C no* used to close the room two
-    days later while three people were still talking in it, and *B yes → C no →
-    D yes* never did. A room without a game now lives exactly as long as its
-    challenge, whatever order the answers came in."""
-
-    for act, who in answers:
-        answer = _accept if act == "accept" else _decline
-        await answer(client, a_room["challenge_id"], a_room["people"][who]["token"])
-        # Drained after each answer, so the two orders are two orders: the
-        # outbox orders on a ``created_at`` that is one second granular on
-        # SQLite and tie-breaks on a minted uuid.
-        await world.deliver_the_outbox(session_factory)
     conversation_id = a_room["room"]["conversation_id"]
-
-    _days_later(clock, candidate_source, 3)
-
-    for who in (a_room["searcher"], a_room["people"]["ana"], a_room["people"]["bo"]):
-        (row,) = await _rooms(client, who["token"])
-        assert row["conversation_id"] == conversation_id
-        assert len(row["members"]) == 3
-        read = await _room_read(client, conversation_id, who["token"])
-        assert read.status_code == 200, read.text
-        lines = [
-            (entry["code"], entry["actor_id"])
-            for entry in read.json()["entries"]
-            if entry["type"] == "system_line"
-        ]
-        assert ("SEAT_LEFT", str(a_room["people"]["cy"]["id"])) in lines
-    assert await _rooms(client, a_room["people"]["cy"]["token"]) == []
-
-
-async def test_a_fill_after_a_no_continues_the_same_room_with_its_history(
-    client, session_factory, candidate_source, clock, searcher
-):
-    """``docs/adr/0164`` §6 — the organiser fills C's seat days later and the
-    newcomer accepts into **the same room**, reading how the others got there.
-    The shelf used to have destroyed it and the fill opened a fresh room with no
-    history."""
-
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    dee_id, dee_token = await world.a_signed_in_candidate(
-        client, session_factory, "dee", mu=searcher["mu"] + 0.1
+    await _on_the_game(
+        session_factory,
+        a_room["game_id"],
+        lambda game, at: game.call_off_whole(occurred_at=at),
     )
-    await world.fold_the_log(session_factory, candidate_source)
-    found = await world.search(client, searcher["token"])
-    assert found.status_code == 200, found.text
-    sent = await client.post(
-        "/api/v1/challenges",
-        json={
-            "search_id": found.json()["search"]["search_id"],
-            "court": [
-                {"side": "A", "player_id": str(searcher["id"])},
-                {"side": "A", "player_id": str(people["ana"]["id"])},
-                {"side": "B", "player_id": str(people["bo"]["id"])},
-                {"side": "B", "player_id": str(people["cy"]["id"])},
-            ],
-        },
-        headers=world.auth(searcher["token"]),
-    )
-    assert sent.status_code == 201, sent.text
-    challenge_id = sent.json()["challenge_id"]
-    for who in ("ana", "bo"):
-        await _accept(client, challenge_id, people[who]["token"])
-    # Drained before the *no*, so the line it writes is the room's last: the
-    # outbox orders on a ``created_at`` that is one second granular on SQLite.
-    await world.deliver_the_outbox(session_factory)
-    await _decline(client, challenge_id, people["cy"]["token"])
-    await world.deliver_the_outbox(session_factory)
-    (before,) = await _rooms(client, searcher["token"])
-    assert before["last_entry"]["code"] == "SEAT_LEFT"
+    await players.deliver_the_outbox(session_factory)
 
-    _days_later(clock, candidate_source, 3)
-    filling = await world.lineup(
-        client, searcher["token"], completing_challenge_id=challenge_id
-    )
-    assert filling.status_code == 200, filling.text
-    filled = await client.post(
-        f"/api/v1/challenges/{challenge_id}/seats",
-        json={
-            "search_id": filling.json()["search"]["search_id"],
-            "court": [
-                {"side": seat["side"], "player_id": seat.get("player_id")}
-                for seat in filling.json()["lineup"]["seats"]
-            ],
-        },
-        headers=world.auth(searcher["token"]),
-    )
-    assert filled.status_code == 200, filled.text
-    assert str(dee_id) in {seat["player_id"] for seat in filled.json()["seats"]}
-    await world.deliver_the_outbox(session_factory)
-    await _accept(client, challenge_id, dee_token)
-    await world.deliver_the_outbox(session_factory)
-
-    (row,) = await _rooms(client, dee_token)
-    assert row["conversation_id"] == before["conversation_id"], "the same room"
-    assert row["game_id"] is not None, "the court is whole, and it became a game"
-    codes = [
-        entry["code"]
-        for entry in await _entries(client, row, {"searcher": {"token": dee_token}})
-        if entry["type"] == "system_line"
-    ]
-    assert codes == [
-        "SEAT_ACCEPTED",
-        "SEAT_LEFT",
-        "SEATS_INVITED",
-        "SEAT_ACCEPTED",
-    ], "the newcomer reads the lines that were there before them"
-
-
-# -- the end, before anything sweeps ---------------------------------------
-
-
-@pytest.fixture
-async def a_half_built_room(client, session_factory, a_room):
-    """The same room, with the two undecided seats declined — so the challenge is
-    ``LINE_UP_INCOMPLETE``, and one departure from over: the organiser and
-    ``ana`` are the last two on it, and nobody is deciding."""
-
-    for who in ("bo", "cy"):
-        await _decline(client, a_room["challenge_id"], a_room["people"][who]["token"])
-    await world.deliver_the_outbox(session_factory)
-    rows = await _rooms(client, a_room["searcher"]["token"])
-    assert len(rows) == 1, rows
-    assert rows[0]["last_entry"]["code"] == "SEAT_LEFT"
-    return a_room
-
-
-async def _over(client, a_room) -> None:
-    """``ana`` takes her yes back: the organiser is alone with nobody deciding,
-    and the challenge is over by itself — ``DECLINED``, a departure being a no
-    (``docs/adr/0165`` §3). A court somebody has joined is nobody's to
-    withdraw, so this is how a half-built court without a game ends."""
-
-    left = await client.post(
-        f"/api/v1/challenges/{a_room['challenge_id']}/departure",
-        headers=world.auth(a_room["people"]["ana"]["token"]),
-    )
-    assert left.status_code == 200, left.text
-    assert left.json()["standing"] == "DECLINED"
-
-
-async def test_a_room_is_gone_the_instant_its_challenge_is_over_and_nothing_has_swept(
-    client, a_half_built_room
-):
-    """``docs/adr/0164`` §6, and ``docs/adr/0153`` §5's *past its end but not
-    yet swept* made literal: the departure that ends the court commits and the
-    outbox has **not** delivered, so the row still stands in the store — and
-    every read already answers as if it did not, because a room without a game
-    has ended exactly when its challenge has, derived on the read."""
-
-    conversation_id = a_half_built_room["room"]["conversation_id"]
-    await _over(client, a_half_built_room)
-
-    for who in (a_half_built_room["searcher"], a_half_built_room["people"]["ana"]):
-        assert await _rooms(client, who["token"]) == []
-        gone = await _room_read(client, conversation_id, who["token"])
+    for person in a_room["people"].values():
+        token = person["token"]
+        assert await _rooms(client, token) == []
+        gone = await _room_read(client, conversation_id, token)
         assert gone.status_code == 404, gone.text
         assert gone.json()["code"] == "conversation_not_found"
 
 
-@pytest.mark.parametrize("route", ["", "/entries"])
-async def test_every_read_on_an_ended_room_answers_not_found(
-    client, a_half_built_room, route
+# -- we played ---------------------------------------------------------------
+
+
+async def test_the_played_line_is_the_answer_to_what_the_room_asked(
+    client, session_factory, a_played_room
 ):
-    """``docs/adr/0153`` §5 — **one code for three cases**: never existed,
-    destroyed, and past its end but not yet swept."""
+    """``the-words.md`` §23.1 — ``GamePlayed`` is the one line a booked room is
+    told, and it names who said so and nothing else."""
 
-    conversation_id = a_half_built_room["room"]["conversation_id"]
-    token = a_half_built_room["searcher"]["token"]
-    await _over(client, a_half_built_room)
+    ana = a_played_room["people"]["ana"]
+    await _state(client, a_played_room["game_id"], ana["token"])
+    await players.deliver_the_outbox(session_factory)
 
-    response = await client.get(
-        f"/api/v1/conversations/{conversation_id}{route}", headers=world.auth(token)
-    )
+    (row,) = await _rooms(client, ana["token"])
 
-    assert response.status_code == 404, response.text
-    assert response.json()["code"] == "conversation_not_found"
+    assert row["last_entry"]["type"] == "system_line"
+    assert row["last_entry"]["code"] == "GAME_PLAYED"
+    assert row["last_entry"]["actor_id"] == str(ana["id"])
+    assert row["last_entry"]["values"] == {}
+    assert row["last_entry"]["seq"] == 1
 
 
-async def test_nobody_can_say_anything_in_a_room_past_its_end(
-    client, a_half_built_room
+async def test_the_result_argument_writes_no_line_because_it_is_games(
+    client, session_factory, a_played_room
 ):
-    """The send is gated by the same seam every read is, so there is one place
-    the answer is decided."""
+    """``the-words.md`` §23.1 — one fact in one place; ``games`` has its own
+    conversation for the argument."""
 
-    conversation_id = a_half_built_room["room"]["conversation_id"]
-    token = a_half_built_room["searcher"]["token"]
-    await _over(client, a_half_built_room)
+    conversation_id = a_played_room["room"]["conversation_id"]
+    ana = a_played_room["people"]["ana"]
+    await _state(client, a_played_room["game_id"], ana["token"])
+    await players.deliver_the_outbox(session_factory)
+    before = await _entries(client, conversation_id, ana["token"])
 
-    said = await _say(
-        client, conversation_id, token, "still there?", _A_CLIENT_MESSAGE_ID
+    await _state(
+        client,
+        a_played_room["game_id"],
+        a_played_room["people"]["cy"]["token"],
+        _THE_OTHER_SCORE,
     )
+    await players.deliver_the_outbox(session_factory)
 
-    assert said.status_code == 404, said.text
-    assert said.json()["code"] == "conversation_not_found"
-
-
-# -- the withdrawal --------------------------------------------------------
+    assert await _entries(client, conversation_id, ana["token"]) == before
 
 
-@pytest.fixture
-async def a_room_the_organiser_is_alone_in_again(client, session_factory, a_room):
-    """The same room, with ``ana``'s yes taken back while ``bo`` and ``cy`` are
-    still deciding — so the challenge is ``AWAITING_ANSWERS`` with nobody
-    besides the organiser on it, which is the one state a room exists in and
-    the withdraw is admitted (``docs/adr/0165`` §4)."""
-
-    left = await client.post(
-        f"/api/v1/challenges/{a_room['challenge_id']}/departure",
-        headers=world.auth(a_room["people"]["ana"]["token"]),
-    )
-    assert left.status_code == 200, left.text
-    assert left.json()["standing"] == "AWAITING_ANSWERS"
-    await world.deliver_the_outbox(session_factory)
-    rows = await _rooms(client, a_room["searcher"]["token"])
-    assert len(rows) == 1, rows
-    assert [member["player_id"] for member in rows[0]["members"]] == [
-        str(a_room["searcher"]["id"])
-    ], "a room of one, still standing"
-    assert rows[0]["last_entry"]["code"] == "SEAT_LEFT"
-    return a_room
+# -- the end, before anything sweeps -----------------------------------------
+#
+# The ``clock`` fixture is the API's: a room's end is derived from what it was
+# told, so the only way to reach it is to be somewhere later. Nothing in the
+# store is rewritten, and nothing here runs the sweep.
 
 
-async def _withdrawn(client, a_room) -> None:
-    withdrawn = await client.post(
-        f"/api/v1/challenges/{a_room['challenge_id']}/withdrawal",
-        headers=world.auth(a_room["searcher"]["token"]),
-    )
-    assert withdrawn.status_code == 200, withdrawn.text
-    assert withdrawn.json()["standing"] == "WITHDRAWN"
+async def _entry_closes_at(client, token: str) -> datetime:
+    """The instant the game's own read says *we played* stops being sayable."""
+
+    games = await client.get("/api/v1/games", headers=players.auth(token))
+    assert games.status_code == 200, games.text
+    (game,) = games.json()["games"]
+    return datetime.fromisoformat(game["entry_closes_at"])
 
 
-async def test_a_withdrawal_destroys_the_room_in_the_same_act(
-    client, session_factory, a_room_the_organiser_is_alone_in_again
+async def test_a_never_played_games_room_ends_when_its_entry_window_closes(
+    client, clock, a_room
 ):
-    """``docs/adr/0153`` §2 — the withdrawal destroys it and writes no line,
-    because there is nobody left to read one. The news is on the challenge
-    screen. **Before the outbox delivers** the room is already over on the
-    read, as any ended challenge's is; **after**, it is destroyed rather than
-    delisted."""
+    """``docs/adr/0153`` §2 — measured from the booked hour: the instant *we
+    played* stops being sayable, the room goes with the game."""
 
-    token = a_room_the_organiser_is_alone_in_again["searcher"]["token"]
-    conversation_id = a_room_the_organiser_is_alone_in_again["room"]["conversation_id"]
+    token = a_room["people"]["ana"]["token"]
+    conversation_id = a_room["room"]["conversation_id"]
+    closes_at = await _entry_closes_at(client, token)
 
-    await _withdrawn(client, a_room_the_organiser_is_alone_in_again)
+    clock.at = closes_at - timedelta(seconds=1)
+    standing = await _room_read(client, conversation_id, token)
+    assert standing.status_code == 200, standing.text
 
-    assert await _rooms(client, token) == []
-    await world.deliver_the_outbox(session_factory)
+    clock.at = closes_at
     assert await _rooms(client, token) == []
     gone = await _room_read(client, conversation_id, token)
     assert gone.status_code == 404, gone.text
     assert gone.json()["code"] == "conversation_not_found"
 
 
-async def test_a_withdrawal_is_refused_while_somebody_is_in_the_room(
-    client, session_factory, a_half_built_room
-):
-    """A court somebody has joined is nobody's to end for the others
-    (``docs/adr/0165`` §4): the organiser's withdrawal is refused, and the room
-    the two of them are in stands exactly as it was."""
-
-    token = a_half_built_room["searcher"]["token"]
-    conversation_id = a_half_built_room["room"]["conversation_id"]
-
-    refused = await client.post(
-        f"/api/v1/challenges/{a_half_built_room['challenge_id']}/withdrawal",
-        headers=world.auth(token),
-    )
-
-    assert refused.status_code == 409, refused.text
-    assert refused.json()["code"] == "somebody_has_joined"
-    await world.deliver_the_outbox(session_factory)
-    for who in (a_half_built_room["searcher"], a_half_built_room["people"]["ana"]):
-        (row,) = await _rooms(client, who["token"])
-        assert row["conversation_id"] == conversation_id
-
-
-# -- the game's clock, untouched -------------------------------------------
-
-
-async def _a_game_in_the_room(client, session_factory, a_room) -> dict:
-    """Both undecided seats accept: the court is whole and the room has its game."""
-
-    for who in ("bo", "cy"):
-        await _accept(client, a_room["challenge_id"], a_room["people"][who]["token"])
-    await world.deliver_the_outbox(session_factory)
-    (row,) = await _rooms(client, a_room["searcher"]["token"])
-    assert row["game_id"] is not None
-    return row
-
-
 async def test_a_room_whose_game_was_played_ends_a_grace_after_we_played(
-    client, session_factory, candidate_source, clock, a_room
+    client, session_factory, clock, four
 ):
-    """``docs/adr/0153`` §2, untouched by ``docs/adr/0164``: forty-eight hours
-    after somebody said *we played*, and not a moment before."""
+    """``docs/adr/0153`` §2 — forty-eight hours after somebody said *we played*,
+    and not a moment before, while that is the earlier anchor: here the hour is
+    days ahead, so entry closes after the grace runs out."""
 
-    row = await _a_game_in_the_room(client, session_factory, a_room)
-    token = a_room["searcher"]["token"]
-    played = await client.post(
-        f"/api/v1/games/{row['game_id']}/result",
-        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(token),
+    room = await _a_booked_room(
+        client, session_factory, four, starts_at=clock.at + timedelta(days=4)
     )
-    assert played.status_code == 200, played.text
-    await world.deliver_the_outbox(session_factory)
-    said_at = clock.at
+    token = four["ana"]["token"]
+    conversation_id = room["room"]["conversation_id"]
+    said_at = clock.at = _now()
+    await _state(client, room["game_id"], token)
+    await players.deliver_the_outbox(session_factory)
 
-    _advance(
-        clock,
-        candidate_source,
-        to=said_at + CONVERSATION_GRACE - timedelta(seconds=1),
-    )
-    standing = await _room_read(client, row["conversation_id"], token)
+    clock.at = said_at + CONVERSATION_GRACE - timedelta(seconds=1)
+    standing = await _room_read(client, conversation_id, token)
     assert standing.status_code == 200, standing.text
 
-    _advance(clock, candidate_source, to=said_at + CONVERSATION_GRACE)
+    clock.at = said_at + CONVERSATION_GRACE
     assert await _rooms(client, token) == []
-    gone = await _room_read(client, row["conversation_id"], token)
+    gone = await _room_read(client, conversation_id, token)
     assert gone.status_code == 404, gone.text
     assert gone.json()["code"] == "conversation_not_found"
 
 
-async def test_a_never_played_games_room_ends_when_its_entry_window_closes(
-    client, session_factory, candidate_source, clock, a_room
+@pytest.fixture
+async def an_ended_room(client, clock, a_room):
+    """The same room, with the API's clock at its game's entry window closing —
+    *past its end but not yet swept*, literally."""
+
+    clock.at = await _entry_closes_at(client, a_room["people"]["ana"]["token"])
+    return a_room
+
+
+@pytest.mark.parametrize("route", ["", "/entries"])
+async def test_every_read_on_an_ended_room_answers_not_found(
+    client, an_ended_room, route
 ):
-    """``docs/adr/0153`` §2 — the instant *we played* stops being sayable and the
-    game becomes a ghost, the room goes with it."""
+    """``docs/adr/0153`` §5 — **one code for three cases**: never existed,
+    destroyed, and past its end but not yet swept."""
 
-    row = await _a_game_in_the_room(client, session_factory, a_room)
-    token = a_room["searcher"]["token"]
-    games = await client.get("/api/v1/games", headers=world.auth(token))
-    assert games.status_code == 200, games.text
-    (game,) = games.json()["games"]
-    closes_at = entry_closes_at(datetime.fromisoformat(game["planned_at"]))
+    conversation_id = an_ended_room["room"]["conversation_id"]
+    token = an_ended_room["people"]["ana"]["token"]
 
-    _advance(clock, candidate_source, to=closes_at - timedelta(seconds=1))
-    standing = await _room_read(client, row["conversation_id"], token)
-    assert standing.status_code == 200, standing.text
+    response = await client.get(
+        f"/api/v1/conversations/{conversation_id}{route}", headers=players.auth(token)
+    )
 
-    _advance(clock, candidate_source, to=closes_at)
-    assert await _rooms(client, token) == []
-    gone = await _room_read(client, row["conversation_id"], token)
-    assert gone.status_code == 404, gone.text
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "conversation_not_found"
+
+
+async def test_nobody_can_say_anything_in_a_room_past_its_end(client, an_ended_room):
+    """The send is gated by the same seam every read is, so there is one place
+    the answer is decided."""
+
+    said = await _say(
+        client,
+        an_ended_room["room"]["conversation_id"],
+        an_ended_room["people"]["ana"]["token"],
+        "still there?",
+        _A_CLIENT_MESSAGE_ID,
+    )
+
+    assert said.status_code == 404, said.text
+    assert said.json()["code"] == "conversation_not_found"

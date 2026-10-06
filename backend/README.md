@@ -558,22 +558,16 @@ arranged games count toward nothing, because a game inside its entry window is n
 played nor a ghost.
 
 Behind all of it is a fifth layer, and it is the only one that **writes nothing until the
-outbox has run**. A conversation is *told* — its rooms are opened and grown from events
-`challenges`, `games` and `plans` publish, by contexts that do not know it exists
-([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) §5) —
-so there is no *open a room* use case for a fixture to call and deliberately none.
+outbox has run**. A conversation is *told* — a room is opened by a **booked game**, from the
+events `games` publishes, by a context that does not know it exists
+([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) §5,
+#575) — so there is no *open a room* use case for a fixture to call and deliberately none.
 `app/seeds/rooms.py` drains the transactional outbox in process, exactly as the embedded
-worker drains it under the API, and every acceptance, completion, *we played* and slot the
-layers above already seeded arrives at the room it belongs to. What it then writes is the one
+worker drains it under the API, and every booked game, *we played* and call-off the layers
+above already seeded arrives at the room it belongs to. What it then writes is the one
 thing a room cannot be told: somebody saying something, through `SendMessage`, enough of it
-to reach **a room long enough to page backward through**.
-
-It reaches three of the four room shapes a screen has to draw — a two-member room whose
-game is recorded, a doubles room whose membership is still growing, and the deep one — and
-**names the fourth on the report rather than in a docstring**: a room carrying every
-system-line code needs a `SeatsInvited`, nothing here performs a fill, and a fill would cost
-a real search that seats somebody new and moves the gate histogram this run asserts. A
-fixture that quietly reached three of four reads as having reached four.
+to reach **a room long enough to page backward through**. It then sweeps, and asserts that
+a booked game still ahead has its room and that no room outlived its game.
 
 Scope is what is **modeled**: players, onboarding assessments, Skill ratings, Player
 profiles, Challenges, Blocks and Plans. Clubs, Courts, Bookings and Matches have no aggregates,
@@ -834,8 +828,8 @@ process and no second deployable.
   **Correctness depends on neither.** Every read of the interest ledger is bounded
   by `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether
   or not it has been swept; and a room's end is derived on every read — the
-  game's clock off its own stream, or its challenge being over, asked of
-  `challenges` — so every route on it answers `conversation_not_found` past that
+  game's clock, off its own stream — so every route on it answers
+  `conversation_not_found` past that
   instant and every list has already dropped it. What the expiry loop buys is a
   table the size of what is live plus one figure that could not be bought later — *yeses that
   expired having never lifted anybody*, `INTEREST_TTL`'s only day-one falsifier,

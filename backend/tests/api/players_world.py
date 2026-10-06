@@ -365,6 +365,53 @@ async def a_confirmed_game(
         await session.commit()
 
 
+async def a_booked_game(
+    session_factory,
+    *,
+    side_a: tuple[UUID, ...],
+    side_b: tuple[UUID, ...],
+    sport: Sport = SPORT,
+    kind: GameKind = GameKind.COUNTED,
+    starts_at: datetime | None = None,
+    booked_at: datetime | None = None,
+) -> dict:
+    """A booked game, opened through the aggregate the way the fill opens one —
+    filed under its booking's id, its hour on it. Its id and its booking's.
+
+    **Its room opens when the outbox is delivered** (#575): ``GamePlanned`` with
+    an hour on it is what opens a booked game's chat, so a test that reads the
+    room calls :func:`deliver_the_outbox` after this. Unless told otherwise the
+    game is booked now and played tomorrow at the same time.
+    """
+
+    now = datetime.now(timezone.utc)
+    starts = instant(starts_at or now + timedelta(days=1))
+    game = Game.planned(
+        game_id=new_uuid(),
+        # A booked game is filed under its booking's id.
+        challenge_id=new_uuid(),
+        sport=sport,
+        kind=kind,
+        window=None,
+        line_up=LineUp.of(
+            (
+                *(Seating(side=GameSide.A, player_id=one) for one in side_a),
+                *(Seating(side=GameSide.B, player_id=one) for one in side_b),
+            )
+        ),
+        occurred_at=instant(booked_at or min(now, starts - timedelta(days=2))),
+        starts_at=starts,
+    )
+    async with session_factory() as session:
+        await build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ).save(game)
+        await session.commit()
+    return {"game_id": game.game_id, "booking_id": game.challenge_id}
+
+
 async def block_between(client, token: str, player_id: UUID):
     """One player blocking another, through the route a person would use."""
 

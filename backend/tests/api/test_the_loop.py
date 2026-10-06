@@ -9,8 +9,8 @@ at all.
 **Nothing stands in for a step.** Every act is a request a phone makes: the send,
 the inbox read, the detail read, the answer, the three slot writes, the entry, the
 acceptance. The only two things that are not requests are the two that are not
-requests in production either — the outbox poll that tells the room, and the
-rating catch-up, which exists precisely because *nothing announces a confirmation*
+requests in production either — the outbox poll, and the rating catch-up,
+which exists precisely because *nothing announces a confirmation*
 (``docs/adr/0137``, ``docs/adr/0139``).
 
 **It walks forward through eight hours rather than sitting still.** A result is
@@ -32,9 +32,9 @@ fails in this repository rather than on somebody's phone. The client owns the
 **Two journeys, because the doubles path is a different shape.** The first is a
 singles game from a send to two moved Levels. The second is the half-built court:
 a line-up nobody finished, the ⚡ that names the challenge it completes, a second
-acceptance growing the room, the withdraw refused because somebody has joined
-(``docs/adr/0165`` §4), and the departures that end it — the last one alone with
-nobody deciding is over, and the room goes with its challenge.
+acceptance, the withdraw refused because somebody has joined (``docs/adr/0165``
+§4), and the departures that end it — the last one alone with nobody deciding is
+over.
 
 Its counterpart is ``app/seeds/`` — the same states, reached by ``make seed`` and
 asserted there. **That half needs a database and does not run in CI. This half
@@ -127,8 +127,7 @@ def journey_clock(client):
 
     Handed to the application through the same dependency a request resolves, so
     every ``occurred_at`` the journey writes is the journey's own — a seat's
-    deadline, a proposal's window, a room's opening. Moving ``at`` is what makes
-    time pass.
+    deadline, a proposal's window. Moving ``at`` is what makes time pass.
     """
 
     clock = FrozenClock(at=datetime.now(timezone.utc) - A_WORKING_DAY)
@@ -179,12 +178,6 @@ async def _plans(client, token: str) -> list[dict]:
     return response.json()["plans"]
 
 
-async def _rooms(client, token: str) -> list[dict]:
-    response = await client.get("/api/v1/conversations", headers=world.auth(token))
-    assert response.status_code == 200, response.text
-    return response.json()["conversations"]
-
-
 async def _ratings(client, token: str) -> dict[str, float]:
     response = await client.get("/api/v1/ratings", headers=world.auth(token))
     assert response.status_code == 200, response.text
@@ -220,8 +213,8 @@ async def test_a_challenge_becomes_a_game_and_the_game_moves_both_levels(
     Asserted step by step rather than at the end, because the value of this test
     is which link broke and not that the chain did. Every assertion is a fact a
     screen draws: the standing at the top of the challenge screen, the row in the
-    inbox, the room in the Chats tab, the card in the Now rail, and the two
-    Levels the whole loop exists to move.
+    inbox, the card in the Now rail, and the two Levels the whole loop exists to
+    move.
     """
 
     world.draw_real_cards(client, candidate_source, exposure_ledger)
@@ -283,7 +276,7 @@ async def test_a_challenge_becomes_a_game_and_the_game_moves_both_levels(
         "a singles court every seat accepted is on, and the game exists already"
     )
 
-    # --- a game nobody asked for, and a room nobody opened -------------------
+    # --- a game nobody asked for ---------------------------------------------
     await world.deliver_the_outbox(session_factory)
     game_id = ""
     for token in (sender["token"], invitee["token"]):
@@ -292,13 +285,6 @@ async def test_a_challenge_becomes_a_game_and_the_game_moves_both_levels(
         assert game["challenge_id"] == challenge_id
         assert game["standing"] == "AWAITING_ENTRY"
         assert card == "planning", "nothing is agreed, so the card asks for a plan"
-        (room,) = await _rooms(client, token)
-        assert room["challenge_id"] == challenge_id
-        assert room["game_id"] == game["game_id"]
-        assert {member["player_id"] for member in room["members"]} == {
-            str(sender["id"]),
-            str(invitee["id"]),
-        }
 
     # --- they arrange it, one slot at a time --------------------------------
     day = local_day(instant(journey_clock.at)) + timedelta(days=2)
@@ -388,15 +374,6 @@ async def _a_court(client, token: str, court: list[dict]) -> str:
     return sent.json()["challenge_id"]
 
 
-async def _entries(client, token: str, conversation_id: str) -> list[dict]:
-    response = await client.get(
-        f"/api/v1/conversations/{conversation_id}/entries",
-        headers=world.auth(token),
-    )
-    assert response.status_code == 200, response.text
-    return response.json()["entries"]
-
-
 async def _answer(client, token: str, challenge_id: str, act: str) -> dict:
     response = await client.post(
         f"/api/v1/challenges/{challenge_id}/{act}", headers=world.auth(token)
@@ -405,7 +382,7 @@ async def _answer(client, token: str, challenge_id: str, act: str) -> dict:
     return response.json()
 
 
-async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_ends_it(
+async def test_a_half_built_court_is_filled_and_the_last_one_left_ends_it(
     client, session_factory, candidate_source, journey_clock
 ):
     """**The doubles path, which is a different shape and not a longer one.**
@@ -413,8 +390,7 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_e
     A padel four sent to one person is half a game: their acceptance produces
     ``LINE_UP_INCOMPLETE`` and — until ``docs/adr/0150`` — the search meant to
     finish the court excluded, by construction, everybody who had accepted it. So
-    the fill **names the challenge it completes**, the room grows with each further
-    acceptance rather than opening a second one, and a court somebody has joined
+    the fill **names the challenge it completes**, and a court somebody has joined
     is nobody's to end for the others (``docs/adr/0165`` §4): the organiser's
     withdraw is refused, everybody leaves like anybody else, and the court is
     over by itself when one is left with nobody deciding (``0165`` §3).
@@ -451,15 +427,6 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_e
         "the acceptance produces it, not the two seats nobody was put in"
     )
 
-    await world.deliver_the_outbox(session_factory)
-    (room,) = await _rooms(client, people["ana"]["token"])
-    assert room["game_id"] is None, "no line-up has completed, so there is no game"
-    assert {member["player_id"] for member in room["members"]} == {
-        str(organiser["id"]),
-        str(people["ana"]["id"]),
-    }
-    conversation_id = room["conversation_id"]
-
     # --- the ⚡ that names the challenge it completes -------------------------
     filling = await world.lineup(
         client, organiser["token"], completing_challenge_id=challenge_id
@@ -490,12 +457,6 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_e
         headers=world.auth(organiser["token"]),
     )
     assert filled.status_code == 200, filled.text
-    # **Drained here rather than once at the end**, which is what a worker does
-    # and what this assertion needs: the outbox orders by ``(created_at, id)``
-    # and SQLite's ``CURRENT_TIMESTAMP`` has one-second granularity, so two rows
-    # written a moment apart tie and the tie-break is a minted uuid
-    # (``docs/adr/0097``). Two batches are two orders nobody has to guess.
-    await world.deliver_the_outbox(session_factory)
     assert filled.json()["standing"] == "AWAITING_ANSWERS", (
         "somebody's answer is owed again, and the standing says so"
     )
@@ -514,26 +475,9 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_e
         "each newly seated player gets their own day, dated from the fill"
     )
 
-    # --- the room grows rather than a second one opening ----------------------
+    # --- a newcomer accepts --------------------------------------------------
     newcomer = next(one for one in people.values() if str(one["id"]) in invited)
     await _answer(client, newcomer["token"], challenge_id, "accept")
-    await world.deliver_the_outbox(session_factory)
-    rooms = await _rooms(client, newcomer["token"])
-    assert [row["conversation_id"] for row in rooms] == [conversation_id], (
-        "one arrangement is one room, however many people accept into it"
-    )
-    assert str(newcomer["id"]) in {
-        member["player_id"] for member in rooms[0]["members"]
-    }
-    codes = [
-        entry["code"]
-        for entry in await _entries(client, newcomer["token"], conversation_id)
-        if entry["type"] == "system_line"
-    ]
-    assert codes == ["SEATS_INVITED", "SEAT_ACCEPTED"], (
-        "the room carries the story without anybody narrating it — and the "
-        "opening acceptance draws no line, because the room is the line"
-    )
 
     # --- somebody leaves, and the court is half built again -------------------
     left = next(
@@ -550,9 +494,6 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_e
     assert "card" not in next(
         seat for seat in theirs["seats"] if seat["player_id"] == str(left["id"])
     ), "the reader who has left keeps their row and is drawn no card"
-    assert await _rooms(client, left["token"]) == [], (
-        "and they are not in the room: membership is the live members"
-    )
 
     # --- and nobody ends it for the others: they leave one by one, and the
     # --- last one alone ends it ---------------------------------------------
@@ -572,10 +513,6 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_e
     assert organiser_out.json()["standing"] == "LINE_UP_INCOMPLETE", (
         "the organiser is a player in the ending rule: two are still on it"
     )
-    await world.deliver_the_outbox(session_factory)
-    assert await _rooms(client, organiser["token"]) == []
-    (room,) = await _rooms(client, newcomer["token"])
-    assert room["conversation_id"] == conversation_id, "the same room, still standing"
     ana_out = await client.post(
         f"/api/v1/challenges/{challenge_id}/departure",
         headers=world.auth(people["ana"]["token"]),
@@ -585,19 +522,8 @@ async def test_a_half_built_court_is_filled_a_room_grows_and_the_last_one_left_e
         "the newcomer is alone with nobody deciding, and a departure is a no"
     )
 
-    await world.deliver_the_outbox(session_factory)
     for one in (organiser, people["ana"], newcomer):
-        assert await _rooms(client, one["token"]) == [], (
-            "a room without a game lives exactly as long as its challenge "
-            "(`docs/adr/0164` §6)"
-        )
-        gone = await client.get(
-            f"/api/v1/conversations/{conversation_id}",
-            headers=world.auth(one["token"]),
-        )
-        assert gone.status_code == 404, gone.text
-        assert gone.json()["code"] == "conversation_not_found"
         still_there = await _challenge(client, one["token"], challenge_id)
         assert still_there["standing"] == "DECLINED", (
-            "the challenge stays and explains where the room went"
+            "the challenge stays, and says how it ended"
         )

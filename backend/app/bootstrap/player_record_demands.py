@@ -4,23 +4,17 @@
 ``matcher_demands.py`` holds the ports the matcher declares of contexts it does
 not write; ``games_demands.py``, ``rating_demands.py`` and
 ``player_score_demands.py`` each hold what one **provider** publishes outward.
-This one is the matcher's kind: a context that writes nothing and asks ten
-questions of eight others. Rows of the two kinds in one list would make every
+This one is the matcher's kind: a context that writes nothing and asks nine
+questions of seven others. Rows of the two kinds in one list would make every
 exhaustiveness assertion a claim about something else, and the first person to
 add a row would have to guess which.
 
-**One port here has four implementations, and that is the shape rather than an
-accident.** ``PriorDisclosure`` is *where has this reader already been shown this
-person*, and the platform answers it in four places — a search of theirs
-returned them, they are both seated in a live challenge, they were on a court
-together, they are both in a group. The fourth was a surface that introduces one
-player to another arriving with a fourth row, and this context never learned
-what a group is. The
-suite runs **each** of them against the demand, which is what makes *no adapter
-signs half a contract* true of a port with more than one signatory. **Whoever
-runs a group they are in** is a fifth strand and a port of its own,
-``RunnerDisclosure``, because it is admitted under other gates — a row beside
-the four would be a claim this list could not check (#566).
+**One port here has three implementations, and that is the shape rather than an
+accident.** ``PriorDisclosure`` is *has this reader already been shown this
+person*, and the platform answers it in three places — they were on a court
+together, they are both in a group, the reader runs a group the subject is in
+(#575). The suite runs **each** of them against the demand, which is what makes
+*no adapter signs half a contract* true of a port with more than one signatory.
 
 **A row carries a builder over a session**, not an instance, so the suite cannot
 quietly excuse the implementations with a database behind them — which here is
@@ -37,26 +31,23 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bootstrap.composition import (
     build_subject_form,
     build_subject_ratings,
+    build_account_gates,
     build_account_hold_query,
     build_account_status_query,
     build_block_query,
-    build_candidate_source,
-    build_challenge_disclosure,
     build_domain_event_store,
     build_event_publisher,
     build_game_disclosure,
     build_group_disclosure,
     build_photo_storage,
-    build_player_profile_repository,
     build_record_gates,
     build_record_photo_link,
     build_runner_disclosure,
-    build_search_disclosure,
     build_subject_identity_source,
     build_subject_reliability,
     build_subject_sportsmanship,
@@ -64,13 +55,11 @@ from app.bootstrap.composition import (
 )
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
-from app.modules.matchmaking.application.fail_closed_gates import FailClosedGates
 from app.modules.player_record.domain.ports import (
     PLAYER_RECORD_DEMANDS,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
-    RunnerDisclosure,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -113,33 +102,16 @@ def _photo_link(session: AsyncSession) -> RecordPhotoLink:
 
 
 def _record_gates(session: AsyncSession) -> RecordGates:
-    """The four fail-closed gates and the reader's hold, over an empty index.
+    """The three gates about accounts and the reader's hold, over a session."""
 
-    **The candidate source is the process's and not the request's**
-    (``docs/adr/0112``), and a register row holds only a session — so this one
-    takes the process-level builder and never refreshes what it hands back, which
-    is a source answering an empty container for every partition. That is exactly
-    the state the demand about this port is written around: *a subject with no row
-    in the partition asked about is not admitted*, because a gate that cannot be
-    evaluated excludes. The factory handed to it is unbound deliberately — a demand
-    that refreshed this index would fail loudly here rather than quietly testing
-    something else.
-    """
-
+    holds = build_account_hold_query(session)
     return build_record_gates(
-        gates=FailClosedGates(
-            profiles=build_player_profile_repository(
-                event_store=build_domain_event_store(session),
-                events=build_event_publisher(session),
-            ),
-            candidates=build_candidate_source(
-                session_factory=async_sessionmaker()
-            ),
+        accounts=build_account_gates(
             blocks=build_block_query(session),
-            holds=build_account_hold_query(session),
+            holds=holds,
             account_status=build_account_status_query(session),
         ),
-        holds=build_account_hold_query(session),
+        holds=holds,
     )
 
 
@@ -156,16 +128,6 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=PriorDisclosure,
-        name="SearchesThatShowedThem",
-        build=build_search_disclosure,
-    ),
-    RegisteredImplementation(
-        port=PriorDisclosure,
-        name="ChallengesTheyShare",
-        build=build_challenge_disclosure,
-    ),
-    RegisteredImplementation(
-        port=PriorDisclosure,
         name="GamesTheyPlayed",
         build=build_game_disclosure,
     ),
@@ -175,7 +137,7 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         build=build_group_disclosure,
     ),
     RegisteredImplementation(
-        port=RunnerDisclosure,
+        port=PriorDisclosure,
         name="GroupsTheReaderRuns",
         build=build_runner_disclosure,
     ),

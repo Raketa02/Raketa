@@ -2,8 +2,10 @@
 
 A player taps a face and is told who that person is. The rule the route runs on
 (``docs/adr/0159``): **a record is read through a prior disclosure, never about a
-person** — and the four fail-closed gates are re-evaluated live on every open,
-so a disclosure entitles a reader to ask and never to be answered.
+person** — the pair played together, share a group, or the reader runs a group
+the subject is in (#575) — and the gates about accounts are re-evaluated live on
+every open, so a disclosure entitles a reader to ask and never to be answered.
+Nothing here searches and nothing reads a candidate index.
 
 **The refusal is the thing most worth testing here**, and it is tested as a
 *sameness* rather than as four statuses: never disclosed, blocked, held and no
@@ -39,7 +41,6 @@ from app.modules.player_score.domain.strands import (
     PUBLISHED_WEIGHTS,
     out_of_a_hundred,
 )
-from app.modules.matchmaking.presentation.dependencies import get_candidate_source
 from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.rating.domain.events import RatingInitialised
 from app.modules.sportsmanship.domain.card import (
@@ -64,22 +65,27 @@ async def searcher(client):
     return await players.a_rated_player(client, "searcher")
 
 
-async def a_search_that_showed(client, session_factory, candidate_source, searcher):
-    """One search of the reader's, and the one person it returned.
+async def their_group(client, searcher) -> tuple[dict, dict]:
+    """The reader's own *Anyone* group at a club, and the reader as its owner."""
 
-    The disclosure this route is built on, made the way the platform makes one:
-    a real candidate in the index and a real search over it, so what entitles the
-    read is a row the platform wrote rather than a fixture's say-so.
-    """
+    owner = {"id": searcher["id"], "headers": players.auth(searcher["token"])}
+    return await a_group(client, owner, await a_club(client)), owner
 
-    subject = await world.a_candidate(
+
+async def a_member_of_their_group(client, session_factory, searcher) -> UUID:
+    """Somebody filed on the log who joined the reader's group — the disclosure
+    a group's Members makes, made the way the platform makes one: a real group
+    and a real *Join*, so what entitles the read is membership the platform
+    holds rather than a fixture's say-so."""
+
+    group, _ = await their_group(client, searcher)
+    subject, token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
-    await world.fold_the_log(session_factory, candidate_source)
-    response = await world.search(client, searcher["token"])
-    assert response.status_code == 200, response.text
-    shown = [row["player_id"] for row in response.json()["candidates"]]
-    assert shown == [str(subject)], shown
+    joined = await join_group(
+        client, {"id": subject, "headers": players.auth(token)}, group
+    )
+    assert joined.status_code == 200, joined.text
     return subject
 
 
@@ -238,14 +244,12 @@ def without_the_trace(response) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def test_a_search_that_showed_them_opens_their_record(
-    client, session_factory, candidate_source, searcher
+async def test_a_group_you_share_opens_their_record(
+    client, session_factory, searcher
 ):
     """The ordinary case, and the whole identity zone with it."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
 
     response = await record_of(client, searcher["token"], subject)
 
@@ -293,29 +297,29 @@ async def test_a_search_that_showed_them_opens_their_record(
 
 
 async def test_a_record_quotes_the_line_they_wrote_and_omits_it_otherwise(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The record sheet draws the intro under the name** (``docs/adr/0170``
     §4), verbatim and off the profile — and a player who skipped has no key at
     all, never an empty string."""
 
-    karol = await world.a_candidate(
-        client,
-        session_factory,
-        "karol",
-        mu=searcher["mu"],
-        intro="Moved from Wrocław in May. Needs opponents.",
-    )
-    ola = await world.a_candidate(client, session_factory, "ola", mu=searcher["mu"])
-    await world.fold_the_log(session_factory, candidate_source)
-    shown = await world.search(client, searcher["token"])
-    assert {row["player_id"] for row in shown.json()["candidates"]} == {
-        str(karol),
-        str(ola),
-    }
+    group, _ = await their_group(client, searcher)
+    shown = {}
+    for name, intro in (
+        ("karol", "Moved from Wrocław in May. Needs opponents."),
+        ("ola", None),
+    ):
+        member_id, token = await players.a_player_on_the_log(
+            client, session_factory, name, mu=searcher["mu"], intro=intro
+        )
+        joined = await join_group(
+            client, {"id": member_id, "headers": players.auth(token)}, group
+        )
+        assert joined.status_code == 200, joined.text
+        shown[name] = member_id
 
-    wrote = await record_of(client, searcher["token"], karol)
-    skipped = await record_of(client, searcher["token"], ola)
+    wrote = await record_of(client, searcher["token"], shown["karol"])
+    skipped = await record_of(client, searcher["token"], shown["ola"])
 
     assert wrote.status_code == 200, wrote.text
     assert wrote.json()["intro"] == "Moved from Wrocław in May. Needs opponents."
@@ -344,63 +348,42 @@ async def test_asking_about_yourself_by_id_is_still_your_own_record(
     assert response.json()["is_self"] is True
 
 
-async def test_the_person_who_was_invited_can_open_the_organiser_s_record(
-    client, session_factory, candidate_source, searcher
+async def test_a_game_you_are_both_on_opens_the_record_both_ways(
+    client, session_factory, searcher
 ):
-    """**The strand a search cannot supply.** A court is sent off the organiser's
-    search, so the organiser has been shown the invitee and the invitee has been
-    shown nothing — and they are the person who most obviously needs to know who
-    they have just been asked to give up an evening to."""
+    """**Played together** (#575): a court the platform put the pair on — booked
+    and still ahead of them, with no group and no search anywhere between them
+    — is a disclosure each way round."""
 
-    people = {}
-    for name, latitude in (("ana", 51.52), ("bea", 51.53), ("caro", 51.54)):
-        player_id, token = await players.a_player_on_the_log(
-            client, session_factory, name, mu=searcher["mu"], latitude=latitude
-        )
-        people[name] = {"id": player_id, "token": token}
-    await world.fold_the_log(session_factory, candidate_source)
-    built = await world.lineup(client, searcher["token"])
-    assert built.status_code == 200, built.text
-    body = built.json()
-    court = [
-        {
-            "side": seat["side"],
-            "player_id": seat.get("player_id", str(searcher["id"])),
-        }
-        for seat in body["lineup"]["seats"]
-    ]
-    sent = await client.post(
-        "/api/v1/challenges",
-        json={"search_id": body["search"]["search_id"], "court": court},
-        headers=players.auth(searcher["token"]),
+    subject, token = await players.a_player_on_the_log(
+        client, session_factory, "subject", mu=searcher["mu"]
     )
-    assert sent.status_code == 201, sent.text
-    invitee = next(
-        person
-        for person in people.values()
-        if str(person["id"]) in {seat["player_id"] for seat in court}
+    assert (await record_of(client, searcher["token"], subject)).status_code == 404
+
+    await players.a_booked_game(
+        session_factory, side_a=(searcher["id"],), side_b=(subject,)
     )
 
-    response = await record_of(client, invitee["token"], searcher["id"])
+    theirs = await record_of(client, searcher["token"], subject)
+    mine = await record_of(client, token, searcher["id"])
 
-    assert response.status_code == 200, response.text
-    assert response.json()["name"] == "searcher"
-    assert response.json()["nickname"] == "searcher"
+    assert theirs.status_code == 200, theirs.text
+    assert theirs.json()["name"] == "subject"
+    assert mine.status_code == 200, mine.text
+    assert mine.json()["name"] == "searcher"
 
 
 async def two_strangers_in_one_group(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ) -> tuple[dict, dict, dict]:
-    """The searcher and a candidate nobody has shown them, both in the searcher's
+    """The searcher and a player nobody has shown them, both in the searcher's
     *Anyone* group — the pair a group's Members lists to each other (#514)."""
 
     subject_id, subject_token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
-    await world.fold_the_log(session_factory, candidate_source)
-    owner = {"id": searcher["id"], "headers": players.auth(searcher["token"])}
+    group, owner = await their_group(client, searcher)
     member = {"id": subject_id, "headers": players.auth(subject_token)}
-    group = await a_group(client, owner, await a_club(client))
     joined = await join_group(client, member, group)
     assert joined.status_code == 200, joined.text
     return group, {**owner, "token": searcher["token"]}, {
@@ -410,20 +393,18 @@ async def two_strangers_in_one_group(
 
 
 async def test_a_group_you_are_both_in_opens_the_record_both_ways(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The strand Members promises** (#529): *Press and hold anyone for the
-    full record* is read by a member who never searched, about people no search
-    of theirs returned — the group is what introduced them."""
+    full record* is read by a member about people nothing else introduced —
+    the group is what introduced them."""
 
     subject_id, subject_token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
-    await world.fold_the_log(session_factory, candidate_source)
     assert (await record_of(client, searcher["token"], subject_id)).status_code == 404
 
-    owner = {"id": searcher["id"], "headers": players.auth(searcher["token"])}
-    group = await a_group(client, owner, await a_club(client))
+    group, _ = await their_group(client, searcher)
     joined = await join_group(
         client, {"id": subject_id, "headers": players.auth(subject_token)}, group
     )
@@ -439,14 +420,14 @@ async def test_a_group_you_are_both_in_opens_the_record_both_ways(
 
 
 async def test_leaving_the_group_closes_the_record_it_opened(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**Membership as it stands, not as it was** — Members lists who is in the
     group now, so the strand is the group now: unlike a game, a group left is no
     longer one the pair are in."""
 
     group, owner, member = await two_strangers_in_one_group(
-        client, session_factory, candidate_source, searcher
+        client, session_factory, searcher
     )
     assert (await record_of(client, owner["token"], member["id"])).status_code == 200
 
@@ -459,14 +440,42 @@ async def test_leaving_the_group_closes_the_record_it_opened(
     assert (await record_of(client, member["token"], owner["id"])).status_code == 404
 
 
+async def test_a_preference_gates_no_record(client, session_factory, searcher):
+    """**No candidate index and no preference** (#575). A gender preference says
+    who a player is willing to be *matched* with; the group already put these
+    two in front of each other, and its Members lists each to the other — so
+    the record opens whichever way the preference points."""
+
+    group, _ = await their_group(client, searcher)
+    kuba_id, kuba = await players.a_player_on_the_log(
+        client,
+        session_factory,
+        "kuba",
+        mu=searcher["mu"],
+        gender="MAN",
+        gender_preference="WOMEN_ONLY",
+    )
+    piotr_id, piotr = await players.a_player_on_the_log(
+        client, session_factory, "piotr", mu=searcher["mu"], gender="MAN"
+    )
+    for member_id, token in ((kuba_id, kuba), (piotr_id, piotr)):
+        joined = await join_group(
+            client, {"id": member_id, "headers": players.auth(token)}, group
+        )
+        assert joined.status_code == 200, joined.text
+
+    assert (await record_of(client, piotr, kuba_id)).status_code == 200
+    assert (await record_of(client, kuba, piotr_id)).status_code == 200
+
+
 async def test_a_block_between_two_members_closes_the_record_the_group_opened(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
-    """The gates stay live whatever the strand: Members leaves a blocked pair out
-    of each other's list, and the record refuses them either way round."""
+    """The gates stay live whatever the strand, and the record refuses a
+    blocked pair either way round."""
 
     _, owner, member = await two_strangers_in_one_group(
-        client, session_factory, candidate_source, searcher
+        client, session_factory, searcher
     )
 
     blocked = await players.block_between(client, member["token"], owner["id"])
@@ -482,15 +491,16 @@ async def test_a_block_between_two_members_closes_the_record_the_group_opened(
 
 
 async def test_a_person_you_have_never_been_shown_is_refused(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """Without this the route is a player-enumeration endpoint, and a UUID being
-    hard to guess is not an authorization model."""
+    hard to guess is not an authorization model. **A search is no disclosure any
+    more** (#575): nothing a reader looked for opens a record — only a court, a
+    group or a group they run."""
 
     stranger, _ = await players.a_player_on_the_log(
         client, session_factory, "stranger", mu=searcher["mu"]
     )
-    await world.fold_the_log(session_factory, candidate_source)
 
     response = await record_of(client, searcher["token"], stranger)
 
@@ -498,46 +508,8 @@ async def test_a_person_you_have_never_been_shown_is_refused(
     assert response.json()["code"] == "record_unavailable"
 
 
-async def test_a_block_in_either_direction_closes_a_record_a_search_opened(
-    client, session_factory, candidate_source, searcher
-):
-    """The disclosure stands for ever and the gates are live, which is the whole
-    reason they are re-run rather than recorded."""
-
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
-    assert (await record_of(client, searcher["token"], subject)).status_code == 200
-
-    blocked = await players.block_between(client, searcher["token"], subject)
-
-    assert blocked.status_code == 204, blocked.text
-    assert (await record_of(client, searcher["token"], subject)).status_code == 404
-
-
-async def test_a_gate_that_cannot_be_evaluated_excludes(
-    client, session_factory, candidate_source, searcher
-):
-    """A subject with no row in the partition the disclosure happened in has no
-    preference to read, so the mutual gender gate cannot be evaluated — and *a
-    gate that cannot be evaluated excludes*. This is the half of the partition
-    rule HTTP can see; which partition is chosen is pinned in
-    ``tests/unit/test_record_admission.py``."""
-
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
-    players.override(
-        client, get_candidate_source, lambda: world.an_empty_index(candidate_source)
-    )
-
-    response = await record_of(client, searcher["token"], subject)
-
-    assert response.status_code == 404, response.text
-
-
 async def test_the_four_refusals_are_byte_identical(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**Asserted as a sameness, not as four statuses.**
 
@@ -547,13 +519,10 @@ async def test_the_four_refusals_are_byte_identical(
     *is this id real* about a stranger.
     """
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     stranger, _ = await players.a_player_on_the_log(
         client, session_factory, "stranger", mu=searcher["mu"]
     )
-    await world.fold_the_log(session_factory, candidate_source)
 
     never_disclosed = await record_of(client, searcher["token"], stranger)
     no_such_player = await record_of(client, searcher["token"], uuid4())
@@ -577,15 +546,13 @@ async def test_the_four_refusals_are_byte_identical(
 
 
 async def test_the_held_reader_is_refused_by_the_same_line(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """A hold points **both ways** (``docs/adr/0095``), so it reaches the route
-    that remembers what a search already showed — and it reaches it as this
+    that remembers who a player has been shown — and it reaches it as this
     route's one refusal rather than as a second thing to draw."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     world.hold_only(client, searcher["id"])
 
     response = await record_of(client, searcher["token"], subject)
@@ -606,11 +573,9 @@ async def test_a_held_player_can_still_read_their_own_record(client, searcher):
 
 
 async def test_an_account_that_may_not_be_shown_is_refused(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     world.may_not_show(client, subject)
 
     response = await record_of(client, searcher["token"], subject)
@@ -641,14 +606,12 @@ async def test_me_is_never_parsed_as_a_player_id(client, searcher):
 
 
 async def test_the_sport_asked_for_is_the_one_the_skill_card_draws(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """The overwhelming case, and the pills beside it name every sport they hold
     **in the registry's own order** rather than the order the ratings arrived."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await also_rated_in(session_factory, subject, sport=Sport.SQUASH, mu=4.10)
 
     asked = await record_of(client, searcher["token"], subject, sport=Sport.SQUASH)
@@ -662,16 +625,14 @@ async def test_the_sport_asked_for_is_the_one_the_skill_card_draws(
 
 
 async def test_a_sport_they_do_not_play_falls_back_and_never_refuses(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The parameter chooses what is drawn and never whether it is.** Admission
     ran in the partition of the search that showed them, which is a fact the
     platform holds — so naming a sport nobody was ever shown in changes the
     header and nothing else."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
 
     response = await record_of(client, searcher["token"], subject, sport=Sport.TENNIS)
 
@@ -680,14 +641,12 @@ async def test_a_sport_they_do_not_play_falls_back_and_never_refuses(
 
 
 async def test_asking_for_no_sport_falls_back_the_same_way(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """A record opened from a surface with no sport behind it — a chat, a games
     list — takes the same fallback rather than a third rule."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
 
     body = (await record_of(client, searcher["token"], subject)).json()
 
@@ -712,7 +671,7 @@ async def test_your_own_record_takes_the_sport_too(client, session_factory, sear
 
 
 async def test_the_run_of_five_is_the_resolved_sports_and_nobody_elses(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The defect this ticket fixes, over the wire.** A run built across every
     sport and drawn beneath a single sport's Level was squash results under a
@@ -722,9 +681,7 @@ async def test_the_run_of_five_is_the_resolved_sports_and_nobody_elses(
     the padel one alone.
     """
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await also_rated_in(session_factory, subject, sport=Sport.SQUASH, mu=4.10)
     await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
@@ -751,14 +708,12 @@ async def test_the_run_of_five_is_the_resolved_sports_and_nobody_elses(
 
 
 async def test_a_run_shorter_than_five_is_never_padded(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """One result means one, and the client draws the gap rather than filling
     it. An empty list is what somebody with none gets."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=False
     )
@@ -774,7 +729,7 @@ async def test_a_run_shorter_than_five_is_never_padded(
 
 
 async def test_the_record_says_how_widely_they_spread_their_games(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**A pair and never a share**, over the **whole** record.
 
@@ -784,9 +739,7 @@ async def test_the_record_says_how_widely_they_spread_their_games(
     rows above it print their raw fractions for.
     """
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     somebody_else = uuid4()
     await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
@@ -804,7 +757,7 @@ async def test_the_record_says_how_widely_they_spread_their_games(
 
 
 async def test_variety_counts_every_sport_and_the_sport_asked_for_moves_it_not(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**It is about no sport at all**, unlike the run of five above it.
 
@@ -812,9 +765,7 @@ async def test_variety_counts_every_sport_and_the_sport_asked_for_moves_it_not(
     different runs of form: one is a habit and the other is this sport's record.
     """
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await also_rated_in(session_factory, subject, sport=Sport.SQUASH, mu=4.10)
     await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
@@ -858,7 +809,7 @@ async def test_your_own_record_carries_the_same_pair(
 
 
 async def test_each_strand_crosses_as_its_raw_pair_and_its_own_figure(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**A perfect record over nine and one over forty are different claims**,
     and a bar alone hides which — so the two counts cross beside the figure.
@@ -867,9 +818,7 @@ async def test_each_strand_crosses_as_its_raw_pair_and_its_own_figure(
     each, one of them good.
     """
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
@@ -884,7 +833,7 @@ async def test_each_strand_crosses_as_its_raw_pair_and_its_own_figure(
 
 
 async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The published figure is the weighted mean of the figures beneath it**,
     recomputed here through the published weights from the rows that actually
@@ -894,9 +843,7 @@ async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
     weights — or one taken over the unrounded ratios — would land somewhere else.
     """
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
@@ -923,16 +870,14 @@ async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
 
 
 async def test_no_weight_crosses_on_this_response_in_any_shape(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The weights are a fact about how the number is made, not about the
     person.** A client holding them could draw one strand as worth more than
     another, which no screen here claims — and could re-derive the pill, which is
     a second rounding of a figure the matcher acts on."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await a_kept_booked_game(session_factory, subject)
 
     body = (await record_of(client, searcher["token"], subject)).json()
@@ -942,7 +887,7 @@ async def test_no_weight_crosses_on_this_response_in_any_shape(
 
 
 async def test_a_player_nothing_has_fallen_due_for_has_no_section_at_all(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**Omitted whole, and never a section of noughts.** Nobody has failed to
     turn up who was never due to, and a zero here is how *no record* becomes *a
@@ -957,9 +902,7 @@ async def test_a_player_nothing_has_fallen_due_for_has_no_section_at_all(
     failure.
     """
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
 
     body = (await record_of(client, searcher["token"], subject)).json()
 
@@ -1027,16 +970,14 @@ async def stars_for(session_factory, subject: UUID, *stars: int) -> None:
 
 
 async def test_a_reader_is_told_the_figure_and_how_many_people_it_rests_on(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**Its own zone, and both numbers in it.** The card above promises
     *counted by the system, not written by people*; this is the one thing on the
     sheet people typed, so it crosses under its own name and never among the
     metered rows."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await stars_for(session_factory, subject, 5, 4, 5)
 
     body = (await record_of(client, searcher["token"], subject)).json()
@@ -1045,15 +986,13 @@ async def test_a_reader_is_told_the_figure_and_how_many_people_it_rests_on(
 
 
 async def test_it_publishes_from_a_single_rating_with_the_count_beside_it(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**No minimum**, because the count does a minimum's work honestly: over one
     player the field visibly reads as one person's opinion, which is the same
     discipline the metered rows take by printing their raw pairs."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await stars_for(session_factory, subject, 3)
 
     body = (await record_of(client, searcher["token"], subject)).json()
@@ -1062,15 +1001,13 @@ async def test_it_publishes_from_a_single_rating_with_the_count_beside_it(
 
 
 async def test_a_person_nobody_has_rated_has_the_zone_absent_entirely(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """A **fourth absence**, and a fourth question: rating is a favour, ignoring
     a card costs nothing and nothing records the omission — so this is never a
     nought and never an empty object."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
 
     body = (await record_of(client, searcher["token"], subject)).json()
 
@@ -1078,15 +1015,13 @@ async def test_a_person_nobody_has_rated_has_the_zone_absent_entirely(
 
 
 async def test_nothing_is_trimmed_at_either_end_of_the_window(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**No outlier trimming of any kind**, because trimming is the platform
     deciding which raters were wrong — a larger claim than publishing the number,
     and one with no appeal route behind it either."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await stars_for(session_factory, subject, 1, 5, 5)
 
     body = (await record_of(client, searcher["token"], subject)).json()
@@ -1117,18 +1052,20 @@ async def test_your_own_record_carries_the_figure_and_the_count(
 
 
 async def test_the_subject_and_a_reader_are_served_one_figure(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**One record, one resolution, whoever is reading.** The figure on your
-    own sheet is byte-for-byte the figure a stranger a search showed you to is
-    served about you — no coarsening, no withheld count, no second fold."""
+    own sheet is byte-for-byte the figure somebody in your group is served
+    about you — no coarsening, no withheld count, no second fold."""
 
+    group, _ = await their_group(client, searcher)
     subject, token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
-    await world.fold_the_log(session_factory, candidate_source)
-    shown = (await world.search(client, searcher["token"])).json()["candidates"]
-    assert [row["player_id"] for row in shown] == [str(subject)]
+    joined = await join_group(
+        client, {"id": subject, "headers": players.auth(token)}, group
+    )
+    assert joined.status_code == 200, joined.text
     await stars_for(session_factory, subject, 5, 3, 4, 4)
 
     as_a_reader = (await record_of(client, searcher["token"], subject)).json()
@@ -1166,15 +1103,13 @@ async def test_a_subject_nobody_has_rated_has_the_zone_absent_on_their_own_recor
 
 
 async def test_the_sport_asked_for_does_not_move_what_players_said(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """It is about **no sport**, like the metered rows and the variety beside it:
     how somebody is to play with is not a padel fact, and `?sport=` says what the
     sheet is about rather than which record is folded."""
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await stars_for(session_factory, subject, 4, 4)
 
     padel = (
@@ -1195,7 +1130,7 @@ async def test_the_sport_asked_for_does_not_move_what_players_said(
 
 
 async def test_stars_move_no_part_of_the_reliability_pill(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The figure does not enter the pill, and the matcher reads it nowhere.**
 
@@ -1214,9 +1149,7 @@ async def test_stars_move_no_part_of_the_reliability_pill(
     this refuses the matcher the import; this refuses the arithmetic.
     """
 
-    subject = await a_search_that_showed(
-        client, session_factory, candidate_source, searcher
-    )
+    subject = await a_member_of_their_group(client, session_factory, searcher)
     await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
     await a_kept_booked_game(session_factory, subject)
 

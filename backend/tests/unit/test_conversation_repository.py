@@ -1,9 +1,9 @@
-"""The conversation row: the allocator, the lock, and *one arrangement is one room*.
+"""The conversation row: the allocator, the lock, and *one booking is one room*.
 
 The aggregate's own suite proves the sequence is gapless in memory. What is here
 is the half that lives in the database: that the row mirrors the aggregate's
 ``last_seq``, that the lookup that opens a room is the one that takes the lock,
-and that a second room for one challenge is refused by the schema rather than by
+and that a second room for one booking is refused by the schema rather than by
 somebody remembering to check.
 
 **The lock itself is not asserted, and that is stated rather than hidden.**
@@ -61,10 +61,10 @@ def conversations(session):
     )
 
 
-def _opened(challenge_id) -> Conversation:
+def _opened(booking_id) -> Conversation:
     return Conversation.opened(
         conversation_id=uuid4(),
-        challenge_id=challenge_id,
+        booking_id=booking_id,
         sport=Sport.PADEL,
         occurred_at=NOW,
     )
@@ -144,7 +144,7 @@ async def test_appends_through_the_locking_read_leave_no_gap_and_no_duplicate(
             )
         else:
             loaded.record_line(
-                code=SystemLineCode.SEAT_ACCEPTED,
+                code=SystemLineCode.GAME_PLAYED,
                 actor_id=uuid4(),
                 values={},
                 source_event_id=uuid4(),
@@ -158,53 +158,52 @@ async def test_appends_through_the_locking_read_leave_no_gap_and_no_duplicate(
     assert [entry.seq for entry in folded.entries] == [1, 2, 3, 4, 5]
 
 
-async def test_the_room_a_challenge_opened_is_found_by_that_challenge(
+async def test_the_room_a_booking_opened_is_found_by_that_booking(
     conversations, session
 ):
-    challenge_id = uuid4()
-    room = _opened(challenge_id)
+    booking_id = uuid4()
+    room = _opened(booking_id)
     await conversations.save(room)
     await session.commit()
 
-    found = await conversations.for_challenge(challenge_id)
+    found = await conversations.for_booking(booking_id)
 
     assert found is not None
     assert found.conversation_id == room.conversation_id
-    assert await conversations.for_challenge(uuid4()) is None
+    assert found.booking_id == booking_id
+    assert (await _row(session, room.conversation_id)).booking_id == booking_id
+    assert await conversations.for_booking(uuid4()) is None
 
 
-async def test_one_arrangement_is_one_room_and_the_schema_says_so(
-    conversations, session
-):
-    """The unique index is the invariant. Without it, two acceptances arriving in
-    one outbox poll would open two rooms for one court."""
+async def test_one_booking_is_one_room_and_the_schema_says_so(conversations, session):
+    """The unique index is the invariant. Without it, two deliveries of one
+    booked game arriving in one outbox poll would open two rooms for it."""
 
-    challenge_id = uuid4()
-    await conversations.save(_opened(challenge_id))
+    booking_id = uuid4()
+    await conversations.save(_opened(booking_id))
     await session.commit()
 
-    await conversations.save(_opened(challenge_id))
+    await conversations.save(_opened(booking_id))
     with pytest.raises(IntegrityError):
         await session.commit()
 
 
-async def test_the_game_reaches_the_row_so_the_played_line_can_find_it(
+async def test_a_room_born_about_its_game_files_the_game_on_its_row_in_one_save(
     conversations, session
 ):
-    """``GamePlayed`` names a game and nothing else, which is why ``GamePlanned``
-    has to reach the room even though it draws nothing."""
+    """``GamePlayed`` names a game and nothing else, so the row must know it
+    from the room's first save — the opening and the game are one save, because
+    the worker's session does not autoflush."""
 
-    room = _opened(uuid4())
-    await conversations.save(room)
-    await session.commit()
     game_id = uuid4()
-
-    loaded = await conversations.load_for_append(room.conversation_id)
-    loaded.note_game(game_id=game_id, occurred_at=_later(1))
-    await conversations.save(loaded)
+    room = _opened(uuid4())
+    room.note_game(game_id=game_id, occurred_at=NOW, starts_at=_later(60))
+    await conversations.save(room)
     await session.commit()
 
     assert (await _row(session, room.conversation_id)).game_id == game_id
+    folded = await conversations.load(room.conversation_id)
+    assert (folded.game_id, folded.starts_at) == (game_id, _later(60))
 
 
 async def test_a_room_that_was_never_opened_loads_as_nothing(conversations):
@@ -258,9 +257,7 @@ async def test_destroying_a_room_takes_its_stream_with_it(conversations, session
     assert await conversations.load(room.conversation_id) is None
 
 
-async def test_destroying_a_room_leaves_every_other_room_alone(
-    conversations, session
-):
+async def test_destroying_a_room_leaves_every_other_room_alone(conversations, session):
     doomed, kept = _opened(uuid4()), _opened(uuid4())
     for room in (doomed, kept):
         await conversations.save(room)
@@ -274,7 +271,7 @@ async def test_destroying_a_room_leaves_every_other_room_alone(
 
 
 async def test_destroying_a_room_twice_destroys_it_once(conversations, session):
-    """Both callers — the withdrawal and the sweep — can run beside themselves,
+    """Both callers — the call-off and the sweep — can run beside themselves,
     and a room that is not there is the state this asks for."""
 
     room = _opened(uuid4())
@@ -288,21 +285,21 @@ async def test_destroying_a_room_twice_destroys_it_once(conversations, session):
     assert await conversations.load(room.conversation_id) is None
 
 
-async def test_the_challenge_may_open_a_room_again_once_the_first_is_destroyed(
+async def test_the_booking_may_open_a_room_again_once_the_first_is_destroyed(
     conversations, session
 ):
-    """The unique index is on the row, so *one arrangement is one room* is a
-    claim about rooms that exist — and a destroyed one does not."""
+    """The unique index is on the row, so *one booking is one room* is a claim
+    about rooms that exist — and a destroyed one does not."""
 
-    challenge_id = uuid4()
-    first = _opened(challenge_id)
+    booking_id = uuid4()
+    first = _opened(booking_id)
     await conversations.save(first)
     await session.flush()
     await conversations.destroy(first.conversation_id)
     await session.flush()
 
-    second = _opened(challenge_id)
+    second = _opened(booking_id)
     await conversations.save(second)
     await session.flush()
 
-    assert await conversations.for_challenge(challenge_id) is not None
+    assert await conversations.for_booking(booking_id) is not None

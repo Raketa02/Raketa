@@ -14,15 +14,13 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends
 
 from app.api.dependencies import (
     ClockDep,
     DbSession,
     DomainEventStoreDep,
     EventPublisherDep,
-    SettingsDep,
-    StoreOrNothingDep,
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
@@ -149,38 +147,17 @@ def get_dismiss_game(
 DismissGameDep = Annotated[DismissGame, Depends(get_dismiss_game)]
 
 
-def get_court_pairing(
-    request: Request,
-    db: DbSession,
-    clock: ClockDep,
-    uow: UnitOfWorkDep,
-    event_store: DomainEventStoreDep,
-    events: EventPublisherDep,
-    settings: SettingsDep,
-    store: StoreOrNothingDep,
-) -> CourtPairing:
-    """The matcher's and the rating context's answer about a game's court, per
+def get_court_pairing(db: DbSession) -> CourtPairing:
+    """The engine's and the rating context's answer about a game's court, per
     request.
 
-    **The index is read off the running process rather than declared**, and it
-    is read with ``getattr`` deliberately: this context may not name the
-    matcher's types, and a process with no index is not a refusal here. A
-    search with none says ``503``; this screen answers regardless — the seats'
-    Levels and the stakes are the rating context's and are read whatever the
-    matcher's state, and the forecast is simply not drawn — because a game
-    screen is not gated on the matcher (``docs/adr/0161``).
+    **Over the request's session and nothing else** (#575): the court is read
+    side against side from the people's Levels, so neither the candidate index
+    nor the Redis store is asked for — a game screen is not gated on the
+    matcher (``docs/adr/0161``), and now it does not reach for one either.
     """
 
-    return build_game_court_pairing(
-        session=db,
-        clock=clock,
-        unit_of_work=uow,
-        event_store=event_store,
-        events=events,
-        settings=settings,
-        store=store,
-        candidates=getattr(request.app.state, "candidate_source", None),
-    )
+    return build_game_court_pairing(db)
 
 
 def get_read_game_pairing(

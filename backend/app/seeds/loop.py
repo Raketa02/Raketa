@@ -25,14 +25,9 @@ claim: **every state the loop's five screens draw is in this database**
   a fixture cannot do, so it is written on a clock three days old; and
   ``CALLED_OFF`` (``docs/adr/0172``) is reached by the one act that records it —
   the departure that leaves one player on a game — on the *called-off* rail game.
-- **The room's eight system-line codes.** Four come from the Plan — three slot
-  writes and the **lock**, which is an act rather than a slot and comes from the
-  one arranged plan declared agreed (``docs/adr/0155``).
-  ``GAME_PLAYED`` was written and then **swept**, because a room outlives *we
-  played* by forty-eight hours and every played evening here is older than that.
-  ``SEAT_ACCEPTED`` and ``SEAT_LEFT`` need a court where somebody accepts after
-  the room is already open and somebody else leaves it, and ``SEATS_INVITED``
-  needs a **fill** — an act nothing in this fixture performed.
+- **No room.** A challenge's acceptance opened one until #575; a room is opened
+  only by a booked game now, so nothing this layer writes reaches a
+  conversation, and the outbox it drains as it goes opens none.
 
 **Written in the past where the state is about a clock, and only there.** A
 result is confirmed six hours after the score was proposed, a card leaves the rail
@@ -100,7 +95,6 @@ from app.modules.challenges.domain.challenge import Challenge
 from app.modules.challenges.domain.seats import SeatAnswer
 from app.modules.challenges.domain.seats import Side as CourtSide
 from app.modules.challenges.domain.standing import Standing
-from app.modules.conversations.domain.entries import SystemLine, SystemLineCode
 from app.modules.games.application.commands import (
     AcceptResultCommand,
     StateResultCommand,
@@ -134,11 +128,7 @@ from app.seeds.paths import (
     tick_the_tail_to_catch_up,
 )
 from app.seeds.plans import AGREED_HOUR, ARRANGED_GAMES, agree_up_to
-from app.seeds.rooms import (
-    deliver_everything_told,
-    every_room_in_the_database,
-    read_the_entries,
-)
+from app.seeds.rooms import deliver_everything_told
 
 #: The barrier this layer calls between writes: *deliver what has been told so
 #: far*. A callable rather than a session factory, so the writers below name what
@@ -994,16 +984,14 @@ async def _fill_a_half_built_court(
         return (
             f"grown · challenge {court.id} was filled by a member's own ⚡ and "
             f"read {grown.standing.value} the moment they were asked; the one "
-            f"seat invited said no and it reads {left.standing.value} again, "
-            f"with both lines in the room"
+            f"seat invited said no and it reads {left.standing.value} again"
         )
     raise LoopStateMissing(
         "no half-built court in this database could be grown: either none "
         "stands — `app/seeds/pairs.py` leaves two — or every ⚡ run from one came "
         "back with nobody new to invite, which is the cohort's own pool and is "
         "held under its own name by `app/seeds/screens.py`. Without a fill, "
-        f"{SystemLineCode.SEATS_INVITED.value} is a system line no room in this "
-        "database can draw."
+        "the challenge screen's grown court is a state nothing here reaches."
     )
 
 
@@ -1128,9 +1116,6 @@ async def assert_the_loop(
                 *await _refuse_a_card_the_rail_cannot_draw(paths, cohort),
                 *await _refuse_a_standing_only_one_side_can_read(paths),
                 await _refuse_a_reader_who_left_and_is_told_they_are_in(paths),
-                await _refuse_a_system_line_no_room_carries(
-                    session, settings=settings, now=now
-                ),
             ]
     return tuple(lines)
 
@@ -1515,62 +1500,6 @@ async def _refuse_a_reader_who_left_and_is_told_they_are_in(
         "no still-open court in this database has somebody on it who declined a "
         "seat, so the challenge screen's *reader who has left* arm cannot be "
         "opened at all. The row that reaches it is `THE_COURT_SOMEBODY_LEFT`."
-    )
-
-
-# ---------------------------------------------------------------------------
-# The room: every code, and every one of them in a room that still stands
-# ---------------------------------------------------------------------------
-
-
-async def _refuse_a_system_line_no_room_carries(
-    session: AsyncSession, *, settings: Settings, now: Instant
-) -> str:
-    """*Every system-line code is in a room somebody can still open.*
-
-    **In a room that still stands, which is the whole difficulty.** Every code was
-    reachable before this layer and three of them were not *drawable*: a room
-    outlives *we played* by forty-eight hours and every played evening in the
-    played history is older than that, so ``GAME_PLAYED`` had been written and
-    swept — and ``SEAT_ACCEPTED``, ``SEATS_INVITED`` and ``SEAT_LEFT`` need a
-    court that grew or shrank **after** its room opened, which nothing here did.
-
-    **Read as a member, by paging backward to the beginning** — the way a person
-    scrolling reaches it. The one room this fixture fills past a page holds fifty
-    messages above the lines that were written before them, so a claim made off the
-    newest page alone would be a claim about what a room *opens on*.
-    """
-
-    carried: dict[str, list[str]] = {}
-    rooms = await every_room_in_the_database(session, settings=settings, now=now)
-    for room in rooms:
-        for entry in await read_the_entries(
-            session, room=room, settings=settings, now=now
-        ):
-            if isinstance(entry, SystemLine):
-                carried.setdefault(entry.code.value, []).append(
-                    str(room.conversation_id)
-                )
-    missing = [code.value for code in SystemLineCode if code.value not in carried]
-    if missing:
-        raise LoopStateMissing(
-            f"{missing} is a system line no standing room in this database "
-            f"carries, across {len(rooms)} room(s) whose newest pages hold "
-            f"{sorted(carried)}. A code nothing draws is a sentence in "
-            f"`the-words.md` §23 that no developer can look at. The rows that "
-            f"reach the membership three are `THE_COURT_SOMEBODY_LEFT` and the "
-            f"fill in `app/seeds/loop.py`; the Plan's four are "
-            f"`app/seeds/plans.py` — and `PLAN_LOCKED` is the one of those four "
-            f"that is an act rather than a slot, so it comes from the row "
-            f"declared `locked=True` and from nothing else; `GAME_PLAYED` needs "
-            f"a game played inside `CONVERSATION_GRACE`, which is `RAIL_GAMES`; "
-            f"and `SIDE_FORMED` is written only into the room a *doubles* mutual "
-            f"opens, which is `app/seeds/pairs.py`'s mutual-born court."
-        )
-    return (
-        f"lines · all {len(carried)} system-line code(s) are carried by a room "
-        f"that still stands: "
-        + ", ".join(f"{code} ({len(where)})" for code, where in sorted(carried.items()))
     )
 
 

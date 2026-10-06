@@ -748,23 +748,20 @@ class CourtPairing(Protocol):
     An outward demand on the matcher, signed by an adapter that lives on the
     matcher's side of the arrow (``docs/adr/0161``). The game screen needs a
     forecast and cannot go and get one: ``games`` may not import
-    ``matchmaking``, and the whole recompute-fail-closed apparatus already
-    exists there for the challenge card — this port is how it is reused rather
-    than built a second time.
+    ``matchmaking``, and the balance forecast a Games card prints already
+    lives there — this port is how it is reused rather than built a second
+    time, read side against side from the people's Levels (#575).
 
     **Recomputed, never replayed, and nothing is recorded.** A game carries no
     pairing and never will; the answer is as-of-now and means what a card means
     *because this game has not happened*, which is why the caller asks only
     while it has not.
 
-    **Two providers behind one port, and each fails on its own.** The forecast
-    and the split are the matcher's; the seats' Levels and the stakes are the
-    rating context's. A matcher that cannot be reached costs the first two and
-    never the Levels, because a Level is a fact about a person and not about
-    the pairing that could not be computed.
+    **A seat with no Level costs the forecast and never the other Levels**,
+    because a Level is a fact about a person and not about the pairing that
+    could not be computed.
 
-    **Nothing here re-gates.** The four fail-closed gates ran when the
-    challenge was minted, and the court is the whole of the permission
+    **Nothing here re-gates.** The court is the whole of the permission
     (``docs/adr/0141``, ``docs/adr/0143`` §2). What makes that safe is the
     recompute: a seat that cannot be priced today has no figure, with no trace.
     """

@@ -2,9 +2,9 @@
 
 The rooms themselves are folded from ``event_store`` like every other aggregate
 here; what this adds is the **lookup**, and the lookup is on the conversation row
-because that is where ``challenge_id`` and ``game_id`` are indexed.
+because that is where ``booking_id`` and ``game_id`` are indexed.
 
-**One question about the union, never one per challenge**, which is the shape
+**One question about the union, never one per booking**, which is the shape
 every set read in this codebase takes. The order is not part of the answer: the
 list is ordered by its last entry (``docs/adr/0148`` §11), which is a fold and
 belongs to the use case.
@@ -12,8 +12,7 @@ belongs to the use case.
 **The whole stream of each room is folded**, and it is bounded by the room rather
 than by the platform: a conversation is destroyed within days of the evening it
 was arranging (``docs/adr/0153``), which is the difference ``docs/adr/0148`` §6
-draws between a record and a room, applied to what a read costs. The challenges
-list already folds an aggregate per row for the same reason.
+draws between a record and a room, applied to what a read costs.
 """
 
 from __future__ import annotations
@@ -40,14 +39,14 @@ class SqlAlchemyConversationDirectory:
         self._session = session
         self._conversations = conversations
 
-    async def for_challenges(
-        self, challenge_ids: Collection[UUID]
+    async def for_bookings(
+        self, booking_ids: Collection[UUID]
     ) -> tuple[Conversation, ...]:
-        if not challenge_ids:
+        if not booking_ids:
             return ()
         found = await self._session.execute(
             select(ConversationORM.conversation_id)
-            .where(ConversationORM.challenge_id.in_(tuple(challenge_ids)))
+            .where(ConversationORM.booking_id.in_(tuple(booking_ids)))
             # Ordered so that two identical requests fold the same rooms in the
             # same order (``docs/adr/0105`` §1) — nothing downstream can observe
             # it, because the use case sorts, which is why the rule is stated on
@@ -75,9 +74,9 @@ class SqlAlchemyConversationDirectory:
     async def for_game(self, game_id: UUID) -> Conversation | None:
         """The room this game belongs to, **with its row locked**.
 
-        Its one caller is the telling that writes the *played* line, which is a
-        write — so this takes the lock the append needs, exactly as
-        ``for_challenge`` does.
+        Its callers are tellings that write — the *played* line, and the
+        call-off that destroys the room — so this takes the lock the append
+        needs, exactly as ``for_booking`` does.
         """
 
         found = await self._session.execute(

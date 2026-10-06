@@ -14,7 +14,6 @@ import pytest
 from app.kernel import Sport, instant
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import (
-    COUNT,
     DEPARTURE,
     MESSAGE_LENGTH_CAP,
     Message,
@@ -41,10 +40,10 @@ def _later(minutes: int):
     return instant(NOW + timedelta(minutes=minutes))
 
 
-def _opened() -> Conversation:
+def _opened(booking_id=None) -> Conversation:
     return Conversation.opened(
         conversation_id=uuid4(),
-        challenge_id=uuid4(),
+        booking_id=booking_id or uuid4(),
         sport=Sport.PADEL,
         occurred_at=NOW,
     )
@@ -63,15 +62,17 @@ def test_a_room_opens_with_no_entries_because_the_opening_is_not_a_line():
     """``the-words.md`` §23.1 — *it is the opening; ``seq`` 1 is whatever
     happens next.*"""
 
-    room = _opened()
+    booking = uuid4()
+    room = _opened(booking)
 
     assert room.entries == ()
     assert room.last_seq == 0
+    assert room.booking_id == booking
     assert [type(event) for event in room.pull_events()] == [ConversationOpened]
 
 
 def test_the_opening_stores_no_members_because_membership_is_derived():
-    """``docs/adr/0146`` §7 — never stored, from whichever record is arranging."""
+    """``docs/adr/0146`` §7 — never stored, read off the game's line-up."""
 
     room = _opened()
 
@@ -95,7 +96,7 @@ def test_the_sequence_starts_at_one_and_is_gapless_across_both_shapes():
         occurred_at=_later(1),
     )
     room.record_line(
-        code=SystemLineCode.SEAT_ACCEPTED,
+        code=SystemLineCode.GAME_PLAYED,
         actor_id=uuid4(),
         values={},
         source_event_id=uuid4(),
@@ -133,13 +134,16 @@ def test_the_sequence_survives_a_replay_of_the_stream():
 def test_a_message_carries_no_id_of_its_own():
     """``docs/adr/0148`` §4 — ``(conversation_id, seq)`` already identifies it."""
 
-    assert not hasattr(Message(
-        seq=1,
-        author_id=uuid4(),
-        client_message_id=uuid4(),
-        text="hi",
-        sent_at=NOW,
-    ), "id")
+    assert not hasattr(
+        Message(
+            seq=1,
+            author_id=uuid4(),
+            client_message_id=uuid4(),
+            text="hi",
+            sent_at=NOW,
+        ),
+        "id",
+    )
 
 
 def test_the_same_client_message_id_records_nothing_and_answers_the_same_seq():
@@ -196,27 +200,28 @@ def test_a_message_past_the_cap_is_refused_rather_than_truncated():
 # -- system lines ----------------------------------------------------------
 
 
-def test_a_seat_leaving_is_one_code_with_the_answer_as_a_value():
-    """``the-words.md`` §23 — a lapse is still not a decline, in the value."""
+def test_a_stored_line_of_a_code_nothing_writes_any_more_still_folds():
+    """Only ``GAME_PLAYED`` is written (#575); the other codes stay so a stored
+    room still folds, and a room that will not fold is one the sweep cannot
+    destroy."""
 
     room = _opened()
-    declined = room.record_line(
-        code=SystemLineCode.SEAT_LEFT,
+    opened = room.pull_events()
+    stored = SystemLineRecorded(
+        conversation_id=room.conversation_id,
+        seq=1,
+        code=SystemLineCode.SEAT_LEFT.value,
         actor_id=uuid4(),
         values={DEPARTURE: SeatDeparture.DECLINED.value},
         source_event_id=uuid4(),
         occurred_at=_later(1),
     )
-    lapsed = room.record_line(
-        code=SystemLineCode.SEAT_LEFT,
-        actor_id=uuid4(),
-        values={DEPARTURE: SeatDeparture.LAPSED.value},
-        source_event_id=uuid4(),
-        occurred_at=_later(2),
-    )
 
-    assert declined.code is lapsed.code is SystemLineCode.SEAT_LEFT
-    assert declined.values[DEPARTURE] != lapsed.values[DEPARTURE]
+    (line,) = Conversation.from_history([*opened, stored]).entries
+
+    assert isinstance(line, SystemLine)
+    assert line.code is SystemLineCode.SEAT_LEFT
+    assert line.values == {DEPARTURE: SeatDeparture.DECLINED.value}
 
 
 def test_a_redelivered_event_records_nothing():
@@ -227,7 +232,7 @@ def test_a_redelivered_event_records_nothing():
     actor = uuid4()
 
     first = room.record_line(
-        code=SystemLineCode.SEAT_ACCEPTED,
+        code=SystemLineCode.GAME_PLAYED,
         actor_id=actor,
         values={},
         source_event_id=caused_by,
@@ -235,7 +240,7 @@ def test_a_redelivered_event_records_nothing():
     )
     room.pull_events()
     again = room.record_line(
-        code=SystemLineCode.SEAT_ACCEPTED,
+        code=SystemLineCode.GAME_PLAYED,
         actor_id=actor,
         values={},
         source_event_id=caused_by,
@@ -247,38 +252,24 @@ def test_a_redelivered_event_records_nothing():
     assert len(room.entries) == 1
 
 
-def test_values_carry_the_count_and_never_the_names():
-    """``docs/adr/0148`` §4 — ``values`` never repeats what membership says."""
-
-    room = _opened()
-
-    line = room.record_line(
-        code=SystemLineCode.SEATS_INVITED,
-        actor_id=uuid4(),
-        values={COUNT: "2"},
-        source_event_id=uuid4(),
-        occurred_at=_later(1),
-    )
-
-    assert set(line.values) == {COUNT}
-
-
 # -- the game --------------------------------------------------------------
 
 
 def test_noting_the_game_writes_no_line_and_is_told_once():
-    """``the-words.md`` §23.1 — the seats already imply it, and the event still
-    arrives because the room's own end is derived from its moment."""
+    """``the-words.md`` §23.1 — a booked game is announced on Home and its
+    details, and the room still learns it because its own end is derived from
+    the game's moment and hour."""
 
     room = _opened()
     room.pull_events()
     game_id = uuid4()
 
-    room.note_game(game_id=game_id, occurred_at=_later(1))
+    room.note_game(game_id=game_id, occurred_at=_later(1), starts_at=_later(60))
     events = room.pull_events()
-    room.note_game(game_id=game_id, occurred_at=_later(2))
+    room.note_game(game_id=game_id, occurred_at=_later(2), starts_at=_later(90))
 
     assert room.game_id == game_id
+    assert room.starts_at == _later(60)
     assert room.entries == ()
     assert [type(event) for event in events] == [GameNoted]
     assert room.pull_events() == []
@@ -293,10 +284,11 @@ def test_a_room_with_no_game_has_no_planned_at_and_one_with_a_game_keeps_it():
     room = _opened()
     assert room.planned_at is None
 
-    room.note_game(game_id=uuid4(), occurred_at=_later(1))
+    room.note_game(game_id=uuid4(), occurred_at=_later(1), starts_at=_later(60))
+    replayed = _replayed(room)
 
     assert room.planned_at == _later(1)
-    assert _replayed(room).planned_at == _later(1)
+    assert (replayed.planned_at, replayed.starts_at) == (_later(1), _later(60))
 
 
 def test_a_second_telling_of_the_game_does_not_move_the_anchor():
@@ -354,7 +346,7 @@ def test_the_last_entry_is_absent_in_a_room_where_nothing_has_happened_yet():
 def test_the_stream_folds_both_shapes_back_in_sequence_order():
     room = _opened()
     room.record_line(
-        code=SystemLineCode.SEAT_ACCEPTED,
+        code=SystemLineCode.GAME_PLAYED,
         actor_id=uuid4(),
         values={},
         source_event_id=uuid4(),
@@ -418,12 +410,11 @@ def test_a_line_and_a_message_never_share_a_seq():
 
 def test_a_page_names_every_author_and_every_actor_and_nobody_twice():
     """[#408](https://github.com/Raketa02/Raketa/issues/408) — ``{name}`` is
-    filled from the people the response resolves, and the person a
-    ``SEAT_LEFT`` line is about has by definition just left the membership. So
-    the read asks about everybody the page names, not only about the roster."""
+    filled from the people the response resolves, so the read asks about
+    everybody the page names, not only about the roster."""
 
     room = _opened()
-    talker, leaver = uuid4(), uuid4()
+    talker, player = uuid4(), uuid4()
     room.say(
         author_id=talker,
         client_message_id=uuid4(),
@@ -431,20 +422,20 @@ def test_a_page_names_every_author_and_every_actor_and_nobody_twice():
         occurred_at=_later(1),
     )
     room.record_line(
-        code=SystemLineCode.SEAT_LEFT,
-        actor_id=leaver,
-        values={DEPARTURE: SeatDeparture.DECLINED.value},
+        code=SystemLineCode.GAME_PLAYED,
+        actor_id=player,
+        values={},
         source_event_id=uuid4(),
         occurred_at=_later(2),
     )
     room.say(
         author_id=talker,
         client_message_id=uuid4(),
-        text="anyone?",
+        text="good game",
         occurred_at=_later(3),
     )
 
-    assert people_named(room.entries) == frozenset({talker, leaver})
+    assert people_named(room.entries) == frozenset({talker, player})
 
 
 def test_a_line_with_no_actor_names_nobody():

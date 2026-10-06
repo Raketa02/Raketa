@@ -42,12 +42,10 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_a_room_of_yours,
-    build_arranging_court,
     build_conversation_directory,
     build_conversation_hold_query,
     build_conversation_repository,
     build_follow_conversation,
-    build_lifetime,
     build_member_faces,
     build_membership,
     build_nudge_publisher,
@@ -62,7 +60,6 @@ from app.modules.conversations.application.commands import FollowConversationCom
 from app.modules.conversations.application.follow_conversation import (
     FollowConversation,
 )
-from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.application.record_typing import RecordTyping
 from app.modules.conversations.application.read_conversation import ReadConversation
@@ -79,7 +76,6 @@ from app.modules.conversations.domain.live import (
     TypingRoster,
 )
 from app.modules.conversations.domain.ports import (
-    ArrangingCourt,
     ConversationDirectory,
     ConversationRepository,
     MemberFaces,
@@ -118,43 +114,21 @@ ConversationDirectoryDep = Annotated[
 ]
 
 
-def get_arranging_court(db: DbSession) -> ArrangingCourt:
-    """Per request, and **shared** — which is why it is declared here at all.
-
-    The list read asks it a second question the membership fold does not (*which
-    challenges has this player accepted a seat on*), so without one declaration
-    the request would build two, each an aggregate repository remembering its own
-    stream versions over one session.
-    """
-    return build_arranging_court(db)
-
-
-ArrangingCourtDep = Annotated[ArrangingCourt, Depends(get_arranging_court)]
-
-
 def get_played_court(db: DbSession) -> PlayedCourt:
-    """Per request: the list read asks it which games the reader is on, beside
-    the challenges they accepted (#542)."""
+    """Per request, and **shared**: the list read asks it which games the reader
+    is on (#542), and membership asks it who is on each one — one adapter over
+    one session for both questions."""
     return build_played_court(db)
 
 
 PlayedCourtDep = Annotated[PlayedCourt, Depends(get_played_court)]
 
 
-def get_membership(db: DbSession, arranging: ArrangingCourtDep) -> Membership:
-    return build_membership(db, arranging=arranging)
+def get_membership(db: DbSession, played: PlayedCourtDep) -> Membership:
+    return build_membership(db, played=played)
 
 
 MembershipDep = Annotated[Membership, Depends(get_membership)]
-
-
-def get_lifetime(db: DbSession, arranging: ArrangingCourtDep) -> Lifetime:
-    """Over the request's one court, for the reason membership is: *is it over*
-    is the third question a request puts to the same port."""
-    return build_lifetime(db, arranging=arranging)
-
-
-LifetimeDep = Annotated[Lifetime, Depends(get_lifetime)]
 
 
 def get_member_faces(db: DbSession, settings: SettingsDep) -> MemberFaces:
@@ -172,19 +146,15 @@ MemberFacesDep = Annotated[MemberFaces, Depends(get_member_faces)]
 
 def get_read_conversations(
     directory: ConversationDirectoryDep,
-    arranging: ArrangingCourtDep,
     played: PlayedCourtDep,
     membership: MembershipDep,
-    lifetime: LifetimeDep,
     faces: MemberFacesDep,
     clock: ClockDep,
 ) -> ReadConversations:
     return ReadConversations(
         directory=directory,
-        arranging=arranging,
         played=played,
         membership=membership,
-        lifetime=lifetime,
         faces=faces,
         clock=clock,
     )
@@ -196,14 +166,12 @@ ReadConversationsDep = Annotated[ReadConversations, Depends(get_read_conversatio
 def get_a_room_of_yours(
     conversations: ConversationRepositoryDep,
     membership: MembershipDep,
-    lifetime: LifetimeDep,
     clock: ClockDep,
 ) -> ARoomOfYours:
     """Per request, because the repository it holds is."""
     return build_a_room_of_yours(
         conversations=conversations,
         membership=membership,
-        lifetime=lifetime,
         clock=clock,
     )
 

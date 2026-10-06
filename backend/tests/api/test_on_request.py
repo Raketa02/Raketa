@@ -323,7 +323,7 @@ async def test_the_chat_opens_when_the_club_says_yes_and_not_before(
         async with session_factory() as session:
             return await session.scalar(
                 select(ConversationORM.conversation_id).where(
-                    ConversationORM.challenge_id == proposal
+                    ConversationORM.booking_id == proposal
                 )
             )
 

@@ -25,7 +25,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0161](../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)), on its own list
   because `games_demands.py` is what that context *publishes* and a demand is the other kind
   of claim;
-  `conversation_demands.py` holds what a **room** demands of the three contexts it is
+  `conversation_demands.py` holds what a **room** demands of the contexts it is
   told by and reads from; and `plan_demands.py` holds what a **plan** demands — the courts
   a player may plan, folded over `challenges` and `games` (ADR-0164 §3), and one fact about
   a *person*. There is deliberately no *conversations provider* and no *plans provider*
@@ -98,4 +98,5 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   takes the two seams the platform supplies from outside a request — the process's
   candidate index and the exposure ledger behind Redis — because the pairing it contracts
   is recomputed through the whole scoring pipeline, and **no test in this repository needs
-  Redis running**.
+  Redis running**. `game_demands.py` keeps that row shape and needs only the session: the
+  game's pairing is read side against side from the people's Levels (#575).

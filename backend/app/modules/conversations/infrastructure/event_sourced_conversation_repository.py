@@ -6,7 +6,7 @@ what version the next append expects — plus the one thing no other context her
 needs: **the sequence allocator's lock.**
 
 **Two reads, and the difference is the whole of ``docs/adr/0147`` §2.** ``load``
-serves a response. ``load_for_append`` and ``for_challenge`` take the
+serves a response. ``load_for_append`` and ``for_booking`` take the
 conversation row ``FOR UPDATE`` first, so ``last_seq + 1`` is minted while
 nobody else can be minting it. A single method with a flag would be one a caller
 could forget, and the failure would be two people seeing one bubble twice under
@@ -51,7 +51,7 @@ CONVERSATION_AGGREGATE = "conversation"
 def _opening_field(name: str) -> str:
     """A field on the opening event, checked at import.
 
-    The row mirrors three of them, and what is avoidable about that coupling is
+    The row mirrors some of them, and what is avoidable about that coupling is
     it being *silent*: a renamed field would leave the row carrying a stale
     spelling for ever, and the failure would look like a room that had never been
     opened rather than like a bug.
@@ -65,7 +65,7 @@ def _opening_field(name: str) -> str:
     return name
 
 
-CHALLENGE_ID = _opening_field("challenge_id")
+BOOKING_ID = _opening_field("booking_id")
 
 
 class EventSourcedConversationRepository:
@@ -93,17 +93,17 @@ class EventSourcedConversationRepository:
             return None
         return await self._folded(conversation_id)
 
-    async def for_challenge(self, challenge_id: UUID) -> Conversation | None:
-        """The room this challenge already opened, **with its row locked**.
+    async def for_booking(self, booking_id: UUID) -> Conversation | None:
+        """The room this booking's game already opened, **with its row locked**.
 
         Matched on the row rather than on the opening event's payload, because
         this read is the one that has to take the lock — and a lock is on a row.
-        The unique index on ``challenge_id`` is what makes it answer with one.
+        The unique index on ``booking_id`` is what makes it answer with one.
         """
 
         found = await self._session.execute(
             select(ConversationORM.conversation_id)
-            .where(ConversationORM.challenge_id == challenge_id)
+            .where(ConversationORM.booking_id == booking_id)
             .with_for_update()
         )
         conversation_id = found.scalars().first()
@@ -129,7 +129,7 @@ class EventSourcedConversationRepository:
             self._session.add(
                 ConversationORM(
                     conversation_id=conversation.conversation_id,
-                    challenge_id=conversation.challenge_id,
+                    booking_id=conversation.booking_id,
                     game_id=conversation.game_id,
                     sport=conversation.sport.value,
                     last_seq=conversation.last_seq,
@@ -166,7 +166,7 @@ class EventSourcedConversationRepository:
         nothing subscribes to a conversation's own events.
 
         **Idempotent**: deleting nothing is the state this asks for, and both
-        callers — the withdrawal and the sweep — can run beside themselves.
+        callers — the call-off and the sweep — can run beside themselves.
         """
 
         await self._session.execute(

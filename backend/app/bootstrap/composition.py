@@ -487,12 +487,10 @@ from app.modules.conversations.application.a_room_of_yours import ARoomOfYours
 from app.modules.conversations.application.destroy_ended_conversations import (
     DestroyEndedConversations,
 )
-from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.application.tell_the_room import TellTheRoom
 from app.modules.conversations.domain.ports import (
     AccountHoldQuery as ConversationAccountHoldQuery,
-    ArrangingCourt,
     ConversationDirectory,
     ConversationRepository,
     MemberFaces,
@@ -525,9 +523,6 @@ from app.modules.conversations.infrastructure.redis_typing_presence import (
 from app.modules.conversations.infrastructure.absent_providers import (
     NobodyIsFollowing,
     NoHoldsExist as NoConversationHoldsExist,
-)
-from app.modules.conversations.infrastructure.challenges_arranging_court import (
-    ChallengesArrangingCourt,
 )
 from app.modules.conversations.infrastructure.event_sourced_conversation_repository import (  # noqa: E501
     EventSourcedConversationRepository,
@@ -618,9 +613,7 @@ from app.modules.matchmaking.domain.ports import (
     PlayerScoreQuery,
     SharedCourtQuery,
 )
-from app.modules.matchmaking.application.fail_closed_gates import (
-    FailClosedGates,
-)
+from app.modules.matchmaking.application.fail_closed_gates import AccountGates
 from app.modules.matchmaking.application.roll_exposure import RollExposure
 from app.modules.matchmaking.domain.cards import (
     CardPhotoLinks,
@@ -799,7 +792,6 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
-    RunnerDisclosure,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -808,11 +800,9 @@ from app.modules.player_record.domain.ports import (
     SubjectVariety,
 )
 from app.modules.player_record.infrastructure.disclosures import (
-    ChallengesTheyShare,
     GamesTheyPlayed,
     GroupsTheReaderRuns,
     GroupsTheyShare,
-    SearchesThatShowedThem,
 )
 from app.modules.player_record.infrastructure.live_record_gates import (
     LiveRecordGates,
@@ -3349,79 +3339,23 @@ def build_court_pairing_query_over(
 
 
 def build_game_court_pairing(
-    *,
-    session: AsyncSession,
-    clock: Clock,
-    unit_of_work: UnitOfWork,
-    event_store: DomainEventStore,
-    events: DomainEventPublisher,
-    settings: Settings,
-    store: Redis | None,
-    candidates: CandidateSource | None,
+    session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> CourtPairing:
-    """What the matcher makes of a game's court, for the reader (``docs/adr/0161``).
+    """What the engine makes of a game's court, for the reader (``docs/adr/0161``).
 
-    The one outward demand ``games`` makes of the matcher, and the third line
-    here where a court is priced for somebody already on it —
-    ``build_court_pairing_query``'s shape, one screen later. It is wired to a
-    route a tap opens and never to a list, for the same reason that one is: the
-    whole Fit stack runs over the court.
-
-    ``candidates`` is ``None`` in a process with no index, and ``store`` is
-    ``None`` where the ephemeral store never came up. Neither is a refusal, and
-    neither is a null object either: the forecast needs the matcher and the
-    seats and the stakes do not, so a process with no index still names every
-    Level on the court and prices it, and draws no forecast. That is the
-    adapter with no arranger, and not a second class.
-
-    **Two entry points and one assembly**, as beside it: this one is the
-    route's, over the connections a request holds, and
-    :func:`build_game_court_pairing_over` is the same wiring over a workbench a
-    caller already holds.
-    """
-
-    if candidates is None or store is None:
-        return build_game_court_pairing_over(session=session, workbench=None)
-    return build_game_court_pairing_over(
-        session=session,
-        workbench=build_court_pairing_workbench(
-            session=session,
-            clock=clock,
-            unit_of_work=unit_of_work,
-            event_store=event_store,
-            events=events,
-            settings=settings,
-            exposure=build_exposure_ledger(store),
-            candidates=candidates,
-        ),
-    )
-
-
-def build_game_court_pairing_over(
-    *, session: AsyncSession, workbench: SearchWorkbench | None
-) -> CourtPairing:
-    """The adapter itself, over a workbench the caller already holds — or none.
-
-    Three things composed and none of them new: the pairing use case the
-    challenge card is built on, the at-stake rule read forward, and ``rating``'s
-    published read for the seats — the last two over the session, exactly as
-    the workbench's own at-stake read is. ``workbench`` is ``None`` where this
-    process cannot price a court, and the two session reads are built
-    regardless, because they need no workbench.
+    The one outward demand ``games`` makes of the matcher, **answered from the
+    balance forecast directly** (#575): a booked game's court is read side
+    against side from the people's Levels under the live ruleset — the reading
+    a Games card makes of the same people (:func:`build_balance_forecasts`) —
+    and from ``rating``'s published figures and result-update rule beside it.
+    No search workbench, candidate index or ledger sits behind it, so a process
+    with none of them still draws the whole screen.
     """
 
     return GamesCourtPairing(
-        arranger=(
-            None
-            if workbench is None
-            else PairWithACourt(
-                workbench=workbench,
-                ruleset=build_ruleset(),
-                engine=build_match_fit_engine(),
-            )
-        ),
-        at_stake=build_at_stake_query(session),
-        ratings=build_rated_player_query(session),
+        ratings=build_rated_player_query(session, runtime=runtime),
+        ruleset=build_ruleset(),
+        at_stake=build_at_stake_query(session, runtime=runtime),
     )
 
 
@@ -3977,7 +3911,7 @@ def build_plannable_courts(
 
     The one thing the Plan reads about a court, and the read that decides
     whether a write may land. Built here rather than at the surface for the
-    reason ``build_arranging_court`` is: which contexts answer *who is on this
+    reason every adapter is: which contexts answer *who is on this
     court and is it still being arranged* is a wiring choice, and a read path
     that reached into either itself would put a second author on it. It is
     folded rather than projected for the reason every read in those contexts
@@ -4517,23 +4451,6 @@ def build_record_photo_link(
     )
 
 
-def build_search_disclosure(session: AsyncSession) -> PriorDisclosure:
-    """*A search of mine returned them* — over the record that says so."""
-
-    return SearchesThatShowedThem(build_search_store(session))
-
-
-def build_challenge_disclosure(session: AsyncSession) -> PriorDisclosure:
-    """*We are both seated in a live challenge* — over ``challenges``' directory.
-
-    The strand that runs the other way from a search: a court is sent off the
-    organiser's search, so without this the person who was *asked* could not open
-    the record of the person who asked them.
-    """
-
-    return ChallengesTheyShare(build_challenge_directory(session))
-
-
 def build_game_disclosure(session: AsyncSession) -> PriorDisclosure:
     """*We were on a court together* — over ``games``' directory."""
 
@@ -4551,7 +4468,7 @@ def build_group_disclosure(session: AsyncSession) -> PriorDisclosure:
     return GroupsTheyShare(build_group_directory(session))
 
 
-def build_runner_disclosure(session: AsyncSession) -> RunnerDisclosure:
+def build_runner_disclosure(session: AsyncSession) -> PriorDisclosure:
     """*I run a group they are in* — over ``groups``' directory and who runs each
     official group now, the same reading the group's Members makes (#566).
 
@@ -4565,18 +4482,30 @@ def build_runner_disclosure(session: AsyncSession) -> RunnerDisclosure:
     )
 
 
-def build_record_gates(
-    *, gates: FailClosedGates, holds: AccountHoldQuery
-) -> RecordGates:
-    """The four that fail closed, plus the reader's own hold.
+def build_account_gates(
+    *, blocks: BlockQuery, holds: AccountHoldQuery, account_status: AccountStatusQuery
+) -> AccountGates:
+    """The three gates about accounts — a block in either direction, a hold, an
+    account that may not be shown — over the three reads a request already
+    holds. ``FailClosedGates`` asks the same three beside the preference, so
+    there is one spelling of each."""
 
-    The four are **not built here**: they are ``matchmaking``'s collaborator,
-    already assembled per request wherever a surface shows one player to another,
-    and this line composes rather than copies. A second spelling of a safety gate
-    is the defect the whole rule exists to prevent.
+    return AccountGates(blocks=blocks, holds=holds, account_status=account_status)
+
+
+def build_record_gates(
+    *, accounts: AccountGates, holds: AccountHoldQuery
+) -> RecordGates:
+    """The three about accounts, plus the reader's own hold — no preference and
+    no candidate index (#575).
+
+    The three are **not built here**: they are ``matchmaking``'s collaborator,
+    already assembled per request, and this line composes rather than copies. A
+    second spelling of a safety gate is the defect the whole rule exists to
+    prevent.
     """
 
-    return LiveRecordGates(gates=gates, holds=holds)
+    return LiveRecordGates(accounts=accounts, holds=holds)
 
 
 def build_absent_terms() -> frozenset[Term]:
@@ -4843,27 +4772,6 @@ def build_conversation_directory(
     )
 
 
-def build_arranging_court(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> ArrangingCourt:
-    """Half of *one rule read against two records*, answered by ``challenges``.
-
-    Built here rather than at the surface for the reason every adapter is: which
-    context answers *who has agreed to be on this court* is a wiring choice, and
-    a read path that reached into ``challenges`` itself would put a second author
-    on it.
-    """
-    return ChallengesArrangingCourt(
-        challenges=build_challenge_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        ),
-        directory=build_challenge_directory(session, runtime=runtime),
-    )
-
-
 def build_played_court(
     session: AsyncSession,
     *,
@@ -4928,66 +4836,41 @@ def build_conversation_hold_query(
 def build_membership(
     session: AsyncSession,
     *,
-    arranging: ArrangingCourt | None = None,
+    played: PlayedCourt | None = None,
     runtime: EventRuntime | None = None,
 ) -> Membership:
-    """*The people who have agreed to be on this court right now* — one rule,
-    over both records.
+    """*The people on this room's game's court right now* — read off ``games``.
 
-    ``arranging`` is takeable because the list read needs the same port for a
-    second question — *which challenges has this player accepted a seat on* —
-    and two courts over one session would be two aggregate repositories each
-    remembering its own stream versions. One per request, handed in.
+    ``played`` is takeable because the list read asks the same port a second
+    question — *which games is this player on* — and two courts over one
+    session would be two aggregate repositories each remembering its own stream
+    versions. One per request, handed in.
     """
-    return Membership(
-        arranging=arranging or build_arranging_court(session, runtime=runtime),
-        played=build_played_court(session, runtime=runtime),
-    )
-
-
-def build_lifetime(
-    session: AsyncSession,
-    *,
-    arranging: ArrangingCourt | None = None,
-    runtime: EventRuntime | None = None,
-) -> Lifetime:
-    """*Which of these rooms are over* — the game's clock off the room's own
-    stream, and the challenge's end off ``challenges`` (``docs/adr/0164`` §6).
-
-    ``arranging`` is takeable for the reason ``build_membership``'s is: a
-    request asks the same port for membership, for the list's *find*, and now
-    for *is it over*, and three courts over one session would be three aggregate
-    repositories each remembering its own stream versions. One per request,
-    handed in.
-    """
-    return Lifetime(
-        arranging=arranging or build_arranging_court(session, runtime=runtime)
-    )
+    return Membership(played=played or build_played_court(session, runtime=runtime))
 
 
 def build_a_room_of_yours(
     *,
     conversations: ConversationRepository,
     membership: Membership,
-    lifetime: Lifetime,
     clock: Clock,
 ) -> ARoomOfYours:
     """*This room, if you are in it* — the seam every act on one room shares.
 
-    Built from the three collaborators rather than from a session, because all
-    are already request-scoped and a second copy of any would be a second answer
-    to *who is in this* or *is this over*.
+    Built from the collaborators rather than from a session, because both are
+    already request-scoped and a second copy of either would be a second answer
+    to *who is in this*.
 
-    **The clock is the fourth, and it is what makes the lifetime a read.** A room
-    past its end answers ``conversation_not_found`` whether or not the sweep has
-    run (``docs/adr/0153`` §5). *Over* is decided in ``Lifetime`` — the one
-    seam the list and the sweep decide it through too — and this is the one seam
-    every act on **one** room passes through, so the refusal has a single place.
+    **The clock is what makes the lifetime a read.** A room past its end answers
+    ``conversation_not_found`` whether or not the sweep has run
+    (``docs/adr/0153`` §5). *Over* is folded off the room's own stream — the
+    same fold the list and the sweep decide it through — and this is the one
+    seam every act on **one** room passes through, so the refusal has a single
+    place.
     """
     return ARoomOfYours(
         conversations=conversations,
         membership=membership,
-        lifetime=lifetime,
         clock=clock,
     )
 
@@ -5010,11 +4893,6 @@ def build_destroy_ended_conversations(
     The repository and the directory are **one pair over one session**, as every
     other reader of the two is: the directory folds through the repository, so a
     second one would be a second set of remembered stream versions.
-
-    **It reads ``challenges`` too**, through the lifetime seam every read
-    decides a room's end through: a room without a game is over when its
-    challenge is (``docs/adr/0164`` §6), and a sweep that folded the room's own
-    stream alone would never delete one.
     """
     resolved = runtime or get_event_runtime()
     conversations = build_conversation_repository(
@@ -5027,7 +4905,6 @@ def build_destroy_ended_conversations(
             session=session, conversations=conversations
         ),
         conversations=conversations,
-        lifetime=build_lifetime(session, runtime=resolved),
         unit_of_work=build_unit_of_work(session),
         clock=clock,
     )
@@ -5058,14 +4935,11 @@ def build_tell_the_room(
         event_store=build_domain_event_store(session, runtime=runtime),
         events=build_event_publisher(session, runtime=runtime),
     )
-    played = build_played_court(session, runtime=runtime)
     return TellTheRoom(
         conversations=conversations,
         directory=build_conversation_directory(
             session=session, conversations=conversations
         ),
-        arranging=build_arranging_court(session, runtime=runtime),
-        played=played,
         nudges=nudges,
     )
 

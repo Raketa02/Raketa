@@ -3,36 +3,36 @@
 Run under two ``PYTHONHASHSEED``s by ``test_game_pairing.py``, because the one
 place the pairing read could hand two processes two answers to one question is
 a set walked into an order (``docs/adr/0105``) — and a game's court is made of
-sets: ``LineUp.players_on`` is a ``frozenset``, and the partner and the
-opponents the engine is handed have to come out of it in one order everywhere.
+sets: ``LineUp.players_on`` is a ``frozenset``, and the sides the engine reads
+have to come out of it in one order everywhere.
 
 **Below the routes, with fixed ids, on purpose.** The whole HTTP flow cannot be
 compared across two processes: every player id is minted at random, ties break
 on it, and two runs would disagree for a reason that has nothing to do with
-hash seeds. So the probe walks the pure path the adapter takes — the sides off
-the line-up, the court arranged and priced by the engine, the stakes priced
-side against side by the rule — over ids that are the same in both processes.
+hash seeds. So the probe runs the adapter the route runs — the sides off the
+line-up, the court read side against side by the engine, the stakes priced
+side against side by the rule — over Levels and ids that are the same in both
+processes.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import asdict
 from typing import Collection, Mapping
 from uuid import UUID
 
 from app.bootstrap.composition import build_ruleset
 from app.engines.racketskill.core import SkillEstimate
 from app.kernel import Sport
-from app.modules.games.domain.lineup import GameSide, LineUp, Seating
-from app.modules.matchmaking.application.pair_with_a_court import arrange_the_court
-from app.modules.matchmaking.infrastructure.games_court_pairing import sides_of
+from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
+from app.modules.matchmaking.infrastructure.games_court_pairing import (
+    GamesCourtPairing,
+)
 from app.modules.matchmaking.infrastructure.rating_at_stake import (
     RatingResultUpdateRule,
 )
 from app.modules.rating.domain.ports import RatedSport
-from tests.unit.matchfit_builders import searcher, seated
 
 #: Four people, fixed. The reader is on side A with a partner; two across.
 READER = UUID("00000000-0000-4000-8000-000000000001")
@@ -49,7 +49,8 @@ LEVELS = {
 
 
 class _Ratings:
-    """``RatedPlayerQuery`` over a dict — the engine's currency and nothing read."""
+    """``RatedPlayerQuery`` over a dict — the engine's currency and the
+    published figures beside it, and nothing read."""
 
     async def estimates_for(
         self, player_ids: Collection[UUID], *, sport: Sport
@@ -64,7 +65,19 @@ class _Ratings:
     async def published_for(
         self, player_ids: Collection[UUID], *, sport: Sport
     ) -> Mapping[UUID, RatedSport]:
-        return {}
+        return {
+            one: RatedSport(
+                sport=sport,
+                mu=LEVELS[one][0],
+                confidence=60,
+                range_low=LEVELS[one][0] - 0.3,
+                range_high=LEVELS[one][0] + 0.3,
+                band_name="Improver",
+                counted_results=0,
+            )
+            for one in player_ids
+            if one in LEVELS
+        }
 
 
 async def _the_pairing() -> dict:
@@ -76,40 +89,36 @@ async def _the_pairing() -> dict:
             Seating(side=GameSide.B, player_id=RIGHT),
         )
     )
-    partners, opponents = sides_of(line_up, READER)
-    court = {
-        one: seated(player_id=str(one), mu=LEVELS[one][0], sigma=LEVELS[one][1])
-        for one in (*partners, *opponents)
-    }
-    arranged = arrange_the_court(
-        searcher(mu=LEVELS[READER][0], sigma=LEVELS[READER][1]),
-        court,
-        partners=frozenset(partners),
-        sport=Sport.PADEL,
+    ratings = _Ratings()
+    pairing = await GamesCourtPairing(
+        ratings=ratings,
         ruleset=build_ruleset(),
-    )
-    assert arranged is not None
-    at_stake = await RatingResultUpdateRule(_Ratings()).counted_game_deltas_on_court(
-        player_id=READER,
-        own_side=[READER, *partners],
-        opposing_side=opponents,
+        at_stake=RatingResultUpdateRule(ratings),
+    ).pairing_for(
         sport=Sport.PADEL,
+        kind=GameKind.COUNTED,
+        line_up=line_up,
+        reader_id=READER,
     )
-    assert at_stake is not None
+    assert pairing is not None
+    assert pairing.forecast is not None and pairing.split is not None
+    assert pairing.at_stake is not None
     return {
-        "partners": [str(one) for one in partners],
-        "opponents": [str(one) for one in opponents],
+        "seats": [str(seat.player_id) for seat in pairing.seats],
         "forecast": {
-            "pct": arranged.forecast.pct,
-            "sigma_group": arranged.forecast.sigma_group,
-            "provisional": arranged.forecast.provisional,
+            "pct": pairing.forecast.pct,
+            "sigma_group": pairing.forecast.sigma_group,
+            "provisional": pairing.forecast.provisional,
         },
         "split": {
-            "your_side": arranged.split.your_side,
-            "their_side": arranged.split.their_side,
-            "gap": arranged.split.gap,
+            "your_side": pairing.split.your_side,
+            "their_side": pairing.split.their_side,
+            "gap": pairing.split.gap,
         },
-        "at_stake": asdict(at_stake),
+        "at_stake": {
+            "win_delta": pairing.at_stake.win_delta,
+            "loss_delta": pairing.at_stake.loss_delta,
+        },
     }
 
 

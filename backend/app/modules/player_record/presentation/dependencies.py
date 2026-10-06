@@ -5,17 +5,16 @@ class comes from ``app.bootstrap.composition``, and
 ``tests/unit/test_composition_root.py`` fails this file if it imports one.
 
 **The two use cases are declared apart, and the difference is the point.**
-``ReadOwnRecord`` names no gate machinery at all, so the route for your own sheet
-does not depend on the candidate index being loaded in this process — the gates
-bind it once per evaluation and refuse the whole read when there is none, which
-is right for a sheet about a stranger and absurd for the one screen that tells a
-player how they appear. A single factory with a branch inside it would have made
-that a runtime accident instead of a wiring decision.
+``ReadOwnRecord`` names no gate machinery at all, so nothing that refuses a
+stranger's sheet — a block, a hold, a store that cannot answer — can take down
+the one screen that tells a player how they appear. A single factory with a
+branch inside it would have made that a runtime accident instead of a wiring
+decision.
 
-**The four fail-closed gates are taken from ``matchmaking``'s own declaration**
-rather than assembled again here. That factory is where every surface showing one
-player to another gets them, and a surface deciding for itself where a gate comes
-from is how one of them ends up wired to a different answer.
+**The gates' three reads are taken from ``matchmaking``'s own declarations**
+rather than assembled again here. Those factories are where every surface
+showing one player to another gets them, and a surface deciding for itself
+where a gate comes from is how one of them ends up wired to a different answer.
 """
 
 from __future__ import annotations
@@ -32,13 +31,12 @@ from app.api.dependencies import (
     SettingsDep,
 )
 from app.bootstrap.composition import (
-    build_challenge_disclosure,
+    build_account_gates,
     build_game_disclosure,
     build_group_disclosure,
     build_record_gates,
     build_record_photo_link,
     build_runner_disclosure,
-    build_search_disclosure,
     build_subject_form,
     build_subject_identity_source,
     build_subject_ratings,
@@ -46,9 +44,10 @@ from app.bootstrap.composition import (
     build_subject_sportsmanship,
     build_subject_variety,
 )
+from app.modules.blocks.presentation.dependencies import BlockQueryDep
 from app.modules.matchmaking.presentation.dependencies import (
     AccountHoldQueryDep,
-    FailClosedGatesDep,
+    AccountStatusQueryDep,
 )
 from app.modules.player_profile.presentation.dependencies import PhotoStorageDep
 from app.modules.player_record.application.admission import RecordAdmission
@@ -141,29 +140,31 @@ SubjectSportsmanshipDep = Annotated[
 
 def get_record_admission(
     db: DbSession,
-    gates: FailClosedGatesDep,
+    blocks: BlockQueryDep,
     holds: AccountHoldQueryDep,
+    account_status: AccountStatusQueryDep,
 ) -> RecordAdmission:
-    """The strands and the four gates, assembled per request.
+    """The three strands and the gates, assembled per request.
 
     The strands are listed **cheapest first**, which is the order they are read
-    in: a search record is one indexed query, and the two directories fold
-    streams. It changes no answer — the partitions are unioned before any gate
-    runs — and it is what a reader who arrived from the shortlist pays. The
-    group strand is two indexed reads, so it comes second. **Whoever runs their
-    group** is not on the list: it is admitted under other gates, so the
-    admission asks it by name, and last (#566).
+    in and the first yes ends the walk: a group the pair share is two indexed
+    reads, a court they shared folds the reader's games, and a group the reader
+    runs reads the subject's groups and who runs each. It changes no answer —
+    every strand is admitted under the same gates (#575).
     """
 
     return RecordAdmission(
         disclosures=(
-            build_search_disclosure(db),
             build_group_disclosure(db),
-            build_challenge_disclosure(db),
             build_game_disclosure(db),
+            build_runner_disclosure(db),
         ),
-        runners=build_runner_disclosure(db),
-        gates=build_record_gates(gates=gates, holds=holds),
+        gates=build_record_gates(
+            accounts=build_account_gates(
+                blocks=blocks, holds=holds, account_status=account_status
+            ),
+            holds=holds,
+        ),
     )
 
 
@@ -210,9 +211,9 @@ def get_read_own_record(
     """Your own record — **and still not one of these is a gate.**
 
     Six readers and a clock now, and the property that matters is unchanged:
-    nothing here binds the candidate index, so the one screen that tells a player
-    how they appear cannot be taken down by the machinery that gates somebody
-    else's sheet. The reliability read is the one that makes that worth the
+    nothing here is a gate, so the one screen that tells a player how they
+    appear cannot be taken down by the machinery that gates somebody else's
+    sheet. The reliability read is the one that makes that worth the
     wiring: the pill is the number deciding who this player is offered to, and a
     penalty nobody can look up is a penalty nobody can fix.
 

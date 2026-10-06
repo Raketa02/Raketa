@@ -2,10 +2,10 @@
 say you are typing, and follow it live.
 
 **Six routes, and membership is the gate on every one of them**
-(``docs/adr/0148`` §2). The four fail-closed safety gates ran over every pair of
-the court in the send's own transaction; **nothing is re-evaluated against the
-reader**, because telling a reader that something changed about somebody else on
-the court is the one thing a safety gate may never say.
+(``docs/adr/0148`` §2). The pair rule ran over every pair of the court before
+the game was booked; **nothing is re-evaluated against the reader**, because
+telling a reader that something changed about somebody else on the court is the
+one thing a safety gate may never say.
 
 **A non-member gets ``conversation_not_found``, not a 403** — one code for *it
 does not exist* and *it is not yours*, on ``challenge_not_found``'s argument
@@ -15,12 +15,12 @@ evening.
 **A hold refuses the send and refuses no read** (``docs/adr/0148`` §9). The hold's
 argument is about **reach**, and a message is reach; but a hold must not erase an
 arrangement other people are already inside, so a held player keeps reading the
-room and keeps seeing the plan.
+room.
 
-**There is no route that creates a conversation.** A room is opened by the first
-acceptance, through the outbox, by a context that does not know this one exists
-(``docs/adr/0146`` §5) — so there is no ``POST /conversations`` and there will
-not be one.
+**There is no route that creates a conversation.** A room is opened by a booked
+game, through the outbox, by a context that does not know this one exists
+(``docs/adr/0146`` §5, #575) — so there is no ``POST /conversations`` and there
+will not be one.
 
 **The fifth route is one-directional and carries no content** (``docs/adr/0147``,
 amended by ``docs/adr/0156``).
@@ -166,25 +166,22 @@ _NOT_FOUND_AS_JSON: dict[int | str, dict[str, Any]] = {
     },
     summary="Your conversations",
     description=(
-        "**A room opens on the first acceptance and grows with each one after "
-        "it.** A doubles court whose line-up is still filling draws the members "
-        "it has, not the court it will be.\n\n"
+        "**A room is opened by a booked game**, filed under its booking, and its "
+        "members are the game's court as it stands — somebody who left is not "
+        "drawn, and a rescue who took the seat is.\n\n"
         "**Ordered by the last entry, newest first.** A room where nothing has "
         "happened yet carries `last_entry: null` and orders on the moment it "
         "opened — the opening writes no line, so there is genuinely nothing "
         "there yet.\n\n"
         "**No state pill and no standing.** The last entry is what a pill would "
         "have said; a standing beside it would be a second place for one fact to "
-        "be true. The state-keyed surfaces are the challenge screen and the game "
-        "screen.\n\n"
+        "be true. The state-keyed surfaces are Home and the game's details.\n\n"
         "**Only live rooms are here, because there are only live rooms.** A "
         "conversation is destroyed rather than delisted once the episode it was "
-        "opened for is over — deliberately the opposite of `GET /challenges`, "
-        "which keeps ended challenges and says so. The difference is the "
-        "difference between a record and a room.\n\n"
-        "**This is one of two reads for the Chats tab, and they are not "
-        "merged.** `GET /challenges` is the other. Two sections, two contexts, "
-        "two queries, two caches."
+        "opened for is over. The difference is the difference between a record "
+        "and a room.\n\n"
+        "**A game's details find its chat here**, by the row whose `game_id` is "
+        "the game's."
     ),
 )
 async def read_conversations(
@@ -218,12 +215,12 @@ async def read_conversations(
         "1 — there is no `has_more`, because a gapless sequence makes `seq` 1 the "
         "beginning.\n\n"
         "**Nothing here is re-evaluated against you.** The safety gates ran when "
-        "the challenge was minted; a read that re-ran them would tell you "
-        "something changed about somebody else.\n\n"
+        "the game was booked; a read that re-ran them would tell you something "
+        "changed about somebody else.\n\n"
         "**`people` is everybody this response names and `members` is the "
         "roster.** Fill every `{name}` and every author label from `people`: "
-        "the actor of a `SEAT_LEFT` line is by definition no longer a member, "
-        "and a client naming off the roster alone drew *? said no*."
+        "the author of an old message may have left the court since, and a "
+        "client naming off the roster alone draws *?*."
     ),
 )
 async def read_conversation(
@@ -546,7 +543,7 @@ def _frame(frame: Nudge | Typing) -> LiveFrame:
 def _row(row: ConversationRow) -> ConversationRowSchema:
     return ConversationRowSchema(
         conversation_id=row.conversation_id,
-        challenge_id=row.challenge_id,
+        booking_id=row.booking_id,
         game_id=row.game_id,
         sport=row.sport,
         members=[_member(member) for member in row.members],
@@ -561,7 +558,7 @@ def _conversation(
     return ConversationResponse(
         read_at=read_at,
         conversation_id=room.conversation_id,
-        challenge_id=room.challenge_id,
+        booking_id=room.booking_id,
         game_id=room.game_id,
         sport=room.sport,
         members=[_member(member) for member in room.members],

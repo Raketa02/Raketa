@@ -14,11 +14,10 @@ yet swept* are one answer for one reason.
 
 **The end is read here rather than in a sweep**, and that is the whole of the
 lifetime's correctness. The sweep makes the destruction real; this makes the
-answer right, whether or not the sweep has ever run — the same split
-``challenges``' ``lapse`` and ``entry_closes_at``'s own docstring both state.
-It is read through ``Lifetime`` rather than off the room alone, because a room
-without a game ends with its **challenge** (``docs/adr/0164`` §6), and that is
-a fact about another record.
+answer right, whether or not the sweep has ever run — the split
+``entry_closes_at``'s own docstring states. It is read off the room's own
+stream (``domain/lifetime.py``), through the one function the list and the
+sweep decide it through too.
 
 **Two doors, and the difference is the lock.** ``to_read`` serves a response;
 ``to_append`` takes the conversation row ``FOR UPDATE`` first, because that is
@@ -31,9 +30,8 @@ bubble twice.
 for: the detail read draws the members it just gated on, and asking twice would
 be two answers to *who is in this* against one instant.
 
-It is a collaborator rather than a base class — unlike ``challenges``' own
-``AChallengeOfYours``, whose four collaborators are the same four for every act.
-Here they are not: a send needs a hold query and a unit of work, the two reads
+It is a collaborator rather than a base class, because the acts' collaborators
+are not the same: a send needs a hold query and a unit of work, the two reads
 need the faces and neither of those, and the heartbeat and the stream need a
 store nothing else here touches. What all of them share is exactly this, and
 nothing else.
@@ -46,10 +44,10 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Clock
-from app.modules.conversations.application.lifetime import Lifetime
 from app.modules.conversations.application.membership import Membership
 from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.errors import ConversationNotFound
+from app.modules.conversations.domain.lifetime import has_ended
 from app.modules.conversations.domain.ports import ConversationRepository
 
 
@@ -71,12 +69,10 @@ class ARoomOfYours:
         *,
         conversations: ConversationRepository,
         membership: Membership,
-        lifetime: Lifetime,
         clock: Clock,
     ) -> None:
         self._conversations = conversations
         self._membership = membership
-        self._lifetime = lifetime
         self._clock = clock
 
     async def to_read(self, conversation_id: UUID, reader_id: UUID) -> ARoom:
@@ -94,11 +90,10 @@ class ARoomOfYours:
     async def _yours(self, room: Conversation | None, reader_id: UUID) -> ARoom:
         if room is None:
             raise ConversationNotFound()
-        # **Before membership.** A room with a game answers off its own stream,
-        # which is already in hand; a room without one costs a read of its
-        # challenge — and a room that is over is one nobody needs membership
-        # for, so the read that decides it is the first.
-        if await self._lifetime.has_ended(room, now=self._clock.now()):
+        # **Before membership.** The end is folded off the room's own stream,
+        # which is already in hand — and a room that is over is one nobody
+        # needs membership for, so the fold that decides it is the first.
+        if has_ended(room, now=self._clock.now()):
             raise ConversationNotFound()
         members = await self._membership.of_one(room)
         if reader_id not in members:
