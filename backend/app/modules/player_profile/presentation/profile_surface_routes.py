@@ -1,12 +1,11 @@
 """The profile surface reads and writes: one read, one `PUT` per fact.
 
-The search screen edits three facts — the weekly hours, the search radius
-and the per-sport Play intent — and until these routes existed it could read none
-of them and write none of them. The engine has been raising `KEEP_THESE_TIMES`
-and `KEEP_THIS_RADIUS` the whole time, and `matchmaking/domain/prompts.py` names
-the gap in writing: *every one of these questions is answered by a write this
-backend has no route for.* This is that write, and the third one is ADR-0094's
-`PUT /api/v1/play-intents/{sport}`, next door.
+A player edits three facts here — the weekly hours, the search radius and the
+per-sport Play intent — and the third is ADR-0094's
+`PUT /api/v1/play-intents/{sport}`, next door. The search screen these routes
+were first written for, and the prompts it raised (`KEEP_THESE_TIMES`,
+`KEEP_THIS_RADIUS`), went with the searches (#579); the You tab edits the same
+facts through the same writes.
 
 **One `PUT` per fact, unkeyed, and deliberately not a `PATCH`.** Three arguments
 converge and the third is decisive:
@@ -16,9 +15,9 @@ converge and the third is decisive:
    intent in one sport, the same request twice lands the same state, and the
    no-op rule means the second appends nothing."* Two write shapes in one context
    is the thing worth avoiding.
-2. **Each prompt is answered by exactly one write.** `KEEP_THESE_TIMES` writes
-   the weekly hours; `KEEP_THIS_RADIUS` writes the radius. A partial update would exist
-   to serve a caller that does not exist.
+2. **Each fact is changed by exactly one write.** The weekly hours by one, the
+   radius by another. A partial update would exist to serve a caller that does
+   not exist.
 3. **`null` versus absent is fatal on the week specifically.** A blank week is a
    **legal value** — `set_weekly_hours` accepts one deliberately — so
    `PATCH {"weekly_hours": null}` would mean both *leave my week alone* and
@@ -153,15 +152,14 @@ _LOST_THE_RACE = {
         "that own it: the week, the radius and the per-sport Play intent the "
         "Play screens edit, and — since the *You* tab — the tags, the photos "
         "with their verdicts, the intro, the standing proposals answer, and "
-        "the owner's own gender and preference. The one fact a search screen "
+        "the owner's own gender and preference. The one fact a Play screen "
         "still needs from elsewhere — **which sports am I rated in** — is "
         "`GET /api/v1/ratings` and is not re-served here.\n\n"
         "**`play_intents` holds only what was declared.** An undeclared sport is "
         "absent, never `null`: `NO_PREFERENCE` is an explicit answer, so there "
         "is no unanswered value to send. *Rated but undeclared* is a set "
         "difference against `GET /ratings`, and it is what a client uses to open "
-        "the declaration interstitial **before** a search is refused with "
-        "`play_intent_not_declared` rather than after.\n\n"
+        "the declaration interstitial for a sport still undeclared.\n\n"
         "**An empty `weekly_hours` is a real answer.** A player may clear their "
         "week; it means *we do not know when they play* and never *never*. "
         "**An empty `photos` list is one too**: a profile may hold none.\n\n"
@@ -210,10 +208,6 @@ async def read_player_profile(
         "asked for at the end of onboarding, and not every later edit of it. A "
         "cleared week is read as *absent* by the matcher, never as a zero — "
         "silence is never scored (`docs/adr/0102`).\n\n"
-        "**This is where a `KEEP_THESE_TIMES` prompt is answered.** The engine "
-        "notices that a search ran on a week the profile does not hold and asks; "
-        "nothing in the matcher writes a profile, so a *yes* is this request. "
-        "Declining writes nothing anywhere.\n\n"
         "Repeated hours are collapsed and the response carries the week as "
         "stored, in the platform's reading order — so a client can see what the "
         "profile now holds rather than assuming it kept what was sent.\n\n"
@@ -299,11 +293,10 @@ async def change_search_radius(
         "platform's records. A fix that rounds to the cell already stored "
         "records nothing and still answers `204` — which is what makes a write "
         "on every launch free, and why there is no `Idempotency-Key`.\n\n"
-        "**Nothing else moves.** A trip is a trip: the next deal deals around "
-        "the new area, the radar refetches, *In your area* answers for the new "
-        "cell — and nothing is reset, no radius changes and no prompt is "
-        "raised. `204` and no body: no route on this surface serves the area "
-        "yet, and a silent write on every launch is not the one to start."
+        "**Nothing else moves.** A trip is a trip: whatever reads the area "
+        "reads the new cell — and nothing is reset and no radius changes. "
+        "`204` and no body: no route on this surface serves the area yet, and "
+        "a silent write on every launch is not the one to start."
     ),
 )
 async def change_location(
@@ -354,8 +347,7 @@ async def change_location(
         "The response carries the tags **in the vocabulary's order**, which is "
         "what the profile read serves and what a card draws, so a client can "
         "see what the profile now holds rather than assuming it kept the order "
-        "it sent. The next deal anybody runs reads the new tags off the "
-        "candidate index, as it always has."
+        "it sent. The next read of their record shows the new tags."
     ),
 )
 async def change_social_tags(
@@ -456,10 +448,8 @@ async def change_photos(
         "trimmed — back from `GET /players/me/profile`, as the two gender "
         "writes are read back.\n\n"
         "Unkeyed and safe to send twice: the same line twice records nothing, "
-        "and so does withdrawing a line that was never written. The next deal "
-        "reads the new line — or none — off the candidate index; search "
-        "records already kept quote the line as it stood at the deal "
-        "(`docs/adr/0104`)."
+        "and so does withdrawing a line that was never written. The next read "
+        "of their record shows the new line — or none."
     ),
 )
 async def change_intro(
@@ -489,9 +479,8 @@ async def change_intro(
         "(`docs/adr/0179` §4), and the contract walk holds it to being the "
         "only one; the write answers nothing rather than becoming a second. "
         "Read the answer back from `GET /players/me/profile`.\n\n"
-        "The mutual gate reads the new answer on the next search either side "
-        "runs: the searcher's own live, everybody else's off the candidate "
-        "index, which follows the event as it always has."
+        "The mutual gate reads the new answer live, the next time the proposer, "
+        "the fill or a rescue asks it of a pair."
     ),
 )
 async def change_gender(
@@ -518,15 +507,15 @@ async def change_gender(
         "nothing.\n\n"
         "**It is mutual and durable, and narrowing it has an effect the "
         "player must be told about at the moment of setting**: they become "
-        "invisible to the excluded side entirely — including to searchers who "
-        "asked for anybody. The client says so from a reason code; learning it "
+        "kept off courts with the excluded side entirely — including with "
+        "players who asked for anybody. The client says so from a reason code; "
+        "learning it "
         "from silence is not acceptable. Seats already accepted are facts, not "
         "candidates: nothing already agreed is undone.\n\n"
         "**`204` and no body**, for the gender write's reason: the setting is "
         "served on the owner's profile read and on no other shape "
-        "(`docs/adr/0179` §4). It gates the next search in both directions — "
-        "this player's own, read live, and everybody else's, off the candidate "
-        "index once the projection has followed the event."
+        "(`docs/adr/0179` §4). It is read live, in both directions, the next "
+        "time the proposer, the fill or a rescue asks it of a pair."
     ),
 )
 async def change_gender_preference(

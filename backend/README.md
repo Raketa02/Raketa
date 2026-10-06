@@ -266,7 +266,7 @@ aggregator.
 |---|---|
 | `APP_ENV` is not one of the four | A typo must not silently change behaviour. |
 | `development`/`staging` with no `APP_HOST` or `WRITER_DB_URL` | Neither is provisioned; falling back points at a database that does not exist. |
-| `development`/`staging` with no `REDIS_URL` | Same reason, one step further: the ledgers behind it fail soft, so falling back to a laptop's service name would boot permanently degraded and look exactly like a quiet week. |
+| `development`/`staging` with no `REDIS_URL` | Same reason, one step further: the live channel behind it fails soft, so falling back to a laptop's service name would boot permanently degraded and look exactly like a quiet room. |
 | `production` with the default `JWT_SECRET_KEY` | It is public in this repo's history, so every token it signs is forgeable. |
 | `production` with the default `PHOTO_STORAGE_SECRET_KEY` | It is the local MinIO container's, published in this repo, and it unlocks every photo the platform holds. |
 | `production` with `DEBUG=true` | It serves verbose errors to callers. |
@@ -309,21 +309,11 @@ serving HTTP.
 | `PHOTO_REVIEW_BACKFILL_INTERVAL_SECONDS` | How often the backfill runs. |
 | `PHOTO_REVIEW_BACKFILL_BATCH_LIMIT` | Most photos one backfill run may send to the reviewer. |
 | `PHOTO_REVIEW_BACKFILL_PAUSE_SECONDS` | Gap between two reviews inside one run. Not which photos it picks — that is the note on the object. |
-| `REDIS_URL` | The ephemeral store, holding the exposure and suppression ledgers. Server-to-server; no scheme rule. |
-| `EXPOSURE_ROLL_ENABLED` | Enables the hourly exposure roll. |
-| `EXPOSURE_ROLL_INTERVAL_SECONDS` | How often the roll runs. Not either ledger's TTL — see *The ephemeral store*. |
-| `INTENT_DRIFT_ENABLED` | Enables the daily intent-drift prompt loop. |
-| `INTENT_DRIFT_INTERVAL_SECONDS` | How often it runs. Not any of its thresholds — those are domain. |
-| `GRID_STALENESS_ENABLED` | Enables the daily availability-staleness prompt loop. |
-| `GRID_STALENESS_INTERVAL_SECONDS` | How often it runs. Not how old a grid must be — that is domain. |
-| `INTEREST_EXPIRY_ENABLED` | Enables the hourly *Let's play* expiry sweep. |
-| `INTEREST_EXPIRY_INTERVAL_SECONDS` | How often the sweep runs. **Not `INTEREST_TTL`**, which is a ruleset row. |
+| `REDIS_URL` | The ephemeral store, holding a room's live channel and its typing roster. Server-to-server; no scheme rule. |
 | `RATING_CATCH_UP_ENABLED` | Enables the hourly rating catch-up, which moves a Level on every confirmed counted result. **The only job whose absence a player would notice** — nothing announces a confirmation, so this is the whole path a result has to a rating. |
 | `RATING_CATCH_UP_INTERVAL_SECONDS` | How often it runs. **Not the update rule**, which is `engines/racketskill/results.py` and is domain — an environment that could pick a K-factor decides how a marketplace rates people. |
 | `CONVERSATION_SWEEP_ENABLED` | Enables the hourly conversation sweep, which destroys every room whose episode is over. **Destroyed, not delisted** — turning it off changes no answer, because the end is derived and every route already refuses past it; what stops is the rows going away. |
 | `CONVERSATION_SWEEP_INTERVAL_SECONDS` | How often it runs. **Not `CONVERSATION_GRACE`**, which is how long a room outlives its game and is domain. |
-| `SCALE_PRESSURE_ENABLED` | Enables the scale-pressure probe — trigger 1's event-loop lag monitor, which also closes the fifteen-minute scoring window. |
-| `SCALE_PRESSURE_INTERVAL_SECONDS` | How often it ticks. The tick *is* the measurement: the probe records how much later than this the loop got back to it. **Not the trigger's 15-minute window and not its thresholds** — those are domain, in `matchmaking/domain/scale_triggers.py`. |
 | `GUNICORN_WORKERS` | How many workers this container runs. Read by `docker/api/startup.prod.sh` and by trigger 4's arithmetic, so the memory reading is about the fleet that exists. It selects no behaviour: it is a multiplier inside a log record. |
 | `RUN_MIGRATIONS_ON_STARTUP` | Optional production startup migration toggle. |
 
@@ -481,22 +471,19 @@ generator's inputs: rings cut by the relaxation ladder's own ×1.5 and ×2.0 plu
 past the slider's 50 km ceiling, one archetype per band, and a rule apiece for the newcomer
 share, the proposals opt-out, the mutual-gender exclusion and the dual-sport membership.
 `app/seeds/screens.py` holds the **assertions**, and every one of them is an outcome of a
-real read path run as the protagonist — the pool search, the deal, the line-up, the ladder.
-Nothing is asserted about a number the generator chose, because a ruleset that tightens
-`QUALITY_FLOOR` moves no distribution at all and still empties every screen.
+real read path run as the protagonist or her club — the group deck, Fill in, the posting
+grid, the club's Bookings day. Nothing is asserted about a number the generator chose.
 
 Regenerate the population with `make gen-cohort` and commit the result. It records
 **inputs only** — no level, no uncertainty, no band, because those are the engine's answers
 and a committed copy of an answer is a second number nothing keeps honest.
 
-Behind the cohort are eleven accounts named for a **relationship to
-`the-populated-player`**, from her side — `said-yes-to-you`, `they-challenged-you`,
-`you-passed-them` and eight more (`app/seeds/relationships.py`). The relationships themselves
-are gone: a layer wrote each edge through a real search, deal or send for the matcher's
-screens to read back, five of the edges were challenges, and the layer went with the
-challenges (#578) — as did the plans layer and the loop's own states. The accounts stay,
-because the pool's played history seats them on her past courts; each description says what
-the account is now.
+The eleven accounts once named for a **relationship to `the-populated-player`** —
+`said-yes-to-you`, `they-challenged-you`, `you-passed-them` and eight more — are gone. The
+relationships went with the challenges (#578), as did the plans layer and the loop's own
+states; the accounts and the pool's played history that seated them on her past courts
+went with the searches (#579), so her played history is her own evenings and the cohort's
+games.
 
 Behind all of it is a last layer, and it is the only one that **writes nothing until the
 outbox has run**. A conversation is *told* — a room is opened by a **booked game**, from the
@@ -716,42 +703,31 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and nineteen jobs are in it today: the
+  `app/bootstrap/jobs.py` is the register, and fourteen jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
   held for more than 24 hours that no committed profile currently names; the
   **photo re-review backfill**, which asks the reviewer about the photos nobody
   ever asked it about; the candidate index's **tail reader** and **snapshot
-  refresh**; the **exposure roll**, which publishes one scalar per sport per week
-  saying what *shown more often than most* means; the two **prompt loops** —
-  intent drift and availability staleness — which write no value anywhere and each
-  raise a standing question instead; the **interest expiry loop**, which removes
-  every *Let's play* whose twenty-one days have passed; the **scale-pressure
-  probe**, whose work is measuring how late the event loop woke it; the
-  **rating catch-up**, which is the whole path a confirmed result has to a Level;
-  the **conversation sweep**, which destroys every room whose episode is over; the
-  **mail worker**; and the new loop's jobs — the proposer's sweep and its tick, the
-  book-by sweep, the On request timeout, the cut-off, the club payouts and the
-  new-bookings summary. The challenge lapse loop and the hour loop went with the
-  challenges (#578). Two of them take no database session: the roll, whose whole
-  input and output are in Redis, and the backfill, whose whole input and output are
-  the object store.
+  refresh**, which nothing reads since the searches went and which go with the
+  ranking (#580); the **rating catch-up**, which is the whole path a confirmed
+  result has to a Level; the **conversation sweep**, which destroys every room
+  whose episode is over; the **mail worker**; and the new loop's jobs — the
+  proposer's sweep and its tick, the book-by sweep, the On request timeout, the
+  cut-off, the club payouts and the new-bookings summary. The challenge lapse loop
+  and the hour loop went with the challenges (#578); the exposure roll, the two
+  prompt loops, the interest expiry loop and the scale-pressure probe went with
+  the searches (#579). The backfill takes no database session: its whole input and
+  output are the object store.
 
-  **Two of them delete things, and they delete different kinds of thing.** The
-  interest expiry loop removes a row; the conversation sweep removes an
-  aggregate — a room and its whole stream, *destroyed, not delisted*
+  **The conversation sweep deletes an aggregate** — a room and its whole stream,
+  *destroyed, not delisted*
   ([ADR-0142](../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md),
   with its instant moved by
   [ADR-0153](../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)).
-  **Correctness depends on neither.** Every read of the interest ledger is bounded
-  by `now`, so a lapsed yes lifts nobody and counts against nobody's cap whether
-  or not it has been swept; and a room's end is derived on every read — the
-  game's clock, off its own stream — so every route on it answers
-  `conversation_not_found` past that
-  instant and every list has already dropped it. What the expiry loop buys is a
-  table the size of what is live plus one figure that could not be bought later — *yeses that
-  expired having never lifted anybody*, `INTEREST_TTL`'s only day-one falsifier,
-  which a lapsed row leaves no trace to compute. What the sweep buys is that the
-  destruction is **real**, which is the whole difference between a room that is
+  **Correctness does not depend on it.** A room's end is derived on every read —
+  the game's clock, off its own stream — so every route on it answers
+  `conversation_not_found` past that instant and every list has already dropped
+  it. What the sweep buys is that the destruction is **real**, which is the whole difference between a room that is
   over and a record with no end. `CONVERSATION_GRACE` is domain, in
   `app/modules/conversations/domain/lifetime.py`; only
   `CONVERSATION_SWEEP_INTERVAL_SECONDS` is configuration.
@@ -800,37 +776,19 @@ same place for ever, which is a stall rather than a pause.
 
 ## The ephemeral store
 
-Redis holds the **two ledgers that are allowed to be lossy** — exposure and
-suppression — and nothing else (ADR-0093). The rule that separates it from
-everything durable is one sentence: **the gate is the cache; the evidence is the
-row.** A fact that must survive is a durable row elsewhere. *Who was shown to
-whom in week 34* is answered by the search record; *were these two ever passed
-on* is answered by the durable pass record, which is exactly the fact a TTL
-destroys and exactly why the two are stored apart.
+Redis holds **only what is allowed to be lossy** — a room's live channel and who
+is typing in it — and nothing else (ADR-0093, ADR-0147). Every message is a
+durable row in Postgres before anything is published, so an unreachable Redis
+costs a room its liveness and never anybody their message. The posture is applied
+once, by the wrappers in `conversations/infrastructure/`, and the composition root
+never hands out an unwrapped adapter. The matcher's exposure and suppression
+ledgers were the store's first two readers, and went with the searches (#579).
 
-**Both ledgers fail soft, and it is worth saying out loud** because ADR-0095's
-*a gate that cannot be evaluated excludes* reads like it should reach them.
-Applying that to a suppression would **empty the deck rather than protect
-anybody**: a suppression is a courtesy, a block is a safety control. So an
-unreachable Redis degrades **ordering and repetition** and never excludes
-anybody or empties a surface. The posture is applied once, by
-`matchmaking/infrastructure/fail_soft_ledgers.py`, and the composition root
-never hands out an unwrapped adapter — so no caller can get it wrong and none
-has to remember to.
-
-**Neither TTL is configuration.** How long a suppression lasts is
-`PASS_SUPPRESS`, a product number in the released ruleset; how long a week of
-exposure survives is `EXPOSURE_RETENTION_WEEKS`, in
-`app/modules/matchmaking/domain/ledgers.py`. Both decide what can still be
-asked. What *is* configuration is where the store lives and how often the roll
-runs — the same split the photo sweep's retention window and cadence have.
-
-**No test needs Redis running.** Both ledgers sit behind ports with an in-memory
-implementation that the whole HTTP suite runs against, wired in
-`tests/conftest.py` exactly as the object store and the photo-review sidecar
-are; and the Redis adapters themselves are exercised by the same contract suite
-against an in-process stand-in, so the key shapes and TTLs are tested rather
-than assumed.
+**No test needs Redis running.** The live channel runs over an in-process
+stand-in (`tests/unit/fake_redis.py`) that the whole HTTP suite is wired to in
+`tests/conftest.py`, exactly as the object store and the photo-review sidecar
+are, so the real adapters' key shapes and frames are exercised rather than
+assumed.
 
 ## Testing And Quality
 

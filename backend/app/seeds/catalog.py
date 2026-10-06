@@ -236,16 +236,12 @@ STRONGEST = AnswerPolicy(claims=4, demonstrations=4)
 #: ``THE_PROTAGONISTS_BAND`` — so an account may take any of them and still be
 #: held to the same claim it was held to before.
 #:
-#: **What they exist for.** The eleven relationship accounts are *controls*:
-#: everything that is not the edge under test is held equal, deliberately. The
-#: rating was held equal with it, and it did not have to be — a block, a pass, an
-#: interest and an open challenge are gates on a **pair**, and none of them reads
-#: μ. Holding it equal anyway put eleven accounts at one level in the
-#: protagonist's own pool, where they outscore everybody and tie with each other:
-#: the evenest four is then a tie between clones, ⚡ returns the same court every
-#: time, and the balance forecast reads the same number whatever was asked for.
-#: The edge stays the only axis under test; the level stops being a sixteenth
-#: copy of hers.
+#: **What they exist for.** The named accounts beside the protagonist are held
+#: to her band, and a band held at one level would make clones of them: the
+#: evenest four is then a tie between clones, and the balance forecast reads the
+#: same number whatever court is asked about. Eight answer sets keep them in her
+#: band without making a copy of her. (They were written for the eleven
+#: relationship accounts, which went with the searches, #579.)
 #:
 #: They are **fixed policies and not a spread** — each account answers one way,
 #: deterministically, and ``_refuse_an_impossible_policy`` still refuses a drawn
@@ -538,12 +534,7 @@ CATALOG_SURNAMES: tuple[str, ...] = (
     "Ferrer", "Solano", "Vidal", "Rojas", "Miralles", "Andrade",
 )
 
-#: The eleven relationship accounts', dealt by their own module.
-RELATIONSHIP_SURNAMES: tuple[str, ...] = (
-    "Nogueira", "Peralta", "Quintana", "Sabater",
-)
-
-#: The cohort's, and disjoint from the other two by construction.
+#: The cohort's, and disjoint from the catalog's by construction.
 COHORT_SURNAMES: tuple[str, ...] = (
     "Bertran", "Casals", "Duarte", "Esteve", "Fabregat", "Gallego",
     "Herrero", "Iglesias",
@@ -1071,20 +1062,15 @@ def _refuse_an_impossible_catalog() -> None:
             f"TLD, which cannot be registered. '{SEED_EMAIL_DOMAIN}' can be."
         )
 
-    refuse_two_accounts_at_one_name(ACCOUNTS)
+    _refuse_two_accounts_at_one_name(ACCOUNTS)
     for account in ACCOUNTS:
-        refuse_an_impossible_account(account)
+        _refuse_an_impossible_account(account)
 
 
-def refuse_two_accounts_at_one_name(accounts: Sequence[SeedAccount]) -> None:
-    """No two of these are the same person. **Asked across every list at once.**
-
-    Public, and taking the accounts rather than reading ``ACCOUNTS``, because the
-    catalog is no longer the only list the runner walks: the eleven relationships
-    are seeded through the same registration, so a slug shared *between* the two
-    lists is a collision this file could not see and the run would meet half way
-    through, at the second registration for one address.
-    """
+def _refuse_two_accounts_at_one_name(accounts: Sequence[SeedAccount]) -> None:
+    """No two of these are the same person — a shared slug is a collision the
+    run would meet half way through, at the second registration for one
+    address."""
 
     seen: set[str] = set()
     for account in accounts:
@@ -1093,15 +1079,8 @@ def refuse_two_accounts_at_one_name(accounts: Sequence[SeedAccount]) -> None:
         seen.add(account.slug)
 
 
-def refuse_an_impossible_account(account: SeedAccount) -> None:
-    """Everything that makes one account seedable, asked before a session opens.
-
-    Public because the catalog is no longer the only list of accounts: the
-    eleven relationships in ``app/seeds/relationships.py`` are seeded through the
-    same walk and have to answer the same questions. One copy, so an account
-    added to either list is held to one standard — two would be two standards,
-    and the one that drifted would be the one nobody re-read.
-    """
+def _refuse_an_impossible_account(account: SeedAccount) -> None:
+    """Everything that makes one account seedable, asked before a session opens."""
 
     Email(account.email)
     Name(account.name)

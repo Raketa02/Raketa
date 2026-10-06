@@ -61,7 +61,6 @@ from app.seeds.catalog import (
     RATED_IN_EVERY_SPORT,
     THE_NEWCOMER,
     THE_POPULATED_PLAYER,
-    SeedAccount,
 )
 from app.seeds.clock import FixedClock
 
@@ -102,11 +101,9 @@ async def write_the_payment_methods(
     *,
     now: Instant,
     cohort: Sequence[tuple[str, UUID]],
-    others: Sequence[SeedAccount] = (),
 ) -> SeededPaymentMethods:
-    """Save a card for every named account but the ones left without, for every
-    cohort member — ``cohort`` is each member's handle and player id — and for
-    every other account a run seats on a game (``others``).
+    """Save a card for every named account but the ones left without, and for
+    every cohort member — ``cohort`` is each member's handle and player id.
 
     **After the accounts and the cohort**, which it reads and never writes.
     Nothing below reads a method yet, so its position among the later layers is
@@ -146,7 +143,7 @@ async def write_the_payment_methods(
     async with session_factory() as session:
         users = build_user_repository(session)
         named: list[tuple[str, UUID, EnteredCard | None]] = []
-        for account in (*ACCOUNTS, *others):
+        for account in ACCOUNTS:
             user = await users.get_by_email(account.email)
             if user is None:
                 raise RuntimeError(

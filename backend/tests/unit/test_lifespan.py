@@ -24,10 +24,8 @@ from app.bootstrap.jobs import (
     MAIL_DELIVERY_JOB,
     PROPOSAL_EXPIRY_JOB,
     PROPOSER_JOB,
-    INTEREST_EXPIRY_JOB,
     PHOTO_SWEEP_JOB,
     RATING_CATCH_UP_JOB,
-    SCALE_PRESSURE_JOB,
 )
 from app.core.config import Settings
 from app.modules.conversations.infrastructure.absent_providers import (
@@ -201,10 +199,6 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         PHOTO_SWEEP_ENABLED=False,
         PHOTO_REVIEW_BACKFILL_ENABLED=False,
         CANDIDATE_INDEX_ENABLED=False,
-        EXPOSURE_ROLL_ENABLED=False,
-        INTENT_DRIFT_ENABLED=False,
-        GRID_STALENESS_ENABLED=False,
-        INTEREST_EXPIRY_ENABLED=False,
         RATING_CATCH_UP_ENABLED=False,
         CONVERSATION_SWEEP_ENABLED=False,
         MAIL_DELIVERY_ENABLED=False,
@@ -230,20 +224,16 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     monkeypatch.setattr(lifespan_module, "dispose_engine", dispose_engine)
 
     async with lifespan_module.build_lifespan(settings)(app):
-        # The scoring histogram's probe is the one job left, and it is the same
-        # claim the redis assertion below makes: it reads this process's own
-        # counters, so it needs no session, no store and no engine. Everything
-        # that would have reached for a factory is gone.
-        assert [job.name for job in app.state.scheduled_jobs] == [SCALE_PRESSURE_JOB]
-        assert app.state.scoring_meter is not None
+        # Nothing is registered, and nothing reached for a factory to get there.
+        assert app.state.scheduled_jobs == []
         # The index's own source is one of the things that must not have been
         # built: it takes a session factory, and building one is what this test
         # exists to prove did not happen.
         assert app.state.candidate_source is None
         # The ephemeral store is **not** the same claim, and the difference is
         # the point: it needs no session, so it is opened whatever is switched
-        # off. A request path resolves its ledgers through this client, and a
-        # job's toggle may not decide whether a Play surface has one.
+        # off. A room's live channel publishes through this client, and a job's
+        # toggle may not decide whether a room has one.
         assert app.state.redis is not None
 
     assert disposed == [True]
@@ -254,7 +244,6 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
     [
         ("PHOTO_SWEEP_ENABLED", PHOTO_SWEEP_JOB),
         ("CANDIDATE_INDEX_ENABLED", CANDIDATE_INDEX_TAIL_JOB),
-        ("INTEREST_EXPIRY_ENABLED", INTEREST_EXPIRY_JOB),
         ("RATING_CATCH_UP_ENABLED", RATING_CATCH_UP_JOB),
         ("CONVERSATION_SWEEP_ENABLED", CONVERSATION_SWEEP_JOB),
         ("MAIL_DELIVERY_ENABLED", MAIL_DELIVERY_JOB),
@@ -283,16 +272,11 @@ async def test_a_lone_database_job_is_handed_a_session_factory(
             "PHOTO_SWEEP_ENABLED",
             "PHOTO_REVIEW_BACKFILL_ENABLED",
             "CANDIDATE_INDEX_ENABLED",
-            "EXPOSURE_ROLL_ENABLED",
-            "INTENT_DRIFT_ENABLED",
-            "GRID_STALENESS_ENABLED",
-            "INTEREST_EXPIRY_ENABLED",
             "RATING_CATCH_UP_ENABLED",
             "CONVERSATION_SWEEP_ENABLED",
             "MAIL_DELIVERY_ENABLED",
             "PROPOSAL_EXPIRY_ENABLED",
             "PROPOSER_ENABLED",
-            "SCALE_PRESSURE_ENABLED",
         )
     }
     settings = _settings(**{**off, flag: True})
@@ -433,15 +417,13 @@ async def test_the_ephemeral_store_is_opened_and_closed_with_the_application(
     monkeypatch.setattr(lifespan_module, "get_redis", lambda: client)
     monkeypatch.setattr(lifespan_module, "close_redis", close_redis)
 
-    settings = _settings(
-        EVENT_DELIVERY_WORKER_ENABLED=False, EXPOSURE_ROLL_ENABLED=False
-    )
+    settings = _settings(EVENT_DELIVERY_WORKER_ENABLED=False)
     app = FastAPI()
     app.state.event_runtime = object()
 
     async with lifespan_module.build_lifespan(settings)(app):
-        # Opened even with the roll off, which is the assertion: the pool is the
-        # process's, and only its *readers* are behind flags.
+        # Opened with every job stubbed away, which is the assertion: the pool
+        # is the process's, and only its *readers* are behind flags.
         assert opened == [settings]
         assert app.state.redis is client
         assert closed == []
@@ -455,7 +437,7 @@ async def test_the_store_is_closed_after_the_engine_and_after_the_jobs(
     """Order, because closing a pool under a live job is the whole hazard."""
 
     order: list[str] = []
-    job = _FakeWorker("exposure-roll")
+    job = _FakeWorker("conversation-sweep")
 
     async def stop() -> None:
         order.append("job")
@@ -479,7 +461,7 @@ async def test_the_store_is_closed_after_the_engine_and_after_the_jobs(
     app.state.event_runtime = object()
 
     async with lifespan_module.build_lifespan(
-        _settings(EVENT_DELIVERY_WORKER_ENABLED=False, EXPOSURE_ROLL_ENABLED=True)
+        _settings(EVENT_DELIVERY_WORKER_ENABLED=False)
     )(app):
         pass
 

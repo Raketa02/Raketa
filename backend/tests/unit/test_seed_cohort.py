@@ -41,7 +41,7 @@ from app.core.config import get_settings
 from app.engines.assessment import AnswerOption, Question
 from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import SPORT_SPECS, Sport
-from app.modules.matchmaking.domain.searches import LAST_FIVE
+from app.modules.games.domain.ports import RECENT_RESULTS
 from app.modules.player_profile.domain.intro import Intro
 from app.seeds import catalog
 from app.seeds.catalog import (
@@ -79,8 +79,6 @@ from app.modules.matchmaking.domain.geography import Point, distance_km
 from app.seeds.booked_history import write_the_played_history
 from app.seeds.club_courts import write_the_club_courts
 from app.seeds.clubs import write_the_clubs
-from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
-from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 from app.seeds.payments import write_the_payment_methods
 from app.seeds.photos import DeclaredVerdict
 from app.seeds.runner import (
@@ -281,8 +279,8 @@ def test_somebody_plays_enough_games_to_fill_the_run_of_form():
         for handle in game.players:
             counted[handle] = counted.get(handle, 0) + 1
 
-    assert max(counted.values()) >= LAST_FIVE, counted
-    assert any(1 <= played < LAST_FIVE for played in counted.values()), counted
+    assert max(counted.values()) >= RECENT_RESULTS, counted
+    assert any(1 <= played < RECENT_RESULTS for played in counted.values()), counted
     assert len(counted) < len(COHORT.members), "every member has played"
 
 
@@ -798,7 +796,6 @@ async def a_seeded_world(session_factory):
         session_factory,
         now=now,
         cohort=[(member.member.handle, member.player_id) for member in members],
-        others=RELATIONSHIP_ACCOUNTS,
     )
     clubs = await write_the_clubs(session_factory, settings=settings, now=now)
     await write_the_club_courts(
@@ -808,8 +805,8 @@ async def a_seeded_world(session_factory):
         session_factory,
         settings=settings,
         now=now,
-        games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
-        named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
+        games=PLAYED_GAMES,
+        named=ACCOUNTS,
     )
     return {
         "accounts": accounts,

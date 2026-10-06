@@ -478,7 +478,7 @@ class CommitPlayerProfileRequest(BaseModel):
             "The player's own answer, asked once. Required — `PREFER_NOT_TO_SAY` "
             "is a first-class answer and is what a player who does not want to "
             "say sends; there is no way to send nothing. It matches only "
-            "unconstrained searches, which costs its holder reach, and the "
+            "unconstrained preferences, which costs its holder reach, and the "
             "client is what says so at the moment of asking."
         ),
     )
@@ -573,7 +573,7 @@ class PlayerProfileResponse(BaseModel):
 
     **No gender value comes back out of this body**, and that is a rule rather
     than an oversight (``docs/adr/0096`` §6): a preference crosses the wire
-    *in*, on a search; no response that describes one player to another carries
+    *in*, on a write; no response that describes one player to another carries
     a gender out and no card renders one. This body is only ever the caller's
     own profile, so nothing here would leak a third party's answer — the field
     is left off anyway, because *which* shapes may carry it is a line rather
@@ -715,10 +715,8 @@ class PlayerProfileReadResponse(BaseModel):
             "(`NO_PREFERENCE` is an explicit answer).\n\n"
             "*Rated but not yet declared* is a set difference the client "
             "computes against `GET /ratings`, which it is already fetching to "
-            "build the sport chips. A search by a player with no declaration "
-            "for that sport is refused with `play_intent_not_declared`, so this "
-            "is what lets a client open the one-tap interstitial before the "
-            "refusal rather than after it."
+            "build the sport chips, and it is what lets a client open the "
+            "one-tap interstitial for a sport still undeclared."
         ),
     )
     social_tags: list[SocialTag] = Field(
@@ -1058,7 +1056,7 @@ class ChangeGenderRequest(BaseModel):
         ...,
         description=(
             "The player's own answer. `PREFER_NOT_TO_SAY` is a first-class "
-            "answer; it matches only unconstrained searches, which costs its "
+            "answer; it matches only unconstrained preferences, which costs its "
             "holder reach, and the client is what says so at the moment of "
             "asking (`docs/adr/0096`)."
         ),

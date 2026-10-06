@@ -5,12 +5,10 @@ no CLIP container, and — since the ephemeral store arrived — no Redis. That 
 the acceptance criterion rather than a convenience: a suite that only passes
 with containers up is a suite CI cannot be trusted to run.
 
-**The ledger is the worst of the three to get wrong**, which is why it gets a
-test of its own rather than being left to the fixtures. A missing object store
-fails a request and a missing sidecar fails a review; a missing ledger answers
-*nobody has been shown to anybody* and *nothing is suppressed*, which are
-perfectly plausible answers. A suite quietly talking to no Redis at all would
-be green and would prove nothing.
+**The ephemeral store gets tests of its own** rather than being left to the
+fixtures, because a room's live channel is the one reader of it left (#579) and
+it runs over a fake the suite overrides: a request path that quietly grew its
+own client would pass every other test and fail on a laptop with no Redis.
 """
 
 from __future__ import annotations
@@ -19,7 +17,6 @@ import pytest
 
 from app.infrastructure.redis_client import get_redis
 from app.main import create_app
-from tests.unit.fake_ledgers import InMemoryExposureLedger, InMemorySuppressionLedger
 
 
 async def test_serving_a_request_opens_no_connection_pool(client):
@@ -42,26 +39,11 @@ def test_the_application_starts_with_no_ephemeral_store_reachable():
     """Constructing the app touches no store, and constructing a client would
     connect to nothing anyway.
 
-    It is the same property the ledgers' fail-soft posture rests on, one layer
-    down: a store that is down costs answers, never a start.
+    It is the same property the live channel's fail-soft posture rests on, one
+    layer down: a store that is down costs liveness, never a start.
     """
 
     create_app()
 
     with pytest.raises(RuntimeError, match="not initialised"):
         get_redis()
-
-
-async def test_both_ledgers_are_the_in_memory_ones(
-    client, exposure_ledger, suppression_ledger
-):
-    """The fixtures the whole suite runs against, named.
-
-    Asserted rather than assumed because the override is invisible: a route
-    added tomorrow that reached `get_redis` directly instead of asking for the
-    port would pass every other test in this file and fail on a laptop with no
-    Redis.
-    """
-
-    assert isinstance(exposure_ledger, InMemoryExposureLedger)
-    assert isinstance(suppression_ledger, InMemorySuppressionLedger)

@@ -17,19 +17,18 @@ the real adapters genuinely need one, and a suite that could only construct the
 implementations needing no I/O would be a suite that quietly excused the only
 implementations with a database behind it.
 
-**Four of the seven rows named a null object once and one still does.**
-``NoHoldsExist`` remains, because nothing on this platform can open a case;
+**Four rows named a null object once and one still does.** ``NoHoldsExist``
+remains, because nothing on this platform can open a case;
 ``NoMatchHistoryExists``, ``NoResultUpdateRuleExists`` and ``NoPlayerScoresExist``
 are gone, each on the day the fact its own name asserted stopped being true
 (``docs/adr/0137``, ``docs/adr/0139``, ``docs/adr/0140``). Swapping a row is the
-whole integration, which is what the register was for — and the one row left is a
-**gate** rather than a term, which is ``docs/adr/0098``'s rule showing through:
-a gate may be honestly empty, and a term may never be honestly neutral.
+whole integration, which is what the register was for.
 
-**A row names one implementation and not one provider.** ``MatchHistoryQuery``
-composed two shipped contexts in one row until ``challenges`` was removed
-(#578); ``GamesPlayed`` now reads ``games`` alone, and a fill's court and a
-mutual's mint are measured absences, both going with the searches (#579).
+**Three rows since #579.** The searches, the deck and the radar were the only
+readers of a Player Score, the match history, the fill's half-built court and
+the deck's cool-off, so those four ports and their rows went with them; what is
+left are the two account gates the player record asks and the at-stake read a
+booked game's pairing prints.
 
 **It is not the only register.** ``games_demands.py`` holds the ports a
 *provider* publishes outward, in the same shape and for the same reason; they are
@@ -52,20 +51,12 @@ from app.bootstrap.composition import (
     build_account_hold_query,
     build_account_status_query,
     build_at_stake_query,
-    build_half_built_court_query,
-    build_match_history_query,
-    build_player_score_query,
-    build_shared_court_query,
 )
 from app.modules.matchmaking.domain.ports import (
     MATCHER_DEMANDS,
     AccountHoldQuery,
     AccountStatusQuery,
     AtStakeQuery,
-    HalfBuiltCourtQuery,
-    MatchHistoryQuery,
-    PlayerScoreQuery,
-    SharedCourtQuery,
 )
 
 P = TypeVar("P")
@@ -88,16 +79,6 @@ class RegisteredImplementation(Generic[P]):
 
 REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
-        port=PlayerScoreQuery,
-        name="PublishedPlayerScores",
-        build=build_player_score_query,
-    ),
-    RegisteredImplementation(
-        port=MatchHistoryQuery,
-        name="GamesPlayed",
-        build=build_match_history_query,
-    ),
-    RegisteredImplementation(
         port=AtStakeQuery,
         name="RatingResultUpdateRule",
         build=build_at_stake_query,
@@ -111,16 +92,6 @@ REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=AccountStatusQuery,
         name="UsersAccountStatus",
         build=build_account_status_query,
-    ),
-    RegisteredImplementation(
-        port=HalfBuiltCourtQuery,
-        name="NoHalfBuiltCourtsExist",
-        build=build_half_built_court_query,
-    ),
-    RegisteredImplementation(
-        port=SharedCourtQuery,
-        name="GamesSharedCourts",
-        build=build_shared_court_query,
     ),
 )
 

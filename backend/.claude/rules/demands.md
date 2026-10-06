@@ -28,6 +28,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   contexts (#578)**: `challenge_demands.py`, what `challenges` demanded of the matcher, and
   `plan_demands.py`, what a plan demanded — and with them `games`' `AgreedMoment` and the
   `SeatableCourt` it published for challenges.
+  **The matcher's register is three rows since #579**: `AccountHoldQuery`,
+  `AccountStatusQuery` and `AtStakeQuery`. `PlayerScoreQuery`, `MatchHistoryQuery`,
+  `HalfBuiltCourtQuery` and `SharedCourtQuery` were read by the searches, the line-ups and
+  the deck alone and went with them, and `AtStakeQuery` lost its head-to-head read — a
+  booked game's court is priced side against side.
   Each register's exhaustiveness
   assertion is about its own kind of claim and would stop meaning anything with another
   kind in it — which is also the rule for the next one: **a new provider or a new consumer

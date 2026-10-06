@@ -56,6 +56,11 @@ class PlayIntentSurface(str, Enum):
     was, and nothing load-bearing reads it — which is exactly the condition
     under which a self-reported field is safe to keep.
 
+    **Three of its five screens are gone** — the search screen's toggle, the
+    deck and the drift prompt went with the searches (#579) — and their codes
+    stay, because a code already in a stream has to keep meaning what it meant
+    when it was written. Nothing emits them any more.
+
     **It widened rather than renaming, and the reason was cost** (#280). The
     deck earned the fifth member: ``POST /deck`` has no mode to read, so it
     reads the declaration, is refused with ``play_intent_not_declared`` exactly

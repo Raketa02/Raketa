@@ -9,13 +9,14 @@ query written here. A ``select`` over ``event_store`` on this side would make
 this context a second reader of two other schemas and a second author of what *a
 ghost* means.
 
-**Why it is not called ``PlayerScoreQuery``.** The matcher already declares a port
-of that name — its *demand*, in its own vocabulary, answered by an adapter on its
-side of the arrow. This is the *publication*, in this context's vocabulary, and
-the two are different shapes. A shared word over two different shapes is what
-renamed ``Standing`` on the contract when ``games`` arrived (``docs/adr/0137``);
-the rule that came out of it is that **the cost of a shared word is paid by
-whoever arrives second**, and here that is this context.
+**Why it is not called ``PlayerScoreQuery``.** The matcher declared a port of
+that name — its *demand*, in its own vocabulary, answered by an adapter on its
+side of the arrow — until the searches that read it went (#579). This is the
+*publication*, in this context's vocabulary, and the two were different shapes.
+A shared word over two different shapes is what renamed ``Standing`` on the
+contract when ``games`` arrived (``docs/adr/0137``); the rule that came out of
+it is that **the cost of a shared word is paid by whoever arrives second**, and
+here that is this context.
 """
 
 from __future__ import annotations

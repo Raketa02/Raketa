@@ -5,9 +5,8 @@ four*, which is the cubic half and the one the ``K × K`` mask exists for.
 
 **The mask arrives as a callable and the gates that built it do not.** Every test
 here supplies its own admissibility, because the engine's whole claim is that it
-enforces whatever it is handed — the claim that the mask itself is the three
-gates is `tests/unit/test_matchmaking_lineups.py`'s, on the other side of the
-fence, where the I/O is.
+enforces whatever it is handed. The line-up search that built the mask from the
+three gates went with the searches (#579).
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ from app.engines.matchfit.grouping import Arrangement, Seated
 from app.engines.matchfit.v1 import GUESTS, arranged, best, seat
 from app.engines.matchfit.v1.group import objective
 from app.kernel import InvariantViolated
-from app.modules.matchmaking.domain.fence import combine_group_sigma
+from app.modules.matchmaking.domain.balance import combine_group_sigma
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from tests.unit.matchfit_builders import searcher, seated
 

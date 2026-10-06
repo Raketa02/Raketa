@@ -51,28 +51,27 @@ class Gender(str, Enum):
     Per person and never per sport, which is what keeps it on ``PlayerProfile``
     rather than beside a rating (ADR-0089's cardinality, unchanged).
 
-    This is **a statement about which searches a player wishes to appear in**,
-    not a ruling by the platform on who anybody is. A player whose identity is
-    not on this list picks the answer that puts them where they want to be seen,
-    or takes ``PREFER_NOT_TO_SAY`` and appears in unconstrained searches only.
+    This is **a statement about which games a player wishes to be put in**, not
+    a ruling by the platform on who anybody is. A player whose identity is not on
+    this list picks the answer that puts them where they want to be, or takes
+    ``PREFER_NOT_TO_SAY`` and is paired only with players who asked for anybody.
     The platform adjudicates nothing.
     """
 
     WOMAN = "WOMAN"
     MAN = "MAN"
-    #: Matches only an unconstrained search and never a narrowed one. It costs
+    #: Matches only an unconstrained preference and never a narrowed one. It costs
     #: its holder reach, and ADR-0096 records that the honest framing of that
     #: cost is a copy problem — the client's, never this module's.
     PREFER_NOT_TO_SAY = "PREFER_NOT_TO_SAY"
 
 
 class GenderPreference(str, Enum):
-    """Who a player is willing to be matched with — durable, not per search.
+    """Who a player is willing to be matched with — durable, never per game.
 
-    **Durable rather than per-search because the gate is mutual.** It has to be
-    evaluated against a player when somebody *else* searches and they are not
-    present, and a per-search setting cannot bind that direction at all. A
-    per-search override may **narrow** this, never widen past it.
+    **Durable because the gate is mutual.** It has to be evaluated against a
+    player when somebody *else's* game is being made and they are not present,
+    and a setting made at the moment could not bind that direction at all.
     """
 
     WOMEN_ONLY = "WOMEN_ONLY"

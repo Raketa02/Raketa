@@ -412,10 +412,10 @@ clean
 echo
 echo ".importlinter — the ephemeral store fenced out of the business rules"
 
-# The two ledgers are ports, and *behind a port* is only true while nothing on the
-# inside can reach the client. What is actually at stake is the fail-soft posture:
-# every ledger leaves the composition root wrapped, because an unwrapped adapter
-# raises and a raise on either path empties a surface to protect nobody. A use case
+# A room's live channel is a port, and *behind a port* is only true while nothing
+# on the inside can reach the client. What is actually at stake is the fail-soft
+# posture: every adapter leaves the composition root wrapped, because an unwrapped
+# one raises and a raise on a courtesy costs a room its response. A use case
 # reaching for Redis itself is a use case that has skipped that.
 probe "$MODULE_APPLICATION_PROBE" 'from redis.asyncio import Redis
 
@@ -431,15 +431,15 @@ clean
 # A use case that constructs the adapter has reached past the wrapper exactly as
 # completely as one that imports the client, and with the flag on it would read as
 # KEPT.
-probe "$MODULE_APPLICATION_PROBE" 'from app.modules.matchmaking.infrastructure.redis_ledgers import (
-    RedisExposureLedger,
+probe "$MODULE_APPLICATION_PROBE" 'from app.modules.conversations.infrastructure.redis_live_channel import (
+    RedisNudgePublisher,
 )
 
-Ledger = RedisExposureLedger
+Publisher = RedisNudgePublisher
 '
 expect red imports "an application layer constructing the redis adapter is refused" \
   "app.modules.users.application is not allowed to import redis" \
-  "app.modules.matchmaking.infrastructure.redis_ledgers -> redis"
+  "app.modules.conversations.infrastructure.redis_live_channel -> redis"
 clean
 
 # And the legitimate direction: the adapter is on the outside of the fence, which is

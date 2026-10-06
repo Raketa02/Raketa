@@ -72,7 +72,6 @@ from app.seeds.catalog import (
     RatingClaim,
     SeedAccount,
 )
-from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 from app.seeds.runner import (
     SeededAccount,
     SeededScenario,
@@ -300,10 +299,8 @@ def test_the_walk_has_something_to_walk():
         "official_groups.py",
         "payments.py",
         "photos.py",
-        "pool_history.py",
         "posts.py",
         "proposals.py",
-        "relationships.py",
         "rescues.py",
         "rooms.py",
         "runner.py",
@@ -355,15 +352,10 @@ def test_the_seed_path_touches_only_the_contexts_that_exist():
     aggregate is written, so a repository port — or a repository builder — from
     anywhere else is the line being crossed, and it is refused by name.
 
-    **The matchmaking stores the seed does import are not the line, and that is
-    a decision rather than a gap.** `build_search_store`, `build_interest_ledger`,
-    `build_pass_ledger` and `build_deck_reset_ledger` are among that module's
-    own five durable ledgers — nothing there is event-sourced
-    (`backend/CLAUDE.md`, `the-engine.md` §12) — and they are written by
-    matchmaking's *own use cases*, which is exactly the shape §10 sanctioned.
     Writing a matchmaking **aggregate** would need a matchmaking repository, and
     there is not one to import; the day somebody writes one, the builder check
-    above is what fails.
+    above is what fails. (The matchmaking ledgers the seed once imported went
+    with the searches, #579.)
 
     Equality in both directions, on purpose. A Courts repository appearing is the
     scope creep the rule forbids; `rating` *disappearing* is the seed quietly
@@ -727,17 +719,10 @@ async def _streams(session) -> dict[str, int]:
     return {aggregate: count for aggregate, count in rows.all()}
 
 
-#: Every account the catalog walk writes: the states, the four protagonists and
-#: the eleven relationships. Written as one tuple here for the reason the runner
-#: walks one — an assertion counted over half of them goes green on the day the
-#: other half stops being seeded.
-SEEDED_ACCOUNTS = ACCOUNTS + RELATIONSHIP_ACCOUNTS
-
-
 def _rated_scenarios() -> list[tuple[SeedAccount, RatedRun]]:
     return [
         (account, scenario)
-        for account in SEEDED_ACCOUNTS
+        for account in ACCOUNTS
         for scenario in account.scenarios
         if isinstance(scenario, RatedRun)
     ]
@@ -755,14 +740,14 @@ async def test_seeding_writes_an_event_stream_for_every_aggregate(session_factor
         seeded = await seed(session)
         streams = await _streams(session)
 
-    assert len(seeded) == len(SEEDED_ACCOUNTS)
+    assert len(seeded) == len(ACCOUNTS)
     # Two events per account, as a player writes them: the registration and the
     # naming (``docs/adr/0171`` §2). One would be an account seeded around the
     # act the gate holds every real account at. And one more per Tester, the
     # mark ``make tester`` would have appended (``docs/adr/0180`` §9).
-    assert streams.get("user", 0) == 2 * len(SEEDED_ACCOUNTS) + len(TESTERS)
+    assert streams.get("user", 0) == 2 * len(ACCOUNTS) + len(TESTERS)
     assert streams.get("assessment", 0) >= sum(
-        len(account.scenarios) for account in SEEDED_ACCOUNTS
+        len(account.scenarios) for account in ACCOUNTS
     )
     assert streams.get("skill_rating", 0) == len(_rated_scenarios())
 
@@ -802,7 +787,7 @@ async def _stored_ratings(session):
     )
 
     found = {}
-    for account in SEEDED_ACCOUNTS:
+    for account in ACCOUNTS:
         user = await users.get_by_email(account.email)
         assert user is not None
         for rating in await ratings.find_all_for(player_id=user.id):

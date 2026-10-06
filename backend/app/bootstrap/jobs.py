@@ -32,7 +32,6 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
-from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
@@ -47,19 +46,12 @@ from app.bootstrap.composition import (
     build_expire_unanswered_requests,
     build_call_off_short_games,
     build_decide_club_payouts,
-    build_exposure_ledger,
     build_image_transcoder,
-    build_interest_ledger,
     build_mailer,
     build_pending_mail,
     build_photo_review,
     build_photo_storage,
-    build_play_intent_declaration_repository,
     build_player_profile_repository,
-    build_prompt_ledger,
-    build_roll_exposure,
-    build_scale_pressure_probe,
-    build_search_store,
     build_settle_ratings_on_results,
     build_summarise_new_bookings,
     build_unit_of_work,
@@ -75,16 +67,6 @@ from app.modules.matchmaking.domain.index_staleness import (
 from app.modules.matchmaking.domain.scale_triggers import footprint_of
 from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
     DatabaseCandidateSource,
-)
-from app.modules.matchmaking.infrastructure.scale_instruments import ScoringMeter
-from app.modules.matchmaking.application.detect_intent_drift import (
-    DetectIntentDrift,
-)
-from app.modules.matchmaking.application.lapse_expired_interest import (
-    LapseExpiredInterest,
-)
-from app.modules.matchmaking.application.offer_to_refresh_stale_grids import (
-    OfferToRefreshStaleGrids,
 )
 from app.modules.player_profile.application.review_unreviewed_photos import (
     ReviewUnreviewedPhotos,
@@ -122,27 +104,6 @@ PHOTO_REVIEW_BACKFILL_JOB = "photo-review-backfill"
 CANDIDATE_INDEX_TAIL_JOB = "candidate-index-tail"
 CANDIDATE_INDEX_REFRESH_JOB = "candidate-index-refresh"
 
-#: The exposure roll's name in the logs and on its asyncio task.
-EXPOSURE_ROLL_JOB = "exposure-roll"
-
-#: The two prompt loops. Neither changes a value — **each raises a question and
-#: stops** — and they are two jobs rather than one because they read two
-#: different things: the search rows, and the index's picture of who ticked what
-#: and when. A job that read both would fail as a unit for either's reason.
-INTENT_DRIFT_JOB = "intent-drift"
-GRID_STALENESS_JOB = "availability-staleness"
-
-#: Trigger 1's second instrument (``scale-posture.md`` §4). It is the **event
-#: loop lag monitor** — a job whose work is measuring how late the loop woke it
-#: — and the job that closes the fifteen-minute window the scoring histogram is
-#: read over. It writes one log record per window and nothing else.
-SCALE_PRESSURE_JOB = "scale-pressure"
-
-#: The interest ledger's expiry loop. **A yes lapses; it never quietly decays**
-#: (``docs/adr/0127``). It is the only job here that deletes anything, and the
-#: only one whose log line carries a falsifier rather than a throughput figure.
-INTEREST_EXPIRY_JOB = "interest-expiry"
-
 #: The rating catch-up. The **first** job that writes a domain event, and the
 #: only one on this list whose output a player would miss: a confirmation is a
 #: clock passing and announces nothing (``docs/adr/0137``), so without this a
@@ -152,12 +113,11 @@ INTEREST_EXPIRY_JOB = "interest-expiry"
 #: the next tick.
 RATING_CATCH_UP_JOB = "rating-catch-up"
 
-#: The conversation sweep. **The second job here that deletes anything**, and
-#: the only one that deletes an aggregate: *destroyed, not delisted*
-#: (``docs/adr/0142``, with its instant moved by ``docs/adr/0153``). Like the
-#: interest expiry it buys a table the size of what is live and nothing a player
-#: can see — every route already answers ``conversation_not_found`` past a room's
-#: end — but unlike it, what it removes is a stream rather than a row.
+#: The conversation sweep. The one job here that deletes an aggregate:
+#: *destroyed, not delisted* (``docs/adr/0142``, with its instant moved by
+#: ``docs/adr/0153``). It buys a store the size of what is live and nothing a
+#: player can see — every route already answers ``conversation_not_found`` past
+#: a room's end.
 CONVERSATION_SWEEP_JOB = "conversation-sweep"
 
 #: The book-by sweep (#538). It appends a ``ProposalExpired`` to every proposal
@@ -212,8 +172,6 @@ def build_scheduled_jobs(
     session_factory: async_sessionmaker[AsyncSession] | None,
     settings: Settings,
     candidate_source: DatabaseCandidateSource | None = None,
-    redis_client: Redis | None = None,
-    meter: ScoringMeter | None = None,
     proposer_due: DueForProposing | None = None,
 ) -> list[PeriodicJob]:
     """Every job this process should run, in the order they were registered.
@@ -222,33 +180,20 @@ def build_scheduled_jobs(
     line here and changing nothing in the lifespan that starts them.
 
     ``candidate_source`` is passed in rather than built here because it is the
-    **one** piece of state a job owns that something else will read: a search
-    binds a container from it, so the process must hold exactly one and the
-    lifespan is where that one is kept. Absent, the refresh loop is simply not
-    registered — a process with no index to serve from has nothing to refresh.
+    process's one index container, held by the lifespan. Absent, the refresh
+    loop is simply not registered — a process with no index has nothing to
+    refresh.
 
-    ``redis_client`` arrives the same way and for the same reason: the process
-    holds one connection pool and the lifespan owns it. Unlike
-    ``candidate_source`` its absence is **not** a legitimate state — the pool is
-    opened unconditionally — so omitting it while the roll is enabled raises.
-
-    ``meter`` arrives like ``candidate_source`` and for the same reason: the
-    scoring histogram is **per worker**, so the process holds exactly one and
-    the lifespan is where that one is kept. Absent, the pressure probe is simply
-    not registered — a process nothing scores in has no window to close.
-
-    ``session_factory`` is optional because **the exposure roll is the first job
-    here that wants none** — its whole input and output are in the ephemeral
-    store. It is still required by every job that reads the database, and
-    omitting it while one of those is enabled raises rather than quietly
-    registering nothing.
+    ``session_factory`` is optional because **the photo re-review backfill wants
+    none** — its whole input and output are the object store. It is still
+    required by every job that reads the database, and omitting it while one of
+    those is enabled raises rather than quietly registering nothing.
     """
 
     jobs: list[PeriodicJob] = []
     if (
         settings.PHOTO_SWEEP_ENABLED
         or settings.CANDIDATE_INDEX_ENABLED
-        or settings.INTEREST_EXPIRY_ENABLED
         or settings.RATING_CATCH_UP_ENABLED
         or settings.CONVERSATION_SWEEP_ENABLED
         or settings.MAIL_DELIVERY_ENABLED
@@ -288,12 +233,6 @@ def build_scheduled_jobs(
                         source=candidate_source, settings=settings
                     )
                 )
-        if settings.INTEREST_EXPIRY_ENABLED:
-            jobs.append(
-                build_interest_expiry_job(
-                    session_factory=session_factory, settings=settings
-                )
-            )
         if settings.RATING_CATCH_UP_ENABLED:
             jobs.append(
                 build_rating_catch_up_job(
@@ -360,126 +299,7 @@ def build_scheduled_jobs(
         # whole output is metadata on the objects it read. Nothing to guard, so
         # nothing to raise about.
         jobs.append(build_photo_review_backfill(settings=settings))
-    if settings.SCALE_PRESSURE_ENABLED and meter is not None:
-        # Skipped quietly with no meter, exactly as the index refresh is with no
-        # source: a process that scores nothing has no pressure to report, and
-        # there is nothing here to fall back to. The meter is built
-        # unconditionally by the lifespan, so this is a fact about a test's
-        # wiring rather than about a deployment.
-        jobs.append(build_scale_pressure_job(meter=meter, settings=settings))
-    if settings.EXPOSURE_ROLL_ENABLED:
-        if redis_client is None:
-            # As loud as the session factory above, and for the same reason: the
-            # lifespan opens the pool unconditionally, so reaching here is a
-            # wiring error rather than a configuration one — and a roll that
-            # silently did not register looks exactly like a roll that is off.
-            raise ValueError(
-                "the exposure roll is enabled, but no redis client was passed "
-                "to build_scheduled_jobs"
-            )
-        jobs.append(build_exposure_roll_job(client=redis_client, settings=settings))
-    # The two prompt loops. Each is guarded by what **it** needs and nothing
-    # else, so that turning one on cannot refuse the process over a dependency
-    # only the other one wants — and a loop the process cannot host is refused
-    # loudly where its absence would be somebody's decision, and skipped quietly
-    # where it is a fact about the process.
-    if settings.INTENT_DRIFT_ENABLED:
-        if redis_client is None or session_factory is None:
-            raise ValueError(
-                "the intent drift loop is enabled, but no redis client or "
-                "session factory was passed to build_scheduled_jobs"
-            )
-        jobs.append(
-            build_intent_drift_job(
-                session_factory=session_factory,
-                client=redis_client,
-                settings=settings,
-            )
-        )
-    if settings.GRID_STALENESS_ENABLED and candidate_source is not None:
-        # Absent a source this is simply not registered, exactly as the index
-        # refresh is: a process with no picture of the city has no grids to find
-        # stale, and there is nothing here to fall back to. The store is a
-        # different matter — the lifespan opens the pool unconditionally, so
-        # reaching here without one is a wiring error.
-        if redis_client is None:
-            raise ValueError(
-                "the availability-staleness loop is enabled, but no redis "
-                "client was passed to build_scheduled_jobs"
-            )
-        jobs.append(
-            build_grid_staleness_job(
-                source=candidate_source,
-                client=redis_client,
-                settings=settings,
-            )
-        )
     return jobs
-
-
-def build_scale_pressure_job(
-    *,
-    meter: ScoringMeter,
-    settings: Settings,
-) -> PeriodicJob:
-    """Trigger 1, instrumented: the loop's own oversleep and the scoring window.
-
-    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``) in the
-    only sense that matters for an instrument: it reads and reports this
-    process's own counters and writes nothing anywhere. *N processes, N runs* is
-    what the trigger wants — it is stated **per worker** in
-    ``scale-posture.md`` §4, because the answer to it is a per-worker change and
-    two workers each at 0.2 are not one worker at 0.4.
-
-    **The tick is the measurement.** A periodic job asks the loop to wake it in a
-    second and is woken in a second plus ε, and ε is time the loop could not get
-    back to it — the contention the trigger is about. So the work here *is* the
-    scheduling, and the job does nothing else on the ticks inside a window.
-
-    **One record per fifteen minutes, and it says which half fired.** At
-    ``WARNING`` when the trigger has fired, because a boolean field on an INFO
-    line is a thing nobody is paged by — which is the same as not raising one.
-
-    And the honest part, written where the record is emitted rather than only in
-    the spec: **there is nowhere to read this.** It is a structured log record
-    and this repository has no metrics stack, no dashboard and no alerting
-    behind it (``scale-posture.md`` §7's last row). That is the state the
-    instrument ships in, and it is still strictly better than a trigger somebody
-    has to remember to go and measure.
-    """
-
-    probe = build_scale_pressure_probe(meter=meter, settings=settings)
-
-    async def run() -> None:
-        reading = probe.tick()
-        if reading is None:
-            return
-        logger.log(
-            logging.WARNING if reading.fires else logging.INFO,
-            "scoring pressure window",
-            extra={
-                "job": SCALE_PRESSURE_JOB,
-                "window_seconds": round(reading.window_seconds, 3),
-                "scoring_calls": reading.samples,
-                "scoring_calls_sampled": reading.retained,
-                "scoring_p99_ms": round(reading.scoring_p99_ms, 3),
-                "duty_cycle": round(reading.duty_cycle, 4),
-                "loop_lag_p99_ms": round(reading.loop_lag_p99_ms, 3),
-                # Both halves, whichever fired. *The p99 crossed* is answered by
-                # the posture's rungs 1 and 2 and *the duty cycle crossed* by
-                # rung 4, so a record that only said `trigger_1` would send the
-                # reader to re-measure what the instrument already knew.
-                "trigger_1_p99_crossed": reading.p99_crossed,
-                "trigger_1_duty_cycle_crossed": reading.duty_cycle_crossed,
-                "trigger_1_fires": reading.fires,
-            },
-        )
-
-    return PeriodicJob(
-        name=SCALE_PRESSURE_JOB,
-        interval_seconds=settings.SCALE_PRESSURE_INTERVAL_SECONDS,
-        run=run,
-    )
 
 
 def build_mail_delivery_job(
@@ -821,54 +641,6 @@ def _log_proposed(job: str, done: Proposed) -> None:
         )
 
 
-def build_interest_expiry_job(
-    *,
-    session_factory: async_sessionmaker[AsyncSession],
-    settings: Settings,
-) -> PeriodicJob:
-    """Remove every *Let's play* whose twenty-one days have passed.
-
-    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``):
-    deleting a row twice deletes it once, and two processes racing over the same
-    batch leave exactly what one leaves. It is a keyed delete over an indexed
-    date, so *N processes, N runs* costs a wasted query and nothing else.
-
-    **Correctness does not depend on it running.** Every read of the ledger is
-    bounded by ``now``, so a lapsed yes lifts nobody and counts against nobody's
-    cap whether or not it has been swept. What the loop buys is a table the size
-    of what is live, and the falsifier below.
-
-    The log line is the point of the report: *yeses that expired having never
-    lifted anybody* is ``INTEREST_TTL``'s one falsifier that runs without
-    ``matches`` (``the-five-numbers.md`` §8), and a lapsed row leaves no trace, so
-    it is counted here or never.
-    """
-
-    clock = build_clock()
-
-    async def run() -> None:
-        async with session_factory() as session:
-            lapsed = await LapseExpiredInterest(
-                clock=clock,
-                interest=build_interest_ledger(session),
-                unit_of_work=build_unit_of_work(session),
-            ).execute()
-        logger.info(
-            "interest expiry loop finished",
-            extra={
-                "job": INTEREST_EXPIRY_JOB,
-                "removed": lapsed.removed,
-                "never_lifted": lapsed.never_lifted,
-            },
-        )
-
-    return PeriodicJob(
-        name=INTEREST_EXPIRY_JOB,
-        interval_seconds=settings.INTEREST_EXPIRY_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
 def build_rating_catch_up_job(
     *,
     session_factory: async_sessionmaker[AsyncSession],
@@ -964,140 +736,6 @@ def build_conversation_sweep_job(
     return PeriodicJob(
         name=CONVERSATION_SWEEP_JOB,
         interval_seconds=settings.CONVERSATION_SWEEP_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
-def build_intent_drift_job(
-    *,
-    session_factory: async_sessionmaker[AsyncSession],
-    client: Redis,
-    settings: Settings,
-) -> PeriodicJob:
-    """Notice when searches keep disagreeing with a declaration, and **ask**.
-
-    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): it is
-    a reader whose only write is a prompt keyed by ``(player, sport)``, so four
-    processes raising it four times a day leave exactly what one raise leaves.
-    It writes no value anywhere — that refusal is the point of the loop, not an
-    implementation detail of it.
-    """
-
-    prompts = build_prompt_ledger(client)
-    clock = build_clock()
-
-    async def run() -> None:
-        async with session_factory() as session:
-            report = await DetectIntentDrift(
-                searches=build_search_store(session),
-                declarations=build_play_intent_declaration_repository(
-                    event_store=build_domain_event_store(session),
-                    events=build_event_publisher(session),
-                ),
-                prompts=prompts,
-                clock=clock,
-            ).execute()
-        logger.info(
-            "intent drift loop finished",
-            extra={
-                "job": INTENT_DRIFT_JOB,
-                "searches_read": report.searches_read,
-                "pairs_examined": report.pairs_examined,
-                "prompts_raised": report.prompts_raised,
-            },
-        )
-
-    return PeriodicJob(
-        name=INTENT_DRIFT_JOB,
-        interval_seconds=settings.INTENT_DRIFT_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
-def build_grid_staleness_job(
-    *,
-    source: DatabaseCandidateSource,
-    client: Redis,
-    settings: Settings,
-) -> PeriodicJob:
-    """Offer to refresh a week that has stopped describing a week.
-
-    **Idempotent and safe beside itself with no lock**: it reads this process's
-    own snapshot and writes one prompt per player, the same prompt every tick
-    while the grid stays old. It takes no session for the same reason the
-    exposure roll does not — the index is already in memory, and asking the
-    database for what the process is holding would be a second answer to one
-    question.
-    """
-
-    prompts = build_prompt_ledger(client)
-    clock = build_clock()
-
-    async def run() -> None:
-        report = await OfferToRefreshStaleGrids(
-            candidates=source, prompts=prompts, clock=clock
-        ).execute()
-        logger.info(
-            "availability staleness loop finished",
-            extra={
-                "job": GRID_STALENESS_JOB,
-                "grids_examined": report.grids_examined,
-                "prompts_raised": report.prompts_raised,
-            },
-        )
-
-    return PeriodicJob(
-        name=GRID_STALENESS_JOB,
-        interval_seconds=settings.GRID_STALENESS_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
-def build_exposure_roll_job(
-    *,
-    client: Redis,
-    settings: Settings,
-) -> PeriodicJob:
-    """Publish, per sport, what *shown more often than most* means this week.
-
-    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``), and
-    for the simplest of the three reasons on this page: it is a **reader** that
-    writes one derived scalar. Two runs racing cannot lose an appearance because
-    neither of them touches one, and two runs over an unchanged bucket publish
-    the identical number. There is nothing to serialise, so nothing is.
-
-    It takes no session. The only thing it reads and the only thing it writes
-    are in the ephemeral store, which makes it the first job here that would run
-    in a process with no database at all — and the first whose failure mode is
-    already handled below it, since the ledger it is handed fails soft.
-    """
-
-    roll = build_roll_exposure(build_exposure_ledger(client))
-
-    async def run() -> None:
-        report = await roll.execute()
-        # Logged at info even when it published nothing, for the reason every
-        # loop here is: *the roll ran and the city was quiet* and *the roll did
-        # not run* are the two states this has to be tellable apart from
-        # outside. ``players_counted`` is what separates a quiet week from a
-        # ledger that answered nothing — the one thing a fail-soft port makes
-        # invisible everywhere else.
-        logger.info(
-            "exposure roll finished",
-            extra={
-                "job": EXPOSURE_ROLL_JOB,
-                "exposure_week": report.week.label,
-                "players_counted": report.players_counted,
-                "thresholds": {
-                    sport.value: threshold
-                    for sport, threshold in report.thresholds.items()
-                },
-            },
-        )
-
-    return PeriodicJob(
-        name=EXPOSURE_ROLL_JOB,
-        interval_seconds=settings.EXPOSURE_ROLL_INTERVAL_SECONDS,
         run=run,
     )
 

@@ -4,20 +4,22 @@ publishes outward.
 **Two of these are the module's own** — the repository and the directory — one
 is somebody else's, and three are the platform's. ``GameHistoryQuery`` is the read
 every other context in
-[#302](https://github.com/Raketa02/Raketa/issues/302) was blocked on: the
-pairwise history the matcher's familiarity term has been standing down for want
-of, the count under `player_card.counted_games`, and the five results *Last 5*
-draws. It is contracted in ``tests/demands/`` in ADR-0098's shape, over every
-registered implementation, because *a demand nobody executes is a demand
-satisfied by accident* — and this one has three consumers arriving in three
-different tickets, none of which can read it while it is being written.
+[#302](https://github.com/Raketa02/Raketa/issues/302) was blocked on. It is
+contracted in ``tests/demands/`` in ADR-0098's shape, over every registered
+implementation, because *a demand nobody executes is a demand satisfied by
+accident*. Its readers today are ``player_score`` (attendance and result
+answering) and the player record (a sport's run of form). **Four of its reads
+have no reader since the searches went** (#579) — ``played_counterparts``, the
+matcher's familiarity; ``counted_games_for`` and ``recent_results_for``, a
+search card's count and *Last 5*; and ``late_change_threshold``, the matcher's
+history — and they go with the ranking (#580).
 
 **Every count here is measured and none is invented** (``docs/adr/0098``). The
 games ledger exists now, so ``counted_games == 0`` means *we looked and this
 person has played none*, which is a real answer and the one §9.10's newcomer
-predicate has been waiting for. That is the opposite of ``PlayerScoreQuery``,
-where a zero would be a claim about a record nobody keeps and the player is
-absent from the answer instead.
+predicate has been waiting for. That is the opposite of a Player Score, where a
+zero would be a claim about a record nobody keeps and the player is absent from
+the answer instead.
 
 **Fewer than five results is a real answer and is never padded.** The card draws
 a gap; a fifth invented row would be the same mistake in a smaller place.
@@ -27,10 +29,10 @@ read**, and the split is a fence rather than a filing decision. Every read there
 is bounded — five results, five hundred counterparts — because its caller holds
 twenty rows and asks once; that one is deliberately unbounded, because *how
 widely do they spread their games* is a career statistic and a window would be a
-second horizon nothing keeps in step with the matcher's. An unbounded fold on the
-port a search already holds is one somebody eventually calls inside that walk, so
-it answers about one player, in a type only the surface that opens one person at
-a time is handed.
+second horizon nothing keeps in step with the others. An unbounded fold on a
+port a caller already holds is one somebody eventually calls inside a walk, so it
+answers about one player, in a type only the surface that opens one person at a
+time is handed.
 
 **``PlayerNames`` is the one port here this context consumes rather than
 offers**, and it is a single field wide on purpose. A game says who was on the
@@ -73,12 +75,9 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, LineUp
 from app.modules.games.domain.results import Outcome
 
-#: How many counterparts travel with one read of the pairwise history.
-#:
-#: **Spelled to match ``matchmaking``'s ``PAIRWISE_COUNTERPART_BOUND``**, which
-#: this context may not import: ``games`` is a provider and does not know a
-#: matcher exists. The two spellings meet at the composing adapter, which refuses
-#: to import if they ever part company.
+#: How many counterparts travel with one read of the pairwise history. It was
+#: spelled to match the matcher's own bound, read by a composing adapter that
+#: went with the searches (#579); nothing reads it now, and it goes with #580.
 PLAYED_COUNTERPART_BOUND = 500
 
 #: How many results *Last 5* draws. The card's own number, and the only place it

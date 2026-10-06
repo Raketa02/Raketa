@@ -1,11 +1,14 @@
-"""The old loop's routes answer *not found* (#578, PRD #569).
+"""The old loop's routes answer *not found* (#578, #579, PRD #569).
 
-**Challenges and plans are gone**, and with them the old game card's dismissal:
-a game is made one way — a group's Games deck books it — and nothing a client
-sends reaches a challenge, a plan or the clearing of a called-off card any
-more. Each route is asked **as a signed-in player with a real id in the path**,
-so the answer is the router's — no such route — and never a refusal some
-surviving route gave about the caller or the id.
+**Challenges and plans are gone**, and with them the old game card's dismissal
+(#578); **so are the searches, the deck and the radar** — the shortlist and its
+read-back, the line-ups and their forecast, a *Let's play* and its list, a deal
+and *Show them again*, a pass, a prompt's *not now* and a reading (#579). A
+game is made one way — a group's Games deck books it — and nothing a client
+sends reaches any of them any more. Each route is asked **as a signed-in player
+with a real id in the path and a body it used to take**, so the answer is the
+router's — no such route — and never a refusal some surviving route gave about
+the caller, the id or the body.
 
 The removed routes the player document no longer carries are listed by hand
 rather than derived from it: a list read off the document could not fail.
@@ -37,6 +40,21 @@ THE_OLD_LOOP = (
     ("PUT", f"/api/v1/plans/{_ANY_ID}/hour", {"hour": "18:00"}),
     ("PUT", f"/api/v1/plans/{_ANY_ID}/lock", None),
     ("POST", f"/api/v1/games/{_ANY_ID}/dismissal", None),
+    ("POST", "/api/v1/searches", {"sport": "PADEL", "mode": "COMPETITIVE"}),
+    ("GET", f"/api/v1/searches/{_ANY_ID}", None),
+    ("POST", "/api/v1/lineups", {"sport": "PADEL", "mode": "COMPETITIVE"}),
+    ("POST", "/api/v1/forecasts", {"search_id": _ANY_ID, "sport": "PADEL"}),
+    (
+        "POST",
+        "/api/v1/interest",
+        {"search_id": _ANY_ID, "sport": "PADEL", "player_id": _ANY_ID},
+    ),
+    ("GET", "/api/v1/interest", None),
+    ("POST", "/api/v1/deck", {"sport": "PADEL"}),
+    ("POST", "/api/v1/deck/reset", {"sport": "PADEL"}),
+    ("POST", "/api/v1/passes", {"search_id": _ANY_ID, "player_id": _ANY_ID}),
+    ("POST", "/api/v1/prompt-declines", {"prompt": "INTENT_DRIFT"}),
+    ("POST", "/api/v1/radar", {"sport": "PADEL"}),
 )
 
 

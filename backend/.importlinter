@@ -238,14 +238,16 @@ allow_indirect_imports = false
 
 # The ephemeral store is fenced out of the business layers on exactly the argument
 # ADR-0091 makes for photo bytes: *behind a port* is only true while nothing on the
-# inside can reach the library. The two ledgers are ports in
-# `matchmaking/domain/ledgers.py`, and what makes their fail-soft posture a promise
-# rather than a hope is that every ledger leaves the composition root wrapped — an
-# unwrapped adapter raises, and a raise on either path empties a surface to protect
-# nobody. A use case reaching for Redis itself is a use case that has skipped that.
+# inside can reach the library. A room's live channel and its typing roster are
+# ports in `conversations/domain/`, and what makes their fail-soft posture a promise
+# rather than a hope is that every adapter leaves the composition root wrapped — an
+# unwrapped one raises, and a raise on a courtesy costs a room its response. A use
+# case reaching for Redis itself is a use case that has skipped that. (The
+# matcher's exposure and suppression ledgers were the first two, and went with the
+# searches, #579.)
 #
 # `allow_indirect_imports = false`, for the reason the imaging fence sets it: the
-# interesting violation is the indirect one. `RedisExposureLedger` takes a `Redis`,
+# interesting violation is the indirect one. `RedisNudgePublisher` takes a `Redis`,
 # so a use case importing the adapter to construct one is caught here as well as a
 # use case importing the client — and with the flag on, the first would read as
 # KEPT.
@@ -261,15 +263,14 @@ forbidden_modules =
     redis
 allow_indirect_imports = false
 
-# `games` is a **provider**: it signs `MatchHistoryQuery` through an adapter that
-# lives in the matcher's own infrastructure, and it does not know a matcher
-# exists (docs/adr/0137). It holds second spellings — `PLAYED_COUNTERPART_BOUND` against
-# `PAIRWISE_COUNTERPART_BOUND`, `PlayedOutcome` against `PairwiseOutcome`,
-# `GameSide` against two other `Side`s — and each of them is a type with the
-# right shape sitting one directory over, which is exactly what somebody in a
-# hurry reaches for. `games_match_history.py` refuses to import when the two
-# bounds disagree, and that guards the **value**; this guards the **direction**,
-# which is the half a constant cannot check.
+# `games` is a **provider**: it signs `CourtPairing` through an adapter that
+# lives in the matcher's own infrastructure (`games_court_pairing.py`), and it
+# does not know a matcher exists (docs/adr/0137, docs/adr/0161). It holds second
+# spellings — `GameSide` against the matcher's own sides, `PLAYED_COUNTERPART_BOUND`
+# for a history the matcher once read — and each of them is a type with the right
+# shape sitting one directory over, which is exactly what somebody in a hurry
+# reaches for. This guards the **direction**, which is the half a constant cannot
+# check.
 #
 # `allow_indirect_imports = true`: `games` legitimately imports `player_profile`
 # (the `Window` ADR-0100 puts there), and its `presentation/dependencies.py`
@@ -285,16 +286,12 @@ forbidden_modules =
     app.modules.matchmaking
 allow_indirect_imports = true
 
-# The second of the same rule, and the one most likely to be broken, because
-# `player_score` is the context whose whole output is a number the matcher reads
-# (docs/adr/0140). It publishes `PublishedScoreQuery` in its own vocabulary and
-# an adapter in the matcher's own infrastructure translates it into
-# `PlayerScoreReading` — so the shapes on the two sides are near-identical and
-# sitting one directory apart, which is the exact configuration somebody in a
-# hurry collapses. Importing `RatioStrand` here instead of declaring
-# `StrandRatio` would make this context depend on the consumer it exists to
-# serve, and would put the matcher's rounding inside the number on a player's own
-# profile.
+# The second of the same rule. `player_score` publishes `PublishedScoreQuery` in
+# its own vocabulary (docs/adr/0140), and the matcher read it through an adapter
+# of its own until the searches that scored went (#579). Nothing on the matcher's
+# side reads a Player Score now, and the arrow stays fenced so the next reader
+# arrives the same way: a provider that imported its consumer's types would
+# depend on the consumer it exists to serve.
 #
 # It reads two *other* contexts on purpose and that is not what this fences: the
 # arrow runs `player_score -> games` and `player_score -> bookings` (#544; it ran
@@ -342,7 +339,7 @@ allow_indirect_imports = true
 # design, so a strict contract here is a contract about the composition root and
 # not about the matcher. The violation this exists for is the **direct** one, and
 # it is direct in the only shape it could realistically take: a composing adapter
-# in `matchmaking/infrastructure/`, spelled exactly like `games_match_history.py`
+# in `matchmaking/infrastructure/`, spelled exactly like `games_court_pairing.py`
 # beside it, reading a star average into a term. That import names
 # `app.modules.sportsmanship` on its own line.
 #

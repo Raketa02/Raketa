@@ -84,8 +84,8 @@ from app.modules.conversations.domain.entries import (
 from app.modules.conversations.domain.lifetime import CONVERSATION_GRACE
 from app.modules.conversations.domain.paging import PAGE_LIMIT_DEFAULT
 from app.seeds.clock import FixedClock
+from app.seeds.catalog import THE_POPULATED_PLAYER
 from app.seeds.cohort import PLAYED_GAMES, SEED_EMAIL_DOMAIN
-from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
 
 #: How many entries the pageable room carries. **One page and a little**, so the
 #: newest page is full and there is genuinely a page behind it — a room of
@@ -118,16 +118,15 @@ THE_SMALL_TALK: tuple[str, ...] = (
 )
 
 
-#: Everybody this layer reads as. **The protagonist, the eleven relationship
-#: accounts, and everybody the played history seated** — the protagonist is on
-#: every booked game of hers, which is where the standing rooms are.
+#: Everybody this layer reads as. **The protagonist and everybody the cohort's
+#: played history seated** — the protagonist is on every booked game of hers,
+#: which is where the standing rooms are.
 #:
 #: There is no *all the rooms* read and there should not be: membership is the
 #: gate on every route this context has, so a fixture that wanted the whole list
 #: would have to go round the gate to get it.
 _THE_READERS: tuple[str, ...] = (
-    PROTAGONIST.email,
-    *(account.email for account in RELATIONSHIP_ACCOUNTS),
+    THE_POPULATED_PLAYER.email,
     *dict.fromkeys(
         f"{handle}@{SEED_EMAIL_DOMAIN}"
         for game in PLAYED_GAMES

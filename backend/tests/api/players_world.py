@@ -432,6 +432,44 @@ def override(client, dependency, factory) -> None:
     client._transport.app.dependency_overrides[dependency] = factory  # noqa: SLF001
 
 
+def hold_only(client, *player_ids) -> None:
+    """A hold on these players and **nobody else** — the reader included out.
+
+    The hold has no producer in this build — nothing can hold anybody, which is
+    why the gate ships true-over-empty — so the only way to drive it over HTTP is
+    to replace the query. It answers **only about ids it was asked about**, which
+    is the port's own contract and not a shortcut taken here.
+    """
+
+    from app.modules.matchmaking.presentation.dependencies import (
+        get_account_hold_query,
+    )
+
+    held = frozenset(player_ids)
+
+    class Holding:
+        async def held_among(self, asked):
+            return frozenset(asked) & held
+
+    override(client, get_account_hold_query, Holding)
+
+
+def may_not_show(client, *player_ids) -> None:
+    """``users`` refusing to have these players shown, and saying so to nobody."""
+
+    from app.modules.matchmaking.presentation.dependencies import (
+        get_account_status_query,
+    )
+
+    unshowable = frozenset(player_ids)
+
+    class Unshowable:
+        async def may_not_be_shown(self, candidate_ids):
+            return frozenset(candidate_ids) & unshowable
+
+    override(client, get_account_status_query, Unshowable)
+
+
 async def deliver_the_outbox(
     session_factory,
     *,

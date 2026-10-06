@@ -18,9 +18,15 @@ So the split is: the **engine** owns what a ruleset *is* and what makes one
 malformed; the **module** owns the dataset and hands it over. That is the same
 split the deferred runtime store will need, arriving early rather than late.
 
-The second is **the far side of the five outward ports** — the four honest null
-objects in ``absent_providers.py`` and the one real adapter in
-``users_account_status.py``. Four of the five providers do not exist, and
-nothing here stands in for one: a null object says something true about this
-platform today and stops being true on the day its provider lands.
+The second is **the far side of the three outward ports** — the one honest
+null object in ``absent_providers.py`` (``NoHoldsExist``), and the real adapters
+in ``users_account_status.py`` and ``rating_at_stake.py``. A null object says
+something true about this platform today and stops being true on the day its
+provider lands.
+
+The third is the **composing adapter** a provider signs on the matcher's side of
+the arrow: ``games_court_pairing.py``, the booked game's pairing (#575). And the
+fourth is the **candidate index** — its model, its tail, its snapshot source and
+its rebuild — which nothing reads since the searches went (#579) and which goes
+with the ranking (#580).
 """

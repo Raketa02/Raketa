@@ -17,23 +17,11 @@ name, is what history is recorded under.
 - Emit events from the use case and persist them through `DomainEventStore.append`,
   enqueued on the transactional outbox **in the same transaction** as the state change.
   Side effects happen after commit, in handlers — never inline in the use case.
-- **The matchmaking module's five durable ledgers are exempt**, by decision rather than
-  by oversight: the `search` record, `interest`, the **pass** record, the **prompt
-  decline** and the **deck reset** are event-free (`the-engine.md` §12 — *nothing here is
-  event-sourced*). All five are small facts with an identity and no life story, and
-  nothing **subscribes** to one being written — the suppression a pass writes is a cache
-  the use case fills after its commit, not a subscriber, a decline is read by one filter
-  on the next search, and a reset is one moment the next deal reads. A mutual yes used
-  to open a challenge, as a **call in the same transaction** rather than a subscription
-  (#251, #222); since the challenges went (#578) it opens nothing. The row itself still
-  earns no event.
-  The authority is `the-engine.md` §12, which names all five and says *nothing here is
-  event-sourced*; ADR-0128 decides what a pass **is** and does not speak to event
-  sourcing, ADR-0094 says of the decline in its own words that *declining a prompt is
-  not a domain fact and earns no event* — its amendment moved the suppression out of
-  Redis and kept that sentence literally — and the reset argued for itself in ADR-0169's
-  amendment of 2026-09-15. Anything else that wants the exemption argues for it in an
-  ADR first.
+- **The matchmaking module's five durable ledgers were exempt, and are gone** (#579): the
+  `search` record, `interest`, the pass record, the prompt decline and the deck reset were
+  event-free tables (`the-engine.md` §12), and migration `0047` dropped all five with the
+  searches, the deck and the radar that wrote them. The exemption went with them; anything
+  else that wants one argues for it in an ADR first.
 - **Two tables are event-free because an event would hold a secret**, and each was argued
   for in its ADR: `one_time_credentials`, where a link and a code live as hashes with a
   lifetime (ADR-0184 §3 — *a code's hash kept for ever is a code that can be cracked

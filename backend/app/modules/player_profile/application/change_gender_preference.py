@@ -1,22 +1,19 @@
 """Record a new durable answer to *who am I willing to play with*.
 
 The You tab's write (``docs/adr/0179`` §8) for the preference ADR-0096 §3 made
-**durable rather than per search**: the gate it feeds is mutual, evaluated
-against this player when somebody else searches and this player is not present,
-which a per-search setting could not bind at all. A single search may narrow
-this; nothing may widen past it.
+**durable, never per game**: the gate it feeds is mutual, evaluated against this
+player when somebody else's game is being made and this player is not present,
+which a setting made at the moment could not bind at all.
 
-**No-op on an unchanged value.** And what a change *does* — narrowing makes this
-player invisible to the excluded side entirely, searchers who asked for anybody
+**No-op on an unchanged value.** And what a change *does* — narrowing keeps this
+player off courts with the excluded side entirely, players who asked for anybody
 included — is the client's to say at the moment of setting, from a reason code;
 nothing here can enforce that, and the event says so.
 
-**The projection follows, as it does for the commit.** ``GenderPreferenceChanged``
-moves the index row, so the next search anybody else runs reads the narrowed
-answer off it, and the searcher's own is read live off the aggregate — the two
-directions a narrowing gates, and both follow one event. Seats already accepted
-are facts, not candidates: nothing downstream treats this as a reason to undo an
-agreement.
+**Both directions read it live**: the proposer, the fill and a rescue ask the
+pair rule of every pair they would seat (``proposals``' ``MatcherPlayerFit``).
+Seats already taken are facts, not candidates: nothing downstream treats this as
+a reason to undo a booked game.
 """
 
 from __future__ import annotations

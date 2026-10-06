@@ -593,82 +593,16 @@ class Settings(BaseSettings):
 
     # --- the ephemeral store (docs/adr/0093)
     #
-    # **Redis holds the two ledgers that are allowed to be lossy** — exposure and
-    # suppression — and nothing else. Everything the platform must be able to say
-    # later is a durable row: the gate is the cache, the evidence is the row.
+    # **Redis holds only what is allowed to be lossy** — since the searches went
+    # (#579) that is a room's live channel and who is typing in it — and nothing
+    # else. Everything the platform must be able to say later is a durable row.
     #
     # A **server-to-server** address, like `PHOTO_STORAGE_ENDPOINT_URL` and
     # `PHOTO_REVIEW_ENDPOINT_URL`, so the public-network scheme rule has nothing to
     # say about it — no browser and no phone ever opens it. A deployed environment
     # that wants TLS spells it `rediss://` in the URL it sets, which is the same
     # place it sets the credentials.
-    #
-    # **What is emphatically not here is either TTL.** How long a suppression lasts
-    # is `PASS_SUPPRESS`, a product decision in the released ruleset; how long a
-    # week of exposure survives is `EXPOSURE_RETENTION_WEEKS`, in
-    # `matchmaking/domain/ledgers.py`. Both decide what can still be asked, and an
-    # environment that could shorten either would be an environment selecting
-    # behaviour a domain test can observe. What lives here is where the store is,
-    # and how often the roll runs.
     REDIS_URL: str = DEFAULT_REDIS_URL
-
-    # --- the exposure roll (docs/adr/0092, matchmaking-engine.md §14.5)
-    #
-    # Hourly, matching §14.5. The scalar it publishes is a percentile over a week's
-    # appearances, which barely moves within an hour and is read on every search —
-    # so the cadence is the trade between a stale threshold and an unbounded read on
-    # the request path. Turning it off changes no rule a domain test could observe:
-    # the *shown more than most* rung simply never fires, and the two rungs that
-    # lift are unaffected, which is the state the platform is in today.
-    EXPOSURE_ROLL_ENABLED: bool = True
-    EXPOSURE_ROLL_INTERVAL_SECONDS: float = 60 * 60
-
-    # --- the two prompt loops
-    # (docs/adr/0092, docs/adr/0099, matchmaking-engine.md §6.3)
-    #
-    # **Each raises a question and changes no value**, which is what makes both
-    # of them safe to turn off: the platform simply stops asking. Nothing a
-    # domain test can observe moves — a search still runs on the same grid at the
-    # same radius against the same floor, and the two per-search prompts, which
-    # are facts about the search in front of you rather than about a history, are
-    # raised on the request path and are not switchable at all.
-    #
-    # **What is emphatically not here is any of the four thresholds.** How many
-    # searches make a drift, how many takes make a habit, how old a grid has to
-    # be and how long a raised prompt lives are rules a domain test can observe,
-    # and they live in `matchmaking/domain/prompts.py`. An environment that could
-    # move one would be an environment deciding when a player gets asked about
-    # their own profile — which is the same class of error as an environment that
-    # could move the quality floor.
-    #
-    # Daily, matching §14.5's own cadence for the drift detector. Both read a
-    # window wider than their interval, so a missed tick or a deploy does not
-    # create a day nobody's drift was noticed in.
-    INTENT_DRIFT_ENABLED: bool = True
-    INTENT_DRIFT_INTERVAL_SECONDS: float = 24 * 60 * 60
-    GRID_STALENESS_ENABLED: bool = True
-    GRID_STALENESS_INTERVAL_SECONDS: float = 24 * 60 * 60
-
-    # --- the interest expiry loop (docs/adr/0092, docs/adr/0127)
-    #
-    # **Turning it off changes no rule a domain test could observe.** Every read
-    # of the interest ledger is bounded by `now`, so a yes stops lifting, stops
-    # counting against the cap and stops being listed the moment it expires,
-    # swept or not. What the loop buys is that the table stays the size of what
-    # is live, and the one figure a lapsed row could ever be asked for — *yeses
-    # that expired having never lifted anybody*, which is `INTEREST_TTL`'s only
-    # day-one falsifier and cannot be computed after the rows are gone.
-    #
-    # **`INTEREST_TTL` itself is emphatically not here.** How long a yes lives
-    # decides who is admitted below the quality floor, which is a rule a domain
-    # test observes; it is a ruleset row, and only this cadence is a setting.
-    #
-    # Hourly, which is far finer than a twenty-one-day window needs and is chosen
-    # against the other end: the sweep is a keyed delete over an indexed date, so
-    # a frequent tick is cheap and a rare one lets a deploy gap turn into a
-    # visibly growing table.
-    INTEREST_EXPIRY_ENABLED: bool = True
-    INTEREST_EXPIRY_INTERVAL_SECONDS: float = 60 * 60
 
     # --- the rating catch-up (docs/adr/0139)
     #
@@ -715,29 +649,14 @@ class Settings(BaseSettings):
     CONVERSATION_SWEEP_ENABLED: bool = True
     CONVERSATION_SWEEP_INTERVAL_SECONDS: float = 60 * 60
 
-    # --- the two scale triggers (docs/adr/0092, scale-posture.md §4)
+    # --- trigger 4 (scale-posture.md §4)
     #
-    # **The instruments are configuration; the thresholds are not.** How often
-    # the loop-lag probe ticks and how many workers this container runs are
-    # facts about the deployment. *p99 above 20 ms*, *duty cycle above 0.25* and
-    # *half the container memory* are the numbers the escalation ladder is
-    # climbed on, and they live in `matchmaking/domain/scale_triggers.py` — an
-    # environment that could widen a trigger is an environment that decides when
-    # the platform is in trouble.
+    # The index refresh recomputes trigger 4 at every load — *half the container
+    # memory* — and the threshold lives in `matchmaking/domain/scale_triggers.py`:
+    # an environment that could widen a trigger is an environment that decides
+    # when the platform is in trouble. What is here is a fact about the
+    # deployment. Trigger 1 and its probe went with the searches (#579).
     #
-    # Turning the probe off changes nothing a domain test could observe: no
-    # search is timed differently and no answer moves. What stops is the record,
-    # and *a trigger that requires somebody to go and measure fires late* is the
-    # reason the default is on.
-    #
-    # A second a tick, because the reading is the loop's own oversleep and a
-    # probe that slept a minute would report a minute's worth of contention as
-    # one sample. Fifteen minutes of ticks then close a window — the interval
-    # that §4 states the trigger over, which is `TRIGGER_WINDOW` and not a
-    # setting.
-    SCALE_PRESSURE_ENABLED: bool = True
-    SCALE_PRESSURE_INTERVAL_SECONDS: float = 1.0
-
     #: How many workers this container runs, read from the variable
     #: `docker/api/startup.prod.sh` already passes to gunicorn — so trigger 4's
     #: arithmetic reads the fleet that exists rather than one somebody typed
@@ -835,17 +754,17 @@ class Settings(BaseSettings):
                 )
             if "REDIS_URL" not in provided:
                 # The same refusal as the database's, and for the same reason
-                # rather than for a weaker one. The ledgers behind it fail soft, so
-                # an unreachable Redis costs a search its spread and nothing more —
+                # rather than for a weaker one. What sits behind it fails soft, so
+                # an unreachable Redis costs a room its liveness and nothing more —
                 # but *silently degraded for ever* is not a state an environment
                 # should be able to boot into by inheriting a laptop's service
-                # name. A ledger that never works looks exactly like a quiet week.
+                # name. A live channel that never works looks like a quiet room.
                 raise ConfigurationError(
                     f"REDIS_URL is not set, and APP_ENV selects '{env}', which is "
                     f"deployed. Falling back to the local default would point at an "
-                    f"ephemeral store that does not exist, and the ledgers behind it "
-                    f"would degrade silently — set REDIS_URL explicitly or use "
-                    f"'local'."
+                    f"ephemeral store that does not exist, and the live channel "
+                    f"behind it would degrade silently — set REDIS_URL explicitly or "
+                    f"use 'local'."
                 )
             if "PUBLIC_SITE_URL" not in provided:
                 # The fourth of the same refusal, and the one whose damage

@@ -1,18 +1,18 @@
 """``PlayerFit`` by **the matcher's own pair rule**, never a copy of it.
 
-Today's engine holds every pair on a court to three things, and only three —
-the mask a line-up enumerates under (``matchmaking/domain/lineups.py``,
-``docs/adr/0116``): **no block** either way, **mutual gender preference**, and
-**Levels within the kind's window** — the ruleset's ``level_tolerance`` for the
-kind, narrowed to the competitive one while either player is new
-(``docs/adr/0113``). This adapter asks exactly those, through the two pure
-functions the matcher and the send already share, over the live ruleset; so a
-proposal and a line-up cannot come to two answers about one pair.
+Every pair on a court is held to three things, and only three — the mask the old
+line-ups enumerated under (``docs/adr/0116``): **no block** either way, **mutual
+gender preference**, and **Levels within the kind's window** — the ruleset's
+``level_tolerance`` for the kind, narrowed to the competitive one while either
+player is new (``docs/adr/0113``). This adapter asks exactly those, through two
+pure functions — ``player_profile``'s mutual preference and the matcher's level
+window (``matchmaking/domain/level_window.py``) — over the live ruleset, so a
+proposal, a fill and a rescue cannot come to two answers about one pair.
 
 **Live facts, read now**: the blocks off the log, each person's gender, their
 preference and when their profile was made off their own stream, and their
-Level in the sport off rating's published read — not the candidate index, which
-is a searcher's picture and may be a tick behind a block.
+Level in the sport off rating's published read — never a projection that may be
+a tick behind a block.
 
 **Fails closed.** A person with no profile, or no rating in the sport, fits
 nobody: the level gate cannot be evaluated, and *a gate that cannot be evaluated
@@ -37,7 +37,10 @@ from app.engines.matchfit.core import SearchMode
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import Instant, Sport
 from app.modules.blocks.domain.ports import BlockQuery
-from app.modules.matchmaking.domain.gates import level_close_enough, level_tolerance
+from app.modules.matchmaking.domain.level_window import (
+    level_close_enough,
+    level_tolerance,
+)
 from app.modules.player_profile.domain.mutual_preference import (
     preferences_are_mutual,
 )

@@ -7,7 +7,6 @@ her week begins. The database half is ``tests/api/test_seed_booked_history.py``.
 
 from __future__ import annotations
 
-import ast
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -36,22 +35,6 @@ from app.seeds.cohort import (
 from app.seeds.sportsmanship import RATED_AFTER
 
 SEEDS = Path(__file__).resolve().parents[2] / "app" / "seeds"
-
-#: What is left of the challenge loop's seed layers, which the new path stands
-#: without: the pool's declared history and the relationship accounts. The
-#: layers that wrote challenges and plans are gone (#578).
-OLD_LAYERS = frozenset({"pool_history", "relationships"})
-#: The new path's layers, and the population under them.
-NEW_PATH = (
-    "proposals",
-    "bookings",
-    "rescues",
-    "posts",
-    "cohort",
-    "booked_history",
-    "sportsmanship",
-    "payments",
-)
 
 
 def test_her_record_reaches_a_figure_that_is_not_a_full_bar():
@@ -114,26 +97,6 @@ def test_the_latest_evening_is_before_her_week_and_long_over(weekday, hour):
 
     assert week_of(latest - timedelta(minutes=1)) < week_of(now)
     assert latest <= now - SETTLED_FOR
-
-
-@pytest.mark.parametrize("module", NEW_PATH)
-def test_the_new_path_imports_nothing_from_the_old_loop(module):
-    """The new loop's layers and the cohort stand on the new path: no challenge,
-    no plan, and none of the challenge loop's seed layers."""
-
-    tree = ast.parse((SEEDS / f"{module}.py").read_text())
-    imported = {
-        node.module
-        for node in ast.walk(tree)
-        if isinstance(node, ast.ImportFrom) and node.module is not None
-    }
-
-    assert not {
-        name
-        for name in imported
-        if name.startswith(("app.modules.challenges", "app.modules.plans"))
-        or (name.startswith("app.seeds.") and name.split(".")[2] in OLD_LAYERS)
-    }, sorted(imported)
 
 
 @pytest.mark.parametrize("weekday", range(7))

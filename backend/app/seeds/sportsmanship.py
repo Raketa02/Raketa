@@ -31,9 +31,8 @@ was* and *has this been answered*, neither of which is a clock — the ghost is
 the only court nobody may rate, and it is not one of these because a ghost is
 not settled-and-played at all.
 
-**The declarations are handed in**, with the resolver that turns a handle into
-an address, so this layer imports no other layer's fixtures: the cohort's own
-table is the default, and the runner adds whatever else a run declares.
+**The declarations are the cohort's own** (``WHAT_PLAYERS_SAID``) by default,
+and every handle in them is a cohort member's.
 
 **Re-running writes nothing twice.** The ledger is asked which of a rater's games
 are already closed before anything is sent, for the reason every probe in this
@@ -43,7 +42,7 @@ is to be repeatable.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Final, final
@@ -97,18 +96,6 @@ class SeededOpinions:
     published: tuple[str, ...]
 
 
-def everything_said(*tables: Said) -> Said:
-    """**Several declarations, as one table.** A subject named in two keeps
-    every rater from each, so the split between them is a filing decision rather
-    than a partition somebody has to maintain."""
-
-    merged: dict[str, dict[str, int]] = {}
-    for table in tables:
-        for subject, said in table.items():
-            merged.setdefault(subject, {}).update(said)
-    return merged
-
-
 def _cohort_address(handle: str) -> str:
     return COHORT.by_handle(handle).email
 
@@ -118,7 +105,6 @@ async def write_what_players_said(
     *,
     now: Instant,
     said: Said = WHAT_PLAYERS_SAID,
-    address_of: Callable[[str], str] = _cohort_address,
 ) -> SeededOpinions:
     """Answer every declared card, and read back what the platform publishes.
 
@@ -131,13 +117,13 @@ async def write_what_players_said(
         people = await _player_ids(
             session,
             {
-                address_of(handle)
+                _cohort_address(handle)
                 for subject, raters in said.items()
                 for handle in (subject, *raters)
             },
         )
         handles = {
-            address_of(handle): handle
+            _cohort_address(handle): handle
             for subject, raters in said.items()
             for handle in (subject, *raters)
         }
@@ -146,10 +132,10 @@ async def write_what_players_said(
 
         written: list[str] = []
         for rater, stars_by_subject in sorted(_by_rater(said).items()):
-            rater_id = people[address_of(rater)]
+            rater_id = people[_cohort_address(rater)]
             settled = await courts.courts_of(rater_id, now=now)
             for court, given in _cards_of(
-                rater, stars_by_subject, settled, people=people, address_of=address_of
+                rater, stars_by_subject, settled, people=people
             ):
                 if await ledger.answered_among(
                     rater_id=rater_id, game_ids=(court.game_id,)
@@ -180,7 +166,7 @@ async def write_what_players_said(
         published = build_published_sportsmanship(session)
         figures: list[str] = []
         for subject in sorted(said):
-            standing = await published.published_for(people[address_of(subject)])
+            standing = await published.published_for(people[_cohort_address(subject)])
             if standing is None:
                 raise OpinionRefused(
                     f"'{subject}' is declared to have been rated and the "
@@ -226,7 +212,6 @@ def _cards_of(
     settled: Sequence[SettledCourt],
     *,
     people: Mapping[str, UUID],
-    address_of: Callable[[str], str],
 ) -> list[tuple[SettledCourt, tuple[StarsGiven, ...]]]:
     """Which court carries which stars — **the latest one the two of them shared.**
 
@@ -240,7 +225,7 @@ def _cards_of(
 
     cards: dict[UUID, tuple[SettledCourt, list[StarsGiven]]] = {}
     for subject, stars in stars_by_subject.items():
-        subject_id = people[address_of(subject)]
+        subject_id = people[_cohort_address(subject)]
         shared = [court for court in settled if subject_id in court.others]
         if not shared:
             raise OpinionRefused(
@@ -261,6 +246,5 @@ __all__ = [
     "OpinionRefused",
     "RATED_AFTER",
     "SeededOpinions",
-    "everything_said",
     "write_what_players_said",
 ]

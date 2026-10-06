@@ -219,8 +219,6 @@ from app.seeds.photos import (
     an_image,
     the_store_answers,
 )
-from app.seeds.pool_history import THE_POOL_HAS_A_RECORD, WHAT_THE_POOL_SAID, address_of
-from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import (
     assert_the_club_bookings,
@@ -230,7 +228,6 @@ from app.seeds.screens import (
 )
 from app.seeds.sportsmanship import (
     SeededOpinions,
-    everything_said,
     write_what_players_said,
 )
 
@@ -449,7 +446,7 @@ async def seed(
             await _seed_account(
                 session, account, now=now, settings=settings, photos=photos
             )
-            for account in ACCOUNTS + RELATIONSHIP_ACCOUNTS
+            for account in ACCOUNTS
         ]
     )
 
@@ -1295,7 +1292,6 @@ async def run(settings: Settings | None = None) -> SeedReport:
             session_factory,
             now=now,
             cohort=[(member.member.handle, member.player_id) for member in members],
-            others=RELATIONSHIP_ACCOUNTS,
         )
         # **The clubs next, before anything that could stand at one.** A club
         # reads nobody, and a group needs a home club.
@@ -1325,25 +1321,22 @@ async def run(settings: Settings | None = None) -> SeedReport:
             session_factory, settings=settings, now=now
         )
         # **The played history first, and on the path the product makes games
-        # on** (#573): her evenings, the cohort's games and the pool's, each a
-        # past booked game, played and scored. Before every layer that reads a
+        # on** (#573): her evenings and the cohort's games, each a past booked
+        # game, played and scored. Before every layer that reads a
         # record or a week, and placed before this week, so nothing below — her
         # deck, her Fill in, her post — sees a week the history has filled.
         history = await write_the_played_history(
             session_factory,
             settings=settings,
             now=now,
-            games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
-            named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
+            games=PLAYED_GAMES,
+            named=ACCOUNTS,
         )
         # **After the games and before anything reads a record**, because a card
         # is drawn for a court that is over: nothing here arranges an evening,
         # and every rating it writes is about one the layer above just wrote.
         opinions = await write_what_players_said(
-            session_factory,
-            now=now,
-            said=everything_said(WHAT_PLAYERS_SAID, WHAT_THE_POOL_SAID),
-            address_of=address_of,
+            session_factory, now=now, said=WHAT_PLAYERS_SAID
         )
         # **The games still filling, after every layer that writes anything a
         # fit reads.** A pick is made through the real pair rule, which reads

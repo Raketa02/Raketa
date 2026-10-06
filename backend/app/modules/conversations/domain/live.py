@@ -120,12 +120,10 @@ class NudgePublisher(Protocol):
 
     **This is a use case's own post-commit write, not a subscriber, and that is
     the repository's existing shape rather than a new one.** ``domain-events.md``
-    says side effects happen after commit *in handlers*; the two writes to the
-    ephemeral store that already exist take this shape instead, and say so — the
-    suppression a pass writes is *"a cache its use case fills after the commit
-    rather than a subscriber"*, and ``run_shortlist_search`` writes exposure
-    *after the commit* in the same way. A nudge belongs with them: **nothing
-    subscribes to a nudge**, it survives nothing, and routing it through the
+    says side effects happen after commit *in handlers*; a write to the
+    ephemeral store takes this shape instead, as the matcher's pass suppression
+    and exposure did until the searches went (#579). **Nothing subscribes to a
+    nudge**, it survives nothing, and routing it through the
     outbox would put the poll interval between a person typing and the other
     phones hearing about it — which is the latency the whole record was written
     to avoid. What the outbox still carries is the **event**; this is the

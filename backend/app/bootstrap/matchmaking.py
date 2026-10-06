@@ -1,13 +1,13 @@
-"""The ruleset's last two checks, where the engine and the contract both exist.
+"""The ruleset's last checks, where the engine and the platform's vocabularies
+both exist.
 
 Most of what makes a ruleset believable is checked inside the engine, at import,
-by ``validate_ruleset``. Two checks cannot live there, and it is the fence that
-says so rather than a preference: **an engine may not import a module and may not
-import pydantic**, so a tag id is a bare string to it and the wire union is
-invisible.
+by ``validate_ruleset``. These cannot live there, and it is the fence that says
+so rather than a preference: **an engine may not import a module**, so a tag id
+is a bare string to it.
 
 So they run here, in the composition root — the one place that may see the
-engine, the platform's vocabularies and the API contract at once.
+engine and the platform's vocabularies at once.
 
 1. **Every tag id a matrix row or the familiarity map names is a tag this
    platform actually serves.** A typo'd id is a row that can never fire, and a
@@ -23,12 +23,10 @@ engine, the platform's vocabularies and the API contract at once.
    id that way; a cell keyed on a string nobody declares is a cell that can never
    be read, and a declaration with no cell would stand a term down for a player
    who answered the question.
-4. **Every evidence kind the ruleset can emit is present in the wire union**
-   (``docs/adr/0106``). Two serialisations of one set of facts exist on purpose —
-   storage stays open where the wire is closed — and this is the one check that
-   stands between them. It is a **load failure rather than a lint** because the
-   drift it catches is silent for exactly as long as nobody releases a ruleset
-   with a new kind.
+
+**A fourth check went with the searches** (#579): every evidence kind the ruleset
+could emit had to be in the shortlist's wire union, and no response carries one
+any more.
 
 **Called at startup, so a malformed ruleset fails the deploy** and the previous
 one keeps serving on the pods that are still up (``docs/adr/0119`` §6). With an
@@ -46,7 +44,6 @@ from __future__ import annotations
 from app.engines.matchfit.ruleset import Ruleset
 from app.kernel import invariant
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-from app.modules.matchmaking.presentation.evidence import WIRE_EVIDENCE_KINDS
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import (
     SOCIAL_TAG_VOCABULARY,
@@ -67,7 +64,6 @@ def verify_ruleset(ruleset: Ruleset = LIVE_RULESET) -> Ruleset:
     _verify_tag_ids(ruleset)
     _verify_familiarity_map(ruleset)
     _verify_intent_table(ruleset)
-    _verify_evidence_kinds(ruleset)
     return ruleset
 
 
@@ -132,15 +128,3 @@ def _verify_intent_table(ruleset: Ruleset) -> None:
             f"{mode.value} reads {declaration!r} as its own evening, and no "
             f"player can declare it",
         )
-
-
-def _verify_evidence_kinds(ruleset: Ruleset) -> None:
-    unpublished = sorted(
-        kind.value for kind in ruleset.emittable_evidence_kinds() - WIRE_EVIDENCE_KINDS
-    )
-    invariant(
-        not unpublished,
-        f"a ruleset can emit evidence kinds the wire union does not publish: "
-        f"{unpublished} — the client generates a renderer per variant and would "
-        f"draw nothing at all",
-    )

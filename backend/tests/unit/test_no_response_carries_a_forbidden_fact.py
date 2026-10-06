@@ -24,9 +24,8 @@ added to a candidate row, in a diff where nothing looks wrong.
 - **a decline, a pass** — a refusal is not a notification, and a pass is
   write-only.
 - **a withheld or near-miss row** — *a player may ask why somebody was shown;
-  nobody may ask who was withheld.* One field is admitted against this rule and
-  is named in ``PERMITTED`` with its reason: the read-back's own ``withheld``,
-  which says a row **it already showed** is no longer shown and names nobody.
+  nobody may ask who was withheld.* The one field once admitted against it, the
+  search read-back's own ``withheld``, went with the searches (#579).
 - **a birthdate or an age** — nothing in this backend collects one, and no gate
   may reopen it here.
 - **a first, last, full or given name** — the platform holds the **Name** a
@@ -104,19 +103,7 @@ FORBIDDEN: dict[str, tuple[object, ...]] = {
 #: written about. Kept as a named list rather than by loosening a rule, so
 #: admitting one is a decision somebody writes down instead of a signal quietly
 #: getting weaker.
-PERMITTED: dict[str, str] = {
-    "withheld": (
-        "The read-back's statement that a row it recorded is no longer shown "
-        "(ADR-0109), and **not** the fact this rule was written about. That one "
-        "is layer 3 — *who did not clear the floor* — and it is a person the "
-        "searcher was never shown, named to them for the first time; this is a "
-        "person they were shown this morning, and all it says is that the "
-        "product has stopped showing them. It carries no id, no card and no "
-        "gate: `withheld_reason` and `near_miss_count` are still refused, which "
-        "is what keeps this an exemption for one field rather than a weakened "
-        "rule."
-    ),
-}
+PERMITTED: dict[str, str] = {}
 
 #: Fields that trip a rule above and are published **on one named shape and no
 #: other** — the narrower admission, keyed by the shape as well as the word.
@@ -229,15 +216,13 @@ def _properties(spec: dict | None = None) -> list[tuple[str, str]]:
     ]
 
 
-def test_the_walk_reaches_the_shortlist_and_not_only_the_error_envelope():
+def test_the_walk_reaches_the_record_and_not_only_the_error_envelope():
     """The guard on the guard: a walk that reached nothing would pass for ever,
     and would go on passing the day the surface grew the field it guards."""
 
     reached = schemas_reachable_from_responses(_spec())
 
     assert "ErrorResponse" in reached
-    assert "ShortlistResponse" in reached, "the search route is not in the walk"
-    assert "PlayerCardSchema" in reached
     # The one shape admitted to carry a gender value out. A walk that did not
     # reach it would pass the refusal for ever and prove nothing about it.
     assert "PlayerProfileReadResponse" in reached, "the profile read is not in the walk"

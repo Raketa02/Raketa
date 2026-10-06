@@ -1,14 +1,14 @@
-"""A small in-process Redis, so the ledger adapters are actually tested.
+"""A small in-process Redis, so the live channel's adapters are actually tested.
 
-**Not a second implementation of the ports** — that is what
-`tests/unit/fake_ledgers.py` is, and the two are different things. This is a
-stand-in for the *server*, so that `RedisExposureLedger` and
-`RedisSuppressionLedger` — the classes that decide the key shapes, the field
-encoding and the TTLs — run inside the same contract suite as everything else
-rather than being the one implementation nothing exercises. A suite that only
-passes with a container up is a suite CI cannot be trusted to run, and the
-alternative to this file is not *a better test*, it is *no test of the adapters
-at all*.
+**Not a second implementation of the ports.** This is a stand-in for the
+*server*, so that the conversation adapters — `RedisNudgePublisher`, the
+subscriber and the typing roster, the classes that decide the channel keys, the
+frames and the TTLs — run inside the suite as everything else does rather than
+being the one implementation nothing exercises. (The matcher's exposure and
+suppression ledgers were its first users, and went with the searches, #579.)
+A suite that only passes with a container up is a suite CI cannot be trusted to
+run, and the alternative to this file is not *a better test*, it is *no test of
+the adapters at all*.
 
 **A deliberate subset, and it stays one.** It implements exactly the commands
 the adapters issue and nothing more, so a new command in an adapter is an

@@ -20,7 +20,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from tests.api import matchmaking_world as world
 from tests.api import players_world as players
 from tests.api.administration_world import (
     MARTA,
@@ -335,14 +334,14 @@ async def test_every_other_gate_still_refuses_whoever_runs_it(
 
     assert (await record(client, marta, kuba["id"])).status_code == 404
 
-    world.hold_only(client, ewa["id"])
+    players.hold_only(client, ewa["id"])
     assert (await record(client, marta, ewa["id"])).status_code == 404
     assert (await record(client, marta, zofia["id"])).status_code == 200
 
-    world.hold_only(client, UUID(marta["id"]))
+    players.hold_only(client, UUID(marta["id"]))
     assert (await record(client, marta, zofia["id"])).status_code == 404
 
-    world.hold_only(client)
-    world.may_not_show(client, zofia["id"])
+    players.hold_only(client)
+    players.may_not_show(client, zofia["id"])
     assert (await record(client, marta, zofia["id"])).status_code == 404
     assert (await record(client, marta, ewa["id"])).status_code == 200

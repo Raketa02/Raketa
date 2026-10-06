@@ -17,11 +17,11 @@ engine and the two Redis clients are the process's, so all three are opened
 before anything that might want one and disposed in the same `finally`, after
 every background task has stopped — a job still running against a closed pool is
 the same shutdown bug in any of them. **None is gated on a feature flag**, and
-the Redis ones especially must not be: a request path resolves its ledgers
-through the command client, so a job's toggle deciding whether the pool exists
-would be a job's toggle deciding whether a Play surface 500s. Opening one
-connects to nothing, so a store that is down costs the ledgers their answers and
-never costs the application its start (``matchmaking/domain/ledgers.py``).
+the Redis ones especially must not be: a room's live channel publishes through
+the command client, so a job's toggle deciding whether the pool exists would be
+a job's toggle deciding whether a chat 500s. Opening one connects to nothing, so
+a store that is down costs a room its liveness and never costs the application
+its start.
 
 **The second Redis client is the subscriber's, and it is a second client rather
 than a flag** (``docs/adr/0147`` §5, #342). A conversation stream subscribes on
@@ -50,7 +50,6 @@ from app.bootstrap.composition import (
     build_nudge_publisher,
     build_payment_provider,
     build_push_notifications,
-    build_scoring_meter,
 )
 from app.bootstrap.events import build_event_delivery_worker
 from app.bootstrap.jobs import build_scheduled_jobs
@@ -98,28 +97,21 @@ def build_lifespan(settings: Settings):
         # session per tick, so one factory serves all of them — and it is built
         # only if something wants one, which is what lets an application with
         # all of it disabled start without an engine having been reached for at
-        # all. **The exposure roll is the first job that wants none**, so the
-        # engine is no longer a precondition for having any jobs.
+        # all. **The photo re-review backfill wants none**, so the engine is not
+        # a precondition for having any jobs.
         background: list[BackgroundTask] = []
         # Assigned whether or not anything is registered: an attribute that only
         # sometimes exists is one every reader has to guard against.
         app.state.scheduled_jobs = []
         # Likewise. **One per process, and this is where the one lives**
-        # (``docs/adr/0112``): the refresh loop rebuilds it and a search binds a
-        # container from it, so a second instance anywhere would be a second
-        # index that nothing keeps in step with the first.
+        # (``docs/adr/0112``): the refresh loop rebuilds it, so a second
+        # instance anywhere would be a second index that nothing keeps in step
+        # with the first.
         app.state.candidate_source = None
-        # Likewise, and unconditionally — trigger 1 is stated *on one worker*
-        # (``scale-posture.md`` §4), so the histogram is this process's own and
-        # a second instance anywhere would be a second window that nothing
-        # closes. It is built whether or not the probe that reads it is
-        # registered: the searches are what fill it, and a search may not have
-        # to ask whether an instrument exists.
-        app.state.scoring_meter = build_scoring_meter()
         # Likewise — one connection pool, and this is where the one lives. It
-        # is whatever `init_redis` above returned, unconditionally: the roll is
-        # one reader of the ledgers and the Play surfaces are the rest, so this
-        # attribute may not depend on the roll being switched on.
+        # is whatever `init_redis` above returned, unconditionally: a room's
+        # live channel publishes on it, so this attribute may not depend on any
+        # toggle.
         app.state.redis = get_redis()
         # Likewise, and for the same reason: an open conversation stream takes a
         # `PubSub` off this one, so it may not depend on any toggle either.
@@ -140,7 +132,6 @@ def build_lifespan(settings: Settings):
             settings.EVENT_DELIVERY_WORKER_ENABLED
             or settings.PHOTO_SWEEP_ENABLED
             or settings.CANDIDATE_INDEX_ENABLED
-            or settings.INTEREST_EXPIRY_ENABLED
             or settings.RATING_CATCH_UP_ENABLED
             or settings.CONVERSATION_SWEEP_ENABLED
             or settings.MAIL_DELIVERY_ENABLED
@@ -189,8 +180,6 @@ def build_lifespan(settings: Settings):
             session_factory=session_factory,
             settings=settings,
             candidate_source=app.state.candidate_source,
-            redis_client=app.state.redis,
-            meter=app.state.scoring_meter,
             proposer_due=proposer_due,
         )
         # Only the scheduled jobs, not the outbox drain beside them: this

@@ -52,12 +52,12 @@ def test_every_surface_that_names_another_player_carries_the_name() -> None:
     schemas = _spec()["components"]["schemas"]
 
     # A challenge's seats and court people were three more, and went with the
-    # challenges (#578).
+    # challenges (#578); the search card was another, and went with the searches
+    # (#579).
     for owner in (
         "ConversationMemberSchema",
         "ConversationPersonSchema",
         "SeatingSchema",
-        "PlayerCardSchema",
     ):
         properties = schemas[owner]["properties"]
         assert "name" in properties, f"{owner} names nobody"

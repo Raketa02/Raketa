@@ -26,8 +26,8 @@ Player Score, because nobody has ever been due to play*, and that stopped being
 true the moment ``games`` could record a plan that produced a game or did not
 (``docs/adr/0140``). It is the third of these to retire by its own stated fact
 becoming false, and the one whose retirement moved a number: reliability was the
-last term absent platform-wide, so ``build_absent_terms`` now answers with an
-empty set and the evidence gate counts eight live terms rather than seven.
+last term absent platform-wide, so the evidence gate counted eight live terms
+rather than seven — until the searches that ran it went (#579).
 
 **``NoMatchHistoryExists`` was here and is gone rather than narrowed** (#253). Its
 docstring's second half — *the count is a measured ``0`` for everybody asked,
@@ -35,20 +35,15 @@ because no challenge has ever been sent by anyone* — stopped being true the da
 ``challenges`` shipped a send, and a null object whose stated fact has become
 false is worse than no null object at all.
 
-**Two arrived the other way, when ``challenges`` was removed** (#578): a fill
-names a court that no longer exists, and a mutual yes opens nothing, because
-the only thing that made a game of one is gone. Both state a fact that is true
-of this platform from that day, and both go with the searches and the deck that
-still call them (#579).
+**Two arrived the other way, when ``challenges`` was removed** (#578) —
+``NoHalfBuiltCourtsExist`` and ``NoMutualOpensAGame`` — and left with the
+searches and the deck that called them (#579).
 """
 
 from __future__ import annotations
 
 from typing import Collection, final
 from uuid import UUID
-
-from app.kernel import Sport
-from app.modules.matchmaking.domain.ports import HalfBuiltCourt
 
 
 @final
@@ -63,34 +58,3 @@ class NoHoldsExist:
 
     async def held_among(self, player_ids: Collection[UUID]) -> frozenset[UUID]:
         return frozenset()
-
-
-@final
-class NoHalfBuiltCourtsExist:
-    """No court is half built, because nothing builds a court any more (#578).
-
-    A fill used to name a challenge still being arranged; the challenges
-    context is gone, so every id a fill names is a court that does not exist,
-    and the port's own answer for that is ``None``.
-    """
-
-    async def half_built_court(
-        self, *, challenge_id: UUID, member_id: UUID
-    ) -> HalfBuiltCourt | None:
-        return None
-
-
-@final
-class NoMutualOpensAGame:
-    """Two yeses that meet open no game, because nothing makes a game from one
-    (#578).
-
-    ``None`` is the port's ordinary answer — *there is no game to name* — so
-    the yes still stands and is still recorded; it simply arranges nothing,
-    since a game is now made only by a booking.
-    """
-
-    async def open_from_mutual_interest(
-        self, *, sport: Sport, player_id: UUID, other_player_id: UUID
-    ) -> UUID | None:
-        return None

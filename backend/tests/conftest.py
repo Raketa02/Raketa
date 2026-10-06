@@ -46,15 +46,6 @@ from app.main import create_app  # noqa: E402  (also registers ORM models)
 from app.modules.player_profile.infrastructure.passthrough_photo_review import (  # noqa: E402,E501
     PassThroughPhotoReview,
 )
-from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (  # noqa: E402,E501
-    DatabaseCandidateSource,
-)
-from app.modules.matchmaking.presentation.dependencies import (  # noqa: E402
-    get_candidate_source,
-    get_exposure_ledger,
-    get_prompt_ledger,
-    get_suppression_ledger,
-)
 from app.modules.notifications.infrastructure.push import (  # noqa: E402
     RecordingPush,
 )
@@ -67,11 +58,6 @@ from app.modules.payments.presentation.dependencies import (  # noqa: E402
 from app.modules.player_profile.presentation.dependencies import (  # noqa: E402
     get_photo_review,
     get_photo_storage,
-)
-from tests.unit.fake_ledgers import (  # noqa: E402
-    InMemoryExposureLedger,
-    InMemoryPromptLedger,
-    InMemorySuppressionLedger,
 )
 from tests.unit.fake_clock import MovableClock  # noqa: E402
 from tests.unit.fake_mailer import RecordingMailer  # noqa: E402
@@ -164,37 +150,6 @@ def pushes():
 
 
 @pytest.fixture
-def exposure_ledger():
-    """The exposure ledger every API test runs against.
-
-    Overridden on `client` regardless of whether a test asks for it, so **no
-    test in this suite needs Redis running** — which is the acceptance criterion
-    and not a convenience, exactly as it is for the object store above.
-
-    A ledger is the worse of the two to get wrong. A missing object store fails
-    a request; a missing ledger answers *nothing was shown to anybody*, which is
-    a perfectly plausible answer, so a suite silently talking to no Redis at all
-    would look green and prove nothing.
-    """
-
-    return InMemoryExposureLedger(build_clock())
-
-
-@pytest.fixture
-def suppression_ledger():
-    """The suppression ledger every API test runs against. See above."""
-
-    return InMemorySuppressionLedger(build_clock())
-
-
-@pytest.fixture
-def prompt_ledger():
-    """The prompt ledger every API test runs against. See above."""
-
-    return InMemoryPromptLedger(build_clock())
-
-
-@pytest.fixture
 def live_channel():
     """The ephemeral store the conversation stream publishes on and follows.
 
@@ -204,8 +159,8 @@ def live_channel():
     be two message buses and a nudge would never reach a stream.
 
     Overridden on `client` regardless of whether a test asks for it, so **no test
-    in this suite needs Redis running** — the same acceptance criterion the
-    ledgers above are held to, and here it also means the real
+    in this suite needs Redis running** — the acceptance criterion the object
+    store above is held to too, and here it also means the real
     `RedisNudgePublisher` and `RedisNudgeSubscriber` run: the classes that decide
     the channel key and the frame's encoding are exercised rather than stubbed
     past.
@@ -214,34 +169,11 @@ def live_channel():
     return FakeRedis()
 
 
-@pytest.fixture
-def candidate_source(session_factory):
-    """The one candidate index this process has, for the length of one test.
-
-    **One per process** is `docs/adr/0112`'s rule, and the lifespan is where the
-    one normally lives — but `ASGITransport` does not run a lifespan, so under
-    this seam nothing owns it. This fixture is that owner.
-
-    It is the **real** adapter over the test's own engine rather than a stub, so
-    a search here walks the same decode, the same bound container and the same
-    staleness ladder a request does. A test that wants rows in it seeds the log,
-    tails it, and calls `refresh()`.
-    """
-
-    return DatabaseCandidateSource(
-        session_factory=session_factory, empty_at=build_clock().now()
-    )
-
-
 @pytest_asyncio.fixture
 async def app(
     session_factory,
     photo_storage,
     photo_review,
-    exposure_ledger,
-    suppression_ledger,
-    prompt_ledger,
-    candidate_source,
     live_channel,
     payments,
 ):
@@ -267,14 +199,10 @@ async def app(
     app.dependency_overrides[get_db] = _get_db_override
     app.dependency_overrides[get_photo_storage] = lambda: photo_storage
     app.dependency_overrides[get_photo_review] = lambda: photo_review
-    app.dependency_overrides[get_exposure_ledger] = lambda: exposure_ledger
-    app.dependency_overrides[get_suppression_ledger] = lambda: suppression_ledger
-    app.dependency_overrides[get_prompt_ledger] = lambda: prompt_ledger
-    app.dependency_overrides[get_candidate_source] = lambda: candidate_source
     app.dependency_overrides[get_payment_provider] = lambda: payments
     # `ASGITransport` runs no lifespan, so nothing has initialised either Redis
-    # client and `get_redis()` would raise. The ledgers above are overridden one
-    # layer higher and never reach it; the live channel deliberately is not.
+    # client and `get_redis()` would raise. The live channel is the one reader
+    # left (#579), and it runs over the fake rather than being stubbed past.
     app.dependency_overrides[get_redis] = lambda: live_channel
     app.dependency_overrides[get_redis_subscriber] = lambda: live_channel
     try:
@@ -323,9 +251,8 @@ class Mailbox:
         return self._app.dependency_overrides.get(get_clock, build_clock)()
 
     async def drain(self) -> None:
-        # Imported here: the outbox's drain lives with the matchmaking world
-        # that needed it first, and importing it at module load would drag that
-        # module into every test.
+        # Imported here: the outbox's drain lives with the players world, and
+        # importing it at module load would drag that module into every test.
         from tests.api.players_world import deliver_the_outbox
 
         # The application's own provider, so a card released from the outbox

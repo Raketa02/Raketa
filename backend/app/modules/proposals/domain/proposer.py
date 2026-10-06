@@ -94,7 +94,7 @@ from app.engines.matchfit.scorable import LevelReading
 from app.engines.matchfit.v1 import forecast
 from app.kernel import SPORT_SPECS, Instant, Sport, invariant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
-from app.modules.matchmaking.domain.fence import combine_group_sigma
+from app.modules.matchmaking.domain.balance import combine_group_sigma
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import (
     WeeklyHours,

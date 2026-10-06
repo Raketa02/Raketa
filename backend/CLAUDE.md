@@ -19,7 +19,6 @@ make check          # lint + lint-imports + typecheck + test — the same gate C
 make lint           # ruff check .     make format → ruff format .     make typecheck → mypy
 make test-gates     # prove the kernel/engines purity gates still fire (CI runs it)
 make openapi        # emit openapi.{player,dev,club,public}.json — see The API contract
-make gen-walkthroughs  # rewrite the matchmaking golden files (a diff is a design change)
 make gen-cohort     # rewrite the seed cohort's population (a diff is a fixture change)
 make up / down      # dev stack: Postgres, API, MinIO, photo-review, Redis, Mailpit
                     # (every email lands in http://localhost:8025)
@@ -100,7 +99,7 @@ Rules to preserve:
   times, so a job must be safe beside itself. A window or threshold is domain; only the
   cadence is configuration.
 - **The outside world sits behind ports** — photo storage, the photo-check sidecar (fails
-  open), the Redis ledgers (fail soft), the mail queue and `Mailer`, `PaymentProvider`,
+  open), a room's live channel on Redis (fails soft), the mail queue and `Mailer`, `PaymentProvider`,
   `PushNotifications` (Expo; fails soft).
   `.importlinter` keeps each SDK out of every domain and application layer, including
   through the adapter, and `tests/conftest.py` overrides each port, so no test needs a
@@ -133,7 +132,7 @@ changing code that calls into another context, read its rule.**
 | `kernel-and-engines.md` | the purity gates and the kernel's surface |
 | `demands.md` | the demand registers and which one a new port belongs in |
 | `player-profile-and-photos.md` | photo storage, the on-court check, profile reads and writes |
-| `matchmaking.md` | candidate index, Redis ledgers, interest, the deck and passes, searches |
+| `matchmaking.md` | what the new games kept (the balance forecast, the level window), the three outward demands, the candidate index until #580 |
 | `games.md` | the booked game: opening, a seat left and taken, call-offs, results, the pairing |
 | `conversations.md` | rooms, their end and the live channel |
 | `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record |

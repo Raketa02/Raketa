@@ -264,8 +264,6 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
     from app.seeds.booked_history import write_the_played_history
     from app.seeds.catalog import ACCOUNTS
     from app.seeds.cohort import PLAYED_GAMES
-    from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
-    from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
     from app.seeds.runner import seed_the_cohort
     from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
@@ -278,9 +276,7 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
             session, clock=FixedClock(at=now), settings=settings, photos=photos
         )
     cohort = [(member.member.handle, member.player_id) for member in members]
-    await write_the_payment_methods(
-        session_factory, now=now, cohort=cohort, others=RELATIONSHIP_ACCOUNTS
-    )
+    await write_the_payment_methods(session_factory, now=now, cohort=cohort)
     clubs = await write_the_clubs(session_factory, settings=settings, now=now)
     await write_the_club_courts(
         session_factory, settings=settings, now=now, clubs=clubs
@@ -289,8 +285,8 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
         session_factory,
         settings=settings,
         now=now,
-        games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
-        named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
+        games=PLAYED_GAMES,
+        named=ACCOUNTS,
     )
 
     seeded = await write_the_proposals(
@@ -548,8 +544,6 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
     from app.seeds.booked_history import write_the_played_history
     from app.seeds.catalog import ACCOUNTS
     from app.seeds.cohort import PLAYED_GAMES
-    from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
-    from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
     from app.seeds.runner import seed_the_cohort
     from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
@@ -562,9 +556,7 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
             session, clock=FixedClock(at=now), settings=settings, photos=photos
         )
     cohort = [(member.member.handle, member.player_id) for member in members]
-    await write_the_payment_methods(
-        session_factory, now=now, cohort=cohort, others=RELATIONSHIP_ACCOUNTS
-    )
+    await write_the_payment_methods(session_factory, now=now, cohort=cohort)
     clubs = await write_the_clubs(session_factory, settings=settings, now=now)
     await write_the_club_courts(
         session_factory, settings=settings, now=now, clubs=clubs
@@ -573,8 +565,8 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
         session_factory,
         settings=settings,
         now=now,
-        games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
-        named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
+        games=PLAYED_GAMES,
+        named=ACCOUNTS,
     )
     proposals = await write_the_proposals(
         session_factory, settings=settings, now=now, cohort=cohort

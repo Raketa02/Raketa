@@ -4,9 +4,8 @@
 rather than silence.** Both halves are structural rather than a convention:
 ``kind`` is a class attribute on every variant, so evidence under a kind that is
 not one of the eight cannot be constructed at all; and the union is exhaustive
-over ``EvidenceKind``, which is also what the wire union is checked against in
-the composition root. Two spellings of the same set of facts exist on purpose —
-one computes and one publishes — and these are the checks standing between them.
+over ``EvidenceKind``. (The wire union it was checked against went with the
+searches that published it, #579.)
 
 The second half of the file is the **complement arm**, which is the one piece of
 the tag arithmetic the constant table does not fully specify. ``strength · dr(n)``
@@ -37,7 +36,6 @@ from app.engines.matchfit.v1 import (
     playing_style,
 )
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
-from app.modules.matchmaking.presentation.evidence import WIRE_EVIDENCE_KINDS
 from app.modules.player_profile.domain.social_tags import SocialTag
 from tests.unit.matchfit_builders import candidate, searcher
 
@@ -55,19 +53,6 @@ def test_every_term_has_a_variant_to_answer_under() -> None:
     """Eight terms, eight kinds, and the mapping is the enum's rather than a table."""
 
     assert {term.evidence_kind for term in Term} == set(EvidenceKind)
-
-
-def test_the_engine_and_the_wire_publish_the_same_set_of_kinds() -> None:
-    """The one check standing between the two serialisations.
-
-    Storage stays open where the wire is closed, and the two are allowed to
-    differ in *shape*. They may never differ in **membership**: an evidence kind
-    the engine can emit and the schema does not publish renders as nothing at
-    all, on the one screen whose entire promise is that it shows its working —
-    where a missing reason line looks identical to a term that stood down.
-    """
-
-    assert {variant.kind for variant in EVIDENCE_VARIANTS} == WIRE_EVIDENCE_KINDS
 
 
 def test_a_variants_kind_is_a_property_of_the_type_and_not_an_argument() -> None:

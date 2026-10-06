@@ -1,9 +1,8 @@
 """Replace a player's weekly hours, whole — *Save your week*.
 
-**The write the ``KEEP_THESE_TIMES`` prompt is answered by.** The engine notices
-that a search ran on a week the profile does not hold and asks whether to keep
-it; this is where a yes lands. Nothing in the matcher writes a profile — it asks,
-and it accepts whatever answer comes back (``matchmaking/domain/prompts.py``).
+**The one write a week is changed by**, from the You tab. The search prompt that
+once asked a player to keep a week (``KEEP_THESE_TIMES``) went with the searches
+(#579); nothing but the player writes a profile.
 
 **A cleared week is a legal value here.** ``WeeklyHours.edited`` is what the
 week is built through rather than ``of_cells``, because the floor binds the

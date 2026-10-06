@@ -383,10 +383,10 @@ class PlayerProfile:
     ) -> None:
         """Record a new durable answer to *who am I willing to play with*.
 
-        **Durable rather than per search**, because the gate it feeds is mutual:
-        it is evaluated against this player when somebody else searches and this
-        player is not present, which a per-search setting could not bind at all.
-        A single search may narrow this; nothing may widen past it.
+        **Durable, never per game**, because the gate it feeds is mutual: it is
+        evaluated against this player when somebody else's game is being made
+        and this player is not present, which a setting made at the moment could
+        not bind at all.
         """
 
         if preference == self.gender_preference:

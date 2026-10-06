@@ -16,7 +16,7 @@ ECS_CLUSTER      ?= raketa-cluster
 ECS_SERVICE      ?= raketa-service
 
 .PHONY: help install test test-affected test-group test-durations split-partition coverage lint lint-imports format typecheck check test-gates openapi \
-        gen-walkthroughs gen-cohort \
+        gen-cohort \
         build-dev up down down-v logs ps shell migrate seed seed-host sim-location \
         rebuild-candidate-index rebuild-candidate-index-host \
         photo-flag-rate photo-flag-rate-host tester tester-host \
@@ -97,14 +97,6 @@ typecheck:         ## mypy
 	poetry run mypy app scripts
 
 check: lint lint-imports typecheck test  ## the full local gate (matches CI)
-
-# The three walkthroughs are golden files at the pure seam: a fixed population, a
-# fixed clock, a fixed ruleset and the complete expected answer. **A diff is a
-# design change and must be argued for in the pull request** — which is the whole
-# point, because it makes a weight change visible instead of quiet. This target
-# rewrites them; it is never run by CI.
-gen-walkthroughs:  ## rewrite the matchmaking walkthrough golden files
-	UPDATE_GOLDEN=1 poetry run pytest tests/unit/test_matchmaking_walkthroughs.py -q
 
 # The seed cohort's population, generated from a seed and committed as a file
 # (app/seeds/cohort.json). **Inputs only** — no level, no uncertainty and no

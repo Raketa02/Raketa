@@ -18,7 +18,7 @@ becoming the matcher's own refusal.
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Collection, TypeVar
+from typing import Any, Awaitable, Callable, TypeVar
 
 from uuid import UUID
 
@@ -51,10 +51,9 @@ async def read_demand(
 
     **The soft branch catches broadly, and that is deliberate.** A provider that
     raises and a provider that answers something malformed are the same event to
-    a term — it could not be evaluated — and standing down is the right answer to
-    both. What keeps that from being silent is the per-term ``NoEvidence`` rate in
-    the telemetry, which is load-bearing rather than garnish: a degraded search
-    otherwise looks exactly like a duller one.
+    a soft read — it could not be evaluated — and standing down is the right
+    answer to both: the at-stake block a booked game's pairing prints is simply
+    not drawn.
     """
 
     posture = FAIL_POSTURE.get(port)
@@ -87,31 +86,6 @@ async def read_demand(
         return stood_down
 
 
-async def live_block_pairs(
-    blocks: BlockQuery, player_ids: Collection[UUID]
-) -> frozenset[frozenset[UUID]]:
-    """Every standing block **between two candidates**. **Fails closed.**
-
-    The line-up's own block read, and the second reader
-    ``docs/adr/0116`` gives ADR-0095: a four contains six pairs, three of them
-    contain no searcher, and nothing in a shortlist ever asked whether two
-    candidates may share a court.
-
-    It is the same translation :func:`live_block_set` performs — somebody else's
-    outage becoming the matcher's own refusal — written beside it rather than
-    inside the line-up so that a safety gate is translated in one place. A
-    line-up that cannot evaluate this **refuses**; it never seats a four on an
-    unread mask.
-    """
-
-    try:
-        return await blocks.blocked_pairs_among(player_ids)
-    except BlockStateUnavailable as unavailable:
-        raise GateDataUnavailable(
-            "the pairwise block mask could not be evaluated"
-        ) from unavailable
-
-
 async def live_block_set(blocks: BlockQuery, player_id: UUID) -> frozenset[UUID]:
     """This player's live block set, in either direction. **Fails closed.**
 
@@ -122,10 +96,9 @@ async def live_block_set(blocks: BlockQuery, player_id: UUID) -> frozenset[UUID]
     somebody else's outage becoming the matcher's own refusal, a 503 about the
     platform rather than a 403 about *you*.
 
-    It is a function rather than a line in two use cases because **both** the
-    search and its read-back evaluate this gate, and a safety gate that is
-    translated in one place and swallowed in the other is the failure the whole
-    fail-closed rule exists to prevent.
+    It is a function rather than a line in a use case because a safety gate
+    that is translated in one place and swallowed in another is the failure the
+    whole fail-closed rule exists to prevent.
     """
 
     try:

@@ -31,22 +31,6 @@ from app.modules.groups.presentation.routes import (
     join_search_router,
     router as groups_router,
 )
-from app.modules.matchmaking.presentation.deck_routes import (
-    passes_router,
-    router as deck_router,
-)
-from app.modules.matchmaking.presentation.interest_routes import (
-    router as interest_router,
-)
-from app.modules.matchmaking.presentation.lineup_routes import (
-    forecasts_router,
-    router as lineups_router,
-)
-from app.modules.matchmaking.presentation.prompt_decline_routes import (
-    router as prompt_declines_router,
-)
-from app.modules.matchmaking.presentation.radar_routes import router as radar_router
-from app.modules.matchmaking.presentation.routes import router as searches_router
 from app.modules.notifications.presentation.routes import (
     router as notifications_router,
 )
@@ -102,14 +86,6 @@ player_api_router.include_router(profile_surface_router)
 player_api_router.include_router(play_intents_router)
 player_api_router.include_router(photos_router)
 player_api_router.include_router(blocks_router)
-player_api_router.include_router(searches_router)
-player_api_router.include_router(lineups_router)
-player_api_router.include_router(forecasts_router)
-player_api_router.include_router(interest_router)
-player_api_router.include_router(deck_router)
-player_api_router.include_router(radar_router)
-player_api_router.include_router(passes_router)
-player_api_router.include_router(prompt_declines_router)
 player_api_router.include_router(conversations_router)
 player_api_router.include_router(games_router)
 player_api_router.include_router(sportsmanship_router)

@@ -30,7 +30,7 @@ from datetime import timedelta
 from typing import Final, final
 
 from app.kernel import Clock, Instant, instant
-from app.modules.matchmaking.domain.search_context import NEWCOMER_WINDOW
+from app.modules.matchmaking.domain.level_window import NEWCOMER_WINDOW
 
 #: ADR-0113's window, **read and never moved**. Spelled in days because that
 #: is the unit the seed's own refusal prints and the unit a member's row is

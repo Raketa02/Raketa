@@ -30,8 +30,6 @@ from app.modules.matchmaking.infrastructure.candidate_index_model import (
     CandidatePlayerFactsORM,
     CandidateRowORM,
 )
-from app.modules.matchmaking.infrastructure.deck_reset_model import DeckResetORM
-from app.modules.matchmaking.infrastructure.interest_model import InterestORM
 from app.modules.notifications.infrastructure.notification_models import (
     NoticeORM,
     NotificationPreferencesORM,
@@ -41,10 +39,6 @@ from app.modules.payments.infrastructure.payment_models import (
     PaymentCustomerORM,
     PaymentNoticeORM,
     SeatChargeORM,
-)
-from app.modules.matchmaking.infrastructure.search_model import (
-    SearchCandidateORM,
-    SearchORM,
 )
 from app.modules.sportsmanship.infrastructure.card_model import (
     SportsmanshipCardORM,
@@ -68,12 +62,10 @@ __all__ = [
     "ClubORM",
     "ClubPaymentsAccountORM",
     "ConversationORM",
-    "DeckResetORM",
     "EventOutboxORM",
     "EventStoreORM",
     "GroupMemberORM",
     "GroupORM",
-    "InterestORM",
     "MailQueueORM",
     "NoticeORM",
     "NotificationPreferencesORM",
@@ -85,8 +77,6 @@ __all__ = [
     "ProposalPersonORM",
     "PushDeviceORM",
     "RefreshTokenORM",
-    "SearchCandidateORM",
-    "SearchORM",
     "SeatChargeORM",
     "SportsmanshipCardORM",
     "SportsmanshipRatingORM",

@@ -15,27 +15,17 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Nineteen jobs today (two went with the challenges, #578) — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Fourteen jobs today — two went with the challenges (#578), and five with the
+  searches (#579): the **exposure roll**, the two **prompt loops** (intent drift,
+  availability staleness), the **interest expiry loop** and the **scale-pressure probe**,
+  with their settings. The ordinals below are the register's, so the gaps are those. The
+  first is the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
-  swap places), the candidate index's two loops below, the **exposure roll**, the
-  first job here that takes no database session at all, the two **prompt loops**
-  (intent drift, availability staleness), which write no value anywhere — each raises a
-  question into the prompt ledger and stops, and every threshold behind them is domain
-  in `matchmaking/domain/prompts.py` while only the cadences are settings — and the
-  **interest expiry loop**, the first of two that delete anything. Turning that one off
-  changes no rule a domain test could observe (every ledger read is bounded by `now`,
-  so a lapsed yes lifts nobody whether or not it has been swept); what it buys is a
-  table the size of what is live, and the one figure a lapsed row could ever be asked
-  for — *yeses that expired having never lifted anybody*, `INTEREST_TTL`'s only day-one
-  falsifier, which cannot be computed once the rows are gone. The eighth is the
-  **scale-pressure probe** — the only job whose work *is* its own scheduling: it measures
-  how late the loop woke it, and closes the fifteen-minute window
-  [`scale-posture.md`](../../../docs/specs/matchmaking/scale-posture.md) §4 states trigger 1
-  over. It reads this process's own counters and writes nothing anywhere, so it needs no
-  session and no store, and *N processes, N runs* is what the trigger wants — it is
-  stated **per worker**. The ninth is the **photo re-review backfill**
+  swap places), then the candidate index's two loops below — which nothing reads since the
+  searches went, and which go with the ranking (#580); the refresh still recomputes
+  trigger 4 at every load. The ninth is the **photo re-review backfill**
   ([ADR-0132](../../../docs/adr/0132-a-re-review-is-the-same-reviewer-and-a-stale-prompt-set-is-not-one.md)),
-  the second job that takes no session — its whole input and output are the object store.
+  the job that takes no session — its whole input and output are the object store.
   Every photo uploaded before ADR-0129's checker landed carries `review: allowed` written
   by a pass-through that looked at nothing, and **the note is what tells the three
   populations apart**: no `review-note` key is the pass-through era, `unavailable=…` is a
@@ -71,7 +61,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   that could pick a K-factor is an environment that decides how a marketplace rates people.
   The twelfth is the **conversation sweep**
   ([ADR-0153](../../../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)),
-  the second that deletes anything and the only one that deletes an **aggregate** — a room
+  the one that deletes an **aggregate** — a room
   and its whole stream, *destroyed, not delisted*. Correctness does not depend on it: a
   room's end is derived on every read — the game's clock off its own stream (#575) — so
   every route on it answers

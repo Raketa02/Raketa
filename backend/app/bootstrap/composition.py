@@ -48,7 +48,6 @@ from app.application.ports import (
 from app.bootstrap.events import EventRuntime, get_event_runtime
 from app.core.config import PushProvider, Settings
 from app.engines.assessment import AssessmentEngine
-from app.engines.matchfit.core import Term
 from app.engines.matchfit.ruleset import Ruleset
 from app.engines.matchfit.scoring import MatchFit
 from app.engines.matchfit.v1 import MatchFitV1
@@ -531,53 +530,17 @@ from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
 )
 from app.modules.games.infrastructure.users_names import UsersNames
-from app.modules.matchmaking.infrastructure.games_shared_courts import (
-    GamesSharedCourts,
-)
-from app.modules.matchmaking.infrastructure.games_match_history import GamesPlayed
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
     AccountStatusQuery,
     AtStakeQuery,
-    HalfBuiltCourtQuery,
-    MatchHistoryQuery,
-    PlayerScoreQuery,
-    SharedCourtQuery,
 )
 from app.modules.matchmaking.application.fail_closed_gates import AccountGates
-from app.modules.matchmaking.application.roll_exposure import RollExposure
-from app.modules.matchmaking.domain.cards import (
-    CardPhotoLinks,
-    PlayerCardSource,
-    PlayerRecordSource,
-)
-from app.modules.matchmaking.domain.declines import PromptDeclineLedger
-from app.modules.matchmaking.domain.ledgers import ExposureLedger, SuppressionLedger
-from app.modules.matchmaking.domain.prompts import PromptLedger
-from app.modules.matchmaking.domain.interest import InterestLedger
-from app.modules.matchmaking.domain.deck_reset import DeckResetLedger
-from app.modules.matchmaking.domain.passes import PassLedger
-from app.modules.matchmaking.domain.search_store import SearchStore
-from app.modules.matchmaking.infrastructure.fail_soft_ledgers import (
-    FailSoftExposureLedger,
-    FailSoftPromptLedger,
-    FailSoftSuppressionLedger,
-)
-from app.modules.matchmaking.infrastructure.redis_ledgers import (
-    RedisExposureLedger,
-    RedisPromptLedger,
-    RedisSuppressionLedger,
-)
 from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
     RebuildCandidateIndex,
 )
 from app.modules.matchmaking.infrastructure.absent_providers import (
-    NoHalfBuiltCourtsExist,
     NoHoldsExist,
-    NoMutualOpensAGame,
-)
-from app.modules.matchmaking.infrastructure.published_player_scores import (
-    PublishedPlayerScores,
 )
 from app.modules.player_score.domain.ports import PublishedScoreQuery
 from app.modules.player_score.infrastructure.three_strands_from_the_record import (
@@ -597,36 +560,7 @@ from app.modules.matchmaking.infrastructure.snapshot_horizon import (
 )
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.matchmaking.infrastructure.scale_instruments import (
-    ScalePressureProbe,
-    ScoringMeter,
     container_memory_limit_bytes,
-)
-from app.modules.matchmaking.infrastructure.card_photo_links import (
-    PresignedCardPhotos,
-)
-from app.modules.matchmaking.infrastructure.games_card_records import (
-    GamesPlayedAndAgreed,
-)
-from app.modules.matchmaking.infrastructure.player_card_source import (
-    PlayerCardIdentities,
-)
-from app.modules.matchmaking.infrastructure.sqlalchemy_interest_ledger import (
-    SqlAlchemyInterestLedger,
-)
-from app.modules.matchmaking.infrastructure.sqlalchemy_deck_reset_ledger import (
-    SqlAlchemyDeckResetLedger,
-)
-from app.modules.matchmaking.infrastructure.sqlalchemy_pass_ledger import (
-    SqlAlchemyPassLedger,
-)
-from app.modules.matchmaking.infrastructure.sqlalchemy_prompt_decline_ledger import (
-    SqlAlchemyPromptDeclineLedger,
-)
-from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
-    SqlAlchemySearchStore,
-)
-from app.modules.matchmaking.domain.mutual_challenge import (
-    MutualChallengeMinting,
 )
 from app.modules.matchmaking.infrastructure.games_court_pairing import (
     GamesCourtPairing,
@@ -3147,11 +3081,10 @@ def build_play_intent_declaration_repository(
 
     **Declared before its first caller exists**, which is unusual here and is
     deliberate: the aggregate and its durable contract landed with #182 so that
-    the index has an event to read, while the write path — the rating tail, the
-    search screen's inline offer and ``PUT /api/v1/play-intents/{sport}`` — is
-    ADR-0094's own build. This line is what that build wires to rather than
-    re-deciding, and it is one line so that the re-decision never happens
-    somewhere else.
+    the index has an event to read, while the write path — the rating tail and
+    ``PUT /api/v1/play-intents/{sport}`` — is ADR-0094's own build. This line is
+    what that build wires to rather than re-deciding, and it is one line so that
+    the re-decision never happens somewhere else.
     """
     return EventSourcedPlayIntentDeclarationRepository(
         event_store=event_store, events=events
@@ -3159,14 +3092,14 @@ def build_play_intent_declaration_repository(
 
 
 # --------------------------------------------------------------------------
-# Matchmaking — the five outward ports
+# Matchmaking — the three outward ports
 # --------------------------------------------------------------------------
 #
-# Built before a use case asks for one, deliberately and for the reason the play
-# intent repository above is: these are ``docs/adr/0098``'s consumer-driven
-# contracts, and the search that reads them arrives later. **This is the live
-# wiring**, and it is one line per port so the choice of implementation is made
-# here rather than re-made wherever a search is assembled. The register in
+# ``docs/adr/0098``'s consumer-driven contracts, one line per port so the choice
+# of implementation is made here rather than re-made wherever a reader is
+# assembled: the two account gates the player record asks, and the at-stake read
+# a booked game's pairing prints (``build_at_stake_query``, below with the
+# games). Four more went with the searches (#579). The register in
 # ``app/bootstrap/matcher_demands.py`` is what enrols each of them in the
 # contract suite.
 
@@ -3217,23 +3150,6 @@ def build_booking_history(session: AsyncSession) -> BookingHistoryQuery:
         ),
         no_shows=build_game_no_shows(session),
     )
-
-
-def build_player_score_query(session: AsyncSession) -> PlayerScoreQuery:
-    """``player_score`` ships, so a Player Score is a real answer.
-
-    **The third null object to retire by its own stated fact becoming false**
-    (``docs/adr/0095``, ``docs/adr/0140``). ``NoPlayerScoresExist`` said *nobody
-    has a Player Score, because nobody has ever been due to play*, and that was
-    true until ``games`` recorded a plan that produced a game or did not. Swapping
-    it is one row in the register and this line, exactly as ADR-0095 promised.
-
-    **It is also why ``build_absent_terms`` below now takes no argument.** That
-    function used to read the adapter this line chose, because *reliability has no
-    provider* was a fact about this wiring; there is no longer anything to read,
-    so the set is empty and the parameter went with the null object.
-    """
-    return PublishedPlayerScores(build_published_score_query(session), build_clock())
 
 
 # --------------------------------------------------------------------------
@@ -3311,57 +3227,11 @@ def build_game_directory(
 ) -> GameDirectory:
     """*Which games was I on the court of* — the same read, folded whole.
 
-    One class answers both ports so a screen wanting the aggregates and a search
+    One class answers both ports so a screen wanting the aggregates and a reader
     wanting the counts do not run the same substring match twice. They stay two
     ports: a caller that wants counts has no business holding the aggregates.
     """
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
-
-
-def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
-    """What was played between a searcher and anybody, read off ``games``.
-
-    **One provider since #578**: the challenge half went with the challenges
-    context, and what is left of it is a measured absence — no challenge open,
-    nobody's inbox holding one (``GamesPlayed``).
-
-    The clock is built here rather than taken, because *a game whose entry
-    window has closed* is a fact about the instant the read happens, and a
-    caller holding one could hold a stale one.
-    """
-    return GamesPlayed(games=build_game_history_query(session), clock=build_clock())
-
-
-def build_half_built_court_query(session: AsyncSession) -> HalfBuiltCourtQuery:
-    """The court a fill names — **none, since #578**: nothing builds a court
-    any more, so every id a fill names is a court that does not exist."""
-    return NoHalfBuiltCourtsExist()
-
-
-def build_mutual_challenge_minting(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> MutualChallengeMinting:
-    """What two yeses that meet open — **nothing, since #578**: the challenge a
-    mutual used to mint is gone, and a game is made only by a booking. The yes
-    still stands; the deck and its interest go with #579."""
-    return NoMutualOpensAGame()
-
-
-def build_shared_court_query(session: AsyncSession) -> SharedCourtQuery:
-    """The courts the deck's cool-off reads, answered by ``games`` and translated.
-
-    **One provider and one contract**: every fact on this read is a game fact —
-    who is on the court, and whether it is behind them yet — so nothing
-    composes with it, and it reads ``games``' own directory rather than a
-    second published port (``docs/adr/0169`` §6).
-
-    The clock is built here rather than taken, for the reason the history's is:
-    *is this court still ahead of them* is a fact about the instant the read
-    happens, and a caller holding one could hold a stale one.
-    """
-    return GamesSharedCourts(build_game_directory(session), build_clock())
 
 
 def build_rated_player_query(
@@ -3394,7 +3264,7 @@ def build_at_stake_query(
     exactly when a null object is swapped rather than narrowed.
 
     Built per request, because the adapter memoises the Levels it reads for the
-    life of one search and a longer-lived one would be a cache of numbers that
+    life of one request and a longer-lived one would be a cache of numbers that
     move.
     """
     return RatingResultUpdateRule(build_rated_player_query(session, runtime=runtime))
@@ -3409,9 +3279,9 @@ def build_opponent_variety_query(
 
     The same class as the history read and a **separate port**, which is the
     whole of the fence: this fold is unbounded, and a caller holding it as part
-    of the port a search already carries could call it inside a walk over five
-    hundred candidates. Typed narrowly here, it reaches only the surface that
-    opens one person at a time.
+    of a port it already carries could call it inside a walk over hundreds of
+    people. Typed narrowly here, it reaches only the surface that opens one
+    person at a time.
     """
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
 
@@ -3580,151 +3450,6 @@ def build_ruleset() -> Ruleset:
     return LIVE_RULESET
 
 
-def build_search_store(session: AsyncSession) -> SearchStore:
-    """Where the record goes. Over the **request's own** session, always.
-
-    ``docs/adr/0104`` commits it in the request's transaction and before the
-    response, so a store built over anything else — a background factory, a
-    second session — would be a record that could commit without the search, or
-    a search that could return without the record.
-    """
-    return SqlAlchemySearchStore(session)
-
-
-def build_interest_ledger(session: AsyncSession) -> InterestLedger:
-    """The durable *Let's play* ledger, over the caller's own session.
-
-    Over the session and never over a connection of its own, for the reason the
-    search store is: a yes and the origin key that proves it belong to one
-    transaction, and the write is committed by the use case that made both
-    decisions.
-
-    **No fail-soft wrapper.** The two Redis ledgers are wrapped where they are
-    built, because losing a courtesy costs a search its spread; this one is the
-    only read that can *admit* somebody, so a lost answer is a person who was
-    guaranteed a place and silently did not get one. It fails the way the record
-    beside it does.
-    """
-
-    return SqlAlchemyInterestLedger(session)
-
-
-def build_pass_ledger(session: AsyncSession) -> PassLedger:
-    """The durable record of every pass, over the caller's own session.
-
-    **No fail-soft wrapper**, and the contrast with the suppression ledger built
-    beside it is the whole design: that one is the *gate* and may be lost for the
-    price of a repeated card, and this one is the *evidence* and may not. A pass
-    whose row could not be written is a pass that did not happen, and the route
-    says so rather than suppressing quietly against nothing.
-    """
-
-    return SqlAlchemyPassLedger(session)
-
-
-def build_deck_reset_ledger(session: AsyncSession) -> DeckResetLedger:
-    """The durable record of every *Show them again*, over the caller's session.
-
-    **No fail-soft wrapper**, and for the opposite reason to the pass's: this
-    row is not the evidence beside a gate, it is what three courtesies read to
-    know they have been cleared. A reset that could be lost would re-hide the
-    people a player just asked to see — the *empty the deck* failure every soft
-    ledger here is soft in order to avoid — so it is a table, read in the deal's
-    own transaction, and a reset whose row could not be written is a reset that
-    did not happen, which the route says.
-    """
-
-    return SqlAlchemyDeckResetLedger(session)
-
-
-def build_prompt_decline_ledger(session: AsyncSession) -> PromptDeclineLedger:
-    """The durable record of every *not now*, over the caller's own session.
-
-    **No fail-soft wrapper**, and the contrast with the prompt ledger built below
-    is the whole design: that one holds a question a loop left standing and may
-    be lost for the price of an offer nobody sees this week, and this one holds a
-    player's answer and may not. A decline whose row could not be written is a
-    decline that did not happen, and the route says so rather than going quiet
-    against nothing.
-
-    The read that consults it degrades on its own, at its one call site, and it
-    degrades the other way from everything in ``fail_soft_ledgers.py`` — to
-    *every* prompt silenced, which is no prompt at all.
-    """
-
-    return SqlAlchemyPromptDeclineLedger(session)
-
-
-def build_player_card_source(
-    *,
-    session: AsyncSession,
-    event_store: DomainEventStore,
-    events: DomainEventPublisher,
-    storage: PhotoStorage,
-) -> PlayerCardSource:
-    """The three card fields the index deliberately does not hold.
-
-    Built over the **three providers' own ports** rather than over the session,
-    which is the whole of what keeps the matcher from becoming a second reader of
-    somebody else's schema — and it is why this builder takes an event store
-    rather than only a connection: a Player profile is a stream, and folding one
-    is that context's business.
-
-    The third provider is the photo store, and it arrives here for the same
-    reason its neighbour ``build_card_photo_links`` does: what the on-court check
-    concluded rides on the object beside the bytes (``docs/adr/0138``), and where
-    a photograph lives is the Player profile's business rather than the
-    matcher's.
-    """
-    return PlayerCardIdentities(
-        users=build_user_repository(session),
-        profiles=build_player_profile_repository(
-            event_store=event_store, events=events
-        ),
-        photos=storage,
-    )
-
-
-def build_player_record_source(session: AsyncSession) -> PlayerRecordSource:
-    """The card's record block — what the platform watched this person do.
-
-    Over ``games``' **own published port** rather than its streams, exactly as
-    ``build_match_history_query`` above is: the fold that decides whether a game
-    counted and whether its result settled belongs to the context that owns the
-    log, and a second one written for a card would part company with it on the
-    first window that moved.
-
-    The clock is built here rather than taken, for the reason that builder gives:
-    both of those are folds against the instant the read happens, and a caller
-    holding one could hold a stale one.
-    """
-
-    return GamesPlayedAndAgreed(
-        games=build_game_history_query(session), clock=build_clock()
-    )
-
-
-def build_card_photo_links(
-    *, storage: PhotoStorage, settings: Settings
-) -> CardPhotoLinks:
-    """The address a card's photograph is drawn from, minted per response.
-
-    Over the **photo provider's own port**, exactly as the card source is over
-    theirs: where a photograph lives is that context's business, and a key
-    written here would be a second answer to it.
-
-    **The window is read here**, from the one setting every photo link in this
-    platform is signed for — so a card and ``GET /photos/{id}`` cannot disagree
-    about how long a link may live, and the route that declares this adapter
-    does not get to name a number.
-    """
-
-    return PresignedCardPhotos(
-        storage=storage, valid_for_minutes=settings.PHOTO_URL_VALID_FOR_MINUTES
-    )
-
-
-
 # --------------------------------------------------------------------------
 # The player record — one route out, and every port inward
 # --------------------------------------------------------------------------
@@ -3783,8 +3508,8 @@ def build_group_disclosure(session: AsyncSession) -> PriorDisclosure:
     """*We are both in a group* — over ``groups``' directory.
 
     The strand a group's Members needed: it lists every member rated in the
-    sport and opens their record on a press and hold, and a member who never
-    searched had been shown them by the group alone.
+    sport and opens their record on a press and hold, and the group alone is
+    what showed them to each other.
     """
 
     return GroupsTheyShare(build_group_directory(session))
@@ -3809,8 +3534,7 @@ def build_account_gates(
 ) -> AccountGates:
     """The three gates about accounts — a block in either direction, a hold, an
     account that may not be shown — over the three reads a request already
-    holds. ``FailClosedGates`` asks the same three beside the preference, so
-    there is one spelling of each."""
+    holds, so there is one spelling of each."""
 
     return AccountGates(blocks=blocks, holds=holds, account_status=account_status)
 
@@ -3830,90 +3554,15 @@ def build_record_gates(
     return LiveRecordGates(accounts=accounts, holds=holds)
 
 
-def build_absent_terms() -> frozenset[Term]:
-    """Which terms have no provider **on this platform**, as opposed to for a
-    person. **Today: none of them.**
-
-    The evidence gate counts person-specific gaps and never platform-wide
-    absence — a fact nobody has about anybody cannot be evidence this person
-    failed to produce — so somebody has to say which is which. It is decided
-    here because *no provider exists* is a fact about this wiring rather than
-    about any ruleset: a ruleset that could declare it would be a weight release
-    deciding which contexts are built.
-
-    **It used to be read off the adapter chosen above, and there is nothing left
-    to read.** Reliability was the last absent term and ``player_score`` ships
-    (``docs/adr/0140``), so the set is empty and the argument that used to decide
-    it has gone with the null object it was inspecting. The function stays,
-    because *a term the engine weighs before its provider exists* is a live
-    situation with a live rule — this is where the next one is declared, and
-    ``live_terms`` refuses a name no mode weights, so a stale entry here is a red
-    build rather than a quietly narrower gate.
-    """
-    return frozenset()
-
-
 def build_match_fit_engine() -> MatchFit:
     """The concrete scorer version is chosen here, and nowhere else.
 
     The same rule the assessment engine follows (``docs/adr/0015``): a caller
     depends on the ``MatchFit`` abstraction, so swapping ``v1`` for a version
-    that computes a term differently is this line and no other. Nothing asks for
-    one yet — the search that does arrives with the routes — and it is wired now
-    for the reason the five ports above are: a choice of implementation belongs
-    in a composition root whether or not a caller has turned up to make it.
+    that computes a term differently is this line and no other. **Nothing asks
+    for one since the searches went** (#579); it goes with the ranking (#580).
     """
     return MatchFitV1()
-
-
-# --------------------------------------------------------------------------
-# Matchmaking — the ephemeral store
-# --------------------------------------------------------------------------
-#
-# **Every ledger leaves here wrapped, and that is the point of building them
-# here.** Exposure, suppression and the prompts fail soft
-# (``the-two-contracts.md`` §8), and
-# a posture applied by the composition root is one no caller can be handed
-# without. An unwrapped ``RedisExposureLedger`` is a correct adapter and a wrong
-# dependency: it raises, and a raise on either of these paths empties a surface
-# to protect nobody.
-#
-# The client is passed in rather than built per ledger. It holds the process's
-# one connection pool, opened by the lifespan and closed by it, so a builder
-# that reached for its own would be a second pool per request.
-
-
-def build_exposure_ledger(client: Redis) -> ExposureLedger:
-    """Who has been shown to whom this week, failing soft."""
-
-    return FailSoftExposureLedger(RedisExposureLedger(client))
-
-
-def build_suppression_ledger(client: Redis) -> SuppressionLedger:
-    """Whom this player has recently passed on, failing soft."""
-
-    return FailSoftSuppressionLedger(RedisSuppressionLedger(client))
-
-
-def build_prompt_ledger(client: Redis) -> PromptLedger:
-    """The questions a loop left standing for a player, failing soft.
-
-    The softest of the three: an outage here costs one inline offer, on one
-    search, and the loop that raised it raises it again tomorrow.
-    """
-
-    return FailSoftPromptLedger(RedisPromptLedger(client))
-
-
-def build_roll_exposure(exposure: ExposureLedger) -> RollExposure:
-    """The hourly roll, over whichever ledger it was handed.
-
-    Takes the port rather than the client, so the job is assembled from a ledger
-    that already carries its posture — the roll has no branch for *Redis is
-    down* and does not need one.
-    """
-
-    return RollExposure(exposure=exposure, clock=build_clock())
 
 
 # --------------------------------------------------------------------------
@@ -3987,37 +3636,6 @@ def build_candidate_source(
 
     return DatabaseCandidateSource(
         session_factory=session_factory, empty_at=build_clock().now()
-    )
-
-
-def build_scoring_meter() -> ScoringMeter:
-    """This worker's scoring histogram. **One per process**, like the index.
-
-    Trigger 1 is stated *on one worker over 15 min* (``scale-posture.md`` §4), so
-    a per-request meter would measure one request and a meter shared across
-    processes would measure a fleet — and neither is the number the trigger is
-    written about.
-    """
-
-    return ScoringMeter()
-
-
-def build_scale_pressure_probe(
-    *, meter: ScoringMeter, settings: Settings
-) -> ScalePressureProbe:
-    """The loop-lag monitor that closes this worker's scoring window.
-
-    Built here rather than in ``jobs.py`` for the reason every adapter is: the
-    job register says *what* meets *how often* and holds no wiring of its own.
-
-    The interval reaches the probe as well as the ``PeriodicJob``, and it has to
-    be the same number in both: the probe's reading is *how much later than the
-    interval the loop got back to it*, so a probe told one cadence and scheduled
-    on another would report the difference between two settings as contention.
-    """
-
-    return ScalePressureProbe(
-        meter, interval_seconds=settings.SCALE_PRESSURE_INTERVAL_SECONDS
     )
 
 
@@ -4269,10 +3887,9 @@ def build_tell_the_room(
 def build_nudge_publisher(client: Redis) -> NudgePublisher:
     """*Tell whoever is listening that a room moved* — **wrapped, always.**
 
-    The composition root never hands out an unwrapped publisher, on
-    ``build_exposure_ledger``'s argument one section up: the entry is already
-    durable in Postgres when this is called, so a bus that is down costs a room
-    its liveness and may never cost anybody their message. An unwrapped one would
+    The composition root never hands out an unwrapped publisher: the entry is
+    already durable in Postgres when this is called, so a bus that is down costs
+    a room its liveness and may never cost anybody their message. An unwrapped one would
     make that a discipline at two call sites instead of a property of the type.
 
     **On the command client, not the subscriber's.** A ``PUBLISH`` is a

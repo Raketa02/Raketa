@@ -29,34 +29,21 @@ from app.bootstrap.jobs import (
     CONVERSATION_SWEEP_JOB,
     MAIL_DELIVERY_JOB,
     RATING_CATCH_UP_JOB,
-    EXPOSURE_ROLL_JOB,
-    GRID_STALENESS_JOB,
-    INTEREST_EXPIRY_JOB,
-    INTENT_DRIFT_JOB,
     PHOTO_REVIEW_BACKFILL_JOB,
     PHOTO_SWEEP_JOB,
     PROPOSAL_EXPIRY_JOB,
     PROPOSER_JOB,
     PROPOSER_ON_CHANGES_JOB,
-    SCALE_PRESSURE_JOB,
     build_scheduled_jobs,
 )
 from app.core.config import get_settings
-from app.kernel import Sport, instant
-from app.modules.matchmaking.domain.ledgers import week_of
+from app.kernel import instant
 from app.modules.matchmaking.domain.scale_triggers import (
     BYTES_PER_ROW,
-    SCORING_P99_TRIGGER_MS,
-    TRIGGER_WINDOW,
     footprint_of,
 )
 from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
     RefreshReport,
-)
-from app.modules.matchmaking.infrastructure.scale_instruments import ScoringMeter
-from app.modules.matchmaking.infrastructure.redis_ledgers import (
-    RedisExposureLedger,
-    busy_threshold_key,
 )
 from app.modules.player_profile.domain.photos import (
     REVIEW_NOTE_METADATA_KEY,
@@ -69,7 +56,6 @@ from app.shared.ids import new_uuid
 from tests.unit import image_fixtures as fixtures
 from tests.unit.fake_event_store import FrozenClock
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
-from tests.unit.fake_redis import BrokenRedis, FakeRedis
 
 #: Stands in for a session factory a job is built with and never runs against.
 #: These cases assert what is *registered*, and the factory is only reached at
@@ -150,8 +136,8 @@ def test_a_database_job_without_a_session_factory_refuses_to_be_registered():
 
     *The sweep is off* and *the sweep was enabled and silently dropped* have one
     symptom — orphans accumulating — and only one of them is somebody's
-    decision. The parameter went optional when the exposure roll arrived wanting
-    no session, which is exactly when that hole opened.
+    decision. The parameter is optional because the photo re-review backfill
+    wants no session, which is exactly where that hole could open.
     """
 
     settings = _nothing_but(PHOTO_SWEEP_ENABLED=True)
@@ -174,10 +160,6 @@ def _nothing_but(**overrides):
             "PHOTO_SWEEP_ENABLED": False,
             "PHOTO_REVIEW_BACKFILL_ENABLED": False,
             "CANDIDATE_INDEX_ENABLED": False,
-            "EXPOSURE_ROLL_ENABLED": False,
-            "INTENT_DRIFT_ENABLED": False,
-            "GRID_STALENESS_ENABLED": False,
-            "INTEREST_EXPIRY_ENABLED": False,
             "RATING_CATCH_UP_ENABLED": False,
             "CONVERSATION_SWEEP_ENABLED": False,
             "MAIL_DELIVERY_ENABLED": False,
@@ -187,7 +169,6 @@ def _nothing_but(**overrides):
             "CUT_OFF_ENABLED": False,
             "CLUB_PAYOUTS_ENABLED": False,
             "NEW_BOOKINGS_SUMMARY_ENABLED": False,
-            "SCALE_PRESSURE_ENABLED": False,
             **overrides,
         }
     )
@@ -328,333 +309,13 @@ async def test_the_backfill_job_runs_end_to_end_through_the_real_wiring(
 
 
 # ---------------------------------------------------------------------------
-# The exposure roll
-# ---------------------------------------------------------------------------
-
-
-def test_the_roll_is_registered_and_carries_the_configured_cadence():
-    settings = _nothing_but(
-        EXPOSURE_ROLL_ENABLED=True, EXPOSURE_ROLL_INTERVAL_SECONDS=1800.0
-    )
-
-    jobs = build_scheduled_jobs(
-        session_factory=None, settings=settings, redis_client=FakeRedis()
-    )
-
-    assert [job.name for job in jobs] == [EXPOSURE_ROLL_JOB]
-    assert jobs[0].interval_seconds == 1800.0
-
-
-def test_the_roll_without_an_ephemeral_store_refuses_to_be_registered():
-    """Loudly, exactly as a database job with no session factory is.
-
-    Unlike ``candidate_source``, a missing client is not a legitimate state: the
-    lifespan opens the pool unconditionally, because the roll is one reader of
-    the ledgers and every Play surface is the rest. So reaching here is a wiring
-    error — and a roll that silently did not register looks precisely like a
-    roll that is switched off.
-    """
-
-    settings = _nothing_but(EXPOSURE_ROLL_ENABLED=True)
-
-    with pytest.raises(ValueError, match="redis client"):
-        build_scheduled_jobs(
-            session_factory=None, settings=settings, redis_client=None
-        )
-
-
-def test_the_roll_can_be_turned_off():
-    settings = _nothing_but(EXPOSURE_ROLL_ENABLED=False)
-
-    assert (
-        build_scheduled_jobs(
-            session_factory=None, settings=settings, redis_client=FakeRedis()
-        )
-        == []
-    )
-
-
-async def test_the_roll_runs_end_to_end_through_the_real_wiring():
-    """The tracer: the wired job, the real ledger, and a threshold in the store.
-
-    The client is the one thing substituted, since the real one is a network
-    call. Everything else is what production runs — the fail-soft wrapper, the
-    Redis adapter, the real key shapes and the real percentile.
-    """
-
-    client = FakeRedis()
-    settings = _nothing_but(EXPOSURE_ROLL_ENABLED=True)
-    week = week_of(build_clock().now())
-    ledger = RedisExposureLedger(client)
-    for times in (1, 1, 2, 11):
-        await ledger.record_shown(
-            sport=Sport.PADEL, week=week, player_ids=[new_uuid()] * times
-        )
-
-    (roll,) = build_scheduled_jobs(
-        session_factory=None, settings=settings, redis_client=client
-    )
-    await roll.run_once()
-
-    assert await client.get(busy_threshold_key(Sport.PADEL, week)) == "11"
-
-
-async def test_a_roll_against_an_unreachable_store_neither_raises_nor_publishes(caplog):
-    """The job inherits the ledger's posture and needs no branch of its own.
-
-    ``run_once`` lets the failure through — that is what it is for — so a raise
-    here would be a raise, not a swallowed one.
-    """
-
-    settings = _nothing_but(EXPOSURE_ROLL_ENABLED=True)
-
-    (roll,) = build_scheduled_jobs(
-        session_factory=None, settings=settings, redis_client=BrokenRedis()
-    )
-
-    with caplog.at_level(logging.INFO):
-        await roll.run_once()
-
-    assert any(
-        record.message == "exposure roll finished" and record.players_counted == 0
-        for record in caplog.records
-        if hasattr(record, "players_counted")
-    )
-
-
-# ---------------------------------------------------------------------------
-# The two prompt loops
-# ---------------------------------------------------------------------------
-
-
-def test_the_drift_loop_is_registered_and_carries_the_configured_cadence():
-    """Daily, matching §14.5's own cadence — and read from the settings, so the
-    number in the templates is configuration that changes something."""
-
-    settings = _nothing_but(
-        INTENT_DRIFT_ENABLED=True, INTENT_DRIFT_INTERVAL_SECONDS=3600.0
-    )
-
-    jobs = build_scheduled_jobs(
-        session_factory=UNUSED_SESSIONS, settings=settings, redis_client=FakeRedis()
-    )
-
-    assert [job.name for job in jobs] == [INTENT_DRIFT_JOB]
-    assert jobs[0].interval_seconds == 3600.0
-
-
-def test_the_staleness_backstop_is_registered_and_carries_its_cadence():
-    settings = _nothing_but(
-        GRID_STALENESS_ENABLED=True, GRID_STALENESS_INTERVAL_SECONDS=7200.0
-    )
-
-    jobs = build_scheduled_jobs(
-        session_factory=UNUSED_SESSIONS,
-        settings=settings,
-        candidate_source=object(),
-        redis_client=FakeRedis(),
-    )
-
-    assert [job.name for job in jobs] == [GRID_STALENESS_JOB]
-    assert jobs[0].interval_seconds == 7200.0
-
-
-def test_the_backstop_is_not_registered_without_an_index_to_read():
-    """A process holding no picture of the city has no grids to find stale, and
-    there is nothing here to fall back to."""
-
-    settings = _nothing_but(GRID_STALENESS_ENABLED=True)
-
-    jobs = build_scheduled_jobs(
-        session_factory=UNUSED_SESSIONS,
-        settings=settings,
-        candidate_source=None,
-        redis_client=FakeRedis(),
-    )
-
-    assert jobs == []
-
-
-def test_a_prompt_loop_without_a_store_to_leave_a_question_in_refuses():
-    """Loudly, as every other job here does: *the loop is off* and *the loop was
-    enabled and silently dropped* have one symptom — nobody is ever asked."""
-
-    settings = _nothing_but(INTENT_DRIFT_ENABLED=True)
-
-    with pytest.raises(ValueError, match="redis"):
-        build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
-
-
-def test_the_drift_loop_without_a_session_factory_refuses():
-    settings = _nothing_but(INTENT_DRIFT_ENABLED=True)
-
-    with pytest.raises(ValueError, match="session factory"):
-        build_scheduled_jobs(
-            session_factory=None, settings=settings, redis_client=FakeRedis()
-        )
-
-
-async def test_the_drift_loop_runs_end_to_end_through_the_real_wiring(
-    session_factory, caplog
-):
-    """The session, the store and the declaration repository really are assembled
-    per run — and a quiet day is logged as a quiet day rather than as silence."""
-
-    settings = _nothing_but(INTENT_DRIFT_ENABLED=True)
-    (drift,) = build_scheduled_jobs(
-        session_factory=session_factory, settings=settings, redis_client=FakeRedis()
-    )
-
-    with caplog.at_level(logging.INFO):
-        await drift.run_once()
-
-    assert any(
-        record.message == "intent drift loop finished" and record.searches_read == 0
-        for record in caplog.records
-    )
-
-
-# ---------------------------------------------------------------------------
-# The interest expiry loop
-# ---------------------------------------------------------------------------
-
-
-def test_the_expiry_loop_is_registered_and_carries_the_configured_cadence():
-    """Hourly by default, and read from the settings — because ``INTEREST_TTL``
-    itself is emphatically **not** a setting, and only the cadence is."""
-
-    settings = _nothing_but(
-        INTEREST_EXPIRY_ENABLED=True, INTEREST_EXPIRY_INTERVAL_SECONDS=1800.0
-    )
-
-    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
-
-    assert [job.name for job in jobs] == [INTEREST_EXPIRY_JOB]
-    assert jobs[0].interval_seconds == 1800.0
-
-
-def test_the_expiry_loop_without_a_session_factory_refuses_to_be_registered():
-    """It reads the database, so it joins the loud branch rather than the quiet
-    one: an expiry that silently did not register looks exactly like one that is
-    off, and the symptom — a table that only grows — takes weeks to notice."""
-
-    settings = _nothing_but(INTEREST_EXPIRY_ENABLED=True)
-
-    with pytest.raises(ValueError, match="session factory"):
-        build_scheduled_jobs(session_factory=None, settings=settings)
-
-
-async def test_the_expiry_loop_runs_end_to_end_through_the_real_wiring(
-    session_factory, caplog
-):
-    """A quiet sweep is logged as a quiet sweep, and the log line carries the
-    falsifier rather than a throughput figure."""
-
-    settings = _nothing_but(INTEREST_EXPIRY_ENABLED=True)
-    (expiry,) = build_scheduled_jobs(
-        session_factory=session_factory, settings=settings
-    )
-
-    with caplog.at_level(logging.INFO):
-        await expiry.run_once()
-
-    assert any(
-        record.message == "interest expiry loop finished"
-        and record.removed == 0
-        and record.never_lifted == 0
-        for record in caplog.records
-    )
-
-
-# ---------------------------------------------------------------------------
-# The two trigger instruments (scale-posture.md §4)
+# Trigger 4, on the index refresh (scale-posture.md §4)
 #
 # What is asserted is that the record is emitted and carries the fields the
 # trigger is stated in. **No wall-clock, no p99 and no rate of this machine's
 # own** — those are metrics, and a metric asserted on a shared runner is a mute
 # waiting to happen.
 # ---------------------------------------------------------------------------
-
-
-def test_the_pressure_probe_is_registered_and_carries_the_configured_cadence():
-    """It needs no session, no store and no index — it reads this process's own
-    counters, which is why it is the one job a process with everything else
-    switched off still runs."""
-
-    settings = _nothing_but(SCALE_PRESSURE_ENABLED=True)
-    meter = ScoringMeter()
-
-    jobs = build_scheduled_jobs(
-        session_factory=None, settings=settings, meter=meter
-    )
-
-    assert [job.name for job in jobs] == [SCALE_PRESSURE_JOB]
-    assert jobs[0].interval_seconds == settings.SCALE_PRESSURE_INTERVAL_SECONDS
-
-
-def test_the_probe_is_not_registered_without_a_histogram_to_read():
-    """A process that scores nothing has no window to close, and there is
-    nothing here to fall back to."""
-
-    settings = _nothing_but(SCALE_PRESSURE_ENABLED=True)
-
-    assert build_scheduled_jobs(session_factory=None, settings=settings) == []
-
-
-async def test_a_window_that_closes_writes_one_record_naming_both_halves(caplog):
-    """One record per window, and it says which half of trigger 1 fired.
-
-    The window is closed by advancing the probe's own duration source rather
-    than by waiting fifteen minutes, so what this asserts is the record's shape
-    and the arithmetic behind it — never a timing this runner produced.
-    """
-
-    settings = _nothing_but(SCALE_PRESSURE_ENABLED=True)
-    elapsed = [0.0]
-    meter = ScoringMeter(monotonic=lambda: elapsed[0])
-    # The meter the job's probe reads is this one, so *fifteen minutes have
-    # passed* is one statement rather than two that could disagree.
-    job = jobs_module.build_scale_pressure_job(meter=meter, settings=settings)
-
-    meter.observe_scoring(2.0)
-    with caplog.at_level(logging.INFO, logger="app.bootstrap.jobs"):
-        await job.run_once()
-        assert not [r for r in caplog.records if r.msg == "scoring pressure window"]
-        elapsed[0] += TRIGGER_WINDOW.total_seconds()
-        await job.run_once()
-
-    written = [r for r in caplog.records if r.msg == "scoring pressure window"]
-    assert len(written) == 1
-    record = written[0]
-    assert record.levelno == logging.INFO
-    assert record.job == SCALE_PRESSURE_JOB
-    assert record.scoring_calls == 1
-    assert record.trigger_1_fires is False
-    assert record.trigger_1_p99_crossed is False
-    assert record.trigger_1_duty_cycle_crossed is False
-    assert hasattr(record, "loop_lag_p99_ms")
-
-
-async def test_a_window_that_fires_the_trigger_leaves_the_healthy_level(caplog):
-    """A boolean field on an INFO line is a thing nobody is paged by, which is
-    the same as not raising one."""
-
-    settings = _nothing_but(SCALE_PRESSURE_ENABLED=True)
-    elapsed = [0.0]
-    meter = ScoringMeter(monotonic=lambda: elapsed[0])
-    job = jobs_module.build_scale_pressure_job(meter=meter, settings=settings)
-
-    for _ in range(100):
-        meter.observe_scoring(SCORING_P99_TRIGGER_MS + 1.0)
-    with caplog.at_level(logging.INFO, logger="app.bootstrap.jobs"):
-        await job.run_once()
-        elapsed[0] += TRIGGER_WINDOW.total_seconds()
-        await job.run_once()
-
-    record = [r for r in caplog.records if r.msg == "scoring pressure window"][0]
-    assert record.levelno == logging.WARNING
-    assert record.trigger_1_fires is True
-    assert record.trigger_1_p99_crossed is True
 
 
 async def test_the_refresh_record_carries_trigger_fours_arithmetic(caplog):

@@ -22,10 +22,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   face** (`app/seeds/cohort.py`). A population is generated from a seed and committed as
   `app/seeds/cohort.json` — **inputs only**, never a level, an uncertainty or a band, and
   every draw keyed off the member's own handle so adding one changes that row and nobody
-  else's (`make gen-cohort`, and a test asserts byte-identity). It borrows
-  `scripts/ruleset_diff/population.py`'s mechanics and **none of its numbers**: that corpus
-  is a comparator and this one's job is to *reach* states, which is why ADR-0121 is
-  undisturbed. It is the crowd the Games deck, Fill in and posting deal from. It fails
+  else's (`make gen-cohort`, and a test asserts byte-identity). It borrowed the ruleset
+  corpus's mechanics (`scripts/ruleset_diff/`, gone with the searches, #579) and **none of
+  its numbers**: that corpus was a comparator and this one's job is to *reach* states,
+  which is why ADR-0121 is undisturbed. It is the crowd the Games deck, Fill in and posting deal from. It fails
   `make seed` on **two clocks**: an engine retune moves the band histogram (a range per
   band, never a μ — a μ would pin the engine), and the calendar walks every newcomer out of
   ADR-0113's window, which fails **by name with the age in days**. The run injects a
@@ -47,10 +47,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   the challenges (#578). None of this runs in CI: it needs a database with the seed in it.
 - **Every played game is a past booked game, on the path the product makes games on**
   (`app/seeds/booked_history.py`, #573). That covers her own evenings (tennis singles that
-  fill the record she reads about herself), the cohort's `PLAYED_GAMES` and the pool's
-  courts, which the runner hands in. Each game is made, filled by its last yes, played and scored through the use cases
-  a phone runs, on a backdated clock, in a group she runs per sport at Ogrody 33. Four
-  things are load-bearing.
+  fill the record she reads about herself) and the cohort's `PLAYED_GAMES`, which the
+  runner hands in. Each game is made, filled by its last yes, played and scored through
+  the use cases a phone runs, on a backdated clock, in a group she runs per sport at
+  Ogrody 33. Four things are load-bearing.
   - **Every game is over before this week began.** A booked game counts toward its week's
     *games per week*, so a game this week would hold the deck, Fill in and posts to a
     smaller week. A declared game keeps its day where that is before the week, and starts
@@ -66,21 +66,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
     - a counted evening on her Home;
     - a confirmed counted result of hers for the catch-up to fold;
     - a rater who rated her on one of her evenings.
-
-  **A second fence, and it is about imports rather than writes.** The new-loop layers
-  (proposals, bookings, rescues, posts, this one, sportsmanship, payments) and the cohort
-  import nothing from what is left of the challenge loop's seed — the pool's history and the
-  relationship accounts. The runner hands their declarations in, so deleting them deletes
-  nothing the new path stands on. `tests/unit/test_seed_booked_history.py` walks them for
-  it. The writes-against-reads fence above is unchanged.
-- **Eleven accounts are named for a relationship with the protagonist, and the
-  relationships are gone** (`app/seeds/relationships.py`, #578). Each was named for one edge
-  the old loop wrote between two people — *they said yes to you*, *they challenged you*,
-  *you passed them* — through a real search, deal or send (`pairs.py`, `paths.py`). Five of
-  those edges were challenges, so the layer went with the challenges, and the plans layer
-  and the loop's own states (`plans.py`, `loop.py`) with them. The accounts stay because
-  the pool's played history (`pool_history.py`) seats them on her past courts by slug, and
-  each description says what the account is now. Renaming them goes with the pool's history
-  and the searches (#579). **The outbox drain that opens booked rooms stays**
+- **The challenge loop's seed is gone** (#578, #579). The relationships layer
+  (`pairs.py`, `paths.py`), the plans and the loop's own states went with the challenges;
+  the pool's played history (`pool_history.py`) and the eleven relationship accounts
+  (`relationships.py`) went with the searches, so her history is her own evenings and the
+  cohort's games alone. **The outbox drain that opens booked rooms stays**
   (`app/seeds/rooms.py`): a room is told, so the run delivers in process before any screen
   is read.

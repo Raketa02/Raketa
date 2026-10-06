@@ -2,11 +2,10 @@
 
 Nothing here is evidence for anything and nothing here survives five seconds, so
 a store that cannot be reached costs a room its typing indicator and costs
-nobody anything else. That is the same collapse ``fail_soft_ledgers.py`` argues
-for at length — *we could not tell* reading as *there is nothing to tell* — and
-it is safe here for the strongest version of that reason: an empty roster is
-**also** what a room where nobody is typing answers, which is what a room is
-almost all of the time.
+nobody anything else. That is a collapse — *we could not tell* reading as
+*there is nothing to tell* — and it is safe here for the strongest version of
+that reason: an empty roster is **also** what a room where nobody is typing
+answers, which is what a room is almost all of the time.
 
 **Both directions are soft, and that is the departure worth stating**
 (``docs/adr/0156`` §6). The nudge ports fail in opposite directions: a publish is

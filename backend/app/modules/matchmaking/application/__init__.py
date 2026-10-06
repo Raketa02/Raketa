@@ -1,7 +1,8 @@
-"""The Matchmaking context's use cases.
+"""The Matchmaking context's application layer.
 
-Empty of use cases today — the search, the line-up and the deck arrive with the
-routes that call them. What is here already is the one piece of orchestration the
-outward ports need before any of that: **performing a read under the posture its
-port declared**.
+No use cases since the searches, the deck and the radar went (#579). What is
+left is the orchestration the outward ports need — **performing a read under the
+posture its port declared** (``outward_reads.py``) — and the three account gates
+the player record asks before it shows one player to another
+(``fail_closed_gates.py``).
 """

@@ -326,9 +326,9 @@ class RecordSportsmanshipSchema(BaseModel):
     is a larger claim than publishing the number.
 
     **The matcher does not read it, and you should say so if you draw it beside
-    the pill.** A low figure here does not hide anybody, demote anybody or narrow
-    anybody's search results — the reliability pill is the counted-only number
-    and is exactly what the platform acts on.
+    the pill.** A low figure here does not hide anybody, demote anybody or keep
+    anybody out of a game — the reliability pill is the counted-only number and
+    is exactly what the platform acts on.
 
     **On your own record too, at this resolution.** The person it is about
     reads the same figure and the same count a stranger does; the coarse band
@@ -417,8 +417,8 @@ class PlayerRecordResponse(BaseModel):
     """Everything the platform will say about one person, to this reader.
 
     **Read through a prior disclosure and never about a person at large.** A
-    record opens for somebody a search of yours returned, somebody you share an
-    open challenge, a game or a group with, and yourself. Anybody else — and
+    record opens for somebody you were on a game with, somebody you share a
+    group with, somebody in a group you run, and yourself. Anybody else — and
     anybody a live gate no longer admits — is `404`, in one shape that names
     nothing.
     """
@@ -509,8 +509,7 @@ class PlayerRecordResponse(BaseModel):
             "The Social tag ids they hold, in the vocabulary's own order. "
             "**Which of them the reader also holds is the client's own "
             "comparison** — the platform states no overlap here, so a record "
-            "opened without a search behind it draws them untinted and claims "
-            "nothing about common ground."
+            "draws them untinted and claims nothing about common ground."
         ),
     )
     intro: str = Field(
@@ -521,10 +520,7 @@ class PlayerRecordResponse(BaseModel):
             "verbatim, drawn under the name. **Omitted where they wrote "
             "none**, and never an empty string: the intro is optional, and a "
             "player who skipped has no line rather than an empty one.\n\n"
-            "The same field the player card carries (`player_card.intro`), "
-            "read off the profile as it stands rather than off a search "
-            "record; today the two cannot differ, since the line is written "
-            "once at onboarding and not editable yet. Fenced at the write "
+            "Read off the profile as it stands. Fenced at the write "
             "against a phone number, an email, a URL or an `@handle`, so what "
             "arrives is a line about a player and never a way to reach one. "
             "Present on your own record as on anybody else's — it is what "

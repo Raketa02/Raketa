@@ -3,11 +3,11 @@
 **Every game the seed says somebody played is written on the path the product
 makes games on.** That is the protagonist's own evenings, which fill the record
 she reads about herself, and every declared game the runner hands in: the
-cohort's own (``PLAYED_GAMES``) and, while that layer stands, the pool's. Each is
-a game the way the Games deck makes one — ``MakeProposal`` at an hour Ogrody 33
-sells, then ``SayYes`` from everybody on it, so the last yes **books** it: the
-seats charged through the run's own fake provider, a Booking on a free court and
-the ordinary Game it opens. Then the result is stated and answered through
+cohort's own (``PLAYED_GAMES``). Each is a game the way the Games deck makes
+one — ``MakeProposal`` at an hour Ogrody 33 sells, then ``SayYes`` from
+everybody on it, so the last yes **books** it: the seats charged through the
+run's own fake provider, a Booking on a free court and the ordinary Game it
+opens. Then the result is stated and answered through
 ``games``' own two acts. Nothing here opens a table, and nothing here imports the
 challenge loop.
 

@@ -6,10 +6,10 @@
 answers *what did somebody say about me*, or *what did I say about them*. It
 answers only *which of these cards are closed*, which is a fact about an act and
 not about an opinion — the list read joins on it and the write path gates on it,
-and neither can learn a star from it. That is
-the same shape ``InterestLedger`` takes and for a stronger reason: an inbox there
-was merely a query nobody wanted, and here an individual rating reaching anybody
-is the failure the whole design is built to prevent. *No individual rating is
+and neither can learn a star from it. That is the shape the matcher's interest
+ledger took before it went (#579), and for a stronger reason: an inbox there was
+merely a query nobody wanted, and here an individual rating reaching anybody is
+the failure the whole design is built to prevent. *No individual rating is
 returned to anybody, on any route, in any shape* is a rule about routes only
 while a route could get one — so the port does not offer one, and a route that
 wanted to leak one would have to grow a read first.

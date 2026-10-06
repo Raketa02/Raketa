@@ -15,16 +15,17 @@ flag on the shared one: a blocking read has no business in the pool a player's
 critical path draws its commands from, and that is a decision to take once here
 rather than to re-open at every call site.
 
-**Not an adapter.** Nothing here knows what a ledger is; the ledgers are in
-``matchmaking/infrastructure/redis_ledgers.py`` and they are handed this client.
-That is why a dependency declaration may import this module, the way it may
-import ``get_db``: what it reaches for is the connection, not the thing built
-over it.
+**Not an adapter.** Nothing here knows what a room's live channel is; the
+adapters over it are in ``conversations/infrastructure/`` and they are handed
+this client. That is why a dependency declaration may import this module, the
+way it may import ``get_db``: what it reaches for is the connection, not the
+thing built over it.
 
 **Nothing here fails.** Constructing a client opens no socket — ``redis-py``
 connects lazily on the first command — so an application whose Redis is down
-starts normally and its ledgers degrade, which is the posture
-``matchmaking/domain/ledgers.py`` argues for at length. The refusal that *does*
+starts normally and what sits on it degrades: a room loses its liveness and
+never a message, which is durable in Postgres before anything is published. The
+refusal that *does*
 exist is in the settings: a **deployed** environment that never set ``REDIS_URL``
 will not boot at all, because permanently degraded is not a state to inherit from
 a laptop's service name. That refusal covers `production` too, and for eleven days
@@ -41,7 +42,7 @@ from app.core.config import Settings
 #: How long **opening a connection** may take, on any client this module builds.
 #:
 #: A store that is not accepting connections has to be found out about rather
-#: than waited on: the ledgers behind this fail soft, and a fail-soft port that
+#: than waited on: what sits behind this fails soft, and a fail-soft port that
 #: waits forever fails soft in name only. Two seconds is far outside anything a
 #: healthy local or in-VPC Redis does and far inside anything a person notices.
 #: **A subscriber shares this half**, because *cannot connect* is a fault on a
@@ -54,8 +55,9 @@ REDIS_CONNECT_TIMEOUT_SECONDS = 2.0
 #: How long a **command may wait for its reply**, once connected.
 #:
 #: Same number as the connect timeout, for a different reason, which is the whole
-#: argument for two names. Both ledgers sit inline on paths a player is waiting
-#: on, and a wedged store must cost a search its spread rather than its response.
+#: argument for two names. A room's publish and its typing roster sit inline on
+#: paths a player is waiting on, and a wedged store must cost a room its liveness
+#: rather than its response.
 #:
 #: **This is a request/response deadline and only that.** It has nothing to say
 #: about a subscription, where waiting *is* the operation — see

@@ -56,7 +56,7 @@ from app.engines.matchfit.v1.group import (
 from app.kernel import InvariantViolated
 from app.engines.matchfit.v1.terms import forecast_pct
 from app.engines.racketskill.core import combine_sigma
-from app.modules.matchmaking.domain.fence import combine_group_sigma
+from app.modules.matchmaking.domain.balance import combine_group_sigma
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.player_profile.domain.play_intent import PlayIntent
 from app.modules.player_profile.domain.social_tags import SocialTag

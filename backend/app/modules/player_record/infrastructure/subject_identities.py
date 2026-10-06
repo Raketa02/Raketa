@@ -23,8 +23,8 @@ that touches the matcher's own fence and is not this ticket's.
 
 **The verdict is translated rather than passed through.** ``PhotoReviewDecision``
 is ``player_profile``'s word and ``OnCourtVerdict`` is this context's; they carry
-the same two strings deliberately, because a client reading a search card and a
-record must not be handed two spellings of one fact.
+the same two strings deliberately, because a client reading a photo on a profile
+and on a record must not be handed two spellings of one fact.
 """
 
 from __future__ import annotations

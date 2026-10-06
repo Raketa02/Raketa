@@ -105,8 +105,8 @@ there; they are not repeated here.
   and despite `User` being an event-sourced aggregate — it is the projection side, not the
   write side. It keeps its name; read the shape, not the noun.
 - **Outward port** — a port this backend defines and **another context implements**, rather
-  than one it implements itself. The five in `modules/matchmaking/domain/ports.py` are the
-  only ones today ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)):
+  than one it implements itself. The three in `modules/matchmaking/domain/ports.py` are the
+  matcher's ([ADR-0098](../docs/adr/0098-matcher-demands-as-executable-contracts.md)):
   the matcher names the facts it needs and has no opinion on the provider's aggregates,
   storage or state machines. Distinguish it from a repository port, which this backend both
   defines and adapts. _Avoid_: "external port", "integration".
@@ -268,14 +268,6 @@ there; they are not repeated here.
   position rather than a rate, because at this size a 25% draw is four people on a good day
   and one on a bad one. _Avoid_: reading a rate here as evidence about anything, a μ in the
   artifact, a rule expressed as a percentage.
-- **Relationship account** — a seed account named for a **pair** rather than for its own
-  state — `said-yes-to-you`, `they-blocked-you` — always from the protagonist's side. The
-  eleven were made so the old loop could exhibit facts about two people that no
-  distribution can, and each edge was written through a real search, deal or send. **The
-  edges went with the challenges (#578) and the accounts stay**: the pool's played history
-  seats them on the protagonist's past courts by slug, and each description says what the
-  account is now. _Avoid_: an account named for its own state here, reading a slug as a
-  relationship anything still writes.
 - **Dev console** — the backend's development surface: surface `dev`, contract
   `openapi.dev.json`, code in `app/api/dev/`. Today it is **one roster route and its gate**;
   its page — a no-build `console.html` at `/dev` that signed in as a seeded player and
@@ -432,25 +424,6 @@ there; they are not repeated here.
   make happen sooner is exactly that. _Avoid_: a configurable retention window, a cadence
   hard-coded in the domain.
 
-- **Synthetic corpus** — the generated population the replay harness runs a candidate
-  **ruleset release** against, at two densities, with a fixed clock and a fixed
-  `SearchContext` ([ADR-0121](../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md)).
-  **It stands for a comparison, never for a city.** Every number the harness prints is
-  baseline-against-candidate over the *same* population, so what it owes is ordering, and
-  an absolute rate is a claim it never makes — which is why the draws are neutral wherever
-  nothing in the repository states a shape, and why the one departure is argued in the
-  spec and printed on the report. Its **seeded generator is code and its output is a
-  committed file**, so a generator edit arrives as a visible population diff rather than
-  silently rewriting every past comparison, and CI regenerating under a different
-  `PYTHONHASHSEED` asserts generation and pipeline together. It goes stale by
-  **contradiction** — a named parameter leaving its band against the search record — never
-  by ceasing to resemble anything. It lives in `scripts/ruleset_diff/`, its artifacts in
-  `docs/specs/matchmaking/ruleset-diff/`, and **only the thin density is a build gate** —
-  the dense one runs on demand and is measured in hours, where a gate that takes hours is a
-  gate somebody turns off ([`the-ruleset-gate.md`](../docs/specs/matchmaking/the-ruleset-gate.md)
-  §1.1). _Avoid_: "realistic", "production-like", a fixture whose correlations nobody
-  measured, folding §20.1's scenarios or the six judged pairings into it.
-
 - **Judged-pairings harness** — `scripts/judged_pairings/`, the package that reads
   `docs/specs/matchmaking/judged-pairings.json`, scores its six cases against the **live
   ruleset**, and writes every derived number back: the fixture's own readings, the tables
@@ -496,63 +469,6 @@ there; they are not repeated here.
   Player Score is, because `datetime` is forbidden to this layer outright. _Avoid_:
   "candidate row" for it — that is the index's, on the other side of the fence, and it
   legitimately holds gender.
-- **Wire evidence union** — the closed, discriminated set of **Evidence** variants in
-  `app/modules/matchmaking/presentation/evidence.py`, keyed by `kind`. The engine's
-  `EvidenceKind` supplies the discriminator strings so the two halves cannot spell one
-  differently. **A ruleset that can emit a kind this union does not publish refuses to
-  load** — checked in `app/bootstrap/matchmaking.py`, which is where the ruleset and the
-  contract are both visible, and a **load failure rather than a lint** because the drift
-  is silent for exactly as long as nobody releases a ruleset with a new kind
-  ([ADR-0106](../docs/adr/0106-evidence-vocabulary-is-contract-weights-are-configuration.md)).
-  _Avoid_: "terms blob" for it — the store is open where the wire is closed, on purpose.
-- **Drawn distance** vs **cell distance** — the two kilometre figures a search holds about
-  one pair, and only one of them is a measurement. The **cell distance** is haversine
-  between two coarse centroids (`geography.distance_km`); it is what the `OUTSIDE_RADIUS`
-  gate applies and what the distance term reads, and its evidence prints it whole. The
-  **drawn distance** is the same haversine between the pair's two
-  [**Drawn spots**](../CONTEXT.md) — `geography.drawn_spot`, SHA-256 over the id's bytes,
-  the top 53 bits of each eight-byte half as one exact fraction, a bearing and an amount
-  along it to the square's edge in **degrees** — rounded half-to-even to one decimal and
-  floored at `0.1` by `geography.shown_kilometres`; it is what `distance_km` carries on
-  every candidate, what the record keeps and what *Closest* sorts
-  ([ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §2).
-  `Generated` carries both and `admitted_of` is its one constructor;
-  `Scored.shown_distance_km` derives the print once for the response, the row and the sort;
-  `shortlist_determinism_probe` prints it under two hash seeds; and
-  `tests/unit/test_the_drawn_spot_prints_and_never_scores.py` walks `app/engines/`,
-  `gates.py` and `fence.py` for the word `drawn_spot` — a term or a gate that read it would
-  move a Fit with a digest. _Avoid_: "whole kilometres" for the wire — nothing prints one
-  since 2026-09-16 — and computing the drawn distance in `fence.py`, which is where
-  everything the scorer sees is assembled and where this one number must never be.
-
-- **Asked gates** vs **not asked** — how the radar's **reading** keeps five of the ten
-  gates without relaxing the other four, which
-  [ADR-0099](../docs/adr/0099-relaxation-offers-the-searchers-own-asks.md) forbids. `gates.asked_on`
-  names the set per surface — every surface asks all ten but `RADAR`, which asks `BLOCKED`,
-  `HELD_ACCOUNT`, `ACCOUNT_INACTIVE`, `GENDER_PREFERENCE` and `NOT_RATED`, with
-  `OUTSIDE_RADIUS` as the reach — and `gate_of` steps over a gate the surface does not ask
-  **without evaluating it**, never evaluating and overruling it. The histogram keeps ten keys
-  on every surface, so a reading records a **zero** under each gate it did not ask, which the
-  telemetry reads as *not asked* on a `RADAR` row and never as *nobody was excluded*
-  ([ADR-0174](../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md) §3).
-  What follows the gates on a reading is `domain/radar.py`: everyone admitted is scored,
-  everyone scored is drawn, the floor is computed and not applied, and the order is the
-  printed distance then the id. _Avoid_: "relaxed" for a gate the radar drops, and a
-  `SearchContext` field carrying the set — it is derived from the surface so a context
-  cannot say one thing about its surface and another about its gates.
-
-- **Scores under one ruler** — `SearchSurface.scores_under_one_ruler`, true of the deck and
-  the reading and false of the three that take a mode from the request. The one place the
-  record's invariant and the context's stood-down terms read *which surfaces have no mode*;
-  the `search` table's two check constraints (`0027`) cannot read it and spell the surfaces
-  by name, and `tests/unit/test_search_store.py` holds that spelling to the property, so a
-  surface added to one and not the other goes red. The deck's own ledgers are shared the
-  same way: `application/deck_exclusions.py` holds the four reads behind the deal's
-  exclusions once, built once per request and handed to both use cases, and a reading asks
-  it **only for the chip** — `pool.want_to_play_you` is the deck's number by the deck's
-  rule, over a generation re-run under the deck's surface — and never for who it draws.
-  _Avoid_: "the deck's" as the test for a null mode, which is now half the truth.
-
 - **Tail reader** — `CandidateIndexTail`, the **candidate index's only writer**. It
   subscribes to `event_store` in `sequence_no` order and **not** to the outbox, and the two
   are different subscriptions with different guarantees
@@ -630,62 +546,13 @@ there; they are not repeated here.
   two cadences are configuration. _Avoid_: putting the ladder in `config.py`, or `index_stale`
   on the wire — §18 itself says the player sees nothing at that rung.
 
-- **Ephemeral store** — the module's Redis, holding the **exposure ledger** and the
-  **suppression ledger** and nothing else. The rule that separates it from every durable
-  store is one sentence: **the gate is the cache; the evidence is the row.** A fact that must
-  survive is a durable row elsewhere — *who was shown to whom* is answered by the search
-  record, *were these two ever passed on* by the durable pass record, which is exactly the
-  fact a TTL destroys
-  ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
-  [ADR-0128](../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)). Its
-  **address** is configuration (`REDIS_URL`); **neither TTL is** — `PASS_SUPPRESS` is a
-  product number in the released ruleset and `EXPOSURE_RETENTION_WEEKS` is in
-  `matchmaking/domain/ledgers.py`, because both decide what can still be asked. _Avoid_:
-  "cache" alone for it — half of what a cache implies is *recomputable*, and neither ledger
-  is.
-- **Interest ledger** — the module's own **durable** ledger of every live *Let's play*,
-  and the counterweight to the ephemeral store above: it is a table, not a Redis key,
-  because it is the one thing in this context a human would miss. Two shapes are
-  structural rather than remembered. It has **no method that answers *who has said yes to
-  me***: the lift's read (`days_ago_towards`) takes the candidate population it may answer
-  about, so an inbox is not a query the port can express
-  ([ADR-0109](../docs/adr/0109-a-read-back-names-what-it-withholds.md)). And every read is
-  **bounded by `now`**, so a lapsed yes is invisible whether or not the expiry loop has run
-  — *lapsed* and *never sent* are one answer at this seam. It does not fail soft: unlike
-  exposure and suppression it can **admit** somebody, so a lost read is a person the
-  product guaranteed a place and silently dropped. `INTEREST_TTL` and
-  `OUTSTANDING_INTEREST_CAP` are ruleset rows and only the sweep's cadence is
-  configuration. _Avoid_: a `state` or `expired_at` column — a yes is live or gone
-  ([ADR-0127](../docs/adr/0127-a-signal-expires-or-is-refused-never-quietly-decays.md)).
-- **The origin key's columns** — `origin_search_id` and `origin_position` on the
-  `interest` row. The **term** is the root glossary's
-  ([`../CONTEXT.md`](../CONTEXT.md)) and is not restated here; what is technical is
-  where it lives and how it is filled. **Two columns, never a third table** — the link
-  is 1:1, and when `matches` lands the chain is `match ← interest ← search`, still
-  foreign keys. The position is read off the cited search's own **returned** rows rather
-  than sent by the client, so it is true by construction, and a citation that cannot be
-  proved raises `origin_search_not_found` rather than writing a null. _Avoid_: making
-  either column nullable "for now" — the whole value of the key is that *interests per
-  search* has no missing rows.
-- **Fail-soft ledger** — how *exposure and suppression fail soft* stops being prose.
-  `FailSoftExposureLedger` and `FailSoftSuppressionLedger` wrap any implementation and
-  degrade every operation to the **empty answer**, and the composition root never hands out
-  an unwrapped adapter. It is a wrapper rather than a `try` per adapter method, because an
-  adapter that swallows its own failures makes *the store answered nothing* and *the store
-  could not be reached* indistinguishable — and rather than a `try` per call site, because
-  that is a discipline, which is what `application/outward_reads.py` refuses for the five
-  outward ports. Applying ADR-0095's *a gate that cannot be evaluated excludes* here would
-  **empty the deck rather than protect anybody**. _Avoid_: reading it as a general resilience
-  wrapper — it is safe **only** because neither ledger is evidence for anything, and it would
-  be indefensible around `BlockQuery`.
-- **Exposure roll** — the hourly `PeriodicJob` that publishes, per sport, what *shown more
-  often than most* means this week. It is the first job in `app/bootstrap/jobs.py` that takes
-  **no database session**. Despite §14.5's name it **rolls no bucket**: the week is derived
-  from `now`, so next week's key starts empty and this week's expires on its own — the same
-  argument that struck the newcomer-window loop. It is idempotent and safe beside itself
-  because it is a **reader** that writes one derived scalar. _Avoid_: adding bucket
-  management to it — a job whose name promises work it does not do is a job somebody adds the
-  work back into.
+- **Ephemeral store** — the process's Redis, holding a room's **live channel** and its
+  **typing roster** and nothing else. Every message is a durable row before anything is
+  published, so an unreachable store costs a room its liveness and never anybody their
+  message ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
+  ADR-0147). Its **address** is configuration (`REDIS_URL`). The matcher's exposure and
+  suppression ledgers were its first readers and went with the searches (#579). _Avoid_:
+  "cache" alone for it — nothing here is recomputed from anything.
 - **Nudge** — one of the live channel's **two** frames, and the one that says a room moved:
   `{v, conversation_id, last_seq}`, and never content
   ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)

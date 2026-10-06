@@ -9,8 +9,9 @@ is what a city looks like. A realistic launch draw reaches a full court only by
 luck, and an honestly-modelled 100%-newcomer launch leaves the protagonist's pool
 nearly empty — a true fact about launch and a useless screen.
 
-That is why this is **not** ``scripts/ruleset_diff/population.py`` with different
-numbers, and why it may exist beside it without disturbing
+That is why this was **not** the ruleset corpus's population
+(``scripts/ruleset_diff/``, gone with the searches, #579) with different numbers,
+and why it could exist beside it without disturbing
 [ADR-0121](../../../docs/adr/0121-a-fixture-stands-for-a-comparison-never-for-a-city.md).
 That corpus is a **comparator**: it orders two rulesets over one population and
 prints on its own report that it cannot tell you what the empty-result rate *is*.
@@ -392,11 +393,9 @@ RINGS: Final = (
 EVERY_NTH_PLAYS_BOTH_SPORTS: Final = 3
 PLAYS_BOTH_SPORTS_AT: Final = 0
 
-#: Every n-th member has opted out of proposals. ``gates.py`` gates
-#: ``SearchInitiation.ENGINE`` only — *that gate gates the push, not the person*
-#: — so these are **full candidates in a search a human ran** and absent from
-#: the engine's fill. A unit test proves the gate; only a fixture proves the two
-#: screens differ, and somebody who has never seen one reads that as a bug.
+#: Every n-th member has opted out of proposals. The searches' gate that read the
+#: opt-out went with the searches (#579); the opt-out itself goes with #581, and
+#: until then these members are an ordinary part of the crowd.
 EVERY_NTH_HAS_OPTED_OUT: Final = 5
 HAS_OPTED_OUT_AT: Final = 1
 
@@ -432,19 +431,15 @@ SHARED_CELLS_FLOOR: Final = 2
 #: and most of her week, rather than the floor of two cells and the one lucky
 #: tag everybody else is drawn with.
 #:
-#: **The arm this fixture was missing, and the one that makes ⚡ a choice.**
-#: Every other rule here widens the population *away* from her; nothing drew
-#: anybody *towards* her, so the only rows clearing ``QUALITY_FLOOR`` against
-#: her were the named accounts of ``catalog.py`` and ``relationships.py`` —
-#: which are her **controls**, and therefore identical to each other and to her
-#: on level, week, tags and address. Nine of them in one pool is nine
-#: candidates at one μ: the evenest four is a tie between clones, so the engine
-#: returned one court and one forecast whatever the search asked for, and a
-#: developer reads that as a broken engine rather than as a fixture with no
-#: second answer in it.
+#: **The arm this fixture was missing.** Every other rule here widens the
+#: population *away* from her; nothing drew anybody *towards* her, so the
+#: searches this was first drawn for (gone, #579) found only her controls —
+#: identical to each other and to her on level, week, tags and address — and a
+#: crowd at one μ gives the balance forecast nothing to say. It stays because
+#: the Games deck, Fill in and posting deal from the same crowd.
 #:
 #: A close match is drawn on level like everybody else — the point is a rival
-#: to the clone block that is **not** a copy of it, so the four ⚡ fills differ
+#: to the clone block that is **not** a copy of it, so the courts dealt differ
 #: in strength and the balance forecast has something to say. Half the
 #: population, because a court is four people and the arms above remove most of
 #: any given member: opted out, gender-gated, no shared week, too far.
@@ -1073,7 +1068,7 @@ def _named(members: Sequence[CohortMember]) -> tuple[CohortMember, ...]:
     trade the module note already makes for the draws, and the reason the
     handles are zero-padded.
 
-    The pool is disjoint from the catalog's and the relationships' by surname
+    The pool is disjoint from the catalog's by surname
     (``catalog.FIRST_NAMES``), so no cohort member can ever collide with a named
     account however either list grows.
     """

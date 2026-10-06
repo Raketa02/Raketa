@@ -5,11 +5,11 @@ nudge buys is that somebody's phone finds out **now** rather than when they next
 open the screen — and a bus that is down may cost a room its liveness, but it may
 never cost anybody their message.
 
-**One wrapper at one seam**, for the reason ``fail_soft_ledgers.py`` gives at
-length: a ``try`` inside the adapter makes *the bus said nothing* and *the bus
-could not be reached* indistinguishable from outside, and a ``try`` at each call
-site makes the posture a discipline. The composition root never hands out an
-unwrapped publisher, so there is no call site that could forget.
+**One wrapper at one seam**: a ``try`` inside the adapter makes *the bus said
+nothing* and *the bus could not be reached* indistinguishable from outside, and
+a ``try`` at each call site makes the posture a discipline. The composition
+root never hands out an unwrapped publisher, so there is no call site that could
+forget.
 
 **It catches broadly, deliberately.** A store that raises and a store that
 answers something impossible are the same event to a courtesy, and the log line
@@ -41,10 +41,10 @@ class FailSoftNudgePublisher:
         try:
             await self._inner.nudge(nudge)
         except Exception:
-            # Warning rather than error, on `fail_soft_ledgers`' argument: a bus
-            # restarting is an expected state and nothing is broken for the
-            # player, who keeps reading the room. It is not info either — a chat
-            # that silently stopped being live must not read like a quiet one.
+            # Warning rather than error: a bus restarting is an expected state
+            # and nothing is broken for the player, who keeps reading the room.
+            # It is not info either — a chat that silently stopped being live
+            # must not read like a quiet one.
             logger.warning(
                 "the live channel is unavailable, the room is not live",
                 extra={

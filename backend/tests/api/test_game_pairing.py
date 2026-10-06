@@ -47,7 +47,6 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
-from sqlalchemy import func, select
 
 from app.bootstrap.composition import (
     build_balance_forecasts,
@@ -59,7 +58,6 @@ from app.kernel import Sport, instant
 from app.modules.games.application.commands import VacateSeatCommand
 from app.modules.games.application.vacate_seat import VacateSeat
 from app.modules.games.domain.lineup import GameKind
-from app.modules.matchmaking.infrastructure.search_model import SearchORM
 from app.modules.proposals.domain.deck import Sides
 from tests.api import players_world as players
 
@@ -128,11 +126,9 @@ def _without_the_trace(response) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def test_the_pairing_answers_with_no_search_in_existence(
-    client, session_factory
-):
-    """**The forecast straight from the Levels** (#575). Nothing in this
-    database was ever searched for, and the process holds no candidate index —
+async def test_the_pairing_answers_straight_from_the_levels(client, session_factory):
+    """**The forecast straight from the Levels** (#575). There is no search on
+    this platform any more (#579), and the process holds no candidate index —
     and the game screen still draws its forecast, its split, its stakes and four
     Levels, because the court is read side against side and nothing else."""
 
@@ -141,9 +137,6 @@ async def test_the_pairing_answers_with_no_search_in_existence(
 
     response = await _pairing(client, four["me"]["token"], game_id)
 
-    async with session_factory() as session:
-        searches = await session.scalar(select(func.count()).select_from(SearchORM))
-    assert searches == 0
     assert response.status_code == 200, response.text
     body = response.json()
     assert set(body) == {"read_at", "seats", "forecast", "split", "at_stake"}

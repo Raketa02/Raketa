@@ -54,7 +54,6 @@ from app.modules.rating.infrastructure.event_sourced_skill_rating_repository imp
 )
 from app.shared.ids import new_uuid
 from tests.unit.event_log import append
-from tests.api import matchmaking_world as world
 from tests.api import players_world as players
 from tests.api.test_groups import a_club, a_group
 from tests.api.test_groups import join as join_group
@@ -530,12 +529,12 @@ async def test_the_four_refusals_are_byte_identical(
     # come from the live gate rather than from the disclosure. Run against a
     # stranger they would take the same path `never_disclosed` just took, and the
     # sameness below would be a claim about three causes wearing four names.
-    world.hold_only(client, subject)
+    players.hold_only(client, subject)
     held = await record_of(client, searcher["token"], subject)
-    world.hold_only(client)
-    assert (
-        await record_of(client, searcher["token"], subject)
-    ).status_code == 200, "the hold, not the fixture, is what refused"
+    players.hold_only(client)
+    assert (await record_of(client, searcher["token"], subject)).status_code == 200, (
+        "the hold, not the fixture, is what refused"
+    )
     blocked_by = await players.block_between(client, searcher["token"], subject)
     assert blocked_by.status_code == 204, blocked_by.text
     blocked = await record_of(client, searcher["token"], subject)
@@ -553,7 +552,7 @@ async def test_the_held_reader_is_refused_by_the_same_line(
     route's one refusal rather than as a second thing to draw."""
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
-    world.hold_only(client, searcher["id"])
+    players.hold_only(client, searcher["id"])
 
     response = await record_of(client, searcher["token"], subject)
 
@@ -565,7 +564,7 @@ async def test_a_held_player_can_still_read_their_own_record(client, searcher):
     """The one screen that tells somebody how they appear is the one a penalty
     must not close: *a penalty nobody can look up is a penalty nobody can fix.*"""
 
-    world.hold_only(client, searcher["id"])
+    players.hold_only(client, searcher["id"])
 
     response = await own_record(client, searcher["token"])
 
@@ -576,7 +575,7 @@ async def test_an_account_that_may_not_be_shown_is_refused(
     client, session_factory, searcher
 ):
     subject = await a_member_of_their_group(client, session_factory, searcher)
-    world.may_not_show(client, subject)
+    players.may_not_show(client, subject)
 
     response = await record_of(client, searcher["token"], subject)
 

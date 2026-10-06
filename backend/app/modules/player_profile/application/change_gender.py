@@ -13,8 +13,8 @@ open* reachable from this route at all. Nothing is re-validated: a ``Gender``
 is a closed set the boundary selected from, and ``PREFER_NOT_TO_SAY`` is an
 answer like the others.
 
-The candidate projection follows ``GenderChanged`` as it always has, so the
-mutual gate reads the new answer on the next search either side runs.
+The mutual gate reads the new answer live, the next time the proposer, the fill
+or a rescue asks it of a pair.
 """
 
 from __future__ import annotations

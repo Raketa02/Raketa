@@ -1,30 +1,23 @@
-"""The mutual gender gate, as one predicate. **Three callers, one rule.**
+"""The mutual gender gate, as one predicate. **One rule, wherever it is asked.**
 
 ``docs/adr/0096`` makes the gate mutual — a pairing is admissible only if each
-side passes the other's preference — and the rule was written once, in
-``matchmaking.domain.gates``, with a docstring saying why it must stay once:
+side passes the other's preference — and a second implementation of a mutual
+safety gate is exactly the thing that ends up satisfied in one place and not the
+other. So the **judgement** lives here, beside the two enums it reads, where
+every context that holds a profile can call it. Its caller today is
+``proposals``' ``MatcherPlayerFit``, which asks it of every pair on a court the
+proposer, the fill and a rescue would seat; the searches that asked it of an
+index row went in #579.
 
-    the same gate is evaluated in two places … and a second implementation of a
-    mutual safety gate is exactly the thing that ends up satisfied in one place
-    and not the other.
-
-**The send makes three, and it cannot import the first.** The import arrow runs
-``matchmaking -> challenges`` and never back (``.importlinter``), so a send
-re-verifying this gate in its own transaction has no way to reach the matcher's
-copy. Something had to move, and what moved is the **judgement**: it lives here,
-beside the two enums it reads, where every context that holds a profile can call
-it.
-
-**The reading stayed with each caller**, and that is the whole of the split. The
-docstring's fear is about the *rule*, not about the source: the matcher reads a
-candidate off an index row whose fields are strings from a log that outlives this
-deployment, and the send reads live profiles because a safety gate must never be
-evaluated on a stale copy. Two readers, two failure modes, one verdict.
+**The reading stays with each caller**, and that is the whole of the split: a
+caller reads the two people's answers from wherever it holds them, and a safety
+gate must never be evaluated on a stale copy. Two readers would be two failure
+modes and still one verdict.
 
 **This is not the gate moving into the vocabulary.** ``gender.py`` fences the
 comparison out of itself so that the module ``app/engines/matchfit/`` imports
 carries no matching rule; that fence is intact, because nothing here is imported
-by the vocabulary and the engine still never sees a gender. What is here is a
+by the vocabulary and the engine never sees a gender. What is here is a
 predicate over two people's answers, in the context that owns the answers.
 """
 
@@ -56,10 +49,9 @@ def preferences_are_mutual(
       gender at all, which is why an unanswered question costs nothing until
       somebody's safety setting depends on it.
 
-    It takes four scalars rather than two people, because the two sides arrive
-    from different places in every caller — an index row against a live profile,
-    or two live profiles — and a signature that accepted a *person* would be one
-    a caller could pass the wrong kind of person to.
+    It takes four scalars rather than two people, because the two sides may
+    arrive from different places, and a signature that accepted a *person*
+    would be one a caller could pass the wrong kind of person to.
     """
 
     if one_preference is None or other_preference is None:

@@ -245,8 +245,7 @@ async def the_store_answers(photos: PhotoStorage) -> bool:
     that quietly wrote no photographs would leave a developer looking for the
     shield on a card that never had one. So the question is asked once, the
     photographs are skipped when the answer is no, and the run says so on its
-    report — the same trade the pass's suppression already makes about Redis,
-    and for the same reason (``app/seeds/pairs.py``).
+    report.
 
     **It catches broadly, deliberately**, exactly as ``fail_soft_ledgers`` does:
     a store that refuses a connection, one that times out and one that answers
