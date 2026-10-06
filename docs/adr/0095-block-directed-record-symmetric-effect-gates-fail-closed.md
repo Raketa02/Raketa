@@ -2,6 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-08-26
+- **§2's event table, §3, §7 and §8 amended 2026-10-06 by [ADR-0193](0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)**: a block keeps two people
+  off one court, and groups, Members lists, the record and chats already shared are untouched. It
+  takes back the blocker's yeses where the other person is In until the club confirms, and never
+  touches a confirmed booking. A response may carry the reader's own blocks, never anyone's block
+  of the reader. No surface is recorded (`blocks.player_blocked` v2). §2's *neither party can ever
+  discover which way it went* now holds of the blocked party only.
 
 ## Context
 

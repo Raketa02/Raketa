@@ -2,6 +2,10 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-08
+- **§4–§5 and the 2026-10-02 amendment narrowed 2026-10-06 by [ADR-0193](0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)** §2: a block is no
+  longer a gate a record is admitted under, in either direction. The blocker opens the record to
+  unblock, and the blocked person's read is the same byte for byte whether or not they were
+  blocked. The other gates and their one refusal stand.
 - **The 2026-09-08 sportsmanship amendment's split amended by [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §5** — the
   figure and its count cross to the subject too, `SubjectSportsmanship` has one method,
   `sportsmanship_band` retires from the record and the invariant beside `is_self` with it.

@@ -2,6 +2,8 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-25
+- **§10 superseded 2026-10-06 by [ADR-0193](0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)** §2: a block hides nobody in a Members list, in either
+  direction, for a member or for whoever runs the group. *Counts don't change* stands.
 - **§7–§8 narrowed 2026-10-04 by [ADR-0191](0191-the-club-answers-its-official-groups-requests-and-a-removal-is-emailed.md)**: an Official group's **club answers its
   Join requests too, at any time**, beside whoever runs it, and edits nothing in it; a Handover moves
   which Administrator answers.

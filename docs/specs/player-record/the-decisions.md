@@ -91,6 +91,11 @@ decides who may be seen. Without this rule a subject rated in squash but opened 
 context has no index row, the gender gate cannot be evaluated, *a gate that cannot be
 evaluated excludes*, and the route refuses somebody the reader demonstrably just saw.
 
+> **2026-10-06,
+> [ADR-0193](../../adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+> §2:** a block is no longer one of these gates, in either direction, nor one of the refusals
+> below.
+
 **One refusal, and it names nothing.** *Never disclosed to you*, *blocked*, *held* and *no
 such player* return the same thing, byte-identical. On screen it is one line — **"This record
 isn't available."** The indistinguishability is the feature: a payload naming the gate

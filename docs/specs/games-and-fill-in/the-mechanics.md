@@ -118,7 +118,9 @@
 - **Intent.** The first time a member opens Games for a sport without an intent, the app asks
   once, inline: *Competitive / For fun / Either*. Nothing else is blocked. The answer is the
   existing per-sport Play intent, changeable later.
-- **Blocks.** Two players who blocked each other are never on the same card, in any group.
+- **Blocks.** Two players, either of whom blocked the other, are never on the same card, in any
+  group. Blocking somebody takes back your yeses where they are In, until the club confirms; your
+  booked games stay ([ADR-0193](../../adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
 - **Gender preference** and the level gates of today's engine apply as they do today.
 
 ### 4.2 Weekly hours (availability)
@@ -1036,7 +1038,7 @@ No notification is ever sent for a single swipe.
 | The club cancels a booked game | Called off; full refund; nobody's record; a new card first. |
 | The club changes its prices | Only new cards carry the new price. |
 | You leave a group | Your yeses there are withdrawn. Your booked games stay. |
-| Somebody you blocked | Never on a card with you. |
+| Somebody you blocked | Never on a card with you. Your yeses where they are In are taken back, until the club confirms. Your booked games stay. |
 | Someone doesn't turn up | Reported in the result; 24 h to dispute; strongest mark; no levels move ([§15.3](#153-no-shows)). |
 | The club checked someone in | They cannot be reported as a no-show. |
 

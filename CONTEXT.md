@@ -600,33 +600,40 @@ of the code because this file asks for them in that order.
 
 ### Blocks (`backend/app/modules/blocks/`)
 
-One player deciding they do not want to be shown another, ever again. Settled by
+One player keeping another off their games. Settled by
 [ADR-0095](docs/adr/0095-block-directed-record-symmetric-effect-gates-fail-closed.md) and
-**built**: the aggregate, its two events, the `BlockQuery` port and two routes. The surfaces
-that will consult the port do not exist yet, which is why it is wired and has no caller.
+amended by [ADR-0193](docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md):
+**a block keeps two people off one court, and the blocker can see it.** **Built**: the aggregate,
+its two events, the `BlockQuery` port and two routes, read by the new games' pair rule. **Still to
+build** ([#586](https://github.com/Raketa02/Raketa/issues/586)): the request without a surface,
+`blocks.player_blocked` v2, Blocked players, the record's own-block fact and the withdrawal of
+filling yeses. Until then, the code also still hides a blocked pair in Members lists and refuses the
+record on a block, which ADR-0193 §2 undoes.
 
 - **Block** — an **event-sourced aggregate**, one stream per **ordered** `(blocker, blocked)`
   pair, with a deterministic stream id derived from that pair. **The record is directed; the
   effect is symmetric.** `A → B` and `B → A` are two independent blocks, so one being lifted
-  never lifts the other.
-- **Blocker** / **blocked** — the two sides of the ordered pair. The words name the *record*,
-  never an experience: neither party can discover which way it went.
+  never lifts the other. What it reaches is **one court**: a blocked pair, either way, is never
+  dealt a version together, never both **In**, never offered each other's **Rescue** and never
+  joined onto each other's **Post**. _Avoid_: hide, mute, ban — it hides nobody.
+- **Blocker** / **blocked** — the two sides of the ordered pair. The blocker can see their own
+  block. The blocked person can never discover it.
+- **Own block** — a block the reader made: the only kind of block a response may carry. Two reads
+  carry it, **Blocked players** (the caller's own blocks, each with the person's name, photo and
+  when) and the **player record** (whether the reader blocked its subject). _Avoid_: a field that
+  answers *either way round*, which would tell the blocked person.
 - **Block events** (durable name / version):
-  - **PlayerBlocked** — `blocks.player_blocked` / v1 — the pair and the surface it was made
-    from. **No reason, and no free text.**
-    - **Block surface** — which of the four screens that show one player to another the block
-      was made from: `SHORTLIST`, `LINEUP`, `FILL_SEATS`, `DECK` — the same roster
-      [`search-telemetry.md`](docs/specs/matchmaking/search-telemetry.md) §2 calls **Surface**,
-      and deliberately not extended. Client-asserted context recorded beside the fact; **no
-      rule reads it**, in the shape of the Play intent surface. Unblocking records none,
-      because it happens in one place.
+  - **PlayerBlocked** — `blocks.player_blocked` / v2 — the pair. **No reason, no free text, and no
+    screen.** v1 also named which of the old loop's four screens the block was made from. It still
+    folds: that field is read and dropped, and nothing in the store is rewritten.
   - **PlayerUnblocked** — `blocks.player_unblocked` / v1 — the pair.
-- **BlockQuery** — the port that answers *is either of these two blocked by the other*. One
-  port, consulted by every surface that shows one player to another, in two shapes: the
-  searcher's whole **exclusion set** for generation, and the **pairwise** question for
-  re-verifying a row before a response leaves. **It fails closed** — it raises rather than
-  answering *nobody is blocked* when it cannot read the state, because an empty answer it
-  cannot stand behind is a safety control switching itself off under load.
+- **BlockQuery** — the port that answers *is either of these two blocked by the other*, read by the
+  one pair rule every route onto a court asks (Proposals' **PlayerFit**). It answers in two shapes:
+  a player's whole **exclusion set**, and the **pairwise** question. From #586 a third, **directed**
+  read answers own blocks, and is only ever asked with the reader as the blocker. **It fails
+  closed**: it raises rather than answering *nobody is blocked* when it cannot read the state,
+  because an empty answer it cannot stand behind is a safety control switching itself off under
+  load.
 - **Hold** — the platform stopping a player from starting anything new while an unsettled case
   is open against them. A **held account** is an account under a Hold. Nothing can place one
   today, because the `cases` context does not exist.
@@ -645,15 +652,24 @@ that will consult the port do not exist yet, which is why it is wired and has no
   reason for a block is ever wanted, it belongs to a Report and not to a Block.
 
 **Invariants**
-- **A block works both ways, immediately and silently.** Each disappears from the other's view
-  on every surface where the platform shows one player to another. Neither is notified, and no
-  response shape can carry a block or a decline — asserted by a test, not by review.
-- **A block is forward-looking.** It removes each from the other's *future* proposals and
-  listings. It does not reach into a game already agreed or a chat already open; what it does
-  to an open **Challenge** is a demand on the unbuilt `challenges` context, not a decision
-  this context makes.
+- **A block keeps two people off one court, and reaches nothing else.** Groups, Members lists, the
+  player record, booked games and chats already shared are untouched. Both stay in the group, see
+  each other in its Members list and can open each other's record. Hiding a member of a crowd
+  everybody can see would itself be the tell.
+- **Nobody is shown that they were blocked; you can see your own blocks.** A response may carry
+  the reader's own blocks, never anyone's block of the reader, which a test over the emitted
+  contract asserts. Nothing the blocked person reads names a block, and their read of the
+  blocker's record is the same byte for byte whether or not they were blocked. A yes that would
+  pair them is refused without saying why, and nobody is notified of a block or an unblock.
+- **A block takes back the blocker's yeses until the club confirms, and never touches a
+  confirmed booking.** Where the blocked person is In, picks and posts alike, the blocker's yes
+  goes: on a proposal still filling by the ordinary **Withdraw**, silently, and on a booking
+  waiting for the club as if they left it, so the others In are told they left. Either way it is
+  free, and nothing says why. The blocked person's yes stands. A booking the club confirmed stays
+  as it is, and leaving it is the ordinary Leaver rule. **Unblocking brings no yes back.**
 - **Blocking is idempotent, and blocking yourself is an error.** A second block appends
-  nothing, in the shape of `disable()`; a self-block raises rather than no-ops.
+  nothing, in the shape of `disable()`; a self-block raises rather than no-ops. Unblocking lifts
+  only the caller's own block and never 404s.
 - **No cap, no cooldown, no rate limit.** Friction on the one control a person has is a tax
   paid to solve a problem the platform does not have.
 - **Erasure reaches both sides.** Erasing a player erases every stream they appear in, on
@@ -1938,7 +1954,7 @@ every fact read through the owning context's published port, and one rule of its
   up can watch the penalty lift. Two rows today, `player_score`'s two live strands, read
   through that context's published port and never recomputed here. **The weights are not on the
   wire**: they are a fact about how the number is made rather than about the person.
-- **The disclosure's partition** — the sport a disclosure happened in. The four fail-closed
+- **The disclosure's partition** — the sport a disclosure happened in. The fail-closed
   gates are re-run live on every open **in that sport's partition** and never in whichever
   sport the reader arrived from, because the mutual gender gate reads an index row and the
   index is keyed by sport. A subject rated only in squash has no padel row, and *a gate that
@@ -1949,10 +1965,13 @@ every fact read through the owning context's published port, and one rule of its
 - **A record is read through a prior disclosure, never about a person.** Otherwise a route
   taking a player id is a player-enumeration endpoint, and a UUID being hard to guess is not
   an authorization model.
-- **The four refusals are one refusal, byte for byte.** *Never disclosed*, *blocked either
-  way*, *held* and *no such player* answer with the same status and the same body. Naming the
-  gate delivers a block to the person it was meant to be invisible to; separating *never
-  disclosed* from *no such player* answers *is this id real* about a stranger.
+- **The refusals are one refusal, byte for byte.** *Never disclosed*, *held* and *no such
+  player* answer with the same status and the same body. Naming the gate tells a reader
+  something about a person they may not be shown; separating *never disclosed* from *no such
+  player* answers *is this id real* about a stranger. **A block is not among them**, in either
+  direction ([ADR-0193](docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+  §2, from #586): the blocker opens the record to unblock, and the blocked person's read is the
+  same whether or not they were blocked.
 - **The gate runs before any provider is touched.** A read that fetched a stranger's handle
   and photograph and *then* refused would have done the lookup the rule exists to prevent.
 - **The server says whether a record is the reader's own.** The client never derives it by
@@ -2124,8 +2143,9 @@ decides how they will (Part 2, and the note under **Conversation**).
   Member** — somebody on a court right now — which it is not, and must never be shortened to where
   the two could meet. Counted in *N members*, including an Administrator who joined as a player; a
   club's *Players* figure is the same count. **Nobody removes a Group member** — a member leaves,
-  and may rejoin under the group's rule. A **blocked** pair, either way, is left out of each other's
-  Members lists; counts never change for it. _Avoid_: bare *member* wherever a conversation could
+  and may rejoin under the group's rule. **A Block hides nobody from a Members list**
+  ([ADR-0193](docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+  §2, from #586), and counts never change. _Avoid_: bare *member* wherever a conversation could
   be meant, follower, participant.
 - **Join policy** — who gets in: **Anyone** (the default: joining admits at once) or **People I
   approve** (joining creates a Join request). **Switching to Anyone admits everyone waiting.** An
