@@ -44,6 +44,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { LEAVE_THE_GAME } from '@/features/proposals/types';
 
 import { challengeErrorMessage } from './challengeErrorMessage';
 import {
@@ -54,7 +55,6 @@ import {
   REMOVING,
   removeRefusalMessage,
 } from './challengeDetailPresentation';
-import { LEAVE_THE_GAME } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
 const TOMEK = 'bbbbbbbb-0000-4000-8000-000000000002';

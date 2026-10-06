@@ -59,7 +59,6 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { balanceLabel, balanceTone, balanceWord } from '@/features/play/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { offlineMessage, type AppError } from '@/shared/errors';
 import { formatDistanceKm, formatPercent } from '@/shared/formatting/ratingFormat';
@@ -75,6 +74,7 @@ import {
   ScreenHeader,
   theme,
 } from '@/shared/ui';
+import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { foldOf, peopleOn, refusalOutcome, rowsOf, type DeckPerson } from '../domain/deck';

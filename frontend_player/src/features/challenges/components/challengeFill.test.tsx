@@ -51,10 +51,10 @@ import {
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
+import { LEAVE_THE_GAME } from '@/features/proposals/types';
 
 import { standingLine } from './challengePresentation';
 import { FILL_THE_SEATS, REMOVE_THE_CHALLENGE } from './challengeDetailPresentation';
-import { LEAVE_THE_GAME } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
 const BEA = 'bbbbbbbb-0000-4000-8000-000000000002';

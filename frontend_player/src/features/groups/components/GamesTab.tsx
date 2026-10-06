@@ -24,16 +24,15 @@
  * court in the app draws, the photograph or the poster behind it, the dashed ring for a seat
  * nobody is in — at `groupPage.seat`. The mocks draw circles; this app has no round face
  * (#338 refused an avatar), so they are the face's own box. The row is **one element** to a
- * listener, play's court summary — *Padel, 1 of 4 seats filled.* — so this row and the Friends
+ * listener, the court summary — *Padel, 1 of 4 seats filled.* — so this row and the Friends
  * court say a court's seats one way: the faces carry no name a sentence could not say better, and
  * the headline has already said who is missing. *3 of 4* is a count and is drawn in mono (1.4).
  */
 
 import { StyleSheet, View } from 'react-native';
 
-import { SeatFace } from '@/features/play/types';
 import { GamesDeck } from '@/features/proposals/types';
-import { courtSeatCount, theme } from '@/shared/ui';
+import { courtSeatCount, SeatFace, theme } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group } from '../domain/group';

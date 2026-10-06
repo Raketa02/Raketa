@@ -44,6 +44,15 @@
 # where the grep is proved still to fire, in both directions, because a one-way edge that
 # has quietly become a wall is as wrong as one that has become a door.
 #
+# And three features are fenced off from everything that ships, while #576 takes them out:
+#
+#   @/features/play, @/features/challenges, @/features/plans
+#                                                → only from each other and OLD_LOOP_SURFACES
+#
+# The old loop is deleted whole, which is only safe while nothing live reaches into it (#574).
+# The fence is lifted one layer at a time, so each exemption is probed with that layer's other
+# bans as well: a block that dropped them would be an old file free of every rule at once.
+#
 # Each ban was added to a tree that already satisfied it, so not one of them has
 # ever been seen to fail — and a rule that has never fired is indistinguishable
 # from one that cannot. A renamed directory, a `files` glob that stops matching,
@@ -204,7 +213,8 @@ PREFERENCES_OTHER='src/shared/lib/preferences/index.ts'
 WIRE_LAYER='src/features/onboarding/api/placeholder.ts'
 
 # The one-way edge's four sides: the three layers of `features/games` the ban has to reach,
-# and the feature on the permitted side of it.
+# and the feature on the permitted side of it. The plans and challenges screens are inside the
+# old loop's fence, which is lifted for them; the edge is about two features, not about it.
 GAMES_SCREEN='src/features/games/components/Placeholder.tsx'
 GAMES_WIRE='src/features/games/mappers/placeholder.ts'
 GAMES_DOMAIN='src/features/games/domain/placeholder.ts'
@@ -398,11 +408,11 @@ expect_allowed @/features/games/types "$PLANS_SCREEN"
 expect_allowed @/generated/schema "$GAMES_WIRE"
 expect_blocked @/generated/schema "$GAMES_SCREEN" "api/ or mappers/"
 expect_blocked react-native "$GAMES_DOMAIN" 'pure TypeScript'
-# The two declared edges the other way out of `games` (#415): the forecast block cites Play's
-# balance words through its public surface, and the players card opens `player_record`'s
+# The declared edge the other way out of `games`: the players card opens `player_record`'s
 # sheet. Asserted so a later hand widening the one-way ban into "games imports no feature"
-# goes red here rather than at the first `pnpm lint` after it.
-expect_allowed @/features/play/types "$GAMES_SCREEN"
+# goes red here rather than at the first `pnpm lint` after it. Its other edge (#415), into
+# Play's balance words, is gone — they are `shared/vocabulary`'s since #574 — and the old
+# loop's fence refuses it, below.
 expect_allowed @/features/player_record/types "$GAMES_SCREEN"
 # And the deep path is still what it always was: a feature never reaches past another's types.ts.
 expect_blocked @/features/play/components/balancePresentation "$GAMES_SCREEN" 'types.ts'
@@ -410,6 +420,65 @@ expect_blocked @/features/play/components/balancePresentation "$GAMES_SCREEN" 't
 # `player_record`'s public surface, and nothing deeper.
 expect_allowed @/features/player_record/types "$CHALLENGES_SCREEN"
 expect_blocked @/features/player_record/hooks/useOwnFace "$CHALLENGES_SCREEN" 'types.ts'
+
+echo
+echo "the old loop — nothing that ships imports features/play, challenges or plans (#574)"
+LIVE_SCREEN='src/features/proposals/components/Placeholder.tsx'
+LIVE_PAGE='src/features/groups/components/Placeholder.tsx'
+LIVE_DOMAIN='src/features/proposals/domain/placeholder.ts'
+LIVE_WIRE='src/features/proposals/mappers/placeholder.ts'
+LIVE_TEST='src/features/proposals/components/placeholder.test.tsx'
+LIVE_ROUTE='src/app/(app)/(tabs)/play/group/placeholder.tsx'
+# A shell file beside the listed ones, and a play route beside the listed ones: the
+# exemption names files, so a sibling is as fenced as any other live file.
+SHELL_SIBLING='src/features/shell/components/PlayScreen.tsx'
+OLD_ROUTE_SIBLING='src/app/(app)/(tabs)/play/join.tsx'
+for module in @/features/play/types @/features/challenges/types @/features/plans/types; do
+  expect_blocked "$module" "$LIVE_SCREEN" 'features/proposals'
+  expect_blocked "$module" "$LIVE_PAGE" 'features/proposals'
+  expect_blocked "$module" "$LIVE_DOMAIN" 'features/proposals'
+  expect_blocked "$module" "$LIVE_WIRE" 'features/proposals'
+  expect_blocked "$module" "$LIVE_TEST" 'features/proposals'
+  expect_blocked "$module" "$LIVE_ROUTE" 'features/proposals'
+  expect_blocked "$module" "$GAMES_SCREEN" 'features/proposals'
+  expect_blocked "$module" "$SHELL_SIBLING" 'features/proposals'
+  expect_blocked "$module" "$OLD_ROUTE_SIBLING" 'features/proposals'
+done
+# The bare feature and the relative climb out of a feature, not only the public surface.
+expect_blocked @/features/plans "$LIVE_SCREEN" 'features/proposals'
+expect_blocked ../../challenges/types "$LIVE_SCREEN" 'features/proposals'
+
+echo
+echo "  …and the fence is lifted inside the old loop and on OLD_LOOP_SURFACES alone"
+PLAY_SCREEN='src/features/play/components/Placeholder.tsx'
+PLAY_DOMAIN='src/features/play/domain/placeholder.ts'
+CHALLENGES_WIRE='src/features/challenges/mappers/placeholder.ts'
+PLANS_TEST='src/features/plans/components/placeholder.test.tsx'
+CHATS_TAB='src/features/shell/components/ChatsScreen.tsx'
+ROOM='src/features/conversations/domain/room.ts'
+DISMISSAL='src/features/games/hooks/useDismissGame.ts'
+OLD_ROUTE='src/app/(app)/(tabs)/chats/challenge/[challengeId]/index.tsx'
+OLD_SUITE='src/features/shell/components/theShell.test.tsx'
+expect_allowed @/features/challenges/types "$PLAY_SCREEN"
+expect_allowed @/features/challenges/types "$PLAY_DOMAIN"
+expect_allowed @/features/play/types "$CHALLENGES_WIRE"
+expect_allowed @/features/play/types "$PLANS_TEST"
+expect_allowed @/features/challenges/types "$CHATS_TAB"
+expect_allowed @/features/plans/types "$ROOM"
+expect_allowed @/features/challenges/types "$DISMISSAL"
+expect_allowed @/features/challenges/types "$OLD_ROUTE"
+expect_allowed @/features/play/types "$OLD_SUITE"
+# Lifted one ban wide, in every layer: each exemption still carries its layer's other bans.
+expect_blocked @/generated/schema "$PLAY_SCREEN" "api/ or mappers/"
+expect_blocked @/generated/schema "$CHATS_TAB" "api/ or mappers/"
+expect_allowed @/generated/schema "$CHALLENGES_WIRE"
+expect_blocked react-native "$PLAY_DOMAIN" 'pure TypeScript'
+expect_blocked react-native "$ROOM" 'pure TypeScript'
+expect_blocked expo-location "$PLANS_TEST" 'src/shared/lib/platform'
+expect_blocked expo-location "$OLD_ROUTE" 'src/shared/lib/platform'
+expect_blocked @/features/play/components/DeckScreen "$CHATS_TAB" 'types.ts'
+# And the dismissal is still a `features/games` file: the one-way ban on plans holds there.
+expect_blocked @/features/plans/types "$DISMISSAL" 'ADR-0149'
 
 echo
 printf '%s passed, %s failed\n' "$pass" "$fail"

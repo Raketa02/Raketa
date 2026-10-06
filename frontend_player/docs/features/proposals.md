@@ -28,11 +28,12 @@ then you, then the rest — the one rule every mock (2–8, 10) agrees with; `ri
 (`groups`' game-intent store, which Friends shares) hands in the kind chosen; the read says which
 segments the player's intent shows, and a choice it does not show is read again as the segment it
 does (`resolveKind`, `useGroupDeck`'s second query) — so a For-fun player never lands on an empty
-Competitive deck. No segments at all is no intent declared: Play's `DeclarationInterstitial` replaces
+Competitive deck. No segments at all is no intent declared: `DeclarationInterstitial` replaces
 the deck, reporting `DECK` — the contract's word for a deck, since `PlayIntentSurface` has no value
 for a group's tab — with its own line about who reads the answer, and the answer re-reads the deck.
 
-**The stage is the Players deck's.** `DeckStage` and `DeckAnswers` come through `play/types`, with
+**The stage was built for the Players deck, and lives here.** `DeckStage`, `DeckAnswers` and the
+interstitial moved from `play` with their words in #574, since this is the deck that stays, with
 the two things that differ handed in: the stamps' words (_I'm in_ / _Not this time_, the share after
 _I'm in_ when the yes charges at once) and the three buttons' names (_I'm in_, _Not this time_, _Game
 details_). The stage's cards behind now fade as well as shrink (Q90), for both decks.
@@ -165,7 +166,7 @@ never copied into a store:
   again; a new card brand names You › Payments; anything else is a vote. A yes the card called free
   can still be the last — the others got there first — so the deck's plain yes is read too.
 - **It's a game!** is the yes screen's third face (ADR-0167): its ground, entrance, tiles, `vs`, word
-  role and pills, crossed from `challenges/types` — the faces are **the card the yes was said on**, its
+  role and pills, its own since #574 (`YesGround`, `YesEntrance`, `YesTile`) — the faces are **the card the yes was said on**, its
   rows the sides the booking drew, photographs and all, so nothing is read. An overlay on
   `ModalStage`'s top layer over the whole phone, not a route: it answers wherever the player is ten
   seconds after the swipe, and a route could not carry a card. _Open game_ lays Home down
@@ -359,7 +360,7 @@ _new_ marked. A seat gone before the read says _This seat isn't offered to you a
 
 **_Leave the game_ is at the foot of a booked game's details** (A4.1, details 10; §13), with the line
 saying what leaving costs **now** — the read's `leaving`, folded by the server — and today's _Before
-you leave_ sheet (`challenges`' `LeaveSheet`) with the §13 words: _You'll be refunded 27,18 zł now (the
+you leave_ sheet (`LeaveSheet`, this feature's since #574) with the §13 words: _You'll be refunded 27,18 zł now (the
 0,82 zł card fee isn't returned)…_ before the cut-off, _…when someone takes it; if nobody does, you
 won't be…_ after it, _Nobody has paid yet. Leaving withdraws your yes._ while the club decides. The
 door is `LeaveTheGame`, the group exit's shape: the sheet is the surface while the act is in flight

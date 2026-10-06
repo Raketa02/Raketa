@@ -49,11 +49,11 @@ import {
 } from '@/test-support/transport';
 
 import { FILL_THE_SEAT } from '@/shared/vocabulary/theActsWords';
+import { LEAVE_THE_GAME } from '@/features/proposals/types';
 
 import { SEND_CHALLENGE_LABEL } from '../types';
 
 import { challengeErrorMessage } from './challengeErrorMessage';
-import { LEAVE_THE_GAME } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
 const KASIA = 'cccccccc-0000-4000-8000-000000000003';

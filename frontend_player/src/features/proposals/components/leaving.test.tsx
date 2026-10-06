@@ -11,7 +11,7 @@
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
-import { LEAVE_THE_GAME } from '@/features/challenges/types';
+import { LEAVE_THE_GAME } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { forgetPhonePreferences } from '@/shared/lib/preferences';
 import { queryClient } from '@/shared/lib/query-client';

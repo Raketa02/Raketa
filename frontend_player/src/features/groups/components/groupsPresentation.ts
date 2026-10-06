@@ -14,10 +14,11 @@
  */
 
 import { sportLabel, sportShortLabel } from '@/features/onboarding/types';
-import { courtSummaryLabel, seatLabel, type SeatPlace } from '@/features/play/types';
 import { counted } from '@/shared/formatting/counted';
 import { playerName } from '@/shared/formatting/playerName';
 import { formatDistanceKm, formatLevel } from '@/shared/formatting/ratingFormat';
+import type { SeatPlace } from '@/shared/vocabulary/seatPlace';
+import { courtSummaryLabel, seatLabel } from '@/shared/vocabulary/seatPlacePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
@@ -227,7 +228,7 @@ export function gamesLine(card: GamesCard, sport: Sport, clubName: string): stri
 
 /**
  * *Padel, 1 of 4 seats filled.* — a court's seats, spoken as one element before any seat: the
- * Friends court's summary and the Games card's row of seats alike. It is play's sentence
+ * Friends court's summary and the Games card's row of seats alike. It is the court's own sentence
  * (`courtSummaryLabel`, the-words §20.4), so a group's court and a line-up's say the same thing.
  */
 export function seatsFilledLabel(sport: Sport, filled: number, seats: number): string {
@@ -235,17 +236,17 @@ export function seatsFilledLabel(sport: Sport, filled: number, seats: number): s
 }
 
 /**
- * *Your side, you, level 2,71* — the reader's seat on the Friends court: play's seat sentence, and
- * the Level the seat draws under the face, in the words play's seats say a Level in.
+ * *Your side, you, level 2,71* — the reader's seat on the Friends court: the seat's own sentence,
+ * and the Level the seat draws under the face, in the words a seat says a Level in.
  */
 export function yourSeatLabel(place: SeatPlace, level: number | undefined): string {
   const seat = seatLabel(place, { kind: 'you' });
   return level === undefined ? seat : `${seat}, level ${formatLevel(level)}`;
 }
 
-/** *Their side, empty* — a seat a friend could fill, named by where it is (play's `seatLabel`). */
+/** *Their side, empty* — a seat a friend could fill, named by where it is (`seatLabel`). */
 export function emptySeatLabel(place: SeatPlace): string {
-  return seatLabel(place, { kind: 'empty', unfilled: null });
+  return seatLabel(place, { kind: 'empty' });
 }
 
 /** *Padel · 0 of 3 picked* — the Friends screen's eyebrow (play 54), drawn upper case. */

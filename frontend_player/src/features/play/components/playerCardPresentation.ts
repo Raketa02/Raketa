@@ -46,9 +46,7 @@
 import { counted } from '@/shared/formatting/counted';
 import {
   formatDistanceKm,
-  formatLevel,
   formatPercent,
-  formatRange,
   formatSignedLevel,
 } from '@/shared/formatting/ratingFormat';
 import { slotName } from '@/shared/vocabulary/availabilityPresentation';
@@ -62,25 +60,6 @@ import type { GameResult, InclusionReason } from '../domain/vocabulary';
 
 import type { CandidateAction } from './accessibilityPresentation';
 import { livenessLine } from './livenessPresentation';
-
-/** Everything the level row states, exactly as `player_card` published it. */
-export interface LevelRowFacts {
-  readonly level: number;
-  /** The band's **published name**. Its numeric edges are not on the card, and not here. */
-  readonly band: string;
-  /** μ ± σ, clamped to the scale, as `rating` published it. */
-  readonly range: { readonly low: number; readonly high: number };
-}
-
-/**
- * `2,71 · Established · likely 2,55–2,87`.
- *
- * The one word this app writes into the row is *likely*: the band's name is the server's, and
- * all three numbers take §B16's format through the one formatter.
- */
-export function levelRow(facts: LevelRowFacts): string {
-  return `${formatLevel(facts.level)} · ${facts.band} · likely ${formatRange(facts.range)}`;
-}
 
 /** What the meta line states — a distance, and the one comparison it may draw beside it. */
 export interface MetaLineFacts {

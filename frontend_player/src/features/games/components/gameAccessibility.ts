@@ -29,8 +29,8 @@
  * court*.
  */
 
-import { balanceLabel } from '@/features/play/types';
 import { formatLevel, formatSignedLevel } from '@/shared/formatting/ratingFormat';
+import { balanceLabel } from '@/shared/vocabulary/balancePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Score } from '../domain/game';

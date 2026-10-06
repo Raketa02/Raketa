@@ -14,8 +14,7 @@
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { SeatFace } from '@/features/play/types';
-import { theme } from '@/shared/ui';
+import { SeatFace, theme } from '@/shared/ui';
 
 import type { DeckPerson } from '../domain/deck';
 

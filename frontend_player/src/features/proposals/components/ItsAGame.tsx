@@ -8,6 +8,10 @@
  * game** and **Later**. Nothing else: the player knows the game, and everybody else is told by the
  * notice *It's a game! · you paid*, never this screen.
  *
+ * The ground, the entrance's one beat and the tile are this screen's own (`YesGround`,
+ * `YesEntrance`, `YesTile`), since [#574](https://github.com/Raketa02/Raketa/issues/574) brought
+ * them here from the challenge's yes screen, which is the old loop's.
+ *
  * ## The faces are the card's
  *
  * Drawn off the card the yes was said on — the reader's own version, the one the last yes filled,
@@ -31,7 +35,6 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { YesEntrance, YesGround, YesTile, type YesSeat } from '@/features/challenges/types';
 import { Button, ModalStage, theme, useLiveRegion } from '@/shared/ui';
 
 import type { DeckCard } from '../domain/deck';
@@ -40,6 +43,9 @@ import { itsAGamePicture, type Face } from '../domain/fill';
 import { FILL_COPY } from './fillCopy';
 import { itsAGameSentence } from './fillPresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
+import { YesEntrance } from './YesEntrance';
+import { YesGround } from './YesGround';
+import { YesTile, type YesSeat } from './YesTile';
 
 export interface ItsAGameProps {
   /** The card the filling yes was said on. */

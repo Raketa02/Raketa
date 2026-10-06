@@ -29,7 +29,7 @@
  * ## An open seat is a row with nobody in it
  *
  * A seat somebody left is still a seat (ADR-0162, #411 rule 6), so it keeps its row in the
- * reader's order: an empty face — `SeatFace`'s `empty` occupant under Play's dashed ring, the
+ * reader's order: an empty face — `SeatFace`'s `empty` occupant under the seat's dashed ring, the
  * same drawing the Now card's court uses for it — the words `Open seat` where the handle would
  * be, no level row (the pairing names whoever holds a rating, and nobody holds this seat), and
  * **not a button**: there is no record to open for nobody, and a row that could be pressed
@@ -70,9 +70,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { SeatFace } from '@/features/play/types';
 import { PlayerRecordSheet, type RecordSubject } from '@/features/player_record/types';
-import { Card, PlayerPhoto, theme } from '@/shared/ui';
+import { Card, PlayerPhoto, SeatFace, theme } from '@/shared/ui';
 
 import type { Game, GameSeat } from '../domain/game';
 import { courtForReader, type Pairing } from '../domain/pairing';

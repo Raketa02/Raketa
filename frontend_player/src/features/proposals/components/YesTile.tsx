@@ -29,7 +29,17 @@ import { StyleSheet, Text, View } from 'react-native';
 import { handleInitials } from '@/shared/formatting/playerName';
 import { PlayerPhoto, playerPhotoRadius, theme } from '@/shared/ui';
 
-import type { YesSeat } from '../domain/yesScreen';
+/** One tile: somebody who has said yes, with the photograph the seat card carries — or nobody. */
+export type YesSeat =
+  | {
+      readonly kind: 'person';
+      readonly playerId: string;
+      /** The whole name, for the spoken sentence. Absent where `users` has lost the account. */
+      readonly name?: string;
+      /** Off the seat card; absent for the reader, whose face comes off their own record. */
+      readonly photoUrl?: string;
+    }
+  | { readonly kind: 'empty' };
 
 export interface YesTileProps {
   readonly seat: YesSeat;

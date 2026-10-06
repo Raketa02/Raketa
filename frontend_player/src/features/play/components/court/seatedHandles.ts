@@ -32,10 +32,11 @@
 
 import type { RecordSubject } from '@/features/player_record/types';
 import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
+import type { SeatPlace } from '@/shared/vocabulary/seatPlace';
 
 import type { Candidate } from '../../domain/candidate';
 import type { Seating } from '../../domain/forecast';
-import { courtHalfOf, type CourtHalf, type SeatPlace } from '../../domain/lineup';
+import { courtHalfOf, type CourtHalf } from '../../domain/lineup';
 
 /**
  * One printed handle, with **the things that decide whether it is a control and what it opens**.

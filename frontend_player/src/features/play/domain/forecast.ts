@@ -40,8 +40,10 @@
  * reading intent."* There is one number in this file and it is a seat count.
  */
 
-import type { BuildSeat, SeatPlace } from './lineup';
-import { courtHalfOf, seatPlaces } from './lineup';
+import { seatPlaces, type SeatPlace } from '@/shared/vocabulary/seatPlace';
+
+import type { BuildSeat } from './lineup';
+import { courtHalfOf } from './lineup';
 import type { ForecastAssumption, GroupReason, Relationship, UnfilledReason } from './vocabulary';
 
 /**

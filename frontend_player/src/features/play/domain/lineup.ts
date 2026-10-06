@@ -82,6 +82,7 @@
  * `components/court/`'s — §7's line, drawn once.
  */
 
+import type { SeatPlace } from '@/shared/vocabulary/seatPlace';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Candidate, SearchEnvelope } from './candidate';
@@ -454,49 +455,6 @@ export type BuildSeat =
       readonly accepted: boolean;
     }
   | { readonly kind: 'empty' };
-
-/**
- * Where a seat is, in the only two terms a listener can use: **a side, and a role.**
- *
- * The vocabulary lives here rather than beside the sentences that render it because it is
- * **H-25's**, and [`the-play-components.md`](../../../../../docs/specs/matchmaking/the-play-components.md)
- * §7 puts *a rule somebody could be wrong about* in `domain/` and the words for it in
- * `components/`. Somebody can be very wrong about which half is yours.
- *
- * Three values and not four, because *their partner* is a role nobody on this screen is
- * seated relative to: a listener places the far half by its side alone.
- */
-export const SEAT_PLACES = ['YOUR_SIDE', 'YOUR_PARTNER', 'THEIR_SIDE'] as const;
-
-export type SeatPlace = (typeof SEAT_PLACES)[number];
-
-/**
- * Side and role for every seat, in seat order — **the one thing the drawing cannot say.**
- *
- * The court's coordinates are per Sport and `theme.size.court.seats` lists them *your side
- * first*, so a half is a slice of that list and nothing else. **H-25 is why it cannot be the
- * geometry**: squash has no net, both players stand on the same half of the drawing, and a
- * rule that read the far side off a `y` above the middle would seat both of you on your own
- * side in one Sport out of four, with nothing on screen to see.
- *
- * **And a side follows you.** Swap mode is *change sides, never seats*, so you can end up in
- * the far half — at which point that half is yours and the one you started in is theirs. A
- * place read off the index alone would keep calling it theirs.
- *
- * A court always seats you. One that does not reads as the court it started as — you in seat
- * 0 — rather than as a court with two far halves, which is a state no screen could describe.
- */
-export function seatPlaces(seats: readonly BuildSeat[]): readonly SeatPlace[] {
-  const half = Math.max(1, seats.length / 2);
-  const found = seats.findIndex((seat) => seat.kind === 'you');
-  const yours = found === -1 ? 0 : found;
-  const yourHalf = Math.floor(yours / half);
-
-  return seats.map((_, at) => {
-    if (at === yours) return 'YOUR_SIDE';
-    return Math.floor(at / half) === yourHalf ? 'YOUR_PARTNER' : 'THEIR_SIDE';
-  });
-}
 
 /**
  * The two **halves** of a court, as everything that speaks about one of them names it.

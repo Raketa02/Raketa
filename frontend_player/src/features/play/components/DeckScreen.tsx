@@ -117,6 +117,12 @@ import { ShellScreen } from '@/features/shell/types';
 import { recoveryMessage } from '@/shared/errors';
 import { playerName } from '@/shared/formatting/playerName';
 import { Button, Note, behindOverlay, moveAccessibilityFocus, theme } from '@/shared/ui';
+import {
+  DeckAnswers,
+  DeckStage,
+  type DeckExit,
+  type DragVerdict,
+} from '@/features/proposals/types';
 
 import type { Candidate } from '../domain/candidate';
 import {
@@ -146,10 +152,8 @@ import { usePlaySession } from '../store/playSession.store';
 
 import { AnswerNotes } from './AnswerNotes';
 import { deckAnswerLabels } from './accessibilityPresentation';
-import { DeckAnswers } from './DeckAnswers';
 import { DeckEnding } from './DeckEnding';
 import { DeckPill } from './DeckPill';
-import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
 import { PlayersToggle } from './PlayersToggle';
 import { PromptSheet } from './PromptSheet';
 import { SportChips } from './SportChips';

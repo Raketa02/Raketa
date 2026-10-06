@@ -52,13 +52,13 @@ import { View } from 'react-native';
 import type { AppError } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
 import { behindOverlay } from '@/shared/ui';
+import { LEAVE_THE_GAME, LeaveSheet } from '@/features/proposals/types';
 
 import { useLeaveGame } from '../hooks/useChallenge';
 import { useLeavingWouldEnd } from '../hooks/useChallenges';
 import { useActDoor, type ActDoor } from '../hooks/useActDoor';
 
-import { LEAVE_THE_GAME, leaveFromTheListBody, leaveRefusalMessage } from './leaveGamePresentation';
-import { LeaveSheet } from './LeaveSheet';
+import { leaveFromTheListBody, leaveRefusalMessage } from './leaveGamePresentation';
 
 /** The name the row's accessibility action goes by — see `ActDoorAsk.actionName`. */
 const LEAVE_ACTION = 'leave-the-game';

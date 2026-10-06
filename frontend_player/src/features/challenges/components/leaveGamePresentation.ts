@@ -11,6 +11,11 @@
  * lives beside the act that says it, and the act is composed onto those surfaces through
  * `types.ts`.
  *
+ * **The sheet's own words are no longer here.** *Before you leave*, its lines, the act and *Stay
+ * in* went to `features/proposals` with the sheet
+ * ([#574](https://github.com/Raketa02/Raketa/issues/574)), because a booked game's *Leave the
+ * game* is the caller that stays; what is left is what the Chats row's door says.
+ *
  * ## The withdraw's shape, and the difference that reworded it
  *
  * `WithdrawSheet`'s exact shape a third time — a title naming the **moment** rather than the act,
@@ -35,34 +40,6 @@ import { playerName } from '@/shared/formatting/playerName';
 import type { LeavingEnds } from '../domain/challenge';
 
 import { challengeErrorMessage } from './challengeErrorMessage';
-
-/** The departure while it is in flight, on the control that carries it out. */
-export const LEAVING = 'Leaving…';
-
-/** The title names the moment, so the act is named once — by {@link LEAVE_THE_GAME}. */
-export const LEAVE_SHEET_TITLE = 'Before you leave';
-
-/**
- * The three bodies, in order: what survives, what the leaver gives up, and that it cannot be
- * undone. The first line is the whole reason the act exists (#411: *the others keeping what they
- * agreed rather than starting over*), and the second is the one cost that is theirs alone.
- */
-export const LEAVE_SHEET_BODY = [
-  'The others keep the game and can fill your seat.',
-  "You can't be asked back into this one.",
-  'This cannot be undone.',
-] as const;
-
-/**
- * The act, on the sheet that confirms it — and, since #427, the control a Chats row reveals and
- * the challenge screen draws before the court is whole. One label on the control and on the
- * sheet's act, on `Send the challenge`'s precedent: the act is named once, and what is under the
- * sheet is hidden while it is up.
- */
-export const LEAVE_THE_GAME = 'Leave the game';
-
-/** The sheet's dismissal, **named by what it does** — never just *Close*. */
-export const LEAVE_SHEET_CLOSE_LABEL = 'Stay in';
 
 /**
  * **The one line the list's sheet says** — the consequence, as the author fixed it

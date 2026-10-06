@@ -28,7 +28,6 @@ import type { UseMutationResult } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { LEAVE_THE_GAME, LeaveSheet } from '@/features/challenges/types';
 import type { AppError } from '@/shared/errors';
 import { useIsOnline } from '@/shared/lib/platform';
 import { showToast } from '@/shared/store/toast.store';
@@ -38,6 +37,8 @@ import type { Leaving } from '../domain/home';
 import type { LeavingKind } from '../domain/vocabulary';
 
 import { leaveRefusal, leavingLine, leavingSheetBody, leftToast } from './homePresentation';
+import { LeaveSheet } from './LeaveSheet';
+import { LEAVE_THE_GAME } from './leaveSheetCopy';
 
 export interface LeaveTheGameProps {
   /** What leaving costs now — the read's. */

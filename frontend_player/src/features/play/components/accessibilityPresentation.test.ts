@@ -7,8 +7,8 @@
  */
 
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
-
-import { SEAT_PLACES } from '../domain/lineup';
+import { SEAT_PLACES } from '@/shared/vocabulary/seatPlace';
+import { courtSummaryLabel } from '@/shared/vocabulary/seatPlacePresentation';
 
 import {
   PLAY_LIVE_REGIONS,
@@ -16,7 +16,6 @@ import {
   candidateActionLabel,
   candidateCardLabel,
   clearSeatLabel,
-  courtSummaryLabel,
   deckAnswerLabels,
   fitSentence,
   poolHeaderLabel,

@@ -1,6 +1,10 @@
 import {
   DECLARATION_BODY,
   DECLARATION_EYEBROW,
+  declarationTitle,
+} from '@/features/proposals/types';
+
+import {
   MODE_HEADING,
   WEEK_ADDED_FOR_THIS_SEARCH,
   WEEK_CHANGED_AND_ADDED,
@@ -9,7 +13,6 @@ import {
   courtEntryTitle,
   declarationOptionLabel,
   declarationLine,
-  declarationTitle,
   intentGloss,
   intentLabel,
   modeControlLabel,

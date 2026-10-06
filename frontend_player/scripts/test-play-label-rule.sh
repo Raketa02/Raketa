@@ -7,8 +7,8 @@
 # `the-words.md` §20.12 books two gates over the accessibility contract, and this
 # is the one a type cannot give:
 #
-#   every Pressable under src/features/play/ and src/features/games/ carries an
-#   accessibilityLabel, or hides itself explicitly
+#   every Pressable under src/features/play/, src/features/games/ and
+#   src/features/proposals/ carries an accessibilityLabel, or hides itself explicitly
 #
 # Label *coverage* is already a compile error — the copy tables are Records keyed
 # by the generated unions, so a code with no words does not build. But the
@@ -89,6 +89,7 @@ expect_allowed() { # <name> <path> <source>
 
 PLAY='src/features/play/components/Seat.tsx'
 GAMES='src/features/games/components/ScoreEntry.tsx'
+PROPOSALS='src/features/proposals/components/DeckAnswers.tsx'
 PLAY_SCREEN='src/features/play/hooks/useSeat.tsx'
 ELSEWHERE='src/features/onboarding/components/Step.tsx'
 PRIMITIVE='src/shared/ui/Thing.tsx'
@@ -161,6 +162,11 @@ expect_blocked "a Pressable hidden on Android alone is blocked in $PLAY" "$PLAY"
 expect_blocked "an unnamed Pressable is blocked in $GAMES" "$GAMES" "$BARE" 'accessibilityLabel'
 expect_allowed "a named Pressable is allowed in $GAMES" "$GAMES" "$NAMED"
 
+# The Games deck's feature joined it when the deck's three answers moved there from Play (#574):
+# raw Pressables that were under the rule must not leave it by changing folders.
+expect_blocked "an unnamed Pressable is blocked in $PROPOSALS" "$PROPOSALS" "$BARE" 'accessibilityLabel'
+expect_allowed "a named Pressable is allowed in $PROPOSALS" "$PROPOSALS" "$NAMED"
+
 echo
 echo "and it is scoped to Play, because Part 13 owns the general rule"
 expect_allowed "the same violation is silent in $ELSEWHERE" "$ELSEWHERE" "$BARE"
@@ -180,6 +186,7 @@ export const A = () => <Text style={{ fontWeight: \"700\" }}>x</Text>;
 expect_blocked "a hex literal is still blocked in $PLAY" "$PLAY" "$HEX" 'theme.ts'
 expect_blocked "an rgba() literal is still blocked in $PLAY" "$PLAY" "$RGBA" 'theme.ts'
 expect_blocked "fontWeight is still blocked in $PLAY" "$PLAY" "$WEIGHT" 'Android'
+expect_blocked "a hex literal is still blocked in $PROPOSALS" "$PROPOSALS" "$HEX" 'theme.ts'
 
 echo
 printf '%s passed, %s failed\n' "$pass" "$fail"

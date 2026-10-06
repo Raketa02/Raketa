@@ -12,14 +12,12 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { StyleSheet, View, type TextStyle, type ViewStyle } from 'react-native';
 
 import { useToastQueue } from '@/shared/store/toast.store';
-import { courtSeatSize, theme } from '@/shared/ui';
-
-import { seatPlaces } from '../../domain/lineup';
+import { courtSeatSize, seatCaptionName, SEAT_NAME_LETTERS, theme } from '@/shared/ui';
+import { seatPlaces } from '@/shared/vocabulary/seatPlace';
 
 import { CourtBuild } from './CourtBuild';
 import { CourtMini } from './CourtMini';
 import { CourtSeat, type CourtSeatOccupant } from './CourtSeat';
-import { seatCaptionName, SEAT_NAME_LETTERS } from './seatFace';
 
 /** 2 to 64 characters, and the seat is 46pt. The arithmetic §5 ran, as a fixture. */
 const LONG_HANDLE = 'marekwiśniewski-plays-every-tuesday-and-most-saturdays-in-warsaw';

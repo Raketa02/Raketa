@@ -66,13 +66,14 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { declarationTitle } from '@/features/proposals/types';
 
 import { searchKeys } from '../hooks/searchKeys';
 import type { MyInterest } from '../mappers/interestMappers';
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
 
-import { declarationLine, declarationTitle, modeControlLabel } from './findAGamePresentation';
+import { declarationLine, modeControlLabel } from './findAGamePresentation';
 import {
   NOBODY_IN_RANGE_TITLE,
   PANE_LABEL,

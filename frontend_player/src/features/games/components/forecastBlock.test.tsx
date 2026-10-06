@@ -13,10 +13,10 @@
 
 import { screen, waitFor } from 'expo-router/testing-library';
 
-import { balanceLabel, balanceTone, balanceWord } from '@/features/play/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { BALANCE_INK } from '@/shared/ui/BalanceBar';
+import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
 import {
   GATE_USER,
   launchSignedIn,

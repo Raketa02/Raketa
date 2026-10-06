@@ -14,9 +14,8 @@
 import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
-import { LEAVE_THE_GAME } from '@/features/challenges/types';
 import { PAYMENTS_COPY } from '@/features/payments/types';
-import { FILL_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
+import { FILL_COPY, LEAVE_THE_GAME, PROPOSALS_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';

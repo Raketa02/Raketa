@@ -1,7 +1,7 @@
 import { theme } from '@/shared/ui/theme';
+import { SEAT_PLACES, seatPlaces } from '@/shared/vocabulary/seatPlace';
 
 import {
-  SEAT_PLACES,
   carriedOnto,
   changingMode,
   changingSport,
@@ -11,7 +11,6 @@ import {
   sameOrigin,
   seatIsClearable,
   seatIsLocked,
-  seatPlaces,
   tapSeat,
   withheldSeats,
   type BuildSeat,

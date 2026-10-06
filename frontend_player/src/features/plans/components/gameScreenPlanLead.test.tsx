@@ -17,7 +17,7 @@
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Image, Text } from 'react-native';
 
-import { LEAVE_THE_GAME } from '@/features/challenges/types';
+import { LEAVE_THE_GAME } from '@/features/proposals/types';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { BALANCE_FORECAST, OPEN_SEAT, PLAYERS } from '@/features/games/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';

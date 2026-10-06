@@ -5,7 +5,7 @@
  * ## Four states, in the order the screens list them
  *
  * 1. **No intent for this sport** — the read's segments are empty, and the one-time question
- *    *Competitive / For fun / Either* replaces the deck until it is answered (A2.1). Play's own
+ *    *Competitive / For fun / Either* replaces the deck until it is answered (A2.1) —
  *    `DeclarationInterstitial`, reporting `DECK`; the answer re-reads the deck, which then has
  *    segments.
  * 2. **Nothing to deal in this segment** — the group's starting cards, exactly as built (*Just you
@@ -26,11 +26,12 @@
  * is read as the segment it does (`useGroupDeck`), so the switch never stands on an empty deck the
  * player could not have wanted.
  *
- * ## The stage is Players', and the card is this feature's
+ * ## The stage was Players', and the card is this feature's
  *
- * Play's `DeckStage` — the pan gesture, the stamps, the fly-off, the arrival, the haptic — with the
- * two cards behind now fading as they shrink (Q90), and Play's `DeckAnswers` under it: ✕ is *Not
- * this time*, the ball is *I'm in*, **i** opens the game's details (A2.2). The stamps are this
+ * `DeckStage` — the pan gesture, the stamps, the fly-off, the arrival, the haptic — with the two
+ * cards behind now fading as they shrink (Q90), and `DeckAnswers` under it: ✕ is *Not this time*,
+ * the ball is *I'm in*, **i** opens the game's details (A2.2). Both were built for Players' deck and
+ * came here with the interstitial in #574, since this is the deck that stays. The stamps are this
  * deck's words, *I'M IN* carrying the share whenever the yes charges at once (Q72).
  *
  * ## Answering: the card flies on the press, and the server settles it
@@ -67,16 +68,9 @@ import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import {
-  DeckAnswers,
-  DeckStage,
-  DeclarationInterstitial,
-  type DeckExit,
-  type DragVerdict,
-} from '@/features/play/types';
 import { sportLabel } from '@/features/onboarding/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
-import { offlineMessage, type AppError } from '@/shared/errors';
+import { offlineMessage, recoveryMessage, type AppError } from '@/shared/errors';
 import { showToast } from '@/shared/store/toast.store';
 import {
   behindOverlay,
@@ -106,6 +100,9 @@ import { useFillYes } from '../hooks/useFillYes';
 import { useAnswerCard, useDropCard, useGroupDeck, useRereadDeck } from '../hooks/useGroupDeck';
 import { useLatest } from '../hooks/useLatest';
 
+import { DeckAnswers } from './DeckAnswers';
+import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
+import { DeclarationInterstitial } from './DeclarationInterstitial';
 import {
   ANSWER_LABELS,
   capLine,
@@ -271,6 +268,7 @@ export function GamesDeck({ groupId, sport, chosen, onChoose, empty, onTop }: Ga
           sportName={sportLabel(sport)}
           declaredOn="DECK"
           onDeclared={() => void reread()}
+          refusalMessage={recoveryMessage}
         />
       </ScrollView>
     );

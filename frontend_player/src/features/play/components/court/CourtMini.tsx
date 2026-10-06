@@ -26,9 +26,7 @@
  * action; the summary preceding the seats is the element, and it is `Court`'s.
  */
 
-import { Court, courtSeatSize, type SportKey } from '@/shared/ui';
-
-import { SeatFace, type CourtFaceOccupant } from './seatFace';
+import { Court, courtSeatSize, SeatFace, type CourtFaceOccupant, type SportKey } from '@/shared/ui';
 
 export interface CourtMiniProps {
   readonly sport: SportKey;

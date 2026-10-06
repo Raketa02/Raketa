@@ -31,8 +31,17 @@ import { fakeHaptics } from '@/test-support/platform';
 import { dragTo, release, swipe } from '@/test-support/swipe';
 
 import { DeckStage, type DeckExit, type DragVerdict, type StampWords } from './DeckStage';
-import { PLAYERS_STAMPS } from './deckPresentation';
 import { STACK } from './deckStageGeometry';
+
+/**
+ * The words this suite has always drawn the stamps in — Players' *Let's play* and *Not today*, which
+ * the stage was built under. Spelled here since the stage moved to the Games deck (#574): the
+ * stage takes its words from its caller, and these are a caller's.
+ */
+const PLAYERS_STAMPS: Readonly<Record<DeckExit, StampWords>> = {
+  yes: { words: "Let's play" },
+  no: { words: 'Not today' },
+};
 
 /** How long a card takes to leave. Longer than the component's own 240, so a flight completes. */
 const PAST_THE_FLIGHT = 400;

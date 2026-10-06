@@ -1,7 +1,7 @@
 /**
  * The face in a seat, and the ring around it — **the drawing both courts share.**
  *
- * [`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
+ * [`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md)
  * §4 separates `CourtMini` and `CourtBuild` on behaviour and says in the same breath that they
  * *"share everything that is a number"*. This is that share: the box, its corner, the
  * photo-or-poster switch and the ring over it. What the two do not share is what a seat is
@@ -9,6 +9,15 @@
  *
  * **The ring is drawn over the face rather than as the face's own border**, so selecting a
  * seat does not move the photograph under it in by a point.
+ *
+ * ## Why it is `shared/ui`
+ *
+ * It was `features/play/components/court/seatFace`, while Play's courts were the only ones that
+ * drew a face. The group page's Friends court and Games card, Fill in's squares and a booked
+ * game's players card draw the same face in the same ring, and none of them may import
+ * `features/play/` — the loop [#569](https://github.com/Raketa02/Raketa/issues/569) removes — so
+ * the drawing came below all of them ([#574](https://github.com/Raketa02/Raketa/issues/574)), as
+ * `PlayerPhoto` under it did. The ring came with it, because the face is its only reader.
  *
  * **Your own seat draws the poster.** `photo_url` is minted for another player's card row;
  * nothing in a line-up carries yours, and `GET /photos/{id}` signs your own by an id this
@@ -31,11 +40,10 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { formatLevel } from '@/shared/formatting/ratingFormat';
-import { theme } from '@/shared/ui';
 
-import { PlayerPhoto, playerPhotoRadius } from '@/shared/ui';
-
+import { PlayerPhoto, playerPhotoRadius } from './PlayerPhoto';
 import { seatRing, type SeatRing } from './seatRing';
+import { theme } from './theme';
 
 /**
  * Who is in a seat, as **a drawing** needs them: an id, and a link if there is one.
@@ -130,7 +138,7 @@ export interface SeatCaptionProps {
    *
    * Absent on an empty seat, on a withheld one whose card is gone with its handle, and on a
    * **game's** seat, which carries a handle and nothing else about the person in it
-   * ([ADR-0141](../../../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)).
+   * ([ADR-0141](../../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md)).
    */
   readonly level?: number;
 }
@@ -150,7 +158,7 @@ export interface SeatCaptionProps {
  * spends one of four characters saying *there was more* on a caption whose whole job is telling
  * four faces apart. **The sentence and the spoken name stay whole** — a truncation of a drawing
  * invents nothing, which is the only thing
- * [ADR-0107](../../../../../../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)
+ * [ADR-0107](../../../../docs/adr/0107-the-player-card-is-assembled-outside-the-engine.md)
  * forbids.
  *
  * **Hidden**, always: the seat around it already carries the whole handle and the level in its

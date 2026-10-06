@@ -174,6 +174,7 @@ import {
 } from '@/shared/ui';
 import { dayLabel, hourLabel } from '@/shared/vocabulary/availabilityPresentation';
 import { HOURS, WEEKDAYS, weeklyHoursAt } from '@/shared/vocabulary/week';
+import { DeclarationInterstitial } from '@/features/proposals/types';
 
 import { findAGameStanding } from '../domain/findAGame';
 import { alreadyAsked } from '../domain/raisedPrompt';
@@ -185,7 +186,6 @@ import { usePlayPreferences } from '../store/playPreferences.store';
 import { usePlaySession } from '../store/playSession.store';
 
 import { BUILDER_ROUTE } from './BuilderScreen';
-import { DeclarationInterstitial } from './DeclarationInterstitial';
 import { DeclarationStanding } from './DeclarationStanding';
 import { searchWeekCellLabel } from './accessibilityPresentation';
 import { PromptSheet, type AfterThePrompt } from './PromptSheet';
@@ -568,6 +568,7 @@ export function FindAGameScreen() {
               sport={standing.sport}
               sportName={sportName}
               declaredOn="SEARCH_SWITCH"
+              refusalMessage={playErrorMessage}
             />
           ) : null}
 

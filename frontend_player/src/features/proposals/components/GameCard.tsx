@@ -50,9 +50,9 @@
 import Feather from '@expo/vector-icons/Feather';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { balanceTone } from '@/features/play/types';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
 import { BalanceBar, theme, type BalanceBarTone } from '@/shared/ui';
+import { balanceTone } from '@/shared/vocabulary/balancePresentation';
 import type { Weekday } from '@/shared/vocabulary/week';
 
 import {

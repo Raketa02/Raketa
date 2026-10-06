@@ -54,6 +54,8 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { balanceLabel, balanceWord } from '@/shared/vocabulary/balancePresentation';
+import { levelRow } from '@/shared/formatting/levelRow';
 
 import { searchKeys } from '../hooks/searchKeys';
 import { usePlayPreferences } from '../store/playPreferences.store';
@@ -66,9 +68,8 @@ import {
   seatLabel,
   splitRowLabel,
 } from './accessibilityPresentation';
-import { balanceLabel, balanceWord } from './balancePresentation';
 import { PICK_PLAYERS_LABEL, PROVISIONAL_WORD } from './builderPresentation';
-import { YOU_SAID_YES_WORD, levelRow } from './playerCardPresentation';
+import { YOU_SAID_YES_WORD } from './playerCardPresentation';
 import {
   POOL_COURT_LABEL,
   POOL_TITLE,

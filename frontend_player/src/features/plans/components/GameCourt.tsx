@@ -59,9 +59,16 @@
  */
 
 import type { Game } from '@/features/games/types';
-import { SeatCaption, SeatFace, seatBox } from '@/features/play/types';
 import { playerName } from '@/shared/formatting/playerName';
-import { Court, courtSeatSize, theme, type SportKey } from '@/shared/ui';
+import {
+  Court,
+  courtSeatSize,
+  SeatCaption,
+  SeatFace,
+  seatBox,
+  theme,
+  type SportKey,
+} from '@/shared/ui';
 import { StyleSheet, View } from 'react-native';
 
 export interface GameCourtProps {

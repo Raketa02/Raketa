@@ -15,7 +15,7 @@
  * each in its own greens and its own shading on a disc whose colour it knows nothing about, and
  * clipped besides where the line box is the font size. `Tick.tsx` and `Star.tsx` draw their marks
  * for the same reason, and the design system's rule for a mark Feather does not have — which is
- * every sport — is that it is **drawn** (Part 0; [ADR-0135](../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
+ * every sport — is that it is **drawn** (Part 0; [ADR-0135](../../../../../docs/adr/0135-the-bar-draws-one-family-and-the-bolt-joins-it.md)
  * fixed the family, and Feather has no ball). So the ball is a path: it does not scale with
  * Dynamic Type, does not vary by platform, and takes the colour its bed is owed.
  *

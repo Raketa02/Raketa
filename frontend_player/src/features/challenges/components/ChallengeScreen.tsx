@@ -135,7 +135,6 @@ import { router } from 'expo-router';
 
 import {
   PROVISIONAL_WORD,
-  balanceReading,
   forecastAssumption,
   forecastHeading,
   saidYesTo,
@@ -153,6 +152,7 @@ import { durationLeft } from '@/shared/formatting/durations';
 import { playerName } from '@/shared/formatting/playerName';
 import { OUT_OF_DATE_GAP } from '@/shared/vocabulary/outOfDate';
 import { Button, Note, theme } from '@/shared/ui';
+import { balanceReading } from '@/shared/vocabulary/balancePresentation';
 
 import { actRefusal } from '../domain/actRefusal';
 import { seatName } from '../domain/challenge';

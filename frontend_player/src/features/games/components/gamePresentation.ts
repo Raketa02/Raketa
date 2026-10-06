@@ -63,8 +63,8 @@
  */
 
 import { YOU_MARK } from '@/features/player_record/types';
-import { levelRow } from '@/features/play/types';
 import { counted } from '@/shared/formatting/counted';
+import { levelRow } from '@/shared/formatting/levelRow';
 import { handleStem, playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import { formatPercent } from '@/shared/formatting/ratingFormat';
 import { sentenceList } from '@/shared/formatting/sentenceList';
@@ -908,8 +908,8 @@ function halves(
  * One seat's Level, in the row under the handle — `the-words.md` §6.4's level row with the
  * confidence as a fourth clause: `2,71 · Established · likely 2,55 – 2,87 · 74% sure`.
  *
- * The first three clauses are Play's `levelRow`, cited rather than re-spelled, so the band's name,
- * the range's dash and the two-decimal comma cannot drift between a card and this row. The fourth
+ * The first three clauses are `levelRow`'s, cited rather than re-spelled, so the band's name, the
+ * range's dash and the two-decimal comma cannot drift between a card and this row. The fourth
  * is the engine's own whole percentage through the one formatter, and the word *sure* is this
  * screen's — the challenge card says `{n}% sure` the same way.
  */

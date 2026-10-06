@@ -82,10 +82,10 @@ import { useDeclarePlayIntent } from '@/features/player_profile/types';
 import { openTab } from '@/features/shell/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 import { Button, Note, theme } from '@/shared/ui';
+import type { PlayDeclarationSurface } from '@/features/proposals/types';
 
 import type { PlayIntent, SearchMode } from '../domain/vocabulary';
 
-import type { PlayDeclarationSurface } from './DeclarationInterstitial';
 import { declarationLine } from './findAGamePresentation';
 import { playErrorMessage } from './playErrorMessage';
 

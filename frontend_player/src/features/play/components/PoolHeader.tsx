@@ -85,19 +85,20 @@ import {
   DarkCard,
   Hairline,
   theme,
+  type CourtFaceOccupant,
   type SportKey,
 } from '@/shared/ui';
+import { seatPlaces } from '@/shared/vocabulary/seatPlace';
+import { balanceLabel, balanceTone } from '@/shared/vocabulary/balancePresentation';
+import { courtSummaryLabel } from '@/shared/vocabulary/seatPlacePresentation';
 
 import type { Candidate } from '../domain/candidate';
 import type { Arrangement, Seating } from '../domain/forecast';
 import { seatsFilled, theirSideSeated, toBuildSeat } from '../domain/forecast';
-import { seatPlaces } from '../domain/lineup';
 
-import { courtSummaryLabel, poolHeaderLabel, splitRowLabel } from './accessibilityPresentation';
-import { balanceLabel, balanceTone } from './balancePresentation';
+import { poolHeaderLabel, splitRowLabel } from './accessibilityPresentation';
 import { GAP_WORD, SIDE_HEADINGS, sideName } from './builderPresentation';
 import { CourtMini } from './court/CourtMini';
-import type { CourtFaceOccupant } from './court/seatFace';
 import { handlesOn } from './court/seatedHandles';
 import { POOL_COURT_LABEL, poolSeatedLine } from './poolPresentation';
 

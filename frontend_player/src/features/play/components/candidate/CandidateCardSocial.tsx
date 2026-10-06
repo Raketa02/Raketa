@@ -69,6 +69,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Button, PlayerPhoto, PressableCard, theme } from '@/shared/ui';
+import { levelRow } from '@/shared/formatting/levelRow';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Term } from '../../domain/vocabulary';
@@ -77,7 +78,6 @@ import {
   CANDIDATE_ACTION_WORD,
   OVERLAP_ROW_LABEL,
   candidateTag,
-  levelRow,
   metaLine,
   overlapRowValue,
 } from '../playerCardPresentation';

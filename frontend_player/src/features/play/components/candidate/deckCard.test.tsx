@@ -14,14 +14,13 @@ import { formatLevel, formatRange } from '@/shared/formatting/ratingFormat';
 import { ON_COURT_CLAUSE, ON_COURT_MARK, theme } from '@/shared/ui';
 import { TICK_PATH } from '@/shared/ui/Tick';
 import { socialTagChip } from '@/shared/vocabulary/socialTagPresentation';
+import { BALL_PATHS, BALL_STROKE, DeckAnswers } from '@/features/proposals/types';
 
 import type { Candidate, SearchEnvelope } from '../../domain/candidate';
 import type { Evidence, ScoredTerm } from '../../domain/evidence';
 import type { Term } from '../../domain/vocabulary';
 import { deckAnswerLabels } from '../accessibilityPresentation';
-import { BALL_PATHS, BALL_STROKE } from '../DeckBall';
 import { NO_VALUE } from '../deckCardPresentation';
-import { DeckAnswers } from '../DeckAnswers';
 import { livenessLine, inclusionLine } from '../livenessPresentation';
 
 import { DeckCard } from './DeckCard';

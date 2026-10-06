@@ -22,19 +22,11 @@
  * else's evening.
  */
 
+import type { YesSeat } from '@/features/proposals/types';
+
 import type { DetailSeat } from './challengeDetail';
 
-/** One tile: somebody who has said yes, with the photograph the seat card carries — or nobody. */
-export type YesSeat =
-  | {
-      readonly kind: 'person';
-      readonly playerId: string;
-      /** The whole name, for the spoken sentence. Absent where `users` has lost the account. */
-      readonly name?: string;
-      /** Off the seat card; absent for the reader, whose face comes off their own record. */
-      readonly photoUrl?: string;
-    }
-  | { readonly kind: 'empty' };
+export type { YesSeat };
 
 /**
  * The picture in two halves, each in the reader's order — `CourtSides`' shape, one context over.

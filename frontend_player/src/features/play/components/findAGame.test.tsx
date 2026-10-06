@@ -35,20 +35,19 @@ import {
   type Wire,
 } from '@/test-support/transport';
 import { paint } from '@/test-support/weekGridTouch';
+import { courtSummaryLabel } from '@/shared/vocabulary/seatPlacePresentation';
+import { DECLARATION_BODY, declarationTitle } from '@/features/proposals/types';
 
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession } from '../store/playSession.store';
 
-import { courtSummaryLabel } from './accessibilityPresentation';
 import { playErrorMessage } from './playErrorMessage';
 import { poolRankingStatus } from './searchingPresentation';
 import { searchingFloorMs } from './searchingWait';
 import {
-  DECLARATION_BODY,
   WEEK_CHANGED_FROM_PROFILE,
   courtEntryTitle,
   declarationLine,
-  declarationTitle,
   searchControlLabel,
 } from './findAGamePresentation';
 

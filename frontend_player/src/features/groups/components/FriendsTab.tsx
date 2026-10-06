@@ -7,16 +7,16 @@
  * - **The court for the sport the page is on** — `Court`, the one court drawing every surface in
  *   the app shares, at `court.build`, the width a seat is 46 at. The reader stands in the first
  *   seat, their face labelled *You 2,71*; every other seat is **empty and pressable**, a dashed
- *   ring with a white plus, and opens the Friends screen. The drawing is `play`'s — `SeatFace` and
- *   `SeatCaption` through its public surface, as `plans` and `games` read them — restyled only in
+ *   ring with a white plus, and opens the Friends screen. The drawing is `shared/ui`'s — `SeatFace`
+ *   and `SeatCaption`, as Fill in and a booked game's players card draw them — restyled only in
  *   the plus, which is white on this court (`PlusOnMedia`) because volt on a court means *picked
  *   for a swap*.
  * - **+ Friends**, the same door as an empty seat.
  *
  * **Side labels are drawn where the mocks draw them — padel and badminton.** Squash has no halves:
  * both players stand on one. On tennis the far seat stands at the top centre (28 of 132), which is
- * where the label would be written. **Every seat still says its side to a listener**, in play's own
- * sentences over play's own rule (`seatPlaces`, `seatLabel`): a side is a team rather than a half
+ * where the label would be written. **Every seat still says its side to a listener**, in the seat's
+ * own sentences over its own rule (`seatPlaces`, `seatLabel`, both `shared/vocabulary`'s): a side is a team rather than a half
  * of the drawing, so squash's other seat is *their side* too, and where a seat is does not depend
  * on whether the court prints it.
  */
@@ -25,7 +25,6 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useSkillRatings } from '@/features/onboarding/types';
-import { SeatCaption, SeatFace, seatBox, seatPlaces, type BuildSeat } from '@/features/play/types';
 import { useOwnFace } from '@/features/player_record/types';
 import {
   Button,
@@ -33,9 +32,13 @@ import {
   courtSeatCount,
   courtSeatSize,
   PlusOnMedia,
+  SeatCaption,
+  SeatFace,
+  seatBox,
   Segment,
   theme,
 } from '@/shared/ui';
+import { seatPlaces, type LineUpSeat } from '@/shared/vocabulary/seatPlace';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Group } from '../domain/group';
@@ -55,7 +58,7 @@ const WIDTH = theme.size.court.build;
 const LABELLED_SIDES: ReadonlySet<Sport> = new Set(['padel', 'badminton']);
 
 /** The line-up this court draws: the reader, and every other seat still open. */
-function lineUp(seats: number): readonly BuildSeat[] {
+function lineUp(seats: number): readonly LineUpSeat[] {
   return Array.from({ length: seats }, (_, at) => (at === 0 ? { kind: 'you' } : { kind: 'empty' }));
 }
 

@@ -12,7 +12,9 @@
  *
  * All five of those are `BottomSheet`'s already, which is the whole reason this file is short:
  * what a third sheet on that shape owes is its sentences and the name of its act — and they are
- * `leaveGamePresentation.ts`', where the difference from the withdraw's is argued.
+ * `leaveSheetCopy.ts`' beside it, moved here from the challenge's departure deck with the sheet
+ * ([#574](https://github.com/Raketa02/Raketa/issues/574)), where the difference from the
+ * withdraw's is argued.
  *
  * ## Two surfaces, one sheet, and what the second one needed
  *
@@ -41,7 +43,7 @@ import {
   LEAVE_SHEET_TITLE,
   LEAVE_THE_GAME,
   LEAVING,
-} from './leaveGamePresentation';
+} from './leaveSheetCopy';
 
 export interface LeaveSheetProps {
   readonly visible: boolean;

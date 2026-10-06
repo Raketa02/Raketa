@@ -110,6 +110,16 @@ export { RadiusSlider, type RadiusSliderProps } from './RadiusSlider';
 export { Row, type RowProps, type RowVariant } from './Row';
 export { RUN_OF_FORM_FILL, RunOfForm, type RunOfFormProps } from './RunOfForm';
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader';
+export {
+  SEAT_NAME_LETTERS,
+  SeatCaption,
+  SeatFace,
+  seatBox,
+  seatCaptionName,
+  type CourtFaceOccupant,
+  type SeatCaptionProps,
+  type SeatFaceProps,
+} from './SeatFace';
 export { Segment, type SegmentOption, type SegmentProps } from './Segment';
 export { SocialTagRow, type SocialTagRowProps } from './SocialTagRow';
 export { Star, STAR_FILL, type StarProps } from './Star';

@@ -21,10 +21,10 @@ import { Image, StyleSheet, View, type ViewStyle } from 'react-native';
 import { OPEN_THE_CHAT } from '@/features/conversations/types';
 import { REMOVE_THIS_CARD } from '@/features/games/types';
 import { HOME_COPY } from '@/features/shell/types';
-import { SEAT_NAME_LETTERS, endPlaySession } from '@/features/play/types';
+import { endPlaySession } from '@/features/play/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
-import { theme } from '@/shared/ui';
+import { SEAT_NAME_LETTERS, theme } from '@/shared/ui';
 import { FILL_THE_SEAT } from '@/shared/vocabulary/theActsWords';
 import {
   GAMES_PATH,

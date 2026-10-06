@@ -95,6 +95,7 @@ import { useOwnFace } from '@/features/player_record/types';
 import { openTab } from '@/features/shell/types';
 import { useHardwareBack } from '@/shared/lib/platform';
 import { Button, theme, useLiveRegion } from '@/shared/ui';
+import { YesEntrance, YesGround, YesTile } from '@/features/proposals/types';
 
 import type { DetailSeat } from '../domain/challengeDetail';
 import {
@@ -108,9 +109,6 @@ import {
 import { useHeldChallenge } from '../hooks/useChallenge';
 import { CHATS_LIST_ROUTE, type WhichYes } from '../schemas/routeParams';
 
-import { YesEntrance } from './YesEntrance';
-import { YesGround } from './YesGround';
-import { YesTile } from './YesTile';
 import { LATER, VS, YES_SENTENCE, YES_WORD } from './yesScreenPresentation';
 
 export interface YesScreenProps {

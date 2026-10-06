@@ -28,10 +28,10 @@
  *
  * `the-play-screens.md` §5: the gap, the percentage and the deltas are the server's. The bar
  * takes the **signed** gap as its `advantage` and maps it on 7.11's one fixed scale — exactly as
- * the builder's forecast card feeds it — and the tone is the served figure's through Play's
+ * the builder's forecast card feeds it — and the tone is the served figure's through
  * `balanceTone`. The word beside the figure is `balanceWord`'s, because the bar is a colour and
- * Part 13 forbids colour as the only signal. Those three are cited across the `games → play` seam
- * rather than re-spelled: three copies of §B9's breaks is where one of them becomes `>`.
+ * Part 13 forbids colour as the only signal. Those three are cited from `shared/vocabulary` rather
+ * than re-spelled: three copies of §B9's breaks is where one of them becomes `>`.
  *
  * ## Four elements, and the bar is not one of them
  *
@@ -43,9 +43,9 @@
 
 import { StyleSheet, Text, View } from 'react-native';
 
-import { balanceLabel, balanceTone, balanceWord } from '@/features/play/types';
 import { formatLevel, formatPercent } from '@/shared/formatting/ratingFormat';
 import { BalanceBar, BALANCE_INK, Card, theme } from '@/shared/ui';
+import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
 
 import type { AtStake, PairingForecast, PairingSplit } from '../domain/pairing';
 

@@ -18,6 +18,7 @@
  * the row itself, and is asserted there against the same two registers.
  */
 
+import { levelRow } from '@/shared/formatting/levelRow';
 import type { SocialTagId } from '@/shared/vocabulary/socialTags';
 
 import {
@@ -25,7 +26,6 @@ import {
   candidateTag,
   countedGamesReading,
   lastFiveReading,
-  levelRow,
   metaLine,
   recordClauses,
   socialTagClauses,

@@ -16,9 +16,10 @@
  */
 
 import { router } from 'expo-router';
+import type { ReactNode } from 'react';
 
 import { useGameRooms } from '@/features/conversations/types';
-import type { BookedOnTheRail } from '@/features/plans/types';
+import type { AppError } from '@/shared/errors';
 
 import { bookedGameIds, chatIsOpen, isNew, onHome } from '../domain/home';
 import { useHome, useOpenedGames, useReadClock } from '../hooks/useHome';
@@ -26,8 +27,24 @@ import { useHome, useOpenedGames, useReadClock } from '../hooks/useHome';
 import { HomeGameCard } from './HomeGameCard';
 import { bookedGameRoute } from './proposalRoutes';
 
-/** What the rail takes from this feature — `plans`' own slot type, crossed as a type alone. */
-export type BookedCards = BookedOnTheRail;
+/**
+ * **What the rail takes from this feature** — the slot Home's rail fills with the booked games.
+ *
+ * `gameIds` is every Game the booked cards stand for: a booked game's Game is in `GET /games` too,
+ * and the rail leaves those out of its own cards — and of the badge — rather than drawing one game
+ * twice. It was the rail's own type, `BookedOnTheRail`, until
+ * [#574](https://github.com/Raketa02/Raketa/issues/574) put it with the booked games, so this
+ * feature imports nothing from `plans`: the rail is the old loop's and reads this type instead.
+ */
+export interface BookedCards {
+  readonly gameIds: ReadonlySet<string>;
+  /** How many cards `cards` draws — the heading counts them and the dots page through them. */
+  readonly count: number;
+  /** The booked games' read failed with nothing to draw — said here, as the games list's is. */
+  readonly error: AppError | null;
+  /** The cards, at the rail's card width, in their own order. */
+  readonly cards: (width: number) => ReactNode;
+}
 
 export function useBookedCards(): BookedCards {
   const home = useHome();

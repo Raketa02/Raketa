@@ -5,7 +5,8 @@
  * *"the court owns geometry and knows nothing about players; a seat owns its label, its ring,
  * its badge and its taps."* So `Court` hands this component a box and a position, and
  * everything inside that box is here. The face and the ring are
- * [`seatFace.tsx`](./seatFace.tsx)'s, because the read-only court draws the same ones.
+ * [`SeatFace.tsx`](../../../../shared/ui/SeatFace.tsx)'s, because the read-only court draws the
+ * same ones.
  *
  * ## The label is an identifier under a face, and it is three letters
  *
@@ -74,13 +75,12 @@
 
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Plus, theme } from '@/shared/ui';
+import { Plus, SeatCaption, SeatFace, seatBox, theme } from '@/shared/ui';
+import type { SeatPlace } from '@/shared/vocabulary/seatPlace';
 
-import type { SeatPlace } from '../../domain/lineup';
 import type { UnfilledReason } from '../../domain/vocabulary';
 import { clearSeatLabel, seatLabel } from '../accessibilityPresentation';
 
-import { SeatCaption, SeatFace, seatBox } from './seatFace';
 import { seatWho } from './seatWho';
 
 /**
@@ -93,7 +93,7 @@ import { seatWho } from './seatWho';
  * seat that eventually will be.
  */
 export type CourtSeatOccupant =
-  /** **The id is optional**, because no route serves a searcher their own — `seatFace.tsx`. */
+  /** **The id is optional**, because no route serves a searcher their own — `SeatFace.tsx`. */
   | { readonly kind: 'you'; readonly playerId?: string }
   | {
       readonly kind: 'player';

@@ -45,8 +45,15 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
-import type { DeckAnswerLabels } from './accessibilityPresentation';
 import { DeckBall } from './DeckBall';
+
+/** The deck's three buttons. It is §20.3's card with three actions beside it instead of one. */
+export interface DeckAnswerLabels {
+  readonly pass: string;
+  readonly accept: string;
+  /** `Marek Z.’s record` — the *i*, and the long press's own name. */
+  readonly record: string;
+}
 
 export interface DeckAnswersProps {
   /** The three buttons' spoken names — see the module note. */

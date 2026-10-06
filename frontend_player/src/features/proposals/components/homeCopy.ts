@@ -125,7 +125,7 @@ export const HOME_GAME_COPY = {
   },
   /**
    * ***Leave the game*** (the mechanics §13; #557) — the line under the button for the moment, the
-   * sheet's words (today's *Before you leave* sheet, `challenges`' `LeaveSheet`), the toast once it
+   * sheet's words (today's *Before you leave* sheet, `LeaveSheet`), the toast once it
    * is done, and the route's three refusals. The sentences carrying a sum are `homePresentation.ts`.
    */
   leave: {

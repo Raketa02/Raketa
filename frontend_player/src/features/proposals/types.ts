@@ -82,6 +82,12 @@ export { parseBookingParams, parseRescueParams } from './schemas/bookingParams';
 export { bookedGameRoute } from './components/proposalRoutes';
 /** The words the Home and details suites hold the screens to. */
 export { HOME_GAME_COPY } from './components/homeCopy';
+/**
+ * ***Leave the game*** — the departure's one word, on the door and on the sheet's act, for the
+ * suites that press it. The sheet and its words are this feature's since
+ * [#574](https://github.com/Raketa02/Raketa/issues/574), with the booked game's departure.
+ */
+export { LEAVE_THE_GAME } from './components/leaveSheetCopy';
 
 /**
  * **Where a notice opens** ([#559](https://github.com/Raketa02/Raketa/issues/559); the screens A9):
@@ -92,3 +98,49 @@ export { HOME_GAME_COPY } from './components/homeCopy';
  */
 export { gameRoute, rescueRoute } from './components/proposalRoutes';
 export { proposalKeys } from './hooks/proposalKeys';
+
+/**
+ * **The Games deck's stage, its three buttons and the intent question** — the pan gesture, the
+ * stamps, the fly-off, the arrival and the haptic tick, the ✕ / i / ball row, and the one-time
+ * *Your usual game* card a group's Games tab stands on (#553). They were Play's until
+ * [#574](https://github.com/Raketa02/Raketa/issues/574) brought them to the deck that stays, and
+ * each still takes its words from its caller where two decks differ.
+ *
+ * **Crossed only for the old loop** — Players' deck and Find a game draw the same three, and their
+ * suites hold the ball's drawing and the card's words — until
+ * [#576](https://github.com/Raketa02/Raketa/issues/576) deletes them, and this block with them.
+ */
+export {
+  DeckStage,
+  type DeckExit,
+  type DragVerdict,
+  type StampWords,
+} from './components/DeckStage';
+export { DeckAnswers, type DeckAnswerLabels } from './components/DeckAnswers';
+export { BALL_PATHS, BALL_STROKE } from './components/DeckBall';
+export {
+  DeclarationInterstitial,
+  type PlayDeclarationSurface,
+} from './components/DeclarationInterstitial';
+export {
+  DECLARATION_BODY,
+  DECLARATION_EYEBROW,
+  declarationTitle,
+} from './components/declarationPresentation';
+
+/**
+ * ***It's a game!*'s drawn parts** — the ground, the entrance's one beat and the tile — crossed only
+ * for the old loop's yes screen (`challenges`' *Challenge!* and *Matched!*), which draws the same
+ * three until [#576](https://github.com/Raketa02/Raketa/issues/576) deletes it.
+ */
+export { YesEntrance } from './components/YesEntrance';
+export { YesGround } from './components/YesGround';
+export { YesTile, type YesSeat } from './components/YesTile';
+
+/**
+ * **The departure's sheet, and the words its suite holds it to** — crossed only for the old loop's
+ * Chats row door (`challenges`' `DepartureDoor`), which opens the same sheet with its own line
+ * until [#576](https://github.com/Raketa02/Raketa/issues/576) deletes it.
+ */
+export { LeaveSheet } from './components/LeaveSheet';
+export { LEAVE_SHEET_CLOSE_LABEL, LEAVE_SHEET_TITLE, LEAVING } from './components/leaveSheetCopy';

@@ -43,6 +43,7 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { LEAVE_THE_GAME } from '@/features/proposals/types';
 
 import { standingLine, yourAnswerWindowLine } from './challengePresentation';
 import {
@@ -59,7 +60,6 @@ import {
   saidYesOnPlayersLine,
   seatDidLine,
 } from './challengeDetailPresentation';
-import { LEAVE_THE_GAME } from './leaveGamePresentation';
 
 const ME = GATE_USER.id;
 const EWA = 'bbbbbbbb-0000-4000-8000-000000000002';

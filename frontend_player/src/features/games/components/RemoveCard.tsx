@@ -38,7 +38,7 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import { theme } from '@/shared/ui';
 
-import { useDismissGame } from '../hooks/useGames';
+import { useDismissGame } from '../hooks/useDismissGame';
 
 import { REMOVE_THIS_CARD } from './gamePresentation';
 

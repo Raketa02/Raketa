@@ -55,10 +55,9 @@
 
 import { type ToastTone } from '@/shared/store/toast.store';
 
+import type { DeckExit, StampWords } from '@/features/proposals/types';
 import { counted } from '@/shared/formatting/counted';
 
-import type { StampWords } from './DeckStage';
-import type { DeckExit } from './deckStageGeometry';
 import { DECK_ANSWER_WORDS } from './playerCardPresentation';
 
 /** The two panes of the Players tab, as the toggle names them. Deck is the one it opens on. */
@@ -123,9 +122,6 @@ export const STAMP_WORDS: Readonly<Record<DeckExit, string>> = {
   yes: DECK_ANSWER_WORDS.accept,
   no: DECK_ANSWER_WORDS.pass,
 };
-
-/** Between a stamp's words and its figure — the mocks' middle dot: *I'M IN · 32 zł*. */
-export const STAMP_JOIN = ' · ';
 
 /** The same two, as the stage takes a stamp — words and no figure, because Players prices nothing. */
 export const PLAYERS_STAMPS: Readonly<Record<DeckExit, StampWords>> = {

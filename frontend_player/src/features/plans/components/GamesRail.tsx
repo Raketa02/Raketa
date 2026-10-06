@@ -65,14 +65,15 @@
  * rail leaves every one of them out of its own cards, so a game is drawn once — as its booking.
  */
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 
 import { useCurrentUser } from '@/features/auth/types';
 import { useChatDoors } from '@/features/conversations/types';
 import { useGames } from '@/features/games/types';
-import { recoveryMessage, type AppError } from '@/shared/errors';
+import type { BookedCards } from '@/features/proposals/types';
+import { recoveryMessage } from '@/shared/errors';
 import { Note, PagerDots, theme } from '@/shared/ui';
 
 import { planOf, railGames } from '../domain/gameCard';
@@ -80,25 +81,6 @@ import { usePlans } from '../hooks/usePlans';
 
 import { GameCard } from './GameCard';
 import { gamesHeading } from './nowPresentation';
-
-/**
- * **The booked games, drawn first** ([#556](https://github.com/Raketa02/Raketa/issues/556)) — Home's
- * other half, which `features/proposals` draws and the shell hands in: this feature knows nothing
- * about a booking, and the cards come as a slot.
- *
- * `gameIds` is every Game the booked cards stand for: a booked game's Game is in `GET /games` too,
- * and the rail leaves those out of its own cards — and of the badge — rather than drawing one game
- * twice.
- */
-export interface BookedOnTheRail {
-  readonly gameIds: ReadonlySet<string>;
-  /** How many cards `cards` draws — the heading counts them and the dots page through them. */
-  readonly count: number;
-  /** The booked games' read failed with nothing to draw — said here, as the games list's is. */
-  readonly error: AppError | null;
-  /** The cards, at the rail's card width, in their own order. */
-  readonly cards: (width: number) => ReactNode;
-}
 
 export interface GamesRailProps {
   /**
@@ -111,7 +93,7 @@ export interface GamesRailProps {
    */
   readonly empty: { readonly line: string; readonly act: string };
   /** Home's booked games (#556), first on the rail. Absent is a rail of Classic games alone. */
-  readonly booked?: BookedOnTheRail;
+  readonly booked?: BookedCards;
 }
 
 export function GamesRail({ empty, booked }: GamesRailProps) {

@@ -50,8 +50,9 @@
 import { useState } from 'react';
 
 import { Court, courtSeatSize, type SportKey } from '@/shared/ui';
+import { seatPlaces } from '@/shared/vocabulary/seatPlace';
 
-import { seatIsClearable, seatPlaces, tapSeat } from '../../domain/lineup';
+import { seatIsClearable, tapSeat } from '../../domain/lineup';
 
 import { CourtSeat, type CourtSeatOccupant } from './CourtSeat';
 

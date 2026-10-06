@@ -105,11 +105,9 @@ export {
    */
   PLAYER_SCORE_BLOCK,
   balanceRowValue,
-  levelRow,
   metaLine,
   overlapRowValue,
   stakeClauses,
-  type LevelRowFacts,
   type MetaLineFacts,
 } from './components/playerCardPresentation';
 export { NOT_ON_THIS_PLATFORM_FOOTER, degradedLine } from './components/degradedPresentation';
@@ -147,7 +145,6 @@ export {
   candidateActionLabel,
   candidateCardLabel,
   clearSeatLabel,
-  courtSummaryLabel,
   deckAnswerLabels,
   fitSentence,
   provisionalForecastAnnouncement,
@@ -156,16 +153,9 @@ export {
   whyFitSheetLabel,
   type CandidateAction,
   type CandidateCardFacts,
-  type DeckAnswerLabels,
   type PlayLiveRegion,
   type SeatOccupant,
 } from './components/accessibilityPresentation';
-export {
-  balanceLabel,
-  balanceReading,
-  balanceTone,
-  balanceWord,
-} from './components/balancePresentation';
 export {
   engineFillStatus,
   poolRankingStatus,
@@ -225,26 +215,13 @@ export {
   type CourtSeatOccupant,
   type CourtSeatProps,
 } from './components/court/CourtSeat';
-export {
-  SEAT_NAME_LETTERS,
-  SeatCaption,
-  SeatFace,
-  seatBox,
-  seatCaptionName,
-  type CourtFaceOccupant,
-  type SeatCaptionProps,
-  type SeatFaceProps,
-} from './components/court/seatFace';
 export { seatWho, type SeatWho } from './components/court/seatWho';
 
 export {
-  SEAT_PLACES,
   seatIsClearable,
   seatIsLocked,
-  seatPlaces,
   tapSeat,
   type BuildSeat,
-  type SeatPlace,
   type SeatTap,
 } from './domain/lineup';
 
@@ -332,28 +309,6 @@ export { FindAGameScreen } from './components/FindAGameScreen';
  * long press that opens `SH.whyfit` ([#270](https://github.com/Raketa02/Raketa/issues/270)).
  */
 export { DeckScreen } from './components/DeckScreen';
-
-/**
- * **The deck's stage, its three buttons, and the intent question** — what a group's Games deck
- * stands on ([#553](https://github.com/Raketa02/Raketa/issues/553), the screens A2.1–A2.2): the
- * pan gesture, the stamps, the fly-off, the arrival and the haptic tick, the ✕ / i / ball row, and
- * the one-time *Your usual game* card, reused rather than drawn twice. Each takes its words from
- * its caller where the two decks differ — the stamps and the buttons' names — and nothing of
- * Players' screen comes with them.
- */
-export {
-  DeckStage,
-  type DeckExit,
-  type DeckStageProps,
-  type DragVerdict,
-  type StagedCard,
-  type StampWords,
-} from './components/DeckStage';
-export { DeckAnswers, type DeckAnswersProps } from './components/DeckAnswers';
-export {
-  DeclarationInterstitial,
-  type DeclarationInterstitialProps,
-} from './components/DeclarationInterstitial';
 
 /**
  * The whole Fit calculation, in a sheet — and the one surface allowed to draw a term row.
@@ -505,7 +460,6 @@ export {
 export {
   FIND_A_GAME_TITLE,
   WEEK_CHANGED_FROM_PROFILE,
-  declarationTitle,
   intentLabel,
   modeControlLabel,
   modeLabel,

@@ -2,11 +2,11 @@
  * The ring around a face on a court — **the one number the two courts share that the design
  * system is not entitled to.**
  *
- * [7.12](../../../../../docs/design-system.md#712-the-court) puts it here in writing: *"the
+ * [7.12](../../../docs/design-system.md#712-the-court) puts it here in writing: *"the
  * seat face is a share of the court with a floor… Its **radius and its ring are not here**:
  * the court owns where a seat goes and how big its box is, and the seat owns what is drawn in
  * it."* So it cannot be a `theme.size.court` token. And
- * [`the-play-components.md`](../../../../../../docs/specs/matchmaking/the-play-components.md)
+ * [`the-play-components.md`](../../../../docs/specs/matchmaking/the-play-components.md)
  * §4 says the read-only court and the interactive one *"share everything that is a number"*,
  * so it cannot be two copies either — `CourtMini` draws the same ring `CourtSeat` does, and
  * two literals is how one of them ends up at 1,5 the day somebody adjusts a screen.
@@ -31,7 +31,7 @@
  * **Volt means two things and they never share a court.** On `CourtBuild` it is the seat you
  * picked for a swap; on `CourtMini` it is which seat is you. The read-only court has no
  * selection to confuse it with and the interactive one marks nobody, so the accent carries one
- * meaning per surface — which is what [1.2](../../../../../docs/design-system.md#12-one-accent-used-sparingly)
+ * meaning per surface — which is what [1.2](../../../docs/design-system.md#12-one-accent-used-sparingly)
  * asks and what makes two components cheaper than one with a flag.
  *
  * **The ring is drawn over the face rather than as the face's own border**, at both call
@@ -40,7 +40,7 @@
 
 import { StyleSheet } from 'react-native';
 
-import { theme } from '@/shared/ui';
+import { theme } from './theme';
 
 /** Two points of white, three of volt. The seat's own numbers, on `THUMB`'s precedent. */
 const RING = { width: 2, selected: 3 } as const;

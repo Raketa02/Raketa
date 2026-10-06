@@ -62,28 +62,31 @@
  *   surface, and the sentences it governs are `searchingPresentation.ts`'s.
  */
 
-import { counted } from '@/shared/formatting/counted';
+import type { DeckAnswerLabels } from '@/features/proposals/types';
+import { levelRow, type LevelRowFacts } from '@/shared/formatting/levelRow';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
 import type { AvailabilityDiffState } from '@/shared/ui/AvailabilityGrid';
 import type { Announcement } from '@/shared/ui/overlay';
 import { cellLabel } from '@/shared/vocabulary/availabilityPresentation';
+import { balanceLabel } from '@/shared/vocabulary/balancePresentation';
 import { orOutOfDate } from '@/shared/vocabulary/outOfDate';
+import type { SeatPlace } from '@/shared/vocabulary/seatPlace';
+import {
+  PLACE_CLAUSE,
+  courtSummaryLabel,
+  seatLabel as courtSeatLabel,
+  type CourtSummary,
+  type SeatOccupant as CourtSeatOccupant,
+} from '@/shared/vocabulary/seatPlacePresentation';
 import type { WeeklyHour } from '@/shared/vocabulary/week';
 
 import type { Split } from '../domain/forecast';
-import { courtHalfOf, type CourtHalf, type SeatPlace } from '../domain/lineup';
+import { courtHalfOf, type CourtHalf } from '../domain/lineup';
 import type { ForecastAssumption, UnfilledReason } from '../domain/vocabulary';
 
-import { balanceLabel } from './balancePresentation';
 import { GAP_WORD } from './builderPresentation';
 import { WITHHELD_SEAT_LINE, unfilledSeatLine } from './courtPresentation';
-import {
-  DECK_ANSWER_WORDS,
-  levelRow,
-  metaLine,
-  type LevelRowFacts,
-  type MetaLineFacts,
-} from './playerCardPresentation';
+import { DECK_ANSWER_WORDS, metaLine, type MetaLineFacts } from './playerCardPresentation';
 import { forecastAssumption } from './searchPresentation';
 
 /** The scale Fit is against, spelled out rather than assumed. See {@link fitSentence}. */
@@ -379,14 +382,6 @@ export function radarTileLabel(facts: {
   return `${facts.name}, ${facts.distance}, ${facts.sportName} ${formatLevel(facts.level)}`;
 }
 
-/** The deck's three buttons. It is §20.3's card with three actions beside it instead of one. */
-export interface DeckAnswerLabels {
-  readonly pass: string;
-  readonly accept: string;
-  /** `Marek Z.’s record` — the *i*, and the long press's own name. */
-  readonly record: string;
-}
-
 /**
  * `Not today, Marek` · `Let's play, Marek`.
  *
@@ -406,14 +401,6 @@ export function deckAnswerLabels(name: string): DeckAnswerLabels {
     record: `${name}’s record`,
   };
 }
-
-/**
- * The place as a seat label **opens** with it — capitalised, because it starts a sentence. */
-const PLACE: Readonly<Record<SeatPlace, string>> = {
-  YOUR_SIDE: 'Your side',
-  YOUR_PARTNER: 'Your side, your partner',
-  THEIR_SIDE: 'Their side',
-};
 
 /**
  * The **side** as a sentence names it mid-way — *"Remove Marek from your side"*.
@@ -441,15 +428,15 @@ export const SIDE: Readonly<Record<CourtHalf, string>> = {
 };
 
 /**
- * Who is in a seat, as the court knows it.
+ * Who is in a seat, as the court knows it — the shared seat's three kinds, and the two only a
+ * line-up being built can hold.
  *
  * `empty` carries §11's per-seat obstacle where the engine gave one, and `null` where the seat
  * was simply never filled — the two spellings of absence, kept apart because a court that
  * *stated* a shortfall and one that has not been asked to fill a seat are different things.
  */
 export type SeatOccupant =
-  | { readonly kind: 'you' }
-  | { readonly kind: 'player'; readonly name: string; readonly level: number }
+  | Exclude<CourtSeatOccupant, { readonly kind: 'empty' }>
   /**
    * A seat that still holds somebody the **record no longer describes** — the withheld mark
    * ([#271](https://github.com/Raketa02/Raketa/issues/271)).
@@ -467,14 +454,9 @@ export type SeatOccupant =
  * `Your side, you` · `Your side, your partner, Marek, level 2,92` · `Their side, Ana, level
  * 3,10` · `Their side, empty. Nobody left in range — everybody who fits is already seated`.
  *
- * A seat is a `button` in all four cases. Selected for a swap it takes
- * `accessibilityState={{ selected: true }}`, which §20.2 substitutes for the `pressed` React
- * Native does not ship — the state is never written into the name.
- *
- * **The 9,5pt seat label does not earn `allowFontScaling={false}`.** Part 13 permits that
- * escape only *"inside the level bar's drawn geometry"*, and §15 already ruled the court's
- * case the other way: *"a seat label may truncate visually; a sentence may not, and a spoken
- * name never does."* The visible label scales and truncates; this one is whole.
+ * The seat's own sentence is `shared/vocabulary/seatPlacePresentation.ts`' — the group page's
+ * court says it too (#574) — and this adds the two clauses only a line-up being built says: the
+ * withheld mark, and the engine's obstacle after an empty seat.
  *
  * **The holding ring is struck rather than announced** (§20.4,
  * [#278](https://github.com/Raketa02/Raketa/issues/278)). The prototype's 430 ms ring fed two
@@ -485,18 +467,17 @@ export type SeatOccupant =
  * route: {@link seatedNameLabel} on the forecast card's own names row.
  */
 export function seatLabel(place: SeatPlace, occupant: SeatOccupant): string {
-  const where = PLACE[place];
   switch (occupant.kind) {
-    case 'you':
-      return `${where}, you`;
-    case 'player':
-      return `${where}, ${occupant.name}, level ${formatLevel(occupant.level)}`;
     case 'withheld':
-      return `${where}. ${WITHHELD_SEAT_LINE}`;
-    case 'empty':
+      return `${PLACE_CLAUSE[place]}. ${WITHHELD_SEAT_LINE}`;
+    case 'empty': {
+      const empty = courtSeatLabel(place, { kind: 'empty' });
       return occupant.unfilled === null
-        ? `${where}, empty`
-        : `${where}, empty. ${unfilledSeatLine(occupant.unfilled)}`;
+        ? empty
+        : `${empty}. ${unfilledSeatLine(occupant.unfilled)}`;
+    }
+    default:
+      return courtSeatLabel(place, occupant);
   }
 }
 
@@ -527,8 +508,8 @@ export function clearSeatLabel(seat: {
  * worse than none.
  *
  * It opens with the **same place clause a seat's own spoken name opens with** — *your side*,
- * *your side, your partner*, *their side* — and takes `PLACE` rather than the heading the row
- * draws, for §1's reason: a formatter composes from a code, never from another surface's
+ * *your side, your partner*, *their side* — and takes `PLACE_CLAUSE` rather than the heading the
+ * row draws, for §1's reason: a formatter composes from a code, never from another surface's
  * message. The heading says *Your side* where the partner's own name says *Your side, your
  * partner*, which is §20.4's rule that the role disambiguates two seats on one half. That is
  * also what hides the two side headings — each name now names its own side, exactly as 7.12
@@ -538,8 +519,8 @@ export function clearSeatLabel(seat: {
  * others see you* is what that sheet is, and a listener who heard *player record* on their own
  * seat would reasonably expect a settings screen.
  *
- * Both clauses are spelled here rather than lower-cased from the sheet's own titles, on `PLACE`
- * and `SIDE`'s precedent one block up: **two tables and not one lower-cased at the call site**
+ * Both clauses are spelled here rather than lower-cased from the sheet's own titles, on
+ * `PLACE_CLAUSE` and `SIDE`'s precedent: **two tables and not one lower-cased at the call site**
  * — a transformation over a composed sentence is a rule that breaks on the first proper noun.
  */
 const RECORD_CLAUSE = 'player record';
@@ -549,7 +530,7 @@ export function seatedNameLabel(
   place: SeatPlace,
   seated: { readonly name: string; readonly self: boolean },
 ): string {
-  return `${PLACE[place]}, ${seated.name}, ${seated.self ? OWN_RECORD_CLAUSE : RECORD_CLAUSE}`;
+  return `${PLACE_CLAUSE[place]}, ${seated.name}, ${seated.self ? OWN_RECORD_CLAUSE : RECORD_CLAUSE}`;
 }
 
 /**
@@ -577,30 +558,6 @@ export function splitRowLabel(sides: Readonly<Record<CourtHalf, string>>, split:
   const yours = `${sides.yours} ${formatLevel(split.yourSide)}`;
   const theirs = `${sides.theirs} ${formatLevel(split.theirSide)}`;
   return `${yours}, ${theirs}, ${GAP_WORD} ${formatLevel(split.gap)}`;
-}
-
-/**
- * A court as a sentence needs it: which Sport, and how full it is.
- *
- * One type because the three never travel apart — a count with no Sport places nothing, and a
- * Sport with no count says nothing — and because `poolHeaderLabel` builds on exactly this
- * sentence rather than on a second wording of it.
- */
-export interface CourtSummary {
-  readonly sportName: string;
-  readonly filled: number;
-  readonly seats: number;
-}
-
-/**
- * The court's summary element, which **precedes** the seats: `Padel, 3 of 4 seats filled.`
- *
- * Four seats announced against nothing are four seats a listener cannot place. The sport is
- * the served name, as `poolRankingStatus` takes it; the count routes through `counted()` for
- * §19's reason, which is that no string in this app hardcodes an `s`.
- */
-export function courtSummaryLabel(court: CourtSummary): string {
-  return `${court.sportName}, ${court.filled} of ${counted(court.seats, 'seat filled', 'seats filled')}.`;
 }
 
 /**

@@ -63,12 +63,13 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+import { balanceLabel, balanceWord } from '@/shared/vocabulary/balancePresentation';
+import { courtSummaryLabel } from '@/shared/vocabulary/seatPlacePresentation';
 
 import { usePlayPreferences } from '../store/playPreferences.store';
 import { endPlaySession, usePlaySession } from '../store/playSession.store';
 
 import {
-  courtSummaryLabel,
   provisionalForecastAnnouncement,
   seatLabel,
   seatedNameLabel,
@@ -76,7 +77,6 @@ import {
   whyFitSheetLabel,
 } from './accessibilityPresentation';
 import { courtEntryLabel } from './findAGamePresentation';
-import { balanceLabel, balanceWord } from './balancePresentation';
 import {
   ALREADY_EVENEST,
   EVEN_IT_OUT_LABEL,

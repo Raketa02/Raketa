@@ -13,7 +13,6 @@
  */
 
 import { sportLabel } from '@/features/onboarding/types';
-import { balanceWord } from '@/features/play/types';
 import { codeMessage, type AppError } from '@/shared/errors';
 import { counted } from '@/shared/formatting/counted';
 import { handleStem } from '@/shared/formatting/playerName';
@@ -21,6 +20,7 @@ import { formatLevel, formatPercent, formatZloty } from '@/shared/formatting/rat
 import { dayDate } from '@/shared/date/calendarDay';
 import { platformClock, platformDay } from '@/shared/date/platformZone';
 import { dayLabel, dayName } from '@/shared/vocabulary/availabilityPresentation';
+import { balanceWord } from '@/shared/vocabulary/balancePresentation';
 import type { Sport } from '@/shared/vocabulary/sport';
 import type { Weekday } from '@/shared/vocabulary/week';
 
@@ -326,6 +326,9 @@ export function courtSpoken(
 // ---------------------------------------------------------------------------
 // The stamps and the answers
 // ---------------------------------------------------------------------------
+
+/** Between a stamp's words and its figure — the mocks' middle dot: *I'M IN · 32 zł*. */
+export const STAMP_JOIN = ' · ';
 
 /**
  * The stamps a card is swiped under: *I'M IN* — with the price when the yes charges at once (Q72)

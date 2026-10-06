@@ -43,14 +43,16 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
-
-import { challengeErrorMessage } from './challengeErrorMessage';
 import {
-  LEAVE_FROM_THE_LIST_BODY,
   LEAVE_SHEET_CLOSE_LABEL,
   LEAVE_SHEET_TITLE,
   LEAVE_THE_GAME,
   LEAVING,
+} from '@/features/proposals/types';
+
+import { challengeErrorMessage } from './challengeErrorMessage';
+import {
+  LEAVE_FROM_THE_LIST_BODY,
   leaveRefusalMessage,
   leavingEndsLine,
 } from './leaveGamePresentation';

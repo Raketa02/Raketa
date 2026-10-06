@@ -48,6 +48,14 @@
  * is not the reader there. `onDeclared` is the caller's, so the deck is read again for the
  * segments the answer now shows; the interstitial knows nothing about what it stands in front of.
  *
+ * **It lives with the Games deck** ([#574](https://github.com/Raketa02/Raketa/issues/574)), the
+ * caller that stays when Find a game goes with the old loop
+ * ([#569](https://github.com/Raketa02/Raketa/issues/569)); `SEARCH_SWITCH` and its line leave
+ * with that screen. **What a refusal says is the caller's too** (`refusalMessage`), for the reason
+ * the stage's words are: Find a game says Play's own sentences, as it always has, and the Games
+ * deck says the app's recovery sentence — the declaration's route answers only a lost race and a
+ * malformed request, and neither is a search's to explain.
+ *
  * **It is not the mode toggle, and the two must never be collapsed.** This writes a
  * `PlayIntent` with three values; the toggle chooses a `SearchMode` with two. That arity gap
  * is ADR-0094's central move, and `domain/playMode` holds the whole argument.
@@ -86,21 +94,22 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useDeclarePlayIntent } from '@/features/player_profile/types';
-import type { Sport } from '@/shared/vocabulary/sport';
+import type { AppError } from '@/shared/errors';
 import { Button, DarkCard, Note, theme } from '@/shared/ui';
-
-import { PLAY_INTENTS } from '../domain/vocabulary';
+import { PLAY_INTENTS } from '@/shared/vocabulary/playIntent';
+import {
+  declarationOptionLabel,
+  intentGloss,
+  intentLabel,
+} from '@/shared/vocabulary/playIntentPresentation';
+import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
   DECLARATION_BODY,
   DECLARATION_EYEBROW,
   GROUP_DECK_DECLARATION_BODY,
-  declarationOptionLabel,
   declarationTitle,
-  intentGloss,
-  intentLabel,
-} from './findAGamePresentation';
-import { playErrorMessage } from './playErrorMessage';
+} from './declarationPresentation';
 
 /**
  * The two of `PlayIntentSurface` a Play screen may report, spelled here rather than derived.
@@ -132,6 +141,8 @@ export interface DeclarationInterstitialProps {
   readonly declaredOn: PlayDeclarationSurface;
   /** The answer has landed — for a caller whose own read the answer changes. */
   readonly onDeclared?: () => void;
+  /** The sentence a refused answer is said in — the caller's words. See the module note. */
+  readonly refusalMessage: (error: AppError) => string;
 }
 
 export function DeclarationInterstitial({
@@ -139,6 +150,7 @@ export function DeclarationInterstitial({
   sportName,
   declaredOn,
   onDeclared,
+  refusalMessage,
 }: DeclarationInterstitialProps) {
   const declare = useDeclarePlayIntent();
   // Which answer is being written, and therefore which one is *busy* rather than merely shut.
@@ -150,7 +162,7 @@ export function DeclarationInterstitial({
           screen draws over the court card a search was refused on. */}
       {declare.error !== null ? (
         <Note variant="coral" accessibilityRole="alert">
-          {playErrorMessage(declare.error)}
+          {refusalMessage(declare.error)}
         </Note>
       ) : null}
 

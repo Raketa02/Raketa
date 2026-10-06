@@ -71,9 +71,9 @@ import { StyleSheet, Text, View } from 'react-native';
 import { playerName } from '@/shared/formatting/playerName';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
 import { BALANCE_INK, BalanceBar, theme } from '@/shared/ui';
+import { balanceLabel, balanceReading, balanceTone } from '@/shared/vocabulary/balancePresentation';
 
 import type { LevelFitEvidence, PredictedBalanceEvidence } from '../../domain/evidence';
-import { balanceLabel, balanceReading, balanceTone } from '../balancePresentation';
 import { BALANCE_ROW_LABEL } from '../playerCardPresentation';
 
 import { FactRow } from './FactRow';

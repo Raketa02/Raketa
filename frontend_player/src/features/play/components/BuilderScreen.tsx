@@ -231,6 +231,9 @@ import {
   useLiveRegion,
   type BalanceBarTone,
 } from '@/shared/ui';
+import { seatPlaces } from '@/shared/vocabulary/seatPlace';
+import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/balancePresentation';
+import { courtSummaryLabel } from '@/shared/vocabulary/seatPlacePresentation';
 
 import type { Candidate } from '../domain/candidate';
 import {
@@ -249,7 +252,7 @@ import {
   type SeatOccupancy,
   type Seating,
 } from '../domain/forecast';
-import { seatPlaces, withheldSeats, type CourtHalf } from '../domain/lineup';
+import { withheldSeats, type CourtHalf } from '../domain/lineup';
 import { socialTagOverlap } from '../domain/socialTagOverlap';
 import { alreadyAsked } from '../domain/raisedPrompt';
 import type { UnfilledReason } from '../domain/vocabulary';
@@ -260,12 +263,10 @@ import { usePlaySession } from '../store/playSession.store';
 
 import {
   PLAY_LIVE_REGIONS,
-  courtSummaryLabel,
   provisionalForecastAnnouncement,
   seatedNameLabel,
   splitRowLabel,
 } from './accessibilityPresentation';
-import { balanceLabel, balanceTone, balanceWord } from './balancePresentation';
 import {
   ALREADY_EVENEST,
   EVEN_IT_OUT_LABEL,
@@ -1533,7 +1534,7 @@ function toOccupant(
   seat: Seating[number],
   court: {
     /** Your own player id — the account's, read at the screen. `undefined` for the one frame
-     *  the launch read is still in flight (`seatFace.tsx`). */
+     *  the launch read is still in flight (`SeatFace.tsx`). */
     readonly self: string | undefined;
     readonly rows: ReadonlyMap<string, Candidate>;
     readonly unfilled: UnfilledReason | null;

@@ -199,12 +199,12 @@ it keeps its position when the player leaves the page and comes back, and ADR-01
 the phone; one value for the app, since it is the intent of the game being built. Like the app's
 other process stores, a sign-out does not reset it.
 
-**The court is play's court, spoken in play's sentences.** `Court` at `court.build` with play's
-`SeatFace` and `SeatCaption` through `play/types` — the edge `plans` and `games` already cross —
-and the reader in the first seat, captioned _You 2,71_; every other seat is a dashed ring with a
-white plus that opens **Friends**, as **+ Friends** does. Who sits on which side is play's rule
+**The court is the app's court, spoken in the seat's sentences.** `Court` at `court.build` with
+`shared/ui`'s `SeatFace` and `SeatCaption` — Play's until #574, and drawn by Fill in and a booked
+game's players card too — and the reader in the first seat, captioned _You 2,71_; every other seat is a dashed ring with a
+white plus that opens **Friends**, as **+ Friends** does. Who sits on which side is the seat's rule
 (`seatPlaces`, a side is a team, so squash's other seat is _their side_) and every seat says so in
-play's sentences: _Padel, 1 of 4 seats filled._ first, then _Your side, you, level 2,71_, _Your
+the seat's sentences (`shared/vocabulary`'s, #574): _Padel, 1 of 4 seats filled._ first, then _Your side, you, level 2,71_, _Your
 side, your partner, empty_, _Their side, empty_. The Games card's row speaks the same summary.
 **Side labels are drawn on padel and badminton only**, as the mocks draw them: squash has no
 halves, and tennis's far seat stands where the label would be written.

@@ -21,6 +21,8 @@
 
 import { playerName } from '@/shared/formatting/playerName';
 import { ON_COURT_CLAUSE } from '@/shared/ui';
+import { balanceReading } from '@/shared/vocabulary/balancePresentation';
+import type { LevelRowFacts } from '@/shared/formatting/levelRow';
 
 import type { AtStake, Candidate, SearchEnvelope } from '../../domain/candidate';
 import { isTagEvidence, type Evidence, type ScoredTerm } from '../../domain/evidence';
@@ -29,14 +31,12 @@ import { selectConcern, selectReasons, type ReasonSelection } from '../../domain
 import type { SocialTagOverlap } from '../../domain/socialTagOverlap';
 import type { Term } from '../../domain/vocabulary';
 import { candidateCardLabel } from '../accessibilityPresentation';
-import { balanceReading } from '../balancePresentation';
 import { concernLine } from '../concernPresentation';
 import { livenessLine } from '../livenessPresentation';
 import {
   recordClauses,
   socialTagClauses,
   stakeClauses,
-  type LevelRowFacts,
   type MetaLineFacts,
   type RecordBlockFacts,
 } from '../playerCardPresentation';

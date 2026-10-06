@@ -1,6 +1,6 @@
 /**
  * **The mark's confirmation** — *Before you say so* ([#560](https://github.com/Raketa02/Raketa/issues/560);
- * the Games & Fill in mechanics §15.3), on the leave sheet's shape (`challenges`' `LeaveSheet`): a
+ * the Games & Fill in mechanics §15.3), on the leave sheet's shape (`proposals`' `LeaveSheet`): a
  * real modal over `BottomSheet`, a title naming **the moment** so the act is named once — by the
  * control that carries it out — a dismissal named by what it does, and focus landing on the title
  * rather than on the act.

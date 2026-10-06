@@ -516,7 +516,9 @@ draws it.
   true rather than intended, and it closes a sport rated before the declaration shipped, a
   restored account and a bug in the tail with one screen. **It is not the mode toggle**, and
   the two must never be collapsed — it writes a `PlayIntent` with three values and the toggle
-  chooses a `SearchMode` with two, which is the arity gap ADR-0094 spent a type on. _Avoid_:
+  chooses a `SearchMode` with two, which is the arity gap ADR-0094 spent a type on. A group's
+  Games tab asks the same question, and the component lives with that deck in
+  `features/proposals` since #574, the caller that stays when Find a game goes. _Avoid_:
   "the intent prompt" — a Prompt rides on a search response and offers something; this gates
   one; "onboarding step", which it is not and must not become.
 - **No hold state** — the one thing this tab must never remember. A held account is a `403` the

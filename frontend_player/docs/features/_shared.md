@@ -133,7 +133,7 @@ screen** ([#433](https://github.com/Raketa02/Raketa/issues/433),
 radius option on the one primitive rather than a second one, changing the corner and nothing else,
 which is 4.2's _the chip — the only true pill_ with one fenced exception — and the yes screen's tile
 is `PlayerPhoto`'s `face` box at two measured sizes with initials drawn over a **poster** and an
-outlined empty seat drawn beside it, both in `features/challenges/components/YesTile.tsx` rather
+outlined empty seat drawn beside it, both in `features/proposals/components/YesTile.tsx` rather
 than here, because the poster's initials are that screen's one licensed drawing and a face
 elsewhere is still a photograph or a poster and nothing over it. `handleInitials` sits beside
 `handleStem` in `shared/formatting/playerName.ts`, with the four-sided fence on it. The rest arrive

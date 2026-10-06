@@ -56,10 +56,11 @@
  */
 
 import type { AtStake } from '@/features/play/types';
-import { PLAYER_SCORE_BLOCK, levelRow, metaLine, stakeClauses } from '@/features/play/types';
+import { PLAYER_SCORE_BLOCK, metaLine, stakeClauses } from '@/features/play/types';
 import type { AppError } from '@/shared/errors';
 import { playerName, type NamedPlayer } from '@/shared/formatting/playerName';
 import { formatDistanceKm } from '@/shared/formatting/ratingFormat';
+import { levelRow } from '@/shared/formatting/levelRow';
 
 import type { CourtPerson, PairingAbsence, SeatWord } from '../domain/challengeDetail';
 
