@@ -25,7 +25,7 @@
  * `conversation_not_found` is not a send's sentence: the room is gone and there is no retry that
  * changes it. A room nothing was read from leaves the screen — `challenge_not_found`'s own arm,
  * verbatim (§3.7) — and a room that ends while it is on screen closes in place with §22.5's own
- * sentence (`roomOverLine`), which is the read's to draw and never a refusal note's.
+ * sentence (`ROOM_OVER_LINE`), which is the read's to draw and never a refusal note's.
  *
  * **`account_held` never reaches this table**, and that is a decision rather than a gap
  * ([#365](https://github.com/Raketa02/Raketa/issues/365)). A hold is a fact about the **account**

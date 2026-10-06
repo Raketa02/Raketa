@@ -64,7 +64,7 @@
  *
  * ## The header's second line is the booking's word
  *
- * Handed in (`state`, the booking's word — *booked*, *needs result*), because the room knows its
+ * Handed in (`gameState`, the booking's word — *booked*, *needs result*), because the room knows its
  * game and not the booking's standing; the details that open it have just read that.
  *
  * ## The room owns its chrome: the top inset, and the bottom one because the bar stands down
@@ -147,10 +147,10 @@ export interface ConversationScreenProps {
    * The header's second line after the sport — the booking's own word (*booked*), handed in by the
    * booked game's chat, which has just read the booking.
    */
-  readonly state: string;
+  readonly gameState: string;
 }
 
-export function ConversationScreen({ conversationId, state }: ConversationScreenProps) {
+export function ConversationScreen({ conversationId, gameState }: ConversationScreenProps) {
   const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useConversation(conversationId);
   const me = useCurrentUser().data?.id;
@@ -189,7 +189,7 @@ export function ConversationScreen({ conversationId, state }: ConversationScreen
       opened={data}
       playerId={me}
       over={over}
-      gameState={state}
+      gameState={gameState}
       onPageBack={() => {
         if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
       }}

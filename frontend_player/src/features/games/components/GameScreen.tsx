@@ -85,11 +85,11 @@
  * one slot**, because §22.6 settles that *the rungs differ by the clock and not by the
  * arrangement*.
  *
- * **Two routes mount this one component** — `/games/[gameId]` under Now and
- * `/chats/conversation/[conversationId]/details` under Chats — so each lights its own column and
- * *back* is correct in both directions by construction. It is **not told which**, and that is the
- * point: a screen that knew its door would be a screen that could draw differently through one of
- * them.
+ * **One route mounts this component now** — a booked game's result, `/booking/[id]/result`,
+ * on the score lead with the four slots empty ([#576](https://github.com/Raketa02/Raketa/issues/576)).
+ * It was mounted at `/games/[gameId]` and behind a room's *Details* too, filled by the old loop's
+ * plan, until that loop was removed; the plan lead and the slots below are that loop's, kept until
+ * a ticket of its own folds the screen to the one lead it has.
  *
  * ## Three plan arms, and the one word that tells them apart
  *

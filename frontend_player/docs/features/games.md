@@ -238,8 +238,8 @@ than the challenge is `challenges.md`'s to say.
 
 **The score grid is the landing for _Needs result_ alone**
 ([ADR-0166](../../../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)). The _Today_ rung
-is gone — the decision and its reasons are recorded in [`plans.md`](plans.md), whose ladder it was
-— so `entryLeadOf` lands a game on its own day on **the plan**, with _We played_ the quiet door
+is gone — the decision and its reasons were recorded in the old loop's `plans` record, whose ladder
+it was and which left with it in #576 — so `entryLeadOf` lands a game on its own day on **the plan**, with _We played_ the quiet door
 beneath _Open the chat_, and on the grid only once the agreed point has passed. Nothing in this
 feature changed but the sentence: `EntryLead` is still derived from the card's door, _We played_
 is still offered on every entry arm, and the two-arm docstrings now name one score-led rung.

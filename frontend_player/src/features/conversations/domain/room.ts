@@ -34,11 +34,6 @@ import type { ConversationMember, ConversationPerson } from './membership';
 
 export interface ConversationRoom {
   readonly conversationId: string;
-  /**
-   * The booked game it is about — absent only on a room the old loop opened before its court
-   * became a game, which no booked room is. `domain/roomOver.ts` reads it for how a room ended.
-   */
-  readonly gameId?: string;
   /** The instant the header and the page were folded — **one instant for both**. */
   readonly readAt: string;
   readonly sport: Sport;

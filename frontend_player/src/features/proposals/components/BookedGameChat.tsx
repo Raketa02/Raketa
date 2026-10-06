@@ -34,7 +34,7 @@ export function BookedGameChat({ bookingId }: BookedGameChatProps) {
     return (
       <ConversationScreen
         conversationId={room.conversationId}
-        state={COPY.statusInLine[game.status]}
+        gameState={COPY.statusInLine[game.status]}
       />
     );
   }

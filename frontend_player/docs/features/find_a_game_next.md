@@ -7,8 +7,8 @@
 **An empty screen, and a feature folder around it**
 ([#479](https://github.com/Raketa02/Raketa/issues/479),
 [ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
-§7). Find a game is about to be rebuilt, and the rebuild needs somewhere to live while the current
-one keeps working. `FindAGameNextScreen` was what the Play tab's root drew while `find_a_game` was
+§7). Find a game was to be rebuilt, and the rebuild needed somewhere to live while the old one kept
+working. `FindAGameNextScreen` was what the Play tab's root drew while `find_a_game` was
 off: the app's `paper` ground and nothing else, under the shell's tab bar. **No copy** — nothing
 says _coming soon_, because there is no promise to make yet and a sentence written now is one the
 rebuild would inherit without anybody deciding it. It is its own feature rather than a file in the

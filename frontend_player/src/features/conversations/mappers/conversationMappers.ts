@@ -24,8 +24,9 @@
  * ## What is not mapped, and why that is the rule rather than an omission
  *
  * The rule is *"these fields are mapped by the screen that draws them"*. **`game_id` is mapped on
- * the row and the room**, because it is the join a booked game's chat and Home's cards find their
- * room by, and how a room that ended is told (`domain/roomOver.ts`). **`challenge_id` is not
+ * the row**, because it is the join a booked game's chat and Home's cards find their room by, and
+ * not on the opened room, which nothing reads it from since the old loop's rooms — which could end
+ * before they had a game — went with that loop (#576). **`challenge_id` is not
  * mapped**: it was the old loop's join from a challenge screen into its room, and no screen reads
  * it since that loop was removed ([#576](https://github.com/Raketa02/Raketa/issues/576)) — the wire
  * names it `booking_id` from #575, and #577 follows. `read_at` stays off the row and is on the
@@ -147,7 +148,6 @@ export function toConversationRoom(response: ConversationResponse): OpenConversa
     ...toEntryPage(response),
     room: {
       conversationId: response.conversation_id,
-      ...(response.game_id == null ? {} : { gameId: response.game_id }),
       readAt: response.read_at,
       sport,
       members: response.members.map(toPerson),

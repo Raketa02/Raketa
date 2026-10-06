@@ -1,10 +1,7 @@
 /**
  * **What stands in for a room that is not there** — still coming, refused, or gone.
  *
- * Three states with one sentence each, and none of them invents a fourth. It is a component
- * rather than a block repeated in two screens because both doors under `/chats/conversation/…`
- * land on the same nothing: the room and the game behind it are one read, so a room that is not
- * there is not there for either.
+ * Three states with one sentence each, and none of them invents a fourth.
  *
  * **The read still in flight draws nothing at all** —
  * [10.1](../../../../docs/design-system.md#101-screen-structure) forbids a spinner in this slot,
@@ -13,7 +10,7 @@
  *
  * A room that is **gone** never reaches this: one nothing was ever read from leaves the screen,
  * which is §3.7's own answer, and one that went while it was on screen stays, drawn as it was
- * with a sentence in the composer's place (`domain/roomOver.ts`). What lands here is a read that
+ * with a sentence in the composer's place (`ROOM_OVER_LINE`). What lands here is a read that
  * failed for some other reason, and a record whose sport this build cannot name.
  *
  * **It takes the top inset, and only that one.** The header it draws stands where the room's

@@ -31,8 +31,8 @@ Expo SDK upgrade never has to touch a feature.
   That is the one thing in this folder that is not a vocabulary, and it is here because there
   is nowhere else it can go: a `domain/` module must stay pure TypeScript, so it cannot import
   the shape from the `shared/ui` component that draws it, and `shared/ui` cannot import it from
-  the feature that computes it. `SocialTagOverlap` is the occupant — `play/domain` computes one
-  from a candidate and `shared/ui`'s `SocialTagRow` draws it. **The rule that computes one never
+  the feature that computes it. `SocialTagOverlap` is the occupant — the old loop's Play computed
+  one from a candidate, and `shared/ui`'s `SocialTagRow` draws it. **The rule that computes one never
   follows it here**; only the answer's shape does.
 - **`shared/` never imports a feature.** That reverses the dependency arrow and couples
   every future feature to this one. ESLint enforces it.

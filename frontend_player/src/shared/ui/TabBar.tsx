@@ -15,12 +15,13 @@
  * It is the design system's list rather than the shell's: the ADR's words are *"the family
  * is fixed … a sixth glyph on a sixth surface is a fresh question that inherits the family and
  * nothing else, never a licence to sprinkle."* A caller that could pass its own tabs is a caller
- * that could add a fourth without argument — and it would silently invalidate `labelMaxScale`,
- * which is derived from exactly these three words in exactly this many columns.
+ * that could add a fourth without argument — and it would silently break `labelMaxScale`, which
+ * is held against exactly these three words in exactly this many columns.
  *
  * It was five, with the old loop's Players and Chats drawn behind a flag, until that loop was
  * removed ([#576](https://github.com/Raketa02/Raketa/issues/576)): the switch, Chats' badge and
- * the cap derived over five columns went with them.
+ * the cap's derivation over five columns went with them. The cap kept the number five columns
+ * gave it — at three, the width no longer decides it (`theme.size.tabBar`).
  *
  * ## Feather, and selection in tone alone
  *
@@ -107,8 +108,8 @@ export interface TabBarTab<Key extends string = TabBarKey> {
  * the moment they are booked. It always drew `home`, which beat the calendar and the clock
  * because it claims nothing that is not built, and now it is also the tab's name.
  *
- * `labelMaxScale` is derived from these exact words. Adding a fourth, or a longer one, is a
- * change to `tabBarLabelCap.test.ts`'s answer before it is a change to this list.
+ * `labelMaxScale` is held against these exact words. Adding a fourth, or a longer one, is a
+ * change `tabBarLabelCap.test.ts` has to pass before it is a change to this list.
  */
 export const TAB_BAR_TABS = [
   { key: 'home', label: 'Home', glyph: 'home' },
@@ -389,12 +390,12 @@ function Glyph({ name, size, color }: { name: FeatherGlyph; size: number; color:
 
 /**
  * `tag` — 9.5/700 and **flat**. A tab label is a *name*, and `eyebrow`, the other member of
- * the 9.5 pair, is tracked: 1.43pt per character spends 8.6pt of a 64pt column on air.
+ * the 9.5 pair, is tracked: 1.43pt per character spent on air.
  *
  * Part 13 names this bar as the fixed-height exception **and** permits
  * `allowFontScaling={false}` only inside the level bar's drawn geometry, so a bounded
- * multiplier is the only mechanism left. It is derived rather than picked — see
- * `theme.size.tabBar.labelMaxScale`.
+ * multiplier is the only mechanism left — see `theme.size.tabBar.labelMaxScale` for where its
+ * number comes from.
  */
 function Label({ text, color }: { text: string; color: string }) {
   return (

@@ -160,8 +160,8 @@ as it already forwards the way back; 10.3 carries the callout.
 **The deck's drag reached four primitives and one port, and only the tick is not fenced**
 ([#444](https://github.com/Raketa02/Raketa/issues/444),
 [ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) §3,
-§7; the decisions are [`play.md`](play.md)'s, and this is what the shared layer changed to carry
-them). **`HapticsPort` is two verbs wide**: `light()` — the OS's own _impact: light_ — joins
+§7; the decisions were the old loop's Play's, whose record left with it in #576, and this is what
+the shared layer changed to carry them). **`HapticsPort` is two verbs wide**: `light()` — the OS's own _impact: light_ — joins
 `success()`, for one tick as a drag first crosses the deck's threshold, off under reduced motion
 with the motion; the fake counts both kinds, and the router harness gained `stubHaptics` /
 `resetHaptics` as a fourth port alongside the three it already wraps. **`OnCourtMark` draws a

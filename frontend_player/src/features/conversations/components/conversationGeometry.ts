@@ -72,9 +72,10 @@ export function handleBudget(screenWidth: number, faces: number): number {
  * How many characters of handle the **header's** words can hold, on this screen.
  *
  * The row's arithmetic against the header's chrome, which differs at both ends: there is a back
- * chevron on the left and, where there is a game, a `Details` control on the right — and the
- * control is charged for on **every** room rather than only the ones that draw it, so a header
- * does not reflow its handles when a line-up completes.
+ * chevron on the left and the width of a `Details` control on the right — charged on every room,
+ * though no room draws the control since the old loop's rooms went (#576): giving the width back
+ * would reflow every booked room's title, which is a change to look at on a device rather than one
+ * to make in a removal.
  *
  * The chevron is `h1` and its reachable area is the header's own; what is subtracted is the
  * `space.sm` gaps 10.3 sets between its parts, the cluster, and the two controls.

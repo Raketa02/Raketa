@@ -192,7 +192,7 @@ sheet reads statement first and answer last (9.1), and only with the record: a r
 somebody the reader may not act on, and buttons over the refusal would say otherwise. It is a
 slot and not a prop set this sheet reads, for the module's own rule — it reads no global state —
 and what stands between two people is the caller's to know. The radar fills it with
-_Not today_ · _Let's play_ or the standing relation (`radar/RadarSheetFoot`, [`play.md`](play.md));
+_Not today_ · _Let's play_ or the standing relation (the old loop's radar, removed in #576);
 **the deck's _i_ and the long press fill nothing, by decision**: the deck's own buttons are one tap
 away and two places to answer at once invites a double tap, which `deck.test.tsx` holds. The next
 surface that wants a foot has to argue for one.

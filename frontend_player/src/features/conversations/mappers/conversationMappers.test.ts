@@ -224,19 +224,17 @@ describe('one room, opened', () => {
     };
   }
 
-  /** The instant it was folded, and the game it is about — the booked game's join. */
-  it('carries the instant it was folded and the game', () => {
+  /**
+   * The instant it was folded — and not the game, which the room no longer reads: the booked
+   * game's join is the row's (`useGameRoom`), and nothing on the screen draws the room's own.
+   */
+  it('carries the instant it was folded, and leaves the game to the row', () => {
     const room = toConversationRoom(
       opened({ game_id: 'eeeeeeee-0000-4000-8000-000000000005' }),
     )?.room;
 
     expect(room?.readAt).toBe('2026-09-08T12:00:00Z');
-    expect(room?.gameId).toBe('eeeeeeee-0000-4000-8000-000000000005');
-  });
-
-  /** `null` collapses to absent. */
-  it('has no game where the wire says none', () => {
-    expect(toConversationRoom(opened())?.room.gameId).toBeUndefined();
+    expect(room).not.toHaveProperty('gameId');
   });
 
   /**

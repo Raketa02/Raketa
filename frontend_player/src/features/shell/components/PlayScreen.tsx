@@ -1,9 +1,9 @@
 /**
- * **Play, as it opens with `classic_play` off** — a *Groups | Explore* segment pinned at the top,
+ * **Play** — a *Groups | Explore* segment pinned at the top,
  * and the page for the segment under it ([#512](https://github.com/Raketa02/Raketa/issues/512),
  * play mocks 1 and 3, PRD #500 stories 1–4).
  *
- * The shell's for the reason Now, Chats and You are: a tab owns its own words and composes other
+ * The shell's for the reason Home and You are: a tab owns its own words and composes other
  * features' pages under them. *Groups* is `features/groups`' list; *Explore* is
  * `features/find_a_game_next`'s empty screen — the place the rebuilt Find a game will grow, which
  * is what Explore is for — so the placeholder the Play tab used to show whole now sits under the

@@ -15,9 +15,9 @@
  * line and the two props that let two callers differ went with it. A refusal is said in the app's
  * recovery sentence: the declaration's route answers only a lost race and a malformed request.
  *
- * **It is not the mode toggle, and the two must never be collapsed.** This writes a
- * `PlayIntent` with three values; the toggle chooses a `SearchMode` with two. That arity gap
- * is ADR-0094's central move, and `domain/playMode` holds the whole argument.
+ * **It is not a mode toggle, and must never become one.** This writes a `PlayIntent` with three
+ * values; old Find a game's toggle chose a search mode with two. That arity gap is ADR-0094's
+ * central move.
  *
  * ## Why it is a dark card and not a note
  *
@@ -46,8 +46,7 @@
  * **The failure stays on paper, above the card.** Coral is the app's failure colour and the
  * dark card's repaint has no on-dark coral in it; a white line inside the card would be a
  * failure carried by wording alone, next to a screen that draws every other one as a coral
- * note. So it is drawn as that same note, above the card, exactly as the search's own refusal
- * is drawn above the court card that failed.
+ * note. So it is drawn as that same note, above the card.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
