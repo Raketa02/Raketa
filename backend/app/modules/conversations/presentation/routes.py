@@ -180,8 +180,8 @@ _NOT_FOUND_AS_JSON: dict[int | str, dict[str, Any]] = {
         "conversation is destroyed rather than delisted once the episode it was "
         "opened for is over. The difference is the difference between a record "
         "and a room.\n\n"
-        "**A game's details find its chat here**, by the row whose `game_id` is "
-        "the game's."
+        "**A game's details find its chat here**, by the row whose `booking_id` "
+        "is the booking's."
     ),
 )
 async def read_conversations(

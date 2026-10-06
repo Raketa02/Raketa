@@ -2698,7 +2698,7 @@
           "conversations"
         ],
         "summary": "Your conversations",
-        "description": "**A room is opened by a booked game**, filed under its booking, and its members are the game's court as it stands \u2014 somebody who left is not drawn, and a rescue who took the seat is.\n\n**Ordered by the last entry, newest first.** A room where nothing has happened yet carries `last_entry: null` and orders on the moment it opened \u2014 the opening writes no line, so there is genuinely nothing there yet.\n\n**No state pill and no standing.** The last entry is what a pill would have said; a standing beside it would be a second place for one fact to be true. The state-keyed surfaces are Home and the game's details.\n\n**Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over. The difference is the difference between a record and a room.\n\n**A game's details find its chat here**, by the row whose `game_id` is the game's.",
+        "description": "**A room is opened by a booked game**, filed under its booking, and its members are the game's court as it stands \u2014 somebody who left is not drawn, and a rescue who took the seat is.\n\n**Ordered by the last entry, newest first.** A room where nothing has happened yet carries `last_entry: null` and orders on the moment it opened \u2014 the opening writes no line, so there is genuinely nothing there yet.\n\n**No state pill and no standing.** The last entry is what a pill would have said; a standing beside it would be a second place for one fact to be true. The state-keyed surfaces are Home and the game's details.\n\n**Only live rooms are here, because there are only live rooms.** A conversation is destroyed rather than delisted once the episode it was opened for is over. The difference is the difference between a record and a room.\n\n**A game's details find its chat here**, by the row whose `booking_id` is the booking's.",
         "operationId": "read_conversations_api_v1_conversations_get",
         "responses": {
           "200": {
@@ -7099,7 +7099,7 @@
           "proposals"
         ],
         "summary": "A booked game",
-        "description": "The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** \u2014 a QR payload and a short code, theirs alone. **The chat is the reader's room whose `game_id` is this game's**, in `GET /conversations`.\n\n**A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid \u2014 *You?*), with `rescue` \u2014 no check-in code, no `leaving`. Nothing is recorded.",
+        "description": "The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** \u2014 a QR payload and a short code, theirs alone. **The chat is the reader's room whose `booking_id` is this booking's**, in `GET /conversations`.\n\n**A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid \u2014 *You?*), with `rescue` \u2014 no check-in code, no `leaving`. Nothing is recorded.",
         "operationId": "read_booking_details_api_v1_bookings__booking_id__get",
         "security": [
           {
@@ -9208,7 +9208,7 @@
               }
             ],
             "title": "Game Id",
-            "description": "The booked game this room is about \u2014 the join a game's details make to find its chat. A booked game's room is born about it; `null` only on a room nothing opens any more, which is never served."
+            "description": "The booked game this room is about. A booked game's room is born about it; `null` only on a room nothing opens any more, which is never served. The join a game's details make to find its chat is `booking_id`."
           },
           "sport": {
             "$ref": "#/components/schemas/Sport",
@@ -10539,11 +10539,11 @@
             "format": "uuid",
             "title": "Game Id"
           },
-          "challenge_id": {
+          "booking_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Challenge Id",
-            "description": "The booking this game was opened for \u2014 its id, under the name the field was born with."
+            "title": "Booking Id",
+            "description": "The booking this game was opened for. **A game is opened only by a booking**, so every game has one \u2014 and its chat is the room filed under the same `booking_id` in `GET /conversations`."
           },
           "sport": {
             "$ref": "#/components/schemas/Sport"
@@ -10684,7 +10684,7 @@
         "type": "object",
         "required": [
           "game_id",
-          "challenge_id",
+          "booking_id",
           "sport",
           "kind",
           "standing",

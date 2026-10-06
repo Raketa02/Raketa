@@ -224,10 +224,10 @@ class ConversationRowSchema(BaseModel):
     game_id: UUID | None = Field(
         ...,
         description=(
-            "The booked game this room is about — the join a game's details "
-            "make to find its chat. A booked game's room is born about it; "
-            "`null` only on a room nothing opens any more, which is never "
-            "served."
+            "The booked game this room is about. A booked game's room is born "
+            "about it; `null` only on a room nothing opens any more, which is "
+            "never served. The join a game's details make to find its chat is "
+            "`booking_id`."
         ),
     )
     sport: Sport = Field(..., description="What the game is")

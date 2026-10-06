@@ -272,11 +272,12 @@ class GameSchema(BaseModel):
     """One game, its court, and what it is right now."""
 
     game_id: UUID
-    challenge_id: UUID = Field(
+    booking_id: UUID = Field(
         ...,
         description=(
-            "The booking this game was opened for — its id, under the name the "
-            "field was born with."
+            "The booking this game was opened for. **A game is opened only by a "
+            "booking**, so every game has one — and its chat is the room filed "
+            "under the same `booking_id` in `GET /conversations`."
         ),
     )
     sport: Sport

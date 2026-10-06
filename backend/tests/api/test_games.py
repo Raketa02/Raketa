@@ -104,7 +104,8 @@ async def test_a_booking_leaves_a_game_behind(client, session_factory, searcher)
     for token in [searcher["token"]] + [one["token"] for one in people.values()]:
         (game,) = await _games(client, token)
         assert game["game_id"] == str(booked["game_id"])
-        assert game["challenge_id"] == str(booked["booking_id"])
+        assert game["booking_id"] == str(booked["booking_id"])
+        assert "challenge_id" not in game, "no field calls a booking a challenge"
         assert game["standing"] == "AWAITING_ENTRY"
         assert game["kind"] == "COUNTED"
         assert game["played_at"] is None

@@ -20,9 +20,10 @@ from the code.
   at its cut-off (`CallOffGame`, #544) and calls it off whole for its club
   (`CallOffTheWholeGame`, #547) the same way — all through
   `bookings/infrastructure/games_opening.py`. **The booking's id sits in `challenge_id`**, on
-  the event, the aggregate, the commands, `GameRepository.for_challenge` and `GET /games`: the
-  field keeps the name it was born with when a challenge's completed line-up opened games,
-  because renaming a stored field is a version 2 and nothing reads it as a challenge any more.
+  the event, the aggregate, the commands and `GameRepository.for_challenge`: the field keeps
+  the name it was born with when a challenge's completed line-up opened games, because
+  renaming a stored field is a version 2. **On the wire it is `booking_id`** (`GET /games`,
+  #578), the same key a game's chat is filed under, so no field calls a booking a challenge.
   **One booking is one game**: `OpenPlannedGame` answers `None` for a booking that already
   has one, and `bookings` treats that as a bug upstream rather than a retry.
 - **The line-up is frozen until somebody leaves it**

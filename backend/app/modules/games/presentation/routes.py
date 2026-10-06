@@ -513,7 +513,7 @@ def _game(one: StandingGame, *, reader_id: UUID) -> GameSchema:
     arguing = one.standing is GameStanding.AWAITING_ANSWER
     return GameSchema(
         game_id=game.id,
-        challenge_id=game.challenge_id,
+        booking_id=game.challenge_id,
         sport=game.sport,
         kind=game.kind,
         window=game.window,
