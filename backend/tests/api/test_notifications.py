@@ -34,7 +34,7 @@ from app.bootstrap.composition import (
 from app.core.config import get_settings
 from app.kernel import Sport
 from app.modules.payments.domain.entered_cards import A_CARD_THAT_DECLINES_LATER
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -789,7 +789,7 @@ async def test_a_card_the_reader_s_deck_does_not_show_is_not_told(
 ):
     ola, kuba, ewa, tomek = crowd[:4]
     # Tomek wants padel for fun now: the deck shows him no competitive card.
-    await world.declare_intent(client, tomek["token"], intent="FOR_FUN")
+    await players.declare_intent(client, tomek["token"], intent="FOR_FUN")
     proposal = await makes(
         session_factory,
         clock,

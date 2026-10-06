@@ -40,8 +40,7 @@ from app.bootstrap.composition import build_clock
 from app.core.config import get_settings
 from app.engines.assessment import AnswerOption, Question
 from app.infrastructure.events.event_store_model import EventStoreORM
-from app.kernel import Sport
-from app.modules.challenges.domain.seats import seats_per_side
+from app.kernel import SPORT_SPECS, Sport
 from app.modules.matchmaking.domain.searches import LAST_FIVE
 from app.modules.player_profile.domain.intro import Intro
 from app.seeds import catalog
@@ -57,18 +56,14 @@ from app.seeds.catalog import (
     answer_key,
 )
 from app.seeds.clock import NEWCOMER_WINDOW_DAYS, FixedClock, days_before
-from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.seeds.cohort import (
     ARCHETYPES,
     ARTIFACT,
     BAND_HISTOGRAM,
     COHORT,
     EVERY_PLAYED_GAME,
-    GHOSTED_AT_LEAST_DAYS_AGO,
     INTROS,
     PLAYED_GAMES,
-    PROTAGONIST_GAMES,
-    PROTAGONIST_HANDLE,
     RINGS,
     WHAT_PLAYERS_SAID,
     Cohort,
@@ -80,7 +75,11 @@ from app.seeds.cohort import (
     latitude_of,
 )
 from app.modules.matchmaking.domain.geography import Point, distance_km
+from app.seeds.booked_history import write_her_history
+from app.seeds.club_courts import write_the_club_courts
+from app.seeds.clubs import write_the_clubs
 from app.seeds.games import write_the_played_history
+from app.seeds.payments import write_the_payment_methods
 from app.seeds.pairs import write_the_relationships
 from app.seeds.photos import DeclaredVerdict
 from app.seeds.runner import (
@@ -166,8 +165,9 @@ def test_the_played_history_records_no_answer_the_platform_gave():
     """
 
     document = as_document(generate())
-    played = document["played_games"] + document["protagonist_games"]
+    played = document["played_games"]
     assert played, "the artifact records no played game at all"
+    assert "protagonist_games" not in document, "her evenings are booked games now"
 
     for game in played:
         assert set(game) == {
@@ -200,84 +200,12 @@ def test_the_protagonist_plays_in_none_of_the_cohorts_own():
     cards *in* her pool reach every state a card can be in, and a row of it that
     seated her would be answering a second question in the same table.
 
-    Her own evenings are `PROTAGONIST_GAMES`, which is checked below."""
+    Her own evenings are past booked games, declared and checked in
+    `app/seeds/booked_history.py`."""
 
     played = {handle for game in PLAYED_GAMES for handle in game.players}
 
     assert all(handle.startswith("cohort-") for handle in played), played
-
-
-def test_her_own_history_seats_her_on_side_b_and_never_organising():
-    """The two strands that exist because of where she sits.
-
-    An organiser's seat is accepted at birth, so an organiser answers no
-    invitation and has no *answers challenges*; and the side that **states** the
-    score is asked nothing, so a protagonist on side A has no *answers about
-    results*. Both would go missing silently — as an absent row rather than as a
-    failure — which is why this is a test and not a comment.
-    """
-
-    assert PROTAGONIST_GAMES, "her record has no evenings behind it"
-
-    for game in PROTAGONIST_GAMES:
-        assert game.side_b[0] == PROTAGONIST_HANDLE, game
-        assert PROTAGONIST_HANDLE not in game.side_a, game
-        assert game.organiser != PROTAGONIST_HANDLE, game
-
-
-def test_her_record_reaches_a_figure_that_is_not_a_full_bar():
-    """**Every strand she has is a fraction somebody could work off.**
-
-    A fixture of tidy evenings publishes nothing but 100% and never draws the
-    card's whole point: a penalty you can look up and watch lift. So one
-    arrangement is a ghost, one score goes unanswered, and this asserts the two
-    are actually there rather than trusting a comment above the rows.
-    """
-
-    ghosts = [game for game in PROTAGONIST_GAMES if game.was_a_ghost]
-    unanswered = [
-        game for game in PROTAGONIST_GAMES if game.was_scored and not game.answered
-    ]
-    played = [game for game in PROTAGONIST_GAMES if not game.was_a_ghost]
-
-    assert len(ghosts) == 1, [game.played_days_ago for game in PROTAGONIST_GAMES]
-    assert len(unanswered) == 1, [game.won_by for game in PROTAGONIST_GAMES]
-    assert {game.won_by for game in played} == {"A", "B"}, "the run is one colour"
-
-
-def test_her_opponents_are_fewer_than_her_games():
-    """*Opponent variety* is distinct people over counted games, so a fixture
-    where no pair ever plays twice publishes 100% and proves nothing about the
-    row. A completed line-up releases its pair, so this is reachable — and the
-    writer's probe has to key on the day for it to be written."""
-
-    played = [game for game in PROTAGONIST_GAMES if not game.was_a_ghost]
-    opponents = {
-        handle
-        for game in played
-        for handle in game.players
-        if handle != PROTAGONIST_HANDLE
-    }
-
-    assert len(opponents) < len(played), (sorted(opponents), len(played))
-
-
-def test_a_declared_ghost_is_old_enough_to_be_one():
-    """**A plan is a ghost only once its entry window has closed**, and that
-    window is an ordinary week plus a day — not the day a score's window is.
-
-    A ghost declared inside it is a game still *awaiting its entry*, which the
-    record leaves out of **both** halves of *shows up*: the bar reads full, the
-    strand is a lie by omission, and nothing fails. It cost a seeded run exactly
-    that, which is why the floor is derived from `games`' own constants here
-    rather than typed beside them.
-    """
-
-    assert GHOSTED_AT_LEAST_DAYS_AGO > (PLAN_HORIZON + ENTRY_GRACE).days
-
-    for game in PROTAGONIST_GAMES:
-        if game.was_a_ghost:
-            assert game.played_days_ago >= GHOSTED_AT_LEAST_DAYS_AGO, game
 
 
 def test_nobody_is_rated_by_somebody_they_never_played():
@@ -320,7 +248,7 @@ def test_a_court_seats_what_its_sport_seats():
     one short of four opens no game at all."""
 
     for game in PLAYED_GAMES:
-        per_side = seats_per_side(Sport(game.sport))
+        per_side = SPORT_SPECS[Sport(game.sport)].players // 2
         assert len(game.side_a) == per_side, game
         assert len(game.side_b) == per_side, game
 
@@ -869,6 +797,18 @@ async def a_seeded_world(session_factory):
     played = await write_the_played_history(
         session_factory, settings=settings, now=now, photos=photos
     )
+    # **Her own evenings beside it**, as past booked games (#573) — so the cards,
+    # the clubs and their courts they are booked through come first.
+    await write_the_payment_methods(
+        session_factory,
+        now=now,
+        cohort=[(member.member.handle, member.player_id) for member in members],
+    )
+    clubs = await write_the_clubs(session_factory, settings=settings, now=now)
+    await write_the_club_courts(
+        session_factory, settings=settings, now=now, clubs=clubs
+    )
+    await write_her_history(session_factory, settings=settings, now=now)
     # **The relationships are part of the world and not a layer above it.** Five
     # of the ten `LivenessSignal` codes are facts about a pair, so a world seeded
     # without them is one where the assertions below would be reading a fixture

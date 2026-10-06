@@ -596,9 +596,10 @@ async def _send_the_court(
             f"arranged at all — and the pair it declares is a pair the platform "
             f"says cannot see each other. "
             f"Gates: {dict(sorted(record.counts.excluded_by_gate.items()))}. "
-            f"The row is a declared arrangement — `PLAYED_GAMES` or "
-            f"`PROTAGONIST_GAMES` in `app/seeds/cohort.py`, or `ARRANGED_GAMES` "
-            f"in `app/seeds/plans.py`."
+            f"The row is a declared arrangement — `PLAYED_GAMES` in "
+            f"`app/seeds/cohort.py`, `THE_POOL_HAS_A_RECORD` in "
+            f"`app/seeds/pool_history.py`, or `ARRANGED_GAMES` in "
+            f"`app/seeds/plans.py`."
         )
 
     await send_a_court(

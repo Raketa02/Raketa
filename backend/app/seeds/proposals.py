@@ -50,7 +50,6 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_group_code_minter,
-    build_group_directory,
     build_home_clubs,
     build_player_fit,
     build_fake_payments,
@@ -77,7 +76,7 @@ from app.modules.users.domain.value_objects import Email
 from app.seeds.catalog import THE_POPULATED_PLAYER
 from app.seeds.clock import FixedClock
 from app.seeds.clubs import SEED_CLUBS, desk_email
-from app.seeds.groups import group_repository, join_group
+from app.seeds.groups import group_repository, group_run_by, join_group
 
 #: The group the games are dealt in, and where it plays.
 GAMES_GROUP: Final = "Padel po pracy"
@@ -276,18 +275,7 @@ async def _the_group(
 async def _games_group_of(
     session: AsyncSession, her: UUID, club_id: UUID
 ) -> UUID | None:
-    directory = build_group_directory(session)
-    listings = await directory.listings(await directory.groups_of(her))
-    return next(
-        (
-            listing.id
-            for listing in listings.values()
-            if listing.owner_id == her
-            and listing.home_club_id == club_id
-            and listing.name == GroupName(GAMES_GROUP)
-        ),
-        None,
-    )
+    return await group_run_by(session, her, club_id=club_id, name=GAMES_GROUP)
 
 
 async def her_games_group(session: AsyncSession) -> tuple[UUID, UUID] | None:

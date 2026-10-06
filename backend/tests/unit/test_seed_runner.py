@@ -302,6 +302,7 @@ def test_the_walk_has_something_to_walk():
         "__init__.py",
         "__main__.py",
         "administrators.py",
+        "booked_history.py",
         "bookings.py",
         "catalog.py",
         "clock.py",

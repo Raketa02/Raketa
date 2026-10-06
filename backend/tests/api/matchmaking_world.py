@@ -39,22 +39,14 @@ from app.api.dependencies import (
     UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
-    build_clock,
     build_court_pairing_query_over,
     build_court_pairing_workbench,
-    build_nudge_publisher,
 )
-from app.bootstrap.events import build_event_runtime
 from app.kernel import Sport
 from app.modules.challenges.presentation.dependencies import (
     get_court_pairing_query,
 )
-from app.modules.conversations.infrastructure.absent_providers import (
-    NobodyIsFollowing,
-)
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
-from app.modules.notifications.infrastructure.push import RecordingPush
-from app.modules.payments.infrastructure.fake_payments import FakePayments
 from app.modules.matchmaking.infrastructure.prompt_decline_model import (
     PromptDeclineORM,
 )
@@ -62,191 +54,41 @@ from app.modules.matchmaking.infrastructure.search_model import (
     SearchCandidateORM,
     SearchORM,
 )
-from app.modules.player_profile.domain.events import (
-    IntroWritten,
-    PlayerProfileCreated,
-    PlayIntentDeclared,
-    ProposalsOptInAnswered,
+
+# The players and the shared moves are the new-loop world's (#573), re-exported
+# so the searches, the deck and the challenges below are built on the same ones.
+from tests.api.players_world import (
+    CENTRE as CENTRE,
+    COMPETITIVE_TAGS as COMPETITIVE_TAGS,
+    LONG_AGO as LONG_AGO,
+    SHARED_SLOTS as SHARED_SLOTS,
+    SPORT as SPORT,
+    a_player_on_the_log as a_player_on_the_log,
+    a_rated_player as a_rated_player,
+    a_rating as a_rating,
+    auth as auth,
+    block_between as block_between,
+    commit_profile as commit_profile,
+    declare_intent as declare_intent,
+    deliver_the_outbox as deliver_the_outbox,
+    override as override,
+    rate as rate,
+    rate_in as rate_in,
+    register as register,
 )
-from app.modules.player_profile.infrastructure.event_sourced_player_profile_repository import (  # noqa: E501
-    PLAYER_PROFILE_AGGREGATE,
-)
-from app.modules.rating.domain.events import RatingInitialised
-from app.modules.rating.domain.ids import skill_rating_id
-from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
-    RATING_AGGREGATE,
-)
-from tests.unit.candidate_index_fixtures import TickingClock, append, build_tail
+from tests.unit.candidate_index_fixtures import TickingClock, build_tail
+from tests.unit.event_log import append as append
 
-#: London, at the platform's own coarse precision. Every distance in these tests
-#: is measured from here.
-CENTRE = (51.51, -0.13)
 
-#: A moment inside every candidate's newcomer window is *not* what these tests
-#: want by default — the window tightens the level gate for the whole pairing —
-#: so profiles are committed a good while before the searches run.
-LONG_AGO = datetime(2026, 6, 1, 9, 0, tzinfo=timezone.utc)
-
-SPORT = Sport.PADEL
-
-#: Two tags the platform actually serves, on opposite sides of the style/vibe
-#: split, so a candidate can be made to look competitive or sociable.
-COMPETITIVE_TAGS = ("PLAYS_TO_WIN", "HERE_TO_IMPROVE")
+#: Two tags on the other side of the style/vibe split from
+#: ``COMPETITIVE_TAGS``, so a candidate can be made to look sociable.
 SOCIABLE_TAGS = ("HERE_FOR_THE_SOCIAL", "PLAYS_FOR_FUN")
 
-#: A week that overlaps the searcher's on two of its 112 hours.
-SHARED_SLOTS = ("2:19", "6:10")
 
+async def a_searcher(client, name: str = "searcher", **facts) -> dict:
+    """One player, ready to search — the new-loop world's rated player."""
 
-async def register(client, name: str) -> tuple[UUID, str]:
-    """Sign one player up, in, and name them. Returns their id and a bearer token.
-
-    The naming is the player's own act after sign-up (``docs/adr/0171`` §2),
-    and every surface a search reaches names a player by it — so a fixture that
-    stopped here would be a population the gate never lets onto a court. The
-    one word is used for the name and the nickname alike, so an assertion
-    reading a seat's ``name`` finds what the test registered.
-    """
-
-    signup = await client.post(
-        "/api/v1/users",
-        json={
-            "email": f"{name}@example.com",
-            "password1": "hunter22!",
-            "password2": "hunter22!",
-            "adult_attested": True,
-        },
-    )
-    assert signup.status_code == 201, signup.text
-    login = await client.post(
-        "/api/v1/auth/login",
-        json={"email": f"{name}@example.com", "password": "hunter22!"},
-    )
-    assert login.status_code == 200, login.text
-    token = login.json()["access_token"]
-    named = await client.put(
-        "/api/v1/users/me/name",
-        json={"name": name, "nickname": name},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert named.status_code == 200, named.text
-    return UUID(signup.json()["id"]), token
-
-
-def auth(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
-async def commit_profile(client, token: str, **overrides) -> None:
-    """The searcher's own profile, through the route the client uses."""
-
-    body = {
-        "social_tag_ids": list(COMPETITIVE_TAGS),
-        "photo_ids": [],
-        "weekly_hours": [
-            {"day": 2, "hour": 19},
-            {"day": 6, "hour": 10},
-        ],
-        "location": {"latitude": CENTRE[0], "longitude": CENTRE[1]},
-        "search_radius_km": 10,
-        "proposals_opt_in": {"accepted": True, "copy_version": "proposals-2026-08"},
-        "gender": "WOMAN",
-    }
-    body.update(overrides)
-    response = await client.post(
-        "/api/v1/players/me/profile",
-        json=body,
-        headers={**auth(token), "Idempotency-Key": f"commit-{token[:12]}"},
-    )
-    assert response.status_code == 201, response.text
-
-
-async def rate(client, token: str, sport: Sport = SPORT) -> float:
-    """The shortest honest path to a stored rating, and the μ it produced."""
-
-    created = (
-        await client.post(
-            "/api/v1/assessments", json={"sport": sport.value}, headers=auth(token)
-        )
-    ).json()
-    await client.post(
-        f"/api/v1/assessments/{created['assessment_id']}/answers",
-        json={"question_id": created["question"]["id"], "option_id": "never-played"},
-        headers=auth(token),
-    )
-    done = await client.post(
-        f"/api/v1/assessments/{created['assessment_id']}/completion",
-        headers=auth(token),
-    )
-    assert done.status_code == 200, done.text
-    return float(done.json()["result"]["mu"])
-
-
-async def declare_intent(
-    client,
-    token: str,
-    *,
-    intent: str = "COMPETITIVE",
-    sport: Sport = SPORT,
-) -> None:
-    """The searcher's declaration, through ADR-0094's own route.
-
-    ``RATING_TAIL`` because that is where a first declaration is made — this is
-    called straight after ``rate``, which is the run whose tail asks.
-    """
-
-    response = await client.put(
-        f"/api/v1/play-intents/{sport.value}",
-        json={"intent": intent, "surface": "RATING_TAIL"},
-        headers=auth(token),
-    )
-    assert response.status_code == 200, response.text
-
-
-async def a_searcher(
-    client,
-    name: str = "searcher",
-    *,
-    intent: str = "COMPETITIVE",
-    sport: Sport = SPORT,
-    location: tuple[float, float] = CENTRE,
-    gender: str = "WOMAN",
-    intro: str | None = None,
-) -> dict:
-    """One player, ready to search: profile, rating and declaration.
-
-    Every one of the three through the route a person would use, so a searcher
-    is the searcher the platform makes rather than the one this file describes.
-
-    ``intent`` is a parameter rather than something a test declares afterwards
-    because the deck is the surface that cares: it reads the declaration instead
-    of a mode, so *no preference* is a case it wants at birth. Declaring again
-    afterwards would work — the route is unkeyed and re-declaring is an edit —
-    but it would put a second event on a stream no test meant to give a history.
-
-    ``location`` is where the profile is committed, for the one kind of test
-    that needs two searchers in two cities: a location that *moves*
-    (``docs/adr/0174`` §6) is asserted through the neighbours it gains and
-    loses, and each of those is a searcher of their own. ``gender`` and
-    ``intro`` are the same kind of parameter for the You tab's edits
-    (``docs/adr/0179`` §8): a preference that *narrows* is asserted through the
-    searchers it stops finding and the ones that stop finding it, and a line
-    that changes through the card the other searcher is dealt. A photograph is
-    not: it must be held in the store under an id this function has not yet
-    registered, so a searcher with a face is built from the parts.
-    """
-
-    player_id, token = await register(client, name)
-    profile: dict = {
-        "location": {"latitude": location[0], "longitude": location[1]},
-        "gender": gender,
-    }
-    if intro is not None:
-        profile["intro"] = intro
-    await commit_profile(client, token, **profile)
-    mu = await rate(client, token, sport)
-    await declare_intent(client, token, intent=intent, sport=sport)
-    return {"id": player_id, "token": token, "mu": mu}
+    return await a_rated_player(client, name, **facts)
 
 
 async def a_candidate(client, session_factory, name: str, **facts) -> UUID:
@@ -257,148 +99,12 @@ async def a_candidate(client, session_factory, name: str, **facts) -> UUID:
 
 
 async def a_signed_in_candidate(
-    client,
-    session_factory,
-    name: str,
-    *,
-    mu: float,
-    latitude: float = CENTRE[0],
-    longitude: float = CENTRE[1],
-    tags: tuple[str, ...] = COMPETITIVE_TAGS,
-    photo_ids: tuple[UUID, ...] = (),
-    availability: tuple[str, ...] = SHARED_SLOTS,
-    radius_km: int = 25,
-    gender: str = "WOMAN",
-    gender_preference: str = "ANY",
-    intent: str | None = "COMPETITIVE",
-    at: datetime = LONG_AGO,
-    intro: str | None = None,
+    client, session_factory, name: str, **facts
 ) -> tuple[UUID, str]:
-    """The same person, **and a bearer token for them.**
+    """The same person, **and a bearer token for them** — the new-loop world's
+    player filed on the log, where the index tails one."""
 
-    They are registered through the route because the card reads a **nickname**
-    from ``users``, which the index does not tail — and a candidate with no
-    nickname is a row the search drops rather than a row it shows blank. That
-    registration produces a token, and it is handed back here for the one thing
-    only a candidate can do for themselves: block another candidate, which is a
-    pair no shortlist ever gated.
-    """
-
-    player_id, token = await register(client, name)
-    await append(
-        session_factory,
-        PlayerProfileCreated(
-            player_id=player_id,
-            social_tags=tags,
-            photo_ids=tuple(str(photo_id) for photo_id in photo_ids),
-            weekly_hours=availability,
-            latitude=latitude,
-            longitude=longitude,
-            search_radius_km=radius_km,
-            idempotency_key=f"key-{player_id}",
-            occurred_at=at,
-            gender=gender,
-            gender_preference=gender_preference,
-        ),
-        # **A profile's stream id is the player id itself**, and the card is
-        # assembled from the profile port rather than from the index — so a
-        # profile filed under a random id is one the card source cannot load,
-        # and every candidate here would silently have no photograph.
-        aggregate_type=PLAYER_PROFILE_AGGREGATE,
-        aggregate_id=player_id,
-    )
-    await append(
-        session_factory,
-        ProposalsOptInAnswered(player_id, True, "v1", "ONBOARDING", at),
-    )
-    if intro is not None:
-        # Only where a line was written — and on the profile's own stream, at
-        # the version after the creating event, because the record reads the
-        # line off the *fold* while the card reads it off the index
-        # (`docs/adr/0170` §3). The opt-in above is filed under a random id:
-        # nothing here folds it, and the index reads it by sequence either way.
-        await append(
-            session_factory,
-            IntroWritten(player_id, intro, at),
-            aggregate_type=PLAYER_PROFILE_AGGREGATE,
-            aggregate_id=player_id,
-            version=2,
-        )
-    await append(
-        session_factory,
-        _rating(player_id, mu=mu, at=at),
-        # **A rating's stream id is derived from ``(player, sport)``**, and until
-        # ``docs/adr/0139`` nothing read one back by that address — the candidate
-        # index tails the log by sequence, so a rating filed under a random
-        # profile-shaped id was indistinguishable from a real one. ``at_stake``
-        # reads the stream, so a candidate filed anywhere else is a candidate the
-        # block is silently never drawn for.
-        aggregate_type=RATING_AGGREGATE,
-        aggregate_id=skill_rating_id(player_id, SPORT),
-    )
-    if intent is not None:
-        await append(
-            session_factory,
-            PlayIntentDeclared(player_id, SPORT.value, intent, "RATING_TAIL", at),
-        )
-    return player_id, token
-
-
-async def block_between(client, token: str, player_id: UUID):
-    """One player blocking another, through the route a person would use."""
-
-    return await client.post(
-        "/api/v1/blocks",
-        json={"player_id": str(player_id), "surface": "SHORTLIST"},
-        headers=auth(token),
-    )
-
-
-async def rate_in(session_factory, player_id: UUID, sport: Sport, *, mu: float) -> None:
-    """A second sport's Level for a candidate already in the city.
-
-    Filed on its own stream, keyed by ``(player, sport)`` exactly as the first
-    one was, so the index folds it into that sport's partition on the next
-    ``fold_the_log``. What it buys a test is a second deck to deal — the deck is
-    one sport, and a promise about *another sport's* deck needs one to exist.
-    """
-
-    await append(
-        session_factory,
-        _rating(player_id, mu=mu, at=LONG_AGO, sport=sport),
-        aggregate_type=RATING_AGGREGATE,
-        aggregate_id=skill_rating_id(player_id, sport),
-    )
-
-
-def _rating(
-    player_id: UUID, *, mu: float, at: datetime, sport: Sport = SPORT
-) -> RatingInitialised:
-    """One candidate's Level, filed where the rating context files one.
-
-    The two ids were ``hash()`` of a tuple, which is **seeded per interpreter**
-    and so produced a different stream on every run — harmless while nothing read
-    one back, and exactly the failure ``docs/adr/0105`` is written about the
-    moment something did.
-    """
-
-    return RatingInitialised(
-        rating_id=skill_rating_id(player_id, sport),
-        player_id=player_id,
-        sport=sport.value,
-        mu=mu,
-        sigma=0.34,
-        confidence=62,
-        range_low=mu - 0.3,
-        range_high=mu + 0.3,
-        band_name="Improver",
-        band_lower=2.5,
-        band_upper=3.0,
-        status="INITIAL_ESTIMATE",
-        engine_version="v3",
-        source_assessment_id=UUID(int=player_id.int ^ 1),
-        occurred_at=at,
-    )
+    return await a_player_on_the_log(client, session_factory, name, **facts)
 
 
 async def fold_the_log(session_factory, candidate_source) -> None:
@@ -610,20 +316,6 @@ async def a_yes(client, session_factory, candidate_source, *, sender, towards):
 #: inside the staleness ladder's first rung, so nothing here is testing the
 #: refusal by accident.
 A_MOMENT_LATER = timedelta(minutes=1)
-
-
-def override(client, dependency, factory) -> None:
-    """Replace one dependency on the running application, for one test.
-
-    The `client` fixture holds the app rather than exposing it, so reaching for
-    it is a private access — written **once, here**, with the reason attached,
-    rather than three times in a test module. What it buys is the only way to
-    drive a refusal that lives behind a provider: the fail-closed reads and the
-    index are wired per request, so breaking one on purpose is a dependency
-    override and nothing else.
-    """
-
-    client._transport.app.dependency_overrides[dependency] = factory  # noqa: SLF001
 
 
 def draw_real_cards(client, candidate_source, exposure_ledger) -> None:
@@ -905,76 +597,3 @@ async def forecast(
         },
         headers=auth(token),
     )
-
-
-async def deliver_the_outbox(
-    session_factory,
-    *,
-    rounds: int = 6,
-    live_channel=None,
-    payments=None,
-    proposer_due=None,
-    push=None,
-) -> int:
-    """Run the transactional outbox to exhaustion, the way the worker does.
-
-    **Nothing in this suite runs the delivery loop**, because until the
-    Conversation context arrived every subscriber was a logger and no response
-    depended on one having run. A room, though, is *told* through the outbox by
-    contexts that do not know it exists (``docs/adr/0146`` §5), so a test that
-    wants one has to let the poll happen.
-
-    It builds the batch through ``EventRuntime.create_event_batch_for`` rather
-    than assembling handlers itself, which is what makes the delivery this drives
-    the delivery that ships — including the session-bound subscriber the batch
-    adds for itself.
-
-    **Rounds, because delivery cascades.** A room opened by an acceptance
-    publishes its own events, and those are outbox rows too. Draining until a
-    round publishes nothing is the honest stopping condition.
-
-    **``live_channel`` is what makes this delivery live**, and it is the same
-    fake the ``client`` fixture publishes and follows over. Pass it whenever a
-    test cares that a system line nudged an open stream; leave it out and the
-    drain is the one a seed run does, with nobody following
-    (``docs/adr/0147`` §3). The parameter is required in the application and
-    optional here for exactly that reason: *nobody is following* is the honest
-    answer for most of this file.
-
-    **``payments`` is the provider a replaced or removed card is released at** —
-    the ``payments`` fixture, when a test reads what was released; otherwise a
-    fake nobody reads, which is the seed run's answer too.
-
-    **``proposer_due`` is the proposer listening** — a ``DueForProposing`` the
-    delivery notes what changed in, as the API process's does (#540); left out,
-    nobody is.
-
-    **``push`` is the push service a notice given is pushed through** — the
-    ``pushes`` fixture, when a test reads what a phone was pushed; otherwise a
-    recording one nobody reads (#549).
-    """
-
-    runtime = build_event_runtime()
-    provider = payments if payments is not None else FakePayments()
-    nudges = (
-        NobodyIsFollowing()
-        if live_channel is None
-        else build_nudge_publisher(live_channel)
-    )
-    published = 0
-    for _ in range(rounds):
-        async with session_factory() as session:
-            batch = runtime.create_event_batch_for(
-                session=session,
-                clock=build_clock(),
-                batch_size=100,
-                nudges=nudges,
-                payments=provider,
-                push=push if push is not None else RecordingPush(),
-                proposer_due=proposer_due,
-            )
-            delivered = await batch.execute(worker_id="tests")
-        published += delivered
-        if not delivered:
-            break
-    return published

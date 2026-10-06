@@ -13,7 +13,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 from app.kernel import Sport
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.test_groups import (
     GROUPS,
     a_club,
@@ -363,15 +363,15 @@ async def test_a_request_names_nobody_s_nickname(client):
     """The Name and never the handle (``docs/adr/0171`` §4)."""
 
     karol = await a_player(client, "karol")
-    kasia_id, token = await world.register(client, "kasia")
+    kasia_id, token = await players.register(client, "kasia")
     renamed = await client.put(
         "/api/v1/users/me/name",
         json={"name": "Kasia Nowak", "nickname": "kasia_n"},
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
     assert renamed.status_code == 200, renamed.text
     group = await an_approval_group(client, karol)
-    await join(client, {"id": kasia_id, "headers": world.auth(token)}, group)
+    await join(client, {"id": kasia_id, "headers": players.auth(token)}, group)
 
     [request] = await waiting(client, karol, group)
 

@@ -23,7 +23,7 @@ import pytest
 
 from app.core.config import get_settings
 from app.kernel import Sport
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.administration_world import (
     ADMINISTRATORS,
     MARTA,
@@ -655,9 +655,9 @@ async def test_a_player_sees_the_declared_dots_and_administrator_marta_on_the_li
     client, ogrody, marta
 ):
     group = await an_official_group(client, marta, ogrody["id"])
-    player_id, token = await world.register(client, "kasia")
-    await world.rate(client, token, Sport.TENNIS)
-    kasia = {"id": player_id, "headers": world.auth(token)}
+    player_id, token = await players.register(client, "kasia")
+    await players.rate(client, token, Sport.TENNIS)
+    kasia = {"id": player_id, "headers": players.auth(token)}
 
     found = row_in(await search(client, kasia, "ogrody"), group)
 

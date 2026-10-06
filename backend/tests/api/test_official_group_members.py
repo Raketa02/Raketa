@@ -21,6 +21,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.administration_world import (
     MARTA,
     accept_path,
@@ -86,10 +87,10 @@ async def a_member(client, session_factory, name: str, **facts) -> dict:
     """Somebody with a profile, a padel rating and an index row's worth of facts
     on the log — the subject a record can describe."""
 
-    player_id, token = await world.a_signed_in_candidate(
+    player_id, token = await players.a_player_on_the_log(
         client, session_factory, name, mu=3.0, **facts
     )
-    return {"id": player_id, "token": token, "headers": world.auth(token)}
+    return {"id": player_id, "token": token, "headers": players.auth(token)}
 
 
 async def made_an_administrator(client, desk: dict, player: dict, name: str) -> dict:

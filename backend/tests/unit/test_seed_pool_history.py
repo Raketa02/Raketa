@@ -20,7 +20,6 @@ from app.seeds.catalog import THE_BLANK_WEEK_PLAYER, THE_NEWCOMER
 from app.seeds.cohort import (
     COHORT,
     PLAYED_GAMES,
-    PROTAGONIST_GAMES,
     PROTAGONIST_HANDLE,
     RATED_WITHIN_DAYS,
 )
@@ -54,10 +53,10 @@ def test_the_organiser_is_hers_or_a_ring_s_own_or_a_member_against_her():
     at nought kilometres and nobody from the centre. The third arm is the second one's
     argument rather than an exception to it: what the rule asserts is *this organiser's
     shortlist provably returns these seats*, and a cohort member reaching **her** is the
-    one other thing this fixture already proves — every row in `PROTAGONIST_GAMES` is a
-    member organising a singles court against her. `cohort-c-00` is why it is needed:
-    their own shortlist returns one face from their ring, which cannot fill a doubles
-    court, and returns her on every search they run.
+    one other thing her own singles history proved before it moved to booked games —
+    every row of it was a member organising a singles court against her. `cohort-c-00`
+    is why it is needed: their own shortlist returns one face from their ring, which
+    cannot fill a doubles court, and returns her on every search they run.
     """
 
     for game in THE_POOL_HAS_A_RECORD:
@@ -71,13 +70,14 @@ def test_the_organiser_is_hers_or_a_ring_s_own_or_a_member_against_her():
             assert handle.startswith(f"cohort-{ring}-"), (game.organiser, handle)
 
 
-def test_nobody_plays_twice_on_one_evening_across_all_three_lists():
+def test_nobody_plays_twice_on_one_evening_across_both_lists():
     """*Last 5* is ordered on the instant each game was played, so two games at one
     instant leave the run to a tie-break on a uuid — a row of squares that reshuffles
-    between databases. The three lists are one calendar."""
+    between databases. The challenge loop's two lists are one calendar; her own
+    evenings are booked at a club's hours, which no challenge is stamped at."""
 
     days: dict[str, set[int]] = {}
-    for game in (*PLAYED_GAMES, *PROTAGONIST_GAMES, *THE_POOL_HAS_A_RECORD):
+    for game in (*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD):
         for handle in game.players:
             assert game.played_days_ago not in days.setdefault(handle, set()), handle
             days[handle].add(game.played_days_ago)

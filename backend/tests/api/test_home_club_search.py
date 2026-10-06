@@ -16,14 +16,14 @@ import re
 import pytest
 
 from app.kernel import Sport
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.test_clubs import SIGN_UP, ogrody_33
 from tests.api.test_groups import a_group, a_player, a_rated_player, join
 
 SEARCH = "/api/v1/home-clubs"
 
 #: Where the searching player's Location area is — the platform's coarse cell.
-HOME = world.CENTRE
+HOME = players.CENTRE
 
 
 def kilometres_between(a: tuple[float, float], b: tuple[float, float]) -> float:
@@ -77,7 +77,7 @@ async def a_club_at(
 async def a_located_player(client, name: str) -> dict:
     player = await a_player(client, name)
     token = player["headers"]["Authorization"].split()[1]
-    await world.commit_profile(
+    await players.commit_profile(
         client, token, location={"latitude": HOME[0], "longitude": HOME[1]}
     )
     return player

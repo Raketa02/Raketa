@@ -34,7 +34,6 @@ from app.kernel import Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
-from app.modules.games.domain.results import Score, SetScore
 from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.modules.player_score.domain.strands import (
     PUBLISHED_WEIGHTS,
@@ -53,15 +52,16 @@ from app.modules.rating.infrastructure.event_sourced_skill_rating_repository imp
     RATING_AGGREGATE,
 )
 from app.shared.ids import new_uuid
-from tests.unit.candidate_index_fixtures import append
+from tests.unit.event_log import append
 from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.test_groups import a_club, a_group
 from tests.api.test_groups import join as join_group
 
 
 @pytest.fixture
 async def searcher(client):
-    return await world.a_searcher(client)
+    return await players.a_rated_player(client, "searcher")
 
 
 async def a_search_that_showed(client, session_factory, candidate_source, searcher):
@@ -87,7 +87,7 @@ async def record_of(client, token: str, player_id: UUID, *, sport: Sport | None 
     return await client.get(
         f"/api/v1/players/{player_id}/record",
         params={} if sport is None else {"sport": sport.value},
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
 
@@ -95,7 +95,7 @@ async def own_record(client, token: str, *, sport: Sport | None = None):
     return await client.get(
         "/api/v1/players/me/record",
         params={} if sport is None else {"sport": sport.value},
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
 
@@ -130,54 +130,6 @@ async def also_rated_in(session_factory, player_id: UUID, *, sport: Sport, mu: f
         aggregate_type=RATING_AGGREGATE,
         aggregate_id=skill_rating_id(player_id, sport),
     )
-
-
-async def a_confirmed_game(
-    session_factory, a: UUID, b: UUID, *, sport: Sport, a_won: bool
-):
-    """One counted singles game between them, played and confirmed by silence.
-
-    Written through the aggregate rather than as rows, which is the rule every
-    suite in this repository takes about somebody else's context: what the record
-    reads is a fold, and the only honest way to exercise one is to make the
-    history it folds.
-
-    **Dated a month back on purpose.** A confirmation is a clock passing rather
-    than an act (``docs/adr/0137``), so a game is made in the past instead of
-    anything being told it is over.
-    """
-
-    played = instant(datetime.now(timezone.utc) - timedelta(days=30))
-    game = Game.planned(
-        game_id=new_uuid(),
-        challenge_id=new_uuid(),
-        sport=sport,
-        kind=GameKind.COUNTED,
-        window=Window.TODAY,
-        line_up=LineUp.of(
-            (
-                Seating(side=GameSide.A, player_id=a),
-                Seating(side=GameSide.B, player_id=b),
-            )
-        ),
-        occurred_at=instant(played - timedelta(hours=1)),
-    )
-    game.state_result(
-        by=a,
-        score=Score.of(
-            [SetScore(a=6, b=4), SetScore(a=6, b=3)]
-            if a_won
-            else [SetScore(a=4, b=6), SetScore(a=3, b=6)]
-        ),
-        occurred_at=played,
-    )
-    async with session_factory() as session:
-        await build_game_repository(
-            session=session,
-            event_store=build_domain_event_store(session),
-            events=build_event_publisher(session),
-        ).save(game)
-        await session.commit()
 
 
 async def a_ghosted_plan(session_factory, a: UUID, b: UUID, *, sport: Sport):
@@ -307,7 +259,7 @@ async def test_a_search_that_showed_them_opens_their_record(
         "name": "subject",
         "nickname": "subject",
         "area_code": "A+05151-000013",
-        "social_tags": list(world.COMPETITIVE_TAGS),
+        "social_tags": list(players.COMPETITIVE_TAGS),
         "sports": [
             {
                 "sport": "PADEL",
@@ -402,7 +354,7 @@ async def test_the_person_who_was_invited_can_open_the_organiser_s_record(
 
     people = {}
     for name, latitude in (("ana", 51.52), ("bea", 51.53), ("caro", 51.54)):
-        player_id, token = await world.a_signed_in_candidate(
+        player_id, token = await players.a_player_on_the_log(
             client, session_factory, name, mu=searcher["mu"], latitude=latitude
         )
         people[name] = {"id": player_id, "token": token}
@@ -420,7 +372,7 @@ async def test_the_person_who_was_invited_can_open_the_organiser_s_record(
     sent = await client.post(
         "/api/v1/challenges",
         json={"search_id": body["search"]["search_id"], "court": court},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     assert sent.status_code == 201, sent.text
     invitee = next(
@@ -442,12 +394,12 @@ async def two_strangers_in_one_group(
     """The searcher and a candidate nobody has shown them, both in the searcher's
     *Anyone* group — the pair a group's Members lists to each other (#514)."""
 
-    subject_id, subject_token = await world.a_signed_in_candidate(
+    subject_id, subject_token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
     await world.fold_the_log(session_factory, candidate_source)
-    owner = {"id": searcher["id"], "headers": world.auth(searcher["token"])}
-    member = {"id": subject_id, "headers": world.auth(subject_token)}
+    owner = {"id": searcher["id"], "headers": players.auth(searcher["token"])}
+    member = {"id": subject_id, "headers": players.auth(subject_token)}
     group = await a_group(client, owner, await a_club(client))
     joined = await join_group(client, member, group)
     assert joined.status_code == 200, joined.text
@@ -464,16 +416,16 @@ async def test_a_group_you_are_both_in_opens_the_record_both_ways(
     full record* is read by a member who never searched, about people no search
     of theirs returned — the group is what introduced them."""
 
-    subject_id, subject_token = await world.a_signed_in_candidate(
+    subject_id, subject_token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
     await world.fold_the_log(session_factory, candidate_source)
     assert (await record_of(client, searcher["token"], subject_id)).status_code == 404
 
-    owner = {"id": searcher["id"], "headers": world.auth(searcher["token"])}
+    owner = {"id": searcher["id"], "headers": players.auth(searcher["token"])}
     group = await a_group(client, owner, await a_club(client))
     joined = await join_group(
-        client, {"id": subject_id, "headers": world.auth(subject_token)}, group
+        client, {"id": subject_id, "headers": players.auth(subject_token)}, group
     )
     assert joined.status_code == 200, joined.text
 
@@ -517,7 +469,7 @@ async def test_a_block_between_two_members_closes_the_record_the_group_opened(
         client, session_factory, candidate_source, searcher
     )
 
-    blocked = await world.block_between(client, member["token"], owner["id"])
+    blocked = await players.block_between(client, member["token"], owner["id"])
 
     assert blocked.status_code == 204, blocked.text
     assert (await record_of(client, owner["token"], member["id"])).status_code == 404
@@ -535,7 +487,7 @@ async def test_a_person_you_have_never_been_shown_is_refused(
     """Without this the route is a player-enumeration endpoint, and a UUID being
     hard to guess is not an authorization model."""
 
-    stranger, _ = await world.a_signed_in_candidate(
+    stranger, _ = await players.a_player_on_the_log(
         client, session_factory, "stranger", mu=searcher["mu"]
     )
     await world.fold_the_log(session_factory, candidate_source)
@@ -557,7 +509,7 @@ async def test_a_block_in_either_direction_closes_a_record_a_search_opened(
     )
     assert (await record_of(client, searcher["token"], subject)).status_code == 200
 
-    blocked = await world.block_between(client, searcher["token"], subject)
+    blocked = await players.block_between(client, searcher["token"], subject)
 
     assert blocked.status_code == 204, blocked.text
     assert (await record_of(client, searcher["token"], subject)).status_code == 404
@@ -575,7 +527,7 @@ async def test_a_gate_that_cannot_be_evaluated_excludes(
     subject = await a_search_that_showed(
         client, session_factory, candidate_source, searcher
     )
-    world.override(
+    players.override(
         client, get_candidate_source, lambda: world.an_empty_index(candidate_source)
     )
 
@@ -598,7 +550,7 @@ async def test_the_four_refusals_are_byte_identical(
     subject = await a_search_that_showed(
         client, session_factory, candidate_source, searcher
     )
-    stranger, _ = await world.a_signed_in_candidate(
+    stranger, _ = await players.a_player_on_the_log(
         client, session_factory, "stranger", mu=searcher["mu"]
     )
     await world.fold_the_log(session_factory, candidate_source)
@@ -615,7 +567,7 @@ async def test_the_four_refusals_are_byte_identical(
     assert (
         await record_of(client, searcher["token"], subject)
     ).status_code == 200, "the hold, not the fixture, is what refused"
-    blocked_by = await world.block_between(client, searcher["token"], subject)
+    blocked_by = await players.block_between(client, searcher["token"], subject)
     assert blocked_by.status_code == 204, blocked_by.text
     blocked = await record_of(client, searcher["token"], subject)
 
@@ -774,13 +726,13 @@ async def test_the_run_of_five_is_the_resolved_sports_and_nobody_elses(
         client, session_factory, candidate_source, searcher
     )
     await also_rated_in(session_factory, subject, sport=Sport.SQUASH, mu=4.10)
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.SQUASH, a_won=False
     )
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.SQUASH, a_won=True
     )
 
@@ -807,7 +759,7 @@ async def test_a_run_shorter_than_five_is_never_padded(
     subject = await a_search_that_showed(
         client, session_factory, candidate_source, searcher
     )
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=False
     )
 
@@ -836,13 +788,13 @@ async def test_the_record_says_how_widely_they_spread_their_games(
         client, session_factory, candidate_source, searcher
     )
     somebody_else = uuid4()
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=False
     )
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, somebody_else, sport=Sport.TENNIS, a_won=True
     )
 
@@ -864,10 +816,10 @@ async def test_variety_counts_every_sport_and_the_sport_asked_for_moves_it_not(
         client, session_factory, candidate_source, searcher
     )
     await also_rated_in(session_factory, subject, sport=Sport.SQUASH, mu=4.10)
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, uuid4(), sport=Sport.SQUASH, a_won=True
     )
 
@@ -890,7 +842,7 @@ async def test_your_own_record_carries_the_same_pair(
     """*How others see you* draws the number everybody else is shown, which is
     the whole reason the screen exists."""
 
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, searcher["id"], uuid4(), sport=Sport.PADEL, a_won=True
     )
 
@@ -918,7 +870,7 @@ async def test_each_strand_crosses_as_its_raw_pair_and_its_own_figure(
     subject = await a_search_that_showed(
         client, session_factory, candidate_source, searcher
     )
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
     await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
@@ -945,7 +897,7 @@ async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
     subject = await a_search_that_showed(
         client, session_factory, candidate_source, searcher
     )
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
     await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
@@ -1171,7 +1123,7 @@ async def test_the_subject_and_a_reader_are_served_one_figure(
     own sheet is byte-for-byte the figure a stranger a search showed you to is
     served about you — no coarsening, no withheld count, no second fold."""
 
-    subject, token = await world.a_signed_in_candidate(
+    subject, token = await players.a_player_on_the_log(
         client, session_factory, "subject", mu=searcher["mu"]
     )
     await world.fold_the_log(session_factory, candidate_source)

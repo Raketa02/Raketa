@@ -64,8 +64,7 @@ from pathlib import Path
 from typing import Final, Mapping, Sequence, final
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from app.kernel import Sport
-from app.modules.challenges.domain.seats import seats_per_side
+from app.kernel import SPORT_SPECS, Sport
 from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.modules.sportsmanship.domain.window import (
     CARD_OPENS_AFTER,
@@ -756,52 +755,13 @@ SECOND_SPORT_BECAUSE_THEY_PLAYED: Final[frozenset[str]] = frozenset(
 )
 
 # ---------------------------------------------------------------------------
-# The protagonist's own played history — the record she reads about herself
+# The protagonist — where she sits, and where her own record comes from
 # ---------------------------------------------------------------------------
 #
-# **A second list rather than more rows in the first, because they answer
-# different questions.** ``PLAYED_GAMES`` exists so that the *cards in her pool*
-# reach every state a card can be in — a full run, a gap, a count with no run, an
-# absence. These exist so that **her own record sheet** is not empty: `SH.player`
-# opened on your own face is titled *How others see you*, and a sheet that says
-# nothing is a sheet nobody can develop against.
-#
-# Three properties are load-bearing and each is checked below:
-#
-# - **She is never the organiser**, and is always ``side_b[0]``. The side that
-#   *states* the score is asked nothing, so a protagonist on side A would have no
-#   *answers about results* strand; it exists because of where she sits. (She
-#   was also never the organiser for *answers challenges*, whose organiser's own
-#   seat answered nothing — a strand that stood down with #544.)
-# - **Every opponent is a cohort member whose own drawn radius already reaches
-#   the centre**, so nothing here feeds ``_how_far_they_have_to_see`` and not one
-#   member's draw moves. That is the whole reason this list can be added without
-#   rewriting ``cohort.json``: the population is untouched and only the events
-#   written over it are new.
-# - **One sport, and every opponent already holds it.** Nothing here may reach
-#   ``SECOND_SPORT_BECAUSE_THEY_PLAYED``, because that feeds the draw and the
-#   draw is the artifact — so a row may only name somebody the population
-#   already rated in that sport. Her *padel* record staying empty is the same
-#   absence the sheet is built to spell, seen from the inside: the record card
-#   is one record for the whole player, and only the run of form is per sport.
-#
-# **A pair may play twice, and this list is the first thing that does.** A
-# completed line-up releases its pair (``docs/adr/0142`` §1, #343), so two people
-# who have played can be shown each other and challenged again — which is what
-# lets three opponents carry five counted games, and therefore what lets
-# *opponent variety* print anything but ``100%``. It is also why the writer
-# identifies an already-written game **and an already-sent court** by the day as
-# well as the line-up: by line-up alone, the second evening with the same person
-# is the first one.
-#
-# **It does not move ``PREVIOUS_ACCEPT``, and the reason is the first bullet
-# again.** That signal is *they said yes to you before* — **a price on their
-# card, off their own answers, never off the reader's**. She is the invitee on
-# every one of these rows, so the accept is hers: the tally it leaves sits on
-# **her** card in *their* pool, and their cards in hers carry nothing. Seating
-# her on side A would move the tally and cost her two strands, which is the trade
-# the first bullet already refuses. So the code stays in ``CANNOT_BE_DRAWN`` in
-# ``screens.py``, with a narrower reason than it had.
+# **Her own played history is not declared here.** The evenings on the record she
+# reads about herself are past *booked* games, written on the path the product
+# makes games on (``app/seeds/booked_history.py``, #573). ``PLAYED_GAMES`` stays
+# the cohort's own, for the cards in her pool.
 
 #: The one account these rows seat besides the cohort. Read off the catalog
 #: rather than spelled, so the address and the handle cannot drift apart.
@@ -813,146 +773,14 @@ PROTAGONIST_HANDLE: Final = THE_POPULATED_PLAYER.slug
 #: has is a latitude, which is all ``_distance_between`` ever reads.
 PROTAGONIST_RING: Final = "centre"
 
-#: Who she is declared to play. **Members who hold this sport, who declared it
-#: competitively, and whose own drawn radius already reaches the centre** — all
-#: three read off the committed population rather than arranged for.
-#:
-#: The last clause is what keeps this list free: an opponent who could not
-#: already see her would have to be *given* a radius, and a member's radius is
-#: part of the draw. Four members clear all three bars and only three are here:
-#: `cohort-d-07`'s own search never returns her on a fresh database, on the level
-#: gate, and that is the one bar a declaration cannot check.
-PROTAGONISTS_OPPONENTS: Final = (
-    "cohort-a-12",
-    "cohort-c-00",
-    "cohort-d-08",
-)
-
-#: On a singles court the organiser is the **only** other person, so everybody
-#: she plays organises. Kept as its own name rather than folded into the one
-#: above, because the two say different things — *who may be seated* and *whose
-#: search has to find her* — and a doubles row would separate them again.
-PROTAGONISTS_ORGANISERS: Final = PROTAGONISTS_OPPONENTS
-
-#: **Her record, as the six evenings behind it.** Read down the endings rather
-#: than the scores: they are chosen so that every figure on her sheet is a
-#: fraction somebody could *work off* rather than a full bar.
-#:
-#: - Six arrangements, five of them played: the oldest is **a ghost** — the
-#:   line-up completed, nobody ever said it happened, and the entry window closed
-#:   over it. *Shows up* reads 5 of 6.
-#: - Every invitation answered — once *answers challenges*' 6 of 6, a strand
-#:   that stood down with #544, so it is on her sheet no more.
-#: - Five scores put to her side and one of them ignored — the three-day-old
-#:   row, which confirms by silence anyway and still draws its square. *Answers
-#:   about results* reads 4 of 5.
-#: - Three distinct people over five counted games, so *opponent variety* prints
-#:   ``60% · 3 of 5`` rather than the ``100%`` every card in this fixture printed
-#:   while no pair could play twice.
-#: - The run of five is **full** and reads ``W L W L W``: mixed, which is the
-#:   only row of squares a reader can read a mistake off.
-#:
-#: **Tennis and singles, and both are forced.** A padel row is a doubles court,
-#: so its organiser's one search has to return *three* named people before the
-#: shortlist fills — and it does not: an organiser whose radius reaches the
-#: centre also reaches the eleven relationship accounts, which are clones of the
-#: protagonist and outscore their own ring. A singles court asks the search for
-#: one person, which is the difference between a fixture that writes and one that
-#: fails half way through with a message about a pool. Tennis, because tennis is
-#: this platform's singles sport.
-#:
-#: **Every organiser here was measured against a *fresh* database**, and that is
-#: not a formality: a fourth member passes this list's every declared rule and
-#: their search never returns her, because the level gate reads a rating that has
-#: not moved yet. On a database where her counted games already exist it does
-#: return her, which is a fixture that writes on the second run and fails on the
-#: first.
-#:
-#: **Nothing here moves the draw.** Every opponent already holds tennis, so
-#: ``SECOND_SPORT_BECAUSE_THEY_PLAYED`` is unchanged; every one of them was
-#: already drawn a radius that reaches the centre, so no member is re-drawn. The
-#: committed population is byte-identical with this list added, which is the
-#: property that lets it exist beside a fixture every screen assertion is read
-#: from.
-#:
-#: **The two oldest days are derived from the entry window**, so a horizon that
-#: moves takes the ghost and the row beside it with it. The rest are typed, and
-#: the refusal reads the cohort's own history as well as this one: `cohort-a-12`
-#: is already playing on every day from two to seven, and a member on two courts
-#: at one instant leaves *Last 5* to a tie-break on a uuid.
-PROTAGONIST_GAMES: Final[tuple[PlayedGame, ...]] = (
-    # **The ghost.** Nobody claimed the evening and the entry window closed over
-    # it, so the platform reads it as never played — which also means there is
-    # nobody to rate for it, and the sportsmanship layer skips it by asking the
-    # same question the card does. It is also the one row outside the
-    # sportsmanship card's own week, which is the same fact from the other side.
-    PlayedGame(
-        sport=Sport.TENNIS.value,
-        played_days_ago=GHOSTED_AT_LEAST_DAYS_AGO + 1,
-        side_a=("cohort-c-00",),
-        side_b=(PROTAGONIST_HANDLE,),
-        won_by=None,
-        entered=False,
-    ),
-    # **`cohort-a-12` plays her once and it has to be here.** Every day inside
-    # the fixture's own window is spent on the cohort's five tennis singles, and
-    # this is the first one clear of them. It is outside the sportsmanship card's
-    # week as a result, which is why nobody declares what they thought of her.
-    PlayedGame(
-        sport=Sport.TENNIS.value,
-        played_days_ago=GHOSTED_AT_LEAST_DAYS_AGO,
-        side_a=("cohort-a-12",),
-        side_b=(PROTAGONIST_HANDLE,),
-        won_by="B",
-    ),
-    PlayedGame(
-        sport=Sport.TENNIS.value,
-        played_days_ago=6,
-        side_a=("cohort-c-00",),
-        side_b=(PROTAGONIST_HANDLE,),
-        won_by="A",
-    ),
-    PlayedGame(
-        sport=Sport.TENNIS.value,
-        played_days_ago=5,
-        side_a=("cohort-d-08",),
-        side_b=(PROTAGONIST_HANDLE,),
-        won_by="B",
-    ),
-    # **The one she never answered.** The score stands — silence confirms it —
-    # so the square is drawn and the dock lands on the strand rather than on the
-    # result.
-    PlayedGame(
-        sport=Sport.TENNIS.value,
-        played_days_ago=3,
-        side_a=("cohort-c-00",),
-        side_b=(PROTAGONIST_HANDLE,),
-        won_by="A",
-        answered=False,
-    ),
-    # **The oldest of the played ones, and it is oldest because of a later layer.** It
-    # sat two days ago until `pool_history.py` needed her evenings inside the card's
-    # week; her tennis history holds every day it can, so the one that moved is the one
-    # whose opponent had a free day this far back. It is outside the card's week now,
-    # which costs nothing: the rating `cohort-d-08` gives her lands on the five-day-old
-    # court they also share.
-    PlayedGame(
-        sport=Sport.TENNIS.value,
-        played_days_ago=11,
-        side_a=("cohort-d-08",),
-        side_b=(PROTAGONIST_HANDLE,),
-        won_by="B",
-    ),
-)
-
-#: Every arrangement this seed writes, in one tuple, for the readers that do not
-#: care whose record it is for: the writer, which walks it oldest first, and the
-#: refusals below, which ask *who shared a court with whom* across both lists.
+#: Every arrangement the challenge loop writes, in one tuple, for the readers that
+#: do not care which list it came from: the writer, which walks it oldest first,
+#: and the refusals below, which ask *who shared a court with whom*.
 #:
 #: The sportsmanship layer is **not** one of them, deliberately — it asks the
 #: database which courts a rater actually has rather than re-deriving them from
 #: here, so a declaration cannot name an evening the run failed to write.
-EVERY_PLAYED_GAME: Final[tuple[PlayedGame, ...]] = PLAYED_GAMES + PROTAGONIST_GAMES
+EVERY_PLAYED_GAME: Final[tuple[PlayedGame, ...]] = PLAYED_GAMES
 
 
 # ---------------------------------------------------------------------------
@@ -1003,11 +831,8 @@ RATED_WITHIN_DAYS: Final = (CARD_OPENS_AFTER + CARD_STAYS_OPEN_FOR).days
 
 #: **What each of these people was told about them, out of five.**
 #:
-#: - The protagonist rests on **two raters at 4,5**. Two rather than three,
-#:   because her evening with ``cohort-a-12`` is nine days old and **the card
-#:   closes after a week** — a rating written for it would be one nobody was ever
-#:   shown the card to give. She reads it on her own sheet, titled *How others
-#:   see you*, exactly as a reader of her record does (``docs/adr/0179`` §5).
+#: - What her opponents said about the protagonist is declared beside her
+#:   evenings, in ``app/seeds/booked_history.py``.
 #: - ``cohort-a-12`` rests on **three at 4,0** and ``cohort-a-16`` on **two at
 #:   3,5** — a middling figure and a small count, because a card that only ever
 #:   drew 4,5 over two would never show what a fuller record looks like.
@@ -1019,10 +844,6 @@ RATED_WITHIN_DAYS: Final = (CARD_OPENS_AFTER + CARD_STAYS_OPEN_FOR).days
 #:   ``cohort-a-13``, so their records omit the zone. **That is the state most
 #:   players are in** and it is the one an empty fixture would leave unproved.
 WHAT_PLAYERS_SAID: Final[Mapping[str, Mapping[str, int]]] = {
-    PROTAGONIST_HANDLE: {
-        "cohort-c-00": 5,
-        "cohort-d-08": 4,
-    },
     "cohort-a-12": {
         "cohort-d-01": 4,
         "cohort-d-02": 4,
@@ -1647,10 +1468,6 @@ def as_document(cohort: Cohort) -> dict[str, object]:
             band: list(bounds) for band, bounds in BAND_HISTOGRAM.items()
         },
         "played_games": [_game_document(game) for game in PLAYED_GAMES],
-        # **Committed beside the cohort's own and never mixed into it**, because
-        # they answer different questions: those rows exist to reach card states
-        # in her pool, these to fill the record sheet she reads about herself.
-        "protagonist_games": [_game_document(game) for game in PROTAGONIST_GAMES],
         # **Inputs, like a score is.** The average, the count and the band the
         # subject is shown are the fold `sportsmanship` takes over these, and a
         # committed copy of one of them would be a number nothing keeps honest.
@@ -1804,7 +1621,6 @@ def _refuse_an_impossible_cohort(cohort: "Cohort") -> None:
         raise RuntimeError("two cohort members share a handle")
 
     _refuse_a_played_history_nobody_could_play(cohort)
-    _refuse_a_protagonists_history_she_could_not_play(cohort)
     _refuse_an_opinion_nobody_was_on_a_court_to_have(cohort)
     _refuse_a_photograph_set_with_a_state_missing(cohort)
     for member in cohort.members:
@@ -1831,7 +1647,7 @@ def _refuse_a_played_history_nobody_could_play(cohort: "Cohort") -> None:
     days: dict[str, set[int]] = {}
     for index, game in enumerate(PLAYED_GAMES):
         sport = Sport(game.sport)
-        per_side = seats_per_side(sport)
+        per_side = SPORT_SPECS[sport].players // 2
         if len(game.side_a) != per_side or len(game.side_b) != per_side:
             raise RuntimeError(
                 f"played game {index} seats {len(game.side_a)} against "
@@ -1958,141 +1774,6 @@ def _refuse_an_ending_no_evening_can_have(index: int, game: PlayedGame) -> None:
             f"score has a winner. What leaves a game unscored is two sides who "
             f"each answered with a score of their own (`docs/adr/0137`)."
         )
-
-
-def _refuse_a_protagonists_history_she_could_not_play(cohort: "Cohort") -> None:
-    """Every row of ``PROTAGONIST_GAMES``, against the world that has to write it.
-
-    **The list's whole value is that it moves no draw**, so most of what is
-    checked here is that it stayed inside the population as drawn: an opponent
-    the fixture reserved for something else, a sport somebody was never assessed
-    in, an organiser whose radius does not reach the centre. Each of those would
-    otherwise surface mid-run as a message about an empty pool, blaming the
-    search rather than the row.
-    """
-
-    known = {member.handle: member for member in cohort.members}
-    # **Seeded from the cohort's own history first**, because a member on two
-    # courts at one instant is the same defect whichever list put them there —
-    # and ``cohort-d-07`` and ``cohort-d-08`` are already playing inside this
-    # window.
-    days: dict[str, set[int]] = {}
-    for game in PLAYED_GAMES:
-        for handle in game.players:
-            days.setdefault(handle, set()).add(game.played_days_ago)
-
-    for index, game in enumerate(PROTAGONIST_GAMES):
-        sport = Sport(game.sport)
-        _refuse_an_ending_no_evening_can_have(index, game)
-
-        per_side = seats_per_side(sport)
-        if len(game.side_a) != per_side or len(game.side_b) != per_side:
-            raise RuntimeError(
-                f"protagonist game {index} seats {len(game.side_a)} against "
-                f"{len(game.side_b)} on a {sport.value} court, which has "
-                f"{per_side} a side."
-            )
-        if game.side_b[0] != PROTAGONIST_HANDLE:
-            raise RuntimeError(
-                f"protagonist game {index} does not seat "
-                f"'{PROTAGONIST_HANDLE}' first on side B. She sits there in "
-                f"every row and it is not a convention: the organiser answers "
-                f"no invitation of their own, and the side that *states* the "
-                f"score is asked nothing — so a row that moves her costs her a "
-                f"strand and the sheet quietly loses a bar."
-            )
-        if game.players.count(PROTAGONIST_HANDLE) != 1:
-            raise RuntimeError(
-                f"protagonist game {index} seats '{PROTAGONIST_HANDLE}' "
-                f"{game.players.count(PROTAGONIST_HANDLE)} time(s)."
-            )
-        if game.organiser not in PROTAGONISTS_ORGANISERS:
-            raise RuntimeError(
-                f"protagonist game {index} is organised by '{game.organiser}', "
-                f"who is not in `PROTAGONISTS_ORGANISERS`. A court built on a "
-                f"*for fun* search is a friendly and no card counts one, so an "
-                f"organiser here has to have declared this sport competitively."
-            )
-        floor = (
-            GHOSTED_AT_LEAST_DAYS_AGO if game.was_a_ghost else PLAYED_AT_LEAST_DAYS_AGO
-        )
-        if game.played_days_ago < floor:
-            raise RuntimeError(
-                f"protagonist game {index} was arranged {game.played_days_ago} "
-                f"day(s) ago and this ending needs {floor}. A score is confirmed "
-                f"by silence when its window closes; **a plan is a ghost only "
-                f"once its entry window has**, and that window is a week plus a "
-                f"day rather than the day the score's is. A ghost declared "
-                f"inside it is a game still awaiting its entry, which the record "
-                f"leaves out of both halves of *shows up* — a full bar, and "
-                f"nothing failing."
-            )
-
-        others = [handle for handle in game.players if handle != PROTAGONIST_HANDLE]
-        if len(set(game.players)) != len(game.players):
-            raise RuntimeError(f"protagonist game {index} seats somebody twice")
-        for handle in others:
-            if handle not in PROTAGONISTS_OPPONENTS:
-                raise RuntimeError(
-                    f"protagonist game {index} seats '{handle}', who is not in "
-                    f"`PROTAGONISTS_OPPONENTS`. The rest of the ring is spoken "
-                    f"for: three members are the empty cards, two are the "
-                    f"evening nobody scored, and the others are gated out of a "
-                    f"court of hers by level or by gender."
-                )
-            member = known[handle]
-            if sport not in member.sports:
-                raise RuntimeError(
-                    f"protagonist game {index} is {sport.value} and "
-                    f"'{handle}' holds no {sport.value} rating. **Nothing here "
-                    f"may reach `SECOND_SPORT_BECAUSE_THEY_PLAYED`**: that set "
-                    f"feeds the draw and the draw is the committed artifact, so "
-                    f"a row may only name somebody the population already rated "
-                    f"in this sport."
-                )
-            if member.committed_days_ago <= game.played_days_ago:
-                raise RuntimeError(
-                    f"protagonist game {index} was played "
-                    f"{game.played_days_ago} day(s) ago and '{handle}' "
-                    f"committed their profile {member.committed_days_ago} "
-                    f"day(s) ago — a game before the player existed."
-                )
-        for handle in (*others, PROTAGONIST_HANDLE):
-            if game.played_days_ago in days.setdefault(handle, set()):
-                raise RuntimeError(
-                    f"'{handle}' plays twice on the same day, and *Last 5* is "
-                    f"ordered on the instant each game was played."
-                )
-            days[handle].add(game.played_days_ago)
-
-        organiser = known[game.organiser]
-        if _is_lopsided(_position_in(game.organiser)):
-            raise RuntimeError(
-                f"'{game.organiser}' organises protagonist game {index} and is "
-                f"the ring's lopsided member, whose radius is the slider's "
-                f"floor and reaches nobody."
-            )
-        to_the_centre = _distance_between(organiser.ring, PROTAGONIST_RING)
-        if to_the_centre > organiser.radius_km:
-            raise RuntimeError(
-                f"'{game.organiser}' organises protagonist game {index} and the "
-                f"centre is {to_the_centre:.2f} km away, outside the "
-                f"{organiser.radius_km} km they were drawn. **Nothing here may "
-                f"widen it**: an organiser's radius is part of the committed "
-                f"draw, and giving one to this list would move `cohort.json` "
-                f"and every screen assertion read off it. Pick an opponent who "
-                f"can already see her."
-            )
-        for handle in others:
-            if handle == game.organiser:
-                continue
-            reach = _distance_between(organiser.ring, known[handle].ring)
-            if reach > organiser.radius_km:
-                raise RuntimeError(
-                    f"'{game.organiser}' organises protagonist game {index} and "
-                    f"'{handle}' is {reach:.2f} km away, outside the "
-                    f"{organiser.radius_km} km they set."
-                )
 
 
 def _refuse_an_opinion_nobody_was_on_a_court_to_have(cohort: "Cohort") -> None:

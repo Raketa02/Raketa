@@ -64,7 +64,7 @@ from app.modules.proposals.domain.deck import GAME_LENGTH, week_of, week_window
 from app.seeds.bookings import (
     NotEnoughToBook,
     SeededBookings,
-    four_say_yes,
+    all_say_yes,
     padel_hours_on_sale,
 )
 from app.seeds.clock import FixedClock
@@ -254,7 +254,7 @@ async def _a_game_left_by_one(
 ) -> None:
     """The four's game booked, and the last of them leaving it."""
 
-    answer = await four_say_yes(
+    answer = await all_say_yes(
         session,
         settings=settings,
         clock=clock,

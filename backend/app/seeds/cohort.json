@@ -213,86 +213,6 @@
       "answered": true
     }
   ],
-  "protagonist_games": [
-    {
-      "sport": "TENNIS",
-      "played_days_ago": 10,
-      "side_a": [
-        "cohort-c-00"
-      ],
-      "side_b": [
-        "the-populated-player"
-      ],
-      "won_by": null,
-      "entered": false,
-      "answered": true
-    },
-    {
-      "sport": "TENNIS",
-      "played_days_ago": 9,
-      "side_a": [
-        "cohort-a-12"
-      ],
-      "side_b": [
-        "the-populated-player"
-      ],
-      "won_by": "B",
-      "entered": true,
-      "answered": true
-    },
-    {
-      "sport": "TENNIS",
-      "played_days_ago": 6,
-      "side_a": [
-        "cohort-c-00"
-      ],
-      "side_b": [
-        "the-populated-player"
-      ],
-      "won_by": "A",
-      "entered": true,
-      "answered": true
-    },
-    {
-      "sport": "TENNIS",
-      "played_days_ago": 5,
-      "side_a": [
-        "cohort-d-08"
-      ],
-      "side_b": [
-        "the-populated-player"
-      ],
-      "won_by": "B",
-      "entered": true,
-      "answered": true
-    },
-    {
-      "sport": "TENNIS",
-      "played_days_ago": 3,
-      "side_a": [
-        "cohort-c-00"
-      ],
-      "side_b": [
-        "the-populated-player"
-      ],
-      "won_by": "A",
-      "entered": true,
-      "answered": false
-    },
-    {
-      "sport": "TENNIS",
-      "played_days_ago": 11,
-      "side_a": [
-        "cohort-d-08"
-      ],
-      "side_b": [
-        "the-populated-player"
-      ],
-      "won_by": "B",
-      "entered": true,
-      "answered": true
-    }
-  ],
   "what_players_said": {
     "cohort-a-08": {
       "cohort-a-16": 5
@@ -305,10 +225,6 @@
     "cohort-a-16": {
       "cohort-a-13": 3,
       "cohort-a-14": 4
-    },
-    "the-populated-player": {
-      "cohort-c-00": 5,
-      "cohort-d-08": 4
     }
   },
   "members": [

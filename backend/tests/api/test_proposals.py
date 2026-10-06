@@ -37,7 +37,7 @@ from app.modules.proposals.domain.errors import (
     VersionDoesNotFit,
 )
 from app.modules.proposals.infrastructure.proposal_models import PoolORM, ProposalORM
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.unit.fake_clock import MovableClock
 from tests.api.proposals_world import (
     MONDAY_MORNING,
@@ -233,7 +233,7 @@ async def test_leaving_the_group_withdraws_the_leaver_s_yeses_there(
     # A yes of one's own can be withdrawn by hand before the leaving lands.
     assert (await withdraws(client, ewa, proposal)).status_code == 204
 
-    await world.deliver_the_outbox(session_factory)
+    await players.deliver_the_outbox(session_factory)
 
     assert await live_ids(client, kuba) == []
     assert (await events_of(session_factory, proposal)).count(
@@ -459,7 +459,7 @@ async def test_a_yes_from_somebody_who_does_not_fit_a_player_in_is_refused(
     )
     # Dealt while only Marek was In, and E fitted him; B, In since, blocked E.
     await says_yes(client, b, post)
-    assert (await world.block_between(client, b["token"], e["id"])).status_code == 204
+    assert (await players.block_between(client, b["token"], e["id"])).status_code == 204
 
     refused = await says_yes(client, e, post)
 
@@ -477,7 +477,7 @@ async def test_a_version_naming_somebody_who_does_not_fit_a_player_in_is_not_dea
     ola = four[0]
     blocked = await a_player(client, payments, "blocked")
     await client.post(f"/api/v1/groups/{group}/membership", headers=blocked["headers"])
-    await world.block_between(client, ola["token"], blocked["id"])
+    await players.block_between(client, ola["token"], blocked["id"])
     pick = await makes(
         session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
     )
@@ -492,7 +492,7 @@ async def test_every_pair_on_a_version_must_fit_each_other(
     client, session_factory, clock, payments, club, four, group
 ):
     far = await a_player(client, payments, "far", sports=())
-    await world.rate_in(
+    await players.rate_in(
         session_factory, far["id"], Sport.PADEL, mu=4.5
     )  # Levels apart: outside the competitive window of anybody here.
     await client.post(f"/api/v1/groups/{group}/membership", headers=far["headers"])

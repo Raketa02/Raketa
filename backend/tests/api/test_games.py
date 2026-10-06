@@ -32,11 +32,12 @@ from __future__ import annotations
 import pytest
 
 from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 
 
 @pytest.fixture
 async def searcher(client):
-    return await world.a_searcher(client)
+    return await players.a_rated_player(client, "searcher")
 
 
 async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
@@ -48,7 +49,7 @@ async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
 
     people = {}
     for name, delta in (("ana", 0.0), ("bo", 0.05), ("cy", -0.05)):
-        player_id, token = await world.a_signed_in_candidate(
+        player_id, token = await players.a_player_on_the_log(
             client, session_factory, name, mu=mu + delta
         )
         people[name] = {"id": player_id, "token": token}
@@ -70,7 +71,7 @@ async def _a_sent_challenge(client, searcher) -> str:
     sent = await client.post(
         "/api/v1/challenges",
         json={"search_id": body["search"]["search_id"], "court": court},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     assert sent.status_code == 201, sent.text
     return sent.json()["challenge_id"]
@@ -80,13 +81,13 @@ async def _everybody_accepts(client, challenge_id: str, people: dict) -> None:
     for person in people.values():
         answered = await client.post(
             f"/api/v1/challenges/{challenge_id}/accept",
-            headers=world.auth(person["token"]),
+            headers=players.auth(person["token"]),
         )
         assert answered.status_code == 200, answered.text
 
 
 async def _games(client, token: str) -> list[dict]:
-    response = await client.get("/api/v1/games", headers=world.auth(token))
+    response = await client.get("/api/v1/games", headers=players.auth(token))
     assert response.status_code == 200, response.text
     return response.json()["games"]
 
@@ -193,7 +194,7 @@ async def test_the_two_acts_name_the_court_the_way_the_list_does(
     stated = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     assert stated.status_code == 200, stated.text
     assert {
@@ -203,7 +204,7 @@ async def test_the_two_acts_name_the_court_the_way_the_list_does(
     theirs = _an_opponent_of(game, searcher, people)
     agreed = await client.post(
         f"/api/v1/games/{game['game_id']}/result/acceptance",
-        headers=world.auth(theirs["token"]),
+        headers=players.auth(theirs["token"]),
     )
     assert agreed.status_code == 200, agreed.text
     assert {
@@ -229,7 +230,7 @@ async def test_a_block_does_not_unname_somebody_you_already_played(
     (game,) = await _games(client, searcher["token"])
     theirs = _an_opponent_of(game, searcher, people)
 
-    blocked = await world.block_between(client, searcher["token"], theirs["id"])
+    blocked = await players.block_between(client, searcher["token"], theirs["id"])
     assert blocked.status_code == 204, blocked.text
 
     for token in (searcher["token"], theirs["token"]):
@@ -256,7 +257,7 @@ async def test_stating_a_result_records_that_the_game_happened(
     stated = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
 
     assert stated.status_code == 200, stated.text
@@ -287,13 +288,13 @@ async def test_the_other_side_agrees_and_the_game_has_a_winner(
     await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
 
     theirs = _an_opponent_of(game, searcher, people)
     agreed = await client.post(
         f"/api/v1/games/{game['game_id']}/result/acceptance",
-        headers=world.auth(theirs["token"]),
+        headers=players.auth(theirs["token"]),
     )
 
     assert agreed.status_code == 200, agreed.text
@@ -328,7 +329,7 @@ async def test_a_played_game_reaches_a_bystanders_card_as_a_counted_game(
     the other way — a run of form is agreed results only.
     """
 
-    host = await world.a_searcher(client, "host")
+    host = await players.a_rated_player(client, "host")
     people = await _a_city(client, session_factory, candidate_source, host["mu"])
     challenge_id = await _a_sent_challenge(client, host)
     await _everybody_accepts(client, challenge_id, people)
@@ -336,7 +337,7 @@ async def test_a_played_game_reaches_a_bystanders_card_as_a_counted_game(
     stated = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(host["token"]),
+        headers=players.auth(host["token"]),
     )
     assert stated.status_code == 200, stated.text
     await world.fold_the_log(session_factory, candidate_source)
@@ -371,14 +372,14 @@ async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
     await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     opponent = _an_opponent_of(game, searcher, people)
 
     countered = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 4, "b": 6}, {"a": 3, "b": 6}]}},
-        headers=world.auth(opponent["token"]),
+        headers=players.auth(opponent["token"]),
     )
     assert countered.status_code == 200, countered.text
     body = countered.json()
@@ -393,7 +394,7 @@ async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
     again = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 4, "b": 6}, {"a": 2, "b": 6}]}},
-        headers=world.auth(opponent["token"]),
+        headers=players.auth(opponent["token"]),
     )
     assert again.status_code == 409
     assert again.json()["code"] == "your_side_has_already_answered"
@@ -429,12 +430,12 @@ async def test_a_disagreement_offers_its_own_way_out_to_the_side_that_started_it
     await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 4, "b": 6}, {"a": 3, "b": 6}]}},
-        headers=world.auth(opponent["token"]),
+        headers=players.auth(opponent["token"]),
     )
     await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
 
     (mine,) = await _games(client, searcher["token"])
@@ -447,7 +448,7 @@ async def test_a_disagreement_offers_its_own_way_out_to_the_side_that_started_it
 
     agreed = await client.post(
         f"/api/v1/games/{game['game_id']}/result/acceptance",
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
 
     assert agreed.status_code == 200, agreed.text
@@ -483,13 +484,13 @@ async def test_a_pending_acceptance_says_who_agreed_and_when_it_settles(
     stated = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     assert stated.status_code == 200, stated.text
     opponent = _an_opponent_of(game, searcher, people)
     await client.post(
         f"/api/v1/games/{game['game_id']}/result/acceptance",
-        headers=world.auth(opponent["token"]),
+        headers=players.auth(opponent["token"]),
     )
 
     (mine,) = await _games(client, searcher["token"])
@@ -518,7 +519,7 @@ async def test_a_level_score_is_refused_because_a_result_names_a_winner(
     refused = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 4, "b": 6}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
 
     assert refused.status_code == 400, refused.text
@@ -533,7 +534,7 @@ async def test_nobody_who_did_not_play_can_see_or_touch_the_game(
 
     await _an_arranged_game(client, session_factory, candidate_source, searcher)
     (game,) = await _games(client, searcher["token"])
-    stranger_id, stranger = await world.a_signed_in_candidate(
+    stranger_id, stranger = await players.a_player_on_the_log(
         client, session_factory, "outsider", mu=searcher["mu"]
     )
 
@@ -541,7 +542,7 @@ async def test_nobody_who_did_not_play_can_see_or_touch_the_game(
     refused = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 0}]}},
-        headers=world.auth(stranger),
+        headers=players.auth(stranger),
     )
     assert refused.status_code == 403
     assert refused.json()["code"] == "you_were_not_on_this_court"

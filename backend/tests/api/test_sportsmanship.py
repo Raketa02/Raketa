@@ -56,6 +56,7 @@ from app.modules.sportsmanship.infrastructure.card_model import (
     SportsmanshipRatingORM,
 )
 from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 
 
 class MovableClock:
@@ -89,19 +90,19 @@ def clock(client):
     """
 
     movable = MovableClock(datetime.now(timezone.utc) - timedelta(days=2))
-    world.override(client, get_clock, lambda: movable)
+    players.override(client, get_clock, lambda: movable)
     return movable
 
 
 @pytest.fixture
 async def searcher(client):
-    return await world.a_searcher(client)
+    return await players.a_rated_player(client, "searcher")
 
 
 async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
     people = {}
     for name, delta in (("ana", 0.0), ("bo", 0.05), ("cy", -0.05)):
-        player_id, token = await world.a_signed_in_candidate(
+        player_id, token = await players.a_player_on_the_log(
             client, session_factory, name, mu=mu + delta
         )
         people[name] = {"id": player_id, "token": token}
@@ -125,7 +126,7 @@ async def _a_played_game(client, searcher, people) -> str:
     sent = await client.post(
         "/api/v1/challenges",
         json={"search_id": body["search"]["search_id"], "court": court},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     assert sent.status_code == 201, sent.text
     challenge_id = sent.json()["challenge_id"]
@@ -133,7 +134,7 @@ async def _a_played_game(client, searcher, people) -> str:
     for person in people.values():
         answered = await client.post(
             f"/api/v1/challenges/{challenge_id}/accept",
-            headers=world.auth(person["token"]),
+            headers=players.auth(person["token"]),
         )
         assert answered.status_code == 200, answered.text
 
@@ -148,14 +149,14 @@ async def _a_played_game(client, searcher, people) -> str:
     entered = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     assert entered.status_code == 200, entered.text
     return game["game_id"]
 
 
 async def _games(client, token: str) -> list[dict]:
-    response = await client.get("/api/v1/games", headers=world.auth(token))
+    response = await client.get("/api/v1/games", headers=players.auth(token))
     assert response.status_code == 200, response.text
     return response.json()["games"]
 
@@ -185,7 +186,7 @@ async def _a_settled_game(client, session_factory, candidate_source, searcher, c
 
 
 async def _waiting(client, token: str) -> list[dict]:
-    response = await client.get("/api/v1/sportsmanship", headers=world.auth(token))
+    response = await client.get("/api/v1/sportsmanship", headers=players.auth(token))
     assert response.status_code == 200, response.text
     return response.json()["cards"]
 
@@ -212,7 +213,7 @@ async def _rate(client, token: str, game_id: str, ratings: list[dict]):
     return await client.post(
         f"/api/v1/sportsmanship/{game_id}",
         json={"ratings": ratings},
-        headers=world.auth(token),
+        headers=players.auth(token),
     )
 
 
@@ -294,7 +295,7 @@ async def test_the_three_refusals_about_whose_game_it_is_are_byte_identical(
 
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
     unsettled = await _a_played_game(client, searcher, people)
-    stranger_id, stranger_token = await world.a_signed_in_candidate(
+    stranger_id, stranger_token = await players.a_player_on_the_log(
         client, session_factory, "dee", mu=searcher["mu"]
     )
     assert stranger_id is not None
@@ -396,7 +397,7 @@ async def test_stars_for_somebody_who_was_not_on_that_court_are_refused(
     game_id, _people = await _a_settled_game(
         client, session_factory, candidate_source, searcher, clock
     )
-    stranger_id, _token = await world.a_signed_in_candidate(
+    stranger_id, _token = await players.a_player_on_the_log(
         client, session_factory, "dee", mu=searcher["mu"]
     )
 
@@ -747,7 +748,7 @@ async def test_a_game_settled_the_same_evening_is_not_asked_about_until_tomorrow
     game_id = await _a_played_game(client, searcher, people)
     agreed = await client.post(
         f"/api/v1/games/{game_id}/result/acceptance",
-        headers=world.auth(
+        headers=players.auth(
             await _somebody_on_the_other_side(client, searcher, people, game_id)
         ),
     )

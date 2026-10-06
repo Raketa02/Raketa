@@ -42,7 +42,7 @@ from app.modules.rating.domain.ids import skill_rating_id
 from app.modules.rating.infrastructure.event_sourced_skill_rating_repository import (
     RATING_AGGREGATE,
 )
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.club_courts_world import (
     PAYMENTS_LINK,
     a_desk,
@@ -67,7 +67,7 @@ from tests.api.proposals_world import (
     warsaw,
     withdraws,
 )
-from tests.unit.candidate_index_fixtures import append
+from tests.unit.event_log import append
 from tests.unit.fake_clock import MovableClock
 
 GAMES_AND_MONEY = "/api/v1/players/me/games-and-money"
@@ -494,7 +494,7 @@ async def test_a_card_with_somebody_in_i_blocked_is_withheld_and_a_name_is_left_
         versions=((ola, kuba, ania, marek),),
     )
 
-    blocked = await world.block_between(client, ola["token"], kuba["id"])
+    blocked = await players.block_between(client, ola["token"], kuba["id"])
     assert blocked.status_code in (200, 201, 204), blocked.text
 
     [card] = (await deck_of(client, ola, group))["cards"]
@@ -514,7 +514,7 @@ async def test_a_name_who_blocked_somebody_in_is_left_off_my_card(
         versions=((ola, kuba, ewa, tomek),),
     )
     await says_yes(client, kuba, proposal)
-    blocked = await world.block_between(client, tomek["token"], kuba["id"])
+    blocked = await players.block_between(client, tomek["token"], kuba["id"])
     assert blocked.status_code in (200, 201, 204), blocked.text
 
     [card] = (await deck_of(client, ola, group))["cards"]
@@ -624,7 +624,7 @@ async def test_the_segments_follow_my_intent_and_nobody_is_dealt_before_i_answer
     assert deck["games_badge"] == 0
 
     # Either: both segments, and the badge counts across them.
-    await world.declare_intent(client, ola["token"], intent="NO_PREFERENCE")
+    await players.declare_intent(client, ola["token"], intent="NO_PREFERENCE")
     deck = await deck_of(client, ola, group, kind="FOR_FUN")
     assert deck["segments"] == [
         {"kind": "COMPETITIVE", "count": 1},

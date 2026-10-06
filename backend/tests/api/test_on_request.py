@@ -39,7 +39,7 @@ from app.modules.conversations.infrastructure.conversation_model import (
 )
 from app.modules.payments.domain.entered_cards import A_CARD_THAT_DECLINES_LATER
 from app.modules.proposals.application.propose_games import Proposed
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -582,7 +582,7 @@ async def test_leaving_the_group_while_it_waits_takes_the_request_with_the_yes(
         f"/api/v1/groups/{group}/membership", headers=four[2]["headers"]
     )
     assert left.status_code in (200, 204), left.text
-    await world.deliver_the_outbox(session_factory)
+    await players.deliver_the_outbox(session_factory)
 
     assert await waiting_at(client, desk) == []
     assert await home_of(client, four[2]) == []

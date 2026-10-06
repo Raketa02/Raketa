@@ -36,7 +36,7 @@ from app.modules.proposals.application.propose_games import (
     DueForProposing,
     Proposed,
 )
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.club_courts_world import EXCEPTIONS, confirms_settings
 from tests.api.proposals_world import (
     GROUPS,
@@ -404,12 +404,12 @@ async def test_somebody_joining_makes_the_pool_due_and_the_tick_deals_to_it(
     group = await a_group(client, three[0], club, *three[1:])
     assert await proposes(session_factory, clock, group) == Proposed(pools=1)
     due = DueForProposing()
-    await world.deliver_the_outbox(session_factory, proposer_due=due)
+    await players.deliver_the_outbox(session_factory, proposer_due=due)
     due.take()
 
     joined = await client.post(f"{GROUPS}/{group}/membership", headers=tomek["headers"])
     assert joined.status_code in (200, 201), joined.text
-    await world.deliver_the_outbox(session_factory, proposer_due=due)
+    await players.deliver_the_outbox(session_factory, proposer_due=due)
     async with session_factory() as session:
         proposer = build_propose_games(session, clock=clock)
         pools = await proposer.pools_due(due.take())

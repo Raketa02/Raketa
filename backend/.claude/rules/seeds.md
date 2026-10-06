@@ -62,6 +62,24 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   a seeded shield is one `decision_on_record` agrees to believe. The object store is the
   one thing the seed writes that lives outside the database, so the run **asks it one
   question first** and reports rather than dies when it cannot answer.
+- **Her own record is past booked games, on the path the product makes games on**
+  (`app/seeds/booked_history.py`, #573). Her evenings are tennis singles at Ogrody 33, in
+  a group she runs there. Each is made, filled by its last yes, played and scored through
+  the use cases a phone runs, on a backdated clock, and her opponents rate her through
+  `AnswerTheCard`. The challenge loop's played history no longer seats her own evenings.
+  Three things are load-bearing. **Every evening is over before this week began.** A booked
+  game counts toward its week's *games per week*, so an evening this week would hold her
+  deck, her Fill in and her post to a smaller week than the layers after it seat. Every
+  evening also ends at least two days before the run, so every result window on it has
+  closed. **Her Level moves through the rating catch-up**, the API's job, as every
+  result's does. The layer only checks that the job has her results to fold.
+  **`assert_her_history` fails the run by name** if her Home draws no counted evening, if
+  no confirmed counted result of hers is there to move her Level, or if nobody has rated
+  her on one of them. **A second fence, and it is about imports rather than writes**: the
+  new-loop layers (proposals, bookings, rescues, posts, this one) and the cohort import
+  nothing from the challenge loop or its seed layers, so deleting those layers deletes
+  nothing the new path stands on. `tests/unit/test_seed_booked_history.py` walks them for
+  it. The writes-against-reads fence above is unchanged.
 - **A distribution cannot assert a pair, so eleven accounts are named for one**
   (`app/seeds/relationships.py`, `app/seeds/pairs.py`, `app/seeds/paths.py`). Five of the
   ten `LivenessSignal` codes are facts about **two people** — *they said yes to you*, *they

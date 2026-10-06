@@ -472,7 +472,7 @@ async def test_nothing_player_side_begins_before_the_attestation(
     method can begin until it has given one — the invariant every sign-up used
     to keep by construction."""
 
-    from tests.api.matchmaking_world import commit_profile
+    from tests.api.players_world import commit_profile
 
     _, email = marta_invited
     set_ = await client.post(

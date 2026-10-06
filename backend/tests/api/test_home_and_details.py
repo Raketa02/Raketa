@@ -24,7 +24,7 @@ import pytest
 
 from app.api.dependencies import get_clock
 from app.modules.payments.domain.entered_cards import A_CARD_THE_BANK_ALWAYS_CHECKS
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.administration_world import (
     MARTA,
     invites,
@@ -592,7 +592,7 @@ async def test_a_card_with_somebody_in_the_reader_blocked_is_not_shown_to_them(
 ):
     proposal = await a_card(session_factory, clock, club=club, group=group, four=four)
     await says_yes(client, four[1], proposal)
-    blocked = await world.block_between(client, four[0]["token"], four[1]["id"])
+    blocked = await players.block_between(client, four[0]["token"], four[1]["id"])
     assert blocked.status_code in (200, 201, 204), blocked.text
 
     refused = await proposal_of(client, four[0], proposal)

@@ -35,7 +35,7 @@ from app.modules.payments.domain.entered_cards import (
 )
 from app.modules.payments.infrastructure.fake_payments import FakeRefusal
 from app.modules.payments.presentation.dependencies import get_payment_commitments
-from tests.api.matchmaking_world import deliver_the_outbox
+from tests.api.players_world import deliver_the_outbox
 
 BASE = "/api/v1/players/me/payment-methods"
 SETUP = f"{BASE}/setup"

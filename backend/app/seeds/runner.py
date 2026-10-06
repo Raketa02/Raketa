@@ -191,6 +191,12 @@ from app.seeds.club_courts import (
 from app.seeds.clubs import SeededClubs, club_lines, write_the_clubs
 from app.seeds.groups import SeededGroups, group_lines, write_the_groups
 from app.seeds.bookings import SeededBookings, book_her_games, booking_lines
+from app.seeds.booked_history import (
+    SeededHistory,
+    assert_her_history,
+    history_lines,
+    write_her_history,
+)
 from app.seeds.rescues import SeededRescues, rescue_lines, seed_the_rescues
 from app.seeds.posts import SeededPost, post_her_game, post_lines
 from app.seeds.proposals import (
@@ -1253,6 +1259,9 @@ class SeedReport:
     rescues: SeededRescues | None = None
     #: Her own post (#546). ``None`` on the same callers.
     post: SeededPost | None = None
+    #: Her played history as past booked games (#573). ``None`` on the same
+    #: callers.
+    history: SeededHistory | None = None
     #: Whether the object store answered at all. A photograph is the one thing
     #: the seed writes that lives outside the database, so it is the one thing a
     #: run can be missing for a reason that is nobody's fixture.
@@ -1357,6 +1366,12 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # relationships is free — it sits here because it belongs to the
         # evenings rather than to the inboxes.
         opinions = await write_what_players_said(session_factory, now=now)
+        # **Her own record, on the path the product makes games on** (#573):
+        # past booked games, played, scored and rated. Placed before this week,
+        # so nothing below — her deck, her Fill in, her post — sees a week the
+        # history has filled; and beside the challenge loop's played history,
+        # which no longer seats her.
+        history = await write_her_history(session_factory, settings=settings, now=now)
         # **After both populations and before every claim.** An edge is a real
         # search or deal run as the sender, so it needs everybody in the index —
         # and the claims are read off what the edges made true.
@@ -1463,6 +1478,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
                 now=now,
                 on=bookings.bookings[0].start,
             ),
+            await assert_her_history(session_factory, settings=settings, now=now),
         )
         return SeedReport(
             accounts=accounts,
@@ -1485,6 +1501,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             bookings=bookings,
             rescues=rescues,
             post=post,
+            history=history,
             photographs=photographs,
         )
     finally:
@@ -1593,6 +1610,8 @@ def report(run_report: SeedReport) -> list[str]:
         lines.extend(["", *administrator_lines(run_report.administrators)])
     if run_report.official_groups is not None:
         lines.extend(["", *official_group_lines(run_report.official_groups)])
+    if run_report.history is not None:
+        lines.extend(["", *history_lines(run_report.history)])
     if run_report.played is not None:
         lines.extend(["", *_played_lines(run_report.played)])
     if run_report.opinions is not None:

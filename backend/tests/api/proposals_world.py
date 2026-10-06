@@ -38,7 +38,7 @@ from app.modules.proposals.application.commands import (
 )
 from app.modules.proposals.domain.post import PostedFor
 from app.modules.proposals.domain.proposal import Origin
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.club_courts_world import (
     a_desk,
     adds_a_court,
@@ -166,16 +166,16 @@ async def a_player(
     saved card, living where the world's profiles live unless ``location``
     says otherwise. Their id and headers."""
 
-    player_id, token = await world.register(client, name)
+    player_id, token = await players.register(client, name)
     profile: dict = {"gender": gender}
     if gender_preference is not None:
         profile["gender_preference"] = gender_preference
     if location is not None:
         profile["location"] = {"latitude": location[0], "longitude": location[1]}
-    await world.commit_profile(client, token, **profile)
+    await players.commit_profile(client, token, **profile)
     for sport in sports:
-        await world.rate(client, token, sport)
-    headers = world.auth(token)
+        await players.rate(client, token, sport)
+    headers = players.auth(token)
     if card:
         await saves_a_card(client, payments, headers, entered)
     return {"id": player_id, "token": token, "headers": headers}
@@ -204,16 +204,16 @@ async def a_member(
     unless told otherwise, with a declared intent and — unless told otherwise
     — a saved card."""
 
-    player_id, token = await world.register(client, name)
+    player_id, token = await players.register(client, name)
     profile: dict = {"weekly_hours": week, "gender": gender}
     if gender_preference is not None:
         profile["gender_preference"] = gender_preference
-    await world.commit_profile(client, token, **profile)
+    await players.commit_profile(client, token, **profile)
     for sport in sports:
-        await world.rate_in(session_factory, player_id, sport, mu=mu)
+        await players.rate_in(session_factory, player_id, sport, mu=mu)
         if intent is not None:
-            await world.declare_intent(client, token, intent=intent, sport=sport)
-    headers = world.auth(token)
+            await players.declare_intent(client, token, intent=intent, sport=sport)
+    headers = players.auth(token)
     if card:
         await saves_a_card(client, payments, headers)
     return {"id": player_id, "token": token, "headers": headers, "name": name}

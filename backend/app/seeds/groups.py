@@ -272,6 +272,26 @@ async def join_group(
     ).execute(JoinGroupCommand(group_id=group_id, player_id=player_id))
 
 
+async def group_run_by(
+    session: AsyncSession, owner_id: UUID, *, club_id: UUID, name: str
+) -> UUID | None:
+    """The group this player owns at the club under this name, or ``None`` —
+    how a layer that creates a group of its own finds it again on a re-run."""
+
+    directory = build_group_directory(session)
+    listings = await directory.listings(await directory.groups_of(owner_id))
+    return next(
+        (
+            listing.id
+            for listing in listings.values()
+            if listing.owner_id == owner_id
+            and listing.home_club_id == club_id
+            and listing.name == GroupName(name)
+        ),
+        None,
+    )
+
+
 def group_repository(session: AsyncSession) -> GroupRepository:
     return build_group_repository(
         session,

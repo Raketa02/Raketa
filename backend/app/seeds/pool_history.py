@@ -63,7 +63,6 @@ from app.seeds.cohort import (
     GHOSTED_AT_LEAST_DAYS_AGO,
     PLAYED_AT_LEAST_DAYS_AGO,
     PLAYED_GAMES,
-    PROTAGONIST_GAMES,
     PROTAGONIST_HANDLE,
     RATED_WITHIN_DAYS,
     STARS_ARE_ONE_TO_FIVE,
@@ -368,7 +367,7 @@ THE_RECORD_GOES_BACK: Final[tuple[PlayedGame, ...]] = (
     # one face from their ring — `cohort-c-02`, and that one declares FOR_FUN — while
     # `cohort-c-03` resolves to the fun vector too and `cohort-c-04` is the ring's
     # Advanced outlier at 3,91. What `cohort-c-00` *does* reach on every search is her,
-    # which is what `PROTAGONIST_GAMES` already spends three courts proving.
+    # which is what her own singles history used to spend three courts proving.
     #
     # So both of them send a **tennis singles** court at her, which is the shape their
     # existing history takes, on the only three days her own calendar leaves free: she
@@ -628,7 +627,7 @@ def _refuse_a_pool_history_nobody_could_play() -> None:
             known[slug] = account.profile.committed_days_ago
 
     days: dict[str, set[int]] = {}
-    for game in (*PLAYED_GAMES, *PROTAGONIST_GAMES):
+    for game in PLAYED_GAMES:
         for handle in game.players:
             days.setdefault(handle, set()).add(game.played_days_ago)
 
@@ -639,8 +638,8 @@ def _refuse_a_pool_history_nobody_could_play() -> None:
         # the
         # ring rule is really asserting is *this organiser's shortlist provably returns
         # these seats*; a cohort member reaching the protagonist is the one other thing
-        # this fixture already proves, in `PROTAGONIST_GAMES`, where every row is a
-        # member
+        # her own singles history proved before it moved to booked games, where
+        # every row was a member
         # organising a singles court against her. Ring c is why it is needed:
         # `cohort-c-00`
         # reaches exactly one face in their own ring and cannot fill a doubles court

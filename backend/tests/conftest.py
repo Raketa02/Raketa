@@ -326,7 +326,7 @@ class Mailbox:
         # Imported here: the outbox's drain lives with the matchmaking world
         # that needed it first, and importing it at module load would drag that
         # module into every test.
-        from tests.api.matchmaking_world import deliver_the_outbox
+        from tests.api.players_world import deliver_the_outbox
 
         # The application's own provider, so a card released from the outbox
         # is released at the fake the test reads.

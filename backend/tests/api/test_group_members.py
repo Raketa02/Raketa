@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 from app.kernel import Sport
 from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.groups.presentation.dependencies import get_hidden_members
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.test_groups import (
     GROUPS,
     a_club,
@@ -25,17 +25,16 @@ from tests.api.test_groups import (
 )
 from tests.api.test_join_requests import an_approval_group, approve, waiting
 from tests.api.test_join_search import search
-from tests.api.test_player_record import a_confirmed_game
 
 
 async def a_padel_player(client, name: str, *also: Sport) -> dict:
     """A player rated in padel, and the Level the rating published for them."""
 
-    player_id, token = await world.register(client, name)
-    level = await world.rate(client, token, Sport.PADEL)
+    player_id, token = await players.register(client, name)
+    level = await players.rate(client, token, Sport.PADEL)
     for sport in also:
-        await world.rate(client, token, sport)
-    return {"id": player_id, "headers": world.auth(token), "level": level}
+        await players.rate(client, token, sport)
+    return {"id": player_id, "headers": players.auth(token), "level": level}
 
 
 async def members(client, reader: dict, group: dict, sport: str = "PADEL"):
@@ -102,9 +101,9 @@ async def test_only_the_members_rated_in_the_sport_are_listed(client):
     karol = await a_padel_player(client, "karol", Sport.TENNIS)
     zofia = await a_padel_player(client, "zofia")
     fred = await a_player(client, "fred")
-    tomasz_id, token = await world.register(client, "tomasz")
-    await world.rate(client, token, Sport.TENNIS)
-    tomasz = {"id": tomasz_id, "headers": world.auth(token)}
+    tomasz_id, token = await players.register(client, "tomasz")
+    await players.rate(client, token, Sport.TENNIS)
+    tomasz = {"id": tomasz_id, "headers": players.auth(token)}
     group = await a_group(client, karol, await a_club(client))
     for member in (zofia, fred, tomasz):
         await join(client, member, group)
@@ -156,7 +155,7 @@ async def test_a_member_with_a_record_carries_their_player_score(
     group = await a_group(client, karol, await a_club(client))
     await join(client, zofia, group)
     # One game Zofia turned up to, out of one she was due at: a hundred.
-    await a_confirmed_game(
+    await players.a_confirmed_game(
         session_factory, UUID(str(zofia["id"])), uuid4(), sport=Sport.PADEL, a_won=True
     )
 
@@ -322,7 +321,7 @@ class Unreadable:
 
 
 def blocks_unreadable(client) -> None:
-    world.override(client, get_hidden_members, Unreadable)
+    players.override(client, get_hidden_members, Unreadable)
 
 
 async def test_a_list_nobody_could_check_is_not_served(client):

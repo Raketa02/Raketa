@@ -37,7 +37,7 @@ from app.modules.payments.domain.entered_cards import (
     A_CARD_THE_BANK_ALWAYS_CHECKS,
 )
 from app.modules.proposals.domain.errors import CourtHourNotForSale
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from app.modules.bookings.infrastructure.event_sourced_booking_repository import (
     SqlAlchemyBookingDirectory,
 )
@@ -732,7 +732,7 @@ async def test_a_pair_in_that_stopped_fitting_books_nothing_and_the_later_yes_go
     )
     await says_yes(client, ola, proposal)
     await says_yes(client, kuba, proposal)
-    blocked = await world.block_between(client, ola["token"], kuba["id"])
+    blocked = await players.block_between(client, ola["token"], kuba["id"])
     assert blocked.status_code in (200, 201, 204), blocked.text
     await says_yes(client, ewa, proposal)
 

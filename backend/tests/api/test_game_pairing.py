@@ -61,6 +61,7 @@ from app.modules.games.presentation.dependencies import get_court_pairing
 from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
 from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 
 #: `backend/`, so a probe is importable exactly as it is under pytest.
 ROOT = Path(__file__).resolve().parents[2]
@@ -68,7 +69,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @pytest.fixture
 async def searcher(client):
-    return await world.a_searcher(client)
+    return await players.a_rated_player(client, "searcher")
 
 
 def draw_real_pairings(client, candidate_source, exposure_ledger) -> None:
@@ -103,11 +104,16 @@ def draw_real_pairings(client, candidate_source, exposure_ledger) -> None:
             ),
         )
 
-    world.override(client, get_court_pairing, _pairings)
+    players.override(client, get_court_pairing, _pairings)
 
 
 async def _a_city(
-    client, session_factory, candidate_source, mu: float, *, sport: Sport = world.SPORT
+    client,
+    session_factory,
+    candidate_source,
+    mu: float,
+    *,
+    sport: Sport = players.SPORT,
 ) -> dict:
     """Three other players, each a **whole** player with a token of their own.
 
@@ -119,14 +125,14 @@ async def _a_city(
 
     people = {}
     for name in ("ana", "bo", "cy"):
-        person = await world.a_searcher(client, name, sport=sport)
+        person = await players.a_rated_player(client, name, sport=sport)
         people[name] = {"id": person["id"], "token": person["token"]}
     await world.fold_the_log(session_factory, candidate_source)
     return people
 
 
 async def _a_sent_challenge(
-    client, searcher, *, mode: str = "COMPETITIVE", sport: Sport = world.SPORT
+    client, searcher, *, mode: str = "COMPETITIVE", sport: Sport = players.SPORT
 ) -> tuple[str, list[dict]]:
     response = await world.lineup(client, searcher["token"], mode, sport)
     assert response.status_code == 200, response.text
@@ -141,7 +147,7 @@ async def _a_sent_challenge(
     sent = await client.post(
         "/api/v1/challenges",
         json={"search_id": body["search"]["search_id"], "court": court},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     assert sent.status_code == 201, sent.text
     return sent.json()["challenge_id"], court
@@ -151,13 +157,13 @@ async def _accepts(client, challenge_id: str, *people: dict) -> None:
     for person in people:
         answered = await client.post(
             f"/api/v1/challenges/{challenge_id}/accept",
-            headers=world.auth(person["token"]),
+            headers=players.auth(person["token"]),
         )
         assert answered.status_code == 200, answered.text
 
 
 async def _the_game(client, token: str) -> dict:
-    response = await client.get("/api/v1/games", headers=world.auth(token))
+    response = await client.get("/api/v1/games", headers=players.auth(token))
     assert response.status_code == 200, response.text
     (game,) = response.json()["games"]
     return game
@@ -165,7 +171,7 @@ async def _the_game(client, token: str) -> dict:
 
 async def _pairing(client, token: str, game_id: str):
     return await client.get(
-        f"/api/v1/games/{game_id}/pairing", headers=world.auth(token)
+        f"/api/v1/games/{game_id}/pairing", headers=players.auth(token)
     )
 
 
@@ -183,7 +189,7 @@ async def _an_arranged_game(
 
 
 async def _a_game_opened_on(
-    session_factory, *, side_a: tuple, side_b: tuple, sport: Sport = world.SPORT
+    session_factory, *, side_a: tuple, side_b: tuple, sport: Sport = players.SPORT
 ) -> str:
     """A game whose court was never sent as a challenge, opened through the
     aggregate — the one way to seat somebody the matcher would never have
@@ -248,7 +254,7 @@ async def test_everybody_on_the_court_reads_the_pairing_and_nobody_else_does(
     people, game, _ = await _an_arranged_game(
         client, session_factory, candidate_source, searcher
     )
-    _, stranger = await world.register(client, "stranger")
+    _, stranger = await players.register(client, "stranger")
 
     for token in [searcher["token"]] + [one["token"] for one in people.values()]:
         response = await _pairing(client, token, game["game_id"])
@@ -370,7 +376,7 @@ async def test_the_games_forecast_is_the_challenge_cards_forecast(
     ana = people["ana"]
 
     while_arranging = await client.get(
-        f"/api/v1/challenges/{challenge_id}", headers=world.auth(ana["token"])
+        f"/api/v1/challenges/{challenge_id}", headers=players.auth(ana["token"])
     )
     assert while_arranging.status_code == 200, while_arranging.text
     on_the_card = next(
@@ -428,8 +434,8 @@ async def test_an_unrated_reader_is_drawn_no_forecast_and_the_others_levels(
 
     draw_real_pairings(client, candidate_source, exposure_ledger)
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    unrated_id, unrated = await world.register(client, "unrated")
-    await world.commit_profile(client, unrated)
+    unrated_id, unrated = await players.register(client, "unrated")
+    await players.commit_profile(client, unrated)
     game_id = await _a_game_opened_on(
         session_factory,
         side_a=(searcher["id"], unrated_id),
@@ -464,8 +470,8 @@ async def test_an_unrated_seat_empties_the_forecast_for_everybody_else_too(
 
     draw_real_pairings(client, candidate_source, exposure_ledger)
     people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    unrated_id, unrated = await world.register(client, "unrated")
-    await world.commit_profile(client, unrated)
+    unrated_id, unrated = await players.register(client, "unrated")
+    await players.commit_profile(client, unrated)
     game_id = await _a_game_opened_on(
         session_factory,
         side_a=(searcher["id"], people["bo"]["id"]),
@@ -493,7 +499,7 @@ async def test_the_pairing_is_history_once_the_game_has_happened(
     played = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
-        headers=world.auth(searcher["token"]),
+        headers=players.auth(searcher["token"]),
     )
     assert played.status_code == 200, played.text
 
@@ -543,8 +549,8 @@ async def test_a_singles_court_is_two_seats_and_one_strength_a_side(
     of one is one person."""
 
     draw_real_pairings(client, candidate_source, exposure_ledger)
-    me = await world.a_searcher(client, "me", sport=Sport.TENNIS)
-    them = await world.a_searcher(client, "them", sport=Sport.TENNIS)
+    me = await players.a_rated_player(client, "me", sport=Sport.TENNIS)
+    them = await players.a_rated_player(client, "them", sport=Sport.TENNIS)
     await world.fold_the_log(session_factory, candidate_source)
     challenge_id, court = await _a_sent_challenge(client, me, sport=Sport.TENNIS)
     assert len(court) == 2

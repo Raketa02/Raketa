@@ -13,15 +13,15 @@ import pytest
 from sqlalchemy import func, select
 
 from app.infrastructure.events.event_store_model import EventStoreORM
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 
 GAMES_AND_MONEY = "/api/v1/players/me/games-and-money"
 
 
 @pytest.fixture
 async def player(client) -> dict:
-    _, token = await world.register(client, "ola")
-    return world.auth(token)
+    _, token = await players.register(client, "ola")
+    return players.auth(token)
 
 
 async def events_filed(session_factory) -> int:

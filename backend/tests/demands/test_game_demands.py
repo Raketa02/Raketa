@@ -34,6 +34,7 @@ from app.kernel import InvariantViolated, Sport
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.ports import AgreedMoment, ClubCheckIns, CourtPairing
 from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 
 
 def registered(port):
@@ -84,7 +85,7 @@ async def _read(
     reader_id,
     line_up: LineUp,
     kind: GameKind = GameKind.COUNTED,
-    sport: Sport = world.SPORT,
+    sport: Sport = players.SPORT,
 ):
     async with session_factory() as session:
         return await _port(
@@ -144,12 +145,12 @@ async def test_the_seats_name_whoever_holds_a_rating_in_the_courts_own_order(
     them.** The unrated seat is simply not there — absence has one spelling —
     and the figures are ``rating``'s published ones, never derived."""
 
-    reader = await world.a_searcher(client, "reader")
+    reader = await players.a_rated_player(client, "reader")
     ada, bea = await _a_court(
         client, session_factory, candidate_source, "ada", "bea", mu=reader["mu"]
     )
-    unrated_id, unrated = await world.register(client, "unrated")
-    await world.commit_profile(client, unrated)
+    unrated_id, unrated = await players.register(client, "unrated")
+    await players.commit_profile(client, unrated)
 
     answer = await _read(
         implementation,
@@ -186,8 +187,8 @@ async def test_the_forecast_and_the_split_are_read_in_the_readers_direction(
     mirror-image strengths, because *your side* is theirs wherever they sit.
     Never provisional, because a line-up is frozen at the plan."""
 
-    reader = await world.a_searcher(client, "reader")
-    other = await world.a_searcher(client, "other")
+    reader = await players.a_rated_player(client, "reader")
+    other = await players.a_rated_player(client, "other")
     ada, bea = await _a_court(
         client, session_factory, candidate_source, "ada", "bea", mu=reader["mu"]
     )
@@ -227,8 +228,8 @@ async def test_a_singles_court_is_one_strength_a_side(
     """`seats_per_side` is the sport's: a tennis court is two people, and the
     split is two player strengths and their difference."""
 
-    me = await world.a_searcher(client, "me", sport=Sport.TENNIS)
-    you = await world.a_searcher(client, "you", sport=Sport.TENNIS)
+    me = await players.a_rated_player(client, "me", sport=Sport.TENNIS)
+    you = await players.a_rated_player(client, "you", sport=Sport.TENNIS)
     await world.fold_the_log(session_factory, candidate_source)
 
     answer = await _read(
@@ -259,8 +260,8 @@ async def test_a_reader_with_nothing_to_compute_still_gets_the_seats(
     ada, bea, cy = await _a_court(
         client, session_factory, candidate_source, "ada", "bea", "cy", mu=2.80
     )
-    unrated_id, unrated = await world.register(client, "unrated")
-    await world.commit_profile(client, unrated)
+    unrated_id, unrated = await players.register(client, "unrated")
+    await players.commit_profile(client, unrated)
 
     answer = await _read(
         implementation,
@@ -286,7 +287,7 @@ async def test_a_seat_the_index_cannot_describe_empties_the_forecast_not_the_lev
     provisional figure on a court whose line-up is frozen. The forecast is
     omitted instead; their Level, which is ``rating``'s, is still named."""
 
-    reader = await world.a_searcher(client, "reader")
+    reader = await players.a_rated_player(client, "reader")
     ada, bea = await _a_court(
         client, session_factory, candidate_source, "ada", "bea", mu=reader["mu"]
     )
@@ -320,7 +321,7 @@ async def test_a_friendly_is_never_priced_and_a_counted_game_is(
     """*Meaningless rather than unavailable*: the forecast is drawn either way,
     and the stakes only where a result would count."""
 
-    reader = await world.a_searcher(client, "reader")
+    reader = await players.a_rated_player(client, "reader")
     ada, bea, cy = await _a_court(
         client, session_factory, candidate_source, "ada", "bea", "cy", mu=reader["mu"]
     )
@@ -360,8 +361,8 @@ async def test_the_stakes_are_the_sides_and_both_partners_get_one_pair(
     another, so the two people on a side are moved by the same amount — and the
     pair each is shown is the same pair."""
 
-    reader = await world.a_searcher(client, "reader")
-    partner = await world.a_searcher(client, "partner")
+    reader = await players.a_rated_player(client, "reader")
+    partner = await players.a_rated_player(client, "partner")
     bea, cy = await _a_court(
         client, session_factory, candidate_source, "bea", "cy", mu=reader["mu"]
     )
@@ -405,7 +406,7 @@ async def test_a_reader_who_is_not_on_the_court_is_a_broken_precondition(
     ada, bea = await _a_court(
         client, session_factory, candidate_source, "ada", "bea", mu=2.80
     )
-    stranger_id, _ = await world.register(client, "stranger")
+    stranger_id, _ = await players.register(client, "stranger")
 
     with pytest.raises(InvariantViolated):
         await _read(

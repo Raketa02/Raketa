@@ -16,7 +16,7 @@ import pytest
 
 from app.core.config import get_settings
 from app.kernel import Sport
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.test_clubs import SIGN_UP, ogrody_33
 
 GROUPS = "/api/v1/groups"
@@ -39,8 +39,8 @@ async def a_club(client, name: str = "Bonarka Arena", **overrides) -> dict:
 
 
 async def a_player(client, name: str) -> dict:
-    player_id, token = await world.register(client, name)
-    return {"id": player_id, "headers": world.auth(token)}
+    player_id, token = await players.register(client, name)
+    return {"id": player_id, "headers": players.auth(token)}
 
 
 async def create(client, player: dict, club: dict, **overrides):
@@ -325,10 +325,10 @@ async def test_a_player_with_no_groups_has_an_empty_list(client):
 
 
 async def a_rated_player(client, name: str, *sports: Sport) -> dict:
-    player_id, token = await world.register(client, name)
+    player_id, token = await players.register(client, name)
     for sport in sports:
-        await world.rate(client, token, sport)
-    return {"id": player_id, "headers": world.auth(token)}
+        await players.rate(client, token, sport)
+    return {"id": player_id, "headers": players.auth(token)}
 
 
 async def test_a_dot_is_a_sport_at_least_two_members_are_rated_in(client):
@@ -357,7 +357,9 @@ async def test_dots_are_read_so_a_rating_earned_later_adds_one(client):
     group = await a_group(client, tomek, await a_club(client))
     await join(client, kuba, group)
 
-    await world.rate(client, kuba["headers"]["Authorization"].split()[1], Sport.TENNIS)
+    await players.rate(
+        client, kuba["headers"]["Authorization"].split()[1], Sport.TENNIS
+    )
 
     [listed] = await my_groups(client, tomek)
     assert listed["sports"] == ["PADEL", "TENNIS"]

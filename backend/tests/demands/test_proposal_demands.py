@@ -72,7 +72,7 @@ from app.modules.proposals.domain.post import LevelRange
 from app.modules.proposals.domain.proposal import ClubAnswer
 from app.kernel import minutes
 from app.shared.ids import new_uuid
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.administration_world import club_signs_up
 
 OLA, KUBA, EWA, TOMEK = (new_uuid() for _ in range(4))
@@ -289,8 +289,8 @@ async def test_a_club_is_as_far_as_every_distance_is_printed(
     """From the player's Location area to the club's point: 0,03° of latitude
     in Kraków, printed to one decimal."""
 
-    player_id, token = await world.register(client, "ola")
-    await world.commit_profile(
+    player_id, token = await players.register(client, "ola")
+    await players.commit_profile(
         client, token, location={"latitude": 50.03, "longitude": 19.95}
     )
     club_id, _ = await club_signs_up(client, point=(50.06, 19.95))
@@ -402,7 +402,7 @@ async def test_a_request_is_answered_once_and_a_withdrawn_one_asked_again(
 async def test_a_player_is_named_by_their_name_and_a_stranger_not_at_all(
     implementation, client, session
 ):
-    player_id, _ = await world.register(client, "ola")
+    player_id, _ = await players.register(client, "ola")
     names: PlayerNames = implementation.build(session)
 
     assert await names.names_of([player_id, new_uuid()]) == {player_id: "ola"}
@@ -684,9 +684,9 @@ def test_the_card_fee_on_a_share_is_the_provider_s_standard_price(implementation
 
 
 async def _rated(client, session_factory, name: str, *, mu: float, **profile) -> UUID:
-    player_id, token = await world.register(client, name)
-    await world.commit_profile(client, token, **profile)
-    await world.rate_in(session_factory, player_id, Sport.PADEL, mu=mu)
+    player_id, token = await players.register(client, name)
+    await players.commit_profile(client, token, **profile)
+    await players.rate_in(session_factory, player_id, Sport.PADEL, mu=mu)
     return player_id
 
 
@@ -703,8 +703,8 @@ async def test_two_people_fit_by_the_matchers_own_pair_rule(
     picky = await _rated(
         client, session_factory, "ania", mu=2.5, gender_preference="MEN_ONLY"
     )
-    unrated, token = await world.register(client, "kuba")
-    await world.commit_profile(client, token)
+    unrated, token = await players.register(client, "kuba")
+    await players.commit_profile(client, token)
     fit: PlayerFit = implementation.build(session)
 
     unfit = await fit.unfit_pairs(
@@ -728,8 +728,8 @@ async def test_a_players_window_is_the_kinds_tolerance_around_their_level(
     for somebody unrated in the sport (#546)."""
 
     ola = await _rated(client, session_factory, "ola", mu=2.5)
-    unrated, token = await world.register(client, "kuba")
-    await world.commit_profile(client, token)
+    unrated, token = await players.register(client, "kuba")
+    await players.commit_profile(client, token)
     fit: PlayerFit = implementation.build(session)
 
     window = await fit.level_window(

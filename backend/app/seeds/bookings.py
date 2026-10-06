@@ -59,7 +59,8 @@ from app.bootstrap.composition import (
     build_say_yes,
 )
 from app.core.config import Settings
-from app.kernel import Instant, hours, shifted
+from app.engines.matchfit.core import SearchMode
+from app.kernel import Instant, Sport, hours, shifted
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, local_day
 from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.proposals.application.answers import YesAnswer
@@ -209,7 +210,7 @@ async def _put_to_the_club(
     """Her full game at Kazimierz Padel, answered *waiting for the club* — or
     the one still waiting from an earlier run."""
 
-    club_id = await _club_of(session, WAITING_CLUB)
+    club_id = await club_id_of(session, WAITING_CLUB)
     hers = await build_player_bookings(session, settings=settings).of_player(her)
     already = next(
         (
@@ -240,7 +241,7 @@ async def _put_to_the_club(
             f"{WAITING_CLUB.name} sells no padel hour clear of her games from "
             f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
         )
-    answer = await four_say_yes(
+    answer = await all_say_yes(
         session,
         settings=settings,
         clock=clock,
@@ -259,7 +260,9 @@ async def _put_to_the_club(
     return SeededWaiting(start=start, made=True)
 
 
-async def _club_of(session: AsyncSession, club: SeedClub) -> UUID:
+async def club_id_of(session: AsyncSession, club: SeedClub) -> UUID:
+    """The club its desk signed up, off the desk's account."""
+
     account = await build_club_account_repository(
         session,
         event_store=build_domain_event_store(session),
@@ -365,7 +368,7 @@ async def _book(
     start: Instant,
     players: tuple[UUID, ...],
 ) -> None:
-    answer = await four_say_yes(
+    answer = await all_say_yes(
         session,
         settings=settings,
         clock=clock,
@@ -382,7 +385,7 @@ async def _book(
         )
 
 
-async def four_say_yes(
+async def all_say_yes(
     session: AsyncSession,
     *,
     settings: Settings,
@@ -392,17 +395,19 @@ async def four_say_yes(
     club_id: UUID,
     start: Instant,
     players: tuple[UUID, ...],
+    sport: Sport = GAMES_SPORT,
+    kind: SearchMode = GAMES_KIND,
 ) -> YesAnswer | None:
-    """A pick at the hour for these four, each saying yes in turn — the last
-    one's answer."""
+    """A pick at the hour for these players — four in padel — each saying yes
+    in turn. The last one's answer."""
 
     proposal_id = await build_make_proposal(session, clock=clock).execute(
         MakeProposalCommand(
             pool_id=pool_id,
             origin=Origin.PICK,
             poster_id=None,
-            sport=GAMES_SPORT,
-            kind=GAMES_KIND,
+            sport=sport,
+            kind=kind,
             club_id=club_id,
             start=start,
             versions=[list(players)],

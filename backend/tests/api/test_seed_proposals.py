@@ -65,7 +65,7 @@ from app.seeds.screens import (
     assert_the_group_deck,
     assert_the_posting_grid,
 )
-from tests.api import matchmaking_world as world
+from tests.api import players_world as players
 from tests.api.proposals_world import live_ids, saves_a_card, says_yes
 
 WARSAW = ZoneInfo("Europe/Warsaw")
@@ -110,13 +110,13 @@ async def a_crowd(client, session_factory, payments, size: int, *, mu: float):
     crowd, headers = [], {}
     for index in range(size):
         name = f"crowd{index:02d}"
-        player_id, token = await world.register(client, name)
-        await world.commit_profile(client, token, weekly_hours=HER_WEEK)
-        await world.rate_in(session_factory, player_id, Sport.PADEL, mu=mu)
-        await world.declare_intent(
+        player_id, token = await players.register(client, name)
+        await players.commit_profile(client, token, weekly_hours=HER_WEEK)
+        await players.rate_in(session_factory, player_id, Sport.PADEL, mu=mu)
+        await players.declare_intent(
             client, token, intent="COMPETITIVE", sport=Sport.PADEL
         )
-        headers[player_id] = world.auth(token)
+        headers[player_id] = players.auth(token)
         await saves_a_card(client, payments, headers[player_id])
         crowd.append((name, player_id))
     return crowd, headers
@@ -128,7 +128,7 @@ async def signed_in_as_her(client) -> dict:
         json={"email": THE_POPULATED_PLAYER.email, "password": SEED_PASSWORD},
     )
     assert login.status_code == 200, login.text
-    return {"headers": world.auth(login.json()["access_token"])}
+    return {"headers": players.auth(login.json()["access_token"])}
 
 
 async def test_the_protagonist_is_dealt_picks_with_nought_to_three_in(
@@ -261,6 +261,7 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
     that the cohort ``make seed`` writes can seat four picks at all."""
 
     from app.seeds.clock import FixedClock
+    from app.seeds.booked_history import write_her_history
     from app.seeds.games import write_the_played_history
     from app.seeds.pairs import write_the_relationships
     from app.seeds.runner import seed_the_cohort
@@ -283,6 +284,7 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
     await write_the_played_history(
         session_factory, settings=settings, now=now, photos=photos
     )
+    await write_her_history(session_factory, settings=settings, now=now)
     await write_the_relationships(
         session_factory, settings=settings, now=now, photos=photos
     )
@@ -539,6 +541,7 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
     the server decides is drawn on her two weeks, for anybody and for women."""
 
     from app.seeds.clock import FixedClock
+    from app.seeds.booked_history import write_her_history
     from app.seeds.games import write_the_played_history
     from app.seeds.pairs import write_the_relationships
     from app.seeds.runner import seed_the_cohort
@@ -561,6 +564,7 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
     await write_the_played_history(
         session_factory, settings=settings, now=now, photos=photos
     )
+    await write_her_history(session_factory, settings=settings, now=now)
     await write_the_relationships(
         session_factory, settings=settings, now=now, photos=photos
     )
