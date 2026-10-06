@@ -14,8 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.kernel import Sport
-from app.modules.challenges.domain.seats import seats_per_side
+from app.kernel import SPORT_SPECS, Sport
 from app.seeds.catalog import THE_BLANK_WEEK_PLAYER, THE_NEWCOMER
 from app.seeds.cohort import (
     COHORT,
@@ -40,7 +39,7 @@ def test_every_court_seats_what_its_sport_seats():
     short of four opens no game at all."""
 
     for game in THE_POOL_HAS_A_RECORD:
-        per_side = seats_per_side(Sport(game.sport))
+        per_side = SPORT_SPECS[Sport(game.sport)].players // 2
         assert len(game.side_a) == per_side, game
         assert len(game.side_b) == per_side, game
 

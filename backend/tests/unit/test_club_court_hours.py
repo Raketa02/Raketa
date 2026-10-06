@@ -21,14 +21,12 @@ from app.modules.clubs.domain.hours_exceptions import (
     ExceptionReason,
     HoursException,
 )
-from app.modules.plans.domain.slots import PLATFORM_ZONE
 
 
 def test_a_club_s_zone_is_the_platform_s_one_locale_assumption():
-    """Spelled twice, on purpose — a club's hours are not a plan's — and held
-    together here, so the first shard somewhere else moves both."""
+    """One zone for every club, until the first club somewhere else."""
 
-    assert CLUB_ZONE.key == PLATFORM_ZONE.key == "Europe/Warsaw"
+    assert CLUB_ZONE.key == "Europe/Warsaw"
 
 
 def test_an_hour_is_its_wall_clock_on_both_sides_of_the_spring_change():

@@ -11,13 +11,6 @@ four games is one question, asked about the union of everybody who sat on any of
 those courts — not one question per seat, and not one per game
 (``docs/adr/0141``) — and, since ``docs/adr/0172`` §4, whoever called a game off,
 whose seat is vacated and cannot supply the name.
-
-**And the rail subtracts its reader** (``docs/adr/0172`` §5): a game the reader
-has dismissed is left off their list, derived on every read off the set the
-aggregate folds. Nobody else's list moves. The one other read of that set is the
-challenge inbox's, which subtracts the same reader off the same set so the row
-goes with the card (``docs/adr/0173``) — asked through ``challenges``' own port
-as one membership, never handed the set.
 """
 
 from __future__ import annotations
@@ -106,17 +99,10 @@ class ReadGames:
         the order — the answer is a mapping keyed by id — and the rule is stated
         on the collection rather than on what happens to be observable, because
         that is what changes silently.
-
-        **A game this reader dismissed is not in the answer**, and the
-        subtraction is here and nowhere else (``docs/adr/0172`` §5).
         """
 
         now = instant(self._clock.now())
-        found = tuple(
-            game
-            for game in await self._games.playing(player_id)
-            if player_id not in game.dismissed
-        )
+        found = await self._games.playing(player_id)
         names = await self._names.names_of(
             sorted(
                 {player for game in found for player in game.line_up.players}

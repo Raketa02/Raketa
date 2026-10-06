@@ -8,11 +8,8 @@ exception's, *today*, a week's) is a local day, and every instant it hands out
 is UTC.
 
 **One zone for every club, and it is a locale assumption rather than a
-constant to tune**, the shape ``plans``' ``PLATFORM_ZONE`` already takes and in
-the same words: its falsifier is the first club somewhere else, and on that day
-the zone becomes a fact the club records. It is spelled here rather than
-imported, because a club's hours are a fact about the club and not about a
-Classic play plan; a unit test holds the two spellings together.
+constant to tune**: its falsifier is the first club somewhere else, and on that
+day the zone becomes a fact the club records.
 """
 
 from __future__ import annotations

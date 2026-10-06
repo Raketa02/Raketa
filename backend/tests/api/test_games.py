@@ -1,19 +1,20 @@
-"""The three game routes, end to end over HTTP — and the seam that creates a game.
+"""The game routes, end to end over HTTP — on a game a booking opened.
 
-The whole reachable path in one file: a searcher builds a court with ⚡, sends it,
-everybody accepts, and **a game exists that nobody asked for**. That is the point
-of this file. Four acceptances used to leave no fact behind; the first assertion
-below is that they now leave one.
+A booking opens a game (#541) the way the fill does, through games' own use
+case, and **a game exists that no game route asked for**: everything here is
+what the people on its court do with it afterwards.
 
-Four things are asserted here and nowhere else:
+Five things are asserted here and nowhere else:
 
-**A game is opened by a completed line-up, not by a request.** There is no route
-that creates one, and the game appears on all four players' lists the moment the
-last seat accepts.
+**A game is opened by a booking, not by a request.** There is no route that
+creates one, and the game is on all four players' lists, filed under its
+booking.
 
 **A result is the record that the game happened.** The entry carries the moment;
-nothing sends a date, because there is no booking and no calendar to check one
-against.
+nothing sends a date, because the booked hour is already on the game.
+
+**A court with a seat open refuses a result** (``docs/adr/0162`` §3): a side the
+engine cannot price, and a seat with no outcome to give anyone.
 
 **Silence confirms, and no route is called confirm.** The proposal's window is
 the whole mechanism, and the response says when it closes.
@@ -29,8 +30,18 @@ you already played (``docs/adr/0141``).
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
+from app.bootstrap.composition import (
+    build_domain_event_store,
+    build_event_publisher,
+    build_game_repository,
+)
+from app.kernel import instant
+from app.modules.games.application.commands import VacateSeatCommand
+from app.modules.games.application.vacate_seat import VacateSeat
 from tests.api import matchmaking_world as world
 from tests.api import players_world as players
 
@@ -40,7 +51,7 @@ async def searcher(client):
     return await players.a_rated_player(client, "searcher")
 
 
-async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
+async def _a_city(client, session_factory, mu: float) -> dict:
     """Three other players, each with a token of their own.
 
     Signed in rather than folded in alone, because everything under test here is
@@ -53,37 +64,7 @@ async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
             client, session_factory, name, mu=mu + delta
         )
         people[name] = {"id": player_id, "token": token}
-    await world.fold_the_log(session_factory, candidate_source)
     return people
-
-
-async def _a_sent_challenge(client, searcher) -> str:
-    response = await world.lineup(client, searcher["token"])
-    assert response.status_code == 200, response.text
-    body = response.json()
-    court = [
-        {
-            "side": seat["side"],
-            "player_id": seat.get("player_id", str(searcher["id"])),
-        }
-        for seat in body["lineup"]["seats"]
-    ]
-    sent = await client.post(
-        "/api/v1/challenges",
-        json={"search_id": body["search"]["search_id"], "court": court},
-        headers=players.auth(searcher["token"]),
-    )
-    assert sent.status_code == 201, sent.text
-    return sent.json()["challenge_id"]
-
-
-async def _everybody_accepts(client, challenge_id: str, people: dict) -> None:
-    for person in people.values():
-        answered = await client.post(
-            f"/api/v1/challenges/{challenge_id}/accept",
-            headers=players.auth(person["token"]),
-        )
-        assert answered.status_code == 200, answered.text
 
 
 async def _games(client, token: str) -> list[dict]:
@@ -92,30 +73,38 @@ async def _games(client, token: str) -> list[dict]:
     return response.json()["games"]
 
 
-async def _an_arranged_game(client, session_factory, candidate_source, searcher):
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    challenge_id = await _a_sent_challenge(client, searcher)
-    await _everybody_accepts(client, challenge_id, people)
-    return people, challenge_id
+async def _a_booked_four(session_factory, host: dict, people: dict) -> dict:
+    """A padel four booked for an hour that began two hours ago — played, and
+    nobody has said so yet. Its game's id and its booking's."""
+
+    return await players.a_booked_game(
+        session_factory,
+        side_a=(host["id"], people["ana"]["id"]),
+        side_b=(people["bo"]["id"], people["cy"]["id"]),
+        starts_at=datetime.now(timezone.utc) - timedelta(hours=2),
+    )
 
 
-async def test_a_completed_line_up_leaves_a_game_behind(
-    client, session_factory, candidate_source, searcher
-):
-    """**The thing that did not exist.** No request created this.
+async def _an_arranged_game(client, session_factory, searcher):
+    people = await _a_city(client, session_factory, searcher["mu"])
+    booked = await _a_booked_four(session_factory, searcher, people)
+    return people, booked
 
-    It is on every player's list, it carries the challenge it came from, and it
+
+async def test_a_booking_leaves_a_game_behind(client, session_factory, searcher):
+    """**The thing no game route created.**
+
+    It is on every player's list, it carries the booking it came from, and it
     is awaiting somebody saying it happened — which is the only way anything ever
     learns that it did.
     """
 
-    people, challenge_id = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, booked = await _an_arranged_game(client, session_factory, searcher)
 
     for token in [searcher["token"]] + [one["token"] for one in people.values()]:
         (game,) = await _games(client, token)
-        assert game["challenge_id"] == challenge_id
+        assert game["game_id"] == str(booked["game_id"])
+        assert game["challenge_id"] == str(booked["booking_id"])
         assert game["standing"] == "AWAITING_ENTRY"
         assert game["kind"] == "COUNTED"
         assert game["played_at"] is None
@@ -143,7 +132,7 @@ _CARD_FIELDS = (
 
 
 async def test_a_seat_names_the_person_in_it_and_says_nothing_else_about_them(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The handle travels; the card does not.**
 
@@ -157,9 +146,7 @@ async def test_a_seat_names_the_person_in_it_and_says_nothing_else_about_them(
     print *You* over it: which id is the reader's is already on the response.
     """
 
-    people, _ = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, _ = await _an_arranged_game(client, session_factory, searcher)
     everybody = {str(searcher["id"]): "searcher"} | {
         str(one["id"]): name for name, one in people.items()
     }
@@ -176,7 +163,7 @@ async def test_a_seat_names_the_person_in_it_and_says_nothing_else_about_them(
 
 
 async def test_the_two_acts_name_the_court_the_way_the_list_does(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """One shape, three routes.
 
@@ -185,9 +172,7 @@ async def test_the_two_acts_name_the_court_the_way_the_list_does(
     that settles a score against a person.
     """
 
-    people, _ = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, _ = await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
     named = {seat["player_id"]: seat["name"] for seat in game["seats"]}
 
@@ -213,7 +198,7 @@ async def test_the_two_acts_name_the_court_the_way_the_list_does(
 
 
 async def test_a_block_does_not_unname_somebody_you_already_played(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The court is the gate, and nothing here is re-gated.**
 
@@ -224,9 +209,7 @@ async def test_a_block_does_not_unname_somebody_you_already_played(
     both at is not an introduction.
     """
 
-    people, _ = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, _ = await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
     theirs = _an_opponent_of(game, searcher, people)
 
@@ -241,7 +224,7 @@ async def test_a_block_does_not_unname_somebody_you_already_played(
 
 
 async def test_stating_a_result_records_that_the_game_happened(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """One act, two facts. **Nothing sends a date.**
 
@@ -249,9 +232,7 @@ async def test_stating_a_result_records_that_the_game_happened(
     reservation are the three things this platform does not have.
     """
 
-    people, _ = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, _ = await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
 
     stated = await client.post(
@@ -273,7 +254,7 @@ async def test_stating_a_result_records_that_the_game_happened(
 
 
 async def test_the_other_side_agrees_and_the_game_has_a_winner(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """One opponent suffices, and the outcome is rendered **for the reader**.
 
@@ -281,9 +262,7 @@ async def test_the_other_side_agrees_and_the_game_has_a_winner(
     list and a loss on another, which is why neither side stores the other's.
     """
 
-    people, _ = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, _ = await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
     await client.post(
         f"/api/v1/games/{game['game_id']}/result",
@@ -310,13 +289,11 @@ async def test_a_played_game_reaches_a_bystanders_card_as_a_counted_game(
 
     It lives here rather than beside the other card assertions in
     ``test_searches.py`` because arranging a game is what this file can do — a
-    court is built, sent, accepted by four people and then played, and there is
-    no shorter path to a counted game because there is no route that creates one.
+    court is booked for four people and then played, and there is no route that
+    creates a game.
 
-    **The four who played are read by somebody who did not**, and that is not a
-    convenience: an open challenge gates its own participants out of each other's
-    lists, so the four cannot see each other and only a fifth player can see the
-    record they left. The searcher here is that fifth player.
+    **The four who played are read by somebody who did not**: the searcher here
+    is a fifth player, reading the record they left off a card.
 
     What it proves is the seam ``games`` and the matcher meet on: the count comes
     off ``GameHistoryQuery`` through the card's own source, at assembly time and
@@ -330,9 +307,8 @@ async def test_a_played_game_reaches_a_bystanders_card_as_a_counted_game(
     """
 
     host = await players.a_rated_player(client, "host")
-    people = await _a_city(client, session_factory, candidate_source, host["mu"])
-    challenge_id = await _a_sent_challenge(client, host)
-    await _everybody_accepts(client, challenge_id, people)
+    people = await _a_city(client, session_factory, host["mu"])
+    await _a_booked_four(session_factory, host, people)
     (game,) = await _games(client, host["token"])
     stated = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
@@ -356,7 +332,7 @@ async def test_a_played_game_reaches_a_bystanders_card_as_a_counted_game(
 
 
 async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """The other side's one turn, and it says what happened instead.
 
@@ -365,9 +341,7 @@ async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
     is refused.
     """
 
-    people, _ = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, _ = await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
     await client.post(
         f"/api/v1/games/{game['game_id']}/result",
@@ -401,7 +375,7 @@ async def test_there_is_no_rejection_and_a_disagreement_carries_a_score(
 
 
 async def test_a_disagreement_offers_its_own_way_out_to_the_side_that_started_it(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The exit from an argument, readable by both people in it.**
 
@@ -416,9 +390,7 @@ async def test_a_disagreement_offers_its_own_way_out_to_the_side_that_started_it
     game.
     """
 
-    people, _ = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, _ = await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
     opponent = _an_opponent_of(game, searcher, people)
     assert _side_of(game, str(opponent["id"])) == "B", (
@@ -466,7 +438,7 @@ async def test_a_disagreement_offers_its_own_way_out_to_the_side_that_started_it
 
 
 async def test_a_pending_acceptance_says_who_agreed_and_when_it_settles(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """**The grace, visible to the side it is being run against.**
 
@@ -477,9 +449,7 @@ async def test_a_pending_acceptance_says_who_agreed_and_when_it_settles(
     and five hours ago are not the same news.
     """
 
-    people, _ = await _an_arranged_game(
-        client, session_factory, candidate_source, searcher
-    )
+    people, _ = await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
     stated = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
@@ -509,11 +479,11 @@ async def test_a_pending_acceptance_says_who_agreed_and_when_it_settles(
 
 
 async def test_a_level_score_is_refused_because_a_result_names_a_winner(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """*Last 5* is win or loss, and none of the four sports produces a draw."""
 
-    await _an_arranged_game(client, session_factory, candidate_source, searcher)
+    await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
 
     refused = await client.post(
@@ -526,13 +496,59 @@ async def test_a_level_score_is_refused_because_a_result_names_a_winner(
     assert refused.json()["code"] == "a_score_must_name_a_winner"
 
 
+async def _leaves(session_factory, booking_id, player_id) -> None:
+    """Somebody leaves the booked game — through games' own ``VacateSeat``,
+    which is how the booking's *Leave the game* opens the seat (#544)."""
+
+    async with session_factory() as session:
+        games = build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        )
+        await VacateSeat(games=games).execute(
+            VacateSeatCommand(challenge_id=booking_id, player_id=player_id),
+            occurred_at=instant(datetime.now(timezone.utc)),
+        )
+        await session.commit()
+
+
+async def test_a_court_with_a_seat_open_cannot_record_a_result(
+    client, session_factory, searcher
+):
+    """``docs/adr/0162`` §3 — a score on a court with a seat open is a score
+    with a side nobody can price. Booked well ahead here, so the hour has not
+    come and the game has not *started short*; it is still awaiting its entry,
+    with the leaver's seat drawn open."""
+
+    people = await _a_city(client, session_factory, searcher["mu"])
+    booked = await players.a_booked_game(
+        session_factory,
+        side_a=(searcher["id"], people["ana"]["id"]),
+        side_b=(people["bo"]["id"], people["cy"]["id"]),
+    )
+    await _leaves(session_factory, booked["booking_id"], people["cy"]["id"])
+
+    stated = await client.post(
+        f"/api/v1/games/{booked['game_id']}/result",
+        json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
+        headers=players.auth(searcher["token"]),
+    )
+
+    assert stated.status_code == 409, stated.text
+    assert stated.json()["code"] == "the_court_has_an_open_seat"
+    (game,) = await _games(client, searcher["token"])
+    assert game["standing"] == "AWAITING_ENTRY"
+    assert [seat for seat in game["seats"] if seat["player_id"] is None]
+
+
 async def test_nobody_who_did_not_play_can_see_or_touch_the_game(
-    client, session_factory, candidate_source, searcher
+    client, session_factory, searcher
 ):
     """One code for two cases, because separating them would answer *is this id
     real* about four strangers' evening."""
 
-    await _an_arranged_game(client, session_factory, candidate_source, searcher)
+    await _an_arranged_game(client, session_factory, searcher)
     (game,) = await _games(client, searcher["token"])
     stranger_id, stranger = await players.a_player_on_the_log(
         client, session_factory, "outsider", mu=searcher["mu"]

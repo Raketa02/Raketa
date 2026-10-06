@@ -13,7 +13,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0140](../../../docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md)).
   `app/modules/player_score/` is the seventh context and the first that **keeps no record at
   all** — no aggregate, no repository, no table, no migration. It folds `games`' and
-  `challenges`' published ports and does arithmetic over them, because a stored score would be a
+  `bookings`' published ports (`challenges`' until #578) and does arithmetic over them, because a stored score would be a
   second place for *did that game happen* to be true and the copy is what gets believed. Four
   things about it are load-bearing. **Its port is `PublishedScoreQuery` and not
   `PlayerScoreQuery`** — the matcher's port of that name is the *demand* and this is the

@@ -43,8 +43,8 @@ from app.shared.domain.errors import (
 # subclass walk below can see its classes.
 from app.modules.auth.domain import errors as auth_errors  # noqa: F401
 from app.modules.blocks.domain import errors as blocks_errors  # noqa: F401
-from app.modules.challenges.domain import errors as challenges_errors  # noqa: F401
 from app.modules.clubs.domain import errors as clubs_errors  # noqa: F401
+from app.modules.games.domain import errors as games_errors  # noqa: F401
 from app.modules.matchmaking.domain import (  # noqa: F401
     errors as matchmaking_errors,
 )
@@ -97,7 +97,7 @@ def test_the_walk_actually_finds_the_domain_errors():
         "ProposalsOptInNotAnswered",
         "PlayerProfileAlreadyExists",
         "GateDataUnavailable",
-        "TheLineUpIsNoLongerSendable",
+        "TheCourtHasAnOpenSeat",
         "AccountHeld",
         "ClubEmailAlreadyRegistered",
     } <= names

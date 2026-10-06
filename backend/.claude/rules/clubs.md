@@ -38,7 +38,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §3, §5, #535).
   `clubs` holds a third aggregate, **Club courts** (`domain/club_courts.py`), filed under the
   **club's own id** and **born by being used** — nothing is written at sign-up, and `load`
-  answers an unwritten aggregate, as the Plan's does. It holds the courts (one sport each, from
+  answers an unwritten aggregate. It holds the courts (one sport each, from
   the club's own; indoor or outdoor; offered or switched off), each court's **Raketa hours** —
   the player's own `WeeklyHours`, imported rather than respelled, with no floor — the
   exceptions, the price table, the way of working, the settings and pause, and the club's
@@ -59,8 +59,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   is **ready** (#537), so a club Stripe stops is live no longer, and its courts leave the
   decks with it (`PaymentsStatusChanged` makes the proposer due). A club
   cannot untick a sport one of its courts plays (`club_sport_has_courts`), asked before the
-  official groups are. Every hour is wall clock in `CLUB_ZONE` — `plans`' `PLATFORM_ZONE`
-  spelled again on purpose, a unit test holding the two together — through `slot_start`.
+  official groups are. Every hour is wall clock in `CLUB_ZONE` — one zone for every club, a
+  locale assumption until the first club somewhere else — through `slot_start`.
   Seeded by `app/seeds/club_courts.py`: all three ways of working, Wisła Park half set up and
   not live, Zabłocie Sport paused, and a run that fails if a live club has nothing for sale in
   the next fortnight.

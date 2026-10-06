@@ -103,11 +103,11 @@ class AccountHeld(ForbiddenError):
     stops you searching but lets you send invitations is that hole with the blast
     radius pointed at other people.
 
-    **Why it lives beside the taxonomy rather than in a module.** Two contexts
-    refuse on it: the matcher, at every search entry point, and ``challenges``,
-    when an organiser presses send. Neither may import the other — the arrow runs
-    ``matchmaking -> challenges`` and never back — and the provider is a third
-    context, ``cases``, which does not exist. The wire code has to be *one*
+    **Why it lives beside the taxonomy rather than in a module.** More than one
+    context refuses on it — the matcher at every search entry point, a room when
+    somebody writes, and ``challenges`` when an organiser pressed send, until
+    #578 — none may import another, and the provider is a context of its own,
+    ``cases``, which does not exist. The wire code has to be *one*
     ``account_held``, because it is one fact with one remedy, and
     ``tests/unit/test_error_envelope.py`` is right to refuse two classes claiming
     it. So the class is shared and the *ports* are not: each context declares its

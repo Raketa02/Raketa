@@ -82,7 +82,6 @@ from app.seeds.clubs import write_the_clubs
 from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
 from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 from app.seeds.payments import write_the_payment_methods
-from app.seeds.pairs import write_the_relationships
 from app.seeds.photos import DeclaredVerdict
 from app.seeds.runner import (
     COHORT_DISCLAIMER,
@@ -93,7 +92,6 @@ from app.seeds.runner import (
     seed,
     seed_the_cohort,
 )
-from app.seeds.screens import CANNOT_BE_DRAWN, assert_the_screens
 from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -795,7 +793,7 @@ async def a_seeded_world(session_factory):
         )
     # **The played history is part of the world too**, as `runner.run` writes
     # it: past booked games (#573) — so the cards, the clubs and their courts
-    # they are booked through come first — before the relationships.
+    # they are booked through come first.
     await write_the_payment_methods(
         session_factory,
         now=now,
@@ -813,72 +811,13 @@ async def a_seeded_world(session_factory):
         games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
         named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
     )
-    # **The relationships are part of the world and not a layer above it.** Five
-    # of the ten `LivenessSignal` codes are facts about a pair, so a world seeded
-    # without them is one where the assertions below would be reading a fixture
-    # nobody could have produced.
-    pairs = await write_the_relationships(
-        session_factory, settings=settings, now=now, photos=photos
-    )
     return {
         "accounts": accounts,
         "members": members,
         "now": now,
-        "pairs": pairs,
         "played": played,
         "photos": photos,
     }
-
-
-async def test_the_cohort_reaches_every_screen_it_promises(
-    session_factory, a_seeded_world
-):
-    """The assertions, run as the protagonist. **This is the acceptance test.**
-
-    Every line here is an outcome of a real read path — the pool search, the
-    deal, the line-up, the ladder and the three named states — and not one of
-    them is a number the generator chose. What is asserted about the *lines* is
-    only that each surface reported: the surfaces themselves refuse by raising,
-    which is the whole design of `screens.py`.
-    """
-
-    lines = await assert_the_screens(
-        session_factory,
-        settings=get_settings(),
-        now=a_seeded_world["now"],
-        pairs=a_seeded_world["pairs"],
-        photos=a_seeded_world["photos"],
-    )
-    text = "\n".join(lines)
-
-    for surface in (
-        "pool ·",
-        "gender gate ·",
-        "newcomer window ·",
-        "reason lines ·",
-        "deck ·",
-        "court ·",
-        "ladder ·",
-        "proposals opt-out ·",
-        "interest ·",
-        "mutual ·",
-        "outstanding ·",
-        "decline ·",
-        "absences ·",
-        "block ·",
-        "pass ·",
-        "radar ·",
-        "record block ·",
-        "run of form ·",
-        "player score ·",
-        "unscored ·",
-        "familiarity ·",
-        "photo verdict ·",
-        "newcomer gate ·",
-        "one sport ·",
-        "blank week ·",
-    ):
-        assert surface in text, f"nothing was read for {surface}"
 
 
 async def test_the_band_histogram_is_met_by_the_engine_that_ships(
@@ -1017,16 +956,3 @@ def test_the_report_says_the_cohort_stands_for_nothing(a_seeded_world):
     assert THE_BLANK_WEEK_PLAYER.email in text
     assert "ring a:" in text
     assert "pool · read" in text
-
-
-def test_every_unreachable_reason_line_carries_its_reason():
-    """A list of measured absences and not a list of exceptions.
-
-    Each entry says *why* it cannot be drawn, and the assertion in `screens.py`
-    checks the same code really is absent from the run — so the day a provider
-    lands, the run goes red and demands the code move to the promised side.
-    """
-
-    assert CANNOT_BE_DRAWN
-    for code, because in CANNOT_BE_DRAWN.items():
-        assert len(because) > 20, f"{code} is excluded without a reason"

@@ -23,10 +23,10 @@ name, is what history is recorded under.
   event-sourced*). All five are small facts with an identity and no life story, and
   nothing **subscribes** to one being written — the suppression a pass writes is a cache
   the use case fills after its commit, not a subscriber, a decline is read by one filter
-  on the next search, and a reset is one moment the next deal reads. A mutual yes does
-  open a challenge, and it is a **call in the same transaction** rather than a
-  subscription (#251, #222): the promise it keeps — *that player has left the deck for
-  good* — is false for as long as a poller takes. The row itself still earns no event.
+  on the next search, and a reset is one moment the next deal reads. A mutual yes used
+  to open a challenge, as a **call in the same transaction** rather than a subscription
+  (#251, #222); since the challenges went (#578) it opens nothing. The row itself still
+  earns no event.
   The authority is `the-engine.md` §12, which names all five and says *nothing here is
   event-sourced*; ADR-0128 decides what a pass **is** and does not speak to event
   sourcing, ADR-0094 says of the decline in its own words that *declining a prompt is

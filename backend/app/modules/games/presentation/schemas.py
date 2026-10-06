@@ -8,9 +8,7 @@ Three rules decide everything below.
 them are the client's (``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
-stale. **The one thing a reader's own act changes about this list is which games
-are in it** (``docs/adr/0172`` §5): a called-off game the reader has dismissed is
-left off their rail, derived on every read, and nothing about the game moves.
+stale.
 
 **Every deadline is a moment the backend computed**, never a duration and never a
 rule the client applies. A phone renders *how long you have* by subtracting from
@@ -275,7 +273,11 @@ class GameSchema(BaseModel):
 
     game_id: UUID
     challenge_id: UUID = Field(
-        ..., description="The ask whose line-up completed into this game"
+        ...,
+        description=(
+            "The booking this game was opened for — its id, under the name the "
+            "field was born with."
+        ),
     )
     sport: Sport
     kind: GameKind = Field(
@@ -289,8 +291,8 @@ class GameSchema(BaseModel):
     window: Window | None = Field(
         default=None,
         description=(
-            "How soon the week this was arranged for came round. ``null`` on a "
-            "game born of a mutual yes: no grid was proposed from."
+            "How soon the week this was arranged for came round. ``null`` on "
+            "every booked game, which has an hour instead."
         ),
     )
     standing: GameStanding = Field(
@@ -302,7 +304,7 @@ class GameSchema(BaseModel):
         ),
     )
     planned_at: datetime = Field(
-        ..., description="When the last seat accepted and this became a game"
+        ..., description="When the court was booked and this became a game"
     )
     played_at: datetime | None = Field(
         default=None,
@@ -325,8 +327,9 @@ class GameSchema(BaseModel):
     called_off_at: datetime | None = Field(
         default=None,
         description=(
-            "When somebody called it off, while a seat was open "
-            "(``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; "
+            "When it was called off — at the club's cut-off with a seat open, "
+            "or by the club taking the court back (``docs/adr/0163``). ``null`` "
+            "unless the standing is `CALLED_OFF`; "
             "then the act's own instant, which is what the ending card is "
             "shelved from — a day later, as `played_at` and `entry_closes_at` "
             "already shelve the other endings. Who is `called_off_by`."
@@ -336,14 +339,12 @@ class GameSchema(BaseModel):
         default=None,
         description=(
             "The player who called it off, and their name (``docs/adr/0172`` "
-            "§4). ``null`` on every standing but `CALLED_OFF`. The last leaver, "
-            "whose seat is drawn open — or whoever pressed *Call it off*, who "
-            "still holds one; which of the two is read off the seats, and the "
-            "game screen's heading is keyed on it."
+            "§4). ``null`` on every standing but `CALLED_OFF` — and on a booked "
+            "game called off by its cut-off or its club, which nobody did."
         ),
     )
     seats: list[SeatingSchema] = Field(
-        ..., description="The court, in the order the challenge handed it over"
+        ..., description="The court, in the order the booking handed it over"
     )
     score: ScoreSchema | None = Field(
         default=None,

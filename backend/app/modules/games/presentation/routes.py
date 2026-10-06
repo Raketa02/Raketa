@@ -1,24 +1,17 @@
-"""The seven game routes: read yours, read one's pairing, state a score, agree
-with one, clear a called-off one's card — and, on a booked game, say somebody
-did not come, or say you did (#547).
+"""The six game routes: read yours, read one's pairing, state a score, agree
+with one — and, on a booked game, say somebody did not come, or say you did
+(#547).
 
 **There is no route that creates a game, none that moves a seat on one, and
-none that ends one.** A game exists because a challenge's line-up completed, and
-nothing a client sends can produce one — which is what makes *these people
+none that ends one.** A game exists because a booking opened it (#541), and
+nothing a client sends here can produce one — which is what makes *these people
 arranged this* a fact rather than a claim. A seat opens because somebody left
-the **challenge** (``POST /challenges/{id}/departure``) and is filled because the
-next completed line-up re-seated the same game; here a seat somebody left is
-drawn with `player_id: null` (``docs/adr/0162``). And a game with a seat open
-is **called off** because its court was — by *Call it off*
-(``POST /challenges/{id}/withdrawal``) or by the departure that left one player
-on it — which is where the act's permission lives; here it is read as
-`standing: CALLED_OFF` with `called_off_at` and `called_off_by` beside it
+the **booking** and is filled by a rescue (#544, #545); here a seat somebody
+left is drawn with `player_id: null` (``docs/adr/0162``). And a game is
+**called off** because its booking was — at the club's cut-off with a seat
+open, or by the club — which is where the act's permission lives; here it is
+read as `standing: CALLED_OFF` with `called_off_at` beside it
 (``docs/adr/0163``, ``docs/adr/0172`` §4).
-
-**The one act here that is the reader's own is the dismissal**
-(``docs/adr/0172`` §5): a called-off game's card cleared from their rail,
-recorded once per player and derived on every read of ``GET /games``. It
-removes a card, not a fact, so it answers nothing.
 
 **The pairing is read beside the game and never on it** (``docs/adr/0161``).
 ``GameSchema`` carries no forecast and never will; what the game screen draws
@@ -43,7 +36,6 @@ from fastapi import APIRouter, status
 from app.core.exception_handlers import ErrorResponse
 from app.modules.games.application.commands import (
     AcceptResultCommand,
-    DismissGameCommand,
     DisputeANoShowCommand,
     ReportANoShowCommand,
     StateResultCommand,
@@ -59,7 +51,6 @@ from app.modules.games.domain.windows import (
 )
 from app.modules.games.presentation.dependencies import (
     AcceptResultDep,
-    DismissGameDep,
     DisputeANoShowDep,
     ReportANoShowDep,
     ReadGamePairingDep,
@@ -240,10 +231,7 @@ _ACCEPTING_REFUSALS: dict[int | str, dict[str, Any]] = {
         "nothing sweeps it, because there is nothing for a sweep to correct.\n\n"
         "**`read_at` is the instant every standing and deadline here was folded "
         "against.** Render your countdowns from it, so they cannot disagree with "
-        "the standing beside them.\n\n"
-        "**A called-off game you have dismissed is not here** "
-        "(`POST /games/{id}/dismissal`), on this device and every other — the "
-        "dismissal is recorded on the game, once, and subtracted on every read."
+        "the standing beside them."
     ),
 )
 async def read_games(
@@ -482,56 +470,6 @@ async def dispute_a_no_show(
         ),
         reader_id=user.id,
     )
-
-
-@router.post(
-    "/{game_id}/dismissal",
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses={
-        status.HTTP_204_NO_CONTENT: {
-            "description": (
-                "The card is cleared from your rail — on this device and every "
-                "other — and nothing else moves. A second press answers the "
-                "same and writes nothing."
-            )
-        },
-        status.HTTP_403_FORBIDDEN: _REFUSALS[status.HTTP_403_FORBIDDEN],
-        status.HTTP_409_CONFLICT: {
-            "model": ErrorResponse,
-            "description": (
-                "`game_is_not_called_off` — only a called-off game's card can "
-                "be cleared. The other endings' cards carry a score or a "
-                "strand's verdict and are the record for the day they stay; a "
-                "live game's card is the game."
-            ),
-        },
-    },
-    summary="Remove this card",
-    description=(
-        "**Clear a called-off court from your own two lists** — the game's "
-        "card from Now and the challenge's row from Chats (`docs/adr/0172` §5, "
-        "`docs/adr/0173`). Yours alone: nobody else's lists move, and the game, "
-        "its record and the challenge are untouched. It is instant and there "
-        "is no undo — a mis-tap loses the card and the row and nothing else, "
-        "which is why there is no sheet.\n\n"
-        "**Recorded on the game, once per player**, so the card and the row "
-        "are gone on your other phone and after a reinstall; `GET /games` and "
-        "`GET /challenges` each subtract it on every read rather than keeping "
-        "a list.\n\n"
-        "**Only on a game that is `CALLED_OFF`**, and only for somebody on its "
-        "court — the presser, or the players the leaver left; the leaver's "
-        "seat is open and the card was never on their rail.\n\n"
-        "**A noun and not a verb**, like the departure: what this creates is "
-        "the dismissal, and it answers nothing because the thing a redraw "
-        "would draw is the thing you removed."
-    ),
-)
-async def dismiss_game(
-    game_id: UUID,
-    user: CurrentUserDep,
-    use_case: DismissGameDep,
-) -> None:
-    await use_case.execute(DismissGameCommand(game_id=game_id, player_id=user.id))
 
 
 def _score(payload: ScoreSchema) -> Score:

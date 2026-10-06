@@ -30,22 +30,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.api.dependencies import (
-    ClockDep,
-    DbSession,
-    DomainEventStoreDep,
-    EventPublisherDep,
-    SettingsDep,
-    UnitOfWorkDep,
-)
-from app.bootstrap.composition import (
-    build_court_pairing_query_over,
-    build_court_pairing_workbench,
-)
 from app.kernel import Sport
-from app.modules.challenges.presentation.dependencies import (
-    get_court_pairing_query,
-)
 from app.modules.matchmaking.infrastructure.pass_model import PassORM
 from app.modules.matchmaking.infrastructure.prompt_decline_model import (
     PromptDeclineORM,
@@ -56,7 +41,7 @@ from app.modules.matchmaking.infrastructure.search_model import (
 )
 
 # The players and the shared moves are the new-loop world's (#573), re-exported
-# so the searches, the deck and the challenges below are built on the same ones.
+# so the searches and the deck below are built on the same ones.
 from tests.api.players_world import (
     CENTRE as CENTRE,
     COMPETITIVE_TAGS as COMPETITIVE_TAGS,
@@ -318,84 +303,6 @@ async def a_yes(client, session_factory, candidate_source, *, sender, towards):
 A_MOMENT_LATER = timedelta(minutes=1)
 
 
-def draw_real_cards(client, candidate_source, exposure_ledger) -> None:
-    """Wire the **real** pairing query over this test's own index and ledger.
-
-    The production declaration reaches for the process's candidate index and for
-    the Redis pool, and neither exists under ``ASGITransport``. That default is
-    the right one for this suite — it is what makes *the pairing could not be
-    read* the production path rather than a simulation — and the wrong one for
-    any test about a card actually being drawn.
-
-    What is wired instead is the **same assembly the route builds**, declared
-    with its own dependencies so the session is still the request's, over the two
-    seams ``app/bootstrap/challenge_demands.py`` names: the process's index and
-    an exposure ledger that needs no server.
-
-    **Here rather than in one test module**, because two files now want a
-    challenge screen with a pairing on it — the file that asserts the card block
-    and the one that walks the whole loop — and a second copy of this wiring is a
-    second opinion about which seams a challenge screen is built over.
-    """
-
-    def _pairings(
-        db: DbSession,
-        clock: ClockDep,
-        uow: UnitOfWorkDep,
-        event_store: DomainEventStoreDep,
-        events: EventPublisherDep,
-        settings: SettingsDep,
-    ):
-        return build_court_pairing_query_over(
-            workbench=a_real_workbench(
-                db,
-                clock,
-                uow,
-                event_store,
-                events,
-                settings,
-                exposure_ledger=exposure_ledger,
-                candidate_source=candidate_source,
-            ),
-            settings=settings,
-        )
-
-    override(client, get_court_pairing_query, _pairings)
-
-
-def a_real_workbench(
-    db,
-    clock,
-    uow,
-    event_store,
-    events,
-    settings,
-    *,
-    exposure_ledger,
-    candidate_source,
-):
-    """The **same assembly the routes build**, over this test's own two seams.
-
-    One place for the wiring, because two surfaces now price a court for
-    somebody already on it — the challenge detail and the game's pairing — and a
-    second copy of it would be a second opinion about which seams a court is
-    priced over. The six positional arguments are a request's own, handed on by
-    a dependency declared with them; the two keyword ones are what the suite
-    supplies for itself.
-    """
-
-    return build_court_pairing_workbench(
-        session=db,
-        clock=clock,
-        unit_of_work=uow,
-        event_store=event_store,
-        events=events,
-        settings=settings,
-        exposure=exposure_ledger,
-        candidates=candidate_source,
-    )
-
-
 def rewind_the_index(source, by: timedelta) -> None:
     """Move the index's *caught up at* backwards, without moving the clock.
 
@@ -456,19 +363,6 @@ def hold_everybody(client) -> None:
     )
 
     override(client, get_account_hold_query, HoldingEverybody)
-
-
-def hold_everybody_planning(client) -> None:
-    """The same hold, on the **plans** context's own declaration of the port.
-
-    Each context declares when its adapter is built, so a hold driven through
-    ``matchmaking``'s dependency reaches no plan route at all. One helper per
-    declaration is the honest shape: the stand-in is shared, the seam is not.
-    """
-
-    from app.modules.plans.presentation.dependencies import get_plan_hold_query
-
-    override(client, get_plan_hold_query, HoldingEverybody)
 
 
 def hold_only(client, *player_ids) -> None:

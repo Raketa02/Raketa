@@ -30,7 +30,6 @@ from app.modules.conversations.domain.conversation import Conversation
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
     GameCalledOff,
-    GameDismissed,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -54,7 +53,6 @@ EVERY_PUBLISHED_EVENT = (
     SeatVacated,
     LineUpReseated,
     GameCalledOff,
-    GameDismissed,
     GamePlayed,
     ResultProposed,
     ResultCorrected,
@@ -150,16 +148,6 @@ def test_a_call_off_draws_nothing_and_has_the_largest_effect_of_any_telling():
     assert called_off.line is None and called_off.reaches_the_room
     assert "destroys" in called_off.why_nothing
     assert GameCalledOff in TOLD_ABOUT
-
-
-def test_the_dismissal_reaches_the_room_not_at_all():
-    """``docs/adr/0172`` §5 — a card is dismissed only on a called-off game, and
-    there is no room by then."""
-
-    dismissed = _row(GameDismissed)
-
-    assert dismissed.line is None and not dismissed.reaches_the_room
-    assert GameDismissed not in TOLD_ABOUT
 
 
 def test_the_line_up_moving_reaches_the_room_not_at_all():

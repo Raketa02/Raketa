@@ -20,7 +20,6 @@ import pytest
 import app.core.lifespan as lifespan_module
 from app.bootstrap.jobs import (
     CANDIDATE_INDEX_TAIL_JOB,
-    CHALLENGE_LAPSE_JOB,
     CONVERSATION_SWEEP_JOB,
     MAIL_DELIVERY_JOB,
     PROPOSAL_EXPIRY_JOB,
@@ -29,7 +28,6 @@ from app.bootstrap.jobs import (
     PHOTO_SWEEP_JOB,
     RATING_CATCH_UP_JOB,
     SCALE_PRESSURE_JOB,
-    UNFILLED_COURT_JOB,
 )
 from app.core.config import Settings
 from app.modules.conversations.infrastructure.absent_providers import (
@@ -207,8 +205,6 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         INTENT_DRIFT_ENABLED=False,
         GRID_STALENESS_ENABLED=False,
         INTEREST_EXPIRY_ENABLED=False,
-        CHALLENGE_LAPSE_ENABLED=False,
-        UNFILLED_COURT_ENABLED=False,
         RATING_CATCH_UP_ENABLED=False,
         CONVERSATION_SWEEP_ENABLED=False,
         MAIL_DELIVERY_ENABLED=False,
@@ -259,8 +255,6 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         ("PHOTO_SWEEP_ENABLED", PHOTO_SWEEP_JOB),
         ("CANDIDATE_INDEX_ENABLED", CANDIDATE_INDEX_TAIL_JOB),
         ("INTEREST_EXPIRY_ENABLED", INTEREST_EXPIRY_JOB),
-        ("CHALLENGE_LAPSE_ENABLED", CHALLENGE_LAPSE_JOB),
-        ("UNFILLED_COURT_ENABLED", UNFILLED_COURT_JOB),
         ("RATING_CATCH_UP_ENABLED", RATING_CATCH_UP_JOB),
         ("CONVERSATION_SWEEP_ENABLED", CONVERSATION_SWEEP_JOB),
         ("MAIL_DELIVERY_ENABLED", MAIL_DELIVERY_JOB),
@@ -277,7 +271,7 @@ async def test_a_lone_database_job_is_handed_a_session_factory(
     `build_scheduled_jobs` raises when one of its database jobs is on and no
     factory arrives, so a job added to its list and not to the lifespan's is a
     process that starts everywhere except where that job is the only one left
-    on — which is how the hour loop (``docs/adr/0175``) and the conversation
+    on — which is how the old hour loop and the conversation
     sweep were wired for a while. One flag on, every other off, the lifespan
     must enter and the job must be there.
     """
@@ -293,8 +287,6 @@ async def test_a_lone_database_job_is_handed_a_session_factory(
             "INTENT_DRIFT_ENABLED",
             "GRID_STALENESS_ENABLED",
             "INTEREST_EXPIRY_ENABLED",
-            "CHALLENGE_LAPSE_ENABLED",
-            "UNFILLED_COURT_ENABLED",
             "RATING_CATCH_UP_ENABLED",
             "CONVERSATION_SWEEP_ENABLED",
             "MAIL_DELIVERY_ENABLED",

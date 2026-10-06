@@ -16,9 +16,6 @@ from app.modules.administrators.presentation.routes import (
 )
 from app.modules.auth.presentation.routes import router as auth_router
 from app.modules.blocks.presentation.routes import router as blocks_router
-from app.modules.challenges.presentation.routes import (
-    router as challenges_router,
-)
 from app.modules.conversations.presentation.routes import (
     router as conversations_router,
 )
@@ -58,7 +55,6 @@ from app.modules.payments.presentation.seat_charge_routes import (
     receipts_router,
     seat_charges_router,
 )
-from app.modules.plans.presentation.routes import router as plans_router
 from app.modules.player_profile.presentation.photo_routes import (
     router as photos_router,
 )
@@ -114,10 +110,8 @@ player_api_router.include_router(deck_router)
 player_api_router.include_router(radar_router)
 player_api_router.include_router(passes_router)
 player_api_router.include_router(prompt_declines_router)
-player_api_router.include_router(challenges_router)
 player_api_router.include_router(conversations_router)
 player_api_router.include_router(games_router)
-player_api_router.include_router(plans_router)
 player_api_router.include_router(sportsmanship_router)
 player_api_router.include_router(player_record_router)
 player_api_router.include_router(groups_router)

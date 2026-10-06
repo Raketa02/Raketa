@@ -670,48 +670,6 @@ class Settings(BaseSettings):
     INTEREST_EXPIRY_ENABLED: bool = True
     INTEREST_EXPIRY_INTERVAL_SECONDS: float = 60 * 60
 
-    # --- the challenge lapse loop (docs/adr/0092)
-    #
-    # **Turning it off changes no rule a domain test could observe.** A seat past
-    # its answer window reads as lapsed at every instant, its pair releases and
-    # its challenge stands as `LAPSED` whether or not anything has swept it —
-    # `standing.py` folds the seats against the clock and stores nothing. What
-    # the loop buys is the *record*: a `SeatLapsed` in the log, so that **answers
-    # challenges** has a denominator, and a lapse is a fact somebody can count
-    # rather than an absence they have to infer.
-    #
-    # **`ANSWER_WINDOW` itself is emphatically not here.** How long an invitee has
-    # to answer is the promise the invitation makes — behaviour a domain test can
-    # observe, and an environment that could select it would be an environment
-    # that decides how long a player has to answer — and it lives in
-    # `challenges/domain/answer_window.py`. Only this cadence is a setting.
-    # Moving it there moves nothing already sent: a seat's `answer_by` is stamped
-    # when the seat is invited, so every outstanding challenge keeps the promise
-    # it was sent with.
-    #
-    # Hourly, and the number it is chosen against is the window rather than the
-    # backlog: a `SeatLapsed` is stamped with the moment the sweep noticed, so
-    # the interval is how late the record is, and an hour against a two-day
-    # window is a forty-eighth. Finer would buy a rounder timestamp and pay for
-    # it in a read that is not yet indexed.
-    CHALLENGE_LAPSE_ENABLED: bool = True
-    CHALLENGE_LAPSE_INTERVAL_SECONDS: float = 60 * 60
-
-    # --- the hour loop (docs/adr/0175 §3)
-    #
-    # **The second loop that appends a challenge event, and the first one
-    # correctness depends on.** A court that has been a game and is still short
-    # of a player when its agreed hour passes is called off by the platform —
-    # nobody's decision, since nobody presses *Call it off* any more — and the
-    # challenge's fold cannot reach that ending on its own: the hour is the
-    # plan's, which the challenge cannot read. Until this runs, such a row reads
-    # *needs a player* with nothing to press; so the interval is how long that
-    # dead minute lasts, and a minute is what it is chosen to be. The candidate
-    # read is every court somebody ever left, over an unindexed column, and the
-    # cost is stated there; finer than a minute buys nothing a player would see.
-    UNFILLED_COURT_ENABLED: bool = True
-    UNFILLED_COURT_INTERVAL_SECONDS: float = 60
-
     # --- the rating catch-up (docs/adr/0139)
     #
     # **The second job that appends a domain event, and the first whose absence a

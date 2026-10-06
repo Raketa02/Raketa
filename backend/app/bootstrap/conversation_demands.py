@@ -1,12 +1,11 @@
 """The register of what ``conversations`` demands of contexts it does not write.
 
-**A sixth register rather than more rows in one of the five, and that is the rule
+**A register of its own rather than more rows in another, and that is the rule
 rather than a preference.** ``matcher_demands.py`` holds the ports the *matcher*
 declares of contexts it does not write; ``games_demands.py``,
 ``rating_demands.py`` and ``player_score_demands.py`` each hold what one
-*provider* publishes outward; ``challenge_demands.py`` holds what ``challenges``
-demands of the matcher. This one holds what a **conversation** demands of the
-contexts it is told by and reads from — a fifth kind of claim, and each
+*provider* publishes outward. This one holds what a **conversation** demands of
+the contexts it is told by and reads from — another kind of claim, and each
 register's exhaustiveness assertion is about its own kind and would stop meaning
 anything with another kind in it.
 

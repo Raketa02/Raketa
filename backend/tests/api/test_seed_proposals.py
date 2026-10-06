@@ -255,8 +255,8 @@ async def test_a_crowd_that_does_not_fit_her_fails_the_run_by_name(
 
 async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_factory):
     """**The real crowd, in the runner's order**: the named accounts and the
-    cohort, their cards, the clubs and their courts, the played history and the
-    relationships — whose blocks the fit reads live — and then this layer. The
+    cohort, their cards, the clubs and their courts, the played history, and
+    then this layer. The
     tests above stand a small crowd in for the cohort; this one is the claim
     that the cohort ``make seed`` writes can seat four picks at all."""
 
@@ -266,7 +266,6 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
     from app.seeds.cohort import PLAYED_GAMES
     from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
     from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
-    from app.seeds.pairs import write_the_relationships
     from app.seeds.runner import seed_the_cohort
     from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
@@ -292,9 +291,6 @@ async def test_the_cohort_seats_every_pick_the_way_make_seed_runs_it(session_fac
         now=now,
         games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
         named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
-    )
-    await write_the_relationships(
-        session_factory, settings=settings, now=now, photos=photos
     )
 
     seeded = await write_the_proposals(
@@ -554,7 +550,6 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
     from app.seeds.cohort import PLAYED_GAMES
     from app.seeds.pool_history import THE_POOL_HAS_A_RECORD
     from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
-    from app.seeds.pairs import write_the_relationships
     from app.seeds.runner import seed_the_cohort
     from tests.unit.fake_photo_storage import InMemoryPhotoStorage
 
@@ -580,9 +575,6 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
         now=now,
         games=(*PLAYED_GAMES, *THE_POOL_HAS_A_RECORD),
         named=(*ACCOUNTS, *RELATIONSHIP_ACCOUNTS),
-    )
-    await write_the_relationships(
-        session_factory, settings=settings, now=now, photos=photos
     )
     proposals = await write_the_proposals(
         session_factory, settings=settings, now=now, cohort=cohort

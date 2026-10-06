@@ -52,7 +52,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   event a booked game's court publishes and what this room does about it, including the ones
   that write nothing and why. One line is written today: `GAME_PLAYED`. `SystemLineCode` keeps
   the eight codes rooms opened by challenges carried, so a stored line still folds and the
-  sweep can destroy those rooms; they go with the challenges and plans that wrote them. There
+  sweep can destroy those rooms. The challenges and plans that wrote them are gone (#578);
+  the codes are still on the player document and the player app still renders them, so they
+  leave with a player ticket rather than under it. There
   is no *Game on* line. And **a refused line is not a refused telling**: `GamePlanned` reaches
   the room, draws nothing, and is what opens it; `GameCalledOff` draws nothing and is what
   destroys it.

@@ -1,14 +1,11 @@
 """``GameHistoryQuery`` and ``GameDirectory`` over the event log.
 
-**Everything here folds the aggregate**, and that is the difference from
-``challenges``' history read. There, an answer is a thing that happened *to the
-court as it stood then*, so the walk carries the arrangement along with it; here
-a game's line-up moves in exactly two told ways and the fold carries both
-(``docs/adr/0162``), so today's court is the court as it stands and the fold is
-the whole answer. **Every read answers about the people on the court now**: the
-streams read finds everybody a court has ever seated, and the folded line-up is
-what says who is still on it — a leaver is nobody's counterpart, nobody's
-attendee, and their list no longer holds the game.
+**Everything here folds the aggregate.** A game's line-up moves in exactly two
+told ways and the fold carries both (``docs/adr/0162``), so today's court is the
+court as it stands and the fold is the whole answer. **Every read answers about
+the people on the court now**: the streams read finds everybody a court has ever
+seated, and the folded line-up is what says who is still on it — a leaver is
+nobody's counterpart, nobody's attendee, and their list no longer holds the game.
 
 **Nothing is projected.** Every fact these reads publish — played or a ghost,
 counted, confirmed, won or lost — is folded from the record against the caller's
@@ -20,9 +17,8 @@ passed, wrong until something rebuilt it, and believed throughout.
 rather than reading one, because a search that asked about counted games and
 about familiarity in one request must get one instant's answer to both.
 
-**Cost.** The same as ``challenges``' three reads and for the same reason:
-bounded by how many games the platform has ever recorded, because a substring
-match cannot use a B-tree.
+**Cost.** Bounded by how many games the platform has ever recorded, because a
+substring match cannot use a B-tree.
 """
 
 from __future__ import annotations

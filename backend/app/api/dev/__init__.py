@@ -1,29 +1,12 @@
-"""The dev console: a tool that answers back, made of one file and one path.
+"""The dev console's surface: a gate and one roster path, and no page yet.
 
-**Nothing in Play can be exercised with one phone.** ``Line-up incomplete``, the
-decline that reopens a seat, the instant match born of a mutual yes — every one
-of them needs a real second player answering. This is the second player.
-
-**It acts as another player by signing in as them**, through the ordinary
-``POST /api/v1/auth/login`` with the seed password that already exists as one
-public constant. There is no impersonation endpoint, no ``Act-As`` header and no
-authorisation path that exists for this tool. The consequence is the good one:
-every write the console presses is a *player-surface* write, so *acts as another
-player* is literal rather than approximate.
-
-**Nothing here reacts on its own.** There are no auto-reply timers of any kind.
-The prototype's simulated replies are machinery the UI spec §G4 lists for
-deletion, and it is explicit that *"acceptance is not instant and may never
-arrive — the interface must handle pending indefinitely."* The console exists so
-that a human decides when the other side answers; a timer here would put the
-prototype's lie back, one layer down.
-
-**Made of one no-build HTML file** returned by a ``FileResponse``. No npm, no
-bundler, no codegen, and no lint lane for one file — said here so that nobody
-adds one. This is not a detail beside the placement under ``backend/``; it is
-what makes the placement true. The job is a table and a few buttons. The day it
-wants a component tree it has become a product, and the placement is re-argued
-rather than grown into.
+**Nothing in Play can be exercised with one phone** — a game that fills needs
+other players saying yes. The console is the other players. Its first page, a
+no-build ``console.html``, acted as another player by signing in as them through
+the ordinary ``POST /api/v1/auth/login`` and pressed challenges; it went with the
+challenges (#578). The games test console replaces it (``docs/adr/0194``, #590),
+and acts as seed accounts without signing in. What is written below is what the
+surface kept: the roster and its gate.
 
 **The gate is checked on import of ``routes``, and deliberately not here.**
 ``app/seeds/`` puts its refusal in the package's ``__init__`` — the *smallest

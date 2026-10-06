@@ -98,11 +98,9 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: Matches are modeled nowhere, so a seed for one of them would have to invent
 #: the aggregate first.
 #:
-#: `challenges` and `blocks` joined on the day the relationship layer landed, and
-#: they joined as *writes through their own use cases*: five of the ten
-#: `LivenessSignal` codes are facts about a pair, no distribution can exhibit
-#: one, and a court and a block are the only shapes two of them come in. Both are
-#: modeled — which is the whole of what this rule asks.
+#: `challenges` and `blocks` joined on the day the relationship layer landed, as
+#: *writes through their own use cases*, and left with it (#578): the layer sent
+#: challenges, and a context that no longer exists is written by nothing.
 #:
 #: `conversations` joined for one act rather than for the rooms. The seed opens
 #: no room and cannot: a room is *told*, through the outbox, by contexts that do
@@ -111,10 +109,8 @@ RFC2606_RESERVED_TLDS = frozenset({".test", ".example", ".invalid", ".localhost"
 #: something — through `SendMessage`, because a room long enough to page backward
 #: through is a screen state and no arrangement produces one.
 #:
-#: `plans` joined the ordinary way: three slot writes through the three use
-#: cases a request runs, on four games this fixture arranges and deliberately
-#: never plays. A plan is *born by being used*, so there is no opening act to
-#: seed and the write **is** the birth.
+#: `plans` joined the ordinary way, three slot writes through their use cases,
+#: and left with the context (#578).
 #:
 #: `clubs` joined on the day the Club context was written (#503), and it is the
 #: first context this rule *waited for* rather than one it admitted: the list
@@ -134,11 +130,8 @@ WRITTEN_CONTEXTS = frozenset(
         "users",
         "rating",
         "player_profile",
-        "challenges",
-        "blocks",
         "games",
         "conversations",
-        "plans",
         "payments",
         "proposals",
     }
@@ -168,13 +161,10 @@ AGGREGATE_WRITERS = {
     "build_skill_rating_repository": "rating",
     "build_player_profile_repository": "player_profile",
     "build_play_intent_declaration_repository": "player_profile",
-    "build_challenge_repository": "challenges",
-    "build_block_repository": "blocks",
     # The played history states and answers a result, which is `games`' own
-    # aggregate written through `games`' own two use cases — the same shape the
-    # challenge send has one line up. The **game** itself is opened by the
-    # acceptance that filled the last seat, inline and inside `challenges`, so
-    # nothing here opens one.
+    # aggregate written through `games`' own two use cases. The **game** itself
+    # is opened by the last yes that booked it, inline and inside `proposals`,
+    # so nothing here opens one.
     "build_game_repository": "games",
     # The messages, and **not the rooms**. A room is opened and grown by the
     # outbox delivering somebody else's events, which needs no repository from
@@ -182,10 +172,6 @@ AGGREGATE_WRITERS = {
     # and a seeded bubble goes through the use case a request runs like
     # everything else.
     "build_conversation_repository": "conversations",
-    # The three slot writes. There is no *open a plan* act to list beside it: a
-    # plan is born by being used, so the first slot write is the birth and this
-    # is the only repository the layer needs.
-    "build_plan_repository": "plans",
     # The club and its account, both written by the one `SignUpClub` a desk
     # runs — which is why the layer needs both, and nothing else.
     "build_club_repository": "clubs",
@@ -201,8 +187,8 @@ AGGREGATE_WRITERS = {
     # engine will drive (#540) — and its yeses said by `SayYes`, the swipe's own
     # use case, over the one repository both take (#538). **The last yes books
     # the game** (#541): the booking, its Game and every seat's charge are
-    # written inline by that same `SayYes`, as an acceptance opens a game inside
-    # `challenges` — so `app/seeds/bookings.py` takes no repository of its own.
+    # written inline by that same `SayYes` — so `app/seeds/bookings.py` takes no
+    # repository of its own.
     "build_proposal_repository": "proposals",
     # An Administrator, invited by its club and let in the way that person
     # would get in — `InviteAdministrator`, then `SetInvitationPassword` or
@@ -309,16 +295,11 @@ def test_the_walk_has_something_to_walk():
         "club_courts.py",
         "clubs.py",
         "cohort.py",
-        "games.py",
         "groups.py",
         "guard.py",
-        "loop.py",
         "official_groups.py",
-        "pairs.py",
-        "paths.py",
         "payments.py",
         "photos.py",
-        "plans.py",
         "pool_history.py",
         "posts.py",
         "proposals.py",

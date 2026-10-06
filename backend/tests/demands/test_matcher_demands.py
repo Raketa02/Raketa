@@ -27,7 +27,6 @@ import pytest
 import pytest_asyncio
 
 from app.bootstrap.composition import (
-    build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
     build_game_repository,
@@ -38,7 +37,7 @@ from app.bootstrap.matcher_demands import (
     implementations_of,
 )
 from app.engines.assessment import AssessmentResult, BandView
-from app.engines.matchfit.core import ReliabilityStrand, SearchMode
+from app.engines.matchfit.core import ReliabilityStrand
 from app.engines.racketskill.core import (
     STATUS_INITIAL_ESTIMATE,
     SkillEstimate,
@@ -52,18 +51,10 @@ from app.engines.racketskill.update_v1 import (
     rating_after,
 )
 from app.kernel import Instant, InvariantViolated, Sport, instant
-from app.modules.challenges.application.send_challenge import SendChallenge
-from app.modules.challenges.domain.answer_window import ANSWER_WINDOW
-from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.origins import (
-    SentFromSearch as WrittenFromSearch,
-)
-from app.modules.challenges.domain.seats import SeatPlan, court_sides
 from app.modules.matchmaking.domain.errors import GateDataUnavailable
 from app.modules.matchmaking.domain.ports import (
     FAIL_POSTURE,
     MATCHER_DEMANDS,
-    PAIRWISE_COUNTERPART_BOUND,
     AccountHoldQuery,
     AccountStatusQuery,
     AtStakeQuery,
@@ -285,193 +276,16 @@ async def test_every_strand_that_crosses_carries_its_own_evidence(
 # MatchHistoryQuery — the pairwise read, the count, and the origin key
 # ---------------------------------------------------------------------------
 #
-# **The one port with two providers, and the arrangement belongs to the port.**
-# ``challenges`` ships and answers three of the four reads; ``matches`` is
-# unwritten and owes the fourth. So this block arranges a real world — through
-# the ``Challenge`` aggregate and never an ``INSERT`` (``docs/adr/0029``), which
-# is also the only way the fold behind these reads is exercised at all — and
-# asserts real answers about it.
-#
-# **The arrangement splits in two, and the half that is missing is said out loud
-# rather than left for a reader to mistake the coverage as even.** ``ACCEPTED``
-# and ``DECLINED`` are challenge facts and are arranged below. ``PLAYED``,
-# ``PLANNED_NEVER_PLAYED`` and ``late_change_threshold`` are ``matches``' and
-# **cannot be arranged by anybody yet**: the demands about them stay shape-only
-# until that context signs, and they are vacuous on purpose rather than by
-# oversight.
-#
-# **Every arrangement is dated against the wall clock, and that is the point of
-# the first demand.** The provider derives *open* from the seats and ``now``, so
-# a seat invited twenty-five hours ago reads as lapsed with nothing having swept
-# it — and an implementation that stored a standing would still be calling it
-# awaiting.
-
-
-def _repository(session):
-    """A challenge repository over this session. **Built per act, deliberately.**
-
-    It remembers the stream versions it has read, so each arrangement step loads
-    and saves through its own — which is what a request does, and what stops one
-    step's version answering for another's.
-    """
-
-    return build_challenge_repository(
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    )
+# **One provider since #578.** ``games`` answers the pairwise read; the challenge
+# half — ``ACCEPTED`` and ``DECLINED``, the open-challenge set and the load count
+# — went with the challenges, and what is left of it is a **measured absence**:
+# nothing sends a challenge, so none is open and nobody's inbox holds one. The
+# arrangement is real games through the ``Game`` aggregate and never an
+# ``INSERT`` (``docs/adr/0029``); the helpers are the shared-court block's below.
 
 
 def _ago(**offset) -> Instant:
-    """A moment that far behind the clock this suite's provider reads."""
-
     return instant(datetime.now(timezone.utc) - timedelta(**offset))
-
-
-def _long_enough_ago_to_have_lapsed() -> Instant:
-    """A moment far enough back that a seat invited then has run out of window.
-
-    **Derived from ``ANSWER_WINDOW``, with an hour to spare, rather than typed as
-    *yesterday*.** The window moved from a day to two (``docs/adr/0151``), and a
-    fixture carrying its own copy of the old number would have gone on passing
-    while asserting nothing about a lapse — which is the way a case like this
-    fails silently rather than red.
-    """
-
-    return instant(datetime.now(timezone.utc) - ANSWER_WINDOW - timedelta(hours=1))
-
-
-def _just_after(sent_at: Instant, **offset) -> Instant:
-    """A moment that far after a send, and well inside that seat's window."""
-
-    return instant(sent_at + timedelta(**offset))
-
-
-async def _sent(
-    session,
-    *,
-    organiser: UUID,
-    invitees: tuple[UUID, ...],
-    sport: Sport,
-    at: Instant,
-    search_id: UUID | None = None,
-    positions: dict[UUID, int] | None = None,
-    mode: SearchMode | None = None,
-) -> Challenge:
-    """One send, through the aggregate: an organiser, a court, and a search behind it.
-
-    Empty seats fill the rest of the court, because the court is the sport's
-    whole fixed list — and every invitee arrives carrying the origin the send
-    read off the search, because a seat that cannot say where it came from
-    cannot be constructed at all.
-    """
-
-    sides = court_sides(sport)
-    occupants: list[UUID | None] = [organiser, *invitees]
-    occupants += [None] * (len(sides) - len(occupants))
-    from_search = search_id or new_uuid()
-    where = positions or {}
-    arrangement = [
-        SeatPlan(
-            side=side,
-            player_id=occupant,
-            origin=(
-                None
-                if occupant is None or occupant == organiser
-                else WrittenFromSearch(
-                    search_id=from_search, position=where.get(occupant, seat + 1)
-                )
-            ),
-        )
-        for seat, (side, occupant) in enumerate(zip(sides, occupants, strict=True))
-    ]
-    challenge = Challenge.sent(
-        challenge_id=new_uuid(),
-        sport=sport,
-        mode=mode,
-        window=Window.THIS_WEEK,
-        organiser_id=organiser,
-        arrangement=arrangement,
-        occurred_at=at,
-    )
-    await _repository(session).save(challenge)
-    return challenge
-
-
-async def _mutual(session, *, one: UUID, other: UUID, at: Instant) -> Challenge:
-    """The challenge two yeses that met open. **Both seats accepted, no deadline.**"""
-
-    challenge = Challenge.opened_from_mutual_interest(
-        challenge_id=new_uuid(),
-        sport=Sport.PADEL,
-        mode=None,
-        organiser_id=one,
-        other_player_id=other,
-        occurred_at=at,
-    )
-    await _repository(session).save(challenge)
-    return challenge
-
-
-async def _answers(session, challenge: Challenge, player_id: UUID, *, yes: bool, at):
-    repository = _repository(session)
-    loaded = await repository.load(challenge.id)
-    if yes:
-        loaded.accept(player_id, occurred_at=at)
-    else:
-        loaded.decline(player_id, occurred_at=at)
-    await repository.save(loaded)
-
-
-async def _removed(session, challenge: Challenge, *, at: Instant) -> None:
-    """The organiser removes a challenge nobody has joined (``docs/adr/0165`` §4)."""
-
-    repository = _repository(session)
-    loaded = await repository.load(challenge.id)
-    loaded.withdraw(loaded.organiser_id, occurred_at=at)
-    await repository.save(loaded)
-
-
-async def _refill(
-    session, challenge: Challenge, *, seating: UUID, beside: UUID, at: Instant
-) -> None:
-    """Complete a half-built court: keep who is in, and offer the open seat on.
-
-    The path that makes today's arrangement forget a former occupant — the whole
-    reason the answers are walked off the events rather than read off the seats.
-    """
-
-    repository = _repository(session)
-    loaded = await repository.load(challenge.id)
-    sides = court_sides(loaded.sport)
-    occupants: list[UUID | None] = [loaded.organiser_id, beside, seating]
-    occupants += [None] * (len(sides) - len(occupants))
-    loaded.invite(
-        [
-            SeatPlan(
-                side=side,
-                player_id=occupant,
-                origin=(
-                    WrittenFromSearch(search_id=new_uuid(), position=seat + 1)
-                    if occupant == seating
-                    else None
-                ),
-            )
-            for seat, (side, occupant) in enumerate(zip(sides, occupants, strict=True))
-        ],
-        by=loaded.organiser_id,
-        occurred_at=at,
-    )
-    await repository.save(loaded)
-
-
-async def _sweep(session, challenge: Challenge, *, now: Instant) -> int:
-    """Run the record-keeping sweep over one challenge, as the loop would."""
-
-    repository = _repository(session)
-    loaded = await repository.load(challenge.id)
-    recorded = loaded.lapse(now=now)
-    await repository.save(loaded)
-    return recorded
 
 
 def _counterparts(rows) -> set[UUID]:
@@ -479,627 +293,49 @@ def _counterparts(rows) -> set[UUID]:
 
 
 def _by_player(counterparts) -> dict[UUID, dict]:
-    return {one.player_id: dict(one.outcomes) for one in counterparts}
+    return {row.player_id: row.outcomes for row in counterparts}
 
 
 @pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_a_seat_past_its_window_is_not_open_with_no_sweep_having_run(
+async def test_no_challenge_is_open_and_every_inbox_is_a_measured_zero(
     implementation, session
 ):
-    """**The demand that can tell a derived standing from a cached one.**
-
-    A padel court sent yesterday: one invitee accepted inside their day, two
-    never answered. Nothing has swept anything — there is no ``SeatLapsed`` in
-    this stream — and the two silent seats have already left both the open read
-    and the count, because *open* is folded from the seats and the clock at the
-    moment it is asked.
-
-    An implementation holding a standing column, or a projection of *who has an
-    open challenge with whom*, would still be answering **awaiting** here. That
-    is the whole reason this demand is written the way it is: it is right until a
-    deadline passes, wrong until something sweeps it, and it is the copy that
-    gets believed.
-
-    The challenge itself still stands, which is what stops this passing for the
-    wrong reason: one seat is accepted, so there is somebody left to keep faith
-    with and the answer *nothing is open* would be as wrong as the answer
-    *everything is*.
-    """
-
-    port = implementation.build(session)
-    organiser, kept, silent, also_silent = (new_uuid() for _ in range(4))
-    long_ago = _long_enough_ago_to_have_lapsed()
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(kept, silent, also_silent),
-        sport=Sport.PADEL,
-        at=long_ago,
-    )
-    await _answers(
-        session, challenge, kept, yes=True, at=_just_after(long_ago, minutes=30)
-    )
-
-    assert _counterparts(await port.open_challenges(organiser)) == {kept}
-    assert _counterparts(await port.open_challenges(kept)) == {organiser}
-    assert await port.open_challenges(silent) == ()
-    counts = await port.open_challenge_counts([kept, silent, also_silent])
-    assert dict(counts) == {kept: 0, silent: 0, also_silent: 0}
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_a_decline_and_a_lapse_leave_the_open_read_and_only_one_is_an_answer(
-    implementation, session
-):
-    """One arrangement, two opposite assertions — and the signals turning on.
-
-    A seat that declined and a seat whose day ran out have both **reopened**, so
-    neither holder is in the game and both go back to the deck at once: a
-    decline must not cost somebody a candidate they never turned down, and
-    neither must silence.
-
-    What they do to the *other* read is opposite, and that is the whole demand.
-    A decline is a judgement and is what ``PREVIOUS_DECLINE`` prices; a lapse is
-    a fact about a window and **tallies nowhere**, because a signal that filed
-    silence as judgement would be reading an erased history. The accepted seat is
-    the third case: ``PREVIOUS_ACCEPT`` is *they said yes to you before*, a price
-    put on **their** card, which is why the tally is their answers and never the
-    reader's own.
-
-    The challenge is still standing throughout, which is what stops this passing
-    for the wrong reason: one seat is accepted, so the answer *nothing is open*
-    would be as wrong as the answer *everything is*.
-    """
-
-    port = implementation.build(session)
-    organiser, said_yes, said_no, said_nothing = (new_uuid() for _ in range(4))
-    long_ago = _long_enough_ago_to_have_lapsed()
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(said_yes, said_no, said_nothing),
-        sport=Sport.PADEL,
-        at=long_ago,
-    )
-    that_evening = _just_after(long_ago, minutes=20)
-    a_little_later = _just_after(long_ago, minutes=40)
-    await _answers(session, challenge, said_yes, yes=True, at=that_evening)
-    await _answers(session, challenge, said_no, yes=False, at=a_little_later)
-
-    assert _counterparts(await port.open_challenges(organiser)) == {said_yes}
-    answered = _by_player(await port.pairwise_counterparts(organiser))
-    assert set(answered) == {said_yes, said_no}
-    assert set(answered[said_yes]) == {PairwiseOutcome.ACCEPTED}
-    assert set(answered[said_no]) == {PairwiseOutcome.DECLINED}
-    assert answered[said_yes][PairwiseOutcome.ACCEPTED].count == 1
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_refilling_a_declined_seat_erases_nobodys_answer(implementation, session):
-    """A refusal is remembered after the seat it was given from is somebody else's.
-
-    ``SeatsInvited`` carries the **whole** resulting court, so the arrangement as
-    it stands today has forgotten whoever left it. An implementation reading
-    *who answered* off today's seats therefore drops a recorded decline the
-    moment the organiser refills that position — a real refusal, erased by an act
-    of somebody else's, with the signal going quiet and nothing looking broken.
-
-    It cuts the other way in the same arrangement, and that half is the one an
-    over-eager fix gets wrong: the player seated **into** the reopened position
-    was not in the game that was declined, and inherits no history from it.
-    """
-
-    port = implementation.build(session)
-    organiser, said_no, kept, replacement = (new_uuid() for _ in range(4))
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(said_no, kept),
-        sport=Sport.PADEL,
-        at=_ago(minutes=30),
-    )
-    await _answers(session, challenge, said_no, yes=False, at=_ago(minutes=20))
-    await _refill(
-        session, challenge, seating=replacement, beside=kept, at=_ago(minutes=10)
-    )
-
-    assert said_no not in _counterparts(await port.open_challenges(organiser))
-    assert set(_by_player(await port.pairwise_counterparts(organiser))) == {said_no}
-    # The newcomer shares a court with the organiser and with nobody's history.
-    assert await port.pairwise_counterparts(replacement) == ()
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_every_occupied_seat_but_your_own_is_a_counterpart(
-    implementation, session
-):
-    """Co-invitees included, because sharing a line-up makes a pair.
-
-    If we are both in a line-up we have an open game together, which is the
-    exclusion's plain sense read from the other side — and it is what makes the
-    send's refusal symmetric: two people sharing a court may not open a second
-    challenge against each other.
-
-    Nobody is their own counterpart, which is the other half and is the one an
-    implementation folding *the players in this challenge* would get wrong.
-    """
-
-    port = implementation.build(session)
-    organiser, one, two, three = (new_uuid() for _ in range(4))
-    await _sent(
-        session,
-        organiser=organiser,
-        invitees=(one, two, three),
-        sport=Sport.PADEL,
-        at=_ago(minutes=5),
-    )
-
-    assert _counterparts(await port.open_challenges(two)) == {organiser, one, three}
-    assert _counterparts(await port.open_challenges(organiser)) == {one, two, three}
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_each_open_row_carries_its_own_seats_origin(implementation, session):
-    """The telemetry join: one search, three positions, three rows.
-
-    ``search-telemetry.md`` §19.2 joins a challenge back to the row of the
-    shortlist it was drawn from, so a doubles send from one search at three
-    positions has to come back as three rows carrying three positions. A
-    challenge-level origin would keep the search and lose every position, and
-    there is no backfill — the loss would be permanent and silent.
-
-    A seat nobody invited says ``SentOutsideASearch`` and never nothing: the
-    organiser built their own seat, so from an invitee's side the row is a claim
-    rather than a missing value.
-    """
-
-    port = implementation.build(session)
-    organiser, one, two, three = (new_uuid() for _ in range(4))
-    search_id = new_uuid()
-    await _sent(
-        session,
-        organiser=organiser,
-        invitees=(one, two, three),
-        sport=Sport.PADEL,
-        at=_ago(minutes=5),
-        search_id=search_id,
-        positions={one: 2, two: 5, three: 9},
-    )
-
-    drawn = {
-        row.counterpart_id: row.origin
-        for row in await port.open_challenges(organiser)
-    }
-    assert all(isinstance(origin, SentFromSearch) for origin in drawn.values())
-    assert {
-        person: (origin.search_id, origin.position)
-        for person, origin in drawn.items()
-    } == {
-        one: (search_id, 2),
-        two: (search_id, 5),
-        three: (search_id, 9),
-    }
-    theirs = {row.counterpart_id: row.origin for row in await port.open_challenges(one)}
-    assert isinstance(theirs[organiser], SentOutsideASearch)
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_every_open_row_names_the_challenge_it_is_about(
-    implementation, session
-):
-    """**The exemption is an input, and this is where it comes from.**
-
-    A fill names the challenge it completes and the open-challenge gate steps
-    aside for that one and for nothing else (``docs/adr/0150`` §3) — which needs
-    the reader to be able to take one challenge's rows out of this answer. A
-    counterpart, an origin and an instant cannot say *which*, so the row carries
-    the id; reconstructing it from ``opened_at`` would be a join on a timestamp.
-
-    Two open challenges, and each row names its own: a reader excusing one must
-    not excuse the other.
-    """
-
-    port = implementation.build(session)
-    organiser, one, other = (new_uuid() for _ in range(3))
-    padel = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(one,),
-        sport=Sport.PADEL,
-        at=_ago(minutes=5),
-    )
-    tennis = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(other,),
-        sport=Sport.TENNIS,
-        at=_ago(minutes=4),
-    )
-
-    named = {
-        row.counterpart_id: row.challenge_id
-        for row in await port.open_challenges(organiser)
-    }
-
-    assert named == {one: padel.id, other: tennis.id}
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_no_counterpart_appears_twice_and_the_read_is_not_sport_keyed(
-    implementation, session
-):
-    """One row per person, over every sport at once.
-
-    The exclusion is *anybody you already have an open game with*, and it carries
-    no sport field at all: asking somebody for padel while your tennis challenge
-    sits unanswered is pestering with a sport chip on it. So a searcher's two
-    open challenges in two sports come back as one list, and a person in it once.
-
-    An implementation answering one row per **challenge** rather than per person
-    passes every other demand here and fails this one.
-    """
-
-    port = implementation.build(session)
-    organiser, alone, one, two = (new_uuid() for _ in range(4))
-    await _sent(
-        session,
-        organiser=organiser,
-        invitees=(alone,),
-        sport=Sport.TENNIS,
-        at=_ago(minutes=9),
-    )
-    await _sent(
-        session,
-        organiser=organiser,
-        invitees=(one, two),
-        sport=Sport.PADEL,
-        at=_ago(minutes=4),
-    )
-
-    rows = await port.open_challenges(organiser)
-    assert _counterparts(rows) == {alone, one, two}
-    assert len(rows) == len(_counterparts(rows))
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_the_count_is_unanswered_invited_seats_and_nothing_else(
-    implementation, session
-):
-    """Seats waiting on **your** answer — not your sends, not what you accepted.
-
-    The ruleset's own falsifier is what decides this: *answer rate by
-    open-challenge bucket, and if answer rate does not fall as load rises the
-    signal is measuring nothing.* Only unanswered seats are the denominator of
-    that. An organiser with sends out is over-committed and is not slow to
-    answer, and sinking them would dock the exact behaviour the product exists to
-    produce.
-
-    Across every sport, because the read is not sport-keyed — and a seat whose
-    window has passed stops counting the moment it does, without a sweep.
-    """
-
-    port = implementation.build(session)
-    organiser, accepted, busy, waiting = (new_uuid() for _ in range(4))
-    somebody_else, elsewhere = new_uuid(), new_uuid()
-    court = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(accepted, busy, waiting),
-        sport=Sport.PADEL,
-        at=_ago(minutes=20),
-    )
-    await _answers(session, court, accepted, yes=True, at=_ago(minutes=15))
-    await _sent(
-        session,
-        organiser=somebody_else,
-        invitees=(busy,),
-        sport=Sport.TENNIS,
-        at=_ago(minutes=10),
-    )
-    await _sent(
-        session,
-        organiser=elsewhere,
-        invitees=(waiting,),
-        sport=Sport.TENNIS,
-        at=_long_enough_ago_to_have_lapsed(),
-    )
-
-    counts = await port.open_challenge_counts(
-        [organiser, accepted, busy, waiting, somebody_else]
-    )
-
-    assert dict(counts) == {
-        # Their own send waits on nobody, and their seat is accepted from birth.
-        organiser: 0,
-        somebody_else: 0,
-        # They answered; nothing is waiting on them any more.
-        accepted: 0,
-        # Two seats, two sports, both still theirs to answer.
-        busy: 2,
-        # One live seat, and one whose day ran out with nothing having swept it.
-        waiting: 1,
-    }
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_a_seat_on_a_challenge_its_organiser_removed_waits_on_nobody(
-    implementation, session
-):
-    """A removed challenge holds seats whose day is still running
-    (``docs/adr/0165`` §4), and an invitee is not slow to answer a question
-    nobody is asking any more.
-
-    The old contract said a seat awaiting at ``now`` sat on a challenge that had
-    not ended *by construction*; the pre-answer removal broke the construction,
-    so the read now asks the standing rather than inheriting the answer.
-    """
-
-    port = implementation.build(session)
-    organiser, asked, also_asked = (new_uuid() for _ in range(3))
-    removed = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(asked, also_asked),
-        sport=Sport.PADEL,
-        at=_ago(minutes=20),
-    )
-    await _removed(session, removed, at=_ago(minutes=10))
-    await _sent(
-        session,
-        organiser=new_uuid(),
-        invitees=(also_asked,),
-        sport=Sport.TENNIS,
-        at=_ago(minutes=5),
-    )
-
-    counts = await port.open_challenge_counts([asked, also_asked])
-
-    assert dict(counts) == {asked: 0, also_asked: 1}
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_the_open_challenge_count_keys_exactly_the_set_it_was_asked_about(
-    implementation, session
-):
-    """Everybody asked gets a count, and a zero here is **measured**.
-
-    This demand used to assert ``dict(counts) == {id: 0}`` for two strangers,
-    which was a claim about the null object rather than about the port: it was
-    stronger than the contract, and it would have failed a correct provider the
-    moment anybody had an inbox. What the contract actually says is that the
-    answer **keys exactly the asked set** — nobody volunteered, nobody dropped —
-    and that a zero means the seats were counted and none were theirs.
-
-    So the arrangement seeds one busy player beside two strangers, and the
-    demand asserts both halves at once: the shape over everybody, and a real
-    number for the one person there is a real number about. A Player Score's
-    zero would have been **invented**, which is why that port answers about
-    nobody at all and this one answers about everybody.
-    """
-
-    port = implementation.build(session)
-    stranger, also_a_stranger, busy = (new_uuid() for _ in range(3))
-    await _sent(
-        session,
-        organiser=new_uuid(),
-        invitees=(busy,),
-        sport=Sport.TENNIS,
-        at=_ago(minutes=3),
-    )
-    asked = (stranger, also_a_stranger, busy)
-
-    counts = await port.open_challenge_counts(asked)
-
-    assert set(counts) == set(asked)
-    assert counts[stranger] == 0
-    assert counts[also_a_stranger] == 0
-    assert counts[busy] >= 1
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_a_lapse_tallies_nowhere_even_once_it_has_been_recorded(
-    implementation, session
-):
-    """Silence is a fact about a window, never a fact about a judgement.
-
-    A lapse and a decline do the same thing to a line-up and are different facts.
-    Filing one as the other would leave the *answers challenges* strand and the
-    previous-decline signal reading the same erased history — the exact failure
-    the outcomes are kept apart to prevent — and it would price somebody's
-    forgotten notification as a refusal of the person who sent it.
-
-    Asserted **on both sides of the sweep**, which is the part that would
-    otherwise go untested: the seat already reads as lapsed before anything runs,
-    and once ``SeatLapsed`` is in the log it is still not an answer. The sweep
-    buys the record and never the ranking.
-    """
-
-    port = implementation.build(session)
-    organiser, silent = new_uuid(), new_uuid()
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(silent,),
-        sport=Sport.TENNIS,
-        at=_long_enough_ago_to_have_lapsed(),
-    )
-
-    assert await port.pairwise_counterparts(organiser) == ()
-    assert await port.pairwise_counterparts(silent) == ()
-
-    swept = await _sweep(session, challenge, now=instant(datetime.now(timezone.utc)))
-    assert swept == 1
-
-    assert await port.pairwise_counterparts(organiser) == ()
-    assert await port.pairwise_counterparts(silent) == ()
-    assert await port.open_challenges(organiser) == ()
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_a_challenge_born_of_a_mutual_yes_tallies_nothing(
-    implementation, session
-):
-    """Nobody answered anything, so there is nothing to count.
-
-    Both seats are accepted from birth, because each of them had already said
-    *Let's play* to the other and asking either to answer again would make *you
-    now have an open game together* not yet true. What that pair is worth is
-    already priced by the interest lift, and counting it again as a previous
-    accept is the double-count the shape is careful to avoid.
-
-    It is still an **open challenge**, which is the half that must not be lost
-    with the other: the two of them have a game together and the exclusion has to
-    see it.
-    """
+    """Nothing sends a challenge since #578, so nobody is arranging anything
+    with anybody — and **every player asked about gets a count**, a zero that
+    was measured rather than invented."""
 
     port = implementation.build(session)
     one, other = new_uuid(), new_uuid()
-    await _mutual(session, one=one, other=other, at=_ago(minutes=5))
+    game = _a_game(line_up=_singles(one, other), planned_at=_ago(days=3))
+    game.state_result(by=one, score=_a_score(), occurred_at=_ago(days=2))
+    await _saved(session, game)
 
-    assert await port.pairwise_counterparts(one) == ()
-    assert await port.pairwise_counterparts(other) == ()
-    assert _counterparts(await port.open_challenges(one)) == {other}
-    assert _counterparts(await port.open_challenges(other)) == {one}
-
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_an_accept_is_tallied_and_a_completed_line_up_reopens_the_pair(
-    implementation, session
-):
-    """**The accept is counted, and the pair it finished arranging is released.**
-
-    Two demands meet on one arrangement. A seat that accepts is tallied as an
-    `ACCEPTED` outcome on the pair, which is what prices `PREVIOUS_ACCEPT`. And
-    a singles court whose only invitee accepts is `ON` — every seat accepted, the
-    arranging **finished** — so the pair is no longer *open* and each is back in
-    the other's pool.
-
-    This is [#343](https://github.com/Raketa02/Raketa/issues/343) and
-    `docs/adr/0142` §1, contracted at the port both providers sign. It reversed
-    the reading this test used to carry: *open* was `AWAITING_ANSWERS | ON |
-    LINE_UP_INCOMPLETE`, so an accepted pair stayed gated for as long as the
-    database existed and `PREVIOUS_ACCEPT` was unreachable on every surface. It
-    is reachable now — the tally and the ungated row can be held by one pair at
-    the same instant, which is precisely what these two assertions say.
-
-    **`app/seeds/screens.py` still names the code in `CANNOT_BE_DRAWN`, and the
-    reason there is now about that cohort rather than about this rule.** Every
-    accepted seat the seed writes sits on a court still being arranged, so no
-    seeded pair reaches this state — a fact about eleven fixtures, which is
-    checked where it is stated and not here.
-    """
-
-    port = implementation.build(session)
-    organiser, invitee = new_uuid(), new_uuid()
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(invitee,),
-        sport=Sport.TENNIS,
-        at=_ago(minutes=10),
-    )
-    await _answers(session, challenge, invitee, yes=True, at=_ago(minutes=5))
-
-    tallied = _by_player(await port.pairwise_counterparts(organiser))
-    assert PairwiseOutcome.ACCEPTED in tallied[invitee]
-    assert tallied[invitee][PairwiseOutcome.ACCEPTED].count == 1
-
-    # And the same arrangement, read the other way: they finished arranging a
-    # game, so nothing stands between them and the tally is priceable.
-    assert await port.open_challenges(organiser) == ()
-    assert await port.open_challenges(invitee) == ()
+    assert await port.open_challenges(one) == ()
+    assert await port.open_challenges(other) == ()
+    assert await port.open_challenge_counts([one, other]) == {one: 0, other: 0}
 
 
 @pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_an_accept_beside_an_unanswered_seat_keeps_the_pair_open(
+async def test_a_played_game_is_tallied_for_both_and_newest_first(
     implementation, session
 ):
-    """The line the release runs along, from the side that did **not** move.
-
-    An acceptance on a padel four with a seat still deciding is
-    `AWAITING_ANSWERS`, not `ON`: somebody's answer is owed, so those people are
-    still arranging a game and every occupied seat is still a counterpart. This
-    is exactly the court `app/seeds/relationships.py` writes — one co-invitee in,
-    one silent beside them — and the reason `PREVIOUS_ACCEPT` is drawn on no card
-    in that cohort even though the platform can now draw it.
-    """
+    """``PLAYED`` is ``games``' fact, read for each side of the net, and the
+    rows come newest first — the order is the bound's meaning."""
 
     port = implementation.build(session)
-    organiser, accepted, silent = (new_uuid() for _ in range(3))
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(accepted, silent),
-        sport=Sport.PADEL,
-        at=_ago(minutes=10),
-    )
-    await _answers(session, challenge, accepted, yes=True, at=_ago(minutes=5))
+    me, older, newer = new_uuid(), new_uuid(), new_uuid()
+    for them, days in ((older, 9), (newer, 3)):
+        game = _a_game(line_up=_singles(me, them), planned_at=_ago(days=days + 1))
+        game.state_result(by=me, score=_a_score(), occurred_at=_ago(days=days))
+        await _saved(session, game)
 
-    assert _counterparts(await port.open_challenges(organiser)) == {accepted, silent}
-    assert _counterparts(await port.open_challenges(accepted)) == {organiser, silent}
+    rows = await port.pairwise_counterparts(me)
 
-
-@pytest.mark.parametrize("implementation", registered(MatchHistoryQuery))
-async def test_the_pairwise_bound_and_its_order_against_a_history_that_exceeds_it(
-    implementation, session
-):
-    """500 counterparts, newest first — against an arrangement that passes neither
-    trivially.
-
-    The bound is what makes a counterpart cut off by it and one fully decayed by
-    time **indistinguishable by construction**, and that only holds if the answer
-    is ordered before it is cut. An implementation that truncated an unordered
-    read would drop an arbitrary five hundred and pass every shape demand above.
-
-    So the arrangement is two people over the bound, each with their own answer at
-    their own moment, and the demand asserts the two oldest are the two missing.
-    """
-
-    port = implementation.build(session)
-    searcher = new_uuid()
-    over_the_bound = PAIRWISE_COUNTERPART_BOUND + 2
-    people = [new_uuid() for _ in range(over_the_bound)]
-    for age, person in enumerate(people):
-        challenge = await _sent(
-            session,
-            organiser=searcher,
-            invitees=(person,),
-            sport=Sport.TENNIS,
-            at=_ago(minutes=age + 2),
-        )
-        await _answers(
-            session, challenge, person, yes=False, at=_ago(minutes=age + 1)
-        )
-
-    counterparts = await port.pairwise_counterparts(searcher)
-
-    assert len(counterparts) == PAIRWISE_COUNTERPART_BOUND
-    assert len({one.player_id for one in counterparts}) == len(counterparts)
-    moments = [one.last_at for one in counterparts]
-    assert moments == sorted(moments, reverse=True)
-    assert [one.player_id for one in counterparts] == people[
-        :PAIRWISE_COUNTERPART_BOUND
-    ]
-
-
-def test_the_send_is_where_the_pair_rule_is_verified_for_real():
-    """The gate stays **soft**, and this is the backstop that lets it.
-
-    ``OPEN_CHALLENGE`` fails soft and is deliberately not re-evaluated in the
-    read-back: this is embarrassment rather than safety — *the matcher proposes,
-    the backend disposes* — and withholding a row on a fact the search itself was
-    willing to be wrong about would reopen what ``docs/adr/0109`` closed.
-
-    That argument only holds because something else checks for real. The send
-    re-reads the pair rule inside its own transaction, over the whole court, at
-    the moment it commits — so a search from an hour ago cannot open a second
-    challenge against somebody. This demand records the dependency structurally,
-    because the failure it guards against is somebody removing the backstop and
-    every test about the soft gate still passing.
-    """
-
-    assert FAIL_POSTURE[MatchHistoryQuery] is FailPosture.SOFT
-    assert "open_challenges" in signature(SendChallenge.__init__).parameters
+    assert [row.player_id for row in rows] == [newer, older]
+    tallied = _by_player(rows)
+    assert tallied[newer][PairwiseOutcome.PLAYED].count == 1
+    assert PairwiseOutcome.ACCEPTED not in tallied[newer]
+    assert _by_player(await port.pairwise_counterparts(newer)).keys() == {me}
 
 
 # ---------------------------------------------------------------------------
@@ -1430,220 +666,19 @@ async def test_an_unrated_seat_beside_a_rated_one_is_priced_as_the_update_prices
 
 
 # ---------------------------------------------------------------------------
-# HalfBuiltCourtQuery — the court a fill names, and the three ways it answers
-# nothing
+# HalfBuiltCourtQuery — the court a fill names, and since #578 there is none
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
-async def test_a_half_built_court_answers_with_what_a_fill_may_not_be_told(
-    implementation, session
-):
-    """The sport, the kind of evening and who is already sitting down.
+async def test_a_fill_names_a_court_that_does_not_exist(implementation, session):
+    """Nothing builds a court any more (#578), so every id a fill names answers
+    the port's own word for *no such court*."""
 
-    All three are the challenge's, which is the whole of why the request refuses
-    them: a caller supplying one offers a second place for a fact to be true. The
-    member asking is **not** in the seated set, for the reason a search never
-    returns its own searcher.
-    """
-
-    organiser, acceptor = new_uuid(), new_uuid()
-    sent_at = _ago(hours=2)
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(acceptor,),
-        sport=Sport.PADEL,
-        at=sent_at,
-        mode=SearchMode.COMPETITIVE,
-    )
-    await _answers(
-        session, challenge, acceptor, yes=True, at=_just_after(sent_at, minutes=5)
-    )
-
-    court = await implementation.build(session).half_built_court(
-        challenge_id=challenge.id, member_id=organiser
-    )
-
-    assert court is not None
-    assert court.challenge_id == challenge.id
-    assert court.sport is Sport.PADEL
-    assert court.mode is SearchMode.COMPETITIVE
-    assert court.seated_ids == (acceptor,)
-    assert court.answered_and_gone == frozenset()
-
-
-@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
-async def test_a_mutual_born_court_carries_its_pair_and_no_mode(
-    implementation, session
-):
-    """The commonest half-built court, and the case that decided *any live
-    member may fill*.
-
-    Both seats accepted from birth, both on side A in a doubles sport, no mode
-    and no window — and its "organiser" is only whoever's yes arrived second, so
-    the read answers the **other** one exactly as readily.
-    """
-
-    one, other = new_uuid(), new_uuid()
-    challenge = await _mutual(session, one=one, other=other, at=_ago(hours=1))
-
-    theirs = await implementation.build(session).half_built_court(
-        challenge_id=challenge.id, member_id=other
-    )
-
-    assert theirs is not None
-    assert theirs.mode is None
-    assert theirs.seated_ids == (one,)
-
-
-@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
-async def test_everybody_who_answered_and_left_is_named_apart_from_the_seated(
-    implementation, session
-):
-    """A decline reopens a seat and releases the pair, so the person who turned
-    the court down is back in the pool that would fill it.
-
-    They are named here so the fill can leave them out — otherwise the aggregate
-    refuses the send **after** the player chose them.
-    """
-
-    organiser, acceptor, decliner = new_uuid(), new_uuid(), new_uuid()
-    sent_at = _ago(hours=3)
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(acceptor, decliner),
-        sport=Sport.PADEL,
-        at=sent_at,
-    )
-    await _answers(
-        session, challenge, acceptor, yes=True, at=_just_after(sent_at, minutes=1)
-    )
-    await _answers(
-        session, challenge, decliner, yes=False, at=_just_after(sent_at, minutes=2)
-    )
-
-    court = await implementation.build(session).half_built_court(
-        challenge_id=challenge.id, member_id=organiser
-    )
-
-    assert court is not None
-    assert court.seated_ids == (acceptor,)
-    assert court.answered_and_gone == frozenset({decliner})
-
-
-@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
-async def test_a_lapsed_invitee_is_gone_with_no_sweep_having_run(
-    implementation, session
-):
-    """**The demand that keeps the lapse loop out of correctness.**
-
-    ``Challenge.answered`` grows on the *events*, so a seat whose day ran out
-    joins it only once the sweep has appended a ``SeatLapsed`` — and the sweep
-    exists for the record, not for correctness. A read off that set alone would
-    let a fill offer back somebody the aggregate refuses the moment the loop
-    ticks, so the identical press would succeed at 48 hours and be refused at 49.
-
-    Nothing is swept here. The invitee's day has simply run out.
-    """
-
-    organiser, acceptor, silent = new_uuid(), new_uuid(), new_uuid()
-    sent_at = _long_enough_ago_to_have_lapsed()
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(acceptor, silent),
-        sport=Sport.PADEL,
-        at=sent_at,
-    )
-    await _answers(
-        session, challenge, acceptor, yes=True, at=_just_after(sent_at, minutes=1)
-    )
-
-    court = await implementation.build(session).half_built_court(
-        challenge_id=challenge.id, member_id=organiser
-    )
-
-    assert court is not None
-    assert court.seated_ids == (acceptor,)
-    assert court.answered_and_gone == frozenset({silent}), (
-        "a seat past its window has left the court and must not be offered back"
-    )
-
-
-@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
-async def test_a_court_answers_nothing_to_a_stranger_an_absentee_or_an_ending(
-    implementation, session
-):
-    """**One refusal for three cases, and it is the port's own rule.**
-
-    No such challenge, a member holding no live seat, and a court nobody is
-    arranging any more. Telling them apart would answer *is this challenge id
-    real* about a stranger's evening, one probe at a time.
-    """
-
-    organiser, acceptor, decliner = new_uuid(), new_uuid(), new_uuid()
-    sent_at = _ago(hours=3)
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(acceptor, decliner),
-        sport=Sport.PADEL,
-        at=sent_at,
-    )
-    await _answers(
-        session, challenge, acceptor, yes=True, at=_just_after(sent_at, minutes=1)
-    )
-    await _answers(
-        session, challenge, decliner, yes=False, at=_just_after(sent_at, minutes=2)
-    )
-    reading = implementation.build(session)
+    port = implementation.build(session)
 
     assert (
-        await reading.half_built_court(
-            challenge_id=new_uuid(), member_id=organiser
-        )
-        is None
-    ), "no such challenge"
-    assert (
-        await reading.half_built_court(
-            challenge_id=challenge.id, member_id=decliner
-        )
-        is None
-    ), "they hold a seat and have left it"
-    assert (
-        await reading.half_built_court(
-            challenge_id=challenge.id, member_id=new_uuid()
-        )
-        is None
-    ), "never on this court at all"
-
-
-@pytest.mark.parametrize("implementation", registered(HalfBuiltCourtQuery))
-async def test_a_court_every_seat_accepted_is_nobody_to_arrange_with_any_more(
-    implementation, session
-):
-    """A completed line-up has become a game: the arranging is **finished**, and
-    there is no open seat for a fill to grow into."""
-
-    organiser, invitee = new_uuid(), new_uuid()
-    sent_at = _ago(hours=1)
-    challenge = await _sent(
-        session,
-        organiser=organiser,
-        invitees=(invitee,),
-        sport=Sport.TENNIS,
-        at=sent_at,
-    )
-    await _answers(
-        session, challenge, invitee, yes=True, at=_just_after(sent_at, minutes=1)
-    )
-
-    assert (
-        await implementation.build(session).half_built_court(
-            challenge_id=challenge.id, member_id=organiser
-        )
+        await port.half_built_court(challenge_id=new_uuid(), member_id=new_uuid())
         is None
     )
 

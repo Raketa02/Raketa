@@ -21,7 +21,6 @@ from app.modules.conversations.domain.entries import SystemLine, SystemLineCode
 from app.modules.conversations.domain.live import Nudge
 from app.modules.games.domain.events import (
     GameCalledOff,
-    GameDismissed,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -331,7 +330,6 @@ async def test_what_the_room_is_not_told_changes_nothing_even_if_handed_it(
     for event in (
         SeatVacated(game_id=GAME, player_id=BO, occurred_at=_at(1)),
         LineUpReseated(game_id=GAME, seatings=(), occurred_at=_at(2)),
-        GameDismissed(game_id=GAME, dismissed_by=BO, occurred_at=_at(3)),
         ResultProposed(
             game_id=GAME, player_id=ANA, side="A", score="6-4", occurred_at=_at(4)
         ),

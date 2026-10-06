@@ -4,28 +4,26 @@
 column would be wrong for the whole gap between a deadline passing and anything
 noticing, and it would be the copy that gets believed — which is why there is no
 status field on the aggregate, no ``ResultConfirmed`` event, and this function is
-the only place a standing exists. It is ``challenges``' own rule, *nothing
-announces a conclusion the seats already imply*, applied to a result.
+the only place a standing exists: *nothing announces a conclusion the record
+already implies*, applied to a result.
 
 Nine values. Eight of them are what the record and the clock can answer for —
 five ends and three waits, the fourth end a booked game's hour coming with a
 seat open (#544), the fifth a report of somebody not turning up that stood its
 day, and the third wait that day (#547) — and **the ninth is the one exemption
 this module holds, and it is written down so it stays one** (``docs/adr/0163``).
-A game called off is a decision a person took, and there is nothing on the
-record to fold it out of, so it is the one standing an event announces — on
-the rule ``challenges`` wrote for ``WITHDRAWN``: *an event may announce a
+A game called off is a decision — a booking's cut-off, or its club taking the
+court back — and there is nothing on the record to fold it out of, so it is the
+one standing an event announces — on the rule *an event may announce a
 conclusion only when no arrangement of the record could reach it*
-(``docs/adr/0142`` §3). ``GameCalledOff`` is not a
-second place for the fact to be true; it is the only place, and the fold reads it
-first.
+(``docs/adr/0142`` §3). ``GameCalledOff`` is not a second place for the fact to
+be true; it is the only place, and the fold reads it first.
 
-**The class is ``GameStanding`` and the domain term is *standing*.** ``challenges``
-already publishes a ``Standing`` component on ``openapi.player.json``, and a
-second class of that name does not shadow it — it renames it, breaking types a
-shipped mobile app generated months ago. See ``lineup.py`` for the rule: the
-contract is one namespace, and the cost of a shared word is paid by whoever
-arrives second.
+**The class is ``GameStanding`` and the domain term is *standing*.** It was
+named apart from the ``Standing`` component ``challenges`` published on
+``openapi.player.json`` until #578, because a second class of that name would
+have renamed the first in a contract that is one namespace; the name stays,
+since renaming a component is a change to types a shipped app generated.
 """
 
 from __future__ import annotations
@@ -249,9 +247,9 @@ def standing_of(
     The order of the questions is the design, and each rung is a decision:
 
     **Was it called off?** The one question here that is not a reading of the
-    clock, and it is asked first for the reason ``challenges`` asks about a
-    withdrawal first (``docs/adr/0163``): every other answer is still what it
-    was — the plan is on the record and its window may not have closed — so a
+    clock, and it is asked first (``docs/adr/0163``): every other answer is
+    still what it was — the game is on the record and its window may not have
+    closed — so a
     fold that read the clock first would answer with the standing somebody has
     just ended, and would turn a called-off game into a ghost the day its window
     closed. ``called_off_at`` is **stated by every caller and never defaulted**,

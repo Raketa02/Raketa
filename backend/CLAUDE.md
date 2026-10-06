@@ -25,8 +25,8 @@ make up / down      # dev stack: Postgres, API, MinIO, photo-review, Redis, Mail
                     # (every email lands in http://localhost:8025)
 make migrate        # alembic upgrade head inside the API container
 make seed           # deterministic dev accounts, the cohort and their history, through the
-                    # use cases; needs the stack up (make seed-host on the host). Then
-                    # http://localhost:8000/dev — the dev console, for acting as another player
+                    # use cases; needs the stack up (make seed-host on the host). The dev
+                    # surface keeps its roster (/dev/roster) for the games test console (#590)
 ```
 
 One test: `poetry run pytest tests/unit/test_user_domain.py::test_name`.
@@ -127,15 +127,15 @@ changing code that calls into another context, read its rule.**
 | Rule | Covers |
 | --- | --- |
 | `domain-events.md`, `migrations.md` | event registration and the event-free tables; Alembic |
-| `seeds.md` | named accounts, the cohort, the played history, pairs, the loop's states |
+| `seeds.md` | named accounts, the cohort, the played history as booked games, the screens it reads |
 | `jobs.md` | every periodic job and what correctness depends on |
 | `surfaces.md` | route surfaces, the dev console, the four OpenAPI documents |
 | `kernel-and-engines.md` | the purity gates and the kernel's surface |
 | `demands.md` | the demand registers and which one a new port belongs in |
 | `player-profile-and-photos.md` | photo storage, the on-court check, profile reads and writes |
 | `matchmaking.md` | candidate index, Redis ledgers, interest, the deck and passes, searches |
-| `challenges-and-games.md` | the fill, departures, called-off courts, results, the pairing |
-| `conversations.md`, `plans.md` | rooms, their end and the live channel; plans |
+| `games.md` | the booked game: opening, a seat left and taken, call-offs, results, the pairing |
+| `conversations.md` | rooms, their end and the live channel |
 | `player-score.md`, `sportsmanship.md`, `player-record.md` | the player record |
 | `clubs.md`, `groups.md` | clubs, token audiences, club courts; groups and official groups |
 | `payments.md`, `proposals.md` | the payments port and webhook; club money and payouts, once a day after the game; proposals and the group deck |

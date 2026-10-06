@@ -51,10 +51,9 @@ def test_every_surface_that_names_another_player_carries_the_name() -> None:
 
     schemas = _spec()["components"]["schemas"]
 
+    # A challenge's seats and court people were three more, and went with the
+    # challenges (#578).
     for owner in (
-        "SeatSchema",
-        "DetailSeatSchema",
-        "CourtPersonSchema",
         "ConversationMemberSchema",
         "ConversationPersonSchema",
         "SeatingSchema",

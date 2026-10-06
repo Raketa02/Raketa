@@ -318,8 +318,6 @@ serving HTTP.
 | `GRID_STALENESS_INTERVAL_SECONDS` | How often it runs. Not how old a grid must be — that is domain. |
 | `INTEREST_EXPIRY_ENABLED` | Enables the hourly *Let's play* expiry sweep. |
 | `INTEREST_EXPIRY_INTERVAL_SECONDS` | How often the sweep runs. **Not `INTEREST_TTL`**, which is a ruleset row. |
-| `CHALLENGE_LAPSE_ENABLED` | Enables the hourly challenge lapse loop, which records a passed answer window as a lapse. |
-| `CHALLENGE_LAPSE_INTERVAL_SECONDS` | How often it runs. **Not `ANSWER_WINDOW`**, which is the promise the invitation makes and is domain. |
 | `RATING_CATCH_UP_ENABLED` | Enables the hourly rating catch-up, which moves a Level on every confirmed counted result. **The only job whose absence a player would notice** — nothing announces a confirmation, so this is the whole path a result has to a rating. |
 | `RATING_CATCH_UP_INTERVAL_SECONDS` | How often it runs. **Not the update rule**, which is `engines/racketskill/results.py` and is domain — an environment that could pick a K-factor decides how a marketplace rates people. |
 | `CONVERSATION_SWEEP_ENABLED` | Enables the hourly conversation sweep, which destroys every room whose episode is over. **Destroyed, not delisted** — turning it off changes no answer, because the end is derived and every route already refuses past it; what stops is the rows going away. |
@@ -491,73 +489,16 @@ Regenerate the population with `make gen-cohort` and commit the result. It recor
 **inputs only** — no level, no uncertainty, no band, because those are the engine's answers
 and a committed copy of an answer is a second number nothing keeps honest.
 
-Behind the cohort is a third layer, and it exists because **a distribution cannot assert a
-pair**. Five of the ten Liveness codes a card can print are facts about two people — *they
-said yes to you*, *they turned your court down*, *their inbox is full* — and no population,
-however well shaped, can exhibit one: a rate over sixty members produces edges nobody
-named, and it cannot assert that *exactly one* instant-match pair exists. So eleven
-accounts are named for a **relationship to `the-populated-player`**, from her side, and
-`app/seeds/pairs.py` writes each edge through the use case that owns it.
+Behind the cohort are eleven accounts named for a **relationship to
+`the-populated-player`**, from her side — `said-yes-to-you`, `they-challenged-you`,
+`you-passed-them` and eight more (`app/seeds/relationships.py`). The relationships themselves
+are gone: a layer wrote each edge through a real search, deal or send for the matcher's
+screens to read back, five of the edges were challenges, and the layer went with the
+challenges (#578) — as did the plans layer and the loop's own states. The accounts stay,
+because the pool's played history seats them on her past courts; each description says what
+the account is now.
 
-| Address | Relationship, and what it makes true |
-| --- | --- |
-| `said-yes-to-you@raketa.example` | A live inbound *Let's play* — her pool card carries `INTEREST_RECEIVED`, the only lift that admits below `QUALITY_FLOOR` |
-| `your-yes-makes-it-mutual@raketa.example` | A second live yes, on her **deck** — say yes back and a game opens inline. The one instant match this database can produce |
-| `you-said-yes-to-them@raketa.example` | Her own outgoing yes — the outstanding-per-sport count, and a repeat tap that changes nothing |
-| `you-challenged-them@raketa.example` | An open **tennis** singles challenge, so they are missing from her **padel** pool — one open challenge per pair, across sports |
-| `they-challenged-you@raketa.example` | Organiser of a padel doubles court she holds a seat on, with its own day running |
-| `in-your-line-up-and-accepted@raketa.example` | A co-invitee on that court who said yes — a filled seat, and gone from every one of her surfaces |
-| `in-your-line-up-still-deciding@raketa.example` | The other co-invitee, who has answered nothing — an unanswered seat beside the filled one |
-| `they-turned-down-your-court@raketa.example` | Declined a seat on a court she organised; it ended with the seat, so they are back in her pool carrying the refusal |
-| `you-blocked-them@raketa.example` | Blocked by her — absent from all four surfaces, silently |
-| `they-blocked-you@raketa.example` | Blocked **her** — the same absence and a different fact, and it is checkable only by signing in as them |
-| `you-passed-them@raketa.example` | Passed on — gone from her deck and a full candidate in her pool |
-
-Three rules shape that layer, and each is a way a relationship fixture goes wrong:
-
-- **Every edge costs a real search or deal run as the sender**, because `Interest` and
-  `Pass` have no non-search constructor and a send cites the search its court was built on.
-  That cost is turned into the check: the origin must resolve, which proves the protagonist
-  was genuinely findable through gender, level and radius before any lift is claimed.
-- **An absence claim asserts the gate histogram, not the absence.** An account gated for an
-  accidental reason — no rating, out of range, the wrong gender preference — is absent too,
-  and a naive claim passes; the histogram is counted first-in-declaration order, so
-  `excluded_by_gate[OPEN_CHALLENGE] >= 4` names the reason exactly.
-- **One code is not reached by these fixtures.** A pair is `OPEN_CHALLENGE`-gated while
-  they are still **arranging**, and this cohort's accepted seat is exactly that — a
-  co-invitee's seat on a doubles court with an unanswered seat beside it — so
-  `PREVIOUS_ACCEPT` is drawn on no card here. It is **not** unreachable on the platform:
-  [ADR-0142](../docs/adr/0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
-  §1 releases a pair the moment their line-up completes, so a pair who finished arranging a
-  game are shown each other again. The code is listed as absent **by name**, with that
-  reason, and the release is contracted by a demand in `tests/demands/` — and the run goes
-  red on the day the code *is* drawn here, which is how it moves to the promised side.
-
-Two costs are printed on the report rather than hidden. The pass's suppression is a Redis
-TTL that **fails soft** while its durable row never expires, so the run is idempotent for
-the row and unconditional for the cache — and when a deck deals somebody it should not, the
-complaint names the cache rather than accusing the fixture. And the deal that earned the
-pass's origin key is remembered for a day (ADR-0131), so `make seed` leaves the
-protagonist's deck that many cards short.
-
-A fourth layer arranges four more courts and **never plays them**
-([ADR-0144](../docs/adr/0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)). It
-exists because every game the played history writes carries a moment somebody said they
-played, so every one of them is past its entry window as far as a plan is concerned — *the
-game leaving `AWAITING_ENTRY` is the only thing that freezes the slots*, and a database made
-only of played games can draw a plan card in exactly one state. `app/seeds/plans.py` sends
-four tennis courts, answers every seat, and then writes their plans to **nought, one, two
-and three slots** through the three routes a player presses. *Nought* is the row that reads
-oddly and is the point: a plan is born by being used, so no slots means the court carries
-**nothing in the store** and `GET /plans` still lists it — a row with three empty slots and
-its anchor, because a row exists for every court the reader holds an accepted seat on
-([ADR-0164](../docs/adr/0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)
-§4) — the state is asserted as hard as the other three, because a layer that quietly
-reached three of four reads as having reached four. It is the one layer that writes in the **present**, and its cost is on the report: four
-arranged games count toward nothing, because a game inside its entry window is neither
-played nor a ghost.
-
-Behind all of it is a fifth layer, and it is the only one that **writes nothing until the
+Behind all of it is a last layer, and it is the only one that **writes nothing until the
 outbox has run**. A conversation is *told* — a room is opened by a **booked game**, from the
 events `games` publishes, by a context that does not know it exists
 ([ADR-0146](../docs/adr/0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) §5,
@@ -570,10 +511,10 @@ to reach **a room long enough to page backward through**. It then sweeps, and as
 a booked game still ahead has its room and that no room outlived its game.
 
 Scope is what is **modeled**: players, onboarding assessments, Skill ratings, Player
-profiles, Challenges, Blocks and Plans. Clubs, Courts, Bookings and Matches have no aggregates,
-so they have no scenarios; each adds its own when it exists. A walk over `app/seeds/` asserts
-the package **writes** those contexts and reaches every other one — matchmaking, today —
-only through that context's own use cases. Conversations is on neither side of that walk,
+profiles, clubs and their courts, groups, administrators, payment methods, the games still
+filling and the games they booked. A walk over `app/seeds/` asserts the package **writes**
+those contexts and reaches every other one — matchmaking and sportsmanship, today — only
+through that context's own use cases. Conversations is on neither side of that walk,
 and that is the point: the seed never writes one, and the rooms in the database are there
 because the outbox delivered what the others wrote.
 
@@ -631,46 +572,20 @@ nobody can sign in as is not an account.
 
 ## The Dev Console
 
-**Nothing in Play can be exercised with one phone.** `Line-up incomplete`, the decline that
-reopens a seat, the instant match born of a mutual yes — every one of them needs a real
-second player answering. The dev console is that second player.
+**Its page is gone, and the games test console replaces it**
+([ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md),
+#590). The page — a no-build `console.html` at `/dev` that signed in as a seeded player and
+pressed searches, yeses and challenges as them — went with the challenges (#578). What stays
+is the surface the next one is built on:
 
-```bash
-make up && make seed          # the stack, and the accounts to act as
-open http://localhost:8000/dev
-```
-
-Three views, in order — **roster**, **search as**, **answer as**. Pick a row, and the
-console signs in as that account through the ordinary `POST /api/v1/auth/login` with the
-one public seed password. From there it runs real searches, says *Let's play*, and accepts
-or declines seats, all through the player API, as that player.
-
-What it is, stated because each half is load-bearing:
-
-> **Replaced by the games test console of
-> [ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)**
-> (#590, after #578 removes this one). It acts as seed accounts without signing in, refuses a
-> non-seed account and is served in `local` only. What follows describes the console that exists
-> until then.
-
-- **It is not a third app.** It is `app/api/dev/`, one no-build `console.html` behind a
-  `FileResponse` and one route. No npm, no bundler, no codegen, no lint lane. The day it
-  wants a component tree it has become a product, and the placement is re-argued rather
-  than grown into.
-- **There is no impersonation endpoint and no `Act-As` header.** The obvious shape —
-  `POST /dev/sessions {handle} → tokens` — was refused by name. The browser presents a
-  credential to the ordinary login route, which means the roster hands it one: the response
-  carries the seed password **once, at the top level**, because one password for every
-  seeded account is what `app/seeds/catalog.py` decided. The consequence is the good one —
-  every write the console presses is a *player-surface* write.
-- **It is gated structurally and by data, and only one of those can fail.** The structural
-  gate is `app/api/dev/gate.py`'s `CONSOLE_SERVED`, a second table written out per
-  environment — importing `app/api/dev/routes.py` under `APP_ENV=production` raises
-  `ConsoleRefused`, and `create_app` mounts nothing. The data gate is a *consequence*: the
-  roster lists accounts addressed on the reserved `.example` TLD, and production has none.
-- **Nothing reacts on its own.** There is not one timer in the page. UI spec §G4 is explicit
-  that *"acceptance is not instant and may never arrive"*, and the console exists so that a
-  human decides when the other side answers.
+- **The roster**, `GET /dev/roster`: every account on the reserved `.example` TLD, and the
+  one public seed password **once, at the top level**, because one password for every seeded
+  account is what `app/seeds/catalog.py` decided.
+- **The gate, structural and by data, and only one of those can fail.** The structural gate
+  is `app/api/dev/gate.py`'s `CONSOLE_SERVED`, a second table written out per environment —
+  importing `app/api/dev/routes.py` under `APP_ENV=production` raises `ConsoleRefused`, and
+  `create_app` mounts nothing. The data gate is a *consequence*: the roster lists accounts
+  addressed on the reserved TLD, and production has none.
 - **Its contract is `openapi.dev.json`, and it holds exactly one path** — the roster.
   Nothing generates types from it, so it is gated by a **freshness** check
   (`make contract-freshness`) rather than by the client drift check, which has no purchase
@@ -801,7 +716,7 @@ process and no second deployable.
   and dispatches to subscribed handlers. Its worker id is the lease its batches
   claim rows under.
 - **Scheduled jobs** (`PeriodicJob`) run because an interval elapsed.
-  `app/bootstrap/jobs.py` is the register, and twelve jobs are in it today: the
+  `app/bootstrap/jobs.py` is the register, and nineteen jobs are in it today: the
   **uncommitted-photo sweep**, which deletes every photo the object store has
   held for more than 24 hours that no committed profile currently names; the
   **photo re-review backfill**, which asks the reviewer about the photos nobody
@@ -812,12 +727,14 @@ process and no second deployable.
   raise a standing question instead; the **interest expiry loop**, which removes
   every *Let's play* whose twenty-one days have passed; the **scale-pressure
   probe**, whose work is measuring how late the event loop woke it; the
-  **challenge lapse loop**, which writes down every answer window that passed with
-  nothing in it; the **rating catch-up**, which is the whole path a confirmed
-  result has to a Level; and the **conversation sweep**, which destroys every room
-  whose episode is over. Two of them take no database session: the roll, whose
-  whole input and output are in Redis, and the backfill, whose whole input and
-  output are the object store.
+  **rating catch-up**, which is the whole path a confirmed result has to a Level;
+  the **conversation sweep**, which destroys every room whose episode is over; the
+  **mail worker**; and the new loop's jobs — the proposer's sweep and its tick, the
+  book-by sweep, the On request timeout, the cut-off, the club payouts and the
+  new-bookings summary. The challenge lapse loop and the hour loop went with the
+  challenges (#578). Two of them take no database session: the roll, whose whole
+  input and output are in Redis, and the backfill, whose whole input and output are
+  the object store.
 
   **Two of them delete things, and they delete different kinds of thing.** The
   interest expiry loop removes a row; the conversation sweep removes an
@@ -839,24 +756,12 @@ process and no second deployable.
   `app/modules/conversations/domain/lifetime.py`; only
   `CONVERSATION_SWEEP_INTERVAL_SECONDS` is configuration.
 
-  The lapse loop is one of two jobs here that **append a domain event** — the
-  other is the rating catch-up — and it is
-  the clearest case of a loop bought for the record rather than for correctness. A
-  seat past its answer window already reads as lapsed, its pair already releases
-  and its challenge already stands as `LAPSED`, because a standing is folded from
-  the seats and the clock and stored nowhere — a reader asking *is this challenge
-  still open* between a deadline and a sweep gets the same answer either way. What
-  the loop buys is a `SeatLapsed` in the log, so that **answers challenges** has a
-  denominator. What it appends is never a `SeatDeclined`: **a lapse is not a
-  decline**, and a Strand that filed silence as judgement would be measuring the
-  wrong people. `ANSWER_WINDOW` is domain, in
-  `app/modules/challenges/domain/answer_window.py`; only
-  `CHALLENGE_LAPSE_INTERVAL_SECONDS` is configuration. It is also the one job
-  here that takes **a transaction per item rather than per run**: every process
-  walks the same clock-derived list in the same order, so a run that ended on its
-  first version conflict would be a loop that made no progress anywhere. A
-  conflict is counted and stepped over, exactly as the backfill does with a
-  refusal about one image.
+  The jobs that **append a domain event** — the rating catch-up and the new loop's
+  sweeps — take **a transaction per item rather than per run**: every process walks
+  the same clock-derived list in the same order, so a run that ended on its first
+  version conflict would be a loop that made no progress anywhere. A conflict is
+  counted and stepped over, exactly as the backfill does with a refusal about one
+  image.
 
 **A job may only be registered if it is idempotent and safe to run beside
 itself.** With N API processes a job runs N times per interval, at unrelated

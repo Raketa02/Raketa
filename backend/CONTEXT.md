@@ -269,43 +269,24 @@ there; they are not repeated here.
   and one on a bad one. _Avoid_: reading a rate here as evidence about anything, a μ in the
   artifact, a rule expressed as a percentage.
 - **Relationship account** — a seed account named for a **pair** rather than for its own
-  state — `said-yes-to-you`, `they-blocked-you` — always from the protagonist's side, with
-  the protagonist named in the description and never in the slug (a pool card is read
-  constantly and a sign-in happens once). The eleven exist because five of the ten
-  `LivenessSignal` codes are facts about two people and **no distribution can exhibit
-  one**: a rate over sixty members produces edges nobody named, and it cannot assert that
-  *exactly one* instant-match pair exists. Every edge costs a **real search or deal run as
-  the sender**, because interest and passes have no non-search constructor and a send cites
-  the search its court was built on — and that cost is the check, since an origin that
-  resolves proves the protagonist was genuinely findable before any lift is claimed.
-  _Avoid_: an account named for its own state here, a second protagonist acquiring edges,
-  an edge written straight into a ledger.
-- **Relationship claim** — what a relationship account promises, and it is **a code on a
-  card or a named absence, read through the protagonist's own read path** — never a ledger
-  lookup, because a check computed from what the generator wrote can only ever pass. An
-  absence claim asserts the **gate histogram** rather than the absence: the histogram is
-  counted first-in-declaration-order, so `excluded_by_gate[OPEN_CHALLENGE] >= 4` names the
-  reason exactly, where a bare absence is also what *no rating*, *out of range* and *the
-  wrong gender preference* look like. _Avoid_: asserting an absence on its own, reading the
-  edge back out of the store that wrote it.
-- **Dev console** — the backend-served development tool at `/dev`: surface `dev`, contract
-  `openapi.dev.json`, code in `app/api/dev/`. **[ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md) replaces it** with the games
-  test console (#590, after #578 removes this one). That console acts as seed accounts without
-  signing in, in `local` only, and three of the rules below are reversed. Until then, this
-  entry describes the console that exists. Two things a reader would otherwise assume
-  wrongly. **It is not a client** — nothing generates types from its contract, which is why
-  that document is gated by a *freshness* check and not by `check-contract-drift.sh`. And
-  it acts as another player **only by signing in as one**, through the ordinary
-  `POST /api/v1/auth/login` with the public seed password its roster carries at the top
-  level; there is no impersonation endpoint, no `Act-As` header and no authorisation path
-  that exists for it, so every write it presses is a **player-surface** write and *never
-  acts on behalf of anybody* holds by construction rather than by inspection. Three views —
-  roster, search as, answer as — one identity at a time, the token in memory only, the
-  current identity rendered large, and **not one timer**: it exists so that nothing
-  auto-answers. `frontend_club/` was *"the club console"* and is gone; this is the only
-  console, and saying so here is cheaper than having the collision rediscovered.
-  _Avoid_: calling it an app (it is one HTML file and one route), a second client, an admin
-  panel.
+  state — `said-yes-to-you`, `they-blocked-you` — always from the protagonist's side. The
+  eleven were made so the old loop could exhibit facts about two people that no
+  distribution can, and each edge was written through a real search, deal or send. **The
+  edges went with the challenges (#578) and the accounts stay**: the pool's played history
+  seats them on the protagonist's past courts by slug, and each description says what the
+  account is now. _Avoid_: an account named for its own state here, reading a slug as a
+  relationship anything still writes.
+- **Dev console** — the backend's development surface: surface `dev`, contract
+  `openapi.dev.json`, code in `app/api/dev/`. Today it is **one roster route and its gate**;
+  its page — a no-build `console.html` at `/dev` that signed in as a seeded player and
+  pressed searches, yeses and challenges as them — went with the challenges (#578).
+  **[ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)
+  replaces it** with the games test console (#590), which acts as seed accounts without
+  signing in, in `local` only. **It is not a client** — nothing generates types from its
+  contract, which is why that document is gated by a *freshness* check and not by
+  `check-contract-drift.sh`. `frontend_club/` was *"the club console"* and is gone; this is
+  the only console, and saying so here is cheaper than having the collision rediscovered.
+  _Avoid_: calling it an app, a second client, an admin panel.
 - **Console gate** — `CONSOLE_SERVED` in `app/api/dev/gate.py`: where the dev console is
   served, written out per environment with the same `_undecided` refusal the **Seed guard**
   carries. ADR-0194 narrows it to `local` and makes the data half a refusal
@@ -763,7 +744,7 @@ there; they are not repeated here.
   failure closes the stream — **a chat that is not live has to look not-live**, because a
   connection held open delivering nothing looks up to date (ADR-0147 §8). `/health` stays
   about the **process** for the same reason it is safe to close: a health check that pinged
-  Redis would take sign-in, onboarding and challenges down with the chat. _Avoid_: wrapping
+  Redis would take sign-in, onboarding and the games down with the chat. _Avoid_: wrapping
   the subscriber "for symmetry" — the symmetry is what would hide the outage.
 - **The subscriber's own client** — the process's **second** Redis client, from
   `create_redis_subscriber_client` and opened by the lifespan beside the command pool.

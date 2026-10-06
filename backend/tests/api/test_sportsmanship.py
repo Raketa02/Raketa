@@ -1,10 +1,9 @@
 """The card, end to end over HTTP — and everything it refuses to be.
 
-A four is built with ⚡, sent, accepted by everybody, played, and its score left
-to confirm itself. Then the people who were there are asked how it went. That is
-the whole reachable path, and it starts from the same walk ``test_games.py``
-takes because a card cannot exist without a game and a game cannot exist without
-a completed line-up.
+A four is booked, played, and its score left to confirm itself. Then the people
+who were there are asked how it went. That is the whole reachable path, and it
+starts from the same booked game ``test_games.py`` does, because a card cannot
+exist without a game.
 
 Six things are asserted here and nowhere else:
 
@@ -55,7 +54,6 @@ from app.modules.sportsmanship.infrastructure.card_model import (
     SportsmanshipCardORM,
     SportsmanshipRatingORM,
 )
-from tests.api import matchmaking_world as world
 from tests.api import players_world as players
 
 
@@ -99,53 +97,30 @@ async def searcher(client):
     return await players.a_rated_player(client, "searcher")
 
 
-async def _a_city(client, session_factory, candidate_source, mu: float) -> dict:
+async def _a_city(client, session_factory, mu: float) -> dict:
     people = {}
     for name, delta in (("ana", 0.0), ("bo", 0.05), ("cy", -0.05)):
         player_id, token = await players.a_player_on_the_log(
             client, session_factory, name, mu=mu + delta
         )
         people[name] = {"id": player_id, "token": token}
-    await world.fold_the_log(session_factory, candidate_source)
     return people
 
 
-async def _a_played_game(client, searcher, people) -> str:
-    """One arranged game with a score on the table, from ⚡ to *we played*."""
+async def _a_played_game(client, session_factory, clock, searcher, people) -> str:
+    """One booked game with a score on the table: booked for an hour that began
+    two hours before the test's *now*, and *we played* said through the route."""
 
-    built = await world.lineup(client, searcher["token"])
-    assert built.status_code == 200, built.text
-    body = built.json()
-    court = [
-        {
-            "side": seat["side"],
-            "player_id": seat.get("player_id", str(searcher["id"])),
-        }
-        for seat in body["lineup"]["seats"]
-    ]
-    sent = await client.post(
-        "/api/v1/challenges",
-        json={"search_id": body["search"]["search_id"], "court": court},
-        headers=players.auth(searcher["token"]),
+    booked = await players.a_booked_game(
+        session_factory,
+        side_a=(searcher["id"], people["ana"]["id"]),
+        side_b=(people["bo"]["id"], people["cy"]["id"]),
+        starts_at=clock.now() - timedelta(hours=2),
     )
-    assert sent.status_code == 201, sent.text
-    challenge_id = sent.json()["challenge_id"]
-
-    for person in people.values():
-        answered = await client.post(
-            f"/api/v1/challenges/{challenge_id}/accept",
-            headers=players.auth(person["token"]),
-        )
-        assert answered.status_code == 200, answered.text
-
-    # Found by the challenge it came from rather than by being the only one:
-    # two of these are arranged in the tests about a rater meeting the same
-    # person twice, and *the game* would silently become *the first game*.
-    (game,) = [
-        one
-        for one in await _games(client, searcher["token"])
-        if one["challenge_id"] == challenge_id
-    ]
+    # Found by its id rather than by being the only one: two of these are
+    # arranged in the tests about a rater meeting the same person twice, and
+    # *the game* would silently become *the first game*.
+    game = await _the_game(client, searcher["token"], str(booked["game_id"]))
     entered = await client.post(
         f"/api/v1/games/{game['game_id']}/result",
         json={"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}},
@@ -174,11 +149,11 @@ async def _the_game(client, token: str, game_id: str) -> dict:
     return game
 
 
-async def _a_settled_game(client, session_factory, candidate_source, searcher, clock):
+async def _a_settled_game(client, session_factory, searcher, clock):
     """A whole game, played and confirmed by the silence of everybody else."""
 
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    game_id = await _a_played_game(client, searcher, people)
+    people = await _a_city(client, session_factory, searcher["mu"])
+    game_id = await _a_played_game(client, session_factory, clock, searcher, people)
     clock.move(PROPOSAL_WINDOW + timedelta(minutes=1))
     game = await _the_game(client, searcher["token"], game_id)
     assert game["standing"] == "CONFIRMED", "the score should have confirmed itself"
@@ -232,14 +207,12 @@ async def _stored_ratings(session_factory) -> list[SportsmanshipRatingORM]:
 
 
 async def test_everybody_else_on_the_court_can_be_given_stars(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """**Three people in doubles** — both opponents *and* the partner — and the
     answer comes back with nothing in it at all."""
 
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
 
     answered = await _rate(
         client,
@@ -258,13 +231,13 @@ async def test_everybody_else_on_the_court_can_be_given_stars(
 
 
 async def test_a_card_cannot_be_answered_until_the_game_has_settled(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """The card is drawn once the score settles, and the route says so — with a
     refusal that names nothing about *why*."""
 
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    game_id = await _a_played_game(client, searcher, people)
+    people = await _a_city(client, session_factory, searcher["mu"])
+    game_id = await _a_played_game(client, session_factory, clock, searcher, people)
 
     too_early = await _rate(
         client,
@@ -279,7 +252,7 @@ async def test_a_card_cannot_be_answered_until_the_game_has_settled(
 
 
 async def test_the_three_refusals_about_whose_game_it_is_are_byte_identical(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """**One refusal, and it names nothing.** A game that has not settled, a game
     somebody else played and a game that does not exist come back the same — a
@@ -293,8 +266,8 @@ async def test_the_three_refusals_about_whose_game_it_is_are_byte_identical(
     response the server sends, including two of the same failure.
     """
 
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    unsettled = await _a_played_game(client, searcher, people)
+    people = await _a_city(client, session_factory, searcher["mu"])
+    unsettled = await _a_played_game(client, session_factory, clock, searcher, people)
     stranger_id, stranger_token = await players.a_player_on_the_log(
         client, session_factory, "dee", mu=searcher["mu"]
     )
@@ -316,14 +289,12 @@ async def test_the_three_refusals_about_whose_game_it_is_are_byte_identical(
 
 
 async def test_anybody_may_be_left_blank_and_the_blank_leaves_nothing_behind(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """Somebody left out is not a row with a null in it — they are not there at
     all, which is what makes *no record of the omission* structural."""
 
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
 
     answered = await _rate(
         client,
@@ -338,15 +309,13 @@ async def test_anybody_may_be_left_blank_and_the_blank_leaves_nothing_behind(
 
 
 async def test_a_card_with_everybody_blank_is_an_answer_and_closes_it(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """*I am not rating anyone* is an answer. It stores a card and no ratings,
     and the card is what refuses the second attempt — which is the whole reason
     the closure is kept apart from the stars."""
 
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
 
     blank = await _rate(client, searcher["token"], game_id, [])
     assert blank.status_code == 204, blank.text
@@ -367,11 +336,9 @@ async def test_a_card_with_everybody_blank_is_an_answer_and_closes_it(
 
 
 async def test_a_second_submission_is_refused(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
     first = await _rate(
         client,
         searcher["token"],
@@ -392,11 +359,9 @@ async def test_a_second_submission_is_refused(
 
 
 async def test_stars_for_somebody_who_was_not_on_that_court_are_refused(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
-    game_id, _people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, _people = await _a_settled_game(client, session_factory, searcher, clock)
     stranger_id, _token = await players.a_player_on_the_log(
         client, session_factory, "dee", mu=searcher["mu"]
     )
@@ -414,11 +379,9 @@ async def test_stars_for_somebody_who_was_not_on_that_court_are_refused(
 
 
 async def test_rating_yourself_is_refused(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
-    game_id, _people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, _people = await _a_settled_game(client, session_factory, searcher, clock)
 
     refused = await _rate(
         client,
@@ -433,15 +396,13 @@ async def test_rating_yourself_is_refused(
 
 @pytest.mark.parametrize("stars", [0, 6])
 async def test_a_star_count_off_the_scale_is_refused(
-    client, session_factory, candidate_source, searcher, clock, stars: int
+    client, session_factory, searcher, clock, stars: int
 ):
     """**No zero and no sixth star**, refused by the domain's own rule rather
     than by a bound on the wire — there is one copy of the range, and this is the
     route that proves it is reachable."""
 
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
 
     refused = await _rate(
         client,
@@ -455,11 +416,9 @@ async def test_a_star_count_off_the_scale_is_refused(
 
 
 async def test_one_card_carries_one_answer_about_each_player(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
 
     refused = await _rate(
         client,
@@ -476,14 +435,12 @@ async def test_one_card_carries_one_answer_about_each_player(
 
 
 async def test_everybody_on_the_court_gets_their_own_card(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """The card belongs to a **rater**, not to a game. One person answering does
     not close it for the other three."""
 
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
 
     mine = await _rate(
         client,
@@ -505,7 +462,7 @@ async def test_everybody_on_the_court_gets_their_own_card(
 
 
 async def test_only_a_raters_most_recent_rating_of_a_person_counts(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """**Two evenings with the same person leave one answer.** Two friends who
     partner every week would otherwise supply most of each other's ratings, and
@@ -517,9 +474,7 @@ async def test_only_a_raters_most_recent_rating_of_a_person_counts(
     the first rather than joining it.
     """
 
-    first_game, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    first_game, people = await _a_settled_game(client, session_factory, searcher, clock)
     generous = await _rate(
         client,
         searcher["token"],
@@ -528,7 +483,7 @@ async def test_only_a_raters_most_recent_rating_of_a_person_counts(
     )
     assert generous.status_code == 204, generous.text
 
-    second_game = await _a_played_game(client, searcher, people)
+    second_game = await _a_played_game(client, session_factory, clock, searcher, people)
     clock.move(PROPOSAL_WINDOW + timedelta(minutes=1))
     revised = await _rate(
         client,
@@ -551,14 +506,12 @@ async def test_only_a_raters_most_recent_rating_of_a_person_counts(
 
 
 async def test_a_blank_does_not_withdraw_what_was_said_about_somebody_before(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """A blank is the absence of an opinion, not the withdrawal of one. Leaving
     somebody out of tonight's card keeps whatever you last said about them."""
 
-    first_game, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    first_game, people = await _a_settled_game(client, session_factory, searcher, clock)
     await _rate(
         client,
         searcher["token"],
@@ -566,7 +519,7 @@ async def test_a_blank_does_not_withdraw_what_was_said_about_somebody_before(
         [{"player_id": str(people["ana"]["id"]), "stars": 5}],
     )
 
-    second_game = await _a_played_game(client, searcher, people)
+    second_game = await _a_played_game(client, session_factory, clock, searcher, people)
     clock.move(PROPOSAL_WINDOW + timedelta(minutes=1))
     blank_about_ana = await _rate(
         client,
@@ -654,14 +607,12 @@ def _answered_with(operation: dict, spec: dict) -> set[str]:
 
 
 async def test_a_settled_game_waits_for_your_stars_with_everybody_else_on_it(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """The list a card is drawn from: one game, and the three people you may
     rate — both opponents *and* your partner."""
 
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
 
     (card,) = await _waiting(client, searcher["token"])
 
@@ -672,14 +623,12 @@ async def test_a_settled_game_waits_for_your_stars_with_everybody_else_on_it(
 
 
 async def test_everybody_on_the_court_is_waiting_for_their_own_card(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """A card belongs to a rater and not to a game. Each of the four is asked,
     and each is asked about the other three."""
 
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
     everybody = {str(searcher["id"]): searcher["token"]} | {
         str(person["id"]): person["token"] for person in people.values()
     }
@@ -691,11 +640,9 @@ async def test_everybody_on_the_court_is_waiting_for_their_own_card(
 
 
 async def test_answering_takes_the_card_off_the_list(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
     answered = await _rate(
         client,
         searcher["token"],
@@ -710,14 +657,12 @@ async def test_answering_takes_the_card_off_the_list(
 
 
 async def test_the_all_blank_card_also_takes_it_off_the_list(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """*I am not rating anyone* is an answer, and the point of it is that the
     card stops being asked — otherwise it would sit there for the week."""
 
-    game_id, _people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, _people = await _a_settled_game(client, session_factory, searcher, clock)
     answered = await _rate(client, searcher["token"], game_id, [])
     assert answered.status_code == 204, answered.text
 
@@ -725,27 +670,27 @@ async def test_the_all_blank_card_also_takes_it_off_the_list(
 
 
 async def test_a_game_still_awaiting_an_answer_is_not_asked_about(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """**Settled first.** A score on the table with its window still open is a
     game somebody may yet counter, and there is no card for it."""
 
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    await _a_played_game(client, searcher, people)
+    people = await _a_city(client, session_factory, searcher["mu"])
+    await _a_played_game(client, session_factory, clock, searcher, people)
     clock.move(timedelta(hours=1))
 
     assert await _waiting(client, searcher["token"]) == []
 
 
 async def test_a_game_settled_the_same_evening_is_not_asked_about_until_tomorrow(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """**Settled is not enough.** An explicit agreement settles a result in six
     hours, and this is the one path that reaches *over, but not yet a day* — so
     it is the case that tells the two conditions apart."""
 
-    people = await _a_city(client, session_factory, candidate_source, searcher["mu"])
-    game_id = await _a_played_game(client, searcher, people)
+    people = await _a_city(client, session_factory, searcher["mu"])
+    game_id = await _a_played_game(client, session_factory, clock, searcher, people)
     agreed = await client.post(
         f"/api/v1/games/{game_id}/result/acceptance",
         headers=players.auth(
@@ -766,15 +711,13 @@ async def test_a_game_settled_the_same_evening_is_not_asked_about_until_tomorrow
 
 
 async def test_a_card_nobody_answered_is_gone_after_its_week(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """**And nothing swept it.** The expiry is a fold over the evening's own
     clock, so the card is simply not drawn — there is no job, no row and no
     record that it lapsed."""
 
-    game_id, _people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, _people = await _a_settled_game(client, session_factory, searcher, clock)
     assert len(await _waiting(client, searcher["token"])) == 1
 
     clock.move(CARD_STAYS_OPEN_FOR)
@@ -791,7 +734,7 @@ async def test_a_player_with_nothing_to_rate_gets_an_empty_list(client, searcher
 
 
 async def test_a_lapsed_card_is_off_the_list_and_still_answerable(
-    client, session_factory, candidate_source, searcher, clock
+    client, session_factory, searcher, clock
 ):
     """**The week governs the prompt, not the permission**, and this is the one
     place the difference is visible.
@@ -809,9 +752,7 @@ async def test_a_lapsed_card_is_off_the_list_and_still_answerable(
     means refused* — is the one somebody tidying this up would reach for.
     """
 
-    game_id, people = await _a_settled_game(
-        client, session_factory, candidate_source, searcher, clock
-    )
+    game_id, people = await _a_settled_game(client, session_factory, searcher, clock)
     clock.move(CARD_STAYS_OPEN_FOR + timedelta(days=30))
     assert await _waiting(client, searcher["token"]) == []
 

@@ -36,7 +36,6 @@ import pytest_asyncio
 
 from app.bootstrap.composition import (
     build_booking_repository,
-    build_challenge_repository,
     build_domain_event_store,
     build_event_publisher,
     build_game_repository,
@@ -49,9 +48,6 @@ from app.bootstrap.player_score_demands import (
 from app.engines.matchfit.core import ReliabilityStrand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking
-from app.modules.challenges.domain.challenge import Challenge
-from app.modules.challenges.domain.seats import SeatPlan, court_sides
-from app.modules.challenges.domain.origins import SentFromSearch
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
@@ -97,160 +93,12 @@ def _ago(**offset) -> Instant:
 _LONG_ENOUGH_TO_GHOST = PLAN_HORIZON + ENTRY_GRACE + timedelta(days=1)
 
 
-def _challenges(session):
-    return build_challenge_repository(
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    )
-
-
 def _games(session):
     return build_game_repository(
         session=session,
         event_store=build_domain_event_store(session),
         events=build_event_publisher(session),
     )
-
-
-def _court(
-    sport: Sport,
-    organiser: UUID,
-    *invitees: UUID,
-    already_in: tuple[UUID, ...] = (),
-) -> list[SeatPlan]:
-    """The sport's whole fixed court: the organiser, whoever is asked, and gaps.
-
-    An empty seat is a seat, so the rest of the court is spelled rather than
-    omitted — and a **newly** invited seat carries the origin the send read off a
-    search, because a seat that cannot say where it came from cannot be
-    constructed. ``already_in`` is who is being kept rather than asked: only the
-    newly seated are invited, and offering a seat to somebody already in the game
-    is refused at the aggregate.
-    """
-
-    sides = court_sides(sport)
-    occupants: list[UUID | None] = [organiser, *already_in, *invitees]
-    occupants += [None] * (len(sides) - len(occupants))
-    asked = set(invitees)
-    return [
-        SeatPlan(
-            side=side,
-            player_id=occupant,
-            origin=(
-                SentFromSearch(search_id=new_uuid(), position=seat)
-                if occupant in asked
-                else None
-            ),
-        )
-        for seat, (side, occupant) in enumerate(zip(sides, occupants, strict=True), 1)
-    ]
-
-
-async def _invited(
-    session,
-    *,
-    organiser: UUID,
-    invitee: UUID,
-    at: Instant,
-    beside: UUID | None = None,
-) -> Challenge:
-    """One send, through the aggregate: an organiser and whoever is asked.
-
-    Tennis unless a second invitee is named, in which case it is padel — because
-    a singles challenge whose only invitee says no is **over**, and a court with
-    somebody still in it is what a re-offer needs.
-    """
-
-    others = (invitee,) if beside is None else (invitee, beside)
-    sport = Sport.TENNIS if beside is None else Sport.PADEL
-    challenge = Challenge.sent(
-        challenge_id=new_uuid(),
-        sport=sport,
-        mode=None,
-        window=Window.THIS_WEEK,
-        organiser_id=organiser,
-        arrangement=_court(sport, organiser, *others),
-        occurred_at=at,
-    )
-    await _challenges(session).save(challenge)
-    await session.commit()
-    return challenge
-
-
-async def _answers(
-    session, challenge: Challenge, player_id: UUID, *, yes: bool, at: Instant
-) -> None:
-    repository = _challenges(session)
-    loaded = await repository.load(challenge.id)
-    assert loaded is not None
-    if yes:
-        loaded.accept(player_id, occurred_at=at)
-    else:
-        loaded.decline(player_id, occurred_at=at)
-    await repository.save(loaded)
-    await session.commit()
-
-
-async def _refills(
-    session,
-    challenge: Challenge,
-    *,
-    organiser: UUID,
-    still_in: tuple[UUID, ...],
-    replacement: UUID,
-    at: Instant,
-) -> None:
-    """Offer the seat somebody just left on to somebody new.
-
-    The path that makes today's arrangement forget a former occupant, which is
-    the whole reason the invitations are walked off the events rather than read
-    off the seats.
-    """
-
-    repository = _challenges(session)
-    loaded = await repository.load(challenge.id)
-    assert loaded is not None
-    loaded.invite(
-        _court(loaded.sport, organiser, replacement, already_in=still_in),
-        by=loaded.organiser_id,
-        occurred_at=at,
-    )
-    await repository.save(loaded)
-    await session.commit()
-
-
-async def _leaves(
-    session, challenge: Challenge, player_id: UUID, *, at: Instant
-) -> None:
-    """Somebody takes their yes back (``docs/adr/0165`` §1)."""
-
-    repository = _challenges(session)
-    loaded = await repository.load(challenge.id)
-    assert loaded is not None
-    loaded.leave(player_id, occurred_at=at)
-    await repository.save(loaded)
-    await session.commit()
-
-
-async def _withdraws(session, challenge: Challenge, *, at: Instant) -> None:
-    """The organiser removes a challenge nobody else is on (``docs/adr/0165``
-    §4) — whatever seats are still deciding.
-
-    This helper used to carry a ``past_the_standing_rule`` switch that recorded
-    the event straight onto the recorder, because no legal withdrawal could
-    catch an invitation whose day was still running and the state
-    ``docs/adr/0142`` §5 legislates for could not be built through ``withdraw``
-    at all. It can now, so the write is the ordinary path — the aggregate's own
-    rule, its fold, the repository, the codec and the store — and what is
-    exercised is the read and not a fixture's idea of one.
-    """
-
-    repository = _challenges(session)
-    loaded = await repository.load(challenge.id)
-    assert loaded is not None
-    loaded.withdraw(loaded.organiser_id, occurred_at=at)
-    await repository.save(loaded)
-    await session.commit()
 
 
 def _bookings(session):
@@ -596,18 +444,14 @@ async def test_the_three_strands_with_no_provider_are_absent_and_never_nought(
     """Named one by one, so the day one lands the assertion says which.
 
     Nobody has failed to answer a challenge since challenges stopped waiting for
-    answers (#544) — an invitation answered, and one left to lapse, publish
-    nothing; nobody owes a court share, because a share is taken before the game
-    exists; and nobody has been rated, because there is no surface on which to
-    rate anybody.
+    answers (#544), and nothing sends one since they went (#578); nobody owes a
+    court share, because a share is taken before the game exists; and nobody
+    has been rated, because there is no surface on which to rate anybody.
     """
 
     port = implementation.build(session)
     one, other = new_uuid(), new_uuid()
     await _played(session, one=one, other=other, at=_ago(days=3))
-    answered = await _invited(session, organiser=other, invitee=one, at=_ago(days=4))
-    await _answers(session, answered, one, yes=True, at=_ago(days=4))
-    await _invited(session, organiser=other, invitee=one, at=_ago(days=3))
 
     score = (await port.scores_for([one], now=_now()))[one]
 

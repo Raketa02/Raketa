@@ -54,21 +54,11 @@ and says so, because an account whose name lies is worse than one that is
 missing: nothing about the screen it is developed against would look wrong.
 
 The events this writes land on the outbox and are delivered by the API's worker
-the next time it polls, exactly as a request's are. Seeding does not deliver
-them itself: a seed run is not an event-delivery worker, and having two would be
-two things that can disagree about what has been delivered.
-
-**That sentence is about the outbox and it does not bind the candidate index.**
-The two are different subscriptions with different guarantees
-(``docs/adr/0110``): the outbox delivers side effects once per platform, leased,
-out of append order; the index is a **projection of the log** that anybody may
-recompute, behind a single ``FOR UPDATE`` cursor, so a concurrent tick blocks and
-then finds nothing to do. That property was made true on purpose, and it is what
-lets this run **tick the tail to catch-up in-process** before the assertions in
-``app/seeds/screens.py`` read the index. Polling ``caught_up_at`` would make a
-developer command depend on the API being up; printing *now run
-``make rebuild-candidate-index``* would put the assertions behind a step people
-forget, which is the same failure as an account whose name lies.
+the next time it polls, exactly as a request's are — with one barrier of its
+own: ``rooms.py`` drains the outbox in process before the screens are read,
+because a booked game's room is *told* and a claim about a room has to be made
+on the far side of the telling. The batch takes its rows ``FOR UPDATE SKIP
+LOCKED``, so a worker draining at the same moment finds nothing left.
 
 **A profile is committed on an injected clock** (``app/seeds/clock.py``). On the
 wall clock every seeded profile is a newcomer, and ADR-0113's whole point is that
@@ -223,13 +213,6 @@ from app.seeds.cohort import (
     CohortMember,
 )
 from app.seeds.guard import refuse_unless_seedable
-from app.seeds.loop import (
-    SeededLoop,
-    assert_the_loop,
-    costs as loop_costs,
-    write_the_loop,
-)
-from app.seeds.pairs import SeededPairs, write_the_relationships
 from app.seeds.photos import (
     SEED_IMAGE_MEDIA_TYPE,
     DeclaredPhotoReview,
@@ -237,15 +220,13 @@ from app.seeds.photos import (
     the_store_answers,
 )
 from app.seeds.pool_history import THE_POOL_HAS_A_RECORD, WHAT_THE_POOL_SAID, address_of
-from app.seeds.relationships import PROTAGONIST, RELATIONSHIP_ACCOUNTS
-from app.seeds.plans import SeededPlans, costs as plan_costs, write_the_plans
+from app.seeds.relationships import RELATIONSHIP_ACCOUNTS
 from app.seeds.rooms import SeededRooms, open_the_rooms
 from app.seeds.screens import (
     assert_the_club_bookings,
     assert_the_fill_in,
     assert_the_group_deck,
     assert_the_posting_grid,
-    assert_the_screens,
 )
 from app.seeds.sportsmanship import (
     SeededOpinions,
@@ -1215,21 +1196,9 @@ class SeedReport:
     members: tuple[SeededMember, ...]
     now: Instant
     screens: tuple[str, ...] = ()
-    #: The eleven relationships, the inboxes they left behind, and the two
-    #: costs. ``None`` only where a caller drove the two populations without the
-    #: layer above them — the API suite does, and it asserts no screen.
-    pairs: SeededPairs | None = None
-    #: The four arranged-and-never-played games, and the plans on them.
-    #: ``None`` on the same callers and for the same reason as the two above.
-    plans: SeededPlans | None = None
-    #: The loop's own states — a game at every moment of its life, the two courts
-    #: sent for the ends they reach, and the fill — with the claims read back off
-    #: the screens they are for. ``None`` on the same callers and for the same
-    #: reason as the layers above.
-    loop: SeededLoop | None = None
-    #: The rooms the seeded acceptances earned, once the outbox was delivered.
-    #: ``None`` on the callers that drive the populations without the layers
-    #: above them, exactly as the two above are.
+    #: The rooms the booked games opened, once the outbox was delivered.
+    #: ``None`` only where a caller drove the two populations without the layers
+    #: above them — the API suite does, and it asserts no screen.
     rooms: SeededRooms | None = None
     #: The cards those evenings left behind, and what the published fold makes
     #: of them. ``None`` on the same callers and for the same reason.
@@ -1376,33 +1345,10 @@ async def run(settings: Settings | None = None) -> SeedReport:
             said=everything_said(WHAT_PLAYERS_SAID, WHAT_THE_POOL_SAID),
             address_of=address_of,
         )
-        # **After both populations and before every claim.** An edge is a real
-        # search or deal run as the sender, so it needs everybody in the index —
-        # and the claims are read off what the edges made true.
-        pairs = await write_the_relationships(
-            session_factory, settings=settings, now=now, photos=photos
-        )
-        # **After the relationships and before the delivery.** A plan needs a
-        # game still inside its entry window and every other layer's games are
-        # played, so this one arranges four more and stops — and it has to run
-        # before the outbox is drained, so that the four system lines it writes
-        # reach the rooms in the same pass everything else does. It holds a
-        # delivery barrier of its own as well, because a plan line is hung on
-        # the room its challenge opened and that opening is an earlier event.
-        plans = await write_the_plans(
-            session_factory, settings=settings, now=now
-        )
-        # **After the plans and before the delivery**, on the plans layer's own
-        # reason twice over: the cards this layer reaches are the ones no other
-        # layer draws, and the lines it writes have to reach their rooms in the
-        # same pass everything else's do.
-        written = await write_the_loop(
-            session_factory, settings=settings, now=now
-        )
         # **The games still filling, after every layer that writes anything a
         # fit reads.** A pick is made through the real pair rule, which reads
-        # blocks live, so it comes after the relationships wrote theirs; and its
-        # yeses are real ones, so it comes after the cards were saved. Nothing
+        # blocks live; and its yeses are real ones, so it comes after the cards
+        # were saved. Nothing
         # below reads a proposal, and its events are delivered with the rest.
         proposals = await write_the_proposals(
             session_factory,
@@ -1439,35 +1385,15 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # **After every layer that writes and before the screens.** A room is
         # *told* through the outbox by contexts that do not know it exists
         # (``docs/adr/0146`` §5), so nothing above this line opened one — the
-        # acceptances, the completions and the *we played*s are all sitting in
-        # the queue. Delivering here is the same barrier the candidate index's
-        # tick is, for the same reason: the assertions read the real path, and
-        # the real path has a poller in front of it.
+        # bookings and the *we played*s are all sitting in the queue. The
+        # assertions read the real path, and the real path has a poller in
+        # front of it.
         rooms = await open_the_rooms(
             session_factory, settings=settings, now=now
         )
-        # **After the rooms, because half its claims are about them.** A room is
-        # told through the outbox and an ended one is destroyed by a sweep, so a
-        # claim about which lines a standing room carries has to be made on the
-        # far side of both.
-        loop = SeededLoop(
-            written=written,
-            claims=await assert_the_loop(
-                session_factory, settings=settings, now=now
-            ),
-        )
-        screens = await assert_the_screens(
-            session_factory,
-            settings=settings,
-            now=now,
-            pairs=pairs,
-            photographs=photographs,
-            photos=photos,
-        )
-        # Beside the battery: the group deck is this run's proposals layer's
-        # claim, and the cohort's acceptance test builds no proposals.
+        # **After the rooms**: every screen below is read on the far side of the
+        # delivery, as the API's own reads would find it.
         screens = (
-            *screens,
             await assert_the_group_deck(session_factory, settings=settings, now=now),
             await assert_the_fill_in(
                 session_factory,
@@ -1489,10 +1415,7 @@ async def run(settings: Settings | None = None) -> SeedReport:
             members=members,
             now=now,
             screens=screens,
-            pairs=pairs,
-            plans=plans,
             rooms=rooms,
-            loop=loop,
             opinions=opinions,
             clubs=clubs,
             club_courts=club_courts,
@@ -1618,19 +1541,13 @@ def report(run_report: SeedReport) -> list[str]:
     if run_report.opinions is not None:
         lines.extend(["", *_opinion_lines(run_report.opinions)])
     lines.extend(["", *_photograph_lines(run_report.members)])
-    if run_report.pairs is not None:
-        lines.extend(["", *_relationship_lines(run_report.pairs)])
-    if run_report.plans is not None:
-        lines.extend(["", *_plan_lines(run_report.plans)])
     if run_report.rooms is not None:
         lines.extend(["", *_room_lines(run_report.rooms)])
-    if run_report.loop is not None:
-        lines.extend(["", *_loop_lines(run_report.loop)])
     if run_report.screens:
         lines.extend(["", "The screens, read as the protagonist:"])
         lines.extend(f"  {line}" for line in run_report.screens)
     lines.extend(["", COHORT_DISCLAIMER])
-    costs = list(run_report.pairs.costs if run_report.pairs else ())
+    costs: list[str] = []
     if run_report.history is not None and run_report.history.this_week:
         costs.append(
             f"{len(run_report.history.this_week)} declared game(s) are played "
@@ -1638,8 +1555,6 @@ def report(run_report: SeedReport) -> list[str]:
             f"inside it and could not have played before; they count toward "
             f"this week's games for everybody on them."
         )
-    costs.extend(plan_costs(run_report.plans) if run_report.plans else ())
-    costs.extend(loop_costs(run_report.loop) if run_report.loop else ())
     if not run_report.photographs:
         costs.append(
             "the object store did not answer, so this run seeded no "
@@ -1655,56 +1570,14 @@ def report(run_report: SeedReport) -> list[str]:
     return lines
 
 
-def _loop_lines(loop: SeededLoop) -> list[str]:
-    """What the loop's own layer wrote, and what the screens then drew.
-
-    **Written and claimed in one block**, unlike every other layer: the two halves
-    run either side of the delivery — the rooms have to be told before a line can
-    be read back — and printing them apart would put the claims a screenful away
-    from the rows that reach them.
-    """
-
-    return [
-        "The loop's own states — a game at every moment of its life:",
-        *(f"  {line}" for line in loop.written.games),
-        *(f"  {line}" for line in loop.written.courts),
-        *(f"  {line}" for line in loop.claims),
-    ]
-
-
 def _room_lines(rooms: SeededRooms) -> list[str]:
-    """The rooms the delivery opened, the ones the sweep took away, and the one
-    shape this fixture does not reach.
-
-    **The gap is on the report rather than in a docstring**, on the rule the two
-    relationship costs already follow: a fixture that quietly reached three of
-    four shapes reads as having reached four, and the person it misleads is the
-    one about to build the screen.
-    """
+    """The rooms the delivery opened, and the ones the sweep took away."""
 
     return [
         "The rooms, once the outbox was delivered and the ended ones swept:",
         f"  {rooms.delivered} event(s) delivered · {rooms.said} message(s) said "
         f"· {rooms.swept.destroyed} room(s) destroyed",
         *(f"  {line}" for line in rooms.rooms),
-        "  not reached · a room carrying every system-line code. It needs a "
-        "`SeatsInvited`, and nothing here performs a fill — which would cost a "
-        "real search that seats somebody new and move the gate histogram this "
-        "run asserts.",
-    ]
-
-
-def _plan_lines(plans: SeededPlans) -> list[str]:
-    """The four card states, each read back off ``GET /plans``' own use case.
-
-    **Nought is a row on this list**, and it is the one that reads oddly: a plan
-    at no slots is a game with *no plan*, so the line says so rather than
-    printing three empty values a client can never be sent.
-    """
-
-    return [
-        "The plans, on games nobody has played:",
-        *(f"  {line}" for line in plans.plans),
     ]
 
 
@@ -1747,26 +1620,6 @@ def _photograph_lines(members: Sequence[SeededMember]) -> list[str]:
             if entry.photograph is not None
         ),
     ]
-
-
-def _relationship_lines(pairs: SeededPairs) -> list[str]:
-    """The eleven, one line each, with what each one promises beside it.
-
-    **The claim is printed where the address is**, because a developer signing in
-    as `said-yes-to-you` is asking what they should expect to see, and an account
-    named for a pair answers that only if the pair's own promise is beside it.
-    """
-
-    lines = [f"The eleven relationships, with {PROTAGONIST.slug}:"]
-    for edge in pairs.edges:
-        lines.append(f"  {edge.relationship.account.email}")
-        lines.append(f"      {edge.line}")
-        lines.append(f"      claims: {edge.relationship.claim}")
-    lines.extend(f"  {line}" for line in pairs.inboxes)
-    lines.append(f"  {pairs.withdrawn}")
-    lines.append(f"  {pairs.half_built.sent}")
-    lines.append(f"  {pairs.half_built.mutual_born}")
-    return lines
 
 
 def _cohort_lines(members: Sequence[SeededMember]) -> list[str]:

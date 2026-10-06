@@ -37,20 +37,10 @@ from app.seeds.sportsmanship import RATED_AFTER
 
 SEEDS = Path(__file__).resolve().parents[2] / "app" / "seeds"
 
-#: The layers the challenge loop writes, which the new path stands without.
-OLD_LAYERS = frozenset(
-    {
-        "games",
-        "pool_history",
-        "relationships",
-        "pairs",
-        "paths",
-        "plans",
-        "loop",
-        "rooms",
-        "screens",
-    }
-)
+#: What is left of the challenge loop's seed layers, which the new path stands
+#: without: the pool's declared history and the relationship accounts. The
+#: layers that wrote challenges and plans are gone (#578).
+OLD_LAYERS = frozenset({"pool_history", "relationships"})
 #: The new path's layers, and the population under them.
 NEW_PATH = (
     "proposals",

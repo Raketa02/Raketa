@@ -43,10 +43,6 @@ from app.modules.blocks.application.event_subscriptions import (
     register_block_events,
     subscribe_block_handlers,
 )
-from app.modules.challenges.application.event_subscriptions import (
-    register_challenge_events,
-    subscribe_challenge_handlers,
-)
 from app.modules.clubs.application.event_subscriptions import (
     register_club_events,
     subscribe_club_handlers,
@@ -79,10 +75,6 @@ from app.modules.notifications.application.event_subscriptions import (
     subscribe_the_teller,
 )
 from app.modules.notifications.domain.ports import PushNotifications
-from app.modules.plans.application.event_subscriptions import (
-    register_plan_events,
-    subscribe_plan_handlers,
-)
 from app.modules.proposals.application.propose_games import DueForProposing
 from app.modules.proposals.application.event_subscriptions import (
     register_proposal_events,
@@ -296,9 +288,7 @@ def build_event_runtime() -> EventRuntime:
     register_rating_events(catalog)
     register_player_profile_events(catalog)
     register_block_events(catalog)
-    register_challenge_events(catalog)
     register_game_events(catalog)
-    register_plan_events(catalog)
     register_conversation_events(catalog)
     register_club_events(catalog)
     register_group_events(catalog)
@@ -314,9 +304,7 @@ def build_event_runtime() -> EventRuntime:
     subscribe_rating_handlers(dispatcher)
     subscribe_player_profile_handlers(dispatcher)
     subscribe_block_handlers(dispatcher)
-    subscribe_challenge_handlers(dispatcher)
     subscribe_game_handlers(dispatcher)
-    subscribe_plan_handlers(dispatcher)
     subscribe_conversation_handlers(dispatcher)
     subscribe_club_handlers(dispatcher)
     subscribe_group_handlers(dispatcher)

@@ -198,9 +198,9 @@ async def test_there_is_no_impersonation_endpoint(client, seeded):
 # ---------------------------------------------------------------------------
 
 
-async def test_the_console_is_served_at_dev(client):
-    response = await client.get("/dev")
+async def test_the_old_console_page_is_gone_and_the_roster_stays(client, seeded):
+    """The page that pressed challenges as another player went with them
+    (#578); the roster stays for the games test console that replaces it."""
 
-    assert response.status_code == 200, response.text
-    assert response.headers["content-type"].startswith("text/html")
-    assert "Raketa — dev console" in response.text
+    assert (await client.get("/dev")).status_code == 404
+    assert (await client.get("/dev/roster")).status_code == 200

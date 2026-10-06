@@ -1,14 +1,12 @@
 """Who is on the court, on which side, and what kind of evening it was.
 
-**The line-up is frozen until somebody leaves it** (``docs/adr/0162``).
-``challenges``' invariant is that *an acceptance is to the game, not to the
-side* — the membership is settled the moment the last seat accepts, and the
-arrangement is still the organiser's to choose. This context takes the
-arrangement as it stood at that instant, and moves it in exactly two ways, both
-told by ``challenges`` in the transaction of the act: a seat is **vacated** when
-its occupant leaves the game, and the court is **re-seated** when the next
-completed line-up arrives for it. Nothing here moves anybody on its own, and a
-result is still about the two sides that played — which is why a result is
+**The line-up is frozen until somebody leaves it** (``docs/adr/0162``). The
+membership is settled the moment the court is booked, and the fill draws the
+sides. This context takes the arrangement as it stood at that instant, and
+moves it in exactly two ways, both told by ``bookings`` in the transaction of
+the act: a seat is **vacated** when its occupant leaves the game (#544), and a
+rescue **takes** an open seat (#545). Nothing here moves anybody on its own, and
+a result is still about the two sides that played — which is why a result is
 refused while a seat is open.
 
 **An open seat is a seat.** It is drawn empty, in its place, so a four with one
@@ -16,17 +14,15 @@ seat open is still a four and the court still says which side is short. Dropping
 it would publish a three-person doubles game (``docs/adr/0141``), and that
 sentence survives: a seat is never dropped, and now it can be open.
 
-**One string per seating on the wire**, the precedent ``challenges`` set for its
-seats: the event codec coerces scalars only, so a tuple of dataclasses comes back
-out of storage as a list of dicts and the aggregate would rebuild the shape on
-every replay.
+**One string per seating on the wire**: the event codec coerces scalars only,
+so a tuple of dataclasses comes back out of storage as a list of dicts and the
+aggregate would rebuild the shape on every replay.
 
-``GameSide`` is a **third** spelling of A and B in this repository, after
-``challenges.domain.seats.GameSide`` and ``matchmaking.domain.lineups.GameSide``. The
+``GameSide`` is a **second** spelling of A and B in this repository, after
+``matchmaking.domain.lineups.Side`` (``challenges`` held a third until #578). The
 strings are equal on purpose so the mapping at each seam is identity rather than
 a table; what differs is what the word is *about*. The matcher's is a side of a
-line-up it is ranking, ``challenges``' is a position somebody was asked to sit
-in, and this one is **the side that won or lost**.
+line-up it is ranking, and this one is **the side that won or lost**.
 """
 
 from __future__ import annotations
@@ -38,9 +34,8 @@ from uuid import UUID
 
 from app.kernel import invariant
 
-#: What separates the two fields of a seating code. A pipe rather than a colon
-#: for the reason ``challenges`` chose one: nothing else in either field can
-#: spell it, and a uuid is full of hyphens.
+#: What separates the two fields of a seating code. A pipe rather than a colon:
+#: nothing else in either field can spell it, and a uuid is full of hyphens.
 _FIELD = "|"
 
 
@@ -118,7 +113,7 @@ class Seating:
 @final
 @dataclass(frozen=True, slots=True)
 class LineUp:
-    """The court, in the order ``challenges`` handed it over.
+    """The court, in the order the booking handed it over.
 
     **Every seat is present, occupied or open, and nobody sits twice**, checked
     here rather than trusted: this is the one place the arrangement crosses out
@@ -228,10 +223,9 @@ class LineUp:
     def counterparts_of(self, player_id: UUID) -> frozenset[UUID]:
         """Everybody else on this court — partner and opponents alike.
 
-        **A pair is anybody you were on a court with.** ``challenges`` reaches the
-        same answer for an open challenge (*sharing a line-up makes a pair*), and
-        familiarity is a fact about two people having played, not about which way
-        round the net they stood.
+        **A pair is anybody you were on a court with**: familiarity is a fact
+        about two people having played, not about which way round the net they
+        stood.
         """
 
         return self.players - {player_id}

@@ -18,7 +18,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   one court), you **share a group**, or you **run a group they are in** (#575) — otherwise a
   route taking a player id is a player-enumeration endpoint, and a UUID being hard to guess is
   not an authorization model. A search that showed them and a challenge you share stopped
-  being disclosures with #575; the old loop's Find a game and challenges are going. Each
+  being disclosures with #575, and the challenges are gone (#578). Each
   strand is a `PriorDisclosure` answering **yes or no** (`GamesTheyPlayed`, `GroupsTheyShare`,
   `GroupsTheReaderRuns`), asked in turn and stopped at the first yes. A game discloses for as
   long as the pair are both on its court, played or not; a group is membership as it stands. **The gates run live, and they read no candidate index**: the three about accounts

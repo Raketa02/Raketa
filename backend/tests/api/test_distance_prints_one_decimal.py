@@ -8,9 +8,10 @@ derives for the same two people, so a surface that quietly kept the whole
 kilometre — or measured from the cell rather than the spot — goes red by value
 and not by type alone.
 
-The five surfaces: the shortlist, the deck, the line-up, completing a
-half-built court, and the challenge card an invitee reads. The read-back is the
-sixth reader and prints what was recorded.
+The three surfaces: the shortlist, the deck and the line-up. The read-back is
+the fourth reader and prints what was recorded. Completing a half-built court
+and the challenge card an invitee read were two more, and went with the
+challenges (#578).
 """
 
 from __future__ import annotations
@@ -133,7 +134,7 @@ async def test_the_deck_prints_the_same_number_the_shortlist_does(
     assert on_the_deck == expected_print(searcher["id"], nearby, NEARBY)
 
 
-async def test_the_line_up_and_its_fill_print_it_on_every_seated_row(
+async def test_the_line_up_prints_it_on_every_seated_row(
     client, session_factory, candidate_source, searcher
 ):
     people = {}
@@ -157,79 +158,3 @@ async def test_the_line_up_and_its_fill_print_it_on_every_seated_row(
         assert row["distance_km"] == expected_print(
             searcher["id"], UUID(player_id), NEARBY
         )
-
-    # The fill: a padel four sent to one person who accepts, then ⚡ naming it.
-    court = [
-        {"side": "A", "player_id": str(searcher["id"])},
-        {"side": "A", "player_id": str(people["ana"]["id"])},
-        {"side": "B"},
-        {"side": "B"},
-    ]
-    sent = await client.post(
-        "/api/v1/challenges",
-        json={"search_id": seated["search"]["search_id"], "court": court},
-        headers=world.auth(searcher["token"]),
-    )
-    assert sent.status_code == 201, sent.text
-    challenge_id = sent.json()["challenge_id"]
-    accepted = await client.post(
-        f"/api/v1/challenges/{challenge_id}/accept",
-        headers=world.auth(people["ana"]["token"]),
-    )
-    assert accepted.status_code == 200, accepted.text
-
-    filled = await world.lineup(
-        client, searcher["token"], completing_challenge_id=challenge_id
-    )
-
-    assert filled.status_code == 200, filled.text
-    body = filled.json()
-    assert body["search"]["surface"] == "FILL_SEATS"
-    for player_id, row in _by_id(body["candidates"]).items():
-        assert_one_decimal(row["distance_km"])
-        assert row["distance_km"] == expected_print(
-            searcher["id"], UUID(player_id), NEARBY
-        )
-
-
-async def test_the_challenge_card_an_invitee_reads_prints_it_in_their_direction(
-    client, session_factory, candidate_source, exposure_ledger, searcher
-):
-    """The card is recomputed for the reader (``docs/adr/0143``), and the spot
-    is fixed per player, so the invitee's print is spot to spot the other way
-    round — the same two spots, the same number."""
-
-    world.draw_real_cards(client, candidate_source, exposure_ledger)
-    ana = await world.a_searcher(client, "ana")
-    await world.fold_the_log(session_factory, candidate_source)
-    listed = (await world.search(client, searcher["token"])).json()
-    sent = await client.post(
-        "/api/v1/challenges",
-        json={
-            "search_id": listed["search"]["search_id"],
-            # A padel court is a four; the two empty seats are nobody's yet.
-            "court": [
-                {"side": "A", "player_id": str(searcher["id"])},
-                {"side": "A"},
-                {"side": "B", "player_id": str(ana["id"])},
-                {"side": "B"},
-            ],
-        },
-        headers=world.auth(searcher["token"]),
-    )
-    assert sent.status_code == 201, sent.text
-
-    detail = await client.get(
-        f"/api/v1/challenges/{sent.json()['challenge_id']}",
-        headers=world.auth(ana["token"]),
-    )
-
-    assert detail.status_code == 200, detail.text
-    organiser = next(
-        seat
-        for seat in detail.json()["seats"]
-        if seat.get("player_id") == str(searcher["id"])
-    )
-    printed = organiser["card"]["pairing"]["distance_km"]
-    assert_one_decimal(printed)
-    assert printed == expected_print(ana["id"], searcher["id"], world.CENTRE)

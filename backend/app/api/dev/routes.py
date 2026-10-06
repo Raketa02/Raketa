@@ -1,4 +1,4 @@
-"""The dev surface: one roster, and the page that reads it.
+"""The dev surface: one roster, and nothing yet that reads it.
 
 **The gate is checked at the top of this module**, so importing it anywhere the
 console is not served refuses before a router exists. ``app/api/dev/__init__.py``
@@ -10,12 +10,13 @@ import checks the process and ``run`` re-checks the object that decides which
 database is about to be written to. A process that is production does not get a
 console by being handed a `Settings` that says otherwise.
 
-**Two routes, and only one of them is the contract.** ``GET /dev`` hands over
-``console.html`` and is ``include_in_schema=False``: a document describing how to
-fetch a page is not something anything generates types from, and the claim
-``openapi.dev.json`` makes is the honest one — this surface has exactly one path,
-the roster, and every other request the console sends is a **player-surface**
-request it makes as the player it signed in as.
+**One route, and it is the contract.** The console page that read it — a
+no-build ``console.html`` at ``GET /dev``, which signed in as a seeded player and
+pressed searches, yeses and challenges on their behalf — went with the challenge
+routes it called (#578). The roster and this module's gate stay for the games
+test console that replaces it (``docs/adr/0194``, #590), and
+``openapi.dev.json`` still says the honest thing: this surface has exactly one
+path, the roster.
 
 **The roster carries the password once, at the top level.** The obvious shape —
 ``POST /dev/sessions {handle} → tokens`` — *is* an impersonation endpoint, and
@@ -50,11 +51,9 @@ and the placement is re-argued rather than grown into.
 
 from __future__ import annotations
 
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, status
-from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.sql.elements import ColumnElement
@@ -65,8 +64,6 @@ from app.core.config import get_settings
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 refuse_unless_served(get_settings())
-
-CONSOLE_HTML = Path(__file__).resolve().parent / "console.html"
 
 #: A seed account is one addressed on a TLD RFC 2606 §2 reserves: no registry
 #: will ever sell a name under it, so an address here cannot be somebody's real
@@ -198,8 +195,3 @@ async def read_roster(db: DbSession) -> RosterResponse:
             for row in rows
         ],
     )
-
-
-@dev_api_router.get("", include_in_schema=False)
-async def read_console() -> FileResponse:
-    return FileResponse(CONSOLE_HTML, media_type="text/html")

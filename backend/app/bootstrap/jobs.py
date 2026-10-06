@@ -38,7 +38,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bootstrap.composition import (
     build_propose_games,
     build_candidate_index_tail,
-    build_challenge_repository,
     build_clock,
     build_container_memory_limit,
     build_destroy_ended_conversations,
@@ -51,12 +50,8 @@ from app.bootstrap.composition import (
     build_exposure_ledger,
     build_image_transcoder,
     build_interest_ledger,
-    build_lapsing_challenge_query,
-    build_left_court_query,
     build_mailer,
     build_pending_mail,
-    build_planned_game_handover,
-    build_seatable_game_query,
     build_photo_review,
     build_photo_storage,
     build_play_intent_declaration_repository,
@@ -82,12 +77,6 @@ from app.modules.matchmaking.infrastructure.candidate_snapshot_source import (
     DatabaseCandidateSource,
 )
 from app.modules.matchmaking.infrastructure.scale_instruments import ScoringMeter
-from app.modules.challenges.application.call_off_unfilled_courts import (
-    CallOffUnfilledCourts,
-)
-from app.modules.challenges.application.lapse_expired_seats import (
-    LapseExpiredSeats,
-)
 from app.modules.matchmaking.application.detect_intent_drift import (
     DetectIntentDrift,
 )
@@ -154,20 +143,7 @@ SCALE_PRESSURE_JOB = "scale-pressure"
 #: only one whose log line carries a falsifier rather than a throughput figure.
 INTEREST_EXPIRY_JOB = "interest-expiry"
 
-#: The challenges lapse loop. The **first** job here that writes a domain event,
-#: and the only one whose whole product is a record: a seat past its answer
-#: window already reads as lapsed, so what this appends is the fact somebody can
-#: count rather than a change anybody can see.
-CHALLENGE_LAPSE_JOB = "challenge-lapse"
-
-#: The hour loop (``docs/adr/0175`` §3). The **second** job that appends a
-#: challenge event, and the first one on this list a challenge's standing
-#: depends on: a court still short of a player when its hour passes reads
-#: *needs a player* until this writes ``CALLED_OFF`` on it, because the hour is
-#: the plan's and the challenge cannot read a plan.
-UNFILLED_COURT_JOB = "unfilled-court"
-
-#: The rating catch-up. The **second** job that writes a domain event, and the
+#: The rating catch-up. The **first** job that writes a domain event, and the
 #: only one on this list whose output a player would miss: a confirmation is a
 #: clock passing and announces nothing (``docs/adr/0137``), so without this a
 #: result never reaches a Level. It holds no cursor — the rating streams are the
@@ -273,8 +249,6 @@ def build_scheduled_jobs(
         settings.PHOTO_SWEEP_ENABLED
         or settings.CANDIDATE_INDEX_ENABLED
         or settings.INTEREST_EXPIRY_ENABLED
-        or settings.CHALLENGE_LAPSE_ENABLED
-        or settings.UNFILLED_COURT_ENABLED
         or settings.RATING_CATCH_UP_ENABLED
         or settings.CONVERSATION_SWEEP_ENABLED
         or settings.MAIL_DELIVERY_ENABLED
@@ -317,18 +291,6 @@ def build_scheduled_jobs(
         if settings.INTEREST_EXPIRY_ENABLED:
             jobs.append(
                 build_interest_expiry_job(
-                    session_factory=session_factory, settings=settings
-                )
-            )
-        if settings.CHALLENGE_LAPSE_ENABLED:
-            jobs.append(
-                build_challenge_lapse_job(
-                    session_factory=session_factory, settings=settings
-                )
-            )
-        if settings.UNFILLED_COURT_ENABLED:
-            jobs.append(
-                build_unfilled_court_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -578,10 +540,10 @@ def build_proposal_expiry_job(
 ) -> PeriodicJob:
     """Record every proposal whose book-by passed unfilled.
 
-    **Idempotent and safe beside itself with no lock**, on the lapse loop's
-    terms: the aggregate records nothing on a proposal already ended, a genuine
-    race is caught by the stream version, and the loser steps over that one
-    proposal and keeps going.
+    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): the
+    aggregate records nothing on a proposal already ended, a genuine race is
+    caught by the stream version, and the loser steps over that one proposal and
+    keeps going.
 
     **Correctness does not depend on it running**: a proposal is over from its
     book-by on at every read. What it buys is the record — silently, since the
@@ -903,117 +865,6 @@ def build_interest_expiry_job(
     return PeriodicJob(
         name=INTEREST_EXPIRY_JOB,
         interval_seconds=settings.INTEREST_EXPIRY_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
-def build_challenge_lapse_job(
-    *,
-    session_factory: async_sessionmaker[AsyncSession],
-    settings: Settings,
-) -> PeriodicJob:
-    """Write down every answer window that passed with nothing in it.
-
-    **Idempotent and safe beside itself with no lock** (``docs/adr/0092``): the
-    aggregate skips a seat that already carries an answer, so a second pass
-    appends nothing. A genuine race is caught by the stream version, and the
-    loser **steps over that one challenge and keeps going** — every process walks
-    the same clock-derived list in the same order, so a run that ended on its
-    first conflict would be a loop that made no progress in any process. *N
-    processes, N runs* costs a repeated read and a counted collision.
-
-    **Correctness does not depend on it running.** A seat past its window reads
-    as lapsed, its pair releases and its challenge stands as ``LAPSED`` whether
-    or not anything has been past: the standing is folded from the seats and the
-    clock and is stored nowhere. What the loop buys is the record — *answers
-    challenges* is a Strand over challenges answered inside their window, and
-    silence leaves nothing behind to count unless something writes it down.
-
-    **A lapse is not a decline**, and the loop is where that distinction becomes
-    observable: what it appends is ``SeatLapsed``, never ``SeatDeclined``, because
-    somebody who said nothing made no judgement.
-    """
-
-    clock = build_clock()
-
-    async def run() -> None:
-        async with session_factory() as session:
-            swept = await LapseExpiredSeats(
-                clock=clock,
-                challenges=build_challenge_repository(
-                    event_store=build_domain_event_store(session),
-                    events=build_event_publisher(session),
-                ),
-                lapsing=build_lapsing_challenge_query(session),
-                unit_of_work=build_unit_of_work(session),
-            ).execute()
-        logger.info(
-            "challenge lapse loop finished",
-            extra={
-                "job": CHALLENGE_LAPSE_JOB,
-                "seats": swept.seats,
-                "challenges": swept.challenges,
-                # Not noise: *the loop is doing nothing* and *the loop is losing
-                # every race* have one symptom — a denominator that stops
-                # growing — and only one of them is somebody's problem.
-                "conflicts": swept.conflicts,
-            },
-        )
-
-    return PeriodicJob(
-        name=CHALLENGE_LAPSE_JOB,
-        interval_seconds=settings.CHALLENGE_LAPSE_INTERVAL_SECONDS,
-        run=run,
-    )
-
-
-def build_unfilled_court_job(
-    *,
-    session_factory: async_sessionmaker[AsyncSession],
-    settings: Settings,
-) -> PeriodicJob:
-    """Call off every game court still short of a player once its hour has
-    passed (``docs/adr/0175`` §3).
-
-    **Idempotent and safe beside itself with no lock**, on the lapse loop's
-    terms: the aggregate writes nothing on a court that is not half built, a
-    genuine race is caught by the stream version, and the loser steps over that
-    one court and keeps going.
-
-    **Correctness depends on it running**, which the lapse loop's does not: the
-    challenge's fold cannot read the plan whose hour this is, so the ending is
-    recorded here or not at all. What it buys the people on such a court is the
-    exit nobody presses — no ghost charged to them, their pair released, the
-    room destroyed and the row given its day.
-    """
-
-    clock = build_clock()
-
-    async def run() -> None:
-        async with session_factory() as session:
-            called_off = await CallOffUnfilledCourts(
-                clock=clock,
-                challenges=build_challenge_repository(
-                    event_store=build_domain_event_store(session),
-                    events=build_event_publisher(session),
-                ),
-                left=build_left_court_query(session),
-                games=build_seatable_game_query(session),
-                planned_games=build_planned_game_handover(session),
-                unit_of_work=build_unit_of_work(session),
-            ).execute()
-        logger.info(
-            "unfilled court loop finished",
-            extra={
-                "job": UNFILLED_COURT_JOB,
-                "courts": called_off.courts,
-                "conflicts": called_off.conflicts,
-            },
-        )
-
-    return PeriodicJob(
-        name=UNFILLED_COURT_JOB,
-        interval_seconds=settings.UNFILLED_COURT_INTERVAL_SECONDS,
         run=run,
     )
 

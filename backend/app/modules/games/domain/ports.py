@@ -22,15 +22,6 @@ absent from the answer instead.
 **Fewer than five results is a real answer and is never padded.** The card draws
 a gap; a fifth invented row would be the same mistake in a smaller place.
 
-**The Plan no longer reads a port published here.** ``PlanningCourt`` — *is
-this player on this game's court, and is that game still open to planning* — was
-published here while a plan was the game's (``docs/adr/0148`` §8). A plan is
-the challenge's now (``docs/adr/0164`` §3), drawn from the room's opening
-before any game exists, so the question is about a court this record cannot
-see on its own; the Plan declares it in its own words and answers it over both
-records. The arrow still runs ``plans -> games`` and never back: ``games`` does
-not know a plan exists, which is ADR-0145 §4's *"beside that context without
-being let into it"* made checkable and enforced in ``.importlinter``.
 **``OpponentVarietyQuery`` is a separate port and not a sixth fact on the history
 read**, and the split is a fence rather than a filing decision. Every read there
 is bounded — five results, five hundred counterparts — because its caller holds
@@ -60,20 +51,6 @@ that arrow. No ``Forecast``, no ``Split`` and no ``Stakes`` is borrowed from the
 engines: a provider that reached for the type one directory over would be the
 second-spelling trap the contract's own comment names.
 
-**``AgreedMoment`` is the third port consumed here, and ``SeatableCourt`` is the
-one it exists for** (``docs/adr/0162`` §4). A player may leave a game, and
-somebody may fill the seat, only while the game is awaiting its entry **and its
-agreed moment is ahead** — and the moment is the Plan's, computed there and
-nowhere else, in a context this one may not import (``.importlinter``,
-ADR-0145 §4). So this context *demands* the moment in its own words — keyed by
-the challenge the game was opened from, which is the plan's own id
-(``docs/adr/0164`` §1) and a fact every game carries — an adapter in
-``plans/infrastructure/`` signs it, and the guard — standing and moment, read
-together, once — is *published* here for ``challenges``, keyed by the challenge
-id because that is the currency ``challenges`` holds. Nothing about a moment is
-stored on a game: ADR-0137's *no date field anywhere* is still exactly true of
-this record.
-
 **``attendance_for`` and ``result_answering_for`` are the two reads here that
 answer about fewer people than they were asked about**, and the exception proves
 the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0160``).
@@ -101,8 +78,7 @@ from app.modules.games.domain.results import Outcome
 #: **Spelled to match ``matchmaking``'s ``PAIRWISE_COUNTERPART_BOUND``**, which
 #: this context may not import: ``games`` is a provider and does not know a
 #: matcher exists. The two spellings meet at the composing adapter, which refuses
-#: to import if they ever part company — the seam ``challenges`` already has for
-#: the same number.
+#: to import if they ever part company.
 PLAYED_COUNTERPART_BOUND = 500
 
 #: How many results *Last 5* draws. The card's own number, and the only place it
@@ -470,31 +446,6 @@ class ConfirmedResultLedger(Protocol):
 
 
 @runtime_checkable
-class AgreedMoment(Protocol):
-    """*When has this game been agreed for?* — this context's demand on
-    whoever keeps a plan.
-
-    Declared in this context's own words and answered by an adapter that lives
-    on the Plan's side of the arrow, because ``games`` may not import the Plan
-    (ADR-0145 §4) and the moment is computed there and nowhere else
-    (``agreed_point``: both slots the agreed instant, the day alone the start
-    of the following local day, no day nothing at all).
-
-    **Keyed by the challenge the game was opened from**, because a plan is the
-    challenge's (``docs/adr/0164`` §1) and every game carries that id — so the
-    caller asks in a currency it already holds and the adapter translates
-    nothing. **One court and never a collection**, because it is asked on a
-    write path about the one court an act names, and read at the guard rather
-    than stored anywhere.
-    """
-
-    async def agreed_point_of(self, challenge_id: UUID) -> Instant | None:
-        """The plan's moment, or ``None`` while no day is recorded — which
-        includes a court whose plan has never been written."""
-        ...
-
-
-@runtime_checkable
 class ClubCheckIns(Protocol):
     """*Who did the club see arrive?* — this context's demand on whoever keeps
     a booking (#547; the mechanics §15.1, §16.10).
@@ -502,56 +453,15 @@ class ClubCheckIns(Protocol):
     A player the club's desk checked in **can never be reported as not
     turning up**, and the scan is the booking's fact, recorded where the desk
     made it; so this context asks for it rather than keeping a copy that could
-    disagree. **Keyed by the challenge id the game was opened from** — a
-    booked game's ``challenge_id`` is its booking's id — so the caller asks in
-    a currency it already holds, as ``AgreedMoment`` is asked. A game a
-    completed line-up opened has no desk, and nobody on it was checked in.
+    disagree. **Keyed by the id the game was opened under** — a booked game's
+    ``challenge_id`` is its booking's id, the field keeping the name it was
+    born with — so the caller asks in a currency it already holds. A game with
+    no booking behind it has no desk, and nobody on it was checked in.
     """
 
     async def checked_in(self, challenge_id: UUID) -> frozenset[UUID]:
         """Everybody the club checked in to the game opened from
         ``challenge_id`` — empty when there is no booking behind it."""
-        ...
-
-
-@final
-class SeatChange(str, Enum):
-    """Whether a seat on this court may still be left or taken, and if not, why.
-
-    Three answers and no fourth: a court whose game is awaiting its entry with
-    its moment ahead — or not yet agreed — **admits** a change; one whose
-    agreed moment has passed refuses it, so a no-show cannot vacate a seat to
-    block the result and a newcomer cannot accept into *Sunday* on Monday; and
-    one whose game has happened, or never will, is the record of an evening
-    and nothing on it moves. *No game at all* is the port's ``None``.
-    """
-
-    ADMITTED = "ADMITTED"
-    MOMENT_PASSED = "MOMENT_PASSED"
-    GAME_IS_HISTORY = "GAME_IS_HISTORY"
-
-
-@runtime_checkable
-class SeatableCourt(Protocol):
-    """*May a seat on this challenge's court still be left, or taken?*
-
-    **Named for both halves** (``docs/adr/0162`` §4): a departure and a
-    re-entry — the fill, and the acceptance that completes it — are gated by
-    the same two facts, the game's standing and the plan's moment, and one
-    port answering both is what keeps the leaving and the filling from coming
-    to two answers about one instant.
-
-    **Keyed by the challenge id in both directions**, on ``SettledGameQuery``'s
-    argument: the caller's question is about a court it minted and handed over,
-    and it never learns a game id to ask with. The standing is the repository's
-    and the moment is ``AgreedMoment``'s, and the guard is written once, here.
-    """
-
-    async def seat_change_on(
-        self, challenge_id: UUID, *, now: Instant
-    ) -> SeatChange | None:
-        """The answer for the game this challenge became, or ``None`` because
-        it became none."""
         ...
 
 
@@ -564,12 +474,13 @@ class GameRepository(Protocol):
     async def save(self, game: Game) -> None: ...
 
     async def for_challenge(self, challenge_id: UUID) -> Game | None:
-        """The game a completed line-up already opened, if one has.
+        """The game a booking already opened, if one has — ``challenge_id`` is
+        the booking's id, under the name the field was born with.
 
         **One arrangement is one game**, and the opening runs in the transaction
-        of an accept — so the read that makes it idempotent belongs beside the
+        of the fill — so the read that makes it idempotent belongs beside the
         write rather than in the caller. It is not a lookup by payload the way
-        the directory is: it answers about one challenge and returns one game.
+        the directory is: it answers about one booking and returns one game.
         """
         ...
 
@@ -945,7 +856,6 @@ class GameHistoryQuery(Protocol):
 __all__ = [
     "PLAYED_COUNTERPART_BOUND",
     "RECENT_RESULTS",
-    "AgreedMoment",
     "Attendance",
     "ConfirmedGame",
     "ConfirmedResultLedger",
@@ -966,6 +876,4 @@ __all__ = [
     "PlayerNames",
     "PlayedTally",
     "ResultAnswering",
-    "SeatChange",
-    "SeatableCourt",
 ]

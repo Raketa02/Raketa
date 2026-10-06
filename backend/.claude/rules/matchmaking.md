@@ -81,8 +81,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ADR-0130's *a withholding is stated, the gate is not named* applied one route over. Giving
   the first case an id, which is one port read away, would make absence mean *a gate refused
   about one of you* and the field would have to go; §3 of the record is where that is
-  written down. `mutual_born_challenges_that_became_games` answers **newest first** for it, so
-  the row named to a player is not set iteration order (ADR-0105).
+  written down. `mutual_born_challenges_that_became_games` answered **newest first** for it, so
+  the row named to a player was not set iteration order (ADR-0105). **Since #578 nothing is
+  minted**: the challenges went, `build_mutual_challenge_minting` signs the port with
+  `NoMutualOpensAGame`, and `ExpressedInterestResponse.challenge_id` is always `null` — the
+  port's own word for *no game to name* — until #579 removes the interest route. A fill's
+  `completing_challenge_id` likewise names a court that does not exist
+  (`NoHalfBuiltCourtsExist`), and `MatchHistoryQuery` is `games` alone (`GamesPlayed`), with no
+  challenge open and a measured zero in every inbox.
 - **The deck reads no declaration, and a pass is a statement about my deck**
   ([ADR-0169](../../../docs/adr/0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md),
   [ADR-0128](../../../docs/adr/0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md),

@@ -15,14 +15,12 @@ deleted by somebody who reads it as duplication.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 import pytest
 
 from app.api.contract import SURFACES, build_surface_spec
 from app.api.dev.routes import (
-    CONSOLE_HTML,
     SEED_ADDRESS_TLD,
     SEED_PASSWORD,
     is_seed_account,
@@ -153,54 +151,3 @@ def test_the_predicate_ignores_case():
     filter is an `ILIKE`, so the Python predicate has to agree with it."""
 
     assert is_seed_account(f"Alice@RAKETA{RESERVED_TLD.upper()}")
-
-
-# ---------------------------------------------------------------------------
-# The page: three rules that are absences, asserted as absences
-# ---------------------------------------------------------------------------
-
-
-def _console_code() -> str:
-    """`console.html` with its comments removed.
-
-    The page explains each of these rules in a comment that has to *name* the
-    thing it refuses, so a search over the raw file finds every one of them and
-    proves nothing. What is asserted is the code.
-
-    Only whole-line `//` comments are stripped, which is every one the file has
-    — a trailing one would survive, so keep them on their own line.
-    """
-
-    source = CONSOLE_HTML.read_text()
-    source = re.sub(r"<!--.*?-->", "", source, flags=re.S)
-    return re.sub(r"^\s*//.*$", "", source, flags=re.M)
-
-
-def test_the_console_stores_no_token_and_starts_no_timer():
-    """#229 left these as prose, on the grounds that there is nothing to assert
-    against an absence. In one file there is.
-
-    - **No timer.** The prototype's simulated replies are machinery UI spec §G4
-      lists for deletion, and the whole reason this console exists is that
-      nothing auto-answers. A `setTimeout` here would put that lie back one
-      layer down.
-    - **No persisted token.** A dev tool that persists tokens leaks them into a
-      screenshot or a shared browser profile; being logged out by a refresh is
-      the correct cost.
-    """
-
-    code = _console_code()
-
-    for forbidden in ("setInterval", "setTimeout", "localStorage", "sessionStorage"):
-        assert forbidden not in code, f"the console must not use {forbidden}"
-
-
-def test_the_console_signs_in_through_the_ordinary_login_route():
-    """No impersonation endpoint, and no `Act-As` header — asserted where a
-    reader would otherwise have to take the docstring's word for it."""
-
-    code = _console_code()
-
-    assert "/auth/login" in code
-    assert "Act-As" not in code
-    assert "/dev/sessions" not in code

@@ -10,8 +10,7 @@ What it buys is a ``ProposalExpired`` on the stream, which is what a poster's
 *your post didn't fill* will be told from (#546), and a projection whose
 ``ended`` column lets the live reads stay narrow as the table grows.
 
-**One transaction per proposal**, on the challenge lapse loop's argument
-(``challenges/application/lapse_expired_seats.py``): every process walks the
+**One transaction per proposal** (``docs/adr/0092``): every process walks the
 same clock-derived list in the same order, so a version conflict is counted and
 stepped over rather than ending the run on the first collision, and nothing
 holds a cursor.

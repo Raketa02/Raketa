@@ -31,7 +31,6 @@ from app.bootstrap.composition import (
     build_player_names,
 )
 from app.modules.games.application.answer_result import AcceptResult, StateResult
-from app.modules.games.application.dismiss_game import DismissGame
 from app.modules.games.application.no_shows import DisputeANoShow, ReportANoShow
 from app.modules.games.application.read_game_pairing import ReadGamePairing
 from app.modules.games.application.read_games import ReadGames
@@ -131,20 +130,6 @@ def get_dispute_a_no_show(
 
 
 DisputeANoShowDep = Annotated[DisputeANoShow, Depends(get_dispute_a_no_show)]
-
-
-def get_dismiss_game(
-    clock: ClockDep,
-    uow: UnitOfWorkDep,
-    games: GameRepositoryDep,
-) -> DismissGame:
-    """The dismissal: the result acts' repository and unit of work, and no
-    names — it answers nothing, so there is nobody to name."""
-
-    return DismissGame(games=games, uow=uow, clock=clock)
-
-
-DismissGameDep = Annotated[DismissGame, Depends(get_dismiss_game)]
 
 
 def get_court_pairing(db: DbSession) -> CourtPairing:

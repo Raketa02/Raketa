@@ -381,30 +381,6 @@ from app.modules.blocks.infrastructure.event_sourced_block_query import (
 from app.modules.blocks.infrastructure.event_sourced_block_repository import (
     EventSourcedBlockRepository,
 )
-from app.modules.challenges.application.court_safety import CourtSafety
-from app.modules.challenges.application.open_from_mutual_interest import (
-    OpenChallengeFromMutualInterest,
-)
-from app.modules.challenges.domain.friendly_choice import FriendlyChoiceQuery
-from app.modules.challenges.domain.game_of_court import GameOfCourtQuery
-from app.modules.challenges.domain.planned_game import PlannedGameHandover
-from app.modules.challenges.domain.seatable_game import SeatableGameQuery
-from app.modules.challenges.domain.settled_game import SettledGameQuery
-from app.modules.challenges.infrastructure.games_game_of_court import (
-    GamesGameOfCourt,
-)
-from app.modules.challenges.infrastructure.games_planned_game import (
-    GamesPlannedGame,
-)
-from app.modules.challenges.infrastructure.games_seatable_game import (
-    GamesSeatableGame,
-)
-from app.modules.challenges.infrastructure.games_settled_game import (
-    GamesSettledGame,
-)
-from app.modules.challenges.infrastructure.profile_friendly_choice import (
-    ProfileFriendlyChoice,
-)
 from app.modules.clubs.application.password_accounts import ClubPasswordAccounts
 from app.modules.clubs.application.session_holders import ClubAccountSessionHolders
 from app.modules.clubs.domain.ports import (
@@ -479,7 +455,6 @@ from app.modules.groups.infrastructure.rated_group_members import (
 from app.modules.groups.infrastructure.sqlalchemy_group_directory import (
     SqlAlchemyGroupDirectory,
 )
-from app.modules.games.application.dismiss_game import DismissGameOfCourt
 from app.modules.games.application.open_planned_game import OpenPlannedGame
 from app.modules.games.application.take_a_seat import TakeASeat
 from app.modules.games.application.vacate_seat import VacateSeat
@@ -537,7 +512,6 @@ from app.modules.conversations.infrastructure.sqlalchemy_conversation_directory 
     SqlAlchemyConversationDirectory,
 )
 from app.modules.games.domain.ports import (
-    AgreedMoment,
     ClubCheckIns,
     ConfirmedResultLedger,
     CourtPairing,
@@ -546,7 +520,6 @@ from app.modules.games.domain.ports import (
     GameRepository,
     OpponentVarietyQuery,
     PlayerNames,
-    SeatableCourt,
 )
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
     EventSourcedConfirmedResults,
@@ -554,10 +527,6 @@ from app.modules.games.infrastructure.event_sourced_confirmed_results import (
 from app.modules.games.infrastructure.event_sourced_game_history import (
     EventSourcedGameHistory,
 )
-from app.modules.games.infrastructure.event_sourced_seatable_court import (
-    EventSourcedSeatableCourt,
-)
-from app.modules.plans.infrastructure.games_agreed_moment import PlansAgreedMoment
 from app.modules.games.infrastructure.event_sourced_game_repository import (
     EventSourcedGameRepository,
 )
@@ -565,45 +534,7 @@ from app.modules.games.infrastructure.users_names import UsersNames
 from app.modules.matchmaking.infrastructure.games_shared_courts import (
     GamesSharedCourts,
 )
-from app.modules.matchmaking.infrastructure.games_match_history import (
-    GamesPlayedAndChallengesAnswered,
-)
-from app.modules.challenges.domain.ports import (
-    AccountHoldQuery as ChallengeAccountHoldQuery,
-    ChallengeDirectory,
-    ChallengeHistoryQuery,
-    ChallengeRepository,
-    CourtPairingQuery,
-    LapsingChallengeQuery,
-    LeftCourtQuery,
-    OpenChallengeQuery,
-    OriginSearchQuery,
-    PlayerNames as ChallengePlayerNames,
-)
-from app.modules.challenges.infrastructure.absent_providers import (
-    NoHoldsExist as NoChallengeHoldsExist,
-)
-from app.modules.challenges.infrastructure.event_sourced_challenge_directory import (
-    EventSourcedChallengeDirectory,
-)
-from app.modules.challenges.infrastructure.event_sourced_challenge_history import (
-    EventSourcedChallengeHistory,
-)
-from app.modules.challenges.infrastructure.event_sourced_challenge_repository import (
-    EventSourcedChallengeRepository,
-)
-from app.modules.challenges.infrastructure.event_sourced_lapsing_challenge_query import (  # noqa: E501
-    EventSourcedLapsingChallengeQuery,
-)
-from app.modules.challenges.infrastructure.event_sourced_left_court_query import (
-    EventSourcedLeftCourtQuery,
-)
-from app.modules.challenges.infrastructure.users_names import (
-    UsersNames as ChallengeUsersNames,
-)
-from app.modules.challenges.infrastructure.event_sourced_open_challenge_query import (
-    EventSourcedOpenChallengeQuery,
-)
+from app.modules.matchmaking.infrastructure.games_match_history import GamesPlayed
 from app.modules.matchmaking.domain.ports import (
     AccountHoldQuery,
     AccountStatusQuery,
@@ -640,7 +571,11 @@ from app.modules.matchmaking.infrastructure.redis_ledgers import (
 from app.modules.matchmaking.infrastructure.rebuild_candidate_index import (
     RebuildCandidateIndex,
 )
-from app.modules.matchmaking.infrastructure.absent_providers import NoHoldsExist
+from app.modules.matchmaking.infrastructure.absent_providers import (
+    NoHalfBuiltCourtsExist,
+    NoHoldsExist,
+    NoMutualOpensAGame,
+)
 from app.modules.matchmaking.infrastructure.published_player_scores import (
     PublishedPlayerScores,
 )
@@ -693,50 +628,14 @@ from app.modules.matchmaking.infrastructure.sqlalchemy_search_store import (
 from app.modules.matchmaking.domain.mutual_challenge import (
     MutualChallengeMinting,
 )
-from app.modules.matchmaking.infrastructure.challenges_half_built_court import (
-    ChallengesHalfBuiltCourts,
-)
-from app.modules.matchmaking.infrastructure.challenges_match_history import (
-    ChallengesButNobodyHasPlayed,
-)
-from app.modules.matchmaking.infrastructure.challenges_mutual_challenge import (
-    ChallengesMutualChallenge,
-)
-from app.modules.matchmaking.application.pair_with_a_court import PairWithACourt
-from app.modules.matchmaking.application.search_workbench import SearchWorkbench
-from app.modules.matchmaking.domain.candidate_snapshot import CandidateSource
-from app.modules.matchmaking.infrastructure.challenge_court_cards import (
-    ChallengeCourtCards,
-    NoCourtCanBePriced,
-)
 from app.modules.matchmaking.infrastructure.games_court_pairing import (
     GamesCourtPairing,
-)
-from app.modules.matchmaking.infrastructure.search_court_origin import (
-    SearchCourtOrigin,
 )
 from app.modules.matchmaking.infrastructure.rating_at_stake import (
     RatingResultUpdateRule,
 )
 from app.modules.matchmaking.infrastructure.users_account_status import (
     UsersAccountStatus,
-)
-from app.modules.plans.application.read_plans import ReadPlans
-from app.modules.plans.domain.ports import (
-    AccountHoldQuery as PlanAccountHoldQuery,
-    PlanDirectory,
-    PlannableCourts,
-    PlanRepository,
-)
-from app.modules.plans.infrastructure.absent_providers import (
-    NoHoldsExist as NoPlanHoldsExist,
-)
-from app.modules.plans.infrastructure.event_sourced_plan_repository import (
-    EventSourcedPlanDirectory,
-    EventSourcedPlanRepository,
-)
-from app.modules.plans.infrastructure.plannable_courts import (
-    ChallengesAndGamesPlannableCourts,
 )
 from app.modules.player_profile.domain.ports import (
     PlayIntentDeclarationRepository,
@@ -3137,347 +3036,6 @@ def build_block_query(
 
 
 # --------------------------------------------------------------------------
-# Challenges
-# --------------------------------------------------------------------------
-
-
-def build_challenge_repository(
-    *,
-    event_store: DomainEventStore,
-    events: DomainEventPublisher,
-) -> ChallengeRepository:
-    """Per unit of work, for the same reason every aggregate repository is.
-
-    It remembers the stream versions it loaded, so it must never be longer-lived
-    than the transaction it was built beside: one send's versions must never
-    answer for another's.
-    """
-    return EventSourcedChallengeRepository(event_store=event_store, events=events)
-
-
-def build_open_challenge_query(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> OpenChallengeQuery:
-    """*Are any two of these people already arranging a game?*
-
-    Over the **log**, because the standing is derived from the seats and the
-    clock and a projection of it would be a status column with a table around
-    it — right until a deadline passed, wrong until something swept it, and
-    believed throughout. It takes the codec from the event runtime rather than
-    declaring the durable names a second time, for the reason the block query
-    does: a re-declared published contract drifts silently.
-    """
-    return EventSourcedOpenChallengeQuery(
-        session, (runtime or get_event_runtime()).codec
-    )
-
-
-def build_challenge_directory(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> ChallengeDirectory:
-    """*What have I been asked, and what have I asked for* — over the log.
-
-    Over the log for the reason the open-challenge query is: there is no standing
-    to project, because a standing is a fold of the seats against a clock and a
-    stored one would be wrong for the whole gap between a deadline and a sweep.
-    """
-    return EventSourcedChallengeDirectory(
-        session, (runtime or get_event_runtime()).codec
-    )
-
-
-def build_lapsing_challenge_query(session: AsyncSession) -> LapsingChallengeQuery:
-    """The candidate set the lapse loop opens — over the log, and with no codec.
-
-    The only read in this context that needs no ``EventCodec``: it answers with
-    stream ids and the loop replays each one through the repository, so decoding
-    them here would be the same stream read twice.
-    """
-    return EventSourcedLapsingChallengeQuery(session)
-
-
-def build_left_court_query(session: AsyncSession) -> LeftCourtQuery:
-    """The candidate set the hour loop opens — over the log, and with no codec,
-    on the lapse read's argument (``docs/adr/0175`` §3)."""
-    return EventSourcedLeftCourtQuery(session)
-
-
-def build_challenge_names(session: AsyncSession) -> ChallengePlayerNames:
-    """*What is this person called* — the one thing a challenge **list** borrows.
-
-    The second line in this file building a names adapter, and the second
-    ``UsersNames`` class behind it: ``challenges`` and ``games`` each declare
-    the port because neither may import the other, so the two are aliased apart
-    here rather than one context signing the other's (``docs/adr/0143`` §7).
-    """
-    return ChallengeUsersNames(build_user_repository(session))
-
-
-def build_challenge_hold_query(session: AsyncSession) -> ChallengeAccountHoldQuery:
-    """``cases`` does not exist, so nothing can hold an account.
-
-    **The second line in this file that says so**, and the duplication is the
-    decision rather than an oversight: ``challenges`` declares its own hold port
-    because it may not import the matcher, and a shared declaration would mean a
-    send reading a safety fact through a context it was split away from. On the
-    day ``cases`` ships, this line and ``build_account_hold_query`` change to the
-    same adapter.
-    """
-    return NoChallengeHoldsExist()
-
-
-def build_court_safety(session: AsyncSession) -> CourtSafety:
-    """The four fail-closed gates, over the providers that own each fact.
-
-    Three of the four are somebody else's shipped port — ``blocks``, ``users``
-    and ``player_profile`` — and only the hold is answered by an empty provider.
-    Assembled here rather than at each surface so that the send and the
-    mutual-born mint cannot come to two answers about which reads fail closed.
-    """
-    return CourtSafety(
-        blocks=build_block_query(session),
-        holds=build_challenge_hold_query(session),
-        accounts=build_user_repository(session),
-        profiles=build_player_profile_repository(
-            event_store=build_domain_event_store(session),
-            events=build_event_publisher(session),
-        ),
-    )
-
-
-def build_origin_search_query(session: AsyncSession) -> OriginSearchQuery:
-    """What the search a court was built on says about that court.
-
-    An outward demand ``challenges`` makes and the matcher signs, so the adapter
-    is the matcher's and this line is where the two meet. The alternative — a
-    window and a position on the request body — is the one thing
-    ``docs/adr/0100`` has no picker for and the one thing the origin key may not
-    take a client's word for.
-    """
-    return SearchCourtOrigin(build_search_store(session))
-
-
-def build_court_pairing_query(
-    *,
-    session: AsyncSession,
-    clock: Clock,
-    unit_of_work: UnitOfWork,
-    event_store: DomainEventStore,
-    events: DomainEventPublisher,
-    settings: Settings,
-    store: Redis | None,
-    candidates: CandidateSource | None,
-) -> CourtPairingQuery:
-    """Who the people on a court are, and what the reader makes of each of them.
-
-    The second outward demand ``challenges`` makes of the matcher and the second
-    line here where the two meet — ``build_origin_search_query``'s shape, one
-    screen later (``docs/adr/0143`` §4). It is the **expensive** one: a search
-    context bound live, the whole Fit stack run over the court, a card assembled
-    per person and a photograph signed for each, so it is wired to a route a tap
-    opens and never to a list.
-
-    **Everything it needs is a whole workbench**, because the pairing is
-    recomputed through the same code path a search runs rather than replayed from
-    a record — which is the only shape under which a challenge born of a search
-    and one born of a mutual yes render the same way, and the only one under
-    which *Match score for you* is true.
-
-    ``candidates`` is ``None`` in a process with no index, and ``store`` is
-    ``None`` where the ephemeral store never came up. Neither is a refusal here:
-    both reach the reader as *the pairing could not be read*, because answering a
-    challenge is not gated on the matcher.
-
-    **Two entry points and one assembly.** This one is the route's, over the
-    connections a request holds; :func:`build_court_pairing_query_over` is the
-    same wiring over the two seams a demands suite supplies itself, so what the
-    suite exercises is what ships rather than a second construction of it.
-    """
-
-    if candidates is None or store is None:
-        return NoCourtCanBePriced()
-    return build_court_pairing_query_over(
-        workbench=build_court_pairing_workbench(
-            session=session,
-            clock=clock,
-            unit_of_work=unit_of_work,
-            event_store=event_store,
-            events=events,
-            settings=settings,
-            exposure=build_exposure_ledger(store),
-            candidates=candidates,
-        ),
-        settings=settings,
-    )
-
-
-def build_court_pairing_query_over(
-    *, workbench: SearchWorkbench, settings: Settings
-) -> CourtPairingQuery:
-    """The adapter itself, over a workbench the caller already holds.
-
-    **A workbench is taken rather than built, because a caller may already have
-    one.** A seed run assembles one for its searches and then reads a challenge
-    screen through it; building a second over the same session would be four
-    objects over one table, which is the thing ``app/seeds/paths.py`` says in as
-    many words about its own stores.
-    """
-
-    storage = build_photo_storage(settings)
-    return ChallengeCourtCards(
-        pairing=PairWithACourt(
-            workbench=workbench,
-            ruleset=build_ruleset(),
-            engine=build_match_fit_engine(),
-        ),
-        photos=build_card_photo_links(storage=storage, settings=settings),
-    )
-
-
-def build_game_court_pairing(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> CourtPairing:
-    """What the engine makes of a game's court, for the reader (``docs/adr/0161``).
-
-    The one outward demand ``games`` makes of the matcher, **answered from the
-    balance forecast directly** (#575): a booked game's court is read side
-    against side from the people's Levels under the live ruleset — the reading
-    a Games card makes of the same people (:func:`build_balance_forecasts`) —
-    and from ``rating``'s published figures and result-update rule beside it.
-    No search workbench, candidate index or ledger sits behind it, so a process
-    with none of them still draws the whole screen.
-    """
-
-    return GamesCourtPairing(
-        ratings=build_rated_player_query(session, runtime=runtime),
-        ruleset=build_ruleset(),
-        at_stake=build_at_stake_query(session, runtime=runtime),
-    )
-
-
-def build_court_pairing_workbench(
-    *,
-    session: AsyncSession,
-    clock: Clock,
-    unit_of_work: UnitOfWork,
-    event_store: DomainEventStore,
-    events: DomainEventPublisher,
-    settings: Settings,
-    exposure: ExposureLedger,
-    candidates: CandidateSource,
-) -> SearchWorkbench:
-    """A workbench for a caller that holds no other reason to have one.
-
-    The two seams a demands suite supplies for itself: the candidate index is the
-    **process's** rather than the request's (``docs/adr/0112``), and the exposure
-    ledger is Redis, which no test in this repository needs running.
-
-    Everything else is built from the session, because this caller shares none of
-    it with anything — which is exactly what makes it safe to build here and
-    exactly why a caller who *does* share passes their own workbench instead.
-    """
-
-    storage = build_photo_storage(settings)
-    return SearchWorkbench(
-                clock=clock,
-                ruleset=build_ruleset(),
-                searches=build_search_store(session),
-                unit_of_work=unit_of_work,
-                candidates=candidates,
-                profiles=build_player_profile_repository(
-                    event_store=event_store, events=events
-                ),
-                ratings=build_skill_rating_repository(
-                    event_store=event_store, events=events
-                ),
-                declarations=build_play_intent_declaration_repository(
-                    event_store=event_store, events=events
-                ),
-                blocks=build_block_query(session),
-                holds=build_account_hold_query(session),
-                account_status=build_account_status_query(session),
-                history=build_match_history_query(session),
-                player_scores=build_player_score_query(session),
-                at_stake=build_at_stake_query(session),
-                exposure=exposure,
-                interest=build_interest_ledger(session),
-                cards=build_player_card_source(
-                    session=session,
-                    event_store=event_store,
-                    events=events,
-                    storage=storage,
-                ),
-        records=build_player_record_source(session),
-        absent_terms=build_absent_terms(),
-        # **Nothing is recorded and nothing is measured.** The meter reports the
-        # scoring stage of a *search*, and this is not one.
-        meter=None,
-    )
-
-
-def build_mutual_challenge_minting(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> MutualChallengeMinting:
-    """The challenge two yeses that met open, minted inline.
-
-    It wraps a ``challenges`` use case rather than an aggregate: what a
-    mutual-born challenge *is* belongs to that context, and the adapter is a
-    translation of one sentence into another.
-
-    **No unit of work here.** The mint joins the transaction of the yes that
-    caused it, so the use case appends and publishes and the caller commits — the
-    boundary stays a decision about the command.
-    """
-    return ChallengesMutualChallenge(
-        OpenChallengeFromMutualInterest(
-            challenges=build_challenge_repository(
-                event_store=build_domain_event_store(session),
-                events=build_event_publisher(session),
-            ),
-            open_challenges=build_open_challenge_query(session, runtime=runtime),
-            settled_games=build_settled_game_query(session, runtime=runtime),
-            safety=build_court_safety(session),
-            clock=build_clock(),
-            planned_games=build_planned_game_handover(session, runtime=runtime),
-            friendly_choices=build_friendly_choice_query(session, runtime=runtime),
-        )
-    )
-
-
-def build_friendly_choice_query(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> FriendlyChoiceQuery:
-    """*Which of these two declared* for fun *in this sport?* — what the mutual
-    mint reads to decide the kind of game it opens (``docs/adr/0169`` §8).
-
-    Built on ``player_profile``'s own declaration repository rather than on the
-    matcher's ``mode_for_intent``: the arrow runs ``matchmaking -> challenges``
-    and never back, and the two mappings answer different questions anyway —
-    that one picks a weight vector and lets *no preference* inherit the fun
-    ruler, this one honours a stated wish and lets *no preference* choose
-    nothing.
-
-    **A second declaration repository inside one unit of work** beside whatever
-    the request built, and safe for ``build_settled_game_query``'s reason: it
-    only ever **reads**, and two readers may hold a version of one stream.
-    """
-    return ProfileFriendlyChoice(
-        build_play_intent_declaration_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        )
-    )
-
-
-# --------------------------------------------------------------------------
 # Rating
 # --------------------------------------------------------------------------
 
@@ -3678,23 +3236,6 @@ def build_player_score_query(session: AsyncSession) -> PlayerScoreQuery:
     return PublishedPlayerScores(build_published_score_query(session), build_clock())
 
 
-def build_challenge_history_query(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> ChallengeHistoryQuery:
-    """What ``challenges`` owes the matcher — over the log, like its two siblings.
-
-    Over the log rather than a projection for the reason the open-challenge query
-    and the directory are: *open* is a fold of the seats against a clock, and a
-    stored standing would be wrong for the whole gap between a deadline passing
-    and a sweep noticing it.
-    """
-    return EventSourcedChallengeHistory(
-        session, (runtime or get_event_runtime()).codec
-    )
-
-
 # --------------------------------------------------------------------------
 # Games
 # --------------------------------------------------------------------------
@@ -3709,154 +3250,32 @@ def build_game_repository(
     """Per unit of work, for the same reason every aggregate repository is.
 
     It takes the session as well as the store, because one of its reads is a
-    lookup by payload: *has this challenge already opened a game*, which is what
-    makes the opening idempotent inside the accept's own transaction.
+    lookup by payload: *has this booking already opened a game*, which is what
+    makes the opening idempotent inside the fill's own transaction.
     """
     return EventSourcedGameRepository(
         event_store=event_store, events=events, session=session
     )
 
 
-def build_planned_game_handover(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> PlannedGameHandover:
-    """The game a completed line-up opens or re-seats, the seat a departure
-    vacates, the game a deserting departure or the hour calls off, and the
-    dismissal a reader records on it from the Chats row, recorded inline
-    (``docs/adr/0162``, ``docs/adr/0163``, ``docs/adr/0175``).
+def build_game_court_pairing(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> CourtPairing:
+    """What the engine makes of a game's court, for the reader (``docs/adr/0161``).
 
-    It wraps four ``games`` use cases rather than an aggregate: what a game born
-    of a completed line-up *is* belongs to that context, and the adapter is a
-    translation of one sentence into another — four times.
-
-    **One repository for all four**, because they run in one transaction and
-    each loads the stream it appends to; **no unit of work here**, because the
-    hand-over joins the transaction of the acceptance, the departure, the
-    sweep or the dismissal that caused it, so the use case appends and
-    publishes and the caller commits — the boundary stays a decision about the
-    command.
+    The one outward demand ``games`` makes of the matcher, **answered from the
+    balance forecast directly** (#575): a booked game's court is read side
+    against side from the people's Levels under the live ruleset — the reading
+    a Games card makes of the same people (:func:`build_balance_forecasts`) —
+    and from ``rating``'s published figures and result-update rule beside it.
+    No search workbench, candidate index or ledger sits behind it, so a process
+    with none of them still draws the whole screen.
     """
-    games = build_game_repository(
-        session=session,
-        event_store=build_domain_event_store(session, runtime=runtime),
-        events=build_event_publisher(session, runtime=runtime),
-    )
-    return GamesPlannedGame(
-        OpenPlannedGame(games=games),
-        VacateSeat(games=games),
-        CallOffGame(games=games),
-        DismissGameOfCourt(games=games),
-    )
 
-
-def build_agreed_moment(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> AgreedMoment:
-    """*When has this game been agreed for?* — the Plan's answer to ``games``'
-    demand (``docs/adr/0162`` §4), keyed by the challenge the game was opened
-    from, which is the plan's own id (``docs/adr/0164`` §1).
-
-    Over the Plan's repository rather than its directory, because the question
-    is about one court and ``load`` answers an unwritten plan — whose moment is
-    ``None`` — rather than nothing.
-    """
-    return PlansAgreedMoment(
-        build_plan_repository(
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        )
-    )
-
-
-def build_seatable_court(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> SeatableCourt:
-    """*May a seat on this challenge's court still be left, or taken?* —
-    ``games``' answer, over its repository and the Plan's moment.
-
-    A second game repository inside one unit of work, beside the hand-over's,
-    on ``build_settled_game_query``'s argument: this one only ever reads, and
-    the hand-over's is the only writer.
-    """
-    return EventSourcedSeatableCourt(
-        games=build_game_repository(
-            session=session,
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        ),
-        moments=build_agreed_moment(session, runtime=runtime),
-    )
-
-
-def build_seatable_game_query(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> SeatableGameQuery:
-    """The read half of the departure's seam, in ``challenges``' own words:
-    the adapter translates ``games``' published answer and decides nothing."""
-    return GamesSeatableGame(build_seatable_court(session, runtime=runtime))
-
-
-def build_game_of_court_query(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> GameOfCourtQuery:
-    """*Which of these courts have a game, and which game?* — the challenge
-    read's fourth question on the arrow ``challenges -> games``
-    (``docs/adr/0172`` §4), wired the way the settled read is and for its
-    reason: the join is the repository's, nothing is written through it, and a
-    second reading repository inside one unit of work is safe because the
-    hand-over's is the only writer.
-    """
-    return GamesGameOfCourt(
-        build_game_repository(
-            session=session,
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        )
-    )
-
-
-def build_settled_game_query(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> SettledGameQuery:
-    """*Is anything more going to happen to the game this challenge opened?*
-
-    The read half of the seam above, wired the same way and for the same reason:
-    what *settled* means belongs to ``games``, and which implementation answers
-    belongs here (``docs/adr/0152`` §5).
-
-    It is built on the aggregate repository rather than on a read port, because
-    the join it needs — one challenge to one game — is already there for the
-    opening's idempotence. Nothing is written through it, and it commits nothing.
-
-    **It is a second game repository inside one unit of work**, beside the one
-    ``build_planned_game_handover`` makes, and that is safe here for a reason
-    rather than by luck: a repository's per-unit-of-work state is the version
-    bookkeeping behind optimistic concurrency, and this one only ever **reads**.
-    Two readers may hold a version of one stream; what must not happen is two
-    *writers* holding one, and the hand-over's repository is the only writer —
-    it opens a game, or since ``docs/adr/0162`` re-seats or vacates a seat on
-    one, and nothing built here appends beside it. Sharing one would mean a
-    builder taking another builder's product, which is not the shape any port is
-    wired in here.
-    """
-    return GamesSettledGame(
-        build_game_repository(
-            session=session,
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        )
+    return GamesCourtPairing(
+        ratings=build_rated_player_query(session, runtime=runtime),
+        ruleset=build_ruleset(),
+        at_stake=build_at_stake_query(session, runtime=runtime),
     )
 
 
@@ -3867,11 +3286,10 @@ def build_game_history_query(
 ) -> GameHistoryQuery:
     """What ``games`` owes the rest of the platform — over the log.
 
-    Over the log rather than a projection for the reason every read in
-    ``challenges`` is: the standing is a fold of the record against a clock, and
-    a stored one would be wrong for the whole gap between a deadline passing and
-    anything noticing — with nothing to notice it, because this context has no
-    sweep.
+    Over the log rather than a projection: the standing is a fold of the record
+    against a clock, and a stored one would be wrong for the whole gap between a
+    deadline passing and anything noticing — with nothing to notice it, because
+    this context has no sweep.
     """
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
 
@@ -3900,131 +3318,35 @@ def build_game_directory(
     return EventSourcedGameHistory(session, (runtime or get_event_runtime()).codec)
 
 
-def build_plannable_courts(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> PlannableCourts:
-    """*Which courts is this player arranging, and which are history* —
-    ``challenges`` and ``games`` folded together, on the Plan's side of both
-    arrows (``docs/adr/0164`` §3).
-
-    The one thing the Plan reads about a court, and the read that decides
-    whether a write may land. Built here rather than at the surface for the
-    reason every adapter is: which contexts answer *who is on this
-    court and is it still being arranged* is a wiring choice, and a read path
-    that reached into either itself would put a second author on it. It is
-    folded rather than projected for the reason every read in those contexts
-    is: ``open_to_planning`` and ``whole`` are standings, and a stored one would
-    be wrong for the whole gap between a deadline passing and anything noticing.
-
-    **A second game repository inside one unit of work**, on
-    ``build_settled_game_query``'s argument: this one only ever reads.
-    """
-    return ChallengesAndGamesPlannableCourts(
-        challenges=build_challenge_directory(session, runtime=runtime),
-        games=build_game_repository(
-            session=session,
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        ),
-    )
-
-
-def build_plan_repository(
-    *,
-    event_store: DomainEventStore,
-    events: DomainEventPublisher,
-) -> PlanRepository:
-    """Per unit of work, for the reason every aggregate repository here is: it
-    remembers the stream versions it loaded.
-
-    **It takes no session**, unlike ``conversations``' — there is no row to lock
-    and no lookup by payload, because a plan's stream id *is* its challenge's.
-    """
-    return EventSourcedPlanRepository(event_store=event_store, events=events)
-
-
-def build_plan_directory(
-    session: AsyncSession,
-    *,
-    runtime: EventRuntime | None = None,
-) -> PlanDirectory:
-    """*Which of these courts have a plan written* — one ``IN`` over the
-    aggregate ids.
-
-    It reads the rows itself rather than folding through the repository, which is
-    the opposite of the conversation directory beside it and for a stated reason:
-    nothing appends to a plan read from here, so there is no stream version for a
-    second reader to disagree about.
-    """
-    return EventSourcedPlanDirectory(session, (runtime or get_event_runtime()).codec)
-
-
-def build_plan_hold_query(session: AsyncSession) -> PlanAccountHoldQuery:
-    """``cases`` does not exist, so nothing can hold an account.
-
-    **The fourth line in this file that says so.** Each context declares its own
-    hold port because none may import another to ask a safety question; on the
-    day ``cases`` ships, all four change to the same adapter.
-    """
-    return NoPlanHoldsExist()
-
-
-def build_read_plans(
-    session: AsyncSession,
-    *,
-    clock: Clock,
-    runtime: EventRuntime | None = None,
-) -> ReadPlans:
-    """*One row for every court you may plan, written or not.*
-
-    Assembled here rather than at the surface because a seed run reads it too,
-    and the two must be reading the same thing.
-    """
-    return ReadPlans(
-        plans=build_plan_directory(session, runtime=runtime),
-        courts=build_plannable_courts(session, runtime=runtime),
-        clock=clock,
-    )
-
-
 def build_match_history_query(session: AsyncSession) -> MatchHistoryQuery:
-    """``challenges`` and ``games``, composed into one bounded read.
+    """What was played between a searcher and anybody, read off ``games``.
 
-    **The one outward port with two providers, and the split is by fact rather
-    than by contract** (``docs/adr/0098`` as amended, ``docs/adr/0137``).
-    ``ACCEPTED`` and ``DECLINED`` are challenge facts and ``PLAYED`` and
-    ``PLANNED_NEVER_PLAYED`` are ``games``', and the seam runs *through*
-    ``pairwise_counterparts`` — so the port stays whole and the second provider
-    arrives here as a **composition** rather than as a second contract.
+    **One provider since #578**: the challenge half went with the challenges
+    context, and what is left of it is a measured absence — no challenge open,
+    nobody's inbox holding one (``GamesPlayed``).
 
-    The clock is built here rather than taken, because *open* and *a plan whose
-    window has closed* are both facts about the instant the read happens, and a
+    The clock is built here rather than taken, because *a game whose entry
+    window has closed* is a fact about the instant the read happens, and a
     caller holding one could hold a stale one.
     """
-    return GamesPlayedAndChallengesAnswered(
-        challenges=ChallengesButNobodyHasPlayed(
-            build_challenge_history_query(session), build_clock()
-        ),
-        games=build_game_history_query(session),
-        clock=build_clock(),
-    )
+    return GamesPlayed(games=build_game_history_query(session), clock=build_clock())
 
 
 def build_half_built_court_query(session: AsyncSession) -> HalfBuiltCourtQuery:
-    """The court a fill names, answered by ``challenges`` and translated.
+    """The court a fill names — **none, since #578**: nothing builds a court
+    any more, so every id a fill names is a court that does not exist."""
+    return NoHalfBuiltCourtsExist()
 
-    **One provider and one contract**, unlike the history port beside it: every
-    fact on this read is a challenge fact, so nothing composes with it.
 
-    The clock is built here rather than taken, for the reason the history's is:
-    *is this court still being arranged* is a fact about the instant the read
-    happens, and a caller holding one could hold a stale one.
-    """
-    return ChallengesHalfBuiltCourts(
-        build_challenge_history_query(session), build_clock()
-    )
+def build_mutual_challenge_minting(
+    session: AsyncSession,
+    *,
+    runtime: EventRuntime | None = None,
+) -> MutualChallengeMinting:
+    """What two yeses that meet open — **nothing, since #578**: the challenge a
+    mutual used to mint is gone, and a game is made only by a booking. The yes
+    still stands; the deck and its interest go with #579."""
+    return NoMutualOpensAGame()
 
 
 def build_shared_court_query(session: AsyncSession) -> SharedCourtQuery:
@@ -4161,7 +3483,7 @@ def build_subject_reliability(session: AsyncSession) -> SubjectReliability:
     Built over ``player_score``'s **published** read and never over the two folds
     underneath it, which is the same fence every other row here takes: the blend
     a player is shown is that context's arithmetic, and a second caller reaching
-    past it to ``games`` and ``challenges`` would be a second author of what the
+    past it to ``games`` and ``bookings`` would be a second author of what the
     number means.
     """
 

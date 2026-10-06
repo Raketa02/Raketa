@@ -11,7 +11,7 @@ The second read starts from **nobody**, and is at the bottom of this file. The
 rating context walks confirmed results forward and has no player to ask about
 until it has folded the game.
 
-**The match is a substring, and it is the same decision ``challenges`` made.**
+**The match is a substring.**
 The court crosses the wire as one code per seating (``lineup.py``), so a player is
 inside an array of strings rather than in a scalar column of their own — and JSON
 array containment is PostgreSQL's ``@>`` and SQLite's ``json_each``, which are not

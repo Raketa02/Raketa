@@ -105,4 +105,4 @@ def test_the_rescue_may_act_on_the_court_and_the_leaver_may_not():
 
     assert EVE in game.line_up.players
     with pytest.raises(YouWereNotOnThisCourt):
-        game.dismiss(by=CY, occurred_at=STARTS_AT)
+        game.accept_result(by=CY, occurred_at=STARTS_AT)

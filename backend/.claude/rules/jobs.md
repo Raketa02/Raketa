@@ -15,7 +15,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Twenty jobs today — the uncommitted-photo sweep, whose
+  mechanism and its own ADR. Nineteen jobs today (two went with the challenges, #578) — the uncommitted-photo sweep, whose
   **retention window is domain and whose cadence is configuration** (those two must not
   swap places), the candidate index's two loops below, the **exposure roll**, the
   first job here that takes no database session at all, the two **prompt loops**
@@ -53,20 +53,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`PhotoReviewUnavailability.is_about_the_reviewer` is the split); and a note it cannot
   parse reads as *nobody looked* — the deliberate inverse of the sweep, whose action is a delete. The budget, the
   pause and the cadence are settings and none of them selects which photos are chosen.
-  The tenth is the **challenge lapse loop** (#252), and it is the only job here that
-  **appends a domain event**. A seat past its answer window already reads as lapsed, its
-  pair already releases and its challenge already stands as `LAPSED` — a standing is
-  folded from the seats and the clock and stored nowhere, so a reader asking *is this
-  challenge still open* between a deadline and a sweep gets the same answer either way.
-  What the loop buys is the **record**: a `SeatLapsed` in the log, so that *answers
-  challenges* has a denominator. What it appends is never a `SeatDeclined` — **a lapse is
-  not a decline**, and a Strand that filed silence as judgement would be measuring the
-  wrong people. Its read names **candidates rather than conclusions** and that is
-  deliberate: a store that could filter on *has this seat lapsed* would be the derived
-  standing, stored. `ANSWER_WINDOW` is domain; only the cadence is a setting.
+  The tenth was the **challenge lapse loop** (#252) and, after it, the **hour loop**
+  (`unfilled-court`, ADR-0175 §3); both went with the challenges (#578), and their settings
+  with them.
   The eleventh is the **rating catch-up**
   ([ADR-0139](../../../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)),
-  the second that appends a domain event and **the only one on this list that correctness
+  the first that appends a domain event and **the only one on this list that correctness
   depends on**. Every other job buys a record or a table's size; this is the only path a
   confirmed result has to a Level, because ADR-0137 refused a `ResultConfirmed` event — a
   confirmation is a clock passing and announces nothing — and recorded that cost by name. A
@@ -81,12 +73,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0153](../../../docs/adr/0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md)),
   the second that deletes anything and the only one that deletes an **aggregate** — a room
   and its whole stream, *destroyed, not delisted*. Correctness does not depend on it: a
-  room's end is derived on every read — the game's clock off its own stream, or its
-  challenge being over, asked of `challenges` — so every route on it answers
+  room's end is derived on every read — the game's clock off its own stream (#575) — so
+  every route on it answers
   `conversation_not_found` past that instant and every list has already dropped it, whether
   or not anything has swept. What it buys is that the destruction is **real**, which is the
-  whole difference between a room that is over and a record with no end. Like the lapse
-  loop its read names **candidates rather than conclusions**, and here it could not do
+  whole difference between a room that is over and a record with no end. Its read names
+  **candidates rather than conclusions**, and here it could not do
   otherwise: a store that could answer *which rooms have ended* would be the stored
   `ends_at` ADR-0153 §5 refuses. It leaves a hole in `event_store.sequence_no`, which the
   candidate index's tail is built for — a gap is stepped over once the snapshot horizon

@@ -1199,9 +1199,12 @@ class RunLineupRequest(BaseModel):
     completing_challenge_id: UUID = Field(
         OMITTED,
         description=(
-            "The half-built challenge this fill completes. **Send it and send "
-            "nothing else about the court**: the sport, the kind of evening and "
-            "the locked seats are all read off it.\n\n"
+            "The half-built challenge this fill completes. **Since #578 it names "
+            "no court** — nothing builds a challenge any more — so a fill naming "
+            "one is refused as a court that is not yours to fill; the route goes "
+            "with the searches (#579). **Send it and send nothing else about the "
+            "court**: the sport, the kind of evening and the locked seats are "
+            "all read off it.\n\n"
             "**Any live member may fill; ending a court is a different act** — "
             "removing one that was never a game is the organiser's while nobody "
             "has joined and nobody's once somebody has, and calling off the game "

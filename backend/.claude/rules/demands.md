@@ -13,37 +13,21 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ([ADR-0098](../../../docs/adr/0098-matcher-demands-as-executable-contracts.md)). Adding a row
   to a register enrols an adapter; a port with no row fails the suite. Not named
   *contract* — that word already means `openapi.player.json` drift here.
-  **Seventeen registers, and they are seventeen on purpose — one per kind of claim.**
+  **Fifteen registers, and they are fifteen on purpose — one per kind of claim.**
   `app/bootstrap/matcher_demands.py` and `player_record_demands.py` hold the ports a
   *consumer* declares of contexts it does not write; `games_demands.py`,
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
-  the ports one *provider* publishes outward; `challenge_demands.py` holds
-  what `challenges` demands of the **matcher** — the arrow's other direction, which
-  arrived with the challenge detail read
-  ([ADR-0143](../../../docs/adr/0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md))
-  — and `game_demands.py` holds the one thing `games` demands of it, the court's pairing
-  ([ADR-0161](../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)), on its own list
-  because `games_demands.py` is what that context *publishes* and a demand is the other kind
-  of claim;
-  `conversation_demands.py` holds what a **room** demands of the contexts it is
-  told by and reads from; and `plan_demands.py` holds what a **plan** demands — the courts
-  a player may plan, folded over `challenges` and `games` (ADR-0164 §3), and one fact about
-  a *person*. There is deliberately no *conversations provider* and no *plans provider*
-  register, and there never will be: a conversation is told and tells nothing, and nothing
-  on this side of the wire reads a plan **through a port the Plan declares** — `games` may
-  not import it, and the card ladder that reads one is the client's `domain/`. The one fact
-  `games` does read off a plan, its agreed moment, is `games`' **own** demand
-  (`AgreedMoment`, on `game_demands.py`) that the Plan's adapter signs — the consumer
-  contracts its own demand, which is the rule below from the other side (ADR-0162 §4).
-  Neither has a consumer of a port it declares, so neither publishes one. **The Plan's court
-  read used to be on somebody else's register and no longer is**, and the move is the rule
-  rather than an exception to it: while a plan was the game's, *is this player on this
-  game's court, and is that game still open to planning* was `games`' question about
-  `games`' record, published there as `PlanningCourt` — a consumer contracting its own
-  provider's port is the consumer marking its own homework. A plan is the challenge's, the
-  question is about a court that may not have become a game yet, and no provider can answer
-  it alone; so it is a **demand**, contracted by the consumer that declares it, which is
-  `conversation_demands.py`'s shape exactly.
+  the ports one *provider* publishes outward; `game_demands.py` holds what `games` demands
+  of other contexts — the court's pairing
+  ([ADR-0161](../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)), and who
+  the club's desk checked in — on its own list because `games_demands.py` is what that
+  context *publishes* and a demand is the other kind of claim; and
+  `conversation_demands.py` holds what a **room** demands of the contexts it is told by and
+  reads from. There is deliberately no *conversations provider* register, and there never
+  will be: a conversation is told and tells nothing. **Two registers went with their
+  contexts (#578)**: `challenge_demands.py`, what `challenges` demanded of the matcher, and
+  `plan_demands.py`, what a plan demanded — and with them `games`' `AgreedMoment` and the
+  `SeatableCourt` it published for challenges.
   Each register's exhaustiveness
   assertion is about its own kind of claim and would stop meaning anything with another
   kind in it — which is also the rule for the next one: **a new provider or a new consumer
@@ -55,11 +39,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   the record's list has **three** implementations, which is what the suite has to be
   parameterised over: *where has this reader been shown this person* is a question three
   contexts each answer about themselves.
-  **The eleventh, `payments_demands.py`, is a kind of its own**: the two adapters of one port
+  **The ninth, `payments_demands.py`, is a kind of its own**: the two adapters of one port
   onto the outside world — the fake and Stripe — so a fake that drifts from the provider goes red.
   Its rows build over the **settings**, not a session, and one may be absent: Stripe runs only
   where a person placed a test key, and is skipped by name otherwise (ADR-0190 §1).
-  **The twelfth, `proposal_demands.py`, is Proposals' consumer register** (#542): Home's and the
+  **The tenth, `proposal_demands.py`, is Proposals' consumer register** (#542): Home's and the
   details' three demands — a player's bookings (`bookings`), a booked game's result (`games`), a
   club's distance (the Player profile and `clubs`) — and, since #543, an On request club's
   requests and answers (`bookings`) and the players' Names on them (`users`), and since #544
@@ -72,31 +56,30 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   group each pool is (`PoolOrigins`) and whether a club checks players in (`DeskCheckIns`).
   The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
   over HTTP only and are owed rows there.
-  **The thirteenth, `booking_demands.py`, is Bookings' consumer register** (#543): the first
+  **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first
   free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
   both the Club context's facts — and the Games context's: the ordinary Game a booking opens
   (`GameOpening`, #541, registered by #544), what leaving, a rescue, the cut-off and the
   club's cancel do to it (`GameChanges`, #544, #545, #547), and who did not come to it
   (`GameNoShows`, #547), which the record reads. **`game_demands.py` gained its third row
   with #547**: who the club's desk checked in (`ClubCheckIns`), the booking's fact a no-show
-  report asks first — signed by `bookings`, as the Plan signs `AgreedMoment`.
-  **The fourteenth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
+  report asks first — signed by `bookings`; since #578 it is the second of two rows.
+  **The twelfth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
   consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
   games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.
-  **The fifteenth, `payment_demands.py`, is Payments' consumer register** (#548), apart from
+  **The thirteenth, `payment_demands.py`, is Payments' consumer register** (#548), apart from
   `payments_demands.py`'s two provider adapters: which games are over for good, so their money
   is the club's to be paid out (`GamesOver`, signed by `proposals`). Its older demands —
   `Sellers`, `Payers`, `PaymentCommitments` — were contracted over HTTP only and are owed rows.
-  **The sixteenth, `push_demands.py`, is the second of `payments_demands.py`'s kind** (#549):
+  **The fourteenth, `push_demands.py`, is the second of `payments_demands.py`'s kind** (#549):
   the two adapters of the push port — the recording service every API test reads, and Expo,
   asked over a loopback server speaking Expo's documented push API, never Expo itself.
-  **The seventeenth, `notification_demands.py`, is Notifications' consumer register**
+  **The fifteenth, `notification_demands.py`, is Notifications' consumer register**
   (#549): a game as it stands (`GameBriefs`), what a refund gave back (`PaidShares`), who an
   open seat is offered to (`SeatOffers`) and what a person and a club are called (`Names`).
   Notifications is told and tells nothing, so like a conversation it publishes no port.
-  **A row carries a builder, and not always over a bare session.** `challenge_demands.py`'s
-  takes the two seams the platform supplies from outside a request — the process's
-  candidate index and the exposure ledger behind Redis — because the pairing it contracts
-  is recomputed through the whole scoring pipeline, and **no test in this repository needs
-  Redis running**. `game_demands.py` keeps that row shape and needs only the session: the
-  game's pairing is read side against side from the people's Levels (#575).
+  **A row carries a builder, and not always over a bare session.** Most build over a
+  session; `payments_demands.py`'s and `push_demands.py`'s build over the settings.
+  `game_demands.py` builds over the session alone since the game's pairing is read side
+  against side from the people's Levels (#575), and **no test in this repository needs
+  Redis running**.

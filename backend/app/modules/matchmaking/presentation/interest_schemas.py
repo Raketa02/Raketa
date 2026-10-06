@@ -137,9 +137,11 @@ class ExpressedInterestResponse(BaseModel):
     challenge_id: UUID | None = Field(
         ...,
         description=(
-            "**The game the two of you have**, when there is one — the "
-            "challenge this tap opened, or the one an earlier mutual between "
-            "you opened that is not finished with.\n\n"
+            "**Always `null` since #578**: nothing opens a game from two yeses "
+            "any more — a game is made by a booking — and this route goes with "
+            "the deck (#579). It was **the game the two of you have**, when "
+            "there was one — the challenge this tap opened, or the one an "
+            "earlier mutual between you opened that was not finished with.\n\n"
             "**`null` is one answer covering two causes, and it does not say "
             "which.** You may already have a game *being arranged* together, or "
             "the platform may have declined to open one. That distinction does "

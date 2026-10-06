@@ -217,11 +217,11 @@ class MemberFace:
 class MemberFaces(Protocol):
     """What the people in a room are called and what they look like.
 
-    **A third spelling of a name read, and the duplication is the decision** —
-    ``challenges`` and ``games`` each have their own, for the reason both say:
-    two contexts needing *what do I print on this seat* is not a reason for one
-    to own the other's vocabulary. This one carries a face beside the name
-    because a room draws one and neither of the others does.
+    **A second spelling of a name read, and the duplication is the decision** —
+    ``games`` has its own, for the reason both say: two contexts needing *what
+    do I print on this seat* is not a reason for one to own the other's
+    vocabulary. This one carries a face beside the name because a room draws
+    one and the game's does not.
     """
 
     async def faces_of(self, player_ids: Collection[UUID]) -> Mapping[UUID, MemberFace]:

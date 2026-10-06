@@ -48,7 +48,6 @@ from app.kernel import invariant
 from app.modules.conversations.domain.entries import SystemLineCode
 from app.modules.games.domain.events import (
     GameCalledOff,
-    GameDismissed,
     GamePlanned,
     GamePlayed,
     LineUpReseated,
@@ -129,15 +128,6 @@ TELLINGS: tuple[Telling, ...] = (
             "membership reads the game's line-up live rather than being told — "
             "a rescue taking a seat (#545) joins the room the moment it "
             "commits, and its line, *Ola took the seat*, is not drawn yet"
-        ),
-    ),
-    Telling(
-        event=GameDismissed,
-        line=None,
-        reaches_the_room=False,
-        why_nothing=(
-            "a card is dismissed only on a called-off game, and there is no "
-            "room by then — the reader's own act, and nobody else's fact"
         ),
     ),
     Telling(

@@ -26,12 +26,10 @@ whole integration, which is what the register was for — and the one row left i
 **gate** rather than a term, which is ``docs/adr/0098``'s rule showing through:
 a gate may be honestly empty, and a term may never be honestly neutral.
 
-**A row names one implementation and not one provider**, which is what lets
-``GamesPlayedAndChallengesAnswered`` sit here as ``MatchHistoryQuery``'s single
-registered implementation while composing two shipped contexts. ADR-0098's *one
-provider signs one contract* is bent there and the bend is recorded in the ADR's
-amendment banner, not smuggled in as a second row — and the composition is what
-kept the bend to one row when the second provider arrived (``docs/adr/0137``).
+**A row names one implementation and not one provider.** ``MatchHistoryQuery``
+composed two shipped contexts in one row until ``challenges`` was removed
+(#578); ``GamesPlayed`` now reads ``games`` alone, and a fill's court and a
+mutual's mint are measured absences, both going with the searches (#579).
 
 **It is not the only register.** ``games_demands.py`` holds the ports a
 *provider* publishes outward, in the same shape and for the same reason; they are
@@ -96,7 +94,7 @@ REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=MatchHistoryQuery,
-        name="GamesPlayedAndChallengesAnswered",
+        name="GamesPlayed",
         build=build_match_history_query,
     ),
     RegisteredImplementation(
@@ -116,7 +114,7 @@ REGISTERED_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     ),
     RegisteredImplementation(
         port=HalfBuiltCourtQuery,
-        name="ChallengesHalfBuiltCourts",
+        name="NoHalfBuiltCourtsExist",
         build=build_half_built_court_query,
     ),
     RegisteredImplementation(

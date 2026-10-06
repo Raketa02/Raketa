@@ -261,34 +261,9 @@ forbidden_modules =
     redis
 allow_indirect_imports = false
 
-# The matcher ends at a ranked list and *asking somebody* begins in `challenges`,
-# and the whole point of the split is that the matcher reads challenges through a
-# port rather than owning them (#221, #250). The arrow therefore runs
-# `matchmaking -> challenges` and never back — which is a rule about one import
-# statement, and so exactly the kind that is broken by somebody in a hurry
-# reaching for `SentFromSearch` or `Side` because a type with the right shape
-# already exists one directory over. Both are deliberately spelled twice; this is
-# what keeps the second spelling from being deleted as duplication.
-#
-# `allow_indirect_imports = true`, for the reason the configuration fence sets it:
-# `challenges` legitimately imports `player_profile` (the `Window` ADR-0100 puts
-# there) and the Match Fit engine (`SearchMode`), and a strict contract would one
-# day go red naming a module that had done nothing. The violation this exists for
-# is the direct one.
-[importlinter:contract:challenges-does-not-know-the-matcher]
-name = The Challenges context does not import the matcher
-type = forbidden
-source_modules =
-    app.modules.challenges
-forbidden_modules =
-    app.modules.matchmaking
-allow_indirect_imports = true
-
-# The same rule one context over, and it is the same rule rather than a copy of
-# it: `games` is a **provider**, it signs `MatchHistoryQuery`'s missing half
-# through a composing adapter that lives in the matcher's own infrastructure, and
-# it does not know a matcher exists (docs/adr/0137). It has more second spellings
-# than `challenges` does, not fewer — `PLAYED_COUNTERPART_BOUND` against
+# `games` is a **provider**: it signs `MatchHistoryQuery` through an adapter that
+# lives in the matcher's own infrastructure, and it does not know a matcher
+# exists (docs/adr/0137). It holds second spellings — `PLAYED_COUNTERPART_BOUND` against
 # `PAIRWISE_COUNTERPART_BOUND`, `PlayedOutcome` against `PairwiseOutcome`,
 # `GameSide` against two other `Side`s — and each of them is a type with the
 # right shape sitting one directory over, which is exactly what somebody in a
@@ -296,10 +271,11 @@ allow_indirect_imports = true
 # bounds disagree, and that guards the **value**; this guards the **direction**,
 # which is the half a constant cannot check.
 #
-# `allow_indirect_imports = true`, for the reason its neighbour sets it: `games`
-# legitimately imports `player_profile` (the `Window` ADR-0100 puts there) and
-# the Match Fit engine (`SearchMode`), and a strict contract would one day go red
-# naming a module that had done nothing.
+# `allow_indirect_imports = true`: `games` legitimately imports `player_profile`
+# (the `Window` ADR-0100 puts there), and its `presentation/dependencies.py`
+# imports the composition root, which imports every context — so a strict
+# contract would go red naming a module that had done nothing. The violation
+# this exists for is the direct one.
 [importlinter:contract:games-does-not-know-the-matcher]
 name = The Games context does not import the matcher
 type = forbidden
@@ -309,7 +285,7 @@ forbidden_modules =
     app.modules.matchmaking
 allow_indirect_imports = true
 
-# The third of the same rule, and the one most likely to be broken, because
+# The second of the same rule, and the one most likely to be broken, because
 # `player_score` is the context whose whole output is a number the matcher reads
 # (docs/adr/0140). It publishes `PublishedScoreQuery` in its own vocabulary and
 # an adapter in the matcher's own infrastructure translates it into
@@ -326,7 +302,7 @@ allow_indirect_imports = true
 # matcher's own composing adapters take, and neither provider knows this context
 # exists.
 #
-# `allow_indirect_imports = true`, for the reason its two neighbours set it: it
+# `allow_indirect_imports = true`, for the reason its neighbour sets it: it
 # legitimately imports the Match Fit engine for `ReliabilityStrand`, which is the
 # closed vocabulary a second spelling here would fork.
 [importlinter:contract:player-score-does-not-know-the-matcher]
@@ -338,9 +314,9 @@ forbidden_modules =
     app.modules.matchmaking
 allow_indirect_imports = true
 
-# The fourth of the same rule, and then — uniquely so far — the same rule pointed
+# The third of the same rule, and then — uniquely so far — the same rule pointed
 # back the other way. `sportsmanship` does not import the matcher, for the reason
-# its three neighbours do not: it is a provider, and a provider that knew its
+# its two neighbours do not: it is a provider, and a provider that knew its
 # consumer would eventually be shaped by it.
 #
 # The second contract is the one that is actually load-bearing, and it is a
@@ -451,9 +427,10 @@ forbidden_modules =
 allow_indirect_imports = false
 
 # **A conversation is told, and tells nothing** (docs/adr/0146 §5). Its system
-# lines are written from events `challenges`, `games` and `plans` publish through
-# the outbox, and **none of those contexts knows it exists**. That ignorance is the whole of the record's argument: the moment
-# `challenges` knows a conversation exists, the two ship as one thing, and the
+# lines are written from events `games` publishes through the outbox (#575), and
+# **no context knows it exists**. That ignorance is the whole of the record's
+# argument: the moment `games` knows a conversation exists, the two ship as one
+# thing, and the
 # two alternatives it refuses by name — an inline port and a read at open —
 # would both begin with exactly this import.
 #
@@ -463,8 +440,8 @@ allow_indirect_imports = false
 # accept path looks like ordinary wiring and would be argued over in review
 # rather than caught.
 #
-# `allow_indirect_imports = true`, for the reason the challenges/matcher fence
-# sets it and one this file has now met twice: **every module's
+# `allow_indirect_imports = true`, for the reason this file meets again and
+# again: **every module's
 # `presentation/dependencies.py` imports the composition root, and the
 # composition root imports every context.** A strict contract here is red on the
 # day it is written, naming `player_profile` for reaching `conversations`
@@ -476,10 +453,8 @@ name = No context knows the Conversation exists
 type = forbidden
 source_modules =
     app.modules.bookings
-    app.modules.challenges
     app.modules.games
     app.modules.matchmaking
-    app.modules.plans
     app.modules.player_record
     app.modules.player_score
     app.modules.proposals
@@ -505,14 +480,12 @@ source_modules =
     app.modules.auth
     app.modules.blocks
     app.modules.bookings
-    app.modules.challenges
     app.modules.clubs
     app.modules.conversations
     app.modules.games
     app.modules.groups
     app.modules.matchmaking
     app.modules.payments
-    app.modules.plans
     app.modules.player_profile
     app.modules.player_record
     app.modules.player_score
@@ -524,46 +497,12 @@ forbidden_modules =
     app.modules.notifications
 allow_indirect_imports = true
 
-# **`games` cannot read a plan** (docs/adr/0145 §4). ADR-0137's sentence — *"there
-# is no booking, no calendar and no date field anywhere"* — was scoped rather than
-# deleted when the Plan arrived: it is a claim about **`games`' record**, and it is
-# still exactly true of one. The record that scoped it said what would make the
-# scoping checkable rather than aspirational: *"if `games` ever imports the Plan,
-# this clause has been broken."* This is that check.
-#
-# The arrow runs one way and the permitted direction is `plans -> games`
-# (docs/adr/0148 §8): the Plan imports `PLAN_HORIZON`, because its interlock with
-# `ENTRY_GRACE` is the argument and two numbers whose relationship is the argument
-# must not be separated; and its `PlannableCourts` adapter folds a game's standing
-# through `games`' own repository (docs/adr/0164 §3), beside the challenge's. The
-# same arrow runs `plans -> challenges` for the same read. Neither direction is a
-# mistake — only the reverse is, and only the reverse is fenced.
-#
-# It is a rule about one import statement, which is the kind broken by somebody in
-# a hurry: `GameSchema` is the obvious place to hang a plan, a per-game plan read
-# is the obvious shape, and both begin with exactly this import. What refuses them
-# is a second list beside the first (docs/adr/0148 §7), and this is what keeps that
-# from being re-litigated in review instead of by the build.
-#
-# `allow_indirect_imports = true`, for the reason every module fence in this file
-# sets it: `games`' own `presentation/dependencies.py` imports the composition
-# root, and the composition root imports every context — so a strict contract is
-# red on the day it is written, naming the composition root doing its job.
-[importlinter:contract:games-does-not-know-the-plan]
-name = The Games context does not import the Plan
-type = forbidden
-source_modules =
-    app.modules.games
-forbidden_modules =
-    app.modules.plans
-allow_indirect_imports = true
-
 # A club does not know its groups exist. `groups` reads `clubs` — a group's home
 # club, both searches, the fold its names are matched by — and the one thing
 # `clubs` asks back, *which sports do the official groups here declare* (a details
 # edit may not untick one, docs/adr/0182 §5), is a port declared in `clubs`' own
-# words and **signed in `groups/infrastructure/`**, as `games`' agreed moment is
-# signed by the Plan. An adapter living in `clubs` would have been the obvious
+# words and **signed in `groups/infrastructure/`**, as `games`' check-ins are
+# signed by `bookings`. An adapter living in `clubs` would have been the obvious
 # place to write it, and would have pointed the arrow back; this is what refuses
 # it (#509).
 #
@@ -734,7 +673,6 @@ forbidden_modules =
     app.modules.auth
     app.modules.blocks
     app.modules.bookings
-    app.modules.challenges
     app.modules.clubs
     app.modules.conversations
     app.modules.games
@@ -742,7 +680,6 @@ forbidden_modules =
     app.modules.matchmaking
     app.modules.notifications
     app.modules.payments
-    app.modules.plans
     app.modules.player_profile
     app.modules.player_score
     app.modules.proposals

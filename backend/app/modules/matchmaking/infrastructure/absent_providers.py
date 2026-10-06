@@ -33,15 +33,22 @@ empty set and the evidence gate counts eight live terms rather than seven.
 docstring's second half — *the count is a measured ``0`` for everybody asked,
 because no challenge has ever been sent by anyone* — stopped being true the day
 ``challenges`` shipped a send, and a null object whose stated fact has become
-false is worse than no null object at all. What signs ``MatchHistoryQuery`` now is
-``challenges_match_history.ChallengesButNobodyHasPlayed``, which is half a real
-adapter and half a measured absence and is named for exactly that.
+false is worse than no null object at all.
+
+**Two arrived the other way, when ``challenges`` was removed** (#578): a fill
+names a court that no longer exists, and a mutual yes opens nothing, because
+the only thing that made a game of one is gone. Both state a fact that is true
+of this platform from that day, and both go with the searches and the deck that
+still call them (#579).
 """
 
 from __future__ import annotations
 
 from typing import Collection, final
 from uuid import UUID
+
+from app.kernel import Sport
+from app.modules.matchmaking.domain.ports import HalfBuiltCourt
 
 
 @final
@@ -56,3 +63,34 @@ class NoHoldsExist:
 
     async def held_among(self, player_ids: Collection[UUID]) -> frozenset[UUID]:
         return frozenset()
+
+
+@final
+class NoHalfBuiltCourtsExist:
+    """No court is half built, because nothing builds a court any more (#578).
+
+    A fill used to name a challenge still being arranged; the challenges
+    context is gone, so every id a fill names is a court that does not exist,
+    and the port's own answer for that is ``None``.
+    """
+
+    async def half_built_court(
+        self, *, challenge_id: UUID, member_id: UUID
+    ) -> HalfBuiltCourt | None:
+        return None
+
+
+@final
+class NoMutualOpensAGame:
+    """Two yeses that meet open no game, because nothing makes a game from one
+    (#578).
+
+    ``None`` is the port's ordinary answer — *there is no game to name* — so
+    the yes still stands and is still recorded; it simply arranges nothing,
+    since a game is now made only by a booking.
+    """
+
+    async def open_from_mutual_interest(
+        self, *, sport: Sport, player_id: UUID, other_player_id: UUID
+    ) -> UUID | None:
+        return None

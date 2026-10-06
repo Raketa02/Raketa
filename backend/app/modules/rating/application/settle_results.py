@@ -13,8 +13,7 @@ wanted. What it would cost is progress: ADR-0092 puts a copy of every job in eve
 API process with no lock between them, and this run is derived from the clock, so
 N processes walk the *same* games in the *same* order. One version conflict on one
 rating would roll back the whole run, and every process would keep colliding at the
-same place. So a conflict is **counted and stepped over** — the shape the challenge
-lapse loop already argues for.
+same place. So a conflict is **counted and stepped over**.
 
 **Idempotent, and the ratings are the cursor.** Every move records the game that
 caused it, so a game already folded into a stream is skipped by the aggregate
@@ -68,8 +67,8 @@ class Settled:
     have one symptom — nothing moves — and only one of them is a defect.
 
     ``conflicts`` is ratings another process reached first. Here rather than
-    swallowed for the reason the lapse loop gives: *the loop is doing nothing* and
-    *the loop is losing every race* look identical from outside.
+    swallowed because *the loop is doing nothing* and *the loop is losing every
+    race* look identical from outside.
     """
 
     games: int

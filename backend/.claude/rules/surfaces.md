@@ -9,12 +9,13 @@ paths:
 
 Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-bearing and not obvious from the code.
 
-> **The dev console below is replaced by the games test console of
-> [ADR-0194](../../../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)**
-> (#590, after #578 removes it). That console acts as seed accounts **without signing in**,
-> refuses a non-seed account, is served in `local` only, and builds situations from `app/seeds/`.
-> Each action runs the player's or club's own use case. What follows describes the console that
-> exists until then.
+> **The dev console's page is gone (#578), and the games test console of
+> [ADR-0194](../../../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)
+> replaces it** (#590). That console acts as seed accounts **without signing in**, refuses a
+> non-seed account, is served in `local` only, and builds situations from `app/seeds/`. Each
+> action runs the player's or club's own use case. What follows describes the surface it
+> inherits: the gate and the roster stayed; the page that signed in as a player and pressed
+> challenges did not.
 
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix, and mount
   them on **the surface whose client calls them**: `app/api/v1/player.py` for the player
@@ -27,12 +28,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   payment provider's webhooks mount through `app/api/v1/webhooks.py`, under
   `/api/v1/webhooks` and out of every document (ADR-0190 §4). The one
   exception to the prefix is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
-  second client: one no-build `console.html` behind a `FileResponse` at `/dev`, and one
-  roster route, which is the whole of `openapi.dev.json`. It **acts as another player by
-  signing in as them** through the ordinary `POST /api/v1/auth/login` with the public seed
-  password the roster hands over, so there is no impersonation endpoint, no `Act-As` header
-  and no authorisation path that exists for it — every write it presses is a
-  player-surface write. It is gated **structurally and by data**, asymmetrically:
+  second client: one roster route, which is the whole of `openapi.dev.json`. Its page — a
+  no-build `console.html` at `/dev` that **acted as another player by signing in as them**
+  through the ordinary `POST /api/v1/auth/login` with the public seed password the roster
+  hands over — went with the challenge routes it pressed (#578). It is gated **structurally and by data**, asymmetrically:
   `CONSOLE_SERVED` in `app/api/dev/gate.py` is a **second table** and never `SEEDABLE`
   (deriving one refusal from another is what `app/seeds/guard.py` argues against), and
   importing `routes.py` in production raises `ConsoleRefused` — while the data half is a

@@ -51,8 +51,13 @@ from sqlalchemy import func, select
 
 from app.bootstrap.composition import (
     build_balance_forecasts,
+    build_domain_event_store,
+    build_event_publisher,
+    build_game_repository,
 )
-from app.kernel import Sport
+from app.kernel import Sport, instant
+from app.modules.games.application.commands import VacateSeatCommand
+from app.modules.games.application.vacate_seat import VacateSeat
 from app.modules.games.domain.lineup import GameKind
 from app.modules.matchmaking.infrastructure.search_model import SearchORM
 from app.modules.proposals.domain.deck import Sides
@@ -387,6 +392,60 @@ async def test_the_pairing_is_history_once_the_game_has_happened(
 
     assert response.status_code == 409
     assert response.json()["code"] == "pairing_is_history"
+
+
+# ---------------------------------------------------------------------------
+# A seat open
+# ---------------------------------------------------------------------------
+
+
+async def _leaves(session_factory, booking_id: UUID, player_id: UUID) -> None:
+    """Somebody leaves the booked game — through games' own ``VacateSeat``,
+    which is how the booking's *Leave the game* opens the seat (#544)."""
+
+    async with session_factory() as session:
+        games = build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        )
+        await VacateSeat(games=games).execute(
+            VacateSeatCommand(challenge_id=booking_id, player_id=player_id),
+            occurred_at=instant(datetime.now(timezone.utc)),
+        )
+        await session.commit()
+
+
+async def test_the_pairing_omits_the_forecast_and_the_stakes_while_a_seat_is_open(
+    client, session_factory
+):
+    """#411 rule 6, and ``docs/adr/0161`` §4's reserved absence: a forecast is a
+    claim about a court, and a court with a seat open is not yet the one that
+    will play. The seats that are filled still name their Levels, and the
+    leaver is told what a stranger is told."""
+
+    four = await _four(client)
+    booked = await players.a_booked_game(
+        session_factory,
+        side_a=(four["me"]["id"], four["partner"]["id"]),
+        side_b=(four["left"]["id"], four["right"]["id"]),
+    )
+    game_id = str(booked["game_id"])
+    whole = await _pairing(client, four["me"]["token"], game_id)
+    assert whole.status_code == 200, whole.text
+    assert "forecast" in whole.json() and "at_stake" in whole.json()
+
+    await _leaves(session_factory, booked["booking_id"], four["right"]["id"])
+
+    reopened = await _pairing(client, four["me"]["token"], game_id)
+    assert reopened.status_code == 200, reopened.text
+    body = reopened.json()
+    assert "forecast" not in body and "split" not in body and "at_stake" not in body
+    assert {seat["player_id"] for seat in body["seats"]} == {
+        str(four[name]["id"]) for name in ("me", "partner", "left")
+    }
+    gone = await _pairing(client, four["right"]["token"], game_id)
+    assert gone.status_code == 404, gone.text
 
 
 # ---------------------------------------------------------------------------

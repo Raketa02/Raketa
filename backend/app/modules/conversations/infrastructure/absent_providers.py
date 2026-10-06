@@ -5,12 +5,12 @@ object **named for the fact it asserts** — ``NoHoldsExist``, not
 ``NullAccountHoldQuery`` — because *null* reads as *not wired yet*, and both of
 these are wired (``docs/adr/0095``, ``docs/adr/0147`` §3).
 
-**It is the third spelling of one empty answer, and the duplication is the
-decision.** The matcher and ``challenges`` each declare a port of the same shape
-against the same absent provider, and this context may not import either: a room
-reading a safety fact through the matcher would be exactly the coupling
-``docs/adr/0146`` split these contexts to avoid. On the day ``cases`` ships,
-three lines in the composition root change to the same adapter.
+**It is a second spelling of one empty answer, and the duplication is the
+decision.** The matcher declares a port of the same shape against the same absent
+provider (``challenges`` declared a third until #578), and this context may not
+import it: a room reading a safety fact through the matcher would be exactly the
+coupling ``docs/adr/0146`` split these contexts to avoid. On the day ``cases``
+ships, two lines in the composition root change to the same adapter.
 """
 
 from __future__ import annotations

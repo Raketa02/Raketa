@@ -21,9 +21,8 @@ player was on the court for, but the rule is kept so it stays a rule.
 first is a ``404`` where the acts above say ``403``. An act on a game is made by
 somebody holding a game id the list already gave them, so *you were not on this
 court* is a caller's bug; a **read** keyed on an id is the shape a directory is
-probed through, and ``game_not_found`` is ``challenge_not_found``'s argument
-verbatim — one code for two cases, because separating them would answer *is
-this id real* about four strangers' evening.
+probed through, and ``game_not_found`` is one code for two cases, because
+separating them would answer *is this id real* about four strangers' evening.
 """
 
 from __future__ import annotations
@@ -95,12 +94,11 @@ class NotAGameToCallOff(ConflictError):
     the end it is, because a call-off that reached a ghost would flip a standing
     the platform has already drawn and un-charge a strand after the fact.
 
-    The challenge guarantees the open seat by construction — *Call it off* is
-    admitted in ``LINE_UP_INCOMPLETE`` and nowhere else — and the use case steps
-    over a game already ended by its clock rather than raising this, so on the
-    withdrawal route neither half is a code a client meets. The aggregate keeps
-    the refusal all the same: the button is UX, and the server is the
-    correctness mechanism.
+    The booking guarantees the open seat by construction — its cut-off calls
+    off only a game short of a player — and the use case steps over a game that
+    already started short rather than raising this, so neither half is a code a
+    client meets. The aggregate keeps the refusal all the same: the caller is
+    one context over, and the server is the correctness mechanism.
     """
 
     code = "not_a_game_to_call_off"
@@ -129,32 +127,15 @@ class TheGameWasCalledOff(ConflictError):
         )
 
 
-class GameIsNotCalledOff(ConflictError):
-    """A dismissal asked of a game on any standing but ``CALLED_OFF``.
-
-    Its own code (``docs/adr/0172`` §5), because the other endings' cards are
-    the record for the day they stay — *Never played*, *Counted* and
-    *Uncounted* carry a score or a strand's verdict — and a live game's card is
-    the game. Widening the trash is a design of its own and is out of scope by
-    name, so the refusal says which standing the act wants rather than an
-    umbrella.
-    """
-
-    code = "game_is_not_called_off"
-
-    def __init__(self) -> None:
-        super().__init__("Only a called-off game's card can be dismissed.")
-
-
 class TheGameIsNotOpenToSeating(ConflictError):
     """A seat asked to change on a game that is not awaiting its entry.
 
     After *we played* — or after the entry window closed on silence — the
-    line-up is the record of an evening and nothing on it moves. ``challenges``
-    asks the moment guard before it gets here and refuses with its own
-    ``game_is_history``, so this is the aggregate's backstop rather than the
-    code a client meets — and it has its own code because a code is unique
-    across the platform, and this one names what *this* record refuses.
+    line-up is the record of an evening and nothing on it moves. ``bookings``
+    asks whether a seat may still move before it gets here and refuses with its
+    own codes, so this is the aggregate's backstop rather than the code a client
+    meets — and it has its own code because a code is unique across the
+    platform, and this one names what *this* record refuses.
     """
 
     code = "the_line_up_is_settled"

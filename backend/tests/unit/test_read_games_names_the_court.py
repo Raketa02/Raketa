@@ -185,27 +185,3 @@ async def test_the_leaver_who_called_it_off_is_named_though_their_seat_is_open()
     (row,) = found
     assert row.game.called_off_by == two
     assert row.names[two] == "marekb"
-
-
-async def test_a_game_the_reader_dismissed_is_left_off_their_rail_and_nobody_elses():
-    """``docs/adr/0172`` §5 — derived on every read: the aggregate folds who
-    has dismissed it and the rail subtracts its reader. The other players'
-    rails are untouched, and so is the record."""
-
-    me, partner, one, two = (new_uuid() for _ in range(4))
-    game = a_game(me, partner, one, two, at=NOW)
-    game.vacate(two, occurred_at=instant(NOW - timedelta(hours=2)))
-    game.call_off(by=two, occurred_at=instant(NOW - timedelta(hours=1)))
-    game.dismiss(by=me, occurred_at=instant(NOW - timedelta(minutes=5)))
-    directory = Directory(games=(game,))
-    names = Handles(known={me: "me_", partner: "kasia_w", one: "tomek.p"})
-
-    _, mine = await ReadGames(games=directory, names=names, clock=FixedClock()).execute(
-        me
-    )
-    _, theirs = await ReadGames(
-        games=directory, names=names, clock=FixedClock()
-    ).execute(partner)
-
-    assert mine == ()
-    assert [row.game.id for row in theirs] == [game.id]

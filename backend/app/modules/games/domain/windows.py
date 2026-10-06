@@ -1,11 +1,9 @@
 """The three clocks, and what each of them is measured against.
 
-**None of them is ADR-0048's number, because none of ADR-0048's has anything to
-run from.** That record clocked entry from *the final point* and the result
-window from *the match end*; a challenge here carries a ``Window`` — ``TODAY``,
-``WEEKEND`` — and never a date, a time or a court, so there is no final point to
-count from and the numbers had to be re-derived rather than copied
-(``docs/adr/0137``).
+**None of them is ADR-0048's number.** That record clocked entry from *the final
+point* and the result window from *the match end*; these were re-derived for
+games that carried no hour (``docs/adr/0137``), and a booked game's entry now
+runs from the end of its hour (#541).
 
 **Nothing here reads a clock.** The caller says when the line-up completed and
 when a score was put on the table, exactly as ``window_of`` is handed what day it
@@ -23,29 +21,18 @@ from typing import Final
 
 from app.kernel import Instant, instant
 
-#: How long a plan is allowed to become a game. **One ordinary week**, and that
-#: is the only calendar this product has: the availability grid is *an ordinary
-#: week*, and every ``Window`` — ``TODAY``, ``TOMORROW``, ``WEEKEND``,
-#: ``THIS_WEEK``, ``ANY`` — is a statement about one. A table of one horizon per
-#: window was rejected: ``ANY`` has no horizon at all, and a window is *a label
-#: on the search*, never a proposed time.
+#: How long a game **with no hour** is allowed to be played: **one ordinary
+#: week** from when it was arranged. Every game a booking opens has its hour
+#: (#541), so this measures only a stream written before bookings, which carries
+#: none — kept so such a stream still folds to an end.
 PLAN_HORIZON: Final = timedelta(days=7)
 
-#: How long after the horizon somebody may still say *we played*. **Twenty-four
-#: hours, on a reason of its own.** It used to borrow the challenge's answer
-#: window — *a day is what this platform already asks of a person it needs an
-#: answer from* — and that window is now forty-eight hours
-#: (``docs/adr/0151``). The citation goes rather than standing: an argument
-#: pointing at a fact that has moved is worse than no argument, because it reads
-#: as agreement between two numbers that have stopped agreeing.
-#:
-#: What keeps it at a day is ADR-0145 §5's interlock. ADR-0144 clamps the plan's
-#: day chips at ``planned_at + PLAN_HORIZON`` once a game exists — before one,
-#: the clamp runs from the challenge's send and this record has no say
-#: (``docs/adr/0164`` §4) — and entry closes one grace after that, so this
-#: number is exactly what makes **every plannable day leave at least
-#: twenty-four hours to say *we played***. Kept as its own constant rather than
-#: folded into *eight days*, because gluing the two would hide both arguments.
+#: How long after the game somebody may still say *we played* — after its
+#: booked hour's end, or after the horizon of a game with no hour. **Twenty-four
+#: hours**: the day this platform asks of a person it needs an answer from, and
+#: what makes **every game leave at least twenty-four hours to say *we
+#: played***. Kept as its own constant rather than folded into a game's length,
+#: because gluing the two would hide both arguments.
 ENTRY_GRACE: Final = timedelta(hours=24)
 
 #: How long a score stands before silence confirms it. ADR-0048's day, kept for
@@ -53,15 +40,9 @@ ENTRY_GRACE: Final = timedelta(hours=24)
 #: shortening it without a notification channel reintroduces the discarded-game
 #: problem the flow was designed to remove.
 #:
-#: **It did not move when the challenge's answer window did, and the difference
-#: is what the default does.** The two were the same twenty-four hours until
-#: ``docs/adr/0151`` doubled that one for reaching nobody who has not opened the
-#: app — the very coupling this constant already records. What separates them is
-#: that silence on a proposed score **confirms** it, while silence on an
-#: invitation **costs you the game**: a window whose default is benign can be
-#: short, and one whose default takes the game away has to be long enough to
-#: actually reach somebody. Written down because otherwise the next reader
-#: re-aligns two numbers that have stopped being one.
+#: **A day is short enough because of what the default does**: silence on a
+#: proposed score **confirms** it, and a window whose default is benign can be
+#: short.
 PROPOSAL_WINDOW: Final = timedelta(hours=24)
 
 #: How long an acceptance waits before it settles anything. **Six hours, not
@@ -89,22 +70,6 @@ A_BOOKED_GAME: Final = timedelta(hours=1)
 NO_SHOW_DISPUTE_WINDOW: Final = timedelta(hours=24)
 
 
-def horizon_ends_at(planned_at: Instant) -> Instant:
-    """The last instant this game could have been played — the end of its
-    week, and **the moment a court with no day agreed is measured against**
-    (``docs/adr/0175`` §3).
-
-    A plan's agreed point is the moment while there is one; a court whose day
-    was never picked has none, and read that way it would admit a fill and a
-    departure right up to the entry window closing on a ghost. So the horizon's
-    end stands in for it: past this instant the game is one nobody may be
-    seated into or leave, and the hour loop calls a court still short of a
-    player off here rather than letting the grace ghost it.
-    """
-
-    return instant(planned_at + PLAN_HORIZON)
-
-
 def entry_closes_at(
     planned_at: Instant, *, starts_at: Instant | None = None
 ) -> Instant:
@@ -117,8 +82,9 @@ def entry_closes_at(
     **A booked game knows its hour** (``starts_at``, #541): it is played then,
     so the grace runs from that hour's end. A booking may be a fortnight ahead,
     and a week from the moment it was booked would ghost a game before it was
-    played. A game with no hour — a completed line-up's — has its week; a
-    reader holding a ``Game`` asks ``Game.entry_closes_at``, which passes it.
+    played. A game with no hour — a stream written before bookings — has its
+    week; a reader holding a ``Game`` asks ``Game.entry_closes_at``, which
+    passes it.
     """
 
     if starts_at is not None:

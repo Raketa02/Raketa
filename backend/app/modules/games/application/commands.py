@@ -1,4 +1,4 @@
-"""What a caller may ask this context to do. **Six commands, and no flags.**
+"""What a caller may ask this context to do. **Eight commands, and no flags.**
 
 Each is one sentence a player could say. There is no *kind* on the result
 command deciding between proposing, correcting and countering: which of the three
@@ -18,23 +18,22 @@ from app.modules.games.domain.results import Score
 
 @dataclass(frozen=True, slots=True)
 class OpenPlannedGameCommand:
-    """A line-up completed. ``challenges`` sends this and nothing else does."""
+    """A line-up was booked. ``bookings`` sends this and nothing else does
+    (#541): ``challenge_id`` is the booking's id, under the name the field was
+    born with, and ``starts_at`` the booked hour."""
 
     challenge_id: UUID
     sport: Sport
     counted: bool
     window: str | None
     line_up: Sequence[tuple[str, UUID]]
-    #: The hour a booking opens it for (#541) — then ``challenge_id`` is the
-    #: booking's id. ``None`` from a completed line-up.
     starts_at: Instant | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class VacateSeatCommand:
-    """Somebody left the game this challenge became. ``challenges`` sends this
-    in the transaction of the departure — and ``bookings`` in a booked game's,
-    its booking's id where a challenge's is (#544)."""
+    """Somebody left the game their booking opened. ``bookings`` sends this in
+    the transaction of the departure (#544)."""
 
     challenge_id: UUID
     player_id: UUID
@@ -43,8 +42,8 @@ class VacateSeatCommand:
 @dataclass(frozen=True, slots=True)
 class TakeASeatCommand:
     """A booking's rescue took an open seat on the game it opened (#545):
-    ``bookings`` sends this in the transaction of the rescue, its booking's id
-    where a challenge's is, and the side the leaver sat on."""
+    ``bookings`` sends this in the transaction of the rescue, with the side the
+    leaver sat on."""
 
     challenge_id: UUID
     player_id: UUID
@@ -54,13 +53,9 @@ class TakeASeatCommand:
 
 @dataclass(frozen=True, slots=True)
 class CallOffGameCommand:
-    """The court was ended with a seat open, so the game it became is called
-    off. ``challenges`` sends this in the transaction of the departure that
-    left at most one player on the court (``docs/adr/0165`` §3), or of the
-    hour that found the court still short of a player (``docs/adr/0175``
-    §3) — and ``bookings`` when a booked game is short at its cut-off, its
-    booking's id where a challenge's is (#544). ``called_by`` is the leaver, or
-    ``None`` for the hour and the cut-off."""
+    """A booked game is short at its club's cut-off, so it is called off.
+    ``bookings`` sends this in the transaction of the cut-off (#544);
+    ``called_by`` is ``None``, because the cut-off is nobody's act."""
 
     challenge_id: UUID
     called_by: UUID | None
@@ -80,25 +75,6 @@ class AcceptResultCommand:
     """*That is what happened.* From the other side, and one is enough."""
 
     game_id: UUID
-    player_id: UUID
-
-
-@dataclass(frozen=True, slots=True)
-class DismissGameCommand:
-    """*Remove this card.* The reader's own, on a called-off game
-    (``docs/adr/0172`` §5)."""
-
-    game_id: UUID
-    player_id: UUID
-
-
-@dataclass(frozen=True, slots=True)
-class DismissGameOfCourtCommand:
-    """*Remove this row.* The reader's own, on the called-off game this
-    challenge became — sent by ``challenges`` for anybody it had asked, seated
-    on the game or not (``docs/adr/0175`` §5)."""
-
-    challenge_id: UUID
     player_id: UUID
 
 

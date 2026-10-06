@@ -67,9 +67,10 @@ class OpenTheGame:
 
 @final
 class LeaveAndCallOffTheGame:
-    """``GameChanges`` over the use cases a challenge's departure and call-off
-    reach a game through (#544), the one a rescue takes a seat by (#545), and
-    the club's cancel (#547): a booking's id is where a challenge's is."""
+    """``GameChanges`` over games' own use cases: the departure and the
+    cut-off's call-off (#544), the one a rescue takes a seat by (#545), and the
+    club's cancel (#547) — the booking's id in the field games still calls
+    ``challenge_id``."""
 
     def __init__(
         self,
