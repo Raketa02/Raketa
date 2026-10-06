@@ -20,6 +20,8 @@ that join lives** to this ticket. Upholds
 [ADR-0146](0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) rather than narrowing
 either.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `features/plans`, the Now card and its ladder, the `/games/[gameId]` and `/chats/[conversationId]/details` routes and the 2026-09-12 amendment are gone, so §1, §4, §5 and the plan half of §2 describe nothing. The shape stands: `GameScreen` is still `features/games`' and is composed by another feature — the booked game's result, in `features/proposals`, which hands it no plan, card, court or fill. §3's chat door is still a client join over `GET /conversations` that fails soft, now keyed by `booking_id`. The pairing §6 admits, as ADR-0161 amended it, is drawn on the booked game's details.
+
 ## Context
 
 Now draws **fourteen cards** ([#324](https://github.com/Raketa02/Raketa/issues/324)), and four

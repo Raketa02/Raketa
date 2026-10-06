@@ -6,7 +6,7 @@
   the device**, for **exactly three values**. Nothing else is reversed.
 - **Narrows the enforcement of [ADR-0008](0008-player-mobile-securestore-direct-api.md) a second
   time**, not its decision. *`AsyncStorage` must never hold a credential* stands. The lint fence that
-  [ADR-0180](0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md) made *an
+  ADR-0180 made *an
   allow-list of one, which a later module can ask to join* admits **a second module**, the
   phone-preferences store, and this is that request. The boundary test keeps asserting the ban
   everywhere else.
@@ -19,6 +19,8 @@
   [#512](https://github.com/Raketa02/Raketa/issues/512) (the store and the segment),
   [#513](https://github.com/Raketa02/Raketa/issues/513) (the last sport) and
   [#518](https://github.com/Raketa02/Raketa/issues/518) (the last profile).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The flags' datafile cache, the first module this record's allow-list admitted, went with the feature flags (#576), so the allow-list is one module again: the phone-preferences store.
 
 ## Context
 

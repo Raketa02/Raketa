@@ -1,6 +1,6 @@
 # ADR-0163 — *Called off* is the fourth end of a game
 
-- **Status:** Accepted — **§1's *whose act* superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §5**: any player on
+- **Status:** Accepted — **§1's *whose act* superseded 2026-09-13 by ADR-0165 §5**: any player on
   the court, with no organiser-first clause and no fallback; and a game is also called off
   **by the departure** that leaves one player on it (ADR-0165 §3). §2–§7 stand — **and three
   sentences superseded 2026-09-15 by
@@ -19,7 +19,7 @@
 - **Supersedes, by named sentence:**
   [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)'s *"a game reaches exactly
   three ends"* — there are four, and the fourth is the one an act reaches.
-  [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md) §*There is no completion
+  ADR-0144 §*There is no completion
   event and no cancellation*'s *"Calling the game off is out of scope"* — it is in scope, and it
   did not need the state ADR-0137 refused, because the standing is still folded.
   [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md) §2's
@@ -30,7 +30,7 @@
   [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) §2's *"a court that
   has been a game is the one `LINE_UP_INCOMPLETE` that does not [get the act] — until the act
   that touches the game exists"*: this is that act.
-- **Amends** [ADR-0152](0152-a-mutual-mints-again-once-the-last-one-is-finished-with.md) §4: a
+- **Amends** ADR-0152 §4: a
   called-off game is **settled** and releases the pair as a ghost does, and the challenge is
   `WITHDRAWN`, which already released it. **Amends**
   [ADR-0153](0153-a-conversation-is-for-the-episode-and-its-end-was-already-on-the-wire.md) §2's
@@ -40,6 +40,8 @@
   fold that let the last person leave *because* this record would give the court an exit.
 - Settles [#417](https://github.com/Raketa02/Raketa/issues/417), the second child of
   [#411](https://github.com/Raketa02/Raketa/issues/411); the author's rule 4, grilled 2026-09-11.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `challenges` is gone, so the withdraw that called a game off and its hand-over through `PlannedGameHandover` (§2's first half), the `SeatableCourt`, plan and mutual bullets in §3, the room destroyed by `challenges.withdrawn` (§5's body) and §6 describe nothing. `CALLED_OFF` stands as the fourth end: settled, in neither tally, refused by `the_game_was_called_off` and `pairing_is_history`, with `called_off_at` on the wire. `Game.call_off` is now told by `bookings`, with nobody on the record, when the cut-off finds a seat still open, and `call_off_whole` sits beside it for when the club takes the court back. `GameCalledOff` destroys the room in the act and writes no line.
 
 ## Context
 
@@ -105,7 +107,7 @@ in neither tally, the way a game still inside its window goes in neither.
 
 ### 1. Whose act — the organiser, or once the organiser has left, anybody still on the court
 
-> **Superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §5.** *The caller is still live on the court, and is the
+> **Superseded 2026-09-13 by ADR-0165 §5.** *The caller is still live on the court, and is the
 > organiser or the organiser is not* loses its second clause: **the caller is on the court.** The
 > organiser holds no power over a court somebody else has joined, on the author's rule that
 > nobody does. One code, the same sentence, its second clause gone. The interim on
@@ -220,7 +222,7 @@ Everything is additive.
 ### 5. The room — destroyed in the act, told nothing new
 
 > **`GameCalledOff` does reach the room** — since the departure's call-off
-> ([ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §3,
+> (ADR-0165 §3,
 > built by #424) arrived with no withdrawal beside it, the room's teller destroys the room on
 > `games.called_off` too, and finds nothing where the challenge's own ending got there first.
 > [ADR-0172](0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md) §6

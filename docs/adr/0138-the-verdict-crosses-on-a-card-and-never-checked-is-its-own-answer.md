@@ -9,6 +9,8 @@
 - Settles [#307](https://github.com/Raketa02/Raketa/issues/307) on
   [#302](https://github.com/Raketa02/Raketa/issues/302)'s spec.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search's `player_card` is gone (#579), and with it `PlayerCardSource`, `RecordedCard`, the `HEAD` per shortlist row and the read-back's frozen shield. The decision stands where the verdict now crosses — the player record's `review` and the owner's own `ProfilePhotoResource.review` — with three answers: *not checked* is an omission, only `allowed` earns a shield, and the note never crosses.
+
 ## Context
 
 Part 1 of the redrawn competitive card puts a **✓ ON COURT** shield on the photo panel:

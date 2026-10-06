@@ -3,12 +3,14 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `POST /forecasts` is gone, with the builder and the searches it was bound to (#579), so §1, §3, §4, the per-row `would_be_forecast` and the *Evenest* sort describe nothing that runs. §2's rule stands and the engine is built to it: one function, `v1/group.py`'s `forecast`, produces both the full and the provisional figure, reading an empty seat as if it matched its partner, and the assumption travels inside `Forecast`. A Games card prints its forecast as provisional while a side is short; a booked game's pairing reads the same function.
+
 ## Context
 
-§9.9 of [`matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) ends with a
+§9.9 of `matchmaking-engine.md` ends with a
 promise: the group objective and the arrangement *"both live in the matcher and neither is
 reimplemented on the client"*.
-[`the-two-contracts.md`](../specs/matchmaking/the-two-contracts.md) §5 made half of it
+`the-two-contracts.md` §5 made half of it
 enforceable — all three arrangements of the four cross with a forecast each, so *Even it out*
 is a **selection** and not a calculation, and there is no arithmetic left for the client to be
 tempted by.
@@ -34,7 +36,7 @@ implementation produces both numbers.
 Three ways to close it, and the second is the trap:
 
 - **Re-`POST /lineups`** with the composed set as `locked_seats`. Correct, and it writes a
-  durable `search` row per tap. [ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md)
+  durable `search` row per tap. ADR-0104
   made every engine invocation a permanent record and §19's denominator *searches run*; a
   builder session of six edits would enter that denominator as six searches. This is the same
   reasoning that made `POST /searches` deliberately non-idempotent — two taps are two searches
@@ -60,7 +62,7 @@ it was written to protect.
 
 Seats may be empty. A side with one player is read as if the missing seat matched the one
 already there, and the result carries `provisional: true` with its `assumption` code, inside
-the `Forecast` type [`the-two-contracts.md`](../specs/matchmaking/the-two-contracts.md) §5
+the `Forecast` type `the-two-contracts.md` §5
 already defines — *inside*, because a sibling boolean is how the number and its caveat get
 separated in a refactor.
 
@@ -80,7 +82,7 @@ labelled provisional exactly as the header and the seat lines already are.
 
 The request cites a `search_id`, and every player id in the line-up must have appeared in that
 search's returned rows. Required and non-nullable, the same discipline
-[`the-two-contracts.md`](../specs/matchmaking/the-two-contracts.md) §7 applies to interest and
+`the-two-contracts.md` §7 applies to interest and
 for the same reason: a fact with no origin is a fact nobody can audit.
 
 Unbounded, this route is a level-and-band lookup for any player in the city, reachable by id.
@@ -130,5 +132,5 @@ is doing real work only against ids that were never returned, and that is the ca
 **One more route the map did not have when it started counting.** With `POST /passes` and
 `GET /interest`, the four routes of `the-two-contracts.md` are seven. That file's §1 stands as
 written for the four that create searches; the additions are recorded in
-[`the-play-screens.md`](../specs/matchmaking/the-play-screens.md), which is where the screens
+`the-play-screens.md`, which is where the screens
 that need them are specified.

@@ -3,9 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-08-09
 - **Its enforcement is narrowed a second time by [ADR-0188](0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)**, not its decision: one more module, the phone-preferences store, may import `AsyncStorage` for three per-account choices. A credential still never goes there.
-- **Its enforcement is narrowed by [ADR-0180](0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)**, not its decision: `AsyncStorage` still never holds a credential, and one module (the feature flags' datafile cache) may now import it.
+- **Its enforcement is narrowed by ADR-0180**, not its decision: `AsyncStorage` still never holds a credential, and one module (the feature flags' datafile cache) may now import it.
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0007** (the club console's cookie session), removed in the 2026-08-25 reset. This ADR's own decision, for the player app, is untouched. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The flags' datafile cache the ADR-0180 bullet above names is gone with the feature flags (#576), and ADR-0180 was deleted. `AsyncStorage` is imported by one module again, the phone-preferences store of ADR-0188, and `eslint.config.mjs` names it alone. The decision itself is untouched.
 
 ## Context
 

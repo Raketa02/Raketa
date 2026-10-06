@@ -31,7 +31,8 @@
 
 - **Bottom bar:** **Home · ⚡ Play · You**. Home's badge counts games that need you (a result to
   enter or confirm, a payment to confirm, a seat open in your game). **Players** and **Chats**
-  appear only behind the **Classic play** flag.
+  were the older loop, hidden behind a *Classic play* flag and then removed on 2026-10-06
+  ([#569](https://github.com/Raketa02/Raketa/issues/569)).
 - **Group page** (mock 1): header (back, monogram, name, *n members · home club*, the sport pill
   on the right), then the tabs **Games · Fill in · Friends · Info**:
   - **Games** badge — cards where somebody is already In with you (mock 1: *Games 4*).
@@ -56,10 +57,11 @@
 
 ### A2.2 The deck stage
 
-Reuse today's **`DeckStage`** from the Players deck — the pan gesture, the stamps, the fly-off,
+Reuse the **`DeckStage`** the Players deck had — the pan gesture, the stamps, the fly-off,
 the arrival animation, the haptic tick — and nothing else of that screen. One change: the two
-cards peeking behind the top card **fade as well as shrink** (today they only shrink) (Q90). The
-three buttons under the card are today's `DeckAnswers`: **✕** (= swipe left), **i** (= the game
+cards peeking behind the top card **fade as well as shrink** (they used to only shrink) (Q90).
+Both now live in `frontend_player/src/features/proposals/components/`, since the Players deck was
+removed (#569). The three buttons under the card are `DeckAnswers`: **✕** (= swipe left), **i** (= the game
 details), the coral ball (= swipe right).
 
 - **Swipe right / the ball** — yes. **Swipe left / ✕** — no.
@@ -177,7 +179,7 @@ The booked layout with the dashed *You?* tile, the court number, *Paid* players,
 
 ### A4.4 The chat
 
-Today's conversation screen without the plan card and without the Details button; the back
+The conversation screen, which lost its plan card and Details button with the old loop; the back
 chevron returns to the details. Opens when the game is booked; members are the current line-up;
 system lines *"Kuba left — the seat is open"* and *"Ola took the seat"*.
 
@@ -322,7 +324,7 @@ rest grey. **The order is changed from the mocks** (Q82):
 
 ## A8. Home
 
-Today's Now rail of game cards, renamed **Home**, showing the statuses of
+The rail of game cards that was *Now*, renamed **Home**, showing the statuses of
 [the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses): **Waiting for the club**
 (amber), **Booked** (mint), **Seat open** (amber), the result statuses as today, **Called off**
 (red) — each with its money line. **Open game** → [A4.1](#a41-a-booked-game-youre-in-details-510),
@@ -357,7 +359,7 @@ list reached from a bell on Home. Emails go through the existing mailer (ADR-018
   posting grid cell (nine states), the slot sheet, the hour grid (7 × 16), the numbered setup
   checklist, the method card, the receipt row, the on/off chip.
 - **Changed** — peeking deck cards fade; the group page's Competitive / For fun switch appears on
-  Games; the You tab gains *Account*; the bottom bar loses Players and Chats (behind the flag).
+  Games; the You tab gains *Account*; the bottom bar loses Players and Chats (removed, #569).
 - **Sport colours** as today: padel coral, tennis mint, squash night2, badminton amber.
 
 ---
@@ -485,7 +487,8 @@ The shape is ADR-0189 §5. What each app needs from it:
   while it waited), `BookingConfirmed` (court number,
   seats, cut-off), `CourtMoved`, `SeatLeft`, `SeatRescued`, `CalledOffAtCutOff`,
   `CancelledByClub`, `PlayerCheckedIn`, `BookingPlayed`. It opens the ordinary **Game** on
-  confirmation, as a completed line-up does today; the no-show report lives on the Game.
+  confirmation — the only thing that opens one since the old loop was removed (#569); the
+  no-show report lives on the Game.
 - **Payment method** (Payments, per player): `MethodSaved` (Stripe customer and method ids, brand,
   last four, wallet), `TermsAccepted` (version, time, IP), `MethodChanged`, `MethodRemoved`,
   `BrandChanged` (asks again).
@@ -509,9 +512,11 @@ proposals' needs, per club and hour.
 ## C3. Jobs
 
 - **The proposer** — continuously, per pool and sport: free court hours × free fitting members →
-  proposals, through the Match Fit engine (distance off in a group). Deals versions at half-In and
-  after every no. Respects blocks, gender preference, levels, games-per-week, most-I'll-pay, live
-  caps, one card per people-set per batch.
+  proposals. *Fitting* is the pair rule (`PlayerFit`: blocks, mutual gender preference, the level
+  window), and the most even four is read off the balance forecast — no ranking or score
+  ([the mechanics §5.1](the-mechanics.md#51-what-it-does)); distance only picks a group's clubs.
+  Deals versions at half-In and after every no. Respects games-per-week, most-I'll-pay and one
+  card per people-set per batch.
 - **Book-by expiry** — expires unfilled proposals; tells posters.
 - **The cut-off** — at each booking's cut-off: still short → called off, refunds; full → nothing
   (money already taken).

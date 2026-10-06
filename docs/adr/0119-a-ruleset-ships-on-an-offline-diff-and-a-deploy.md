@@ -3,9 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The offline diff and its gate are gone — `check-ruleset-diff.sh`, the replay harness's corpora and the searches they read (#572, #579) — and with no search there is nothing to shadow or canary, so §1–§4 and §5's first paragraph describe nothing that runs. The one live dataset, `2026.09.15-a`, was then trimmed in place (#580): the ranking's sections were cut, no number moved, and the two older releases were deleted. What stands is §6 — the ruleset is validated at import, and a malformed one fails the deploy and never falls back — and §5's rule that a pull request moving a number carries one line per changed constant with its hypothesis and its falsifier. Since the trim, a released dataset is never edited again.
+
 ## Context
 
-[`matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) §22 ends with one rollout
+`matchmaking-engine.md` §22 ends with one rollout
 for every phase: **shadow** (the matcher runs, logs its answers, serves nothing) → **canary**
 (5% of searches, watch acceptance and empty rate) → **full**, and *"ruleset changes always go
 through §20.3 first."* §11 adds that A/B falls out for free — a search can be assigned a ruleset
@@ -19,9 +21,9 @@ So *"ships"* means a deploy, and each rung of the ladder has to earn its place a
 
 **Canary's obstacle is not the one the ticket named.** Hash assignment needs no routing surface —
 it is an in-process branch over two embedded rulesets — and `ruleset_version` is on every `search`
-row ([`search-telemetry.md`](../specs/matchmaking/search-telemetry.md) §2), so every rate in §19.1
+row (`search-telemetry.md` §2), so every rate in §19.1
 stays computable per arm. Nothing about it is
-[ADR-0101](0101-partition-derived-never-a-matching-criterion.md)'s trigger 2. The obstacle is that
+ADR-0101's trigger 2. The obstacle is that
 **a canary's success metric is acceptance**, and the outcome half of the telemetry chain needs the
 `matches` context, which does not exist. At §17's peak — 1–20 searches a second in one launch
 city — 5% is a handful of searches a day, measured against a rate nobody can compute.
@@ -29,14 +31,14 @@ city — 5% is a handful of searches a day, measured against a rate nobody can c
 **Shadow's obstacle is that something cheaper already answers most of the question.** Shadow is
 the *only* full-fidelity instrument on real traffic: it runs at the one moment the live inputs
 exist, so it applies the block and hold gates and can promote candidates from outside the recorded
-band, which [ADR-0118](0118-a-past-search-is-not-reproducible.md)'s offline diff cannot. Its price
+band, which ADR-0118's offline diff cannot. Its price
 is honest and it is not the scoring cost. Doubling the scoring call moves the duty cycle from
 **0.07 to 0.14**, comfortably inside trigger 1's **0.25**
-([`scale-posture.md`](../specs/matchmaking/scale-posture.md) §4) — affordable, which is not the
+(`scale-posture.md` §4) — affordable, which is not the
 same as worth spending. What it actually costs is **a second deploy and a wait before the real
 one**, forward-only sampling at launch traffic, and a doubling of `search_candidate`, already the
 largest table in the system with a 100-million-row revisit trigger
-([ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) §3).
+(ADR-0104 §3).
 
 **The enforcement idiom is already in this repository, twice.** `check-contract-drift.sh` with
 `make test-drift`, and `check-poetry-pin-drift.sh` with `make test-poetry-pin` — each driving its
@@ -96,7 +98,7 @@ of an answer already on hand.
 ### 5. A named owner signs, and the PR carries the argument
 
 **The same person accountable for the quality floor** (§23 Q10,
-[`ranking-weights.md`](../specs/matchmaking/ranking-weights.md) §10) signs a ruleset release. One
+`ranking-weights.md` §10) signs a ruleset release. One
 number decides when the product says nothing rather than something, and the numbers around it
 decide what it says instead; splitting the accountability makes each owner reasonable and the pair
 of them wrong.

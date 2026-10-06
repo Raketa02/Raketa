@@ -2,10 +2,12 @@
 
 **Status:** decided, 2026-09-17 — [ADR-0179](../../adr/0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md)
 records the decisions, the PRD is [#465](https://github.com/Raketa02/Raketa/issues/465) and the
-tickets are its children. Investigated against the codebase as it stands on
-`feat/RKTA-05_chats_and_now_game_cards`; nothing here is built. The walkable prototype is [`the-you-prototype.html`](the-you-prototype.html) — open it in a
-browser (a `#passport`, `#record`, … hash opens a screen directly), tap every row, and read the
-notes panel beside the phone: it names the read, the write and the consequence for whichever
+tickets are its children. Investigated against the codebase as it stood on
+`feat/RKTA-05_chats_and_now_game_cards`; it has been built since (#466–#473). The walkable
+prototype is [`the-you-prototype.html`](the-you-prototype.html) — it predates the removal of
+*How far to look* and *Game suggestions* with Classic play (2026-10-06, #581, #582) and still
+draws both. Open it in a browser (a `#passport`, `#record`, … hash opens a screen directly),
+tap every row, and read the notes panel beside the phone: it names the read, the write and the consequence for whichever
 screen is open, and logs every request the screen would send.
 
 ## 0. The one sentence
@@ -41,16 +43,13 @@ tab is a new drawn object.
 | Social step 3 · photos | up to three, first is the profile photo, each on-court-checked | `POST /photos`, then the commit | Aggregate method exists, **no route** |
 | Social step 4 · availability | the 7 × 3 **Availability grid** | the profile commit | Yes — `PUT /players/me/availability` |
 | Social step 5 · location | the coarse **Location area** | the profile commit | Yes — `PUT /players/me/location`, but it is *the cold start's write, and no screen's* |
-| Social step 6 · radius | the **Search radius**, 1–50 km | the profile commit | Yes — `PUT /players/me/search-radius` |
-| Social step 7 · gender | **Gender** and **Gender preference** | the profile commit | Aggregate methods exist, **no route**, and the values are **never served back** |
-| Social step 8 · opt-in | the **Proposals opt-in** | the profile commit | Aggregate method exists with a `PROFILE` surface waiting for it, **no route** |
+| Social step 6 · gender | **Gender** and **Gender preference** | the profile commit | Aggregate methods exist, **no route**, and the values are **never served back** |
 
 ### 1.2 The promises the app has already made
 
 Four sentences a player has already read say that something is editable *from your profile*.
 The tab has to make them true, and each is a row below:
 
-- Opt-in step: *"You can stop **any time, from your profile**."* → §3.8
 - Gender step: *"You can change this later **in your preferences**. It applies to every search."* → §3.7
 - Location step: *"…continue and set your area later **from your profile**."* → §3.6 (the
   finish then insists on it, so *later* has always meant *before the end of setting up*; the
@@ -70,9 +69,8 @@ The first two become rows; the panel's *Sign out* stays at the foot of the tab, 
 
 `PlayerProfile` has one method per changeable fact under a heading that reads, verbatim, *"Later
 changes, from the profile screen"*: `change_social_tags`, `change_photos`,
-`change_availability`, `change_location`, `change_search_radius`, `change_gender`,
-`change_gender_preference`, `answer_proposals_opt_in`. Three have routes. `ConsentSurface.PROFILE`
-exists and its docstring says *"the endpoint that drives it does not yet."*
+`change_availability`, `change_location`, `change_gender`, `change_gender_preference`. Two
+have routes.
 
 `GET /players/me/record` — *"the same sheet everybody else is shown about you"* — already
 carries the name, handle, photo and its on-court verdict, the intro, the tags, one pill per rated
@@ -90,17 +88,18 @@ ScreenHeader      eyebrow PLAYER PROFILE · h1 You
                   → taps open §3.9 How others see you
 
   PLAYING         Skill passport · Player reliability · What kind of game
-  FINDING PLAYERS Your week · How far to look · Where you play · Who you play with · Game suggestions
+  FINDING PLAYERS Your week · Where you play · Who you play with
   ON YOUR CARD    How others see you · Photos · Tags · Intro · Name
 
   Sign out        AccountPanel's button, at the foot — as today
 ```
 
 Three groups, because the rows answer three different questions: *what has the platform
-concluded about me* (read-only), *what does the matcher read when it looks for a game*
-(declarations that feed terms, gates and the engine's consent), and *what does a stranger read
-about me* (the card and the record). The groups are section titles over cards of rows —
-[5.5](../../../frontend_player/docs/design-system.md#55-row--the-key-value-line)'s key-value row
+concluded about me* (read-only), *what does a proposed game read about me* (declarations the
+new games read: the proposer reads the week and the Play intent, the pair rule on every court
+reads the gender preference, and every distance to a club is measured from the Location area),
+and *what does a stranger read about me* (the card and the record). The groups are section
+titles over cards of rows — [5.5](../../../frontend_player/docs/design-system.md#55-row--the-key-value-line)'s key-value row
 with a title, a **live** one-line summary drawn from the read, and a chevron.
 
 **There is no Account group.** Blocked players and the account rows (email, password, deletion)
@@ -112,10 +111,8 @@ were on the first draft and are out — §4 says why and what each would need.
 | Player reliability | `92 of 100 · 3 things counted` | the ring, then the record card's rows | **none** | read exists; one decision (§5.3) |
 | What kind of game | `Padel Competitive · Tennis For fun · Squash not set` | one row per rated sport, expands to the three answers | in place, `PUT /play-intents/{sport}` | **built** |
 | Your week | `10 slots ticked` | the availability grid as the step draws it, *Save* / *Clear all* | `PUT /players/me/availability` on *Save* | route exists, screen missing |
-| How far to look | `10 km · across your town` | the slider between the served bounds, *Save* | `PUT /players/me/search-radius` on *Save* | route exists, screen missing |
 | Where you play | `Area set · updates when you open Raketa` | *Your area is set*, *Read my area again*, the permission states | `PUT /players/me/location` | route exists, screen missing |
 | Who you play with | `Matched with anyone` | the gender step's two radio groups, each with *Save*; the reach sentence at the press | two new `PUT`s | **needs a decision** (§5.2) and two routes |
-| Game suggestions | `Yes — since 12 Aug` | the three promises, the standing answer with its date, the two answers | new write with `surface: PROFILE` | needs a route and the read |
 | How others see you | `Your player record, as a stranger reads it` | `PlayerRecordSheet` for yourself, section for section | none — the doors are the rows below | **built**, needs a door |
 | Photos | `2 of 3 · profile photo on court` | the photos step as it is: tiles, add, promote, hold for options, the flagged notice | `POST /photos`, then `PUT /players/me/photos` on every change | needs a route and the read |
 | Tags | `4 of 6 · Stays for a drink, Plays to win, +2` | the tags step as it is, with *Save* | `PUT /players/me/social-tags` | needs a route and the read |
@@ -186,14 +183,15 @@ it and do not**:
 | Row | Weight | What it counts | In the number? |
 | --- | --- | --- | --- |
 | Shows up | 35 | plans that settled → games that happened; a Ghost game is charged to everybody on that court | yes |
-| Answers challenges | 20 | seats you were asked to take → answered inside the window; **a decline is a good outcome** | yes |
 | Answers about results | 15 | scores put to you → answered inside the window; **a counter is as good as an acceptance**; forgets after twelve months | yes |
+| Keeps plans | 12 | booked games whose hour came → kept with every seat held; **broken only by leaving** so that the game is called off at its cut-off, or after it with nobody taking the seat (#544) | yes |
 | Opponent variety | — | different people over times on a court, whole record; two counts and the share | no — context for a Level |
-| Sportsmanship, by players | — | what other players said | no — never read by the matcher |
+| Sportsmanship, by players | — | what other players said | no — matchmaking never reads it |
 
-*Keeps plans* and *Settles up* have nothing to measure on this platform and are not rows;
+*Answers challenges* stands down — challenges no longer wait for an answer (#544) — and *Settles
+up* has nothing to measure, because the court money is taken up front; neither is a row.
 *Confirms results* was struck and stays struck (ADR-0137). The weights are the player's own —
-35 / 20 / 15 — renormalised over the strands that are there, and **they are not printed**: the
+35 / 15 / 12 — renormalised over the strands that are there, and **they are not printed**: the
 record does not carry them on the wire and the screen draws what the record draws.
 
 **What opens.**
@@ -219,8 +217,8 @@ drawing a nought. The sportsmanship figure needs §5.3.
 ### 3.3 What kind of game — Play intent, per sport
 
 **What it is.** `COMPETITIVE · FOR_FUN · NO_PREFERENCE`, declared per rated sport, never inferred
-and never transferred between sports. *Mode is the search's setting right now; intent is the
-player's standing declaration.*
+and never transferred between sports. *Mode is one game's kind; intent is the player's standing
+declaration.*
 
 **What opens.** Under the title, one line — **This changes how people find you** — and then
 `PlayIntentsSection` as it is built today (#296): one row per rated sport, the row expands in
@@ -231,10 +229,11 @@ section's heading and body sentence are dropped; the line under the title says w
 `surface: PROFILE_SCREEN`. Idempotent — the same value twice records nothing. The value drawn is
 the route's answer arriving in the cache, never the request echoed back.
 
-**What changes.** The **intent alignment** term in every stranger's search that finds this player
-— a weight, never a gate, and the one term never relaxed when the pool is thin. An undeclared
-sport cannot be searched in or dealt from until it is answered. Nothing about what this player may
-search for.
+**What changes.** Which kinds of game a group's Games deck deals this player in the sport —
+*Competitive* the Competitive segment, *For fun* the For fun one, *No preference* both — and so
+which proposed games and rescues the proposer puts them in: only a kind their intent wants. An
+undeclared sport deals them nothing until it is answered; the deck asks the question in its
+place.
 
 ### 3.4 Your week — the Availability grid
 
@@ -253,31 +252,17 @@ empty week is a legal value and the footnote says what it means.
 the whole week. Unkeyed, idempotent; the response carries the grid as stored and that is what the
 screen draws. `useChangeAvailability` exists.
 
-**What changes.** The **availability overlap** term in every search that considers this player;
-the **Window** a challenge carries (`TODAY · TOMORROW · WEEKEND · THIS_WEEK · ANY`), derived from
-the grid at the moment of sending; the week Play's working copy is seeded from the next time the
-tab is entered. A blank week makes the overlap term stand down for this player — it is never
-scored as no overlap. Find a game keeps its own working copy and never writes it back; that does
-not change.
+**What changes.** Which court hours this player is dealt: the proposer puts them only in a game
+whose whole hour their week has free, and a booked game that lost somebody is offered to them as
+a rescue only at such an hour — one rule, `free_for_the_hour`, asked by the proposer, posting and
+the rescue board alike. And the **overlap grid** on every Games card they are on: how many of the
+people on it are free together, never who, with its grade. A blank week deals nothing, because
+being free is a claim a week has to make; a card with a blank week on it grades *Slim*, never
+*High*.
 
 ### 3.5 How far to look — the Search radius
 
-**What it is.** Whole kilometres, between the served bounds (today 1–50, step 1, default 10).
-*A filter when the player searches, a weight when the engine proposes* — and the Radar's reach.
-
-**What opens.** The slider (6.10) opened at the profile's value — the row is the control, the
-fill and the thumb are `night`, the thumb in its surface ring — with the figure and the words
-(`10 km · Across your town`) above it, and **a *Save* button under it**. Letting go of the slider
-writes nothing; the button does. That is a deliberate difference from Find a game, where the
-radius reaches the server as the first half of pressing the card.
-
-**How the update happens.** *Save* sends `PUT /players/me/search-radius`. The write path
-re-snaps to the bounds and answers with the radius as held, which is what the slider then shows.
-`useChangeSearchRadius` and the bounds helpers exist.
-
-**What changes.** The edge of every search this player runs; how *close* is priced when Raketa
-proposes them a game; how far the Radar draws and the deck deals; the `KEEP_THIS_RADIUS` prompt
-stops being raised once the profile holds the wider number.
+*Removed with Classic play on 2026-10-06 (#581, #582).*
 
 ### 3.6 Where you play — the Location area
 
@@ -290,7 +275,7 @@ a neighbourhood and the screen does not pretend to. Two things:
 - **the state**: *Your area is set* (mint) with the one sentence the tab already carries — *Your
   area updates each time you open Raketa; it is never finer than about a kilometre*. **It is the
   only state**: onboarding cannot finish without an area (*the one answer setting up cannot
-  finish without*, the opt-in step's own words), so every profile the tab can read holds one;
+  finish without*, the last step's own words), so every profile the tab can read holds one;
 - **Read my area again** — the control from the location step, in its three permission states
   (*Raketa cannot see where you play · Location is turned off for Raketa → Open Settings*, and
   the plain control).
@@ -300,9 +285,10 @@ exactly as the step does, and sends `PUT /players/me/location`. A fix that round
 already held records nothing and answers `204`. The route exists, written for the cold start; a
 screen calling it is the same request with a person behind it.
 
-**What changes.** Which partition of the candidate index this player is in and is searched
-from; the distance on every card that names them; *In your area*; the Radar's centre; the next
-deal. Nothing else moves — no radius, no reset, no prompt.
+**What changes.** The distance to the club this player reads on a game's details, a booked game
+and *Post a game*'s clubs, all measured from the cell; the nearest-first order of *New group*'s
+home-club search and of the search for a group to join; and *In your area* on a record that
+names them. Nothing else moves — no reset, no prompt.
 
 **What it needs from the contract.** Nothing. The first draft asked the read for
 `has_location`; it would always be true, and a flag that cannot be false is a branch nobody
@@ -312,7 +298,7 @@ tests. The screen branches on the permission state alone, which is the device's.
 
 **What it is.** Two answers on one screen, because the second is unanswerable without the first:
 `WOMAN · MAN · PREFER_NOT_TO_SAY`, self-declared and freely changed, and `ANY · WOMEN_ONLY ·
-MEN_ONLY`, durable and **mutual** — it protects an inbox, not only a search.
+MEN_ONLY`, durable and **mutual** — it binds the other side's courts, not only this player's.
 
 **What opens.** `SocialGenderStep`'s two radio groups under its two headings (*About you* / *Who
 we should match you with*), each with its own *Save*, and the **reach sentence at the moment of
@@ -325,34 +311,19 @@ with anyone*); the gender is drawn on this screen and no other.
 `PUT /players/me/gender-preference`, both idempotent no-ops on an unchanged value. Neither route
 exists; both aggregate methods do.
 
-**What changes.** The mutual gate — evaluated before enumeration, never relaxed, never scored.
-`PREFER_NOT_TO_SAY` matches unconstrained searches only. A narrowed preference removes this player
-from the excluded side's view entirely, including from people who searched for anybody; widening
-restores it on the next search. In a four, every gate binds all six pairs.
+**What changes.** The pair rule on every court this player is dealt — mutual, never relaxed,
+never scored, and read live on every proposal, fill and rescue (`PlayerFit`): no game is
+proposed, filled or offered as a rescue with a pair on it that either preference excludes.
+`PREFER_NOT_TO_SAY` fits only a preference of *anyone*. A narrowed preference keeps this player
+off the excluded side's courts entirely, including those of people open to anyone; widening
+restores them from the next proposal. In a four, every gate binds all six pairs.
 
 **The decision this row needs** is in §5.2: the screen has to draw the current answers, and the
 profile read promises never to serve them.
 
 ### 3.8 Game suggestions — the Proposals opt-in
 
-**What it is.** The recorded answer to whether the engine may push games at this player. No
-default; every answer is recorded with the moment, the copy version shown and the surface.
-
-**What opens.** The opt-in step's three promises (*You may receive… · You always accept… · You
-can stop… any time, from here*), the scope line (*saying no doesn't affect how other players find
-you*), the **standing answer with its date and against which words** (*Yes — 12 August,
-proposals-opt-in.v3*), and the two answer buttons.
-
-**How the update happens.** Pressing either answer sends it with `surface: PROFILE` and the copy
-version currently on screen. **Every press records** — consent is evidenced, not asserted, so
-*asked again against these words and said yes again* is a fact the stream keeps. The aggregate
-method and the `PROFILE` surface exist; the route does not, and the read does not carry the
-standing answer.
-
-**What changes.** Whether searches with `Initiation = platform` may include this player. A *no*
-stops the engine pushing and nothing else — search, matchmaking and every other part of the
-product are unaffected. Over-applying it makes a ghost account; under-applying it is a consent
-violation.
+*Removed with Classic play on 2026-10-06 (#581, #582).*
 
 ### 3.9 How others see you
 
@@ -366,7 +337,7 @@ else**, exactly as a court opens it today:
 1. `RecordHeader` — the `PhotoPanel` at record size (the photograph or the generated poster,
    the flat scrim, the ON COURT mark where the photo passed, the resolved sport's Level over
    it), and beside it the name with *(you)*, the `@nickname`, the intro, and one sport pill per
-   rated sport. No distance line and no fit pill, because `is_self` says so and no search opened it.
+   rated sport. No distance line and no fit pill, because `is_self` says so.
 2. `SkillCard` — `PADEL · 2,71 · 61% sure` over the level bar with its band names.
 3. `RecordBlocks` — *Player reliability · Last 5 · Counted*.
 4. `RecordCard` — the metered strands, *Opponent variety*, *Sportsmanship, by players*.
@@ -401,7 +372,7 @@ the ids in order, the aggregate's `change_photos`, idempotent on an unchanged li
 *Save*, because the step has none: the row is the state. Removing the last one sends an empty
 list and the poster returns.
 
-**What changes.** The face on every card, seat and radar tile that names this player, and the
+**What changes.** The face on every card, seat and record that names this player, and the
 ON COURT mark — **only a passed check earns the shield**, and a card marks only the pass; the
 uploader is the one who sees a flag.
 
@@ -424,10 +395,9 @@ words (*Pick 1 more tag to save*). The step's *Continue* is *Save*.
 **How the update happens.** *Save* sends `PUT /players/me/social-tags` with the ids; the server
 re-validates against the same vocabulary and bounds the picker read. No route yet.
 
-**What changes.** The two terms that read tags — **playing style** and **social vibe**, split by
-the claim the tag-relationship matrix makes about a pair, never by the group a tag was printed in
-— and the tag overlap drawn on every card and record that names this player. **A tag is not an
-intent**: `HERE_TO_COMPETE` and a `FOR_FUN` declaration coexist and nothing overrules either.
+**What changes.** The tags on this player's record, and nothing else: **a tag is shown, never
+scored**, and no proposal reads one. **A tag is not an intent**: `HERE_TO_COMPETE` and a
+`FOR_FUN` declaration coexist and nothing overrules either.
 
 ### 3.12 Intro
 
@@ -448,9 +418,8 @@ are frozen reads as a bug… it becomes editable the day a profile-edit surface 
 three, as one piece of work."* This tab is that surface, so the intro's write ships with the tags'
 and the photos' — an aggregate change (`IntroChanged`) plus its route.
 
-**What changes.** The line under the name on this player's card and record. Search records
-already kept quote the line as it was when the search ran — ADR-0104's cost, extended to a
-sentence, and accepted in ADR-0170.
+**What changes.** The line under the name on this player's record, and on their own header card
+on this tab, from the next read.
 
 ### 3.13 Name
 
@@ -475,16 +444,14 @@ from the next read; the two initials over a generated poster; the handle on the 
 
 | Candidate | Why it is not a row |
 | --- | --- |
-| **Blocked players** | Out of this build. It would need a read that does not exist (`GET /blocks`, the caller's own list with names and faces) — and more to the point **no client surface makes a block today**; a screen that only lifts blocks nobody can place is a screen for a control that is not there. Comes back with the block control on the record sheet and the deck card, as one ticket. `DELETE /blocks/{player_id}` exists for it. |
+| **Blocked players** | Out of this build. Its read now exists (`GET /blocks`, the caller's own list with names and faces, #586) — but **no client surface makes a block today**; a screen that only lifts blocks nobody can place is a screen for a control that is not there. Comes back with the block control on the record sheet, as one ticket (#587). `DELETE /blocks/{player_id}` exists for it. |
 | **Account** — email, password, deletion | Out of this build. None has a route; erasure is a domain concept (*erasure reaches both sides*) with no act behind it. *Sign out* is not affected: it stays at the foot of the tab as `AccountPanel` draws it today, the only way out of a session. |
-| *Show them again* (deck reset) | Per sport and about one deal; it lives on the deck's ending where the player has just run out of cards. Idempotent and tells nobody — nothing about it is a preference. |
 | Alerts and notification preferences | No push channel exists in the app (no `expo-notifications`, no token route). A row of switches that switch nothing is a lie the design system already forbids (*no coming soon*). |
 | A games history | *A history surface, on You* is on the loop's fog map; `GET /games` exists but what a finished game's tail should be is undecided. Not a preference. |
-| *Your Let's play yeses* | `GET /interest` is the deck's own read; a list of them is close to the interest inbox ADR-0106 forbids. |
-| Default sport, default mode, language, city | No such facts exist. Play remembers sport and mode for a visit; language was struck as a nationality proxy; there is no city — only a cell and a radius (ADR-0174 §1). |
+| Default sport, default mode, language, city | No such facts exist. Play remembers its segment and the sport last picked, per account on the phone (ADR-0188); language was struck as a nationality proxy; there is no city — only a cell (ADR-0174 §1). |
 | Rankings | Nothing on this platform ranks players against each other; the prototype's ladder was cut with the reset. |
 | Explanatory cards on the read-only screens | *Nobody types a level in*, *what it changes*, *what clears it* were on the first draft and are gone: the passport is the result card and the reliability screen is the record card, and each already says what it is. |
-| Confirms results, Keeps plans, Settles up | Struck or standing down; a row drawn for one would be a nought under a name. |
+| Confirms results, Answers challenges, Settles up | Struck or standing down; a row drawn for one would be a nought under a name. |
 
 ## 5. What the contract needs
 
@@ -495,13 +462,12 @@ them."*
 
 ### 5.1 The read grows
 
-`PlayerProfileReadResponse` gains, beside `availability`, `search_radius_km` and `play_intents`:
+`PlayerProfileReadResponse` gains, beside `availability` and `play_intents`:
 
 - `social_tags` — the ids, in the vocabulary's order (required at commit, so never absent);
 - `photos` — the ids in order, each with its verdict as the uploader is owed it, or an empty list
   (**an empty list is a real answer** — a profile may hold none);
-- `intro` — the line, or omitted where none was written;
-- `proposals_opt_in` — `accepted`, `answered_at`, `copy_version`.
+- `intro` — the line, or omitted where none was written.
 
 ### 5.2 Decided (ADR-0179 §4): the owner reads their own gender and preference
 
@@ -554,7 +520,6 @@ beside the reversal. The client's two-armed `Opinion` collapses to one.
 | `PUT /players/me/intro` (+ removal) | **new** `IntroChanged` | ADR-0170 §5 — ships with the two above |
 | `PUT /players/me/gender` | `change_gender` | no-op on unchanged |
 | `PUT /players/me/gender-preference` | `change_gender_preference` | no-op on unchanged |
-| `PUT /players/me/proposals-opt-in` | `answer_proposals_opt_in` | **always records**; `surface: PROFILE`, `copy_version` from the screen |
 
 Regenerate `openapi.player.json` and `make gen-api`; the drift check will hold the client to it.
 
@@ -564,15 +529,15 @@ The tickets are #465's children; the order below is theirs.
 
 1. **The composition** — the tab as three groups, drawing what exists: the passport from
    `GET /ratings` and the record's per-sport panel, reliability and *How others see you* from
-   `GET /players/me/record`, intents as built, the week and the radius from the surface with their
-   existing writes, the area's control over the existing route, the naming screen behind a door,
+   `GET /players/me/record`, intents as built, the week from the surface with its existing
+   write, the area's control over the existing route, the naming screen behind a door,
    *Sign out* as it is. Every row from `PlayIntentsSection` down is a `player_profile` component
    composing the step it came from; `shell` composes and owns the group titles. No contract change.
 2. **Add a sport** — the second door into the onboarding pass (§3.1). Client only; the
    questionnaire and its routes are untouched.
-3. **The read grows and the six writes land** (§5.1, §5.4), one backend ticket, blocking:
+3. **The read grows and the five writes land** (§5.1, §5.4), one backend ticket, blocking:
 4. **The three social edits as one piece of work** — photos, tags, intro — which is the shape
-   ADR-0170 §5 asked for; then gender and preference behind §5.2's decision; then the opt-in.
+   ADR-0170 §5 asked for; then gender and preference behind §5.2's decision.
 5. **The sportsmanship figure**, behind §5.3's decision, whichever way it goes.
 
 ## 7. What this document does not decide

@@ -30,13 +30,15 @@
 > arriving with something in it — and an evidence kind a build cannot read still renders a named
 > gap rather than a shorter list.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The ranking is gone (#580), and with it every evidence variant — the modifier, liveness, inclusion and gate reason codes, the relaxation `ask`, the challenge `window` and `search_candidate.terms` — so §1, §2, §3 and §5 govern nothing that runs, and no weight is left to configure. Two rules outlived the matcher and still bind: §4's two spellings of absence (omitted where a field does not apply, `null` for a measured nothing), as the player record and a booked game's pairing serialise them, and §6's named gap, which the player app draws for any closed code it does not know (`shared/vocabulary/outOfDate.ts`).
+
 ## Context
 
 Two rules this repository already holds point in opposite directions the moment the matcher
 has to serialise a reason.
 
 **[ADR-0022](0022-kernel-negative-space-and-constant-homes.md), extended to the matcher by
-§12.1 of [`matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md):** the backend
+§12.1 of `matchmaking-engine.md`:** the backend
 emits machine codes and never display text. Evidence crosses structured —
 `{"kind": "availability_overlap", "shared_count": 4, "next_slot": {...}, "days_away": 5}` —
 and the client writes *"4 shared slots · next Tuesday evening."* This is settled and nothing
@@ -47,7 +49,7 @@ here reopens it.
 hand-writing a DTO that mirrors a backend response. `check-contract-drift.sh` regenerates and
 diffs in CI, so a contract change shipped without its client types fails the build.
 
-[`search-telemetry.md`](../specs/matchmaking/search-telemetry.md) then makes the stored
+`search-telemetry.md` then makes the stored
 `search_candidate.terms` column **deliberately opaque** JSONB — *"stamped with
 `ruleset_version` and its shape is allowed to change between rulesets, which is exactly what a
 relational schema would fight."* That is right for storage, and it was written about storage.
@@ -85,7 +87,7 @@ per variant. This is §12.1's structure with its openness removed: the same obje
 
 The same applies to every other closed vocabulary the response carries — modifier codes,
 liveness reason codes, inclusion reasons, gate reason codes, the relaxation `ask`, the
-challenge `window` ([ADR-0100](0100-challenge-window-derived-never-chosen.md)),
+challenge `window` (ADR-0100),
 `optimised_for`. Sports, tags, day parts and intents cross as the platform's **existing**
 machine codes; a second spelling of a closed vocabulary is how two systems begin disagreeing
 about the same word.
@@ -93,7 +95,7 @@ about the same word.
 ### 2. Storage stays opaque, and the two are allowed to differ
 
 `search_candidate.terms` remains JSONB. This is not the two-homes defect
-[ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) removed: that was one
+ADR-0104 removed: that was one
 number in two stores **free to disagree about the same question**. These two serialisations
 answer different questions. The row must still deserialise in five years under a ruleset
 nobody runs any more; the wire type must be exhaustive *today*, for the ruleset that is
@@ -168,8 +170,8 @@ load failure rather than a lint.
 
 **Old clients degrade visibly rather than quietly.** The named gap is a slightly worse screen
 than a perfectly rendered one and a much better screen than a plausible wrong one — the same
-trade [ADR-0099](0099-relaxation-offers-the-searchers-own-asks.md) took on the honest empty
-state, and [§18](../specs/matchmaking/matchmaking-engine.md)'s standing rule: degrade
+trade ADR-0099 took on the honest empty
+state, and §18's standing rule: degrade
 honestly, never fabricate.
 
 **The absence rule binds every context that later serialises a matcher fact,** not just this

@@ -3,9 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The ranking is gone (#580), so there are no weight vectors and no quality floor for newness to leave alone: decisions 1 and 5, and the Consequences' empty screens, radius rungs, calibration modifier and judged pairings, describe nothing that runs, and decision 4 is moot. Decisions 2 and 3 are the rule today: while either player in a pair is inside their fourteen-day newcomer window, the pair is held to the competitive tolerance whatever the kind of game (`matchmaking/domain/level_window.py`) — for every pair the proposer, the fill and a rescue would seat, and for a post's level range.
+
 ## Context
 
-§9.10 of [`matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) — *The newcomer
+§9.10 of `matchmaking-engine.md` — *The newcomer
 path* — opens with **a distinct ruleset**:
 
 > level 30 · balance 22 · reliability 20 · intent 14 · availability 8 · style 4 · vibe 2 ·
@@ -20,7 +22,7 @@ Resolving [#175](https://github.com/Raketa02/Raketa/issues/175) on the map
 found the vector unaffordable for a reason that has nothing to do with its numbers.
 
 **A third weight vector re-opens the quality floor.**
-[`the-five-numbers.md`](../specs/matchmaking/the-five-numbers.md) sets **one** `QUALITY_FLOOR` for
+`the-five-numbers.md` sets **one** `QUALITY_FLOOR` for
 both modes and every sport, on an explicit argument — *"each extra dimension is a place to lower
 it quietly for whichever pool is thin"* — and refuses to define it as an integer at all. It is
 defined by **six judged pairings** and the constraint
@@ -29,7 +31,7 @@ defined by **six judged pairings** and the constraint
 Fit(case 3)  <  QUALITY_FLOOR  ≤  min( Fit(1), Fit(2), Fit(4), Fit(5), Fit(6) )
 ```
 
-which [`ranking-weights.md`](../specs/matchmaking/ranking-weights.md) then read as **44**, against
+which `ranking-weights.md` then read as **44**, against
 the two existing vectors. A third vector re-derives every Fit value in that table. Either the
 floor moves for newcomers — the precise thing the map refused — or the vector owes the same six
 judged pairings, in a mode where the judgements were never made.
@@ -64,7 +66,7 @@ written the predicate is true for every player who will ever exist.
 5. **§9.10's distance-weight-to-zero is struck as redundant.**
 
 The window itself, and everything else this ticket settled, is in
-[`the-newcomer-path.md`](../specs/matchmaking/the-newcomer-path.md).
+`the-newcomer-path.md`.
 
 ## Consequences
 
@@ -88,7 +90,7 @@ only one side is a rule with a door in it.
 shown a for-fun opponent between Δμ 0.55 and 0.90 who would otherwise have been admitted. At
 launch density ([#161](https://github.com/Raketa02/Raketa/issues/161): 63% of searches already
 return fewer than five candidates) that will occasionally be why a screen is emptier. It is the
-same trade [ADR-0099](0099-relaxation-offers-the-searchers-own-asks.md) took deliberately — **a bad
+same trade ADR-0099 took deliberately — **a bad
 match is worse than no match** — and the empty-result rate stays a guardrail metric, never
 sufficient grounds to move it.
 
@@ -103,7 +105,7 @@ tolerance catches it**. The concern is about *experience*, and the engine holds 
 experience. Four reasons decide it anyway:
 
 - It is a **percentile over the pool**, so the identical pairing is admissible in a large city and
-  refused in a small one — the shape [ADR-0101](0101-partition-derived-never-a-matching-criterion.md)
+  refused in a small one — the shape ADR-0101
   struck for the partition, and unexplainable in one sentence naming evidence, which is the third
   refusal.
 - Its input does not exist.

@@ -12,20 +12,22 @@
   (*what a group doesn't do yet*, except its friends list and member removal).
 - **Narrows to the *Classic play* loop** — the Players deck, Chats, challenges with the
   where · day · hour plan, and Find a game, now behind one feature flag —
-  [ADR-0145](0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md),
-  [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md),
-  [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md),
-  [ADR-0150](0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md),
+  ADR-0145,
+  ADR-0144,
+  ADR-0164,
+  ADR-0150,
   [ADR-0151](0151-a-window-whose-default-costs-you-the-game-must-outlast-the-gap-between-app-opens.md),
-  [ADR-0100](0100-challenge-window-derived-never-chosen.md),
+  ADR-0100,
   [ADR-0169](0169-the-deck-lives-on-players-and-a-swipe-is-an-answer.md) and
   [ADR-0175](0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md) §4.
 - **Amends** [ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md) §11
   (*Games* now counts real games), [ADR-0179](0179-the-you-tab-is-onboarding-laid-out-flat-and-a-level-is-watched-from-it.md) §9
   (the You tab gains an *Account* group), [ADR-0102](0102-silence-is-never-scored.md) and
-  [ADR-0120](0120-a-factor-reads-the-pair-or-it-is-not-a-factor.md) (the grid they read becomes
+  ADR-0120 (the grid they read becomes
   hours), and extends [ADR-0167](0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md)
   (its screen is reused as *It's a game!*).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Classic play is removed, not flagged: the Players deck, Chats, challenges with their plan, Find a game and the flag are gone. Of the records the header narrows to that loop, 0100, 0144, 0145, 0150 and 0164 were deleted; 0151, 0169 and 0175 stayed with notes, because a live rule rests on each (see the [ADR index](README.md#the-2026-10-06-classic-play-removal--the-second-gap)). So §6's second bullet, §8's third bullet and the *Consequences*' two game-making paths are history, and this record is the one way a game is made. The "who fits whom" ranking went too (#580): what deals is the pair rule (`PlayerFit`: no block, mutual gender preference, the level window) and the balance forecast, so §2's *today's Match Fit, unchanged*, §5's availability term and the judged pairings and ruleset diff in the *Consequences* no longer apply. ADR-0120, which the header amends, was deleted with the ranking; the hours a card's people share are read only to grade its overlap, over everybody on it. A Game is opened only by a booking.
 
 ## Context
 
@@ -33,10 +35,10 @@ Groups exist ([ADR-0183](0183-a-group-is-a-crowd-at-a-home-club-and-its-link-nev
 a club's WhatsApp crowd, or a player's own. Their **Games** and **Fill in** tabs are
 placeholders, and §13 says why — a group *"doesn't pick games, post games, offer or book
 courts, or handle money. It has no chat."* Behind that sentence sit three older refusals:
-**no booking will ever contradict the hour** ([0145](0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md)),
+**no booking will ever contradict the hour** (0145),
 **a club isn't a court** ([0182](0182-a-club-is-a-place-players-search-and-its-account-signs-in-only-on-the-club-surface.md) §8),
-and a plan is **where · day · hour agreed in a chat** ([0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md),
-[0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)).
+and a plan is **where · day · hour agreed in a chat** (0144,
+0164).
 
 The product owner's market work says the refusals were the gap, not the protection. In a club's
 WhatsApp group somebody assembles four people, somebody books, somebody chases the money. The

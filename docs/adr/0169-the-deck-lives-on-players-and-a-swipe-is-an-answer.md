@@ -11,14 +11,14 @@
   - [#231](https://github.com/Raketa02/Raketa/issues/231) §3's *"Decided: buttons only"* and its
     argument — *a swipe would be the cheapest gesture in the application attached to the most
     durable consequence in the feature* — which
-    [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §6
+    ADR-0165 §6
     kept for the chat row and keeps there: the row's swipe still reveals. On the deck the
     consequence is no longer the most durable one (§5), and the swipe acts (§3).
-  - [ADR-0109](0109-a-read-back-names-what-it-withholds.md) §2's *"Incoming-and-not-mutual never
+  - ADR-0109 §2's *"Incoming-and-not-mutual never
     crosses, on any route, in any shape — not as a list, not as a count, not as a badge"* — by
     **one count, on one envelope** (§4). The list and the badge stay refused; the schema test that
     enforces the sentence is narrowed to enforce the rest of it.
-  - [ADR-0128](0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)'s Context sentence
+  - ADR-0128's Context sentence
     *"there is no Show them again — that button was struck for making the suppression a
     suggestion"* and §4's *"`PASS_SUPPRESS` crosses in no shape at all"* — a route now clears it
     (§5). §1–§3 stand in full: deck only, one-directional, never escalating.
@@ -26,16 +26,16 @@
     reads the declaration and is refused with `play_intent_not_declared` exactly as a search is"*
     — the deck reads no declaration (§2). `DECK` stays in the closed five, stored on the events
     that carry it and never emitted again.
-  - [`the-two-contracts.md`](../specs/matchmaking/the-two-contracts.md) §6's *"`NO_PREFERENCE →
+  - `the-two-contracts.md` §6's *"`NO_PREFERENCE →
     fun`"* mapping on the deck — now *everyone → fun* (§2) — and its *"Match me is reached from
     the screen the week is edited on"*: it is reached from a tab of its own, and the deal runs on
     the profile's week.
-  - [`matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) §9.11's first band,
+  - `matchmaking-engine.md` §9.11's first band,
     *"People who have already said yes to you — an instant match is one tap away"*, and
     [`the-words.md`](../specs/matchmaking/the-words.md) §10's sentence *They already said yes to
     you* **on the deck card** — the liker is unmarked and placed by the nudge (§4). The sentence
     and the tag stay on the list (§8).
-  - [`the-play-screens.md`](../specs/matchmaking/the-play-screens.md) §7's two-button deck, its
+  - `the-play-screens.md` §7's two-button deck, its
     *"there is still no Show them again"*, and its empty-state copy; and
     [`the-words.md`](../specs/matchmaking/the-words.md) §20.5's *two named buttons* — three
     buttons and a drag (§3), with §20.5's other half kept whole: the drag is **never the only
@@ -46,25 +46,25 @@
 - **Amends** [ADR-0142](0142-a-withdrawn-challenge-is-the-one-conclusion-the-seats-cannot-reach.md)
   §1's *"Whether a pair with an unplayed game may arrange a second one is not decided here"* — for
   the **deck only** it is decided (§6); the shortlist keeps §1's release.
-  Amends [ADR-0127](0127-a-signal-expires-or-is-refused-never-quietly-decays.md) §6 by one field:
+  Amends ADR-0127 §6 by one field:
   `ttl_days` crosses beside `cap`, so a sentence may print the number without the client holding
   it (§5). The three numbers are unchanged.
   Amends [ADR-0012](0012-player-app-design-system.md) 15.4 and
   [ADR-0167](0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §2's *"the
   next dark screen argues for its own record, here"* — this is that record, for a **surface**
   and not a screen (§7).
-- **Leaves standing** [ADR-0125](0125-a-full-inbox-sinks-a-player-never-withholds-them.md) — the
+- **Leaves standing** ADR-0125 — the
   lift is still `+14` and the sink still sits under it;
-  [ADR-0126](0126-position-moves-on-a-fact-about-the-player-never-about-the-list.md) — the
+  ADR-0126 — the
   deck's order still moves on facts about the player, one band fewer;
-  [ADR-0131](0131-a-deal-remembers-for-a-day-so-a-spent-deal-deals-again.md) — a deal still
+  ADR-0131 — a deal still
   remembers for a day, and §5 names the one act that forgets;
   [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md) §3 — no activity recency:
   the card's *around this week* is the liveness code's own existing words, drawn only when the
   code is present; [ADR-0138](0138-the-verdict-crosses-on-a-card-and-never-checked-is-its-own-answer.md)
   — only *allowed* draws the mark, and §7 changes its drawing, not its rule;
   [ADR-0134](0134-the-poster-draws-a-player-and-no-value-is-invented.md) — the poster is the face
-  when there is no photograph; [ADR-0154](0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md)
+  when there is no photograph; ADR-0154
   and [ADR-0167](0167-a-yes-lands-on-its-own-screen-and-the-room-is-opened-by-a-tap.md) §1 —
   the yes screen is unchanged, and *Later* pops to the deck where it now lives;
   [ADR-0146](0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md) §4 — the doubles line
@@ -76,6 +76,8 @@
 - Settles the spec issue for the Players deck ([#438](https://github.com/Raketa02/Raketa/issues/438));
   built by its backend and client children. **A backend and contract change.** Grilled
   2026-09-14.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The Players tab, its deck of people, the count, the reset, the cool-off, the Radar toggle and the doubles mutual's `SIDE_FORMED` line are gone, so §1, §2, §4–§6, §8–§10, the amendment and §3's ceiling and toasts describe nothing; `SIDE_FORMED` is no longer written and stays only so stored lines fold. Two things stand because the group's Games deck took them over (`docs/specs/games-and-fill-in/the-screens.md` A2.2). §3's stage is now `DeckStage` in `features/proposals`: a drag is an answer, the stamps are feedback with a threshold, one haptic tick, `PanResponder` and `Animated`, and buttons that are never removed because they are the accessible path. §7's stamps and the on-court tick, never fenced to the card, are live; the wash and the 24 pt name role have no card left to draw on.
 
 ## Context
 

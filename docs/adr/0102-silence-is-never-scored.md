@@ -4,9 +4,11 @@
 - **Date:** 2026-08-26
 - **Amended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the grid becomes hours per weekday (07:00–23:00). A blank week is still absent, never zero, and onboarding still needs at least one hour.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The ranking is gone (#580): there is no availability term, no `NoEvidence` renormalisation and no quality floor, so the fifteen points, the five of eight terms and #167's minimum-evidence rule below describe nothing that runs. Parts 1 and 2 stand: a commit with no hour ticked is refused (`weekly_hours_empty`), and one hour is enough. Part 3's rule stands on its new readers: the engine's `group_availability` reads a blank week as unknown rather than zero, so a Games card grades it *Slim* and never scores it, and `free_for_the_hour` finds a blank week free for nothing.
+
 ## Context
 
-[`docs/specs/matchmaking/matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md)
+`docs/specs/matchmaking/matchmaking-engine.md` *(removed)*
 §10 is the property that lets the matcher ship: a term with no evidence returns `NoEvidence`,
 is dropped from the sum, and the remaining weights renormalise. **No record is not a bad
 record.** [ADR-0098](0098-matcher-demands-as-executable-contracts.md) sharpened it into an
@@ -25,7 +27,7 @@ same fact currently carries three different meanings:
 | Where | What blank means | Worth |
 |---|---|---|
 | `backend/app/modules/player_profile/domain/availability.py` | *"no preference … it scores no overlap"* — a zero | −15 of 100 |
-| [ADR-0099](0099-relaxation-offers-the-searchers-own-asks.md) | the searcher's availability term is `NoEvidence` | the term stands down |
+| ADR-0099 | the searcher's availability term is `NoEvidence` | the term stands down |
 | The phrase itself | *any time suits me* | +15 of 100 |
 
 The root [`CONTEXT.md`](../../CONTEXT.md) carries the first reading as a stated invariant of

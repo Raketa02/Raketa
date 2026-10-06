@@ -18,6 +18,8 @@
   conversation is told, and tells nothing* is a fact about the backend context, and nothing here
   makes it ask anybody anything.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `features/plans`, its rung ladder and the Now card are gone, so the second line's source (`useGameCardName` over `GET /plans` and `GET /games`) and the room with no game that drew the sport alone describe nothing. The header still draws the sport and the game's state in lower case; the state is now the booking's own word (*booked*), passed in by the booked game's chat. The Chats rows this record kept stateless are no longer drawn anywhere. The stems, the whole-handle spoken name and the `h1` budget stand.
+
 ## Context
 
 **The design for the redrawn conversation screen puts two things in the header that three records
@@ -69,7 +71,7 @@ either, because no act produces them — they are a reading of the plan against 
 stream, as a record of acts, cannot hold.
 
 > **One of the two examples is gone, 2026-09-14, with
-> [ADR-0166](0166-the-day-row-says-today-and-no-card-does.md)**: there is no *Today* rung, so the
+> ADR-0166**: there is no *Today* rung, so the
 > header never says `· today`. The argument stands on *Needs result* alone — still a reading of the
 > plan against `read_at`, still carried by no line — and the header still draws the card's name. The last line on the row is the last thing somebody
 *did*; the header's line is where the game *stands*, and inside a room a player is past the door

@@ -3,9 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-08-28
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search read-back went with the searches (#579), and with it `GET /api/v1/searches/{id}`, the `{ "withheld": true }` row, its exemption from the forbidden-fact fence and everything under Consequences. The rule in the title outlived the route: the player record's one 404, `AccountGates`, and the Games deck's refusals — a pair that does not fit, a rescue or a post not open to you — each say that something stands in the way and never which gate.
+
 ## Context
 
-[ADR-0109](0109-a-read-back-names-what-it-withholds.md) settled the read-back:
+ADR-0109 settled the read-back:
 `GET /api/v1/searches/{id}` re-reads the gates that fail closed against live state, the
 stored record is not rewritten, and **a withheld row is stated rather than vanished** —
 because a list that quietly gets shorter is the same class of lie as a breakdown that
@@ -134,7 +136,7 @@ lookup plus a block-set read*; the mutual gender gate makes it a lookup, three s
 one snapshot binding, because gender is the one fail-closed gate whose other half lives on
 the index row — and resolving twenty ids inside that container is a pass over the partition,
 because `CandidateSource` deliberately answers with the container and never with questions
-about rows ([ADR-0112](0112-the-snapshot-is-a-per-partition-container-bound-once.md)). The staleness ladder is deliberately **not** applied — it refuses on ranking
-quality ([ADR-0111](0111-the-index-holds-only-what-a-player-changes-about-themselves.md))
+about rows (ADR-0112). The staleness ladder is deliberately **not** applied — it refuses on ranking
+quality (ADR-0111)
 and a read-back ranks nothing — but a candidate the index no longer holds has no preference
 to read, so that gate cannot be evaluated, and *a gate that cannot be evaluated excludes*.

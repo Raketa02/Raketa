@@ -6,7 +6,7 @@
 - **Date:** 2026-09-14
 - **Extended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the same screen, with the word *It's a game!*, greets the player whose yes (or rescue join) books a group game.
 - **Supersedes, by named sentence,**
-  [`the-loop-screens.md`](../specs/the-loop/the-loop-screens.md) §2.1's *"`I'm in` goes to the
+  `the-loop-screens.md` §2.1's *"`I'm in` goes to the
   room … The reply is still the redraw (§2.4), and then the screen pushes the room"* — the reply
   is still the redraw, and the screen pushes **the yes screen**; the room is opened by a tap (§1).
   Everything else in that paragraph stands and moves behind the button: the teller writing the
@@ -25,7 +25,7 @@
   derived, and the picture the screen draws is that rule;
   [ADR-0149](0149-a-game-is-composed-at-the-surface-and-the-chat-door-is-a-join.md) §3 — the chat
   door is a join over the reader's rooms, and the button is that join;
-  [ADR-0154](0154-a-mutual-names-the-game-it-has-and-names-nothing-when-it-has-none.md) — a mutual
+  ADR-0154 — a mutual
   naming no chat says nothing more, and gets no screen;
   [ADR-0134](0134-the-poster-draws-a-player-and-no-value-is-invented.md) — the poster is a fact
   about an id, and the initials ride on it; and
@@ -37,6 +37,8 @@
   [#433](https://github.com/Raketa02/Raketa/issues/433) and
   [#434](https://github.com/Raketa02/Raketa/issues/434). **No backend change and no contract
   change**: every fact the screen draws is already on the wire. Grilled 2026-09-14.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The challenge, *Let's play*, the Chats list and the deck's toasts are gone, so §1's landing rules, §4's *Challenge!* and *Matched!*, §5 and the Context's two taps describe nothing. The screen survives as *It's a game!* (ADR-0189): an overlay on `ModalStage` over the whole phone rather than a route the bar stands down for, raised by the fill for the player whose yes filled the game, with *Open game* and *Later*. §2's dark ground, pill, 32 pt word, `volt`, entrance and haptic stand as written, as do §3's initials tile and its four-sided fence.
 
 ## Context
 

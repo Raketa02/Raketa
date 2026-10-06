@@ -104,7 +104,7 @@ takes no rule of its own: it **reports every press with the value pressed**, exa
 cell fires whether or not it is ticked, so whether a second press clears the row is the
 caller's. **6.15's swipe row is the first control that moves a row**
 ([#427](https://github.com/Raketa02/Raketa/issues/427),
-[ADR-0165](../../../docs/adr/0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+ADR-0165
 §6): a list row that slides left on React Native's own `PanResponder` — as the radius slider
 already drags, and with neither `react-native-gesture-handler` nor `reanimated` added _(both are
 in the app since ADR-0176, for the radar's field, and gesture-handler since #551 for 6.8's paint

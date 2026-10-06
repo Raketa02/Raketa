@@ -189,7 +189,7 @@ guarantee is what the spec's *required there* means, and it is the gate's to kee
 record's read carries both** `name` and `nickname` (`PlayerRecordResponse`), for one's own record
 and for another player's. This is a **straight rename** on the contract, not an expand-and-
 contract. **Contradicts [`docs/environments.md`](../environments.md)'s *renaming a field is all
-three phases … never one commit* — on [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §1's
+three phases … never one commit* — on ADR-0164 §1's
 precedent and for its reason**: the sequence exists for a released build that stays installed on
 real phones, there is none — only `local` runs — and the drift check is what keeps the two apps
 honest on the branch, red between the backend ticket and the client ticket that regenerates from

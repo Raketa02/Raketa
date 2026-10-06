@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the line-up route and the group objective are gone (#579, #580), so the searcher, the mask inside a K = 24 enumeration, `NO_ADMISSIBLE_COMBINATION`, the index's copy of gender and μ, the re-verified line-up and the per-search falsifier describe nothing that runs. The rule stands, and the Games deck is built on it: no block either way, mutual gender preference and the level window (narrowed while either player is new) bind every pair on a court. It is `proposals`' `PlayerFit`, asked by the proposer, the fill and a rescue over one bulk block read (`blocked_pairs_among`), and it fails closed.
+
 ## Context
 
 Every pairwise gate this map has settled is computed against **the searcher**, because every
@@ -79,7 +81,7 @@ enumeration and cannot overtake it.
 **It fails closed, without exception.** ADR-0095's paired invariant is inherited unchanged: *a
 term that cannot be evaluated stands down; a gate that cannot be evaluated excludes.* Gender
 and μ are already in the candidate index
-([ADR-0111](0111-the-index-holds-only-what-a-player-changes-about-themselves.md)). Blocks are
+(ADR-0111). Blocks are
 not — ADR-0095 keeps them out of the index deliberately — so the line-up route makes **one bulk
 block query over the `K` candidate ids**, and if it cannot be resolved the line-up refuses
 rather than returning a four.
@@ -91,7 +93,7 @@ the searcher-only reading is already the six-pair reading.
 
 **A four can be impossible where candidates are plentiful.** Five eligible candidates no longer
 guarantee an admissible combination. The honest answer is a **partial line-up** — the shape
-[`the-two-contracts.md`](../specs/matchmaking/the-two-contracts.md) §5 already fixed — and it
+`the-two-contracts.md` §5 already fixed — and it
 needs a reason the client can say out loud, so `NO_ADMISSIBLE_COMBINATION` joins
 `NO_CANDIDATE_ABOVE_FLOOR` and `POOL_EXHAUSTED` in the `unfilled_reason` vocabulary. Without
 that code the gate is indistinguishable from a thin pool, on the screen and in the telemetry.
@@ -117,7 +119,7 @@ gating.
 **ADR-0095's re-verify gains a second reader.** The backend already re-verifies the searcher's
 blocks against returned rows; it now re-verifies the candidate-to-candidate edges of a returned
 line-up too, on the same seam, for the same reason
-([ADR-0109](0109-a-read-back-names-what-it-withholds.md)).
+(ADR-0109).
 
 **One class of gate is deliberately left out: anything from a context that does not exist.**
 [ADR-0098](0098-matcher-demands-as-executable-contracts.md)'s pending-pair set — *do these two
@@ -126,6 +128,6 @@ searcher-only. A gate that fails closed on an absent provider would empty every 
 
 **It is falsifiable, and cheaply:** the count of combinations refused by the pairwise gate, per
 line-up, recorded from the first search
-([ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md)). If it is
+(ADR-0104). If it is
 indistinguishable from zero the gate is decorative; if it dominates the enumeration the pool is
 too thin for doubles and that is a density finding, not a gate finding.

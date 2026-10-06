@@ -4,7 +4,7 @@
 - **Date:** 2026-09-16
 - **§4 narrowed 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) to the Classic play loop**: a game made in a group is left from its game details, with *Leave the game*.
 - **Supersedes, by named sentence:**
-  [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+  ADR-0165
   §5 whole — *"Call it off is any player's"* — the press exists for nobody (§1); and §3's
   *"at most one player on it and no seat awaiting an answer"* is narrowed to **nobody on it,
   whoever is still deciding; or one player on it and no seat awaiting** (§2).
@@ -23,11 +23,11 @@
   is widened, from the row, to everybody the court asked (§5).
   [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) §4's *"the moment
   guard"* gains a moment for a court with no day agreed: the end of its horizon (§3).
-  [`the-loop-screens.md`](../specs/the-loop/the-loop-screens.md) §2.5's and §2.6's *Leave the
+  `the-loop-screens.md` §2.5's and §2.6's *Leave the
   game* on the challenge screen's arms, §4.2's *Open the chat* door on the game screen and its
   *courtActs* — *Leave this game* and *Call it off* — under *We played*: the screen draws one act,
   *Fill the seat*, directly under the card (§4).
-- **Narrows** [ADR-0173](0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md) §2's
+- **Narrows** ADR-0173 §2's
   *"the reader holds an accepted seat"* to **everybody the court asked whose seat it closed on**
   — an accepted seat, a seat still deciding, a seat whose day ran out (§5) — and its §3's *"posts
   the existing game dismissal"* to a door of the challenge's own that records the same event.
@@ -54,6 +54,8 @@
   undo on the dismissal; or whether the hour should warn anybody ahead of itself.
 - Decided 2026-09-16 with the author in session, grilled over three rounds; built in the same
   session, backend and player app.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges, the Chats row, the dismissal and the hourly job that called off a court still short of a player are gone, so §1's `court_has_been_a_game`, §2's fold, §3's job, §4's *Fill the seat* and Chats swipe, §5 and §6's words describe nothing that runs. The record's rule outlived its loop: **no player can call a game off**. A booked game ends short only by its club's cut-off — a seat that opened before it and is still open at it calls the game off, with nobody named (`called_off_by` is `null`) — or by the club taking the court back, and the game screen's ending says the shortage and names nobody, as §1 and §3 decided.
 
 ## Context
 

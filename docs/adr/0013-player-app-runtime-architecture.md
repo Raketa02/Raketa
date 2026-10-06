@@ -3,9 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-08-12
 - **Its logout sequence gains a step from [ADR-0188](0188-the-phone-remembers-three-choices-per-account-and-forgets-them-at-sign-out.md)**: the phone-preferences store is cleared. That store is three choices the player made, not the *persistence layer* this record leaves unadopted — the app stays network-backed.
-- **Its *Not adopted now* line for a feature-flag service is superseded by [ADR-0180](0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)** — the player app adopts Featurevisor. The rest of that list, and its rule that a dependency arrives with the code that needs it, stand.
+- **Its *Not adopted now* line for a feature-flag service is superseded by ADR-0180** — the player app adopts Featurevisor. The rest of that list, and its rule that a dependency arrives with the code that needs it, stand.
 
 > **Note — the 2026-08-25 reset.** It cites **ADR-0007** (the club console's cookie session), removed in the 2026-08-25 reset. This ADR's own decision, for the player app, is untouched. See the [ADR index](README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). This ADR's body is left as written: an accepted ADR is immutable, and the reason a past decision looked right is itself information.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The feature flags were removed with the loop they hid (#576) — Featurevisor, its datafile fetch and cache, and the flag hooks — and ADR-0180 was deleted. Its supersession above has lapsed: *a feature-flag service* is back on the *Not adopted now* list, under that list's rule that a dependency arrives with the code that needs it.
 
 ## Context
 
@@ -106,7 +108,7 @@ feature's private layers. Auth concurrency tests — the four scenarios ordinary
 miss — are mandatory rather than encouraged.
 
 **Not adopted now.** `openapi-fetch`, Sentry, Maestro, React Hook Form, a feature-flag
-service *(superseded by [ADR-0180](0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md))*, `expo-network`/netinfo and any persistence layer are documented as required
+service *(superseded by ADR-0180)*, `expo-network`/netinfo and any persistence layer are documented as required
 capabilities with the conditions that trigger them, but are **not** added to
 `package.json`. Dependencies arrive with the code that needs them.
 

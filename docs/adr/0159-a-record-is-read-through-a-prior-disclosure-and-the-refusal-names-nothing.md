@@ -11,6 +11,8 @@
   `sportsmanship_band` retires from the record and the invariant beside `is_self` with it.
   The cost is accepted and written beside the reversal there.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Searches, challenges, the candidate index and its partitions are gone, so §3's search and challenge strands, §4's partition rule, §7's `SearchStore.sports_shown_in` and the costs built on them describe nothing. Admission is now three strands, each a `PriorDisclosure` answering yes or no: the pair played together (were on one court), they share a group, or the reader runs a group the subject is in (#575). The 2026-10-02 amendment's separate `RunnerDisclosure` port and `admits_regardless_of_preference` went with the difference they kept: **no strand reads the gender preference**. The gates are the account gates — a hold, an account that may not be shown — plus the reader's own hold, and ADR-0193 took the block off that list. Every amendment's reference to a search card or the matcher is historical.
+
 ## Context
 
 [#373](https://github.com/Raketa02/Raketa/issues/373) opens a surface this platform has

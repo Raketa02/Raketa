@@ -1,9 +1,21 @@
 # The player record — implementation
 
+> **This is the plan the record was built from, and it is built** —
+> `backend/app/modules/player_record` and `frontend_player/src/features/player_record`. Since
+> the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)) a
+> record is opened from a player's face on a game or a group — a Games card, a game's details, a
+> booked game, Fill in, *Post a game*, a group's Members — or about yourself from You, and it is
+> admitted by *played together*, *share a group* or *runs their group*, each a yes-or-no
+> `PriorDisclosure`
+> ([ADR-0159](../../adr/0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)'s
+> note; `player_record/application/admission.py`). Everything below about the Play tab, the
+> builder, the pool header, `SH.whyfit`, the Fit breakdown, a `search_id` citation, the player
+> card and search economics describes the removed loop and is kept as the plan's history.
+
 **What replaces `SH.whyfit` when you tap a face on the forecast card, and everything the
 backend has to grow for it to be drawable.**
 
-- **Status:** proposed. Nothing here is built.
+- **Status:** built. This was the proposal.
 - **Surface:** the bottom sheet opened from the balance-forecast card on *Build the four* /
   *Set up the match* (`BuilderScreen`), and from the same card on `PoolHeader`.
 - **Spans:** `backend/` (one new context, one new route, three amended ports) and
@@ -75,7 +87,7 @@ record sheet K-7 removed. The only new wire field is `confidence`.
 | Element | Where the value lives today | Verdict |
 | --- | --- | --- |
 | *Shows up* — `9 of 9` | `StrandRatio{good, opportunities, value}` under `ReliabilityStrand.SHOWS_UP`. **Live.** Only the *blended* number crosses today | ⚠️ per-strand counts are new on the wire |
-| *Answers challenges* — `11 of 11` | `ReliabilityStrand.ANSWERS_CHALLENGES`. **Live.** Same | ⚠️ same |
+| *Answers challenges* — `11 of 11` | `ReliabilityStrand.ANSWERS_CHALLENGES`. **Stands down** since challenges stopped waiting for answers (#544); *Keeps plans*, read off booked games, is live in its place | — not drawn |
 | **Confirms results** | **Struck, not deferred** — ADR-0137 / ADR-0140. `ReliabilityStrand.CONFIRMS_RESULTS` and its two ruleset weights were deleted with the provider | ❌ **collision C3** (§2.3) |
 | **Sportsmanship, by opponents — 4,8 / 5** | `ReliabilityStrand.SPORTSMANSHIP` exists as a *name* and **stands down**: no surface on this platform lets anybody rate anybody | ❌ **collision C4** (§2.4) |
 | **Opponent variety — 70 %** | `GameHistoryQuery.played_counterparts` returns one row per person. The *statistic* was withdrawn from `player_score`'s contract when both its consumers were struck (ADR-0098 amendment) | ⚠️ **returns with a consumer** (§2.5) |

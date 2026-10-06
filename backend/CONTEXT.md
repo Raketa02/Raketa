@@ -49,11 +49,9 @@ there; they are not repeated here.
   None is the default, and the third is the one that has to be argued for hardest, because
   *state changes emit domain events* is a standing rule here — it earns the exemption by
   having no life story (a card is born answered), no subscriber, and no derived standing
-  anybody folds from it. Distinguish it from a **durable ledger** — the matcher's interest,
-  pass, decline and deck-reset rows — which is a small fact with no aggregate around it at
-  all; this has
-  an aggregate, because the card and every answer on it are written together and every rule
-  about who may be on it holds across the whole of it.
+  anybody folds from it. It is still an aggregate and not a bare row, because the card and
+  every answer on it are written together and every rule about who may be on it holds
+  across the whole of it.
 - **Durable event name** — the stable `"<context>.<event>"` string plus integer version
   registered in the event catalog, e.g. `users.user_registered` / v1. It is the wire
   contract for stored history and is **independent of the Python class name**.
@@ -114,8 +112,8 @@ there; they are not repeated here.
   for the fact it asserts and never for being empty: `NoHoldsExist`, not
   `NullAccountHoldQuery`, because *null* reads as *not wired yet* and these are wired. It is
   not a stub or a fake — it returns what is *true today*, and stops being true on the day its
-  provider lands. The rule it obeys is **a gate may be honestly empty; a term may never be
-  honestly neutral**, and the test is whether a zero would be **measured** or **invented**.
+  provider lands. The rule it obeys is **a gate may be honestly empty; a courtesy may never
+  be honestly invented**, and the test is whether a zero would be **measured** or **invented**.
   _Avoid_: stub, dummy, placeholder, no-op adapter.
 - **Register** (`app/bootstrap/matcher_demands.py`) — the list of every implementation of
   every outward port, one row each, read by the **demand suite** in `tests/demands/` and
@@ -262,18 +260,17 @@ there; they are not repeated here.
   uncertainty or a band, because those are the engine's answers to the questionnaire each
   member sits and a committed copy of an answer is a number nothing keeps honest. It is a
   **development workbench and says so on its own artifact**: a population chosen so that
-  every Play screen state is *reachable*, standing for nothing outside itself and
+  every screen the games draw is *reachable*, standing for nothing outside itself and
   describing no real market. Every draw is keyed off the member's own handle, so adding one
   changes that row and nobody else's; every coverage rule is a rule over the member's
   position rather than a rate, because at this size a 25% draw is four people on a good day
   and one on a bad one. _Avoid_: reading a rate here as evidence about anything, a μ in the
   artifact, a rule expressed as a percentage.
 - **Dev console** — the backend's development surface: surface `dev`, contract
-  `openapi.dev.json`, code in `app/api/dev/`. Today it is **one roster route and its gate**;
-  its page — a no-build `console.html` at `/dev` that signed in as a seeded player and
-  pressed searches, yeses and challenges as them — went with the challenges (#578).
+  `openapi.dev.json`, code in `app/api/dev/`. Today it is **one roster route and its gate**,
+  and no page.
   **[ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)
-  replaces it** with the games test console (#590), which acts as seed accounts without
+  gives it one** — the games test console (#590), which acts as seed accounts without
   signing in, in `local` only. **It is not a client** — nothing generates types from its
   contract, which is why that document is gated by a *freshness* check and not by
   `check-contract-drift.sh`. `frontend_club/` was *"the club console"* and is gone; this is
@@ -430,18 +427,17 @@ there; they are not repeated here.
   ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md)).
   **The engine owns the shape and the module owns the data**: `Ruleset` and
   `validate_ruleset` are the engine's, the dataset is here, and the day the runtime store
-  lands it replaces this package rather than growing beside it. Since the ranking went
-  (#580) a ruleset is two sections — the balance rules and each kind of game's level
-  tolerance — and one release is carried. _Avoid_: "config", "settings" — the environment
-  may select configuration and may never select a ruleset.
+  lands it replaces this package rather than growing beside it. A ruleset is two sections —
+  the balance rules the forecast reads and each kind of game's level tolerance — and one
+  release is carried. _Avoid_: "config", "settings" — the environment may select
+  configuration and may never select a ruleset.
 
 - **Ephemeral store** — the process's Redis, holding a room's **live channel** and its
   **typing roster** and nothing else. Every message is a durable row before anything is
   published, so an unreachable store costs a room its liveness and never anybody their
   message ([ADR-0093](../docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md),
-  ADR-0147). Its **address** is configuration (`REDIS_URL`). The matcher's exposure and
-  suppression ledgers were its first readers and went with the searches (#579). _Avoid_:
-  "cache" alone for it — nothing here is recomputed from anything.
+  ADR-0147). Its **address** is configuration (`REDIS_URL`). _Avoid_: "cache" alone for
+  it — nothing here is recomputed from anything.
 - **Nudge** — one of the live channel's **two** frames, and the one that says a room moved:
   `{v, conversation_id, last_seq}`, and never content
   ([ADR-0147](../docs/adr/0147-the-live-channel-carries-a-nudge-and-the-sequence-is-what-cannot-be-swapped.md)
@@ -487,7 +483,7 @@ there; they are not repeated here.
 - **The conversation channel** — `conversation:{id}`, one Redis pub/sub channel per room,
   subscribed and unsubscribed as streams open and close. Keyed on the **conversation and
   never on a member**: per-user would force *who is in this room* into the append path, and
-  membership is derived from whichever record is arranging — a read bought to gain nothing.
+  membership is derived from the room's booked game — a read bought to gain nothing.
   Nothing is retained on it, which is the point: a subscriber that misses a notification
   loses **latency, not data**. _Avoid_: Redis Streams here — durability on this leg buys
   nothing a nudge does not already give away.

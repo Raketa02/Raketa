@@ -10,6 +10,8 @@
   familiar form — stands whole, and §2's closed list carries the name where it carried the nickname.
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches are gone (#579), so no returned candidate carries a `player_card`: §1's seam after `matchfit`, *Why 78?*, the distance and bearing beside the card, the providers read at assembly and the copy kept in an unexpiring search record describe nothing that runs. What the card settled for every surface that shows one player to another stands. A photograph crosses as its stored `photo_id` beside a `photo_url` minted per response and written down nowhere, both omitted when there is none; there is no activity recency at any granularity (§3); and §4, as ADR-0171 reads it, is the whole name or nobody. The player record keeps a closed list of its own (ADR-0159), not this one.
+
 ## Context
 
 [ADR-0093](0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) put a pure scorer
@@ -17,10 +19,10 @@ behind a package boundary, and [ADR-0096](0096-gender-preference-mutual-gate-inv
 made that boundary a privacy fence asserted by a build-failing test: a `ScorableCandidate`
 has no name, no photo, no birthdate and no precise location, because *a term cannot read a
 protected characteristic when the value is not in the process*. §7.2 of
-[`matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) says the same of the
+`matchmaking-engine.md` says the same of the
 candidate index — **the fields do not exist**.
 
-[`the-two-contracts.md`](../specs/matchmaking/the-two-contracts.md) §4 then fixed what a
+`the-two-contracts.md` §4 then fixed what a
 returned candidate carries: `player_id`, `fit`, the terms with their evidence,
 `degraded_terms`, modifiers, liveness reason codes, an optional inclusion reason, `at_stake`
 and `would_be_forecast`. Every one of those is about a **pairing**.
@@ -114,7 +116,7 @@ player_card: { nickname, photo_id?, area_code, distance_km,
 > - **`distance_km` left the card**, for the same rule read the other way: a distance is a
 >   fact about a **pair**, and it is the one field whose value would change depending on who
 >   is looking. It sits on the *candidate*, beside the card
->   ([`the-play-screens.md`](../specs/matchmaking/the-play-screens.md) §1, which carries the
+>   (`the-play-screens.md` §1, which carries the
 >   argument).
 >
 > - **`review` was added beside `photo_id`** — what the on-court check concluded about that
@@ -165,7 +167,7 @@ data does not hold and would let *"3 km"* sit under a 3 km radius while being ex
 
 **`photo_id` in the record, `photo_url` on the response.**
 [ADR-0091](0091-photo-storage-behind-a-port.md) serves photos through short-lived presigned
-URLs, and [ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) keeps every
+URLs, and ADR-0104 keeps every
 search row for ever: a presigned URL written into an unexpiring record is a dead link within
 the hour. The record stores the id; the URL is minted per response, on the `POST` and again
 on every `GET`. **The dead-link argument is about the record, and a URL that never enters it

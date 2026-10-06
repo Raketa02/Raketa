@@ -1,6 +1,6 @@
 # ADR-0148 — The last line is the pill, and the plan is read beside the game rather than inside it
 
-- **Status:** Accepted — **§7's join key and §8's addressing amended 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md)**: the
+- **Status:** Accepted — **§7's join key and §8's addressing amended 2026-09-13 by ADR-0164**: the
   plan is keyed by `challenge_id`, `GET /plans` lists every court the reader may plan, and the
   four writes are `PUT /plans/{challenge_id}/…`. *Read beside the game, never inside it* stands.
 - **Date:** 2026-09-07
@@ -8,10 +8,10 @@
   contract: that record made a system line *a code and its values, never a Message with a `kind`*,
   and said the two *"share one ordered stream and one sequence number"*. This decides how two
   shapes ride one JSON list, and what each one carries.
-- **Extends [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)** into the
+- **Extends ADR-0144** into the
   contract: three slots, three events, no lock — and therefore three routes and no lock route.
   *(Its **no lock** half is amended by
-  [ADR-0155](0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md): there is a
+  ADR-0155: there is a
   fourth event and a fourth write route, and the lock is an **act** rather than a slot. Everything
   this record decides about the three slots — §8's shape, `agreed_point`, and *a slot carries its
   value and nothing else* — is untouched; `locked_at` is not on a slot.)*
@@ -25,7 +25,7 @@
   the conversation's **header** draws the sport and the game's *card name* — the four-rung
   client-side ladder Now already draws, folded from two lists the room already reads — and never
   a standing. The **row** keeps every word of §6.
-- **Cites [ADR-0145](0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md)**, whose
+- **Cites ADR-0145**, whose
   scoping of ADR-0137 is **checkable** — *"`games` importing the Plan is what breaks it"* — which
   is the constraint §7 is built around rather than a nicety it observes.
 - **Cites [ADR-0143](0143-the-challenge-is-the-gate-and-the-card-is-recomputed-for-the-reader.md)**
@@ -40,6 +40,8 @@
   trace anywhere in any response* posture the refusals take.
 - Settles [#334](https://github.com/Raketa02/Raketa/issues/334) on the map
   [#321](https://github.com/Raketa02/Raketa/issues/321).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The Plan and `challenges` contexts are gone, and with them §7, §8, the plan halves of §9 and §10, §1's Chats tab and `GET /challenges`, and ADR-0164's 2026-09-13 amendments (ADR-0164 was deleted). Rows and rooms are filed under `booking_id` where §2 put `challenge_id`. A room is opened only by a booked game, and membership is that game's current line-up, no longer accepted seats that only grow. Nothing draws the rows as a tab any more: `GET /conversations` remains as the read a booked game's chat door joins over (ADR-0149 §3). `SEAT_LEFT` and the plan codes are no longer written and stay only so stored lines fold.
 
 ## Context
 
@@ -176,7 +178,7 @@ is out of scope, so **nothing marks a conversation read and no field carries it.
 
 ### 7. The plan is read beside the game, never inside it
 
-> **Amended 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md).** `GET /plans` lists one row for every **court** the reader may
+> **Amended 2026-09-13 by ADR-0164.** `GET /plans` lists one row for every **court** the reader may
 > plan, written or not, keyed by `challenge_id` and carrying the horizon anchor; Now and the chat
 > join by the challenge id a game and a room both carry. Still the only plan read, still beside
 > the game.
@@ -193,12 +195,12 @@ The list is ordered and lifetimed like its owner, and it carries **no `read_at`*
 
 ### 8. Three writes, one per slot; two refusals
 
-> **Amended 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md).** The four writes are addressed by `challenge_id`; the day's
+> **Amended 2026-09-13 by ADR-0164.** The four writes are addressed by `challenge_id`; the day's
 > clamp is `PLAN_HORIZON` past the row's anchor — the send until the game exists, then
 > `planned_at` — and the lock gains `the_court_is_not_whole`. `PLAN_HORIZON` still lives in
 > `games` and `plans` still imports it, in the direction below.
 
-> **Amended by [ADR-0155](0155-the-plan-gains-a-lock-and-locking-is-an-act-rather-than-a-count.md).**
+> **Amended by ADR-0155.**
 > This heading read *no lock*. There is a fourth write route, `PUT /plans/{game_id}/lock`, and it
 > is not a slot: it takes no body, answers the same `PlanSchema`, and adds one refusal —
 > `the_plan_is_not_complete`, a 409 — to the two below. **Nothing else here moves.** *A slot

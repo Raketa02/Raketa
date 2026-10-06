@@ -1,9 +1,10 @@
 # Raketa — Monorepo
 
-A racket-sport platform. **Today it does one thing end to end:** a player signs up, signs
-in, and answers a questionnaire that gives them a Skill rating per sport. **Independently
-deployable** apps share one repository and one domain language, and communicate **only over
-HTTP**. There are four
+A racket-sport platform. **Today, end to end:** a player signs up, answers a questionnaire that
+gives them a Skill rating per sport, joins groups, and is proposed games — the last yes books a
+club's court and charges every seat — while a club runs its courts, bookings and money on its
+website. **Independently deployable** apps share one repository and one domain language, and
+communicate **only over HTTP**. There are four
 ([ADR-0187](docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)),
 each with its own CI lane.
 
@@ -22,11 +23,14 @@ each with its own CI lane.
 > [ADR index](docs/adr/README.md#the-2026-08-25-reset--why-the-sequence-has-gaps). Courts,
 > bookings and money are **decided again** by
 > [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) — the group's Games
-> deck and Fill in, specified in `docs/specs/games-and-fill-in/`. A club's courts, Raketa hours,
-> prices and way of working are built (#535), and so is a player's saved payment method behind
-> the payments port ([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md),
-> #536), and so are proposals — a game still filling in a pool, answered with a silent yes
-> (#538); bookings and charges are not yet.
+> deck and Fill in, specified in `docs/specs/games-and-fill-in/` — and are built, money behind the
+> payments port ([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)).
+>
+> **The older way of making a game was removed on 2026-10-06** (#569): *Classic play* — the Players
+> deck and radar, Chats, challenges and plans, Find a game, the searches, the candidate index and
+> the "who fits whom" ranking — together with the feature flag that hid it, and the ADRs and
+> specs that described only them. The Games deck is the one way a game is made; see the
+> [ADR index](docs/adr/README.md#the-2026-10-06-classic-play-removal--the-second-gap).
 
 ## Start the session inside the app you are changing
 

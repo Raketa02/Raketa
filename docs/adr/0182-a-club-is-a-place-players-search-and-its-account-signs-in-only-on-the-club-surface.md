@@ -5,7 +5,7 @@
 - **§8's *a club isn't a court* superseded 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: a club lists courts, hours and prices and sells them through Raketa in one of three ways of working. A plan's *where* in the Classic play loop is unchanged.
 - **Answers [ADR-0002](0002-event-sourced-user-aggregate.md)'s per-context question for Clubs:**
   *event-sourced*, with a synchronous search projection.
-- **Narrows [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)'s** *"there
+- **Narrows ADR-0144's** *"there
   is no club record to hold the true one"* and its *"the price of refusing a venue record"*. A club
   record now exists. **A plan's *where* is unchanged**: it stays free text that nothing reads, and
   the one platform zone stays. The club record doesn't become a plan's venue (§8).
@@ -22,6 +22,8 @@
   [#500](https://github.com/Raketa02/Raketa/issues/500), grilled 2026-09-24/25. Built by
   [#503](https://github.com/Raketa02/Raketa/issues/503) (backend) and the club website's tickets
   [#522](https://github.com/Raketa02/Raketa/issues/522)–[#524](https://github.com/Raketa02/Raketa/issues/524).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Plans went with Classic play, so §8's *it isn't a plan's venue*, the header's narrowing of ADR-0144 and the last *Harder* bullet describe nothing that exists; §8's first half was already superseded by ADR-0189. A game's place is a club's court, named on the card that proposes it. Everything else stands.
 
 ## Context
 

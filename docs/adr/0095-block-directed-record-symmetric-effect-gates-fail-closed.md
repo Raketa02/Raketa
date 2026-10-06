@@ -9,10 +9,12 @@
   of the reader. No surface is recorded (`blocks.player_blocked` v2). §2's *neither party can ever
   discover which way it went* now holds of the blocked party only.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the deck and the candidate index are gone (#579, #580), so §4's two enforcement points — the block set carried in the `SearchContext`, and the re-verify before a search response leaves — and §5's and §6's refusals at the search entry no longer exist. A block is now asked of every pair the proposer, the fill and a rescue would seat (`proposals`' `PlayerFit`, over `blocked_pairs_among`). *A gate that cannot be evaluated excludes* holds there, and in the account gates the player record runs, where `NoHoldsExist` still answers the hold. §1–§3 and §8 stand as ADR-0193 amended them.
+
 ## Context
 
 The matchmaking engine applies eight gates before anything is scored
-([`docs/specs/matchmaking/matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) §9.1).
+(`docs/specs/matchmaking/matchmaking-engine.md` *(removed)* §9.1).
 Two of them read contexts this repository does not have: **a block, either direction**, and
 **a held account** — somebody with an open unsettled case. Charting the map
 [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
@@ -26,7 +28,7 @@ phasing decision. This record settles
 live" (§7.5), keeps blocks and passes out of every response shape (§21), and proposes that
 the matcher hold *advisory copies of all three live facts so it can rank on them*. The
 prototype has shipped the promise in user-facing copy already
-([`social-prototype-v1.html:3520`](../specs/matchmaking/social-prototype-v1.html)):
+(`social-prototype-v1.html:3520`):
 
 > *"Blocking works both ways — you disappear from each other's matchmaking, decks, radar and
 > rankings, immediately and silently."*

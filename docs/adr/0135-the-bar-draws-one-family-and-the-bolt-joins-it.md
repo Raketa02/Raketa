@@ -8,6 +8,8 @@
 - **Builds on:** [#227](https://github.com/Raketa02/Raketa/issues/227) (the five-tab shell), [#219](https://github.com/Raketa02/Raketa/issues/219) (the 9.5 type floor), [#221](https://github.com/Raketa02/Raketa/issues/221) (a chat opens on the first acceptance)
 - **Evidence:** branch [`prototype/play-tab-glyphs`](https://github.com/Raketa02/Raketa/tree/prototype/play-tab-glyphs) — three families × three glyph slates × four treatments of the bolt × two state channels, drawn in #227's own bar over its own back stack, and looked at
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The bar is three columns now — Home · ⚡ Play · You (#576) — so `map-pin`, `message-circle` and the Players tab's `users` left the player bar with Around, Chats and Players. Feather, `home`, `zap` at 15pt in the disc, `user`, selection in tone alone and the declared dependency all stand; the administrator's bar draws `users` for Groups under this record's one-family rule.
+
 ## Context
 
 `design-system.md` §10.2 draws the five tab icons as 16pt `currentColor` squares and says

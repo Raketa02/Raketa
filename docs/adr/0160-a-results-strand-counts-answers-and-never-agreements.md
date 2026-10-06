@@ -15,6 +15,8 @@
   `docs/specs/player-record/the-decisions.md` §4 and §6 are the product decisions this
   record carries out.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The ranking and its rulesets are gone (#580): only `2026.09.15-a` remains, with no strand weights, no `min_observations` and no `horizon_days`, so §4, §5's ruleset release and its offline gates, §6 and the matcher's half of the Consequences describe nothing. `ANSWERS_RESULTS` (§1–§2) is live, and so is `ANSWERED_RESULTS_WINDOW` at twelve months (§3), which now stands on its own: the horizon it was chosen to equal, and the test that held them together, are gone. The published blend keeps §5's 35/20/15/12/10/8 over the strands that publish; *answers challenges* stands down and *keeps plans* is read off booked games (#544).
+
 ## Context
 
 **The player record sheet prints metered rows, and there are two of them.** *Shows up* and
@@ -27,7 +29,7 @@ and it is the one this repository has already refused in writing.
 **ADR-0137 §5 struck *confirms results* and gave a reason that has not aged.** An
 unconfirmed result is a fact about a **pair**; a strand is a verdict about a **person**;
 and every denominator tried on it docked somebody
-[ADR-0049](0049-an-unscored-match-is-an-evening-not-evidence.md) protects. Its table is
+ADR-0049 protects. Its table is
 explicit — *counted games played* docks both sides of every disagreement including the one
 who was right, and *games where a score was put in front of you* docks the side whose
 honest counter the other side then ignored.

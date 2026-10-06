@@ -1,6 +1,6 @@
 # ADR-0142 — A withdrawn challenge is the one conclusion the seats cannot reach
 
-- **Status:** Accepted — **§2's *where* superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4**: the withdraw is
+- **Status:** Accepted — **§2's *where* superseded 2026-09-13 by ADR-0165 §4**: the withdraw is
   admitted exactly while nobody besides the organiser holds an accepted seat — before any answer
   included — and refused once anybody has joined. §1, §3, §4 and §5 stand; §2's whole-challenge,
   irreversible, organiser-only shape stands where the act still exists.
@@ -20,6 +20,8 @@
   keeps it one.
 - Settles [#325](https://github.com/Raketa02/Raketa/issues/325) on the map
   [#321](https://github.com/Raketa02/Raketa/issues/321).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges are gone, and with them the withdraw, the one-open-challenge-per-pair rule, `Standing.WITHDRAWN` and *answers challenges* (§1, §2, §4, §5). §3's test outlived the act it was written for: *an event may announce a conclusion only when no arrangement of the record could reach it* is what `games` holds `GameCalledOff`, `SeatVacated` and `LineUpReseated` to (ADR-0163). Read §3 for that rule and nothing else here.
 
 ## Context
 
@@ -93,7 +95,7 @@ already agreed did nothing wrong*. A withdrawn challenge does not come back; re-
 people is a **new** challenge, with fresh deadlines and its own `answered` set, which is what it
 actually is.
 
-> **Both halves of §2's *where* are superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §4.** *In
+> **Both halves of §2's *where* are superseded 2026-09-13 by ADR-0165 §4.** *In
 > `LINE_UP_INCOMPLETE` and nowhere else* becomes *while nobody besides the organiser holds an
 > accepted seat*: a court somebody has joined is nobody's to end for the others — the organiser
 > leaves it like anybody else, and it is over by itself when one is left with nobody deciding

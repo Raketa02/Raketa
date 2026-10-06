@@ -4,7 +4,7 @@
 - **Date:** 2026-08-26
 
 > **Amended 2026-08-26 by [ADR-0114](0114-a-newcomer-may-not-be-declined.md) and
-> [`the-newcomer-path.md`](../specs/matchmaking/the-newcomer-path.md): opponent variety is
+> `the-newcomer-path.md`: opponent variety is
 > withdrawn from the contract.** It was demanded on behalf of two consumers — familiarity's sign
 > flip (§9.4) and the welcoming-record modifier.
 > [#164](https://github.com/Raketa02/Raketa/issues/164) struck the first as a statistic that does
@@ -87,10 +87,12 @@
 > asserted there, because an unbounded fold behind a set-shaped read is one somebody eventually
 > calls inside the walk over five hundred candidates §4 bounds.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches and the ranking are gone (#579, #580), and so are the matcher's demands on a Player Score and on the match history: Decisions 1–4, 7, the term half of 6 and the 2026-08-30 amendment describe ports and adapters that no longer exist. The discipline stands and has spread. Every outward port is a demand run over every registered implementation, the null ones included, from a register in the composition root (`app/bootstrap/*_demands.py`, `tests/demands/`). The matcher's register holds three rows — the hold (`NoHoldsExist`), the account status and the at-stake read — and Decision 2's value-plus-evidence shape lives on as `player_score`'s own publication, read by the player record.
+
 ## Context
 
 Of the eight Fit terms in
-[`docs/specs/matchmaking/matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) §9.3,
+`docs/specs/matchmaking/matchmaking-engine.md` *(removed)* §9.3,
 five work against the backend as it stands. The rest read `player_score`, `matches` and `cases`,
 **none of which exist**, and the map
 [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)

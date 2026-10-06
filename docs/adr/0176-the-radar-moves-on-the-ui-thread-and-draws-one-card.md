@@ -1,7 +1,7 @@
 # ADR-0176 — The radar moves on the UI thread, and draws one card at a time
 
 - **Status:** Accepted — **§2's *the rubber band at the reach's edge* narrowed 2026-09-17 by
-  [ADR-0177](0177-the-pinch-lets-go-where-it-is-and-a-stack-opens-on-a-tap.md) §1** to the
+  ADR-0177 §1** to the
   drag: the pinch is held at the edge, and the drag is anchored on the recogniser's
   translation rather than the fingers' position. **§2's *one transform carrying the lot, every
   tile counter-scaled* replaced 2026-09-17** (§2, amended): every tile places itself on the UI
@@ -16,14 +16,14 @@
     selected player keeps their card when the view zooms back out"* — **the card is the
     selection's alone, at every width** (§3). Its *"land at the 3 km stop"* — **or at the
     width already held, where that is narrower** (§3).
-  - [`the-radar.md`](../specs/matchmaking/the-radar.md) §7.3's third state, §7.4's *"Nearer
+  - `the-radar.md` §7.3's third state, §7.4's *"Nearer
     players are drawn above farther ones"* read as a rule about cards, §7.5's flight width, and
     the whole of §7.9. The spec is amended in place, and the amendments cite this record.
   - The locked mocks **3, 9 and 10**, where they draw several cards at once. ADR-0174 locked the
     mocks with *"where a mock and a record disagree, the record is amended"*; here the mock is
     what a device disproved, and the author's own ruling on the device is what amends it. The
     card itself — mocks 10–14, line for line — stands.
-- **Narrows** [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)
+- **Narrows** ADR-0165
   §6's *"with neither `react-native-gesture-handler` nor `reanimated` added"* to **the swipe
   row, the deck's drag and the radius slider stay on `PanResponder`**; the two libraries are in
   the app now, for one surface, and the argument for keeping the others where they are is
@@ -34,6 +34,8 @@
   the sheet's foot. Nothing on the wire changes. **A client change only.**
 - Grilled 2026-09-16 at the repo root, from two devices — an iPhone simulator and an Android
   phone — and one screenshot each.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The radar's field is gone, and §3 and §4 with it. §2's adoption stands without the radar: `react-native-gesture-handler` and `react-native-reanimated` stay — the week grid, the undo toast, a group's sport filter and the record's details use them — `GestureHandlerRootView` stays outermost in the root layout, and the router harness still runs real reanimated. Of the three surfaces §2 kept on `PanResponder`, only the deck's drag is still drawn, as the Games deck's `DeckStage`; the swipe row and the radius slider have no caller.
 
 ## Context
 

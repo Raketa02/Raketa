@@ -32,6 +32,8 @@
   2026-09-17 with the author, from a prototype walk over every screen; not grilled, because every
   question the walk raised was answered on the prototype itself.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** *How far to look* and *Game suggestions* are gone with the search radius and the proposals opt-in (#581, #582), so their rows in §1 and §2, §2's opt-in write and radius paragraph, and §8's `proposals_opt_in` field and its `PUT` no longer exist. §9's block control *on the deck card* has no deck card to go on; a block is made from the player record (ADR-0193). Everything else stands.
+
 ## Context
 
 **The tab says it is not built, and three sections sit under the sentence.** `YouScreen` is the

@@ -5,7 +5,7 @@
 - **Completes [ADR-0146](0146-the-chat-is-two-contexts-and-a-system-line-is-a-code.md)**, which
   gave a conversation *"a **conversation-scoped sequence number minted on append**, decided by the
   transport research"* and left its shape, its promise and its transport to this record.
-- **Cites [ADR-0110](0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)** — *two
+- **Cites ADR-0110** — *two
   subscriptions, two guarantees*. ADR-0146 claimed the second guarantee; this record is the
   mechanism that makes the claim true.
 - **Cites [ADR-0097](0097-event-store-append-order-is-a-sequence-column.md)**, whose finding —
@@ -40,6 +40,8 @@
 > `create_redis_subscriber_client` whose connect is bounded and whose read has no deadline at all.
 > **What Decision 5 asks for is unchanged**; one of the stated consequences retires. The amendment
 > at the foot of this record says what moved and what did not.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The Plan and `challenges` are gone, so §3's plan and challenge lines, §12's live plan slots, lock and growing membership, and the plan half of the 2026-09-11 amendment — the plan list, the cancel before a plan write, the accept that wrote `SeatAccepted` with `GamePlanned` — describe nothing. Only `games` writes into a room now, and on a nudge the client re-reads the room and the games list. Membership (§5) is the booked game's current line-up. There is no Chats tab: the room list survives only as the read a booked game's chat door joins over. The transport, the nudge, the gapless sequence, the token deadline and the fail-soft/fail-loud split stand.
 
 ## Context
 

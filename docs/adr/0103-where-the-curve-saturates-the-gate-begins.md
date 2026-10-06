@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the level-fit term, the quality floor and the judged pairings are gone (#579, #580), so the case-3 arithmetic, the never-relaxed list, the pool description's reason codes and #169's per-search counts below describe nothing that runs. The gate stands as the **level window**: two people may share a court only while `|Δμ|` is below their kind of game's own tolerance — 0.55 competitive, 0.90 for fun — with no constant of its own (`matchmaking/domain/level_window.py`). It is asked of every pair the proposer, the fill and a rescue would seat, and it bounds a post's level range.
+
 ## Context
 
 [ADR-0098](0098-matcher-demands-as-executable-contracts.md) gave the matcher the invariant
@@ -15,7 +17,7 @@ Resolving [#168](https://github.com/Raketa02/Raketa/issues/168) on the map
 found the *other* half of the same idea missing, and found it by arithmetic rather than by
 argument.
 
-[`the-five-numbers.md`](../specs/matchmaking/the-five-numbers.md) defines `QUALITY_FLOOR` by six
+`the-five-numbers.md` defines `QUALITY_FLOOR` by six
 judged pairings rather than by an integer, and states the constraint the weights must satisfy:
 
 ```
@@ -41,7 +43,7 @@ nine points into level fit, which either makes level the largest for-fun term (d
 inversion) or drops availability to ~9 (contradicting case 2's own existence). **Re-judging
 case 3 as shown in for-fun** removes the only *not shown* case, leaving the floor with no lower
 bound in that mode and making one floor for both modes unsustainable — which
-[`the-five-numbers.md`](../specs/matchmaking/the-five-numbers.md) refuses by name.
+`the-five-numbers.md` refuses by name.
 
 The third is the diagnosis, and it is mechanical:
 
@@ -81,7 +83,7 @@ And it states the invariant the case failure exposed, as the mirror of ADR-0098'
 
 Three consequences follow immediately and are part of the decision:
 
-- **It joins the never-relaxed list** in [ADR-0099](0099-relaxation-offers-the-searchers-own-asks.md),
+- **It joins the never-relaxed list** in ADR-0099,
   beside the nine gates, the reliability floor and the quality floor.
 - **It does not resurrect §9.8's struck rung 4.** ADR-0099 removed level relaxation because a
   rung may only relax what the searcher themselves asked for, and **nobody asks for a level
@@ -101,7 +103,7 @@ still willing to look at.
 
 **The empty state gets a better sentence.** A thin pool now distinguishes *nobody at your level*
 from *nobody good enough*, as separate reason codes on
-[ADR-0099](0099-relaxation-offers-the-searchers-own-asks.md)'s pool description. The client
+ADR-0099's pool description. The client
 writes both; the engine names which.
 
 **In competitive it changes almost nothing, and that is accepted.** Candidates beyond Δμ 0.55
@@ -118,7 +120,7 @@ anybody.
 **A gate is harsher than a weight in a thin market, and this one has no relief valve.** At
 launch density ([#161](https://github.com/Raketa02/Raketa/issues/161): 63% of searches already
 return fewer than five candidates) it will occasionally be the reason a screen is empty. That is
-the same trade [ADR-0099](0099-relaxation-offers-the-searchers-own-asks.md) already took
+the same trade ADR-0099 already took
 deliberately — **a bad match is worse than no match** — and the empty-result rate remains a
 guardrail metric and never sufficient grounds to move it.
 

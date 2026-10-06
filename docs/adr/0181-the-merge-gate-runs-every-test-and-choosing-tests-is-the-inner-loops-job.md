@@ -18,6 +18,8 @@
   the race first, then the suite's overheads, then parallel runs, then CI's new shape, and last
   the `/implement` skill's wording for the end-of-ticket run.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The judged-pairings and ruleset-diff gates were retired with the ranking they gated (#572), and their still-fires suites with them. §4's backend meta tier is one `backend-meta` job, not two, and there is no ruleset release-report job in any tier. ADR-0180, cited below for the flags repository's review convention, was deleted with the flags. Every numbered decision stands.
+
 ## Context
 
 **Every ticket ends with a wait, and the wait grows with every ticket**, because every ticket
@@ -249,7 +251,7 @@ spread across workers).
 - **The durations file is one more committed artifact**, which goes stale quietly. Stale is
   harmless by construction (item 5), but an unbalanced shard is minutes nobody sees being lost.
 - **`ci-ok` becomes the required check only by a GitHub setting**, and
-  [ADR-0180](0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+  ADR-0180
   records that a private repository on this free account has no branch protection. Until the
   plan changes, `ci-ok` is the one status a human reads before merging, not one GitHub
   enforces.

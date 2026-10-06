@@ -7,16 +7,16 @@
 - **Date:** 2026-08-26
 
 > **Overrules two recommendations in the matchmaking input document**
-> ([`docs/specs/matchmaking/matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md)):
+> (`docs/specs/matchmaking/matchmaking-engine.md` *(removed)*):
 > §6.2's *"the profile carries a `Mapping[Sport, PlayIntent]`"* and §23 Q16's *"it is the
 > first per-sport fact on `PlayerProfile`"*. §6.1, §6.3, §6.4 and §6.5 transfer unchanged.
-> Recorded in that document's [conflict table](../specs/matchmaking/README.md#conflicts-with-an-accepted-adr).
+> Recorded in that document's conflict table *(removed)*.
 
 > **Amended 2026-08-29 by [The prompt that asks again after you said no](https://github.com/Raketa02/Raketa/issues/237):
 > the suppression keeps its window, its scope and its refusal of an event, and stops living in
 > Redis.** The Decision below says a decline is *"held in the sweeper's Redis with a TTL"*. That
 > one clause becomes **a durable row in `matchmaking`, with the live suppression derived from
-> it** — [ADR-0128](0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)'s shape, on
+> it** — ADR-0128's shape, on
 > ADR-0128's argument: `prompts.py`'s own two constants are falsified by *take-up rate* and
 > *acceptance rate on the offer*, and a lapsed TTL leaves no trace the player was ever asked.
 > Everything else stands **literally**: *for that sport*, *30 days*, and *declining a prompt is
@@ -25,6 +25,8 @@
 > to agree about the same suppression window, and a change to one that forgets the other
 > produces either nagging or silence."* There is now one store and one filter, read where every
 > prompt already converges, so the two halves have no way to disagree.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the Players deck, the drift prompt and the ranking are gone (#579, #580), so nothing scores Intent alignment: the alignment table, the search screen as the edit surface, the 30-day suppression and the 2026-08-29 amendment that moved it to a row, the daily drift loop and the search's gate have no code behind them. `SEARCH_SWITCH` and `DRIFT_PROMPT` stay in the enum only for the events that carry them. The aggregate, its event, the unkeyed `PUT /play-intents/{sport}` and the two-types rule stand. A group's Games deck reads the declaration to choose what it deals and its one-tap interstitial reports `DECK`, so the closed five of the 2026-09-01 amendment stands too; the You tab is the other place a player changes it.
 
 ## Context
 

@@ -4,14 +4,16 @@
 - **Date:** 2026-08-26
 - **§1 narrowed 2026-09-25 by [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md) §5**: age is a precondition of **playing**, not of holding an account. An account an Invitation created isn't attested, and *Start playing* asks before anything player-side; sign-up still refuses without it, and no Skill rating exists without one. *Adults only* and *attestation, not verification* stand.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search, its candidate index and the gate roster this record counted against are gone (#579, #580), so *once per search*, *beside the block set*, *spent at generation* and *never an index column* describe nothing that runs. The gate stands as decided: `AccountStatusQuery` reads `users`, fails closed, tells nobody and stays apart from the hold, and it now guards the player record through `AccountGates`, where a block is no longer beside it (ADR-0193 §2). §1's attestation is untouched.
+
 ## Context
 
-[`matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) §9.1 lists eight gates.
+`matchmaking-engine.md` §9.1 lists eight gates.
 Seven name a fact and a provider. The eighth reads **"Below the age or eligibility threshold —
 whatever that policy turns out to be"**, and it is the only row in the table whose *Live today*
 column says `policy` rather than a context.
 
-[`the-engine.md`](../specs/matchmaking/the-engine.md) §3 carried it forward as row 8 of ten,
+`the-engine.md` §3 carried it forward as row 8 of ten,
 marked ⚠ **no policy, no field, no decision** — the only row of the roster with nothing behind
 it. Resolving [#189](https://github.com/Raketa02/Raketa/issues/189) on the map
 [The matchmaking engine: who sits down, and why](https://github.com/Raketa02/Raketa/issues/155)
@@ -27,7 +29,7 @@ different product's vocabulary."*
 
 So the gate has no input — and §7.2's privacy line makes that permanent for the index, where
 **date of birth is one of six names a build-failing assertion refuses**
-([`the-candidate-index.md`](../specs/matchmaking/the-candidate-index.md) §3).
+(`the-candidate-index.md` §3).
 [ADR-0096](0096-gender-preference-mutual-gate-invisible-to-the-scorer.md)'s rule — *a protected
 characteristic may gate; it may never score* — **permits** an age gate, so the privacy line is
 not what refuses it. What refuses it is that **there is no policy to enforce**: the platform has
@@ -46,7 +48,7 @@ has a provider **today**:
 disabled account with `account_disabled`, and `get_current_user` refuses it too.
 
 **Nothing in the matchmaking design has ever read it.**
-[`the-candidate-index.md`](../specs/matchmaking/the-candidate-index.md) §2 tails
+`the-candidate-index.md` §2 tails
 `player_profile`, `rating` and `auth` — never `users` — so a disabled account keeps its index row
 and remains a candidate indefinitely. The roster's ten gates ask about blocks, holds, photos,
 ratings, radius, opt-in, gender and level. None asks whether the account still works.
@@ -98,13 +100,13 @@ is reached. A second check there would assert something the request could not ha
 truths, from different contexts, with different lifecycles and different remedies. One boolean
 with two meanings is a gate that fails for unrelated reasons under one reason code, and the
 provider that would sign that contract does not exist yet while this one does.
-[`consumer-driven-contracts.md`](../specs/matchmaking/consumer-driven-contracts.md) already
+`consumer-driven-contracts.md` already
 proves the pattern is not reserved for absent contexts: `AtStakeQuery` reads `rating`, which
 shipped.
 
 **Live, and never an index column.** A stale *active* column means a disabled account is shown to
 a stranger, which breaks
-[ADR-0111](0111-the-index-holds-only-what-a-player-changes-about-themselves.md)'s invariant by
+ADR-0111's invariant by
 construction: staleness there costs **quality, never safety**. Account state is also not a fact a
 player changes *about themselves* in the profile sense — an administrator may change it — so it
 fails the index's admission test on both counts.

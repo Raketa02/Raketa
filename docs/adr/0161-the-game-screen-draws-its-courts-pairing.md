@@ -20,6 +20,8 @@
   [#410](https://github.com/Raketa02/Raketa/issues/410). Built by
   [#412](https://github.com/Raketa02/Raketa/issues/412).
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The challenge card, `PairWithACourt`, the candidate index and the Match Fit ranking are gone, so §3's identity with the challenge card, §2's index-and-ledger provider and Fit mode, and the Consequences that compare two at-stake figures describe nothing. The pairing is now read side against side from rating's estimates through `forecast_the_sides` — the engine's `forecast_and_split` under the live ruleset's balance rules — with no index behind it (#575), the same reading a Games card makes of the same people. §1's route, court gate and `AWAITING_ENTRY` lifetime, §2's port in `games`' own words, §4's absences and stakes, and §5 stand.
+
 ## Context
 
 **The Planning details design draws two blocks a game screen refuses.** `BALANCE FORECAST` —

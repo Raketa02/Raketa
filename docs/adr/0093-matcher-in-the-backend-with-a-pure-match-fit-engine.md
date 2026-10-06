@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the deck, the candidate index and the "who fits whom" ranking are gone (#579, #580), and with them everything this record put in the stateful half: the index, the exposure, suppression and interest ledgers, the sweeper and the search telemetry — so the storage table, the per-result version stamps and the four triggers describe a scoring loop that no longer runs. The split stands. `app/engines/matchfit/` is still a pure engine, now the balance forecast and group availability, fenced from RacketSkill both ways; `app/modules/matchmaking/` is its stateful neighbour, holding the level window, geography and the account gates. One ruleset is released, `2026.09.15-a`, embedded and never chosen by the environment. When the ranking went, its other sections were cut from that ruleset in place rather than released under a new name — the one exception to *immutable once released*, taken because no number the new games read moved (#580).
+
 ## Context
 
 The matchmaking engine answers *who sits down*: given a player, a sport and a moment, it
@@ -13,7 +15,7 @@ decided on the map
 this record settles the first question on it, because nearly every operational question waits
 on the answer.
 
-The input document ([`docs/specs/matchmaking/matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) §4)
+The input document (`docs/specs/matchmaking/matchmaking-engine.md` *(removed)* §4)
 recommends **a separate, independently deployable service written in Go at `matcher/`**,
 reachable from the backend over internal HTTP, and argues explicitly past two accepted ADRs to
 get there. The document is input material, not accepted design; both arguments deserve an
@@ -140,7 +142,7 @@ in a codebase to lift into a service:
 
 1. **Request latency measurably contends with scoring** — sign-in or profile requests degrade
    when a city is busy, traced to the scoring loop sharing the process.
-   *(Amended by [ADR-0101](0101-partition-derived-never-a-matching-criterion.md): stated as
+   *(Amended by ADR-0101: stated as
    p99 of one scoring call > 20 ms, or duty cycle > 0.25, on one worker over fifteen
    minutes — measured, and instrumented from the first build.)*
 2. **Scoring capacity and request capacity visibly diverge** — one needs scaling and the other
@@ -151,12 +153,12 @@ in a codebase to lift into a service:
 4. **The index no longer fits comfortably in memory beside the API** — §7.2 sizes a
    50 000-player city at 32 MB; several cities at gigabyte scale expires the "it is just a
    function call" argument.
-   *(Amended by [ADR-0101](0101-partition-derived-never-a-matching-criterion.md): §7.2's
+   *(Amended by ADR-0101: §7.2's
    32 MB is wrong by an order of magnitude — measured, 782 bytes a row, held once per
    worker. Restated as `bytes_per_row × rows × workers × 2` exceeding half the container's
    memory limit, which a 1 GB container reaches at ~32 000 players on four workers, not at
    "several cities".)*
-   *(Amended again by [ADR-0112](0112-the-snapshot-is-a-per-partition-container-bound-once.md):
+   *(Amended again by ADR-0112:
    the `× 2` was budgeting a duplicate of every row during a refresh that no longer
    duplicates any of them — a delta refresh copies row **references** from the container it
    replaces. The trigger is `bytes_per_row × rows × workers`, which the same 1 GB container

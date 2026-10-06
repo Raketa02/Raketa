@@ -145,7 +145,7 @@ carries nothing that names a sport.
 **2 — The pose is not a fact, and nothing may read it as one.** It is chosen by a hash: a
 player whose pose is *serve* is not a server, and the handedness a pose appears to show is
 not theirs. A poster is shown and never read — the same standing a social tag has under
-[ADR-0115](0115-a-tag-about-the-person-may-be-shown-never-scored.md). No engine, no term and
+ADR-0115. No engine, no term and
 no gate may take an input from it.
 
 **3 — The hash does not choose a hue. It chooses from `POSTER_HUES`** — a closed set of

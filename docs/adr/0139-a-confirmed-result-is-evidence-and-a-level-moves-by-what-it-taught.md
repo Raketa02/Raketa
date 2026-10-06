@@ -13,6 +13,8 @@
 - Settles [#304](https://github.com/Raketa02/Raketa/issues/304) on the spec
   [#302](https://github.com/Raketa02/Raketa/issues/302).
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The search card that priced *you against this person* is gone (#579), and so are the matcher's skill term and the `games_match_history.py` beside which §6 put the adapter. *At stake* is read only on a booked game's pairing now, side against side, by the same `stakes()` that moves the Level (ADR-0161). The update rule, its constants, the statuses, a four's share and the hourly catch-up stand as written.
+
 ## Context
 
 **Nobody's Level has ever moved.** `NoResultUpdateRuleExists` says so in its own name, and it
@@ -215,7 +217,7 @@ reach, because the ceiling has to see both sides to scale them together anyway.
 `AtStakeQuery`'s registered implementation is `RatingResultUpdateRule`, which reads two Levels
 through a new narrow port and calls that same function. `NoResultUpdateRuleExists` is **deleted**
 — the second of the three null objects to retire by its own stated fact becoming false, and the
-swap was one row in the register, exactly as [ADR-0095](0095-blocks-and-holds-are-different-refusals.md)
+swap was one row in the register, exactly as [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md)
 promised.
 
 **The card prices the pairing it is showing you**: you against this person, with that sport's own

@@ -8,7 +8,7 @@
   and **the card is the selection's alone at every width**; the closest width draws faces with
   their level, a tap flies at the 3 km stop or the narrower width already held, and mocks 3, 9
   and 10 no longer bind where they draw several cards. **§8's *Clustering* superseded
-  2026-09-17 by [ADR-0177](0177-the-pinch-lets-go-where-it-is-and-a-stack-opens-on-a-tap.md)
+  2026-09-17 by ADR-0177
   §2**: at the floor only, players too close to tell apart fold into a stack a tap opens;
   above it the blob is still the truth. §1–§6, the rest of §7 and the rest of §8 stand.
 - **Date:** 2026-09-16
@@ -22,7 +22,7 @@
     stands.** The record sheet reached **from the radar** draws *Wants to play you* (§4), for
     §4's own reason read on a surface without an order: on the deck *"order is the only thing
     that makes the chip's promise findable"*, and the radar has no order at all. This narrows
-    [ADR-0109](0109-a-read-back-names-what-it-withholds.md) §2 by one more shape — the
+    ADR-0109 §2 by one more shape — the
     sentence on a person the reader is already looking at, which is exactly what ADR-0169 §8
     draws in the builder's list. The list and the badge stay refused.
   - [ADR-0107](0107-the-player-card-is-assembled-outside-the-engine.md) §2's *"`distance_km` is
@@ -34,25 +34,25 @@
     inside a 10 km reach, because the reach is measured cell to cell and the print is measured
     spot to spot, and the two are kept different on purpose so that the deck and the radar never
     disagree about who is in.
-  - [`the-play-screens.md`](../specs/matchmaking/the-play-screens.md) §7's *"Try the radar"*
+  - `the-play-screens.md` §7's *"Try the radar"*
     reaching a pane that says it is not built, and the client glossary's **Radar** — *"not
     built … until a map has an argument of its own"*. The pane is built; the glossary entry
     travels with the client ticket.
   - The profile surface's *"`change_location` … belongs to You, which is not built"* — a route
     now, and it is not You's: it is the **cold start's** (§6).
-- **Amends** [ADR-0131](0131-a-deal-remembers-for-a-day-so-a-spent-deal-deals-again.md) by
+- **Amends** ADR-0131 by
   one boundary: a **reading** is not a deal and never enters the dealt memory (§4). Amends
-  [ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) and
+  ADR-0104 and
   [ADR-0159](0159-a-record-is-read-through-a-prior-disclosure-and-the-refusal-names-nothing.md)
   §3 by one row: a reading is a recorded search and a prior disclosure — the *"fourth surface
   that introduces one player to another"* §3 anticipated, with its row in the register (§1).
   Amends [ADR-0089](0089-player-profile-context-event-sourced.md) by nothing: `LocationChanged`
   exists, the candidate projection already follows it, and §6 gives it its first writer after
   the commit.
-- **Leaves standing** [ADR-0128](0128-a-pass-is-about-my-deck-a-block-is-about-a-person.md)
+- **Leaves standing** ADR-0128
   §1–§3 — a pass is still a statement about my deck; the radar is a second place to *give* one,
   and the radar itself hides nobody for it (§4);
-  [ADR-0101](0101-partition-derived-never-a-matching-criterion.md) — the reach is the
+  ADR-0101 — the reach is the
   searcher's own radius and never a partition, and there is no city (§1);
   [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md) — blocks
   inherit, as it said they would, and *a gate that cannot be evaluated excludes* holds on every
@@ -62,13 +62,15 @@
   is drawn at full strength; [ADR-0134](0134-the-poster-draws-a-player-and-no-value-is-invented.md)
   — the poster is the face; ADR-0169 §5, §6 and §8 — the reset, the cool-off and the builder are
   untouched, and the cool-off holds people out of the **deck** and never off the radar;
-  [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §6
+  ADR-0165 §6
   — no gesture library; the radar's pan and pinch are read from the raw touches (§7).
 - **Does not decide** venues, clustering, a location picker, blocking from the radar, or the
   radius on You (§8).
 - Settles the spec issue for the Radar ([#457](https://github.com/Raketa02/Raketa/issues/457));
   built by its backend and client children. **A backend and contract change.** Grilled
   2026-09-16, three rounds, at the repo root, against sixteen mocks that are **locked**.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The radar went with the Players tab, and with it the reading, its gates, the two windows, the chip, the screen and §8's list (§1, §3–§5, §7–§8); nothing calls `drawn_spot` or `bearing_deg` any more. Two decisions here still run. §6 is how a player's area moves: `PUT /players/me/location` on every cold start and on a return after more than a day, never on a plain foreground, with the You tab's one sentence. §2's print — one decimal, never below a tenth (`shown_kilometres`) — is how a club's distance is printed (ADR-0182 §6), measured from the reader's area rather than from a drawn spot.
 
 ## Context
 
@@ -266,7 +268,7 @@ one thing that would surprise a careful player.
 
 ### 7. The screen, as the mocks draw it
 
-The numbers below are the design; the spec ([`the-radar.md`](../specs/matchmaking/the-radar.md))
+The numbers below are the design; the spec (`the-radar.md`)
 carries every one of them with its mock.
 
 - **Frame.** The Deck | Radar toggle and the chip are the header; the sport chips below when
@@ -325,7 +327,7 @@ neither moves here. **A player rated in no sport** sees on the radar what the de
 ADR-0169 §4 and §9, ADR-0107 §2, ADR-0109 §2, ADR-0128 §1 and ADR-0131 carry a scope note
 pointing here. The root glossary gains **Radar**, **Reach**, **Reading**, **Drawn spot** and
 **Bearing**, and its **Location area**, **Search radius**, **Surface**, **Pass**, **Want to play
-you** and **An interest inbox** entries are rewritten in place. [`the-radar.md`](../specs/matchmaking/the-radar.md)
+you** and **An interest inbox** entries are rewritten in place. `the-radar.md`
 is the spec; `the-play-screens.md` §7 and §12 and the specs' README point to it. The client
 glossary's **Radar**, the design system's Part 16 rows, the theme and the play, shell, player
 record and player profile feature records travel with the client tickets; the OpenAPI documents,

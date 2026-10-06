@@ -3,9 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the shortlist, the candidate index and the ranking are gone (#579, #580), so §2's *the same search*, §3's `rank_key` and `fit`, the shortlist's order and the past-search replay in the Consequences describe nothing that runs. The rule stands and binds every id ordering the new games make — the proposer's batches, the group deck, rescues and the people on a card: no order is ever read off a `set`, and a tie breaks on the canonical `player_id` string. The two-seed subprocess test (§2) is kept, now over a booked game's pairing and the result update rather than a search. The conflict table the last bullet names went with `docs/specs/matchmaking/README.md`'s old body.
+
 ## Context
 
-[`docs/specs/matchmaking/matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) §13
+`docs/specs/matchmaking/matchmaking-engine.md` *(removed)* §13
 promises that *"same request + same snapshot + same ruleset ⇒ byte-identical response,"* as a
 property test rather than an aspiration, and gives four rules to get there. It was written for a
 Go service, and [ADR-0093](0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) put the
@@ -92,7 +94,7 @@ The one place a seed is set deliberately is the test in §2, which sets two of t
 
 - **The rule is wider than the matcher.** It binds `app/engines/` as a whole and anything that
   orders ids anywhere. That breadth is the reason this is its own record rather than a paragraph
-  in [ADR-0104](0104-the-search-record-is-the-answer-and-never-expires.md) about telemetry
+  in ADR-0104 about telemetry
   storage, where nobody sorting a set of player ids in a future engine would ever find it.
 - **A class of bug that survives every single-process test is caught in CI**, for the price of two
   subprocesses in one test.

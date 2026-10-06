@@ -16,7 +16,7 @@
   opens on Find a game"*. Play opens on a **Groups | Explore** switch, and Find a game stays behind
   its flag (§12). §1's other rulings stand: the deck lives on Players, *Match me* is gone, and
   there are still five tabs.
-- **Amends [ADR-0180](0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+- **Amends ADR-0180
   §6's** *"`find_a_game` defaults to enabled"*. It now defaults to **off**, both in code and in
   every environment's definition in the flags repo. **§5 stands and is confirmed**: the backend
   evaluates no flag, so neither Find a
@@ -41,6 +41,8 @@
   [#509](https://github.com/Raketa02/Raketa/issues/509) and [#510](https://github.com/Raketa02/Raketa/issues/510),
   and by the player app's [#512](https://github.com/Raketa02/Raketa/issues/512)–[#514](https://github.com/Raketa02/Raketa/issues/514),
   [#516](https://github.com/Raketa02/Raketa/issues/516) and [#519](https://github.com/Raketa02/Raketa/issues/519).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Find a game, the `find_a_game` flag and the flag system (ADR-0180) are gone (#576). Of §12, Play opening on **Groups | Explore** with Explore blank stands; the flag, its default, *turning it on restores Find a game* and *the backend guards nothing* do not. The header's amendments of ADR-0169 and ADR-0180, and the last *Harder* bullet, describe nothing that exists. The bar is Home · ⚡ Play · You (ADR-0189 §6).
 
 ## Context
 

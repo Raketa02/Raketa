@@ -6,7 +6,7 @@
 
 **An empty screen, and a feature folder around it**
 ([#479](https://github.com/Raketa02/Raketa/issues/479),
-[ADR-0180](../../../docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)
+ADR-0180
 §7). Find a game was to be rebuilt, and the rebuild needed somewhere to live while the old one kept
 working. `FindAGameNextScreen` was what the Play tab's root drew while `find_a_game` was
 off: the app's `paper` ground and nothing else, under the shell's tab bar. **No copy** — nothing

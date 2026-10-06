@@ -74,7 +74,7 @@
 | **Cut-off** | The club's free-cancellation deadline, for example 24 hours before the game. A club setting. |
 | **Rescue** | An open seat in a booked game that lost a player. |
 | **Post** | A game a member creates by picking the hour and the court. Its players see it as a **Challenge**. |
-| **Home** | The first tab of the bottom bar: your games. (Today's *Now*.) |
+| **Home** | The first tab of the bottom bar: your games. |
 
 ---
 
@@ -82,16 +82,18 @@
 
 **The bottom bar** is **Home · ⚡ Play · You**.
 
-- **Home** holds your games from the moment they fill until shortly after they are over
-  (today's *Now*). Its badge counts **games that need you**: a result to enter or confirm,
+- **Home** holds your games from the moment they fill until shortly after they are over. Its
+  badge counts **games that need you**: a result to enter or confirm,
   a payment to confirm, a seat open in your game.
 - **Play** opens on **Groups | Explore**. A group opens its page, with its sport switcher in
   the header.
 - **You** holds your profile, your weekly hours, your payment method, your receipts
   (You › Payments) and your settings.
-- **Players** and **Chats** are no longer in the bar. They come back only behind the
-  **"Classic play"** feature flag, off by default, together with the rest of the old loop:
-  challenges with the where/day/hour plan, and Find a game ([§20](#20-out-of-scope)).
+- **Players** and **Chats** are not in the bar. They were the older loop — the Players deck,
+  the Chats tab, challenges with the where/day/hour plan, and Find a game — which was hidden
+  behind a *Classic play* flag and then **removed on 2026-10-06**
+  ([#569](https://github.com/Raketa02/Raketa/issues/569)). A group's Games deck is the one way
+  a game is made.
 
 **A group page** has four tabs: **Games · Fill in · Friends · Info**.
 
@@ -121,7 +123,8 @@
 - **Blocks.** Two players, either of whom blocked the other, are never on the same card, in any
   group. Blocking somebody takes back your yeses where they are In, until the club confirms; your
   booked games stay ([ADR-0193](../../adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)).
-- **Gender preference** and the level gates of today's engine apply as they do today.
+- **Gender preference** and the **level window** apply to every pair on a card, with the blocks
+  above: together they are the pair rule of [§5.1](#51-what-it-does).
 
 ### 4.2 Weekly hours (availability)
 
@@ -161,15 +164,32 @@ Continuously, and whenever something changes (a court frees up, a member joins, 
 changes their hours), the engine looks at every free court hour in the group's reach for the
 next 14 days and asks: *which members are rated in this sport, want this kind of game, are
 free for this whole hour, and fit each other?* From those it builds the best game — the most
-even four (or two) that also fit socially — and deals it as a **Picked for you** card to each
-of its players.
+even four (or two) — and deals it as a **Picked for you** card to each of its players.
 
-It uses **today's matchmaking engine unchanged**: level fit, predicted balance, intent,
-reliability, availability, playing style and social vibe, with the separate Competitive and
-For fun weights it already has. **Distance stands down inside a group** (everybody plays at
-the same clubs); it will matter again at city scale. There is **no second, lightweight
-engine and no toggle** — what is new is the assembly (people × hour × court), not the
-scoring.
+> **Corrected 2026-10-06** ([#569](https://github.com/Raketa02/Raketa/issues/569)). This
+> section said the new games use *today's matchmaking engine unchanged* — level fit, predicted
+> balance, intent, reliability, availability, playing style and social vibe, with separate
+> Competitive and For fun weights. They never called that ranking, and it has been removed
+> ([#580](https://github.com/Raketa02/Raketa/issues/580)). What they call is below.
+
+The new games keep three pieces of the matchmaking engine, and nothing else of it:
+
+- **The pair rule** (`PlayerFit`), asked of every pair a card, a fill, a rescue or a post would
+  put on one court: **no block** either way, a **mutual gender preference**, and Levels inside
+  the kind's **level window**, whose tolerance per kind is the live ruleset's.
+  While either player is inside their **14-day newcomer window**, the pair is held to the
+  Competitive window whatever the kind. A post's Level range starts from the same window.
+- **The balance forecast** — the engine's own `forecast`, which the proposer reads directly and
+  everything else through `forecast_the_sides`. It picks the most even four the proposer deals
+  at an hour — a tie goes to the closest Levels — chooses the sides, ranks the next best fits for
+  a seat a *No* left and for a rescue, and is the percentage a card and a booked game's details
+  print.
+- **Group availability**, which only grades a card's overlap grid (§8.1).
+
+Who is free is each player's **weekly hours**, read for the whole hour; which kinds they are
+dealt is their **Play intent**. **Distance stands down inside a group**: it decides only which
+clubs a player group plays at (§4.3), and it will matter again at city scale. There is no
+score, no weight and no toggle — what is new is the assembly (people × hour × court).
 
 ### 5.2 What a card promises
 
@@ -221,7 +241,7 @@ cancellation** on it before anyone swipes ([§12.3](#123-leaving-before-and-afte
   marked **In**.
 - A yes is to **this game**: this court, this hour, the people who are In, and anyone the app
   judges fit for the empty seats. A replacement must fit **everybody already In** (every pair
-  of them, as today's engine requires).
+  of them, by the pair rule of §5.1).
 - Before your **first** yes, the app asks you once to save a payment method and accept the
   terms ([§12.5](#125-saving-a-payment-method-and-the-terms)). Your yes lands as soon as that is done.
 
@@ -354,7 +374,7 @@ swipe right**:
    court losing its game; a challenge is a person's own ask; a pick is the engine's suggestion.)
 3. **Then the soonest deadline** (book-by; for a rescue, the cut-off, or the start once the
    cut-off has passed).
-4. **Then the best fit for you.**
+4. **Then the best fit for you** — the forecast of your own version, most even first.
 
 Example Padel deck (Competitive):
 
@@ -1052,8 +1072,8 @@ No notification is ever sent for a single swipe.
   service fee capped at 1.24–3.99 zł per seat; Raketa's absence of one is an advantage.)
 - The Friends tab.
 - **"Classic play"**: the Players deck, the Chats tab, challenges with the where/day/hour plan,
-  and Find a game stay behind one flag, off by default, untouched. The Players deck will
-  probably be removed later.
+  and Find a game. They stayed behind one flag, off by default, until they were **removed on
+  2026-10-06** with the flag itself ([#569](https://github.com/Raketa02/Raketa/issues/569)).
 - The city-level pool (Explore). These mechanics are written for "a pool"; the city is a later
   pool, and distance matters again there.
 
@@ -1111,7 +1131,8 @@ claim by claim, and each record carries a note pointing at it:
   money. It has no chat"; the disabled *Post a game*. **§11**'s *Games* figure now counts the
   games booked in each official group.
 - **ADR-0179 §9** — the You tab gains an *Account* group.
-- **ADR-0169** — the deck lives on Players (now behind "Classic play").
+- **ADR-0169** — the deck lives on Players (removed with Classic play; its swipe stage is the
+  Games deck's).
 - **ADR-0144, ADR-0164** — the plan (where · day · hour) belonging to a challenge.
 - **ADR-0150** — "the fill" completing a challenge from Chats (the word *Fill in* now has one
   meaning).
@@ -1124,8 +1145,9 @@ claim by claim, and each record carries a note pointing at it:
   Departure, Call off*; new entries, in its **Part 2 — Decided, not yet built**: *Pool, Court,
   Court hour, Share, Book-by, Cut-off, Proposal, Post, Version, In, Booking, Rescue, Fill in, Seat
   charge, Weekly hours, Home, Classic play…*
-- `docs/specs/the-loop/the-loop-screens.md` — the states it refused by name (*Booked, Being
-  booked, Cancelled…*) and the Now states *Planning, Game on, Needs a player*.
+- `docs/specs/the-loop/the-loop-screens.md` (deleted 2026-10-06, #569) — the states it refused
+  by name (*Booked, Being booked, Cancelled…*) and the Now states *Planning, Game on, Needs a
+  player*.
 
 ---
 
@@ -1271,7 +1293,7 @@ Aug–Sep 2026).
 | 17 | Weekly hours per day, to the hour, asked in onboarding and editable in You; no "not this week". |
 | 18 | Intent asked once, inline. |
 | 19 | Members only, always taking part; courts per group kind. → Q29 |
-| 20 | Written for a pool; the Players deck probably goes later. |
+| 20 | Written for a pool; the Players deck probably goes later. *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
 | 21 | Another player learns of a yes from the card. |
 | 22 | → replaced by Q38 |
 | 23 | → replaced by Q54/Q58 |
@@ -1283,8 +1305,8 @@ Aug–Sep 2026).
 | 29 | Official groups use other clubs only when theirs has no shared hour in 14 days; player groups home + 10 km. |
 | 30 | 1-hour games; 14 days; hours must cover the game. |
 | 31 | Post a game. → Q40 |
-| 32 | The bottom tab is **Home**; the group tab stays **Games**; Players behind a flag. |
-| 33 | The old loop is retired into the flag. → Q42 |
+| 32 | The bottom tab is **Home**; the group tab stays **Games**; Players behind a flag. *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
+| 33 | The old loop is retired into the flag. → Q42 *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
 | 34 | Fill in has **You're In**, including your posts. |
 | 35 | The moment a game fills. |
 | 36 | The statuses. → updated by Q39/Q58 |
@@ -1293,7 +1315,7 @@ Aug–Sep 2026).
 | 39 | *Held/Booked* wording (Held later removed by Q54). |
 | 40 | The posting steps; the court before the people. |
 | 41 | Post limits (2 live, counts as a yes and toward games per week). |
-| 42 | One "Classic play" flag brings back Players, Chats, challenges/plans and Find a game together. |
+| 42 | One "Classic play" flag brings back Players, Chats, challenges/plans and Find a game together. *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
 | 43 | The club settings and defaults. |
 | 44 | The club is the seller and pays the card fees. |
 | 45 | Cards, Google Pay, Apple Pay if tested; BLIK evaluated in Q57. |

@@ -237,7 +237,7 @@ order — what the fill is told about the court it completes, and why it is read
 than the challenge is `challenges.md`'s to say.
 
 **The score grid is the landing for _Needs result_ alone**
-([ADR-0166](../../../docs/adr/0166-the-day-row-says-today-and-no-card-does.md)). The _Today_ rung
+(ADR-0166). The _Today_ rung
 is gone — the decision and its reasons were recorded in the old loop's `plans` record, whose ladder
 it was and which left with it in #576 — so `entryLeadOf` lands a game on its own day on **the plan**, with _We played_ the quiet door
 beneath _Open the chat_, and on the grid only once the agreed point has passed. Nothing in this
@@ -263,7 +263,7 @@ the fold the re-read lands on is the answer. `RemoveCard` is the control — Fea
 spoken _Remove this card_, on `ChatDoor`'s shape — exported for `features/plans`' card and drawn
 nowhere else. **Not seen on a device.**
 
-**The dismissal clears the row too, and the hour's ending names nobody** ([ADR-0173](../../../docs/adr/0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md), [ADR-0175](../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)).
+**The dismissal clears the row too, and the hour's ending names nobody** (ADR-0173, [ADR-0175](../../../docs/adr/0175-nobody-calls-a-game-off-the-court-ends-by-its-seats-or-by-its-hour.md)).
 `useDismissGame`'s cache effect touches two lists since ADR-0173 — the card through
 `dropCardOfGame`, the row through `challenges`' `dropCourtOfGame` — and `dropCardOfGame` is
 exported as the one write the games list lets another feature make, for the row's own door.

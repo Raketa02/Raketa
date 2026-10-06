@@ -396,7 +396,7 @@ is `None` — the whole zone omitted rather than drawn empty.
 **Two of the three price silence rather than judgement**, which is load-bearing and easy to
 undo. Turning somebody down inside your day is *answering* them, and countering a score you
 believe is wrong is *answering* it — so no player is ever docked for disagreeing
-([ADR-0049](../../adr/0049-no-player-is-penalised-for-not-agreeing-a-result.md),
+(ADR-0049,
 [ADR-0160](../../adr/0160-a-results-strand-counts-answers-and-never-agreements.md)). A strand
 counting *agreements* is the one ADR-0137 struck, for exactly this reason.
 

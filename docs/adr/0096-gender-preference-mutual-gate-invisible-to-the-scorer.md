@@ -12,10 +12,12 @@
   without it ([#566](https://github.com/Raketa02/Raketa/issues/566)). Every surface that
   introduces one player to another, and every co-member of a group, is still gated by it.
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The searches, the candidate index and the scorer are gone (#579, #580), so §1's index row and scorer type, §3's per-search override, §4's relaxation and enumeration, §5's reason code and §6's `SearchContext` describe nothing that runs. The gate stands, mutual and unrelaxed: `player_profile`'s `preferences_are_mutual` is asked of every pair the proposer, the fill and a rescue would seat (`proposals`' `PlayerFit`), which is the every-pair reading ADR-0116 gave §4. §2, the silent half of §5 and §6 as amended stand, and `app/engines/matchfit/` still receives no gender.
+
 ## Context
 
 The matchmaking engine applies its gates before anything is scored
-([`docs/specs/matchmaking/matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md) §9.1).
+(`docs/specs/matchmaking/matchmaking-engine.md` *(removed)* §9.1).
 Whether a player may say *I want to play with women* — or with men, or with anybody — is the
 one question the design document explicitly declines to answer by default. Its §23 Q8 calls
 it *"the sharpest what-this-product-refuses-to-be line in the whole design"* and recommends a

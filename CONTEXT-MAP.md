@@ -18,10 +18,10 @@ The two web apps are the newest, each built on its own scaffold:
   an invitation or a password reset opens when the app is not installed, and the app-link files.
   No sign-in, no session. *Scaffolded by [#525](https://github.com/Raketa02/Raketa/issues/525).*
 
-Outside the monorepo, **`Raketa02/raketa-features`** holds the feature flags as Featurevisor
-YAML. It is not an app and holds no domain code: its CI builds one datafile per environment,
-and the player app fetches its own over HTTP and decides each flag on the device
-([ADR-0180](docs/adr/0180-a-feature-is-turned-on-by-a-pull-request-and-decided-on-the-device.md)).
+Nothing outside the monorepo is part of the topology. **`Raketa02/raketa-features`**, which held
+the feature flags as Featurevisor YAML, is no longer read by anything: the flags left with the
+Classic play loop they hid ([#569](https://github.com/Raketa02/Raketa/issues/569)), and archiving
+the repository is a human step.
 
 ```
                           ┌──────────────────┐
@@ -47,16 +47,22 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > this day. `frontend_public/` is new and gets a fence of its own
 > ([#502](https://github.com/Raketa02/Raketa/issues/502)).
 
-> **Courts, bookings and money are decided again, without a new app**
-> ([ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md); a club's
-> courts are built by #535, a player's saved payment method by #536 and proposals — a game still
-> filling, its pool and its yeses — by #538; the rest is not yet).
-> The backend grows new contexts — Proposals, Bookings, Payments, Notifications, and courts in
-> Clubs — the player app gets the group deck, Fill in and an Account group on You, and the club
-> website gets Bookings, Check in, Courts & prices, Money and Raketa settings. Stripe is an
+> **Courts, bookings and money came back without a new app**
+> ([ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md), built under
+> PRD [#530](https://github.com/Raketa02/Raketa/issues/530)). The backend grew new contexts —
+> Proposals, Bookings, Payments, Notifications, and courts in Clubs — the player app got the group deck, Fill in and an Account group on You, and
+> the club website got Bookings, Check in, Courts & prices, Money and Raketa settings. Stripe is an
 > outside service behind a port, not a deployable, and its webhooks are on no client's contract
-> ([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)). The terms are in `CONTEXT.md` Part 2; the
-> spec set is `docs/specs/games-and-fill-in/`.
+> ([ADR-0190](docs/adr/0190-money-goes-through-one-port-and-a-notice-is-read-once.md)). The terms
+> are in `CONTEXT.md` under those contexts; the spec set is `docs/specs/games-and-fill-in/`.
+>
+> **The older way of making a game went on 2026-10-06** — *Classic play*: the Players deck and
+> radar, Chats, challenges and plans, Find a game, the searches, the candidate index and the
+> ranking, with the feature flag that hid them
+> ([#569](https://github.com/Raketa02/Raketa/issues/569)). No app or fence changed; the
+> `challenges` and `plans` contexts left the backend, `play`, `challenges`, `plans` and
+> `feature_flags` left the player app, and the records and specs that described only them were
+> deleted ([ADR index](docs/adr/README.md#the-2026-10-06-classic-play-removal--the-second-gap)).
 
 > **The matchmaking engine did not add an app, and that was a decision rather than an
 > omission** — the two web apps above arrived later, for a different reason: they are new
@@ -65,9 +71,10 @@ The dev console's `openapi.dev.json` is a fourth surface with no client.
 > [ADR-0093](docs/adr/0093-matcher-in-the-backend-with-a-pure-match-fit-engine.md) puts it in the
 > backend instead — the stateful half as a module, the scorer as the **second engine** beside
 > RacketSkill. So there is no `matcher/CLAUDE.md`, no `matcher/` ownership fence and no matcher CI
-> lane, and the only new topology is a spec set under `docs/specs/matchmaking/`. The two engines
-> may not import each other, which is why `.importlinter` now carries two `forbidden` contracts
-> rather than one: two engines that can reach each other develop two opinions about a level.
+> lane. The two engines may not import each other, which is why `.importlinter` carries two
+> `forbidden` contracts rather than one: two engines that can reach each other develop two
+> opinions about a level. Since 2026-10-06 the second engine scores nothing — it is the balance
+> forecast and group availability the new games read — and its spec set is gone.
 
 ## How the domain language is split
 
@@ -77,7 +84,7 @@ own **technical** vocabulary:
 
 | File | Scope | Owns |
 | --- | --- | --- |
-| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Weekly hours, Search radius, Proposals opt-in, Challenge, Seat, Standing, Game, Result, Score, Counted game, Ghost game, Player Score, Strand, Player card, Record block, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Club courts, Court, Raketa hours, Exception, Price, Share, Court hour, Way of working, Raketa settings, Cut-off, Book-by, Paused, Setup checklist, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Payment method, Setup, Payment terms, Payment provider, Pool, Proposal, Version, Yes, In, Withdraw, Live yes, Tester, Feature flag, and — decided, not yet built (Part 2) — Post, Booking, Rescue, Fill in, Seat charge, Home, Classic play… |
+| **`CONTEXT.md`** (root) | **Shared domain language — source of truth** | User, Player, Authority, Email, Sport, SportSpec, Assessment, Skill rating, Level, Band, Confidence, statuses, domain events, Audience, Signing out everywhere, Player profile, Social tag, Weekly hours, Gender preference, Play intent, Block, Mode, Ruleset, Level window, Newcomer window, Forecast, Split, Game, Line-up, Departure, Result, Score, No-show report, Standing, Counted game, Ghost game, Conversation, Member, System line, Typing, Player Score, Strand, Run of form, At stake, On-court check, Sportsmanship, Stars, The card, Club, Club account, Home club, Club courts, Court, Raketa hours, Exception, Price, Share, Court hour, Way of working, Raketa settings, Cut-off, Book-by, Paused, Setup checklist, Group, Player group, Official group, Owner, Group member, Join policy, Join request, Group link, WhatsApp group size, Handover, Administrator, Invitation, Booking, Leaver, Rescue, Fill in, Check-in, Payment method, Setup, Payment terms, Payment provider, Seat charge, Pool, Proposal, Version, Yes, In, Withdraw, Live yes, Post, Fills, Group deck, Games & money, Home, It's a game!… |
 | **`backend/CONTEXT.md`** | Backend technical vocab only | event-sourced aggregate, outbox, event store, port/adapter, UoW… |
 | **`frontend_player/CONTEXT.md`** | Player-app technical vocab only | feature, use-case, mapper, wire type vs DTO, screen, secure store, query/mutation, presentation module, copy deck… |
 | **`frontend_club/CONTEXT.md`** | Club-website technical vocab only | server layer, cookie session, recovery cookie, single flight, server action, view model, stub backend… |
@@ -185,15 +192,14 @@ else lives one layer down. See
 │   ├── agents/               ← ownership boundaries, domain-doc consumption
 │   ├── environments.md       ← THE four environment names + deployment contract
 │   ├── specs/player-app/     ← the player app's product + architecture specifications
-│   ├── specs/matchmaking/    ← the matchmaking engine: the spec set + the two frozen inputs
-│   │                            the-engine.md is the entry point and states precedence
-│   │                            the-words.md is the WHOLE app's copy deck, here for history
-│   ├── specs/the-loop/       ← the core loop's screens + seams: Chats, the challenge screen,
-│   │                            the conversation, Now, and the one state-detail surface
+│   ├── specs/matchmaking/    ← only the-words.md, the WHOLE app's copy deck, here for history;
+│   │                            the engine's spec set went with Classic play (#569)
+│   ├── specs/player-record/  ← the player record: the plan it was built from + the decisions
+│   ├── specs/you/            ← the You tab, row by row (ADR-0179)
 │   ├── specs/play-groups/    ← Play › Groups, the club website and the Administrator:
 │   │                            the product owner's mocks and which area each one draws
 │   ├── specs/games-and-fill-in/ ← a group's Games deck and Fill in, courts and money (ADR-0189):
-│   │                            the mechanics, the screens and the mocks — decided, not built
+│   │                            the mechanics, the screens and the mocks — the one way a game is made
 │   └── value-formatting.md   ← the rendering table the client implements
 ├── backend/                  ← FastAPI  (CLAUDE.md + CONTEXT.md + its own docs/)
 ├── frontend_player/          ← Expo     (CLAUDE.md + CONTEXT.md)

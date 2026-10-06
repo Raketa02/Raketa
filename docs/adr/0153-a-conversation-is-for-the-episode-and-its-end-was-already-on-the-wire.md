@@ -1,6 +1,6 @@
 # ADR-0153 — A conversation is for the episode, and its end was already on the wire
 
-- **Status:** Accepted — **§3 superseded 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §6**: a room without a game has
+- **Status:** Accepted — **§3 superseded 2026-09-13 by ADR-0164 §6**: a room without a game has
   ended exactly when its challenge is over, and not a grace after its last departure. §2's clock
   for a room with a game, and §4's grace after *we played*, stand.
 - **Date:** 2026-09-07
@@ -12,7 +12,7 @@
   gave the conversation**, and leaves *destroyed, not delisted* exactly where it stands. What
   changes is the anchor and the number; the mechanism is untouched.
 - **Does not move the entry window.**
-  [ADR-0145](0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §5's refusal to
+  ADR-0145 §5's refusal to
   re-date it off an agreed hour stands, and is put to a second job here.
 - **Second application of [ADR-0151](0151-a-window-whose-default-costs-you-the-game-must-outlast-the-gap-between-app-opens.md)'s
   rule** — *a window must exceed the gap between app opens, not equal it* — and the first outside
@@ -21,6 +21,8 @@
   withdrawal.
 - Rewrites [#359](https://github.com/Raketa02/Raketa/issues/359)'s acceptance criteria **before**
   it is built.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** A room is opened only by a booked game and is born about it (#575), so §3 — and ADR-0164 §6, which superseded it and was deleted — §2's challenge arm, the withdrawal in its fourth, and the plan-and-challenge reasoning around them describe nothing. A room with no game has ended: it can only be one a challenge opened before #575, every route answers `conversation_not_found` about it, and the sweep destroys it. §2's clock holds for every room: `entry_closes_at`, now measured from the end of the booked hour, or `CONVERSATION_GRACE` after *we played*. `GameCalledOff` destroys a room in the act, and the room is filed under `booking_id`.
 
 ## Context
 
@@ -59,7 +61,7 @@ refuses a line for a derived standing. A room cannot learn that a game settled w
 
 A conversation exists for the **whole episode** — arrange it, play it, find out what happened — and
 not for the arranging alone. The screen spec already says so and was not being read that way:
-[`the-loop-screens.md`](../specs/the-loop/the-loop-screens.md) §3 calls it *"the place two people
+`the-loop-screens.md` §3 calls it *"the place two people
 who have agreed to play talk about **it**"*, and *it* is the game. `CONTEXT.md` calls a
 Conversation *"one purpose-bound thread"* and never names the purpose.
 
@@ -108,12 +110,12 @@ than it was, only earlier.
 
 ### 3. The room that never becomes a game gets the same number, and stops living for ever
 
-> **Superseded 2026-09-13 by [ADR-0164](0164-a-plan-is-the-challenges-and-a-room-without-a-game-lives-as-long-as-its-challenge.md) §6.** The number went, because the anchor read the *order* the
+> **Superseded 2026-09-13 by ADR-0164 §6.** The number went, because the anchor read the *order* the
 > answers came in — `B yes → D yes → C no` closed the room two days later while three people were
 > talking in it, `B yes → C no → D yes` never did — and it only ever fired on rooms that still had
 > accepted players in them. A room without a game now has ended exactly when its **challenge** is
 > over, derived on every read from the challenge's own standing; what ends a challenge that never
-> becomes a game is [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §3. The room still stops living for ever, and no longer by a clock.
+> becomes a game is ADR-0165 §3. The room still stops living for ever, and no longer by a clock.
 
 ADR-0145 named the case and declined it: *"a conversation opened on a first acceptance whose
 challenge then lapses or is declined to death has no plan, no game and no withdrawal."* #359 was

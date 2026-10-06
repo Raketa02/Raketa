@@ -2,20 +2,22 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-04
-- **Revises [ADR-0034](0034-matches-is-a-record-and-keeps-no-history.md)** (deleted in the
+- **Revises ADR-0034** (deleted in the
   2026-08-25 reset, on `prototype/result-confirmation`): the shape is now **event-sourced**.
-- **Carries forward [ADR-0048](0048-silence-confirms-a-result-and-disagreement-carries-a-score.md)**
+- **Carries forward ADR-0048**
   (same), with both clocks re-derived and one narrowing.
-- **Carries forward [ADR-0049](0049-an-unscored-match-is-an-evening-not-evidence.md)** (same)
+- **Carries forward ADR-0049** (same)
   **whole**, and strikes the clause of the root [`CONTEXT.md`](../../CONTEXT.md) that contradicts
   it.
 - Settles [#303](https://github.com/Raketa02/Raketa/issues/303) on the spec
   [#302](https://github.com/Raketa02/Raketa/issues/302).
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges are gone, so a game is no longer opened by a completed line-up: a booking opens it, in the transaction that booked the court (#541), and the game carries its hour. A booked game's entry window runs from the end of that hour, and `PLAN_HORIZON` now measures only streams written before bookings. The matcher's pairwise read, `counted_games` and *Last 5* on a search card, and `late_change_threshold` went with the ranking (#580). The event-sourced context, the result flow and its clocks, the ends folded and never stored, and §5 all stand.
+
 ## Context
 
 **Nothing on this platform knows that a game was played.** A `Challenge` carries a `Window` —
-`TODAY`, `WEEKEND` — and never a date, a time or a court ([ADR-0100](0100-challenge-window-derived-never-chosen.md)),
+`TODAY`, `WEEKEND` — and never a date, a time or a court (ADR-0100),
 so four acceptances leave no fact behind. Every empty block on the redrawn competitive card
 traces back to that: `player_card.counted_games` is `OMITTED` because *the games ledger has no
 provider in this build, and a zero would be an invented one*; *Last 5* has nothing to draw;
@@ -31,7 +33,7 @@ had not built for.
 
 **Three facts bound the redesign, and each of them has moved since ADR-0048 was written.**
 
-- **There is still no way to reach anybody.** [ADR-0038](0038-now-is-polled-the-push-is-specified-and-deferred.md)
+- **There is still no way to reach anybody.** ADR-0038
   deferred push, nothing in `backend/` sends anything to a phone, and the prompt exists only for
   a player who has already opened the app. ADR-0048's 24-hour deadlines were affordable
   *because* of that, and ADR-0049's refusal to fine anybody rested on it. Both premises hold
@@ -97,7 +99,7 @@ somebody says so and the other side does not disagree.
 **The moment is the moment of the entry, and there is no date field anywhere.** A player who
 says *we played* on Tuesday played on Tuesday as far as this platform is concerned. Asking for a
 date would be a calendar — the thing `availability.py` refuses to hold and
-[ADR-0100](0100-challenge-window-derived-never-chosen.md) refuses to propose — and it would be a
+ADR-0100 refuses to propose — and it would be a
 field with nothing to check it against.
 
 So a game reaches exactly three ends, and **every one of them is folded from the record and the

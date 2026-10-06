@@ -6,10 +6,12 @@
 - **Amends `challenges.domain.answer_window.ANSWER_WINDOW`**, which was
   [#217](https://github.com/Raketa02/Raketa/issues/217)'s adopted number and is the first
   clock in this repository to be argued for rather than inherited.
-- **Does not touch [ADR-0145](0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md)'s
+- **Does not touch ADR-0145's
   interlock**: `ENTRY_GRACE` stays at twenty-four hours, and stops citing the number that moved.
 - Settles [#344](https://github.com/Raketa02/Raketa/issues/344) on the map
   [#321](https://github.com/Raketa02/Raketa/issues/321).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `challenges` is gone, and with it `ANSWER_WINDOW`, lapsing seats, the one-open-challenge-per-pair rule, `CHALLENGE_LOAD`, the lapse sweep and *answers challenges*, which now stands down in `player_score` — so §1's number, §2, §5–§7 and most of the Consequences describe nothing. Two things stand. §1's rule — a window whose default costs somebody something must exceed the gap between app opens, not equal it — is what `CONVERSATION_GRACE`'s 48 hours rests on (ADR-0153 §4), and §4's reason a benign default may be short is still the reason in `games/domain/windows.py`. `ENTRY_GRACE` (§3) is still twenty-four hours, now measured from a booked game's hour.
 
 ## Context
 

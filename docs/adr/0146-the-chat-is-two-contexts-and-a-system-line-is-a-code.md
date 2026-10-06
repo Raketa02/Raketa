@@ -1,16 +1,16 @@
 # ADR-0146 — The chat is two contexts, and a system line is a code rather than a message
 
 - **Status:** Accepted — **§7 narrowed 2026-09-14 by
-  [ADR-0168](0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md)**: the roster is
+  ADR-0168**: the roster is
   still derived from the court, and the room now stores **one subtraction from it** — its members'
   own exits, admissible only once the line-up can no longer move, and effective only while it
   stays so, which is read against `games` on every read rather than kept here.
 - **Date:** 2026-09-07
-- **Completes [ADR-0144](0144-a-plan-is-the-games-and-the-third-slot-is-the-lock.md)**, which made
+- **Completes ADR-0144**, which made
   a Plan *"its own bounded context"* and then deferred: *"the context's name, its events' spelling
   and what it refuses in the glossary's own voice are owed to
   [#332](https://github.com/Raketa02/Raketa/issues/332)."*
-- **Cites [ADR-0110](0110-the-index-tails-the-log-the-outbox-delivers-side-effects.md)** — *two
+- **Cites ADR-0110** — *two
   subscriptions, two guarantees*. That record sent the candidate index to the **log**; this one
   sends a conversation to the **outbox**, and the reason the objection does not transfer is
   stated below.
@@ -21,6 +21,8 @@
 - **Amends the preamble to `CONTEXT.md` Part 1**, on that preamble's own written instruction.
 - Settles [#332](https://github.com/Raketa02/Raketa/issues/332) on the map
   [#321](https://github.com/Raketa02/Raketa/issues/321).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The Plan and `challenges` contexts are gone, so §1's second module, §3, the Plan's half of §8 and every challenge or plan telling the room describe code that no longer exists. A room is opened only by a booked game, through its `GamePlanned` with the hour on it, and `games` is the one context that tells it; a room with no game has ended (#575). Membership (§7) is the booked game's current line-up and nothing else, and the room is filed under `booking_id` on the wire and in the table, where it was `challenge_id`. ADR-0168's narrowing of §7 was never built on this branch and was deleted, so a room stores no membership fact at all.
 
 ## Context
 

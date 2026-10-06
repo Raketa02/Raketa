@@ -1,6 +1,6 @@
 # ADR-0162 — A game's line-up is frozen until somebody leaves it
 
-- **Status:** Accepted — **three sentences superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md)**: §1's *a court that
+- **Status:** Accepted — **three sentences superseded 2026-09-13 by ADR-0165**: §1's *a court that
   has been a game — `ON`, or reopened since and not yet re-seated* (a yes can be taken back
   before the court is whole), §1's
   *a challenge folds `game_opened` off `SeatLeft`* (it folds it off the line-up completing), and
@@ -22,7 +22,7 @@
   line-up. [ADR-0141](0141-a-game-names-its-court-and-the-court-is-the-gate.md) §2's *"a seat
   cannot be dropped without publishing a three-person doubles game"*: a seat can be **open**,
   and it is still never dropped — the record is honoured by drawing the seat empty.
-  [ADR-0150](0150-the-fill-names-the-challenge-it-completes-and-the-gate-steps-aside.md) §1's
+  ADR-0150 §1's
   *"a court they can neither complete nor leave"*: leaving is an act.
 - **Amends** [ADR-0148](0148-the-last-line-is-the-pill-and-the-plan-is-read-beside-the-game.md)
   §4: `SEAT_LEFT` carries a **third** `departure`, `LEFT`, and *the day a seat can be released,
@@ -31,10 +31,12 @@
   §8 in one sentence: the pair rule releases the moment a seat leaves, and a *left* seat is a
   seat that left — consistent, said so here.
 - **Cites** ADR-0142 §3 for the durable names below, and
-  [ADR-0145](0145-the-hour-is-the-agreement-and-no-booking-will-contradict-it.md) §4 for why no
+  ADR-0145 §4 for why no
   arrow moves.
 - Settles [#416](https://github.com/Raketa02/Raketa/issues/416), the first child of
   [#411](https://github.com/Raketa02/Raketa/issues/411); the author's decision, grilled 2026-09-11.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** `challenges`, the Plan and their ports are gone, so the departure on the challenge (§1), the fold (§2), the moment guard (§4), the `SEAT_LEFT` line (§5), the fill and pool (§6), `late_change_threshold` (§8) and §9 describe nothing. §3 survives on a booked game: a seat can be open, and it is drawn, never dropped. `Game.vacate` writes `SeatVacated` when a player leaves through `bookings`, and a rescue taking the seat writes `LineUpReseated` through `Game.take_seat`. A result is refused while a seat is open, every reader — the room's membership included — reads the current line-up, neither event reaches the room, and `planned_at` never moves.
 
 ## Context
 
@@ -104,7 +106,7 @@ must not break: *if `games` ever imports the Plan, this clause has been broken.*
 
 ### 1. `POST /challenges/{id}/departure` — the act, on the challenge, in ADR-0142 §4's noun shape
 
-> **Three sentences below are superseded 2026-09-13 by [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md).** *A court that has been a game — `ON`, or
+> **Three sentences below are superseded 2026-09-13 by ADR-0165.** *A court that has been a game — `ON`, or
 > reopened since and not yet re-seated* — the departure is admitted on a half-built court too, because *leaving a
 > half-built court is a decline, and it is already given* is true before you answer and false
 > after (§1 there). *A challenge folds `game_opened` off it* — it folds it off the acceptance that

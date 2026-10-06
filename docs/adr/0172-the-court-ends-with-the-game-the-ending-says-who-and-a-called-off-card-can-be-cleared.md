@@ -2,7 +2,7 @@
 
 - **Status:** Accepted — **§5's *"the challenge row and the screen behind it keep the news for
   their day"* narrowed 2026-09-16 by
-  [ADR-0173](0173-a-called-off-court-is-cleared-from-both-lists-by-one-act.md)**: the act still
+  ADR-0173**: the act still
   removes no fact, and the challenge row goes with the card for the reader who cleared it —
   `GET /challenges` subtracts its reader off the same set `GET /games` does, and a `CALLED_OFF`
   row the reader is still seated on swipes to reveal *Remove this row*, which posts this same
@@ -16,7 +16,7 @@
 - **Narrows, by named sentence:**
   [ADR-0162](0162-a-games-line-up-is-frozen-until-somebody-leaves-it.md) §2's title — *"a court
   that has been a game does not end by its seats"*, kept standing by
-  [ADR-0165](0165-the-exits-a-yes-can-be-taken-back-and-a-court-is-over-when-one-is-left.md) §3
+  ADR-0165 §3
   — to **by its seats alone**: such a court ends **with its game**, by either of the two acts
   that call the game off, and the ending is recorded on the challenge in the transaction that
   tells the game (§1). The fold still reaches no ending for it from the seats, which is the half
@@ -38,7 +38,7 @@
   ADR-0163's Consequence *"who withdrew a court whose game had already ended is not recorded"* —
   it is now (§4).
   [`the-words.md`](../specs/matchmaking/the-words.md) §22.7's and §22.9's *"nobody is named"*
-  and [`the-loop-screens.md`](../specs/the-loop/the-loop-screens.md) §4.3's *"Nobody is named:
+  and `the-loop-screens.md` §4.3's *"Nobody is named:
   the room went with the act"* — the card names nobody and the screen behind it names the person
   (§8). The loop-screens' §5.2 *"an ending's card offers nothing and opens nothing"* — one ending's
   card offers two things (§8).
@@ -65,7 +65,7 @@
   end is settled and in neither tally) and §6's stepping over a ghost; ADR-0162 §3–§8;
   ADR-0142 §1 (the pair rule, which `CALLED_OFF` releases as every ending does) and §3's **test**
   (passed a second time in §1 — what narrows is the count, not the rule);
-  [ADR-0168](0168-a-member-may-leave-the-chat-once-the-game-is-behind-them.md) whole; and
+  ADR-0168 whole; and
   ADR-0153's clocks — the room is destroyed on a call-off exactly as today.
 - **Cites** ADR-0142 §3 for the test the second recorded conclusion passes (§1); ADR-0168 §2 for
   the shape of a per-player fact stored once and read against the record on every read (§5);
@@ -84,6 +84,8 @@
   [Diego Left](https://claude.ai/artifact/N7wHrEwhWmFvuJE8B4kRYn) — row look *A · Tag, red*,
   faces *only who the sentence names*; the other switches were the alternatives and stay for
   comparison.
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges, the Chats list, the Now card and the card's dismissal are gone (`games.dismissed` is still decoded and changes nothing), so §1–§3, §4's `game_id`, §5–§7, §8's card and §9 describe nothing that exists. Two things stand: `called_off_by` on the game read (§4), and the game screen's ending block (§8), whose heading is the shortage's alone since ADR-0175. A booked game is called off only by its cut-off or by its club, so `called_off_by` is always `null` today and the block names nobody.
 
 ## Context
 

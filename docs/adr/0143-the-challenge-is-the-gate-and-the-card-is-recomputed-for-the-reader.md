@@ -18,6 +18,8 @@
 - Settles [#328](https://github.com/Raketa02/Raketa/issues/328) on the map
   [#321](https://github.com/Raketa02/Raketa/issues/321).
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** Challenges are gone, and with them the detail route, its card, its port, its standings and the reverse Fit (§1, §4, §5, §7, §8, §9 and the 2026-09-10 amendment). Three rules outlived the screen they were written for and are read by booked games: §2 — the arrangement is the gate, and nothing is re-gated against the reader — for a game's court and its room; §3's recompute-at-read while the game has not happened, for the game's pairing (ADR-0161); and §6's three answers when a pairing cannot be computed.
+
 ## Context
 
 **`a_challenge_for_you.png` draws a candidate card, and `ChallengeSchema` returns none of

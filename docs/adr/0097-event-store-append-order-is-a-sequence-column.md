@@ -3,6 +3,8 @@
 - **Status:** Accepted
 - **Date:** 2026-08-26
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The candidate index is gone (#580), so the determinism argument this record leaned on hardest — a rebuildable projection replayed from the store — has no consumer, and `ProposalsOptInAnswered` is no longer appended (#581). The decision stands on its other reason: `sequence_no` is still the store's one total order, and `find_aggregate_ids_by_first_event` still orders by it to choose which assessment a player resumes.
+
 ## Context
 
 `event_store` held two orders, and neither of them ordered the store.

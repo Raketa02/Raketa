@@ -9,10 +9,12 @@
 - **Extends [ADR-0098](0098-matcher-demands-as-executable-contracts.md)**: `PlayerScoreQuery`'s
   null object retires and a real provider signs, which makes reliability the last term to stop
   being absent platform-wide.
-- **Applies [ADR-0111](0111-the-index-holds-only-what-a-player-changes-about-themselves.md)**:
+- **Applies ADR-0111**:
   the published number may not go on the candidate index, and reaches a card at assembly time.
 - Settles [#305](https://github.com/Raketa02/Raketa/issues/305) on the spec
   [#302](https://github.com/Raketa02/Raketa/issues/302).
+
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The matcher's half of this record is gone — `PlayerScoreQuery`, the reliability term and its evidence gate, the ruleset's strand weights and `horizon_days`, and the candidate index §6 kept the score off (#579, #580). *Answers challenges* stood down at #544, when *keeps plans* came up on booked games, and has no source now that challenges are gone, so `player_score` folds `games` and `bookings` instead. §1, §2, §4 and §5 stand: no record of its own, a ghost charged to the whole court, no decay beyond the ratio, and the published weights.
 
 ## Context
 
@@ -32,7 +34,7 @@ satisfiable provider that nobody satisfies is a demand quietly rotting in a cont
 **Five names, not six.** ADR-0137 struck *confirms results* rather than deferring it: an
 unconfirmed result is a fact about a **pair**, a strand is a verdict about a **person**, and
 every denominator tried on it docked somebody
-[ADR-0049](0049-an-unscored-match-is-an-evening-not-evidence.md) protects — both sides of an
+ADR-0049 protects — both sides of an
 honest disagreement included. It named this ticket as the one that removes the enum member, its
 two ruleset weights and its member on `openapi.player.json`, *"because that change is a wire
 change and has to ship with its client."*
@@ -177,7 +179,7 @@ figure the player's own profile disagrees with is worse than a card that says no
 
 ### 6. The number may not go on the candidate index
 
-[ADR-0111](0111-the-index-holds-only-what-a-player-changes-about-themselves.md) rules that the
+ADR-0111 rules that the
 index holds only what a player changes about themselves. **A Player Score is the platform's
 observation of them**, so it may not go on the index — not as a column, not as a tailed
 projection, not as a denormalised strand.

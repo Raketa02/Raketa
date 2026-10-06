@@ -3,9 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-09-02
 
+> **Note — the Classic play removal (2026-10-06, [#569](https://github.com/Raketa02/Raketa/issues/569)).** The line-up and forecast routes are gone (#579, #580), and with them `ArrangementSchema`, `is_current`/`is_best`, *Even it out* and the group objective `G` this record kept off the wire. The split survives on one route: `GET /games/{id}/pairing` serves `your_side`, `their_side` and a signed `gap` beside the forecast, in the reader's direction, from the engine's `Split`. The input-versus-second-score boundary and rules 2 and 3 stand as written.
+
 ## Context
 
-[ADR-0117](0117-a-group-term-reads-only-what-fit-did-not.md) settled what a line-up may say
+ADR-0117 settled what a line-up may say
 about itself, and one sentence of it is a refusal: **`G` is recorded and never returned.**
 A second score the player must trust is worse than none — it competes with Fit, and nobody
 can act on it — so the evidence half is paid by one closed reason code naming the term with
@@ -92,7 +94,7 @@ this decision gives it a path onto the wire.
 ## Consequences
 
 **The card can be argued with.** A player sees *what against what*, on the scale they
-already read levels on — [`matchmaking-engine.md`](../specs/matchmaking/matchmaking-engine.md)
+already read levels on — `matchmaking-engine.md`
 §12 rule 1, *name the evidence, not a category*, which is the same rule that put `sigma_group`
 beside `pct`.
 
