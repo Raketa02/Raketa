@@ -16,11 +16,17 @@ notice does not ask about it again.
 **At least once, like every delivery**: a push made and then a commit that
 failed delivers the notice again, and its phone is pushed it twice. Nothing on
 a phone can be taken back, so this is the price, not a bug to close.
+
+**What a notice is pushed as is decided once** (``NoticePushes``): the pusher
+sends it to every phone, and the dev console's *Sent* pane shows it for a
+player with none — every seed account — as what would have been pushed (#594).
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, replace
 from typing import final
 
 from app.application.events import DeliveryContext
@@ -32,10 +38,58 @@ from app.modules.notifications.domain.ports import (
     Push,
     PushNotifications,
     PushUnavailable,
+    RecordedNotice,
 )
 from app.modules.notifications.domain.preferences import device_of
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class PushMessage:
+    """What each of a player's phones is pushed for one notice: what the
+    phone's system shows, and what a tap opens the app with."""
+
+    title: str
+    body: str
+    data: Mapping[str, str]
+
+
+@final
+class NoticePushes:
+    """**What a notice is pushed as** — the one place its push's words and data
+    are decided.
+
+    **As it was given**: a notice is pushed once, the moment it is given, and
+    a notice the day later gathers others into is pushed to nobody again — so
+    its push is drawn as though nothing was gathered, while the list says how
+    many it holds. The words are drawn from the notice's facts each time they
+    are asked for, as the list's are: a name changed since reads as it stands.
+    """
+
+    def __init__(self, *, words: NoticeWords) -> None:
+        self._words = words
+
+    async def of(self, notices: Sequence[RecordedNotice]) -> list[PushMessage]:
+        given = [replace(notice, gathered=0) for notice in notices]
+        return [
+            PushMessage(title=words.title, body=words.body, data=_opening(notice))
+            for notice, words in zip(given, await self._words.of(given), strict=True)
+        ]
+
+
+def _opening(notice: RecordedNotice) -> dict[str, str]:
+    """What a tap hands the app: the notice, and where it opens."""
+
+    return {
+        "notice_id": str(notice.notice_id),
+        "kind": notice.kind,
+        "opens": notice.opens,
+        "game_id": str(notice.game_id),
+        "pool_id": str(notice.pool_id),
+        "sport": notice.sport.value,
+        "game_kind": notice.game_kind,
+    }
 
 
 @final
@@ -44,12 +98,12 @@ class PushTheNotice:
         self,
         *,
         preferences: NotificationPreferencesRepository,
-        words: NoticeWords,
+        pushes: NoticePushes,
         push: PushNotifications,
         clock: Clock,
     ) -> None:
         self._preferences = preferences
-        self._words = words
+        self._pushes = pushes
         self._push = push
         self._clock = clock
 
@@ -57,20 +111,16 @@ class PushTheNotice:
         tokens = await self._preferences.tokens_of(event.player_id)
         if not tokens:
             return
-        [words] = await self._words.of([recorded(event)])
-        data = {
-            "notice_id": str(event.notice_id),
-            "kind": event.kind,
-            "opens": event.opens,
-            "game_id": str(event.game_id),
-            "pool_id": str(event.pool_id),
-            "sport": event.sport,
-            "game_kind": event.game_kind,
-        }
+        [message] = await self._pushes.of([recorded(event)])
         try:
             receipt = await self._push.send(
                 [
-                    Push(token=token, title=words.title, body=words.body, data=data)
+                    Push(
+                        token=token,
+                        title=message.title,
+                        body=message.body,
+                        data=message.data,
+                    )
                     for token in tokens.values()
                 ]
             )

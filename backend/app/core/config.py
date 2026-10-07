@@ -334,6 +334,10 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     #: The whole budget for one send, connection included.
     SMTP_TIMEOUT_SECONDS: float = 10.0
+    #: The mail catcher's web inbox, as the laptop's browser reaches it — where
+    #: the dev console's *Sent* pane links each email (#594). Read by nothing a
+    #: deployed environment serves: the console is `local`'s alone.
+    MAIL_CATCHER_URL: str = "http://localhost:8025"
 
     # --- photo storage (S3-compatible: MinIO locally, S3 deployed — docs/adr/0091)
     #

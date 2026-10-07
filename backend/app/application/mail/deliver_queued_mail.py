@@ -84,7 +84,7 @@ class DeliverQueuedMail:
             if queued is None:
                 break
             try:
-                await self._mailer.send(queued.message)
+                await self._mailer.send(queued.message, mail_id=queued.id)
             except MailerUnavailable as exc:
                 attempts = queued.attempts + 1
                 now = self._clock.now()

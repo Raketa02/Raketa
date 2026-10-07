@@ -9,8 +9,9 @@ tester opens on the laptop while the phone is signed in as the protagonist. It
 its path and runs that person's own use case (``people.py``), or the club's
 (``club.py``) — steers the in-process payment provider (``provider.py``), shows
 a group's people and games (``board.py``), sets the stage for a mechanic in one
-press (``situations.py``) and runs a timed rule's job over what is due
-(``jobs.py``). It is served in ``local`` only (``gate.py``).
+press (``situations.py``), runs a timed rule's job over what is due
+(``jobs.py``) and shows who was told what — each person's notices, pushes and
+emails (``sent.py``). It is served in ``local`` only (``gate.py``).
 
 **The gate is read here, and the refusal is not.** ``app/seeds/`` puts its
 refusal in the package's ``__init__`` — the *smallest surface a guard can have*

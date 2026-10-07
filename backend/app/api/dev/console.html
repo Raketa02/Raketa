@@ -107,6 +107,8 @@
   .moment { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
   .moment .countdown { font-variant-numeric: tabular-nums; color: var(--warn); }
   .moment .countdown.due { color: var(--bad); font-weight: 600; }
+  .sent { grid-column: 1 / -1; display: grid; gap: 6px; border-top: 1px dashed var(--line); padding-top: 8px; }
+  .sent h4 { margin: 0; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
 </style>
 </head>
 <body>
@@ -173,7 +175,7 @@
 <script>
 "use strict";
 
-const state = { groups: null, board: null, protagonist: null, notices: {}, freeCourts: {}, jobs: [] };
+const state = { groups: null, board: null, protagonist: null, notices: {}, freeCourts: {}, jobs: [], sent: {} };
 const $ = (id) => document.getElementById(id);
 
 // --------------------------------------------------------------------------
@@ -300,6 +302,7 @@ async function refresh() {
   await loadGroups();
   await loadJobs();
   await loadBoard();
+  await readOpenSent();
 }
 
 // --------------------------------------------------------------------------
@@ -358,8 +361,10 @@ function drawPeople() {
         <div class="mono">${esc(row.email)}</div>
         <div class="note">Level ${row.level === null ? "—" : row.level.toFixed(2)}</div>
         ${cardOnFile(row)}
+        <div class="row">${sentButtons(row)}</div>
       </div></div>
       <div class="cards">${cards}</div>
+      ${sentOf(row)}
     </div>`;
   }).join("");
 }
@@ -386,6 +391,81 @@ async function act(button) {
     say(done, done.ok ? `${words} → done` : words);
   }
   await loadBoard();
+}
+
+// --------------------------------------------------------------------------
+// Sent — who was told what, per person (#594)
+// --------------------------------------------------------------------------
+
+function sentButtons(row) {
+  const who = esc(row.name ?? row.email);
+  const open = state.sent[row.player_id];
+  return `<button data-sent="read" data-player="${row.player_id}" data-who="${who}">` +
+    `${open ? "Read Sent again" : "Sent"}</button>` +
+    (open ? `<button data-sent="hide" data-player="${row.player_id}">Hide</button>` : "");
+}
+
+function sentOf(row) {
+  const sent = state.sent[row.player_id];
+  if (!sent) return "";
+  const phones = sent.phones
+    ? `${sent.phones} phone(s) registered now — a notice reached each phone ` +
+      "registered when it was given"
+    : "no phone registered — nothing since the last one went was pushed, " +
+      "and “Pushed as” is what would have been";
+  const notices = sent.notices.length ? `<table>
+    <thead><tr><th>Given</th><th>In the list</th><th>Pushed as</th><th>Opens</th></tr></thead>
+    <tbody>${sent.notices.map(({ listed, pushed }) => {
+      const same = pushed.title === listed.title && pushed.body === listed.body;
+      return `<tr>
+        <td>${when(listed.given_at)}</td>
+        <td><strong>${esc(listed.title)}</strong><br>${esc(listed.body)}` +
+          `${listed.gathered ? `<br><span class="note">+${listed.gathered} gathered into it</span>` : ""}</td>
+        <td>${same ? `<span class="note">the same words</span>`
+          : `<strong>${esc(pushed.title)}</strong><br>${esc(pushed.body)}`}</td>
+        <td>${esc(listed.opens)} <span class="mono">${esc(listed.game_id.slice(0, 8))}</span></td>
+      </tr>`;
+    }).join("")}</tbody></table>` : `<div class="note">No notice.</div>`;
+  const emails = sent.emails.length ? `<table>
+    <thead><tr><th>Queued</th><th>Email</th><th>Sent</th><th>Mail catcher</th></tr></thead>
+    <tbody>${sent.emails.map((e) => `<tr>
+      <td>${when(e.queued_at)}</td>
+      <td>${esc(e.subject)}<br><span class="mono">${esc(e.kind)}</span></td>
+      <td>${e.sent_at ? `sent ${when(e.sent_at)}`
+        : e.given_up_at ? `<span class="bad">given up ${when(e.given_up_at)}</span>`
+        : `queued${e.attempts ? ` · ${e.attempts} failed` : ""}`}` +
+        `${e.last_error ? `<br><span class="mono bad">${esc(e.last_error)}</span>` : ""}</td>
+      <td>${e.in_the_mail_catcher
+        ? `<a href="${esc(e.in_the_mail_catcher)}" target="_blank" rel="noopener">Open</a>`
+        : `<span class="note">not there yet</span>`}</td>
+    </tr>`).join("")}</tbody></table>` : `<div class="note">No email to ${esc(sent.email)}.</div>`;
+  return `<div class="sent">
+    <h4>Notices · in the list and pushed <span class="note">· ${phones}</span></h4>${notices}
+    <h4>Emails · to ${esc(sent.email)}</h4>${emails}
+  </div>`;
+}
+
+async function fetchSent(player) {
+  const read = await call("GET", `/dev/as/${player}/sent`);
+  if (read.ok) state.sent[player] = read.json;
+  return read;
+}
+
+async function readSent(player, who) {
+  const words = `${esc(who)} · Sent`;
+  const read = await fetchSent(player);
+  if (!read.ok) { say(read, words); return; }
+  say(null, `${words} → ${read.json.notices.length} notice(s), ${read.json.emails.length} email(s)`);
+  drawPeople();
+}
+
+// Refresh reads every open pane of the group's rows again; a press does not,
+// since what it tells arrives from the outbox a moment after it answers.
+async function readOpenSent() {
+  for (const row of state.board?.people ?? []) {
+    if (state.sent[row.player_id]) await fetchSent(row.player_id);
+  }
+  if (state.board) drawPeople();
 }
 
 // --------------------------------------------------------------------------
@@ -726,7 +806,10 @@ $("jobs").addEventListener("click", (event) => {
 $("refunds-wait").addEventListener("change", refundsWait);
 $("people").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-act]");
-  if (button) act(button);
+  if (button) return act(button);
+  const sent = event.target.closest("button[data-sent]");
+  if (sent?.dataset.sent === "read") return readSent(sent.dataset.player, sent.dataset.who);
+  if (sent) { delete state.sent[sent.dataset.player]; drawPeople(); }
 });
 $("people").addEventListener("change", (event) => {
   const select = event.target.closest("select[data-card-for]");

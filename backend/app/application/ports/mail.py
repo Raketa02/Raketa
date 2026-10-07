@@ -101,6 +101,11 @@ class MailerUnavailable(Exception):
 @runtime_checkable
 class Mailer(Protocol):
     """Sends one rendered message. Raises :class:`MailerUnavailable` when it
-    cannot, and never decides whether to retry."""
+    cannot, and never decides whether to retry.
 
-    async def send(self, message: OutgoingMessage) -> None: ...
+    ``mail_id`` is the queue row's, and the email's **Message-ID** is made of
+    it: every attempt at one email is the same message, so a mailbox shows a
+    copy sent twice once — and the dev console finds it in the mail catcher by
+    it (#594)."""
+
+    async def send(self, message: OutgoingMessage, *, mail_id: UUID) -> None: ...

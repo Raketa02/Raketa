@@ -14,8 +14,8 @@ and runs the use case their own button runs (``people.py``) — a club's,
 ``/dev/clubs/{club_id}/…``, the desk's (``club.py``); there is no token, no
 session and no header a player route would honour, so the page holds and stores
 nothing. The payment provider's controls are ``provider.py``'s, a group's board
-``board.py``'s, the situations ``situations.py``'s and *Run it now*
-``jobs.py``'s.
+``board.py``'s, the situations ``situations.py``'s, *Run it now*
+``jobs.py``'s and a person's *Sent* pane ``sent.py``'s.
 
 **The roster carries the password once, at the top level.** The console no
 longer signs in with it; the **phone** does — the tester signs the protagonist in
@@ -62,6 +62,7 @@ from app.api.dev.club import router as club_router
 from app.api.dev.jobs import router as jobs_router
 from app.api.dev.people import router as people_router
 from app.api.dev.provider import router as provider_router
+from app.api.dev.sent import router as sent_router
 from app.api.dev.situations import router as situations_router
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 from app.seeds.catalog import SEED_PASSWORD
@@ -163,6 +164,7 @@ async def read_roster(db: DbSession) -> RosterResponse:
 
 
 dev_api_router.include_router(people_router)
+dev_api_router.include_router(sent_router)
 dev_api_router.include_router(club_router)
 dev_api_router.include_router(provider_router)
 dev_api_router.include_router(board_router)

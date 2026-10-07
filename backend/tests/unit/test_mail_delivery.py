@@ -125,6 +125,24 @@ async def test_a_refused_message_waits_and_is_tried_again(
     assert row.text_body is None
 
 
+async def test_every_attempt_at_one_email_is_sent_under_its_queue_id(
+    session_factory, mailer, clock
+):
+    """The id is the email's Message-ID, so a retried copy is the same message
+    to a mailbox — and the dev console finds it in the mail catcher by it."""
+
+    await queue(session_factory, clock, a_message())
+    mailer.refuse_next()
+
+    await run(session_factory, mailer, clock)
+    clock.move(RETRY_AFTER[0])
+    await run(session_factory, mailer, clock)
+
+    row = await the_row(session_factory)
+    assert mailer.tried == [row.id, row.id]
+    assert list(mailer.sent_under) == [row.id]
+
+
 async def test_the_worker_gives_up_and_forgets_the_body_all_the_same(
     session_factory, mailer, clock
 ):

@@ -26,8 +26,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   in from; and a route per thing the page presses — a person's buttons under
   `/dev/as/{player_id}/…`, the club's under `/dev/clubs/{club_id}/…` (#591), the payment
   provider's controls under `/dev/payments/…` (#591), a group's board under `/dev/groups`,
-  the situations under `/dev/situations/…`, and *Run it now* under `/dev/jobs/{job}` — the
-  scheduler's own job name (#591 the club's answer window, #592 the rest). `GET /dev/jobs`
+  the situations under `/dev/situations/…`, *Run it now* under `/dev/jobs/{job}` — the
+  scheduler's own job name (#591 the club's answer window, #592 the rest) — and each
+  person's **Sent** pane, `GET /dev/as/{player_id}/sent` (#594): their notices as the bell
+  lists them (the player route's own `ReadRecentNotices`), the push each was given as
+  (`NoticePushes`, the pusher's own — what would have been pushed, since no seed account
+  has a phone), and their emails from the mail queue, each linked to the mail catcher's
+  search (`MAIL_CATCHER_URL`) for its Message-ID, which is the queue row's id. `GET /dev/jobs`
   lists every job with a press (`RUN_IT_NOW`) and every other job the scheduler registers
   with why it has none (`NOT_RUN_HERE`); `test_games_test_console_time.py` builds the
   register and fails a job that is neither. Each game's pane carries its **pending
@@ -58,9 +63,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
     `tests/unit/test_dev_console_gate.py` imports every module under each refused
     environment to prove it.
   - **Its reads are its own queries** over the contexts' projections (two in `board.py`,
-    the notice inbox's in `provider.py`), and every port it takes is declared as a request
-    dependency — the context's own where one exists, `app/api/dev/dependencies.py` where
-    none does — so a test that replaces a port replaces it for the console too. The
+    the notice inbox's in `provider.py`, the mail queue's in `sent.py`), and every port it
+    takes is declared as a request dependency — the context's own where one exists,
+    `app/api/dev/dependencies.py` where none does — so a test that replaces a port replaces
+    it for the console too. The
     placement ADR-0194 re-argued: nothing shipped imports it, so deleting it changes
     nothing that ships, and every *write* it causes is a context's own use case.
 

@@ -17,26 +17,33 @@ from __future__ import annotations
 
 import asyncio
 import smtplib
+import socket
 import ssl
 from collections.abc import Callable
 from email.message import EmailMessage
-from email.utils import formatdate, make_msgid
+from email.utils import formatdate
 from typing import Optional
+from uuid import UUID
 
 from app.application.ports.mail import MailerUnavailable, OutgoingMessage
 from app.core.config import SmtpSecurity
 
 
-def compose(message: OutgoingMessage, *, sender: str) -> EmailMessage:
+def compose(message: OutgoingMessage, *, sender: str, mail_id: UUID) -> EmailMessage:
     """The message as a mailbox receives it: plain text, with the HTML as its
-    alternative, so a mail program that shows no HTML still shows every word."""
+    alternative, so a mail program that shows no HTML still shows every word.
+
+    **Its Message-ID is its queue row's id** at the sender's domain — unique,
+    since no two rows share one, and the same on every attempt, so a copy the
+    worker sent twice (it sends at least once) is one message to a mailbox.
+    The dev console searches the mail catcher for it (#594)."""
 
     email = EmailMessage()
     email["From"] = sender
     email["To"] = message.to
     email["Subject"] = message.subject
     email["Date"] = formatdate(localtime=False)
-    email["Message-ID"] = make_msgid(domain=_domain_of(sender))
+    email["Message-ID"] = f"<{mail_id}@{_domain_of(sender) or socket.getfqdn()}>"
     email.set_content(message.text)
     email.add_alternative(message.html, subtype="html")
     return email
@@ -82,8 +89,8 @@ class SmtpMailer:
             _connect_over_tls if security is SmtpSecurity.TLS else smtplib.SMTP
         )
 
-    async def send(self, message: OutgoingMessage) -> None:
-        email = compose(message, sender=self._sender)
+    async def send(self, message: OutgoingMessage, *, mail_id: UUID) -> None:
+        email = compose(message, sender=self._sender, mail_id=mail_id)
         try:
             await asyncio.to_thread(self._send, email)
         except (smtplib.SMTPException, OSError) as exc:

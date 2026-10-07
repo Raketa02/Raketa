@@ -17,13 +17,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`app/application/mail/layout.py`, and each flow's own words beside its use case), since an
   email has no client to choose a sentence from a code — and written through `MailQueue` in
   the act's own transaction; the mail worker sends it through the `Mailer` port and purges
-  the body. `.importlinter` keeps `smtplib` out of every domain and application layer. **A
-  secret never enters the event store or the outbox** (ADR-0184 §4): a one-time credential is
-  a row in `one_time_credentials`, hashed, and `OneTimeCredentials` is the one mechanism every
-  flow that issues one goes through — *Forgot password?* on both surfaces and the
-  administrators' invitations. `tests/api/test_forgot_password.py` and
-  `tests/api/test_invitations.py` assert that no link, code or ticket ever reaches an event,
-  at every step.
+  the body. **An email's Message-ID is its queue row's id** (`<mail_id@sender domain>`,
+  #594): every attempt at one email is one message to a mailbox, and the dev console's
+  *Sent* pane links to it in the mail catcher by it. `.importlinter` keeps `smtplib` out of
+  every domain and application layer. **A secret never enters the event store or the
+  outbox** (ADR-0184 §4): a one-time credential is a row in `one_time_credentials`, hashed,
+  and `OneTimeCredentials` is the one mechanism every flow that issues one goes through —
+  *Forgot password?* on both surfaces and the administrators' invitations.
+  `tests/api/test_forgot_password.py` and `tests/api/test_invitations.py` assert that no
+  link, code or ticket ever reaches an event, at every step.
 - **An Administrator is a club naming a person, and every administrator request asks
   again** ([ADR-0184](../../../docs/adr/0184-an-administrator-is-invited-by-a-club-and-a-one-time-credential-never-enters-the-event-store.md),
   [ADR-0185](../../../docs/adr/0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md),

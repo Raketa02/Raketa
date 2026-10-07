@@ -84,7 +84,10 @@ mechanics §17.2; the screens A7.2, A9).
   whatever happens, and money is emailed. A phone Expo answers `DeviceNotRegistered` for is
   removed in the delivery's own transaction. Expo's *receipts* (the second read) are not
   asked. **A push is at least once**, like every delivery: a commit that fails after the
-  push delivers the notice again, and the phone shows it twice.
+  push delivers the notice again, and the phone shows it twice. **What a notice is pushed
+  as is decided once** (`NoticePushes`: its words as given, before anything was gathered
+  into it, and the data a tap opens): the pusher sends it, and the dev console's *Sent*
+  pane shows it for a player with no phone (#594).
 - **A notice records facts, never words** (`NoticeGiven`: the game, pool, club, hour,
   amount, the people it names by id, a reason code, and where a tap opens it —
   `BOOKING`, `PROPOSAL` or `DECK`). The words are `application/words.py`'s, drawn at push

@@ -14,7 +14,9 @@ calls — and one is the step the outbox runs for a seat's money. Each is over
 this request's session and its clock, which is the real *now*.
 
 **And the dealer's first act** (#592): ``MakeProposal``, which no route takes
-— the proposer's, a seed's and *About to expire*'s.
+— the proposer's, a seed's and *About to expire*'s. **And what a notice is
+pushed as** (#594): ``NoticePushes``, the pusher's own, which the *Sent* pane
+shows.
 """
 
 from __future__ import annotations
@@ -45,6 +47,7 @@ from app.bootstrap.composition import (
     build_expire_proposals,
     build_expire_unanswered_requests,
     build_make_proposal,
+    build_notice_pushes,
     build_pools,
     build_proposal_player_names,
     build_propose_games,
@@ -64,6 +67,7 @@ from app.modules.bookings.domain.ports import (
 from app.modules.conversations.application.destroy_ended_conversations import (
     DestroyEndedConversations,
 )
+from app.modules.notifications.application.pushing import NoticePushes
 from app.modules.payments.application.handlers.settle_seat_charges import (
     SettleSeatCharges,
 )
@@ -289,3 +293,12 @@ def get_summary_repository(
 
 
 SummaryRepositoryDep = Annotated[SummaryRepository, Depends(get_summary_repository)]
+
+
+def get_notice_pushes(db: DbSession) -> NoticePushes:
+    """What each notice is pushed as — the pusher's own, which a seed account,
+    with no phone, is never pushed."""
+    return build_notice_pushes(db)
+
+
+NoticePushesDep = Annotated[NoticePushes, Depends(get_notice_pushes)]

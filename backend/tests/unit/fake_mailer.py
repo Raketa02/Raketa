@@ -8,12 +8,18 @@ paths are driven without a relay to take down.
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from app.application.ports.mail import MailerUnavailable, OutgoingMessage
 
 
 class RecordingMailer:
     def __init__(self) -> None:
         self.sent: list[OutgoingMessage] = []
+        #: Each message sent, by the queue id it was sent under.
+        self.sent_under: dict[UUID, OutgoingMessage] = {}
+        #: The queue id of every attempt, a refused one included.
+        self.tried: list[UUID] = []
         self._refusals = 0
 
     def refuse_next(self, times: int = 1) -> None:
@@ -21,11 +27,13 @@ class RecordingMailer:
 
         self._refusals += times
 
-    async def send(self, message: OutgoingMessage) -> None:
+    async def send(self, message: OutgoingMessage, *, mail_id: UUID) -> None:
+        self.tried.append(mail_id)
         if self._refusals:
             self._refusals -= 1
             raise MailerUnavailable("the relay is down (test)")
         self.sent.append(message)
+        self.sent_under[mail_id] = message
 
     def to(self, address: str) -> list[OutgoingMessage]:
         return [message for message in self.sent if message.to == address]

@@ -11,6 +11,10 @@ a filter, because its only door was the ordinary login, which takes any
 credential anyway. Now the console's route is the door, so the check has to be
 a refusal.
 
+**A read about somebody** — their *Sent* pane — refuses the same ids but
+presses nothing, so it takes the account (``SeedAccountDep``) without the
+player route's own step.
+
 **One rule for the roster and the refusal**: ``is_seed_account`` is what the
 console asks of the account it is about to act as, and ``seed_accounts_only`` is
 the same rule in SQL, which the roster and the board run. The TLD is the seed
@@ -30,6 +34,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.api.dependencies import UserRepositoryDep
 from app.modules.users.domain.ports import UserRepository
+from app.modules.users.domain.user import User
 from app.modules.users.presentation.dependencies import GetCurrentUserUseCaseDep
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 from app.seeds.catalog import RESERVED_TLD
@@ -79,17 +84,29 @@ def seed_accounts_only() -> ColumnElement[bool]:
     return UserORM.email.ilike(f"_%@%{RESERVED_TLD}")
 
 
+async def _seed_user(users: UserRepository, player_id: UUID) -> User | None:
+    user = await users.get_by_id(player_id)
+    return user if user is not None and is_seed_account(user.email.value) else None
+
+
 async def holds_a_seed_account(users: UserRepository, player_id: UUID) -> bool:
     """Whether this id is an account the seed created — ``False`` for an id that
     is nobody's, which is not one either."""
 
-    user = await users.get_by_id(player_id)
-    return user is not None and is_seed_account(user.email.value)
+    return await _seed_user(users, player_id) is not None
+
+
+async def the_seed_account(users: UserRepository, player_id: UUID) -> User:
+    """The account itself, once it is one the seed created — refused otherwise."""
+
+    user = await _seed_user(users, player_id)
+    if user is None:
+        raise NotASeedAccount()
+    return user
 
 
 async def refuse_unless_a_seed_account(users: UserRepository, player_id: UUID) -> None:
-    if not await holds_a_seed_account(users, player_id):
-        raise NotASeedAccount()
+    await the_seed_account(users, player_id)
 
 
 async def acting_account(
@@ -116,3 +133,25 @@ async def acting_account(
 
 
 ActingDep = Annotated[UUID, Depends(acting_account)]
+
+
+async def seed_account_in_path(
+    player_id: Annotated[
+        UUID,
+        Path(
+            description=(
+                "The seed account this read is about. Any other id is refused "
+                "`not_a_seed_account`."
+            )
+        ),
+    ],
+    users: UserRepositoryDep,
+) -> User:
+    """The account a read is about (#594). **Not the acting account**: a read
+    presses nothing, so there is no player route whose refusals it must share —
+    what was sent to an account since disabled is still worth reading."""
+
+    return await the_seed_account(users, player_id)
+
+
+SeedAccountDep = Annotated[User, Depends(seed_account_in_path)]

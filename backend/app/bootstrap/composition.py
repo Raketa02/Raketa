@@ -342,7 +342,7 @@ from app.modules.payments.infrastructure.sqlalchemy_notice_inbox import (
 )
 from app.modules.payments.infrastructure.stripe_notices import StripeNotices
 from app.modules.payments.infrastructure.stripe_payments import StripePayments
-from app.modules.notifications.application.pushing import PushTheNotice
+from app.modules.notifications.application.pushing import NoticePushes, PushTheNotice
 from app.modules.notifications.application.reading import NoticeWords
 from app.modules.notifications.application.telling import GiveNotice, TellThePlayers
 from app.modules.notifications.domain.ports import (
@@ -4004,6 +4004,12 @@ def build_notice_words(session: AsyncSession) -> NoticeWords:
     return NoticeWords(names=build_notice_names(session))
 
 
+def build_notice_pushes(session: AsyncSession) -> NoticePushes:
+    """What a notice is pushed as — to every phone, and in the dev console's
+    *Sent* pane."""
+    return NoticePushes(words=build_notice_words(session))
+
+
 def build_tell_the_players(
     session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
 ) -> TellThePlayers:
@@ -4034,7 +4040,7 @@ def build_push_the_notice(
     service."""
     return PushTheNotice(
         preferences=build_notification_preferences_repository(session, runtime=runtime),
-        words=build_notice_words(session),
+        pushes=build_notice_pushes(session),
         push=push,
         clock=clock,
     )

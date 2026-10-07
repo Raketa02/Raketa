@@ -281,6 +281,63 @@
         }
       }
     },
+    "/dev/as/{player_id}/sent": {
+      "get": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Who this person was told what",
+        "description": "Their in-app notices as the bell lists them, the push each was given as, and their emails from the outgoing mail queue, each linked to the local mail catcher once sent.",
+        "operationId": "read_sent_dev_as__player_id__sent_get",
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The seed account this read is about. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The seed account this read is about. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/clubs/{club_id}/bookings/{booking_id}/acceptance": {
       "post": {
         "tags": [
@@ -3657,6 +3714,24 @@
         ],
         "title": "NotRunHereJob"
       },
+      "NoticeKind": {
+        "type": "string",
+        "enum": [
+          "GAME_BOOKED",
+          "CONFIRM_PAYMENT",
+          "GAME_CALLED_OFF",
+          "SOMEONE_LEFT",
+          "REFUNDED",
+          "CLUB_CONFIRMED",
+          "CLUB_COULD_NOT_TAKE_IT",
+          "POST_DID_NOT_FILL",
+          "YOU_COMPLETE_IT",
+          "CHALLENGE",
+          "FILL_IN_ALERT"
+        ],
+        "title": "NoticeKind",
+        "description": "Every notice a player can be told (the mechanics \u00a717.2)."
+      },
       "NoticeRow": {
         "properties": {
           "notice_id": {
@@ -3701,6 +3776,74 @@
           "read"
         ],
         "title": "NoticeRow"
+      },
+      "NoticeSchema": {
+        "properties": {
+          "notice_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Notice Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NoticeKind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "given_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Given At",
+            "description": "When it was given \u2014 or when the day last bundled a notice into it, which is what moves it up the list."
+          },
+          "opens": {
+            "$ref": "#/components/schemas/Opens",
+            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top."
+          },
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The game it is about: its proposal's id, which its booking takes."
+          },
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "game_kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "gathered": {
+            "type": "integer",
+            "title": "Gathered",
+            "description": "How many more notices of its kind the day bundled into this one \u2014 told in its words, and pushed to nobody."
+          }
+        },
+        "type": "object",
+        "required": [
+          "notice_id",
+          "kind",
+          "title",
+          "body",
+          "given_at",
+          "opens",
+          "game_id",
+          "pool_id",
+          "sport",
+          "game_kind",
+          "gathered"
+        ],
+        "title": "NoticeSchema",
+        "description": "One notice, in the words the phone was pushed \u2014 and where a tap opens."
       },
       "NoticesResponse": {
         "properties": {
@@ -3824,6 +3967,16 @@
           "says"
         ],
         "title": "OnRequestResponse"
+      },
+      "Opens": {
+        "type": "string",
+        "enum": [
+          "BOOKING",
+          "PROPOSAL",
+          "DECK"
+        ],
+        "title": "Opens",
+        "description": "The screen a notice opens on when tapped (the screens A9)."
       },
       "Origin": {
         "type": "string",
@@ -4410,6 +4563,182 @@
           "short_code"
         ],
         "title": "SeatCodePane"
+      },
+      "SentEmail": {
+        "properties": {
+          "mail_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Mail Id",
+            "description": "The queue row's id \u2014 the email's Message-ID is made of it."
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "Which email: `payments.game_booked.player`."
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "queued_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Queued At"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At",
+            "description": "When the mail worker handed it to the relay. `null` until."
+          },
+          "given_up_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Given Up At",
+            "description": "When the worker stopped retrying it. It was never sent."
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts",
+            "description": "Failed sends so far."
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error",
+            "description": "The relay's account of the last failure."
+          },
+          "in_the_mail_catcher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "In The Mail Catcher",
+            "description": "The mail catcher's page for it, once it was sent; `null` before \u2014 the catcher has nothing yet \u2014 and for one given up on."
+          }
+        },
+        "type": "object",
+        "required": [
+          "mail_id",
+          "kind",
+          "subject",
+          "queued_at",
+          "sent_at",
+          "given_up_at",
+          "attempts",
+          "last_error",
+          "in_the_mail_catcher"
+        ],
+        "title": "SentEmail"
+      },
+      "SentNotice": {
+        "properties": {
+          "listed": {
+            "$ref": "#/components/schemas/NoticeSchema",
+            "description": "As the bell lists it now \u2014 `GET /api/v1/players/me/notices`'s own row, `gathered` included."
+          },
+          "pushed": {
+            "$ref": "#/components/schemas/SentPush",
+            "description": "What it is pushed as \u2014 to each phone registered when it was given, and with none, what would have been: its words as given, before the day gathered anything into it, which pushes nobody. Drawn from its facts again now, as `listed` is, so a name changed since reads as it stands."
+          }
+        },
+        "type": "object",
+        "required": [
+          "listed",
+          "pushed"
+        ],
+        "title": "SentNotice"
+      },
+      "SentPush": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "What the phone's system shows first."
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "data": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Data",
+            "description": "What a tap hands the app: the notice, and where it opens."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "body",
+          "data"
+        ],
+        "title": "SentPush"
+      },
+      "SentResponse": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email",
+            "description": "The address their emails are queued for."
+          },
+          "phones": {
+            "type": "integer",
+            "title": "Phones",
+            "description": "How many phones are registered to be pushed to now \u2014 not when each notice was given. 0 \u2014 every seed account \u2014 means no notice since the last phone went was pushed: each `pushed` is what would have been."
+          },
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/SentNotice"
+            },
+            "type": "array",
+            "title": "Notices",
+            "description": "The newest first, at most 100."
+          },
+          "emails": {
+            "items": {
+              "$ref": "#/components/schemas/SentEmail"
+            },
+            "type": "array",
+            "title": "Emails",
+            "description": "The newest first, at most 100."
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "phones",
+          "notices",
+          "emails"
+        ],
+        "title": "SentResponse"
       },
       "SidesPane": {
         "properties": {
