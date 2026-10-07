@@ -53,7 +53,9 @@ class LogUserNamed:
             "user.named",
             extra={
                 "user_id": str(event.user_id),
-                "name": event.name,
+                # Not ``name``: a LogRecord has one, and logging refuses the
+                # overwrite (tests/unit/test_logging_extras.py).
+                "user_name": event.name,
                 "nickname": event.nickname,
                 "occurred_at": event.occurred_at.isoformat(),
                 "event_id": str(context.event_id),
