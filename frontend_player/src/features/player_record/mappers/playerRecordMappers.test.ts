@@ -81,6 +81,31 @@ describe('the record, off the wire', () => {
 });
 
 /**
+ * **The reader's own block, and only where there is somebody to block** (#587, ADR-0193 §3).
+ *
+ * `blocked_by_you` answers one direction — the reader's block of the subject, never theirs of the
+ * reader. The sheet draws *Unblock* for `true`, *Block* for `false`, and neither where it is absent
+ * — so the two cases that draw no row are folded to an absence here: your own record, whatever the
+ * wire says, and a record whose blocks the server could not read.
+ */
+describe('your own block', () => {
+  it('carries whether the reader blocked the subject, both ways', () => {
+    expect(toPlayerRecord(response({ blocked_by_you: true })).blockedByYou).toBe(true);
+    expect(toPlayerRecord(response({ blocked_by_you: false })).blockedByYou).toBe(false);
+  });
+
+  it('is absent on your own record, so no row can be drawn there', () => {
+    const own = toPlayerRecord(response({ is_self: true, blocked_by_you: false }));
+
+    expect('blockedByYou' in own).toBe(false);
+  });
+
+  it('is absent where the server could not read the blocks, rather than guessed', () => {
+    expect('blockedByYou' in toPlayerRecord(response())).toBe(false);
+  });
+});
+
+/**
  * **The mark is folded here and nowhere else.**
  *
  * Three answers reach this route — checked and passed, checked and flagged, and nobody

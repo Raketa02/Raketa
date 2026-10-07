@@ -81,7 +81,7 @@ export interface OfficialGroup {
   readonly link: string;
   readonly joinPolicy: JoinPolicy;
   readonly whatsAppSize: number;
-  /** Every player, **newest joined first**; a blocked pair is left out, and the count is not. */
+  /** Every player, **newest joined first**; a block hides nobody here (ADR-0193 §2). */
   readonly players: readonly GroupPlayer[];
   /** *Want to join · N*, in the order they asked — the request card everywhere (club 20). */
   readonly requests: readonly JoinRequest[];

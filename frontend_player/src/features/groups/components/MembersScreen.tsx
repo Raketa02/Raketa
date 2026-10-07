@@ -16,7 +16,7 @@
  * Administrator who joined as a player (#519) — then newest joined first. Each row is the name,
  * the **score tag** (`PlayerScoreTag`: a spark and the Player Score on its band's tint) and the
  * admin tag, over the sport's dot and *Padel 2,71*; no tag for somebody the platform has watched
- * nothing of. A blocked pair is left out either way round and nothing says so. **No friend tag**:
+ * nothing of. A block hides nobody here, either way round (ADR-0193 §2). **No friend tag**:
  * there is no friends feature (PRD #500 overrides play 61 by name).
  *
  * ## Who runs it is always here

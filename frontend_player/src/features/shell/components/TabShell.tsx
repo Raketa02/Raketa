@@ -102,6 +102,7 @@ const YOU_SCREENS = [
   'you/games-and-money',
   'you/payments',
   'you/notifications',
+  'you/blocked-players',
 ] as const;
 
 export function TabShell() {

@@ -697,11 +697,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Blocked players — the players you blocked
+         * @description **Your own blocks, and nobody else's**: each person you blocked and have not unblocked, with their name, photograph and when you blocked them, newest first. Unblock one with `DELETE /blocks/{player_id}`.
+         *
+         *     **Nothing here, or anywhere, lists who blocked you.** If somebody you blocked also blocked you, you see only your own block.
+         */
+        get: operations["read_blocked_players_api_v1_blocks_get"];
         put?: never;
         /**
          * Block a player
-         * @description The two of you disappear from each other's view everywhere, immediately, silently, in **both** directions.
+         * @description **Keeps the two of you off one court**, immediately and silently, whichever of you made the block: you are never dealt a game together, never both In on one, never offered each other's seat and never joined onto each other's post. A yes that would put you together is refused without saying why.
+         *
+         *     **It reaches nothing else.** You both stay in your groups and see each other in their Members lists, either of you can open the other's record, and a chat you already share keeps working.
+         *
+         *     **Your yeses where they are In are taken back** — on a game still filling, as an ordinary withdrawal, and on a game waiting for its club as if you left it, so the others In are told you left. Theirs stand. A game the club confirmed is never touched: leaving it is the ordinary rule. Unblocking brings none of them back.
          *
          *     **Idempotent.** Blocking somebody already blocked records nothing and answers 204.
          *
@@ -709,11 +719,9 @@ export interface paths {
          *
          *     **There is no reason field.** A reason belongs to a report, and this is not one.
          *
-         *     **Neither side is notified**, in either direction, and no response in this API reveals a block to the blocked party.
+         *     **Neither side is notified.** You can read your own blocks — `GET /blocks`, and `blocked_by_you` on a record — and nothing in this API tells anybody they were blocked.
          *
-         *     **The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs, and neither of you can discover which way one went.
-         *
-         *     **It is forward-looking.** It removes each of you from the other's future listings; it does not reach into anything already agreed.
+         *     **The record is directed and the effect is symmetric.** Your block of them and their block of you are independent: lifting yours never lifts theirs.
          */
         post: operations["block_player_api_v1_blocks_post"];
         delete?: never;
@@ -734,9 +742,9 @@ export interface paths {
         post?: never;
         /**
          * Unblock a player
-         * @description Lifts **your** block of this player, immediately.
+         * @description Lifts **your** block of this player, immediately: the two of you may be proposed together again. **It brings back no yes** the block took back.
          *
-         *     **It lifts one direction.** If they have also blocked you, that block stands and the two of you stay invisible to each other — and nothing here tells you so.
+         *     **It lifts one direction.** If they have also blocked you, that block stands and the two of you are still kept off one court — and nothing here tells you so.
          *
          *     **Idempotent, and it never 404s.** Unblocking somebody you never blocked answers 204 and records nothing, because a different answer would be this API reporting on somebody else's state.
          */
@@ -1131,9 +1139,9 @@ export interface paths {
          * Your own record — how others see you
          * @description **The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.
          *
-         *     **Nothing gates it.** A block is between two people and the gender preference is mutual; neither has anything to say about somebody reading their own record, and a hold does not reach it either — this is the one screen a held player has for finding out how they appear.
+         *     **Nothing gates it.** The gender preference is mutual and has nothing to say about somebody reading their own record, and a hold does not reach it either — this is the one screen a held player has for finding out how they appear.
          *
-         *     `is_self` is `true`. Read it rather than comparing ids.
+         *     `is_self` is `true`, and `blocked_by_you` is `false`: nobody can block themselves. Read `is_self` rather than comparing ids.
          *
          *     **What other players said comes back as the figure and its count** — `sportsmanship.average` and `sportsmanship.raters`, exactly what a stranger is served about you. The coarse band that used to stand in for it here is retired by ADR-0179 §5, which names what that costs. It changes nothing about how you are matched: the reliability pill is what the platform acts on.
          *
@@ -1163,7 +1171,9 @@ export interface paths {
          *
          *     **Nothing expires but a group.** A game you were both on discloses for as long as you are both on it, so a sheet you could open this morning opens next year. A group opens it while you are both in it, because its Members lists who is in it now — and while you run a group they are in.
          *
-         *     **The gates are live.** A block placed since, a hold and an account that may not be shown are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.
+         *     **The gates are live.** A hold and an account that may not be shown are re-evaluated on every open, so a disclosure entitles you to *ask* and never to be answered.
+         *
+         *     **A block is not a gate**, either way round. If you blocked this person, the record opens and says so — `blocked_by_you` — and offers the place to unblock. If they blocked you, nothing here differs by a byte.
          *
          *     **Asking about yourself is allowed** and answers `is_self: true` — the client is told rather than left to compare identifiers. It draws the same sheet `/players/me/record` does, figure for figure: `is_self` retitles it and moves nothing on it.
          *
@@ -1208,7 +1218,7 @@ export interface paths {
         };
         /**
          * A group, for its members
-         * @description Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; for every sport, how many members are rated in it and the first of them to join — the Games tab's *N of M*; and the faces on the Info tab's members row, which **leaves out a blocked pair, either way round**, as the Members list does. No count moves.
+         * @description Its name, monogram, dots, member count and home club; its link and join policy; whether the caller owns it; for every sport, how many members are rated in it and the first of them to join — the Games tab's *N of M*; and the faces on the Info tab's members row, in the Members list's order. **A block hides nobody here**, either way round.
          */
         get: operations["read_group_api_v1_groups__group_id__get"];
         put?: never;
@@ -1276,7 +1286,7 @@ export interface paths {
         };
         /**
          * Members of a group, for one sport
-         * @description **Only the members rated in `sport`** — who in the group the caller could play it with: the caller first, then the Owner, then everybody else newest joined first. Each with their face, their Level in the sport, their Player Score where they have one, whether they own the group and when they joined. **A blocked pair, either way round, is left out of each other's list**, and the group's member count does not change.
+         * @description **Only the members rated in `sport`** — who in the group the caller could play it with: the caller first, then the Owner, then everybody else newest joined first. Each with their face, their Level in the sport, their Player Score where they have one, whether they own the group and when they joined. **A block hides nobody here**, either way round: both stay in the group and see each other in its list.
          *
          *     **Read by the group's members, and by whoever runs an official group now** — running one is not membership. That caller reads the same rows in the same order, and is a row only once they have joined as a player. A removed Administrator, and one the group was handed away from, are answered as anyone else who is not in it is.
          */
@@ -2324,7 +2334,7 @@ export interface components {
             whatsapp_size: number;
             /**
              * Players
-             * @description Every player, **newest joined first** — the Administrator too, if they joined as a player. A blocked pair, either way round, is left out, as every Members list leaves them out; `member_count` is the group's.
+             * @description Every player, **newest joined first** — the Administrator too, if they joined as a player. A block hides nobody here, as it hides nobody in a Members list; `member_count` is the group's.
              */
             players: components["schemas"]["GroupPlayerSchema"][];
             /**
@@ -2431,15 +2441,11 @@ export interface components {
         };
         /**
          * BlockPlayerRequest
-         * @description *Do not show me this person again.*
+         * @description *Keep this person off my court.*
          *
-         *     ``surface`` is a closed set the client already holds — the four screens that
-         *     show one player to another — and it is validated here rather than by the
-         *     domain because there is no served vocabulary for a client to hold a stale
-         *     version of. Nothing branches on it.
-         *
-         *     **There is no reason field and there never will be.** A reason for a block
-         *     belongs to a Report, and a request shape is where one would be added first.
+         *     **The other player and nothing else.** There is no reason field and there
+         *     never will be — a reason for a block belongs to a Report, and a request shape
+         *     is where one would be added first — and no screen it was made from.
          */
         BlockPlayerRequest: {
             /**
@@ -2448,15 +2454,52 @@ export interface components {
              * @description The player to block. The blocker is the authenticated caller and is never sent.
              */
             player_id: string;
-            /** @description Which screen the block was made from. Recorded as context; no rule reads it. */
-            surface: components["schemas"]["BlockSurface"];
         };
         /**
-         * BlockSurface
-         * @description The four surfaces of `search-telemetry.md` §2, as a block records them.
-         * @enum {string}
+         * BlockedPlayerSchema
+         * @description One person you blocked — a name, a photograph, and when.
          */
-        BlockSurface: "SHORTLIST" | "LINEUP" | "FILL_SEATS" | "DECK";
+        BlockedPlayerSchema: {
+            /**
+             * Player Id
+             * Format: uuid
+             * @description Who you blocked. `DELETE /blocks/{player_id}` unblocks them.
+             */
+            player_id: string;
+            /**
+             * Name
+             * @description The whole Name, never the nickname.
+             */
+            name: string;
+            /**
+             * Photo Id
+             * Format: uuid
+             * @description Their current photograph. Omitted when they have none, and omitted together with `photo_url` — draw their initials.
+             */
+            photo_id?: string;
+            /**
+             * Photo Url
+             * @description A short-lived signed link to that photograph, minted for **this response**.
+             */
+            photo_url?: string;
+            /**
+             * Blocked At
+             * Format: date-time
+             * @description When you blocked them. Blocking somebody already blocked does not move it; unblocking and blocking again does.
+             */
+            blocked_at: string;
+        };
+        /**
+         * BlockedPlayersResponse
+         * @description *Blocked players* — everybody **you** blocked, and nobody else's blocks.
+         */
+        BlockedPlayersResponse: {
+            /**
+             * Players
+             * @description Your standing blocks, **newest first**. Empty when you have blocked nobody — draw *You haven't blocked anyone.* A block you lifted is not here, and a block of an id nobody holds is not either.
+             */
+            players: components["schemas"]["BlockedPlayerSchema"][];
+        };
         /** BookedClubSchema */
         BookedClubSchema: {
             /**
@@ -4096,7 +4139,7 @@ export interface components {
             sport: components["schemas"]["Sport"];
             /**
              * Members
-             * @description **Only the members rated in `sport`**: the reader first, then the Owner — or the Administrator running an official group, once they joined it as a player — then everybody else **newest joined first**. **A blocked pair, either way round, is left out of each other's list** — and nothing says so: the group's `member_count` is the same for every reader, so it may be more than the rows here. Empty when nobody in the group the reader may see is rated in it.
+             * @description **Only the members rated in `sport`**: the reader first, then the Owner — or the Administrator running an official group, once they joined it as a player — then everybody else **newest joined first**. **A block hides nobody here**, either way round. Empty when nobody in the group is rated in it.
              */
             members: components["schemas"]["GroupMemberSchema"][];
         };
@@ -4220,7 +4263,7 @@ export interface components {
             rated_by_sport: components["schemas"]["GroupSportSchema"][];
             /**
              * Member Faces
-             * @description The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order — the Owner, then newest joined first — with a blocked pair, either way round, left out, as the list it opens leaves them out. Empty for a reader alone (`member_count` 1), whose row draws their own face — and empty too, with `member_count` above 1, when a block hides everybody else. `member_count` is the group's, so its *+N* counts everybody.
+             * @description The Info tab's members row: **up to five** faces of everybody but the reader, in the Members list's order — the Owner, then newest joined first. A block hides nobody here, as it hides nobody in the list it opens. Empty for a reader alone (`member_count` 1), whose row draws their own face. `member_count` is the group's, so its *+N* counts everybody.
              */
             member_faces: components["schemas"]["GroupPersonSchema"][];
             /**
@@ -5692,6 +5735,15 @@ export interface components {
              *     `true` on `/players/me/record` always, and on the parameterised route when a client asks about itself.
              */
             is_self: boolean;
+            /**
+             * Blocked By You
+             * @description Whether **you** have blocked this person — your own block, and never theirs of you. Draw *Unblock* when `true` and *Block* when `false`, and no row at all when `is_self` is `true`.
+             *
+             *     **It answers one direction only, and that is the point.** Nothing on this response, or any other, says whether they blocked you: their record reads the same either way. If you both blocked, each of you reads `true` about your own block and nothing about the other's.
+             *
+             *     `false` on your own record, always. **Omitted only when your blocks could not be read** — draw neither row then, rather than a guess; the rest of the record is unaffected.
+             */
+            blocked_by_you?: boolean;
             /**
              * Name
              * @description The whole name, and **nothing may derive a familiar form from it** — every sentence naming somebody uses the whole name or names nobody (``docs/adr/0171``). The title of the sheet.
@@ -8786,6 +8838,35 @@ export interface operations {
             };
         };
     };
+    read_blocked_players_api_v1_blocks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlockedPlayersResponse"];
+                };
+            };
+            /** @description `block_state_unavailable` — your blocks could not be read. Retry the same request; never draw an empty list for it. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     block_player_api_v1_blocks_post: {
         parameters: {
             query?: never;
@@ -9646,9 +9727,9 @@ export interface operations {
                 };
             };
             /**
-             * @description `record_unavailable` — **one code for four causes, and the body is identical in all four.** You were never shown this person; one of you has blocked the other; the account is held or in a state that may not be shown; or there is no such player.
+             * @description `record_unavailable` — **one code for three causes, and the body is identical in all three.** You were never shown this person; the account is held or in a state that may not be shown; or there is no such player. **A block is not one of them**, either way round.
              *
-             *     **The indistinguishability is the feature.** A response that named which would deliver a block to the one person a block is meant to be invisible to, and a response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger. Draw one line — *This record isn't available.* — and do not branch on anything else here, because there is nothing else here.
+             *     **The indistinguishability is the feature.** A response that separated *never disclosed* from *no such player* would answer *is this id real* about a stranger. Draw one line — *This record isn't available.* — and do not branch on anything else here, because there is nothing else here.
              */
             404: {
                 headers: {
@@ -9769,15 +9850,6 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description `block_state_unavailable` — who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
         };
     };
     delete_group_api_v1_groups__group_id__delete: {
@@ -9894,15 +9966,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `block_state_unavailable` — who is blocked could not be read for the answer's members row. **Nothing was recorded**: the answer is drawn before the save commits, so the retry is the whole edit again. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -10033,15 +10096,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `block_state_unavailable` — who is blocked could not be read, and faces nobody could check are not served. Nothing was recorded; retry. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -10642,15 +10696,6 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description `block_state_unavailable` — who is blocked could not be read for the players list. Nothing was recorded; retry. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
         };
     };
     save_settings_api_v1_administrator_clubs__club_id__groups__group_id__settings_put: {
@@ -10712,15 +10757,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description `block_state_unavailable` — who is blocked could not be read for the players list. Nothing was recorded; retry. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

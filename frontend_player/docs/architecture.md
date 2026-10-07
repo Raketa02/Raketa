@@ -873,7 +873,8 @@ sessions.
   re-dispatch every touch's start and the modal's host wins the second negotiation. So on
   Android `shared/ui/overlay`'s `OverlayHost`, wrapped around the route tree in the root
   layout, renders every stage as a layer beside the toast host, ordered by `theme.layer`, the
-  app hidden beneath it from a screen reader, the back gesture answered by the stage. A
+  app hidden beneath it from a screen reader — and every layer under the newest, for a sheet
+  opened from a sheet — the back gesture answered by the stage. A
   layer's children keep the root's contexts and lose a screen's — every provider is at the
   root, and no sheet's content reads the navigation; keep it so. The first overlay to hold a
   text input takes on `KeyboardAvoidingView` in its stage, on both platforms.

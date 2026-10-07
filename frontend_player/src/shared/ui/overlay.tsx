@@ -69,12 +69,24 @@ export type FocusTarget = RefObject<View | null>;
  *
  * While a layer is up the app beneath takes {@link behindOverlay}: a native window hid the
  * tab bar and the other screens from a screen reader on its own, and a layer in the tree has
- * to say so itself — for the whole app, not only the screen that opened it.
+ * to say so itself — for the whole app, not only the screen that opened it. **And so does every
+ * layer under the newest** ({@link useCoveredLayer}): a sheet opened from inside a sheet leaves
+ * the first one up beneath it, and a listener belongs in the one on top.
+ *
+ * **The order is a context of its own**, apart from `set` and `remove`, and that is load-bearing:
+ * a stage takes its layer down when the API it was handed changes, so an API that moved with the
+ * order would have every stage take its layer down and put it back up at the end — a new order,
+ * a new API, and again, without end. The API never changes; the order re-renders only the stages
+ * that read it, and their re-statement leaves the order as it was.
  */
 export function OverlayHost({ children }: { readonly children: ReactNode }) {
   const [layers, setLayers] = useState<ReadonlyMap<string, ReactNode>>(() => new Map());
+  // The layers' keys, oldest first — moved only when one goes up or comes down, never by the
+  // re-statement every stage makes on every render.
+  const [order, setOrder] = useState<readonly string[]>([]);
   const set = useCallback((key: string, layer: ReactNode) => {
     setLayers((held) => new Map(held).set(key, layer));
+    setOrder((keys) => (keys.includes(key) ? keys : [...keys, key]));
   }, []);
   const remove = useCallback((key: string) => {
     setLayers((held) => {
@@ -83,18 +95,21 @@ export function OverlayHost({ children }: { readonly children: ReactNode }) {
       next.delete(key);
       return next;
     });
+    setOrder((keys) => (keys.includes(key) ? keys.filter((held) => held !== key) : keys));
   }, []);
   const layersApi = useMemo<OverlayLayers>(() => ({ set, remove }), [set, remove]);
   const open = layers.size > 0;
 
   return (
     <OverlayLayersContext.Provider value={layersApi}>
-      <View style={s.beneath} {...behindOverlay(open)} testID="overlay-host-beneath">
-        {children}
-      </View>
-      {[...layers].map(([key, layer]) => (
-        <Fragment key={key}>{layer}</Fragment>
-      ))}
+      <OverlayOrderContext.Provider value={order}>
+        <View style={s.beneath} {...behindOverlay(open)} testID="overlay-host-beneath">
+          {children}
+        </View>
+        {[...layers].map(([key, layer]) => (
+          <Fragment key={key}>{layer}</Fragment>
+        ))}
+      </OverlayOrderContext.Provider>
     </OverlayLayersContext.Provider>
   );
 }
@@ -107,9 +122,25 @@ export interface OverlayLayers {
 
 const OverlayLayersContext = createContext<OverlayLayers | undefined>(undefined);
 
+/** The layers' keys, oldest first — empty where there is no host. See the host's note. */
+const OverlayOrderContext = createContext<readonly string[]>([]);
+
 /** The host's layers, or `undefined` where there is no host — a stage then draws in place. */
 export function useOverlayLayers(): OverlayLayers | undefined {
   return useContext(OverlayLayersContext);
+}
+
+/**
+ * **Whether a newer layer is up over this one** — a sheet opened from inside a sheet, as the
+ * record's *Block* opens its confirmation (#587). A native window hid the window under it from a
+ * screen reader on its own; a layer in the tree hides itself, as the app beneath every layer does.
+ * A key that is not up yet is not covered. The newest is the last put up: a sheet that opens a
+ * sheet is up first, so the second is newer — two put up in one commit would land the child
+ * first, which nothing does.
+ */
+export function useCoveredLayer(key: string): boolean {
+  const order = useContext(OverlayOrderContext);
+  return order.includes(key) && key !== order[order.length - 1];
 }
 
 const s = StyleSheet.create({

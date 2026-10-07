@@ -35,10 +35,10 @@
  * It opens instantly and fills — which is the whole reason a second round trip is affordable
  * here and was not on the twenty-row shortlist. A skeleton, the record, or the refusal.
  *
- * **The refusal draws one line and nothing else.** Never disclosed, blocked in either
- * direction, held, and no such player answer the same code with the same body, byte for byte,
- * and a response that named which would deliver a block to the one person a block is meant to
- * be invisible to. There is no retry on it, because re-asking a refusal returns the refusal —
+ * **The refusal draws one line and nothing else.** Never disclosed, held, an account that may
+ * not be shown, and no such player answer the same code with the same body, byte for byte — a
+ * block is not a gate any more, either way round (ADR-0193 §2). There is no retry on it,
+ * because re-asking a refusal returns the refusal —
  * where a failure to *reach* the platform gets the recovery sentence and a control, since that
  * one genuinely can succeed on a second press.
  *
@@ -64,6 +64,19 @@
  * refused record is somebody the reader may not act on, and the buttons would say otherwise.
  * The next surface that wants a foot has to argue for one.
  *
+ * ## It ends in Block or Unblock — but not on your own
+ *
+ * The last row is **`blocks`' `BlockRow`** ([#587](https://github.com/Raketa02/Raketa/issues/587),
+ * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)):
+ * *Block Kuba Wiśniewski* behind a confirm sheet, or *Unblock Kuba Wiśniewski* once the reader
+ * has. It is not the foot — no caller fills it, and every surface that opens a record gets it —
+ * and it reads no global state either: whether the reader blocked the subject is **this read's
+ * own answer**, `blocked_by_you`, folded to `blockedByYou` at the wire boundary and absent on your
+ * own record and where the server could not read the blocks, so neither row is drawn there. A
+ * press re-reads the record — **this sheet hands its own re-read down**, so `blocks` never names
+ * this feature's keys while this feature draws its row — and the row is the re-read's answer.
+ * Drawn with the record only, as the foot is.
+ *
  * ## The account is folded under the blocks
  *
  * The three blocks — Player reliability, Last 5, Counted — are the summary; the counted card and
@@ -74,8 +87,8 @@
  *
  * ## Six regions, six elements
  *
- * There is no interactive element inside it other than the pairing row — and the foot, where a
- * caller fills it — so every group merges
+ * There is no interactive element inside it other than the pairing row, the Block or Unblock row
+ * and the foot, where a caller fills it — so every group merges
  * into the nearest heading (§20.1) and `recordPresentation` writes what each of them says. The
  * counted card and *What opponents said* are two of them for a reason that is not layout: one
  * is headed with a promise about **authorship**, and the other is what would break it. The
@@ -90,6 +103,7 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { BlockRow } from '@/features/blocks/types';
 import { codeMessage, type AppError } from '@/shared/errors';
 import { BottomSheet, Note, Button, SocialTagRow, theme } from '@/shared/ui';
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
@@ -216,6 +230,7 @@ export function PlayerRecordSheet({
             {...(tagOverlap === undefined ? {} : { tagOverlap })}
             {...(pairing === undefined ? {} : { pairing })}
             {...(foot === undefined ? {} : { foot })}
+            rereadRecord={() => record.refetch()}
           />
         )}
       </View>
@@ -264,9 +279,12 @@ function Filled({
   tagOverlap,
   pairing,
   foot,
+  rereadRecord,
 }: {
   readonly record: PlayerRecord;
   readonly playerId: string;
+  /** This read again — what a block or an unblock at the foot awaits before it settles. */
+  readonly rereadRecord: () => Promise<unknown>;
 } & Pick<
   PlayerRecordSheetProps,
   'distanceKm' | 'viewerAreaCode' | 'tagOverlap' | 'pairing' | 'foot'
@@ -335,6 +353,19 @@ function Filled({
       {/* The foot, last, where the surface filled it. A sheet reads statement first and answer
           last, which is the whole reason it is at the end and inside the scroll (9.1). */}
       {foot === undefined ? null : <View style={s.foot}>{foot}</View>}
+
+      {/* **Block or Unblock, last** (#587, ADR-0193): on every record but your own, from the
+          record's own answer — absent on yours, and where the blocks could not be read. The
+          act is `blocks`'; whether the reader blocked them is this read's, and so is the
+          re-read the act awaits. */}
+      {record.blockedByYou === undefined ? null : (
+        <BlockRow
+          playerId={playerId}
+          name={record.name}
+          blocked={record.blockedByYou}
+          rereadRecord={rereadRecord}
+        />
+      )}
     </>
   );
 }

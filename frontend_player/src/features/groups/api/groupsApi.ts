@@ -74,7 +74,7 @@ const groupPath = (groupId: string) => `/api/v1/groups/${encodeURIComponent(grou
 
 /**
  * **Members, for one sport** — only the members rated in it: the reader, the Owner, then newest
- * joined first. A blocked pair is left out of each other's list, and nothing says so.
+ * joined first. A block hides nobody here, either way round (ADR-0193 §2).
  */
 export function getGroupMembers(
   groupId: string,

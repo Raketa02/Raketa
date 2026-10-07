@@ -168,3 +168,8 @@ with the two questions they answered again — the Search radius and the Proposa
 only by the old loop's ranking — and their screens, `you/radius` and `you/game-suggestions`,
 left `YOU_SCREENS` with them. The group keeps its title: what it holds is still what a proposed
 game reads. The walk is `theShell.test.tsx`, which asserts neither title is drawn.
+
+**ACCOUNT ends with _Blocked players_** ([#587](https://github.com/Raketa02/Raketa/issues/587)):
+`blocks`' row under _Notifications_, its line _Nobody_, _1 player_ or _2 players_, and its screen
+`you/blocked-players` in `YOU_SCREENS`. The gate stubs `GET /blocks` (none), because the row reads
+it on every visit to the tab. The record is [`blocks.md`](blocks.md).

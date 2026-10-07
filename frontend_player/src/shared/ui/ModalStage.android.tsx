@@ -20,6 +20,10 @@
  *   window's slide-out was the one thing the native window did that this does not.
  * - **Touch.** Ordinary: the stage is laid out like any view, so the scrim takes the tap, the
  *   controls take their presses and the sheet's scroll view scrolls.
+ * - **A window over a window.** A stage rendered inside another stage's children — a sheet opened
+ *   from a sheet — is the host's next layer up, and the one under it is hidden from a screen
+ *   reader while it is (`useCoveredLayer`); the back answers the newer first, being the newer
+ *   subscription.
  *
  * The layer is re-stated on every render because it is an element the host renders, not a
  * subtree this component renders — a portal's trade, and the host keeps the layer's position
@@ -30,7 +34,7 @@ import { useEffect, useId, useRef } from 'react';
 import { Animated, BackHandler, Easing, StyleSheet, useWindowDimensions } from 'react-native';
 
 import type { ModalStageProps } from './ModalStage';
-import { useOverlayLayers } from './overlay';
+import { behindOverlay, useCoveredLayer, useOverlayLayers } from './overlay';
 import { theme } from './theme';
 
 export type { ModalStageProps } from './ModalStage';
@@ -44,6 +48,7 @@ export function ModalStage({
 }: ModalStageProps) {
   const layers = useOverlayLayers();
   const key = useId();
+  const covered = useCoveredLayer(key);
   const { height } = useWindowDimensions();
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -96,10 +101,13 @@ export function ModalStage({
 
   // 9.3's order, against the toast host beside the layers: a sheet beneath a toast, a popover
   // over one.
+  // Hidden from a screen reader while a newer layer is up over it — a native window over a
+  // native window did that on its own.
   const layer = visible ? (
     <Animated.View
       style={[StyleSheet.absoluteFill, { zIndex: theme.layer[order] }, motion]}
       testID="modal-stage"
+      {...behindOverlay(covered)}
     >
       {children}
     </Animated.View>

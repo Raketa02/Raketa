@@ -306,4 +306,15 @@ export interface PlayerRecord {
    * opportunities above, and neither is an opinion anybody offered.
    */
   readonly opinion?: Opinion;
+  /**
+   * **Whether the reader has blocked them** — the reader's own block, and never theirs of the
+   * reader ([#587](https://github.com/Raketa02/Raketa/issues/587),
+   * [ADR-0193](../../../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+   * §3). The sheet ends in *Unblock* for `true` and *Block* for `false`.
+   *
+   * **Absent where no row may be drawn**, folded at the wire boundary: on your own record — there
+   * is nobody to block — and where the server could not read the blocks, when neither row is a
+   * guess worth drawing.
+   */
+  readonly blockedByYou?: boolean;
 }

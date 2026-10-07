@@ -18,9 +18,9 @@
  * the group size the Administrator gave the group, filling as people join. It replaced club 11's
  * line — *you approve joins · 6% of the WhatsApp group* — whose rule half is the settings' to say.
  *
- * *N members* is the group's member count, which a block does not change; the faces are the
- * members the server may show this reader, a blocked pair left out. So *+N* counts from the count,
- * not from the faces (`playersStack`). The stack is Info's members row's own drawing (`groups`'
+ * *N members* is the group's member count, and the faces are the newest of its players — a block
+ * hides nobody here (ADR-0193 §2). *+N* counts from the count, not from the faces
+ * (`playersStack`). The stack is Info's members row's own drawing (`groups`'
  * `FaceStack`).
  */
 

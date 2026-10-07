@@ -30,9 +30,10 @@
  * is **immutable**: it is read back by id, `staleTime: Infinity` is honest about it, and the
  * gates that have moved since arrive as *withheld rows* on the read-back. A record is the
  * opposite — the four fail-closed gates are re-evaluated **on every open**, so a cached copy is
- * a copy the gates have stopped being applied to. A block placed between two opens inside one
+ * a copy the gates have stopped being applied to. A hold placed between two opens inside one
  * session would be answered by the entry the first open wrote, which is the one failure this
- * whole route's admission rule exists to prevent.
+ * whole route's admission rule exists to prevent — and so would the reader's own block, which the
+ * record now says (`blocked_by_you`).
  *
  * So `staleTime` and `gcTime` are both **nought**: every open is a cold read, and a sheet that
  * closes takes its answer with it. `the-player-record.md` §6.6 reaches the same place by a

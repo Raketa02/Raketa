@@ -94,7 +94,22 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
       : { reliability: reliability(response.reliability) }),
     ...(response.variety === undefined ? {} : { variety: variety(response.variety) }),
     ...opinion(response),
+    ...ownBlock(response),
   };
+}
+
+/**
+ * **The reader's own block of the subject, or nothing** (#587, ADR-0193 §3).
+ *
+ * Dropped on your own record whatever the wire says — the server answers `false` there, and a
+ * `false` is a *Block* row the sheet would draw — so a row on your own face is unrepresentable
+ * rather than merely unserved. Omitted on the wire when the blocks could not be read, and
+ * omitted here with it: no row is drawn, rather than a guess.
+ */
+function ownBlock(response: PlayerRecordResponse): { readonly blockedByYou?: boolean } {
+  return response.is_self || response.blocked_by_you === undefined
+    ? {}
+    : { blockedByYou: response.blocked_by_you };
 }
 
 /**

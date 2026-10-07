@@ -161,8 +161,8 @@ export interface Group {
   readonly ratedBySport: readonly SportRoster[];
   /**
    * **The Info tab's members row** (#514): up to five faces of everybody **but the reader**, in
-   * the Members list's order — the Owner, then newest joined first — with a blocked pair left
-   * out, either way round. Empty for a reader alone, and for one a block hides everybody from.
+   * the Members list's order — the Owner, then newest joined first. A block hides nobody here
+   * (ADR-0193 §2). Empty for a reader alone.
    */
   readonly memberFaces: readonly GroupPerson[];
 }

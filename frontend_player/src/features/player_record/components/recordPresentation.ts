@@ -606,11 +606,11 @@ export function fitRowLabel(fit: number): string {
 /**
  * **The one line a record that cannot be opened draws, and there is nothing else on it.**
  *
- * Never disclosed, blocked in either direction, held, and no such player answer the same code
- * with the same body, byte for byte — the indistinguishability is the feature, because a
- * response that named which would deliver a block to the one person a block is meant to be
- * invisible to. So this client draws one line and offers no retry: re-asking a refusal returns
- * the refusal.
+ * Never disclosed, held, an account that may not be shown, and no such player answer the same
+ * code with the same body, byte for byte — the indistinguishability is the feature. A block is
+ * no longer among them, either way round (ADR-0193 §2): the blocker reads the record to unblock,
+ * and the blocked person's read is the same byte for byte. So this client draws one line and
+ * offers no retry: re-asking a refusal returns the refusal.
  */
 export const RECORD_UNAVAILABLE = 'This record isn’t available.';
 

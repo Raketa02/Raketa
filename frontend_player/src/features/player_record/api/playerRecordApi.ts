@@ -10,12 +10,12 @@
  * and for yourself. Everybody else — and anybody a live gate no longer admits — is `404`, in
  * one shape that names nothing.
  *
- * `GET /players/me/record` is the same sheet about yourself and **nothing gates it**. A block
- * is between two people and the gender preference is mutual, so neither has anything to say
- * about somebody reading their own record; a hold does not reach it either, because this is the
- * one screen a held player has for finding out how they appear. The parameterised route would
- * answer a healthy account asking about itself, which is exactly why the two are not collapsed:
- * the one player who most needs this screen is the one the other route would refuse.
+ * `GET /players/me/record` is the same sheet about yourself and **nothing gates it**. The gender
+ * preference is mutual and has nothing to say about somebody reading their own record; a hold
+ * does not reach it either, because this is the one screen a held player has for finding out how
+ * they appear. The parameterised route would answer a healthy account asking about itself, which
+ * is exactly why the two are not collapsed: the one player who most needs this screen is the one
+ * the other route would refuse.
  *
  * ## `sport` selects what the sheet is about and never who may be seen
  *
@@ -56,9 +56,10 @@ export interface RecordAsk extends Cancellable {
 /**
  * **One player's record**, or the one refusal that names nothing.
  *
- * `404` carries `record_unavailable` for four causes — never disclosed, blocked either way,
- * held or in a state that may not be shown, and no such player — and the body is identical in
- * all four. The indistinguishability is the feature, so nothing here branches on it.
+ * `404` carries `record_unavailable` for three causes — never disclosed, held or in a state that
+ * may not be shown, and no such player — and the body is identical in all three. A block is not
+ * one of them, either way round (ADR-0193 §2). The indistinguishability is the feature, so nothing
+ * here branches on it.
  */
 export function getPlayerRecord(
   playerId: string,

@@ -5,8 +5,8 @@
  * [ADR-0183](../../../../../docs/adr/0183-a-group-is-a-crowd-at-a-home-club-and-its-link-never-changes.md)
  * §7).
  *
- * Pure: the group and the reader are read elsewhere. Who owns the group, who has been in longest
- * and who a block hides are the server's; this file only reads what came.
+ * Pure: the group and the reader are read elsewhere. Who owns the group and who has been in
+ * longest are the server's; this file only reads what came.
  */
 
 import type { Group, GroupDetails, GroupMember, GroupPerson } from './group';
@@ -15,8 +15,9 @@ import type { Group, GroupDetails, GroupMember, GroupPerson } from './group';
  * **The members row's faces, and its *+N*** (play 58–60). The faces are the group's
  * `memberFaces` — up to five of everybody but the reader — and `more` counts **the other members
  * not drawn**, `memberCount - 1 - faces`. With no face served the reader stands in: alone, that
- * is play 57's own face; hidden from everybody by a block, it is still a face on the row, and
- * `more` counts everybody else.
+ * is play 57's own face, and were the faces ever empty with others in the group, it is still a
+ * face on the row and `more` counts everybody else. (A block once emptied them; since ADR-0193 §2
+ * it hides nobody.)
  */
 export interface MembersRow {
   readonly faces: readonly GroupPerson[];

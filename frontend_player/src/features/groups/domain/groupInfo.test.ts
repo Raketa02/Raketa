@@ -34,8 +34,8 @@ describe('the members row', () => {
     });
   });
 
-  // A block can hide everybody else: the reader stands in, and +N still counts them all.
-  it('draws the reader and counts everybody else when a block hides them all', () => {
+  // No face served with others in the group: the reader stands in, and +N still counts them all.
+  it('draws the reader and counts everybody else when no other face is served', () => {
     expect(membersRow({ memberFaces: [], memberCount: 4 }, READER)).toEqual({
       faces: [READER],
       more: 3,

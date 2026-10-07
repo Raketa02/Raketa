@@ -329,3 +329,16 @@ iPhone build, which `expo-notifications`' own plugin adds unasked — **the remo
 returned config, before the plugin list, because a plugin registered earlier runs its change
 later**, and `npx expo config --type introspect` shows no `aps-environment`. `theme.motion.hold.notice`
 holds the banner's six seconds. The record is [`notifications.md`](notifications.md).
+
+**A layer under a newer layer is hidden from a screen reader**
+([#587](https://github.com/Raketa02/Raketa/issues/587)). The record's _Block_ opens its confirm
+sheet from inside the record sheet — the first sheet over a sheet. On iOS that is a native window
+presented from a native window, which hides the one beneath on its own; on Android it is the
+host's next layer, and the layer beneath stayed a listener's. So `OverlayHost` keeps the layers'
+order and tells each stage whether a newer layer covers it (`useCoveredLayer`), and a covered stage
+spreads `behindOverlay` on its own layer, as the app beneath every layer already took. **The order
+is a context of its own, apart from `set` and `remove`**: a stage takes its layer down when the API
+it holds changes, so an API that moved with the order had every stage take its layer down and put
+it back at the end — a new order, a new API, and again, a render loop the full suite found as a
+worker out of memory. The back answers the newer stage first, being the newer subscription.
+`ModalStage.test.tsx` walks it.

@@ -19,8 +19,8 @@
  * a face and a name each (`AdmittedCard`). It stays until the next save.
  *
  * A refusal the form can name — the name, the ownership, the group gone — is said under the
- * button in the form's words; any other says why it failed. Nothing is recorded on a refusal
- * (`block_state_unavailable` included), so the next press is the whole edit again.
+ * button in the form's words; any other says why it failed. Nothing is recorded on a refusal, so
+ * the next press is the whole edit again.
  */
 
 import { router } from 'expo-router';

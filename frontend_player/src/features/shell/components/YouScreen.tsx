@@ -8,7 +8,7 @@
  * PLAYING           Skill passport · Player reliability · What kind of game
  * FINDING PLAYERS   Your week · Where you play · Who you play with
  * ON YOUR CARD      How others see you · Photos · Tags · Intro · Name
- * ACCOUNT           Games & money · Payments · Notifications
+ * ACCOUNT           Games & money · Payments · Notifications · Blocked players
  * ─────────────
  * Sign out          pinned under the page, above the bar
  * ```
@@ -29,7 +29,8 @@
  * does a stranger read about me, and **how do I pay for a game**. That fourth one was not asked on
  * this tab until money was (ADR-0179 §9, amended by ADR-0189; the screens A7): **ACCOUNT** sits
  * after *On your card* and before *Sign out*, and holds *Games & money* (#554), *Payments*
- * (#552) and *Notifications* (#559), in that order (mock 50). *Sign out* stays at the foot as the
+ * (#552) and *Notifications* (#559), in that order (mock 50), and then *Blocked players* (#587) —
+ * the way back from a block when the record is out of reach. *Sign out* stays at the foot as the
  * account panel draws it, pinned under the scroller.
  *
  * **Finding players lost two rows** with the old loop's ranking, the only thing that read them:
@@ -63,6 +64,7 @@ import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AccountPanel, NameRow } from '@/features/auth/types';
+import { BlockedPlayersRow } from '@/features/blocks/types';
 import {
   IntroRow,
   PhotosRow,
@@ -134,6 +136,7 @@ export function YouScreen({ headerRight }: YouScreenProps) {
             <GamesAndMoneyRow />
             <PaymentsRow divided />
             <NotificationsRow divided />
+            <BlockedPlayersRow divided />
           </YouGroup>
         </ShellScreen>
       </View>

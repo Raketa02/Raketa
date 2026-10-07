@@ -15,7 +15,8 @@
  *
  * **Info is not drawn for a sport**: the members row counts everybody, and Members opens on the
  * filter's sport. Nothing on it is computed on the phone — who owns the group, who has been in
- * longest, who a block hides and which faces come first are all the server's.
+ * longest and which faces come first are all the server's — and a block hides nobody on it
+ * (ADR-0193 §2).
  */
 
 import Feather from '@expo/vector-icons/Feather';

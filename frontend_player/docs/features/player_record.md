@@ -299,3 +299,16 @@ _Player reliability_ screen draws `RecordCard` unfolded, as before: that screen 
 the one ladder and never a second one, held to it at every score in `scoreTone.test.ts`, so a tag
 cannot turn amber where a meter stays neutral. Not seen on a device: the fold's pace, and the sheet
 growing under it on both platforms.
+
+**The sheet ends in Block or Unblock, and a block is no longer one of its refusals**
+([#587](https://github.com/Raketa02/Raketa/issues/587),
+[ADR-0193](../../../docs/adr/0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)
+§2–§3). The last row of every record but your own is `blocks`' `BlockRow`, drawn from this read's
+own `blocked_by_you`, which the mapper folds to `blockedByYou` and drops on your own record and
+where the server omitted it — so a row on your own face is unrepresentable. The sheet hands the row
+its own re-read, so the act's feature never names this one's keys. The row, its sheet and what a
+block re-reads are [`blocks.md`](blocks.md)'s. **What this narrows** is the refusal paragraph above:
+a block is not a gate any more, in either direction — the blocker opens the record to unblock, and
+the blocked person's read is the same byte for byte — so _This record isn't available._ now answers
+three causes (never disclosed, held or not showable, no such player), and the code comments that
+listed four say three.

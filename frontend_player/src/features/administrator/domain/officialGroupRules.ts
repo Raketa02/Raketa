@@ -26,8 +26,8 @@ const STACKED_FACES = 5;
 
 /**
  * **The members card's faces and *+N***: the five newest players, and everybody else **in the
- * group's count** — which a block does not change, so somebody hidden from this reader is still
- * counted. With no face drawn there is no *+N*: it would only repeat the count beside it.
+ * group's count**, which is the server's. With no face drawn there is no *+N*: it would only
+ * repeat the count beside it.
  */
 export function playersStack<Player>(
   players: readonly Player[],

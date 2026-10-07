@@ -46,6 +46,7 @@ import RescueRoute from '@/app/(app)/(tabs)/play/group/[groupId]/rescue/[booking
 import PostAGameRoute from '@/app/(app)/(tabs)/play/group/[groupId]/post';
 import YouRoute from '@/app/(app)/(tabs)/you';
 import YouAreaRoute from '@/app/(app)/(tabs)/you/area';
+import YouBlockedPlayersRoute from '@/app/(app)/(tabs)/you/blocked-players';
 import YouGamesAndMoneyRoute from '@/app/(app)/(tabs)/you/games-and-money';
 import YouIntroRoute from '@/app/(app)/(tabs)/you/intro';
 import YouKindOfGameRoute from '@/app/(app)/(tabs)/you/kind-of-game';
@@ -174,6 +175,7 @@ export const ONBOARDING_ROUTES = {
   '(app)/(tabs)/you/games-and-money': YouGamesAndMoneyRoute,
   '(app)/(tabs)/you/payments': YouPaymentsRoute,
   '(app)/(tabs)/you/notifications': YouNotificationsRoute,
+  '(app)/(tabs)/you/blocked-players': YouBlockedPlayersRoute,
   // The administrator area (#516) — a sibling of `(app)`, one club's area per id, with its own two
   // tabs: Groups at the root, You beside it, New official group and a group's page pushed over
   // Groups, and a group's settings and Start playing's first step pushed over You (#517).
@@ -983,6 +985,22 @@ export function stubGate(
   stubHome(transport);
   stubNotificationChoices(transport);
   stubNotices(transport);
+  stubBlockedPlayers(transport);
+}
+
+export const BLOCKED_PLAYERS_PATH = '/api/v1/blocks';
+
+/**
+ * *Blocked players*, as `GET /blocks` answers — **nobody** unless the suite says otherwise. The
+ * gate stubs it, because the You tab's *Blocked players* row reads it on every visit (#587).
+ */
+export function stubBlockedPlayers(
+  transport: Transport,
+  players: readonly Wire['BlockedPlayerSchema'][] = [],
+) {
+  transport.on('GET', BLOCKED_PLAYERS_PATH, () =>
+    json<Wire['BlockedPlayersResponse']>({ players: [...players] }),
+  );
 }
 
 export const NOTIFICATION_CHOICES_PATH = '/api/v1/players/me/notifications';

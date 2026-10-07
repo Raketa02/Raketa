@@ -105,6 +105,61 @@ describe('a stage under the host', () => {
     expect(theme.layer.popover).toBeGreaterThan(theme.layer.toast);
   });
 
+  it('hides a layer from a screen reader while a newer one is up over it', () => {
+    // A sheet that opens a second sheet from inside itself — the record's Block (#587).
+    function Stacked() {
+      const [first, setFirst] = useState(true);
+      const [second, setSecond] = useState(false);
+      return (
+        <OverlayHost>
+          <ModalStage
+            visible={first}
+            onRequestClose={() => setFirst(false)}
+            animationType="none"
+            layer="sheet"
+          >
+            <View testID="first">
+              <Pressable onPress={() => setSecond(true)} accessibilityLabel="Ask" />
+              <ModalStage
+                visible={second}
+                onRequestClose={() => setSecond(false)}
+                animationType="none"
+                layer="sheet"
+              >
+                <View testID="second">
+                  <Pressable onPress={() => setSecond(false)} accessibilityLabel="Cancel" />
+                </View>
+              </ModalStage>
+            </View>
+          </ModalStage>
+        </OverlayHost>
+      );
+    }
+    render(<Stacked />);
+    const layerOf = (testID: string) =>
+      screen
+        .getAllByTestId('modal-stage', HIDDEN_TOO)
+        .find((layer) => within(layer).queryByTestId(testID, HIDDEN_TOO) !== null)!;
+    // One layer up, and a listener is in it.
+    expect(layerOf('first').props.importantForAccessibility).toBe('auto');
+
+    fireEvent.press(screen.getByLabelText('Ask'));
+    expect(screen.getAllByTestId('modal-stage', HIDDEN_TOO)).toHaveLength(2);
+    // The newer layer is the listener's; the one under it is hidden, as the app beneath is.
+    expect(layerOf('first').props.importantForAccessibility).toBe('no-hide-descendants');
+    expect(layerOf('first').props.accessibilityElementsHidden).toBe(true);
+    expect(layerOf('second').props.importantForAccessibility).toBe('auto');
+    expect(screen.queryByLabelText('Ask')).toBeNull();
+
+    // The back answers the newer one alone.
+    act(() => {
+      pressHardwareBack();
+    });
+    expect(screen.getAllByTestId('modal-stage', HIDDEN_TOO)).toHaveLength(1);
+    expect(layerOf('first').props.importantForAccessibility).toBe('auto');
+    expect(screen.getByLabelText('Ask')).toBeTruthy();
+  });
+
   it('answers the hardware back with the overlay’s own request, and swallows it', () => {
     const onRequestClose = jest.fn();
     render(<App onRequestClose={onRequestClose} />);
