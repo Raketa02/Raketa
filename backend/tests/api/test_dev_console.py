@@ -1,25 +1,25 @@
-"""The dev console over HTTP: the roster, the page, and the sign-in it enables.
+"""The dev surface's roster over HTTP, and the sign-in it enables.
 
-The console's whole claim is that it acts as another player *by being them*, so
-that is what is asserted here — end to end, over the same client every other API
-test uses, with nothing about the dev surface involved after the roster is read.
-The roster hands over an address and a password; everything after that is
-`POST /api/v1/auth/login` and the player surface.
+The games test console acts as seed accounts **without signing in**
+(``docs/adr/0194`` §2) — ``tests/api/test_games_test_console.py`` is that. What
+the roster is still for is **the phone**: the tester signs the protagonist in
+with an address it lists and the one public password, through the ordinary
+``POST /api/v1/auth/login``. So that is what is asserted here, end to end, with
+nothing about the dev surface involved after the roster is read.
 
 The seed run is the fixture rather than a handful of registrations, because the
 interesting claim is about the accounts a developer actually meets. The
 non-seed account beside them is registered through the ordinary signup route,
 which is the only way a real address gets into this database — and the roster
-not showing it is the data gate, which is a **consequence** and not a refusal:
-production has no addresses on the reserved TLD, so the roster is empty there by
-construction.
+not showing it is the same rule that makes the console refuse to act as it.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from app.api.dev.routes import SEED_PASSWORD, is_seed_account
+from app.api.dev.accounts import is_seed_account
+from app.seeds.catalog import SEED_PASSWORD
 from app.seeds.runner import seed
 
 
@@ -77,7 +77,7 @@ async def test_the_roster_shows_no_account_that_is_not_a_seed_one(
 async def test_a_database_with_no_seed_accounts_has_an_empty_roster(
     client, a_real_account
 ):
-    """The data gate as it holds in production: not a refusal, an empty list."""
+    """A store the seed never ran in: an empty list, not an error."""
 
     roster = await _roster(client)
 
@@ -155,12 +155,13 @@ async def test_the_two_spellings_of_the_predicate_agree(client):
 # ---------------------------------------------------------------------------
 
 
-async def test_the_roster_signs_in_through_the_ordinary_login_route(client, seeded):
-    """The acceptance criterion in one case: what the console does with a row.
+async def test_the_roster_signs_the_phone_in_through_the_ordinary_login_route(
+    client, seeded
+):
+    """What the tester does with a row: sign the protagonist's phone in.
 
-    No impersonation endpoint, no `Act-As` header, no dev-only authorisation
-    path — an address and a password against `POST /api/v1/auth/login`, which is
-    the same request the player app makes.
+    An address and a password against `POST /api/v1/auth/login`, which is the
+    same request the player app makes — no dev-only authorisation path.
     """
 
     roster = await _roster(client)
@@ -178,15 +179,15 @@ async def test_the_roster_signs_in_through_the_ordinary_login_route(client, seed
     )
     assert me.status_code == 200, me.text
     assert me.json()["email"] == row["email"]
-    # The id every player-surface read and write names this account by. The
-    # console renders it, and it is what makes a candidate row in one player's
-    # search recognisable as another roster row.
+    # The id every player-surface read and write names this account by — and
+    # the one a console press names it by.
     assert me.json()["id"] == row["player_id"]
 
 
-async def test_there_is_no_impersonation_endpoint(client, seeded):
-    """The shape Decision 19 refused by name, asserted as an absence at the one
-    address somebody would reach for."""
+async def test_there_is_no_endpoint_that_mints_a_session(client, seeded):
+    """The console acts as an account named in a press's path, and holds no
+    token — so there is nothing that hands one out, asserted as an absence at
+    the one address somebody would reach for."""
 
     response = await client.post("/dev/sessions", json={"handle": "anybody"})
 
@@ -198,9 +199,11 @@ async def test_there_is_no_impersonation_endpoint(client, seeded):
 # ---------------------------------------------------------------------------
 
 
-async def test_the_old_console_page_is_gone_and_the_roster_stays(client, seeded):
-    """The page that pressed challenges as another player went with them
-    (#578); the roster stays for the games test console that replaces it."""
+async def test_the_page_is_served_beside_the_roster(client, seeded):
+    """The games test console's page replaced the one that pressed challenges
+    as another player (#578, #590); the roster stays beside it."""
 
-    assert (await client.get("/dev")).status_code == 404
+    page = await client.get("/dev")
+    assert page.status_code == 200
+    assert page.headers["content-type"].startswith("text/html")
     assert (await client.get("/dev/roster")).status_code == 200

@@ -187,9 +187,10 @@ The route table above is not the whole surface — `/api/v1/sports`,
 `/api/v1/assessments`, `/api/v1/ratings` and `/api/v1/player-profile/options`
 are in `openapi.player.json`, which is the document that is authoritative.
 
-There is a second surface, and it is not a client: the **dev console** at `/dev`, whose
-contract is `openapi.dev.json` and holds one path. It is served in `local`, `development`
-and `staging` and refuses to be imported in `production`. See *The Dev Console* below.
+There is a second surface, and it is not a client: the **dev console** at `/dev` — the
+games test console — whose contract is `openapi.dev.json`: the roster, and a path per
+thing its page presses. It is served in `local` only and refuses to be imported anywhere
+else. See *The Dev Console* below.
 
 Example login request:
 
@@ -538,24 +539,41 @@ nobody can sign in as is not an account.
 
 ## The Dev Console
 
-**Its page is gone, and the games test console replaces it**
+**The games test console**
 ([ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md),
-#590). The page — a no-build `console.html` at `/dev` that signed in as a seeded player and
-pressed searches, yeses and challenges as them — went with the challenges (#578). What stays
-is the surface the next one is built on:
+#590): testing the new games by hand means being several people at once, and the console
+is the other people. Open **`http://localhost:8000/dev`** on the laptop while the phone is
+signed in as the protagonist (an address from the roster, and the one seed password).
 
-- **The roster**, `GET /dev/roster`: every account on the reserved `.example` TLD, and the
-  one public seed password **once, at the top level**, because one password for every seeded
-  account is what `app/seeds/catalog.py` decided.
-- **The gate, structural and by data, and only one of those can fail.** The structural gate
-  is `app/api/dev/gate.py`'s `CONSOLE_SERVED`, a second table written out per environment —
-  importing `app/api/dev/routes.py` under `APP_ENV=production` raises `ConsoleRefused`, and
-  `create_app` mounts nothing. The data gate is a *consequence*: the roster lists accounts
-  addressed on the reserved TLD, and production has none.
-- **Its contract is `openapi.dev.json`, and it holds exactly one path** — the roster.
-  Nothing generates types from it, so it is gated by a **freshness** check
-  (`make contract-freshness`) rather than by the client drift check, which has no purchase
-  on a document with no client.
+- **Pick a group and a sport.** Every member the seed created gets a row — name, face,
+  Level — with the cards they were dealt and who is In on each. *Yes*, *No* and *Withdraw*
+  on a row act **as that person**: `POST /dev/as/{player_id}/proposals/{id}/yes` runs the
+  use case their own phone's button runs, refusals included, and a refusal comes back in
+  the domain's words. Nobody signs in; the row says who is acting.
+- **A state pane per game**: who is In, the sides, the court hour, the cut-off, the
+  booking's state, and every charge and refund. Every press refreshes the board; *Refresh*
+  covers the rest — nothing on the page acts on its own.
+- **Situations** set the stage for one mechanic in one press, through the same use cases a
+  request runs and at the real *now*: *1 · Fresh deal* runs the proposer for the group, and
+  *2 · Needs her yes · Instant club* puts enough people In on one of the protagonist's cards
+  that her yes on the phone fills it. Pressed again and again they meet the domain's
+  refusals; a fresh store is `make down-v && make up && make seed`.
+
+It is gated twice, and both halves refuse:
+
+- **Where.** `app/api/dev/gate.py`'s `CONSOLE_SERVED` is a second table written out per
+  environment — **`local` only** — and every module of the console imports
+  `app/api/dev/refusal.py` first, so importing any of it elsewhere raises `ConsoleRefused`
+  (never the seed system's `SeedRefused`, though the console imports the seeds), and
+  `create_app` mounts nothing.
+- **Whom.** It acts only as accounts addressed on the reserved `.example` TLD; any other id
+  is refused `not_a_seed_account` before anything runs.
+
+**The roster**, `GET /dev/roster`, lists every account on the reserved TLD and the one
+public seed password **once, at the top level** — what the phone signs in with. **Its
+contract is `openapi.dev.json`**: nothing generates types from it, so it is gated by a
+**freshness** check (`make contract-freshness`) rather than by the client drift check,
+which has no purchase on a document with no client.
 
 ## Photo Storage
 

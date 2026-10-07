@@ -267,31 +267,55 @@ there; they are not repeated here.
   and one on a bad one. _Avoid_: reading a rate here as evidence about anything, a μ in the
   artifact, a rule expressed as a percentage.
 - **Dev console** — the backend's development surface: surface `dev`, contract
-  `openapi.dev.json`, code in `app/api/dev/`. Today it is **one roster route and its gate**,
-  and no page.
-  **[ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)
-  gives it one** — the games test console (#590), which acts as seed accounts without
-  signing in, in `local` only. **It is not a client** — nothing generates types from its
+  `openapi.dev.json`, code in `app/api/dev/`. It is the **games test console**
+  ([ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md),
+  #590): one no-build page at `/dev` that the tester opens on the laptop while the phone is
+  signed in as the protagonist, the roster the phone signs in from, and a route per thing
+  the page presses — a person's buttons (`/dev/as/{player_id}/…`), a group's board
+  (`/dev/groups`), and the **situations**. It acts as seed accounts **without signing in**,
+  and is served in `local` only. **It is not a client** — nothing generates types from its
   contract, which is why that document is gated by a *freshness* check and not by
   `check-contract-drift.sh`. `frontend_club/` was *"the club console"* and is gone; this is
   the only console, and saying so here is cheaper than having the collision rediscovered.
-  _Avoid_: calling it an app, a second client, an admin panel.
-- **Console gate** — `CONSOLE_SERVED` in `app/api/dev/gate.py`: where the dev console is
-  served, written out per environment with the same `_undecided` refusal the **Seed guard**
-  carries. ADR-0194 narrows it to `local` and makes the data half a refusal
-  (#590). **A second table, and never `SEEDABLE`** — the same answer today to a different
-  question, and deriving one refusal from another is what `guard.py`'s own comment argues
-  against. The refusal sits at the top of `routes.py` rather than in the package's
-  `__init__`, which is where the seed system puts its own and is **wrong here**:
+  _Avoid_: calling it an app, a second client, an admin panel; giving a press logic of its
+  own (a press is wiring: the command, then the use case).
+- **Console gate** — what keeps the dev console off every host but a laptop, in two
+  halves that **both refuse**. The structural half is `CONSOLE_SERVED` in
+  `app/api/dev/gate.py`: served in **`local` only**, written out per environment with the
+  same `_undecided` refusal the **Seed guard** carries. **A second table, and never
+  `SEEDABLE`** — and now the two answer differently, which is the case two tables were kept
+  for: the seed runs in three environments, the console in one, because a console that acts
+  without a credential is a door with none. The refusal is `app/api/dev/refusal.py`, the
+  **first import of every module of the console** but `gate` and the package's `__init__`
+  — not in the `__init__`, which is where the seed system puts its own and is **wrong here**:
   `create_app` reads the table in every environment to decide whether to mount anything, so
   a package that refused on import would make a production deployable crash at startup
-  reading its own dev tool. Beside it the data half is a **filter, not a refusal** — a seed
-  account is one addressed on the reserved `.example` TLD — so *gated structurally and by
-  data* resolves asymmetrically: the structural gate is a check and the data gate is a
-  **consequence**, since production has no such accounts. Both hold; only one can fail.
-  _Avoid_: deriving it from `SEEDABLE`, putting the refusal where the mount reads it,
-  making the roster *refuse* a non-seed address (it would be theatre — the login route any
-  browser reaches takes any credential).
+  reading its own dev tool. First, too, because the console imports the seed system now,
+  and the refusal that arrives must be the console's own. The data half is the **acting
+  account**'s refusal. _Avoid_: deriving it from `SEEDABLE`, putting the refusal where the
+  mount reads it, importing anything into a console module before `refusal.py`.
+- **Acting account** — the seed account a console press acts as, named in the press's own
+  path (`/dev/as/{player_id}/…`) and never signed in: no token, no session, no header a
+  player route would honour. It must be one the seed created — addressed on the reserved
+  `.example` TLD — and any other id is **refused** `not_a_seed_account` before the use case
+  is built, so nothing is recorded. The old console could treat that test as a filter,
+  because its only door was the ordinary login; the console's route is the door now. Every
+  button sits on the acting account's own row, beside their name and face, which is what
+  replaced *one identity at a time*. _Avoid_: *impersonation*, *logged in as*, a press that
+  does not name who it acts as.
+- **Situation** — a named builder in the dev console that sets the stage for one mechanic in
+  one press — *Fresh deal*, *Needs her yes · Instant club*, and the ten more #591–#593 add —
+  so the rows can play it out. It runs **the same use cases a request runs** (built from the
+  seed's building blocks, ADR-0029), so it can never leave a state the app could not reach;
+  it **writes history, never time** — the server's clock is never moved, and what happened
+  earlier is written on the seed's backdated clock; and it **obeys the rules**, so pressed
+  twice it may meet the domain's refusal. The **protagonist** it is built around is the
+  phone in the tester's hand, never acted as. _Avoid_: *scenario* (a seed account's named
+  state), *fixture*, *pretend it's later*.
+- **Run it now** — a dev console press that runs one scheduled job's own unit of work, at the
+  real *now*, over **only what is due** — the code the scheduler runs, called sooner, so it
+  can do nothing the next tick would not (ADR-0194 §5; built by #592). _Avoid_: *trigger*,
+  *fast-forward*, anything that brings a moment forward.
 - **Served vocabulary** — a closed domain constant the platform owns, held in exactly one
   module of the context that owns it and exposed **read-only** over the player API so no
   client hardcodes it. Two exist: the `Sport` registry at `GET /api/v1/sports`, and the

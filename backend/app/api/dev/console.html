@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raketa — games test console</title>
+<!--
+  The games test console (docs/adr/0194, #590). One file, no build: no npm, no
+  bundler, no codegen and no lint lane. It is served by the dev surface beside
+  its routes, in `local` only.
+
+  Three things this page will not do, and each of them is load-bearing:
+
+  1. **It holds no token, so it stores none.** A press names the account it
+     acts as in its path (`/dev/as/{player_id}/…`) and the server refuses any
+     account the seed did not create. Nothing is kept in the browser between
+     loads, and a reload starts from nothing.
+  2. **It shows who is acting on every row.** Many people are on one screen at
+     once, so every button sits on the row of the person it acts as, beside
+     their name and face. The protagonist — the phone in the tester's hand — is
+     marked, and is never acted as by a situation.
+  3. **Nothing acts on its own.** There is no timer of any kind in this file.
+     Every press refreshes what it changed, and the Refresh button covers the
+     rest: nothing answers, runs or fetches unless the tester presses.
+-->
+<style>
+  :root {
+    --ink: #16181d; --dim: #6a7080; --line: #d9dde5; --bg: #f6f7f9;
+    --card: #fff; --accent: #1f6feb; --bad: #b42318; --good: #067647; --warn: #b54708;
+    --soft: #eef2f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif;
+    color: var(--ink); background: var(--bg);
+  }
+  header {
+    position: sticky; top: 0; z-index: 2; background: var(--card);
+    border-bottom: 1px solid var(--line); padding: 10px 20px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--dim); margin: 0 8px 0 0; font-weight: 600; }
+  main { padding: 16px 20px 40px; display: grid; gap: 16px; max-width: 1400px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; }
+  section > h2 {
+    margin: 0; padding: 10px 14px; border-bottom: 1px solid var(--line);
+    font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim);
+  }
+  .body { padding: 12px 14px; display: grid; gap: 10px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  label { color: var(--dim); font-size: 12px; }
+  button { font: inherit; padding: 4px 11px; border: 1px solid var(--line);
+    background: var(--card); border-radius: 6px; cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { color: #fff; filter: brightness(1.08); }
+  button.expected { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  select { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
+  .note { color: var(--dim); }
+  .mono { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: var(--dim); }
+  .bad { color: var(--bad); }
+  .good { color: var(--good); }
+  .pill { display: inline-block; padding: 0 8px; border: 1px solid var(--line);
+    border-radius: 999px; font-size: 11px; letter-spacing: .03em; white-space: nowrap; }
+  .pill.in, .pill.FILLED, .pill.BOOKED, .pill.CAPTURED { color: var(--good); border-color: var(--good); }
+  .pill.no, .pill.EXPIRED, .pill.CALLED_OFF, .pill.FAILED, .pill.TURNED_DOWN,
+  .pill.WITHDRAWN, .pill.COURT_HOUR_LOST, .pill.CANCELLED { color: var(--bad); border-color: var(--bad); }
+  .pill.phone { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pill.FILLING, .pill.SEAT_OPEN, .pill.WAITING_FOR_THE_CLUB, .pill.TAKING { color: var(--warn); border-color: var(--warn); }
+  #outcome { padding: 8px 12px; border-radius: 6px; background: var(--soft); min-height: 34px; }
+  #outcome.bad { background: #fef3f2; }
+
+  .people { display: grid; gap: 8px; }
+  .person { display: grid; grid-template-columns: 220px 1fr; gap: 12px;
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .person.phone { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .who { display: flex; gap: 10px; align-items: flex-start; }
+  .face { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none;
+    background: var(--soft); display: grid; place-items: center; font-weight: 700; color: var(--dim); }
+  .who .name { font-weight: 700; font-size: 15px; }
+  .cards { display: grid; gap: 6px; }
+  .rowcard { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 6px 8px; background: var(--soft); border-radius: 6px; }
+  .rowcard .when { font-weight: 600; min-width: 130px; }
+
+  .games { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); }
+  .game { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; }
+  .game.over { opacity: .6; }
+  .game h3 { margin: 0; font-size: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 2px 10px; }
+  dt { color: var(--dim); font-size: 12px; }
+  dd { margin: 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--dim); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Raketa · games test console</h1>
+  <label>Group <select id="group"></select></label>
+  <label>Sport <select id="sport"></select></label>
+  <label>The phone <select id="protagonist"></select></label>
+  <button id="refresh" class="primary">Refresh</button>
+  <span class="note">local only · acts as seed accounts, without signing in</span>
+</header>
+
+<main>
+  <section>
+    <h2>Situations</h2>
+    <div class="body">
+      <div class="row">
+        <button id="fresh-deal">1 · Fresh deal</button>
+        <button id="needs-her-yes">2 · Needs <span class="her">her</span> yes · Instant club</button>
+      </div>
+      <div id="outcome" class="note">Pick a group. Every press refreshes the board; Refresh covers the rest.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>People <span id="people-note" class="note"></span></h2>
+    <div class="body"><div id="people" class="people"></div></div>
+  </section>
+
+  <section>
+    <h2>Games <span id="games-note" class="note"></span></h2>
+    <div class="body">
+      <div class="row">
+        <label>Show <select id="show">
+          <option value="all">every game in the last day and ahead</option>
+          <option value="moving">games with somebody In, a booking or a charge</option>
+        </select></label>
+      </div>
+      <div id="games" class="games"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const state = { groups: null, board: null, protagonist: null };
+const $ = (id) => document.getElementById(id);
+
+// --------------------------------------------------------------------------
+// Words
+// --------------------------------------------------------------------------
+
+const WARSAW = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Warsaw", weekday: "short", day: "2-digit", month: "short",
+  hour: "2-digit", minute: "2-digit",
+});
+const when = (iso) => (iso ? WARSAW.format(new Date(iso)) : "—");
+const zl = (grosze) => (grosze === null || grosze === undefined ? "—" : (grosze / 100).toFixed(2) + " zł");
+
+function esc(text) {
+  return String(text ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[c]);
+}
+const nameOf = (ref) => esc(ref?.name ?? "(unnamed)");
+const names = (refs) => (refs && refs.length ? refs.map(nameOf).join(", ") : "nobody");
+const pill = (text, kind) => `<span class="pill ${esc(kind ?? text)}">${esc(text)}</span>`;
+const firstName = (name) => (name ? String(name).split(" ")[0] : "her");
+const ANSWER_LOOK = { IN: "in", SAID_NO: "no" };
+const answerPill = (answer) => pill(answer, ANSWER_LOOK[answer] ?? "");
+
+// --------------------------------------------------------------------------
+// The wire — no token: the acting account is in the path
+// --------------------------------------------------------------------------
+
+async function call(method, path, body) {
+  const response = await fetch(path, {
+    method,
+    headers: body ? { "Content-Type": "application/json" } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await response.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch (_) { json = null; }
+  return { ok: response.ok, status: response.status, json, text };
+}
+
+function say(outcome, words) {
+  const box = $("outcome");
+  if (outcome && !outcome.ok) {
+    const code = outcome.json?.code ?? outcome.status;
+    const message = outcome.json?.message ?? outcome.text;
+    box.className = "bad";
+    box.innerHTML = `${words} → <strong>${esc(code)}</strong> · ${esc(message)}`;
+  } else {
+    box.className = "";
+    box.innerHTML = words;
+  }
+}
+
+// --------------------------------------------------------------------------
+// Reading
+// --------------------------------------------------------------------------
+
+async function loadGroups() {
+  const read = await call("GET", "/dev/groups");
+  if (!read.ok) { say(read, "Reading the groups"); return; }
+  state.groups = read.json;
+  const chosen = $("group").value;
+  $("group").innerHTML = read.json.groups.map((g) =>
+    `<option value="${g.group_id}">${g.holds_the_protagonist ? "★ " : ""}` +
+    `${esc(g.name)} · ${esc(g.club_name ?? "?")} · ` +
+    `${g.seed_members} seeded${g.other_members ? ` + ${g.other_members} other` : ""}</option>`
+  ).join("");
+  if (chosen) $("group").value = chosen;
+  if (!$("sport").options.length) {
+    $("sport").innerHTML = read.json.sports.map((s) => `<option>${s}</option>`).join("");
+  }
+  if (!read.json.groups.length) {
+    say(null, "No group has a seeded member. Run <code>make seed</code>.");
+  }
+}
+
+async function loadBoard() {
+  const group = $("group").value;
+  if (!group) return;
+  const read = await call("GET", `/dev/groups/${group}?sport=${$("sport").value}`);
+  if (!read.ok) { say(read, "Reading the board"); return; }
+  state.board = read.json;
+  drawProtagonist();
+  drawPeople();
+  drawGames();
+}
+
+async function refresh() {
+  await loadGroups();
+  await loadBoard();
+}
+
+// --------------------------------------------------------------------------
+// The protagonist — the phone
+// --------------------------------------------------------------------------
+
+function drawProtagonist() {
+  const rows = state.board.people;
+  const chosen = state.protagonist;
+  const fallback = state.groups?.protagonist?.player_id;
+  const pick = rows.some((r) => r.player_id === chosen) ? chosen
+    : rows.some((r) => r.player_id === fallback) ? fallback
+    : rows[0]?.player_id ?? null;
+  state.protagonist = pick;
+  $("protagonist").innerHTML = rows.map((r) =>
+    `<option value="${r.player_id}">${nameOf(r)} · ${esc(r.email)}</option>`).join("");
+  if (pick) $("protagonist").value = pick;
+  const her = rows.find((r) => r.player_id === pick);
+  document.querySelectorAll(".her").forEach((el) => { el.textContent = firstName(her?.name) + "'s"; });
+}
+
+// --------------------------------------------------------------------------
+// People rows — every button acts as the row's own person
+// --------------------------------------------------------------------------
+
+const EXPECTED = { DEALT: ["yes", "no"], IN: ["withdraw"], WITHDREW: ["yes"], REOPENED: ["yes"] };
+
+function drawPeople() {
+  const board = state.board;
+  const others = board.group.other_members;
+  $("people-note").textContent = `· ${board.people.length} seeded` +
+    (others ? ` · ${others} other member(s) the console will not act as` : "");
+  $("people").innerHTML = board.people.map((row) => {
+    const phone = row.player_id === state.protagonist;
+    const face = row.photo_url
+      ? `<img class="face" src="${esc(row.photo_url)}" alt="">`
+      : `<div class="face">${esc((row.name ?? "?").slice(0, 1))}</div>`;
+    const cards = row.cards.length ? row.cards.map((card) => {
+      const expected = EXPECTED[card.answer] ?? [];
+      const button = (verb, label) =>
+        `<button class="${expected.includes(verb) ? "expected" : ""}" ` +
+        `data-act="${verb}" data-player="${row.player_id}" data-game="${card.proposal_id}" ` +
+        `data-who="${esc(row.name ?? row.email)}">${label}</button>`;
+      return `<div class="rowcard">
+        <span class="when">${when(card.starts_at)}</span>
+        ${pill(card.kind, "kind")}
+        ${answerPill(card.answer)}
+        <span>In: ${names(card.people_in)} · ${card.open_seats} open</span>
+        <span class="row">${button("yes", "Yes")}${button("no", "No")}${button("withdraw", "Withdraw")}</span>
+        <span class="mono">${esc(card.proposal_id.slice(0, 8))}</span>
+      </div>`;
+    }).join("") : `<div class="note">No card in ${esc(board.sport.toLowerCase())}.</div>`;
+    return `<div class="person ${phone ? "phone" : ""}">
+      <div class="who">${face}<div>
+        <div class="name">${nameOf(row)} ${phone ? pill("the phone", "phone") : ""}</div>
+        <div class="mono">${esc(row.email)}</div>
+        <div class="note">Level ${row.level === null ? "—" : row.level.toFixed(2)}</div>
+      </div></div>
+      <div class="cards">${cards}</div>
+    </div>`;
+  }).join("");
+}
+
+const VERBS = {
+  yes: ["POST", "yes", "Yes"],
+  no: ["POST", "no", "No"],
+  withdraw: ["DELETE", "yes", "Withdraw"],
+};
+
+async function act(button) {
+  const [method, tail, label] = VERBS[button.dataset.act];
+  const { player, game, who } = button.dataset;
+  const words = `${esc(who)} · ${label} on ${esc(game.slice(0, 8))}`;
+  const done = await call(method, `/dev/as/${player}/proposals/${game}/${tail}`);
+  if (done.ok && done.json) {
+    const a = done.json;
+    const after = a.booked ? "booked — It's a game!"
+      : a.waiting_for_the_club ? "full — waiting for the club"
+      : a.your_payment ? `payment refused (${esc(a.your_payment.status ?? "")})`
+      : `${a.open_seats} seat(s) open`;
+    say(done, `${words} → ${after}`);
+  } else {
+    say(done, done.ok ? `${words} → done` : words);
+  }
+  await loadBoard();
+}
+
+// --------------------------------------------------------------------------
+// State panes — one per game
+// --------------------------------------------------------------------------
+
+function drawGames() {
+  const every = state.board.games;
+  const games = $("show").value === "all" ? every
+    : every.filter((g) => g.people_in.length || g.booking || g.charges.length);
+  $("games-note").textContent =
+    `· ${games.length} of ${every.length} · read ${when(state.board.read_at)}`;
+  $("games").innerHTML = games.length ? games.map((game) => {
+    const booking = game.booking;
+    const over = !["FILLING", "FILLED"].includes(game.standing);
+    const club = game.club.confirms_each_game === null ? "not selling"
+      : game.club.confirms_each_game ? "On request" : "Instant";
+    const sides = game.sides
+      ? `${names(game.sides.first)} <span class="note">v</span> ${names(game.sides.second)}`
+      : "—";
+    const versions = game.versions.map((v) =>
+      `<div>v${v.number}: ${v.people.map((p) => `${nameOf(p)} ${answerPill(p.answer)}`).join(" ")}</div>`
+    ).join("") || "—";
+    const departures = booking && booking.departures.length
+      ? booking.departures.map((d) => `${nameOf(d.player)} left ${when(d.at)}` +
+          (d.rescued_by ? ` · seat taken by ${nameOf(d.rescued_by)}` : " · seat open")).join("<br>")
+      : "—";
+    const charges = game.charges.length ? `<table>
+      <thead><tr><th>Who</th><th>Share</th><th>Status</th><th>Taken</th><th>Refund</th></tr></thead>
+      <tbody>${game.charges.map((c) => `<tr>
+        <td>${nameOf(c.player)}</td>
+        <td>${zl(c.amount_grosze)}</td>
+        <td>${pill(c.status)}${c.failure ? ` <span class="bad">${esc(c.failure)}</span>` : ""}</td>
+        <td>${when(c.taken_at)}</td>
+        <td>${c.refund ? `${zl(c.refund.given_back_grosze)}` +
+          (c.refund.withholds_fee ? " less fee" : " in full") +
+          (c.refund.given_at ? ` · given ${when(c.refund.given_at)}` : " · decided, on its way") : "—"}</td>
+      </tr>`).join("")}</tbody></table>` : `<span class="note">no charge</span>`;
+    return `<div class="game ${over ? "over" : ""}">
+      <h3>${when(game.starts_at)} · ${esc(game.club.name ?? "?")}
+        ${pill(game.standing)} ${booking ? pill(booking.state) : ""}
+        ${game.waiting_for_the_club ? pill("waiting for the club", "WAITING_FOR_THE_CLUB") : ""}</h3>
+      <dl>
+        <dt>Game</dt><dd>${esc(game.origin)} · ${esc(game.kind)} · ${club}${game.poster ? ` · posted by ${nameOf(game.poster)}` : ""}
+          <span class="mono">${esc(game.game_id.slice(0, 8))}</span></dd>
+        <dt>In</dt><dd>${names(game.people_in)} · ${game.open_seats} of ${game.seats} open</dd>
+        <dt>Sides</dt><dd>${sides}</dd>
+        <dt>Dealt</dt><dd>${versions}</dd>
+        <dt>Court hour</dt><dd>${when(game.starts_at)}${booking ? ` · ${esc(booking.court_name)}` : ""}</dd>
+        <dt>Book by</dt><dd>${when(game.book_by)}</dd>
+        <dt>Cut-off</dt><dd>${when(game.cut_off)}</dd>
+        <dt>Share</dt><dd>${zl(game.share_grosze)}</dd>
+        ${booking ? `
+        <dt>Booking</dt><dd>${pill(booking.state)}${booking.called_off ? ` ${esc(booking.called_off)}` : ""}
+          ${booking.cancel_reason ? ` · ${esc(booking.cancel_reason)}` : ""}
+          ${booking.booked_at ? ` · booked ${when(booking.booked_at)}` : ""}
+          ${booking.answer_by ? ` · club answers by ${when(booking.answer_by)}` : ""}</dd>
+        <dt>Left</dt><dd>${departures}</dd>
+        <dt>Checked in</dt><dd>${names(booking.checked_in)}</dd>` : ""}
+        <dt>Money</dt><dd>${charges}</dd>
+      </dl>
+    </div>`;
+  }).join("") : `<div class="note">Nothing to show. Try <em>Fresh deal</em>, or show every game.</div>`;
+}
+
+// --------------------------------------------------------------------------
+// Situations
+// --------------------------------------------------------------------------
+
+async function freshDeal() {
+  const done = await call("POST", "/dev/situations/fresh-deal", { group_id: $("group").value });
+  say(done, done.ok ? `Fresh deal → ${esc(done.json.says)}` : "Fresh deal");
+  await loadBoard();
+}
+
+async function needsHerYes() {
+  const done = await call("POST", "/dev/situations/needs-her-yes-instant-club", {
+    group_id: $("group").value,
+    sport: $("sport").value,
+    protagonist_id: state.protagonist,
+  });
+  say(done, done.ok ? `Needs her yes → ${esc(done.json.says)} Say yes on the phone.` : "Needs her yes");
+  await loadBoard();
+}
+
+// --------------------------------------------------------------------------
+// Wiring
+// --------------------------------------------------------------------------
+
+$("refresh").addEventListener("click", refresh);
+$("group").addEventListener("change", loadBoard);
+$("sport").addEventListener("change", loadBoard);
+$("show").addEventListener("change", () => { if (state.board) drawGames(); });
+$("protagonist").addEventListener("change", () => {
+  state.protagonist = $("protagonist").value;
+  drawProtagonist(); drawPeople();
+});
+$("fresh-deal").addEventListener("click", freshDeal);
+$("needs-her-yes").addEventListener("click", needsHerYes);
+$("people").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-act]");
+  if (button) act(button);
+});
+
+// The first read, once, on load — and nothing after it unless pressed. It
+// opens on the protagonist's biggest group, where the seed deals her games.
+loadGroups().then(() => {
+  const hers = (state.groups?.groups ?? [])
+    .filter((g) => g.holds_the_protagonist)
+    .sort((a, b) => b.seed_members - a.seed_members);
+  if (hers.length) $("group").value = hers[0].group_id;
+  return loadBoard();
+});
+</script>
+</body>
+</html>

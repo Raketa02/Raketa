@@ -9,14 +9,6 @@ paths:
 
 Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-bearing and not obvious from the code.
 
-> **The dev console's page is gone (#578), and the games test console of
-> [ADR-0194](../../../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)
-> replaces it** (#590). That console acts as seed accounts **without signing in**, refuses a
-> non-seed account, is served in `local` only, and builds situations from `app/seeds/`. Each
-> action runs the player's or club's own use case. What follows describes the surface it
-> inherits: the gate and the roster stayed; the page that signed in as a player and pressed
-> challenges did not.
-
 - **New routes mount under `app/api/v1/router.py`;** keep the `/api/v1` prefix, and mount
   them on **the surface whose client calls them**: `app/api/v1/player.py` for the player
   app, `app/api/v1/club.py` — everything under `/api/v1/club` — for the club website, and
@@ -27,27 +19,43 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `tests/unit/test_public_surface.py`). **A route no client calls is on no surface**: the
   payment provider's webhooks mount through `app/api/v1/webhooks.py`, under
   `/api/v1/webhooks` and out of every document (ADR-0190 §4). The one
-  exception to the prefix is the **dev console** (`app/api/dev/`, #256) — a second *surface*, not a
-  second client: one roster route, which is the whole of `openapi.dev.json`. Its page — a
-  no-build `console.html` at `/dev` that **acted as another player by signing in as them**
-  through the ordinary `POST /api/v1/auth/login` with the public seed password the roster
-  hands over — went with the challenge routes it pressed (#578). It is gated **structurally and by data**, asymmetrically:
-  `CONSOLE_SERVED` in `app/api/dev/gate.py` is a **second table** and never `SEEDABLE`
-  (deriving one refusal from another is what `app/seeds/guard.py` argues against), and
-  importing `routes.py` in production raises `ConsoleRefused` — while the data half is a
-  *consequence*, since the roster lists only the reserved `.example` TLD and production has
-  no such accounts. The refusal is at the top of `routes.py` rather than in the package's
-  `__init__`, deliberately: `create_app` reads the gate in **every** environment, so a
-  package that refused on import would take the production deployable down at startup. It
-  **declines the `app/seeds/` import it is entitled to** — which is what keeps the console's
-  own refusal the one that fires — at the cost of spelling two constants twice, pinned by
-  `tests/unit/test_dev_console_surface.py`. Its contract is checked for **freshness**
-  (`make contract-freshness`), not by the client drift check, which has no purchase on a
-  document with no client.
+  exception to the prefix is the **dev console** (`app/api/dev/`) — a second *surface*, not a
+  second client: the **games test console** of
+  [ADR-0194](../../../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)
+  (#590). A no-build `console.html` at `/dev`, out of the contract; the roster the phone signs
+  in from; and a route per thing the page presses — a person's buttons under
+  `/dev/as/{player_id}/…`, a group's board under `/dev/groups`, the situations under
+  `/dev/situations/…`, and *Run it now* (#592). Four rules hold it:
+  - **It acts as seed accounts without signing in.** A press names its **acting account** in
+    its path; `accounts.py` refuses any id not addressed on the reserved `.example` TLD
+    (`not_a_seed_account`) before the use case is built. No token, session or header.
+  - **A press is wiring.** It builds the player's (or club's) command and runs that route's
+    own use case, through the same dependency, so its outcome and its refusals are the
+    player's — `tests/api/test_games_test_console.py` holds each button to the player's
+    route. Work a player route does outside its use case is a bug the console would skip:
+    move it into the use case, never into a copy here.
+  - **Served in `local` only.** `CONSOLE_SERVED` in `gate.py` is a **second table** and never
+    `SEEDABLE` (the seed runs in three environments, the console in one), and **every module
+    of the console imports `refusal.py` first** — but `gate` and the package's `__init__`,
+    which `create_app` reads in every environment, so a package that refused on import would
+    take a production deployable down at startup. First, too, because the console imports
+    `app/seeds/` (situations are built from the seed's building blocks, ADR-0194 §4): the
+    refusal that arrives anywhere else must be `ConsoleRefused`, never `SeedRefused`, and
+    `tests/unit/test_dev_console_gate.py` imports every module under each refused
+    environment to prove it.
+  - **Its reads are its own queries** over the contexts' projections (two, in `board.py`),
+    and every port it takes is declared as a request dependency — the context's own where
+    one exists, `app/api/dev/dependencies.py` where none does — so a test that replaces a
+    port replaces it for the console too. The placement ADR-0194 re-argued: nothing
+    shipped imports it, so deleting it changes nothing that ships, and every *write* it
+    causes is a context's own use case.
+
+  Its contract is checked for **freshness** (`make contract-freshness`), not by the client
+  drift check, which has no purchase on a document with no client.
 
 **`make openapi` writes one document per surface, and there are four.** The second is the
-**dev console**'s `openapi.dev.json` — one path, and no client, so nothing generates types
-from it. The third is the **club website**'s `openapi.club.json`, which `frontend_club`
+**dev console**'s `openapi.dev.json` — the roster and the console's routes, and no client,
+so nothing generates types from it. The third is the **club website**'s `openapi.club.json`, which `frontend_club`
 generates from; the fourth is the **public site**'s `openapi.public.json`, which
 `frontend_public` generates from — **no route on it takes a session**, and its password
 routes run the app's own rules and sign nobody in (#511). All four are committed and gated at

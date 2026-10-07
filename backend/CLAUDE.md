@@ -24,8 +24,8 @@ make up / down      # dev stack: Postgres, API, MinIO, photo-review, Redis, Mail
                     # (every email lands in http://localhost:8025)
 make migrate        # alembic upgrade head inside the API container
 make seed           # deterministic dev accounts, the cohort and their history, through the
-                    # use cases; needs the stack up (make seed-host on the host). The dev
-                    # surface keeps its roster (/dev/roster) for the games test console (#590)
+                    # use cases; needs the stack up (make seed-host on the host). Then the
+                    # games test console is http://localhost:8000/dev (local only, #590)
 ```
 
 One test: `poetry run pytest tests/unit/test_user_domain.py::test_name`.

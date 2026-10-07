@@ -1,15 +1,15 @@
-"""What the dev surface is, and the three claims it would be easy to break.
+"""What the dev surface is, and the claims about its shape it would be easy to
+break.
 
-The gate is tested next door. This is about the surface's *shape*: that its
-contract holds one path, that no `/dev` path has leaked into the document the
-player client generates its wire types from, and that the two constants it
-spells for itself still equal the ones it declined to import.
+The gate is tested next door. This is about the surface's *shape*: that every
+path in its contract is under ``/dev`` and every press names the account it acts
+as, that no ``/dev`` path has leaked into the document the player client
+generates its wire types from, and that the seed predicate is total.
 
-The last of those is the price of the decline, and it is paid deliberately.
-`app/api/dev/__init__.py` argues why the console does not import `app/seeds/`;
-the cost is that `SEED_PASSWORD` and the reserved TLD are written twice, and
-these cases are what keep the second spelling from drifting — or from being
-deleted by somebody who reads it as duplication.
+**The constants are the seed catalog's own.** The old console declined the
+``app/seeds/`` import and spelled the password and the reserved TLD twice; the
+games test console is built from the seed's building blocks (``docs/adr/0194``
+§4), so there is one spelling of each, and nothing here pins a second.
 """
 
 from __future__ import annotations
@@ -20,17 +20,8 @@ from pathlib import Path
 import pytest
 
 from app.api.contract import SURFACES, build_surface_spec
-from app.api.dev.routes import (
-    SEED_ADDRESS_TLD,
-    SEED_PASSWORD,
-    is_seed_account,
-)
-from app.seeds.catalog import (
-    ACCOUNTS,
-    RESERVED_TLD,
-    SEED_EMAIL_DOMAIN,
-    SEED_PASSWORD as CATALOG_SEED_PASSWORD,
-)
+from app.api.dev.accounts import is_seed_account
+from app.seeds.catalog import ACCOUNTS, RESERVED_TLD
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
@@ -40,21 +31,32 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 # ---------------------------------------------------------------------------
 
 
-def test_the_dev_contract_holds_exactly_one_path():
-    """The roster, and nothing else.
-
-    The page itself is `include_in_schema=False` — a document describing how to
+def test_every_dev_path_is_under_dev_and_the_page_is_not_one():
+    """The page is `include_in_schema=False` — a document describing how to
     fetch an HTML file is not something anything generates types from — and
-    every other request the console sends is a **player-surface** request it
-    makes as the player it signed in as. One path is therefore the honest
-    description of this surface, and a second one appearing here means somebody
-    has built a dev-only way to do something a player can already do.
-    """
+    every route it presses is in the document, which still has no client."""
 
     spec = build_surface_spec("Raketa Dev API", SURFACES["dev"])
 
-    assert list(spec["paths"]) == ["/dev/roster"]
+    assert spec["paths"]
+    assert all(path.startswith("/dev/") for path in spec["paths"])
+    assert "/dev" not in spec["paths"]
     assert list(spec["paths"]["/dev/roster"]) == ["get"]
+
+
+def test_every_press_names_the_account_it_acts_as():
+    """ADR-0194 §2: there is no impersonation token, no session and no header —
+    a press acts as the account in its path, and nothing else. A route under
+    `/dev/as/` that did not name one would be acting as nobody in particular."""
+
+    spec = build_surface_spec("Raketa Dev API", SURFACES["dev"])
+
+    acting = [path for path in spec["paths"] if path.startswith("/dev/as/")]
+    assert acting
+    assert all(path.startswith("/dev/as/{player_id}/") for path in acting)
+    for path in acting:
+        for operation in spec["paths"][path].values():
+            assert "403" in operation["responses"], (path, "not_a_seed_account")
 
 
 def test_the_committed_dev_document_is_the_one_the_surface_produces():
@@ -92,21 +94,7 @@ def test_every_surface_writes_a_document_of_its_own():
 
 
 # ---------------------------------------------------------------------------
-# The two constants the decline costs
-# ---------------------------------------------------------------------------
-
-
-def test_the_console_s_password_is_the_seed_system_s_password():
-    assert SEED_PASSWORD == CATALOG_SEED_PASSWORD
-
-
-def test_the_console_s_reserved_tld_is_the_seed_system_s():
-    assert SEED_ADDRESS_TLD == RESERVED_TLD
-    assert SEED_EMAIL_DOMAIN.endswith(SEED_ADDRESS_TLD)
-
-
-# ---------------------------------------------------------------------------
-# The data predicate — a filter, and a total one
+# The data predicate — a total one
 # ---------------------------------------------------------------------------
 
 

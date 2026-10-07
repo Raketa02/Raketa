@@ -3,9 +3,14 @@
 The same two halves ``tests/unit/test_seed_guard.py`` is built from, and the
 second is again the one that matters. The function is easy to satisfy without
 the gate holding anywhere, so the cases below also drive **real processes** under
-a production environment and assert three things at once: importing the console
-refuses, importing the *application* does not, and the app a production process
-builds routes nothing at ``/dev``.
+environments the console is not served in, and assert three things at once:
+importing any module of the console refuses with the console's own refusal,
+importing the *application* does not, and the app such a process builds routes
+nothing at ``/dev``.
+
+**It is served in ``local`` only** (``docs/adr/0194`` §1). The console acts as
+seed accounts without signing in, so it is a door with no credential at all; on
+any shared host anybody who reached the address could be any seeded player.
 
 The third is not a nicety. ``create_app`` reads ``CONSOLE_SERVED`` in every
 environment, so if the refusal lived in ``app/api/dev/__init__.py`` — where the
@@ -16,6 +21,7 @@ because it read its own dev tool. That is an outage, not a gate, and
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -106,13 +112,18 @@ def test_production_is_refused(clean_env):
         refuse_unless_served(production())
 
 
+def test_local_is_served(clean_env):
+    refuse_unless_served(build(APP_ENV=Environment.LOCAL))  # does not raise
+
+
 @pytest.mark.parametrize(
-    "environment",
-    [Environment.LOCAL, Environment.DEVELOPMENT, Environment.STAGING],
+    "environment", [Environment.DEVELOPMENT, Environment.STAGING]
 )
-def test_the_other_three_are_served(clean_env, environment):
+def test_the_deployed_environments_are_refused_too(clean_env, environment):
     """Named one per case rather than looped over `CONSOLE_SERVED`, so a table
-    that lost an entry cannot make this test agree with it."""
+    that gained an entry cannot make this test agree with it. The seed still
+    runs in both (`SEEDABLE`); the console does not — the case two tables were
+    kept for."""
 
     settings = build(
         APP_ENV=environment,
@@ -131,7 +142,8 @@ def test_the_other_three_are_served(clean_env, environment):
         STRIPE_CONNECT_WEBHOOK_SECRET="whsec_guard_suite_connect",
     )
 
-    refuse_unless_served(settings)  # does not raise
+    with pytest.raises(ConsoleRefused):
+        refuse_unless_served(settings)
 
 
 def test_every_environment_has_been_decided_about():
@@ -147,14 +159,18 @@ def test_every_environment_has_been_decided_about():
 
 
 def test_it_is_a_second_table_and_not_the_seed_one():
-    """Same answer today, different question — and deriving one from the other
-    is what `app/seeds/guard.py`'s own comment argues against. This asserts they
-    are two objects, so a future refactor that aliases one to the other has to
-    delete a test that says why not."""
+    """A different question, and now a different answer: the seed runs in
+    three environments, the console in one. Deriving one refusal from the other
+    is what `app/seeds/guard.py`'s own comment argues against, and the two
+    answering differently is the case two tables were kept for."""
 
     from app.seeds.guard import SEEDABLE
 
     assert CONSOLE_SERVED is not SEEDABLE
+    assert [env for env, served in CONSOLE_SERVED.items() if served] == [
+        Environment.LOCAL
+    ]
+    assert SEEDABLE[Environment.DEVELOPMENT] and SEEDABLE[Environment.STAGING]
 
 
 def test_the_refusal_names_the_variable_and_the_alternatives(clean_env):
@@ -237,9 +253,33 @@ PRODUCTION_ENV = {
 }
 
 
+#: The same process, deployed somewhere the seed may still run — so the seed's
+#: own refusal would let an import through, and only the console's stops it.
+DEVELOPMENT_ENV = {**PRODUCTION_ENV, "APP_ENV": "development"}
+STAGING_ENV = {**PRODUCTION_ENV, "APP_ENV": "staging"}
+
+#: Imports each module of the console in turn and prints the error each one
+#: raised. A module whose import raised is not left in `sys.modules`, so every
+#: one is imported afresh and reaches its own first line.
+EVERY_CONSOLE_MODULE = """
+import importlib, pathlib, json
+here = pathlib.Path("app/api/dev")
+raised = {}
+for path in sorted(here.glob("*.py")):
+    if path.stem in ("__init__", "gate"):
+        continue
+    try:
+        importlib.import_module(f"app.api.dev.{path.stem}")
+        raised[path.stem] = None
+    except Exception as error:
+        raised[path.stem] = type(error).__name__
+print(json.dumps(raised))
+"""
+
+
 def test_importing_the_console_refuses_in_production():
-    """`import app.api.dev.routes` is enough: the refusal is at the top of the
-    module, so there is no order of imports that reaches a router first."""
+    """`import app.api.dev.routes` is enough: the refusal is the module's first
+    import, so there is no order of imports that reaches a router first."""
 
     result = _run(["-c", "import app.api.dev.routes"], **PRODUCTION_ENV)
 
@@ -248,24 +288,40 @@ def test_importing_the_console_refuses_in_production():
     assert POISON_SECRET not in result.stderr
 
 
-def test_the_refusal_that_arrives_is_the_console_s_own():
-    """The console is *entitled* to import `app/seeds/`, and declines.
+@pytest.mark.parametrize(
+    "environment", [PRODUCTION_ENV, DEVELOPMENT_ENV, STAGING_ENV],
+    ids=["production", "development", "staging"],
+)
+def test_every_module_of_the_console_refuses_with_its_own_refusal(environment):
+    """The console is built from the seed's building blocks now (ADR-0194 §4),
+    and `app/seeds/__init__` refuses on import too — but only in production.
 
-    If it took that import, `app/seeds/__init__` would refuse first and the
-    failure above would be a `SeedRefused` — `CONSOLE_SERVED` would be a second
-    table nothing had ever proved fires. This is the assertion that makes the
-    decline load-bearing rather than a preference.
+    So the order is load-bearing: were any module of the console to reach the
+    seed system before `refusal.py`, production would answer `SeedRefused` —
+    `CONSOLE_SERVED` would be a second table nothing had ever proved fires — and
+    development and staging, where the seed may run, would import the console
+    without a word. Every module but `gate` and the package's `__init__` (which
+    `create_app` reads everywhere) must answer the console's own refusal.
     """
 
-    result = _run(["-c", "import app.api.dev.routes"], **PRODUCTION_ENV)
+    result = _run(["-c", EVERY_CONSOLE_MODULE], **environment)
 
-    assert "ConsoleRefused" in result.stderr
-    assert "SeedRefused" not in result.stderr
+    assert result.returncode == 0, result.stderr
+    raised = json.loads(result.stdout)
+    assert {"routes", "refusal", "accounts", "people", "board", "situations"} <= set(
+        raised
+    )
+    assert raised == {module: "ConsoleRefused" for module in raised}
 
 
-def test_a_production_process_builds_an_app_without_it():
-    """The other half, and the reason the refusal is not in the package's
-    `__init__`: reading the gate must never be what takes a deployable down."""
+@pytest.mark.parametrize(
+    "environment", [PRODUCTION_ENV, DEVELOPMENT_ENV, STAGING_ENV],
+    ids=["production", "development", "staging"],
+)
+def test_a_process_it_is_not_served_in_builds_an_app_without_it(environment):
+    """The routes are absent outside `local` — and the reason the refusal is not
+    in the package's `__init__`: reading the gate must never be what takes a
+    deployable down."""
 
     result = _run(
         [
@@ -273,14 +329,14 @@ def test_a_production_process_builds_an_app_without_it():
             "from app.main import create_app;"
             " print(sorted({r.path for r in create_app().routes}))",
         ],
-        **PRODUCTION_ENV,
+        **environment,
     )
 
     assert result.returncode == 0, result.stderr
-    # Exact paths, as the printed list quotes them — ``/players/me/devices``
-    # (#549) is no console.
+    # Exact paths and prefixes, as the printed list quotes them —
+    # ``/players/me/devices`` (#549) is no console.
     assert "'/dev'" not in result.stdout
-    assert "'/dev/roster'" not in result.stdout
+    assert "'/dev/" not in result.stdout
 
 
 #: A fifth environment, spelled as `app/core/config.py` spells the four. Patched

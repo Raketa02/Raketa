@@ -69,18 +69,22 @@ COMPETITIVE_TAGS = ("PLAYS_TO_WIN", "HERE_TO_IMPROVE")
 SHARED_SLOTS = ("2:19", "6:10")
 
 
-async def register(client, name: str) -> tuple[UUID, str]:
+async def register(
+    client, name: str, *, domain: str = "example.com"
+) -> tuple[UUID, str]:
     """Sign one player up, in, and name them. Returns their id and a bearer token.
 
     The naming is the player's own act after sign-up (``docs/adr/0171`` §2); the
     one word is used for the name and the nickname alike, so an assertion reading
-    a seat's ``name`` finds what the test registered.
+    a seat's ``name`` finds what the test registered. ``domain`` is where they
+    are addressed — ``raketa.example``, the seed system's reserved TLD, makes an
+    account the games test console may act as (``docs/adr/0194`` §2).
     """
 
     signup = await client.post(
         "/api/v1/users",
         json={
-            "email": f"{name}@example.com",
+            "email": f"{name}@{domain}",
             "password1": "hunter22!",
             "password2": "hunter22!",
             "adult_attested": True,
@@ -89,7 +93,7 @@ async def register(client, name: str) -> tuple[UUID, str]:
     assert signup.status_code == 201, signup.text
     login = await client.post(
         "/api/v1/auth/login",
-        json={"email": f"{name}@example.com", "password": "hunter22!"},
+        json={"email": f"{name}@{domain}", "password": "hunter22!"},
     )
     assert login.status_code == 200, login.text
     token = login.json()["access_token"]

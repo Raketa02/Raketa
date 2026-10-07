@@ -1,138 +1,89 @@
-"""The dev surface: one roster, and nothing yet that reads it.
+"""The dev surface: the games test console's page, its roster, and the routes
+the page presses (``docs/adr/0194``, #590).
 
-**The gate is checked at the top of this module**, so importing it anywhere the
-console is not served refuses before a router exists. ``app/api/dev/__init__.py``
-says why the refusal is here and not in the package's ``__init__``.
+**The refusal is the first import of this module**, and of every module of the
+console (``refusal.py``), so importing it anywhere the console is not served
+refuses before a router exists — and before the seed system the situations are
+built from is reached, whose own refusal would otherwise arrive first.
+``app/api/dev/__init__.py`` says why the refusal is not in the package's
+``__init__``.
 
-It asks the **process's** settings, while ``create_app`` reads the table off the
-settings it was handed — the same split ``app/seeds/`` has, where the package's
-import checks the process and ``run`` re-checks the object that decides which
-database is about to be written to. A process that is production does not get a
-console by being handed a `Settings` that says otherwise.
+**The console acts as seed accounts without signing in** (ADR-0194 §2). A press
+on a person's row names that person in its path — ``/dev/as/{player_id}/…`` —
+and runs the use case their own button runs (``people.py``); there is no token,
+no session and no header a player route would honour, so the page holds and
+stores nothing. A group's board is ``board.py``'s, and the situations are
+``situations.py``'s.
 
-**One route, and it is the contract.** The console page that read it — a
-no-build ``console.html`` at ``GET /dev``, which signed in as a seeded player and
-pressed searches, yeses and challenges on their behalf — went with the challenge
-routes it called (#578). The roster and this module's gate stay for the games
-test console that replaces it (``docs/adr/0194``, #590), and
-``openapi.dev.json`` still says the honest thing: this surface has exactly one
-path, the roster.
+**The roster carries the password once, at the top level.** The console no
+longer signs in with it; the **phone** does — the tester signs the protagonist in
+with the address and the one public password every seeded account holds, which
+``app/seeds/catalog.py`` decided *"so a developer signing in as any of them
+types the same thing"*. It is public by construction — it is written in this
+repository's source — and the gate, not secrecy, is what makes that safe.
 
-**The roster carries the password once, at the top level.** The obvious shape —
-``POST /dev/sessions {handle} → tokens`` — *is* an impersonation endpoint, and
-this console refuses to have one; so the browser must present a credential to the
-ordinary ``POST /api/v1/auth/login`` itself, which means it must hold one. One
-password for every seeded account is what ``app/seeds/catalog.py`` decided *"so a
-developer signing in as any of them types the same thing"*, and a per-account
-copy would state the opposite. It is public by construction — it is written in
-this repository's source — and ``guard.py``'s whole argument is that the gate,
-not secrecy, is what makes that safe.
+**The data predicate is the seed system's own TLD** (``accounts.py``), imported
+from the catalog now that the console is built from the seed's building blocks
+(ADR-0194 §4), so there is one spelling of it. It is the roster's filter and the
+acting account's refusal: **one rule, two uses** — the roster lists nobody the
+console would refuse, and the console refuses everybody the roster leaves out.
 
-**The data predicate is a filter, and never a refusal.** ``is_seed_account`` is
-the roster's query and nothing else. Making the console *refuse* a non-seed
-address would be theatre: it signs in through the ordinary login route, which
-any browser already reaches with any credential. So *gated structurally and by
-data* resolves asymmetrically — the structural gate is a check, and the data gate
-is a **consequence**: production has no addresses on the reserved TLD, so the
-roster is empty there by construction. Both hold; only one of them can fail.
-
-**The query is this module's own, rather than a read model on ``users``**, and
-that is the one place this surface stands beside a documented rule instead of
-inside it. *Dependencies point inward* fences the **domain and application**
-layers off the ORM — `.importlinter` enforces exactly that — and `app/api/` has
-never been on the inside of it. What the rule would otherwise ask for here is a
-port, an adapter and a use case in the `users` context, all of which would exist
-for a development tool and none of which any request would ever run. The trade
-taken instead: the whole dev surface is one directory nothing else imports, its
-one query is three columns and a `WHERE`, and the day it is deleted nothing
-shipped changes shape. If it ever grows a second query it has become a product,
-and the placement is re-argued rather than grown into.
+**Its queries are its own, rather than read models in the contexts**, and that
+is where this surface stands beside a documented rule instead of inside it.
+*Dependencies point inward* fences the **domain and application** layers off the
+ORM — ``.importlinter`` enforces exactly that — and ``app/api/`` has never been
+on the inside of it. A port, an adapter and a use case per read would exist for
+a development tool, and no request would ever run them. The trade, re-argued by
+ADR-0194 rather than grown into: the whole surface is one directory that nothing
+shipped imports, so deleting it changes nothing that ships; its reads are a few
+columns and a ``WHERE`` each, over the projections the contexts already write;
+and every **act** it takes is a context's own use case, never a write of its
+own.
 """
 
 from __future__ import annotations
 
+import app.api.dev.refusal  # noqa: F401 — refuses first; see refusal.py
+
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.sql.elements import ColumnElement
 
 from app.api.dependencies import DbSession
-from app.api.dev.gate import refuse_unless_served
-from app.core.config import get_settings
+from app.api.dev.accounts import seed_accounts_only
+from app.api.dev.board import router as board_router
+from app.api.dev.people import router as people_router
+from app.api.dev.situations import router as situations_router
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
+from app.seeds.catalog import SEED_PASSWORD
 
-refuse_unless_served(get_settings())
-
-#: A seed account is one addressed on a TLD RFC 2606 §2 reserves: no registry
-#: will ever sell a name under it, so an address here cannot be somebody's real
-#: mailbox. **Spelled again rather than imported** from ``app/seeds/catalog.py``
-#: — see the package docstring for why this surface declines that import — and
-#: ``tests/unit/test_dev_console_surface.py`` is what keeps the two spellings
-#: equal, so the second one cannot drift or be deleted as duplication.
-SEED_ADDRESS_TLD = ".example"
-
-#: The one public password every seeded account holds. Spelled again for the same
-#: reason, and pinned to the catalog's by the same test.
-SEED_PASSWORD = "raketa-seed1"
-
-
-def is_seed_account(email: str) -> bool:
-    """Is this address a fabricated one?
-
-    Total: a string with no ``@`` has no domain, so it is **not** a seed account
-    rather than an error — this is a filter, and a filter has an answer for every
-    row it is shown. The ``@`` is checked rather than assumed: without it
-    ``rpartition`` hands back the whole string, and ``nonsense.example`` would
-    read as an address on the reserved TLD.
-
-    The roster's rule, and nothing else's — ``seed_accounts_only`` below is the
-    same rule in SQL and is what the query runs. The console is deliberately not
-    built to *refuse* a non-seed address, because that would be theatre: it signs
-    in through the ordinary login route, which any browser already reaches with
-    any credential.
-    """
-
-    local, at, domain = email.rpartition("@")
-    return bool(local) and bool(at) and domain.casefold().endswith(SEED_ADDRESS_TLD)
-
-
-def seed_accounts_only() -> ColumnElement[bool]:
-    """``is_seed_account`` written in SQL, over ``UserORM.email``.
-
-    Two spellings of one predicate, because the roster must not load a real
-    database's users into this process to filter them — and they cannot drift
-    far, since the domain is everything after the last ``@`` and an address ends
-    where its domain does, so a case-insensitive suffix match is the same claim.
-    The ``%@%`` is the ``@`` the Python side checks for, and it is here for the
-    same reason: without it the pattern matches a string that is not an address
-    at all. ``tests/api/test_dev_console.py`` registers addresses on both sides
-    of the line and asserts the two agree.
-    """
-
-    return UserORM.email.ilike(f"_%@%{SEED_ADDRESS_TLD}")
+#: The page: one file with no build (ADR-0194 §6).
+CONSOLE_HTML = Path(__file__).resolve().parent / "console.html"
 
 
 class RosterAccount(BaseModel):
-    """One account the console may sign in as."""
+    """One account the console may act as."""
 
     player_id: UUID = Field(
         ...,
         description=(
-            "The id every player-surface read and write names this account by. "
-            "Same value as the user's id — there is one identity."
+            "The id every player-surface read and write names this account by — "
+            "and the one a console press names it by. Same value as the user's "
+            "id — there is one identity."
         ),
     )
-    email: str = Field(..., description="What the console types into `/auth/login`")
+    email: str = Field(..., description="What the phone signs in with")
     name: str | None = Field(
         ...,
         description=(
             "The whole name, as every player surface says it. `null` for an "
             "account registered and never named, which no seed run leaves "
             "behind. What the account is *for* — the state it was named for — is "
-            "read off the address, not the name: the roster reads meaning off "
-            "the address rather than out of the seed catalog."
+            "read off the address, not the name."
         ),
     )
     nickname: str | None = Field(
@@ -145,30 +96,39 @@ class RosterAccount(BaseModel):
 
 
 class RosterResponse(BaseModel):
-    """Every account the console may act as, and the one password that does it."""
+    """Every account the console may act as, and the one password the phone
+    signs in with."""
 
     password: str = Field(
         ...,
         description=(
-            "The single password every seeded account holds. **At the top level, "
-            "never per account**: one password for all of them is the seed "
-            "system's own decision, and a per-row copy would state the opposite. "
-            "It is public in this repository's source; the environment gate, not "
-            "secrecy, is what makes that safe."
+            "The single password every seeded account holds — what the tester "
+            "types into the phone to sign the protagonist in. **At the top "
+            "level, never per account**: one password for all of them is the "
+            "seed system's own decision, and a per-row copy would state the "
+            "opposite. It is public in this repository's source; the environment "
+            "gate, not secrecy, is what makes that safe."
         ),
     )
     accounts: list[RosterAccount] = Field(
         ...,
         description=(
             "Every account on the reserved seed TLD, ordered by address and "
-            "**unpaginated** — the console filters client-side. An empty list is "
-            "the honest answer in an unseeded database, and the only answer "
-            "possible in one holding real players."
+            "**unpaginated**. An empty list is the honest answer in an unseeded "
+            "database."
         ),
     )
 
 
 dev_api_router = APIRouter(prefix="/dev", tags=["dev"])
+
+
+@dev_api_router.get("", include_in_schema=False)
+async def read_console() -> FileResponse:
+    """The page. Out of the contract: a document describing how to fetch an
+    HTML file is not something anything generates types from."""
+
+    return FileResponse(CONSOLE_HTML, media_type="text/html")
 
 
 @dev_api_router.get(
@@ -195,3 +155,8 @@ async def read_roster(db: DbSession) -> RosterResponse:
             for row in rows
         ],
     )
+
+
+dev_api_router.include_router(people_router)
+dev_api_router.include_router(board_router)
+dev_api_router.include_router(situations_router)

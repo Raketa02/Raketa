@@ -1,11 +1,18 @@
-"""Where the dev console is served, written out per environment.
+"""Where the dev console is served, written out per environment: **``local``
+only** (``docs/adr/0194`` §1).
 
-**A second table, not ``SEEDABLE``.** It answers the same today and it is not
-the same question, and ``app/seeds/guard.py``'s own comment is the argument
-against deriving one refusal from another: derive it, and the day somebody names
-a fifth environment nothing fails and the new environment quietly serves a
-console. Two tables means the day a fifth name exists is the day *both* stop
-covering ``Environment`` — and both refuse to import.
+**A second table, not ``SEEDABLE``** — and now the two answer differently, which
+is the case two tables were kept for: the seed runs in ``local``,
+``development`` and ``staging``, the console in ``local`` alone. The old
+console was no stronger than the login route, which already takes the public
+seed password; the games test console **acts as seed accounts without signing
+in**, so it is a door with no credential at all, and on any shared host anybody
+who reached the address could be any seeded player, steer payments and run
+jobs. ``app/seeds/guard.py``'s own comment is the argument against deriving one
+refusal from another: derive it, and the day somebody names a fifth environment
+nothing fails and the new environment quietly serves a console. Two tables
+means the day a fifth name exists is the day *both* stop covering
+``Environment`` — and both refuse to import.
 
 **Safe to import anywhere.** This module raises only for a table that has
 stopped covering the enum; the environment refusal is a function you call.
@@ -28,15 +35,15 @@ from typing import Mapping
 from app.core.config import Environment, Settings
 
 #: Where the dev console is served, written out per environment rather than
-#: derived as "everything except production". Deriving it would serve the
-#: console in a fifth environment the moment somebody named one, which is the
-#: one wrong answer that is invisible: nothing would fail, and a page offering
-#: to sign in as other accounts would appear somewhere nobody decided about.
+#: derived as "only local". Deriving it would decide about a fifth environment
+#: the moment somebody named one, which is the one answer nobody argued with:
+#: a page acting as other accounts without a credential must be decided about
+#: wherever it might appear.
 CONSOLE_SERVED: Mapping[Environment, bool] = MappingProxyType(
     {
         Environment.LOCAL: True,
-        Environment.DEVELOPMENT: True,
-        Environment.STAGING: True,
+        Environment.DEVELOPMENT: False,
+        Environment.STAGING: False,
         Environment.PRODUCTION: False,
     }
 )
@@ -74,8 +81,7 @@ def refuse_unless_served(settings: Settings) -> None:
         return
 
     raise ConsoleRefused(
-        f"The dev console is refused: APP_ENV selects '{env}'. It hands a browser "
-        f"a roster of accounts and one password that signs in as any of them, so "
-        f"it is a development tool and never a deployed surface. It is served "
-        f"in: {CONSOLE_SERVED_NAMES}."
+        f"The dev console is refused: APP_ENV selects '{env}'. It acts as any "
+        f"seeded account without signing in, so it is a development tool and "
+        f"never a deployed surface. It is served in: {CONSOLE_SERVED_NAMES}."
     )

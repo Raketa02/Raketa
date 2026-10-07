@@ -25,10 +25,11 @@ with no bearer scheme in it, because nothing on it takes a session
 (``tests/unit/test_public_surface.py``).
 
 **Consequence, stated rather than discovered:** importing the dev router is
-unconditional, so this module refuses to import in production exactly as
-``app/seeds/`` does. That makes it a dev-time module like the seeds — run by
-``make openapi``, never by a server. ``app.main`` is what a server imports, and
-it reads the gate rather than the router.
+unconditional, so this module refuses to import wherever the console is not
+served — everywhere but ``local`` (``app/api/dev/gate.py``), which is narrower
+than the seeds' own refusal. That makes it a dev-time module like the seeds —
+run by ``make openapi``, never by a server. ``app.main`` is what a server
+imports, and it reads the gate rather than the router.
 """
 
 from __future__ import annotations
@@ -52,11 +53,9 @@ _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 SURFACES: dict[str, APIRouter] = {
     "player": player_api_router,
-    # One entry, and the whole dev contract. The page itself is
-    # `include_in_schema=False` and every other request the console sends is a
-    # player-surface request it makes as the player it signed in as — so this
-    # document holds exactly one path, and that is the honest description of
-    # what the surface is.
+    # The games test console's (`docs/adr/0194`): the roster and every route
+    # its page presses, as the accounts they name. The page itself is
+    # `include_in_schema=False`, and nothing generates types from this document.
     "dev": dev_api_router,
     # The club website's, and nobody else's (`docs/adr/0187` §5). Its paths are
     # all under `/api/v1/club`, so this document and the player's never share
