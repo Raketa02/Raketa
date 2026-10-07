@@ -38,14 +38,22 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.kernel import Sport
+from app.modules.games.application.read_games import StandingGame
+from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide
 from app.modules.games.domain.results import (
     MAX_POINTS,
     MAX_SETS,
     MIN_SETS,
     Outcome,
+    Score,
+    SetScore,
 )
 from app.modules.games.domain.standing import GameStanding
+from app.modules.games.domain.windows import (
+    acceptance_settles_at,
+    proposal_closes_at,
+)
 from app.modules.player_profile.domain.weekly_hours import Window
 
 
@@ -77,6 +85,21 @@ class ScoreSchema(BaseModel):
     sets: list[SetScoreSchema] = Field(
         ..., min_length=MIN_SETS, max_length=MAX_SETS
     )
+
+    def as_score(self) -> Score:
+        """The wire's sets as the domain's score. **Validated there, not here.**
+
+        Pydantic bounds the shape — how many sets, and the range of a number in
+        one — and the value object holds the rules: a level set has not
+        finished, and a score names a winner. A route that duplicated either
+        would be a second place for them to be true.
+        """
+
+        return Score.of(SetScore(a=one.a, b=one.b) for one in self.sets)
+
+    @classmethod
+    def of(cls, score: Score | None) -> "ScoreSchema | None":
+        return None if score is None else _rendered(score)
 
 
 class StateResultRequest(BaseModel):
@@ -390,6 +413,128 @@ class GameSchema(BaseModel):
             "game's entry: no score is on the table beside one, and **the game "
             "does not count** whatever it comes to."
         ),
+    )
+
+    @classmethod
+    def of(cls, one: StandingGame, *, reader_id: UUID) -> "GameSchema":
+        """One game as its own court is allowed to see it.
+
+        The occupants carry **a name and nothing else** (``docs/adr/0141``). A
+        card, a Level and an area belong to a search's answer, where a gate
+        decided they may be shown; a game is a record of an evening, and a
+        screen that re-published somebody's profile off the back of it would be
+        a directory with extra steps. A name is not that: it is what these four
+        people already knew about each other by the time they were on a court
+        together, and without it the screens name *sides* — which leaves a
+        result agreed with nobody and three padel games in a week told apart by
+        nothing but how long ago they were arranged.
+
+        **Nothing here is re-gated against who is reading.** The four
+        fail-closed gates decide who may be *introduced*, and an evening you
+        were both at is not an introduction; ``docs/adr/0095`` §7 already
+        settled that a block is forward-looking and does not reach into a game
+        already agreed. A name that vanished from a row would also be the trace
+        §8 says neither party ever sees.
+
+        **One builder for every route that answers a game** — the player's, and
+        the dev console's twins of them (``docs/adr/0194`` §3) — so a press and
+        a phone are answered in one shape.
+        """
+
+        game: Game = one.game
+        now = one.read_at
+        # **The argument travels only while it is one.** Before an entry there
+        # is nothing on the table, and after an ending the ending is the answer:
+        # a confirmed score is ``score``, and an unscored game is an evening
+        # rather than a transcript of what was said about it.
+        arguing = one.standing is GameStanding.AWAITING_ANSWER
+        return cls(
+            game_id=game.id,
+            booking_id=game.challenge_id,
+            sport=game.sport,
+            kind=game.kind,
+            window=game.window,
+            standing=one.standing,
+            planned_at=game.planned_at,
+            played_at=game.played_at,
+            entry_closes_at=(
+                game.entry_closes_at
+                if game.played_at is None
+                and game.called_off_at is None
+                and not game.no_shows
+                else None
+            ),
+            called_off_at=game.called_off_at,
+            called_off_by=(
+                None
+                if game.called_off_by is None
+                else CalledOffBySchema(
+                    player_id=game.called_off_by,
+                    name=one.names.get(game.called_off_by),
+                )
+            ),
+            seats=[
+                SeatingSchema(
+                    side=seating.side,
+                    player_id=seating.player_id,
+                    name=(
+                        None
+                        if seating.player_id is None
+                        else one.names.get(seating.player_id)
+                    ),
+                )
+                for seating in game.line_up.seatings
+            ],
+            score=ScoreSchema.of(game.confirmed_score_at(now)),
+            outcome=game.outcome_for(reader_id, now=now),
+            proposals=[
+                StandingProposalSchema(
+                    side=proposal.side,
+                    proposed_by=proposal.by,
+                    score=_rendered(proposal.score),
+                    proposed_at=proposal.at,
+                    answer_by=proposal_closes_at(proposal.at),
+                    settles_at=acceptance_settles_at(proposal.at),
+                )
+                for proposal in (game.standing_proposals() if arguing else ())
+            ],
+            acceptance=_agreement(game) if arguing else None,
+            no_shows=[
+                NoShowSchema(
+                    player_id=seating.player_id,
+                    name=one.names.get(seating.player_id),
+                    reported_at=report.at,
+                    dispute_by=report.dispute_closes_at,
+                    disputed_at=report.disputed_at,
+                )
+                for seating in game.line_up.seatings
+                if seating.player_id is not None
+                and (report := game.no_shows.get(seating.player_id)) is not None
+            ],
+        )
+
+
+def _rendered(score: Score) -> ScoreSchema:
+    return ScoreSchema(sets=[SetScoreSchema(a=one.a, b=one.b) for one in score.sets])
+
+
+def _agreement(game: Game) -> AcceptanceSchema | None:
+    """The agreement waiting out its grace, and ``None`` when none is.
+
+    The two readers are asked together because the moment is dated from the
+    **score** and never from the tap: an agreement and the proposal it settles
+    are one answer, and the aggregate returns them ``None`` together.
+    """
+
+    acceptance = game.standing_acceptance()
+    accepted = game.accepted_proposal()
+    if acceptance is None or accepted is None:
+        return None
+    return AcceptanceSchema(
+        agreed_by=acceptance.by,
+        of_side=acceptance.of_side,
+        agreed_at=acceptance.at,
+        settles_at=acceptance_settles_at(accepted.at),
     )
 
 

@@ -1,6 +1,7 @@
 """Situations: one press sets the stage for one mechanic, and the rows play it
 out (``docs/adr/0194`` §4; #590 builds the first two, #591 three more, #592
-three whose moment is a clock).
+three whose moment is a clock, #593 the last four — leaving, a rescue, a post
+and after the game).
 
 **A situation goes through the same use cases a request runs** — the proposer
 the job runs, the yes a phone's swipe runs, the seed's own building blocks — so
@@ -36,11 +37,32 @@ make seed``.
    book-by is the next full hour the rules allow: the soonest book-by of an
    hour a club of the group's sells, she and three of the group are free for,
    in a week her deck still shows — dealt as the dealer deals a pick, now.
+6. **Kuba leaves before the cut-off** — a rescue for her phone: four of the
+   group, never her, booked as if earlier at the soonest hour of her week whose
+   cut-off is ``TIME_TO_ANSWER`` off at least, and the first of them — *Kuba* —
+   leaves now: refunded less the card fee, and the seat offered to everybody
+   who fits and is free, her among them, as a *Seat open* card to its best
+   fits.
 7. **Empty seat at the cut-off** — her game booked at the hour whose cut-off is
    the next full hour the rules allow, at a club of the group's that books at
    once: filled by her and three of the group as if earlier, when the hour was
    on sale, and left by one of the three just now — so a seat is open since
    before the cut-off, the leaver refunded less the fee and the seat offered.
+8. **Ania leaves** — two of her games to leave from the phone, made and filled
+   by her and three of the group as if earlier, at a club of the group's that
+   books at once: the soonest hour whose cut-off has passed, and the soonest
+   whose cut-off is still ahead — each ``TIME_TO_ANSWER`` off at least. One
+   refunds her at once less the fee; the other keeps her seat paid until a row
+   takes it.
+9. **A posted game** — her post, for anybody in the kind her deck shows, at
+   the hour whose book-by is the next full hour the rules allow and her sheet
+   lists with somebody who fits her free — made through the post her phone
+   runs on a clock ``POSTED_BEFORE`` back, so the rows join it, or let it go.
+10. **Just played** — her game whose hour ended last, at a club of the group's
+    that books at once, made and filled as if earlier, awaiting its result. Or,
+    given minutes, the hour that ended last before a score was stated across
+    the net from her as if earlier — so that silence confirms it that many
+    minutes from now, and the rating catch-up moves the Levels then.
 11. **Check-in at the club** — her game at the soonest hour today that has not
     begun, at a club of the group's that books at once: made and filled by her
     and three of the group on a clock backdated past the club's minimum notice,
@@ -55,7 +77,7 @@ make seed``.
     new bookings.
 
 **A moment fixed to the hour lands on the next full hour the rules allow, and
-says so** (situations 5 and 7): *fires at 15:00 · 40 min*. Book-bys and
+says so** (situations 5, 7 and 9): *fires at 15:00 · 40 min*. Book-bys and
 cut-offs are whole hours before games that start on the hour, so the soonest
 one is whichever the club sells first — **at least ``TIME_TO_WATCH`` off**, so
 there is time to pick the phone up before it fires.
@@ -63,7 +85,10 @@ there is time to pick the phone up before it fires.
 **The protagonist is the phone**: the account the tester holds, never acted as
 — but a seed account all the same, since it is her deck the situation shapes.
 **A situation that writes history writes hers too**, as the seed does: her yes
-said as if earlier is the past, never a press of hers now.
+said as if earlier is the past, never a press of hers now — her post too (9).
+**A moment counted from an event is built minutes away by backdating the
+event** (situations 3, 10 and 12): the club's answer, a score's day, a club's
+day close.
 """
 
 from __future__ import annotations
@@ -82,7 +107,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import ClockDep, DbSession, SettingsDep, UserRepositoryDep
 from app.api.dev.accounts import holds_a_seed_account, refuse_unless_a_seed_account
-from app.api.dev.board import PersonRef, fires_at, the_group
+from app.api.dev.board import (
+    PersonRef,
+    fires_at,
+    read_rescues,
+    sets_of,
+    the_group,
+)
 from app.api.dev.dependencies import (
     ClubPayoutRepositoryDep,
     ClubTermsDep,
@@ -90,9 +121,16 @@ from app.api.dev.dependencies import (
     MakeProposalDep,
     SummaryRepositoryDep,
     PlayerNamesDep,
+    PlayersInPlayDep,
     PoolsDep,
+    PostAGameOn,
+    PostAGameOnDep,
     ProposeGamesDep,
+    ReadPostingDep,
+    RescueOffersDep,
     SavedMethodsDep,
+    StateResultOn,
+    StateResultOnDep,
     WherePoolsPlayDep,
 )
 from app.api.dev.board import CardOutcome
@@ -100,6 +138,7 @@ from app.api.dev.club import is_a_seed_club
 from app.api.dev.provider import NoSavedCard, TheFakeDep, steer
 from app.core.config import Settings
 from app.core.exception_handlers import ErrorResponse
+from app.engines.matchfit.core import SearchMode
 from app.kernel import (
     SPORT_SPECS,
     Clock,
@@ -121,12 +160,19 @@ from app.modules.clubs.domain.court_hours import (
     local_day,
 )
 from app.modules.clubs.domain.raketa_terms import TIME_TO_CONFIRM_MINUTES
-from app.modules.clubs.domain.ports import ClubAccountRepository
+from app.modules.clubs.domain.ports import (
+    ClubAccountRepository,
+    ClubCourtsRepository,
+)
 from app.modules.clubs.presentation.dependencies import (
     ClubAccountRepositoryDep,
     ClubCourtsRepositoryDep,
     SaveRaketaSettingsDep,
 )
+from app.modules.games.application.commands import StateResultCommand
+from app.modules.games.domain.ports import GameRepository
+from app.modules.games.domain.windows import ENTRY_GRACE, PROPOSAL_WINDOW
+from app.modules.games.presentation.dependencies import GameRepositoryDep
 from app.modules.groups.domain.ports import GroupDirectory, GroupListing
 from app.modules.groups.presentation.dependencies import GroupDirectoryDep
 from app.modules.payments.domain.club_payout import payout_id_for
@@ -135,15 +181,31 @@ from app.modules.payments.presentation.dependencies import (
     PaymentMethodRepositoryDep,
     PaymentProviderDep,
 )
+from app.modules.player_profile.domain.weekly_hours import free_for_the_hour
 from app.modules.proposals.application.answers import SayYes, YesAnswer
 from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     LeaveTheGameCommand,
     MakeProposalCommand,
+    PostAGameCommand,
+    PostingCommand,
 )
 from app.modules.proposals.application.group_deck import ReadGroupDeck
+from app.modules.proposals.application.posting import (
+    Posted,
+    PostingRead,
+    ReadPosting,
+)
 from app.modules.proposals.application.propose_games import ProposeGames
-from app.modules.proposals.domain.deck import DECK_HORIZON, GAME_LENGTH, week_of
+from app.modules.proposals.domain.deck import (
+    DECK_HORIZON,
+    GAME_LENGTH,
+    hour_taken,
+    week_of,
+)
+from app.modules.proposals.domain.overlap import DayRange
+from app.modules.proposals.domain.post import Who
+from app.modules.proposals.domain.posting_grid import WEEKS
 from app.modules.proposals.domain.ports import (
     BookedGames,
     ClubNames,
@@ -168,6 +230,7 @@ from app.modules.proposals.presentation.dependencies import (
     SayYesDep,
 )
 from app.modules.users.domain.ports import UserRepository
+from app.seeds.booked_history import SCORES
 from app.seeds.bookings import all_say_yes
 from app.seeds.clock import FixedClock
 from app.seeds.proposals import GAMES_KIND
@@ -193,6 +256,15 @@ TIME_TO_WATCH = timedelta(minutes=5)
 #: How many games *Club day close* plays in the closed day — nobody on two of
 #: them, so nobody's week takes two.
 DAY_CLOSE_GAMES = 2
+
+#: How long before the press *A posted game* writes her post: her past, never
+#: a press of hers now — and recent enough that the group it read then is the
+#: group now.
+POSTED_BEFORE = timedelta(minutes=10)
+
+#: How far back *Just played* looks for an hour that ended: the day to say *we
+#: played*, so the game it finds can still be said to have happened.
+JUST_PLAYED_WITHIN = ENTRY_GRACE
 
 
 class SituationUnavailable(ConflictError):
@@ -301,6 +373,113 @@ class EmptySeatResponse(BaseModel):
     people_in: list[PersonRef] = Field(description="Everybody still on it, her last.")
     left: PersonRef = Field(description="Who left, just now, before the cut-off.")
     says: str = Field(description="What happened, and when it fires.")
+
+
+class OneLeavesResponse(BaseModel):
+    game_id: UUID = Field(description="The booking — and the rescue's.")
+    starts_at: datetime
+    cut_off: datetime = Field(
+        description=(
+            "The booking's own, ahead: the seat is taken by then, or the game is off."
+        )
+    )
+    club_id: UUID = Field(description="The club the club row acts as.")
+    club_name: str | None
+    people_in: list[PersonRef] = Field(description="Everybody still on it.")
+    left: PersonRef = Field(
+        description="Who left, just now — refunded at once, less the card fee."
+    )
+    offered_to: list[PersonRef] = Field(
+        description="Every member the seat is offered to now: on their *Fill in*."
+    )
+    dealt_to: list[PersonRef] = Field(
+        description="Its best fits: a *Seat open* card in their deck."
+    )
+    says: str = Field(description="What happened, and when the cut-off fires.")
+
+
+class GameToLeave(BaseModel):
+    game_id: UUID = Field(description="The booking — what *Leave the game* names.")
+    starts_at: datetime
+    cut_off: datetime
+    club_id: UUID = Field(description="The club the club row acts as.")
+    club_name: str | None
+    people: list[PersonRef] = Field(description="Everybody on it, her last.")
+
+
+class SheLeavesResponse(BaseModel):
+    before: GameToLeave = Field(
+        description=(
+            "Its cut-off ahead: leaving refunds her at once, less the card fee, "
+            "and offers the seat until the cut-off."
+        )
+    )
+    after: GameToLeave = Field(
+        description=(
+            "Its cut-off passed and its hour ahead: leaving keeps the seat paid "
+            "and offers it until the start — she is refunded, less the fee, when "
+            "somebody takes it, and it is on her record if nobody does."
+        )
+    )
+    says: str = Field(description="What happened, for the tester.")
+
+
+class APostedGameResponse(BaseModel):
+    game_id: UUID = Field(description="Her post — what a *Yes* or a *Join* names.")
+    starts_at: datetime
+    book_by: datetime = Field(
+        description=(
+            "When it goes unless full: the next full hour a book-by can fall on."
+        )
+    )
+    club_id: UUID
+    club_name: str | None
+    kind: SearchMode
+    dealt: list[PersonRef] = Field(
+        description="Everybody it was dealt to beside her, in dealt order."
+    )
+    says: str = Field(description="What happened, and when it fires.")
+
+
+class JustPlayedRequest(HerSituationRequest):
+    result_confirms_in_minutes: int | None = Field(
+        default=None,
+        ge=1,
+        le=PROPOSAL_WINDOW // timedelta(minutes=1),
+        description=(
+            "State a score already, as if earlier — by somebody across the net "
+            "from her, on a game played before it — so that silence confirms it "
+            "this many minutes from now. Left out, the game has just ended and "
+            "nothing is entered."
+        ),
+    )
+
+
+class StatedScore(BaseModel):
+    by: PersonRef
+    sets: str = Field(description="Side A's games first in each set: *6–4 6–3*.")
+    at: datetime
+    confirms_at: datetime = Field(
+        description="When silence makes it final, unless she answers first."
+    )
+
+
+class JustPlayedResponse(BaseModel):
+    booking_id: UUID = Field(description="The booking — its pane's, and Home's.")
+    game_id: UUID = Field(
+        description="The Game it opened: what a score and a no-show name."
+    )
+    starts_at: datetime
+    club_id: UUID = Field(description="The club the club row acts as.")
+    club_name: str | None
+    people: list[PersonRef] = Field(description="Everybody on it, her last.")
+    entry_closes_at: datetime = Field(
+        description="When *we played* stops being sayable."
+    )
+    stated: StatedScore | None = Field(
+        description="The score stated as if earlier; `null` with none asked for."
+    )
+    says: str = Field(description="What happened, for the tester.")
 
 
 class ClubDayCloseRequest(BaseModel):
@@ -661,6 +840,7 @@ class EarlierYeses:
         hour: CourtHourOnSale,
         players: Sequence[UUID],
         at: Instant,
+        kind: SearchMode = GAMES_KIND,
     ) -> YesAnswer | None:
         """The last yes's answer."""
 
@@ -674,7 +854,7 @@ class EarlierYeses:
             start=hour.start,
             players=tuple(players),
             sport=sport,
-            kind=GAMES_KIND,
+            kind=kind,
         )
 
 
@@ -685,6 +865,31 @@ def get_earlier_yeses(
 
 
 EarlierYesesDep = Annotated[EarlierYeses, Depends(get_earlier_yeses)]
+
+
+async def her_deal(
+    deck: ReadGroupDeck,
+    pools: Pools,
+    listing: GroupListing,
+    her: UUID,
+    sport: Sport,
+    *,
+    now: Instant,
+) -> tuple[SearchMode, set[date]]:
+    """Her own filters, as her deck reads them: the kind of game it shows her
+    — Competitive where she plays it — and the weeks her games per week has
+    filled, which it shows nothing in."""
+
+    pool = await pools.find(listing.id)
+    if pool is None:
+        raise SituationUnavailable(f"{listing.name.value} deals no games.")
+    hers = await deck.deal_to(her, pool, sport, [], now=now)
+    if not hers.shown:
+        raise SituationUnavailable(
+            f"She plays no kind of {sport.value.lower()} her deck would show."
+        )
+    kind = GAMES_KIND if GAMES_KIND in hers.shown else hers.shown[0]
+    return kind, {week.starts_on for week in hers.capped}
 
 
 async def her_group(
@@ -1068,18 +1273,7 @@ async def about_to_expire(
     her = body.protagonist_id
     listing = await her_group(groups, users, body.group_id, her)
     now = instant(clock.now())
-    pool = await pools.find(body.group_id)
-    if pool is None:
-        raise SituationUnavailable(f"{listing.name.value} deals no games.")
-    # Her own filters, as her deck reads them: the kinds she plays, and the
-    # weeks her games per week has filled.
-    hers = await deck.deal_to(her, pool, body.sport, [], now=now)
-    if not hers.shown:
-        raise SituationUnavailable(
-            f"She plays no kind of {body.sport.value.lower()} her deck would show."
-        )
-    kind = GAMES_KIND if GAMES_KIND in hers.shown else hers.shown[0]
-    full = {week.starts_on for week in hers.capped}
+    kind, full = await her_deal(deck, pools, listing, her, body.sport, now=now)
 
     soonest: tuple[CourtHourOnSale, Sequence[UUID]] | None = None
     for club_id in await hours_finder.clubs(body.group_id, on_request=None, now=now):
@@ -1147,6 +1341,148 @@ async def about_to_expire(
             f"nobody's answer on it. Its book-by {fires_at(game.book_by, now=now)}: "
             f"then it is gone from her deck, and *Run it now* on the book-by "
             f"sweep records it."
+        ),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 6 · Kuba leaves before the cut-off
+# --------------------------------------------------------------------------- #
+
+
+@router.post(
+    "/one-leaves-before-the-cut-off",
+    response_model=OneLeavesResponse,
+    responses=_REFUSED,
+    summary="Situation 6 · Kuba leaves before the cut-off",
+    description=(
+        "A rescue for her phone: the soonest hour of her week whose cut-off is "
+        f"{TIME_TO_ANSWER // timedelta(hours=1)} hours off at least, at a club of "
+        "the group's that books at once — booked by four of the group as if "
+        "earlier, never her, in the kind her deck shows — and the first of the "
+        "four leaves it now, through the leave their phone runs: refunded at "
+        "once less the card fee, and the seat offered to everybody who fits and "
+        "is free, as a *Seat open* card to its best fits. *Take the seat* or "
+        "*No* from her phone or the rows; still open at the cut-off, *Run it "
+        "now* on the cut-off calls the game off."
+    ),
+)
+async def one_leaves_before_the_cut_off(
+    body: HerSituationRequest,
+    clock: ClockDep,
+    groups: GroupDirectoryDep,
+    users: UserRepositoryDep,
+    pools: PoolsDep,
+    deck: ReadGroupDeckDep,
+    in_play: PlayersInPlayDep,
+    hours_finder: HourFinderDep,
+    club_courts: ClubCourtsRepositoryDep,
+    earlier: EarlierYesesDep,
+    leave: LeaveTheGameDep,
+    offers: RescueOffersDep,
+    names: PlayerNamesDep,
+    clubs: ProposalClubNamesDep,
+) -> OneLeavesResponse:
+    her = body.protagonist_id
+    listing = await her_group(groups, users, body.group_id, her)
+    now = instant(clock.now())
+    kind, full = await her_deal(deck, pools, listing, her, body.sport, now=now)
+    week = (await in_play.of([her], sport=body.sport))[her].week
+    players = SPORT_SPECS[body.sport].players
+
+    soonest: tuple[CourtHourOnSale, Sequence[UUID], Instant, Instant] | None = None
+    for club_id in await hours_finder.clubs(body.group_id, on_request=False, now=now):
+        settings = (await club_courts.load(club_id)).settings
+        filled_at = instant(
+            now - timedelta(hours=settings.minimum_notice_hours) - BEFORE_THE_NOTICE
+        )
+        first = next(
+            (
+                (hour, free, cut_off)
+                for hour, free in await hours_finder.hours_free(
+                    listing,
+                    club_id,
+                    body.sport,
+                    her=her,
+                    on_sale_at=filled_at,
+                    start=now,
+                    end=filled_at + DECK_HORIZON,
+                )
+                # Four beside her — none of them her — her week has room for
+                # it, and she is free then: a seat she would be offered.
+                if len(free) >= players
+                and week_of(hour.start) not in full
+                and free_for_the_hour(week, start=hour.start, zone=CLUB_ZONE)
+                and (cut_off := shifted(hour.start, hours(-settings.cut_off_hours)))
+                >= now + TIME_TO_ANSWER
+            ),
+            None,
+        )
+        if first is not None and (soonest is None or first[0].start < soonest[0].start):
+            soonest = (*first, filled_at)
+    if soonest is None:
+        raise SituationUnavailable(
+            f"No club {listing.name.value} plays at that books at once sells a "
+            f"{body.sport.value.lower()} hour of her week, its cut-off "
+            f"{TIME_TO_ANSWER // timedelta(hours=1)} hours off at least, that four "
+            f"of the group — seed accounts with a card saved — are free for."
+        )
+
+    hour, free, cut_off, filled_at = soonest
+    four = free[:players]
+    answer = _booked(
+        await earlier.all_say_yes(
+            group_id=body.group_id,
+            sport=body.sport,
+            club_id=hour.club_id,
+            hour=hour,
+            players=four,
+            at=filled_at,
+            kind=kind,
+        ),
+        hour,
+    )
+    leaver, *staying = four
+    await leave.execute(
+        LeaveTheGameCommand(booking_id=answer.proposal_id, player_id=leaver)
+    )
+    rescue = next(
+        (
+            read
+            for read in await read_rescues(
+                offers, pools, body.group_id, sport=body.sport, now=now
+            )
+            if read.game.booking_id == answer.proposal_id
+        ),
+        None,
+    )
+    offered = () if rescue is None else rescue.offered
+    dealt = [p for p in offered if rescue is not None and p in rescue.best_fits]
+    named = await names.names_of({*four, *offered})
+    club = (await clubs.names_of([hour.club_id])).get(hour.club_id)
+    hers = (
+        "her deck deals her its *Seat open* card"
+        if her in dealt
+        else "it is on her *Fill in*, and she is not one of its best fits"
+        if her in offered
+        else "it is not offered to her"
+    )
+    return OneLeavesResponse(
+        game_id=answer.proposal_id,
+        starts_at=hour.start,
+        cut_off=cut_off,
+        club_id=hour.club_id,
+        club_name=club,
+        people_in=[PersonRef(player_id=p, name=named.get(p)) for p in staying],
+        left=PersonRef(player_id=leaver, name=named.get(leaver)),
+        offered_to=[PersonRef(player_id=p, name=named.get(p)) for p in offered],
+        dealt_to=[PersonRef(player_id=p, name=named.get(p)) for p in dealt],
+        says=(
+            f"{named.get(leaver, 'One of the four')} left {_when(hour.start)} at "
+            f"{club or 'the club'} just now — refunded at once, less the card fee; "
+            f"the seat is offered to {len(offered)} of the group, and {hers}. The "
+            f"cut-off {fires_at(cut_off, now=now)}: a seat still open then calls "
+            f"the game off."
         ),
     )
 
@@ -1256,6 +1592,475 @@ async def empty_seat_at_the_cut_off(
             f"the group's best fits. The cut-off {fires_at(cut_off, now=now)}: a "
             f"seat still open then calls the game off and refunds everybody in "
             f"full."
+        ),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 8 · Ania leaves
+# --------------------------------------------------------------------------- #
+
+
+class HerGameToLeave:
+    """Her game at the soonest hour a club of the group's that books at once
+    sells, inside or outside its cut-off as asked, with
+    ``TIME_TO_ANSWER`` to leave it in — made and filled by her and three of the
+    group as if earlier, when the hour was on sale. Built per request."""
+
+    def __init__(
+        self,
+        *,
+        hours_finder: HourFinder,
+        club_courts: ClubCourtsRepository,
+        earlier: EarlierYeses,
+        names: PlayerNames,
+        clubs: ClubNames,
+    ) -> None:
+        self._hours = hours_finder
+        self._club_courts = club_courts
+        self._earlier = earlier
+        self._names = names
+        self._clubs = clubs
+
+    async def book(
+        self,
+        her: UUID,
+        listing: GroupListing,
+        sport: Sport,
+        *,
+        past_the_cut_off: bool,
+        now: Instant,
+    ) -> GameToLeave:
+        soonest: tuple[CourtHourOnSale, Sequence[UUID], Instant, Instant] | None = None
+        for club_id in await self._hours.clubs(listing.id, on_request=False, now=now):
+            settings = (await self._club_courts.load(club_id)).settings
+            filled_at = instant(
+                now - timedelta(hours=settings.minimum_notice_hours) - BEFORE_THE_NOTICE
+            )
+            with_cut_offs = [
+                (hour, free, shifted(hour.start, hours(-settings.cut_off_hours)))
+                for hour, free in await self._hours.hours_free(
+                    listing,
+                    club_id,
+                    sport,
+                    her=her,
+                    on_sale_at=filled_at,
+                    start=now,
+                    end=filled_at + DECK_HORIZON,
+                )
+                if hour.start >= now + TIME_TO_ANSWER
+            ]
+            first = next(
+                (
+                    (hour, free, cut_off)
+                    for hour, free, cut_off in with_cut_offs
+                    if (
+                        cut_off <= now
+                        if past_the_cut_off
+                        else cut_off >= now + TIME_TO_ANSWER
+                    )
+                ),
+                None,
+            )
+            if first is not None and (
+                soonest is None or first[0].start < soonest[0].start
+            ):
+                soonest = (*first, filled_at)
+        if soonest is None:
+            raise SituationUnavailable(
+                f"No club {listing.name.value} plays at that books at once sells a "
+                f"{sport.value.lower()} hour "
+                f"{'inside' if past_the_cut_off else 'before'} its cut-off, "
+                f"{TIME_TO_ANSWER // timedelta(hours=1)} hours off at least, that "
+                f"she and three of the group — seed accounts with a card saved — "
+                f"are all free for."
+            )
+
+        hour, free, cut_off, filled_at = soonest
+        people = (*free[: SPORT_SPECS[sport].players - 1], her)
+        answer = _booked(
+            await self._earlier.all_say_yes(
+                group_id=listing.id,
+                sport=sport,
+                club_id=hour.club_id,
+                hour=hour,
+                players=people,
+                at=filled_at,
+            ),
+            hour,
+        )
+        named = await self._names.names_of(people)
+        return GameToLeave(
+            game_id=answer.proposal_id,
+            starts_at=hour.start,
+            cut_off=cut_off,
+            club_id=hour.club_id,
+            club_name=(await self._clubs.names_of([hour.club_id])).get(hour.club_id),
+            people=[PersonRef(player_id=p, name=named.get(p)) for p in people],
+        )
+
+
+def get_her_game_to_leave(
+    hours_finder: HourFinderDep,
+    club_courts: ClubCourtsRepositoryDep,
+    earlier: EarlierYesesDep,
+    names: PlayerNamesDep,
+    clubs: ProposalClubNamesDep,
+) -> HerGameToLeave:
+    return HerGameToLeave(
+        hours_finder=hours_finder,
+        club_courts=club_courts,
+        earlier=earlier,
+        names=names,
+        clubs=clubs,
+    )
+
+
+HerGameToLeaveDep = Annotated[HerGameToLeave, Depends(get_her_game_to_leave)]
+
+
+@router.post(
+    "/she-leaves",
+    response_model=SheLeavesResponse,
+    responses=_REFUSED,
+    summary="Situation 8 · Ania leaves",
+    description=(
+        "Two games of hers to leave from the phone, at a club of the group's "
+        "that books at once, each made and filled by her and three of the group "
+        "as if earlier: the soonest hour whose cut-off has passed, and the "
+        "soonest whose cut-off is still "
+        f"{TIME_TO_ANSWER // timedelta(hours=1)} hours off at least — each with "
+        "that long to leave it in. Leaving the first refunds her at once, less "
+        "the card fee; leaving the second keeps her seat paid until a row takes "
+        "it, and then refunds her."
+    ),
+)
+async def she_leaves(
+    body: HerSituationRequest,
+    clock: ClockDep,
+    groups: GroupDirectoryDep,
+    users: UserRepositoryDep,
+    games: HerGameToLeaveDep,
+) -> SheLeavesResponse:
+    her = body.protagonist_id
+    listing = await her_group(groups, users, body.group_id, her)
+    now = instant(clock.now())
+    after = await games.book(her, listing, body.sport, past_the_cut_off=True, now=now)
+    before = await games.book(her, listing, body.sport, past_the_cut_off=False, now=now)
+    return SheLeavesResponse(
+        before=before,
+        after=after,
+        says=(
+            f"Two of her games to leave on the phone. "
+            f"{_when(instant(before.starts_at))} at "
+            f"{before.club_name or 'the club'}: its cut-off "
+            f"{fires_at(instant(before.cut_off), now=now)} — leaving before it "
+            f"refunds her at once, less the card fee. "
+            f"{_when(instant(after.starts_at))} at "
+            f"{after.club_name or 'the club'}: past its cut-off — leaving keeps her "
+            f"seat paid until a row takes it, and refunds her then."
+        ),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 9 · A posted game
+# --------------------------------------------------------------------------- #
+
+
+class EarlierPost:
+    """Her post, made as if ``POSTED_BEFORE`` earlier — her past, never a
+    press of hers now — through the use case *Post — you're In* runs, over
+    this request's session: the seed's way of writing her post
+    (``app/seeds/posts.py``), on a clock stopped then."""
+
+    def __init__(self, *, reads: ReadPosting, post_on: PostAGameOn) -> None:
+        self._reads = reads
+        self._post_on = post_on
+
+    async def read(self, posting: PostingCommand, *, at: Instant) -> PostingRead:
+        """What her posting read then: the grid's free courts and her week."""
+
+        return await self._reads.read(posting, now=at)
+
+    async def post(self, command: PostAGameCommand, *, at: Instant) -> Posted:
+        return await self._post_on(FixedClock(at=at)).execute(command)
+
+
+def get_earlier_post(reads: ReadPostingDep, post_on: PostAGameOnDep) -> EarlierPost:
+    return EarlierPost(reads=reads, post_on=post_on)
+
+
+EarlierPostDep = Annotated[EarlierPost, Depends(get_earlier_post)]
+
+
+@router.post(
+    "/a-posted-game",
+    response_model=APostedGameResponse,
+    responses=_REFUSED,
+    summary="Situation 9 · A posted game",
+    description=(
+        "Her post, for anybody at the engine's own Level range, in the kind her "
+        f"deck shows — made {POSTED_BEFORE // timedelta(minutes=1)} minutes "
+        "earlier through the post her phone runs — at the hour whose book-by is "
+        "the next full hour the rules allow: the soonest book-by of a court a "
+        "club of the group's sells that her sheet lists with somebody who fits "
+        "her free, in her week, at least "
+        f"{TIME_TO_WATCH // timedelta(minutes=1)} minutes off. The rows answer "
+        "it — *Yes* where dealt, *Join* where not — or let it go at its "
+        "book-by, which *Run it now* on the book-by sweep then records."
+    ),
+)
+async def a_posted_game(
+    body: HerSituationRequest,
+    clock: ClockDep,
+    groups: GroupDirectoryDep,
+    users: UserRepositoryDep,
+    pools: PoolsDep,
+    deck: ReadGroupDeckDep,
+    hours_finder: HourFinderDep,
+    earlier: EarlierPostDep,
+    finder: CardFinderDep,
+    names: PlayerNamesDep,
+    clubs: ProposalClubNamesDep,
+) -> APostedGameResponse:
+    her = body.protagonist_id
+    listing = await her_group(groups, users, body.group_id, her)
+    now = instant(clock.now())
+    kind, full = await her_deal(deck, pools, listing, her, body.sport, now=now)
+    posted_at = instant(now - POSTED_BEFORE)
+    posting = PostingCommand(
+        player_id=her,
+        pool_id=body.group_id,
+        sport=body.sport,
+        kind=kind,
+        who=Who.ANYONE,
+    )
+    read = await earlier.read(posting, at=posted_at)
+    seed_clubs = set(await hours_finder.clubs(body.group_id, on_request=None, now=now))
+    # The sheet lists the group's home club first, so of two book-bys alike
+    # the first found is the home club's.
+    hour = min(
+        (
+            court.hour
+            for week in WEEKS
+            for day in read.grid.days(week)
+            for range_ in DayRange
+            for court in read.grid.free_courts(day, range_)
+            if court.hour.club_id in seed_clubs
+            and court.fits_free > 0
+            and court.hour.book_by >= now + TIME_TO_WATCH
+            and week_of(court.hour.start) not in full
+            and free_for_the_hour(
+                read.poster.week, start=court.hour.start, zone=CLUB_ZONE
+            )
+            and not hour_taken(court.hour.start, read.poster.booked)
+        ),
+        key=lambda one: (one.book_by, one.start),
+        default=None,
+    )
+    if hour is None:
+        raise SituationUnavailable(
+            f"No club {listing.name.value} plays at sells a "
+            f"{body.sport.value.lower()} hour of her week, its book-by "
+            f"{TIME_TO_WATCH // timedelta(minutes=1)} minutes off at least, with "
+            f"somebody who fits her free."
+        )
+
+    posted = await earlier.post(
+        PostAGameCommand(posting=posting, club_id=hour.club_id, start=hour.start),
+        at=posted_at,
+    )
+    game = await finder.reload(posted.proposal_id)
+    dealt = [
+        player
+        for version in game.versions
+        for player in version.players
+        if player != her
+    ]
+    named = await names.names_of([her, *dealt])
+    club = (await clubs.names_of([hour.club_id])).get(hour.club_id)
+    return APostedGameResponse(
+        game_id=game.proposal_id,
+        starts_at=game.start,
+        book_by=game.book_by,
+        club_id=hour.club_id,
+        club_name=club,
+        kind=game.kind,
+        dealt=[PersonRef(player_id=p, name=named.get(p)) for p in dealt],
+        says=(
+            f"{named.get(her, 'Her')}'s post for {_when(game.start)} at "
+            f"{club or 'the club'}, dealt to {len(dealt)} of her best fits — "
+            f"*Yes* from their rows, *Join* from the others'. Its book-by "
+            f"{fires_at(game.book_by, now=now)}: not full by then, it goes, and "
+            f"*Run it now* on the book-by sweep records it."
+        ),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# 10 · Just played
+# --------------------------------------------------------------------------- #
+
+
+class EarlierScore:
+    """A score stated as if earlier — on the seed's backdated clock — through
+    the use case *We played, here is the score* runs, over this request's unit
+    of work: the seed's way of writing a played game
+    (``app/seeds/booked_history.py``), its side winning."""
+
+    def __init__(self, *, games: GameRepository, state_on: StateResultOn) -> None:
+        self._games = games
+        self._state_on = state_on
+
+    async def across_the_net_from(
+        self, her: UUID, *, game_id: UUID, at: Instant
+    ) -> tuple[UUID, str]:
+        """Whoever sits first across the net from her states their side won.
+        Who, and the sets."""
+
+        game = invariant(await self._games.load(game_id), f"{game_id} has no stream")
+        hers = invariant(game.line_up.side_of(her), f"{game_id} does not seat her")
+        stater = next(
+            seating.player_id
+            for seating in game.line_up.seatings
+            if seating.side is hers.other and seating.player_id is not None
+        )
+        score = SCORES[hers.other]
+        await self._state_on(FixedClock(at=at)).execute(
+            StateResultCommand(game_id=game_id, player_id=stater, score=score)
+        )
+        return stater, sets_of(score)
+
+
+def get_earlier_score(
+    games: GameRepositoryDep, state_on: StateResultOnDep
+) -> EarlierScore:
+    return EarlierScore(games=games, state_on=state_on)
+
+
+EarlierScoreDep = Annotated[EarlierScore, Depends(get_earlier_score)]
+
+
+@router.post(
+    "/just-played",
+    response_model=JustPlayedResponse,
+    responses=_REFUSED,
+    summary="Situation 10 · Just played",
+    description=(
+        "Her game at the hour that ended last, at a club of the group's that "
+        "books at once — made and filled by her and three of the group as if "
+        "earlier, when the hour was on sale — awaiting its result: the rows "
+        "and her phone enter a score, agree or counter, or say somebody didn't "
+        "come. **With `result_confirms_in_minutes`, a score is up already**: "
+        "the game is the hour that ended last before then, and somebody across "
+        "the net from her stated their side won as if earlier, so silence "
+        "confirms it that many minutes from now; *Run it now* on the rating "
+        "catch-up then moves the Levels, and not before."
+    ),
+)
+async def just_played(
+    body: JustPlayedRequest,
+    clock: ClockDep,
+    groups: GroupDirectoryDep,
+    users: UserRepositoryDep,
+    hours_finder: HourFinderDep,
+    club_courts: ClubCourtsRepositoryDep,
+    earlier: EarlierYesesDep,
+    scores: EarlierScoreDep,
+    names: PlayerNamesDep,
+    clubs: ProposalClubNamesDep,
+) -> JustPlayedResponse:
+    her = body.protagonist_id
+    listing = await her_group(groups, users, body.group_id, her)
+    now = instant(clock.now())
+    minutes = body.result_confirms_in_minutes
+    stated_at = (
+        None
+        if minutes is None
+        else instant(now - PROPOSAL_WINDOW + timedelta(minutes=minutes))
+    )
+    ended_by = stated_at or now
+    since = instant(ended_by - JUST_PLAYED_WITHIN)
+
+    latest: tuple[CourtHourOnSale, Sequence[UUID], timedelta] | None = None
+    for club_id in await hours_finder.clubs(body.group_id, on_request=False, now=now):
+        notice = timedelta(
+            hours=(await club_courts.load(club_id)).settings.minimum_notice_hours
+        )
+        for hour, free in await hours_finder.hours_free(
+            listing,
+            club_id,
+            body.sport,
+            her=her,
+            on_sale_at=instant(since - notice - BEFORE_THE_NOTICE),
+            start=since,
+            end=ended_by,
+        ):
+            if hour.start + GAME_LENGTH <= ended_by and (
+                latest is None or hour.start > latest[0].start
+            ):
+                latest = (hour, free, notice)
+    if latest is None:
+        raise SituationUnavailable(
+            f"No club {listing.name.value} plays at that books at once sold a "
+            f"{body.sport.value.lower()} hour that ended in the day before "
+            f"{ended_by.astimezone(CLUB_ZONE):%a %H:%M} and she and three of the "
+            f"group — seed accounts with a card saved — were all free for."
+        )
+
+    hour, free, notice = latest
+    people = (*free[: SPORT_SPECS[body.sport].players - 1], her)
+    answer = _booked(
+        await earlier.all_say_yes(
+            group_id=body.group_id,
+            sport=body.sport,
+            club_id=hour.club_id,
+            hour=hour,
+            players=people,
+            at=instant(hour.start - notice - BEFORE_THE_NOTICE),
+        ),
+        hour,
+    )
+    booked = invariant(answer.booked, "booked, with no game")
+    stated: StatedScore | None = None
+    named = await names.names_of(people)
+    if stated_at is not None:
+        stater, sets = await scores.across_the_net_from(
+            her, game_id=booked.game_id, at=stated_at
+        )
+        stated = StatedScore(
+            by=PersonRef(player_id=stater, name=named.get(stater)),
+            sets=sets,
+            at=stated_at,
+            confirms_at=stated_at + PROPOSAL_WINDOW,
+        )
+    club = (await clubs.names_of([hour.club_id])).get(hour.club_id)
+    ends = instant(hour.start + GAME_LENGTH)
+    entry_closes_at = instant(ends + ENTRY_GRACE)
+    return JustPlayedResponse(
+        booking_id=booked.booking_id,
+        game_id=booked.game_id,
+        starts_at=hour.start,
+        club_id=hour.club_id,
+        club_name=club,
+        people=[PersonRef(player_id=p, name=named.get(p)) for p in people],
+        entry_closes_at=entry_closes_at,
+        stated=stated,
+        says=(
+            f"Her game {_when(hour.start)} at {club or 'the club'}, booked earlier "
+            f"and played — over at {ends.astimezone(CLUB_ZONE):%H:%M}. Enter a "
+            f"score, agree or counter, or say somebody didn't come, from the rows "
+            f"or her phone; *we played* is sayable until "
+            f"{_when(entry_closes_at)}."
+            if stated is None
+            else f"Her game {_when(hour.start)} at {club or 'the club'}, played; "
+            f"{stated.by.name or 'somebody across the net'} put {stated.sets} up "
+            f"as if at {stated.at.astimezone(CLUB_ZONE):%a %H:%M}. Silence "
+            f"confirms it — it "
+            f"{fires_at(instant(stated.confirms_at), now=now)} — and *Run it "
+            f"now* on the rating catch-up then moves the Levels. Agree or "
+            f"counter from her phone first."
         ),
     )
 

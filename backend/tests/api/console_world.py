@@ -10,9 +10,11 @@ wrote.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from uuid import UUID
 
 from app.seeds.catalog import SEED_EMAIL_DOMAIN
+from tests.api.proposals_world import a_club_and_its_desk, a_group, a_member
 
 #: Where the seed addresses its accounts — an account here is one the console
 #: may act as.
@@ -125,3 +127,79 @@ async def presses(client, situation: str, **body):
             for key, value in body.items()
         },
     )
+
+
+# --------------------------------------------------------------------------- #
+# A group the seed could have made (#593)
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class SeedWorld:
+    """**Bonarka Arena** — Instant, a padel court every hour at 30 zł a seat, a
+    24-hour cut-off and two hours' notice, its desk on the seed's reserved
+    TLD — and a group of nine members the seed could have made, all at padel
+    2,5, free every hour, competitive, each with a card that pays."""
+
+    club: str
+    desk: dict
+    group: UUID
+    #: The protagonist — the phone in the tester's hand.
+    marta: dict
+    #: Everybody else, in the order they joined: Kuba, Zofia and Marek first.
+    rest: tuple[dict, ...]
+
+    @property
+    def three(self) -> tuple[dict, ...]:
+        return self.rest[:3]
+
+    @property
+    def four(self) -> tuple[dict, ...]:
+        return (self.marta, *self.three)
+
+    def named(self, name: str) -> dict:
+        return next(
+            member for member in (self.marta, *self.rest) if member["name"] == name
+        )
+
+
+async def a_seed_world(client, session_factory, payments) -> SeedWorld:
+    club, desk = await a_club_and_its_desk(client, email=f"desk.bonarka@{SEED}")
+    marta, *rest = [
+        await a_member(client, session_factory, payments, name, domain=SEED)
+        for name in (
+            "marta",
+            "kuba",
+            "zofia",
+            "marek",
+            "ola",
+            "tomek",
+            "ewa",
+            "jan",
+            "lena",
+        )
+    ]
+    group = await a_group(client, marta, club, *rest)
+    return SeedWorld(club, desk, group, marta, tuple(rest))
+
+
+async def her_situation(client, situation: str, world: SeedWorld, **extra):
+    """A situation for the protagonist, in padel."""
+
+    return await presses(
+        client,
+        situation,
+        group_id=world.group,
+        sport="PADEL",
+        protagonist_id=world.marta["id"],
+        **extra,
+    )
+
+
+async def runs(client, job: str) -> dict:
+    """*Run it now* on a job, which must answer."""
+
+    ran = await client.post(f"/dev/jobs/{job}")
+    assert ran.status_code == 200, ran.text
+    assert ran.json()["job"] == job
+    return ran.json()

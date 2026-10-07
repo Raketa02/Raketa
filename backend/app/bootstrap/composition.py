@@ -3401,12 +3401,16 @@ def build_settle_ratings_on_results(
     session: AsyncSession,
     *,
     runtime: EventRuntime | None = None,
+    clock: Clock | None = None,
 ) -> SettleRatingsOnResults:
     """The catch-up, wired the way a request is.
 
-    The clock is built here rather than taken, because *has this result settled*
-    is a fact about the instant the run happens and a caller holding one could
-    hold a stale one — the same argument the composed match-history read makes.
+    The clock is built here unless one is handed in, because *has this result
+    settled* is a fact about the instant the run happens and a caller holding
+    one could hold a stale one — the same argument the composed match-history
+    read makes. The one caller that hands one in is the dev console's *Run it
+    now* (#593), with its request's clock: read the moment the press runs, as
+    every other press's job is, and the clock a test moves.
     """
     resolved = runtime or get_event_runtime()
     event_store = build_domain_event_store(session, runtime=resolved)
@@ -3417,7 +3421,7 @@ def build_settle_ratings_on_results(
             events=build_event_publisher(session, runtime=resolved),
         ),
         uow=build_unit_of_work(session),
-        clock=build_clock(),
+        clock=clock or build_clock(),
     )
 
 

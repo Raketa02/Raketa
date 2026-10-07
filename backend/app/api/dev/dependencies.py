@@ -16,13 +16,19 @@ this request's session and its clock, which is the real *now*.
 **And the dealer's first act** (#592): ``MakeProposal``, which no route takes
 — the proposer's, a seed's and *About to expire*'s. **And what a notice is
 pushed as** (#594): ``NoticePushes``, the pusher's own, which the *Sent* pane
-shows.
+shows. **And who a rescue is offered to** (#593): ``RescueOffers``, *Fill in*'s
+and the deck's own rule, which a row's rescues are read through; a member's
+week (``PlayersInPlay``), which *Kuba leaves* keeps her rescue inside; and
+**two acts on a clock the caller names** — *Post — you're In* and *We played,
+here is the score* — which situations write her post and a score on as if
+earlier (``docs/adr/0194`` §4), as the seed writes them.
 """
 
 from __future__ import annotations
 
 import app.api.dev.refusal  # noqa: F401 — refuses first; see refusal.py
 
+from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends
@@ -33,6 +39,7 @@ from app.api.dependencies import (
     DomainEventStoreDep,
     EventPublisherDep,
     SettingsDep,
+    UnitOfWorkDep,
 )
 from app.bootstrap.composition import (
     build_booking_repository,
@@ -48,9 +55,13 @@ from app.bootstrap.composition import (
     build_expire_unanswered_requests,
     build_make_proposal,
     build_notice_pushes,
+    build_players_in_play,
     build_pools,
+    build_post_a_game,
     build_proposal_player_names,
     build_propose_games,
+    build_read_posting,
+    build_rescue_offers,
     build_saved_methods,
     build_settle_ratings_on_results,
     build_settle_seat_charges,
@@ -64,8 +75,14 @@ from app.modules.bookings.domain.ports import (
     CheckInCodes,
     SummaryRepository,
 )
+from app.kernel import Clock
 from app.modules.conversations.application.destroy_ended_conversations import (
     DestroyEndedConversations,
+)
+from app.modules.games.application.answer_result import StateResult
+from app.modules.games.presentation.dependencies import (
+    GameRepositoryDep,
+    PlayerNamesDep as CourtNamesDep,
 )
 from app.modules.notifications.application.pushing import NoticePushes
 from app.modules.payments.application.handlers.settle_seat_charges import (
@@ -80,12 +97,15 @@ from app.modules.proposals.application.club_requests import (
 from app.modules.proposals.application.cut_off import CallOffShortGames
 from app.modules.proposals.application.expire_proposals import ExpireProposals
 from app.modules.proposals.application.making import MakeProposal
+from app.modules.proposals.application.posting import PostAGame, ReadPosting
 from app.modules.proposals.application.propose_games import ProposeGames
+from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.ports import (
     ClubTerms,
     CourtHours,
     DeckPeople,
     PlayerNames,
+    PlayersInPlay,
     Pools,
     SavedMethods,
     WherePoolsPlay,
@@ -242,10 +262,13 @@ SummariseNewBookingsDep = Annotated[
 ]
 
 
-def get_settle_ratings_on_results(db: DbSession) -> SettleRatingsOnResults:
-    """The ``rating-catch-up`` job's unit of work. It reads the wall clock
-    itself, as the job does (``build_settle_ratings_on_results`` says why)."""
-    return build_settle_ratings_on_results(db)
+def get_settle_ratings_on_results(
+    db: DbSession, clock: ClockDep
+) -> SettleRatingsOnResults:
+    """The ``rating-catch-up`` job's unit of work, over the real *now* — the
+    request's clock, read when the press runs, where the job builds its own
+    (#593: so a stated result before its day is left, as the tick leaves it)."""
+    return build_settle_ratings_on_results(db, clock=clock)
 
 
 SettleRatingsOnResultsDep = Annotated[
@@ -302,3 +325,69 @@ def get_notice_pushes(db: DbSession) -> NoticePushes:
 
 
 NoticePushesDep = Annotated[NoticePushes, Depends(get_notice_pushes)]
+
+
+def get_rescue_offers(
+    db: DbSession, settings: SettingsDep, booked: BookedGamesDep
+) -> RescueOffers:
+    """Who a booked game's open seat is offered to, and its best fits — the
+    rule *Fill in* and the deck read, which a row's rescues show (#593)."""
+    return build_rescue_offers(db, settings=settings, booked=booked)
+
+
+RescueOffersDep = Annotated[RescueOffers, Depends(get_rescue_offers)]
+
+
+def get_players_in_play(db: DbSession) -> PlayersInPlay:
+    """Each member's Level and week, as the proposer deals from them — the
+    week a situation keeps her game inside (#593)."""
+    return build_players_in_play(db)
+
+
+PlayersInPlayDep = Annotated[PlayersInPlay, Depends(get_players_in_play)]
+
+
+def get_read_posting(
+    db: DbSession, settings: SettingsDep, booked: BookedGamesDep
+) -> ReadPosting:
+    """What every step of posting reads, as of whatever instant it is asked
+    about — *A posted game* reads it as of her post (#593)."""
+    return build_read_posting(db, settings=settings, booked=booked)
+
+
+ReadPostingDep = Annotated[ReadPosting, Depends(get_read_posting)]
+
+#: An act built over this request's session on the clock the caller names.
+PostAGameOn = Callable[[Clock], PostAGame]
+StateResultOn = Callable[[Clock], StateResult]
+
+
+def get_post_a_game_on(
+    db: DbSession, settings: SettingsDep, booked: BookedGamesDep
+) -> PostAGameOn:
+    """*Post — you're In* on a clock the caller names — the one stopped
+    earlier that *A posted game* writes her post on (#593)."""
+
+    def on(clock: Clock) -> PostAGame:
+        return build_post_a_game(db, settings=settings, clock=clock, booked=booked)
+
+    return on
+
+
+PostAGameOnDep = Annotated[PostAGameOn, Depends(get_post_a_game_on)]
+
+
+def get_state_result_on(
+    uow: UnitOfWorkDep, games: GameRepositoryDep, names: CourtNamesDep
+) -> StateResultOn:
+    """*We played, here is the score* on a clock the caller names — the one
+    stopped earlier that *Just played* states a score on (#593). Built as the
+    game route's own (``get_state_result``), on another clock."""
+
+    def on(clock: Clock) -> StateResult:
+        return StateResult(games=games, names=names, uow=uow, clock=clock)
+
+    return on
+
+
+StateResultOnDep = Annotated[StateResultOn, Depends(get_state_result_on)]

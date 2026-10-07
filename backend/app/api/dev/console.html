@@ -109,6 +109,10 @@
   .moment .countdown.due { color: var(--bad); font-weight: 600; }
   .sent { grid-column: 1 / -1; display: grid; gap: 6px; border-top: 1px dashed var(--line); padding-top: 8px; }
   .sent h4 { margin: 0; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
+  .cards h4 { margin: 4px 0 0; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--dim); }
+  input.score { font: inherit; width: 84px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
+  input[type=date] { font: inherit; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
+  .posting { display: grid; gap: 6px; padding: 8px; border: 1px dashed var(--accent); border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -130,9 +134,18 @@
         <button id="needs-her-yes">2 · Needs <span class="her">her</span> yes · Instant club</button>
         <button id="card-declines">4 · Card declines at the fill</button>
         <button id="about-to-expire">5 · About to expire</button>
+        <button id="one-leaves">6 · Kuba leaves before the cut-off</button>
         <button id="empty-seat">7 · Empty seat at the cut-off</button>
+        <button id="she-leaves">8 · <span class="she">she</span> leaves</button>
+        <button id="posted-game">9 · A posted game</button>
         <button id="check-in">11 · Check-in at the club</button>
         <button id="day-close">12 · Club day close</button>
+      </div>
+      <div class="row">
+        <button id="just-played">10 · Just played</button>
+        <label>a score up already, confirmed by silence in
+          <input id="confirms-in" type="number" min="1" max="1440" placeholder="—"> min</label>
+        <span class="note">empty: nothing entered — the rows and her phone say what happened</span>
       </div>
       <div class="row">
         <button id="on-request">3 · Needs <span class="her">her</span> yes · On request club</button>
@@ -175,7 +188,7 @@
 <script>
 "use strict";
 
-const state = { groups: null, board: null, protagonist: null, notices: {}, freeCourts: {}, jobs: [], sent: {} };
+const state = { groups: null, board: null, protagonist: null, notices: {}, freeCourts: {}, jobs: [], sent: {}, posting: {} };
 const $ = (id) => document.getElementById(id);
 
 // --------------------------------------------------------------------------
@@ -322,13 +335,14 @@ function drawProtagonist() {
   if (pick) $("protagonist").value = pick;
   const her = rows.find((r) => r.player_id === pick);
   document.querySelectorAll(".her").forEach((el) => { el.textContent = firstName(her?.name) + "'s"; });
+  document.querySelectorAll(".she").forEach((el) => { el.textContent = firstName(her?.name); });
 }
 
 // --------------------------------------------------------------------------
 // People rows — every button acts as the row's own person
 // --------------------------------------------------------------------------
 
-const EXPECTED = { DEALT: ["yes", "no"], IN: ["withdraw"], WITHDREW: ["yes"], REOPENED: ["yes"] };
+const EXPECTED = { DEALT: ["yes", "no"], IN: ["withdraw"], WITHDREW: ["yes"], REOPENED: ["yes"], NOT_DEALT: ["yes"] };
 
 function drawPeople() {
   const board = state.board;
@@ -351,7 +365,8 @@ function drawPeople() {
         ${pill(card.kind, "kind")}
         ${answerPill(card.answer)}
         <span>In: ${names(card.people_in)} · ${card.open_seats} open</span>
-        <span class="row">${button("yes", "Yes")}${button("no", "No")}${button("withdraw", "Withdraw")}</span>
+        <span class="row">${card.answer === "NOT_DEALT" ? button("yes", "Join")
+          : button("yes", "Yes") + button("no", "No") + button("withdraw", "Withdraw")}</span>
         <span class="mono">${esc(card.proposal_id.slice(0, 8))}</span>
       </div>`;
     }).join("") : `<div class="note">No card in ${esc(board.sport.toLowerCase())}.</div>`;
@@ -361,9 +376,9 @@ function drawPeople() {
         <div class="mono">${esc(row.email)}</div>
         <div class="note">Level ${row.level === null ? "—" : row.level.toFixed(2)}</div>
         ${cardOnFile(row)}
-        <div class="row">${sentButtons(row)}</div>
+        <div class="row">${sentButtons(row)}${postButton(row)}</div>
       </div></div>
-      <div class="cards">${cards}</div>
+      <div class="cards">${cards}${bookedOf(row)}${rescuesOf(row)}${postingOf(row)}</div>
       ${sentOf(row)}
     </div>`;
   }).join("");
@@ -391,6 +406,171 @@ async function act(button) {
     say(done, done.ok ? `${words} → done` : words);
   }
   await loadBoard();
+}
+
+// --------------------------------------------------------------------------
+// A row's booked games, its rescues, and posting a game (#593)
+// --------------------------------------------------------------------------
+
+const rowButton = (row, verb, label, data, expected) =>
+  `<button class="${expected ? "expected" : ""}" data-row="${verb}" data-player="${row.player_id}" ` +
+  `data-who="${esc(row.name ?? row.email)}" ${data}>${label}</button>`;
+
+function bookedOf(row) {
+  if (!row.booked.length) return "";
+  const now = Date.now();
+  return `<h4>Booked</h4>` + row.booked.map((b) => {
+    const started = new Date(b.starts_at).getTime() <= now;
+    const on = `data-booking="${b.booking_id}" data-game="${b.game_id ?? ""}"`;
+    const key = `${row.player_id}:${b.booking_id}`;
+    const pane = state.board.games.find((g) => g.game_id === b.booking_id);
+    const court = pane?.sides ? [...pane.sides.first, ...pane.sides.second] : [];
+    const others = court.filter((p) => p.player_id !== row.player_id)
+      .map((p) => `<option value="${p.player_id}">${nameOf(p)}</option>`).join("");
+    const result = !b.game_id ? "" : `
+      <input class="score" data-score-key="${key}" placeholder="6-4 6-3">
+      ${rowButton(row, "result", "Enter score", on, started && b.standing === "AWAITING_ENTRY")}
+      ${rowButton(row, "accept", "Agree", on, b.standing === "AWAITING_ANSWER")}
+      <select data-absent-key="${key}">${others}</select>
+      ${rowButton(row, "no-show", "Didn't come", on, false)}
+      ${rowButton(row, "dispute", "I came", on, b.standing === "NO_SHOW_REPORTED")}`;
+    return `<div class="rowcard">
+      <span class="when">${when(b.starts_at)}</span>
+      ${pill(b.state)} ${b.standing ? pill(b.standing, "kind") : ""}
+      <span class="row">${rowButton(row, "leave", "Leave the game", on, !started)}${result}</span>
+      <span class="mono">${esc(b.booking_id.slice(0, 8))}</span>
+    </div>`;
+  }).join("");
+}
+
+function rescuesOf(row) {
+  if (!row.rescues.length) return "";
+  return `<h4>Rescues</h4>` + row.rescues.map((r) => {
+    const on = `data-booking="${r.booking_id}"`;
+    const look = [r.offered ? "on their Fill in" : "not offered", r.dealt ? "Seat open card" : "",
+      r.said_no ? "said no" : ""].filter(Boolean).join(" · ");
+    return `<div class="rowcard">
+      <span class="when">${when(r.starts_at)}</span>
+      ${pill(r.kind, "kind")}
+      <span>On it: ${names(r.people_on)} · ${r.open_seats} open · <span class="note">${esc(look)}</span></span>
+      <span class="row">${rowButton(row, "take", "Take the seat", on, r.offered)}${rowButton(row, "no-seat", "No", on, r.dealt && !r.said_no)}</span>
+      <span class="mono">${esc(r.booking_id.slice(0, 8))}</span>
+    </div>`;
+  }).join("");
+}
+
+// Sets typed as "6-4 6-3": side A's games first in each set.
+function setsOf(text) {
+  return String(text).trim().split(/\s+/).filter(Boolean).map((set) => {
+    const [a, b] = set.split(/[-–:]/).map(Number);
+    return { a, b };
+  });
+}
+
+async function rowAct(button) {
+  const { row: verb, player, booking, game, who } = button.dataset;
+  const at = (tail) => `/dev/as/${player}/${tail}`;
+  const key = `${player}:${booking}`;
+  const words = `${esc(who)} · ${esc(button.textContent)} on ${esc(booking.slice(0, 8))}`;
+  let done;
+  if (verb === "leave") {
+    done = await call("POST", at(`bookings/${booking}/departure`));
+    say(done, done.ok ? `${words} → ${esc(done.json.left)}` : words);
+  } else if (verb === "take") {
+    done = await call("POST", at(`bookings/${booking}/seats`));
+    say(done, done.ok ? `${words} → ${done.json.booked ? "seated, paid" : `payment refused (${esc(done.json.your_payment?.refusal ?? "")})`}` : words);
+  } else if (verb === "no-seat") {
+    done = await call("POST", at(`bookings/${booking}/no`));
+    say(done, done.ok ? `${words} → the card is gone from their deck` : words);
+  } else {
+    const typed = document.querySelector(`input[data-score-key="${key}"]`)?.value ?? "";
+    const absent = document.querySelector(`select[data-absent-key="${key}"]`)?.value;
+    const [tail, body] = {
+      result: ["result", { score: { sets: setsOf(typed) } }],
+      accept: ["result/acceptance", undefined],
+      "no-show": ["no-shows", { player_id: absent }],
+      dispute: ["no-shows/dispute", undefined],
+    }[verb];
+    done = await call("POST", at(`games/${game}/${tail}`), body);
+    say(done, done.ok ? `${words} → ${esc(done.json.standing)}` : words);
+  }
+  await loadBoard();
+}
+
+const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Warsaw" });
+
+function postButton(row) {
+  return state.posting[row.player_id] ? ""
+    : `<button data-post="open" data-player="${row.player_id}">Post a game…</button>`;
+}
+
+function postingOf(row) {
+  const form = state.posting[row.player_id];
+  if (!form) return "";
+  const options = (values, chosen) => values.map((v) =>
+    `<option ${v === chosen ? "selected" : ""}>${v}</option>`).join("");
+  const field = (name, html) => `<label>${name} ${html}</label>`;
+  const at = `data-player="${row.player_id}"`;
+  const sheet = form.sheet;
+  const courts = !sheet ? "" : sheet.free_courts.length ? sheet.free_courts.map((c) =>
+    `<button data-post="post" ${at} data-club="${c.club.club_id}" data-start="${esc(c.starts_at)}">` +
+    `Post · ${when(c.starts_at)} · ${esc(c.club.name ?? "?")} · ${zl(c.share_grosze)} · ${c.fits_free} fit(s) free</button>`).join("")
+    : `<span class="note">no free court in that third of the day</span>`;
+  return `<h4>Post a game · as ${nameOf(row)}</h4><div class="posting">
+    <div class="row">
+      ${field("Kind", `<select data-post-field="kind" ${at}>${options(["COMPETITIVE", "FOR_FUN"], form.kind)}</select>`)}
+      ${field("Who", `<select data-post-field="who" ${at}>${options(["ANYONE", "MEN", "WOMEN", "MIXED_PAIRS"], form.who)}</select>`)}
+      ${field("Level", `<input type="number" step="0.05" data-post-field="low" ${at} value="${esc(form.low)}" placeholder="engine's">
+        – <input type="number" step="0.05" data-post-field="high" ${at} value="${esc(form.high)}" placeholder="engine's">`)}
+    </div>
+    <div class="row">
+      ${field("Day", `<input type="date" data-post-field="day" ${at} value="${esc(form.day)}">`)}
+      ${field("When", `<select data-post-field="range" ${at}>${options(["MORNING", "AFTERNOON", "EVENING"], form.range)}</select>`)}
+      <button data-post="sheet" ${at}>Court hours</button>
+      <button data-post="close" ${at}>Close</button>
+    </div>
+    ${sheet ? `<div class="row">${courts}</div>` : ""}
+  </div>`;
+}
+
+function postingQuery(form) {
+  const query = new URLSearchParams({
+    sport: state.board.sport, kind: form.kind, who: form.who, day: form.day, range: form.range,
+  });
+  if (form.low !== "") query.set("level_low", form.low);
+  if (form.high !== "") query.set("level_high", form.high);
+  return query;
+}
+
+async function postAct(button) {
+  const { post: verb, player } = button.dataset;
+  const group = $("group").value;
+  const form = state.posting[player];
+  const row = state.board.people.find((r) => r.player_id === player);
+  const words = `${nameOf(row)} · Post a game`;
+  if (verb === "open") {
+    state.posting[player] = { kind: "COMPETITIVE", who: "ANYONE", low: "", high: "",
+      day: TODAY.format(new Date()), range: "EVENING", sheet: null };
+  } else if (verb === "close") {
+    delete state.posting[player];
+  } else if (verb === "sheet") {
+    const read = await call("GET", `/dev/as/${player}/pools/${group}/posting-grid/slot?${postingQuery(form)}`);
+    form.sheet = read.ok ? read.json : null;
+    say(read, read.ok ? `${words} → ${read.json.free_courts.length} free court(s)` : words);
+  } else if (verb === "post") {
+    const done = await call("POST", `/dev/as/${player}/pools/${group}/posts`, {
+      sport: state.board.sport, kind: form.kind, who: form.who,
+      level_low: form.low === "" ? null : Number(form.low),
+      level_high: form.high === "" ? null : Number(form.high),
+      club_id: button.dataset.club, starts_at: button.dataset.start,
+    });
+    say(done, done.ok ? `${words} → In, dealt to ${done.json.dealt_to} in ${done.json.versions} version(s), ` +
+      `${done.json.open_seats} seat(s) open` : words);
+    if (done.ok) delete state.posting[player];
+    await loadBoard();
+    return;
+  }
+  drawPeople();
 }
 
 // --------------------------------------------------------------------------
@@ -526,6 +706,7 @@ function drawGames() {
           ${booking.answer_by ? ` · club answers by ${when(booking.answer_by)}` : ""}</dd>
         <dt>Left</dt><dd>${departures}</dd>
         <dt>Checked in</dt><dd>${names(booking.checked_in)}</dd>` : ""}
+        ${game.result ? `<dt>Result</dt><dd>${resultOf(game.result)}</dd>` : ""}
         <dt>Pending</dt><dd>${momentsOf(game)}</dd>
         <dt>Money</dt><dd>${charges}</dd>
         <dt>${esc(game.club.name ?? "The club")}</dt><dd>${clubButtons(game)}</dd>
@@ -538,7 +719,23 @@ function drawGames() {
 const MOMENT_WORDS = {
   BOOK_BY: "Book-by", CLUB_ANSWER_DUE: "Club's answer due", CUT_OFF: "Cut-off",
   NEW_BOOKINGS_SUMMARY: "Day close · desk told", CLUB_PAYOUT: "Day close · club paid",
+  RESULT_CONFIRMS: "Score confirms",
 };
+
+function resultOf(result) {
+  const scores = result.scores.map((s) =>
+    `${esc(s.sets)} <span class="note">by ${nameOf(s.by)} (${esc(s.side)}) · answer by ${when(s.answer_by)}</span>`).join("<br>");
+  const noShows = result.no_shows.map((n) =>
+    `${nameOf(n.player)} reported ${when(n.reported_at)}` +
+    (n.disputed_at ? ` · disputed ${when(n.disputed_at)}` : ` · dispute by ${when(n.dispute_by)}`)).join("<br>");
+  return `${pill(result.standing, "kind")} ${result.counted ? "counted" : "friendly"}
+    <span class="mono">${esc(result.game_id.slice(0, 8))}</span>
+    ${result.confirmed ? `<br><strong>${esc(result.confirmed)}</strong>` : ""}
+    ${scores ? `<br>${scores}` : ""}
+    ${result.agreed_by ? `<br>agreed by ${nameOf(result.agreed_by)}` : ""}
+    ${noShows ? `<br>${noShows}` : ""}
+    ${result.standing === "AWAITING_ENTRY" ? `<br><span class="note">we played is sayable until ${when(result.entry_closes_at)}</span>` : ""}`;
+}
 
 function momentsOf(game) {
   if (!game.moments.length) return `<span class="note">nothing ahead a job acts at</span>`;
@@ -779,6 +976,34 @@ async function dayClose() {
   await loadBoard();
 }
 
+async function oneLeaves() {
+  const done = await call("POST", "/dev/situations/one-leaves-before-the-cut-off", herSituation());
+  say(done, done.ok ? `Kuba leaves before the cut-off → ${esc(done.json.says)}` : "Kuba leaves before the cut-off");
+  await loadBoard();
+}
+
+async function sheLeaves() {
+  const done = await call("POST", "/dev/situations/she-leaves", herSituation());
+  say(done, done.ok ? `She leaves → ${esc(done.json.says)}` : "She leaves");
+  await loadBoard();
+}
+
+async function postedGame() {
+  const done = await call("POST", "/dev/situations/a-posted-game", herSituation());
+  say(done, done.ok ? `A posted game → ${esc(done.json.says)}` : "A posted game");
+  await loadBoard();
+}
+
+async function justPlayed() {
+  const minutes = $("confirms-in").value;
+  const done = await call("POST", "/dev/situations/just-played", {
+    ...herSituation(),
+    ...(minutes ? { result_confirms_in_minutes: Number(minutes) } : {}),
+  });
+  say(done, done.ok ? `Just played → ${esc(done.json.says)}` : "Just played");
+  await loadBoard();
+}
+
 // --------------------------------------------------------------------------
 // Wiring
 // --------------------------------------------------------------------------
@@ -799,6 +1024,10 @@ $("check-in").addEventListener("click", checkIn);
 $("about-to-expire").addEventListener("click", aboutToExpire);
 $("empty-seat").addEventListener("click", emptySeat);
 $("day-close").addEventListener("click", dayClose);
+$("one-leaves").addEventListener("click", oneLeaves);
+$("she-leaves").addEventListener("click", sheLeaves);
+$("posted-game").addEventListener("click", postedGame);
+$("just-played").addEventListener("click", justPlayed);
 $("jobs").addEventListener("click", (event) => {
   const job = event.target.closest("button[data-job]");
   if (job) runJob(job.dataset.job);
@@ -807,6 +1036,10 @@ $("refunds-wait").addEventListener("change", refundsWait);
 $("people").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-act]");
   if (button) return act(button);
+  const rowButtonPressed = event.target.closest("button[data-row]");
+  if (rowButtonPressed) return rowAct(rowButtonPressed);
+  const post = event.target.closest("button[data-post]");
+  if (post) return postAct(post);
   const sent = event.target.closest("button[data-sent]");
   if (sent?.dataset.sent === "read") return readSent(sent.dataset.player, sent.dataset.who);
   if (sent) { delete state.sent[sent.dataset.player]; drawPeople(); }
@@ -814,6 +1047,9 @@ $("people").addEventListener("click", (event) => {
 $("people").addEventListener("change", (event) => {
   const select = event.target.closest("select[data-card-for]");
   if (select) steerCard(select);
+  // A posting form's fields are kept as they are typed, so a redraw keeps them.
+  const field = event.target.closest("[data-post-field]");
+  if (field) state.posting[field.dataset.player][field.dataset.postField] = field.value;
 });
 $("games").addEventListener("click", (event) => {
   const club = event.target.closest("button[data-club]");

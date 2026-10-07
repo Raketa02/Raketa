@@ -23,9 +23,19 @@ desk would type it.
 
 **And a countdown on every pending moment** (#592): each moment still ahead on
 a game that a timed rule acts at — its book-by, the club's answer, its cut-off,
-the close of its club day — with the job whose *Run it now* acts at it
-(``jobs.py``), so the tester presses at the right time. A moment past is not
-counted down: the press acts on it now, and the next refresh drops it.
+the close of its club day, the moment a stated score confirms — with the job
+whose *Run it now* acts at it (``jobs.py``), so the tester presses at the right
+time. A moment past is not counted down: the press acts on it now, and the next
+refresh drops it.
+
+**And what the rest of a row's buttons act on** (#593): the booked games they
+hold a seat on — *Leave the game*, then the score and the no-shows, named by
+the Game each booking opened, whose record the pane shows — the group's rescues
+they hold no seat on, each read through the rule *Fill in* and the deck read
+(``RescueOffers``) for whether it is offered to them and dealt to them, and the
+posts still filling they were never dealt, which a *Join* answers. As with the
+cards, the console offers each press and the use case says what their own
+button would have.
 """
 
 from __future__ import annotations
@@ -53,12 +63,15 @@ from app.api.dev.dependencies import (
     ClubTermsDep,
     DeckPeopleDep,
     PlayerNamesDep,
+    PoolsDep,
+    RescueOffersDep,
 )
 from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
     CUT_OFF_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     PROPOSAL_EXPIRY_JOB,
+    RATING_CATCH_UP_JOB,
     REQUEST_TIMEOUT_JOB,
 )
 from app.core.exception_handlers import ErrorResponse
@@ -72,6 +85,18 @@ from app.modules.bookings.domain.booking import (
 )
 from app.modules.bookings.domain.ports import BookingRepository, CheckInCodes
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, day_close_after, local_day
+from app.modules.games.domain.game import Game
+from app.modules.games.domain.lineup import GameKind, GameSide
+from app.modules.games.domain.ports import GameRepository
+from app.modules.games.domain.results import Score
+from app.modules.games.domain.standing import GameStanding, settled_at
+from app.modules.games.domain.windows import (
+    A_BOOKED_GAME,
+    ENTRY_GRACE,
+    PROPOSAL_WINDOW,
+    proposal_closes_at,
+)
+from app.modules.games.presentation.dependencies import GameRepositoryDep
 from app.modules.groups.domain.errors import GroupNotFound
 from app.modules.groups.domain.ports import GroupDirectory, GroupListing
 from app.modules.groups.presentation.dependencies import GroupDirectoryDep
@@ -93,9 +118,16 @@ from app.modules.payments.presentation.dependencies import (
     SeatChargeRepositoryDep,
 )
 from app.modules.proposals.application.proposal_details import ReadProposalDetails
+from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.deck import SellingTerms, Sides
 from app.modules.proposals.domain.errors import ProposalNotFound
-from app.modules.proposals.domain.ports import ClubNames, ClubTerms, PlayerNames
+from app.modules.proposals.domain.home import BookedGame
+from app.modules.proposals.domain.ports import (
+    ClubNames,
+    ClubTerms,
+    PlayerNames,
+    Pools,
+)
 from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
 from app.modules.proposals.infrastructure.proposal_models import ProposalORM
 from app.modules.proposals.presentation.dependencies import (
@@ -111,8 +143,11 @@ from app.seeds.catalog import THE_POPULATED_PLAYER
 router = APIRouter(prefix="/groups", tags=["dev"])
 
 #: How far back the board looks for a group's games: a game that started
-#: within it is still shown, so one that has just been played is there to read.
-LOOK_BACK = timedelta(days=1)
+#: within it is still shown, so one that has just been played is there to read
+#: — for as long as its result can still move (#593): its hour, the day to say
+#: *we played*, and the day a score entered at the last of it waits for an
+#: answer.
+LOOK_BACK = A_BOOKED_GAME + ENTRY_GRACE + PROPOSAL_WINDOW
 
 
 class CardOutcome(StrEnum):
@@ -169,6 +204,9 @@ class Moment(StrEnum):
     NEW_BOOKINGS_SUMMARY = "NEW_BOOKINGS_SUMMARY"
     #: The close of the club day it is played on: the club is paid for it.
     CLUB_PAYOUT = "CLUB_PAYOUT"
+    #: A score stated on a counted game becomes final — its day of silence, or
+    #: an agreement's grace — and the rating catch-up moves the Levels.
+    RESULT_CONFIRMS = "RESULT_CONFIRMS"
 
 
 class MomentRule(NamedTuple):
@@ -203,6 +241,12 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
             CLUB_PAYOUTS_JOB,
             "The club's day closes: it is paid what this game left it, once the "
             "money is settled.",
+        ),
+        Moment.RESULT_CONFIRMS: MomentRule(
+            RATING_CATCH_UP_JOB,
+            "Unless the other side counters first, the score is final — by "
+            "silence, or the agreement's grace — and the rating catch-up moves "
+            "the Levels.",
         ),
     }
 )
@@ -278,6 +322,9 @@ class GroupsResponse(BaseModel):
 class RowAnswer(StrEnum):
     """Where a person stands on a card, as its stream leaves it."""
 
+    #: A post still filling they were never dealt: *Join* is a yes on it, which
+    #: says whether they may.
+    NOT_DEALT = "NOT_DEALT"
     #: Dealt it, and not answered.
     DEALT = "DEALT"
     IN = "IN"
@@ -298,6 +345,50 @@ class RowCard(BaseModel):
     answer: RowAnswer
     open_seats: int
     people_in: list[PersonRef] = Field(description="Everybody In, in yes order.")
+
+
+class RowBooked(BaseModel):
+    """A booked game they hold a seat on — what *Leave the game*, a score and
+    a no-show act on."""
+
+    booking_id: UUID = Field(
+        description=(
+            "The booking — its game's pane's `game_id`, and what *Leave the game* "
+            "names."
+        )
+    )
+    game_id: UUID | None = Field(
+        description=(
+            "The Game it opened — what a score, an agreement and a no-show name. "
+            "`null` while its club decides, and for good if it never said yes."
+        )
+    )
+    starts_at: datetime
+    state: BookingState
+    standing: GameStanding | None = Field(
+        description="What its Game is at `read_at`; `null` with no Game."
+    )
+
+
+class RowRescue(BaseModel):
+    """A rescue in the group they hold no seat on — what *Take the seat* and
+    *No* act on."""
+
+    booking_id: UUID
+    starts_at: datetime
+    kind: SearchMode
+    open_seats: int
+    people_on: list[PersonRef] = Field(description="Everybody on it, side A first.")
+    offered: bool = Field(
+        description=(
+            "On their *Fill in*: they fit everybody on it and are free for it — "
+            "*Take the seat* is open to them."
+        )
+    )
+    dealt: bool = Field(
+        description="A *Seat open* card in their deck: one of its best fits."
+    )
+    said_no: bool = Field(description="They said no to its card.")
 
 
 class CardOnFilePane(BaseModel):
@@ -327,7 +418,20 @@ class PersonRow(BaseModel):
     cards: list[RowCard] = Field(
         description=(
             "Every game in the group and sport still filling that is anything to "
-            "them — dealt, In or answered — soonest first."
+            "them — dealt, In or answered — and every post still filling they "
+            "were never dealt (`NOT_DEALT`), soonest first."
+        )
+    )
+    booked: list[RowBooked] = Field(
+        description=(
+            "Every game on the board they hold a seat on, booked or put to its "
+            "club, soonest first."
+        )
+    )
+    rescues: list[RowRescue] = Field(
+        description=(
+            "Every rescue in the group and sport with a seat to take now that "
+            "they hold no seat on, soonest first."
         )
     )
 
@@ -393,6 +497,51 @@ class BookingPane(BaseModel):
     codes: list[SeatCodePane] = Field(
         description="Each seated player's check-in code, the first side first."
     )
+
+
+class ScorePane(BaseModel):
+    """A score on the table."""
+
+    side: GameSide = Field(description="Whose score it is.")
+    by: PersonRef
+    sets: str = Field(description="Side A's games first in each set: *6–4 6–3*.")
+    at: datetime
+    answer_by: datetime = Field(
+        description="When the other side's silence agrees with it."
+    )
+
+
+class NoShowPane(BaseModel):
+    player: PersonRef
+    reported_at: datetime
+    dispute_by: datetime
+    disputed_at: datetime | None
+
+
+class ResultPane(BaseModel):
+    """The Game a booking opened: whether it was played, and what was said
+    about it."""
+
+    game_id: UUID = Field(
+        description=(
+            "The Game's own id — what a score, an agreement and a no-show name; "
+            "not the pane's `game_id`, which is the proposal's and the "
+            "booking's."
+        )
+    )
+    standing: GameStanding
+    counted: bool = Field(description="A competitive game: a result moves Levels.")
+    entry_closes_at: datetime = Field(
+        description="When *we played* stops being sayable."
+    )
+    scores: list[ScorePane] = Field(
+        description="Every score on the table, side A's first — two disagree."
+    )
+    agreed_by: PersonRef | None = Field(
+        description="Who agreed with the other side's score, while its grace runs."
+    )
+    confirmed: str | None = Field(description="The agreed score, once final.")
+    no_shows: list[NoShowPane]
 
 
 class RefundPane(BaseModel):
@@ -469,6 +618,9 @@ class GamePane(BaseModel):
         )
     )
     booking: BookingPane | None
+    result: ResultPane | None = Field(
+        description="The Game its booking opened; `null` until it has one."
+    )
     charges: list[ChargePane] = Field(description="Every one, oldest first.")
     moments: list[MomentPane] = Field(
         description=(
@@ -525,16 +677,18 @@ _NOT_FOUND: dict[int | str, dict[str, Any]] = {
 
 
 class GamePanes:
-    """Every game's pane, read once for the board: the booking and the charges
-    of each, through their contexts' own repositories, and one question each
-    for the names, the clubs and their terms. On a game still filling with
-    somebody In, the sides are the player's own details read as the first of
-    them — the evenest arrangement the engine forecasts, as their card draws it."""
+    """Every game's pane, read once for the board: the booking, the Game it
+    opened and the charges of each, through their contexts' own repositories,
+    and one question each for the names, the clubs and their terms. On a game
+    still filling with somebody In, the sides are the player's own details read
+    as the first of them — the evenest arrangement the engine forecasts, as
+    their card draws it."""
 
     def __init__(
         self,
         *,
         bookings: BookingRepository,
+        games: GameRepository,
         charges: SeatChargeRepository,
         names: PlayerNames,
         clubs: ClubNames,
@@ -543,6 +697,7 @@ class GamePanes:
         codes: CheckInCodes,
     ) -> None:
         self._bookings = bookings
+        self._games = games
         self._charges = charges
         self._names = names
         self._clubs = clubs
@@ -552,12 +707,20 @@ class GamePanes:
 
     async def read(self, games: Sequence[Proposal], *, now: Instant) -> "_Folded":
         bookings: dict[UUID, Booking] = {}
+        played: dict[UUID, Game] = {}
         charges: dict[UUID, Sequence[SeatCharge]] = {}
         sides: dict[UUID, Sides] = {}
         for game in games:
             booking = await self._bookings.load(game.proposal_id)
             if booking is not None:
                 bookings[game.proposal_id] = booking
+                opened = (
+                    None
+                    if booking.game_id is None
+                    else await self._games.load(booking.game_id)
+                )
+                if opened is not None:
+                    played[game.proposal_id] = opened
             charges[game.proposal_id] = await self._charges.of_game(game.proposal_id)
             if (
                 booking is None
@@ -577,6 +740,7 @@ class GamePanes:
             clubs=await self._clubs.names_of(club_ids),
             terms=await self._terms.of(club_ids, now=now),
             bookings=bookings,
+            played=played,
             charges=charges,
             sides=sides,
             codes=self._codes,
@@ -585,6 +749,7 @@ class GamePanes:
 
 def get_game_panes(
     bookings: BookingRepositoryDep,
+    games: GameRepositoryDep,
     charges: SeatChargeRepositoryDep,
     names: PlayerNamesDep,
     clubs: ProposalClubNamesDep,
@@ -594,6 +759,7 @@ def get_game_panes(
 ) -> GamePanes:
     return GamePanes(
         bookings=bookings,
+        games=games,
         charges=charges,
         names=names,
         clubs=clubs,
@@ -670,6 +836,8 @@ async def read_board(
     panes: GamePanesDep,
     methods: PaymentMethodRepositoryDep,
     provider: PaymentProviderDep,
+    offers: RescueOffersDep,
+    pools: PoolsDep,
 ) -> BoardResponse:
     now = instant(clock.now())
     listing = await the_group(groups, group_id)
@@ -688,6 +856,11 @@ async def read_board(
     drawn = await people.people(rows_of, sport=sport)
     fake = steerable(provider)
     cards = await _cards_of(methods, fake, rows_of)
+    rescues = _rescues_of(
+        await read_rescues(offers, pools, group_id, sport=sport, now=now),
+        rows_of,
+        folded.names,
+    )
     return BoardResponse(
         group=_console_group(listing, seed, club, await the_protagonist(users)),
         sport=sport,
@@ -707,8 +880,10 @@ async def read_board(
                 cards=[
                     _card(game, player, folded.names)
                     for game in filling
-                    if game.is_on_it(player)
+                    if game.is_on_it(player) or game.origin is Origin.POST
                 ],
+                booked=folded.booked_by(player),
+                rescues=rescues.get(player, []),
             )
             for player in rows_of
         ],
@@ -774,6 +949,97 @@ async def _cards_of(
     return cards
 
 
+class RescueRead(NamedTuple):
+    """A rescue with a seat to take, and who it is open to."""
+
+    game: BookedGame
+    #: Every member it is offered to — on their *Fill in* — in the group's
+    #: order.
+    offered: tuple[UUID, ...]
+    #: Its best fits: a *Seat open* card in their deck.
+    best_fits: frozenset[UUID]
+
+
+async def read_rescues(
+    offers: RescueOffers,
+    pools: Pools,
+    group_id: UUID,
+    *,
+    sport: Sport,
+    now: Instant,
+) -> list[RescueRead]:
+    """The group's rescues in the sport with a seat to take now, soonest
+    first, each read over every member as *Fill in* and the deck read it —
+    one pair rule per kind, never one per game (``RescueOffers``)."""
+
+    games = await offers.in_pool(group_id, sport=sport, now=now)
+    pool = await pools.find(group_id)
+    if not games or pool is None:
+        return []
+    everybody = await offers.candidates(
+        await pools.members_of(pool), sport=sport, games=games, now=now
+    )
+    offered = await offers.offered(games, everybody, sport=sport, now=now)
+    read: list[RescueRead] = []
+    for game in games:
+        # A no is the seat dealt to the next best fit: whoever said one holds
+        # no place among them, as the deck reads it.
+        fits = await offers.best_fits(
+            game,
+            [p for p in offered[game.booking_id] if p not in game.said_no],
+            sport=sport,
+        )
+        read.append(RescueRead(game, offered[game.booking_id], fits.players))
+    return read
+
+
+def _rescues_of(
+    rescues: Sequence[RescueRead],
+    rows_of: Sequence[UUID],
+    names: Mapping[UUID, str],
+) -> dict[UUID, list[RowRescue]]:
+    """Each row's rescues: every one they hold no seat on."""
+
+    rows: dict[UUID, list[RowRescue]] = {}
+    for rescue in rescues:
+        for player in rows_of:
+            if player in rescue.game.players:
+                continue
+            rows.setdefault(player, []).append(
+                _rescue(
+                    rescue.game,
+                    names,
+                    offered=player in rescue.offered,
+                    dealt=player in rescue.best_fits,
+                    said_no=player in rescue.game.said_no,
+                )
+            )
+    return rows
+
+
+def _rescue(
+    game: BookedGame,
+    names: Mapping[UUID, str],
+    *,
+    offered: bool,
+    dealt: bool,
+    said_no: bool,
+) -> RowRescue:
+    return RowRescue(
+        booking_id=game.booking_id,
+        starts_at=game.start,
+        kind=game.kind,
+        open_seats=game.open_seats,
+        people_on=[
+            PersonRef(player_id=player, name=names.get(player))
+            for player in game.players
+        ],
+        offered=offered,
+        dealt=dealt,
+        said_no=said_no,
+    )
+
+
 async def _games_in(
     db: AsyncSession, pool_id: UUID, *, sport: Sport, now: Instant
 ) -> Sequence[UUID]:
@@ -816,6 +1082,8 @@ def _console_group(
 
 
 def _answer(game: Proposal, player: UUID) -> RowAnswer:
+    if not game.is_on_it(player):
+        return RowAnswer.NOT_DEALT
     if player in game.yeses:
         return RowAnswer.IN
     if player in game.declined:
@@ -885,6 +1153,7 @@ class _Folded:
         clubs: Mapping[UUID, str],
         terms: Mapping[UUID, SellingTerms],
         bookings: Mapping[UUID, Booking],
+        played: Mapping[UUID, Game],
         charges: Mapping[UUID, Sequence[SeatCharge]],
         sides: Mapping[UUID, Sides],
         codes: CheckInCodes,
@@ -894,12 +1163,31 @@ class _Folded:
         self._clubs = clubs
         self._terms = terms
         self._bookings = bookings
+        self._played = played
         self._charges = charges
         self._sides = sides
         self._codes = codes
 
+    def booked_by(self, player: UUID) -> list[RowBooked]:
+        """Every game on the board this player holds a seat on, soonest first
+        — the bookings are read in the games' order."""
+
+        return [
+            RowBooked(
+                booking_id=booking.booking_id,
+                game_id=booking.game_id,
+                starts_at=booking.start,
+                state=booking.state,
+                standing=None if played is None else played.standing_at(self._now),
+            )
+            for proposal_id, booking in self._bookings.items()
+            if player in booking.players
+            for played in (self._played.get(proposal_id),)
+        ]
+
     def pane(self, game: Proposal) -> GamePane:
         booking = self._bookings.get(game.proposal_id)
+        played = self._played.get(game.proposal_id)
         terms = self._terms.get(game.club_id)
         if booking is not None:
             cut_off: Instant | None = booking.cut_off
@@ -956,14 +1244,17 @@ class _Folded:
             ],
             sides=sides,
             booking=None if booking is None else self._booking(booking),
+            result=None if played is None else self._result(played),
             charges=[
                 self._charge(charge)
                 for charge in self._charges.get(game.proposal_id, ())
             ],
-            moments=self._moments(game, booking),
+            moments=self._moments(game, booking, played),
         )
 
-    def _moments(self, game: Proposal, booking: Booking | None) -> list[MomentPane]:
+    def _moments(
+        self, game: Proposal, booking: Booking | None, played: Game | None
+    ) -> list[MomentPane]:
         """Each moment the game's record still has ahead of it."""
 
         ahead: list[tuple[Moment, Instant]] = []
@@ -987,6 +1278,19 @@ class _Folded:
                     (Moment.NEW_BOOKINGS_SUMMARY, day_close_after(booking.booked_at))
                 )
                 ahead.append((Moment.CLUB_PAYOUT, day_close_after(booking.start)))
+        if (
+            played is not None
+            and played.kind is GameKind.COUNTED
+            and played.standing_at(self._now) is GameStanding.AWAITING_ANSWER
+        ):
+            # The Game's own answer to *when does this become final*: an
+            # agreement's grace, or the lone score's day — none while two
+            # scores disagree, which settles nothing.
+            confirms = settled_at(
+                proposals=played.proposals, acceptance=played.acceptance
+            )
+            if confirms is not None:
+                ahead.append((Moment.RESULT_CONFIRMS, confirms))
         order = list(Moment)
         return [
             MomentPane(
@@ -1039,6 +1343,45 @@ class _Folded:
             ],
         )
 
+    def _result(self, played: Game) -> ResultPane:
+        standing = played.standing_at(self._now)
+        # The argument is on the table only while it is one, as the player's
+        # own read of the game has it (``GameSchema.of``) — and an agreement is
+        # one only with the score it agreed with, which the Game answers with
+        # it, ``None`` together.
+        arguing = standing is GameStanding.AWAITING_ANSWER
+        agreement = played.standing_acceptance() if arguing else None
+        if played.accepted_proposal() is None:
+            agreement = None
+        confirmed = played.confirmed_score_at(self._now)
+        return ResultPane(
+            game_id=played.id,
+            standing=standing,
+            counted=played.kind is GameKind.COUNTED,
+            entry_closes_at=played.entry_closes_at,
+            scores=[
+                ScorePane(
+                    side=proposal.side,
+                    by=self._ref(proposal.by),
+                    sets=sets_of(proposal.score),
+                    at=proposal.at,
+                    answer_by=proposal_closes_at(proposal.at),
+                )
+                for proposal in (played.standing_proposals() if arguing else ())
+            ],
+            agreed_by=None if agreement is None else self._ref(agreement.by),
+            confirmed=None if confirmed is None else sets_of(confirmed),
+            no_shows=[
+                NoShowPane(
+                    player=self._ref(player),
+                    reported_at=report.at,
+                    dispute_by=report.dispute_closes_at,
+                    disputed_at=report.disputed_at,
+                )
+                for player, report in played.no_shows.items()
+            ],
+        )
+
     def _charge(self, charge: SeatCharge) -> ChargePane:
         given = charge.refund_given
         return ChargePane(
@@ -1062,3 +1405,9 @@ class _Folded:
                 given_at=None if given is None else given.at,
             ),
         )
+
+
+def sets_of(score: Score) -> str:
+    """*6–4 6–3* — side A's games first in each set, as the score is held."""
+
+    return " ".join(f"{one.a}–{one.b}" for one in score.sets)

@@ -281,6 +281,938 @@
         }
       }
     },
+    "/dev/as/{player_id}/bookings/{booking_id}/departure": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Leave the game, as this person",
+        "description": "`POST /api/v1/bookings/{id}/departure` as the acting account: before the cut-off refunded at once less the card fee, after it the seat offered until the start and refunded when it is taken, while the club decides the request withdrawn \u2014 and the seat offered to the group.",
+        "operationId": "leave_the_game_dev_as__player_id__bookings__booking_id__departure_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepartureResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/bookings/{booking_id}/seats": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Take the seat, as this person",
+        "description": "`POST /api/v1/bookings/{id}/seats` as the acting account \u2014 *I'm in* on a rescue: the share taken at once over the provider this process moves money through, the seat that opened first theirs, and a leaver after the cut-off refunded. The first join wins.",
+        "operationId": "take_the_seat_dev_as__player_id__bookings__booking_id__seats_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YesAnswerResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/bookings/{booking_id}/no": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "No to a rescue, as this person",
+        "description": "`POST /api/v1/bookings/{id}/no` as the acting account \u2014 *Not this time* on a Seat open card: it leaves their deck, and the seat stays on their *Fill in*.",
+        "operationId": "say_no_to_the_seat_dev_as__player_id__bookings__booking_id__no_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/pools/{pool_id}/posting-grid/slot": {
+      "get": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "A posting grid cell's sheet, as this person",
+        "description": "`GET /api/v1/pools/{id}/posting-grid/slot` as the acting account: the free courts the post could be made at \u2014 each a court hour *Post a game* takes \u2014 their best fits free then, and what is already happening there. Nothing is recorded.",
+        "operationId": "read_posting_slot_dev_as__player_id__pools__pool_id__posting_grid_slot_get",
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          },
+          {
+            "name": "sport",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Sport"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/SearchMode"
+            }
+          },
+          {
+            "name": "who",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Who"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Day"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/DayRange",
+              "description": "A third of the day."
+            },
+            "description": "A third of the day."
+          },
+          {
+            "name": "level_low",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Level Low"
+            }
+          },
+          {
+            "name": "level_high",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Level High"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostingSlotResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/pools/{pool_id}/posts": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Post a game, as this person",
+        "description": "`POST /api/v1/pools/{id}/posts` as the acting account \u2014 *Post \u2014 you're In*, with the sport, kind, *Who* and Level range, at a court hour a cell's sheet lists: their yes, and the game dealt to their best fits free then.",
+        "operationId": "post_a_game_dev_as__player_id__pools__pool_id__posts_post",
+        "parameters": [
+          {
+            "name": "pool_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Pool Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/games/{game_id}/result": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "State a score, as this person",
+        "description": "`POST /api/v1/games/{id}/result` as the acting account: *we played, here is the score* \u2014 or their side's correction, or their side's one disagreement with the other's. The record decides which.",
+        "operationId": "state_result_dev_as__player_id__games__game_id__result_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StateResultRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created, and nothing was asked of the use case. Any other code as the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/games/{game_id}/result/acceptance": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Agree with the score, as this person",
+        "description": "`POST /api/v1/games/{id}/result/acceptance` as the acting account: the other side's score agreed with \u2014 final once its grace has run.",
+        "operationId": "accept_result_dev_as__player_id__games__game_id__result_acceptance_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created, and nothing was asked of the use case. Any other code as the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/games/{game_id}/no-shows": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Say somebody didn't come, as this person",
+        "description": "`POST /api/v1/games/{id}/no-shows` as the acting account \u2014 *Kuba didn't come*, on a booked game whose hour has come: the game does not count, and the reported player has a day to dispute it.",
+        "operationId": "report_a_no_show_dev_as__player_id__games__game_id__no_shows_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportANoShowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created, and nothing was asked of the use case. Any other code as the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/as/{player_id}/games/{game_id}/no-shows/dispute": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Say you came, as this person",
+        "description": "`POST /api/v1/games/{id}/no-shows/dispute` as the acting account: the report of them falls, and nobody arbitrates.",
+        "operationId": "dispute_a_no_show_dev_as__player_id__games__game_id__no_shows_dispute_post",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          },
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`.",
+              "title": "Player Id"
+            },
+            "description": "The acting account: the seed account this press acts as. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GameSchema"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting account is not one the seed created, and nothing was asked of the use case. Any other code as the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the player's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/as/{player_id}/sent": {
       "get": {
         "tags": [
@@ -1797,6 +2729,79 @@
         }
       }
     },
+    "/dev/situations/one-leaves-before-the-cut-off": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 6 \u00b7 Kuba leaves before the cut-off",
+        "description": "A rescue for her phone: the soonest hour of her week whose cut-off is 2 hours off at least, at a club of the group's that books at once \u2014 booked by four of the group as if earlier, never her, in the kind her deck shows \u2014 and the first of the four leaves it now, through the leave their phone runs: refunded at once less the card fee, and the seat offered to everybody who fits and is free, as a *Seat open* card to its best fits. *Take the seat* or *No* from her phone or the rows; still open at the cut-off, *Run it now* on the cut-off calls the game off.",
+        "operationId": "one_leaves_before_the_cut_off_dev_situations_one_leaves_before_the_cut_off_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HerSituationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OneLeavesResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/situations/empty-seat-at-the-cut-off": {
       "post": {
         "tags": [
@@ -1823,6 +2828,225 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EmptySeatResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/situations/she-leaves": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 8 \u00b7 Ania leaves",
+        "description": "Two games of hers to leave from the phone, at a club of the group's that books at once, each made and filled by her and three of the group as if earlier: the soonest hour whose cut-off has passed, and the soonest whose cut-off is still 2 hours off at least \u2014 each with that long to leave it in. Leaving the first refunds her at once, less the card fee; leaving the second keeps her seat paid until a row takes it, and then refunds her.",
+        "operationId": "she_leaves_dev_situations_she_leaves_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HerSituationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SheLeavesResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/situations/a-posted-game": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 9 \u00b7 A posted game",
+        "description": "Her post, for anybody at the engine's own Level range, in the kind her deck shows \u2014 made 10 minutes earlier through the post her phone runs \u2014 at the hour whose book-by is the next full hour the rules allow: the soonest book-by of a court a club of the group's sells that her sheet lists with somebody who fits her free, in her week, at least 5 minutes off. The rows answer it \u2014 *Yes* where dealt, *Join* where not \u2014 or let it go at its book-by, which *Run it now* on the book-by sweep then records.",
+        "operationId": "a_posted_game_dev_situations_a_posted_game_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HerSituationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APostedGameResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/situations/just-played": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 10 \u00b7 Just played",
+        "description": "Her game at the hour that ended last, at a club of the group's that books at once \u2014 made and filled by her and three of the group as if earlier, when the hour was on sale \u2014 awaiting its result: the rows and her phone enter a score, agree or counter, or say somebody didn't come. **With `result_confirms_in_minutes`, a score is up already**: the game is the hour that ended last before then, and somebody across the net from her stated their side won as if earlier, so silence confirms it that many minutes from now; *Run it now* on the rating catch-up then moves the Levels, and not before.",
+        "operationId": "just_played_dev_situations_just_played_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JustPlayedRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JustPlayedResponse"
                 }
               }
             }
@@ -2225,6 +3449,71 @@
   },
   "components": {
     "schemas": {
+      "APostedGameResponse": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "Her post \u2014 what a *Yes* or a *Join* names."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By",
+            "description": "When it goes unless full: the next full hour a book-by can fall on."
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "dealt": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Dealt",
+            "description": "Everybody it was dealt to beside her, in dealt order."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, and when it fires."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "starts_at",
+          "book_by",
+          "club_id",
+          "club_name",
+          "kind",
+          "dealt",
+          "says"
+        ],
+        "title": "APostedGameResponse"
+      },
       "AboutToExpireResponse": {
         "properties": {
           "game_id": {
@@ -2314,6 +3603,40 @@
         ],
         "title": "AcceptanceResponse"
       },
+      "AcceptanceSchema": {
+        "properties": {
+          "agreed_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Agreed By"
+          },
+          "of_side": {
+            "$ref": "#/components/schemas/GameSide",
+            "description": "Whose score was agreed with. **Always the accepter's opposite** \u2014 a teammate agreeing with a teammate proves nothing \u2014 so this names the score and, with it, which of the two people this is news for."
+          },
+          "agreed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Agreed At",
+            "description": "When they agreed. On the wire because *a second ago* and *five hours ago* are the same refusal to a client that cannot see it, and the sentence a player reads has to be able to say which."
+          },
+          "settles_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settles At",
+            "description": "When this agreement becomes final. Measured from the **score**, not from the tap: the person the grace protects is the opponent who has not read the score yet, and their clock started when it was put in front of them."
+          }
+        },
+        "type": "object",
+        "required": [
+          "agreed_by",
+          "of_side",
+          "agreed_at",
+          "settles_at"
+        ],
+        "title": "AcceptanceSchema",
+        "description": "Somebody agreed with the other side's score, and it has not settled yet.\n\n**Present only while the grace runs.** Once it has passed the game is\nconfirmed and the agreed score is on `score`; inside it nothing has settled,\na disagreement still wins, and the proposing side is no longer waiting on\nsilence \u2014 which is a different sentence on their screen and a correction the\naggregate will now refuse."
+      },
       "BankConfirmedResponse": {
         "properties": {
           "charge_id": {
@@ -2365,7 +3688,7 @@
             },
             "type": "array",
             "title": "Games",
-            "description": "Every game in the group and sport whose hour began less than 24 hours ago \u2014 filling, booked or over \u2014 soonest first."
+            "description": "Every game in the group and sport whose hour began less than 49 hours ago \u2014 filling, booked or over \u2014 soonest first."
           }
         },
         "type": "object",
@@ -2378,6 +3701,33 @@
           "games"
         ],
         "title": "BoardResponse"
+      },
+      "BookedClubSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The club's name; `null` for a club that no longer exists."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "BookedClubSchema"
       },
       "BookedSchema": {
         "properties": {
@@ -2401,6 +3751,90 @@
         ],
         "title": "BookedSchema",
         "description": "The game a yes booked \u2014 *It's a game!*"
+      },
+      "BookedTileSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "is_you": {
+            "type": "boolean",
+            "title": "Is You"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their Name, whole \u2014 the tile may cut it short, never invent a first name. `null` for an account that can no longer be named."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws a poster."
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "Their published Level in the game's sport; `null` if unrated."
+          },
+          "paid": {
+            "type": "boolean",
+            "title": "Paid",
+            "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
+          },
+          "checked_in": {
+            "type": "boolean",
+            "title": "Checked In",
+            "description": "The club's desk checked them in on the day (#547): they were there, so *didn't come* is never offered for them."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "is_you",
+          "name",
+          "photo_id",
+          "photo_url",
+          "level",
+          "paid",
+          "checked_in"
+        ],
+        "title": "BookedTileSchema",
+        "description": "One seat on a booked game."
       },
       "BookingPane": {
         "properties": {
@@ -2521,6 +3955,33 @@
         ],
         "title": "CalledOff",
         "description": "Why a booking will not be played."
+      },
+      "CalledOffBySchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole name, and **nothing may derive a familiar form from it** (``docs/adr/0107``, ``docs/adr/0171``). ``null`` where ``users`` no longer has the account \u2014 never for an unnamed player, whom the entry gate holds at the naming step."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id"
+        ],
+        "title": "CalledOffBySchema",
+        "description": "Who called the game off, and what they are called (``docs/adr/0172`` \u00a74).\n\n**The name is carried because the court cannot supply it**: the leaver whose\ndeparture called the game off has been **vacated** \u2014 their seat is drawn\n`player_id: null` \u2014 so the seats alone could not name them. It is the same\nname a seat carries, read in the same set read, and it is `null` for the\nsame reason a seat's is: an account `users` no longer answers for.\n\n**A departure is told from a press by whether this player still holds a\nseat on the game.** The presser does; the leaver's seat is open. No second\nfield says which \u2014 the record already does."
       },
       "CancelReason": {
         "type": "string",
@@ -3060,6 +4521,148 @@
         ],
         "title": "DayCloseGame"
       },
+      "DayRange": {
+        "type": "string",
+        "enum": [
+          "MORNING",
+          "AFTERNOON",
+          "EVENING"
+        ],
+        "title": "DayRange",
+        "description": "A third of a day, as a card and the posting grid group hours."
+      },
+      "DeckChallengerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name"
+        ],
+        "title": "DeckChallengerSchema",
+        "description": "Who a challenge names \u2014 *Kuba challenged you*."
+      },
+      "DeckForecastSchema": {
+        "properties": {
+          "pct": {
+            "type": "integer",
+            "title": "Pct"
+          },
+          "provisional": {
+            "type": "boolean",
+            "title": "Provisional",
+            "description": "A seat is empty and was read as matching its partner."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pct",
+          "provisional"
+        ],
+        "title": "DeckForecastSchema",
+        "description": "How even the game on **this** card is forecast to be, with these sides."
+      },
+      "DeckTileSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "is_you": {
+            "type": "boolean",
+            "title": "Is You",
+            "description": "The reader's own tile."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their Name, whole \u2014 the tile may cut it short, never invent a first name. `null` for an account that can no longer be named."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url",
+            "description": "A short-lived link to their first photograph; `null` with `photo_id` draws a poster."
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "Their published Level in the card's sport; `null` if unrated."
+          },
+          "is_in": {
+            "type": "boolean",
+            "title": "Is In",
+            "description": "They said yes: the **IN** tag. Nobody else carries a tag \u2014 a player still deciding is a plain tile."
+          },
+          "paid": {
+            "type": "boolean",
+            "title": "Paid",
+            "description": "On a `SEAT_OPEN` card, a player on the booked game \u2014 *2,75 \u00b7 paid* (#545). `false` on a game still filling, and on the reader's own tile, which is the open seat."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "is_you",
+          "name",
+          "photo_id",
+          "photo_url",
+          "level",
+          "is_in",
+          "paid"
+        ],
+        "title": "DeckTileSchema",
+        "description": "One person on a card."
+      },
       "Delivery": {
         "properties": {
           "notice_id": {
@@ -3159,6 +4762,20 @@
           "rescued_by"
         ],
         "title": "DeparturePane"
+      },
+      "DepartureResponse": {
+        "properties": {
+          "left": {
+            "$ref": "#/components/schemas/Leaving",
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again."
+          }
+        },
+        "type": "object",
+        "required": [
+          "left"
+        ],
+        "title": "DepartureResponse",
+        "description": "*Leave the game*, done."
       },
       "EmptySeatResponse": {
         "properties": {
@@ -3281,6 +4898,69 @@
         "title": "FailureReason",
         "description": "Why a share could not be held (the mechanics \u00a712.2, \u00a719)."
       },
+      "FreeCourtSchema": {
+        "properties": {
+          "club": {
+            "$ref": "#/components/schemas/BookedClubSchema"
+          },
+          "home_club": {
+            "type": "boolean",
+            "title": "Home Club",
+            "description": "The group's home club, listed first."
+          },
+          "distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance Km",
+            "description": "How far it is from the poster; `null` with no Location area."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "*27 z\u0142 if it fills*, each."
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By",
+            "description": "The latest the post can fill."
+          },
+          "courts": {
+            "type": "integer",
+            "title": "Courts",
+            "description": "How many courts of the sport are free then."
+          },
+          "fits_free": {
+            "type": "integer",
+            "title": "Fits Free",
+            "description": "Its own *n free*: the poster's best fits free at this hour."
+          }
+        },
+        "type": "object",
+        "required": [
+          "club",
+          "home_club",
+          "distance_km",
+          "starts_at",
+          "share_grosze",
+          "book_by",
+          "courts",
+          "fits_free"
+        ],
+        "title": "FreeCourtSchema",
+        "description": "One *Free courts* row: a club and hour the post could be made at."
+      },
       "FreeCourtsResponse": {
         "properties": {
           "courts": {
@@ -3329,6 +5009,15 @@
           "says"
         ],
         "title": "FreshDealResponse"
+      },
+      "GameKind": {
+        "type": "string",
+        "enum": [
+          "COUNTED",
+          "FRIENDLY"
+        ],
+        "title": "GameKind",
+        "description": "Whether this game is evidence about how well anybody plays.\n\n**Stamped at the plan and never derived at the end.** ADR-0049's fourth\nrejected option is the reason: *a friendly is a thing people choose*, and\nreclassifying a counted game because nobody typed a score hands a player the\nexact evening they said they did not want, and gives one word two meanings \u2014\nwhat you chose, and what you failed to record."
       },
       "GamePane": {
         "properties": {
@@ -3436,6 +5125,17 @@
               }
             ]
           },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultPane"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Game its booking opened; `null` until it has one."
+          },
           "charges": {
             "items": {
               "$ref": "#/components/schemas/ChargePane"
@@ -3472,11 +5172,256 @@
           "versions",
           "sides",
           "booking",
+          "result",
           "charges",
           "moments"
         ],
         "title": "GamePane",
         "description": "One game, from its first card to its court: everything a tester checks\nthe money and the people against."
+      },
+      "GameSchema": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "The booking this game was opened for. **A game is opened only by a booking**, so every game has one \u2014 and its chat is the room filed under the same `booking_id` in `GET /conversations`."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/GameKind",
+            "description": "Whether this evening is evidence. **Chosen when the game was arranged and never derived at the end** \u2014 a game nobody scored stays counted, because a friendly is a thing people choose."
+          },
+          "window": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Window"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How soon the week this was arranged for came round. ``null`` on every booked game, which has an hour instead."
+          },
+          "standing": {
+            "$ref": "#/components/schemas/GameStanding",
+            "description": "What this game is at the instant it was read. **Derived from the record and the clock, never stored**, so it is right for the whole gap between a deadline and anything noticing."
+          },
+          "planned_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Planned At",
+            "description": "When the court was booked and this became a game"
+          },
+          "played_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Played At",
+            "description": "When somebody said it happened. **The entry carries the moment** \u2014 there is no booking and no calendar, so this is the moment of the entry itself. ``null`` while nobody has said so."
+          },
+          "entry_closes_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Closes At",
+            "description": "When *we played* stops being sayable and the game becomes a game that never happened. ``null`` once somebody has said it happened, and ``null`` on a game that was called off \u2014 the window no longer matters, and a card that shelved itself by it would stay for eight days."
+          },
+          "called_off_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Called Off At",
+            "description": "When it was called off \u2014 at the club's cut-off with a seat open, or by the club taking the court back (``docs/adr/0163``). ``null`` unless the standing is `CALLED_OFF`; then the act's own instant, which is what the ending card is shelved from \u2014 a day later, as `played_at` and `entry_closes_at` already shelve the other endings. Who is `called_off_by`."
+          },
+          "called_off_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalledOffBySchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The player who called it off, and their name (``docs/adr/0172`` \u00a74). ``null`` on every standing but `CALLED_OFF` \u2014 and on a booked game called off by its cut-off or its club, which nobody did."
+          },
+          "seats": {
+            "items": {
+              "$ref": "#/components/schemas/SeatingSchema"
+            },
+            "type": "array",
+            "title": "Seats",
+            "description": "The court, in the order the booking handed it over"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agreed score. ``null`` until something settles on one \u2014 including while a lone score is still waiting, because a score nobody has answered yet is not the result."
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Outcome"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Win or loss **for you**. ``null`` for every standing but a confirmed one: a game nobody scored moves nobody's Level and has no outcome to give anybody."
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/StandingProposalSchema"
+            },
+            "type": "array",
+            "title": "Proposals",
+            "description": "The scores on the table, **side A's first and never in the order they arrived**. Empty unless the game is awaiting an answer: before that nobody has entered one, and after it the ending is on `standing` \u2014 a confirmed score is `score` and an unscored game is an evening, not a transcript of the argument. Two entries **is** the disagreement, and either side may agree with the other's."
+          },
+          "acceptance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AcceptanceSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The agreement that is waiting out its grace, and `null` when none is. **A counter voids one**, so this is what still stands rather than what was once recorded."
+          },
+          "no_shows": {
+            "items": {
+              "$ref": "#/components/schemas/NoShowSchema"
+            },
+            "type": "array",
+            "title": "No Shows",
+            "description": "Everybody reported as not coming to this **booked** game, in the court's order (#547). Empty on every other game. A report is the game's entry: no score is on the table beside one, and **the game does not count** whatever it comes to."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "booking_id",
+          "sport",
+          "kind",
+          "standing",
+          "planned_at",
+          "seats",
+          "proposals",
+          "no_shows"
+        ],
+        "title": "GameSchema",
+        "description": "One game, its court, and what it is right now."
+      },
+      "GameSide": {
+        "type": "string",
+        "enum": [
+          "A",
+          "B"
+        ],
+        "title": "GameSide",
+        "description": "Which side of the net. **Two, and the game names one of them.**"
+      },
+      "GameStanding": {
+        "type": "string",
+        "enum": [
+          "AWAITING_ENTRY",
+          "NEVER_PLAYED",
+          "AWAITING_ANSWER",
+          "CONFIRMED",
+          "UNSCORED",
+          "CALLED_OFF",
+          "STARTED_SHORT",
+          "NO_SHOW_REPORTED",
+          "NO_SHOW"
+        ],
+        "title": "GameStanding",
+        "description": "The nine standings, as codes. A client's words are the client's own."
+      },
+      "GameToLeave": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The booking \u2014 what *Leave the game* names."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "cut_off": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cut Off"
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id",
+            "description": "The club the club row acts as."
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People",
+            "description": "Everybody on it, her last."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "starts_at",
+          "cut_off",
+          "club_id",
+          "club_name",
+          "people"
+        ],
+        "title": "GameToLeave"
       },
       "GroupsResponse": {
         "properties": {
@@ -3581,6 +5526,155 @@
         ],
         "title": "JobsResponse"
       },
+      "JustPlayedRequest": {
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Group Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "protagonist_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Protagonist Id",
+            "description": "Whose phone it is \u2014 the protagonist the situation is for."
+          },
+          "result_confirms_in_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1440.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Confirms In Minutes",
+            "description": "State a score already, as if earlier \u2014 by somebody across the net from her, on a game played before it \u2014 so that silence confirms it this many minutes from now. Left out, the game has just ended and nothing is entered."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_id",
+          "sport",
+          "protagonist_id"
+        ],
+        "title": "JustPlayedRequest"
+      },
+      "JustPlayedResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "The booking \u2014 its pane's, and Home's."
+          },
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The Game it opened: what a score and a no-show name."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id",
+            "description": "The club the club row acts as."
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People",
+            "description": "Everybody on it, her last."
+          },
+          "entry_closes_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Entry Closes At",
+            "description": "When *we played* stops being sayable."
+          },
+          "stated": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StatedScore"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The score stated as if earlier; `null` with none asked for."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "game_id",
+          "starts_at",
+          "club_id",
+          "club_name",
+          "people",
+          "entry_closes_at",
+          "stated",
+          "says"
+        ],
+        "title": "JustPlayedResponse"
+      },
+      "Leaving": {
+        "type": "string",
+        "enum": [
+          "BEFORE_THE_CUT_OFF",
+          "AFTER_THE_CUT_OFF",
+          "WHILE_WAITING_FOR_THE_CLUB"
+        ],
+        "title": "Leaving",
+        "description": "What *Leave the game* does, by when it is pressed (the mechanics \u00a713) \u2014\nsaid on the details before, and answered by the act after."
+      },
+      "LevelRangeSchema": {
+        "properties": {
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          }
+        },
+        "type": "object",
+        "required": [
+          "low",
+          "high"
+        ],
+        "title": "LevelRangeSchema",
+        "description": "A range of Levels, both bounds included."
+      },
       "Moment": {
         "type": "string",
         "enum": [
@@ -3588,7 +5682,8 @@
           "CLUB_ANSWER_DUE",
           "CUT_OFF",
           "NEW_BOOKINGS_SUMMARY",
-          "CLUB_PAYOUT"
+          "CLUB_PAYOUT",
+          "RESULT_CONFIRMS"
         ],
         "title": "Moment",
         "description": "A moment ahead on a game that a timed rule acts at \u2014 what a countdown\ncounts down to, in the order a game meets them."
@@ -3694,6 +5789,96 @@
           "says"
         ],
         "title": "NeedsHerYesResponse"
+      },
+      "NoShowPane": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "reported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reported At"
+          },
+          "dispute_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Dispute By"
+          },
+          "disputed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disputed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "reported_at",
+          "dispute_by",
+          "disputed_at"
+        ],
+        "title": "NoShowPane"
+      },
+      "NoShowSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their whole name, as a seat carries it. ``null`` where ``users`` no longer has the account."
+          },
+          "reported_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reported At"
+          },
+          "dispute_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Dispute By",
+            "description": "The end of their day to say they came \u2014 24 hours from the report. **Nothing happens at this moment**: an undisputed report simply stands from here on, and the game reads `NO_SHOW` once every report has had its day."
+          },
+          "disputed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disputed At",
+            "description": "When they disputed it. **Nobody arbitrates**: a disputed report falls and is on nobody's record; a game whose every report was disputed is `UNSCORED`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "reported_at",
+          "dispute_by"
+        ],
+        "title": "NoShowSchema",
+        "description": "A player reported as not coming to this booked game (#547; the\nmechanics \u00a715.3) \u2014 and what became of it. **Who reported them is not\nhere**: the report is the game's, said by the people who came, and a name\non it would be the platform pointing at one of them."
       },
       "NotRunHereJob": {
         "properties": {
@@ -3968,6 +6153,91 @@
         ],
         "title": "OnRequestResponse"
       },
+      "OneLeavesResponse": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The booking \u2014 and the rescue's."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "cut_off": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cut Off",
+            "description": "The booking's own, ahead: the seat is taken by then, or the game is off."
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id",
+            "description": "The club the club row acts as."
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "people_in": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People In",
+            "description": "Everybody still on it."
+          },
+          "left": {
+            "$ref": "#/components/schemas/PersonRef",
+            "description": "Who left, just now \u2014 refunded at once, less the card fee."
+          },
+          "offered_to": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Offered To",
+            "description": "Every member the seat is offered to now: on their *Fill in*."
+          },
+          "dealt_to": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Dealt To",
+            "description": "Its best fits: a *Seat open* card in their deck."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, and when the cut-off fires."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "starts_at",
+          "cut_off",
+          "club_id",
+          "club_name",
+          "people_in",
+          "left",
+          "offered_to",
+          "dealt_to",
+          "says"
+        ],
+        "title": "OneLeavesResponse"
+      },
       "Opens": {
         "type": "string",
         "enum": [
@@ -3986,6 +6256,15 @@
         ],
         "title": "Origin",
         "description": "Who proposed the game (the mechanics \u00a78.1)."
+      },
+      "Outcome": {
+        "type": "string",
+        "enum": [
+          "WIN",
+          "LOSS"
+        ],
+        "title": "Outcome",
+        "description": "What a confirmed result says about one of the people who played.\n\nTwo values. *Unscored* is not a third: a game with no agreed result produces\n**no outcome for anybody**, which is ADR-0049's *an evening, not evidence*\nstated as a type \u2014 the absence has one spelling, and it is not being in the\nanswer."
       },
       "PaymentRefusal": {
         "type": "string",
@@ -4129,7 +6408,23 @@
             },
             "type": "array",
             "title": "Cards",
-            "description": "Every game in the group and sport still filling that is anything to them \u2014 dealt, In or answered \u2014 soonest first."
+            "description": "Every game in the group and sport still filling that is anything to them \u2014 dealt, In or answered \u2014 and every post still filling they were never dealt (`NOT_DEALT`), soonest first."
+          },
+          "booked": {
+            "items": {
+              "$ref": "#/components/schemas/RowBooked"
+            },
+            "type": "array",
+            "title": "Booked",
+            "description": "Every game on the board they hold a seat on, booked or put to its club, soonest first."
+          },
+          "rescues": {
+            "items": {
+              "$ref": "#/components/schemas/RowRescue"
+            },
+            "type": "array",
+            "title": "Rescues",
+            "description": "Every rescue in the group and sport with a seat to take now that they hold no seat on, soonest first."
           }
         },
         "type": "object",
@@ -4140,9 +6435,326 @@
           "photo_url",
           "level",
           "card",
-          "cards"
+          "cards",
+          "booked",
+          "rescues"
         ],
         "title": "PersonRow"
+      },
+      "PostRequest": {
+        "properties": {
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "who": {
+            "$ref": "#/components/schemas/Who"
+          },
+          "level_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level Low",
+            "description": "The narrowed lower bound; `null` is the engine's own."
+          },
+          "level_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level High",
+            "description": "The narrowed upper bound; `null` is the engine's own."
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start, as listed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sport",
+          "kind",
+          "who",
+          "club_id",
+          "starts_at"
+        ],
+        "title": "PostRequest",
+        "description": "*Post \u2014 you're In*: the four controls and the court hour picked on a\nsheet. **Types only**: who it may be for and which court hours are offered\nare the domain's to refuse, each with its own code."
+      },
+      "PostStillFillingSchema": {
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "club": {
+            "$ref": "#/components/schemas/BookedClubSchema"
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "What a seat costs if it fills."
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By"
+          },
+          "challenger": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckChallengerSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who posted it \u2014 `null` once they withdrew."
+          },
+          "people_in": {
+            "items": {
+              "$ref": "#/components/schemas/DeckTileSchema"
+            },
+            "type": "array",
+            "title": "People In",
+            "description": "Everybody In, in the order they said yes. No court number."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "kind",
+          "starts_at",
+          "club",
+          "share_grosze",
+          "book_by",
+          "challenger",
+          "people_in",
+          "open_seats"
+        ],
+        "title": "PostStillFillingSchema",
+        "description": "Somebody else's post still filling that the poster could join \u2014 **I'm\nin** is `POST /proposals/{proposal_id}/yes`, free until it fills."
+      },
+      "PostedResponse": {
+        "properties": {
+          "proposal_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposal Id"
+          },
+          "versions": {
+            "type": "integer",
+            "title": "Versions",
+            "description": "How many versions it was dealt in, up to 3."
+          },
+          "dealt_to": {
+            "type": "integer",
+            "title": "Dealt To",
+            "description": "How many best fits were dealt it."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "The seats open beside the poster."
+          }
+        },
+        "type": "object",
+        "required": [
+          "proposal_id",
+          "versions",
+          "dealt_to",
+          "open_seats"
+        ],
+        "title": "PostedResponse",
+        "description": "The post, In with its poster \u2014 its id is the game's, in *You're In*."
+      },
+      "PostingCellSchema": {
+        "properties": {
+          "range": {
+            "$ref": "#/components/schemas/DayRange",
+            "description": "Morning 07\u201312, Afternoon 12\u201317, Evening 17\u201323."
+          },
+          "fits_free": {
+            "type": "integer",
+            "title": "Fits Free",
+            "description": "How many of the poster's best fits are free **together with them** at `best_starts_at` \u2014 the best hour in the range that has a free court, or with none, the best hour of the range \u2014 never people who overlap the poster at different hours. The client caps it at *5+*."
+          },
+          "best_starts_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Starts At",
+            "description": "The hour the number is read at; `null` with no hour ahead."
+          },
+          "court_free": {
+            "type": "boolean",
+            "title": "Court Free",
+            "description": "A court the post could be made at is free in the range \u2014 the cell can be picked when somebody fits too."
+          },
+          "full_game": {
+            "type": "boolean",
+            "title": "Full Game",
+            "description": "A full game's worth are free: `fits_free` reaches `open_seats`. Pickable with a court but not full is *only 2 fit \u00b7 may not fill*."
+          },
+          "outside_your_hours": {
+            "type": "boolean",
+            "title": "Outside Your Hours",
+            "description": "The poster's own week covers no hour the number could be read at: dimmed and dashed, still pickable."
+          },
+          "past": {
+            "type": "boolean",
+            "title": "Past",
+            "description": "Earlier today: inert."
+          },
+          "happening": {
+            "type": "boolean",
+            "title": "Happening",
+            "description": "The red dot: a rescue the poster is offered, or somebody else's post still filling they could join, starts in the range."
+          }
+        },
+        "type": "object",
+        "required": [
+          "range",
+          "fits_free",
+          "best_starts_at",
+          "court_free",
+          "full_game",
+          "outside_your_hours",
+          "past",
+          "happening"
+        ],
+        "title": "PostingCellSchema",
+        "description": "One day's range on the posting grid. **The client draws the nine looks\nfrom these values** (the screens A5.2): *dead* is `fits_free` nought; *few*\nor *enough* by `full_game`; a court glyph by `court_free`; *outside your\nhours*, *past* and the red dot by their own flags. *Your pick* is the\nclient's."
+      },
+      "PostingSlotResponse": {
+        "properties": {
+          "pool_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Pool Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "who": {
+            "$ref": "#/components/schemas/Who"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "range": {
+            "$ref": "#/components/schemas/DayRange"
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Read At"
+          },
+          "level_range": {
+            "$ref": "#/components/schemas/LevelRangeSchema"
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats"
+          },
+          "cell": {
+            "$ref": "#/components/schemas/PostingCellSchema",
+            "description": "The headline's cell."
+          },
+          "fits": {
+            "items": {
+              "$ref": "#/components/schemas/SlotFitSchema"
+            },
+            "type": "array",
+            "title": "Fits",
+            "description": "The best fits free at the cell's best hour, best fit first."
+          },
+          "free_courts": {
+            "items": {
+              "$ref": "#/components/schemas/FreeCourtSchema"
+            },
+            "type": "array",
+            "title": "Free Courts",
+            "description": "**Home club first**, then by hour. Tapping one picks it."
+          },
+          "rescues": {
+            "items": {
+              "$ref": "#/components/schemas/SeatToFillSchema"
+            },
+            "type": "array",
+            "title": "Rescues",
+            "description": "**Already happening here**, first: booked games in the range with a seat offered to the poster \u2014 *I'm in \u00b7 `share_grosze`* pays at once (`POST /bookings/{id}/seats`)."
+          },
+          "posts": {
+            "items": {
+              "$ref": "#/components/schemas/PostStillFillingSchema"
+            },
+            "type": "array",
+            "title": "Posts",
+            "description": "Then: posts still filling in the range the poster could join."
+          }
+        },
+        "type": "object",
+        "required": [
+          "pool_id",
+          "sport",
+          "kind",
+          "who",
+          "day",
+          "range",
+          "read_at",
+          "level_range",
+          "open_seats",
+          "cell",
+          "fits",
+          "free_courts",
+          "rescues",
+          "posts"
+        ],
+        "title": "PostingSlotResponse",
+        "description": "A cell's sheet (the mechanics \u00a79.1 step 6; the screens A5.3)."
       },
       "ProposedSchema": {
         "properties": {
@@ -4377,6 +6989,97 @@
         "type": "object",
         "title": "RefusalRequest"
       },
+      "ReportANoShowRequest": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id",
+            "description": "Who did not come \u2014 somebody else on the game's court."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id"
+        ],
+        "title": "ReportANoShowRequest",
+        "description": "*Kuba didn't come.*"
+      },
+      "ResultPane": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id",
+            "description": "The Game's own id \u2014 what a score, an agreement and a no-show name; not the pane's `game_id`, which is the proposal's and the booking's."
+          },
+          "standing": {
+            "$ref": "#/components/schemas/GameStanding"
+          },
+          "counted": {
+            "type": "boolean",
+            "title": "Counted",
+            "description": "A competitive game: a result moves Levels."
+          },
+          "entry_closes_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Entry Closes At",
+            "description": "When *we played* stops being sayable."
+          },
+          "scores": {
+            "items": {
+              "$ref": "#/components/schemas/ScorePane"
+            },
+            "type": "array",
+            "title": "Scores",
+            "description": "Every score on the table, side A's first \u2014 two disagree."
+          },
+          "agreed_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PersonRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who agreed with the other side's score, while its grace runs."
+          },
+          "confirmed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed",
+            "description": "The agreed score, once final."
+          },
+          "no_shows": {
+            "items": {
+              "$ref": "#/components/schemas/NoShowPane"
+            },
+            "type": "array",
+            "title": "No Shows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "standing",
+          "counted",
+          "entry_closes_at",
+          "scores",
+          "agreed_by",
+          "confirmed",
+          "no_shows"
+        ],
+        "title": "ResultPane",
+        "description": "The Game a booking opened: whether it was played, and what was said\nabout it."
+      },
       "RosterAccount": {
         "properties": {
           "player_id": {
@@ -4452,6 +7155,7 @@
       "RowAnswer": {
         "type": "string",
         "enum": [
+          "NOT_DEALT",
           "DEALT",
           "IN",
           "SAID_NO",
@@ -4461,6 +7165,58 @@
         ],
         "title": "RowAnswer",
         "description": "Where a person stands on a card, as its stream leaves it."
+      },
+      "RowBooked": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "The booking \u2014 its game's pane's `game_id`, and what *Leave the game* names."
+          },
+          "game_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Id",
+            "description": "The Game it opened \u2014 what a score, an agreement and a no-show name. `null` while its club decides, and for good if it never said yes."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BookingState"
+          },
+          "standing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GameStanding"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What its Game is at `read_at`; `null` with no Game."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "game_id",
+          "starts_at",
+          "state",
+          "standing"
+        ],
+        "title": "RowBooked",
+        "description": "A booked game they hold a seat on \u2014 what *Leave the game*, a score and\na no-show act on."
       },
       "RowCard": {
         "properties": {
@@ -4504,6 +7260,63 @@
         ],
         "title": "RowCard"
       },
+      "RowRescue": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats"
+          },
+          "people_on": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People On",
+            "description": "Everybody on it, side A first."
+          },
+          "offered": {
+            "type": "boolean",
+            "title": "Offered",
+            "description": "On their *Fill in*: they fit everybody on it and are free for it \u2014 *Take the seat* is open to them."
+          },
+          "dealt": {
+            "type": "boolean",
+            "title": "Dealt",
+            "description": "A *Seat open* card in their deck: one of its best fits."
+          },
+          "said_no": {
+            "type": "boolean",
+            "title": "Said No",
+            "description": "They said no to its card."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "starts_at",
+          "kind",
+          "open_seats",
+          "people_on",
+          "offered",
+          "dealt",
+          "said_no"
+        ],
+        "title": "RowRescue",
+        "description": "A rescue in the group they hold no seat on \u2014 what *Take the seat* and\n*No* act on."
+      },
       "RunItNowJob": {
         "properties": {
           "job": {
@@ -4523,6 +7336,62 @@
           "title"
         ],
         "title": "RunItNowJob"
+      },
+      "ScorePane": {
+        "properties": {
+          "side": {
+            "$ref": "#/components/schemas/GameSide",
+            "description": "Whose score it is."
+          },
+          "by": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "sets": {
+            "type": "string",
+            "title": "Sets",
+            "description": "Side A's games first in each set: *6\u20134 6\u20133*."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "answer_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Answer By",
+            "description": "When the other side's silence agrees with it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "by",
+          "sets",
+          "at",
+          "answer_by"
+        ],
+        "title": "ScorePane",
+        "description": "A score on the table."
+      },
+      "ScoreSchema": {
+        "properties": {
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/SetScoreSchema"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Sets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sets"
+        ],
+        "title": "ScoreSchema",
+        "description": "The sets, in the order they were played.\n\n**A score names a winner**, and a level score is refused: none of the four\nsports produces a draw, and *Last 5* is win or loss with no third column to\nput one in. A *set* here is whatever the sport calls its unit \u2014 a set in\ntennis and padel, a game in squash and badminton."
       },
       "SearchMode": {
         "type": "string",
@@ -4563,6 +7432,121 @@
           "short_code"
         ],
         "title": "SeatCodePane"
+      },
+      "SeatToFillSchema": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "`POST /bookings/{id}/seats` takes the seat \u2014 *I'm in \u00b7 `share_grosze`* \u2014 and `GET /bookings/{id}` is its details as the reader sees it from outside."
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode",
+            "description": "Competitive, or for fun (*\u00b7 friendly* on the title)."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At",
+            "description": "The court hour's start; games are 1 h."
+          },
+          "club": {
+            "$ref": "#/components/schemas/BookedClubSchema"
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name",
+            "description": "What the club calls the court."
+          },
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "What *I'm in* charges at once."
+          },
+          "open_seats": {
+            "type": "integer",
+            "title": "Open Seats",
+            "description": "The dashed **?** squares after the players' posters."
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deadline",
+            "description": "When the row leaves the board \u2014 the club's cut-off while it is ahead, then the start."
+          },
+          "fills_by_the_cut_off": {
+            "type": "boolean",
+            "title": "Fills By The Cut Off",
+            "description": "*fills by `deadline`* before the cut-off; `false` is *offered until the start*. Switches by itself at the cut-off."
+          },
+          "players": {
+            "items": {
+              "$ref": "#/components/schemas/BookedTileSchema"
+            },
+            "type": "array",
+            "title": "Players",
+            "description": "Everybody on the game, each *paid* \u2014 the small posters, first side first. Long-press a poster for their record."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "sport",
+          "kind",
+          "starts_at",
+          "club",
+          "court_name",
+          "share_grosze",
+          "open_seats",
+          "deadline",
+          "fills_by_the_cut_off",
+          "players"
+        ],
+        "title": "SeatToFillSchema",
+        "description": "One *Seats to fill* row: a booked game that lost a player, and the\nreader fits and is free for it."
+      },
+      "SeatingSchema": {
+        "properties": {
+          "side": {
+            "$ref": "#/components/schemas/GameSide"
+          },
+          "player_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Player Id",
+            "description": "Who holds this seat. ``null`` on a seat somebody has **left** and nobody has filled yet: the seat stays, drawn empty, and the game is awaiting a player before it can be recorded as played. **Always present** \u2014 a seat is never dropped."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "The whole name, and **nothing may derive a familiar form from it** \u2014 every sentence naming somebody uses all of it or names nobody (``docs/adr/0107``, ``docs/adr/0171``). Never the nickname: a handle is drawn on a record and said nowhere.\n\n``null`` where ``users`` no longer has this account, and on an open seat \u2014 never for an unnamed player, whom the entry gate holds at the naming step. The seat stays: dropping it would publish a three-person doubles game, and the screen has a side to name instead."
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "player_id"
+        ],
+        "title": "SeatingSchema",
+        "description": "One position on one side: a person, or a seat somebody has left.\n\n**The court is frozen until somebody leaves it** (``docs/adr/0162``). An\nopen seat is drawn, never dropped \u2014 `player_id` is `null` and the seat keeps\nits place \u2014 so a four with one seat open is still a four and the client\nfolds *Needs a player* from it. Nothing on the wire names that rung.\n\n**A name, and nothing else about them** (``docs/adr/0141``). A Level, a\nband, an area and a run of form are what a *searcher* reads to decide about a\ngame that might happen, and a gate decided they may see them; this is the\nrecord of a game that did, and it re-publishes nobody's profile off the back\nof it. The court is the whole of the permission \u2014 ``GET /games`` answers\nabout games you were on the court of \u2014 so nothing here is re-gated against\nwho is reading."
       },
       "SentEmail": {
         "properties": {
@@ -4740,6 +7724,55 @@
         ],
         "title": "SentResponse"
       },
+      "SetScoreSchema": {
+        "properties": {
+          "a": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 0.0,
+            "title": "A",
+            "description": "GameSide A's games in this set"
+          },
+          "b": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 0.0,
+            "title": "B",
+            "description": "GameSide B's games in this set"
+          }
+        },
+        "type": "object",
+        "required": [
+          "a",
+          "b"
+        ],
+        "title": "SetScoreSchema",
+        "description": "One set, **absolute**: what side A took, and what side B took.\n\nNever relative to the reader. A score stored from one point of view has to be\nflipped by whoever reads it next, and the first reader to forget publishes a\nloss as a win."
+      },
+      "SheLeavesResponse": {
+        "properties": {
+          "before": {
+            "$ref": "#/components/schemas/GameToLeave",
+            "description": "Its cut-off ahead: leaving refunds her at once, less the card fee, and offers the seat until the cut-off."
+          },
+          "after": {
+            "$ref": "#/components/schemas/GameToLeave",
+            "description": "Its cut-off passed and its hour ahead: leaving keeps the seat paid and offers it until the start \u2014 she is refunded, less the fee, when somebody takes it, and it is on her record if nobody does."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "before",
+          "after",
+          "says"
+        ],
+        "title": "SheLeavesResponse"
+      },
       "SidesPane": {
         "properties": {
           "first": {
@@ -4764,6 +7797,84 @@
         ],
         "title": "SidesPane"
       },
+      "SlotFitSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Their Name, whole; `null` for an account that can no longer be named."
+          },
+          "photo_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Id"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level",
+            "description": "Their published Level in the sport."
+          },
+          "forecast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeckForecastSchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How even a game of the poster and them is forecast \u2014 `null` where it cannot be read."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name",
+          "photo_id",
+          "photo_url",
+          "level",
+          "forecast"
+        ],
+        "title": "SlotFitSchema",
+        "description": "One of the poster's best fits free then \u2014 *2,75 \u00b7 93*."
+      },
       "Sport": {
         "type": "string",
         "enum": [
@@ -4787,6 +7898,95 @@
         ],
         "title": "Standing",
         "description": "Where a proposal stands at an instant \u2014 derived, never stored."
+      },
+      "StandingProposalSchema": {
+        "properties": {
+          "side": {
+            "$ref": "#/components/schemas/GameSide",
+            "description": "Which side put this score on the table"
+          },
+          "proposed_by": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Proposed By"
+          },
+          "score": {
+            "$ref": "#/components/schemas/ScoreSchema"
+          },
+          "proposed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Proposed At"
+          },
+          "answer_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Answer By",
+            "description": "When the other side's silence becomes agreement. **Nothing happens at this moment** \u2014 no job runs and nothing is written; the game simply reads as confirmed from here on."
+          },
+          "settles_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Settles At",
+            "description": "When an acceptance of this score would become final. Earlier than `answer_by`, and it is the grace an opponent who has not read the score yet is given: inside it a disagreement still wins."
+          }
+        },
+        "type": "object",
+        "required": [
+          "side",
+          "proposed_by",
+          "score",
+          "proposed_at",
+          "answer_by",
+          "settles_at"
+        ],
+        "title": "StandingProposalSchema",
+        "description": "One side's score, on the table and not yet settled on.\n\n**At most one per side**, which is what bounds an argument to two rounds. Two\nof them is the disagreement this platform does not resolve \u2014 and it does not\nresolve it by *arbitrating*, not by hiding it: both scores travel, either\nside may agree with the other's, and that is the only end short of the game\ngoing unscored."
+      },
+      "StateResultRequest": {
+        "properties": {
+          "score": {
+            "$ref": "#/components/schemas/ScoreSchema",
+            "description": "The score you say was played"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score"
+        ],
+        "title": "StateResultRequest",
+        "description": "*This is the score.*\n\n**One request for three acts**, and the record decides which: the first score\nentered, a correction of your own side's while nobody has answered it, or\nyour side's disagreement with the other's. A client that named which would be\na client that could name it wrongly, and a mislabelled correction is a\nproposal nobody may make.\n\n**There is no rejection here and there is no body without a score.** An\nobjection carrying nothing would be free and always optimal for the loser."
+      },
+      "StatedScore": {
+        "properties": {
+          "by": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "sets": {
+            "type": "string",
+            "title": "Sets",
+            "description": "Side A's games first in each set: *6\u20134 6\u20133*."
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "confirms_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Confirms At",
+            "description": "When silence makes it final, unless she answers first."
+          }
+        },
+        "type": "object",
+        "required": [
+          "by",
+          "sets",
+          "at",
+          "confirms_at"
+        ],
+        "title": "StatedScore"
       },
       "SteerCardRequest": {
         "properties": {
@@ -4925,6 +8125,29 @@
           "answer"
         ],
         "title": "VersionPerson"
+      },
+      "Who": {
+        "type": "string",
+        "enum": [
+          "ANYONE",
+          "MEN",
+          "WOMEN",
+          "MIXED_PAIRS"
+        ],
+        "title": "Who",
+        "description": "Who a post is for (the mechanics \u00a79.1 step 3)."
+      },
+      "Window": {
+        "type": "string",
+        "enum": [
+          "TODAY",
+          "TOMORROW",
+          "WEEKEND",
+          "THIS_WEEK",
+          "ANY"
+        ],
+        "title": "Window",
+        "description": "When a game found on a week would plausibly be played. **A code, never a\nsentence** \u2014 *\"tonight\"* is the client's word (``docs/adr/0022``).\n\n**Derived, never chosen** (``docs/adr/0100``). There is no window picker\nanywhere: a player changes their window by changing their week, which is the\nsame act that changes their matches. One control, one meaning.\n\nIt is a **label on the search**, not a proposed time \u2014 the week is still\nnever rendered to anybody as a calendar, and this says only how soon the week\nit ran on comes round."
       },
       "YesAnswerResponse": {
         "properties": {
