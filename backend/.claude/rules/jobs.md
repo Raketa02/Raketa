@@ -15,7 +15,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   built from the composition root so it reaches the same bucket and event store a
   request does. There is no cron, no beat process and no lock: with N API processes a
   job runs N times per interval, so a job that cannot tolerate that needs a different
-  mechanism and its own ADR. Twelve jobs today — two went with the challenges (#578), five
+  mechanism and its own ADR. **A new job is decided about in the dev console too**: it gets a
+  *Run it now* in `app/api/dev/jobs.py`'s `RUN_IT_NOW`, run over the request's session and
+  clock through the same builder the job calls, or a line in `NOT_RUN_HERE` saying why not —
+  `tests/api/test_games_test_console_time.py` fails a registered job that is neither
+  (#592). Twelve jobs today — two went with the challenges (#578), five
   with the searches (#579): the **exposure roll**, the two **prompt loops** (intent drift,
   availability staleness), the **interest expiry loop** and the **scale-pressure probe** —
   and two with the ranking (#580): the **candidate index's tail and refresh**, with trigger 4

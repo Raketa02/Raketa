@@ -12,6 +12,7 @@ from uuid import uuid4
 from app.kernel import instant
 from app.modules.clubs.domain.court_hours import (
     CLUB_ZONE,
+    day_close_after,
     hour_start,
     last_closed_day,
     local_day,
@@ -72,3 +73,21 @@ def test_a_day_closes_when_its_last_court_hour_ends_in_kraków():
     assert last_closed_day(just_before) == date(2026, 10, 9)
     assert last_closed_day(closing) == date(2026, 10, 10)
     assert last_closed_day(after_midnight) == date(2026, 10, 10)
+
+
+def test_the_close_after_an_instant_is_tonight_s_until_it_and_tomorrow_s_from_it():
+    """What happens at 23:00 or later belongs to the next club day's close —
+    the window a day's new bookings are summed up over (#592)."""
+
+    tonight = instant(datetime(2026, 10, 10, 21, tzinfo=timezone.utc))
+    tomorrow = instant(datetime(2026, 10, 11, 21, tzinfo=timezone.utc))
+    before = instant(datetime(2026, 10, 10, 20, 59, tzinfo=timezone.utc))
+    late = instant(datetime(2026, 10, 10, 21, 30, tzinfo=timezone.utc))
+    after_midnight = instant(datetime(2026, 10, 10, 22, 30, tzinfo=timezone.utc))
+
+    assert day_close_after(before) == tonight
+    assert day_close_after(tonight) == tomorrow
+    assert day_close_after(late) == tomorrow
+    assert day_close_after(after_midnight) == tomorrow
+    # And the close it names is a closed day's: that day's last_closed_day.
+    assert last_closed_day(day_close_after(late)) == date(2026, 10, 11)

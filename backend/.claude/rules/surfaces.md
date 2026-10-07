@@ -27,8 +27,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `/dev/as/{player_id}/…`, the club's under `/dev/clubs/{club_id}/…` (#591), the payment
   provider's controls under `/dev/payments/…` (#591), a group's board under `/dev/groups`,
   the situations under `/dev/situations/…`, and *Run it now* under `/dev/jobs/{job}` — the
-  scheduler's own job name (#591 the club's answer window, #592 the rest). Four rules hold
-  it:
+  scheduler's own job name (#591 the club's answer window, #592 the rest). `GET /dev/jobs`
+  lists every job with a press (`RUN_IT_NOW`) and every other job the scheduler registers
+  with why it has none (`NOT_RUN_HERE`); `test_games_test_console_time.py` builds the
+  register and fails a job that is neither. Each game's pane carries its **pending
+  moments** (`board.py`'s `Moment`: book-by, the club's answer, cut-off, the day close that
+  tells the desk and the one that pays the club), each with the job that acts at it, and
+  the page's **one timer** redraws their countdowns and nothing else — the page test holds
+  that it fetches and presses nothing. Four rules hold it:
   - **It acts as seed accounts without signing in.** A press names its **acting account** in
     its path; `accounts.py` refuses any id not addressed on the reserved `.example` TLD
     (`not_a_seed_account`) before the use case is built — and `club.py` any club whose

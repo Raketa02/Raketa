@@ -21,9 +21,12 @@
      their name and face — and the club's on its game's pane, under the club's
      name. The protagonist — the phone in the tester's hand — is marked; a
      situation writes her past as the seed does, and never presses for her now.
-  3. **Nothing acts on its own.** There is no timer of any kind in this file.
-     Every press refreshes what it changed, and the Refresh button covers the
-     rest: nothing answers, runs or fetches unless the tester presses.
+  3. **Nothing acts on its own.** Every press refreshes what it changed, and
+     the Refresh button covers the rest: nothing answers, runs or fetches
+     unless the tester presses. **The one timer in this file redraws the
+     countdowns' numbers and does nothing else** (`redrawCountdowns`, #592) —
+     a countdown says when a *Run it now* will find something; pressing it is
+     still the tester's.
 -->
 <style>
   :root {
@@ -101,6 +104,9 @@
   .club { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .card-on-file { margin-top: 4px; display: flex; gap: 6px; align-items: center; }
   .notices td { white-space: nowrap; }
+  .moment { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .moment .countdown { font-variant-numeric: tabular-nums; color: var(--warn); }
+  .moment .countdown.due { color: var(--bad); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -121,7 +127,10 @@
         <button id="fresh-deal">1 · Fresh deal</button>
         <button id="needs-her-yes">2 · Needs <span class="her">her</span> yes · Instant club</button>
         <button id="card-declines">4 · Card declines at the fill</button>
+        <button id="about-to-expire">5 · About to expire</button>
+        <button id="empty-seat">7 · Empty seat at the cut-off</button>
         <button id="check-in">11 · Check-in at the club</button>
+        <button id="day-close">12 · Club day close</button>
       </div>
       <div class="row">
         <button id="on-request">3 · Needs <span class="her">her</span> yes · On request club</button>
@@ -129,9 +138,8 @@
           <input id="answer-due" type="number" min="1" max="60" placeholder="—"> min</label>
         <span class="note">empty: her yes on the phone asks the club</span>
       </div>
-      <div class="row">
+      <div class="row" id="jobs">
         <strong>Run it now</strong>
-        <button id="request-timeout">The club's answer window</button>
         <span class="note">acts only on what is already due</span>
       </div>
       <div class="row">
@@ -165,7 +173,7 @@
 <script>
 "use strict";
 
-const state = { groups: null, board: null, protagonist: null, notices: {}, freeCourts: {} };
+const state = { groups: null, board: null, protagonist: null, notices: {}, freeCourts: {}, jobs: [] };
 const $ = (id) => document.getElementById(id);
 
 // --------------------------------------------------------------------------
@@ -177,6 +185,24 @@ const WARSAW = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit", minute: "2-digit",
 });
 const when = (iso) => (iso ? WARSAW.format(new Date(iso)) : "—");
+const CLOCK = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Warsaw", hour: "2-digit", minute: "2-digit",
+});
+const DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Warsaw", dateStyle: "short" });
+
+// "fires at 15:00 · 40 min", counted from this laptop's clock — the server's
+// too, since neither ever moves (docs/adr/0194 §4).
+function firesAt(iso, now) {
+  const at = new Date(iso);
+  const seconds = Math.ceil((at.getTime() - now) / 1000);
+  if (seconds <= 0) return `due since ${CLOCK.format(at)} · Run it now`;
+  const minutes = Math.ceil(seconds / 60);
+  const left = seconds < 60 ? `${seconds} s`
+    : minutes < 120 ? `${minutes} min`
+    : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} min`;
+  const today = DAY.format(at) === DAY.format(new Date(now));
+  return `fires at ${today ? CLOCK.format(at) : when(iso)} · ${left}`;
+}
 const zl = (grosze) => (grosze === null || grosze === undefined ? "—" : (grosze / 100).toFixed(2) + " zł");
 
 function esc(text) {
@@ -255,8 +281,24 @@ async function loadBoard() {
   drawGames();
 }
 
+async function loadJobs() {
+  const read = await call("GET", "/dev/jobs");
+  if (!read.ok) { say(read, "Reading the jobs"); return; }
+  state.jobs = read.json.jobs;
+  const row = $("jobs");
+  row.querySelectorAll("button").forEach((b) => b.remove());
+  const note = row.querySelector(".note");
+  state.jobs.forEach((j) => {
+    const button = document.createElement("button");
+    button.dataset.job = j.job;
+    button.textContent = j.title;
+    row.insertBefore(button, note);
+  });
+}
+
 async function refresh() {
   await loadGroups();
+  await loadJobs();
   await loadBoard();
 }
 
@@ -404,12 +446,29 @@ function drawGames() {
           ${booking.answer_by ? ` · club answers by ${when(booking.answer_by)}` : ""}</dd>
         <dt>Left</dt><dd>${departures}</dd>
         <dt>Checked in</dt><dd>${names(booking.checked_in)}</dd>` : ""}
+        <dt>Pending</dt><dd>${momentsOf(game)}</dd>
         <dt>Money</dt><dd>${charges}</dd>
         <dt>${esc(game.club.name ?? "The club")}</dt><dd>${clubButtons(game)}</dd>
         ${game.charges.length ? `<dt>Notices</dt><dd>${noticesOf(game)}</dd>` : ""}
       </dl>
     </div>`;
   }).join("") : `<div class="note">Nothing to show. Try <em>Fresh deal</em>, or show every game.</div>`;
+}
+
+const MOMENT_WORDS = {
+  BOOK_BY: "Book-by", CLUB_ANSWER_DUE: "Club's answer due", CUT_OFF: "Cut-off",
+  NEW_BOOKINGS_SUMMARY: "Day close · desk told", CLUB_PAYOUT: "Day close · club paid",
+};
+
+function momentsOf(game) {
+  if (!game.moments.length) return `<span class="note">nothing ahead a job acts at</span>`;
+  const now = Date.now();
+  return game.moments.map((m) => `<div class="moment">
+      <strong>${esc(MOMENT_WORDS[m.moment] ?? m.moment)}</strong>
+      <span class="countdown" data-fires-at="${esc(m.at)}">${esc(firesAt(m.at, now))}</span>
+      <button data-job="${esc(m.job)}">Run it now</button>
+      <span class="note">${esc(m.says)}</span>
+    </div>`).join("");
 }
 
 // --------------------------------------------------------------------------
@@ -559,10 +618,21 @@ async function noticesAct(button) {
 // Run it now
 // --------------------------------------------------------------------------
 
-async function runRequestTimeout() {
-  const done = await call("POST", "/dev/jobs/request-timeout");
-  say(done, done.ok ? `Run it now · the club's answer window → ${esc(done.json.says)}` : "Run it now");
+async function runJob(job) {
+  const title = state.jobs.find((j) => j.job === job)?.title ?? job;
+  const done = await call("POST", `/dev/jobs/${job}`);
+  say(done, done.ok ? `Run it now · ${esc(title)} → ${esc(done.json.says)}` : `Run it now · ${esc(title)}`);
   await loadBoard();
+}
+
+// The one timer in this file. It redraws the countdowns' numbers from the
+// moments already read, and nothing else: no fetch, no press.
+function redrawCountdowns() {
+  const now = Date.now();
+  document.querySelectorAll("[data-fires-at]").forEach((el) => {
+    el.textContent = firesAt(el.dataset.firesAt, now);
+    el.classList.toggle("due", new Date(el.dataset.firesAt).getTime() <= now);
+  });
 }
 
 // --------------------------------------------------------------------------
@@ -611,6 +681,24 @@ async function checkIn() {
   await loadBoard();
 }
 
+async function aboutToExpire() {
+  const done = await call("POST", "/dev/situations/about-to-expire", herSituation());
+  say(done, done.ok ? `About to expire → ${esc(done.json.says)}` : "About to expire");
+  await loadBoard();
+}
+
+async function emptySeat() {
+  const done = await call("POST", "/dev/situations/empty-seat-at-the-cut-off", herSituation());
+  say(done, done.ok ? `Empty seat at the cut-off → ${esc(done.json.says)}` : "Empty seat at the cut-off");
+  await loadBoard();
+}
+
+async function dayClose() {
+  const done = await call("POST", "/dev/situations/club-day-close", herSituation());
+  say(done, done.ok ? `Club day close → ${esc(done.json.says)}` : "Club day close");
+  await loadBoard();
+}
+
 // --------------------------------------------------------------------------
 // Wiring
 // --------------------------------------------------------------------------
@@ -628,7 +716,13 @@ $("needs-her-yes").addEventListener("click", needsHerYes);
 $("on-request").addEventListener("click", onRequest);
 $("card-declines").addEventListener("click", cardDeclines);
 $("check-in").addEventListener("click", checkIn);
-$("request-timeout").addEventListener("click", runRequestTimeout);
+$("about-to-expire").addEventListener("click", aboutToExpire);
+$("empty-seat").addEventListener("click", emptySeat);
+$("day-close").addEventListener("click", dayClose);
+$("jobs").addEventListener("click", (event) => {
+  const job = event.target.closest("button[data-job]");
+  if (job) runJob(job.dataset.job);
+});
 $("refunds-wait").addEventListener("change", refundsWait);
 $("people").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-act]");
@@ -645,10 +739,15 @@ $("games").addEventListener("click", (event) => {
   if (charge) return chargeAct(charge);
   const notices = event.target.closest("button[data-notices]");
   if (notices) return noticesAct(notices);
+  const job = event.target.closest("button[data-job]");
+  if (job) return runJob(job.dataset.job);
 });
 
 // The first read, once, on load — and nothing after it unless pressed. It
 // opens on the protagonist's biggest group, where the seed deals her games.
+// The countdowns' redraw is the only thing that repeats, and it reads nothing.
+setInterval(redrawCountdowns, 1000);
+loadJobs();
 loadGroups().then(() => {
   const hers = (state.groups?.groups ?? [])
     .filter((g) => g.holds_the_protagonist)

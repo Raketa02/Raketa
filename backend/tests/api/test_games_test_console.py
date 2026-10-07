@@ -119,8 +119,7 @@ async def test_the_page_is_one_file_served_on_the_dev_surface(client):
 
 
 @pytest.mark.parametrize(
-    "what",
-    ["localStorage", "sessionStorage", "document.cookie", "setInterval", "setTimeout"],
+    "what", ["localStorage", "sessionStorage", "document.cookie", "setTimeout"]
 )
 async def test_the_page_stores_no_token_and_nothing_acts_on_its_own(client, what):
     """ADR-0194 §6, held where it can be: the page holds no token, so it stores
@@ -129,6 +128,27 @@ async def test_the_page_stores_no_token_and_nothing_acts_on_its_own(client, what
     page = await client.get("/dev")
 
     assert what not in page.text
+
+
+def _function(page: str, name: str) -> str:
+    """A top-level function's body in the page's one script."""
+
+    return page.split(f"function {name}(", 1)[1].split("\n}\n", 1)[0]
+
+
+async def test_the_page_s_one_timer_only_redraws_the_countdowns(client):
+    """ADR-0194 §6: *a countdown only redraws a number* (#592). The page's one
+    timer redraws the countdowns from what was read, and the redraw fetches,
+    presses and reloads nothing."""
+
+    page = (await client.get("/dev")).text
+
+    assert page.count("setInterval(") == 1
+    assert "setInterval(redrawCountdowns, 1000)" in page
+    for name in ("redrawCountdowns", "firesAt"):
+        body = _function(page, name)
+        for acting in ("fetch(", "call(", "load", "run", "say("):
+            assert acting not in body, (name, acting)
 
 
 # --------------------------------------------------------------------------- #
@@ -445,7 +465,7 @@ async def test_needs_her_yes_puts_three_in_so_her_yes_completes_it(
     # when her yes is due.
     pane = pane_of(await board_of(client, world.group), UUID(game))
     assert pressed.json()["book_by"] == pane["book_by"]
-    assert "book by" in pressed.json()["says"]
+    assert "its book-by fires at" in pressed.json()["says"]
 
     # Her yes, from her own phone, books the game: Home shows it.
     yes = await says(client, PLAYER, "yes", world.marta, UUID(game))

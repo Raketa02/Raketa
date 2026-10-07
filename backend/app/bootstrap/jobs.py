@@ -520,7 +520,7 @@ def build_proposer_job(
     async def run() -> None:
         async with session_factory() as session:
             proposer = build_propose_games(session, clock=clock)
-            done = await _propose_over(
+            done = await propose_over(
                 session, proposer, await proposer.every_pool(), job=PROPOSER_JOB
             )
         _log_proposed(PROPOSER_JOB, done)
@@ -550,7 +550,7 @@ def build_proposer_on_changes_job(
             return
         async with session_factory() as session:
             proposer = build_propose_games(session, clock=clock)
-            done = await _propose_over(
+            done = await propose_over(
                 session,
                 proposer,
                 await proposer.pools_due(changed),
@@ -565,9 +565,14 @@ def build_proposer_on_changes_job(
     )
 
 
-async def _propose_over(
+async def propose_over(
     session: AsyncSession, proposer: ProposeGames, pools: Sequence[UUID], *, job: str
 ) -> Proposed:
+    """The proposer's unit of work over these pools, one after another — the
+    sweep's and the short tick's, and the console's *Run it now*
+    (``app/api/dev/jobs.py``), which hands it this request's session and clock.
+    One pool failing is rolled back, logged and passed over."""
+
     done = Proposed()
     for pool_id in pools:
         try:

@@ -106,3 +106,13 @@ def last_closed_day(now: Instant) -> date:
 
     today = local_day(now)
     return today if now >= day_closes_at(today) else today - timedelta(days=1)
+
+
+def day_close_after(at: Instant) -> Instant:
+    """The first close of a club day after ``at`` — tonight's until 23:00,
+    tomorrow's from it (#592): the close whose ``last_closed_day`` is the day
+    something done at ``at`` is summed up in, since a day runs from the close
+    before it to its own."""
+
+    tonight = day_closes_at(local_day(at))
+    return tonight if at < tonight else day_closes_at(local_day(at) + timedelta(days=1))

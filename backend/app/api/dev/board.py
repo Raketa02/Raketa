@@ -20,17 +20,24 @@ saved card and what the provider will do with its next payment — read off the
 process's fake, the one the console steers, and ``null`` where the provider is
 not it — and each booked seat's check-in code, as the phone shows it and the
 desk would type it.
+
+**And a countdown on every pending moment** (#592): each moment still ahead on
+a game that a timed rule acts at — its book-by, the club's answer, its cut-off,
+the close of its club day — with the job whose *Run it now* acts at it
+(``jobs.py``), so the tester presses at the right time. A moment past is not
+counted down: the press acts on it now, and the next refresh drops it.
 """
 
 from __future__ import annotations
 
 import app.api.dev.refusal  # noqa: F401 — refuses first; see refusal.py
 
+import math
 from collections.abc import Collection, Mapping, Sequence
 from datetime import datetime, timedelta
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Annotated, Any
+from typing import Annotated, Any, NamedTuple
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -47,6 +54,13 @@ from app.api.dev.dependencies import (
     DeckPeopleDep,
     PlayerNamesDep,
 )
+from app.bootstrap.jobs import (
+    CLUB_PAYOUTS_JOB,
+    CUT_OFF_JOB,
+    NEW_BOOKINGS_SUMMARY_JOB,
+    PROPOSAL_EXPIRY_JOB,
+    REQUEST_TIMEOUT_JOB,
+)
 from app.core.exception_handlers import ErrorResponse
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, hours, instant, shifted
@@ -57,6 +71,7 @@ from app.modules.bookings.domain.booking import (
     CancelReason,
 )
 from app.modules.bookings.domain.ports import BookingRepository, CheckInCodes
+from app.modules.clubs.domain.court_hours import CLUB_ZONE, day_close_after, local_day
 from app.modules.groups.domain.errors import GroupNotFound
 from app.modules.groups.domain.ports import GroupDirectory, GroupListing
 from app.modules.groups.presentation.dependencies import GroupDirectoryDep
@@ -137,6 +152,80 @@ def steerable(provider: PaymentProvider) -> FakePayments | None:
     """The provider, when it is the in-process fake the console steers."""
 
     return provider if isinstance(provider, FakePayments) else None
+
+
+class Moment(StrEnum):
+    """A moment ahead on a game that a timed rule acts at — what a countdown
+    counts down to, in the order a game meets them."""
+
+    #: A card still filling is over at its book-by.
+    BOOK_BY = "BOOK_BY"
+    #: An On request club's answer is due.
+    CLUB_ANSWER_DUE = "CLUB_ANSWER_DUE"
+    #: Leaving stops being free, and a seat still open calls the game off.
+    CUT_OFF = "CUT_OFF"
+    #: The close of the club day it was booked in: its desk is emailed it among
+    #: the day's new bookings.
+    NEW_BOOKINGS_SUMMARY = "NEW_BOOKINGS_SUMMARY"
+    #: The close of the club day it is played on: the club is paid for it.
+    CLUB_PAYOUT = "CLUB_PAYOUT"
+
+
+class MomentRule(NamedTuple):
+    """The job whose *Run it now* acts at a moment, and what it does then."""
+
+    job: str
+    says: str
+
+
+MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
+    {
+        Moment.BOOK_BY: MomentRule(
+            PROPOSAL_EXPIRY_JOB,
+            "Unfilled by then, the card is gone from every deck; the book-by "
+            "sweep records it.",
+        ),
+        Moment.CLUB_ANSWER_DUE: MomentRule(
+            REQUEST_TIMEOUT_JOB,
+            "Unanswered by then, the game is called off — no answer, nobody paid.",
+        ),
+        Moment.CUT_OFF: MomentRule(
+            CUT_OFF_JOB,
+            "Leaving stops being free, and a seat still open then calls the game "
+            "off with everybody refunded in full.",
+        ),
+        Moment.NEW_BOOKINGS_SUMMARY: MomentRule(
+            NEW_BOOKINGS_SUMMARY_JOB,
+            "The club's day closes: its desk is emailed this among the day's new "
+            "bookings.",
+        ),
+        Moment.CLUB_PAYOUT: MomentRule(
+            CLUB_PAYOUTS_JOB,
+            "The club's day closes: it is paid what this game left it, once the "
+            "money is settled.",
+        ),
+    }
+)
+
+
+def fires_at(at: Instant, *, now: Instant) -> str:
+    """*fires at 15:00 · 40 min*: when a moment fires, on the clubs' clock —
+    with the day, where it is not today — and how long until then, rounded up
+    to the minute."""
+
+    local = at.astimezone(CLUB_ZONE)
+    when = (
+        f"{local:%H:%M}"
+        if local_day(at) == local_day(now)
+        else f"{local:%a %d %b %H:%M}"
+    )
+    minutes = max(math.ceil((at - now).total_seconds() / 60), 0)
+    left = (
+        f"{minutes} min"
+        if minutes < 120
+        else f"{minutes // 60} h {minutes % 60:02d} min"
+    )
+    return f"fires at {when} · {left}"
 
 
 # --------------------------------------------------------------------------- #
@@ -336,6 +425,17 @@ class ChargePane(BaseModel):
     refund: RefundPane | None
 
 
+class MomentPane(BaseModel):
+    """A pending moment, and the *Run it now* that acts at it."""
+
+    moment: Moment
+    at: datetime = Field(description="When it fires — the countdown's end.")
+    job: str = Field(
+        description="The job that acts at it: `POST /dev/jobs/{job}` once it is due."
+    )
+    says: str = Field(description="What happens then, for the tester.")
+
+
 class GamePane(BaseModel):
     """One game, from its first card to its court: everything a tester checks
     the money and the people against."""
@@ -370,6 +470,13 @@ class GamePane(BaseModel):
     )
     booking: BookingPane | None
     charges: list[ChargePane] = Field(description="Every one, oldest first.")
+    moments: list[MomentPane] = Field(
+        description=(
+            "Every moment still ahead at `read_at` that a timed rule acts at, "
+            "soonest first — each a countdown. A moment past is not listed: its "
+            "job acts on it at the next press or tick."
+        )
+    )
 
 
 class PaymentsPane(BaseModel):
@@ -853,7 +960,46 @@ class _Folded:
                 self._charge(charge)
                 for charge in self._charges.get(game.proposal_id, ())
             ],
+            moments=self._moments(game, booking),
         )
+
+    def _moments(self, game: Proposal, booking: Booking | None) -> list[MomentPane]:
+        """Each moment the game's record still has ahead of it."""
+
+        ahead: list[tuple[Moment, Instant]] = []
+        if (
+            game.standing_at(self._now) is Standing.FILLING
+            and not game.waiting_for_the_club
+        ):
+            ahead.append((Moment.BOOK_BY, game.book_by))
+        if booking is not None:
+            if (
+                booking.state is BookingState.WAITING_FOR_THE_CLUB
+                and booking.answer_by is not None
+            ):
+                ahead.append((Moment.CLUB_ANSWER_DUE, booking.answer_by))
+            if booking.state in (BookingState.BOOKED, BookingState.SEAT_OPEN):
+                ahead.append((Moment.CUT_OFF, booking.cut_off))
+            if booking.booked_at is not None:
+                # Whatever it came to since: the summary marks a game called
+                # off, and the payout nets what one gave back.
+                ahead.append(
+                    (Moment.NEW_BOOKINGS_SUMMARY, day_close_after(booking.booked_at))
+                )
+                ahead.append((Moment.CLUB_PAYOUT, day_close_after(booking.start)))
+        order = list(Moment)
+        return [
+            MomentPane(
+                moment=moment,
+                at=at,
+                job=MOMENT_RULES[moment].job,
+                says=MOMENT_RULES[moment].says,
+            )
+            for moment, at in sorted(
+                ahead, key=lambda one: (one[1], order.index(one[0]))
+            )
+            if at > self._now
+        ]
 
     def _ref(self, player: UUID) -> PersonRef:
         return PersonRef(player_id=player, name=self.names.get(player))

@@ -319,20 +319,30 @@ there; they are not repeated here.
   *webhook simulator*, a control with an effect the real provider could not have.
 - **Situation** — a named builder in the dev console that sets the stage for one mechanic in
   one press — *Fresh deal*, *Needs her yes · Instant club* and · *On request club*, *Card
-  declines at the fill*, *Check-in at the club*, and the seven more #592–#593 add — so the
-  rows can play it out. It runs **the same use cases a request runs** (built from the
-  seed's building blocks, ADR-0029), so it can never leave a state the app could not reach;
+  declines at the fill*, *About to expire*, *Empty seat at the cut-off*, *Check-in at the
+  club*, *Club day close*, and the four more #593 adds — so the rows can play it out. It
+  runs **the same use cases a request runs** (built from the seed's building blocks,
+  ADR-0029), so it can never leave a state the app could not reach;
   it **writes history, never time** — the server's clock is never moved, and what happened
   earlier is written on the seed's backdated clock; and it **obeys the rules**, so pressed
   twice it may meet the domain's refusal. The **protagonist** it is built around is the
   phone in the tester's hand: a situation never presses for her now, and one that writes
-  history writes her past too, as the seed does — her yes said as if earlier. _Avoid_:
-  *scenario* (a seed account's named state), *fixture*, *pretend it's later*.
+  history writes her past too, as the seed does — her yes said as if earlier. **A moment
+  fixed to the hour** — a book-by, a cut-off — **lands on the next full hour the rules
+  allow** and the situation says when it fires (*fires at 15:00 · 40 min*); one counted
+  from an event — the club's answer, the day close — is built minutes away by backdating
+  the event. _Avoid_: *scenario* (a seed account's named state), *fixture*, *pretend it's
+  later*.
 - **Run it now** — a dev console press that runs one scheduled job's own unit of work, at the
   real *now*, over **only what is due** — the code the scheduler runs, called sooner, so it
-  can do nothing the next tick would not (ADR-0194 §5; the club's answer window, the
-  `request-timeout` job, built by #591 and the rest by #592). _Avoid_: *trigger*,
-  *fast-forward*, anything that brings a moment forward.
+  can do nothing the next tick would not (ADR-0194 §5; #591 the club's answer window, #592
+  the rest). There is one for **every job the new games run**, listed at `GET /dev/jobs`;
+  every other job the scheduler registers is named there with why it has none, and a test
+  fails a job that is neither. A **pending moment** is one still ahead on a game that a job
+  acts at — its book-by, the club's answer, its cut-off, the close of the club day it was
+  booked in and of the one it is played on — and the state pane counts each down, so the
+  tester presses when there is something to find. _Avoid_: *trigger*, *fast-forward*,
+  anything that brings a moment forward.
 - **Served vocabulary** — a closed domain constant the platform owns, held in exactly one
   module of the context that owns it and exposed **read-only** over the player API so no
   client hardcodes it. Two exist: the `Sport` registry at `GET /api/v1/sports`, and the

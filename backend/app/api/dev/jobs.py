@@ -1,27 +1,117 @@
 """*Run it now*: a timed rule's job, run over what is due at the real *now*
-(``docs/adr/0194`` §5; #591 builds the club's answer window, #592 the rest).
+(``docs/adr/0194`` §5; #591 built the club's answer window, #592 the rest).
 
 **It runs the job's own unit of work** — the code the scheduler's loop runs
 each tick (``app/bootstrap/jobs.py``) — over this request's session and clock,
 which is the real *now*. **It never brings anything forward**: a unit of work
 acts only on what is already due, so a press does nothing the next scheduled
-tick would not, and work that is not due yet is left exactly as it was.
+tick would not, and work that is not due yet is left exactly as it was. The
+state pane's countdowns (``board.py``) say when a press will find something.
 
 A job's path is its name in the logs and on its task, so the press and the
-scheduler are one job by one name.
+scheduler are one job by one name. **Every job the scheduler registers is
+decided about here**: it has a press (``RUN_IT_NOW``), or it is named with the
+reason it has none (``NOT_RUN_HERE``) — and
+``tests/api/test_games_test_console_time.py`` fails the day a job is registered
+that is neither.
 """
 
 from __future__ import annotations
 
 import app.api.dev.refusal  # noqa: F401 — refuses first; see refusal.py
 
+from collections.abc import Mapping
+from types import MappingProxyType
+from typing import Final
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from app.api.dev.dependencies import ExpireUnansweredRequestsDep
-from app.bootstrap.jobs import REQUEST_TIMEOUT_JOB
+from app.api.dependencies import DbSession
+from app.api.dev.dependencies import (
+    CallOffShortGamesDep,
+    DecideClubPayoutsDep,
+    DestroyEndedConversationsDep,
+    ExpireProposalsDep,
+    ExpireUnansweredRequestsDep,
+    ProposeGamesDep,
+    SettleRatingsOnResultsDep,
+    SummariseNewBookingsDep,
+)
+from app.bootstrap.jobs import (
+    CLUB_PAYOUTS_JOB,
+    CONVERSATION_SWEEP_JOB,
+    CUT_OFF_JOB,
+    MAIL_DELIVERY_JOB,
+    NEW_BOOKINGS_SUMMARY_JOB,
+    PHOTO_REVIEW_BACKFILL_JOB,
+    PHOTO_SWEEP_JOB,
+    PROPOSAL_EXPIRY_JOB,
+    PROPOSER_JOB,
+    PROPOSER_ON_CHANGES_JOB,
+    RATING_CATCH_UP_JOB,
+    REQUEST_TIMEOUT_JOB,
+    propose_over,
+)
+from app.modules.clubs.domain.court_hours import DAY_CLOSES
 
 router = APIRouter(prefix="/jobs", tags=["dev"])
+
+#: Every job the new games run, by the name the scheduler runs it under, with
+#: what its press is called — in the order the page draws them: a game's life,
+#: from its first card to its club's day close and after.
+RUN_IT_NOW: Final[Mapping[str, str]] = MappingProxyType(
+    {
+        PROPOSER_JOB: "the proposer",
+        PROPOSAL_EXPIRY_JOB: "the book-by sweep",
+        REQUEST_TIMEOUT_JOB: "the club's answer window",
+        CUT_OFF_JOB: "the cut-off",
+        CLUB_PAYOUTS_JOB: "the day close · club payouts",
+        NEW_BOOKINGS_SUMMARY_JOB: "the day close · new bookings summary",
+        RATING_CATCH_UP_JOB: "the rating catch-up",
+        CONVERSATION_SWEEP_JOB: "the chat sweep",
+    }
+)
+
+#: Every other job the scheduler registers, and why it has no press.
+NOT_RUN_HERE: Final[Mapping[str, str]] = MappingProxyType(
+    {
+        PROPOSER_ON_CHANGES_JOB: (
+            "The proposer's short tick: the sweep's own batch over the pools a "
+            "change this process delivered made due, every five seconds — and "
+            "the proposer's press walks every pool, theirs among them."
+        ),
+        MAIL_DELIVERY_JOB: (
+            "Not a timed rule: the mail queue's drain, every two seconds. An "
+            "email waits on nothing a press could bring forward."
+        ),
+        PHOTO_SWEEP_JOB: "Photos, not games: uploads never committed to a profile.",
+        PHOTO_REVIEW_BACKFILL_JOB: (
+            "Photos, not games: the reviewer asked about photos nobody asked it about."
+        ),
+    }
+)
+
+
+class RunItNowJob(BaseModel):
+    job: str = Field(
+        description="The job's name — its press is `POST /dev/jobs/{job}`."
+    )
+    title: str = Field(description="What its press is called.")
+
+
+class NotRunHereJob(BaseModel):
+    job: str
+    why: str = Field(description="Why the console has no press for it.")
+
+
+class JobsResponse(BaseModel):
+    jobs: list[RunItNowJob] = Field(
+        description="Every job the new games run, each with its *Run it now*."
+    )
+    not_here: list[NotRunHereJob] = Field(
+        description="Every other job the scheduler runs, and why it has no press."
+    )
 
 
 class RanResponse(BaseModel):
@@ -33,10 +123,83 @@ class RanResponse(BaseModel):
     says: str = Field(description="What happened, for the tester.")
 
 
+def _summary(job: str) -> str:
+    return f"Run it now · {RUN_IT_NOW[job]}"
+
+
+@router.get(
+    "",
+    response_model=JobsResponse,
+    summary="The jobs the console runs now, and the ones it does not",
+)
+async def read_jobs() -> JobsResponse:
+    return JobsResponse(
+        jobs=[RunItNowJob(job=job, title=title) for job, title in RUN_IT_NOW.items()],
+        not_here=[NotRunHereJob(job=job, why=why) for job, why in NOT_RUN_HERE.items()],
+    )
+
+
+@router.post(
+    f"/{PROPOSER_JOB}",
+    response_model=RanResponse,
+    summary=_summary(PROPOSER_JOB),
+    description=(
+        "The sweep over every pool: whatever each group's free court hours and "
+        "free, fitting members make — a pick dealt, a seat a no left handed to "
+        "the next best fits, a pick widened at half In, a card that lost its "
+        "court hour recorded so. What a game already holds is dealt nothing "
+        "twice. *Fresh deal* is the same for one group."
+    ),
+)
+async def run_the_proposer(db: DbSession, proposer: ProposeGamesDep) -> RanResponse:
+    proposed = await propose_over(
+        db, proposer, await proposer.every_pool(), job=PROPOSER_JOB
+    )
+    done = proposed.made + proposed.dealt + proposed.lost + proposed.redealt
+    return RanResponse(
+        job=PROPOSER_JOB,
+        done=done,
+        conflicts=proposed.refused,
+        says=(
+            f"Over {proposed.pools} group(s): {proposed.made} pick(s) made, "
+            f"{proposed.dealt} version(s) dealt, {proposed.redealt} turned-down "
+            f"game(s) re-dealt, {proposed.lost} card(s) found without their court "
+            f"hour."
+            if done
+            else "Nothing to deal: every group's cards are as the proposer would "
+            "leave them."
+        ),
+    )
+
+
+@router.post(
+    f"/{PROPOSAL_EXPIRY_JOB}",
+    response_model=RanResponse,
+    summary=_summary(PROPOSAL_EXPIRY_JOB),
+    description=(
+        "Records every card whose book-by passed unfilled. **The record, not the "
+        "fact**: a card is gone from every deck at its book-by whether or not "
+        "this has run. A card before its book-by is left filling."
+    ),
+)
+async def run_the_book_by_sweep(expire: ExpireProposalsDep) -> RanResponse:
+    expired = await expire.execute()
+    return RanResponse(
+        job=PROPOSAL_EXPIRY_JOB,
+        done=expired.proposals,
+        conflicts=expired.conflicts,
+        says=(
+            f"{expired.proposals} card(s) past their book-by recorded as expired."
+            if expired.proposals
+            else "No card is past its book-by unrecorded: nothing was done."
+        ),
+    )
+
+
 @router.post(
     f"/{REQUEST_TIMEOUT_JOB}",
     response_model=RanResponse,
-    summary="Run it now · the club's answer window",
+    summary=_summary(REQUEST_TIMEOUT_JOB),
     description=(
         "Calls off every request an On request club has not answered by its "
         "deadline — *Called off · no answer*, nobody paid, the court free and "
@@ -54,5 +217,133 @@ async def run_the_request_timeout(expire: ExpireUnansweredRequestsDep) -> RanRes
             f"{unanswered.requests} request(s) past the club's answer called off."
             if unanswered.requests
             else "No request is past the club's answer yet: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{CUT_OFF_JOB}",
+    response_model=RanResponse,
+    summary=_summary(CUT_OFF_JOB),
+    description=(
+        "Calls off every booked game with a seat open since before its cut-off "
+        "once the cut-off has come — everybody still in refunded in full, the "
+        "court free, the club emailed. A game whose cut-off is still ahead is "
+        "left as it is, seat open or not."
+    ),
+)
+async def run_the_cut_off(call_off: CallOffShortGamesDep) -> RanResponse:
+    called_off = await call_off.execute()
+    return RanResponse(
+        job=CUT_OFF_JOB,
+        done=called_off.games,
+        conflicts=called_off.conflicts,
+        says=(
+            f"{called_off.games} game(s) short at their cut-off called off, "
+            f"everybody still in refunded."
+            if called_off.games
+            else "No game is short at a cut-off that has come: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{CLUB_PAYOUTS_JOB}",
+    response_model=RanResponse,
+    summary=_summary(CLUB_PAYOUTS_JOB),
+    description=(
+        f"At the close of the last club day — {DAY_CLOSES}:00 in Kraków — decides each "
+        "club's payout of what its games over by then left it, once their money "
+        "is settled; the outbox then pays it out and emails the desk. A game of "
+        "a day still open waits for that day's close, and a club paid for the "
+        "day already waits for the next."
+    ),
+)
+async def run_the_club_payouts(decide: DecideClubPayoutsDep) -> RanResponse:
+    decided = await decide.execute()
+    return RanResponse(
+        job=CLUB_PAYOUTS_JOB,
+        done=decided.decided,
+        conflicts=decided.conflicts,
+        says=(
+            f"{decided.decided} club payout(s) decided: the outbox pays them out "
+            f"and tells each desk."
+            if decided.decided
+            else "No club is owed anything a closed day settled: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{NEW_BOOKINGS_SUMMARY_JOB}",
+    response_model=RanResponse,
+    summary=_summary(NEW_BOOKINGS_SUMMARY_JOB),
+    description=(
+        "At the close of the last club day, emails each club's desk the games "
+        "booked at it that day — once a day, and nothing on a day nothing was "
+        "booked. A day still open is summed up at its close."
+    ),
+)
+async def run_the_new_bookings_summary(
+    summarise: SummariseNewBookingsDep,
+) -> RanResponse:
+    summed = await summarise.execute()
+    return RanResponse(
+        job=NEW_BOOKINGS_SUMMARY_JOB,
+        done=summed.clubs,
+        conflicts=summed.conflicts,
+        says=(
+            f"{summed.clubs} desk(s) emailed the closed day's new bookings."
+            if summed.clubs
+            else "No desk is owed the closed day's new bookings: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{RATING_CATCH_UP_JOB}",
+    response_model=RanResponse,
+    summary=_summary(RATING_CATCH_UP_JOB),
+    description=(
+        "Moves every Level a confirmed result has tested and nothing has "
+        "applied yet — the only path a result has to a Level. A result still "
+        "waiting for its answer is not confirmed, and moves nothing."
+    ),
+)
+async def run_the_rating_catch_up(settle: SettleRatingsOnResultsDep) -> RanResponse:
+    settled = await settle.execute()
+    return RanResponse(
+        job=RATING_CATCH_UP_JOB,
+        done=settled.games,
+        conflicts=settled.conflicts,
+        says=(
+            f"{settled.games} confirmed result(s) folded: {settled.ratings} "
+            f"Level(s) moved."
+            if settled.games
+            else "No confirmed result is waiting to move a Level: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{CONVERSATION_SWEEP_JOB}",
+    response_model=RanResponse,
+    summary=_summary(CONVERSATION_SWEEP_JOB),
+    description=(
+        "Destroys every chat whose game is over and whose grace has run out — "
+        "destroyed, not delisted. Every read already hides a chat past its end; "
+        "a chat still open is left."
+    ),
+)
+async def run_the_chat_sweep(sweep: DestroyEndedConversationsDep) -> RanResponse:
+    swept = await sweep.execute()
+    return RanResponse(
+        job=CONVERSATION_SWEEP_JOB,
+        done=swept.destroyed,
+        conflicts=0,
+        says=(
+            f"{swept.destroyed} of {swept.walked} chat(s) past their end destroyed."
+            if swept.destroyed
+            else f"None of {swept.walked} chat(s) is past its end: nothing was done."
         ),
     )

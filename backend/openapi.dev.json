@@ -1667,6 +1667,152 @@
         }
       }
     },
+    "/dev/situations/about-to-expire": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 5 \u00b7 About to expire",
+        "description": "Deals her a card nobody has answered, at the hour whose book-by is the next full hour the rules allow \u2014 the soonest book-by of an hour a club of the group's sells, she and three of the group are free for, in a week her deck still shows, at least 5 minutes off. It goes from her deck then, and *Run it now* on the book-by sweep records it.",
+        "operationId": "about_to_expire_dev_situations_about_to_expire_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HerSituationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AboutToExpireResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/situations/empty-seat-at-the-cut-off": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 7 \u00b7 Empty seat at the cut-off",
+        "description": "Books her game at the hour whose cut-off is the next full hour the rules allow, at a club of the group's that books at once \u2014 filled by her and three of the group as if earlier, when the hour was on sale \u2014 and one of the three leaves it now, through the leave their phone runs: a seat open since before the cut-off. Still open at the cut-off, *Run it now* on the cut-off calls the game off and refunds everybody in full; taken first, the game plays.",
+        "operationId": "empty_seat_at_the_cut_off_dev_situations_empty_seat_at_the_cut_off_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HerSituationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmptySeatResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/situations/check-in-at-the-club": {
       "post": {
         "tags": [
@@ -1740,6 +1886,147 @@
         }
       }
     },
+    "/dev/situations/club-day-close": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 12 \u00b7 Club day close",
+        "description": "Writes the last closed club day's played games \u2014 yesterday's, or today's from 23:00 \u2014 at a club of the group's that books at once and has had no day close for it yet: up to 2, each a game's worth of the group, never the protagonist, booked inside that day on a clock backdated to it. Once the outbox has captured the shares, *Run it now* on club payouts pays the club for them, and on the new bookings summary emails its desk the day's bookings.",
+        "operationId": "club_day_close_dev_situations_club_day_close_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClubDayCloseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClubDayCloseResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs": {
+      "get": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "The jobs the console runs now, and the ones it does not",
+        "operationId": "read_jobs_dev_jobs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/proposer": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the proposer",
+        "description": "The sweep over every pool: whatever each group's free court hours and free, fitting members make \u2014 a pick dealt, a seat a no left handed to the next best fits, a pick widened at half In, a card that lost its court hour recorded so. What a game already holds is dealt nothing twice. *Fresh deal* is the same for one group.",
+        "operationId": "run_the_proposer_dev_jobs_proposer_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/proposal-expiry": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the book-by sweep",
+        "description": "Records every card whose book-by passed unfilled. **The record, not the fact**: a card is gone from every deck at its book-by whether or not this has run. A card before its book-by is left filling.",
+        "operationId": "run_the_book_by_sweep_dev_jobs_proposal_expiry_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/jobs/request-timeout": {
       "post": {
         "tags": [
@@ -1762,10 +2049,179 @@
           }
         }
       }
+    },
+    "/dev/jobs/cut-off": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the cut-off",
+        "description": "Calls off every booked game with a seat open since before its cut-off once the cut-off has come \u2014 everybody still in refunded in full, the court free, the club emailed. A game whose cut-off is still ahead is left as it is, seat open or not.",
+        "operationId": "run_the_cut_off_dev_jobs_cut_off_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/club-payouts": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the day close \u00b7 club payouts",
+        "description": "At the close of the last club day \u2014 23:00 in Krak\u00f3w \u2014 decides each club's payout of what its games over by then left it, once their money is settled; the outbox then pays it out and emails the desk. A game of a day still open waits for that day's close, and a club paid for the day already waits for the next.",
+        "operationId": "run_the_club_payouts_dev_jobs_club_payouts_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/new-bookings-summary": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the day close \u00b7 new bookings summary",
+        "description": "At the close of the last club day, emails each club's desk the games booked at it that day \u2014 once a day, and nothing on a day nothing was booked. A day still open is summed up at its close.",
+        "operationId": "run_the_new_bookings_summary_dev_jobs_new_bookings_summary_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/rating-catch-up": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the rating catch-up",
+        "description": "Moves every Level a confirmed result has tested and nothing has applied yet \u2014 the only path a result has to a Level. A result still waiting for its answer is not confirmed, and moves nothing.",
+        "operationId": "run_the_rating_catch_up_dev_jobs_rating_catch_up_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/conversation-sweep": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the chat sweep",
+        "description": "Destroys every chat whose game is over and whose grace has run out \u2014 destroyed, not delisted. Every read already hides a chat past its end; a chat still open is left.",
+        "operationId": "run_the_chat_sweep_dev_jobs_conversation_sweep_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AboutToExpireResponse": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By",
+            "description": "When it goes: the next full hour a book-by can fall on."
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "dealt": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "Dealt",
+            "description": "Who it was dealt to, her first. Nobody has answered."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, and when it fires."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "starts_at",
+          "book_by",
+          "club_name",
+          "dealt",
+          "says"
+        ],
+        "title": "AboutToExpireResponse"
+      },
       "AcceptOutcome": {
         "type": "string",
         "enum": [
@@ -2317,6 +2773,93 @@
         "title": "ClubCancelReason",
         "description": "Why the club cancelled a booked game (the mechanics \u00a716.9) \u2014 the players\nare told it with their refund."
       },
+      "ClubDayCloseRequest": {
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Group Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "protagonist_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protagonist Id",
+            "description": "Whose phone it is \u2014 **kept off** the games, so her week stays as the phone has it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_id",
+          "sport"
+        ],
+        "title": "ClubDayCloseRequest"
+      },
+      "ClubDayCloseResponse": {
+        "properties": {
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id",
+            "description": "The club the club row acts as."
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day",
+            "description": "The last club day closed \u2014 whose close is run."
+          },
+          "closed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Closed At",
+            "description": "When that day closed: 23:00 in Krak\u00f3w."
+          },
+          "games": {
+            "items": {
+              "$ref": "#/components/schemas/DayCloseGame"
+            },
+            "type": "array",
+            "title": "Games",
+            "description": "Played that day, soonest first."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "club_id",
+          "club_name",
+          "day",
+          "closed_at",
+          "games",
+          "says"
+        ],
+        "title": "ClubDayCloseResponse"
+      },
       "ClubPane": {
         "properties": {
           "club_id": {
@@ -2425,6 +2968,41 @@
         ],
         "title": "CourtToMoveToSchema"
       },
+      "DayCloseGame": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "booked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Booked At",
+            "description": "Inside the day, after the close before."
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People"
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "starts_at",
+          "booked_at",
+          "people"
+        ],
+        "title": "DayCloseGame"
+      },
       "Delivery": {
         "properties": {
           "notice_id": {
@@ -2524,6 +3102,72 @@
           "rescued_by"
         ],
         "title": "DeparturePane"
+      },
+      "EmptySeatResponse": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "cut_off": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Cut Off",
+            "description": "The next full hour a cut-off can fall on \u2014 the booking's own."
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id",
+            "description": "The club the club row acts as."
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "people_in": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People In",
+            "description": "Everybody still on it, her last."
+          },
+          "left": {
+            "$ref": "#/components/schemas/PersonRef",
+            "description": "Who left, just now, before the cut-off."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, and when it fires."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "starts_at",
+          "cut_off",
+          "club_id",
+          "club_name",
+          "people_in",
+          "left",
+          "says"
+        ],
+        "title": "EmptySeatResponse"
       },
       "ErrorResponse": {
         "description": "The body of every error response, on both API surfaces.",
@@ -2742,6 +3386,14 @@
             "type": "array",
             "title": "Charges",
             "description": "Every one, oldest first."
+          },
+          "moments": {
+            "items": {
+              "$ref": "#/components/schemas/MomentPane"
+            },
+            "type": "array",
+            "title": "Moments",
+            "description": "Every moment still ahead at `read_at` that a timed rule acts at, soonest first \u2014 each a countdown. A moment past is not listed: its job acts on it at the next press or tick."
           }
         },
         "type": "object",
@@ -2763,7 +3415,8 @@
           "versions",
           "sides",
           "booking",
-          "charges"
+          "charges",
+          "moments"
         ],
         "title": "GamePane",
         "description": "One game, from its first card to its court: everything a tester checks\nthe money and the people against."
@@ -2845,6 +3498,76 @@
         "title": "HerSituationRequest",
         "description": "A situation set up around the protagonist, in a group and a sport."
       },
+      "JobsResponse": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/RunItNowJob"
+            },
+            "type": "array",
+            "title": "Jobs",
+            "description": "Every job the new games run, each with its *Run it now*."
+          },
+          "not_here": {
+            "items": {
+              "$ref": "#/components/schemas/NotRunHereJob"
+            },
+            "type": "array",
+            "title": "Not Here",
+            "description": "Every other job the scheduler runs, and why it has no press."
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobs",
+          "not_here"
+        ],
+        "title": "JobsResponse"
+      },
+      "Moment": {
+        "type": "string",
+        "enum": [
+          "BOOK_BY",
+          "CLUB_ANSWER_DUE",
+          "CUT_OFF",
+          "NEW_BOOKINGS_SUMMARY",
+          "CLUB_PAYOUT"
+        ],
+        "title": "Moment",
+        "description": "A moment ahead on a game that a timed rule acts at \u2014 what a countdown\ncounts down to, in the order a game meets them."
+      },
+      "MomentPane": {
+        "properties": {
+          "moment": {
+            "$ref": "#/components/schemas/Moment"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At",
+            "description": "When it fires \u2014 the countdown's end."
+          },
+          "job": {
+            "type": "string",
+            "title": "Job",
+            "description": "The job that acts at it: `POST /dev/jobs/{job}` once it is due."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happens then, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "moment",
+          "at",
+          "job",
+          "says"
+        ],
+        "title": "MomentPane",
+        "description": "A pending moment, and the *Run it now* that acts at it."
+      },
       "MoveRequest": {
         "properties": {
           "court_id": {
@@ -2914,6 +3637,25 @@
           "says"
         ],
         "title": "NeedsHerYesResponse"
+      },
+      "NotRunHereJob": {
+        "properties": {
+          "job": {
+            "type": "string",
+            "title": "Job"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why",
+            "description": "Why the console has no press for it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job",
+          "why"
+        ],
+        "title": "NotRunHereJob"
       },
       "NoticeRow": {
         "properties": {
@@ -3608,6 +4350,26 @@
           "people_in"
         ],
         "title": "RowCard"
+      },
+      "RunItNowJob": {
+        "properties": {
+          "job": {
+            "type": "string",
+            "title": "Job",
+            "description": "The job's name \u2014 its press is `POST /dev/jobs/{job}`."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "What its press is called."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job",
+          "title"
+        ],
+        "title": "RunItNowJob"
       },
       "SearchMode": {
         "type": "string",
