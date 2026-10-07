@@ -14,6 +14,12 @@ their answer, and who is In — so the tester can see what each person can press
 Which press a phone would *offer* is the player's details' question
 (``GET /proposals/{id}``); the console offers all three, and the use case says
 what a person's own button would have said.
+
+**And what the club row and the payment provider need** (#591): each row's
+saved card and what the provider will do with its next payment — read off the
+process's fake, the one the console steers, and ``null`` where the provider is
+not it — and each booked seat's check-in code, as the phone shows it and the
+desk would type it.
 """
 
 from __future__ import annotations
@@ -23,6 +29,7 @@ import app.api.dev.refusal  # noqa: F401 — refuses first; see refusal.py
 from collections.abc import Collection, Mapping, Sequence
 from datetime import datetime, timedelta
 from enum import StrEnum
+from types import MappingProxyType
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -35,6 +42,7 @@ from app.api.dependencies import ClockDep, DbSession, UserRepositoryDep
 from app.api.dev.accounts import seed_accounts_only
 from app.api.dev.dependencies import (
     BookingRepositoryDep,
+    CheckInCodesDep,
     ClubTermsDep,
     DeckPeopleDep,
     PlayerNamesDep,
@@ -48,17 +56,27 @@ from app.modules.bookings.domain.booking import (
     CalledOff,
     CancelReason,
 )
-from app.modules.bookings.domain.ports import BookingRepository
+from app.modules.bookings.domain.ports import BookingRepository, CheckInCodes
 from app.modules.groups.domain.errors import GroupNotFound
 from app.modules.groups.domain.ports import GroupDirectory, GroupListing
 from app.modules.groups.presentation.dependencies import GroupDirectoryDep
-from app.modules.payments.domain.ports import SeatChargeRepository
+from app.modules.payments.domain.entered_cards import CardBehaviour
+from app.modules.payments.domain.ports import (
+    PaymentMethodRepository,
+    SeatChargeRepository,
+)
+from app.modules.payments.domain.provider import PaymentProvider
 from app.modules.payments.domain.seat_charge import (
     FailureReason,
     SeatCharge,
     SeatChargeStatus,
 )
-from app.modules.payments.presentation.dependencies import SeatChargeRepositoryDep
+from app.modules.payments.infrastructure.fake_payments import FakePayments
+from app.modules.payments.presentation.dependencies import (
+    PaymentMethodRepositoryDep,
+    PaymentProviderDep,
+    SeatChargeRepositoryDep,
+)
 from app.modules.proposals.application.proposal_details import ReadProposalDetails
 from app.modules.proposals.domain.deck import SellingTerms, Sides
 from app.modules.proposals.domain.errors import ProposalNotFound
@@ -80,6 +98,45 @@ router = APIRouter(prefix="/groups", tags=["dev"])
 #: How far back the board looks for a group's games: a game that started
 #: within it is still shown, so one that has just been played is there to read.
 LOOK_BACK = timedelta(days=1)
+
+
+class CardOutcome(StrEnum):
+    """What a saved card does with the next payment asked of it — what the
+    payment provider's controls set (``provider.py``)."""
+
+    #: Every payment goes through.
+    SUCCEEDS = "SUCCEEDS"
+    #: Every payment is declined.
+    DECLINES = "DECLINES"
+    #: The bank wants the player there to check every payment (3-D Secure).
+    ASKS_FOR_VERIFICATION = "ASKS_FOR_VERIFICATION"
+
+
+#: The test card each outcome makes a saved card behave as — what the controls
+#: set, and read back the other way for a row.
+CARD_BEHAVIOURS: Mapping[CardOutcome, CardBehaviour] = MappingProxyType(
+    {
+        CardOutcome.SUCCEEDS: CardBehaviour.SUCCEEDS,
+        CardOutcome.DECLINES: CardBehaviour.DECLINES_PAYMENTS,
+        CardOutcome.ASKS_FOR_VERIFICATION: CardBehaviour.CHECKED_EVERY_TIME,
+    }
+)
+
+
+def outcome_of(behaviour: CardBehaviour) -> CardOutcome:
+    """What a saved card does with a payment. A card the bank checked once,
+    when it was saved, pays off-session; one it refused was never saved."""
+
+    return next(
+        (outcome for outcome, b in CARD_BEHAVIOURS.items() if b is behaviour),
+        CardOutcome.SUCCEEDS,
+    )
+
+
+def steerable(provider: PaymentProvider) -> FakePayments | None:
+    """The provider, when it is the in-process fake the console steers."""
+
+    return provider if isinstance(provider, FakePayments) else None
 
 
 # --------------------------------------------------------------------------- #
@@ -154,6 +211,17 @@ class RowCard(BaseModel):
     people_in: list[PersonRef] = Field(description="Everybody In, in yes order.")
 
 
+class CardOnFilePane(BaseModel):
+    brand: str
+    last_four: str
+    outcome: CardOutcome | None = Field(
+        description=(
+            "What the provider does with the next payment on it; `null` where "
+            "the provider is not the fake the console steers."
+        )
+    )
+
+
 class PersonRow(BaseModel):
     player_id: UUID = Field(description="What a press on this row names.")
     email: str
@@ -163,6 +231,9 @@ class PersonRow(BaseModel):
     )
     level: float | None = Field(
         description="Their published Level in the board's sport; `null` unrated."
+    )
+    card: CardOnFilePane | None = Field(
+        description="Their saved card; `null` with none saved."
     )
     cards: list[RowCard] = Field(
         description=(
@@ -208,6 +279,16 @@ class DeparturePane(BaseModel):
     )
 
 
+class SeatCodePane(BaseModel):
+    player: PersonRef
+    short_code: str = Field(
+        description=(
+            "What the desk types — the phone shows it on the game's day. The "
+            "club row's *Check in* sends it."
+        )
+    )
+
+
 class BookingPane(BaseModel):
     state: BookingState
     court_name: str
@@ -220,6 +301,9 @@ class BookingPane(BaseModel):
     cancel_reason: CancelReason | None
     departures: list[DeparturePane]
     checked_in: list[PersonRef]
+    codes: list[SeatCodePane] = Field(
+        description="Each seated player's check-in code, the first side first."
+    )
 
 
 class RefundPane(BaseModel):
@@ -288,17 +372,33 @@ class GamePane(BaseModel):
     charges: list[ChargePane] = Field(description="Every one, oldest first.")
 
 
+class PaymentsPane(BaseModel):
+    steerable: bool = Field(
+        description=(
+            "The provider is the in-process fake, so the payment provider's "
+            "controls steer it."
+        )
+    )
+    refunds_wait: bool | None = Field(
+        description=(
+            "Every refund waits until it is delivered from the console; `null` "
+            "where the provider is not the fake."
+        )
+    )
+
+
 class BoardResponse(BaseModel):
     group: ConsoleGroup
     sport: Sport
     read_at: datetime = Field(description="The instant every row was read at.")
+    payments: PaymentsPane
     people: list[PersonRow] = Field(
         description="A row per member the console may act as, in join order."
     )
     games: list[GamePane] = Field(
         description=(
             f"Every game in the group and sport whose hour began less than "
-            f"{LOOK_BACK // hours(1)} hours ago — filling, booked or over — "
+            f"{LOOK_BACK // timedelta(hours=1)} hours ago — filling, booked or over — "
             f"soonest first."
         )
     )
@@ -333,6 +433,7 @@ class GamePanes:
         clubs: ClubNames,
         terms: ClubTerms,
         details: ReadProposalDetails,
+        codes: CheckInCodes,
     ) -> None:
         self._bookings = bookings
         self._charges = charges
@@ -340,6 +441,7 @@ class GamePanes:
         self._clubs = clubs
         self._terms = terms
         self._details = details
+        self._codes = codes
 
     async def read(self, games: Sequence[Proposal], *, now: Instant) -> "_Folded":
         bookings: dict[UUID, Booking] = {}
@@ -370,6 +472,7 @@ class GamePanes:
             bookings=bookings,
             charges=charges,
             sides=sides,
+            codes=self._codes,
         )
 
 
@@ -380,6 +483,7 @@ def get_game_panes(
     clubs: ProposalClubNamesDep,
     terms: ClubTermsDep,
     details: ReadProposalDetailsDep,
+    codes: CheckInCodesDep,
 ) -> GamePanes:
     return GamePanes(
         bookings=bookings,
@@ -388,6 +492,7 @@ def get_game_panes(
         clubs=clubs,
         terms=terms,
         details=details,
+        codes=codes,
     )
 
 
@@ -456,6 +561,8 @@ async def read_board(
     people: DeckPeopleDep,
     users: UserRepositoryDep,
     panes: GamePanesDep,
+    methods: PaymentMethodRepositoryDep,
+    provider: PaymentProviderDep,
 ) -> BoardResponse:
     now = instant(clock.now())
     listing = await the_group(groups, group_id)
@@ -472,10 +579,16 @@ async def read_board(
 
     rows_of = [member for member in listing.members if member in seed]
     drawn = await people.people(rows_of, sport=sport)
+    fake = steerable(provider)
+    cards = await _cards_of(methods, fake, rows_of)
     return BoardResponse(
         group=_console_group(listing, seed, club, await the_protagonist(users)),
         sport=sport,
         read_at=now,
+        payments=PaymentsPane(
+            steerable=fake is not None,
+            refunds_wait=None if fake is None else fake.refunds_wait,
+        ),
         people=[
             PersonRow(
                 player_id=player,
@@ -483,6 +596,7 @@ async def read_board(
                 name=drawn[player].name,
                 photo_url=drawn[player].photo_url,
                 level=drawn[player].level,
+                card=cards.get(player),
                 cards=[
                     _card(game, player, folded.names)
                     for game in filling
@@ -529,6 +643,28 @@ async def _seed_accounts_among(
         )
     )
     return {row.id: row.email for row in rows}
+
+
+async def _cards_of(
+    methods: PaymentMethodRepository,
+    fake: FakePayments | None,
+    player_ids: Sequence[UUID],
+) -> dict[UUID, CardOnFilePane]:
+    """Each of these players' saved card — and, from the fake, what it does."""
+
+    cards: dict[UUID, CardOnFilePane] = {}
+    for player in player_ids:
+        saved = (await methods.load(player)).method
+        if saved is None:
+            continue
+        cards[player] = CardOnFilePane(
+            brand=saved.brand,
+            last_four=saved.last_four,
+            outcome=None
+            if fake is None
+            else outcome_of(fake.card_behaviour_of(saved.method_id)),
+        )
+    return cards
 
 
 async def _games_in(
@@ -644,6 +780,7 @@ class _Folded:
         bookings: Mapping[UUID, Booking],
         charges: Mapping[UUID, Sequence[SeatCharge]],
         sides: Mapping[UUID, Sides],
+        codes: CheckInCodes,
     ) -> None:
         self.names = names
         self._now = now
@@ -652,6 +789,7 @@ class _Folded:
         self._bookings = bookings
         self._charges = charges
         self._sides = sides
+        self._codes = codes
 
     def pane(self, game: Proposal) -> GamePane:
         booking = self._bookings.get(game.proposal_id)
@@ -744,6 +882,15 @@ class _Folded:
                 for departure in booking.departures
             ],
             checked_in=self._refs(list(booking.checked_in)),
+            codes=[
+                SeatCodePane(
+                    player=self._ref(player),
+                    short_code=self._codes.code_for(
+                        booking.booking_id, player
+                    ).short_code,
+                )
+                for player in booking.players
+            ],
         )
 
     def _charge(self, charge: SeatCharge) -> ChargePane:

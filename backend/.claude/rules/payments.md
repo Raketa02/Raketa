@@ -57,9 +57,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   outbox** (#544): `SeatChargeRefundDecided` then `SeatChargeRefunded` with the fee the
   provider kept; receipts list it as its own `REFUND` row (`card_fee_grosze`), dated from the
   decision. What the card fee on a share comes to before the money moves is
-  `domain/card_fee.py`'s **estimate** (Stripe's EEA price), which the fake withholds exactly. Seeded by `app/seeds/payments.py`: every named account and cohort member saves a fake
-  card through the three use cases — the protagonist the mock's Visa •••• 4312, two through the
-  wallets — and `brand-new-player` has none.
+  `domain/card_fee.py`'s **estimate** (Stripe's EEA price), which the fake withholds exactly.
+  **The games test console steers the laptop's fake** (#591, `app/api/dev/provider.py`): it
+  reads and sets a saved card's behaviour (`card_behaviour_of`, `card_behaves`), confirms a
+  waiting payment as the phone's bank would (`phone_confirms_payment`), makes refunds wait
+  (`refunds_wait` answers a refund `PaymentsUnavailable`, so the outbox retries, until
+  `gives_refund` or the wait is lifted) and delivers one through `SettleSeatCharges.settle`
+  — the outbox's own step for one charge — and **replays the notices the fake records** for
+  every move of a payment (`notices`: the `payment_intent.*` Stripe would have sent, as
+  `SeatPaymentChanged`) through `ReceivePaymentNotice`. Seeded by `app/seeds/payments.py`:
+  every named account and cohort member saves a fake card through the three use cases — the
+  protagonist the mock's Visa •••• 4312, two through the wallets — and `brand-new-player` has
+  none.
 - **A club connects payments through the provider's pages, and the arrow runs
   `payments → clubs`** (#537). The club's account at the provider is recorded on its **Club
   courts** stream (`clubs/domain/payments_account.py`) — `PaymentsAccountOpened`, once, and

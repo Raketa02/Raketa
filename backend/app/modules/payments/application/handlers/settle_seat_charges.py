@@ -25,6 +25,7 @@ fee the provider took on a capture, which the club pays (#548).
 from __future__ import annotations
 
 from typing import final
+from uuid import UUID
 
 from app.application.events import DeliveryContext
 from app.kernel import Clock, instant
@@ -70,7 +71,15 @@ class SettleSeatCharges:
         event: SeatChargeTaken | SeatChargeReleased | SeatChargeRefundDecided,
         context: DeliveryContext,
     ) -> None:
-        charge = await self._charges.load(event.charge_id)
+        await self.settle(event.charge_id)
+
+    async def settle(self, charge_id: UUID) -> None:
+        """Whatever this charge still owes the provider, asked of it now — what
+        a delivery does, and what the games test console's *Deliver a refund*
+        runs at once (#591). Nothing is committed: the caller's transaction is.
+        """
+
+        charge = await self._charges.load(charge_id)
         if charge is None:
             return
         now = instant(self._clock.now())

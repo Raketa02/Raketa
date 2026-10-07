@@ -551,13 +551,31 @@ signed in as the protagonist (an address from the roster, and the one seed passw
   use case their own phone's button runs, refusals included, and a refusal comes back in
   the domain's words. Nobody signs in; the row says who is acting.
 - **A state pane per game**: who is In, the sides, the court hour, the cut-off, the
-  booking's state, and every charge and refund. Every press refreshes the board; *Refresh*
-  covers the rest — nothing on the page acts on its own.
+  booking's state, every charge and refund, and each seat's check-in code. Every press
+  refreshes the board; *Refresh* covers the rest — nothing on the page acts on its own.
+- **The club** acts from its game's pane, as the club whose court it is:
+  *Accept* or *Refuse* a request, *Move* to a free court, *Cancel* with a reason, and *Check
+  in* a seat with the code the phone shows — `/dev/clubs/{club_id}/…`, each the desk's own
+  route's use case. (No-shows are a player's report, never the club's.)
+- **The payment provider** is the backend's in-process fake, steered: each row's saved card
+  set to pay, decline or ask for the bank's check; *Bank confirms* on a payment that waits
+  for its player (the laptop's phone cannot reach a bank), after which the phone's own
+  *Confirm* books; *Refunds wait until delivered*, and *Deliver refund* on one; and each
+  game's *Notices* — what Stripe would have sent for every move of a payment — delivered
+  once, twice, or all newest first, through the webhook's own handling.
+- **Run it now** runs a timed rule's job over what is already due at the real *now*: the
+  club's answer window (`POST /dev/jobs/request-timeout`) calls off every request past its
+  deadline, and leaves the rest waiting.
 - **Situations** set the stage for one mechanic in one press, through the same use cases a
-  request runs and at the real *now*: *1 · Fresh deal* runs the proposer for the group, and
+  request runs and at the real *now*: *1 · Fresh deal* runs the proposer for the group;
   *2 · Needs her yes · Instant club* puts enough people In on one of the protagonist's cards
-  that her yes on the phone fills it. Pressed again and again they meet the domain's
-  refusals; a fresh store is `make down-v && make up && make seed`.
+  that her yes on the phone fills it; *3 · … On request club* does the same where the club
+  confirms — or, given minutes, asks the club already, written as if earlier, so its answer
+  is due that many minutes from now; *4 · Card declines at the fill* is 2 with her card set
+  to decline; and *11 · Check-in at the club* books her a game later today, filled as if
+  earlier, and switches the club's *We check players in* on if it was off. Pressed again
+  and again they meet the domain's refusals; a fresh store is
+  `make down-v && make up && make seed`.
 
 It is gated twice, and both halves refuse:
 
@@ -566,8 +584,9 @@ It is gated twice, and both halves refuse:
   `app/api/dev/refusal.py` first, so importing any of it elsewhere raises `ConsoleRefused`
   (never the seed system's `SeedRefused`, though the console imports the seeds), and
   `create_app` mounts nothing.
-- **Whom.** It acts only as accounts addressed on the reserved `.example` TLD; any other id
-  is refused `not_a_seed_account` before anything runs.
+- **Whom.** It acts only as accounts addressed on the reserved `.example` TLD — a club, only
+  as one whose desk is — and any other id is refused `not_a_seed_account` before anything
+  runs.
 
 **The roster**, `GET /dev/roster`, lists every account on the reserved TLD and the one
 public seed password **once, at the top level** — what the phone signs in with. **Its

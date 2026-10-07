@@ -271,11 +271,12 @@ there; they are not repeated here.
   ([ADR-0194](../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md),
   #590): one no-build page at `/dev` that the tester opens on the laptop while the phone is
   signed in as the protagonist, the roster the phone signs in from, and a route per thing
-  the page presses — a person's buttons (`/dev/as/{player_id}/…`), a group's board
-  (`/dev/groups`), and the **situations**. It acts as seed accounts **without signing in**,
-  and is served in `local` only. **It is not a client** — nothing generates types from its
-  contract, which is why that document is gated by a *freshness* check and not by
-  `check-contract-drift.sh`. `frontend_club/` was *"the club console"* and is gone; this is
+  the page presses — a person's buttons (`/dev/as/{player_id}/…`), the club's
+  (`/dev/clubs/{club_id}/…`), the **provider controls** (`/dev/payments/…`), a group's board
+  (`/dev/groups`), the **situations** and **Run it now** (`/dev/jobs/…`). It acts as seed
+  accounts **without signing in**, and is served in `local` only. **It is not a client** —
+  nothing generates types from its contract, which is why that document is gated by a
+  *freshness* check and not by `check-contract-drift.sh`. `frontend_club/` was *"the club console"* and is gone; this is
   the only console, and saying so here is cheaper than having the collision rediscovered.
   _Avoid_: calling it an app, a second client, an admin panel; giving a press logic of its
   own (a press is wiring: the command, then the use case).
@@ -301,20 +302,36 @@ there; they are not repeated here.
   is built, so nothing is recorded. The old console could treat that test as a filter,
   because its only door was the ordinary login; the console's route is the door now. Every
   button sits on the acting account's own row, beside their name and face, which is what
-  replaced *one identity at a time*. _Avoid_: *impersonation*, *logged in as*, a press that
-  does not name who it acts as.
+  replaced *one identity at a time*. **The acting club** is the club-row twin (#591): the
+  club whose court it is, named in `/dev/clubs/{club_id}/…`, refused the same way unless its
+  desk signs in on the reserved TLD, and its buttons sit on its game's pane under its name.
+  The club has no *no-show* button — a player on the court reports one, and the desk's scan
+  is evidence, never a verdict (the mechanics §15.3, §16.10). _Avoid_: *impersonation*,
+  *logged in as*, a press that does not name who it acts as.
+- **Provider controls** — the dev console's steering of the **in-process fake** payment
+  provider, the one a laptop moves money through (#591; `app/api/dev/provider.py`): a seed
+  account's saved card set to succeed, decline or ask for the bank's check; **the bank
+  confirms** a payment that waited for its player, which a laptop's phone cannot reach a
+  bank to do; **refunds wait** until one is delivered, and *Deliver* runs the outbox's own
+  step for that charge; and the **notices** the fake records for every move of a payment —
+  what Stripe would have sent — replayed twice or out of order through the webhook's own
+  handling. Any other provider is refused `provider_not_the_fake`. _Avoid_: *mock Stripe*,
+  *webhook simulator*, a control with an effect the real provider could not have.
 - **Situation** — a named builder in the dev console that sets the stage for one mechanic in
-  one press — *Fresh deal*, *Needs her yes · Instant club*, and the ten more #591–#593 add —
-  so the rows can play it out. It runs **the same use cases a request runs** (built from the
+  one press — *Fresh deal*, *Needs her yes · Instant club* and · *On request club*, *Card
+  declines at the fill*, *Check-in at the club*, and the seven more #592–#593 add — so the
+  rows can play it out. It runs **the same use cases a request runs** (built from the
   seed's building blocks, ADR-0029), so it can never leave a state the app could not reach;
   it **writes history, never time** — the server's clock is never moved, and what happened
   earlier is written on the seed's backdated clock; and it **obeys the rules**, so pressed
   twice it may meet the domain's refusal. The **protagonist** it is built around is the
-  phone in the tester's hand, never acted as. _Avoid_: *scenario* (a seed account's named
-  state), *fixture*, *pretend it's later*.
+  phone in the tester's hand: a situation never presses for her now, and one that writes
+  history writes her past too, as the seed does — her yes said as if earlier. _Avoid_:
+  *scenario* (a seed account's named state), *fixture*, *pretend it's later*.
 - **Run it now** — a dev console press that runs one scheduled job's own unit of work, at the
   real *now*, over **only what is due** — the code the scheduler runs, called sooner, so it
-  can do nothing the next tick would not (ADR-0194 §5; built by #592). _Avoid_: *trigger*,
+  can do nothing the next tick would not (ADR-0194 §5; the club's answer window, the
+  `request-timeout` job, built by #591 and the rest by #592). _Avoid_: *trigger*,
   *fast-forward*, anything that brings a moment forward.
 - **Served vocabulary** — a closed domain constant the platform owns, held in exactly one
   module of the context that owns it and exposed **read-only** over the player API so no

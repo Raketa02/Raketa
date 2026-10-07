@@ -281,6 +281,1015 @@
         }
       }
     },
+    "/dev/clubs/{club_id}/bookings/{booking_id}/acceptance": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Accept a request, as the club",
+        "description": "`POST /api/v1/club/bookings/{id}/acceptance` as the acting club: everybody charged together or not at all, over the provider this process moves money through, and the reserved court given.",
+        "operationId": "accept_dev_clubs__club_id__bookings__booking_id__acceptance_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
+              "title": "Club Id"
+            },
+            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptanceResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/clubs/{club_id}/bookings/{booking_id}/refusal": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Refuse a request, as the club",
+        "description": "`POST /api/v1/club/bookings/{id}/refusal` as the acting club: nobody paid, the hour is the club's again, the players are dealt a new card.",
+        "operationId": "refuse_dev_clubs__club_id__bookings__booking_id__refusal_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
+              "title": "Club Id"
+            },
+            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RefusalRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/clubs/{club_id}/bookings/{booking_id}/free-courts": {
+      "get": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Where a game can be moved, as the club",
+        "description": "`GET /api/v1/club/bookings/{id}/free-courts` as the acting club.",
+        "operationId": "free_courts_dev_clubs__club_id__bookings__booking_id__free_courts_get",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
+              "title": "Club Id"
+            },
+            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeCourtsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/clubs/{club_id}/bookings/{booking_id}/move": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Move a game to another court, as the club",
+        "description": "`POST /api/v1/club/bookings/{id}/move` as the acting club.",
+        "operationId": "move_dev_clubs__club_id__bookings__booking_id__move_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
+              "title": "Club Id"
+            },
+            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CourtToMoveToSchema"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/clubs/{club_id}/bookings/{booking_id}/cancellation": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Cancel a game, as the club",
+        "description": "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: everybody refunded in full, on nobody's record, a new card owed.",
+        "operationId": "cancel_dev_clubs__club_id__bookings__booking_id__cancellation_post",
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
+              "title": "Club Id"
+            },
+            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/clubs/{club_id}/check-ins": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Check a player in, as the club",
+        "description": "`POST /api/v1/club/check-ins` as the acting club, with the code the desk would read off the phone \u2014 a booked game's pane lists each seat's.",
+        "operationId": "check_in_dev_clubs__club_id__check_ins_post",
+        "parameters": [
+          {
+            "name": "club_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
+              "title": "Club Id"
+            },
+            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckInResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "As the club's own route answers it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/payments/cards/{player_id}": {
+      "put": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Set a player's saved card to succeed, decline or ask for the check",
+        "description": "What the next payment cloned from this player's saved card does \u2014 the next fill's hold, a rescue's, a club's acceptance.",
+        "operationId": "steer_a_card_dev_payments_cards__player_id__put",
+        "parameters": [
+          {
+            "name": "player_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Player Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteerCardRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SteeredCardResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the player whose money it is is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`seat_charge_not_found`, or `notice_not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`provider_not_the_fake` \u2014 nothing to steer. Otherwise the control's own refusal, and why.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/payments/charges/{charge_id}/bank-confirms": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "The bank confirms a payment that waited for its player",
+        "description": "What the phone's confirmation does with the bank, which a laptop's phone cannot reach: the check passed \u2014 or, for a declined payment, another card typed and its bank agreeing. The provider holds the payment now; the player's own *Confirm* is then the yes again.",
+        "operationId": "the_bank_confirms_dev_payments_charges__charge_id__bank_confirms_post",
+        "parameters": [
+          {
+            "name": "charge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Charge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankConfirmedResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the player whose money it is is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`seat_charge_not_found`, or `notice_not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`provider_not_the_fake` \u2014 nothing to steer. Otherwise the control's own refusal, and why.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/payments/refunds": {
+      "put": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Make refunds wait, or give them when asked",
+        "operationId": "refunds_wait_dev_payments_refunds_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the player whose money it is is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`seat_charge_not_found`, or `notice_not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`provider_not_the_fake` \u2014 nothing to steer. Otherwise the control's own refusal, and why.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/payments/charges/{charge_id}/refund": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Deliver a share's refund now",
+        "description": "The refund decided on this share, given by the provider and recorded now \u2014 the outbox's own step for the charge, run at once. A refund given already is answered as it was.",
+        "operationId": "deliver_a_refund_dev_payments_charges__charge_id__refund_post",
+        "parameters": [
+          {
+            "name": "charge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Charge Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDeliveredResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the player whose money it is is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`seat_charge_not_found`, or `notice_not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`provider_not_the_fake` \u2014 nothing to steer. Otherwise the control's own refusal, and why.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/payments/notices": {
+      "get": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "The notices the provider sent about a game's payments",
+        "operationId": "notices_dev_payments_notices_get",
+        "parameters": [
+          {
+            "name": "game_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Game Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticesResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the player whose money it is is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`seat_charge_not_found`, or `notice_not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`provider_not_the_fake` \u2014 nothing to steer. Otherwise the control's own refusal, and why.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/payments/notices/delivery": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Deliver notices the provider sent \u2014 twice, or out of order",
+        "description": "Each notice, in the order given, to the webhook's own handling: read once, and what it names read from the provider as it stands. An id the provider never sent refuses the whole delivery before any is read.",
+        "operationId": "deliver_notices_dev_payments_notices_delivery_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the player whose money it is is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`seat_charge_not_found`, or `notice_not_found`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`provider_not_the_fake` \u2014 nothing to steer. Otherwise the control's own refusal, and why.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/groups": {
       "get": {
         "tags": [
@@ -446,13 +1455,13 @@
           "dev"
         ],
         "summary": "Situation 2 \u00b7 Needs her yes, Instant club",
-        "description": "Leaves a game needing only the protagonist's yes, at a club that books at once: the soonest card of hers in the group and sport that her deck shows \u2014 one with 0:02:00 hours left before its book-by, where there is one \u2014 with enough of the people dealt it beside her saying yes \u2014 each through the yes their own phone runs. Her yes then fills it: a charge, *It's a game!*, then Home. With no such card, the proposer deals first.",
+        "description": "Leaves a game needing only the protagonist's yes, at a club that books at once: the soonest card of hers in the group and sport that her deck shows \u2014 one with 2 hours left before its book-by, where there is one \u2014 with enough of the people dealt it beside her saying yes \u2014 each through the yes their own phone runs. Her yes then fills it: a charge, *It's a game!*, then Home. With no such card, the proposer deals first.",
         "operationId": "needs_her_yes_instant_club_dev_situations_needs_her_yes_instant_club_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NeedsHerYesRequest"
+                "$ref": "#/components/schemas/HerSituationRequest"
               }
             }
           },
@@ -511,10 +1520,307 @@
           }
         }
       }
+    },
+    "/dev/situations/needs-her-yes-on-request-club": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 3 \u00b7 Needs her yes, On request club",
+        "description": "Situation 2 at a club that confirms each game: her yes asks the club, and the club row accepts or refuses \u2014 or the club's time to confirm runs out. **With `answer_due_in_minutes`, the club is asked already**: her game at the soonest hour an On request club of the group's sells, made and said yes to by her and three of the group \u2014 hers last \u2014 as if earlier, so the answer is due that many minutes from now (or, past the club's own time to confirm, that long from now); then *Run it now* on the club's answer window calls it off once it is due.",
+        "operationId": "needs_her_yes_on_request_club_dev_situations_needs_her_yes_on_request_club_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnRequestResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/situations/card-declines-at-the-fill": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 4 \u00b7 Card declines at the fill",
+        "description": "Situation 2, with her saved card set to decline: her yes fills the game and her share is refused, so nobody pays and the game is filling again. The recovery: *Bank confirms* on her charge, then *Confirm* on her phone books it.",
+        "operationId": "card_declines_at_the_fill_dev_situations_card_declines_at_the_fill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HerSituationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NeedsHerYesResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/situations/check-in-at-the-club": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Situation 11 \u00b7 Check-in at the club",
+        "description": "Her game at the soonest hour today that has not begun, at a club of the group's that books at once \u2014 made and filled by her and three of the group as if earlier, when the hour was still on sale. Her phone shows her check-in code today, and the club checks players in: a club that did not is switched to *We check players in*, as its desk would.",
+        "operationId": "check_in_at_the_club_dev_situations_check_in_at_the_club_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HerSituationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckInAtTheClubResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`group_not_found` \u2014 no such group.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/request-timeout": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the club's answer window",
+        "description": "Calls off every request an On request club has not answered by its deadline \u2014 *Called off \u00b7 no answer*, nobody paid, the court free and the players owed a new card. A request still inside its time to confirm is left waiting.",
+        "operationId": "run_the_request_timeout_dev_jobs_request_timeout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AcceptOutcome": {
+        "type": "string",
+        "enum": [
+          "BOOKED",
+          "SEAT_OPENED"
+        ],
+        "title": "AcceptOutcome",
+        "description": "What the club's yes came to."
+      },
+      "AcceptanceResponse": {
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/AcceptOutcome",
+            "description": "`BOOKED` \u2014 everybody paid, the game is booked on `court_name` and the players are told. `SEAT_OPENED` \u2014 a player's payment did not go through, or a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
+          },
+          "court_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Name",
+            "description": "The court the players were given \u2014 on a booked game only."
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome",
+          "court_name"
+        ],
+        "title": "AcceptanceResponse"
+      },
+      "BankConfirmedResponse": {
+        "properties": {
+          "charge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Charge Id"
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "charge_id",
+          "says"
+        ],
+        "title": "BankConfirmedResponse"
+      },
       "BoardResponse": {
         "properties": {
           "group": {
@@ -528,6 +1834,9 @@
             "format": "date-time",
             "title": "Read At",
             "description": "The instant every row was read at."
+          },
+          "payments": {
+            "$ref": "#/components/schemas/PaymentsPane"
           },
           "people": {
             "items": {
@@ -543,7 +1852,7 @@
             },
             "type": "array",
             "title": "Games",
-            "description": "Every game in the group and sport whose hour began less than 0:24:00 hours ago \u2014 filling, booked or over \u2014 soonest first."
+            "description": "Every game in the group and sport whose hour began less than 24 hours ago \u2014 filling, booked or over \u2014 soonest first."
           }
         },
         "type": "object",
@@ -551,6 +1860,7 @@
           "group",
           "sport",
           "read_at",
+          "payments",
           "people",
           "games"
         ],
@@ -651,6 +1961,14 @@
             },
             "type": "array",
             "title": "Checked In"
+          },
+          "codes": {
+            "items": {
+              "$ref": "#/components/schemas/SeatCodePane"
+            },
+            "type": "array",
+            "title": "Codes",
+            "description": "Each seated player's check-in code, the first side first."
           }
         },
         "type": "object",
@@ -663,7 +1981,8 @@
           "called_off",
           "cancel_reason",
           "departures",
-          "checked_in"
+          "checked_in",
+          "codes"
         ],
         "title": "BookingPane"
       },
@@ -700,6 +2019,59 @@
         ],
         "title": "CancelReason",
         "description": "Why the club cancelled a booked game (the mechanics \u00a716.9) \u2014 told to\nthe players with their refund."
+      },
+      "CancelRequest": {
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/ClubCancelReason",
+            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with their refund."
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "CancelRequest"
+      },
+      "CardOnFilePane": {
+        "properties": {
+          "brand": {
+            "type": "string",
+            "title": "Brand"
+          },
+          "last_four": {
+            "type": "string",
+            "title": "Last Four"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the provider does with the next payment on it; `null` where the provider is not the fake the console steers."
+          }
+        },
+        "type": "object",
+        "required": [
+          "brand",
+          "last_four",
+          "outcome"
+        ],
+        "title": "CardOnFilePane"
+      },
+      "CardOutcome": {
+        "type": "string",
+        "enum": [
+          "SUCCEEDS",
+          "DECLINES",
+          "ASKS_FOR_VERIFICATION"
+        ],
+        "title": "CardOutcome",
+        "description": "What a saved card does with the next payment asked of it \u2014 what the\npayment provider's controls set (``provider.py``)."
       },
       "ChargePane": {
         "properties": {
@@ -781,6 +2153,169 @@
           "refund"
         ],
         "title": "ChargePane"
+      },
+      "CheckInAtTheClubResponse": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "club_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Club Id",
+            "description": "The club the club row acts as."
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "people": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People",
+            "description": "Everybody on it, in yes order."
+          },
+          "check_in_switched_on": {
+            "type": "boolean",
+            "title": "Check In Switched On",
+            "description": "The club checked nobody in, and its *We check players in* was switched on as its desk would."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "starts_at",
+          "club_id",
+          "club_name",
+          "people",
+          "check_in_switched_on",
+          "says"
+        ],
+        "title": "CheckInAtTheClubResponse"
+      },
+      "CheckInRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Code",
+            "description": "What the camera read off the player's QR code, or the six-character short code typed by hand \u2014 spaces, dashes and case do not matter."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "CheckInRequest"
+      },
+      "CheckInResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ends At"
+          },
+          "court_name": {
+            "type": "string",
+            "title": "Court Name"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchMode"
+          },
+          "player": {
+            "$ref": "#/components/schemas/CheckedInPlayerSchema"
+          },
+          "checked_in_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked In At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "starts_at",
+          "ends_at",
+          "court_name",
+          "sport",
+          "kind",
+          "player",
+          "checked_in_at"
+        ],
+        "title": "CheckInResponse",
+        "description": "The booking and the player \u2014 *19:00 \u00b7 Court 2 \u00b7 Padel*, *Piotr S. \u2014\nchecked in \u2713*."
+      },
+      "CheckedInPlayerSchema": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "name"
+        ],
+        "title": "CheckedInPlayerSchema"
+      },
+      "ClubCancelReason": {
+        "type": "string",
+        "enum": [
+          "WEATHER",
+          "REPAIR",
+          "DOUBLE_BOOKING",
+          "OTHER"
+        ],
+        "title": "ClubCancelReason",
+        "description": "Why the club cancelled a booked game (the mechanics \u00a716.9) \u2014 the players\nare told it with their refund."
       },
       "ClubPane": {
         "properties": {
@@ -871,6 +2406,90 @@
         ],
         "title": "ConsoleGroup"
       },
+      "CourtToMoveToSchema": {
+        "properties": {
+          "court_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Court Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "court_id",
+          "name"
+        ],
+        "title": "CourtToMoveToSchema"
+      },
+      "Delivery": {
+        "properties": {
+          "notice_id": {
+            "type": "string",
+            "title": "Notice Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read",
+            "description": "`true` \u2014 read and acted on; `false` \u2014 read before, nothing done."
+          }
+        },
+        "type": "object",
+        "required": [
+          "notice_id",
+          "kind",
+          "read"
+        ],
+        "title": "Delivery"
+      },
+      "DeliveryRequest": {
+        "properties": {
+          "notice_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Notice Ids",
+            "description": "Delivered one after another, in this order \u2014 the same one twice is a replay, newest first is out of order."
+          }
+        },
+        "type": "object",
+        "required": [
+          "notice_ids"
+        ],
+        "title": "DeliveryRequest"
+      },
+      "DeliveryResponse": {
+        "properties": {
+          "deliveries": {
+            "items": {
+              "$ref": "#/components/schemas/Delivery"
+            },
+            "type": "array",
+            "title": "Deliveries"
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "deliveries",
+          "says"
+        ],
+        "title": "DeliveryResponse"
+      },
       "DeparturePane": {
         "properties": {
           "player": {
@@ -960,6 +2579,23 @@
         ],
         "title": "FailureReason",
         "description": "Why a share could not be held (the mechanics \u00a712.2, \u00a719)."
+      },
+      "FreeCourtsResponse": {
+        "properties": {
+          "courts": {
+            "items": {
+              "$ref": "#/components/schemas/CourtToMoveToSchema"
+            },
+            "type": "array",
+            "title": "Courts",
+            "description": "Every other court of the game's sport you still have for Raketa at its hour, in your own order. Empty: there is none \u2014 **Cancel** with *repair* if the court cannot be played."
+          }
+        },
+        "type": "object",
+        "required": [
+          "courts"
+        ],
+        "title": "FreeCourtsResponse"
       },
       "FreshDealRequest": {
         "properties": {
@@ -1183,7 +2819,7 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "NeedsHerYesRequest": {
+      "HerSituationRequest": {
         "properties": {
           "group_id": {
             "type": "string",
@@ -1197,7 +2833,7 @@
             "type": "string",
             "format": "uuid",
             "title": "Protagonist Id",
-            "description": "Whose phone it is \u2014 the yes the game is left needing."
+            "description": "Whose phone it is \u2014 the protagonist the situation is for."
           }
         },
         "type": "object",
@@ -1206,7 +2842,23 @@
           "sport",
           "protagonist_id"
         ],
-        "title": "NeedsHerYesRequest"
+        "title": "HerSituationRequest",
+        "description": "A situation set up around the protagonist, in a group and a sport."
+      },
+      "MoveRequest": {
+        "properties": {
+          "court_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Court Id",
+            "description": "One of the game's free courts."
+          }
+        },
+        "type": "object",
+        "required": [
+          "court_id"
+        ],
+        "title": "MoveRequest"
       },
       "NeedsHerYesResponse": {
         "properties": {
@@ -1263,6 +2915,174 @@
         ],
         "title": "NeedsHerYesResponse"
       },
+      "NoticeRow": {
+        "properties": {
+          "notice_id": {
+            "type": "string",
+            "title": "Notice Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "As Stripe names it, `payment_intent.*`."
+          },
+          "status": {
+            "$ref": "#/components/schemas/PaymentStatus",
+            "description": "Where the move left the payment. The notice carries none of it: it is read as a prompt, and the payment as it stands now."
+          },
+          "payment_id": {
+            "type": "string",
+            "title": "Payment Id"
+          },
+          "charge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Charge Id"
+          },
+          "player": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read",
+            "description": "Raketa has read it \u2014 delivering it again is a no-op."
+          }
+        },
+        "type": "object",
+        "required": [
+          "notice_id",
+          "kind",
+          "status",
+          "payment_id",
+          "charge_id",
+          "player",
+          "read"
+        ],
+        "title": "NoticeRow"
+      },
+      "NoticesResponse": {
+        "properties": {
+          "notices": {
+            "items": {
+              "$ref": "#/components/schemas/NoticeRow"
+            },
+            "type": "array",
+            "title": "Notices",
+            "description": "Every notice about the game's payments, in the order sent."
+          }
+        },
+        "type": "object",
+        "required": [
+          "notices"
+        ],
+        "title": "NoticesResponse"
+      },
+      "OnRequestRequest": {
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Group Id"
+          },
+          "sport": {
+            "$ref": "#/components/schemas/Sport"
+          },
+          "protagonist_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Protagonist Id",
+            "description": "Whose phone it is \u2014 the protagonist the situation is for."
+          },
+          "answer_due_in_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 60.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer Due In Minutes",
+            "description": "Ask the club already, as if her yes had been said earlier, so that its answer is due this many minutes from now. A club's own time to confirm is the most it can be: asked for more, the club is asked now and `answer_by` says when. Left out, her yes is left for the phone."
+          }
+        },
+        "type": "object",
+        "required": [
+          "group_id",
+          "sport",
+          "protagonist_id"
+        ],
+        "title": "OnRequestRequest"
+      },
+      "OnRequestResponse": {
+        "properties": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Game Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "book_by": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Book By"
+          },
+          "club_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Club Name"
+          },
+          "people_in": {
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "type": "array",
+            "title": "People In",
+            "description": "Everybody In now, in yes order."
+          },
+          "answer_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer By",
+            "description": "When the club's answer is due, once it was asked; `null` while her yes is left for the phone."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "game_id",
+          "starts_at",
+          "book_by",
+          "club_name",
+          "people_in",
+          "answer_by",
+          "says"
+        ],
+        "title": "OnRequestResponse"
+      },
       "Origin": {
         "type": "string",
         "enum": [
@@ -1282,6 +3102,46 @@
         ],
         "title": "PaymentRefusal",
         "description": "Why a seat's share could not be held \u2014 the payment's own words, spelled\nhere in this context's (the mechanics \u00a712.2, \u00a719)."
+      },
+      "PaymentStatus": {
+        "type": "string",
+        "enum": [
+          "AUTHORISED",
+          "CAPTURED",
+          "CANCELLED",
+          "AUTHENTICATION_REQUIRED",
+          "DECLINED",
+          "PROCESSING"
+        ],
+        "title": "PaymentStatus",
+        "description": "Where one payment on a club's account stands."
+      },
+      "PaymentsPane": {
+        "properties": {
+          "steerable": {
+            "type": "boolean",
+            "title": "Steerable",
+            "description": "The provider is the in-process fake, so the payment provider's controls steer it."
+          },
+          "refunds_wait": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunds Wait",
+            "description": "Every refund waits until it is delivered from the console; `null` where the provider is not the fake."
+          }
+        },
+        "type": "object",
+        "required": [
+          "steerable",
+          "refunds_wait"
+        ],
+        "title": "PaymentsPane"
       },
       "PersonRef": {
         "properties": {
@@ -1357,6 +3217,17 @@
             "title": "Level",
             "description": "Their published Level in the board's sport; `null` unrated."
           },
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardOnFilePane"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their saved card; `null` with none saved."
+          },
           "cards": {
             "items": {
               "$ref": "#/components/schemas/RowCard"
@@ -1373,6 +3244,7 @@
           "name",
           "photo_url",
           "level",
+          "card",
           "cards"
         ],
         "title": "PersonRow"
@@ -1415,6 +3287,88 @@
         ],
         "title": "ProposedSchema",
         "description": "What the proposer's run did, as the job counts it."
+      },
+      "RanResponse": {
+        "properties": {
+          "job": {
+            "type": "string",
+            "title": "Job",
+            "description": "The job's name, as the scheduler runs it."
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done",
+            "description": "What was due, and was done."
+          },
+          "conflicts": {
+            "type": "integer",
+            "title": "Conflicts",
+            "description": "What another process was doing at that moment, stepped over."
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job",
+          "done",
+          "conflicts",
+          "says"
+        ],
+        "title": "RanResponse"
+      },
+      "RefundDeliveredResponse": {
+        "properties": {
+          "charge_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Charge Id"
+          },
+          "given_back_grosze": {
+            "type": "integer",
+            "title": "Given Back Grosze"
+          },
+          "fee_withheld_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Withheld Grosze"
+          },
+          "given_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Given At"
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "charge_id",
+          "given_back_grosze",
+          "fee_withheld_grosze",
+          "given_at",
+          "says"
+        ],
+        "title": "RefundDeliveredResponse"
       },
       "RefundPane": {
         "properties": {
@@ -1475,6 +3429,58 @@
           "given_at"
         ],
         "title": "RefundPane"
+      },
+      "RefundsRequest": {
+        "properties": {
+          "wait": {
+            "type": "boolean",
+            "title": "Wait",
+            "description": "`true` \u2014 every refund asked of the provider waits until it is delivered here; the outbox asks again meanwhile, as of a provider that is down. `false` \u2014 refunds are given when asked, as at Stripe; any still waiting go on the outbox's next try."
+          }
+        },
+        "type": "object",
+        "required": [
+          "wait"
+        ],
+        "title": "RefundsRequest"
+      },
+      "RefundsResponse": {
+        "properties": {
+          "wait": {
+            "type": "boolean",
+            "title": "Wait"
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "wait",
+          "says"
+        ],
+        "title": "RefundsResponse"
+      },
+      "RefusalRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why, for your own records \u2014 **never shown to the players**, who read *Called off \u00b7 refused*. Blank is no reason."
+          }
+        },
+        "type": "object",
+        "title": "RefusalRequest"
       },
       "RosterAccount": {
         "properties": {
@@ -1625,6 +3631,24 @@
         "title": "SeatChargeStatus",
         "description": "Where a charge stands, as its stream leaves it."
       },
+      "SeatCodePane": {
+        "properties": {
+          "player": {
+            "$ref": "#/components/schemas/PersonRef"
+          },
+          "short_code": {
+            "type": "string",
+            "title": "Short Code",
+            "description": "What the desk types \u2014 the phone shows it on the game's day. The club row's *Check in* sends it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player",
+          "short_code"
+        ],
+        "title": "SeatCodePane"
+      },
       "SidesPane": {
         "properties": {
           "first": {
@@ -1672,6 +3696,52 @@
         ],
         "title": "Standing",
         "description": "Where a proposal stands at an instant \u2014 derived, never stored."
+      },
+      "SteerCardRequest": {
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/CardOutcome"
+          }
+        },
+        "type": "object",
+        "required": [
+          "outcome"
+        ],
+        "title": "SteerCardRequest"
+      },
+      "SteeredCardResponse": {
+        "properties": {
+          "player_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Player Id"
+          },
+          "brand": {
+            "type": "string",
+            "title": "Brand"
+          },
+          "last_four": {
+            "type": "string",
+            "title": "Last Four"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/CardOutcome"
+          },
+          "says": {
+            "type": "string",
+            "title": "Says",
+            "description": "What happened, for the tester."
+          }
+        },
+        "type": "object",
+        "required": [
+          "player_id",
+          "brand",
+          "last_four",
+          "outcome",
+          "says"
+        ],
+        "title": "SteeredCardResponse"
       },
       "ValidationError": {
         "properties": {

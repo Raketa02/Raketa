@@ -24,8 +24,23 @@ from sqlalchemy import update
 
 from app.api.dependencies import get_clock
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
-from app.seeds.catalog import SEED_EMAIL_DOMAIN, THE_POPULATED_PLAYER
+from app.seeds.catalog import THE_POPULATED_PLAYER
 from tests.api import players_world as players
+from tests.api.console_world import (
+    CONSOLE,
+    PLAYER,
+    SEED,
+    at,
+    board_of,
+    code_of,
+    deck_ids,
+    deck_of,
+    ids,
+    pane_of,
+    presses,
+    rows_of,
+    says,
+)
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -37,13 +52,6 @@ from tests.api.proposals_world import (
     warsaw,
 )
 from tests.unit.fake_clock import MovableClock
-
-#: Where the seed addresses its accounts — an account here is one the console
-#: may act as.
-SEED = SEED_EMAIL_DOMAIN
-
-PLAYER = "the player's own route"
-CONSOLE = "the console's row"
 
 
 @pytest.fixture
@@ -95,46 +103,6 @@ async def a_card(session_factory, clock, world: World, *named: dict) -> UUID:
         club_id=world.club,
         versions=(named,),
     )
-
-
-async def says(client, via: str, verb: str, member: dict, game: UUID):
-    """``verb`` — ``yes``, ``no`` or ``withdraw`` — said as ``member``: by their
-    own phone, or by the console's row, which holds no token."""
-
-    method, tail = {
-        "yes": ("POST", "yes"),
-        "no": ("POST", "no"),
-        "withdraw": ("DELETE", "yes"),
-    }[verb]
-    if via == PLAYER:
-        return await client.request(
-            method,
-            f"/api/v1/proposals/{game}/{tail}",
-            headers=member["headers"],
-        )
-    return await client.request(
-        method, f"/dev/as/{member['id']}/proposals/{game}/{tail}"
-    )
-
-
-async def deck_of(client, member: dict, group: UUID) -> list[dict]:
-    """Their Games tab, as their own phone reads it."""
-
-    read = await client.get(
-        f"/api/v1/pools/{group}/deck",
-        params={"sport": "PADEL", "kind": "COMPETITIVE"},
-        headers=member["headers"],
-    )
-    assert read.status_code == 200, read.text
-    return read.json()["cards"]
-
-
-async def deck_ids(client, member: dict, group: UUID) -> list[str]:
-    return [card["proposal_id"] for card in await deck_of(client, member, group)]
-
-
-def code_of(response) -> str:
-    return response.json()["code"]
 
 
 # --------------------------------------------------------------------------- #
@@ -318,16 +286,6 @@ async def test_it_refuses_an_id_that_is_nobody_s(
 # --------------------------------------------------------------------------- #
 
 
-async def board_of(client, world: World, sport: str = "PADEL") -> dict:
-    read = await client.get(f"/dev/groups/{world.group}", params={"sport": sport})
-    assert read.status_code == 200, read.text
-    return read.json()
-
-
-def rows_of(board: dict) -> dict[str, dict]:
-    return {row["name"]: row for row in board["people"]}
-
-
 async def test_the_groups_to_pick_are_counted_by_who_the_console_may_act_as(
     client, world
 ):
@@ -390,7 +348,7 @@ async def test_the_protagonist_is_the_seed_s_own_once_she_is_registered(client, 
 async def test_a_row_per_seeded_member_with_name_photo_and_level(
     client, session_factory, clock, world
 ):
-    board = await board_of(client, world)
+    board = await board_of(client, world.group)
 
     rows = rows_of(board)
     # Piotr is a member, and not an account the seed created: no row.
@@ -413,7 +371,7 @@ async def test_each_row_shows_the_cards_dealt_to_them_with_who_is_in(
     said = await says(client, CONSOLE, "no", world.zofia, game)
     assert said.status_code == 204, said.text
 
-    rows = rows_of(await board_of(client, world))
+    rows = rows_of(await board_of(client, world.group))
 
     [kuba] = rows["kuba"]["cards"]
     assert kuba["proposal_id"] == str(game)
@@ -425,21 +383,13 @@ async def test_each_row_shows_the_cards_dealt_to_them_with_who_is_in(
     assert [card["answer"] for card in rows["zofia"]["cards"]] == ["SAID_NO"]
     assert rows["marek"]["cards"] == []
     # Another sport's board deals none of it.
-    assert all(
-        not row["cards"] for row in (await board_of(client, world, "TENNIS"))["people"]
-    )
+    tennis = await board_of(client, world.group, "TENNIS")
+    assert all(not row["cards"] for row in tennis["people"])
 
 
 # --------------------------------------------------------------------------- #
 # Situations
 # --------------------------------------------------------------------------- #
-
-
-async def presses(client, situation: str, **body):
-    return await client.post(
-        f"/dev/situations/{situation}",
-        json={key: str(value) for key, value in body.items()},
-    )
 
 
 async def test_fresh_deal_runs_the_proposer_now_for_the_group(client, clock, world):
@@ -493,7 +443,7 @@ async def test_needs_her_yes_puts_three_in_so_her_yes_completes_it(
 
     # The only card the four share is soon: it is taken, and the tester is told
     # when her yes is due.
-    pane = pane_of(await board_of(client, world), UUID(game))
+    pane = pane_of(await board_of(client, world.group), UUID(game))
     assert pressed.json()["book_by"] == pane["book_by"]
     assert "book by" in pressed.json()["says"]
 
@@ -535,7 +485,7 @@ async def test_needs_her_yes_prefers_a_card_she_has_time_to_answer(
 
     assert pressed.status_code == 200, pressed.text
     assert pressed.json()["game_id"] == str(saturday)
-    board = await board_of(client, world)
+    board = await board_of(client, world.group)
     assert pane_of(board, soon)["people_in"] == []
     assert len(pane_of(board, saturday)["people_in"]) == 3
 
@@ -585,19 +535,6 @@ async def test_a_situation_for_no_such_group_is_refused(client, world):
 # --------------------------------------------------------------------------- #
 
 
-def pane_of(board: dict, game: UUID) -> dict:
-    [pane] = [pane for pane in board["games"] if pane["game_id"] == str(game)]
-    return pane
-
-
-def at(moment) -> str:
-    return moment.isoformat().replace("+00:00", "Z")
-
-
-def ids(people: list[dict]) -> set[str]:
-    return {person["player_id"] for person in people}
-
-
 async def test_the_pane_of_a_game_still_filling(client, session_factory, clock, world):
     game = await a_card(
         session_factory, clock, world, world.marta, world.kuba, world.zofia
@@ -605,7 +542,7 @@ async def test_the_pane_of_a_game_still_filling(client, session_factory, clock, 
     said = await says(client, CONSOLE, "yes", world.kuba, game)
     assert said.status_code == 200, said.text
 
-    pane = pane_of(await board_of(client, world), game)
+    pane = pane_of(await board_of(client, world.group), game)
 
     assert pane["standing"] == "FILLING"
     assert pane["origin"] == "PICK"
@@ -649,7 +586,7 @@ async def test_the_pane_of_a_booked_game_shows_its_court_sides_and_every_charge(
     assert booked.json()["booked"] is not None, booked.text
     await players.deliver_the_outbox(session_factory, payments=payments)
 
-    pane = pane_of(await board_of(client, world), game)
+    pane = pane_of(await board_of(client, world.group), game)
 
     assert pane["standing"] == "FILLED"
     assert ids(pane["people_in"]) == {str(m["id"]) for m in four}
@@ -689,7 +626,7 @@ async def test_the_pane_shows_a_refund_once_somebody_leaves(
     assert left.status_code == 200, left.text
     await players.deliver_the_outbox(session_factory, payments=payments)
 
-    pane = pane_of(await board_of(client, world), game)
+    pane = pane_of(await board_of(client, world.group), game)
 
     assert pane["booking"]["state"] == "SEAT_OPEN"
     [departure] = pane["booking"]["departures"]

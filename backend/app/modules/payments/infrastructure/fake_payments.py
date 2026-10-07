@@ -40,6 +40,16 @@ fake in another process adopts one for what it was made for.
 confirms every setup with ``A_CARD`` as soon as it is read — the phone of a
 laptop run has no real provider to confirm against — and completes a club's
 onboarding the moment its link is made. A test's fake does neither unless told.
+
+**The games test console steers that one** (#591; ``docs/adr/0194`` §2), and
+three more controls are its: ``card_behaviour_of`` reads what ``card_behaves``
+set; **every move of a payment records the notice Stripe would have sent**
+(``notices``), which the console replays — twice, or out of order — through
+the webhook's own handling, since the fake sends none itself; and **refunds can
+wait** (``refunds_wait``): a refund asked for then is answered as a provider
+that has not given it — ``PaymentsUnavailable``, so the outbox asks again, as it
+would of a provider that was down — until ``gives_refund`` lets that payment's
+through, or the wait is lifted.
 """
 
 from __future__ import annotations
@@ -58,6 +68,7 @@ from app.modules.payments.domain.entered_cards import (
 )
 from app.modules.payments.domain.errors import PaymentsUnavailable
 from app.modules.payments.domain.card_fee import estimated_card_fee
+from app.modules.payments.domain.notices import SeatPaymentChanged
 from app.modules.payments.domain.provider import (
     AWAITING_THE_PLAYER,
     CardOnFile,
@@ -91,6 +102,29 @@ class RecordedCall:
 
     name: str
     arguments: Mapping[str, Any]
+
+
+#: The ``payment_intent.*`` kind Stripe sends when a payment arrives at each
+#: status — what ``StripeNotices`` reads as ``SeatPaymentChanged``.
+NOTICE_KINDS: Mapping[PaymentStatus, str] = {
+    PaymentStatus.AUTHORISED: "payment_intent.amount_capturable_updated",
+    PaymentStatus.CAPTURED: "payment_intent.succeeded",
+    PaymentStatus.CANCELLED: "payment_intent.canceled",
+    PaymentStatus.DECLINED: "payment_intent.payment_failed",
+    PaymentStatus.AUTHENTICATION_REQUIRED: "payment_intent.requires_action",
+}
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class SentNotice:
+    """The notice Stripe would have sent when a payment moved: what Raketa reads
+    off the wire, the kind it came as, and the status the move left — which the
+    notice itself never carries, since a notice is read as a prompt."""
+
+    notice: SeatPaymentChanged
+    kind: str
+    status: PaymentStatus
 
 
 @dataclass
@@ -179,6 +213,12 @@ class FakePayments:
         # Club id -> the account opened for it.
         self._club_accounts: dict[UUID, str] = {}
         self._payouts: dict[str, list[Payout]] = {}
+        #: Every notice Stripe would have sent, in the order the payments moved.
+        self.notices: list[SentNotice] = []
+        #: Set to keep every refund asked for until it is let through.
+        self.refunds_wait = False
+        # Payments whose refund the console let through while refunds wait.
+        self._refunds_let_through: set[str] = set()
 
     # ----------------------------------------------------------------- controls
 
@@ -225,12 +265,25 @@ class FakePayments:
             PaymentStatus.CAPTURED if payment.captures else PaymentStatus.AUTHORISED
         )
         payment.decline_code = None
+        self._notify(payment)
 
     def card_behaves(self, method_id: str, behaviour: CardBehaviour) -> None:
         """A saved card changes its mind — a later decline, say."""
 
         method = self._method(method_id)
         method.card = replace(method.card, behaviour=behaviour)
+
+    def card_behaviour_of(self, method_id: str) -> CardBehaviour:
+        """How a saved card answers a payment now — one another process saved
+        answers as the card every seed saves, until it is told otherwise."""
+
+        return self._method(method_id).card.behaviour
+
+    def gives_refund(self, payment_id: str) -> None:
+        """Let this payment's refund through, while refunds wait: the next time
+        it is asked for, it is given."""
+
+        self._refunds_let_through.add(payment_id)
 
     def bank_replaces_card(self, method_id: str, *, brand: str, last_four: str) -> None:
         """The card's bank issued a new one under the same saved method — a new
@@ -524,6 +577,7 @@ class FakePayments:
         payment = self._on_account(payment_id, account_id)
         if payment.status is PaymentStatus.AUTHORISED:
             payment.status = PaymentStatus.CAPTURED
+            self._notify(payment)
         elif payment.status is not PaymentStatus.CAPTURED:
             raise FakeRefusal(f"{payment_id} is {payment.status} and cannot be taken")
         return self._answer(payment)
@@ -537,7 +591,9 @@ class FakePayments:
         payment = self._on_account(payment_id, account_id)
         if payment.status is PaymentStatus.CAPTURED:
             raise FakeRefusal(f"{payment_id} was taken; refund it instead")
-        payment.status = PaymentStatus.CANCELLED
+        if payment.status is not PaymentStatus.CANCELLED:
+            payment.status = PaymentStatus.CANCELLED
+            self._notify(payment)
         return self._answer(payment)
 
     async def charge_now(
@@ -580,8 +636,17 @@ class FakePayments:
             withhold_fee=withhold_fee,
             key=idempotency_key,
         )
+        if (
+            self.refunds_wait
+            and idempotency_key not in self._by_key
+            and payment_id not in self._refunds_let_through
+        ):
+            # Not given yet: the outbox asks again, as of a provider that is
+            # down, until the console lets it through (#591).
+            raise PaymentsUnavailable()
 
         def refunded() -> Refund:
+            self._refunds_let_through.discard(payment_id)
             payment = self._on_account(payment_id, account_id)
             if payment.adopted and payment.status is PaymentStatus.AUTHORISED:
                 # Raketa gives back only a share it recorded paid: the process
@@ -707,7 +772,25 @@ class FakePayments:
         elif behaviour is CardBehaviour.CHECKED_EVERY_TIME:
             payment.status = PaymentStatus.AUTHENTICATION_REQUIRED
         self._payments[payment_id] = payment
+        self._notify(payment)
         return self._answer(payment)
+
+    def _notify(self, payment: _Payment) -> None:
+        """Record the notice Stripe sends when a payment arrives where this one
+        just did — on the Connected accounts endpoint, naming the payment and
+        its account and carrying nothing of it."""
+
+        self.notices.append(
+            SentNotice(
+                notice=SeatPaymentChanged(
+                    notice_id=_id("evt"),
+                    account_id=payment.account_id,
+                    payment_id=payment.payment_id,
+                ),
+                kind=NOTICE_KINDS[payment.status],
+                status=payment.status,
+            )
+        )
 
     @staticmethod
     def _answer(payment: _Payment) -> Payment:

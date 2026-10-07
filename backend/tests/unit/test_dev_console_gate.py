@@ -308,9 +308,17 @@ def test_every_module_of_the_console_refuses_with_its_own_refusal(environment):
 
     assert result.returncode == 0, result.stderr
     raised = json.loads(result.stdout)
-    assert {"routes", "refusal", "accounts", "people", "board", "situations"} <= set(
-        raised
-    )
+    assert {
+        "routes",
+        "refusal",
+        "accounts",
+        "people",
+        "club",
+        "provider",
+        "board",
+        "situations",
+        "jobs",
+    } <= set(raised)
     assert raised == {module: "ConsoleRefused" for module in raised}
 
 

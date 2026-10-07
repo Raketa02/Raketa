@@ -24,16 +24,24 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   [ADR-0194](../../../docs/adr/0194-the-games-test-console-acts-as-seed-accounts-and-writes-history-never-time.md)
   (#590). A no-build `console.html` at `/dev`, out of the contract; the roster the phone signs
   in from; and a route per thing the page presses — a person's buttons under
-  `/dev/as/{player_id}/…`, a group's board under `/dev/groups`, the situations under
-  `/dev/situations/…`, and *Run it now* (#592). Four rules hold it:
+  `/dev/as/{player_id}/…`, the club's under `/dev/clubs/{club_id}/…` (#591), the payment
+  provider's controls under `/dev/payments/…` (#591), a group's board under `/dev/groups`,
+  the situations under `/dev/situations/…`, and *Run it now* under `/dev/jobs/{job}` — the
+  scheduler's own job name (#591 the club's answer window, #592 the rest). Four rules hold
+  it:
   - **It acts as seed accounts without signing in.** A press names its **acting account** in
     its path; `accounts.py` refuses any id not addressed on the reserved `.example` TLD
-    (`not_a_seed_account`) before the use case is built. No token, session or header.
+    (`not_a_seed_account`) before the use case is built — and `club.py` any club whose
+    desk is not. No token, session or header. **The provider controls steer only the
+    process's own fake** (`provider.py`, `provider_not_the_fake` otherwise), and only a seed
+    account's money.
   - **A press is wiring.** It builds the player's (or club's) command and runs that route's
     own use case, through the same dependency, so its outcome and its refusals are the
     player's — `tests/api/test_games_test_console.py` holds each button to the player's
-    route. Work a player route does outside its use case is a bug the console would skip:
-    move it into the use case, never into a copy here.
+    route, and `test_games_test_console_club_and_provider.py` each club button to the desk's.
+    A replayed notice goes through `ReceivePaymentNotice`, the webhook's own handling, past
+    nothing but the signature check. Work a player route does outside its use case is a bug
+    the console would skip: move it into the use case, never into a copy here.
   - **Served in `local` only.** `CONSOLE_SERVED` in `gate.py` is a **second table** and never
     `SEEDABLE` (the seed runs in three environments, the console in one), and **every module
     of the console imports `refusal.py` first** — but `gate` and the package's `__init__`,
@@ -43,12 +51,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
     refusal that arrives anywhere else must be `ConsoleRefused`, never `SeedRefused`, and
     `tests/unit/test_dev_console_gate.py` imports every module under each refused
     environment to prove it.
-  - **Its reads are its own queries** over the contexts' projections (two, in `board.py`),
-    and every port it takes is declared as a request dependency — the context's own where
-    one exists, `app/api/dev/dependencies.py` where none does — so a test that replaces a
-    port replaces it for the console too. The placement ADR-0194 re-argued: nothing
-    shipped imports it, so deleting it changes nothing that ships, and every *write* it
-    causes is a context's own use case.
+  - **Its reads are its own queries** over the contexts' projections (two in `board.py`,
+    the notice inbox's in `provider.py`), and every port it takes is declared as a request
+    dependency — the context's own where one exists, `app/api/dev/dependencies.py` where
+    none does — so a test that replaces a port replaces it for the console too. The
+    placement ADR-0194 re-argued: nothing shipped imports it, so deleting it changes
+    nothing that ships, and every *write* it causes is a context's own use case.
 
   Its contract is checked for **freshness** (`make contract-freshness`), not by the client
   drift check, which has no purchase on a document with no client.

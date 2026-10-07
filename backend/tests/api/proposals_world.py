@@ -85,6 +85,7 @@ async def a_club_and_its_desk(
     client,
     *,
     name: str = "Bonarka Arena",
+    email: str | None = None,
     way: str = "INSTANT",
     point: tuple[float, float] = (50.06, 19.95),
     paused: bool = False,
@@ -93,12 +94,13 @@ async def a_club_and_its_desk(
     **settings,
 ) -> tuple[str, dict]:
     """``a_club_selling``'s club, and its desk's session — for a test that
-    changes what the club sells afterwards."""
+    changes what the club sells afterwards. The desk signs in at ``email``, or
+    at an address made of the club's name."""
 
     club_id, desk = await a_desk(
         client,
         name=name,
-        email=f"desk@{name.split()[0].lower()}.pl",
+        email=email or f"desk@{name.split()[0].lower()}.pl",
         sports=("PADEL", "TENNIS"),
         point=point,
     )

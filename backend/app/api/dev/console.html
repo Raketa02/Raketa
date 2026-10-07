@@ -12,13 +12,15 @@
   Three things this page will not do, and each of them is load-bearing:
 
   1. **It holds no token, so it stores none.** A press names the account it
-     acts as in its path (`/dev/as/{player_id}/…`) and the server refuses any
-     account the seed did not create. Nothing is kept in the browser between
-     loads, and a reload starts from nothing.
+     acts as in its path (`/dev/as/{player_id}/…`, or the club's,
+     `/dev/clubs/{club_id}/…`) and the server refuses any account the seed did
+     not create. Nothing is kept in the browser between loads, and a reload
+     starts from nothing.
   2. **It shows who is acting on every row.** Many people are on one screen at
      once, so every button sits on the row of the person it acts as, beside
-     their name and face. The protagonist — the phone in the tester's hand — is
-     marked, and is never acted as by a situation.
+     their name and face — and the club's on its game's pane, under the club's
+     name. The protagonist — the phone in the tester's hand — is marked; a
+     situation writes her past as the seed does, and never presses for her now.
   3. **Nothing acts on its own.** There is no timer of any kind in this file.
      Every press refreshes what it changed, and the Refresh button covers the
      rest: nothing answers, runs or fetches unless the tester presses.
@@ -95,6 +97,10 @@
   table { border-collapse: collapse; width: 100%; font-size: 12px; }
   th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--dim); }
+  input[type=number] { font: inherit; width: 64px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; }
+  .club { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .card-on-file { margin-top: 4px; display: flex; gap: 6px; align-items: center; }
+  .notices td { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -114,6 +120,24 @@
       <div class="row">
         <button id="fresh-deal">1 · Fresh deal</button>
         <button id="needs-her-yes">2 · Needs <span class="her">her</span> yes · Instant club</button>
+        <button id="card-declines">4 · Card declines at the fill</button>
+        <button id="check-in">11 · Check-in at the club</button>
+      </div>
+      <div class="row">
+        <button id="on-request">3 · Needs <span class="her">her</span> yes · On request club</button>
+        <label>club asked already, answer due in
+          <input id="answer-due" type="number" min="1" max="60" placeholder="—"> min</label>
+        <span class="note">empty: her yes on the phone asks the club</span>
+      </div>
+      <div class="row">
+        <strong>Run it now</strong>
+        <button id="request-timeout">The club's answer window</button>
+        <span class="note">acts only on what is already due</span>
+      </div>
+      <div class="row">
+        <strong>Payment provider</strong>
+        <label><input id="refunds-wait" type="checkbox"> Refunds wait until delivered</label>
+        <span id="provider-note" class="note"></span>
       </div>
       <div id="outcome" class="note">Pick a group. Every press refreshes the board; Refresh covers the rest.</div>
     </div>
@@ -141,7 +165,7 @@
 <script>
 "use strict";
 
-const state = { groups: null, board: null, protagonist: null };
+const state = { groups: null, board: null, protagonist: null, notices: {}, freeCourts: {} };
 const $ = (id) => document.getElementById(id);
 
 // --------------------------------------------------------------------------
@@ -226,6 +250,7 @@ async function loadBoard() {
   if (!read.ok) { say(read, "Reading the board"); return; }
   state.board = read.json;
   drawProtagonist();
+  drawProvider();
   drawPeople();
   drawGames();
 }
@@ -290,6 +315,7 @@ function drawPeople() {
         <div class="name">${nameOf(row)} ${phone ? pill("the phone", "phone") : ""}</div>
         <div class="mono">${esc(row.email)}</div>
         <div class="note">Level ${row.level === null ? "—" : row.level.toFixed(2)}</div>
+        ${cardOnFile(row)}
       </div></div>
       <div class="cards">${cards}</div>
     </div>`;
@@ -311,7 +337,7 @@ async function act(button) {
     const a = done.json;
     const after = a.booked ? "booked — It's a game!"
       : a.waiting_for_the_club ? "full — waiting for the club"
-      : a.your_payment ? `payment refused (${esc(a.your_payment.status ?? "")})`
+      : a.your_payment ? `payment refused (${esc(a.your_payment.refusal ?? "")})`
       : `${a.open_seats} seat(s) open`;
     say(done, `${words} → ${after}`);
   } else {
@@ -346,7 +372,7 @@ function drawGames() {
           (d.rescued_by ? ` · seat taken by ${nameOf(d.rescued_by)}` : " · seat open")).join("<br>")
       : "—";
     const charges = game.charges.length ? `<table>
-      <thead><tr><th>Who</th><th>Share</th><th>Status</th><th>Taken</th><th>Refund</th></tr></thead>
+      <thead><tr><th>Who</th><th>Share</th><th>Status</th><th>Taken</th><th>Refund</th><th>Provider</th></tr></thead>
       <tbody>${game.charges.map((c) => `<tr>
         <td>${nameOf(c.player)}</td>
         <td>${zl(c.amount_grosze)}</td>
@@ -355,6 +381,7 @@ function drawGames() {
         <td>${c.refund ? `${zl(c.refund.given_back_grosze)}` +
           (c.refund.withholds_fee ? " less fee" : " in full") +
           (c.refund.given_at ? ` · given ${when(c.refund.given_at)}` : " · decided, on its way") : "—"}</td>
+        <td>${chargeButtons(c)}</td>
       </tr>`).join("")}</tbody></table>` : `<span class="note">no charge</span>`;
     return `<div class="game ${over ? "over" : ""}">
       <h3>${when(game.starts_at)} · ${esc(game.club.name ?? "?")}
@@ -378,9 +405,164 @@ function drawGames() {
         <dt>Left</dt><dd>${departures}</dd>
         <dt>Checked in</dt><dd>${names(booking.checked_in)}</dd>` : ""}
         <dt>Money</dt><dd>${charges}</dd>
+        <dt>${esc(game.club.name ?? "The club")}</dt><dd>${clubButtons(game)}</dd>
+        ${game.charges.length ? `<dt>Notices</dt><dd>${noticesOf(game)}</dd>` : ""}
       </dl>
     </div>`;
   }).join("") : `<div class="note">Nothing to show. Try <em>Fresh deal</em>, or show every game.</div>`;
+}
+
+// --------------------------------------------------------------------------
+// The club row — every button acts as the game's own club
+// --------------------------------------------------------------------------
+
+const CANCEL_REASONS = ["WEATHER", "REPAIR", "DOUBLE_BOOKING", "OTHER"];
+
+function clubButtons(game) {
+  const booking = game.booking;
+  if (!booking) return `<span class="note">nothing for the club until the game is full</span>`;
+  const club = game.club.club_id;
+  const id = game.game_id;
+  const b = (verb, label, extra = "") =>
+    `<button data-club="${verb}" data-club-id="${club}" data-game="${id}" ${extra}>${label}</button>`;
+  if (booking.state === "WAITING_FOR_THE_CLUB") {
+    return `<span class="club">${b("accept", "Accept")}${b("refuse", "Refuse")}
+      <span class="note">answer by ${when(booking.answer_by)}</span></span>`;
+  }
+  if (booking.state === "CALLED_OFF") return `<span class="note">called off</span>`;
+  const courts = state.freeCourts[id];
+  const moves = courts === undefined ? b("free-courts", "Move…")
+    : courts.length ? courts.map((c) => b("move", `→ ${esc(c.name)}`, `data-court="${c.court_id}"`)).join("")
+    : `<span class="note">no free court</span>`;
+  const reasons = CANCEL_REASONS.map((r) => `<option>${r}</option>`).join("");
+  const checkIns = booking.codes.map((c) =>
+    b("check-in", `Check in ${nameOf(c.player)}`, `data-code="${esc(c.short_code)}"`) +
+    `<span class="mono">${esc(c.short_code)}</span>`).join("");
+  return `<span class="club">${moves}
+      <select data-reason-for="${id}">${reasons}</select>${b("cancel", "Cancel")}</span>
+    <div class="club">${checkIns}</div>`;
+}
+
+async function clubAct(button) {
+  const { club: verb, clubId, game, court, code } = button.dataset;
+  const at = (tail) => `/dev/clubs/${clubId}/${tail}`;
+  const words = `The club · ${verb} on ${esc(game.slice(0, 8))}`;
+  let done;
+  if (verb === "accept") {
+    done = await call("POST", at(`bookings/${game}/acceptance`));
+    say(done, done.ok ? `${words} → ${esc(done.json.outcome)}` : words);
+  } else if (verb === "refuse") {
+    done = await call("POST", at(`bookings/${game}/refusal`));
+    say(done, done.ok ? `${words} → refused` : words);
+  } else if (verb === "free-courts") {
+    done = await call("GET", at(`bookings/${game}/free-courts`));
+    if (done.ok) state.freeCourts[game] = done.json.courts;
+    say(done, done.ok ? `${words} → ${done.json.courts.length} free court(s)` : words);
+    drawGames();
+    return;
+  } else if (verb === "move") {
+    done = await call("POST", at(`bookings/${game}/move`), { court_id: court });
+    say(done, done.ok ? `${words} → now on ${esc(done.json.name)}` : words);
+  } else if (verb === "cancel") {
+    const reason = document.querySelector(`select[data-reason-for="${game}"]`).value;
+    done = await call("POST", at(`bookings/${game}/cancellation`), { reason });
+    say(done, done.ok ? `${words} → cancelled (${esc(reason)})` : words);
+  } else if (verb === "check-in") {
+    done = await call("POST", at("check-ins"), { code });
+    say(done, done.ok ? `${words} → ${nameOf(done.json.player)} checked in` : words);
+  }
+  delete state.freeCourts[game];
+  await loadBoard();
+}
+
+// --------------------------------------------------------------------------
+// The payment provider — the process's fake, steered
+// --------------------------------------------------------------------------
+
+const OUTCOMES = { SUCCEEDS: "pays", DECLINES: "declines", ASKS_FOR_VERIFICATION: "asks for the bank's check" };
+
+function drawProvider() {
+  const payments = state.board.payments;
+  $("refunds-wait").disabled = !payments.steerable;
+  $("refunds-wait").checked = Boolean(payments.refunds_wait);
+  $("provider-note").textContent = payments.steerable
+    ? "the in-process fake"
+    : "this process pays through a real provider: nothing to steer";
+}
+
+function cardOnFile(row) {
+  if (!row.card) return `<div class="card-on-file note">no card saved</div>`;
+  const options = Object.entries(OUTCOMES).map(([value, label]) =>
+    `<option value="${value}" ${row.card.outcome === value ? "selected" : ""}>${label}</option>`).join("");
+  return `<div class="card-on-file"><span class="mono">${esc(row.card.brand)} •••• ${esc(row.card.last_four)}</span>
+    ${row.card.outcome ? `<select data-card-for="${row.player_id}" data-who="${esc(row.name ?? row.email)}">${options}</select>` : ""}</div>`;
+}
+
+async function steerCard(select) {
+  const words = `${esc(select.dataset.who)}'s card`;
+  const done = await call("PUT", `/dev/payments/cards/${select.dataset.cardFor}`, { outcome: select.value });
+  say(done, done.ok ? `${words} → ${esc(done.json.says)}` : words);
+  await loadBoard();
+}
+
+async function refundsWait() {
+  const done = await call("PUT", "/dev/payments/refunds", { wait: $("refunds-wait").checked });
+  say(done, done.ok ? esc(done.json.says) : "Refunds");
+  await loadBoard();
+}
+
+function chargeButtons(c) {
+  const b = (verb, label) => `<button data-charge="${verb}" data-id="${c.charge_id}">${label}</button>`;
+  return [
+    c.status === "FAILED" && c.payment_id ? b("bank-confirms", "Bank confirms") : "",
+    c.refund && !c.refund.given_at ? b("refund", "Deliver refund") : "",
+  ].join("");
+}
+
+async function chargeAct(button) {
+  const { charge: verb, id } = button.dataset;
+  const done = await call("POST", `/dev/payments/charges/${id}/${verb}`);
+  say(done, done.ok ? esc(done.json.says) : `Charge ${esc(id.slice(0, 8))} · ${verb}`);
+  await loadBoard();
+}
+
+function noticesOf(game) {
+  const id = game.game_id;
+  const listed = state.notices[id];
+  const load = `<button data-notices="read" data-game="${id}">${listed ? "Read again" : "Show"}</button>`;
+  if (!listed) return load;
+  const b = (verb, label, ids) =>
+    `<button data-notices="${verb}" data-game="${id}" data-ids="${esc(ids.join(" "))}">${label}</button>`;
+  const rows = listed.map((n) => `<tr>
+    <td>${nameOf(n.player)}</td><td class="mono">${esc(n.kind)}</td><td>${pill(n.status)}</td>
+    <td>${n.read ? "read ✓" : "—"}</td>
+    <td>${b("deliver", "Deliver", [n.notice_id])}${b("deliver", "Twice", [n.notice_id, n.notice_id])}</td>
+  </tr>`).join("");
+  const newestFirst = listed.map((n) => n.notice_id).reverse();
+  return `${load}${listed.length ? b("deliver", "All, newest first", newestFirst) : ""}
+    <table class="notices"><tbody>${rows}</tbody></table>`;
+}
+
+async function noticesAct(button) {
+  const { notices: verb, game, ids } = button.dataset;
+  if (verb === "deliver") {
+    const done = await call("POST", "/dev/payments/notices/delivery", { notice_ids: ids.split(" ") });
+    say(done, done.ok ? esc(done.json.says) : "Delivering notices");
+  }
+  const read = await call("GET", `/dev/payments/notices?game_id=${game}`);
+  if (read.ok) state.notices[game] = read.json.notices;
+  else say(read, "Reading the notices");
+  await loadBoard();
+}
+
+// --------------------------------------------------------------------------
+// Run it now
+// --------------------------------------------------------------------------
+
+async function runRequestTimeout() {
+  const done = await call("POST", "/dev/jobs/request-timeout");
+  say(done, done.ok ? `Run it now · the club's answer window → ${esc(done.json.says)}` : "Run it now");
+  await loadBoard();
 }
 
 // --------------------------------------------------------------------------
@@ -403,6 +585,32 @@ async function needsHerYes() {
   await loadBoard();
 }
 
+function herSituation() {
+  return { group_id: $("group").value, sport: $("sport").value, protagonist_id: state.protagonist };
+}
+
+async function onRequest() {
+  const due = $("answer-due").value;
+  const done = await call("POST", "/dev/situations/needs-her-yes-on-request-club", {
+    ...herSituation(),
+    ...(due ? { answer_due_in_minutes: Number(due) } : {}),
+  });
+  say(done, done.ok ? `On request club → ${esc(done.json.says)}` : "On request club");
+  await loadBoard();
+}
+
+async function cardDeclines() {
+  const done = await call("POST", "/dev/situations/card-declines-at-the-fill", herSituation());
+  say(done, done.ok ? `Card declines → ${esc(done.json.says)} Say yes on the phone.` : "Card declines");
+  await loadBoard();
+}
+
+async function checkIn() {
+  const done = await call("POST", "/dev/situations/check-in-at-the-club", herSituation());
+  say(done, done.ok ? `Check-in at the club → ${esc(done.json.says)}` : "Check-in at the club");
+  await loadBoard();
+}
+
 // --------------------------------------------------------------------------
 // Wiring
 // --------------------------------------------------------------------------
@@ -417,9 +625,26 @@ $("protagonist").addEventListener("change", () => {
 });
 $("fresh-deal").addEventListener("click", freshDeal);
 $("needs-her-yes").addEventListener("click", needsHerYes);
+$("on-request").addEventListener("click", onRequest);
+$("card-declines").addEventListener("click", cardDeclines);
+$("check-in").addEventListener("click", checkIn);
+$("request-timeout").addEventListener("click", runRequestTimeout);
+$("refunds-wait").addEventListener("change", refundsWait);
 $("people").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-act]");
   if (button) act(button);
+});
+$("people").addEventListener("change", (event) => {
+  const select = event.target.closest("select[data-card-for]");
+  if (select) steerCard(select);
+});
+$("games").addEventListener("click", (event) => {
+  const club = event.target.closest("button[data-club]");
+  if (club) return clubAct(club);
+  const charge = event.target.closest("button[data-charge]");
+  if (charge) return chargeAct(charge);
+  const notices = event.target.closest("button[data-notices]");
+  if (notices) return noticesAct(notices);
 });
 
 // The first read, once, on load — and nothing after it unless pressed. It

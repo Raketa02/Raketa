@@ -10,10 +10,12 @@ built from is reached, whose own refusal would otherwise arrive first.
 
 **The console acts as seed accounts without signing in** (ADR-0194 §2). A press
 on a person's row names that person in its path — ``/dev/as/{player_id}/…`` —
-and runs the use case their own button runs (``people.py``); there is no token,
-no session and no header a player route would honour, so the page holds and
-stores nothing. A group's board is ``board.py``'s, and the situations are
-``situations.py``'s.
+and runs the use case their own button runs (``people.py``) — a club's,
+``/dev/clubs/{club_id}/…``, the desk's (``club.py``); there is no token, no
+session and no header a player route would honour, so the page holds and stores
+nothing. The payment provider's controls are ``provider.py``'s, a group's board
+``board.py``'s, the situations ``situations.py``'s and *Run it now*
+``jobs.py``'s.
 
 **The roster carries the password once, at the top level.** The console no
 longer signs in with it; the **phone** does — the tester signs the protagonist in
@@ -56,7 +58,10 @@ from sqlalchemy import select
 from app.api.dependencies import DbSession
 from app.api.dev.accounts import seed_accounts_only
 from app.api.dev.board import router as board_router
+from app.api.dev.club import router as club_router
+from app.api.dev.jobs import router as jobs_router
 from app.api.dev.people import router as people_router
+from app.api.dev.provider import router as provider_router
 from app.api.dev.situations import router as situations_router
 from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 from app.seeds.catalog import SEED_PASSWORD
@@ -158,5 +163,8 @@ async def read_roster(db: DbSession) -> RosterResponse:
 
 
 dev_api_router.include_router(people_router)
+dev_api_router.include_router(club_router)
+dev_api_router.include_router(provider_router)
 dev_api_router.include_router(board_router)
 dev_api_router.include_router(situations_router)
+dev_api_router.include_router(jobs_router)
