@@ -1,10 +1,12 @@
 # ADR-0189 — A yes books a court, and the club is the seller
 
 - **Status:** Accepted — **amended below** (2026-09-30: Proposals holds a player's Games &
-  money; 2026-10-09: the Home card's bubble also opens the chat, Q100)
+  money; 2026-10-09: the Home card's bubble also opens the chat, Q100; 2026-10-09: the bell's
+  number, *It's a game!* when the four are matched, the club's answer emailed, and time to pay,
+  Q101–Q112)
 - **Date:** 2026-09-29
 - **Specified by** [`docs/specs/games-and-fill-in/the-mechanics.md`](../specs/games-and-fill-in/the-mechanics.md)
-  (the rules, and the decision log Q1–Q100) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
+  (the rules, and the decision log Q1–Q112) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
   (the locked player designs, the club website and the inferred backend). Where this
   record and those documents disagree on a detail, the documents win; this record holds the
   shape.
@@ -231,3 +233,39 @@ The product owner ruled it on 2026-10-09 from story S-01A
 player uses, and Playtomic opens a match's chat from the match itself. It is **Q100** in the
 mechanics' decision log, which amends §14.3 there and the screens' A4.4 and A8. Nothing else in
 §6 moves: a chat still belongs to one game and opens when it is booked.
+
+## Amendment — 2026-10-09: the bell counts, *It's a game!* marks the four, the club's answer is emailed, and a failed card gets time to pay
+
+The product owner ruled twelve questions on 2026-10-09 from story S-01B
+([#606](https://github.com/Raketa02/Raketa/issues/606)), **Q101–Q112** in the mechanics' decision
+log. Four of them move this record's shape; the rest are words and screens, and live in the
+mechanics §11–§17 and the screens A2.4, A7–A9 and B4.
+
+- **The bell's number is kept by the server, per player** (Q101). §5 gives Notifications one
+  aggregate, the Notification preferences, and §6 an in-app fallback beside push. The recent
+  notices behind the bell now carry a number: the notices given since the player last opened the
+  list, the same on every phone, cleared by opening it. Nothing is marked read row by row. A
+  player's own act — the yes that filled a game, a payment they confirmed that completed one — is
+  never counted or bannered back to them (Q102), and nothing comes down at launch.
+- ***It's a game!* means the four are matched**, not that they are booked (Q103, Q110). §2's *the
+  last yes books the game* still says when money moves. But at an On request club the filler sees
+  *It's a game!* with when the club answers, and all four are told it before anybody pays; the
+  club's yes is then one notice, never a second *It's a game!*. The same holds while one payment
+  is missing: the game is matched, and *booked · you paid* follows when the payment is in.
+- **The club's no and its silence are emailed beside money** (Q105). §6's *every money event is
+  also emailed* gains two that move none: *Kazimierz Padel said no* and *… didn't answer in time*,
+  told apart in the notice, the email and on Home. While push is off, email is the only way to
+  reach a player outside the app.
+- **Time to pay** (Q109, Q112). §2's *all or nothing* stands: if one share is refused, nobody
+  pays. What changes is that the refusal no longer lets everything go at once. The refused
+  player's seat is theirs alone for **30 minutes**, never past the book-by. The other shares'
+  holds stay on their cards, and at an On request club the club's yes and its court stay too. Paid
+  in time, the game books on the kept holds, with nobody's bank and not the desk asked again.
+  Lapsed, the holds are let go and the seat is offered as before. This is the one clock a game
+  gets after it fills besides the club's time to confirm. It is one player's, and never outlasts
+  the book-by, so §2's *no clock of Raketa's own* still holds for a card.
+
+The same rulings keep a full game that falls back to filling on its players' Home as *Seat open*
+(Q106) and tell everyone still in it every ending and fall-back (Q104). They also tell a leaver
+only what touches them (Q108), and announce the new card owed after a no (Q107). A card that never
+filled still ends silently, and the record (§4's leaving rules, the mechanics §15.4) is unchanged.

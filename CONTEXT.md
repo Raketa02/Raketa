@@ -26,7 +26,8 @@ adapters), DDD, and event sourcing.
 > **Courts, bookings and money returned with [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)** (2026-09-29),
 > specified in [`docs/specs/games-and-fill-in/`](docs/specs/games-and-fill-in/), and are built: a
 > group's Games deck proposes a game, the last yes books the club's court, and Fill in rescues a
-> seat. Their terms are in Part 1 under **Proposals**, **Bookings**, **Payments** and **Club**.
+> seat. Their terms are in Part 1 under **Proposals**, **Bookings**, **Payments**, **Notifications**
+> and **Club**.
 >
 > **It was cut back again on 2026-10-06**, when the older way of making a game — *Classic play* —
 > was removed with the feature flag that hid it ([#569](https://github.com/Raketa02/Raketa/issues/569)).
@@ -1441,6 +1442,24 @@ charges' (**Payments**), its result the Game's (**Games**).
 - **Check-in** — a club scanning a player's code, or typing its short code, on the day. Evidence
   that the player was there, never a condition for money; a player checked in cannot be reported
   as a no-show.
+- **Seat open** — a game missing a player, as the people still in it read it on Home: a
+  **booked** game that lost one, whose seat is a **Rescue**; and, since ADR-0189's 2026-10-09
+  amendment (the mechanics Q106), a full game that **went back to filling before it was booked** —
+  a player left while the club decided, a yes was taken back because that player's week filled or
+  because two players stopped fitting at the club's yes, or a **Time to pay** ran out. That second
+  kind is not a rescue: its seat is offered only in decks, as any proposal still filling, and it
+  is in *You're In* as well. It goes back to *waiting for the club* (or is booked, at a club that
+  books at once) when it refills, and is called off, nobody paid, if its book-by passes first.
+  The second kind is decided and not yet built ([#624](https://github.com/Raketa02/Raketa/issues/624)).
+  _Avoid_: called off for a game that is only filling again.
+- **Waiting for one payment** — a full game while one player's **Time to pay** runs: nobody has
+  paid, the others' holds are kept, and at an On request club so are the club's yes and its court.
+  Every player's Home reads *Waiting for one payment · until 14:40 · Nobody pays until it's in*;
+  the club's Bookings reads *Accepted · waiting for one player's payment until …*. It ends booked
+  when the payment is in, *Seat open* when the time runs out, or called off when no time is left
+  before the book-by. Decided by ADR-0189's 2026-10-09 amendment (the mechanics Q109–Q112) and not
+  yet built ([#625](https://github.com/Raketa02/Raketa/issues/625),
+  [#626](https://github.com/Raketa02/Raketa/issues/626)).
 
 **Invariants**
 - **A game plays full or not at all.** A seat that opened before the club's cut-off and is still
@@ -1468,6 +1487,15 @@ for each one.
   or refused; then taken, released, or confirmed by the player when their bank wanted them present.
   Raketa's account of a payment; Stripe is the ledger of record, and a notice from it moves a
   charge only forward.
+- **Time to pay** — the **30 minutes** a player whose share was refused when a game filled, or
+  when its On request club accepted it, has to pay, never past the game's book-by. Their seat is
+  theirs alone meanwhile, and the other seats' holds are kept, so paying in time books the game
+  without asking anybody's bank, or the club, again; when it runs out the holds are let go and the
+  seat is offered as any open seat of a game still filling. Nothing retries a card by itself. It is
+  one player's clock, never a card's: the book-by stays the only deadline on a proposal. Decided by
+  ADR-0189's 2026-10-09 amendment (the mechanics Q109) and not yet built
+  ([#625](https://github.com/Raketa02/Raketa/issues/625),
+  [#626](https://github.com/Raketa02/Raketa/issues/626)). _Avoid_: grace period, payment window.
 - **Payment method** — a player's saved card or wallet: its **brand** (the network, as the
   provider names it), its **last four digits** and the **wallet** it came through (Apple Pay,
   Google Pay, or none). An **event-sourced aggregate, one stream per player**, born by being
@@ -1554,8 +1582,14 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   charged together, all or nothing — at an On request club only once the club confirms, the
   booking *waiting for the club* until it does.
 - **It's a game!** — the screen the player whose yes filled the game, or who took a rescue, sees.
+  It marks the players being **matched**, not only booked: since ADR-0189's 2026-10-09 amendment
+  (the mechanics Q103, Q110), it also shows when the game goes to its On request club, with when
+  the club answers, and when one payment is still missing, and the player whose confirmed payment
+  completes a game sees it too. Never twice for one game. Those two are decided and not yet built
+  ([#622](https://github.com/Raketa02/Raketa/issues/622), [#625](https://github.com/Raketa02/Raketa/issues/625)).
 - **Home** — the first tab of the bottom bar: your games from the moment they fill, and the games
-  waiting for a club. Its badge counts only the games that need you. Proposals assembles it.
+  waiting for a club or for one payment, or full once and filling again (*Seat open*). Its badge
+  counts only the games that need you. Proposals assembles it.
 - **Proposal events** (durable name / version) — none of them is told to anybody:
   - **ProposalMade** — `proposals.proposal_made` / v1 — the pool and its kind, the origin and
     poster, the sport and kind, the club and start, the share and the book-by.
@@ -1598,6 +1632,37 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   **Most I'll pay** (off, 35, 45 or 60 zł: a card whose share is above it is never dealt). An
   **event-sourced aggregate, one stream per player** under their own id, born by being used; the
   same answer records nothing.
+
+### Notifications (`backend/app/modules/notifications/`)
+
+Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5–§6 and
+built by [#549](https://github.com/Raketa02/Raketa/issues/549) (the notices, the recent list, the
+three choices, push) and [#559](https://github.com/Raketa02/Raketa/issues/559) (the phone). The
+bell's number was decided by ADR-0189's 2026-10-09 amendment (the mechanics Q101, Q102) and is not
+yet built ([#621](https://github.com/Raketa02/Raketa/issues/621),
+[#627](https://github.com/Raketa02/Raketa/issues/627)).
+
+**What a player is told about their games, and where they find it again.** Notifications is
+told by the other contexts and tells none of them.
+
+- **Notice** — one thing a player was told about their games — a game booked, a payment to
+  confirm, a game called off, a seat left, a card that needs only them — in the server's words, at
+  the moment it happened. It is shown as a **banner** while the app is open, pushed once push is
+  on, emailed when it is about money or the club's answer, and kept in the **recent notices**: the
+  list behind the bell on Home, the newest 30. Most kinds are **always on**; three are the player's
+  choice (*You complete it*, *Challenges for you*, *Fill in alerts*), capped per day and bundled.
+  Nothing is told twice about the same thing, and nothing for a single swipe. A card that never
+  filled ends untold. _Avoid_: notification for the record (a notification is a delivery: a push,
+  a banner, an email); and the payments provider's **notice** (Payments: an event Stripe sends,
+  read once — ADR-0190), which is no player's.
+- **The bell's number** — the notices given since the player last opened the recent notices,
+  shown as *99+* above 99. **Kept by the server, per player**, so it is the same on every phone;
+  opening the list clears it, and the rows that came since the last visit stand out on that visit.
+  Nothing is marked read row by row. **A player's own act is never counted back to them**, nor
+  bannered: the notice that the yes they said filled a game, or that a payment they confirmed
+  completed one, is born seen. Nothing comes down at launch; what was told while the app was
+  closed is in the number. _Avoid_: unread count; badge (Home's badge counts the games that need
+  you).
 
 ## Cross-cutting concepts
 
