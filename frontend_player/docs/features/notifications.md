@@ -92,14 +92,26 @@ phone, until the Expo project exists), is still told while the app is open:
   (`usePushRegistration` answers whether it is) — and a notice the session has not seen before is the
   banner, the newest if a read brings several.
 
-**Each notice is drawn once.** What the session has seen is every id in its first read — so a launch
-draws nothing for what was told while the app was closed — and a pushed notice's id the moment it is
-drawn, so the list read after it does not draw it again; a notice the day bundled another into keeps
-its id, and is not new. The banner is the notice's own title and body, a press opening its game, a
-close control, held `motion.hold.notice` (6 s) and spoken once, queued; the next notice replaces it.
-**It re-reads, and changes nothing**: a push marks stale the list, Home's read (the bar's badge counts
-what needs the player, and every always-on notice moves it) and the read behind the screen it opens —
-a push never changes state the server did not say (Part 13).
+**Each notice is drawn once.** What the session has seen is every id in its first read — so **a
+launch draws nothing**: what was told while the app was closed is in the bell's number, which is the
+catch-up (Q101, [#627](https://github.com/Raketa02/Raketa/issues/627)) — and a pushed notice's id the
+moment it is drawn, so the list read after it does not draw it again; a notice the day bundled another
+into keeps its id, and is not new. **Coming back from the background draws the newest notice the
+session has not seen, and the number counts the rest** — the bannered one too: the number is the
+server's, and a banner is not a visit. **A notice of the player's own act is never
+the banner** (Q102): the list marks it `your_own` — the yes that filled the game, the seat they took —
+and the banner is the newest notice that is somebody else's; the server pushes no own notice either.
+The banner is the notice's own title and body, a press opening its game, a close control, held
+`motion.hold.notice` (6 s) and spoken once, queued; the next notice replaces it. **It re-reads, and
+changes nothing**: a push marks stale the list, Home's read (the bar's badge counts what needs the
+player, and every always-on notice moves it) and the read behind the screen it opens — a push never
+changes state the server did not say (Part 13). **A notice the list's read brings re-reads Home too**
+(Q103) — the minute's read, a return to the app, a pull — so the game it is about is on Home before
+it is tapped; before #627 the minute's read left Home as it was until the app had been away for longer
+than Home stays fresh. The player's own notice re-reads it as well: it is cheap, and a fill seen on
+another phone has moved Home all the same. A notice the day bundled into a row already listed keeps
+the row's id and re-reads nothing: the bundled kinds are deck cards and Fill in alerts, none of them
+on Home.
 
 **A push tapped on the phone opens its game** — with the app in the background, or not running at
 all: the port hands over the tap that started the app once the first listener subscribes, and every
@@ -112,9 +124,28 @@ answered once the player is in.
 `INSIDE_A_TAB`): newest first, one card of rows on the receipts' shape — the title, the body, _when_
 in mono at the trailing edge and a chevron on every row that opens something. **No mock draws it.**
 Empty, it says what will arrive there; a pull re-reads it, as does a push arriving — the session
-holds it for the banner. **The bell has
-no count**: the backend keeps no seen marker (#549, call 11), so a number could only be everything
-ever told.
+holds it for the banner.
+
+**The bell shows a number** (Q101, [#627](https://github.com/Raketa02/Raketa/issues/627)): the
+notices that reached the list since the player last opened it, never their own — the server's count
+(#621's `new_count`), so it is the same on every phone. Drawn up to 99, _99+_ above it, and nothing at
+nought; spoken on the bell's name exactly, _Recent notifications, 120 new_. It is the session's read,
+so the minute's read, a push and a return to the app all move it. **Opening the list is the visit**
+(`useNoticesVisit`): the list is read again however fresh, and once that read lands
+`POST /players/me/notices/visit` follows it — whatever is listed by the time it arrives is seen, so
+the list is written as the server will answer next (nothing new, nought) and read again, and Home's
+bell is clear the moment the player is back. **A read that fails sends no visit**, and the bell keeps
+its number; so does leaving before that read lands. While the list is open, a read bringing a new
+row no visit has covered sends it again — a notice reaching the open list, or one the day bundled
+into a row already there (`domain/notice.ts`' `readOnTheOpenList`, keyed by the row and when it
+reached the list, so a visit the server declines to move cannot loop). The visit is **never held for later** — `networkMode: 'always'`, not retried — because one
+landing on a reconnect would mark seen what reached the list while nobody was looking. **The rows
+that came since the last visit stand out** — a dot before _when_, which turns `ink`, and _New_ said
+first — **for as long as the list is open**, held by the screen rather than read off the latest answer,
+since once the visit lands the server says none is new; the next visit starts from nothing. They are
+taken from the read the list opens on too, so nothing flashes in a moment later — a row a visit on
+another phone has seen since that read still stands out on this one. Nothing is
+marked read row by row, and there is no _mark all_.
 
 **The eighth platform port** is the phone's push notifications — `shared/lib/platform/push.ts`, the
 only importer of `expo-notifications` ([`_shared.md`](_shared.md)). **No phone has a token to give
@@ -132,7 +163,10 @@ permission is asked, the choices save and the list is read, and nothing is pushe
    the top, with a close control and a 6 s hold.
 3. **A notice opens over wherever the player is**, never by laying a tab down — so a deck or a game
    opened from Home lights Play, as a live yes opened from Payments does.
-4. **The bell carries no count** — there is nothing marked read.
+4. ~~**The bell carries no count**~~ — **answered** by Q101 (2026-10-09, the product owner, from
+   S-01B): the bell counts the notices since the list was last opened, the server keeps it, and
+   opening the list clears it ([#621](https://github.com/Raketa02/Raketa/issues/621),
+   [#627](https://github.com/Raketa02/Raketa/issues/627)). See _The bell shows a number_ above.
 5. **The deck opened by a notice stands on the card's sport without saving it** as the last sport
    picked, and moves the switch to the card's kind. The switch is one value for the app, held only
    while it is open (ADR-0188 §5), and Friends shares it: holding the card's kind apart for Games
@@ -152,6 +186,24 @@ permission is asked, the choices save and the list is read, and nothing is pushe
     elsewhere — after the first _It's a game!_, say — would reach them, and is a product decision.
 11. **While the phone is not pushed, the list is read every minute the app is open** — the banner's
     latency then, and one request a minute per open app until push exists. A push stops it.
+12. **The bell's number is drawn in `ink`** — `shared/ui`'s `CountBadge`, the tab bar's badge, in
+    its `news` tone rather than the bar's `coralInk` (design-system 7.29, Part 16 2026-10-09): 1.2
+    closes coral at six, and a count of news is not a thing only the player can clear. The market's
+    unread counts are red.
+13. **The bannered notice stays in the number** — the spec's _the number counts the rest_ is read as
+    _the rest are counted, not bannered_. Taking one off would make a phone's number differ from the
+    server's, which Q101 keeps the same on every phone.
+14. **Leaving the list before its first read lands sends no visit**, and the bell keeps its number:
+    the visit marks seen whatever is listed when it arrives, and a cached read may be missing some.
+15. **A notice that reaches the open list sends the visit again** — a read while the list is open
+    that brings a row not yet drawn as new — so it stands out there and is not counted on the way
+    back. Q101 says only that opening clears the number. Keyed by rows rather than the number, so a
+    visit the server declines to move cannot loop.
+16. **A new row stands out by a dot before _when_, which turns `ink`**, and is spoken _New_ first.
+    No mock draws it; the dot is `sportDot`, the app's one small round mark.
+17. **The banner still comes down over the open list** for a notice that arrives while it is open,
+    as over any screen — the row stands out beneath it too.
+18. **The bell is spoken with the exact number** past 99, where it draws _99+_.
 
 **Owed**: #533's Expo project id into `shared/config/push.ts` (and Android's FCM credentials), and
 O6 before `IPHONE_PUSH` turns true — both then need a development build rebuilt. **A development
