@@ -1,9 +1,10 @@
 # ADR-0189 — A yes books a court, and the club is the seller
 
-- **Status:** Accepted
+- **Status:** Accepted — **amended below** (2026-09-30: Proposals holds a player's Games &
+  money; 2026-10-09: the Home card's bubble also opens the chat, Q100)
 - **Date:** 2026-09-29
 - **Specified by** [`docs/specs/games-and-fill-in/the-mechanics.md`](../specs/games-and-fill-in/the-mechanics.md)
-  (the rules, and the decision log Q1–Q96) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
+  (the rules, and the decision log Q1–Q100) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
   (the locked player designs, the club website and the inferred backend). Where this
   record and those documents disagree on a detail, the documents win; this record holds the
   shape.

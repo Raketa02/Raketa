@@ -857,8 +857,10 @@ over — derived on every read, and made real by an hourly sweep
 ([#359](https://github.com/Raketa02/Raketa/issues/359)). **Since
 [#575](https://github.com/Raketa02/Raketa/issues/575) a room is opened only by a booked game**:
 every chat belongs to one game, opens when it is booked, and is reached from that game's details
-([ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6). There is no
-inbox of rooms.
+([ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §6) and, since its
+2026-10-09 amendment (Q100), from the bubble on the game's Home card, with Back to whichever
+screen opened it; the player app builds that door in
+[#619](https://github.com/Raketa02/Raketa/issues/619). There is no inbox of rooms.
 
 **The place the people booked on one game talk about it.** It is deliberately **not** called
 `Chat` — that word promises messaging between anybody, searchable and permanent, and this context
