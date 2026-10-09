@@ -3536,9 +3536,9 @@ home card    the Now card's shell (7.7 paging, DarkCard night, footer on marginT
              7.22's grey CardTag with the STATUS's dot ("Booked"), a volt CardTag "New" until the
              details are opened, the sport word eyebrow onDarkEyebrow uppercase right ("PADEL",
              "PADEL · FOR FUN") · the facts (below, at h2) beside the other players' faces
-             (stackFace 28, overlap 9, up to three) · the money line tiny onDarkTiny ("Paid · 30 zł ·
-             free to leave until Fri 16:00") — none on a result state · footer: 6.1 lg "Open game",
-             settled while the game is ahead of its end, onDark on an ending · the chat's bubble
+             (stackFace 28, overlap 9, up to three) · the money line tiny onDarkTiny ("Paid · 30 zł
+             · 28,55 zł back if you leave by Fri 16:00") — none on a result state · footer: 6.1 lg
+             "Open game", settled while the game is ahead of its end, onDark on an ending · the chat's bubble
              right of it: Feather message-circle at tabIcon, onDarkTiny, in a minTouch box — a mark,
              not a button · the body one element, the button another
 status ink   the dot and the accent line: Waiting for the club and Seat open `arranging`, Booked
@@ -3548,7 +3548,7 @@ facts        7.22's accent line (courtStroke, the status's colour, padding-left 
              fact one element — eyebrow onDarkEyebrow uppercase label over the value (h1 on the
              details, h2 on a card) and its aside tiny onDarkTiny · WHERE "Bonarka Arena" + "Court 2 ·
              3,1 km" · DAY "Saturday" + "3 Oct" · TIME "16:00" + "until 17:00" · the money row
-             "PAID 28 zł" + "your share · to the club · free to leave until Fri 16:00"
+             "PAID 28 zł" + "your share · to the club · 27,18 zł back if you leave by Fri 16:00"
 details      the top bar is 10.3 compact: the faces, the others named whole as the title, "Padel ·
              booked" under it, and 6.1 sm volt "Chat" on the right, spoken "Open the chat" · the
              game card is 7.22's details card: GameGround, the status CardTag as the header, the

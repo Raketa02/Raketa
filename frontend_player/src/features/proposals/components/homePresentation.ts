@@ -5,7 +5,7 @@
  * `homeCopy.ts`.
  *
  * **Every day and hour here is the club's** (`shared/date/platformZone`), as the court block's are:
- * *free to leave until Fri 16:00* is the club's Friday, on every phone that reads it.
+ * *27,18 zł back if you leave by Fri 16:00* is the club's Friday, on every phone that reads it.
  */
 
 import { sportLabel } from '@/features/onboarding/types';
@@ -17,9 +17,10 @@ import { theme, type ButtonVariant } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
+  backIfYouLeaveAhead,
   courtIsGiven,
-  cutOffAhead,
   moneyLineOf,
+  type BackIfYouLeave,
   type BookedGame,
   type HomeGame,
   type Leaving,
@@ -134,9 +135,7 @@ function moneyParts(line: MoneyLine): readonly string[] {
       return [
         ...(line.paid ? [money.paid] : []),
         share,
-        ...(line.freeToLeaveUntil === undefined
-          ? []
-          : [`${money.freeToLeaveUntil} ${shortMoment(line.freeToLeaveUntil)}`]),
+        ...(line.backIfYouLeave === undefined ? [] : [backIfYouLeaveWords(line.backIfYouLeave)]),
       ];
     }
     case 'waiting':
@@ -166,6 +165,15 @@ function moneyParts(line: MoneyLine): readonly string[] {
 }
 
 /**
+ * *27,18 zł back if you leave by Fri 16:00* — **what leaving gives back, and until when** (Q99): the
+ * card's line and the details' money row say it in the same words, the sum the read's and the hour
+ * written as *fills by* writes it. Never *free to leave*: the card fee is not returned.
+ */
+function backIfYouLeaveWords({ grosze, by }: BackIfYouLeave): string {
+  return `${formatZloty(grosze)} ${COPY.money.backIfYouLeaveBy} ${shortMoment(by)}`;
+}
+
+/**
  * *A seat was still empty at the cut-off* · *Kazimierz Padel couldn't take it* · *Bonarka Arena
  * cancelled it because of the weather* — why a game is off: the club named for the three that are
  * the club's, with its own reason after a cancel (#547).
@@ -189,7 +197,7 @@ function calledOffWhy({
 }
 
 /**
- * **The line under a Home card**: *Paid · 30 zł · free to leave until Sat 17:00*, *Bonarka answers
+ * **The line under a Home card**: *Paid · 30 zł · 28,55 zł back if you leave by Sat 17:00*, *Bonarka answers
  * by 20:45 · Nobody pays until it confirms*, *1 seat open · fills by Sat 17:00 or the game is off
  * and everyone is refunded*, *Refunded 30 zł*.
  */
@@ -197,7 +205,7 @@ export function moneyWords(line: MoneyLine): string {
   return moneyParts(line).join(LINE_JOIN);
 }
 
-/** The same line aloud: *Paid, 30 zł, free to leave until Fri 16:00*. */
+/** The same line aloud: *Paid, 30 zł, 28,55 zł back if you leave by Fri 16:00*. */
 export function moneySpoken(line: MoneyLine): string {
   return moneyParts(line).join(SPOKEN_JOIN);
 }
@@ -245,12 +253,12 @@ export function bookedTime(
 
 /**
  * **The details' money row** (the screens A4.1), read off the card's own money line
- * (`moneyLineOf`): *PAID · 28 zł · your share · to the club*, with *· free to leave until Sat 10:00*
- * while the cut-off is ahead (`cutOffAhead`, the line's own fold); the share nobody pays yet while
- * the club decides, with *· Bonarka answers by 20:45* until its deadline passes (Q98); and on a
- * game a player left, one called off or one that started short, the card's own line beside the
- * share — *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off with what came
- * back, *A seat was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share
+ * (`moneyLineOf`): *PAID · 28 zł · your share · to the club*, with *· 27,18 zł back if you leave by
+ * Sat 10:00* while the cut-off is ahead (`backIfYouLeaveAhead`, the line's own fold — Q99); the
+ * share nobody pays yet while the club decides, with *· Bonarka answers by 20:45* until its deadline
+ * passes (Q98); and on a game a player left, one called off or one that started short, the card's
+ * own line beside the share — *1 seat open · fills by Fri 16:00 or the game is off…*, why it is
+ * off with what came back, *A seat was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share
  * *I'm in* would pay and how long the seat is offered — the *Seats to fill* row's own words.
  */
 export function moneyRow(
@@ -298,14 +306,13 @@ export function moneyRow(
       return { label: share, value, aside: moneyWords(line) };
     case 'booked':
     case undefined: {
-      const until = cutOffAhead(money, now);
+      const back = backIfYouLeaveAhead(money, now);
       return {
         label: share,
         value,
-        aside: [
-          words.toTheClub,
-          ...(until === undefined ? [] : [`${COPY.money.freeToLeaveUntil} ${shortMoment(until)}`]),
-        ].join(LINE_JOIN),
+        aside: [words.toTheClub, ...(back === undefined ? [] : [backIfYouLeaveWords(back)])].join(
+          LINE_JOIN,
+        ),
       };
     }
   }

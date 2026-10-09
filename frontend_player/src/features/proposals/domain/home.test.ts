@@ -45,22 +45,22 @@ function game(extra: Partial<HomeGame> = {}): HomeGame {
       yours: [person('me', { isYou: true }), person('piotr')],
       theirs: [person('ines'), person('bartek')],
     },
-    money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF },
+    money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF, backIfYouLeaveGrosze: 2855 },
     ...extra,
   };
 }
 
 describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', () => {
-  it('reads Paid with the share and free to leave until the cut-off while it is ahead', () => {
+  it('reads Paid with the share, and what comes back if you leave by the cut-off while it is ahead (Q99)', () => {
     expect(moneyLineOf(game(), BEFORE_CUT_OFF)).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
       paid: true,
-      freeToLeaveUntil: CUT_OFF,
+      backIfYouLeave: { grosze: 2855, by: CUT_OFF },
     });
   });
 
-  it('drops the free-to-leave clause at the cut-off itself — the line switches by itself', () => {
+  it('drops the clause at the cut-off itself — the line switches by itself', () => {
     expect(moneyLineOf(game(), Date.parse(CUT_OFF))).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
@@ -68,9 +68,23 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     });
   });
 
-  it('has no free-to-leave clause once the read says the cut-off has passed', () => {
+  it('has no clause once the read says the cut-off has passed', () => {
     const late = game({ money: { shareGrosze: 3000, paid: true } });
     expect(moneyLineOf(late, BEFORE_CUT_OFF)).toEqual({
+      kind: 'booked',
+      shareGrosze: 3000,
+      paid: true,
+    });
+  });
+
+  /**
+   * **The figure is the server's** (Q99): the card fee kept back is the payments' estimate, so the
+   * phone never works one out — with no figure, as from a server older than it, there is no clause,
+   * and never *free to leave* in its place.
+   */
+  it('leaves the clause out with the figure missing, though the cut-off is ahead', () => {
+    const older = game({ money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF } });
+    expect(moneyLineOf(older, BEFORE_CUT_OFF)).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
       paid: true,

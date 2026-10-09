@@ -36,11 +36,20 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
     share_grosze: 2800,
     paid: true,
     free_to_leave_until: '2026-10-02T14:00:00Z',
+    back_if_you_leave_grosze: 2718,
     refunded_grosze: null,
   },
   answer_by: null,
   ...extra,
 });
+
+/** The money as a server older than Q99 sends it — the cut-off, and no figure at all (#617). */
+const OLDER_MONEY = {
+  share_grosze: 2800,
+  paid: true,
+  free_to_leave_until: '2026-10-02T14:00:00Z',
+  refunded_grosze: null,
+} as Wire['BookedMoneySchema'];
 
 describe('toHome', () => {
   it('reads the badge, the clock and every card, the sides with their paid and check-in', () => {
@@ -97,7 +106,12 @@ describe('toHome', () => {
               },
             ],
           },
-          money: { shareGrosze: 2800, paid: true, freeToLeaveUntil: '2026-10-02T14:00:00Z' },
+          money: {
+            shareGrosze: 2800,
+            paid: true,
+            freeToLeaveUntil: '2026-10-02T14:00:00Z',
+            backIfYouLeaveGrosze: 2718,
+          },
         },
       ],
     });
@@ -118,6 +132,7 @@ describe('toHome', () => {
             share_grosze: 2800,
             paid: false,
             free_to_leave_until: null,
+            back_if_you_leave_grosze: null,
             refunded_grosze: null,
           },
         }),
@@ -162,6 +177,21 @@ describe('toHome', () => {
     expect(older).not.toHaveProperty('answerBy');
   });
 
+  it('carries what leaving gives back (Q99), and nothing from an older server’s silence', () => {
+    const [booked, older] = toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      games: [homeGame(), homeGame({ money: OLDER_MONEY })],
+    }).games;
+
+    expect(booked?.money.backIfYouLeaveGrosze).toBe(2718);
+    expect(older?.money).toEqual({
+      shareGrosze: 2800,
+      paid: true,
+      freeToLeaveUntil: '2026-10-02T14:00:00Z',
+    });
+  });
+
   it('reads why a game is off or uncounted, the seats open and what came back', () => {
     const [off, short, open] = toHome({
       read_at: '2026-10-01T08:00:00Z',
@@ -174,6 +204,7 @@ describe('toHome', () => {
             share_grosze: 2800,
             paid: true,
             free_to_leave_until: null,
+            back_if_you_leave_grosze: null,
             refunded_grosze: 2800,
           },
         }),
@@ -224,7 +255,13 @@ describe('toBookedGame', () => {
     where: { id: 'club-1', name: 'Bonarka Arena', distance_km: 3.1 },
     court_name: 'Court 2',
     sides: { yours: [tile({ player_id: 'me', is_you: true })], theirs: [tile()] },
-    money: { share_grosze: 2800, paid: true, free_to_leave_until: null, refunded_grosze: null },
+    money: {
+      share_grosze: 2800,
+      paid: true,
+      free_to_leave_until: null,
+      back_if_you_leave_grosze: null,
+      refunded_grosze: null,
+    },
     shows_forecast: true,
     check_in: { short_code: 'K7M2QX', qr_payload: 'RAKETA-CHECK-IN:1:b-1:me:K7M2QX' },
     leaving: null,
@@ -257,6 +294,20 @@ describe('toBookedGame', () => {
 
     expect(game?.where).toEqual({ id: 'club-1' });
     expect(game).not.toHaveProperty('checkIn');
+  });
+
+  it('carries what leaving gives back on the money row, as Home’s card does (Q99)', () => {
+    const money = { ...homeGame().money, share_grosze: 4000, back_if_you_leave_grosze: 3840 };
+
+    expect(toBookedGame(details({ money }))?.money).toEqual({
+      shareGrosze: 4000,
+      paid: true,
+      freeToLeaveUntil: '2026-10-02T14:00:00Z',
+      backIfYouLeaveGrosze: 3840,
+    });
+    expect(toBookedGame(details({ money: OLDER_MONEY }))?.money).not.toHaveProperty(
+      'backIfYouLeaveGrosze',
+    );
   });
 
   it('reads what leaving would cost now, and nothing where there is no button', () => {

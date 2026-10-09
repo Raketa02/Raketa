@@ -39,10 +39,14 @@ function toSides(wire: Schemas['BookedSidesSchema']): HomeGame['sides'] {
 }
 
 function toMoney(wire: Schemas['BookedMoneySchema']): BookedMoney {
+  // What leaving gives back (Q99) — absent for a `null`, and for the field missing altogether: a
+  // server older than it sends none, and the line then has no clause.
+  const back: number | null | undefined = wire.back_if_you_leave_grosze;
   return {
     shareGrosze: wire.share_grosze,
     paid: wire.paid,
     ...(wire.free_to_leave_until === null ? {} : { freeToLeaveUntil: wire.free_to_leave_until }),
+    ...(back === null || back === undefined ? {} : { backIfYouLeaveGrosze: back }),
     ...(wire.refunded_grosze === null ? {} : { refundedGrosze: wire.refunded_grosze }),
   };
 }

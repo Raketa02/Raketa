@@ -453,7 +453,7 @@ export function shortMoment(instant: string): string {
 /**
  * *Bonarka Arena answers by 20:45* — **when an On request club must say yes** (Q98; the screens
  * A4.2, A8), on the club's clock: the hour alone when it falls on the read's day, else the weekday
- * with it, as *free to leave until Sun 17:00* writes it. Said of *the club* for one the read no
+ * with it, as *back if you leave by Sun 17:00* writes it. Said of *the club* for one the read no
  * longer names.
  */
 export function answersByWords(club: string | undefined, answerBy: AnswerBy): string {

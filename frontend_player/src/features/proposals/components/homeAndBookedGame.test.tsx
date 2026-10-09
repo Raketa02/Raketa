@@ -121,6 +121,9 @@ const waitingForKazimierz = {
 } as const;
 const KAZIMIERZ = 'Kazimierz Padel';
 
+/** **A cut-off an hour after the read** — Thursday 1 October, 11:00 in Warsaw. */
+const CUT_OFF_AT_ELEVEN = bookedMoney({ free_to_leave_until: '2026-10-01T09:00:00Z' });
+
 // ---------------------------------------------------------------------------
 // Home
 // ---------------------------------------------------------------------------
@@ -134,9 +137,38 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(within(drawn).getByText(HOME.status.BOOKED)).toBeTruthy();
     expect(within(drawn).getByText('Bonarka Arena')).toBeTruthy();
     expect(within(drawn).getByText('Saturday')).toBeTruthy();
-    expect(within(drawn).getByText('Paid · 28 zł · free to leave until Fri 16:00')).toBeTruthy();
+    expect(
+      within(drawn).getByText('Paid · 28 zł · 27,18 zł back if you leave by Fri 16:00'),
+    ).toBeTruthy();
     expect(screen.getByRole('button', { name: HOME.openGame })).toBeTruthy();
     expect(screen.getByText('Your games · 1')).toBeTruthy();
+  });
+
+  it('says what a leaver gets back as part of the line, and drops it at the cut-off (Q99)', async () => {
+    stubHomeGames(transport, [homeGame({ money: CUT_OFF_AT_ELEVEN })]);
+    await launchSignedIn();
+
+    const drawn = await card();
+    expect(
+      within(drawn).getByText('Paid · 28 zł · 27,18 zł back if you leave by Thu 11:00'),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(/Paid, 28 zł, 27,18 zł back if you leave by Thu 11:00\./),
+    ).toBeTruthy();
+
+    // The read's clock runs on while the cut-off is ahead, so the clause leaves by itself.
+    act(() => jest.advanceTimersByTime(HOUR));
+    expect(await within(await card()).findByText('Paid · 28 zł')).toBeTruthy();
+    expect(screen.queryByText(/back if you leave/)).toBeNull();
+  });
+
+  it('says nothing of leaving from a server that sends no figure — and never that it is free', async () => {
+    const { back_if_you_leave_grosze: _figure, ...older } = bookedMoney();
+    stubHomeGames(transport, [homeGame({ money: older as Wire['BookedMoneySchema'] })]);
+    await launchSignedIn();
+
+    expect(await within(await card()).findByText('Paid · 28 zł')).toBeTruthy();
+    expect(screen.queryByText(/back if you leave|free to leave/)).toBeNull();
   });
 
   it.each<[Wire['HomeStatus'], Partial<Wire['HomeGameSchema']>, string | undefined]>([
@@ -476,9 +508,23 @@ describe('a booked game’s details (A4.1)', () => {
     expect(screen.getByLabelText('Time, 16:00, until 17:00')).toBeTruthy();
     expect(
       screen.getByLabelText(
-        'Paid, 28 zł, your share · to the club · free to leave until Fri 16:00',
+        'Paid, 28 zł, your share · to the club · 27,18 zł back if you leave by Fri 16:00',
       ),
     ).toBeTruthy();
+  });
+
+  it('drops what a leaver gets back from the money row at the cut-off (Q99)', async () => {
+    await openDetails(bookingDetails({ money: CUT_OFF_AT_ELEVEN }));
+
+    expect(
+      await screen.findByLabelText(
+        'Paid, 28 zł, your share · to the club · 27,18 zł back if you leave by Thu 11:00',
+      ),
+    ).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(HOUR));
+    expect(await screen.findByLabelText('Paid, 28 zł, your share · to the club')).toBeTruthy();
+    expect(screen.queryByText(/back if you leave/)).toBeNull();
   });
 
   it('says the seat open and when it must fill, the leaver’s seat empty (§14.1)', async () => {

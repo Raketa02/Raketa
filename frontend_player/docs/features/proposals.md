@@ -237,8 +237,8 @@ tag with the status's dot, _New_ until opened, the sport word; WHERE (club + cou
 the status's accent line beside the others' faces; the money line (`moneyLineOf` + `moneyWords`, the
 mechanics §14.1's table); _Open game_, which pushes the details over Home. **Every fold runs on the
 read's clock** (`useReadClock`: `read_at` moved on by how long the phone has held the read, ticking
-while a cut-off is ahead), so _free to leave until Fri 16:00_ leaves the line at that instant by
-itself. **An ended card stays a day after its hour** (`onHome`) — the wire dates no ending of a
+while a cut-off is ahead), so the cut-off's clause — _free to leave until Fri 16:00_ then, _27,18 zł
+back if you leave by Fri 16:00_ since #618 (below) — leaves the line at that instant by itself. **An ended card stays a day after its hour** (`onHome`) — the wire dates no ending of a
 booking, and the hour's end is the one instant every ending has.
 
 **_New until opened_ is kept by the phone** (`useOpenedGames`, the fourth value of
@@ -634,11 +634,11 @@ opened from a _You're In_ row. The wire's `answer_by` becomes `answerBy`, absent
 an older server that sends none, and `answerByAhead` folds it on the read's clock as `cutOffAhead`
 folds the cut-off. **No screen shows a deadline that has passed**: the server nulls it from the
 deadline on, the phone drops it at `now` too, and the read's clock ticks while one is there
-(`lineCanRunOut`), on the 30-second tick _free to leave until_ already runs on, so a passed deadline
+(`lineCanRunOut`), on the 30-second tick the cut-off's clause already runs on, so a passed deadline
 can stand for up to that long. The filling details' clock stood still before this, since nothing on
 them ran out. Both details build the aside once (`waitingAside`). **The time is Warsaw's**
 (`answersByWords`): the hour alone on the read's day, else the weekday with it (_Sun 00:15_), the
-form of _free to leave until Sun 17:00_. **Home is sent only what it draws** since #613 — live games,
+form of the cut-off's _Sun 17:00_. **Home is sent only what it draws** since #613 — live games,
 games that ended less than a day after their hour, and any game that needs the reader — so `onHome`
 no longer shelves every booking ever; it catches a card that crosses the line while Home is on
 screen.
@@ -652,3 +652,22 @@ the badge can say 1 over a rail without the card. The backend's `on_home` names 
 taken here.
 
 **Nothing here has been seen on a device.**
+
+**What a leaver gets back** ([#618](https://github.com/Raketa02/Raketa/issues/618); the backend's
+#617; the mechanics Q99; story S-01A's F-LEAVE-20.1). While the cut-off is ahead, a booked card's
+line reads _Paid · 40 zł · 38,40 zł back if you leave by Wed 19:00_ and the details' money row
+_PAID 40 zł · your share · to the club · 38,40 zł back if you leave by Wed 19:00_. **Why**: _free
+to leave until_ was not true. Leaving before the cut-off is refunded less the card fee, which is
+never returned (Q47 stands), so Q99 has both screens say the sum rather than a word that promised
+the whole share. The wire's `money.back_if_you_leave_grosze` becomes `backIfYouLeaveGrosze`, absent
+for a `null` and for an older server that sends none. `backIfYouLeaveAhead` folds it with the cut-off
+on the read's clock, so the clause leaves both screens at the cut-off by itself, as _free to leave
+until_ did, and is spoken as part of the line. **The figure is the server's and never the phone's**:
+the card fee is the payments' estimate, and the line under _Leave the game_, the leave sheet and the
+booking email give the same figure. With no figure the clause is left out — never worked out here,
+and never _free_ in its place. The day and hour are written as before (`shortMoment`, Warsaw's).
+The wire's `free_to_leave_until` kept its name (#617 is additive), and so did the domain's
+`freeToLeaveUntil`, which is the cut-off and still drives _fills by_; no word a player reads says
+_free_ any more. The Games deck's _no free cancellation_, the line under _Leave the game_ and the
+leave sheet are unchanged. **Owed by a root session**: the root `CONTEXT.md`'s **Cut-off** still says
+_Leaving before it is free_.

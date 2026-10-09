@@ -10,9 +10,9 @@
  * the details offer.
  *
  * **One clock, the read's.** Every fold here takes `now`, an instant on the server's clock — the
- * read's `read_at` moved on by however long the phone has held it — so the line that says *free to
- * leave until Sat 17:00* switches at that instant by itself, as the wire asks, and never by this
- * phone's idea of the time.
+ * read's `read_at` moved on by however long the phone has held it — so the line that says *28,55 zł
+ * back if you leave by Sat 17:00* switches at that instant by itself, as the wire asks, and never by
+ * this phone's idea of the time.
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';
@@ -28,14 +28,23 @@ import type {
 } from './vocabulary';
 import { GAME_LENGTH_MS, gameDayOf } from './when';
 
-/** *Paid · 30 zł · free to leave until Sat 17:00* — the money a booked game carries. */
+/** *Paid · 30 zł · 28,55 zł back if you leave by Sat 17:00* — the money a booked game carries. */
 export interface BookedMoney {
   /** Every seat's share, in grosze. */
   readonly shareGrosze: number;
   /** Every seat's share was taken. */
   readonly paid: boolean;
-  /** The club's cut-off while it was still ahead at the read — leaving before it is refunded. */
+  /**
+   * The club's cut-off while it was still ahead at the read — leaving before it is refunded, less
+   * the card fee (Q99). The wire's name, `free_to_leave_until`, is kept; the words never say *free*.
+   */
   readonly freeToLeaveUntil?: string;
+  /**
+   * **What comes back if the reader leaves now** (Q99, #617) — the share less the card fee the
+   * payments estimate, the leave sheet's own figure. Absent whenever the cut-off is, and from a
+   * server older than it.
+   */
+  readonly backIfYouLeaveGrosze?: number;
   /** What everybody still in was given back — a game called off at its cut-off (#544). */
   readonly refundedGrosze?: number;
 }
@@ -159,7 +168,8 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
  * **The line under a Home card** (the mechanics §14.1's table) — or nothing, which is every result
  * state's: *unchanged from today*, and today's cards carry no money.
  *
- * - `booked` — *Paid · 30 zł*, with *free to leave until Sat 17:00* while the cut-off is ahead.
+ * - `booked` — *Paid · 30 zł*, with *28,55 zł back if you leave by Sat 17:00* while the cut-off is
+ *   ahead (Q99).
  * - `waiting` — *Bonarka answers by 20:45 · Nobody pays until it confirms* while the club's
  *   deadline is ahead (Q98), then *Nobody pays until Bonarka confirms*.
  * - `seatOpen` — *1 seat open*, and *fills by Sat 17:00 or the game is off* before the cut-off;
@@ -176,7 +186,7 @@ export type MoneyLine =
       readonly kind: 'booked';
       readonly shareGrosze: number;
       readonly paid: boolean;
-      readonly freeToLeaveUntil?: string;
+      readonly backIfYouLeave?: BackIfYouLeave;
     }
   | { readonly kind: 'waiting'; readonly club?: string; readonly answerBy?: AnswerBy }
   | { readonly kind: 'seatOpen'; readonly seats: number; readonly fillsBy?: string }
@@ -192,12 +202,31 @@ export type MoneyLine =
   | { readonly kind: 'noShow'; readonly yours: boolean };
 
 /**
- * **The cut-off, while it is still ahead of `now`** — the instant *free to leave until …* leaves
- * the card's line and the details' money row, both off this one fold.
+ * **The cut-off, while it is still ahead of `now`** — the instant *… back if you leave by …* leaves
+ * the card's line and the details' money row, and *fills by …* a seat open's.
  */
 export function cutOffAhead(money: BookedMoney, now: number): string | undefined {
   const until = money.freeToLeaveUntil;
   return until !== undefined && Date.parse(until) > now ? until : undefined;
+}
+
+/** *28,55 zł back if you leave by Sat 17:00* — what leaving gives back, and until when (Q99). */
+export interface BackIfYouLeave {
+  readonly grosze: number;
+  /** The club's cut-off. */
+  readonly by: string;
+}
+
+/**
+ * **What leaving gives back, while the cut-off is ahead of `now`** — the card's line and the
+ * details' money row, both off this one fold. **The figure is the read's and is never worked out
+ * here**: the card fee kept back is the payments' estimate, so with no figure — a server older than
+ * Q99 — there is no clause at all, and never *free to leave* in its place.
+ */
+export function backIfYouLeaveAhead(money: BookedMoney, now: number): BackIfYouLeave | undefined {
+  const by = cutOffAhead(money, now);
+  const grosze = money.backIfYouLeaveGrosze;
+  return by === undefined || grosze === undefined ? undefined : { grosze, by };
 }
 
 /**
@@ -212,7 +241,7 @@ export interface AnswerBy {
 
 /**
  * **The club's deadline, while it is still ahead of `now`** — the instant *answers by …* leaves a
- * card's line and either details' money row, as *free to leave until* leaves at the cut-off. Past
+ * card's line and either details' money row, as *back if you leave by* leaves at the cut-off. Past
  * it the club can no longer say yes, and the server's timeout calls the game off within about
  * thirty seconds; until it has, the line reads only *Nobody pays until Bonarka confirms*.
  */
@@ -226,8 +255,8 @@ export function answerByAhead(
 }
 
 /**
- * **Whether the game's line carries a clause that runs out by itself** — *free to leave until* at
- * the cut-off, *answers by* at the club's deadline. While one is there the read's clock ticks
+ * **Whether the game's line carries a clause that runs out by itself** — *back if you leave by* and
+ * *fills by* at the cut-off, *answers by* at the club's deadline. While one is there the read's clock ticks
  * (`useReadClock`), so the clause leaves the screen at that instant rather than at the next read.
  */
 export function lineCanRunOut(game: Pick<HomeGame, 'money' | 'answerBy'>): boolean {
@@ -258,12 +287,12 @@ export function moneyLineOf(
   const club = game.club.name === undefined ? {} : { club: game.club.name };
   switch (game.status) {
     case 'BOOKED': {
-      const until = cutOffAhead(money, now);
+      const back = backIfYouLeaveAhead(money, now);
       return {
         kind: 'booked',
         shareGrosze: money.shareGrosze,
         paid: money.paid,
-        ...(until === undefined ? {} : { freeToLeaveUntil: until }),
+        ...(back === undefined ? {} : { backIfYouLeave: back }),
       };
     }
     case 'WAITING_FOR_THE_CLUB': {

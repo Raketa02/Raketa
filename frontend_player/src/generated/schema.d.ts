@@ -2515,7 +2515,7 @@ export interface components {
         };
         /**
          * BookedMoneySchema
-         * @description The money line: *Paid · 30 zł · free to leave until Sat 17:00*.
+         * @description The money line: *Paid · 30 zł · 28,55 zł back if you leave by Sat 17:00*.
          */
         BookedMoneySchema: {
             /**
@@ -2530,9 +2530,14 @@ export interface components {
             paid: boolean;
             /**
              * Free To Leave Until
-             * @description The club's cut-off while it is still ahead at `read_at` — leaving before it is refunded. `null` from the cut-off on, and for a game that filled after it. The line switches by itself at this instant.
+             * @description The club's cut-off while it is still ahead at `read_at`: leaving before it is refunded at once, less the card fee, which is never returned (`back_if_you_leave_grosze`) — so the line says what comes back, never that leaving is free (Q99). `null` from the cut-off on, for a game that filled after it, for a game still waiting for its club, and for a reader not on the game. The line switches by itself at this instant.
              */
             free_to_leave_until: string | null;
+            /**
+             * Back If You Leave Grosze
+             * @description What the reader gets back if they leave now, in grosze: the share less the card fee the payments estimate — *28,55 zł back if you leave by Sat 17:00*; 3840 on a 40 zł share. The same figure the details' `leaving.refund_grosze` gives before the cut-off, so the card, the leave sheet and the booking email never disagree. `null` whenever `free_to_leave_until` is: from the cut-off on, for a game that filled after it, for a game still waiting for its club, and for a reader not on the game.
+             */
+            back_if_you_leave_grosze: number | null;
             /**
              * Refunded Grosze
              * @description What everybody still in is given back — the whole share, on a game called off at its cut-off or cancelled by its club (*refunded 30 zł*). `null` where nothing is.

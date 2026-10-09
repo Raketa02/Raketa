@@ -23,7 +23,7 @@
  * **One read, `GET /bookings/{id}`, and nothing re-derived.** The status, the sides, the share and
  * whether it was paid, the cut-off, the club's deadline, whether the forecast is drawn, the
  * check-in code and what leaving costs are the server's (#542, #544, #614); what is decided here is
- * how they are drawn, and the clock the money row's *free to leave until* and *answers by* run on
+ * how they are drawn, and the clock the money row's *back if you leave by* and *answers by* run on
  * is the read's (`useReadClock`).
  *
  * ## Three readers, one screen (A4)
@@ -167,7 +167,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
     [],
   );
 
-  // The money row's *free to leave until* leaves by itself at the cut-off, *answers by* at the
+  // The money row's *back if you leave by* leaves by itself at the cut-off, *answers by* at the
   // club's deadline.
   const now = useReadClock(game.readAt, receivedAt, lineCanRunOut(game));
 

@@ -3,8 +3,8 @@
  * Home and details suites build on (#556).
  *
  * One game throughout: *you + Piotr against Inés + Bartek* at Bonarka Arena, Court 2, on Saturday 3
- * October 2026 at 16:00 in Warsaw, booked and paid, free to leave until Friday 16:00. Each suite
- * moves only what it is about — the status, the money, the day — off these.
+ * October 2026 at 16:00 in Warsaw, booked and paid, 27,18 zł back if you leave by Friday 16:00.
+ * Each suite moves only what it is about — the status, the money, the day — off these.
  */
 
 import type { Transport, Wire } from './transport';
@@ -64,7 +64,11 @@ export function bookedSides(): Wire['BookedSidesSchema'] {
   };
 }
 
-/** Paid, 28 zł a seat, free to leave until Friday 16:00 — nothing refunded. */
+/**
+ * Paid, 28 zł a seat, 27,18 zł back if you leave by Friday 16:00 — the details' *Leave the game*
+ * figure — and nothing refunded. **The figure goes with the cut-off**, as the server sends it (Q99):
+ * a suite that clears the cut-off clears it too, unless it says otherwise.
+ */
 export function bookedMoney(
   extra: Partial<Wire['BookedMoneySchema']> = {},
 ): Wire['BookedMoneySchema'] {
@@ -72,6 +76,7 @@ export function bookedMoney(
     share_grosze: 2800,
     paid: true,
     free_to_leave_until: BOOKED_CUT_OFF,
+    back_if_you_leave_grosze: extra.free_to_leave_until === null ? null : 2718,
     refunded_grosze: null,
     ...extra,
   };

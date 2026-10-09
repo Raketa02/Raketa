@@ -17,6 +17,9 @@ import {
 const CUT_OFF = '2026-10-02T14:00:00Z';
 const BEFORE = Date.parse('2026-10-01T08:00:00Z');
 
+/** 28,55 zł back on a 30 zł share if you leave by the cut-off (Q99). */
+const BACK_BY_THE_CUT_OFF = { grosze: 2855, by: CUT_OFF } as const;
+
 /** The club's deadline to answer: 11:00 on the day of the read (Thursday, 10:00 in Warsaw). */
 const ELEVEN = '2026-10-01T09:00:00Z';
 const ELEVEN_TODAY = { at: ELEVEN, today: true } as const;
@@ -26,10 +29,15 @@ const SUNDAY_00_15 = { at: '2026-10-03T22:15:00Z', today: false } as const;
 beforeAll(() => setDeviceZone('America/New_York'));
 
 describe('moneyWords — the line under a Home card (the mechanics §14.1)', () => {
-  it('reads Paid with the share, and free to leave until the cut-off on the club’s clock', () => {
+  it('reads Paid with the share, and what comes back if you leave by the cut-off on the club’s clock (Q99)', () => {
     expect(
-      moneyWords({ kind: 'booked', shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF }),
-    ).toBe('Paid · 30 zł · free to leave until Fri 16:00');
+      moneyWords({
+        kind: 'booked',
+        shareGrosze: 3000,
+        paid: true,
+        backIfYouLeave: BACK_BY_THE_CUT_OFF,
+      }),
+    ).toBe('Paid · 30 zł · 28,55 zł back if you leave by Fri 16:00');
     expect(moneyWords({ kind: 'booked', shareGrosze: 2750, paid: true })).toBe('Paid · 27,50 zł');
   });
 
@@ -149,8 +157,13 @@ describe('whereAside — the court and how far it is (details 8)', () => {
 describe('moneySpoken — the line aloud, its dots commas', () => {
   it('says each clause the line draws, and nothing it does not', () => {
     expect(
-      moneySpoken({ kind: 'booked', shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF }),
-    ).toBe('Paid, 30 zł, free to leave until Fri 16:00');
+      moneySpoken({
+        kind: 'booked',
+        shareGrosze: 3000,
+        paid: true,
+        backIfYouLeave: BACK_BY_THE_CUT_OFF,
+      }),
+    ).toBe('Paid, 30 zł, 28,55 zł back if you leave by Fri 16:00');
     expect(moneySpoken({ kind: 'seatOpen', seats: 1 })).toBe(
       '1 seat open, offered to others, the game goes ahead',
     );
@@ -188,7 +201,7 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
   where: { id: 'club-1', name: 'Bonarka Arena', distanceKm: 3.1 },
   courtName: 'Court 2',
   sides: { yours: [], theirs: [] },
-  money: { shareGrosze: 2800, paid: true, freeToLeaveUntil: CUT_OFF },
+  money: { shareGrosze: 2800, paid: true, freeToLeaveUntil: CUT_OFF, backIfYouLeaveGrosze: 2718 },
   showsForecast: true,
   ...extra,
 });
@@ -196,17 +209,23 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
 const bookedPaid = { shareGrosze: 2800, paid: true } as const;
 
 describe('moneyRow — the details’ money row (A4.1)', () => {
-  it('is PAID · 28 zł · your share · to the club, free to leave until the cut-off while ahead', () => {
+  it('is PAID · 28 zł · your share · to the club, with what comes back while the cut-off is ahead (Q99)', () => {
     expect(moneyRow(booked(), BEFORE)).toEqual({
       label: 'Paid',
       value: '28 zł',
-      aside: 'your share · to the club · free to leave until Fri 16:00',
+      aside: 'your share · to the club · 27,18 zł back if you leave by Fri 16:00',
     });
     expect(moneyRow(booked(), Date.parse(CUT_OFF))).toEqual({
       label: 'Paid',
       value: '28 zł',
       aside: 'your share · to the club',
     });
+  });
+
+  it('says nothing of leaving with the figure missing — never free, never worked out here', () => {
+    expect(
+      moneyRow(booked({ money: { ...bookedPaid, freeToLeaveUntil: CUT_OFF } }), BEFORE),
+    ).toEqual({ label: 'Paid', value: '28 zł', aside: 'your share · to the club' });
   });
 
   it('is the share nobody pays yet while the club decides', () => {
@@ -344,7 +363,7 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
     club: { id: 'club-1', name: 'Bonarka Arena' },
     courtName: 'Court 2',
     sides: { yours: [], theirs: [] },
-    money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF },
+    money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF, backIfYouLeaveGrosze: 2855 },
   };
 
   it('says the status, new, the sport, where, when, the money and the chat — commas for the dots', () => {
@@ -353,11 +372,16 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
         game,
         fresh: true,
         day: { kind: 'weekday', weekday: 6 },
-        money: { kind: 'booked', shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF },
+        money: {
+          kind: 'booked',
+          shareGrosze: 3000,
+          paid: true,
+          backIfYouLeave: BACK_BY_THE_CUT_OFF,
+        },
         chat: true,
       }),
     ).toBe(
-      'Booked, new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł, free to leave until Fri 16:00. Chat open.',
+      'Booked, new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł, 28,55 zł back if you leave by Fri 16:00. Chat open.',
     );
   });
 

@@ -50,7 +50,8 @@ export const HOME_GAME_COPY = {
   /** The money line's words (§14.1). */
   money: {
     paid: 'Paid',
-    freeToLeaveUntil: 'free to leave until',
+    /** *27,18 zł back if you leave by Fri 16:00* — after the sum the read gives (Q99). */
+    backIfYouLeaveBy: 'back if you leave by',
     nobodyPaysUntil: 'Nobody pays until',
     confirms: 'confirms',
     theClub: 'the club',
