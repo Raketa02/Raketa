@@ -155,7 +155,8 @@ One screen (details 5–10, from Part 1), three readers.
   the court facts on an accent line in the status colour: **WHERE** *Bonarka Arena · Court 2 ·
   3,1 km* · **DAY** *Sunday 20 Sep* (*· next week* beyond seven days) · **TIME** *10:00 until
   11:00* · the money row (*PAID · 28 zł · your share · to the club*; before the cut-off:
-  *· free to leave until Sat 10:00*).
+  *· 26,58 zł back if you leave by Sat 10:00*, the 28 zł less its 1,42 zł card fee as A7.3's
+  receipt has it — [the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q99).
 - **Balance forecast** (details 9) — as built today; hidden while a seat is open.
 - **Show at the desk** — on the day only: a QR code and a short code under it.
 - **Leave the game** (details 10) — outlined, red text; the line under it states the cost for
@@ -182,9 +183,11 @@ The booked layout with the dashed *You?* tile, the court number, *Paid* players,
 
 ### A4.4 The chat
 
-The conversation screen, which lost its plan card and Details button with the old loop; the back
-chevron returns to the details. Opens when the game is booked; members are the current line-up;
-system lines *"Kuba left — the seat is open"* and *"Ola took the seat"*.
+The conversation screen, which lost its plan card and Details button with the old loop, and has
+no way into the details; the back chevron returns to where the chat was opened from — the
+details, or Home from the bubble on its card ([A8](#a8-home), Q100). Opens when the game is
+booked; members are the current line-up; system lines *"Kuba left — the seat is open"* and *"Ola
+took the seat"*.
 
 ## A5. Post a game (mock 15)
 
@@ -330,17 +333,20 @@ rest grey. **The order is changed from the mocks** (Q82):
 The rail of game cards that was *Now*, renamed **Home**, showing the statuses of
 [the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses): **Waiting for the club**
 (amber), **Booked** (mint), **Seat open** (amber), the result statuses as today, **Called off**
-(red) — each with its money line. **Open game** → [A4.1](#a41-a-booked-game-youre-in-details-510),
-where the chat is reached — a Home card has no chat door
-([the mechanics §14.3](the-mechanics.md#143-the-chat)). Games that filled since you last looked
-are marked *new*.
+(red) — each with its money line. **Open game** → [A4.1](#a41-a-booked-game-youre-in-details-510).
+On a booked card the **speech bubble is the chat's door**: it opens the game's chat
+([A4.4](#a44-the-chat)) straight over Home, and Back returns to Home
+([the mechanics §14.3](the-mechanics.md#143-the-chat), Q100). It shows when the game's chat is
+open, never on *Waiting for the club* or *Called off*. It carries no count until the details'
+*Chat · n* has its unread count; then it shows the same number. Games that filled since you last
+looked are marked *new*; opening the details, or the chat from the bubble, clears it.
 
 A game **waiting for the club** says when the club must answer, the time its desk is given
 ([the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q98): *Bonarka Arena answers
 by 20:45 · Nobody pays until it confirms*, and once that time has passed, *Nobody pays until
 Bonarka Arena confirms*. **The time is in Warsaw time, as every day and hour on Home is**: the hour
 alone when it falls today (*answers by 20:45*), else the weekday and the hour (*answers by Sun
-00:15*), in the form of *free to leave until Sun 17:00*.
+00:15*), in the form of *38,40 zł back if you leave by Sun 17:00*.
 
 ## A9. Notifications delivery
 

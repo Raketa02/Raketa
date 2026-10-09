@@ -106,8 +106,8 @@
   games you posted). The **Post a game** button floats over it.
 - **Friends** is out of scope. **Info** is unchanged.
 
-**Chat** has no tab. Every chat belongs to one game and is opened from that game's details
-([§14.3](#143-the-chat)).
+**Chat** has no tab. Every chat belongs to one game and is opened from that game's details or
+from the speech bubble on its Home card ([§14.3](#143-the-chat)).
 
 ---
 
@@ -587,8 +587,12 @@ The terms, in full:
 > game is still missing a player at the cut-off, it is called off and everyone still in gets
 > everything back. Refunds reach BLIK within hours and cards within up to two weeks.
 
-The wording is reviewed by a lawyer before launch. The app asks again only if the bank changes
-the card's brand (Visa → Mastercard), because a changed brand cannot be charged without it.
+The wording is reviewed by a lawyer before launch. **A note for that review (Q99):** the card,
+the details and the booking email don't say *free to leave*; they say the sum a leaver gets
+back (*38,40 zł back if you leave by Wed 19:00*). The review should word the leave the same way:
+the share back less the card fee, until the club's cut-off, and not *free*. The app asks again
+only if the bank changes the card's brand (Visa → Mastercard), because a changed brand cannot be
+charged without it.
 
 ### 12.6 The club's money
 
@@ -625,17 +629,22 @@ on, Needs a player** and **Held** are gone: the booking *is* the plan.
 | Status | When | Money line |
 | --- | --- | --- |
 | **Waiting for the club** | An On request club has not confirmed yet | Before the club's time to confirm runs out: *Bonarka answers by 20:45 · Nobody pays until it confirms*. After: *Nobody pays until Bonarka confirms* |
-| **Booked** | Full and booked | Before the cut-off: *Paid · 30 zł · free to leave until Sat 17:00*. After: *Paid · 30 zł* |
+| **Booked** | Full and booked | Before the cut-off: *Paid · 30 zł · 28,55 zł back if you leave by Sat 17:00*. After: *Paid · 30 zł* |
 | **Seat open** | Someone left | Before the cut-off: *1 seat open · fills by Sat 17:00 or the game is off and everyone is refunded*. After: *1 seat open · offered to others · the game goes ahead* |
 | **Needs result · Confirm the result · Counted · Uncounted · Never played** | Unchanged from today | — |
 | **Called off** | A seat was empty at the cut-off, the club cancelled, the club refused a request or didn't answer it, or a player left while it waited for the club | The reason, and *refunded 30 zł* or *nobody paid* |
+
+*Back if you leave by* names what leaving before the club's cut-off gives back: the share less
+its card fee (1,45 zł on 30 zł), the sum the leave sheet then states ([§13](#13-leaving-a-game)),
+so the card never promises what the sheet takes back (Q99). The leaver still bears the fee (Q47).
+At the cut-off the clause leaves the line.
 
 *Answers by* names the end of the club's **time to confirm** after the game filled
 ([§11](#11-the-moment-a-game-fills)): the time its desk is given, in the request email's *Answer
 by …* and the countdown on its Bookings page ([§16.8](#168-answering-a-request-on-request)), so
 the players can tell five minutes from an hour (Q98). Once that time has passed the clause leaves
-the line, as *free to leave until …* leaves at the cut-off, until the game reads *Called off · no
-answer*. It moves no money.
+the line, as *… back if you leave by …* leaves at the cut-off, until the game reads *Called off ·
+no answer*. It moves no money.
 
 A game that **starts with a seat still open** (someone left after the cut-off and nobody took
 it) cannot take a result. It ends **Uncounted · a seat was empty**: no levels move, and nothing
@@ -676,8 +685,11 @@ The same screen serves two more readers (Q75, Q96):
   club confirms — because there is nothing to talk about before, and yeses are silent.
 - **Members are whoever is in the game now.** A leaver drops out with a line *"Kuba left — the
   seat is open"*; a joiner comes in and sees the history.
-- Reached **only from the game details**. The chat room is only the conversation: no plan card,
-  no Details button (the back chevron returns to the details).
+- Reached **from the game details** and **from the speech bubble on its Home card**, which
+  opens it straight over Home (Q100). The back chevron returns to the screen it was opened from:
+  the details, or Home. The chat room is only the conversation: no plan card, no Details button,
+  no way into the details. From a chat opened on Home, Back lands on the card, which already
+  shows the court and the hour.
 - It closes as today: 48 hours after *we played*, when the result window closes, or when the
   game is called off.
 
@@ -1101,7 +1113,8 @@ To settle with Stripe (and a lawyer) before building payments:
   the club's Stripe balance. Confirm how Raketa can keep the club's payouts until after the game
   when the club is the seller.
 - **O3 — The terms' wording** ([§12.5](#125-saving-a-payment-method-and-the-terms)), naming the club as
-  the one charging, reviewed by a lawyer.
+  the one charging, reviewed by a lawyer. The review should word the leave as the card does
+  (Q99): the share back less the card fee, until the cut-off, and not *free*.
 - **O4 — Apple Pay** for one-off charges without the player present: test before launch.
 - **O5 — The club's receipts and invoices.** The club is the seller, so the Polish rules on fiscal
   receipts and invoices for online sales apply to the club. Confirm with a lawyer or accountant what
@@ -1318,7 +1331,7 @@ Aug–Sep 2026).
 | 33 | The old loop is retired into the flag. → Q42 *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
 | 34 | Fill in has **You're In**, including your posts. |
 | 35 | The moment a game fills. |
-| 36 | The statuses. → updated by Q39/Q58/Q98 |
+| 36 | The statuses. → updated by Q39/Q58/Q98/Q99 |
 | 37 | The chat opens when the game fills. |
 | 38 | Fill in is the rescue board; games that are still filling stay in the deck; three card types. |
 | 39 | *Held/Booked* wording (Held later removed by Q54). |
@@ -1380,3 +1393,5 @@ Aug–Sep 2026).
 | 96 | The empty deck keeps today's cards plus Post a game; rescue details for non-members; public site unchanged; payment not in onboarding; the product owner runs to-spec and to-tickets. |
 | 97 | (2026-10-05, amends Q13) No live-yes cap: games per week and one game per hour already bound what a yes can book. The LIVE YESES list stays. |
 | 98 | (2026-10-09, amends Q36; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605), F-REQUEST-43.1) *Do the players see when the club must answer?* Yes: while their game waits for its club, the Home card and the details show the deadline the desk is given (*Bonarka answers by 20:45 · Nobody pays until it confirms*), and it disappears once the deadline passes. It moves no money. Evidence: the desk's email says *Answer by …* while the players read only *Waiting for the club*; Playmore's full game reads *Skład pełny · potwierdzimy o {time}*. |
+| 99 | (2026-10-09, amends Q36's *Booked* money line; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605), F-LEAVE-20.1) *Does the card say "free to leave"?* No. The card, the details and the booking email say the sum: *38,40 zł back if you leave by Wed 19:00*, dropping to *Paid · 40 zł* at the cut-off as before. The booking email (*It's a game! · you paid 40 zł*) says *You can leave until Wed 19:00 and get 38,40 zł back at once (the 1,60 zł card fee isn't returned).*, with the day and time written as the email writes them; a game that filled after its cut-off keeps its sentence. Q47 stands: a refunded leaver still bears the card fee, and the club is still the seller that pays its card fees (Q44). The terms (§12.5, with a note to the lawyer's review, and O3), the deck's *no free cancellation*, the club's *Free-cancellation cut-off*, the line under *Leave the game* and the leave sheet keep their words. Evidence: Playtomic reviewers in Germany and Spain complain of a "free" cancellation that cost a fee (*Die App verlangt 0,95 € Bearbeitungsgebühr!*); Kraków's own systems say *bezpłatnie* and keep a fee (tenis4U keeps 2 %, Playmore its service fee); Playmore's preview says *ze zwrotem wpisowego*. |
+| 100 | (2026-10-09, amends §14.3's *reached only from the game details*, set by the consistency pass [#531](https://github.com/Raketa02/Raketa/issues/531), and ADR-0189 §6; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605), F-HOME-15.1) *Does the Home card's bubble open the chat?* Yes: straight over Home, with Back to whichever screen opened it (Home from the bubble, the details from their *Chat*). The room stays only the conversation, with no way into the details. Opening it from the bubble clears *new*, as opening the details does. The bubble shows when it did before (the chat is open; never on *Waiting for the club* or *Called off*) and carries no count until the unread count owed to the details' *Chat · n* is built (F-HOME-21.1); then it shows the same number. Evidence: a chat icon is a button in every app a player uses, and Playtomic opens a match's chat from the match itself. |

@@ -215,3 +215,18 @@ It lives in Proposals, not in the Player profile or Payments, because every rule
 about which games are dealt and which yeses stand: the deck (#539), the proposer (#540), the
 fill's pause (#541) and posting's guard (#546). The deck itself stays what §5 says it is — a
 projection, recomputed at every read and stored nowhere.
+
+## Amendment — 2026-10-09: the Home card's bubble also opens the chat
+
+§6 says every chat *is reached from that game's details*. That now also means the **speech
+bubble on the game's Home card**: tapping it opens the chat straight over Home, and the back
+chevron returns to **whichever screen opened the chat** — Home from the bubble, the details from
+their *Chat*. The room stays only the conversation, with no way into the details, and opening it
+from the bubble clears the card's *new*, as opening the details does.
+
+The product owner ruled it on 2026-10-09 from story S-01A
+([#605](https://github.com/Raketa02/Raketa/issues/605), F-HOME-15.1). Marta tapped the bubble at
+18:20 to say she would be late, and nothing happened — yet a chat icon is a button in every app a
+player uses, and Playtomic opens a match's chat from the match itself. It is **Q100** in the
+mechanics' decision log, which amends §14.3 there and the screens' A4.4 and A8. Nothing else in
+§6 moves: a chat still belongs to one game and opens when it is booked.
