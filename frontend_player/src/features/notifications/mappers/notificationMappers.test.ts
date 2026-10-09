@@ -6,7 +6,13 @@
 
 import type { Wire } from '@/test-support/transport';
 
-import { toChoices, toChoicesRequest, toNotice, toTarget } from './notificationMappers';
+import {
+  toChoices,
+  toChoicesRequest,
+  toNotice,
+  toRecentNotices,
+  toTarget,
+} from './notificationMappers';
 
 const GAME = '7a1c2f0e-3b4d-4e5f-8a9b-0c1d2e3f4a5b';
 const POOL = '9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
@@ -23,6 +29,8 @@ const NOTICE: Wire['NoticeSchema'] = {
   sport: 'PADEL',
   game_kind: 'FOR_FUN',
   gathered: 0,
+  new: true,
+  your_own: false,
 };
 
 describe('the three choices', () => {
@@ -47,6 +55,8 @@ describe('a listed notice', () => {
       title: 'You complete it',
       body: 'Padel · Sat 16:00 at Bonarka needs only you.',
       givenAt: '2026-10-02T12:05:00Z',
+      isNew: true,
+      yourOwn: false,
       target: {
         opens: 'deck',
         groupId: POOL,
@@ -57,10 +67,28 @@ describe('a listed notice', () => {
     });
   });
 
+  it('keeps whether it is the player’s own — born seen, never new (Q102)', () => {
+    const own = toNotice({ ...NOTICE, kind: 'GAME_BOOKED', new: false, your_own: true });
+    expect(own.isNew).toBe(false);
+    expect(own.yourOwn).toBe(true);
+  });
+
   it('opens nowhere for a sport this build cannot name — and is still listed', () => {
     const notice = toNotice({ ...NOTICE, sport: 'PICKLEBALL' as Wire['Sport'] });
     expect(notice.title).toBe('You complete it');
     expect(notice.target).toBeUndefined();
+  });
+});
+
+describe('the list behind the bell', () => {
+  it('carries the bell’s number beside the rows, exact past 99 (Q101)', () => {
+    const read = toRecentNotices({
+      notices: [NOTICE],
+      new_count: 120,
+      last_opened_at: '2026-10-01T08:00:00Z',
+    });
+    expect(read.newCount).toBe(120);
+    expect(read.notices.map((notice) => notice.id)).toEqual([NOTICE.notice_id]);
   });
 });
 

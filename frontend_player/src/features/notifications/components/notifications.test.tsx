@@ -5,9 +5,10 @@
  *
  * The server is #549's: `GET`/`PUT /players/me/notifications` (a save answers the three it saved),
  * `POST /players/me/devices` and `…/removal` (the token in the body), and `GET /players/me/notices`
- * (newest first, each in the words it was pushed in and with where a tap opens it). The phone is
- * `fakePush()`: a permission the suite sets, a token, and pushes that arrive or are tapped when the
- * suite says so.
+ * (newest first, each in the words it was pushed in and with where a tap opens it) — with #621's
+ * bell: the number since the last visit, each row's `new` and `your_own`, and
+ * `POST /players/me/notices/visit` (#627). The phone is `fakePush()`: a permission the suite sets, a
+ * token, and pushes that arrive or are tapped when the suite says so.
  */
 
 import { focusManager } from '@tanstack/react-query';
@@ -25,12 +26,20 @@ import {
   stubGroupDeck,
   stubProposal,
 } from '@/test-support/groupDeck';
-import { BOOKING, bookingDetails, stubBooking } from '@/test-support/home';
+import {
+  BOOKING,
+  bookedMoney,
+  bookingDetails,
+  homeGame,
+  stubBooking,
+  stubHomeGames,
+} from '@/test-support/home';
 import {
   DEVICES_PATH,
   DEVICE_REMOVAL_PATH,
   launchSignedIn,
   NOTICES_PATH,
+  NOTICES_VISIT_PATH,
   NOTIFICATION_CHOICES_PATH,
   resetPush,
   stubGate,
@@ -53,6 +62,9 @@ import {
   type Transport,
   type Wire,
 } from '@/test-support/transport';
+
+import type { RecentNotices } from '../domain/notice';
+import { notificationKeys } from '../hooks/notificationKeys';
 
 import { NOTIFICATIONS_COPY, NOTIFICATIONS_TITLE } from './notificationsCopy';
 
@@ -97,7 +109,10 @@ const CREW_PAGE: Wire['GroupResponse'] = {
 
 let given = 0;
 
-/** A notice as the list serves it — *It's a game!* about the booked game, unless told otherwise. */
+/**
+ * A notice as the list serves it — *It's a game!* about the booked game, seen and somebody else's,
+ * unless told otherwise.
+ */
 function notice(extra: Partial<Wire['NoticeSchema']> = {}): Wire['NoticeSchema'] {
   given += 1;
   return {
@@ -112,6 +127,8 @@ function notice(extra: Partial<Wire['NoticeSchema']> = {}): Wire['NoticeSchema']
     sport: 'PADEL',
     game_kind: 'COMPETITIVE',
     gathered: 0,
+    new: false,
+    your_own: false,
     ...extra,
   };
 }
@@ -168,7 +185,7 @@ async function backAndForth() {
  * notice must be newer than to be drawn as the banner.
  */
 async function sessionReadTheList() {
-  await waitFor(() => expect(queryClient.getQueryData(['notifications', 'notices'])).toBeDefined());
+  await waitFor(() => expect(queryClient.getQueryData(notificationKeys.notices())).toBeDefined());
 }
 
 /** The server holds the three choices; a save replaces them and answers them. */
@@ -512,7 +529,15 @@ describe('a push while the app is open', () => {
       NOTICES_PATH,
       () =>
         new Promise<Response>((resolve) =>
-          held.push(() => resolve(json<Wire['RecentNoticesResponse']>({ notices: [BOOKED] }))),
+          held.push(() =>
+            resolve(
+              json<Wire['RecentNoticesResponse']>({
+                notices: [BOOKED],
+                new_count: 0,
+                last_opened_at: null,
+              }),
+            ),
+          ),
         ),
     );
 
@@ -522,7 +547,9 @@ describe('a push while the app is open', () => {
     await act(async () => held.shift()?.());
 
     await waitFor(() =>
-      expect(queryClient.getQueryData(['notifications', 'notices'])).toHaveLength(1),
+      expect(
+        queryClient.getQueryData<RecentNotices>(notificationKeys.notices())?.notices,
+      ).toHaveLength(1),
     );
     // The read's answer handed to its observers — TanStack notifies on the next tick — and drawn.
     await act(async () => jest.advanceTimersByTime(1));
@@ -613,6 +640,78 @@ describe('a notice while the app is open, on a phone not pushed', () => {
     expect(screen.queryByText(LEFT.title)).toBeNull();
   });
 
+  // Q101: the bell's number is the catch-up now — the line above, kept, and the number beside it.
+  it('draws nothing on launch — the bell carries the count instead', async () => {
+    stubNotices(transport, [{ ...LEFT, new: true }]);
+    await launchSignedIn();
+    await sessionReadTheList();
+
+    expect(await screen.findByRole('button', { name: 'Recent notifications, 1 new' })).toBeTruthy();
+    await act(async () => jest.advanceTimersByTime(1));
+    expect(screen.queryByText(LEFT.title)).toBeNull();
+  });
+
+  // Q102: the yes that filled the game saw It's a game!; somebody else's act is still told.
+  it('never draws the player’s own — the newest of somebody else’s is drawn instead', async () => {
+    const OWN = notice({ title: 'It’s a game! · you paid 40 zł', your_own: true });
+    await launchSignedIn();
+    await screen.findByLabelText('You');
+    await sessionReadTheList();
+
+    stubNotices(transport, [OWN, { ...LEFT, new: true }]);
+    await act(async () => jest.advanceTimersByTime(60_000));
+
+    expect(await screen.findByText(LEFT.title)).toBeTruthy();
+    expect(screen.queryByText(OWN.title)).toBeNull();
+  });
+
+  it('lists the player’s own, and never draws it as the banner', async () => {
+    const OWN = notice({ title: 'It’s a game! · you paid 40 zł', your_own: true });
+    await launchSignedIn();
+    await screen.findByLabelText('You');
+    await sessionReadTheList();
+
+    stubNotices(transport, [OWN]);
+    await act(async () => jest.advanceTimersByTime(60_000));
+    await waitFor(() =>
+      expect(
+        queryClient.getQueryData<RecentNotices>(notificationKeys.notices())?.notices,
+      ).toHaveLength(1),
+    );
+    await act(async () => jest.advanceTimersByTime(1));
+    expect(screen.queryByText(OWN.title)).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: COPY.bell }));
+    expect(await screen.findByText(OWN.title)).toBeTruthy();
+  });
+
+  // Q103: the minute's read used to leave Home as it was until the app had been away for longer
+  // than Home stays fresh — the game a notice is about is there before it is tapped now.
+  it('re-reads Home — a game waiting for the club is on Home without leaving the app', async () => {
+    const MATCHED = notice({
+      title: 'It’s a game! · Kazimierz Padel answers by 21:15',
+      body: 'Padel · Fri 19:00. Nobody pays until it confirms.',
+      new: true,
+    });
+    await launchSignedIn();
+    await screen.findByLabelText('You');
+    await sessionReadTheList();
+    expect(screen.queryByTestId(`home-game-${BOOKING}`)).toBeNull();
+
+    stubHomeGames(transport, [
+      homeGame({
+        status: 'WAITING_FOR_THE_CLUB',
+        game_id: null,
+        court_name: null,
+        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+      }),
+    ]);
+    stubNotices(transport, [MATCHED]);
+    await act(async () => jest.advanceTimersByTime(60_000));
+
+    expect(await screen.findByTestId(`home-game-${BOOKING}`)).toBeTruthy();
+  });
+
   it('is not read every minute on a phone that is pushed', async () => {
     phone.state = 'granted';
     await launchSignedIn();
@@ -622,6 +721,179 @@ describe('a notice while the app is open, on a phone not pushed', () => {
     await act(async () => jest.advanceTimersByTime(120_000));
 
     expect(transport.requestsTo('GET', NOTICES_PATH)).toHaveLength(listReads);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The bell's number, and the visit that clears it
+// ---------------------------------------------------------------------------
+
+/**
+ * Q101: the bell counts the notices since the player last opened the list — the server's number,
+ * the same on every phone. Opening the list clears it, and the rows that came since the last visit
+ * stand out on that visit.
+ */
+describe('the bell’s number', () => {
+  /**
+   * The server's bell, as #621 keeps it: the notices in the order they reached the list, and how
+   * many of them the last visit had listed. A row is new past that place unless it is the player's
+   * own, and the number counts the new ones.
+   */
+  function serveTheBell(...told: Wire['NoticeSchema'][]) {
+    const reached = [...told];
+    let seenThrough = 0;
+    transport.on('GET', NOTICES_PATH, () => {
+      const notices = reached
+        .map((row, place) => ({ ...row, new: place >= seenThrough && !row.your_own }))
+        .reverse();
+      return json<Wire['RecentNoticesResponse']>({
+        notices,
+        new_count: notices.filter((row) => row.new).length,
+        last_opened_at: null,
+      });
+    });
+    transport.on('POST', NOTICES_VISIT_PATH, () => {
+      seenThrough = reached.length;
+      return noContent();
+    });
+    return {
+      /** Opened on another phone, before this one was picked up. */
+      visited: () => {
+        seenThrough = reached.length;
+      },
+      tell: (row: Wire['NoticeSchema']) => reached.push(row),
+    };
+  }
+
+  const visits = () => transport.requestsTo('POST', NOTICES_VISIT_PATH).length;
+  const heldList = () => queryClient.getQueryData<RecentNotices>(notificationKeys.notices());
+  const bell = (named: string) => screen.findByRole('button', { name: named });
+  /** The figure drawn on the bell — hidden from a listener, who hears it on the bell's name. */
+  const drawnOn = (button: ReturnType<typeof screen.getByRole>) =>
+    within(button).queryAllByText(/^\d+\+?$/, { includeHiddenElements: true });
+
+  /** The rows of the open list, as a listener hears them. */
+  const rowsHeard = async () =>
+    (await screen.findAllByRole('button', { name: /Padel/ })).map(
+      (row) => row.props.accessibilityLabel as string,
+    );
+
+  // Marta's morning (S-01B): one left overnight, two more by lunchtime.
+  const MONDAY = notice({ title: 'You’ve been refunded', body: 'Padel · Mon 19:00 · 27,18 zł' });
+  const IVAN_LEFT = notice({ title: 'Someone left your game', body: 'Padel · Tue 19:00' });
+  const FILLED = notice({ title: 'Your seat is filled again', body: 'Padel · Tue 19:00' });
+  const SEAT_OPEN = notice({ title: 'A seat opened', body: 'Padel · Thu 18:00' });
+
+  it('shows nothing while nothing is new — however much is listed', async () => {
+    serveTheBell(MONDAY).visited();
+    await launchSignedIn();
+    await sessionReadTheList();
+    await act(async () => jest.advanceTimersByTime(1));
+
+    expect(drawnOn(await bell(COPY.bell))).toHaveLength(0);
+  });
+
+  it('counts what reached the list since the last visit — 1 at eight, 3 by lunchtime', async () => {
+    const server = serveTheBell(MONDAY);
+    server.visited();
+    server.tell(IVAN_LEFT);
+    await launchSignedIn();
+
+    const morning = await bell('Recent notifications, 1 new');
+    expect(drawnOn(morning).map((figure) => figure.props.children)).toEqual(['1']);
+
+    server.tell(FILLED);
+    server.tell(SEAT_OPEN);
+    await act(async () => jest.advanceTimersByTime(60_000));
+
+    const lunchtime = await bell('Recent notifications, 3 new');
+    expect(drawnOn(lunchtime).map((figure) => figure.props.children)).toEqual(['3']);
+  });
+
+  it('writes 99+ above 99, and says the exact number', async () => {
+    stubNotices(transport, [{ ...IVAN_LEFT, new: true }], { newCount: 120 });
+    await launchSignedIn();
+
+    const button = await bell('Recent notifications, 120 new');
+    expect(drawnOn(button).map((figure) => figure.props.children)).toEqual(['99+']);
+  });
+
+  it('is cleared by opening the list — whose rows since the last visit stand out on that visit and not on the next', async () => {
+    const server = serveTheBell(MONDAY);
+    server.visited();
+    server.tell(IVAN_LEFT);
+    server.tell(FILLED);
+    await launchSignedIn();
+
+    fireEvent.press(await bell('Recent notifications, 2 new'));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+    // The visit has landed: none is new to the server any more, and the two still stand out for
+    // as long as the list is open.
+    await waitFor(() => expect(visits()).toBe(1));
+    await waitFor(() => expect(heldList()?.newCount).toBe(0));
+    expect(heldList()?.notices.some((row) => row.isNew)).toBe(false);
+    await act(async () => jest.advanceTimersByTime(1));
+    expect(await rowsHeard()).toEqual([
+      expect.stringMatching(/^New\. Your seat is filled again\./),
+      expect.stringMatching(/^New\. Someone left your game\./),
+      expect.stringMatching(/^You’ve been refunded\./),
+    ]);
+
+    fireEvent.press(await screen.findByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(drawnOn(await bell(COPY.bell))).toHaveLength(0);
+
+    fireEvent.press(await bell(COPY.bell));
+    await waitFor(() => expect(visits()).toBe(2));
+    expect(await rowsHeard()).toEqual([
+      expect.stringMatching(/^Your seat is filled again\./),
+      expect.stringMatching(/^Someone left your game\./),
+      expect.stringMatching(/^You’ve been refunded\./),
+    ]);
+  });
+
+  it('stays clear for a notice that reaches the open list — it stands out there instead', async () => {
+    const server = serveTheBell(MONDAY);
+    await launchSignedIn();
+    fireEvent.press(await bell('Recent notifications, 1 new'));
+    await waitFor(() => expect(visits()).toBe(1));
+
+    server.tell(IVAN_LEFT);
+    await act(async () => jest.advanceTimersByTime(60_000));
+
+    await waitFor(() => expect(visits()).toBe(2));
+    // It comes down as the banner too, over the list, as it would over any screen.
+    fireEvent.press(await screen.findByRole('button', { name: COPY.banner.close }));
+    expect(await rowsHeard()).toEqual([
+      expect.stringMatching(/^New\. Someone left your game\./),
+      expect.stringMatching(/^New\. You’ve been refunded\./),
+    ]);
+    fireEvent.press(await screen.findByLabelText('Back'));
+    expect(drawnOn(await bell(COPY.bell))).toHaveLength(0);
+  });
+
+  it('keeps its number when the read the list opens on fails — no visit is sent', async () => {
+    const server = serveTheBell(MONDAY);
+    server.visited();
+    server.tell(IVAN_LEFT);
+    await launchSignedIn();
+    await bell('Recent notifications, 1 new');
+
+    transport.on('GET', NOTICES_PATH, () => errorResponse(503, 'unavailable'));
+    fireEvent.press(await bell('Recent notifications, 1 new'));
+    // Past the read's two retries, each armed once the one before it has failed.
+    for (let retry = 0; retry < 3; retry += 1) {
+      await act(async () => jest.advanceTimersByTime(8_000));
+    }
+    await waitFor(() =>
+      expect(queryClient.getQueryState(notificationKeys.notices())?.status).toBe('error'),
+    );
+    // The failure handed to the open list — TanStack notifies on the next tick.
+    await act(async () => jest.advanceTimersByTime(1));
+
+    expect(visits()).toBe(0);
+    fireEvent.press(await screen.findByLabelText('Back'));
+    expect(await bell('Recent notifications, 1 new')).toBeTruthy();
   });
 });
 

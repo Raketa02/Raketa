@@ -90,6 +90,8 @@ export const NOTIFICATIONS_COPY = {
   /** The bell on Home, and the list behind it. */
   bell: 'Recent notifications',
   list: {
+    /** A row that came since the last visit, said before its words while it stands out. */
+    new: 'New',
     loading: 'Reading what you were told…',
     empty:
       'Nothing yet — when a game fills, a seat opens or money moves, it’s told here and on your phone.',
@@ -120,10 +122,36 @@ export function noticeSpoken(title: string, body: string): string {
   return body === '' ? title : `${title}. ${body}`;
 }
 
-/** A row of the list, spoken: the notice, and when it was given. */
-export function noticeRowSpoken(title: string, body: string, when: string | undefined): string {
+/**
+ * A row of the list, spoken: the notice, and when it was given — and first that it is new, on the
+ * visit it stands out.
+ */
+export function noticeRowSpoken(
+  title: string,
+  body: string,
+  when: string | undefined,
+  standsOut: boolean,
+): string {
   const notice = noticeSpoken(title, body);
-  return when === undefined ? notice : `${notice}. ${when}`;
+  const said = when === undefined ? notice : `${notice}. ${when}`;
+  return standsOut ? `${NOTIFICATIONS_COPY.list.new}. ${said}` : said;
+}
+
+/** The most the bell writes as figures; above it, *99+* (Q101). The server's count is exact. */
+const BELL_CEILING = 99;
+
+/** *3* · *99+* — the bell's number as drawn, and nothing at nought. */
+export function bellFigure(count: number): string | undefined {
+  if (count <= 0) return undefined;
+  return count > BELL_CEILING ? `${BELL_CEILING}+` : String(count);
+}
+
+/**
+ * The bell's name, with its number: *Recent notifications, 3 new*. Exact above 99 — the cap is the
+ * drawing's room, and a listener is not short of it.
+ */
+export function bellSpoken(count: number): string {
+  return count <= 0 ? NOTIFICATIONS_COPY.bell : `${NOTIFICATIONS_COPY.bell}, ${count} new`;
 }
 
 /** An always-on row, spoken with its tag: *Someone left your game, always on*. */

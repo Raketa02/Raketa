@@ -8,7 +8,8 @@
  * | `getChoices` | `GET /players/me/notifications` — the three choices |
  * | `putChoices` | `PUT` the same path — all three, as a tap leaves them; answers what is saved |
  * | `postDevice` | `POST /players/me/devices` — push this phone; the token in the body, never a path |
- * | `getNotices` | `GET /players/me/notices` — the recent list, newest first |
+ * | `getNotices` | `GET /players/me/notices` — the recent list, newest first, and the bell's number |
+ * | `postVisit` | `POST /players/me/notices/visit` — the list was opened; the number is nought (#621) |
  *
  * A phone's removal at sign-out is the sign-out's own step, in `auth`'s api: it is one of the acts
  * that must happen while the session can still make them.
@@ -55,4 +56,13 @@ export function getNotices({ signal }: Cancellable = {}): Promise<
   Schemas['RecentNoticesResponse']
 > {
   return httpRequest({ method: 'GET', path: `${ME}/notices`, authenticated: true, signal });
+}
+
+/**
+ * The list behind the bell was opened — sent **right after the read the open list is drawn from**:
+ * whatever is listed by the time it arrives counts as seen, and the bell is nought on every phone.
+ * `204`, also when nothing moved; a visit never moves the last one back, so a repeat is safe.
+ */
+export function postVisit(): Promise<void> {
+  return httpRequest({ method: 'POST', path: `${ME}/notices/visit`, authenticated: true });
 }

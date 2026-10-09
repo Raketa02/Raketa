@@ -4,8 +4,8 @@
  *
  * ```
  * ‹ Notifications                                   HOME
- * ┌ It's a game! · you paid 30 zł              14:05 ›┐   newest first; the words the push used
- * │ Padel · Sat 16:00 · Bonarka Arena                 │
+ * ┌ It's a game! · you paid 30 zł            ● 14:05 ›┐   newest first; the words the push used
+ * │ Padel · Sat 16:00 · Bonarka Arena                 │   ● new since the last visit
  * │ Someone left your game                Yesterday ›│
  * └───────────────────────────────────────────────────┘
  * ```
@@ -16,8 +16,11 @@
  * is about** (`useOpenNotice`), pushed over this list so *back* returns to it; a notice about a game
  * this build cannot name is listed, words and all, and opens nothing.
  *
- * **Nothing is marked read**: the backend keeps no seen marker, so the list is the newest thirty and
- * the bell carries no count. A pull re-reads it; so does a push arriving while the app is open.
+ * **Opening it is the visit** (#627; Q101; `useNoticesVisit`): it is read again, the visit follows
+ * that read, and the bell is nought. **The rows that came since the last visit stand out** — a dot
+ * before *when*, which turns `ink`, and *New* said first — for as long as the list is open, and not
+ * on the next visit. Nothing is marked read row by row, and there is no *mark all*. A pull re-reads
+ * it; so does a push arriving while the app is open, and the minute's read.
  */
 
 import Feather from '@expo/vector-icons/Feather';
@@ -30,7 +33,7 @@ import { Card, theme } from '@/shared/ui';
 
 import { givenWhen, type Notice } from '../domain/notice';
 import { notificationKeys } from '../hooks/notificationKeys';
-import { useRecentNotices } from '../hooks/useRecentNotices';
+import { useNoticesVisit } from '../hooks/useNoticesVisit';
 
 import {
   NOTIFICATIONS_COPY,
@@ -46,9 +49,9 @@ const COPY = NOTIFICATIONS_COPY;
 export function NoticesScreen() {
   const router = useRouter();
   const client = useQueryClient();
-  const read = useRecentNotices();
+  const { read, standOut } = useNoticesVisit();
   const open = useOpenNotice();
-  const notices = read.data;
+  const notices = read.data?.notices;
   // *When* is read against the moment the list arrived, as the receipts' days are.
   const now = new Date(read.dataUpdatedAt).toISOString();
 
@@ -70,6 +73,7 @@ export function NoticesScreen() {
               key={notice.id}
               notice={notice}
               now={now}
+              standsOut={standOut.has(notice.id)}
               divided={index > 0}
               onOpen={open}
             />
@@ -83,17 +87,20 @@ export function NoticesScreen() {
 function NoticeRow({
   notice,
   now,
+  standsOut,
   divided,
   onOpen,
 }: {
   readonly notice: Notice;
   readonly now: string;
+  /** It came since the last visit — this visit's to show, whatever the server says of it now. */
+  readonly standsOut: boolean;
   readonly divided: boolean;
   readonly onOpen: ReturnType<typeof useOpenNotice>;
 }) {
   const when = givenWhen(notice.givenAt, now);
   const said = when === undefined ? undefined : givenLine(when);
-  const label = noticeRowSpoken(notice.title, notice.body, said);
+  const label = noticeRowSpoken(notice.title, notice.body, said, standsOut);
   const target = notice.target;
 
   const words = (
@@ -102,7 +109,14 @@ function NoticeRow({
         <Text style={s.title}>{notice.title}</Text>
         <Text style={s.line}>{notice.body}</Text>
       </View>
-      {said === undefined ? null : <Text style={s.when}>{said}</Text>}
+      {standsOut || said !== undefined ? (
+        <View style={s.trail}>
+          {standsOut ? <View style={s.newMark} /> : null}
+          {said === undefined ? null : (
+            <Text style={[s.when, standsOut ? s.whenNew : undefined]}>{said}</Text>
+          )}
+        </View>
+      ) : null}
     </>
   );
 
@@ -156,4 +170,16 @@ const s = StyleSheet.create({
   line: { ...theme.type.tiny, color: theme.color.muted },
   // A time is a number, and every number is mono (1.4).
   when: { ...theme.num.tiny, ...theme.tabular, color: theme.color.muted },
+  // *When*, and the mark before it on a new row — one step apart, so the mark is *when*'s.
+  trail: { flexDirection: 'row', alignItems: 'center', gap: theme.space.xs },
+  // New since the last visit: a shape and a tone, never the tone alone — the smallest round mark
+  // in the app (`sportDot`, one size), in `ink`, before *when*, which turns `ink` with it. Trailing,
+  // so the title keeps its edge whatever is new.
+  newMark: {
+    width: theme.size.sportDot,
+    height: theme.size.sportDot,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.color.ink,
+  },
+  whenNew: { color: theme.color.ink },
 });

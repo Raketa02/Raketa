@@ -1761,10 +1761,32 @@ export interface paths {
         /**
          * My recent notices
          * @description Everything you were told — the list behind the bell on Home — the newest first, each in the words it was pushed in and with where a tap opens it. A notice past its kind's daily cap that was bundled is not its own row: the row it joined says how many it holds (`gathered`).
+         *
+         *     **The bell's number** travels here (`new_count`), with when you last opened the list and, on each row, whether it is `new`. A notice of your own act is listed `your_own` and never counted.
          */
         get: operations["read_recent_notices_api_v1_players_me_notices_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/players/me/notices/visit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * I opened my notices
+         * @description What the phone sends as the list behind the bell opens, **right after the read the open list is drawn from**: the rows `new` in that read are the ones to make stand out on this visit, and whatever is on the list by the time this arrives counts as seen.
+         */
+        post: operations["open_recent_notices_api_v1_players_me_notices_visit_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5116,6 +5138,16 @@ export interface components {
              * @description How many more notices of its kind the day bundled into this one — told in its words, and pushed to nobody.
              */
             gathered: number;
+            /**
+             * New
+             * @description It reached the list since you last opened it — given, or a notice bundled into it, which moved it up — and is not your own: one the bell counts, and a row to make stand out on this visit.
+             */
+            new: boolean;
+            /**
+             * Your Own
+             * @description About something you did yourself and saw happen — *It's a game!* for the yes that filled the game, or the seat you took. Born seen: listed, never counted on the bell, never pushed, and never to be shown as a banner.
+             */
+            your_own: boolean;
         };
         /**
          * NotificationChoicesSchema
@@ -6380,6 +6412,16 @@ export interface components {
              * @description The newest first.
              */
             notices: components["schemas"]["NoticeSchema"][];
+            /**
+             * New Count
+             * @description **The bell's number**: the notices that reached your list since you last opened it — given, or bundled into one and moving it up — never your own. Exact however many rows were asked for: the bell writes *99+* past 99. The same on every phone.
+             */
+            new_count: number;
+            /**
+             * Last Opened At
+             * @description When you last opened the list (`POST /players/me/notices/visit`), on any phone — `null` before the first time.
+             */
+            last_opened_at: string | null;
         };
         /**
          * RecordLikelyRangeSchema
@@ -11224,6 +11266,24 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    open_recent_notices_api_v1_players_me_notices_visit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Opened now: the bell's number is nought on every phone, and only what reaches the list after counts. Also the answer when nothing moved — opened again at the same moment, or with a clock behind the last visit, which never moves it back. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

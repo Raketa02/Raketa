@@ -1,6 +1,6 @@
 /**
- * **The notices, off the wire and back** — the three choices, a listed notice, and where a tap goes
- * from the facts a notice names (#559).
+ * **The notices, off the wire and back** — the three choices, a listed notice, the bell's number
+ * (#627), and where a tap goes from the facts a notice names (#559).
  *
  * A notice's sport and kind are narrowed here, once, for the list's rows and a push's payload alike:
  * a code this build cannot name is a notice still listed, in the words the backend wrote, and
@@ -12,7 +12,7 @@ import type { GameKind } from '@/features/proposals/types';
 import type { components } from '@/generated/schema';
 
 import type { NotificationChoices } from '../domain/choices';
-import { targetOf, type Notice, type NoticeTarget } from '../domain/notice';
+import { targetOf, type Notice, type NoticeTarget, type RecentNotices } from '../domain/notice';
 import { NOTICE_KINDS, type NoticeKind } from '../domain/vocabulary';
 import type { SentFacts } from '../schemas/pushNotice';
 
@@ -81,6 +81,16 @@ export function toNotice(wire: Schemas['NoticeSchema']): Notice {
     title: wire.title,
     body: wire.body,
     givenAt: wire.given_at,
+    isNew: wire.new,
+    yourOwn: wire.your_own,
     ...(target === undefined ? {} : { target }),
   };
+}
+
+/**
+ * The list and the bell's number, from one read. `last_opened_at` is left on the wire: a row's own
+ * `new` already says which ones came since, by the server's order rather than a clock.
+ */
+export function toRecentNotices(wire: Schemas['RecentNoticesResponse']): RecentNotices {
+  return { notices: wire.notices.map(toNotice), newCount: wire.new_count };
 }

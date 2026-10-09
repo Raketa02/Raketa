@@ -1,10 +1,19 @@
 /**
  * Where a notice opens (#559; the screens A9: *tapping a notice opens the game it is about — the
- * deck opens with the card on top for You complete it and Challenges*), and when it was given, as
- * the list says it.
+ * deck opens with the card on top for You complete it and Challenges*), when it was given, as the
+ * list says it, and what a read of the list brings (#627; the mechanics Q101, Q102).
  */
 
-import { givenWhen, targetOf } from './notice';
+import {
+  JUST_OPENED,
+  afterTheVisit,
+  arrivalsOf,
+  givenWhen,
+  readOnTheOpenList,
+  standingOut,
+  targetOf,
+  type Notice,
+} from './notice';
 
 const FACTS = {
   gameId: '7a1c2f0e-3b4d-4e5f-8a9b-0c1d2e3f4a5b',
@@ -89,5 +98,125 @@ describe('when a notice was given', () => {
 
   it('a time it cannot read is nothing said', () => {
     expect(givenWhen('not a time', NOW)).toBeUndefined();
+  });
+});
+
+/** A listed notice — news, not the player's own, unless told otherwise. */
+function listed(id: string, extra: Partial<Notice> = {}): Notice {
+  return {
+    id,
+    kind: 'SOMEONE_LEFT',
+    title: 'Someone left your game',
+    body: 'Padel · Tue 19:00',
+    givenAt: '2026-10-06T21:00:00Z',
+    isNew: true,
+    yourOwn: false,
+    ...extra,
+  };
+}
+
+describe('what a read of the list brings the session', () => {
+  it('nothing, when every notice on it was seen before — Home is not read again', () => {
+    expect(arrivalsOf(new Set(['a', 'b']), [listed('a'), listed('b')])).toEqual({
+      arrived: false,
+    });
+  });
+
+  it('the newest it had not seen, as the banner — the list is newest first', () => {
+    const read = [listed('c'), listed('b'), listed('a')];
+    expect(arrivalsOf(new Set(['a']), read)).toEqual({ arrived: true, banner: read[0] });
+  });
+
+  it('never the player’s own as the banner — the newest that is somebody else’s act', () => {
+    const read = [listed('c', { yourOwn: true, isNew: false }), listed('b'), listed('a')];
+    expect(arrivalsOf(new Set(['a']), read)).toEqual({ arrived: true, banner: read[1] });
+  });
+
+  it('an arrival and no banner, when the only one it brings is the player’s own', () => {
+    const read = [listed('b', { yourOwn: true, isNew: false }), listed('a')];
+    expect(arrivalsOf(new Set(['a']), read)).toEqual({ arrived: true });
+  });
+
+  it('nothing for a notice the day bundled another into — it keeps its id and moves up', () => {
+    const read = [listed('a', { givenAt: '2026-10-06T22:00:00Z' }), listed('b')];
+    expect(arrivalsOf(new Set(['a', 'b']), read)).toEqual({ arrived: false });
+  });
+});
+
+describe('the rows that stand out on a visit to the list', () => {
+  it('are the ones a read says are new', () => {
+    const read = [listed('c'), listed('b', { isNew: false }), listed('a', { isNew: false })];
+    expect(standingOut(new Set(), read)).toEqual(new Set(['c']));
+  });
+
+  it('stay standing out once a later read says they are seen — for as long as the list is open', () => {
+    const after = [listed('c', { isNew: false }), listed('b', { isNew: false })];
+    expect(standingOut(new Set(['c']), after)).toEqual(new Set(['c']));
+  });
+
+  it('gain one that arrives while the list is open', () => {
+    const later = [listed('d'), listed('c', { isNew: false })];
+    expect(standingOut(new Set(['c']), later)).toEqual(new Set(['c', 'd']));
+  });
+
+  it('keep the same set when a read adds nothing, so the screen need not draw again', () => {
+    const held = new Set(['c']);
+    expect(standingOut(held, [listed('c', { isNew: false })])).toBe(held);
+    expect(standingOut(held, [listed('c')])).toBe(held);
+  });
+});
+
+describe('when the open list sends the visit', () => {
+  const CACHED = { sinceOpening: false } as const;
+  const FRESH = { sinceOpening: true } as const;
+
+  it('not on the read it opens on — that one is from before it was opened', () => {
+    const { list, visit } = readOnTheOpenList(JUST_OPENED, [listed('a')], CACHED);
+    expect(visit).toBe(false);
+    expect(list.standOut).toEqual(new Set(['a']));
+  });
+
+  it('after the first read since opening, even with nothing new — opening is the visit', () => {
+    const read = [listed('a', { isNew: false })];
+    expect(readOnTheOpenList(JUST_OPENED, read, FRESH).visit).toBe(true);
+  });
+
+  it('not again for a read that brings nothing new', () => {
+    const first = readOnTheOpenList(JUST_OPENED, [listed('a')], FRESH).list;
+    expect(readOnTheOpenList(first, [listed('a', { isNew: false })], FRESH).visit).toBe(false);
+  });
+
+  // A visit the server declines to move — opened at the same moment on another phone — leaves the
+  // rows new; sending again for them would be a loop.
+  it('not again for the rows a visit already covered, though the server still calls them new', () => {
+    const first = readOnTheOpenList(JUST_OPENED, [listed('a')], FRESH).list;
+    expect(readOnTheOpenList(first, [listed('a')], FRESH).visit).toBe(false);
+  });
+
+  it('again for a notice that reaches the open list', () => {
+    const first = readOnTheOpenList(JUST_OPENED, [listed('a')], FRESH).list;
+    const { list, visit } = readOnTheOpenList(
+      first,
+      [listed('b'), listed('a', { isNew: false })],
+      FRESH,
+    );
+    expect(visit).toBe(true);
+    expect(list.standOut).toEqual(new Set(['a', 'b']));
+  });
+
+  it('again for a notice the day bundled into a row already standing out — it reached the list again', () => {
+    const first = readOnTheOpenList(JUST_OPENED, [listed('a')], FRESH).list;
+    const bundled = [listed('a', { givenAt: '2026-10-06T22:00:00Z' })];
+    expect(readOnTheOpenList(first, bundled, FRESH).visit).toBe(true);
+  });
+});
+
+describe('the list once the visit is recorded', () => {
+  it('counts nothing and holds no new row — everything listed by then is seen', () => {
+    const read = { notices: [listed('b'), listed('a', { isNew: false })], newCount: 1 };
+    expect(afterTheVisit(read)).toEqual({
+      notices: [listed('b', { isNew: false }), listed('a', { isNew: false })],
+      newCount: 0,
+    });
   });
 });

@@ -110,7 +110,7 @@ import {
 import { queryClient } from '@/shared/lib/query-client';
 
 import { fakePayments } from './platform';
-import { errorResponse, json, type Transport, type Wire } from './transport';
+import { errorResponse, json, noContent, type Transport, type Wire } from './transport';
 
 /**
  * The Home tab's one line — which is what *the player is in the app* looks like on screen.
@@ -985,6 +985,8 @@ export function stubGate(
   stubHome(transport);
   stubNotificationChoices(transport);
   stubNotices(transport);
+  // Opening the list behind the bell records the visit (#627).
+  transport.on('POST', NOTICES_VISIT_PATH, () => noContent());
   stubBlockedPlayers(transport);
 }
 
@@ -1005,6 +1007,7 @@ export function stubBlockedPlayers(
 
 export const NOTIFICATION_CHOICES_PATH = '/api/v1/players/me/notifications';
 export const NOTICES_PATH = '/api/v1/players/me/notices';
+export const NOTICES_VISIT_PATH = '/api/v1/players/me/notices/visit';
 export const DEVICES_PATH = '/api/v1/players/me/devices';
 export const DEVICE_REMOVAL_PATH = '/api/v1/players/me/devices/removal';
 
@@ -1030,11 +1033,21 @@ export function stubNotificationChoices(
 /**
  * The recent notices, as `GET /players/me/notices` answers — **none** unless the suite says
  * otherwise. The gate stubs it, because a push arriving re-reads the list wherever the player is
- * (#559); the query string is the transport's to drop.
+ * (#559); the query string is the transport's to drop. **The bell's number is the rows marked
+ * `new`** unless the suite names one (#627) — the server's count is exact however few rows it
+ * answers, so a suite drawing *99+* says so.
  */
-export function stubNotices(transport: Transport, notices: readonly Wire['NoticeSchema'][] = []) {
+export function stubNotices(
+  transport: Transport,
+  notices: readonly Wire['NoticeSchema'][] = [],
+  { newCount }: { readonly newCount?: number } = {},
+) {
   transport.on('GET', NOTICES_PATH, () =>
-    json<Wire['RecentNoticesResponse']>({ notices: [...notices] }),
+    json<Wire['RecentNoticesResponse']>({
+      notices: [...notices],
+      new_count: newCount ?? notices.filter((notice) => notice.new).length,
+      last_opened_at: null,
+    }),
   );
 }
 

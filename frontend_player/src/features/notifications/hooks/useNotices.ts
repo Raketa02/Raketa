@@ -14,17 +14,22 @@
  * - **The list behind the bell is read for the session** — on the way in, on every return to the
  *   app, whenever a push or an act marks it stale, and **every minute while this phone is not being
  *   pushed** (`usePushRegistration`'s answer). A notice the session has not seen before is the
- *   banner — the newest one, if a read brings several.
+ *   banner — the newest one, if a read brings several; the bell's number counts the rest.
  *
  * **What the session has seen is every id in its first read**, so a launch draws no banner for what
- * happened while the app was closed — the phone was pushed those, and the list holds them — and a
+ * happened while the app was closed — the bell's number is the catch-up now (#627; Q101) — and a
  * pushed notice's id is seen the moment it is drawn, so the list's re-read after it does not draw it
  * twice. A notice the day bundled another into keeps its id and moves up the list: it is not new, and
- * nothing is drawn — the backend pushes nothing for it either.
+ * nothing is drawn — the backend pushes nothing for it either. **A notice of the player's own act is
+ * never the banner** (Q102): the yes that filled the game saw *It's a game!*, and the server pushes
+ * no such notice either.
  *
  * **It re-reads, and changes nothing**: a push marks stale the list, Home's read (the bar's badge
  * counts what needs the player, and every always-on notice moves it) and the read behind the screen
  * it opens — a push never changes what the server did not say (`docs/architecture.md` Part 13).
+ * **A notice the list's read brings re-reads Home too** (Q103), so the game it is about is there
+ * before it is tapped: without it the minute's read would leave Home as it was until the app had
+ * been away for longer than Home stays fresh.
  *
  * ## A push tapped opens its game
  *
@@ -39,7 +44,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { proposalKeys } from '@/features/proposals/types';
 import { usePush } from '@/shared/lib/platform';
 
-import type { NoticeTarget } from '../domain/notice';
+import { arrivalsOf, type NoticeTarget } from '../domain/notice';
 import { noticeOfPush } from '../use-cases/notifications';
 
 import { notificationKeys } from './notificationKeys';
@@ -77,12 +82,13 @@ export function useNotices(): {
   const list = useRecentNotices({ every: pushed ? false : WHILE_NOT_PUSHED });
 
   useEffect(() => {
-    const notices = list.data;
+    const notices = list.data?.notices;
     if (notices === undefined) return;
     const known = seen.current;
     seen.current = new Set([...(known ?? []), ...notices.map((notice) => notice.id)]);
     if (known === undefined) return;
-    const newest = notices.find((notice) => !known.has(notice.id));
+    const { arrived, banner: newest } = arrivalsOf(known, notices);
+    if (arrived) void client.invalidateQueries({ queryKey: proposalKeys.home() });
     if (newest === undefined) return;
     setBanner({
       key: newest.id,
@@ -90,7 +96,7 @@ export function useNotices(): {
       body: newest.body,
       ...(newest.target === undefined ? {} : { target: newest.target }),
     });
-  }, [list.data]);
+  }, [list.data, client]);
 
   useEffect(
     () =>

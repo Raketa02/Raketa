@@ -89,6 +89,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CountBadge } from './CountBadge';
 import { theme } from './theme';
 
 /** A glyph name Feather actually ships. Not a `string`, and not behind a cast. */
@@ -267,41 +268,11 @@ function FlankTab<Key extends string>({
           is 16. */}
       <View style={s.glyphBox}>
         <Glyph name={tab.glyph} size={theme.size.tabIcon} color={tone} />
-        {waiting === undefined ? null : <Badge count={waiting} />}
+        {/* 1.2's sixth coral entry: a count of things only the player can clear. */}
+        {waiting === undefined ? null : <CountBadge figure={waiting} tone="attend" />}
       </View>
       <Label text={tab.label} color={tone} />
     </Column>
-  );
-}
-
-/**
- * The count, as a mark — **`coralInk` filled with a white digit at 5,89**.
- *
- * White on `coral` is 3,89, the one pairing Rule C refuses outright and the exact correction
- * the ⚡Play disc one column away already took. The digit is mono and tabular, so 1 -> 2 does
- * not reflow the column, and there is no cap.
- *
- * It is **out of the layout**, like the active ring and for the same reason: the bar's height
- * must not change because a game started needing you. It rises `badgeRise` above the icon — the 4pt the
- * ring already spends out of the bar's 6pt top padding — and sits back over the glyph's right
- * edge by the smallest step on the grid, so it reads as attached to the mark rather than
- * floating beside it.
- *
- * **It announces nothing.** The count is on the column's own `accessibilityLabel`, because
- * `Column` is `accessible` and a `<Text>` inside it is swallowed — so a badge that announced
- * itself here would be either silent or a second reading of one number.
- */
-function Badge({ count }: { readonly count: number }) {
-  return (
-    <View
-      style={s.badge}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-    >
-      <Text style={s.badgeCount} maxFontSizeMultiplier={theme.size.tabBar.labelMaxScale}>
-        {count}
-      </Text>
-    </View>
   );
 }
 
@@ -438,30 +409,6 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'visible',
   },
-  badge: {
-    position: 'absolute',
-    // Up by the ring's own overhang, and back over the glyph's right edge by the smallest
-    // step on the grid — so the badge belongs to the mark rather than sitting beside it.
-    bottom: theme.size.tabIcon - theme.size.tabBar.badge + theme.size.tabBar.badgeRise,
-    left: theme.size.tabIcon - theme.space.xxs,
-    height: theme.size.tabBar.badge,
-    minWidth: theme.size.tabBar.badge,
-    paddingHorizontal: theme.space.xxs,
-    borderRadius: theme.radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // 6.1 `primary`'s fill: white on `coralInk` is 5.89, where white on `coral` is 3.89.
-    backgroundColor: theme.color.coralInk,
-  },
-  badgeCount: {
-    ...theme.num.xs,
-    ...theme.tabular,
-    color: theme.color.surface,
-    // The role's own line height is 17 inside an 18pt box; centring is the box's job, and the
-    // text box must not add its own leading on top of it.
-    lineHeight: theme.size.tabBar.badge,
-  },
-
   discBox: {
     width: theme.size.fab,
     height: theme.size.fab,
