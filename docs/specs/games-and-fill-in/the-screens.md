@@ -300,8 +300,8 @@ Back chevron + title; changes save as you tap.
 
 - **ALWAYS ON** — eleven inert rows with a green **on** tag, those of
   [the mechanics §17.2](the-mechanics.md#172-notifications): *It's a game! · you paid* · *It's a
-  game! · the club answers by …* · *Waiting for one payment* · *Confirm your payment to keep your
-  seat* · *Game called off · with the refund* · *Someone left your game · or it's filling again* ·
+  game! · the club answers by …* · *Waiting for one payment* · *Confirm your payment by … to keep
+  your seat* · *Game called off · with the refund* · *Someone left your game · or it's filling again* ·
   *You've been refunded* · *The club confirmed / said no / didn't answer in time* · *Your new game*
   · *A game you left* · *Your post didn't fill*.
 - **YOUR CHOICE** — three rows with a working **On / Off** chip: *You complete it* (on; *A card
@@ -393,7 +393,9 @@ card first*.
 | It's a game! · Kazimierz Padel answers by 21:15 | ✓ | ✓ | — |
 | Waiting for one payment | ✓ | ✓ | — |
 | Confirm your payment by 14:40 to keep your seat | ✓ | ✓ | ✓ |
-| Game called off · with the refund, or *nobody paid* | ✓ | ✓ | ✓ |
+| Your time to pay ran out | ✓ | ✓ | — |
+| Game called off · with the refund | ✓ | ✓ | ✓ |
+| Game called off · nobody paid (not the club's answer) | ✓ | ✓ | — |
 | You've been refunded | ✓ | ✓ | ✓ |
 | Someone left your game · or it's filling again | ✓ | ✓ | — |
 | The club confirmed | ✓ | ✓ | ✓ (booking confirmation) |

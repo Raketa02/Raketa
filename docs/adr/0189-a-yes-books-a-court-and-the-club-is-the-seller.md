@@ -234,12 +234,12 @@ player uses, and Playtomic opens a match's chat from the match itself. It is **Q
 mechanics' decision log, which amends §14.3 there and the screens' A4.4 and A8. Nothing else in
 §6 moves: a chat still belongs to one game and opens when it is booked.
 
-## Amendment — 2026-10-09: the bell counts, *It's a game!* marks the four, the club's answer is emailed, and a failed card gets time to pay
+## Amendment — 2026-10-09: the bell's number, *It's a game!* when the four are matched, the club's answer emailed, and time to pay
 
 The product owner ruled twelve questions on 2026-10-09 from story S-01B
 ([#606](https://github.com/Raketa02/Raketa/issues/606)), **Q101–Q112** in the mechanics' decision
 log. Four of them move this record's shape; the rest are words and screens, and live in the
-mechanics §11–§17 and the screens A2.4, A7–A9 and B4.
+mechanics §11–§17 and the screens A2.4, A4.2, A7–A9, B4, B9 and C3.
 
 - **The bell's number is kept by the server, per player** (Q101). §5 gives Notifications one
   aggregate, the Notification preferences, and §6 an in-app fallback beside push. The recent
@@ -260,10 +260,16 @@ mechanics §11–§17 and the screens A2.4, A7–A9 and B4.
   pays. What changes is that the refusal no longer lets everything go at once. The refused
   player's seat is theirs alone for **30 minutes**, never past the book-by. The other shares'
   holds stay on their cards, and at an On request club the club's yes and its court stay too. Paid
-  in time, the game books on the kept holds, with nobody's bank and not the desk asked again.
+  in time, the game books on the kept holds, and neither anybody's bank nor the desk is asked again.
   Lapsed, the holds are let go and the seat is offered as before. This is the one clock a game
   gets after it fills besides the club's time to confirm. It is one player's, and never outlasts
   the book-by, so §2's *no clock of Raketa's own* still holds for a card.
+
+Where the bell's number and the kept holds live among §5's aggregates is left to their builds,
+[#621](https://github.com/Raketa02/Raketa/issues/621),
+[#625](https://github.com/Raketa02/Raketa/issues/625) and
+[#626](https://github.com/Raketa02/Raketa/issues/626). Each records its shape here when it lands,
+as the 2026-09-30 amendment recorded Games & money once it was built.
 
 The same rulings keep a full game that falls back to filling on its players' Home as *Seat open*
 (Q106) and tell everyone still in it every ending and fall-back (Q104). They also tell a leaver

@@ -1454,8 +1454,8 @@ charges' (**Payments**), its result the Game's (**Games**).
   _Avoid_: called off for a game that is only filling again.
 - **Waiting for one payment** — a full game while one player's **Time to pay** runs: nobody has
   paid, the others' holds are kept, and at an On request club so are the club's yes and its court.
-  Every player's Home reads *Waiting for one payment · until 14:40 · Nobody pays until it's in*;
-  the club's Bookings reads *Accepted · waiting for one player's payment until …*. It ends booked
+  It is on all four's Home as *Waiting for one payment · until 14:40 · Nobody pays until it's in*,
+  the payer's own card reading *Confirm your payment by 14:40*; the club's Bookings reads *Accepted · waiting for one player's payment until …*. It ends booked
   when the payment is in, *Seat open* when the time runs out, or called off when no time is left
   before the book-by. Decided by ADR-0189's 2026-10-09 amendment (the mechanics Q109–Q112) and not
   yet built ([#625](https://github.com/Raketa02/Raketa/issues/625),
@@ -1585,7 +1585,8 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   It marks the players being **matched**, not only booked: since ADR-0189's 2026-10-09 amendment
   (the mechanics Q103, Q110), it also shows when the game goes to its On request club, with when
   the club answers, and when one payment is still missing, and the player whose confirmed payment
-  completes a game sees it too. Never twice for one game. Those two are decided and not yet built
+  completes a game sees it too. The club's yes, or the missing payment coming in, never brings a
+  second one. Those two are decided and not yet built
   ([#622](https://github.com/Raketa02/Raketa/issues/622), [#625](https://github.com/Raketa02/Raketa/issues/625)).
 - **Home** — the first tab of the bottom bar: your games from the moment they fill, and the games
   waiting for a club or for one payment, or full once and filling again (*Seat open*). Its badge
