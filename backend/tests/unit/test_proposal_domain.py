@@ -554,18 +554,27 @@ def test_only_a_game_waiting_for_its_club_is_turned_down():
         proposal.turn_down(ClubAnswer.NO_ANSWER, at=LATER)
 
 
+#: The new card a turned-down or cancelled game's people are dealt first.
+NEW_CARD = uuid4()
+
+
 def test_a_turned_down_game_owes_its_people_a_new_card_once():
     proposal = a_full_game()
     proposal.turn_down(ClubAnswer.NO_ANSWER, at=LATER)
     proposal.pull_events()
 
     assert proposal.owes_a_new_card is True
-    assert proposal.redeal(at=LATER) is True
+    assert proposal.redeal(card_id=NEW_CARD, named=(B, C, D, E), at=LATER) is True
     assert proposal.pull_events() == [
-        Redealt(proposal_id=proposal.proposal_id, occurred_at=LATER)
+        Redealt(
+            proposal_id=proposal.proposal_id,
+            occurred_at=LATER,
+            card_id=NEW_CARD,
+            player_ids=(B, C, D, E),
+        )
     ]
     assert proposal.owes_a_new_card is False
-    assert proposal.redeal(at=LATER) is False
+    assert proposal.redeal(card_id=NEW_CARD, named=(B, C, D, E), at=LATER) is False
     assert a_full_game().owes_a_new_card is False
 
 
@@ -613,7 +622,12 @@ def test_a_game_its_club_cancelled_owes_the_people_still_in_a_new_card_once():
     ]
     assert proposal.standing_at(LATER) is Standing.FILLED
     assert (proposal.owes_a_new_card, proposal.owed_to) == (True, (B, C, D))
-    assert proposal.redeal(at=LATER) is True
+    # The card names E too, as a best fit beside them; it was owed nobody but
+    # the three, and so says.
+    assert proposal.redeal(card_id=NEW_CARD, named=(B, E, C, D), at=LATER) is True
+    [redealt] = proposal.pull_events()
+    assert isinstance(redealt, Redealt)
+    assert (redealt.card_id, redealt.player_ids) == (NEW_CARD, (B, C, D))
     assert proposal.owes_a_new_card is False
     assert a_booked_game().owed_to == (B, C, D, E)
 

@@ -14,6 +14,9 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
   seat** — the yes that filled the game, the seat they took — saw *It's a game!*
   on their own screen, so theirs is **their own**: born seen, never counted nor
   pushed (the mechanics Q102).
+- ``BookingRequested`` — *It's a game! · Kazimierz Padel answers by 21:15*,
+  to the four, each time the game goes to its On request club; the player
+  whose act put it there saw it happen, so theirs is their own (Q103).
 - ``SeatChargeFailed`` — *Confirm your payment*, to the payer.
 - ``SeatChargeRefundDecided`` — *Game called off · with the refund* or *You've
   been refunded*, to the refunded; never a leaver's own refund.
@@ -27,10 +30,13 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
 - ``YesSaid``, ``YesResumed`` — *You complete it*, to the people named on the
   card whose yes would book it.
 - ``VersionDealt`` on a post — *Challenges for you*, to the newly dealt.
+- ``Redealt`` — *Your new game*, to the people a club's no, silence or cancel
+  promised a new card first, on the card they were dealt (Q107). **Every
+  other card the proposer deals tells nobody.**
 
-**An alert never points at a card the reader cannot find**: *You complete it*
-and a challenge go only to a reader whose deck shows the card now (``Decks``,
-the deck's own filters). **And *You complete it* is the named player's**
+**An alert never points at a card the reader cannot find**: *You complete it*,
+a challenge and *Your new game* go only to a reader whose deck shows the card
+now (``Decks``, the deck's own filters). **And *You complete it* is the named player's**
 (§6.3: *the named player keeps two advantages … they get the You complete it
 alert*) — never a next best fit dealt into the card after somebody's no.
 
@@ -46,6 +52,7 @@ on, the kind and the game for a chosen one — is told once.
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Collection
+from dataclasses import replace
 from typing import Any, Final, final
 from uuid import UUID
 
@@ -53,6 +60,7 @@ from app.application.events import DeliveryContext
 from app.kernel import Instant, instant
 from app.modules.bookings.domain.events import (
     BookingRefused,
+    BookingRequested,
     BookingTimedOut,
     RequestWithdrawn,
     SeatLeft,
@@ -83,6 +91,7 @@ from app.modules.payments.domain.events import (
 from app.modules.payments.domain.seat_charge import RefundReason
 from app.modules.proposals.domain.events import (
     ProposalExpired,
+    Redealt,
     VersionDealt,
     YesResumed,
     YesSaid,
@@ -136,6 +145,7 @@ def _notice(
     people: tuple[UUID, ...] = (),
     reason: str | None = None,
     own: bool = False,
+    until: Instant | None = None,
 ) -> Notice:
     return Notice(
         kind=kind,
@@ -151,6 +161,7 @@ def _notice(
         people=people,
         reason=reason,
         own=own,
+        until=until,
     )
 
 
@@ -182,11 +193,23 @@ class TellThePlayers:
         )
 
     async def _tell(
-        self, players: Collection[UUID], notice: Notice, *, at: Instant
+        self,
+        players: Collection[UUID],
+        notice: Notice,
+        *,
+        at: Instant,
+        whose_act: UUID | None = None,
     ) -> None:
+        """``whose_act`` is the player whose own act it tells: their copy is
+        born seen (Q102)."""
+
         # In a stable order, so two processes take the day streams alike.
         for player in sorted(set(players), key=str):
-            await self._give.execute(player, notice, at=at)
+            await self._give.execute(
+                player,
+                replace(notice, own=True) if player == whose_act else notice,
+                at=at,
+            )
 
     # -- the money ------------------------------------------------------------
 
@@ -270,6 +293,28 @@ class TellThePlayers:
         )
 
     # -- the club's answer ----------------------------------------------------
+
+    async def _gone_to_the_club(
+        self, event: BookingRequested, *, key: str, at: Instant
+    ) -> None:
+        game = await self._games.about(event.booking_id, at=at)
+        answer_by = instant(event.answer_by)
+        # Told while the game still waits on this very request: one taken back
+        # or answered before this was delivered is told by what came of it.
+        if game is None or game.answer_by != answer_by:
+            return
+        await self._tell(
+            (*event.first_side, *event.second_side),
+            _notice(
+                NoticeKind.WAITING_FOR_THE_CLUB,
+                game,
+                key=f"{NoticeKind.WAITING_FOR_THE_CLUB}:{key}",
+                opens=Opens.PROPOSAL,
+                until=answer_by,
+            ),
+            at=at,
+            whose_act=event.filled_by,
+        )
 
     async def _turned_down(
         self, event: BookingRefused | BookingTimedOut, *, key: str, at: Instant
@@ -414,6 +459,27 @@ class TellThePlayers:
             at=at,
         )
 
+    async def _new_card(self, event: Redealt, *, key: str, at: Instant) -> None:
+        """The card first a club's no, silence or cancel promised: told to
+        those it was promised to, on the card they find on top of the deck."""
+
+        if event.card_id is None:
+            return
+        card = await self._games.about(event.card_id, at=at)
+        if card is None or not card.filling:
+            return
+        await self._tell(
+            await self._decks.showing(card.game_id, event.player_ids, at=at),
+            _notice(
+                NoticeKind.NEW_GAME,
+                card,
+                key=f"{NoticeKind.NEW_GAME}:{key}",
+                opens=Opens.DECK,
+                amount_grosze=card.share_grosze,
+            ),
+            at=at,
+        )
+
     async def _dealt(self, event: VersionDealt, *, key: str, at: Instant) -> None:
         game = await self._games.about(event.proposal_id, at=at)
         if game is None or game.posted_by is None:
@@ -441,6 +507,7 @@ _Telling = Callable[..., Awaitable[None]]
 #: subscribed and what is handled cannot drift apart.
 _TELLING: Final[dict[type[Any], _Telling]] = {
     SeatChargeTaken: TellThePlayers._seats_taken,
+    BookingRequested: TellThePlayers._gone_to_the_club,
     SeatChargeFailed: TellThePlayers._payment_refused,
     SeatChargeRefundDecided: TellThePlayers._refunded,
     BookingRefused: TellThePlayers._turned_down,
@@ -451,6 +518,7 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     YesSaid: TellThePlayers._one_seat_left,
     YesResumed: TellThePlayers._one_seat_left,
     VersionDealt: TellThePlayers._dealt,
+    Redealt: TellThePlayers._new_card,
 }
 
 #: What ``subscribe_the_teller`` hears.

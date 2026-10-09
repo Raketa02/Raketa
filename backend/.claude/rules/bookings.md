@@ -92,7 +92,9 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   an On request club **asks the club**: the first free court is **reserved** (`BookingRequested` —
   the booking born *waiting for the club*, its row holding the court hour as a booked one does),
   the sides are drawn, the answer is due at the yes plus the club's **time to confirm**, and the
-  desk is emailed *A booking is waiting for your answer* in the same transaction. The yes answers
+  desk is emailed *A booking is waiting for your answer* in the same transaction. The request
+  records whose act put it there (`BookingRequested.filled_by`, the fill's `by`; #622), so the
+  *It's a game! · … answers by* the four are told then is that player's own. The yes answers
   `waiting_for_the_club`. **The proposal stays filling, full** — `Proposal.waiting_for_the_club`
   — and **its book-by no longer ends it**: the game filled in time, and the answer may be due
   past the book-by (never past the start — the longest time to confirm is the shortest notice),

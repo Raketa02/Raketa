@@ -212,6 +212,7 @@ def test_a_game_that_was_never_booked_is_on_nobody_s_record():
         second_side=(EWA, TOMEK),
         cut_off=CUT_OFF,
         answer_by=_at(1),
+        filled_by=None,
         at=_at(),
     )
     booking.refuse(reason=None, at=_at(0.5))

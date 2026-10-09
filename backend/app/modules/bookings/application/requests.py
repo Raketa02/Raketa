@@ -52,6 +52,8 @@ class GameToRequest:
     court: BookedCourt
     cut_off: Instant
     answer_by: Instant
+    #: The player whose own act put it to the club — ``None`` when nobody's did.
+    filled_by: UUID | None
 
 
 @final
@@ -88,6 +90,7 @@ class RequestTheGame:
                 second_side=game.second_side,
                 cut_off=game.cut_off,
                 answer_by=game.answer_by,
+                filled_by=game.filled_by,
                 at=at,
             )
         else:
@@ -97,6 +100,7 @@ class RequestTheGame:
                 second_side=game.second_side,
                 cut_off=game.cut_off,
                 answer_by=game.answer_by,
+                filled_by=game.filled_by,
                 at=at,
             )
         await self._bookings.save(booking)

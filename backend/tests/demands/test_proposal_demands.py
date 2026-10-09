@@ -172,6 +172,7 @@ async def _waiting(session, *, start: Instant) -> Booking:
         second_side=(EWA, TOMEK),
         cut_off=start - timedelta(hours=24),
         answer_by=_at(1),
+        filled_by=None,
         at=_at(),
     )
     return await _saved_booking(session, booking)
@@ -427,6 +428,7 @@ def _a_game_to_ask(club_id: UUID, *, start: Instant, at: Instant) -> GameToAsk:
             time_to_confirm=minutes(30),
         ),
         answer_by=at + timedelta(minutes=30),
+        filled_by=TOMEK,
     )
 
 

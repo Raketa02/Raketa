@@ -99,6 +99,8 @@ class RecordedNotice:
     gathered: int
     #: Of the player's own act: born seen, never counted nor pushed (Q102).
     own: bool = False
+    #: The deadline it names, if its kind names one.
+    until: Instant | None = None
     #: Reached the list — given, or gathered into — since the player last
     #: opened it, and not their own: one the bell counts.
     new: bool = False
@@ -190,6 +192,9 @@ class GameBrief:
     #: waiting for its club is.
     filling: bool
     waiting_for_the_club: bool
+    #: When its club must answer the request it waits on — ``None`` unless it
+    #: waits for its club.
+    answer_by: Instant | None
     #: Seats nobody is In on, while it fills.
     open_seats: int
     #: Everybody In, while it fills.

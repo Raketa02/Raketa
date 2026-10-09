@@ -574,6 +574,10 @@ class GameToAsk:
     second_side: tuple[UUID, ...]
     court: BookableCourt
     answer_by: Instant
+    #: The player whose own act left no seat open — their yes, a join, a
+    #: confirmed payment — and so saw *It's a game!*; ``None`` when no player's
+    #: act did: a paused yes coming back.
+    filled_by: UUID | None
 
 
 @final

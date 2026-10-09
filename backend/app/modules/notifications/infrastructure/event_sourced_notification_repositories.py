@@ -236,6 +236,7 @@ class EventSourcedNoticeDayRepository:
                         sequence_no=record.sequence_no,
                         gathered=0,
                         own=event.own,
+                        until=event.until,
                     )
                 )
             elif isinstance(event, NoticeBundled):
@@ -392,5 +393,6 @@ def _recorded(row: NoticeORM, *, new: bool) -> RecordedNotice:
         given_at=stored_instant(row.given_at),
         gathered=row.gathered,
         own=row.own,
+        until=None if row.until is None else stored_instant(row.until),
         new=new,
     )

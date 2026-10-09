@@ -1,7 +1,8 @@
-"""The two facts #621 adds to Notifications' streams, as a **durable** contract:
-a visit to the recent notices, filed under its own name, and a notice of the
-player's own act — defaulted rather than a version 2, so a notice given before
-reads as nobody's own.
+"""The facts #621 and #622 add to Notifications' streams, as a **durable**
+contract: a visit to the recent notices, filed under its own name; a notice of
+the player's own act — defaulted rather than a version 2, so a notice given
+before reads as nobody's own; and the deadline a notice names, defaulted so a
+notice given before names none.
 """
 
 from __future__ import annotations
@@ -38,7 +39,7 @@ def _decoded(codec: JsonEventCodec, event_type: str, payload: dict):
     )
 
 
-def _given(*, own: bool) -> NoticeGiven:
+def _given(*, own: bool, until: datetime | None = None) -> NoticeGiven:
     return NoticeGiven(
         notice_id=uuid4(),
         player_id=uuid4(),
@@ -57,6 +58,7 @@ def _given(*, own: bool) -> NoticeGiven:
         reason=None,
         occurred_at=NOW,
         own=own,
+        until=until,
     )
 
 
@@ -91,3 +93,15 @@ def test_a_notice_given_before_own_was_asked_is_nobody_s_own():
 
     assert isinstance(decoded, NoticeGiven)
     assert decoded.own is False
+
+
+def test_a_notice_keeps_the_deadline_it_names_and_one_given_before_names_none():
+    codec = _codec()
+    given = _given(own=False, until=datetime(2026, 10, 9, 19, 15, tzinfo=timezone.utc))
+    encoded = codec.encode(given)
+    older = {key: value for key, value in encoded.payload.items() if key != "until"}
+
+    assert _decoded(codec, encoded.event_type, encoded.payload) == given
+    decoded = _decoded(codec, encoded.event_type, older)
+    assert isinstance(decoded, NoticeGiven)
+    assert decoded.until is None

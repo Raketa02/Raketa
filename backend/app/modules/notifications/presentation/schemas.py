@@ -19,7 +19,7 @@ from app.modules.notifications.domain.preferences import (
 
 
 class NotificationChoicesSchema(BaseModel):
-    """The three notices a player chooses. The seven that are always on are
+    """The three notices a player chooses. The nine that are always on are
     no choice, and are not here."""
 
     you_complete_it: bool = Field(

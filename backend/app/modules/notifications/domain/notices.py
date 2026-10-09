@@ -1,7 +1,7 @@
 """**A player's notices of one day** — what they were told, and the caps on
 what they may be (#549; the mechanics §17.2; the screens A7.2, A9).
 
-**Seven kinds are always on**: told whenever they happen, pushed and listed.
+**Nine kinds are always on**: told whenever they happen, pushed and listed.
 **Three are the player's to switch** (``preferences.py``) and **capped per day
 in Kraków** — *You complete it* once, *Challenges for you* and *Fill in alerts*
 three times. Past its cap, *You complete it* and a challenge are **bundled**:
@@ -41,6 +41,9 @@ class NoticeKind(StrEnum):
 
     #: *It's a game! · you paid 30 zł* — the seats were taken.
     GAME_BOOKED = "GAME_BOOKED"
+    #: *It's a game! · Kazimierz Padel answers by 21:15* — the four are matched,
+    #: and the game went to its On request club; nobody has paid (Q103).
+    WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
     #: *Confirm your payment to keep your seat* — or to take one, on a rescue.
     CONFIRM_PAYMENT = "CONFIRM_PAYMENT"
     #: *Game called off · with the refund* — at the cut-off, or by the club.
@@ -53,6 +56,9 @@ class NoticeKind(StrEnum):
     CLUB_CONFIRMED = "CLUB_CONFIRMED"
     #: *The club couldn't take it* (On request) — refused, or no answer.
     CLUB_COULD_NOT_TAKE_IT = "CLUB_COULD_NOT_TAKE_IT"
+    #: *Your new game · Fri 19:00 at Bonarka Arena* — the card first the club's
+    #: no, its silence or its cancel promised (Q107).
+    NEW_GAME = "NEW_GAME"
     #: *Your post didn't fill.*
     POST_DID_NOT_FILL = "POST_DID_NOT_FILL"
     #: *You complete it* — a card needs only you.
@@ -153,6 +159,9 @@ class Notice:
     #: Of the player's own act, which they saw happen: born seen — listed, and
     #: never counted on the bell nor pushed (the mechanics Q102).
     own: bool = False
+    #: The deadline it names — when the club must answer, on *It's a game!*
+    #: at a club that confirms.
+    until: Instant | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -236,6 +245,7 @@ class NoticesOfADay:
             reason=notice.reason,
             occurred_at=at,
             own=notice.own,
+            until=notice.until,
         )
         self._record_that(given)
         return given

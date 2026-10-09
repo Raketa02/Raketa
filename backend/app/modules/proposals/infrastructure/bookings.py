@@ -214,6 +214,7 @@ class BookingsClubRequests:
                     ),
                     cut_off=game.court.cut_off,
                     answer_by=game.answer_by,
+                    filled_by=game.filled_by,
                 ),
                 at=at,
             )

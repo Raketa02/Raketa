@@ -117,7 +117,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `club_cancelled`), its people dealt a new card first exactly as a lost
   card's are, **never at the club and hour that turned them down**, by the first run that
   finds them an hour — owed until then, while the game's own hour is ahead
-  (`proposals.redealt`, recorded once the pick has really been made). **When**: `ProposeGames` runs per pool from two
+  (`proposals.redealt`, recorded once the pick has really been made, naming the card and
+  those of the owed people on it — `card_id`, `player_ids` — whom Notifications tells
+  *Your new game*, #622). **When**: `ProposeGames` runs per pool from two
   jobs — the sweep over every pool (`GroupDirectory.every`) and a short tick over the pools
   a delivered change made due (`DueForProposing`, fed per delivery run by
   `MarkDueForProposing`: a joining, a player's week, intent, first rating or Games & money,

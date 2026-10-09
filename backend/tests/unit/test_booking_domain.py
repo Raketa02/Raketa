@@ -54,6 +54,7 @@ def _requested(**overrides) -> Booking:
         second_side=(EWA, TOMEK),
         cut_off=START - timedelta(hours=24),
         answer_by=_at(30),
+        filled_by=None,
         at=_at(),
     )
     fields.update(overrides)
@@ -74,6 +75,30 @@ def test_a_full_game_at_an_on_request_club_waits_for_the_club_with_its_court_hel
     assert booking.players == (OLA, KUBA, EWA, TOMEK)
     [event] = booking.pull_events()
     assert isinstance(event, BookingRequested)
+    assert event.filled_by is None
+
+
+def test_a_request_names_the_player_whose_own_act_put_it_to_the_club():
+    """Their yes left no seat open, and they saw *It's a game!*: the four are
+    told, and theirs is their own (#622). Asked again, it names whoever's act
+    filled it again."""
+
+    booking = _requested(filled_by=TOMEK)
+    booking.withdraw_request((KUBA,), at=_at(5))
+    booking.request_again(
+        court=COURT,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, TOMEK),
+        cut_off=START - timedelta(hours=12),
+        answer_by=_at(70),
+        filled_by=KUBA,
+        at=_at(40),
+    )
+
+    asked, _, asked_again = booking.pull_events()
+    assert isinstance(asked, BookingRequested)
+    assert isinstance(asked_again, BookingRequested)
+    assert (asked.filled_by, asked_again.filled_by) == (TOMEK, KUBA)
 
 
 def test_accepting_books_it_and_names_the_game_it_opened():
@@ -164,6 +189,7 @@ def test_full_again_the_same_game_asks_the_club_again_with_whoever_is_in():
         second_side=(EWA, TOMEK),
         cut_off=START - timedelta(hours=12),
         answer_by=_at(70),
+        filled_by=None,
         at=_at(40),
     )
 
@@ -188,6 +214,7 @@ def test_a_refused_game_is_never_asked_again():
             second_side=(EWA, TOMEK),
             cut_off=START,
             answer_by=_at(40),
+            filled_by=None,
             at=_at(10),
         )
 

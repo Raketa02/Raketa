@@ -64,7 +64,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Iterable, Sequence
+from typing import Collection, Iterable, Sequence
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
@@ -672,13 +672,22 @@ class Proposal:
             )
         )
 
-    def redeal(self, *, at: Instant) -> bool:
-        """Record that the people In were dealt a new card first. Answers whether
-        anything was recorded: nothing on a game that owes nothing."""
+    def redeal(self, *, card_id: UUID, named: Collection[UUID], at: Instant) -> bool:
+        """Record that the people In were dealt a new card first: ``card_id``,
+        naming ``named`` — those of them it names, and maybe best fits beside
+        them. Answers whether anything was recorded: nothing on a game that
+        owes nothing."""
 
         if not self.owes_a_new_card:
             return False
-        self._record_that(Redealt(proposal_id=self.proposal_id, occurred_at=at))
+        self._record_that(
+            Redealt(
+                proposal_id=self.proposal_id,
+                occurred_at=at,
+                card_id=card_id,
+                player_ids=tuple(p for p in self.owed_to if p in named),
+            )
+        )
         return True
 
     def lose_court_hour(self, *, at: Instant) -> bool:

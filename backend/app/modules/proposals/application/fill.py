@@ -153,7 +153,9 @@ class Fill:
         paused yes coming back. A game booked now records it
         (``ProposalFilled.filled_by``), so what it booked is never told back
         to them as news (the mechanics Q102); one put to its club is filled by
-        the club's yes, which is nobody's."""
+        the club's yes, which is nobody's — and its request records whose act
+        put it there (``BookingRequested.filled_by``), so the *It's a game!*
+        the four are told then is theirs already seen (#622)."""
 
         invariant(proposal.open_seats == 0, f"{proposal.proposal_id} is not full")
         unfit = await self._no_longer_fit(proposal, now=now)
@@ -174,7 +176,7 @@ class Fill:
             await self._undecided.release(proposal.proposal_id, keeping=(), at=now)
             return FillOutcome(court_lost=True)
         if terms.confirms_each_game:
-            return await self._ask_the_club(proposal, court, now=now)
+            return await self._ask_the_club(proposal, court, by=by, now=now)
         return await self._paid_and_booked(
             proposal,
             court_name=court.name,
@@ -232,7 +234,12 @@ class Fill:
         )
 
     async def _ask_the_club(
-        self, proposal: Proposal, court: BookableCourt, *, now: Instant
+        self,
+        proposal: Proposal,
+        court: BookableCourt,
+        *,
+        by: UUID | None,
+        now: Instant,
     ) -> FillOutcome:
         """An On request club: the court is held for its answer and its desk is
         told; nobody pays until it says yes."""
@@ -252,6 +259,7 @@ class Fill:
                 second_side=second_side,
                 court=court,
                 answer_by=answer_by,
+                filled_by=by,
             ),
             at=now,
         )

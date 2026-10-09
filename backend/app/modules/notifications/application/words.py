@@ -12,7 +12,10 @@ when they are needed — a person's name as it stands, the club's as it is
 called.
 
 **The hour is the club's**, Europe/Warsaw — *Sat 10 Oct, 17:00* — and money is
-said as the money emails say it (``zloty``): *30 zł*, *28,55 zł*.
+said as the money emails say it (``zloty``): *30 zł*, *28,55 zł*. **A deadline
+is said against the moment it was told**, as Home's *answers by* is against
+now: *21:15* that day, *Fri 09:00* on another — so a notice read later in the
+list says what it said when it was given.
 """
 
 from __future__ import annotations
@@ -21,9 +24,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final
 
-from app.kernel import Instant, Sport
+from app.kernel import Instant, Sport, invariant
 from app.modules.bookings.domain.booking import CancelReason
-from app.modules.clubs.domain.court_hours import CLUB_ZONE
+from app.modules.clubs.domain.court_hours import CLUB_ZONE, local_day
 from app.modules.notifications.domain.notices import NoticeKind, NoticeReason, Opens
 from app.modules.payments.application.seat_charge_emails import zloty
 from app.modules.payments.domain.seat_charge import FailureReason
@@ -66,6 +69,10 @@ class Said:
     reason: str | None = None
     #: How many more of its kind the day gathered into it.
     gathered: int = 0
+    #: The deadline it names, if its kind names one.
+    until: Instant | None = None
+    #: When it was given — what its deadline is said against.
+    given_at: Instant | None = None
 
 
 def _when(at: Instant) -> str:
@@ -80,6 +87,14 @@ def _hour(at: Instant) -> str:
 
     wall = at.astimezone(CLUB_ZONE)
     return f"{wall:%a} {wall:%H:%M}"
+
+
+def _by(deadline: Instant, *, given_at: Instant | None) -> str:
+    """*21:15* on the day it was given, *Fri 09:00* on another."""
+
+    if given_at is not None and local_day(deadline) == local_day(given_at):
+        return f"{deadline.astimezone(CLUB_ZONE):%H:%M}"
+    return _hour(deadline)
 
 
 def _people(names: Sequence[str]) -> str:
@@ -99,6 +114,15 @@ def words_for(said: Said) -> Words:
 
     if kind is NoticeKind.GAME_BOOKED:
         return Words(title=f"It's a game! · you paid {money}", body=f"{game}.")
+    if kind is NoticeKind.WAITING_FOR_THE_CLUB:
+        answer_by = invariant(said.until, "a game waiting for its club, by no time")
+        return Words(
+            title=(
+                f"It's a game! · {said.club} answers by "
+                f"{_by(answer_by, given_at=said.given_at)}"
+            ),
+            body=f"{sport} · {_hour(said.starts_at)}. Nobody pays until it confirms.",
+        )
     if kind is NoticeKind.CLUB_CONFIRMED:
         return Words(
             title=f"{said.club} confirmed your game",
@@ -108,6 +132,11 @@ def words_for(said: Said) -> Words:
         return Words(
             title=f"{said.club} couldn't take your game",
             body=f"{sport} · {when}. Nobody paid — you'll get a new card first.",
+        )
+    if kind is NoticeKind.NEW_GAME:
+        return Words(
+            title=f"Your new game · {_hour(said.starts_at)} at {said.club}",
+            body=f"The same players · {money} a share — say yes to book it.",
         )
     if kind is NoticeKind.CONFIRM_PAYMENT:
         return _confirm_payment(said, game=game, money=money)

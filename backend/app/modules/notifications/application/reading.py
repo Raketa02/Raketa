@@ -51,6 +51,7 @@ def recorded(given: NoticeGiven) -> RecordedNotice:
         given_at=instant(given.occurred_at),
         gathered=0,
         own=given.own,
+        until=None if given.until is None else instant(given.until),
     )
 
 
@@ -80,6 +81,8 @@ class NoticeWords:
                     ),
                     reason=notice.reason,
                     gathered=notice.gathered,
+                    until=notice.until,
+                    given_at=notice.given_at,
                 )
             )
             for notice in notices

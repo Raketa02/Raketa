@@ -299,17 +299,24 @@ class ProposeGames:
         done = Proposed()
         for proposal_id in batch.lost:
             done += await self._act(self._lose(proposal_id, now), Proposed(lost=1))
-        dealt_after: set[UUID] = set()
+        #: Each owed game whose people's new card was made: the card's game and
+        #: the pick it was made from.
+        dealt_after: dict[UUID, tuple[UUID, Pick]] = {}
         for pick in batch.picks:
-            made = await self._act(self._pick(pool, sport, pick), Proposed(made=1))
+            game_id = _game_of(pool, sport, pick)
+            made = await self._act(
+                self._pick(pool, sport, pick, game_id), Proposed(made=1)
+            )
             done += made
             if made.made and pick.after is not None:
-                dealt_after.add(pick.after)
+                dealt_after[pick.after] = (game_id, pick)
         for proposal_id in batch.redealt:
             # Owed until its people's card is really on the table.
             if proposal_id in dealt_after:
+                game_id, pick = dealt_after[proposal_id]
                 done += await self._act(
-                    self._redealt(proposal_id, now), Proposed(redealt=1)
+                    self._redealt(proposal_id, game_id, pick.named, now),
+                    Proposed(redealt=1),
                 )
         for deal in batch.deals:
             done += await self._act(self._dealt(deal, now), Proposed(dealt=1))
@@ -336,18 +343,26 @@ class ProposeGames:
         await self._uow.commit()
         return True
 
-    async def _redealt(self, proposal_id: UUID, now: Instant) -> bool:
-        """The people on a turned-down game were dealt their new card: it owes
-        nothing more."""
+    async def _redealt(
+        self,
+        proposal_id: UUID,
+        card_id: UUID,
+        named: tuple[UUID, ...],
+        now: Instant,
+    ) -> bool:
+        """The people on a turned-down game were dealt their new card,
+        ``card_id``: it owes nothing more, and says which card it was."""
 
         proposal = await self._proposals.load(proposal_id)
-        if proposal is None or not proposal.redeal(at=now):
+        if proposal is None or not proposal.redeal(
+            card_id=card_id, named=named, at=now
+        ):
             return False
         await self._proposals.save(proposal)
         await self._uow.commit()
         return True
 
-    async def _pick(self, pool: Pool, sport: Sport, pick: Pick) -> bool:
+    async def _pick(self, pool: Pool, sport: Sport, pick: Pick, game_id: UUID) -> bool:
         await self._make.execute(
             MakeProposalCommand(
                 pool_id=pool.id,
@@ -358,14 +373,7 @@ class ProposeGames:
                 club_id=pick.club_id,
                 start=pick.start,
                 versions=[pick.named],
-                proposal_id=pick_id(
-                    pool_id=pool.id,
-                    sport=sport,
-                    kind=pick.kind,
-                    club_id=pick.club_id,
-                    start=pick.start,
-                    named=pick.named,
-                ),
+                proposal_id=game_id,
             )
         )
         return True
@@ -397,6 +405,19 @@ class ProposeGames:
             )
         )
         return True
+
+
+def _game_of(pool: Pool, sport: Sport, pick: Pick) -> UUID:
+    """The game a pick is made as — its id, the same on every process."""
+
+    return pick_id(
+        pool_id=pool.id,
+        sport=sport,
+        kind=pick.kind,
+        club_id=pick.club_id,
+        start=pick.start,
+        named=pick.named,
+    )
 
 
 # --------------------------------------------------------------------------- #

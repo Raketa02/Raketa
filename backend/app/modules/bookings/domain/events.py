@@ -90,6 +90,11 @@ class BookingRequested:
     are drawn already, so the players read the game they are waiting on.
     Recorded again on the same stream when the game fills again after a
     ``RequestWithdrawn``, with whoever is In then.
+
+    ``filled_by`` is the player whose own act left no seat open and so put it
+    to the club — their yes, a join, a confirmed payment — who saw *It's a
+    game!* on their own screen; ``None`` for a paused yes coming back, and for
+    the rows recorded before it was asked (#622).
     """
 
     booking_id: UUID
@@ -107,6 +112,7 @@ class BookingRequested:
     #: When the club's time to confirm runs out — the request's own deadline.
     answer_by: datetime
     occurred_at: datetime
+    filled_by: UUID | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "first_side", _uuids(self.first_side))

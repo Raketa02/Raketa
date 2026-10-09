@@ -81,6 +81,11 @@ class NoticeGiven:
     the seat they took — which they saw happen on their own screen: **born
     seen**, listed and never counted on the bell, nor pushed (the mechanics
     Q102). Defaulted for the rows recorded before it was asked.
+
+    ``until`` is a deadline it names — when the club must answer, on *It's a
+    game!* at a club that confirms (Q103) — kept, so the notice says the same
+    whenever it is read; ``None`` where the kind names none, and on the rows
+    recorded before it was asked.
     """
 
     notice_id: UUID
@@ -103,6 +108,7 @@ class NoticeGiven:
     reason: str | None
     occurred_at: datetime
     own: bool = False
+    until: datetime | None = None
 
     def __post_init__(self) -> None:
         # JSON hands a list of strings back; the codec coerces a bare ``UUID``

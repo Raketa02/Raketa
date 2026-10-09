@@ -9,8 +9,8 @@ paths:
 
 # Notifications
 
-Decisions that are load-bearing and not obvious from the code (#549, #621; ADR-0189 §5 and
-its 2026-10-09 amendment; the mechanics §17.2, Q101, Q102; the screens A7.2, A9).
+Decisions that are load-bearing and not obvious from the code (#549, #621, #622; ADR-0189 §5
+and its 2026-10-09 amendment; the mechanics §17.2, Q101–Q103, Q107; the screens A7.2, A9).
 
 - **A player is told, and nothing asks** (`.importlinter`'s *No context knows
   Notifications exists*). `notifications/application/telling.py` subscribes to
@@ -76,8 +76,34 @@ its 2026-10-09 amendment; the mechanics §17.2, Q101, Q102; the screens A7.2, A9
   seat: **the filler** — `ProposalFilled.filled_by`, recorded by the fill from the yes,
   join or confirmed payment that left no seat open (`Fill.run(by=…)`), `None` for the
   club's yes and a paused yes coming back, and read as `GameBrief.filled_by` — and **a
-  rescuer** (`seats_taken`), whose join showed them *It's a game!* too. The club's yes
-  (*… confirmed your game*) is the club's act and counted for all four.
+  rescuer** (`seats_taken`), whose join showed them *It's a game!* too. And it is the
+  copy of *It's a game! · … answers by* (below) to **the player whose act put the game
+  to its club** — the same `by`, recorded on the request as `BookingRequested.filled_by`
+  (#622). The club's yes (*… confirmed your game*) is the club's act and counted for all
+  four.
+- **Two notices mark the four matched, and the card a club's answer promised** (#622; the
+  mechanics Q103, Q107). Both always on, never capped, never emailed:
+  - **`WAITING_FOR_THE_CLUB`** — *It's a game! · Kazimierz Padel answers by 21:15* / *Padel ·
+    Fri 19:00. Nobody pays until it confirms.* — on `BookingRequested`, to **everybody on
+    the request** (its two sides), opening the game still filling (`PROPOSAL`). Each time
+    the game goes to the club: full again after a seat opened, it is a new request with a
+    new deadline and all four are told again. **Only while the game still waits on that
+    very request** (`GameBrief.answer_by` equal to the event's): a request taken back, or
+    answered, before its delivery is told by what came of it — *filling again*, or the
+    club's answer — never with a deadline the club no longer has. **The deadline is kept
+    on the notice** (`Notice.until` → `NoticeGiven.until` → `notices.until`, migration
+    0051) and said against **the moment it was given** (`Said.given_at`): the hour alone
+    that day, the weekday and the hour on another — Home's *answers by*, frozen, so the row
+    reads the same later in the list.
+  - **`NEW_GAME`** — *Your new game · Fri 19:00 at Bonarka Arena* / *The same players ·
+    40 zł a share — say yes to book it.* — on `proposals.redealt`, which names the card
+    (`card_id`) and **those the owed game promised it to who are on it** (`player_ids`:
+    `owed_to` ∩ the card's names — a best fit completing the card was promised nothing,
+    and is dealt it like any card), told to those of them whose deck shows the card now
+    (`Decks`), opening the group's deck with it on top (`DECK`, the card's own game, pool,
+    sport and kind). Once per card: `Redealt` is recorded once per owed game. **A card the
+    proposer deals for any other reason tells nobody** — a lost court hour's new card first
+    included, which no notice promised; older `Redealt` rows name no card and tell nobody.
 - **Caps and bundling are decided as each trigger is delivered** (`NoticesOfADay.give`);
   the screens' C3 *Notifications job* is not built. *You complete it* once a day,
   *Challenges for you* three times — past the cap each **joins the day's last notice of
@@ -92,8 +118,8 @@ its 2026-10-09 amendment; the mechanics §17.2, Q101, Q102; the screens A7.2, A9
   alert* (the mechanics §6.3), so a next best fit dealt the seat a no left is dealt a
   card and told nothing. **A post's own yes is its birth**, told as the challenge its
   `VersionDealt` is. **An alert never points at a card the reader cannot find**: *You
-  complete it* and a challenge go only to a reader whose deck shows the card now
-  (`Decks` → `ReadGroupDeck.shows`: intent, Games & money, a week or an hour already
+  complete it*, a challenge and *Your new game* go only to a reader whose deck shows the
+  card now (`Decks` → `ReadGroupDeck.shows`: intent, Games & money, a week or an hour already
   booked, the club, pool membership, the pair rule, *Mixed pairs*).
 - **The money notices hang off the money's events.** `SeatChargeTaken` is *It's a game! ·
   you paid* — or, on a booking that waited for its club and to anybody but a rescuer, *the
@@ -122,8 +148,8 @@ its 2026-10-09 amendment; the mechanics §17.2, Q101, Q102; the screens A7.2, A9
   into it, and the data a tap opens): the pusher sends it, and the dev console's *Sent*
   pane shows it for a player with no phone (#594).
 - **A notice records facts, never words** (`NoticeGiven`: the game, pool, club, hour,
-  amount, the people it names by id, a reason code, and where a tap opens it —
-  `BOOKING`, `PROPOSAL` or `DECK`). The words are `application/words.py`'s, drawn at push
+  amount, the people it names by id, a reason code, a deadline (`until`), and where a tap
+  opens it — `BOOKING`, `PROPOSAL` or `DECK`). The words are `application/words.py`'s, drawn at push
   time and again at every read, as an email's copy lives in the backend: a push is shown by
   the phone's system before the app runs. Deployed, an `EXPO_ACCESS_TOKEN` with Expo's
   enhanced push security makes a leaked phone token useless to anybody else.

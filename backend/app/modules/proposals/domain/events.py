@@ -266,10 +266,23 @@ class Redealt:
     """The proposer has dealt the people In on a game its club turned down — or
     still in on one it cancelled (#547) — a new card first. What makes such a
     game owe nothing more; until it, every proposer run looks for an hour again,
-    while the game's own hour is still ahead."""
+    while the game's own hour is still ahead.
+
+    ``card_id`` is the new card, and ``player_ids`` those of the people it owed
+    who are on it — never a best fit dealt beside them, who was promised
+    nothing — so they can be told *Your new game* (#622; the mechanics Q107).
+    ``None`` and empty on the rows recorded before it was asked.
+    """
 
     proposal_id: UUID
     occurred_at: datetime
+    card_id: UUID | None = None
+    player_ids: tuple[UUID, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "player_ids", tuple(UUID(str(one)) for one in self.player_ids)
+        )
 
 
 @dataclass(frozen=True)

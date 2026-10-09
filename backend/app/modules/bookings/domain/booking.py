@@ -235,9 +235,11 @@ class Booking:
         second_side: tuple[UUID, ...],
         cut_off: Instant,
         answer_by: Instant,
+        filled_by: UUID | None,
         at: Instant,
     ) -> "Booking":
-        """A full game put to its On request club, the court reserved for it."""
+        """A full game put to its On request club, the court reserved for it —
+        by ``filled_by``'s own act, if a player's."""
 
         requested = _a_request(
             booking_id=booking_id,
@@ -252,6 +254,7 @@ class Booking:
             second_side=second_side,
             cut_off=cut_off,
             answer_by=answer_by,
+            filled_by=filled_by,
             at=at,
         )
         booking = cls._waiting(requested)
@@ -593,10 +596,12 @@ class Booking:
         second_side: tuple[UUID, ...],
         cut_off: Instant,
         answer_by: Instant,
+        filled_by: UUID | None,
         at: Instant,
     ) -> None:
         """The game whose request was withdrawn is full again: put to the club
-        again, with whoever is In now, on the first free court now."""
+        again, with whoever is In now, on the first free court now — by
+        ``filled_by``'s own act, if a player's."""
 
         invariant(
             self.called_off is CalledOff.SEAT_OPENED,
@@ -616,6 +621,7 @@ class Booking:
                 second_side=second_side,
                 cut_off=cut_off,
                 answer_by=answer_by,
+                filled_by=filled_by,
                 at=at,
             )
         )
@@ -752,6 +758,7 @@ def _a_request(
     second_side: tuple[UUID, ...],
     cut_off: Instant,
     answer_by: Instant,
+    filled_by: UUID | None,
     at: Instant,
 ) -> BookingRequested:
     _sides_of_a_game(sport, first_side, second_side)
@@ -777,4 +784,5 @@ def _a_request(
         cut_off=cut_off,
         answer_by=answer_by,
         occurred_at=at,
+        filled_by=filled_by,
     )

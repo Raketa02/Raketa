@@ -27,6 +27,7 @@ from app.modules.proposals.domain.events import (
     ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
+    Redealt,
     VersionDealt,
     YesSaid,
     YesWithdrawn,
@@ -145,3 +146,62 @@ def test_a_fill_stored_before_it_named_its_filler_names_nobody():
 
     assert isinstance(decoded, ProposalFilled)
     assert decoded.filled_by is None
+
+
+def test_a_new_card_dealt_names_its_card_and_its_people_and_decodes_back():
+    """A replayed ``Redealt`` must name the people as ids equal to theirs, as a
+    version's names must — not the strings JSON hands back."""
+
+    codec = _codec()
+    redealt = Redealt(
+        proposal_id=PROPOSAL,
+        occurred_at=NOW,
+        card_id=uuid4(),
+        player_ids=(PLAYER, uuid4()),
+    )
+    encoded = codec.encode(redealt)
+
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=uuid4(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=encoded.payload,
+            occurred_at=NOW,
+        )
+    )
+
+    assert (encoded.event_type, decoded) == ("proposals.redealt", redealt)
+
+
+def test_a_new_card_dealt_before_it_named_its_card_names_none():
+    """``card_id`` and ``player_ids`` came with #622, defaulted rather than a
+    version 2: a row written before reads as no card, and tells nobody."""
+
+    codec = _codec()
+    encoded = codec.encode(
+        Redealt(
+            proposal_id=PROPOSAL,
+            occurred_at=NOW,
+            card_id=uuid4(),
+            player_ids=(PLAYER,),
+        )
+    )
+    older = {
+        key: value
+        for key, value in encoded.payload.items()
+        if key not in ("card_id", "player_ids")
+    }
+
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=uuid4(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=older,
+            occurred_at=NOW,
+        )
+    )
+
+    assert isinstance(decoded, Redealt)
+    assert (decoded.card_id, decoded.player_ids) == (None, ())

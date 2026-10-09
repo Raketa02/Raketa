@@ -92,6 +92,11 @@ class NoticeORM(Base):
     gathered: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     #: Of the player's own act: born seen, never counted on the bell.
     own: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    #: The deadline it names — when the club must answer, on *It's a game!* at
+    #: a club that confirms.
+    until: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class NoticesOpenedORM(Base):

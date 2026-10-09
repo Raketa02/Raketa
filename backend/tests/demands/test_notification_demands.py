@@ -232,6 +232,56 @@ async def test_a_booked_game_says_whose_own_yes_filled_it(implementation, sessio
 
 
 @pytest.mark.parametrize("implementation", registered(GameBriefs))
+async def test_a_game_waiting_for_its_club_says_by_when_it_answers(
+    implementation, session
+):
+    """Only while it waits: refused, it says no deadline — nor does a game
+    still filling, or one booked at once."""
+
+    games: GameBriefs = implementation.build(session)
+    proposal = await _a_proposal(session)
+    for player in (OLA, KUBA, EWA, TOMEK):
+        proposal.say_yes(player, at=NOW)
+    await _saved(session, proposal)
+    answer_by = NOW + timedelta(minutes=30)
+    booking = Booking.requested(
+        booking_id=proposal.proposal_id,
+        pool_id=proposal.pool.id,
+        club_id=proposal.club_id,
+        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=START,
+        share_grosze=30_00,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, TOMEK),
+        cut_off=START - timedelta(hours=24),
+        answer_by=answer_by,
+        filled_by=TOMEK,
+        at=NOW,
+    )
+    bookings = build_booking_repository(session, **_store(session))
+    await bookings.save(booking)
+    await session.commit()
+    later = NOW + timedelta(minutes=5)
+
+    waiting = await games.about(proposal.proposal_id, at=later)
+
+    assert waiting is not None
+    assert (waiting.waiting_for_the_club, waiting.answer_by) == (True, answer_by)
+    booking.refuse(reason=None, at=later)
+    await bookings.save(booking)
+    await session.commit()
+    assert (await games.about(proposal.proposal_id, at=later)).answer_by is None
+    filling = await _saved(session, await _a_proposal(session))
+    assert (await games.about(filling.proposal_id, at=later)).answer_by is None
+    booked = await _saved(session, await _a_proposal(session))
+    await bookings.save(_booked(booked, at=NOW))
+    await session.commit()
+    assert (await games.about(booked.proposal_id, at=later)).answer_by is None
+
+
+@pytest.mark.parametrize("implementation", registered(GameBriefs))
 async def test_a_game_the_club_cancelled_says_why(implementation, session):
     games: GameBriefs = implementation.build(session)
     proposal = await _saved(session, await _a_proposal(session))

@@ -349,12 +349,17 @@ async def test_a_game_waiting_for_its_club_loses_my_place_as_if_i_left(
     waiting = await client.get(WAITING, headers=desk)
     assert waiting.json()["bookings"] == []
     assert payments.called("authorise") == []
+    # Each was told it was a game when it went to the club (#622); the block
+    # adds one notice, and Ola none.
     for player in four[1:]:
-        [notice] = await notices_of(client, mailbox, player)
+        [notice, asked] = await notices_of(client, mailbox, player)
+        assert asked["kind"] == "WAITING_FOR_THE_CLUB"
         assert notice["kind"] == "SOMEONE_LEFT"
         assert notice["title"] == "ola left your game"
         assert "block" not in notice["title"].lower() + notice["body"].lower()
-    assert await notices_of(client, mailbox, ola) == []
+    assert [n["kind"] for n in await notices_of(client, mailbox, ola)] == [
+        "WAITING_FOR_THE_CLUB"
+    ]
 
 
 # --------------------------------------------------------------------------- #
