@@ -60,6 +60,11 @@ from the code.
   announces a confirmation**: the rating context walks confirmed counted results forward,
   oldest first, ordered on the derived moment each became final
   ([ADR-0139](../../../docs/adr/0139-a-confirmed-result-is-evidence-and-a-level-moves-by-what-it-taught.md)).
+  Its fifth published read is `ScoredGames` (#613): which of some games, by id, had a score
+  proposed, corrected or countered at or after an instant — ids over the stream index, nothing
+  folded — **because a correction re-dates its side's score** and may be made again while the
+  other side has not answered, so a game long past its hour can still wait on somebody; Home
+  asks it about the games older than the hour it reads from.
 - **It has two inward ports, and the first is a single field wide**: `PlayerNames` puts a
   **name** on a seat and nothing else about the person in it
   ([ADR-0141](../../../docs/adr/0141-a-game-names-its-court-and-the-court-is-the-gate.md); the

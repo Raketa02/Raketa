@@ -129,7 +129,13 @@ def test_every_registered_implementation_answers_a_declared_demand():
 # --------------------------------------------------------------------------- #
 
 
-async def _booked(session, *, start: Instant, court: str = "Court 1") -> Booking:
+async def _booked(
+    session,
+    *,
+    start: Instant,
+    court: str = "Court 1",
+    left_by: UUID | None = None,
+) -> Booking:
     booking = Booking.confirmed(
         booking_id=new_uuid(),
         pool_id=new_uuid(),
@@ -145,6 +151,33 @@ async def _booked(session, *, start: Instant, court: str = "Court 1") -> Booking
         game_id=new_uuid(),
         at=_at(),
     )
+    if left_by is not None:
+        booking.leave(left_by, at=_at())
+    return await _saved_booking(session, booking)
+
+
+async def _waiting(session, *, start: Instant) -> Booking:
+    """A full game its On request club has not answered: no Game yet."""
+
+    booking = Booking.requested(
+        booking_id=new_uuid(),
+        pool_id=new_uuid(),
+        club_id=new_uuid(),
+        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=start,
+        share_grosze=30_00,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, TOMEK),
+        cut_off=start - timedelta(hours=24),
+        answer_by=_at(1),
+        at=_at(),
+    )
+    return await _saved_booking(session, booking)
+
+
+async def _saved_booking(session, booking: Booking) -> Booking:
     repository = build_booking_repository(
         session,
         event_store=build_domain_event_store(session),
@@ -163,7 +196,7 @@ async def test_a_player_s_booked_games_come_soonest_first_as_booked(
     sooner = await _booked(session, start=_at(48))
     bookings: PlayerBookings = implementation.build(session)
 
-    found = await bookings.of_player(EWA)
+    found = await bookings.of_player(EWA, since=None)
 
     assert [game.booking_id for game in found] == [
         sooner.booking_id,
@@ -175,7 +208,44 @@ async def test_a_player_s_booked_games_come_soonest_first_as_booked(
     assert (game.start, game.cut_off) == (later.start, later.cut_off)
     assert (game.share_grosze, game.game_id) == (30_00, later.game_id)
     assert (game.sport, game.kind) == (Sport.PADEL, SearchMode.COMPETITIVE)
-    assert await bookings.of_player(new_uuid()) == []
+    assert await bookings.of_player(new_uuid(), since=None) == []
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerBookings))
+async def test_a_player_s_booked_games_are_read_from_an_hour_on(
+    implementation, session
+):
+    """Home's bound (#613): a game whose hour started before ``since`` is not
+    read at all, so how many are loaded no longer grows with old games."""
+
+    await _booked(session, start=_at(48))
+    later = await _booked(session, start=_at(120))
+    bookings: PlayerBookings = implementation.build(session)
+
+    from_its_hour = await bookings.of_player(EWA, since=_at(120))
+    after_it = await bookings.of_player(EWA, since=_at(121))
+
+    assert [game.booking_id for game in from_its_hour] == [later.booking_id]
+    assert after_it == []
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerBookings))
+async def test_the_games_of_a_player_s_older_bookings_are_named_unread(
+    implementation, session
+):
+    """Each Game a player's booking opened before an hour, to its booking —
+    never one with no Game yet, and never one whose seat they left."""
+
+    older = await _booked(session, start=_at(48))
+    await _booked(session, start=_at(120))
+    await _booked(session, start=_at(49), left_by=EWA)
+    await _waiting(session, start=_at(50))
+    bookings: PlayerBookings = implementation.build(session)
+
+    found = await bookings.games_before(EWA, before=_at(120))
+
+    assert found == {older.game_id: older.booking_id}
+    assert await bookings.games_before(new_uuid(), before=_at(200)) == {}
 
 
 @pytest.mark.parametrize("implementation", registered(PlayerBookings))
@@ -209,6 +279,10 @@ async def test_a_seat_s_code_is_the_same_on_every_read_and_its_own(
 # --------------------------------------------------------------------------- #
 # GameResults — where a booked game's result stands, for one of its players
 # --------------------------------------------------------------------------- #
+
+
+A_SCORE = Score.of((SetScore(a=6, b=4), SetScore(a=6, b=3)))
+ANOTHER_SCORE = Score.of((SetScore(a=6, b=4), SetScore(a=7, b=5)))
 
 
 def _a_booked_game() -> Game:
@@ -275,6 +349,25 @@ async def test_a_score_waits_on_the_other_side_s_agreement(implementation, sessi
     assert theirs[game.game_id].stage is ResultStage.SCORE_TO_ANSWER
     assert theirs[game.game_id].awaits_your_agreement is True
     assert ours[game.game_id].awaits_your_agreement is False
+
+
+@pytest.mark.parametrize("implementation", registered(GameResults))
+async def test_the_games_a_score_may_still_wait_on_are_named(implementation, session):
+    """Home's look at games older than it reads (#613): a correction re-dates
+    its side's score, so a game played long ago may still wait on its reader —
+    for a day from the last score put on its table."""
+
+    scored = _a_booked_game()
+    scored.state_result(by=OLA, score=A_SCORE, occurred_at=_at(50))
+    scored.state_result(by=KUBA, score=ANOTHER_SCORE, occurred_at=_at(70))
+    await _saved(session, scored)
+    unscored = await _saved(session, _a_booked_game())
+    asked = [scored.game_id, unscored.game_id, new_uuid()]
+    results: GameResults = implementation.build(session)
+
+    assert await results.waiting_among(asked, now=_at(93)) == {scored.game_id}
+    assert await results.waiting_among(asked, now=_at(95)) == set()
+    assert await results.waiting_among([], now=_at(0)) == set()
 
 
 # --------------------------------------------------------------------------- #

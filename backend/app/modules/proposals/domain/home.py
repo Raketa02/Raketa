@@ -22,23 +22,32 @@ whose seat opened after the cut-off goes ahead short, and once its hour comes
 it is *uncounted · a seat was empty*. What leaving would cost the reader is
 said before they leave (``leave_terms``).
 
-**One borrow, pure**: ``is_the_game_day`` from the Bookings domain, whose desk the
-check-in code is for — *on the day* is the club's calendar day, one rule for the
-phone that shows the code and the desk that scans it.
+**Home sends what Home draws** (#613): every live game, an ended one until a
+day after its hour's end — the phone's own shelf — and any game that needs the
+reader, read only from the earliest hour a game can still ask anything of its
+players (``on_home_since``). Everything older is a card nobody would see.
+
+**Two borrows, pure**: ``is_the_game_day`` from the Bookings domain, whose desk
+the check-in code is for — *on the day* is the club's calendar day, one rule for
+the phone that shows the code and the desk that scans it — and how long a booked
+game needs its players, from the Games domain's own clocks, so the hour Home
+reads from moves when one of them does.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import timedelta
 from enum import StrEnum
 from typing import Final, final
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import SPORT_SPECS, Instant, Sport, exhaustive
+from app.kernel import SPORT_SPECS, Instant, Sport, exhaustive, instant
 from app.modules.bookings.domain.check_in import is_the_game_day
-from app.modules.proposals.domain.deck import Sides
+from app.modules.games.domain.windows import A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR
+from app.modules.proposals.domain.deck import GAME_LENGTH, Sides
 
 
 class HomeStatus(StrEnum):
@@ -487,6 +496,56 @@ def state_of(
         else None,
         uncounted=uncounted_reason(game, status, result),
         cancel_reason=game.cancel_reason if status is HomeStatus.CALLED_OFF else None,
+    )
+
+
+#: How long an ended game keeps its card after its hour's end: **a day** — the
+#: phone's own shelf (``onHome``), measured from the one instant every ending
+#: has, since nothing dates the end of a booking.
+ENDED_SHELF_LIFE: Final = timedelta(hours=24)
+
+#: The four ends a card can say: a game that will not be played, or whose
+#: result is settled — the phone's ``ended``. Every other status is live.
+_ENDED: Final = frozenset(
+    {
+        HomeStatus.COUNTED,
+        HomeStatus.UNCOUNTED,
+        HomeStatus.NEVER_PLAYED,
+        HomeStatus.CALLED_OFF,
+    }
+)
+
+
+def on_home(game: BookedGame, state: BookedState, *, now: Instant) -> bool:
+    """Whether Home sends this card at ``now`` (#613): every live game, an
+    ended one until a day after its hour's end — the phone's own rule — and
+    **any game that needs the reader**, so the badge never counts a card that
+    was not sent.
+
+    That last clause is the phone's rule in all but one case: an *uncounted*
+    game whose reader may still dispute a report of not coming outlives its
+    day by up to another — sent, and on the badge, after the phone's Home has
+    shelved it (story S-33 owns what the phone draws for it).
+    """
+
+    if state.status not in _ENDED or state.needs_you:
+        return True
+    return now < game.start + GAME_LENGTH + ENDED_SHELF_LIFE
+
+
+def on_home_since(now: Instant) -> Instant:
+    """The earliest hour a game Home sends at ``now`` can have started —
+    **unless a score was put on its table again**, which the Games context's
+    clocks say where to look for (``scores_still_waiting_since``).
+
+    Read off how long a booked game needs its players, never written here as a
+    number: a game that started earlier is past its result's day and its
+    answer's, its report's dispute, and the phone's shelf, so it is a card
+    nobody would see.
+    """
+
+    return instant(
+        now - max(A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR, GAME_LENGTH + ENDED_SHELF_LIFE)
     )
 
 

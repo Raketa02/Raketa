@@ -3,8 +3,9 @@
 ``app/seeds/booked_history.py`` writes her evenings the way the Games deck makes
 a game — a proposal filled by its last yes, booked, played, scored — and her
 opponents rate her. Each claim here is read back the way she would read it:
-signed in, through her record and her Home, and through the rating catch-up's
-own use case for the Level.
+signed in, through her record and each game's details — every evening ended
+days ago, so none is on her Home any more (#613) — and through the rating
+catch-up's own use case for the Level.
 
 The world under it is the runner's, cut to what the layer reads: the named
 accounts, her three opponents out of the real cohort, every card, the clubs and
@@ -21,6 +22,7 @@ import pytest
 from app.bootstrap.composition import (
     build_booked_games,
     build_clock,
+    build_player_bookings,
     build_settle_ratings_on_results,
 )
 from app.core.config import get_settings
@@ -124,6 +126,24 @@ async def signed_in_as_her(client) -> dict:
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
+async def statuses_on_the_details(client, session_factory, headers: dict) -> list:
+    """Each booked game of the signed-in player, as its details screen says it
+    ended — every one of them, whenever it was."""
+
+    me = await client.get("/api/v1/users/me", headers=headers)
+    assert me.status_code == 200, me.text
+    async with session_factory() as session:
+        games = await build_player_bookings(session, settings=get_settings()).of_player(
+            UUID(me.json()["id"]), since=None
+        )
+    statuses = []
+    for game in games:
+        read = await client.get(f"/api/v1/bookings/{game.booking_id}", headers=headers)
+        assert read.status_code == 200, read.text
+        statuses.append(read.json()["status"])
+    return sorted(statuses)
+
+
 async def test_her_evenings_are_on_her_record_with_a_mixed_run_and_her_stars(
     client, session_factory, now, her_world
 ):
@@ -174,18 +194,21 @@ async def test_every_evening_is_over_before_her_week_began(
     assert all(week_of(written.start) < week_of(now) for written in seeded.evenings)
 
 
-async def test_her_evenings_have_ended_on_her_home(
+async def test_her_evenings_have_ended_and_left_her_home(
     client, session_factory, now, her_world
 ):
-    """Home holds every game she ever booked, and none of these needs her."""
+    """Each ended as declared, and none needs her — so none is on her Home,
+    which sends only what it draws (#613)."""
 
     await write_the_played_history(session_factory, settings=get_settings(), now=now)
+    headers = await signed_in_as_her(client)
 
-    home = await client.get(HOME, headers=await signed_in_as_her(client))
+    home = await client.get(HOME, headers=headers)
+    statuses = await statuses_on_the_details(client, session_factory, headers)
 
-    assert home.status_code == 200, home.text
-    statuses = sorted(game["status"] for game in home.json()["games"])
     assert statuses == sorted(["COUNTED"] * 5 + ["NEVER_PLAYED"]), statuses
+    assert home.status_code == 200, home.text
+    assert home.json()["games"] == []
     assert home.json()["needing_you"] == 0
 
 
@@ -245,8 +268,9 @@ async def test_a_second_run_writes_nothing_twice(
     ]
     assert not any(written.made or written.acts for written in again.evenings)
     assert all("already answered" in line for line in again.cards)
-    home = await client.get(HOME, headers=await signed_in_as_her(client))
-    assert len(home.json()["games"]) == len(HER_EVENINGS)
+    headers = await signed_in_as_her(client)
+    statuses = await statuses_on_the_details(client, session_factory, headers)
+    assert len(statuses) == len(HER_EVENINGS)
 
 
 async def signed_in_as(client, email: str) -> dict:
@@ -262,7 +286,7 @@ async def test_declared_games_are_booked_before_her_week_and_read_as_declared(
 ):
     """**The cohort's and the pool's games are booked games too**: each played
     before her week began, with the ending it was declared with — read on the
-    Home of somebody who played all three."""
+    details of somebody who played all three."""
 
     seeded = await write_the_played_history(
         session_factory, settings=get_settings(), now=now, games=DECLARED
@@ -274,11 +298,8 @@ async def test_declared_games_are_booked_before_her_week_and_read_as_declared(
         written.start + GAME_LENGTH <= latest_evening_ends_by(now)
         for written in seeded.played
     )
-    home = await client.get(
-        HOME, headers=await signed_in_as(client, COHORT.by_handle("cohort-a-16").email)
-    )
-    assert home.status_code == 200, home.text
-    statuses = sorted(game["status"] for game in home.json()["games"])
+    headers = await signed_in_as(client, COHORT.by_handle("cohort-a-16").email)
+    statuses = await statuses_on_the_details(client, session_factory, headers)
     assert statuses == ["COUNTED", "COUNTED", "UNCOUNTED"], statuses
 
 

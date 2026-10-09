@@ -7,7 +7,9 @@ own list of rooms.
 
 Every read is taken over HTTP as the phone or the club's website takes it, and
 every game is made the way the platform makes one: proposed, answered over HTTP,
-filled by its last yes against the **fake payment provider**.
+filled by its last yes against the **fake payment provider**. **Home sends what
+Home draws** (#613): live games, games that ended less than a day after their
+hour, and any game that needs the reader.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
 **Saturday 10 October, 17:00** at Bonarka Arena, padel at 120 zł — 30 zł a
@@ -270,25 +272,28 @@ async def test_a_score_nobody_answered_is_counted_once_its_window_closes(
     )
     clock.move(timedelta(hours=25))
 
-    [card] = (await home_of(client, four[2]))["games"]
+    # A day after the hour's end too, so off Home (#613): its details say it.
+    details = (await details_of(client, four[2], booked["booking_id"])).json()
 
-    assert card["status"] == "COUNTED"
-    assert card["needs_you"] is False
+    assert details["status"] == "COUNTED"
+    assert details["needs_you"] is False
 
 
 async def test_a_game_nobody_said_happened_ends_never_played(
     client, session_factory, clock, club, four, group
 ):
-    await a_booked_game(
+    booked = await a_booked_game(
         client, session_factory, clock, club=club, group=group, four=four
     )
     # A day after the hour's end: Sunday 18:00.
     clock.move(timedelta(days=6, hours=10))
 
+    details = (await details_of(client, four[0], booked["booking_id"])).json()
     home = await home_of(client, four[0])
 
-    [card] = home["games"]
-    assert card["status"] == "NEVER_PLAYED"
+    assert details["status"] == "NEVER_PLAYED"
+    # Its entry closes as its day on Home ends (#613).
+    assert home["games"] == []
     assert home["needing_you"] == 0
 
 
@@ -348,6 +353,283 @@ async def test_nobody_else_finds_the_game_on_their_home(
     stranger = await a_player(client, payments, "stranger")
 
     assert (await home_of(client, stranger))["games"] == []
+
+
+# --------------------------------------------------------------------------- #
+# Home sends what Home draws (#613, F-HOME-5.1)
+# --------------------------------------------------------------------------- #
+#
+# The bookings are read only from the earliest hour a game can still ask
+# anything of its players, off the games' own clocks: Saturday's game has its
+# entry close Sunday 18:00, and a score made then waits for its answer — as a
+# report made then waits for its dispute — until Monday 18:00, when Home stops
+# reading it. Of those, a card is sent while live, ended less than a day after
+# its hour's end, or needing the reader. **Only a score put on the table again
+# reaches further**: a correction re-dates its side's score, and that side may
+# correct again while the other has not answered.
+
+#: Another score, for a side correcting its own.
+ANOTHER_SCORE = {"score": {"sets": [{"a": 6, "b": 4}, {"a": 7, "b": 5}]}}
+#: The other side's score of the same game, for a counter.
+A_SCORE_THEIRS = {"score": {"sets": [{"a": 4, "b": 6}, {"a": 3, "b": 6}]}}
+#: A minute before the entry closes.
+SUNDAY_ONE_MINUTE_TO_SIX = warsaw(11, 17) + timedelta(minutes=59)
+#: Two minutes before Home stops reading the game.
+MONDAY_TWO_MINUTES_TO_SIX = warsaw(12, 17) + timedelta(minutes=58)
+
+
+async def on_the_game(client, player: dict, game_id: str, act: str, body=None):
+    told = await client.post(
+        f"/api/v1/games/{game_id}/{act}", json=body, headers=player["headers"]
+    )
+    assert told.status_code == 200, told.text
+    return told
+
+
+async def test_a_game_a_month_old_is_not_on_home(
+    client, session_factory, clock, club, four, group
+):
+    await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.move(timedelta(days=35))  # a month after Saturday's game
+
+    home = await home_of(client, four[0])
+
+    assert home["games"] == []
+    assert home["needing_you"] == 0
+
+
+async def test_an_ended_game_is_sent_until_a_day_after_its_hour_ends(
+    client, session_factory, clock, club, four, group
+):
+    """Counted by an agreement: settled at Saturday midnight, six hours after
+    the score it agrees with."""
+
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.at = warsaw(10, 18)
+    ola = four[0]
+    await on_the_game(client, ola, booked["game_id"], "result", A_SCORE)
+    [card] = (await home_of(client, ola))["games"]
+    await on_the_game(
+        client, opponent_of(card, four), booked["game_id"], "result/acceptance"
+    )
+
+    clock.at = warsaw(11, 17)  # 23 hours after the hour's end
+    [card] = (await home_of(client, ola))["games"]
+    assert card["status"] == "COUNTED"
+
+    clock.at = warsaw(11, 19)  # 25 hours after it
+    assert (await home_of(client, ola))["games"] == []
+    details = (await details_of(client, ola, booked["booking_id"])).json()
+    assert details["status"] == "COUNTED"
+
+
+async def test_a_booked_game_far_ahead_is_sent(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client,
+        session_factory,
+        clock,
+        club=club,
+        group=group,
+        four=four,
+        start=warsaw(30, 17),
+    )
+
+    [card] = (await home_of(client, four[0]))["games"]
+
+    assert card["booking_id"] == booked["booking_id"]
+    assert card["status"] == "BOOKED"
+
+
+async def test_a_game_with_a_seat_open_is_sent_and_counted(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    left = await client.post(
+        f"/api/v1/bookings/{booked['booking_id']}/departure",
+        headers=four[1]["headers"],
+    )
+    assert left.status_code == 200, left.text
+
+    home = await home_of(client, four[0])
+
+    [card] = home["games"]
+    assert card["status"] == "SEAT_OPEN"
+    assert home["needing_you"] == 1
+
+
+async def test_a_game_waiting_for_its_club_is_sent(
+    client, session_factory, clock, four
+):
+    club, _ = await a_club_and_its_desk(client, way="ON_REQUEST")
+    group = await a_group(client, four[0], club, *four[1:])
+    proposal = await makes(
+        session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
+    )
+    for player in four:
+        said = await says_yes(client, player, proposal)
+        assert said.status_code == 200, said.text
+
+    [card] = (await home_of(client, four[0]))["games"]
+
+    assert card["status"] == "WAITING_FOR_THE_CLUB"
+
+
+async def test_a_result_still_to_enter_is_sent_and_counted_until_the_entry_closes(
+    client, session_factory, clock, club, four, group
+):
+    await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+
+    clock.at = SUNDAY_ONE_MINUTE_TO_SIX
+    home = await home_of(client, four[0])
+    [card] = home["games"]
+    assert card["status"] == "NEEDS_RESULT"
+    assert home["needing_you"] == 1
+
+    clock.at = warsaw(11, 18)  # never played, and a day after the hour's end
+    home = await home_of(client, four[0])
+    assert home["games"] == []
+    assert home["needing_you"] == 0
+
+
+async def test_a_score_made_as_the_entry_closes_is_sent_and_counted_while_it_waits(
+    client, session_factory, clock, club, four, group
+):
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.at = SUNDAY_ONE_MINUTE_TO_SIX
+    ola = four[0]
+    await on_the_game(client, ola, booked["game_id"], "result", A_SCORE)
+    [card] = (await home_of(client, ola))["games"]
+    rival = opponent_of(card, four)
+
+    clock.at = MONDAY_TWO_MINUTES_TO_SIX
+    theirs = await home_of(client, rival)
+    ours = await home_of(client, ola)
+
+    [card] = theirs["games"]
+    assert (card["status"], card["needs_you"]) == ("CONFIRM_THE_RESULT", True)
+    assert theirs["needing_you"] == 1
+    # Ola's side's score waits on the other side: live, needing nothing of her.
+    [card] = ours["games"]
+    assert (card["status"], card["needs_you"]) == ("CONFIRM_THE_RESULT", False)
+    assert ours["needing_you"] == 0
+
+
+async def test_a_report_still_to_dispute_is_sent_and_counted_past_the_shelf(
+    client, session_factory, clock, club, four, group
+):
+    """Story S-33's case (F-HOME-6.1): an *uncounted* card the reader may still
+    dispute stays on the read and the badge after it has left the phone's Home
+    — and only the reported player's."""
+
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    ola, _, _, tomek = four
+    clock.at = SUNDAY_ONE_MINUTE_TO_SIX
+    await on_the_game(
+        client, ola, booked["game_id"], "no-shows", {"player_id": str(tomek["id"])}
+    )
+
+    clock.at = MONDAY_TWO_MINUTES_TO_SIX
+    reported = await home_of(client, tomek)
+    reporter = await home_of(client, ola)
+
+    [card] = reported["games"]
+    assert (card["status"], card["needs_you"]) == ("UNCOUNTED", True)
+    assert card["uncounted_reason"] == "NO_SHOW"
+    assert reported["needing_you"] == 1
+    assert reporter["games"] == []
+    assert reporter["needing_you"] == 0
+
+    clock.at = warsaw(12, 18)  # the report stood its day
+    reported = await home_of(client, tomek)
+    assert reported["games"] == []
+    assert reported["needing_you"] == 0
+
+
+async def a_score_corrected_two_days_on(
+    client, session_factory, clock, *, club, group, four
+) -> tuple[dict, dict]:
+    """Ola's score as the entry closes, corrected by her as Home would stop
+    reading the game — the game, and her rival."""
+
+    booked = await a_booked_game(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    clock.at = SUNDAY_ONE_MINUTE_TO_SIX
+    ola = four[0]
+    await on_the_game(client, ola, booked["game_id"], "result", A_SCORE)
+    [card] = (await home_of(client, ola))["games"]
+    clock.at = MONDAY_TWO_MINUTES_TO_SIX
+    await on_the_game(client, ola, booked["game_id"], "result", ANOTHER_SCORE)
+    return booked, opponent_of(card, four)
+
+
+async def test_a_score_corrected_two_days_on_is_still_sent_and_counted(
+    client, session_factory, clock, club, four, group
+):
+    """**A correction re-dates its side's score**, and that side may correct it
+    again while the other has not answered: a score can wait on the reader for
+    as long as its side keeps correcting it — so Home still finds the game long
+    after the hour it otherwise reads from has passed it."""
+
+    booked, rival = await a_score_corrected_two_days_on(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    ola = four[0]
+
+    clock.at = warsaw(13, 12)  # Tuesday noon: Home reads from Sunday 11:00
+    theirs = await home_of(client, rival)
+    ours = await home_of(client, ola)
+
+    [card] = theirs["games"]
+    assert card["booking_id"] == booked["booking_id"]
+    assert (card["status"], card["needs_you"]) == ("CONFIRM_THE_RESULT", True)
+    assert theirs["needing_you"] == 1
+    [card] = ours["games"]
+    assert (card["status"], card["needs_you"]) == ("CONFIRM_THE_RESULT", False)
+
+    clock.at = warsaw(13, 18)  # a day after the correction: counted by silence
+    theirs = await home_of(client, rival)
+    assert theirs["games"] == []
+    assert theirs["needing_you"] == 0
+
+
+async def test_a_counter_to_a_corrected_score_waits_a_day_of_its_own(
+    client, session_factory, clock, club, four, group
+):
+    """The rival counters on Tuesday: two scores now wait on each other's side
+    for a day from the later — past the correction's day."""
+
+    booked, rival = await a_score_corrected_two_days_on(
+        client, session_factory, clock, club=club, group=group, four=four
+    )
+    ola = four[0]
+    clock.at = warsaw(13, 12)
+    await on_the_game(client, rival, booked["game_id"], "result", A_SCORE_THEIRS)
+
+    clock.at = warsaw(14, 11)  # the correction is 41 hours old, the counter 23
+    for player in (ola, rival):
+        home = await home_of(client, player)
+        [card] = home["games"]
+        assert (card["status"], card["needs_you"]) == ("CONFIRM_THE_RESULT", True)
+        assert home["needing_you"] == 1
+
+    clock.at = warsaw(14, 12)  # a day after the counter: nobody agreed
+    for player in (ola, rival):
+        assert (await home_of(client, player))["games"] == []
 
 
 # --------------------------------------------------------------------------- #

@@ -374,6 +374,32 @@ class ConfirmedResultLedger(Protocol):
 
 
 @runtime_checkable
+class ScoredGames(Protocol):
+    """Which of some games had a score put on their table lately — **ids, and
+    nothing folded** (#613).
+
+    **The read that exists because a correction re-dates a score.** A score
+    waits for its answer a day from when it was last put on the table, and its
+    side may correct it again while the other side has not answered, so a game
+    played long ago can still be waiting on somebody
+    (``windows.scores_still_waiting_since``). A reader that bounds its read by
+    the game's hour — Home — asks this about the games it left out, and folds
+    only the few named.
+
+    **It answers about the games asked about, by id**, so its cost is the
+    reader's own games and never the platform's.
+    """
+
+    async def scored_since(
+        self, game_ids: Collection[UUID], *, since: Instant
+    ) -> frozenset[UUID]:
+        """Those of these games a score was proposed, corrected or countered
+        on at or after ``since`` — one question about the set; a game that does
+        not exist is absent."""
+        ...
+
+
+@runtime_checkable
 class ClubCheckIns(Protocol):
     """*Who did the club see arrive?* — this context's demand on whoever keeps
     a booking (#547; the mechanics §15.1, §16.10).

@@ -564,8 +564,8 @@ async def test_the_reported_player_disputes_in_their_day_and_nobody_arbitrates(
     assert disputed.json()["no_shows"][0]["disputed_at"] is not None
     clock.move(timedelta(days=2))
     assert strand(await own_record(client, kuba), "KEEPS_PLANS")["good"] == 1
-    [card] = await home_of(client, kuba)
-    assert (card["status"], card["uncounted_reason"]) == ("UNCOUNTED", None)
+    details = await details_of(client, kuba, booking)
+    assert (details["status"], details["uncounted_reason"]) == ("UNCOUNTED", None)
 
 
 async def test_a_dispute_after_the_day_is_too_late(client, clock, club, booking, four):

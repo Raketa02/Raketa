@@ -78,6 +78,16 @@ _CONTRACTS = (
 )
 
 
+def contract_name(event_cls: type) -> str:
+    """The name a game event is stored under — for a read that matches on it
+    (#613), so the spelling has this one home."""
+
+    for registered, name in _CONTRACTS:
+        if registered is event_cls:
+            return name
+    raise LookupError(f"{event_cls.__name__} is not a game event")
+
+
 def register_game_events(catalog: EventCatalog) -> None:
     for event_cls, name in _CONTRACTS:
         catalog.register(event_cls, name=name, version=1)

@@ -11,7 +11,7 @@ is free to leave. **The forecast** shows while the game awaits its entry, and
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -19,8 +19,11 @@ import pytest
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
+from app.modules.games.domain.windows import scores_still_waiting_since
 from app.modules.proposals.domain.home import (
     BookedGame,
+    BookedMoney,
+    BookedState,
     BookingStage,
     CalledOffReason,
     GameResult,
@@ -29,6 +32,8 @@ from app.modules.proposals.domain.home import (
     check_in_shown,
     money_of,
     needs_you,
+    on_home,
+    on_home_since,
     shows_forecast,
     status_of,
 )
@@ -145,6 +150,86 @@ def test_a_seat_open_in_your_game_needs_you():
 )
 def test_nothing_else_needs_you(status):
     assert not needs_you(status, ENTRY_OPEN)
+
+
+# --------------------------------------------------------------------------- #
+# Which cards Home sends (#613)
+# --------------------------------------------------------------------------- #
+
+LIVE = (
+    HomeStatus.WAITING_FOR_THE_CLUB,
+    HomeStatus.BOOKED,
+    HomeStatus.SEAT_OPEN,
+    HomeStatus.NEEDS_RESULT,
+    HomeStatus.CONFIRM_THE_RESULT,
+)
+ENDED = (
+    HomeStatus.COUNTED,
+    HomeStatus.UNCOUNTED,
+    HomeStatus.NEVER_PLAYED,
+    HomeStatus.CALLED_OFF,
+)
+
+
+def a_state(status: HomeStatus, *, needs: bool = False) -> BookedState:
+    return BookedState(
+        status=status,
+        needs_you=needs,
+        money=BookedMoney(share_grosze=30_00, paid=True, free_to_leave_until=None),
+    )
+
+
+def test_every_status_is_live_or_ended():
+    assert set(LIVE) | set(ENDED) == set(HomeStatus)
+
+
+@pytest.mark.parametrize("status", LIVE)
+def test_a_live_card_is_never_shelved(status):
+    """Only an ended card leaves with time: a live one is sent for as long as
+    the read finds it — which is from ``on_home_since`` on."""
+
+    assert on_home(a_booked_game(), a_state(status), now=warsaw(31, 17))
+
+
+@pytest.mark.parametrize("status", ENDED)
+def test_an_ended_game_is_sent_until_a_day_after_its_hour_ends(status):
+    game = a_booked_game()
+
+    assert on_home(game, a_state(status), now=warsaw(11, 17, 59))
+    assert not on_home(game, a_state(status), now=warsaw(11, 18))
+
+
+def test_an_ended_game_that_needs_you_is_sent_past_its_day():
+    """Story S-33's case (F-HOME-6.1): a report of not coming the reader may
+    still dispute, on an *uncounted* card."""
+
+    game = a_booked_game()
+    disputable = a_state(HomeStatus.UNCOUNTED, needs=True)
+
+    assert on_home(game, disputable, now=warsaw(12, 17, 59))
+
+
+def test_home_reads_from_the_earliest_hour_a_game_can_still_ask_anything():
+    """A game at Saturday 17:00: its entry closes Sunday 18:00, and a score made
+    then waits — as a report made then can be disputed — until Monday 18:00."""
+
+    assert on_home_since(warsaw(12, 18)) == warsaw(10, 17)
+
+
+def test_home_reads_from_before_any_ended_card_the_phone_still_draws():
+    now = warsaw(12, 18)
+    since = on_home_since(now)
+    game = a_booked_game(start=since - timedelta(minutes=1))
+
+    assert not any(on_home(game, a_state(status), now=now) for status in ENDED)
+
+
+def test_a_score_still_waits_if_it_was_put_on_the_table_inside_the_last_day():
+    """Only such a score reaches further back than Home reads — a correction
+    re-dates its side's, and may be made again while the other side has not
+    answered."""
+
+    assert scores_still_waiting_since(warsaw(13, 12)) == warsaw(12, 12)
 
 
 # --------------------------------------------------------------------------- #

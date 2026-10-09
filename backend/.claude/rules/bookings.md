@@ -165,7 +165,19 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   §14, §15.1). `GET /home`, `GET /bookings/{id}` and `GET /proposals/{id}` are Proposals' reads
   (`application/home.py`, `booking_details.py`, `proposal_details.py`), over `PlayerBookings` —
   signed in `proposals/infrastructure/bookings.py`, folding each booking's stream — beside the
-  deck's people and forecasts. **A status is folded on every read** (`proposals/domain/home.py`):
+  deck's people and forecasts. **Home's read is bounded** (#613): the bookings are read only
+  from `on_home_since` — the earliest hour a game can still ask anything of its players, off
+  the games' own clocks (`windows.A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR`: the hour, the entry's
+  day, then a day for a score's answer or a report's dispute) — and of those a card is sent
+  only while it is live, ended less than a day after its hour's end (the phone's own shelf),
+  or `needs_you` (`domain/home.py`'s `on_home`), so the badge counts what it always did and an
+  *uncounted* card whose report the reader may still dispute outlives the shelf. **A score
+  put on the table again reaches further back**: a correction re-dates its side's score and
+  may be made again while the other side has not answered, so an older game is still read
+  when a score may still wait on it (`GameResults.waiting_among`, over `games`' `ScoredGames`:
+  a score put on its table inside the last day) among the reader's older games
+  (`PlayerBookings.games_before`, ids only). Seeds read every
+  booking (`of_player(…, since=None)`). **A status is folded on every read** (`proposals/domain/home.py`):
   *booked* until the hour, then the Game's result states (`GameResults`, over `games`' own
   `standing_at`); *waiting for the club* and *called off* with its `called_off_reason`
   (`REFUSED`, `NO_ANSWER`) are the booking's own (#543) — with `game_id` and `court_name`

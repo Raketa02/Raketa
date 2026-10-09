@@ -134,6 +134,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   decides, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing once it is over or
   the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **Home's badge counts the payments to
   confirm** beside the cards that need the reader (`owed_by`, shared with the TO CONFIRM read).
+  **Home's read is bounded** (#613): it sends only what Home draws — live games, games that
+  ended less than a day after their hour, games that need the reader — read from the earliest
+  hour a game can still ask anything of its players, off the games' own clocks; see
+  `bookings.md`.
 - **Leaving a booked game, the cut-off and a paused week coming back are Proposals' too**
   (#544; see `bookings.md`): `POST /bookings/{id}/departure` (`leave_the_game.py`), the
   `cut-off` job (`cut_off.py`) and the outbox subscriber that resumes paused yeses

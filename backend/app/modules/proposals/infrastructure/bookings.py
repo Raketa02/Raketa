@@ -304,14 +304,21 @@ class BookingsPlayerBookings:
         self._bookings = bookings
         self._codes = codes
 
-    async def of_player(self, player_id: UUID) -> Sequence[BookedGame]:
+    async def of_player(
+        self, player_id: UUID, *, since: Instant | None
+    ) -> Sequence[BookedGame]:
         found: list[BookedGame] = []
-        for booking_id in await self._directory.of_player(player_id):
+        for booking_id in await self._directory.of_player(player_id, since=since):
             booking = await self._bookings.load(booking_id)
             game = None if booking is None else _booked_game(booking)
             if game is not None:
                 found.append(game)
         return found
+
+    async def games_before(
+        self, player_id: UUID, *, before: Instant
+    ) -> Mapping[UUID, UUID]:
+        return await self._directory.games_before(player_id, before=before)
 
     async def find(self, booking_id: UUID) -> BookedGame | None:
         booking = await self._bookings.load(booking_id)

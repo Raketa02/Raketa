@@ -9,6 +9,11 @@ this context's words at the seam.
 (``Game.awaits_agreement_from``), asked of it and never restated here — and so
 is whose dispute a report of not turning up waits on (#547): the reported
 player's, while its day runs.
+
+**Which games a score may still wait on** is asked of the Games context's own
+read (``ScoredGames``, #613) with its own clock: a score waits a day from when
+it was last put on the table (``scores_still_waiting_since``) — ids over the
+stream index, nothing folded.
 """
 
 from __future__ import annotations
@@ -18,15 +23,17 @@ from typing import final
 from uuid import UUID
 
 from app.kernel import Instant, exhaustive
-from app.modules.games.domain.ports import GameRepository
+from app.modules.games.domain.ports import GameRepository, ScoredGames
 from app.modules.games.domain.standing import GameStanding
+from app.modules.games.domain.windows import scores_still_waiting_since
 from app.modules.proposals.domain.home import GameResult, ResultStage
 
 
 @final
 class GamesGameResults:
-    def __init__(self, games: GameRepository) -> None:
+    def __init__(self, games: GameRepository, scored: ScoredGames) -> None:
         self._games = games
+        self._scored = scored
 
     async def of(
         self, game_ids: Collection[UUID], *, reader: UUID, now: Instant
@@ -42,6 +49,13 @@ class GamesGameResults:
                 you_may_dispute=game.may_dispute(reader, now=now),
             )
         return results
+
+    async def waiting_among(
+        self, game_ids: Collection[UUID], *, now: Instant
+    ) -> Collection[UUID]:
+        return await self._scored.scored_since(
+            game_ids, since=scores_still_waiting_since(now)
+        )
 
 
 def _stage(standing: GameStanding) -> ResultStage:

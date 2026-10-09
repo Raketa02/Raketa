@@ -69,6 +69,22 @@ A_BOOKED_GAME: Final = timedelta(hours=1)
 #: the same reach to somebody who has not opened the app, for the same reason.
 NO_SHOW_DISPUTE_WINDOW: Final = timedelta(hours=24)
 
+#: How long after a **booked** game's hour starts it can still ask anything of
+#: its players — **unless a score is put on its table again** (#613): its hour,
+#: the day to say *we played*, and then the day a score made at the last moment
+#: waits for its answer, or a report made then for its dispute. Every term is a
+#: clock above, so lengthening one moves this with it.
+#:
+#: **A score put on the table again reaches past it.** A correction re-dates its
+#: side's score, and that side may correct it again while the other side has
+#: not answered — so a score can wait on a player for as long as its side keeps
+#: correcting it, and a counter made meanwhile waits a day of its own. A reader
+#: bounding its read by this looks for those apart
+#: (``scores_still_waiting_since``).
+A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR: Final = (
+    A_BOOKED_GAME + ENTRY_GRACE + max(PROPOSAL_WINDOW, NO_SHOW_DISPUTE_WINDOW)
+)
+
 
 def entry_closes_at(
     planned_at: Instant, *, starts_at: Instant | None = None
@@ -101,6 +117,19 @@ def proposal_closes_at(proposed_at: Instant) -> Instant:
     """
 
     return instant(proposed_at + PROPOSAL_WINDOW)
+
+
+def scores_still_waiting_since(now: Instant) -> Instant:
+    """The earliest a score can have been put on the table — proposed,
+    corrected or countered — and still wait for an answer at ``now`` (#613).
+
+    A lone score waits a day from when it was last put there, two scores a day
+    from the later, and an agreement settles six hours after the score it
+    agrees with — so **every score still waiting was put on the table inside
+    the last day**, however long ago its game was played.
+    """
+
+    return instant(now - max(PROPOSAL_WINDOW, ACCEPTANCE_GRACE))
 
 
 def acceptance_settles_at(proposed_at: Instant) -> Instant:

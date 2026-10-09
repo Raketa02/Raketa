@@ -73,10 +73,23 @@ class BookingDirectory(Protocol):
         be, and one they left is not theirs (#544); one with a seat open is."""
         ...
 
-    async def of_player(self, player_id: UUID) -> Sequence[UUID]:
-        """Every booking this player has a seat on, whenever it is and whatever
-        it came to — **soonest game first**, and by id among games at one hour
-        (#542). A seat they left is not theirs (#544)."""
+    async def of_player(
+        self, player_id: UUID, *, since: Instant | None
+    ) -> Sequence[UUID]:
+        """Every booking this player has a seat on whose game starts at or
+        after ``since`` — whenever it is, when ``since`` is ``None`` — whatever
+        it came to: **soonest game first**, and by id among games at one hour
+        (#542). A seat they left is not theirs (#544). Home reads from an
+        hour on, so how many it reads no longer grows with old games (#613)."""
+        ...
+
+    async def games_before(
+        self, player_id: UUID, *, before: Instant
+    ) -> Mapping[UUID, UUID]:
+        """Each Game opened by a booking this player has a seat on whose game
+        started before ``before``, to that booking — **ids alone, no stream
+        read**: where Home looks for an older game whose score is still waiting
+        (#613). A booking with no Game yet is not here, nor a seat they left."""
         ...
 
     async def counted_in(self, pool_ids: Collection[UUID]) -> Mapping[UUID, int]:

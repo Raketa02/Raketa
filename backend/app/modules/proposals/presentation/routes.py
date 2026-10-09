@@ -480,7 +480,9 @@ async def read_proposal_details(
         "with its status and money line, and **how many need them** — Home's "
         "badge. The status is folded at `read_at` from the booking, its Game's "
         "result and the clock: *Booked* until the hour, then the result states "
-        "as today's cards name them. A game a Classic play challenge opened is "
+        "as today's cards name them. **Only what Home draws is sent**: live "
+        "games, games that ended less than a day after their hour, and games "
+        "that need the reader. A game a Classic play challenge opened is "
         "not here — it is `GET /games`'. Nothing is recorded."
     ),
 )

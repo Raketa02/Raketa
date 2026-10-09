@@ -292,8 +292,10 @@ class SqlAlchemyBookingDirectory:
         rows = await self._session.scalars(query)
         return [stored_instant(at) for at in rows.all()]
 
-    async def of_player(self, player_id: UUID) -> Sequence[UUID]:
-        rows = await self._session.scalars(
+    async def of_player(
+        self, player_id: UUID, *, since: Instant | None
+    ) -> Sequence[UUID]:
+        query = (
             select(BookingORM.id)
             .join(BookingSeatORM, BookingSeatORM.booking_id == BookingORM.id)
             .where(
@@ -302,7 +304,25 @@ class SqlAlchemyBookingDirectory:
             )
             .order_by(BookingORM.start, BookingORM.id)
         )
+        if since is not None:
+            query = query.where(BookingORM.start >= since)
+        rows = await self._session.scalars(query)
         return list(rows.all())
+
+    async def games_before(
+        self, player_id: UUID, *, before: Instant
+    ) -> Mapping[UUID, UUID]:
+        rows = await self._session.execute(
+            select(BookingORM.game_id, BookingORM.id)
+            .join(BookingSeatORM, BookingSeatORM.booking_id == BookingORM.id)
+            .where(
+                BookingSeatORM.player_id == player_id,
+                BookingSeatORM.left_at.is_(None),
+                BookingORM.start < before,
+                BookingORM.game_id.is_not(None),
+            )
+        )
+        return {game_id: booking_id for game_id, booking_id in rows.all()}
 
     async def counted_in(self, pool_ids: Collection[UUID]) -> Mapping[UUID, int]:
         if not pool_ids:

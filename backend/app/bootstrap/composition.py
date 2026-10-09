@@ -517,9 +517,13 @@ from app.modules.games.domain.ports import (
     GameRepository,
     OpponentVarietyQuery,
     PlayerNames,
+    ScoredGames,
 )
 from app.modules.games.infrastructure.event_sourced_confirmed_results import (
     EventSourcedConfirmedResults,
+)
+from app.modules.games.infrastructure.event_sourced_scored_games import (
+    EventSourcedScoredGames,
 )
 from app.modules.games.infrastructure.event_sourced_game_history import (
     EventSourcedGameHistory,
@@ -2504,13 +2508,15 @@ def build_player_bookings(
 def build_game_results(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> GameResults:
-    """Where a booked game's ordinary Game stands, off its own aggregate."""
+    """Where a booked game's ordinary Game stands, off its own aggregate — and
+    which games had a score put on their table lately (#613)."""
     return GamesGameResults(
         build_game_repository(
             session=session,
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
-        )
+        ),
+        build_scored_games(session),
     )
 
 
@@ -3288,6 +3294,13 @@ def build_confirmed_result_ledger(
     return EventSourcedConfirmedResults(
         session, (runtime or get_event_runtime()).codec
     )
+
+
+def build_scored_games(session: AsyncSession) -> ScoredGames:
+    """Which of some games had a score put on their table lately — ids over
+    the stream index, nothing folded (#613): where Home looks, among games older
+    than the hour it reads from, for a score a correction re-dated."""
+    return EventSourcedScoredGames(session)
 
 
 def build_subject_ratings(

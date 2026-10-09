@@ -69,7 +69,7 @@ from app.bootstrap.composition import (
     build_player_names,
     build_published_sportsmanship,
     build_rated_player_query,
-    build_read_home,
+    build_read_booking_details,
     build_settled_courts,
     build_sportsmanship_ledger,
     build_unit_of_work,
@@ -838,7 +838,7 @@ async def _past_bookings(
     bookings = build_player_bookings(session, settings=settings)
     seen: dict[UUID, tuple[UUID, frozenset[UUID], Instant, UUID]] = {}
     for player in sorted(set(players), key=str):
-        for game in await bookings.of_player(player):
+        for game in await bookings.of_player(player, since=None):
             if game.game_id is not None:
                 seen[game.booking_id] = (
                     game.pool_id,
@@ -888,8 +888,9 @@ async def assert_her_history(
     """*Her record has played games, a Level that moves, and stars* — each read
     off her evenings through the paths that read them.
 
-    - **played**: her Home, folded as the phone reads it, draws her evenings
-      *counted*;
+    - **played**: each of her evenings' details reads it *counted* — her
+      details, not her Home, which sends only what it draws (#613), and every
+      evening ended days before the run;
     - **her Level moves**: the confirmed counted results the rating catch-up
       folds hold her evenings, in a sport she is rated in;
     - **stars**: somebody she played has answered a card about her on one of
@@ -908,23 +909,23 @@ async def assert_her_history(
         where = f"her record · {PROTAGONIST_HANDLE} · {HISTORY_GROUPS[HISTORY_SPORT]}"
         if group_id is None:
             raise HistoryIsEmpty(f"{where}: no group, so no evening was written")
-        home = await build_read_home(
+        details = build_read_booking_details(
             session, settings=settings, clock=FixedClock(at=now)
-        ).execute(her)
+        )
         evenings = [
-            card
-            for card in home.games
-            if card.game.pool_id == group_id and card.game.game_id is not None
+            await details.execute(game.booking_id, her)
+            for game in await build_player_bookings(
+                session, settings=settings
+            ).of_player(her, since=None)
+            if game.pool_id == group_id and game.game_id is not None
         ]
-        counted = [card for card in evenings if card.state.status is HomeStatus.COUNTED]
+        counted = [one for one in evenings if one.state.status is HomeStatus.COUNTED]
         if not counted:
             raise HistoryIsEmpty(
                 f"{where} draws no played game: her evenings read "
-                f"{sorted(card.state.status.value for card in evenings)}"
+                f"{sorted(one.state.status.value for one in evenings)}"
             )
-        history = {
-            card.game.game_id for card in evenings if card.game.game_id is not None
-        }
+        history = {one.game.game_id for one in evenings if one.game.game_id is not None}
         moving = [
             game
             for game in await build_confirmed_result_ledger(

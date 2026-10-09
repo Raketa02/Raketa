@@ -989,10 +989,15 @@ class HomeResponse(BaseModel):
     )
     games: list[HomeGameSchema] = Field(
         description=(
-            "Every game the reader booked — and every game of theirs an On request "
-            "club has, or had, to answer — **soonest first**, the ones that are "
-            "over too; a client shelves an ended card as it chooses. A game a "
-            "Classic play challenge opened is not here."
+            "The reader's booked games — and their games an On request club has, "
+            "or had, to answer — **soonest first**, and only what Home draws: "
+            "**every live game** (waiting for the club, booked, with a seat open, "
+            "waiting on its result or on an answer to a score), **every game that "
+            "ended less than a day after its hour's end**, and **any game that "
+            "needs the reader** (`needs_you`) — so an *uncounted* one whose "
+            "report of not coming they may still dispute is sent while they may. "
+            "Nothing older is sent; its details (`GET /bookings/{id}`) still read "
+            "it. A game a Classic play challenge opened is not here."
         )
     )
 

@@ -211,7 +211,9 @@ async def _put_to_the_club(
     the one still waiting from an earlier run."""
 
     club_id = await club_id_of(session, WAITING_CLUB)
-    hers = await build_player_bookings(session, settings=settings).of_player(her)
+    hers = await build_player_bookings(session, settings=settings).of_player(
+        her, since=None
+    )
     already = next(
         (
             game

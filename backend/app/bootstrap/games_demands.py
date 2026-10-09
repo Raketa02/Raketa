@@ -3,9 +3,11 @@
 **The same shape as ``matcher_demands.py``, and a second file rather than more
 rows in that one.** That register holds the ports the *matcher* declares of
 contexts it does not write; these are the ports a **provider** publishes for
-five consumers — the card's counted-games block, *Last 5*, the two facts the
+six consumers — the card's counted-games block, *Last 5*, the two facts the
 Player Score ticket reads per player, the confirmed results the rating context
-walks forward (``docs/adr/0139``), and the record sheet's opponent variety.
+walks forward (``docs/adr/0139``), the record sheet's opponent variety, and
+which games had a score put on their table lately, Home's look at its older
+games (#613).
 Rows of both kinds in one list would make ``MATCHER_DEMANDS``'s exhaustiveness
 assertion a claim about two different things, and the first person to add a
 row would have to guess which.
@@ -29,12 +31,14 @@ from app.bootstrap.composition import (
     build_game_directory,
     build_game_history_query,
     build_opponent_variety_query,
+    build_scored_games,
 )
 from app.modules.games.domain.ports import (
     ConfirmedResultLedger,
     GameDirectory,
     GameHistoryQuery,
     OpponentVarietyQuery,
+    ScoredGames,
 )
 
 #: What this context owes the rest of the platform, declared as data for the
@@ -53,6 +57,7 @@ GAMES_DEMANDS: tuple[type, ...] = (
     GameDirectory,
     ConfirmedResultLedger,
     OpponentVarietyQuery,
+    ScoredGames,
 )
 
 
@@ -76,6 +81,11 @@ GAME_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=OpponentVarietyQuery,
         name="EventSourcedGameHistory",
         build=build_opponent_variety_query,
+    ),
+    RegisteredImplementation(
+        port=ScoredGames,
+        name="EventSourcedScoredGames",
+        build=build_scored_games,
     ),
 )
 

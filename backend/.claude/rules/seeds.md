@@ -63,7 +63,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   - **Levels move through the rating catch-up**, the API's job. Cards are answered the day
     after their evening (`sportsmanship.RATED_AFTER`), inside their week on any weekday.
   - **`assert_her_history` fails the run by name** if any of these is missing:
-    - a counted evening on her Home;
+    - a counted evening, read on its details — every evening is past what Home sends
+      (#613);
     - a confirmed counted result of hers for the catch-up to fold;
     - a rater who rated her on one of her evenings.
 - **The challenge loop's seed is gone** (#578, #579). The relationships layer

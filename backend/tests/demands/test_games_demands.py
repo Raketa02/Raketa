@@ -55,6 +55,7 @@ from app.modules.games.domain.ports import (
     GameHistoryQuery,
     OpponentVariety,
     OpponentVarietyQuery,
+    ScoredGames,
 )
 from app.modules.games.domain.results import Outcome, Score, SetScore
 from app.modules.games.domain.standing import GameStanding
@@ -1635,3 +1636,55 @@ async def test_somebody_who_left_is_nobodys_attendee(implementation, session):
     attendance = await port.attendance_for([ana, bo], now=now)
     assert bo not in attendance
     assert attendance[ana].ghosts == 1
+
+
+# ---------------------------------------------------------------------------
+# ScoredGames — which games had a score put on their table lately (#613)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("implementation", registered(ScoredGames))
+async def test_a_game_is_named_by_the_last_score_put_on_its_table(
+    implementation, session
+):
+    """Proposed, corrected or countered: each puts a score on the table, and a
+    correction **re-dates** its side's — so a game whose score was proposed
+    before ``since`` is named by the correction or the counter made after it,
+    and a game nobody scored never is."""
+
+    port = implementation.build(session)
+    ana, bo = new_uuid(), new_uuid()
+    corrected = _planned(line_up=_singles(ana, bo), at=_ago(days=3))
+    corrected.state_result(by=ana, score=_score((6, 4)), occurred_at=_ago(hours=30))
+    corrected.state_result(by=ana, score=_score((7, 5)), occurred_at=_ago(hours=20))
+    countered = _planned(line_up=_singles(ana, bo), at=_ago(days=3))
+    countered.state_result(by=ana, score=_score((6, 4)), occurred_at=_ago(hours=30))
+    countered.state_result(by=bo, score=_score((4, 6)), occurred_at=_ago(hours=7))
+    proposed_long_ago = _planned(line_up=_singles(ana, bo), at=_ago(days=5))
+    proposed_long_ago.state_result(
+        by=ana, score=_score((6, 1)), occurred_at=_ago(days=4)
+    )
+    unscored = _planned(line_up=_singles(ana, bo), at=_ago(hours=5))
+    for game in (corrected, countered, proposed_long_ago, unscored):
+        await _saved(session, game)
+    asked = [game.id for game in (corrected, countered, proposed_long_ago, unscored)]
+
+    lately = await port.scored_since(asked, since=_ago(days=1))
+
+    assert lately == {corrected.id, countered.id}
+    assert await port.scored_since([unscored.id], since=_ago(days=30)) == set()
+    assert await port.scored_since([], since=_ago(days=30)) == set()
+
+
+@pytest.mark.parametrize("implementation", registered(ScoredGames))
+async def test_only_the_games_asked_about_are_named(implementation, session):
+    port = implementation.build(session)
+    ana, bo = new_uuid(), new_uuid()
+    asked = _planned(line_up=_singles(ana, bo), at=_ago(hours=6))
+    asked.state_result(by=ana, score=_score((6, 4)), occurred_at=_ago(hours=5))
+    other = _planned(line_up=_singles(ana, bo), at=_ago(hours=6))
+    other.state_result(by=ana, score=_score((6, 4)), occurred_at=_ago(hours=5))
+    await _saved(session, asked)
+    await _saved(session, other)
+
+    assert await port.scored_since([asked.id], since=_ago(days=1)) == {asked.id}

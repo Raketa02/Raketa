@@ -827,9 +827,22 @@ class PlayerBookings(Protocol):
     """**A demand of the Bookings context**: the games a player booked, as
     their booking records them, and each seat's check-in code."""
 
-    async def of_player(self, player_id: UUID) -> Sequence[BookedGame]:
-        """Every booked game this player has a seat on, whenever it is —
-        **soonest first**, and by id among games at one hour."""
+    async def of_player(
+        self, player_id: UUID, *, since: Instant | None
+    ) -> Sequence[BookedGame]:
+        """Every booked game this player has a seat on whose hour starts at or
+        after ``since`` — whenever it is, when ``since`` is ``None`` —
+        **soonest first**, and by id among games at one hour. Home reads from
+        an hour on (#613); a seed reads them all."""
+        ...
+
+    async def games_before(
+        self, player_id: UUID, *, before: Instant
+    ) -> Mapping[UUID, UUID]:
+        """Each Game of a booked game this player has a seat on whose hour
+        started before ``before``, to its booking — **ids alone, nothing
+        folded**: what Home asks the Games context about its older games
+        (#613). A booking with no Game is not here."""
         ...
 
     async def find(self, booking_id: UUID) -> BookedGame | None:
@@ -859,6 +872,17 @@ class GameResults(Protocol):
     ) -> Mapping[UUID, GameResult]:
         """Each of these games at ``now``, as ``reader`` reads it — one
         question about the set. A game that cannot be read is absent."""
+        ...
+
+    async def waiting_among(
+        self, game_ids: Collection[UUID], *, now: Instant
+    ) -> Collection[UUID]:
+        """Those of these games a score may still wait for its answer on at
+        ``now`` — **ids, nothing folded**, one question about the set (#613).
+        Candidates: whose answer it waits on is ``of``'s to say. A correction
+        re-dates its side's score, and may be made again while the other side
+        has not answered, so a game long past its hour may still wait on its
+        reader — this is how Home finds it."""
         ...
 
 
