@@ -76,15 +76,19 @@ def game_booked_email(
     starts_at: Instant,
     paid_grosze: int,
     free_to_leave_until: Instant | None,
+    fee_estimate_grosze: int,
     app_link: str,
 ) -> OutgoingMessage:
     """*It's a game! · you paid* — the booking confirmation.
     ``free_to_leave_until`` is the club's cut-off, or ``None`` for a game that
-    filled after it."""
+    filled after it. Before it, the email says what leaving gives back — the
+    share less the card fee, the estimate the card and the leave sheet quote —
+    and never *free* (Q99)."""
 
     leaving = (
-        f"You're free to leave until {_day_and_time(free_to_leave_until)} and "
-        f"are refunded at once, minus the card fee."
+        f"You can leave until {_day_and_time(free_to_leave_until)} and get "
+        f"{zloty(paid_grosze - fee_estimate_grosze)} back at once (the "
+        f"{zloty(fee_estimate_grosze)} card fee isn't returned)."
         if free_to_leave_until is not None
         else "This game has no free cancellation: if you leave, you're refunded "
         "only when someone takes your seat."

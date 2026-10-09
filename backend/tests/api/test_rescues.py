@@ -544,6 +544,7 @@ async def test_a_member_offered_the_seat_reads_the_game_from_outside(
         "share_grosze": SHARE,
         "paid": False,
         "free_to_leave_until": None,
+        "back_if_you_leave_grosze": None,
         "refunded_grosze": None,
     }
     [you, *partner] = details["sides"]["yours"]

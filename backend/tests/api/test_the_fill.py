@@ -846,7 +846,13 @@ async def test_everybody_is_emailed_it_s_a_game_with_what_they_paid(
         assert email.subject == "It's a game! · you paid 30 zł"
         assert "Bonarka Arena, Court 1" in email.text
         assert "Saturday 10 October, 17:00 until 18:00" in email.text
-        assert "free to leave until Friday 9 October, 17:00" in email.text
+        # What leaving by the cut-off gives back, never *free* (Q99): the
+        # 30 zł share less the 1,45 zł card fee the payments estimate.
+        assert (
+            "You can leave until Friday 9 October, 17:00 and get 28,55 zł back "
+            "at once (the 1,45 zł card fee isn't returned)."
+        ) in email.text
+        assert "free to leave" not in email.text
 
 
 async def test_a_game_that_fills_after_its_cut_off_says_so(
@@ -867,7 +873,11 @@ async def test_a_game_that_fills_after_its_cut_off_says_so(
         await says_yes(client, player, proposal)
 
     [email] = await mailbox.to("ola@example.com")
-    assert "no free cancellation" in email.text
+    assert (
+        "This game has no free cancellation: if you leave, you're refunded "
+        "only when someone takes your seat."
+    ) in email.text
+    assert "You can leave until" not in email.text
 
 
 # --------------------------------------------------------------------------- #

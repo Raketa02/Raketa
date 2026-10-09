@@ -14,7 +14,8 @@ the mailbox, the record.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
 **Saturday 10 October, 17:00** at Bonarka Arena, padel at 120 zł — 30 zł a
-seat — with a 24-hour cut-off, so free to leave until **Friday 17:00**.
+seat — with a 24-hour cut-off, so 28,55 zł back if you leave by **Friday
+17:00**.
 """
 
 from __future__ import annotations
@@ -217,6 +218,29 @@ async def test_the_details_say_what_leaving_costs_before_the_player_leaves(
     assert started is None
 
 
+async def test_the_money_line_promises_what_the_leave_sheet_then_refunds(
+    client, clock, booking, four
+):
+    """*28,55 zł back if you leave by Fri 17:00* is the sheet's own figure, on
+    the card and in the details alike — one estimate, so they never disagree
+    (Q99) — until the cut-off takes the clause off the line."""
+
+    ola = four[0]
+
+    details = await details_of(client, ola, booking)
+    [card] = await home_of(client, ola)
+    clock.move(CUT_OFF - MONDAY_MORNING)
+    [after] = await home_of(client, ola)
+
+    assert details["money"]["back_if_you_leave_grosze"] == SHARE - FEE
+    assert (
+        details["money"]["back_if_you_leave_grosze"]
+        == details["leaving"]["refund_grosze"]
+    )
+    assert card["money"] == details["money"]
+    assert after["money"]["back_if_you_leave_grosze"] is None
+
+
 # --------------------------------------------------------------------------- #
 # Leaving after the cut-off, after the start, and while the club decides
 # --------------------------------------------------------------------------- #
@@ -237,6 +261,7 @@ async def test_leaving_after_the_cut_off_keeps_the_seat_paid_and_offers_it(
     [card] = await home_of(client, ola)
     assert (card["status"], card["open_seats"]) == ("SEAT_OPEN", 1)
     assert card["money"]["free_to_leave_until"] is None
+    assert card["money"]["back_if_you_leave_grosze"] is None
     assert card["money"]["paid"] is True
 
 

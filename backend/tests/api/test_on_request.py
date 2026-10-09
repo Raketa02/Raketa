@@ -229,6 +229,7 @@ async def test_a_full_game_waits_for_the_club_and_nobody_is_charged(
             "share_grosze": 30_00,
             "paid": False,
             "free_to_leave_until": None,
+            "back_if_you_leave_grosze": None,
             "refunded_grosze": None,
         }
         assert not any(

@@ -804,7 +804,7 @@ class BookedSidesSchema(BaseModel):
 
 
 class BookedMoneySchema(BaseModel):
-    """The money line: *Paid · 30 zł · free to leave until Sat 17:00*."""
+    """The money line: *Paid · 30 zł · 28,55 zł back if you leave by Sat 17:00*."""
 
     share_grosze: int = Field(description="Every seat's share, in grosze.")
     paid: bool = Field(
@@ -815,9 +815,25 @@ class BookedMoneySchema(BaseModel):
     )
     free_to_leave_until: datetime | None = Field(
         description=(
-            "The club's cut-off while it is still ahead at `read_at` — leaving "
-            "before it is refunded. `null` from the cut-off on, and for a game "
-            "that filled after it. The line switches by itself at this instant."
+            "The club's cut-off while it is still ahead at `read_at`: leaving "
+            "before it is refunded at once, less the card fee, which is never "
+            "returned (`back_if_you_leave_grosze`) — so the line says what comes "
+            "back, never that leaving is free (Q99). `null` from the cut-off on, "
+            "for a game that filled after it, for a game still waiting for its "
+            "club, and for a reader not on the game. The line switches by itself "
+            "at this instant."
+        )
+    )
+    back_if_you_leave_grosze: int | None = Field(
+        description=(
+            "What the reader gets back if they leave now, in grosze: the share "
+            "less the card fee the payments estimate — *28,55 zł back if you "
+            "leave by Sat 17:00*; 3840 on a 40 zł share. The same figure the "
+            "details' `leaving.refund_grosze` gives before the cut-off, so the "
+            "card, the leave sheet and the booking email never disagree. `null` "
+            "whenever `free_to_leave_until` is: from the cut-off on, for a game "
+            "that filled after it, for a game still waiting for its club, and "
+            "for a reader not on the game."
         )
     )
     refunded_grosze: int | None = Field(
@@ -900,6 +916,7 @@ def _money(money: BookedMoney) -> BookedMoneySchema:
         share_grosze=money.share_grosze,
         paid=money.paid,
         free_to_leave_until=money.free_to_leave_until,
+        back_if_you_leave_grosze=money.back_if_you_leave_grosze,
         refunded_grosze=money.refunded_grosze,
     )
 

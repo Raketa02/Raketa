@@ -13,8 +13,8 @@ hour, and any game that needs the reader.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
 **Saturday 10 October, 17:00** at Bonarka Arena, padel at 120 zł — 30 zł a
-seat — with a 24-hour cut-off, so free to leave until **Friday 17:00**. Ola lives
-in Kraków, 3,3 km south of the club.
+seat — with a 24-hour cut-off, so 28,55 zł back if you leave by **Friday
+17:00**. Ola lives in Kraków, 3,3 km south of the club.
 """
 
 from __future__ import annotations
@@ -54,6 +54,8 @@ CONVERSATIONS = "/api/v1/conversations"
 IN_KRAKOW = (50.03, 19.95)
 SATURDAY_FIVE_UTC = "2026-10-10T15:00:00Z"
 FRIDAY_FIVE_UTC = "2026-10-09T15:00:00Z"
+#: What leaving by the cut-off gives back: 30 zł less its 1,45 zł card fee.
+BACK_IF_YOU_LEAVE = 28_55
 A_SCORE = {"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}}
 
 
@@ -186,6 +188,7 @@ async def test_every_player_finds_the_booked_game_on_home_with_its_money_line(
             "share_grosze": 30_00,
             "paid": True,
             "free_to_leave_until": FRIDAY_FIVE_UTC,
+            "back_if_you_leave_grosze": BACK_IF_YOU_LEAVE,
             "refunded_grosze": None,
         }
         yours, theirs = card["sides"]["yours"], card["sides"]["theirs"]
@@ -212,6 +215,7 @@ async def test_from_the_cut_off_on_the_money_line_is_only_paid(
     assert card["status"] == "BOOKED"
     assert card["money"]["paid"] is True
     assert card["money"]["free_to_leave_until"] is None
+    assert card["money"]["back_if_you_leave_grosze"] is None
 
 
 async def test_from_its_hour_the_game_needs_its_result_and_the_badge_counts_it(
@@ -663,6 +667,7 @@ async def test_a_player_in_the_game_reads_its_details(
         "share_grosze": 30_00,
         "paid": True,
         "free_to_leave_until": FRIDAY_FIVE_UTC,
+        "back_if_you_leave_grosze": BACK_IF_YOU_LEAVE,
         "refunded_grosze": None,
     }
     yours, theirs = details["sides"]["yours"], details["sides"]["theirs"]

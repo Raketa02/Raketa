@@ -4,8 +4,10 @@ and money line, and how many of them need the reader (#542; the mechanics §3,
 
 **A read, recorded nowhere, and the clock is read once.** Every status, money
 line and *needs you* here is folded against one instant (``domain/home.py``), and
-that instant travels back as ``read_at`` — so a card's *free to leave until* and
-its status cannot be read against two clocks.
+that instant travels back as ``read_at`` — so a card's cut-off and its status
+cannot be read against two clocks. What leaving before the cut-off gives back is
+the share less the card fee the payments estimate — the leave sheet's own
+figure (Q99).
 
 **Set reads, never one per card**: the reader's bookings, then each game's
 result in one question about the set, the clubs' names in one, and the people on
@@ -50,6 +52,7 @@ from app.modules.proposals.domain.home import (
     state_of,
 )
 from app.modules.proposals.domain.ports import (
+    CardFees,
     ClubNames,
     DeckPeople,
     DeckPerson,
@@ -95,6 +98,7 @@ class ReadHome:
         directory: ProposalDirectory,
         people: DeckPeople,
         clubs: ClubNames,
+        fees: CardFees,
         clock: Clock,
     ) -> None:
         self._bookings = bookings
@@ -103,6 +107,7 @@ class ReadHome:
         self._directory = directory
         self._people = people
         self._clubs = clubs
+        self._fees = fees
         self._clock = clock
 
     async def execute(self, reader: UUID) -> Home:
@@ -127,6 +132,7 @@ class ReadHome:
                     state=state_of(
                         game,
                         None if game.game_id is None else results.get(game.game_id),
+                        card_fee_grosze=self._fees.card_fee_on(game.share_grosze),
                         now=now,
                     ),
                     club_name=names.get(game.club_id),

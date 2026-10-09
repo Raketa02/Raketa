@@ -7063,7 +7063,19 @@
               }
             ],
             "title": "Free To Leave Until",
-            "description": "The club's cut-off while it is still ahead at `read_at` \u2014 leaving before it is refunded. `null` from the cut-off on, and for a game that filled after it. The line switches by itself at this instant."
+            "description": "The club's cut-off while it is still ahead at `read_at`: leaving before it is refunded at once, less the card fee, which is never returned (`back_if_you_leave_grosze`) \u2014 so the line says what comes back, never that leaving is free (Q99). `null` from the cut-off on, for a game that filled after it, for a game still waiting for its club, and for a reader not on the game. The line switches by itself at this instant."
+          },
+          "back_if_you_leave_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Back If You Leave Grosze",
+            "description": "What the reader gets back if they leave now, in grosze: the share less the card fee the payments estimate \u2014 *28,55 z\u0142 back if you leave by Sat 17:00*; 3840 on a 40 z\u0142 share. The same figure the details' `leaving.refund_grosze` gives before the cut-off, so the card, the leave sheet and the booking email never disagree. `null` whenever `free_to_leave_until` is: from the cut-off on, for a game that filled after it, for a game still waiting for its club, and for a reader not on the game."
           },
           "refunded_grosze": {
             "anyOf": [
@@ -7083,10 +7095,11 @@
           "share_grosze",
           "paid",
           "free_to_leave_until",
+          "back_if_you_leave_grosze",
           "refunded_grosze"
         ],
         "title": "BookedMoneySchema",
-        "description": "The money line: *Paid \u00b7 30 z\u0142 \u00b7 free to leave until Sat 17:00*."
+        "description": "The money line: *Paid \u00b7 30 z\u0142 \u00b7 28,55 z\u0142 back if you leave by Sat 17:00*."
       },
       "BookedSchema": {
         "properties": {

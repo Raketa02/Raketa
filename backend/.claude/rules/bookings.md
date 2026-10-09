@@ -152,7 +152,8 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   court hour left).
 - **Emails are the money's** (`payments/application/seat_charge_emails.py`): *It's a game! · you
   paid* to every player when the seats are taken, the club named as the seller and the cut-off
-  line, and *Confirm your payment to keep your seat* to each refused player, worded by reason.
+  line (what leaving by it gives back, Q99), and *Confirm your payment to keep your seat* to
+  each refused player, worded by reason.
 - **Seeded by `app/seeds/bookings.py`**: two of the protagonist's games at Bonarka Arena — the
   first hour on sale today (else inside the cut-off) and the first next week — each made by
   `MakeProposal` and filled by four `SayYes`, hers last, through the run's fake; the seed's outbox
@@ -194,7 +195,8 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   key drawn from `JWT_SECRET_KEY` with its own prefix (`KeyedCheckInCodes`), six characters in
   the typed-code alphabet plus a `RAKETA-CHECK-IN:1:<booking>:<player>:<code>` QR payload, shown
   on the club's calendar day of the game while it stands — #547's desk recomputes it.
-- **Leaving is free until the club's cut-off, and a game plays full or not at all** (#544;
+- **Leaving is refunded at once until the club's cut-off, less the card fee, and a game plays
+  full or not at all** (#544;
   `proposals/application/leave_the_game.py`, `cut_off.py`, `bookings/application/leaving.py`;
   the mechanics §12.3, §13, §14.1, §15.4). `POST /bookings/{id}/departure` locks the game's
   proposal row first, as every act on a game does. **Before the cut-off** the leaver's seat
@@ -206,9 +208,14 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   `game_has_started`. What
   leaving would cost is on the details before the player leaves (`leaving`: the share less
   `card_fee_on`, the payments' **estimate** — Stripe's EEA price, 1.5 % + 1 zł, which the
-  fake withholds exactly). **The cut-off job** (`cut-off`, see `jobs.md`) calls off every
-  game with a seat open since **before** its cut-off (`CalledOffAtCutOff`, naming everybody
-  still in): everybody still in is refunded **in full** (the club bears those fees), the
+  fake withholds exactly) — and **on the money line, never as *free*** (Q99, #617): while
+  the cut-off is ahead, Home's card and the details carry `back_if_you_leave_grosze`
+  (*28,55 zł back if you leave by Fri 17:00*), `null` whenever `free_to_leave_until` is.
+  It is the sheet's figure — `money_of` and `leave_terms` share one subtraction and a read
+  asks the estimate once — and the booking email says it from the same estimate (*You can
+  leave until … and get 28,55 zł back at once*). **The cut-off job** (`cut-off`, see
+  `jobs.md`) calls off every game with a seat open since **before** its cut-off
+  (`CalledOffAtCutOff`, naming everybody still in): everybody still in is refunded **in full** (the club bears those fees), the
   court is free (the partial index), the Game is called off by nobody (`CallOffGame`, which
   steps over a game that already started short) and its room with it, the desk is emailed
   *A game was called off at the cut-off*, each player *Game called off · with the refund*.

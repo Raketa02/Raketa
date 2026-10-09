@@ -2553,6 +2553,7 @@ def build_read_home(
         directory=build_proposal_directory(session),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
+        fees=build_card_fees(),
         clock=clock,
     )
 

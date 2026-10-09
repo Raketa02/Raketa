@@ -277,9 +277,15 @@ class BookedMoney:
     share_grosze: int
     #: Every seat's share was taken — *Paid · 30 zł*.
     paid: bool
-    #: The club's cut-off while it is still ahead — *free to leave until Sat
-    #: 17:00* — and ``None`` from it on, and for a game that filled after it.
+    #: The club's cut-off while it is still ahead — leaving before it is
+    #: refunded at once, less the card fee — and ``None`` from it on, and for a
+    #: game that filled after it.
     free_to_leave_until: Instant | None
+    #: What leaving now gives back — the share less its card fee: *28,55 zł
+    #: back if you leave by Sat 17:00* (Q99) — whenever there is a
+    #: ``free_to_leave_until``, and ``None`` whenever there is not. The leave
+    #: sheet's own figure (``leave_terms``).
+    back_if_you_leave_grosze: int | None
     #: What everybody still in is given back — the whole share, on a game
     #: called off at its cut-off (#544); ``None`` where nothing is.
     refunded_grosze: int | None = None
@@ -413,9 +419,10 @@ def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
             exhaustive(status)
 
 
-def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
+def money_of(game: BookedGame, *, card_fee_grosze: int, now: Instant) -> BookedMoney:
     """The money line: every seat held paid its share of a booked game —
     nobody anything while its club decides, or once it turned it down — and
+    what leaving gives back while the club's cut-off is ahead (Q99), and
     everybody still in gets it all back from a game called off at its
     cut-off, or cancelled by its club (#547)."""
 
@@ -424,10 +431,14 @@ def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
         game.stage in (BookingStage.BOOKED, BookingStage.SEAT_OPEN)
         and called_off is None
     )
+    free_to_leave = paid and now < game.cut_off
     return BookedMoney(
         share_grosze=game.share_grosze,
         paid=paid,
-        free_to_leave_until=game.cut_off if paid and now < game.cut_off else None,
+        free_to_leave_until=game.cut_off if free_to_leave else None,
+        back_if_you_leave_grosze=(
+            _less_the_card_fee(game, card_fee_grosze) if free_to_leave else None
+        ),
         refunded_grosze=(
             game.share_grosze if called_off in _REFUNDED_IN_FULL else None
         ),
@@ -455,6 +466,14 @@ def leaving_of(game: BookedGame, *, now: Instant) -> Leaving:
     return Leaving.AFTER_THE_CUT_OFF
 
 
+def _less_the_card_fee(game: BookedGame, card_fee_grosze: int) -> int:
+    """What a leaver is refunded: their share, less the card fee the provider
+    never returns — one figure for the line and the sheet; the booking email
+    works it from the same estimate (Q99)."""
+
+    return game.share_grosze - card_fee_grosze
+
+
 def leave_terms(
     game: BookedGame, status: HomeStatus, *, card_fee_grosze: int, now: Instant
 ) -> LeaveTerms | None:
@@ -468,7 +487,7 @@ def leave_terms(
         return None
     return LeaveTerms(
         kind=leaving,
-        refund_grosze=game.share_grosze - card_fee_grosze,
+        refund_grosze=_less_the_card_fee(game, card_fee_grosze),
         card_fee_grosze=card_fee_grosze,
     )
 
@@ -495,16 +514,22 @@ class BookedState:
 
 
 def state_of(
-    game: BookedGame, result: GameResult | None, *, now: Instant
+    game: BookedGame,
+    result: GameResult | None,
+    *,
+    card_fee_grosze: int,
+    now: Instant,
 ) -> BookedState:
     """Everything Home and the details fold off the booking, its Game's result
-    and the clock — once, so a card and its details cannot disagree."""
+    and the clock — once, so a card and its details cannot disagree.
+    ``card_fee_grosze`` is the estimate on the game's share, as the leave
+    sheet is given it."""
 
     status = status_of(game, result, now=now)
     return BookedState(
         status=status,
         needs_you=needs_you(status, result),
-        money=money_of(game, now=now),
+        money=money_of(game, card_fee_grosze=card_fee_grosze, now=now),
         called_off=game.called_off_reason(now)
         if status is HomeStatus.CALLED_OFF
         else None,

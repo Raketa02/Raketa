@@ -47,6 +47,7 @@ from app.modules.payments.application.seat_charge_emails import (
     game_booked_email,
 )
 from app.modules.payments.application.setup import key_hour
+from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.errors import (
     PaymentNotConfirmed,
     SeatChargeNotFound,
@@ -276,6 +277,7 @@ class ChargeTheSeats:
                     starts_at=game.starts_at,
                     paid_grosze=game.share_grosze,
                     free_to_leave_until=game.free_to_leave_until,
+                    fee_estimate_grosze=estimated_card_fee(game.share_grosze),
                     app_link=self._app_link,
                 ),
                 at=at,
