@@ -103,15 +103,27 @@ this game* — counting the yeses on every version.
 | You swipe… | On… | What happens |
 | --- | --- | --- |
 | right | a card that won't fill | Your tile gains IN for the others; the card leaves your deck; the yes appears in **Fill in › You're In**. Nothing charged. |
-| right | *Book it now* | Toast **"Booking in 10 s · Undo"** with a draining ring. At zero: everyone charged together → **It's a game!** At an On request club, at zero the game goes to the club (*waiting for the club*); the charge and **It's a game!** follow when it confirms ([the mechanics §11](the-mechanics.md#11-the-moment-a-game-fills)). |
+| right | *Book it now* | Toast **"Booking in 10 s · Undo"** with a draining ring. At zero: everyone charged together → **It's a game!** At an On request club, at zero the game goes to the club (*waiting for the club*) and **It's a game!** shows at once with *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*, in place of a toast; the charge follows when the club confirms ([the mechanics §11](the-mechanics.md#11-the-moment-a-game-fills), Q103). |
 | right | a rescue | The same toast; at zero your share is charged → **It's a game!**; the game is in **Home**. |
 | right | without a saved method | The **payment setup** ([A7.3](#a73-payments)) opens as a sheet; the yes lands when it finishes, or is dropped if you close it. |
 | left | anything | The card leaves; silent; never on your record. |
 
 - **It's a game!** — today's yes screen (ADR-0167): full screen, the faces, the one word *It's a
-  game!*, **Open game** and **Later**. Shown to the player whose action filled it.
+  game!*, **Open game** and **Later**. It marks the players being matched, not only booked (Q103).
+  Shown to the player whose action filled it — a yes or a rescue join — at every kind of club,
+  and to a player whose confirmed payment completes a game waiting for it (Q110). Under the word,
+  one line when something is still missing:
+  - at a club that confirms, *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*,
+    its time written as in [A8](#a8-home);
+  - when another player's payment failed at a club that books at once, *Waiting for one payment ·
+    until 14:40 · Nobody pays until it's in*.
+
+  Its player gets no banner for it, and the bell doesn't count it; the row is still in their list
+  (Q102, [A9](#a9-notifications-delivery)).
 - **A payment that fails at the fill** — toast *"Your payment didn't go through — confirm it to
-  keep your seat"* and the notice of the same name ([A9](#a9-notifications-delivery)).
+  keep your seat"* and the notice *Confirm your payment by 14:40 to keep your seat*
+  ([A9](#a9-notifications-delivery)): the seat is held for the player's time to pay
+  ([the mechanics §12.2](the-mechanics.md#122-when-a-game-fills), Q109).
 
 ## A3. Fill in (mock 11)
 
@@ -166,7 +178,8 @@ One screen (details 5–10, from Part 1), three readers.
 
 ### A4.2 A game still filling (Q75)
 
-Same layout. Status *Filling · 2 of 4 in* (or *Waiting for the club*, amber); tiles with IN tags;
+Same layout. Status *Filling · 2 of 4 in* (or *Waiting for the club*, amber — and for a game that
+had filled, *Seat open* or *Waiting for one payment*, as on [A8](#a8-home)); tiles with IN tags;
 WHERE shows the club and distance, no court number; the money row reads *30 zł if it fills · book
 by Sat 13:00* — while *waiting for the club*, *YOUR SHARE 30 zł* · *nobody pays until Bonarka
 Arena confirms*, with *Bonarka Arena answers by 20:45* beside it until that deadline passes
@@ -285,10 +298,12 @@ Back chevron + title; changes save as you tap.
 
 ### A7.2 Notifications (mocks 52, 53)
 
-- **ALWAYS ON** — seven inert rows with a green **on** tag: *It's a game! · you paid* · *Confirm
-  your payment to keep your seat* · *Game called off · with the refund* · *Someone left your
-  game* · *You've been refunded* · *The club confirmed / couldn't take it* · *Your post didn't
-  fill*.
+- **ALWAYS ON** — eleven inert rows with a green **on** tag, those of
+  [the mechanics §17.2](the-mechanics.md#172-notifications): *It's a game! · you paid* · *It's a
+  game! · the club answers by …* · *Waiting for one payment* · *Confirm your payment to keep your
+  seat* · *Game called off · with the refund* · *Someone left your game · or it's filling again* ·
+  *You've been refunded* · *The club confirmed / said no / didn't answer in time* · *Your new game*
+  · *A game you left* · *Your post didn't fill*.
 - **YOUR CHOICE** — three rows with a working **On / Off** chip: *You complete it* (on; *A card
   needs only you · at most 1 a day, bundled*), *Challenges for you* (on; *A member's post names
   you · at most 3 a day, bundled*), *Fill in alerts* (off; *A booked game you fit needs one more ·
@@ -321,6 +336,11 @@ rest grey. **The order is changed from the mocks** (Q82):
   club when a game fills*, **Change** (reopens the setup; the old method keeps working until the
   new one is saved). Under it a small **Remove this method** link, refused with its reason while
   anything is live (Q83).
+- **TO CONFIRM** — above the live yeses, and above Home's rail too: a payment that failed when a
+  game filled or when its club accepted it, which the player can still confirm; tap → the
+  confirmation. While the seat is held for them, the row names the end of their time to pay,
+  *Confirm your payment by 14:40*, written as the times in [A8](#a8-home) are
+  ([the mechanics §12.2](the-mechanics.md#122-when-a-game-fills), Q109).
 - **LIVE YESES · 3** — every live yes, with no cap (the mechanics Q97); rows *Padel · Saturday 15:00 ·
   Bonarka Arena* with the share in grey; tap → the game's details. Hidden when empty.
 - **RECEIPTS** — newest first; ✓ grey circle for a charge (*−28 zł*, dark), ↩ mint circle for a
@@ -333,8 +353,9 @@ rest grey. **The order is changed from the mocks** (Q82):
 
 The rail of game cards that was *Now*, renamed **Home**, showing the statuses of
 [the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses): **Waiting for the club**
-(amber), **Booked** (mint), **Seat open** (amber), the result statuses as today, **Called off**
-(red) — each with its money line. **Open game** → [A4.1](#a41-a-booked-game-youre-in-details-510).
+(amber), **Waiting for one payment** (amber), **Booked** (mint), **Seat open** (amber), the result
+statuses as today, **Called off** (red) — each with its money line. **Open game** →
+[A4.1](#a41-a-booked-game-youre-in-details-510).
 On a booked card the **speech bubble is the chat's door**: it opens the game's chat
 ([A4.4](#a44-the-chat)) straight over Home, and Back returns to Home
 ([the mechanics §14.3](the-mechanics.md#143-the-chat), Q100). It shows when the game's chat is
@@ -349,22 +370,62 @@ Bonarka Arena confirms*. **The time is in Warsaw time, as every day and hour on 
 alone when it falls today (*answers by 20:45*), else the weekday and the hour (*answers by Sun
 00:15*), in the form of *38,40 zł back if you leave by Sun 17:00*.
 
+**A full game that falls back stays on Home as *Seat open*** for those still In (Q106): *1 seat
+open · Kazimierz Padel is asked again when it's full · nobody paid*, or *1 seat open · books when
+it's full · nobody paid* at a club that books at once, mirroring a booked game's *Seat open*. It
+reads *Waiting for the club* again when it refills, and *Called off · nobody paid* if its book-by
+passes first. It is in *You're In* too ([A3.2](#a32-youre-in--n--your-row-mock-13)).
+
+**Waiting for one payment** (Q111) is on all four's Home while one player's time to pay runs:
+*Waiting for one payment · until 14:40 · Nobody pays until it's in*. The payer's own card reads
+*Confirm your payment by 14:40*, beside their *TO CONFIRM* row ([A7.3](#a73-payments)). At the end it
+becomes *Booked*, or *Seat open*.
+
+A **Called off** card says the club's answer as the notice and the email do (Q105): *Kazimierz
+Padel said no* or *Kazimierz Padel didn't answer in time*, with *Nobody paid — you'll get a new
+card first*.
+
 ## A9. Notifications delivery
 
 | Notice | Push | In-app banner + recent list | Email |
 | --- | --- | --- | --- |
-| It's a game! · you paid | ✓ | ✓ | ✓ (booking confirmation) |
-| Confirm your payment to keep your seat | ✓ | ✓ | ✓ |
-| Game called off · with the refund | ✓ | ✓ | ✓ |
+| It's a game! · you paid (or *… is booked · you paid* after one payment was missing) | ✓ | ✓ | ✓ (booking confirmation) |
+| It's a game! · Kazimierz Padel answers by 21:15 | ✓ | ✓ | — |
+| Waiting for one payment | ✓ | ✓ | — |
+| Confirm your payment by 14:40 to keep your seat | ✓ | ✓ | ✓ |
+| Game called off · with the refund, or *nobody paid* | ✓ | ✓ | ✓ |
 | You've been refunded | ✓ | ✓ | ✓ |
-| Someone left your game | ✓ | ✓ | — |
-| The club confirmed / couldn't take it | ✓ | ✓ | — |
+| Someone left your game · or it's filling again | ✓ | ✓ | — |
+| The club confirmed | ✓ | ✓ | ✓ (booking confirmation) |
+| The club said no · didn't answer in time | ✓ | ✓ | ✓ (Q105) |
+| Your new game | ✓ | ✓ | — |
+| A game you left — called off by your empty seat | ✓ | ✓ | — |
+| A game you left — cancelled by the club, with your refund | ✓ | ✓ | ✓ |
 | Your post didn't fill | ✓ | ✓ | — |
 | You complete it · Challenges for you · Fill in alerts | ✓ if on | ✓ if on | — |
 
-Push goes through Expo's push service. Tapping a notice opens the game it is about (the deck
-opens with the card on top for *You complete it* and *Challenges*). The recent notices are a
-list reached from a bell on Home. Emails go through the existing mailer (ADR-0186).
+Push goes through Expo's push service. Emails go through the existing mailer (ADR-0186).
+
+**Where a notice opens.** Tapping a notice — the banner, its row in the list or, later, a push —
+opens the game it is about. Three open the group's Games deck with their card on top: *You
+complete it*, *Challenges* and **Your new game** (Q107). **Home is read again whenever a notice
+arrives**, so a game a notice is about is there when it is tapped (Q103).
+
+**The bell and its number** (Q101). The recent notices are a list, the newest 30, reached from a
+bell on Home. The bell carries the number of notices given since the player last opened the list,
+*99+* above 99. The server keeps it, so it is the same on every phone. Opening the list clears it,
+and the rows that came since the last visit stand out on that visit. Nothing is marked read row by
+row, and there is no *mark all*. The app icon carries no number until push is on.
+
+**Banners** (Q101, Q102):
+
+- **None at launch.** What was told while Raketa was closed is in the bell's number.
+- **Coming back from the background** shows a banner for the newest notice only; the number counts
+  the rest.
+- **Never for your own act.** The player whose yes filled the game, or whose confirmed payment
+  completed it, sees *It's a game!*; their own notice is in the list, already seen, never bannered
+  and never counted. A notice about money taken by somebody else's act, such as *Kazimierz Padel
+  confirmed your game · you paid 25 zł*, is bannered as usual.
 
 ## A10. Design-system work (Part 16 rows)
 
@@ -436,7 +497,15 @@ Three sections on one page.
 - **Row** (per booking): time + court + sport + kind · the players (name, *paid ✓*, *checked in
   ✓*) · status tag · money (court price, collected, refunded) · the group it came from · actions:
   - **Waiting for you** → **Accept** / **Refuse** with the countdown; Refuse asks for an optional
-    reason.
+    reason, and tells the desk what the players will read: *Kazimierz Padel said no* · *Nobody
+    paid — you'll get a new card first* (Q105). Where the site explains a request left unanswered,
+    it promises *Kazimierz Padel didn't answer in time*.
+  - **Accepted · waiting for one player's payment until 21:20** (Q112) — an Accept that met a
+    refused payment: the club's yes and the court are kept for that player's time to pay, and the
+    player is never named. It is not under *Waiting for you* or on Overview, because the desk has
+    answered. It becomes an ordinary booked game when the payment comes in; when the time runs out
+    it leaves the day as a called-off game does, and the desk has the email *A game didn't go
+    ahead* ([B9](#b9-emails-to-the-club)).
   - **Booked / Seat open** → **Move** (a dialog listing the free courts of that sport at that
     hour; players see the new number) and **Cancel** (a dialog: reason *weather · repair · double
     booking · other*, the consequence spelled out — *"Everyone is refunded in full; the card fees
@@ -480,8 +549,9 @@ to the *other clubs' courts* setting.
 
 Through the existing mailer (ADR-0186): *A booking is waiting for your answer* (at once, with the
 countdown and a link), *New bookings today* (a daily summary), *A game was called off at the
-cut-off — the hour is free again* (at once), *A payout was sent*, *Stripe needs something from
-you* (at once).
+cut-off — the hour is free again* (at once), *A game didn't go ahead* — *A player's payment didn't
+come in time — the court is free again.* (at once, after an Accept that waited on one payment,
+Q112), *A payout was sent*, *Stripe needs something from you* (at once).
 
 ---
 
@@ -538,6 +608,9 @@ proposals' needs, per club and hour.
 - **The cut-off** — at each booking's cut-off: still short → called off, refunds; full → nothing
   (money already taken).
 - **On request timeout** — expires unanswered requests.
+- **Time to pay** — at the end of a failed payment's 30 minutes: lets the kept holds go and offers
+  the seat, or calls the game off when its book-by has come; tells the players and, after an
+  Accept, the desk (Q109, Q112).
 - **Rescue dealing** — on every `SeatLeft`: Seats to fill, Seat open cards, Fill in alerts.
 - **Notifications** — caps and bundling (1 / 3 / 3 a day), push through Expo, email through the
   mailer, in-app list.
