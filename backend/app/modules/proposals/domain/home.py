@@ -434,6 +434,16 @@ def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
     )
 
 
+def answer_by_ahead(answer_by: Instant | None, *, now: Instant) -> Instant | None:
+    """When an On request club must answer, while that is still ahead — *Bonarka
+    answers by 20:45* (Q98). ``None`` from that moment on: the club can no
+    longer say yes, and the line says only *nobody pays until Bonarka
+    confirms* until the game is called off, as *free to leave until* leaves at
+    the cut-off."""
+
+    return answer_by if answer_by is not None and now < answer_by else None
+
+
 def leaving_of(game: BookedGame, *, now: Instant) -> Leaving:
     """What leaving this game does at ``now`` — whether it may still be left
     at all is the caller's question."""
@@ -478,6 +488,10 @@ class BookedState:
     uncounted: UncountedReason | None = None
     #: Why the club cancelled it, when it did (#547).
     cancel_reason: ClubCancelReason | None = None
+    #: When its On request club must answer — the time its desk is given —
+    #: while the game waits for it and the moment is ahead; ``None`` on every
+    #: other status (Q98).
+    answer_by: Instant | None = None
 
 
 def state_of(
@@ -496,6 +510,13 @@ def state_of(
         else None,
         uncounted=uncounted_reason(game, status, result),
         cancel_reason=game.cancel_reason if status is HomeStatus.CALLED_OFF else None,
+        # The booking keeps the moment once the club answered; the players
+        # read it only while the answer is still to come.
+        answer_by=(
+            answer_by_ahead(game.answer_by, now=now)
+            if status is HomeStatus.WAITING_FOR_THE_CLUB
+            else None
+        ),
     )
 
 

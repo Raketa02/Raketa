@@ -7335,6 +7335,19 @@
           "money": {
             "$ref": "#/components/schemas/BookedMoneySchema"
           },
+          "answer_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer By",
+            "description": "When the On request club must answer \u2014 the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 \u00b7 Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` \u2014 the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant."
+          },
           "shows_forecast": {
             "type": "boolean",
             "title": "Shows Forecast",
@@ -7394,6 +7407,7 @@
           "court_name",
           "sides",
           "money",
+          "answer_by",
           "shows_forecast",
           "check_in",
           "leaving"
@@ -10094,6 +10108,19 @@
           },
           "money": {
             "$ref": "#/components/schemas/BookedMoneySchema"
+          },
+          "answer_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer By",
+            "description": "When the On request club must answer \u2014 the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 \u00b7 Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` \u2014 the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant."
           }
         },
         "type": "object",
@@ -10113,7 +10140,8 @@
           "club",
           "court_name",
           "sides",
-          "money"
+          "money",
+          "answer_by"
         ],
         "title": "HomeGameSchema",
         "description": "One card on Home: a game the reader booked."
@@ -12417,6 +12445,19 @@
             "title": "Club Confirms",
             "description": "An On request club: a full game waits for its yes."
           },
+          "answer_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer By",
+            "description": "When the On request club must answer \u2014 the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 \u00b7 Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` \u2014 the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant. Here it stands in the money row in place of the book-by, which no longer ends a game that filled in time."
+          },
           "sides": {
             "$ref": "#/components/schemas/DeckSidesSchema",
             "description": "Everybody drawn, the reader on their own side: for a reader still deciding, their own card as the deck deals it; for a reader In, everybody In \u2014 the client draws the open seats empty."
@@ -12456,6 +12497,7 @@
           "book_by",
           "no_free_cancellation",
           "club_confirms",
+          "answer_by",
           "sides",
           "forecast",
           "overlap"

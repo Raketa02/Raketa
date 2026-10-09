@@ -63,6 +63,8 @@ RECEIPTS = "/api/v1/players/me/receipts"
 DESK_EMAIL = "desk@bonarka.pl"
 #: The deadline: thirty minutes from the last yes on Monday morning.
 ANSWER_BY = MONDAY_MORNING + timedelta(minutes=30)
+#: The same moment as the players' reads carry it: 08:30 in Kraków, in UTC.
+ANSWER_BY_ON_THE_WIRE = "2026-10-05T06:30:00Z"
 #: Saturday evenings, 17:00–19:00.
 SATURDAY_EVENINGS = [{"day": 6, "hour": hour} for hour in (17, 18)]
 
@@ -147,6 +149,38 @@ async def details_of(client, player: dict, proposal: UUID) -> dict:
     read = await client.get(f"/api/v1/proposals/{proposal}", headers=player["headers"])
     assert read.status_code == 200, read.text
     return read.json()
+
+
+async def booking_details_of(client, player: dict, booking: UUID) -> dict:
+    read = await client.get(f"/api/v1/bookings/{booking}", headers=player["headers"])
+    assert read.status_code == 200, read.text
+    return read.json()
+
+
+async def answer_by_of(client, player: dict, proposal: UUID) -> dict[str, str | None]:
+    """When each of the player's three reads of the game says the club must
+    answer: Home's card, the booking's details and the proposal's."""
+
+    [card] = [
+        card
+        for card in await home_of(client, player)
+        if card["booking_id"] == str(proposal)
+    ]
+    booking = await booking_details_of(client, player, proposal)
+    details = await details_of(client, player, proposal)
+    return {
+        "home card": card["answer_by"],
+        "booking details": booking["answer_by"],
+        "proposal details": details["answer_by"],
+    }
+
+
+def in_every_read(answer_by: str | None) -> dict[str, str | None]:
+    return {
+        "home card": answer_by,
+        "booking details": answer_by,
+        "proposal details": answer_by,
+    }
 
 
 async def the_court_is_on_sale(session_factory, clock, club: str) -> bool:
@@ -236,6 +270,93 @@ async def test_the_club_is_emailed_at_once_with_the_countdown(
     # Nobody paid, so nobody is told they did.
     for name in ("ola", "kuba", "ewa", "tomek"):
         assert await mailbox.to(f"{name}@example.com") == []
+
+
+async def test_the_players_read_when_the_club_must_answer(
+    client, session_factory, clock, mailbox, on_request, four
+):
+    """*Bonarka Arena answers by 08:30* — the moment the desk's email names,
+    on Home's card, the booking's details and the proposal's (Q98)."""
+
+    club, _ = on_request
+
+    proposal = await a_full_game(client, session_factory, clock, club=club, four=four)
+
+    [email] = await mailbox.to(DESK_EMAIL)
+    assert "Answer by Monday 5 October, 08:30" in email.text
+    for player in four:
+        assert await answer_by_of(client, player, proposal) == in_every_read(
+            ANSWER_BY_ON_THE_WIRE
+        )
+
+
+async def test_a_game_still_filling_has_no_answer_to_wait_for(
+    client, session_factory, clock, on_request, four
+):
+    club, _ = on_request
+    group = await a_group(client, four[0], club, *four[1:])
+    proposal = await makes(
+        session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
+    )
+    for player in four[:3]:
+        await says_yes(client, player, proposal)
+
+    details = await details_of(client, four[0], proposal)
+
+    assert (details["status"], details["answer_by"]) == ("FILLING", None)
+
+
+@pytest.mark.parametrize(("answers", "answered_with"), [(accepts, 200), (refuses, 204)])
+async def test_once_the_club_answers_the_reads_no_longer_say_when(
+    answers, answered_with, client, session_factory, clock, on_request, four
+):
+    """The booking keeps the moment; the players stop reading it."""
+
+    club, desk = on_request
+    proposal = await a_full_game(client, session_factory, clock, club=club, four=four)
+
+    answered = await answers(client, desk, proposal)
+
+    assert answered.status_code == answered_with, answered.text
+    assert await answer_by_of(client, four[0], proposal) == in_every_read(None)
+
+
+async def test_from_the_deadline_on_the_reads_no_longer_say_it(
+    client, session_factory, clock, on_request, four
+):
+    """From 08:30 the club can no longer say yes: the game still waits for the
+    timeout to call it off, and the line says only *nobody pays until Bonarka
+    Arena confirms* (Q98) — as *free to leave until* leaves at the cut-off."""
+
+    club, _ = on_request
+    proposal = await a_full_game(client, session_factory, clock, club=club, four=four)
+    clock.move(timedelta(minutes=29))
+    assert await answer_by_of(client, four[0], proposal) == in_every_read(
+        ANSWER_BY_ON_THE_WIRE
+    )
+
+    clock.move(timedelta(minutes=1))
+
+    assert (await the_card(client, four[0]))["status"] == "WAITING_FOR_THE_CLUB"
+    assert await answer_by_of(client, four[0], proposal) == in_every_read(None)
+    assert (await times_out(session_factory, clock)).requests == 1
+    assert await answer_by_of(client, four[0], proposal) == in_every_read(None)
+
+
+async def test_an_instant_club_leaves_no_answer_to_wait_for(
+    client, session_factory, clock, payments, four
+):
+    club = await a_club_selling(client)
+    group = await a_group(client, four[0], club, *four[1:])
+    proposal = await makes(
+        session_factory, clock, pool_id=group, club_id=club, versions=(tuple(four),)
+    )
+    for player in four:
+        said = await says_yes(client, player, proposal)
+        assert said.status_code == 200, said.text
+    assert said.json()["booked"] is not None
+
+    assert await answer_by_of(client, four[0], proposal) == in_every_read(None)
 
 
 async def test_the_club_lists_what_waits_for_its_answer_and_no_other_club_does(
@@ -554,6 +675,7 @@ async def test_full_again_the_same_game_asks_the_club_again(
     club, desk = on_request
     proposal = await a_full_game(client, session_factory, clock, club=club, four=four)
     await withdraws(client, four[1], proposal)
+    assert (await details_of(client, four[0], proposal))["answer_by"] is None
     clock.move(timedelta(minutes=5))
 
     again = await says_yes(client, four[1], proposal)
@@ -566,6 +688,10 @@ async def test_full_again_the_same_game_asks_the_club_again(
     )
     for player in four:
         assert (await the_card(client, player))["status"] == "WAITING_FOR_THE_CLUB"
+        # The new deadline, 08:35 in Kraków — never the first one.
+        assert await answer_by_of(client, player, proposal) == in_every_read(
+            "2026-10-05T06:35:00Z"
+        )
     assert len(await mailbox.to(DESK_EMAIL)) == 2
     accepted = await accepts(client, desk, proposal)
     assert accepted.json()["outcome"] == "BOOKED"

@@ -181,7 +181,11 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   *booked* until the hour, then the Game's result states (`GameResults`, over `games`' own
   `standing_at`); *waiting for the club* and *called off* with its `called_off_reason`
   (`REFUSED`, `NO_ANSWER`) are the booking's own (#543) — with `game_id` and `court_name`
-  `null` until the club gives them, and nobody `paid`; a request taken back because a seat
+  `null` until the club gives them, and nobody `paid`; *waiting for the club* carries
+  `answer_by`, the deadline the desk is given (Q98, #614) — `state_of`'s, so a card and its
+  details agree: the latest request's, `null` on every other status though the booking keeps
+  it, and `null` from the deadline on (`answer_by_ahead`), when the club can no longer say
+  yes, as `free_to_leave_until` is from the cut-off; a request taken back because a seat
   opened is on nobody's Home; *seat open*, *called off · short at the cut-off* and
   *uncounted · a seat was empty* are #544's (below); the club's cancel is #547's. **The
   forecast is the Game's pairing** (`GET /games/{id}/pairing`) — the details only say

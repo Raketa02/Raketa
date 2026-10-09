@@ -35,6 +35,7 @@ from app.modules.proposals.domain.home import (
     on_home,
     on_home_since,
     shows_forecast,
+    state_of,
     status_of,
 )
 
@@ -351,6 +352,33 @@ def test_a_request_turned_down_or_withdrawn_is_called_off_with_nobody_paid(reaso
     assert game.court_given is False
     shown = check_in_shown(HomeStatus.CALLED_OFF, start=game.start, now=game.start)
     assert shown is False
+
+
+def test_a_waiting_game_says_when_its_club_must_answer_until_that_moment():
+    """*Bonarka answers by 08:30* — and from 08:30 on, when the club can no
+    longer say yes, only *nobody pays until Bonarka confirms* (Q98)."""
+
+    game = a_request(answer_by=warsaw(5, 8, 30))
+
+    assert state_of(game, None, now=warsaw(5, 8)).answer_by == warsaw(5, 8, 30)
+    assert state_of(game, None, now=warsaw(5, 8, 30)).answer_by is None
+
+
+@pytest.mark.parametrize(
+    "answered",
+    [
+        a_booked_game(answer_by=warsaw(5, 8, 30)),
+        a_booked_game(
+            game_id=None,
+            stage=BookingStage.CALLED_OFF,
+            called_off=CalledOffReason.REFUSED,
+            answer_by=warsaw(5, 8, 30),
+        ),
+    ],
+    ids=["accepted", "refused"],
+)
+def test_a_game_its_club_answered_keeps_its_deadline_off_the_line(answered):
+    assert state_of(answered, None, now=warsaw(5, 8)).answer_by is None
 
 
 def test_a_game_its_club_accepted_is_booked_on_the_court_it_gave():

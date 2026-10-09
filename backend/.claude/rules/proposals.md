@@ -129,11 +129,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   a payment to confirm, a game already answered. A reader still deciding sees **their own card**,
   exactly as the deck deals it, and is refused `proposal_not_found` where the deck withholds it
   (somebody In they do not fit); a reader **In** sees everybody In and nobody's deciding. **A full
-  game still filling is *waiting for the club*** — only an On request club leaves one so. The
-  `actions` are what the routes would take: `YES`/`NO`, `WITHDRAW`, `LEAVE` while the club
-  decides, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing once it is over or
-  the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **Home's badge counts the payments to
-  confirm** beside the cards that need the reader (`owed_by`, shared with the TO CONFIRM read).
+  game still filling is *waiting for the club*** — only an On request club leaves one so — and
+  says when the club must answer (`answer_by`, Q98, #614): the status is the proposal's, and
+  only then is the request asked for its deadline (`ClubRequests.find`, the proposal's own
+  id), folded as Home folds it (`answer_by_ahead`) and `null` if the club answered between the
+  two reads. The `actions` are what the routes would take: `YES`/`NO`, `WITHDRAW`, `LEAVE`
+  while the club decides, `CONFIRM_PAYMENT` (with `your_payment`) for a refused share, nothing
+  once it is over or the answer is final (a no, `NO_LONGER_FITS`, a paused yes). **Home's
+  badge counts the payments to confirm** beside the cards that need the reader (`owed_by`,
+  shared with the TO CONFIRM read).
   **Home's read is bounded** (#613): it sends only what Home draws — live games, games that
   ended less than a day after their hour, games that need the reader — read from the earliest
   hour a game can still ask anything of its players, off the games' own clocks; see

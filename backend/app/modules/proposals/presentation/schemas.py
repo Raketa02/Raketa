@@ -744,6 +744,19 @@ _OPEN_SEATS = (
     "The sides list the seats still held."
 )
 
+_ANSWER_BY = (
+    "When the On request club must answer — the end of its time to confirm, "
+    "the deadline its desk is given in the request email and on its Bookings "
+    "page: *Bonarka Arena answers by 20:45 · Nobody pays until it confirms* "
+    "(Q98). Asked again after a seat reopened and the game filled again, it is "
+    "the new deadline. `null` unless the game is waiting for its club: once "
+    "the club has said yes or refused, while the game is still filling, and at "
+    "an Instant or Only Raketa club. `null` too from the deadline on at "
+    "`read_at` — the club can no longer say yes, and the line reads only "
+    "*Nobody pays until Bonarka Arena confirms* until the game is called off. "
+    "Like `free_to_leave_until`, the line switches by itself at this instant."
+)
+
 
 class BookedTileSchema(BaseModel):
     """One seat on a booked game."""
@@ -934,6 +947,7 @@ class HomeGameSchema(BaseModel):
     )
     sides: BookedSidesSchema
     money: BookedMoneySchema
+    answer_by: datetime | None = Field(description=_ANSWER_BY)
 
     @classmethod
     def from_card(
@@ -967,6 +981,7 @@ class HomeGameSchema(BaseModel):
                 paid=card.state.money.paid,
             ),
             money=_money(card.state.money),
+            answer_by=card.state.answer_by,
         )
 
 
@@ -1154,6 +1169,7 @@ class BookingDetailsResponse(BaseModel):
     )
     sides: BookedSidesSchema
     money: BookedMoneySchema
+    answer_by: datetime | None = Field(description=_ANSWER_BY)
     shows_forecast: bool = Field(
         description=(
             "Draw the balance forecast — `GET /games/{game_id}/pairing`, the card "
@@ -1223,6 +1239,7 @@ class BookingDetailsResponse(BaseModel):
                 paid=details.state.money.paid or details.rescue is not None,
             ),
             money=_money(details.state.money),
+            answer_by=details.state.answer_by,
             shows_forecast=details.shows_forecast,
             check_in=(
                 None
@@ -1316,6 +1333,12 @@ class ProposalDetailsResponse(BaseModel):
     club_confirms: bool = Field(
         description="An On request club: a full game waits for its yes."
     )
+    answer_by: datetime | None = Field(
+        description=(
+            f"{_ANSWER_BY} Here it stands in the money row in place of the "
+            "book-by, which no longer ends a game that filled in time."
+        )
+    )
     sides: DeckSidesSchema = Field(
         description=(
             "Everybody drawn, the reader on their own side: for a reader still "
@@ -1371,6 +1394,7 @@ class ProposalDetailsResponse(BaseModel):
             book_by=proposal.book_by,
             no_free_cancellation=details.no_free_cancellation,
             club_confirms=details.club_confirms,
+            answer_by=details.answer_by,
             sides=_deck_sides(
                 details.sides,
                 reader=reader,

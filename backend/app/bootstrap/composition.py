@@ -2599,6 +2599,7 @@ def build_read_proposal_details(
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
         players=build_players_in_play(session, runtime=runtime),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
         clock=clock,
     )
 
