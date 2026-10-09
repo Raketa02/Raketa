@@ -155,8 +155,9 @@ One screen (details 5–10, from Part 1), three readers.
   the court facts on an accent line in the status colour: **WHERE** *Bonarka Arena · Court 2 ·
   3,1 km* · **DAY** *Sunday 20 Sep* (*· next week* beyond seven days) · **TIME** *10:00 until
   11:00* · the money row (*PAID · 28 zł · your share · to the club*; before the cut-off:
-  *· 26,58 zł back if you leave by Sat 10:00*, the 28 zł less its 1,42 zł card fee as A7.3's
-  receipt has it — [the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q99).
+  *· 26,58 zł back if you leave by Sat 10:00*, the 28 zł less its 1,42 zł card fee as
+  [A7.3](#a73-payments)'s receipt has it —
+  [the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q99).
 - **Balance forecast** (details 9) — as built today; hidden while a seat is open.
 - **Show at the desk** — on the day only: a QR code and a short code under it.
 - **Leave the game** (details 10) — outlined, red text; the line under it states the cost for
