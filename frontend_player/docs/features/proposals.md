@@ -668,8 +668,10 @@ the card fee is the payments' estimate, and the line under _Leave the game_, the
 booking email give the same figure. With no figure the clause is left out — never worked out here,
 and never _free_ in its place. The day and hour are written as before (`shortMoment`, Warsaw's).
 The wire's `free_to_leave_until` kept its name (#617 is additive), and so did the domain's
-`freeToLeaveUntil`, which is the cut-off and still drives _fills by_; no word a player reads says
-_free_ any more. The Games deck's _no free cancellation_, the line under _Leave the game_ and the
+`freeToLeaveUntil`, which is the cut-off and still drives _fills by_; nothing a player reads on
+Home or the details says _free_ any more. The payment terms (`payments`' `PAYMENT_TERMS`, versioned)
+still say _Free to leave until the club's cut-off — refunded minus the card fee_; they keep their
+words until the lawyer's review (the spec's O3). The Games deck's _no free cancellation_, the line under _Leave the game_ and the
 leave sheet are unchanged. **Owed by a root session**: the root `CONTEXT.md`'s **Cut-off** still says
 _Leaving before it is free_.
 
@@ -688,5 +690,7 @@ for the club_ or _Called off_. **Opening the chat from the bubble clears _New_**
 game opened (`useOpenedGames`' `open`) as it pushes, as drawing the details does. The card's spoken
 name no longer says _Chat open_ — the door says its own name. **No count and no lit state yet**:
 both come with the unread count owed to the details' _Chat · n_ (F-HOME-21.1), and the bubble then
-shows the same number. **Not seen on a device**: the door's pressed shade and its row with _Open
-game_ want a look.
+shows the same number. **From the bubble the booking is not yet cached**, so the room waits behind
+`BookedGameChat`'s spinner for `GET /bookings/{id}` — the header's second line is the booking's
+word — where from the details it opens at once. **Not seen on a device**: the door's pressed shade
+and its row with _Open game_ want a look.
