@@ -39,6 +39,7 @@ import type { AnswerBy } from '../domain/home';
 import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
 import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
+import type { FactWords } from './GameFacts';
 import { PROPOSALS_COPY } from './proposalsCopy';
 
 const COPY = PROPOSALS_COPY;
@@ -394,28 +395,28 @@ export function detailsSubline(sport: Sport, status: ProposalStatus): string {
 }
 
 /**
- * **The money row's aside on a game still filling** — *if it fills · book by Sat 13:00* while it
- * fills, *nobody pays until Bonarka Arena confirms* while its club decides (A4.2), with *Bonarka
- * Arena answers by 20:45* beside it until that deadline passes (`answerByAhead`, Q98), and nothing
- * once it is booked or over: the share is the share.
+ * **The money row's words on a game still filling** — *if it fills · book by Sat 13:00* beside the
+ * share while it fills; under it while its club decides (A4.2), *Bonarka Arena answers by 20:45 ·
+ * Nobody pays until it confirms* until that deadline passes (`answerByAhead`, Q98), then *Nobody
+ * pays until Bonarka Arena confirms*; and nothing once it is booked or over: the share is the share.
  */
-export function detailsShareAside(
+export function detailsShareWords(
   status: ProposalStatus,
   card: Pick<DeckCard, 'deadline' | 'club'>,
   deadlineDay: Weekday | undefined,
   answerBy: AnswerBy | undefined,
-): string | undefined {
+): Pick<FactWords, 'aside' | 'below'> {
   switch (status) {
     case 'FILLING':
-      return shareAside(card.deadline, deadlineDay);
+      return { aside: shareAside(card.deadline, deadlineDay) };
     case 'WAITING_FOR_THE_CLUB':
-      return waitingAside(card.club.name, answerBy);
+      return { below: waitingWords(card.club.name, answerBy) };
     case 'FILLED':
     case 'EXPIRED':
     case 'WITHDRAWN':
     case 'COURT_HOUR_LOST':
     case 'TURNED_DOWN':
-      return undefined;
+      return {};
   }
 }
 
@@ -462,13 +463,15 @@ export function answersByWords(club: string | undefined, answerBy: AnswerBy): st
 }
 
 /**
- * *nobody pays until Bonarka Arena confirms · Bonarka Arena answers by 20:45* — **the money row's
- * aside while an On request club decides**, on a game still filling and on a booked game's details
- * alike (A4.2), the deadline beside it until it passes (`answerByAhead`, Q98).
+ * *Bonarka Arena answers by 20:45 · Nobody pays until it confirms* — **the line under the share
+ * while an On request club decides**, on a game still filling and on a booked game's details alike
+ * (A4.2), the Home card's line word for word (Q98); *Nobody pays until Bonarka Arena confirms* once
+ * the deadline has passed (`answerByAhead`).
  */
-export function waitingAside(club: string | undefined, answerBy: AnswerBy | undefined): string {
-  const confirms = `${COPY.game.nobodyPaysUntil} ${club ?? COPY.game.theClub} ${COPY.game.confirms}`;
-  return answerBy === undefined ? confirms : `${confirms}${DOT}${answersByWords(club, answerBy)}`;
+export function waitingWords(club: string | undefined, answerBy: AnswerBy | undefined): string {
+  return answerBy === undefined
+    ? `${COPY.game.nobodyPaysUntil} ${club ?? COPY.game.theClub} ${COPY.game.confirms}`
+    : `${answersByWords(club, answerBy)}${DOT}${COPY.game.nobodyPaysUntilItConfirms}`;
 }
 
 /** *if it fills · book by Sat 13:00* — the money row's aside, off the card's deadline. */

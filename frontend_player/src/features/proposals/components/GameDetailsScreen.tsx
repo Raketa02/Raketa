@@ -12,8 +12,9 @@
  * │ ▎WHERE  Bonarka Arena  3,1 km               │   the club and its distance, never a court number
  * │ ▎DAY    Saturday 3 Oct                      │
  * │ ▎TIME   16:00  until 17:00                  │
- * │ ▎YOUR SHARE  32 zł  if it fills · book by … │   — while the club decides: nobody pays until
- * └─────────────────────────────────────────────┘     Bonarka confirms · Bonarka answers by 20:45
+ * │ ▎YOUR SHARE  32 zł  if it fills · book by … │   — while the club decides, on a line under
+ * └─────────────────────────────────────────────┘     the share: Bonarka answers by 20:45 · Nobody
+ *                                                     pays until it confirms
  * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even
  * ┌ Slim overlap … the grid ────────────────────┐
  * Your yes costs nothing until everybody is in. …
@@ -92,7 +93,7 @@ import {
   barLabels,
   clubName,
   detailsDay,
-  detailsShareAside,
+  detailsShareWords,
   detailsStatus,
   detailsSubline,
   othersTitle,
@@ -364,7 +365,7 @@ function Facts({ details, at }: { readonly details: ProposalDetails; readonly at
   const day = gameDayOf(details.startsAt, at);
   const time = timeWords(details.startsAt);
   const when = day === undefined ? undefined : detailsDay(day, details.startsAt);
-  const aside = detailsShareAside(
+  const shareLines = detailsShareWords(
     details.status,
     card,
     weekdayAt(details.deadline),
@@ -383,7 +384,7 @@ function Facts({ details, at }: { readonly details: ProposalDetails; readonly at
     {
       label: COPY.game.share,
       value: shareWords(details),
-      ...(aside === undefined ? {} : { aside }),
+      ...shareLines,
     },
   ];
   return <GameFacts facts={facts} accent={PROPOSAL_STATUS_INK[details.status]} />;

@@ -697,7 +697,7 @@ describe('a booked game’s details (A4.1)', () => {
     expect(await screen.findByText(DETAILS.gone)).toBeTruthy();
   });
 
-  it('says beside the share when the club answers, until that has passed (Q98)', async () => {
+  it('says under the share when the club answers, until that has passed (Q98)', async () => {
     const details = bookingDetails({
       ...waitingForKazimierz,
       leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
@@ -706,13 +706,15 @@ describe('a booked game’s details (A4.1)', () => {
 
     expect(
       await screen.findByLabelText(
-        'Your share, 25 zł, nobody pays until Kazimierz Padel confirms · Kazimierz Padel answers by 11:00',
+        'Your share, 25 zł, Kazimierz Padel answers by 11:00 · Nobody pays until it confirms',
       ),
     ).toBeTruthy();
+    // On a line of its own under the share, as Home's card draws it — not run on after 25 zł.
+    expect(screen.queryByText(/25 zł.*answers by/)).toBeNull();
 
     act(() => jest.advanceTimersByTime(HOUR));
     expect(
-      await screen.findByLabelText('Your share, 25 zł, nobody pays until Kazimierz Padel confirms'),
+      await screen.findByLabelText('Your share, 25 zł, Nobody pays until Kazimierz Padel confirms'),
     ).toBeTruthy();
     expect(screen.queryByText(/answers by/)).toBeNull();
   });

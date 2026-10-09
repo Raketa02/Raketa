@@ -237,11 +237,11 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     ).toEqual({
       label: 'Your share',
       value: '28 zł',
-      aside: 'nobody pays until Bonarka Arena confirms',
+      below: 'Nobody pays until Bonarka Arena confirms',
     });
   });
 
-  it('says beside it when the club answers, until that deadline passes (Q98)', () => {
+  it('says under it when the club answers, until that deadline passes (Q98)', () => {
     const waiting = booked({
       status: 'WAITING_FOR_THE_CLUB',
       money: { shareGrosze: 2500, paid: false },
@@ -250,12 +250,12 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     expect(moneyRow(waiting, BEFORE)).toEqual({
       label: 'Your share',
       value: '25 zł',
-      aside: 'nobody pays until Bonarka Arena confirms · Bonarka Arena answers by 11:00',
+      below: 'Bonarka Arena answers by 11:00 · Nobody pays until it confirms',
     });
     expect(moneyRow(waiting, Date.parse(ELEVEN))).toEqual({
       label: 'Your share',
       value: '25 zł',
-      aside: 'nobody pays until Bonarka Arena confirms',
+      below: 'Nobody pays until Bonarka Arena confirms',
     });
   });
 

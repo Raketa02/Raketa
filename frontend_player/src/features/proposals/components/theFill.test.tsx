@@ -795,7 +795,7 @@ describe('at an On request club the full game goes to the club (A2.4, §11)', ()
     expect(screen.getByText('Padel · waiting for the club')).toBeTruthy();
     expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
     expect(
-      screen.getByLabelText('Your share, 32 zł, nobody pays until Bonarka Arena confirms'),
+      screen.getByLabelText('Your share, 32 zł, Nobody pays until Bonarka Arena confirms'),
     ).toBeTruthy();
     expect(screen.queryByRole('button', { name: COPY.game.withdraw })).toBeNull();
     expect(screen.queryByText(COPY.game.whatAYesMeans)).toBeNull();
@@ -818,7 +818,7 @@ describe('at an On request club the full game goes to the club (A2.4, §11)', ()
 });
 
 describe('a game waiting for its club says when the club answers (Q98)', () => {
-  it('draws the deadline beside the share, until it has passed', async () => {
+  it('draws the deadline under the share, until it has passed', async () => {
     const card = bookItNow({
       club_confirms: true,
       club: { ...bookItNow().club, name: 'Kazimierz Padel' },
@@ -847,14 +847,16 @@ describe('a game waiting for its club says when the club answers (Q98)', () => {
 
     expect(
       await screen.findByLabelText(
-        'Your share, 25 zł, nobody pays until Kazimierz Padel confirms · Kazimierz Padel answers by 11:00',
+        'Your share, 25 zł, Kazimierz Padel answers by 11:00 · Nobody pays until it confirms',
       ),
     ).toBeTruthy();
+    // On a line of its own under the share, as Home's card draws it — not run on after 25 zł.
+    expect(screen.queryByText(/25 zł.*answers by/)).toBeNull();
 
     // The details' clock runs on while the deadline is ahead, so the clause leaves by itself.
     act(() => jest.advanceTimersByTime(HOUR));
     expect(
-      await screen.findByLabelText('Your share, 25 zł, nobody pays until Kazimierz Padel confirms'),
+      await screen.findByLabelText('Your share, 25 zł, Nobody pays until Kazimierz Padel confirms'),
     ).toBeTruthy();
     expect(screen.queryByText(/answers by/)).toBeNull();
   });

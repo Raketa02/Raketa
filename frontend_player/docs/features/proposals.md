@@ -629,9 +629,13 @@ that list on the group page any more.
 the backend's #613 and #614; the mechanics §14.1, the screens A4.2 and A8, Q98). A game waiting for
 its On request club says when the club must answer. The card's line reads _Kazimierz Padel answers by
 11:00 · Nobody pays until it confirms_, or _The club answers by …_ for a club the read no longer
-names. Either details' money row reads _YOUR SHARE 25 zł · nobody pays until Kazimierz Padel confirms ·
-Kazimierz Padel answers by 11:00_: the booked details opened from the card, and the filling details
-opened from a _You're In_ row. The wire's `answer_by` becomes `answerBy`, absent for a `null` and for
+names. Either details' money row draws the card's line word for word, on a line of its own under the
+share — _YOUR SHARE 25 zł_ over _Kazimierz Padel answers by 11:00 · Nobody pays until it confirms_,
+then _Nobody pays until Kazimierz Padel confirms_ once the deadline passes: the booked details opened
+from the card, and the filling details opened from a _You're In_ row (`GameFacts`' `below`). It
+first ran on after the figure with the clauses the other way round — _25 zł nobody pays until
+Kazimierz Padel confirms · Kazimierz Padel answers by 11:00_ — so the card and its details said one
+thing two ways; the user ruled it under the figure, as Home draws it (2026-10-09). The wire's `answer_by` becomes `answerBy`, absent for a `null` and for
 an older server that sends none, and `answerByAhead` folds it on the read's clock as `cutOffAhead`
 folds the cut-off. **No screen shows a deadline that has passed**: the server nulls it from the
 deadline on, the phone drops it at `now` too, and the read's clock ticks while one is there

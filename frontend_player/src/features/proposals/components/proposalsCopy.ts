@@ -103,10 +103,12 @@ export const PROPOSALS_COPY = {
       COURT_HOUR_LOST: 'no court left',
       TURNED_DOWN: 'turned down',
     } satisfies Readonly<Record<ProposalStatus, string>>,
-    /** The money row's aside while an On request club decides (A4.2). */
-    nobodyPaysUntil: 'nobody pays until',
+    /** The line under the share while an On request club decides (A4.2) — Home's words. */
+    nobodyPaysUntil: 'Nobody pays until',
     confirms: 'confirms',
     theClub: 'the club',
+    /** After *Bonarka Arena answers by 20:45 ·* — the club named once already, as on Home (Q98). */
+    nobodyPaysUntilItConfirms: 'Nobody pays until it confirms',
     /** *Bonarka Arena answers by 20:45* — the club's deadline to say yes (Q98), and Home's too. */
     answersBy: 'answers by',
     /** *The club* at the head of that clause, for a club the read no longer names. */

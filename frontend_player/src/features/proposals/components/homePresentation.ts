@@ -43,7 +43,7 @@ import {
   LINE_JOIN,
   shortMoment,
   timeWords,
-  waitingAside,
+  waitingWords,
 } from './deckPresentation';
 import { seatWhen } from './fillInPresentation';
 import type { FactWords } from './GameFacts';
@@ -255,8 +255,8 @@ export function bookedTime(
  * **The details' money row** (the screens A4.1), read off the card's own money line
  * (`moneyLineOf`): *PAID · 28 zł · your share · to the club*, with *· 27,18 zł back if you leave by
  * Sat 10:00* while the cut-off is ahead (`backIfYouLeaveAhead`, the line's own fold — Q99); the
- * share nobody pays yet while the club decides, with *· Bonarka answers by 20:45* until its deadline
- * passes (Q98); and on a game a player left, one called off or one that started short, the card's
+ * share nobody pays yet while the club decides, with *Bonarka answers by 20:45 · Nobody pays until it
+ * confirms* — the card's own line — on a line under it until its deadline passes (Q98); and on a game a player left, one called off or one that started short, the card's
  * own line beside the share — *1 seat open · fills by Fri 16:00 or the game is off…*, why it is
  * off with what came back, *A seat was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share
  * *I'm in* would pay and how long the seat is offered — the *Seats to fill* row's own words.
@@ -299,7 +299,7 @@ export function moneyRow(
           };
     }
     case 'waiting':
-      return { label: words.yourShare, value, aside: waitingAside(line.club, line.answerBy) };
+      return { label: words.yourShare, value, below: waitingWords(line.club, line.answerBy) };
     case 'seatOpen':
     case 'seatEmpty':
     case 'noShow':

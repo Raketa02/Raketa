@@ -13,7 +13,7 @@ import {
   barLabels,
   capLine,
   countdownWords,
-  detailsShareAside,
+  detailsShareWords,
   fillingStatus,
   gameDayWords,
   inOnGameLine,
@@ -140,7 +140,7 @@ describe('a game’s details', () => {
   });
 
   /** Q98: when the club answers — the hour alone on the read's day, else the weekday with it. */
-  it('says when the club answers, and beside the share while the game waits for it', () => {
+  it('says when the club answers, and under the share while the game waits for it', () => {
     // 11:00 on Wednesday 30 September, and 00:15 on Sunday 4 October, in Warsaw.
     const today = { at: '2026-09-30T09:00:00Z', today: true };
     const sunday = { at: '2026-10-03T22:15:00Z', today: false };
@@ -148,14 +148,15 @@ describe('a game’s details', () => {
     expect(answersByWords(undefined, sunday)).toBe('The club answers by Sun 00:15');
 
     const card = { deadline: '2026-10-02T11:00:00Z', club: { id: 'c-1', name: 'Kazimierz Padel' } };
-    expect(detailsShareAside('WAITING_FOR_THE_CLUB', card, 5, today)).toBe(
-      'nobody pays until Kazimierz Padel confirms · Kazimierz Padel answers by 11:00',
-    );
-    expect(detailsShareAside('WAITING_FOR_THE_CLUB', card, 5, undefined)).toBe(
-      'nobody pays until Kazimierz Padel confirms',
-    );
-    expect(detailsShareAside('FILLING', card, 5, undefined)).toBe(
-      'if it fills · book by Fri 13:00',
-    );
+    expect(detailsShareWords('WAITING_FOR_THE_CLUB', card, 5, today)).toEqual({
+      below: 'Kazimierz Padel answers by 11:00 · Nobody pays until it confirms',
+    });
+    expect(detailsShareWords('WAITING_FOR_THE_CLUB', card, 5, undefined)).toEqual({
+      below: 'Nobody pays until Kazimierz Padel confirms',
+    });
+    expect(detailsShareWords('FILLING', card, 5, undefined)).toEqual({
+      aside: 'if it fills · book by Fri 13:00',
+    });
+    expect(detailsShareWords('FILLED', card, 5, undefined)).toEqual({});
   });
 });
