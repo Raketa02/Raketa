@@ -54,6 +54,8 @@ export const HOME_GAME_COPY = {
     nobodyPaysUntil: 'Nobody pays until',
     confirms: 'confirms',
     theClub: 'the club',
+    /** After *Bonarka answers by 20:45 ·* — the club named once already (Q98). */
+    nobodyPaysUntilItConfirms: 'Nobody pays until it confirms',
     seatOpen: 'seat open',
     seatsOpen: 'seats open',
     fillsBy: 'fills by',
@@ -105,8 +107,6 @@ export const HOME_GAME_COPY = {
     refunded: 'Refunded',
     toTheClub: 'your share · to the club',
     nobodyPaid: 'nobody paid',
-    /** The money row's aside while the club decides — the card's line, mid-sentence. */
-    nobodyPaysUntil: 'nobody pays until',
     showAtTheDesk: 'Show at the desk',
     deskLine: 'Show this at the club’s desk when you arrive — or read them the code.',
     qrSpoken: 'Your check-in code as a QR code',

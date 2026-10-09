@@ -26,7 +26,7 @@ import type {
   LeavingKind,
   UncountedReason,
 } from './vocabulary';
-import { GAME_LENGTH_MS } from './when';
+import { GAME_LENGTH_MS, gameDayOf } from './when';
 
 /** *Paid · 30 zł · free to leave until Sat 17:00* — the money a booked game carries. */
 export interface BookedMoney {
@@ -78,6 +78,11 @@ export interface HomeGame {
   readonly courtName?: string;
   readonly sides: DeckCard['sides'];
   readonly money: BookedMoney;
+  /**
+   * **When the On request club must answer** (Q98) — while the game waits for it, and only while
+   * that deadline was ahead at the read. Absent on every other status, and from an older server.
+   */
+  readonly answerBy?: string;
 }
 
 /** **Home** — the reader's booked games, soonest first, and how many need them. */
@@ -155,7 +160,8 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
  * state's: *unchanged from today*, and today's cards carry no money.
  *
  * - `booked` — *Paid · 30 zł*, with *free to leave until Sat 17:00* while the cut-off is ahead.
- * - `waiting` — *Nobody pays until Bonarka confirms*.
+ * - `waiting` — *Bonarka answers by 20:45 · Nobody pays until it confirms* while the club's
+ *   deadline is ahead (Q98), then *Nobody pays until Bonarka confirms*.
  * - `seatOpen` — *1 seat open*, and *fills by Sat 17:00 or the game is off* before the cut-off;
  *   *offered to others · the game goes ahead* after it.
  * - `calledOff` — why, and *refunded 30 zł* when the shares came back, *nobody paid* when none was
@@ -172,7 +178,7 @@ export type MoneyLine =
       readonly paid: boolean;
       readonly freeToLeaveUntil?: string;
     }
-  | { readonly kind: 'waiting'; readonly club?: string }
+  | { readonly kind: 'waiting'; readonly club?: string; readonly answerBy?: AnswerBy }
   | { readonly kind: 'seatOpen'; readonly seats: number; readonly fillsBy?: string }
   | {
       readonly kind: 'calledOff';
@@ -195,9 +201,43 @@ export function cutOffAhead(money: BookedMoney, now: number): string | undefined
 }
 
 /**
+ * *Bonarka answers by 20:45* — **the club's deadline to say yes** (Q98; the screens A8), and
+ * whether it falls on `now`'s day on the club's calendar: the hour alone then, the weekday with it
+ * on any other day.
+ */
+export interface AnswerBy {
+  readonly at: string;
+  readonly today: boolean;
+}
+
+/**
+ * **The club's deadline, while it is still ahead of `now`** — the instant *answers by …* leaves a
+ * card's line and either details' money row, as *free to leave until* leaves at the cut-off. Past
+ * it the club can no longer say yes, and the server's timeout calls the game off within about
+ * thirty seconds; until it has, the line reads only *Nobody pays until Bonarka confirms*.
+ */
+export function answerByAhead(
+  game: { readonly answerBy?: string },
+  now: number,
+): AnswerBy | undefined {
+  const at = game.answerBy;
+  if (at === undefined || !(Date.parse(at) > now)) return undefined;
+  return { at, today: gameDayOf(at, now)?.kind === 'today' };
+}
+
+/**
+ * **Whether the game's line carries a clause that runs out by itself** — *free to leave until* at
+ * the cut-off, *answers by* at the club's deadline. While one is there the read's clock ticks
+ * (`useReadClock`), so the clause leaves the screen at that instant rather than at the next read.
+ */
+export function lineCanRunOut(game: Pick<HomeGame, 'money' | 'answerBy'>): boolean {
+  return game.money.freeToLeaveUntil !== undefined || game.answerBy !== undefined;
+}
+
+/**
  * The line a card takes at `now`. **Nothing here is counted**: how many seats are open, why a game
- * is off and what came back are the read's (#544), and only the clause that runs out at the
- * cut-off is folded on the clock.
+ * is off and what came back are the read's (#544), and only the clauses that run out — at the
+ * cut-off, and at the club's deadline — are folded on the clock.
  */
 export function moneyLineOf(
   game: Pick<
@@ -210,6 +250,7 @@ export function moneyLineOf(
     | 'clubCancelReason'
     | 'uncountedReason'
     | 'needsYou'
+    | 'answerBy'
   >,
   now: number,
 ): MoneyLine | undefined {
@@ -225,8 +266,10 @@ export function moneyLineOf(
         ...(until === undefined ? {} : { freeToLeaveUntil: until }),
       };
     }
-    case 'WAITING_FOR_THE_CLUB':
-      return { kind: 'waiting', ...club };
+    case 'WAITING_FOR_THE_CLUB': {
+      const by = answerByAhead(game, now);
+      return { kind: 'waiting', ...club, ...(by === undefined ? {} : { answerBy: by }) };
+    }
     case 'SEAT_OPEN': {
       const until = cutOffAhead(money, now);
       return {
@@ -305,8 +348,12 @@ const STATUS: Readonly<
 
 /**
  * **Whether a game is on Home at `now`** — every live game, and an ended one until a day after its
- * hour. Home returns every booking ever (#542, call 2), so the shelf is the client's, as `GET /games`'
- * is the Classic rail's.
+ * hour. **The server sends only what Home draws** (#613): live games, games that ended less than a
+ * day after their hour, and any game that needs the reader. So this rule is not the shelf: it
+ * catches a card that crosses the line while Home is on screen, at that instant rather than at the
+ * next read. **One card it still drops that the server sends**: an uncounted game whose reader may
+ * dispute a report of their not coming outlives its day by up to another (#560), and is on the
+ * badge all that time — what the phone draws for it is story S-33's.
  *
  * **Measured from the hour's end, the one instant every ending has**: the wire dates no ending of a
  * booking, so a game called off days ahead stays until a day after the hour it was for — the player

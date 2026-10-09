@@ -623,3 +623,32 @@ sentence. **The deck's stage still takes its stamp words and labels from its cal
 for two decks with one left; folding them in is left for a ticket of its own. `theFill.test.tsx`
 asserts the fill marks the games list stale rather than counting a re-read, since nothing holds
 that list on the group page any more.
+
+**When the club answers, and what Home is sent** ([#615](https://github.com/Raketa02/Raketa/issues/615);
+the backend's #613 and #614; the mechanics §14.1, the screens A4.2 and A8, Q98). A game waiting for
+its On request club says when the club must answer. The card's line reads _Kazimierz Padel answers by
+11:00 · Nobody pays until it confirms_, or _The club answers by …_ for a club the read no longer
+names. Either details' money row reads _YOUR SHARE 25 zł · nobody pays until Kazimierz Padel confirms ·
+Kazimierz Padel answers by 11:00_: the booked details opened from the card, and the filling details
+opened from a _You're In_ row. The wire's `answer_by` becomes `answerBy`, absent for a `null` and for
+an older server that sends none, and `answerByAhead` folds it on the read's clock as `cutOffAhead`
+folds the cut-off. **No screen shows a deadline that has passed**: the server nulls it from the
+deadline on, the phone drops it at `now` too, and the read's clock ticks while one is there
+(`lineCanRunOut`), on the 30-second tick _free to leave until_ already runs on, so a passed deadline
+can stand for up to that long. The filling details' clock stood still before this, since nothing on
+them ran out. Both details build the aside once (`waitingAside`). **The time is Warsaw's**
+(`answersByWords`): the hour alone on the read's day, else the weekday with it (_Sun 00:15_), the
+form of _free to leave until Sun 17:00_. **Home is sent only what it draws** since #613 — live games,
+games that ended less than a day after their hour, and any game that needs the reader — so `onHome`
+no longer shelves every booking ever; it catches a card that crosses the line while Home is on
+screen.
+
+**Open for the product owner**: `onHome` stays as it was, so it still drops one card the server
+sends. A report of not coming made late in the entry's day leaves its player a day to dispute it,
+up to two days past the hour (#560). The server keeps sending that card while it needs them and
+counts it on Home's badge, while the phone shelves it a day after the hour. Through that second day
+the badge can say 1 over a rail without the card. The backend's `on_home` names this as story S-33's
+(not written yet). The fix is one clause, `|| game.needsYou` — the server's own rule — and is not
+taken here.
+
+**Nothing here has been seen on a device.**

@@ -35,6 +35,7 @@ import {
   type Ribbon,
   type WeekCap,
 } from '../domain/deck';
+import type { AnswerBy } from '../domain/home';
 import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
 import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
@@ -394,19 +395,21 @@ export function detailsSubline(sport: Sport, status: ProposalStatus): string {
 
 /**
  * **The money row's aside on a game still filling** — *if it fills · book by Sat 13:00* while it
- * fills, *nobody pays until Bonarka Arena confirms* while its club decides (A4.2), and nothing once
- * it is booked or over: the share is the share.
+ * fills, *nobody pays until Bonarka Arena confirms* while its club decides (A4.2), with *Bonarka
+ * Arena answers by 20:45* beside it until that deadline passes (`answerByAhead`, Q98), and nothing
+ * once it is booked or over: the share is the share.
  */
 export function detailsShareAside(
   status: ProposalStatus,
   card: Pick<DeckCard, 'deadline' | 'club'>,
   deadlineDay: Weekday | undefined,
+  answerBy: AnswerBy | undefined,
 ): string | undefined {
   switch (status) {
     case 'FILLING':
       return shareAside(card.deadline, deadlineDay);
     case 'WAITING_FOR_THE_CLUB':
-      return `${COPY.game.nobodyPaysUntil} ${card.club.name ?? COPY.game.theClub} ${COPY.game.confirms}`;
+      return waitingAside(card.club.name, answerBy);
     case 'FILLED':
     case 'EXPIRED':
     case 'WITHDRAWN':
@@ -445,6 +448,27 @@ export function shortMoment(instant: string): string {
   return [weekday === undefined ? undefined : dayLabel(weekday), platformClock(instant)]
     .filter((part): part is string => part !== undefined)
     .join(' ');
+}
+
+/**
+ * *Bonarka Arena answers by 20:45* — **when an On request club must say yes** (Q98; the screens
+ * A4.2, A8), on the club's clock: the hour alone when it falls on the read's day, else the weekday
+ * with it, as *free to leave until Sun 17:00* writes it. Said of *the club* for one the read no
+ * longer names.
+ */
+export function answersByWords(club: string | undefined, answerBy: AnswerBy): string {
+  const when = answerBy.today ? (platformClock(answerBy.at) ?? '') : shortMoment(answerBy.at);
+  return `${club ?? COPY.game.theClubLead} ${COPY.game.answersBy} ${when}`;
+}
+
+/**
+ * *nobody pays until Bonarka Arena confirms · Bonarka Arena answers by 20:45* — **the money row's
+ * aside while an On request club decides**, on a game still filling and on a booked game's details
+ * alike (A4.2), the deadline beside it until it passes (`answerByAhead`, Q98).
+ */
+export function waitingAside(club: string | undefined, answerBy: AnswerBy | undefined): string {
+  const confirms = `${COPY.game.nobodyPaysUntil} ${club ?? COPY.game.theClub} ${COPY.game.confirms}`;
+  return answerBy === undefined ? confirms : `${confirms}${DOT}${answersByWords(club, answerBy)}`;
 }
 
 /** *if it fills · book by Sat 13:00* — the money row's aside, off the card's deadline. */

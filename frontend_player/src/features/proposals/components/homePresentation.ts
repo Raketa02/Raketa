@@ -35,7 +35,15 @@ import type {
 } from '../domain/vocabulary';
 import type { GameDay } from '../domain/when';
 
-import { clubName, gameDayWords, LINE_JOIN, shortMoment, timeWords } from './deckPresentation';
+import {
+  answersByWords,
+  clubName,
+  gameDayWords,
+  LINE_JOIN,
+  shortMoment,
+  timeWords,
+  waitingAside,
+} from './deckPresentation';
 import { seatWhen } from './fillInPresentation';
 import type { FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
@@ -132,7 +140,9 @@ function moneyParts(line: MoneyLine): readonly string[] {
       ];
     }
     case 'waiting':
-      return [`${money.nobodyPaysUntil} ${line.club ?? money.theClub} ${money.confirms}`];
+      return line.answerBy === undefined
+        ? [`${money.nobodyPaysUntil} ${line.club ?? money.theClub} ${money.confirms}`]
+        : [answersByWords(line.club, line.answerBy), money.nobodyPaysUntilItConfirms];
     case 'seatOpen': {
       const open = counted(line.seats, money.seatOpen, money.seatsOpen);
       return line.fillsBy === undefined
@@ -179,9 +189,9 @@ function calledOffWhy({
 }
 
 /**
- * **The line under a Home card**: *Paid · 30 zł · free to leave until Sat 17:00*, *Nobody pays until
- * Bonarka confirms*, *1 seat open · fills by Sat 17:00 or the game is off and everyone is refunded*,
- * *Refunded 30 zł*.
+ * **The line under a Home card**: *Paid · 30 zł · free to leave until Sat 17:00*, *Bonarka answers
+ * by 20:45 · Nobody pays until it confirms*, *1 seat open · fills by Sat 17:00 or the game is off
+ * and everyone is refunded*, *Refunded 30 zł*.
  */
 export function moneyWords(line: MoneyLine): string {
   return moneyParts(line).join(LINE_JOIN);
@@ -237,9 +247,10 @@ export function bookedTime(
  * **The details' money row** (the screens A4.1), read off the card's own money line
  * (`moneyLineOf`): *PAID · 28 zł · your share · to the club*, with *· free to leave until Sat 10:00*
  * while the cut-off is ahead (`cutOffAhead`, the line's own fold); the share nobody pays yet while
- * the club decides; and on a game a player left, one called off or one that started short, the card's
- * own line beside the share — *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off
- * with what came back, *A seat was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share
+ * the club decides, with *· Bonarka answers by 20:45* until its deadline passes (Q98); and on a
+ * game a player left, one called off or one that started short, the card's own line beside the
+ * share — *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off with what came
+ * back, *A seat was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share
  * *I'm in* would pay and how long the seat is offered — the *Seats to fill* row's own words.
  */
 export function moneyRow(
@@ -254,6 +265,7 @@ export function moneyRow(
     | 'uncountedReason'
     | 'needsYou'
     | 'rescue'
+    | 'answerBy'
   >,
   now: number,
 ): FactWords {
@@ -279,11 +291,7 @@ export function moneyRow(
           };
     }
     case 'waiting':
-      return {
-        label: words.yourShare,
-        value,
-        aside: `${words.nobodyPaysUntil} ${line.club ?? COPY.money.theClub} ${COPY.money.confirms}`,
-      };
+      return { label: words.yourShare, value, aside: waitingAside(line.club, line.answerBy) };
     case 'seatOpen':
     case 'seatEmpty':
     case 'noShow':

@@ -11,6 +11,7 @@ import type { components } from '@/generated/schema';
 import type { ProposalDetails } from '../domain/details';
 
 import { toChallenger, toClub, toDeckSides, toForecast, toKind, toOverlap } from './deckMappers';
+import { toAnswerBy } from './homeMappers';
 
 type Schemas = components['schemas'];
 
@@ -50,6 +51,7 @@ export function toProposalDetails(
     deadline: wire.book_by,
     noFreeCancellation: wire.no_free_cancellation,
     clubConfirms: wire.club_confirms,
+    ...toAnswerBy(wire.answer_by),
     sides: toDeckSides(wire.sides),
     ...toForecast(wire.forecast),
     overlap,

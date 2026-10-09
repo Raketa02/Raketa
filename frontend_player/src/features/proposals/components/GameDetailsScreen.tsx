@@ -12,8 +12,8 @@
  * │ ▎WHERE  Bonarka Arena  3,1 km               │   the club and its distance, never a court number
  * │ ▎DAY    Saturday 3 Oct                      │
  * │ ▎TIME   16:00  until 17:00                  │
- * │ ▎YOUR SHARE  32 zł  if it fills · book by … │
- * └─────────────────────────────────────────────┘
+ * │ ▎YOUR SHARE  32 zł  if it fills · book by … │   — while the club decides: nobody pays until
+ * └─────────────────────────────────────────────┘     Bonarka confirms · Bonarka answers by 20:45
  * BALANCE FORECAST  [ You + Zofia │ Ania + Ewa ]  87% Very even
  * ┌ Slim overlap … the grid ────────────────────┐
  * Your yes costs nothing until everybody is in. …
@@ -79,7 +79,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import { foldOf, peopleOn, refusalOutcome, rowsOf, type DeckPerson } from '../domain/deck';
 import { completesTheGame, yesOnDetails, type ProposalDetails } from '../domain/details';
-import { LEAVING_WHILE_WAITING } from '../domain/home';
+import { LEAVING_WHILE_WAITING, answerByAhead } from '../domain/home';
 import type { GameKind } from '../domain/vocabulary';
 import { gameDayOf, weekdayAt } from '../domain/when';
 import { useFillYes } from '../hooks/useFillYes';
@@ -232,8 +232,9 @@ function Details({
   };
   const sayNo = () => answer.mutate({ proposalId, said: 'no' }, { onSuccess: () => router.back() });
 
-  // The read's clock, standing at the read: nothing on the details runs out while they are open.
-  const at = useReadClock(details.readAt, receivedAt, false);
+  // The read's clock — running while the club's deadline is ahead, so *answers by …* leaves the
+  // money row by itself; otherwise standing at the read, since nothing else here runs out.
+  const at = useReadClock(details.readAt, receivedAt, details.answerBy !== undefined);
   const seats = courtSeatCount(sport);
   const { top, bottom } = rowsOf(details, seats / 2);
 
@@ -363,7 +364,12 @@ function Facts({ details, at }: { readonly details: ProposalDetails; readonly at
   const day = gameDayOf(details.startsAt, at);
   const time = timeWords(details.startsAt);
   const when = day === undefined ? undefined : detailsDay(day, details.startsAt);
-  const aside = detailsShareAside(details.status, card, weekdayAt(details.deadline));
+  const aside = detailsShareAside(
+    details.status,
+    card,
+    weekdayAt(details.deadline),
+    answerByAhead(details, at),
+  );
   const facts: readonly FactWords[] = [
     {
       label: COPY.game.where,

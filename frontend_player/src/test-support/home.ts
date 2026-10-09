@@ -21,6 +21,9 @@ export const BOOKED_ENDS_AT = '2026-10-03T15:00:00Z';
 /** Friday 2 October, 16:00 in Warsaw — the club's cut-off. */
 export const BOOKED_CUT_OFF = '2026-10-02T14:00:00Z';
 
+/** Thursday 1 October, 11:00 in Warsaw: an On request club answers by then, an hour on. */
+export const CLUB_ANSWERS_BY = '2026-10-01T09:00:00Z';
+
 export const BOOKING = '3f2b8c1e-0000-4000-8000-0000000000b1';
 export const BOOKED_GAME = '3f2b8c1e-0000-4000-8000-0000000000a1';
 export const BOOKED_ROOM = '3f2b8c1e-0000-4000-8000-0000000000c1';
@@ -93,6 +96,7 @@ export function homeGame(extra: Partial<Wire['HomeGameSchema']> = {}): Wire['Hom
     court_name: 'Court 2',
     sides: bookedSides(),
     money: bookedMoney(),
+    answer_by: null,
     ...extra,
   };
 }
@@ -133,6 +137,7 @@ export function bookingDetails(
     check_in: null,
     leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: 2718, card_fee_grosze: 82 },
     rescue: null,
+    answer_by: null,
     ...extra,
   };
 }

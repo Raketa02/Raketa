@@ -2076,7 +2076,7 @@ export interface paths {
         };
         /**
          * Home
-         * @description **The reader's games from the moment they fill**, soonest first, each with its status and money line, and **how many need them** — Home's badge. The status is folded at `read_at` from the booking, its Game's result and the clock: *Booked* until the hour, then the result states as today's cards name them. A game a Classic play challenge opened is not here — it is `GET /games`'. Nothing is recorded.
+         * @description **The reader's games from the moment they fill**, soonest first, each with its status and money line, and **how many need them** — Home's badge. The status is folded at `read_at` from the booking, its Game's result and the clock: *Booked* until the hour, then the result states as today's cards name them. **Only what Home draws is sent**: live games, games that ended less than a day after their hour, and games that need the reader. A game a Classic play challenge opened is not here — it is `GET /games`'. Nothing is recorded.
          */
         get: operations["read_home_api_v1_home_get"];
         put?: never;
@@ -2671,6 +2671,11 @@ export interface components {
             court_name: string | null;
             sides: components["schemas"]["BookedSidesSchema"];
             money: components["schemas"]["BookedMoneySchema"];
+            /**
+             * Answer By
+             * @description When the On request club must answer — the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 · Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` — the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant.
+             */
+            answer_by: string | null;
             /**
              * Shows Forecast
              * @description Draw the balance forecast — `GET /games/{game_id}/pairing`, the card today's game screen draws — while the full game awaits its entry. `false` while a seat is open and once a result is told.
@@ -4407,6 +4412,11 @@ export interface components {
             court_name: string | null;
             sides: components["schemas"]["BookedSidesSchema"];
             money: components["schemas"]["BookedMoneySchema"];
+            /**
+             * Answer By
+             * @description When the On request club must answer — the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 · Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` — the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant.
+             */
+            answer_by: string | null;
         };
         /**
          * HomeResponse
@@ -4426,7 +4436,7 @@ export interface components {
             needing_you: number;
             /**
              * Games
-             * @description Every game the reader booked — and every game of theirs an On request club has, or had, to answer — **soonest first**, the ones that are over too; a client shelves an ended card as it chooses. A game a Classic play challenge opened is not here.
+             * @description The reader's booked games — and their games an On request club has, or had, to answer — **soonest first**, and only what Home draws: **every live game** (waiting for the club, booked, with a seat open, waiting on its result or on an answer to a score), **every game that ended less than a day after its hour's end**, and **any game that needs the reader** (`needs_you`) — so an *uncounted* one whose report of not coming they may still dispute is sent while they may. Nothing older is sent; its details (`GET /bookings/{id}`) still read it. A game a Classic play challenge opened is not here.
              */
             games: components["schemas"]["HomeGameSchema"][];
         };
@@ -6205,6 +6215,11 @@ export interface components {
              * @description An On request club: a full game waits for its yes.
              */
             club_confirms: boolean;
+            /**
+             * Answer By
+             * @description When the On request club must answer — the end of its time to confirm, the deadline its desk is given in the request email and on its Bookings page: *Bonarka Arena answers by 20:45 · Nobody pays until it confirms* (Q98). Asked again after a seat reopened and the game filled again, it is the new deadline. `null` unless the game is waiting for its club: once the club has said yes or refused, while the game is still filling, and at an Instant or Only Raketa club. `null` too from the deadline on at `read_at` — the club can no longer say yes, and the line reads only *Nobody pays until Bonarka Arena confirms* until the game is called off. Like `free_to_leave_until`, the line switches by itself at this instant. Here it stands in the money row in place of the book-by, which no longer ends a game that filled in time.
+             */
+            answer_by: string | null;
             /** @description Everybody drawn, the reader on their own side: for a reader still deciding, their own card as the deck deals it; for a reader In, everybody In — the client draws the open seats empty. */
             sides: components["schemas"]["DeckSidesSchema"];
             /** @description How even the game drawn is forecast — `null` where it cannot be read. */

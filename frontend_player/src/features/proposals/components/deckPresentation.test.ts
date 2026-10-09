@@ -9,9 +9,11 @@ import { AppError } from '@/shared/errors';
 import { rowsOf, type DeckCard, type DeckPerson } from '../domain/deck';
 
 import {
+  answersByWords,
   barLabels,
   capLine,
   countdownWords,
+  detailsShareAside,
   fillingStatus,
   gameDayWords,
   inOnGameLine,
@@ -135,5 +137,25 @@ describe('a game’s details', () => {
     expect(gameDayWords({ kind: 'dated', weekday: 6, day: '2026-10-10' })).toBe('Saturday 10 Oct');
     // Friday 2 October, 13:00 in Warsaw.
     expect(shareAside('2026-10-02T11:00:00Z', 5)).toBe('if it fills · book by Fri 13:00');
+  });
+
+  /** Q98: when the club answers — the hour alone on the read's day, else the weekday with it. */
+  it('says when the club answers, and beside the share while the game waits for it', () => {
+    // 11:00 on Wednesday 30 September, and 00:15 on Sunday 4 October, in Warsaw.
+    const today = { at: '2026-09-30T09:00:00Z', today: true };
+    const sunday = { at: '2026-10-03T22:15:00Z', today: false };
+    expect(answersByWords('Kazimierz Padel', today)).toBe('Kazimierz Padel answers by 11:00');
+    expect(answersByWords(undefined, sunday)).toBe('The club answers by Sun 00:15');
+
+    const card = { deadline: '2026-10-02T11:00:00Z', club: { id: 'c-1', name: 'Kazimierz Padel' } };
+    expect(detailsShareAside('WAITING_FOR_THE_CLUB', card, 5, today)).toBe(
+      'nobody pays until Kazimierz Padel confirms · Kazimierz Padel answers by 11:00',
+    );
+    expect(detailsShareAside('WAITING_FOR_THE_CLUB', card, 5, undefined)).toBe(
+      'nobody pays until Kazimierz Padel confirms',
+    );
+    expect(detailsShareAside('FILLING', card, 5, undefined)).toBe(
+      'if it fills · book by Fri 13:00',
+    );
   });
 });

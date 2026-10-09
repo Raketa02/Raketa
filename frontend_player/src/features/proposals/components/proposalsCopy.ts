@@ -107,6 +107,10 @@ export const PROPOSALS_COPY = {
     nobodyPaysUntil: 'nobody pays until',
     confirms: 'confirms',
     theClub: 'the club',
+    /** *Bonarka Arena answers by 20:45* — the club's deadline to say yes (Q98), and Home's too. */
+    answersBy: 'answers by',
+    /** *The club* at the head of that clause, for a club the read no longer names. */
+    theClubLead: 'The club',
   },
   /**
    * **What a refused answer says** (the screens A2.4) — a toast, and the card springs back or

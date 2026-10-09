@@ -47,6 +47,12 @@ export interface ProposalDetails {
   readonly noFreeCancellation: boolean;
   readonly clubConfirms: boolean;
   /**
+   * **When the On request club must answer** (Q98) — while the game waits for it, and only while
+   * that deadline was ahead at the read; it stands in the money row where the book-by stood.
+   * Absent on every other status, and from an older server.
+   */
+  readonly answerBy?: string;
+  /**
    * Everybody drawn, the reader on their own side: their card as the deck deals it while they decide;
    * everybody In once they are In — the open seats drawn empty.
    */

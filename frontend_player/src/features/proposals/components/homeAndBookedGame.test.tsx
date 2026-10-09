@@ -27,6 +27,7 @@ import {
   BOOKED_GAME,
   BOOKED_ROOM,
   BOOKING,
+  CLUB_ANSWERS_BY,
   HOME_READ_AT,
   INES,
   PIOTR,
@@ -104,6 +105,21 @@ const card = () => screen.findByTestId(`home-game-${BOOKING}`);
 const OLD_LOOP_GAME = '3f2b8c1e-0000-4000-8000-0000000000f1';
 /** A second booking, still waiting for its club. */
 const SECOND_BOOKING = '3f2b8c1e-0000-4000-8000-0000000000b2';
+
+const HOUR = 60 * 60 * 1000;
+
+/**
+ * **Story S-01A's waiting game** — full, at an On request club with an hour to answer, read at
+ * 10:00: nobody has paid, there is no Game and no court yet, and the club answers by 11:00.
+ */
+const waitingForKazimierz = {
+  status: 'WAITING_FOR_THE_CLUB',
+  game_id: null,
+  court_name: null,
+  money: bookedMoney({ share_grosze: 2500, paid: false, free_to_leave_until: null }),
+  answer_by: CLUB_ANSWERS_BY,
+} as const;
+const KAZIMIERZ = 'Kazimierz Padel';
 
 // ---------------------------------------------------------------------------
 // Home
@@ -205,6 +221,28 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(within(drawn).getByText('Bonarka Arena')).toBeTruthy();
     expect(within(drawn).queryByText(/Court/)).toBeNull();
     expect(within(drawn).queryByTestId('home-game-chat')).toBeNull();
+  });
+
+  it('says when the club answers, and drops it once that has passed (Q98)', async () => {
+    const home = homeGame({ ...waitingForKazimierz });
+    stubHomeGames(transport, [{ ...home, club: { ...home.club, name: KAZIMIERZ } }]);
+    await launchSignedIn();
+
+    const drawn = await card();
+    expect(
+      within(drawn).getByText('Kazimierz Padel answers by 11:00 · Nobody pays until it confirms'),
+    ).toBeTruthy();
+    // Said as part of the line, its dots commas.
+    expect(
+      screen.getByLabelText(/Kazimierz Padel answers by 11:00, Nobody pays until it confirms\./),
+    ).toBeTruthy();
+
+    // The read's clock runs on while the deadline is ahead, so the clause leaves by itself.
+    act(() => jest.advanceTimersByTime(HOUR));
+    expect(
+      await within(await card()).findByText('Nobody pays until Kazimierz Padel confirms'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/answers by/)).toBeNull();
   });
 
   it('is new until its details are opened, and stays opened', async () => {
@@ -555,6 +593,26 @@ describe('a booked game’s details (A4.1)', () => {
     fireEvent.press(await screen.findByRole('button', { name: HOME.openGame }));
 
     expect(await screen.findByText(DETAILS.gone)).toBeTruthy();
+  });
+
+  it('says beside the share when the club answers, until that has passed (Q98)', async () => {
+    const details = bookingDetails({
+      ...waitingForKazimierz,
+      leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
+    });
+    await openDetails({ ...details, where: { ...details.where, name: KAZIMIERZ } });
+
+    expect(
+      await screen.findByLabelText(
+        'Your share, 25 zł, nobody pays until Kazimierz Padel confirms · Kazimierz Padel answers by 11:00',
+      ),
+    ).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(HOUR));
+    expect(
+      await screen.findByLabelText('Your share, 25 zł, nobody pays until Kazimierz Padel confirms'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/answers by/)).toBeNull();
   });
 });
 

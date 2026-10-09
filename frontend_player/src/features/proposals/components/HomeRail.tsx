@@ -51,7 +51,7 @@ import { useBookingRooms } from '@/features/conversations/types';
 import { recoveryMessage } from '@/shared/errors';
 import { Note, PagerDots, theme } from '@/shared/ui';
 
-import { chatIsOpen, isNew, onHome } from '../domain/home';
+import { chatIsOpen, isNew, lineCanRunOut, onHome } from '../domain/home';
 import { useHome, useOpenedGames, useReadClock } from '../hooks/useHome';
 
 import { HomeGameCard } from './HomeGameCard';
@@ -78,8 +78,9 @@ export function HomeRail({ empty }: HomeRailProps) {
   const [current, setCurrent] = useState(0);
 
   const all = home.data?.games ?? [];
-  // The clock runs while a cut-off is ahead, so *free to leave until …* leaves the line by itself.
-  const ticking = all.some((game) => game.money.freeToLeaveUntil !== undefined);
+  // The clock runs while a cut-off or a club's deadline is ahead, so *free to leave until …* and
+  // *answers by …* leave the line by themselves.
+  const ticking = all.some(lineCanRunOut);
   const now = useReadClock(home.data?.readAt, home.dataUpdatedAt, ticking);
   const games = all.filter((game) => onHome(game, now));
   const failure = home.data === undefined ? home.error : null;

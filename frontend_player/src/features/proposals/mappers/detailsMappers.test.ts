@@ -50,6 +50,20 @@ describe('a game still filling, in detail', () => {
     expect(toProposalDetails(wire)?.where).not.toHaveProperty('distanceKm');
   });
 
+  it('carries when the club answers, and nothing from a null or an older server’s silence', () => {
+    const card = deckCard();
+    const waiting = proposalDetails(card, {
+      status: 'WAITING_FOR_THE_CLUB',
+      answer_by: '2026-09-30T09:00:00Z',
+    });
+
+    expect(toProposalDetails(waiting)?.answerBy).toBe('2026-09-30T09:00:00Z');
+    expect(toProposalDetails(proposalDetails(card))).not.toHaveProperty('answerBy');
+    expect(toProposalDetails(proposalDetails(card, { answer_by: undefined }))).not.toHaveProperty(
+      'answerBy',
+    );
+  });
+
   it('is nothing for a sport this build cannot name', () => {
     const wire = { ...proposalDetails(deckCard()), sport: 'CURLING' as Wire['Sport'] };
     expect(toProposalDetails(wire)).toBeUndefined();

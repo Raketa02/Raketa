@@ -38,6 +38,7 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
     free_to_leave_until: '2026-10-02T14:00:00Z',
     refunded_grosze: null,
   },
+  answer_by: null,
   ...extra,
 });
 
@@ -145,6 +146,22 @@ describe('toHome', () => {
     expect(game).not.toHaveProperty('courtName');
   });
 
+  it('carries when the club answers, and nothing from a null or an older server’s silence', () => {
+    const [waiting, unset, older] = toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      games: [
+        homeGame({ status: 'WAITING_FOR_THE_CLUB', answer_by: '2026-10-01T09:00:00Z' }),
+        homeGame({ status: 'WAITING_FOR_THE_CLUB' }),
+        homeGame({ status: 'WAITING_FOR_THE_CLUB', answer_by: undefined }),
+      ],
+    }).games;
+
+    expect(waiting?.answerBy).toBe('2026-10-01T09:00:00Z');
+    expect(unset).not.toHaveProperty('answerBy');
+    expect(older).not.toHaveProperty('answerBy');
+  });
+
   it('reads why a game is off or uncounted, the seats open and what came back', () => {
     const [off, short, open] = toHome({
       read_at: '2026-10-01T08:00:00Z',
@@ -212,6 +229,7 @@ describe('toBookedGame', () => {
     check_in: { short_code: 'K7M2QX', qr_payload: 'RAKETA-CHECK-IN:1:b-1:me:K7M2QX' },
     leaving: null,
     rescue: null,
+    answer_by: null,
     ...extra,
   });
 
@@ -264,6 +282,16 @@ describe('toBookedGame', () => {
     expect(game?.rescue).toEqual({ deadline: '2026-10-02T14:00:00Z', fillsByTheCutOff: true });
     expect(toBookedGame(details())).not.toHaveProperty('rescue');
     expect(toBookedGame(details({ rescue: undefined }))).not.toHaveProperty('rescue');
+  });
+
+  it('carries when the club answers, and nothing from a null or an older server’s silence', () => {
+    const waiting = toBookedGame(
+      details({ status: 'WAITING_FOR_THE_CLUB', answer_by: '2026-10-03T09:00:00Z' }),
+    );
+
+    expect(waiting?.answerBy).toBe('2026-10-03T09:00:00Z');
+    expect(toBookedGame(details())).not.toHaveProperty('answerBy');
+    expect(toBookedGame(details({ answer_by: undefined }))).not.toHaveProperty('answerBy');
   });
 
   it('is nothing for a sport this build cannot name', () => {

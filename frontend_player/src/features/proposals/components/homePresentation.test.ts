@@ -17,6 +17,12 @@ import {
 const CUT_OFF = '2026-10-02T14:00:00Z';
 const BEFORE = Date.parse('2026-10-01T08:00:00Z');
 
+/** The club's deadline to answer: 11:00 on the day of the read (Thursday, 10:00 in Warsaw). */
+const ELEVEN = '2026-10-01T09:00:00Z';
+const ELEVEN_TODAY = { at: ELEVEN, today: true } as const;
+/** Sunday 4 October, 00:15 in Warsaw — still Saturday in UTC, and in New York. */
+const SUNDAY_00_15 = { at: '2026-10-03T22:15:00Z', today: false } as const;
+
 beforeAll(() => setDeviceZone('America/New_York'));
 
 describe('moneyWords — the line under a Home card (the mechanics §14.1)', () => {
@@ -32,6 +38,18 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
       'Nobody pays until Bonarka Arena confirms',
     );
     expect(moneyWords({ kind: 'waiting' })).toBe('Nobody pays until the club confirms');
+  });
+
+  it('says when the club answers while it may — the hour alone today, the weekday on another day', () => {
+    expect(moneyWords({ kind: 'waiting', club: 'Kazimierz Padel', answerBy: ELEVEN_TODAY })).toBe(
+      'Kazimierz Padel answers by 11:00 · Nobody pays until it confirms',
+    );
+    expect(moneyWords({ kind: 'waiting', answerBy: ELEVEN_TODAY })).toBe(
+      'The club answers by 11:00 · Nobody pays until it confirms',
+    );
+    expect(moneyWords({ kind: 'waiting', club: 'Bonarka Arena', answerBy: SUNDAY_00_15 })).toBe(
+      'Bonarka Arena answers by Sun 00:15 · Nobody pays until it confirms',
+    );
   });
 
   it('counts the seats open, before the cut-off and after it', () => {
@@ -136,6 +154,9 @@ describe('moneySpoken — the line aloud, its dots commas', () => {
     expect(moneySpoken({ kind: 'seatOpen', seats: 1 })).toBe(
       '1 seat open, offered to others, the game goes ahead',
     );
+    expect(moneySpoken({ kind: 'waiting', club: 'Kazimierz Padel', answerBy: ELEVEN_TODAY })).toBe(
+      'Kazimierz Padel answers by 11:00, Nobody pays until it confirms',
+    );
   });
 });
 
@@ -197,6 +218,24 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     ).toEqual({
       label: 'Your share',
       value: '28 zł',
+      aside: 'nobody pays until Bonarka Arena confirms',
+    });
+  });
+
+  it('says beside it when the club answers, until that deadline passes (Q98)', () => {
+    const waiting = booked({
+      status: 'WAITING_FOR_THE_CLUB',
+      money: { shareGrosze: 2500, paid: false },
+      answerBy: ELEVEN,
+    });
+    expect(moneyRow(waiting, BEFORE)).toEqual({
+      label: 'Your share',
+      value: '25 zł',
+      aside: 'nobody pays until Bonarka Arena confirms · Bonarka Arena answers by 11:00',
+    });
+    expect(moneyRow(waiting, Date.parse(ELEVEN))).toEqual({
+      label: 'Your share',
+      value: '25 zł',
       aside: 'nobody pays until Bonarka Arena confirms',
     });
   });
@@ -332,5 +371,23 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
         chat: false,
       }),
     ).toBe('Counted. Padel. Bonarka Arena, Court 2. 16:00 until 17:00.');
+  });
+
+  it('says when the club answers as part of the line', () => {
+    expect(
+      homeCardLabel({
+        game: {
+          ...game,
+          status: 'WAITING_FOR_THE_CLUB',
+          club: { id: 'club-1', name: 'Kazimierz Padel' },
+        },
+        fresh: false,
+        day: { kind: 'weekday', weekday: 6 },
+        money: { kind: 'waiting', club: 'Kazimierz Padel', answerBy: ELEVEN_TODAY },
+        chat: false,
+      }),
+    ).toBe(
+      'Waiting for the club. Padel. Kazimierz Padel. Saturday, 16:00 until 17:00. Kazimierz Padel answers by 11:00, Nobody pays until it confirms.',
+    );
   });
 });

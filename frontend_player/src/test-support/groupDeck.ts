@@ -190,6 +190,7 @@ export function proposalDetails(
     book_by: card.deadline,
     no_free_cancellation: card.no_free_cancellation,
     club_confirms: card.club_confirms,
+    answer_by: null,
     sides: card.sides,
     forecast: card.forecast,
     overlap: card.overlap,

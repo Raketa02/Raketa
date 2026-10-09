@@ -47,6 +47,14 @@ function toMoney(wire: Schemas['BookedMoneySchema']): BookedMoney {
   };
 }
 
+/**
+ * **When the club answers** (#614) — absent for a `null`, and for the field missing altogether:
+ * a server older than it sends none, and the line then reads as it did before.
+ */
+export function toAnswerBy(wire: string | null | undefined): { readonly answerBy?: string } {
+  return wire === null || wire === undefined ? {} : { answerBy: wire };
+}
+
 /** What Home and the details share of a booked game — every nullable read as an absent field. */
 function toBooking(
   wire: Schemas['HomeGameSchema'] | Schemas['BookingDetailsResponse'],
@@ -66,6 +74,7 @@ function toBooking(
     ...(wire.court_name === null ? {} : { courtName: wire.court_name }),
     sides: toSides(wire.sides),
     money: toMoney(wire.money),
+    ...toAnswerBy(wire.answer_by),
   };
 }
 

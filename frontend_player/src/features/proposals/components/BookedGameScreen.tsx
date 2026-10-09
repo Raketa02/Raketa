@@ -21,9 +21,10 @@
  * ```
  *
  * **One read, `GET /bookings/{id}`, and nothing re-derived.** The status, the sides, the share and
- * whether it was paid, the cut-off, whether the forecast is drawn, the check-in code and what leaving
- * costs are the server's (#542, #544); what is decided here is how they are drawn, and the clock the
- * money row's *free to leave until* runs on is the read's (`useReadClock`).
+ * whether it was paid, the cut-off, the club's deadline, whether the forecast is drawn, the
+ * check-in code and what leaving costs are the server's (#542, #544, #614); what is decided here is
+ * how they are drawn, and the clock the money row's *free to leave until* and *answers by* run on
+ * is the read's (`useReadClock`).
  *
  * ## Three readers, one screen (A4)
  *
@@ -31,7 +32,8 @@
  *   with the line saying what it costs now (`LeaveTheGame`, #557; details 10), drawn while the read
  *   says there is a button: not once the hour has come, nor on a game that is over.
  * - **A game waiting for the club** (A4.2, #543) — the same, *Waiting for the club* in amber, no
- *   court and no Chat; *Leave the game* there withdraws the yes, nobody having paid.
+ *   court and no Chat, and *Bonarka answers by 20:45* beside the share until that passes (Q98);
+ *   *Leave the game* there withdraws the yes, nobody having paid.
  * - **A rescue seen from outside** (A4.3, #545) — opened from a *Seat open* card or a *Seats to fill*
  *   row, by a member the open seat is offered to: the players *paid*, the reader in the dashed seat
  *   that opened (*You complete it* on the last one, *You?* while more are open), the court, the share
@@ -78,7 +80,13 @@ import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/sh
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
 import { yesOnRescue } from '../domain/fill';
-import { chatIsOpen, completesTheRescue, resultActOf, type BookedGame } from '../domain/home';
+import {
+  chatIsOpen,
+  completesTheRescue,
+  lineCanRunOut,
+  resultActOf,
+  type BookedGame,
+} from '../domain/home';
 import { gameDayOf } from '../domain/when';
 import { bookingReadState, useBooking, useOpenedGames, useReadClock } from '../hooks/useHome';
 import { useLeaveBooking } from '../hooks/useLeaveBooking';
@@ -159,8 +167,9 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
     [],
   );
 
-  // The money row's *free to leave until* leaves by itself at the cut-off.
-  const now = useReadClock(game.readAt, receivedAt, game.money.freeToLeaveUntil !== undefined);
+  // The money row's *free to leave until* leaves by itself at the cut-off, *answers by* at the
+  // club's deadline.
+  const now = useReadClock(game.readAt, receivedAt, lineCanRunOut(game));
 
   const { rescue } = game;
   const ink = STATUS_INK[game.status];

@@ -1,10 +1,12 @@
 import type { DeckPerson } from './deck';
 import {
   ENDED_HOME_SHELF_LIFE_MS,
+  answerByAhead,
   chatIsOpen,
   completesTheRescue,
   courtIsGiven,
   isNew,
+  lineCanRunOut,
   moneyLineOf,
   onHome,
   openedFrom,
@@ -83,6 +85,66 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     expect(moneyLineOf(waiting, BEFORE_CUT_OFF)).toEqual({
       kind: 'waiting',
       club: 'Bonarka Arena',
+    });
+  });
+
+  /**
+   * **When the club answers** (Q98; the screens A8): the deadline the desk is given, while it is
+   * ahead of `now` — and the hour alone when it falls on the read's day, on the club's calendar.
+   */
+  describe('the club’s deadline to answer', () => {
+    /** Thursday 1 October, 10:00 in Warsaw — the read. */
+    const READ = Date.parse('2026-10-01T08:00:00Z');
+    /** 11:00 the same day. */
+    const ELEVEN = '2026-10-01T09:00:00Z';
+    const waiting = (extra: Partial<HomeGame> = {}) =>
+      game({
+        status: 'WAITING_FOR_THE_CLUB',
+        money: { shareGrosze: 3000, paid: false },
+        answerBy: ELEVEN,
+        ...extra,
+      });
+
+    it('says when the club answers while the deadline is ahead', () => {
+      expect(moneyLineOf(waiting(), READ)).toEqual({
+        kind: 'waiting',
+        club: 'Bonarka Arena',
+        answerBy: { at: ELEVEN, today: true },
+      });
+    });
+
+    it('drops it at the deadline itself — the line reads as it did before', () => {
+      expect(moneyLineOf(waiting(), Date.parse(ELEVEN))).toEqual({
+        kind: 'waiting',
+        club: 'Bonarka Arena',
+      });
+      expect(moneyLineOf(waiting(), Date.parse(ELEVEN) + 60_000)).toEqual({
+        kind: 'waiting',
+        club: 'Bonarka Arena',
+      });
+    });
+
+    it('says it of the club when the read no longer names it', () => {
+      expect(moneyLineOf(waiting({ club: { id: 'club-1' } }), READ)).toEqual({
+        kind: 'waiting',
+        answerBy: { at: ELEVEN, today: true },
+      });
+    });
+
+    it('is today by the club’s calendar, and another day past its midnight', () => {
+      // 23:30 and 00:15 in Warsaw: the second is Friday, though it is still Thursday in UTC.
+      expect(answerByAhead({ answerBy: '2026-10-01T21:30:00Z' }, READ)).toEqual({
+        at: '2026-10-01T21:30:00Z',
+        today: true,
+      });
+      expect(answerByAhead({ answerBy: '2026-10-01T22:15:00Z' }, READ)).toEqual({
+        at: '2026-10-01T22:15:00Z',
+        today: false,
+      });
+    });
+
+    it('is nothing for a value that is not an instant', () => {
+      expect(answerByAhead({ answerBy: 'soon' }, READ)).toBeUndefined();
     });
   });
 
@@ -195,6 +257,18 @@ describe('onHome — how long an ended game keeps its card', () => {
 
   it('keeps a game called off before its hour until a day after the hour it was for', () => {
     expect(onHome(game({ status: 'CALLED_OFF' }), BEFORE_CUT_OFF)).toBe(true);
+  });
+});
+
+describe('lineCanRunOut — a clause that leaves the line by itself', () => {
+  it('runs out while the cut-off or the club’s deadline is there to pass', () => {
+    expect(lineCanRunOut(game())).toBe(true);
+    const waiting = game({
+      status: 'WAITING_FOR_THE_CLUB',
+      money: { shareGrosze: 3000, paid: false },
+    });
+    expect(lineCanRunOut({ ...waiting, answerBy: '2026-10-01T09:00:00Z' })).toBe(true);
+    expect(lineCanRunOut(waiting)).toBe(false);
   });
 });
 

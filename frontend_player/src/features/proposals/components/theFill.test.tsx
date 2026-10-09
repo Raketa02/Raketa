@@ -81,6 +81,7 @@ const FILL = FILL_COPY;
 /** Past the card's flight, so the stage has told the deck it has gone. */
 const PAST_THE_FLIGHT = 400;
 const SECOND = 1_000;
+const HOUR = 3_600 * SECOND;
 
 const HIDDEN_TOO = { includeHiddenElements: true } as const;
 
@@ -813,6 +814,49 @@ describe('at an On request club the full game goes to the club (A2.4, §11)', ()
     // Read again: the game is filling once more, and the reader may say yes again.
     expect(await screen.findByText('Filling · 3 of 4 in')).toBeTruthy();
     expect(screen.getByRole('button', { name: COPY.yes })).toBeTruthy();
+  });
+});
+
+describe('a game waiting for its club says when the club answers (Q98)', () => {
+  it('draws the deadline beside the share, until it has passed', async () => {
+    const card = bookItNow({
+      club_confirms: true,
+      club: { ...bookItNow().club, name: 'Kazimierz Padel' },
+    });
+    stubProposal(transport, card.proposal_id, () =>
+      proposalDetails(card, {
+        status: 'WAITING_FOR_THE_CLUB',
+        actions: ['LEAVE'],
+        share_grosze: 2500,
+        // 11:00 in Warsaw, an hour after the read.
+        answer_by: new Date(DECK_READ_AT + HOUR).toISOString(),
+      }),
+    );
+    await openGames([]);
+    act(() =>
+      router.push({
+        pathname: '/play/group/[groupId]/game/[proposalId]',
+        params: {
+          groupId: CREW.id,
+          proposalId: card.proposal_id,
+          sport: 'padel',
+          kind: 'competitive',
+        },
+      }),
+    );
+
+    expect(
+      await screen.findByLabelText(
+        'Your share, 25 zł, nobody pays until Kazimierz Padel confirms · Kazimierz Padel answers by 11:00',
+      ),
+    ).toBeTruthy();
+
+    // The details' clock runs on while the deadline is ahead, so the clause leaves by itself.
+    act(() => jest.advanceTimersByTime(HOUR));
+    expect(
+      await screen.findByLabelText('Your share, 25 zł, nobody pays until Kazimierz Padel confirms'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/answers by/)).toBeNull();
   });
 });
 
