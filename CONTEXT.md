@@ -1639,9 +1639,9 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
 Settled by [ADR-0189](docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §5–§6 and
 built by [#549](https://github.com/Raketa02/Raketa/issues/549) (the notices, the recent list, the
 three choices, push) and [#559](https://github.com/Raketa02/Raketa/issues/559) (the phone). The
-bell's number was decided by ADR-0189's 2026-10-09 amendment (the mechanics Q101, Q102) and is not
-yet built ([#621](https://github.com/Raketa02/Raketa/issues/621),
-[#627](https://github.com/Raketa02/Raketa/issues/627)).
+bell's number was decided by ADR-0189's 2026-10-09 amendment (the mechanics Q101, Q102); the server
+keeps it since [#621](https://github.com/Raketa02/Raketa/issues/621), and the phone draws it from
+[#627](https://github.com/Raketa02/Raketa/issues/627).
 
 **What a player is told about their games, and where they find it again.** Notifications is
 told by the other contexts and tells none of them.
@@ -1660,10 +1660,10 @@ told by the other contexts and tells none of them.
   shown as *99+* above 99. **Kept by the server, per player**, so it is the same on every phone;
   opening the list clears it, and the rows that came since the last visit stand out on that visit.
   Nothing is marked read row by row. **A player's own act is never counted back to them**, nor
-  bannered: the notice that the yes they said filled a game, or that a payment they confirmed
-  completed one, is born seen. Nothing comes down at launch; what was told while the app was
-  closed is in the number. _Avoid_: unread count; badge (Home's badge counts the games that need
-  you).
+  bannered: the notice that the yes they said filled a game, that they took a seat on one, or
+  that a payment they confirmed completed one, is born seen. Nothing comes down at launch; what
+  was told while the app was closed is in the number. _Avoid_: unread count; badge (Home's badge
+  counts the games that need you).
 
 ## Cross-cutting concepts
 

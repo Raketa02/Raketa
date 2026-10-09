@@ -271,6 +271,19 @@ Where the bell's number and the kept holds live among §5's aggregates is left t
 [#626](https://github.com/Raketa02/Raketa/issues/626). Each records its shape here when it lands,
 as the 2026-09-30 amendment recorded Games & money once it was built.
 
+**The bell's number, as built by #621.** Notifications gains a further aggregate, the **Bell**:
+when a player last opened their recent notices. It is **event-sourced, one stream per player**
+under the player's own id (`notifications.recent_notices_opened` / v1), born by being used, and
+records a visit only when it is later than the last, so the moment never moves back. The number
+itself is stored nowhere: it is the notices that reached the list after that visit, never the
+player's own, read on the notices' own route and never on Home's. *After* is the event store's
+order — past the newest notice the list held at the visit — not the instant a notice tells of,
+because the outbox delivers after the act; a notice a later one was bundled into moved up, and
+counts again. A notice is **the player's own** when
+their act booked the seat: the fill records whose yes, join or confirmed payment left no seat
+open (`ProposalFilled.filled_by`, nobody for the club's yes or a paused yes coming back), and a
+rescuer took theirs themselves. An own notice is listed, never counted and never pushed.
+
 The same rulings keep a full game that falls back to filling on its players' Home as *Seat open*
 (Q106) and tell everyone still in it every ending and fall-back (Q104). They also tell a leaver
 only what touches them (Q108), and announce the new card owed after a no (Q107). A card that never
