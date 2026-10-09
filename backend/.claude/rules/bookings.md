@@ -28,7 +28,10 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
 - **The last yes books the game, in that yes's own transaction** (`proposals/application/fill.py`).
   `SayYes` loads the proposal **locked** (`load_for_update`, `FOR UPDATE` on its row — SQLite
   renders none, Postgres holds it) so two last yeses fill it once, and the yes that leaves
-  `open_seats` at nought hands the proposal to `Fill`. **First the people**: the game fills only
+  `open_seats` at nought hands the proposal to `Fill`, naming the player whose own act it
+  was (`Fill.run(by=…)`: the yes, a join, a confirmed payment; `None` for a paused yes coming
+  back, and the club's yes) — `ProposalFilled.filled_by`, so Notifications never tells them
+  back what they just did (#621, `notifications.md`). **First the people**: the game fills only
   with people who all fit each other (§7), and a pair already In can stop fitting after both
   said yes — the later of their yeses is taken out (`SeatReopened`, `NO_LONGER_FITS`) and
   nothing is asked of anybody. Then **the club**: a club no longer selling, or with no court

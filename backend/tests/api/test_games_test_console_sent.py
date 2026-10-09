@@ -124,12 +124,19 @@ async def test_after_her_yes_fills_situation_2_everybody_s_sent_shows_it(
         [booked] = about(sent, BOOKED, game)
         bell = await client.get("/api/v1/players/me/notices", headers=member["headers"])
         assert booked["listed"] in bell.json()["notices"]
-        # Pushed in the same words: nothing was gathered into it.
-        assert booked["pushed"]["title"] == booked["listed"]["title"]
-        assert booked["pushed"]["body"] == booked["listed"]["body"]
-        assert booked["pushed"]["data"]["game_id"] == str(game)
         # Nobody has a phone, so nothing was pushed: this is what would have been.
         assert sent["phones"] == 0
+        if member is world.marta:
+            # Her yes filled it, and her phone said It's a game!: her own notice
+            # is pushed to nobody (#621, Q102).
+            assert booked["listed"]["your_own"] is True
+            assert booked["pushed"] is None
+        else:
+            # Pushed in the same words: nothing was gathered into it.
+            assert booked["listed"]["your_own"] is False
+            assert booked["pushed"]["title"] == booked["listed"]["title"]
+            assert booked["pushed"]["body"] == booked["listed"]["body"]
+            assert booked["pushed"]["data"]["game_id"] == str(game)
 
         # The booking confirmation, sent — to them and nobody else — and linked
         # to the message the relay was handed under that id.

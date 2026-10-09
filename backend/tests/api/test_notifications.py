@@ -30,10 +30,19 @@ from app.api.dependencies import get_clock
 from app.bootstrap.composition import (
     build_call_off_short_games,
     build_expire_unanswered_requests,
+    build_notice_day_repository,
 )
 from app.core.config import get_settings
-from app.kernel import Sport
+from app.kernel import Sport, instant
+from app.modules.clubs.domain.court_hours import local_day
+from app.modules.notifications.domain.notices import (
+    Notice,
+    NoticeKind,
+    NoticeReason,
+    Opens,
+)
 from app.modules.payments.domain.entered_cards import A_CARD_THAT_DECLINES_LATER
+from app.shared.ids import new_uuid
 from tests.api import players_world as players
 from tests.api.proposals_world import (
     MONDAY_MORNING,
@@ -330,10 +339,12 @@ async def test_a_push_service_that_is_down_costs_the_push_and_never_the_notice(
 async def test_a_game_that_fills_tells_every_player_they_paid(
     client, booking, crowd, mailbox, pushes
 ):
-    for player in crowd[:4]:
+    # Tomek's yes filled it: his own copy is pushed to nobody (Q102).
+    for player in crowd[:3]:
         assert await pushed_to(mailbox, pushes, player) == [
             ("It's a game! · you paid 30 zł", f"{THE_GAME}.")
         ]
+    assert await pushed_to(mailbox, pushes, crowd[3]) == []
     [notice] = await notices_of(client, mailbox, crowd[0])
     assert {
         key: notice[key]
@@ -478,9 +489,14 @@ async def test_a_leaver_whose_seat_was_taken_is_told_they_were_refunded(
         "You've been refunded 28,55 zł",
         f"Somebody took your seat — {THE_GAME}.",
     )
-    assert await titles_pushed_to(mailbox, pushes, zosia) == [
-        "It's a game! · you paid 30 zł"
-    ]
+    # Zosia took the seat herself and saw *It's a game!*: her notice is her
+    # own, listed and pushed to nobody (Q102).
+    assert await titles_pushed_to(mailbox, pushes, zosia) == []
+    [joined] = await notices_of(client, mailbox, zosia)
+    assert (joined["title"], joined["your_own"]) == (
+        "It's a game! · you paid 30 zł",
+        True,
+    )
 
 
 async def test_a_post_not_full_by_its_book_by_tells_its_poster(
@@ -968,3 +984,242 @@ async def test_the_recent_list_is_the_newest_first_and_as_long_as_asked(
     assert [n["title"] for n in await notices_of(client, mailbox, ola, limit=1)] == [
         "ewa left your game"
     ]
+
+
+# --------------------------------------------------------------------------- #
+# The bell's number (#621; the mechanics Q101, Q102)
+# --------------------------------------------------------------------------- #
+
+VISIT = f"{NOTICES}/visit"
+
+
+async def the_list(client, mailbox, player: dict, **params) -> dict:
+    """The notices read whole: the rows, the bell's number and the last visit."""
+
+    await mailbox.drain()
+    read = await client.get(NOTICES, params=params, headers=player["headers"])
+    assert read.status_code == 200, read.text
+    return read.json()
+
+
+async def opens_the_list(client, player: dict) -> None:
+    opened = await client.post(VISIT, headers=player["headers"])
+    assert opened.status_code == 204, opened.text
+
+
+async def another_phone(client, player: dict) -> dict:
+    """The same player, signed in a second time — another phone."""
+
+    signed_in = await client.post(
+        "/api/v1/auth/login",
+        json={"email": f"{player['name']}@example.com", "password": "hunter22!"},
+    )
+    assert signed_in.status_code == 200, signed_in.text
+    tokens = signed_in.json()
+    return {
+        **player,
+        "headers": players.auth(tokens["access_token"]),
+        "refresh_token": tokens["refresh_token"],
+    }
+
+
+async def test_every_notice_is_new_until_the_list_is_opened_and_then_only_later_ones(
+    client, clock, booking, crowd, mailbox
+):
+    ola, kuba = crowd[:2]
+
+    never_opened = await the_list(client, mailbox, ola)
+    assert (never_opened["new_count"], never_opened["last_opened_at"]) == (1, None)
+    assert [n["new"] for n in never_opened["notices"]] == [True]
+
+    await opens_the_list(client, ola)
+    opened = await the_list(client, mailbox, ola)
+    assert opened["new_count"] == 0
+    assert opened["last_opened_at"] == clock.now().isoformat().replace("+00:00", "Z")
+    assert [n["new"] for n in opened["notices"]] == [False]
+
+    clock.move(timedelta(minutes=5))
+    await leaves(client, kuba, booking)
+    later = await the_list(client, mailbox, ola)
+    assert later["new_count"] == 1
+    assert [(n["title"], n["new"]) for n in later["notices"]] == [
+        ("kuba left your game", True),
+        ("It's a game! · you paid 30 zł", False),
+    ]
+
+
+async def test_a_notice_listed_after_the_visit_is_new_though_it_happened_before(
+    client, booking, crowd, mailbox
+):
+    """Counted by when it reached the list, never by the instant of what it
+    tells: the outbox delivers after the act, and a notice delivered after the
+    visit was not on the list that was opened."""
+
+    ola, kuba = crowd[:2]
+    await the_list(client, mailbox, ola)
+
+    await leaves(client, kuba, booking)  # not delivered yet
+    await opens_the_list(client, ola)
+    after = await the_list(client, mailbox, ola)
+
+    assert after["new_count"] == 1
+    assert after["notices"][0]["title"] == "kuba left your game"
+    assert after["notices"][0]["new"] is True
+
+
+async def test_two_phones_signed_in_as_one_player_read_one_number(
+    client, booking, crowd, mailbox
+):
+    ola = crowd[0]
+    other = await another_phone(client, ola)
+
+    assert (await the_list(client, mailbox, ola))["new_count"] == 1
+    assert (await the_list(client, mailbox, other))["new_count"] == 1
+
+    await opens_the_list(client, other)
+
+    assert (await the_list(client, mailbox, ola))["new_count"] == 0
+    visit = (await the_list(client, mailbox, other))["last_opened_at"]
+
+    # The phone that opened it signs out; a new one reads the same visit.
+    signed_out = await client.post(
+        "/api/v1/auth/logout", json={"refresh_token": other["refresh_token"]}
+    )
+    assert signed_out.status_code == 200, signed_out.text
+    new_phone = await the_list(client, mailbox, await another_phone(client, ola))
+    assert (new_phone["new_count"], new_phone["last_opened_at"]) == (0, visit)
+
+
+async def test_the_number_is_exact_past_the_thirty_rows_sent(
+    client, session_factory, clock, club, group, crowd, mailbox
+):
+    zosia = crowd[4]
+    at = clock.now()
+    async with session_factory() as session:
+        days = build_notice_day_repository(session)
+        day = await days.load(zosia["id"], local_day(at))
+        for n in range(105):
+            day.give(
+                Notice(
+                    kind=NoticeKind.SOMEONE_LEFT,
+                    key=f"{NoticeKind.SOMEONE_LEFT}:{n}",
+                    game_id=new_uuid(),
+                    pool_id=group,
+                    sport=Sport.PADEL,
+                    game_kind="COMPETITIVE",
+                    club_id=UUID(club),
+                    starts_at=instant(SATURDAY_FIVE),
+                    opens=Opens.BOOKING,
+                    people=(crowd[1]["id"],),
+                    reason=NoticeReason.SEAT_OPEN,
+                ),
+                at=at,
+            )
+        await days.save(day)
+        await session.commit()
+
+    read = await the_list(client, mailbox, zosia)
+
+    # The phone writes 99+; the server says how many.
+    assert (len(read["notices"]), read["new_count"]) == (30, 105)
+
+
+async def test_the_filler_s_own_notice_is_theirs_and_never_counted_or_pushed(
+    client, booking, crowd, mailbox, pushes
+):
+    """Tomek's yes filled the game, and his phone said *It's a game!*: his
+    notice is in his list, marked his own, and the bell does not count it. The
+    other three's copies are news to them."""
+
+    tomek = crowd[3]
+
+    filler = await the_list(client, mailbox, tomek)
+    [own] = filler["notices"]
+    assert (own["kind"], own["your_own"], own["new"]) == ("GAME_BOOKED", True, False)
+    assert filler["new_count"] == 0
+    assert await pushed_to(mailbox, pushes, tomek) == []
+
+    for player in crowd[:3]:
+        others = await the_list(client, mailbox, player)
+        [theirs] = others["notices"]
+        assert (theirs["your_own"], theirs["new"], others["new_count"]) == (
+            False,
+            True,
+            1,
+        )
+
+
+async def test_the_club_s_yes_is_counted_for_everybody_and_whose_yes_sent_it(
+    client, session_factory, clock, on_request, crowd, mailbox
+):
+    """Tomek's yes put the game to Kazimierz Padel; the club's yes filled it.
+    That yes is the club's act, so it is news to all four."""
+
+    _, desk = on_request
+    proposal = await a_game_waiting_for(
+        client, session_factory, clock, on_request, crowd
+    )
+
+    accepted = await client.post(
+        f"/api/v1/club/bookings/{proposal}/acceptance", headers=desk
+    )
+
+    assert accepted.status_code == 200, accepted.text
+    for player in crowd[:4]:
+        read = await the_list(client, mailbox, player)
+        [confirmed] = read["notices"]
+        assert (confirmed["kind"], confirmed["your_own"], read["new_count"]) == (
+            "CLUB_CONFIRMED",
+            False,
+            1,
+        )
+
+
+async def test_opening_the_list_again_or_with_a_clock_behind_never_moves_back(
+    client, clock, booking, crowd, mailbox
+):
+    ola = crowd[0]
+    await opens_the_list(client, ola)
+    first = (await the_list(client, mailbox, ola))["last_opened_at"]
+
+    await opens_the_list(client, ola)
+    clock.move(timedelta(hours=-1))
+    await opens_the_list(client, ola)
+
+    assert (await the_list(client, mailbox, ola))["last_opened_at"] == first
+    clock.move(timedelta(hours=2))
+    await opens_the_list(client, ola)
+    assert (await the_list(client, mailbox, ola))["last_opened_at"] > first
+
+
+async def test_a_notice_a_later_one_was_bundled_into_is_new_again(
+    client, session_factory, clock, club, group, crowd, mailbox
+):
+    """It moved up the list because it says more than it did."""
+
+    ola, kuba, ewa, tomek = crowd[:4]
+    for start in (SATURDAY_FIVE, warsaw(10, 18)):
+        proposal = await makes(
+            session_factory,
+            clock,
+            pool_id=group,
+            club_id=club,
+            start=start,
+            versions=(tuple(crowd[:4]),),
+        )
+        for player in (ola, kuba, ewa):
+            assert (await says_yes(client, player, proposal)).status_code == 200
+        if start == SATURDAY_FIVE:
+            assert (await the_list(client, mailbox, tomek))["new_count"] == 1
+            await opens_the_list(client, tomek)
+            assert (await the_list(client, mailbox, tomek))["new_count"] == 0
+            clock.move(timedelta(minutes=5))
+
+    read = await the_list(client, mailbox, tomek)
+    [bundled] = read["notices"]
+    assert (bundled["title"], bundled["gathered"], bundled["new"]) == (
+        "2 games need only you",
+        1,
+        True,
+    )
+    assert read["new_count"] == 1

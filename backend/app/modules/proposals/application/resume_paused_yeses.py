@@ -92,7 +92,8 @@ class ResumePausedYeses:
             if not proposal.resume_yes(player_id, at=at):
                 continue
             if proposal.open_seats == 0:
-                await self._fill.run(proposal, now=at)
+                # Nobody's own act: their week had room again.
+                await self._fill.run(proposal, by=None, now=at)
             await self._proposals.save(proposal)
             resumed += 1
         return resumed

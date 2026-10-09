@@ -1,5 +1,5 @@
 """The wire shapes of You › Account › **Notifications**, a phone's push token,
-and the recent notices (#549; the screens A7.2, A9)."""
+the recent notices and the bell's number (#549, #621; the screens A7.2, A9)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport
-from app.modules.notifications.application.reading import RecentNotice
+from app.modules.notifications.application.reading import RecentNotice, RecentNotices
 from app.modules.notifications.domain.notices import NoticeKind, Opens
 from app.modules.notifications.domain.preferences import (
     NotificationChoice,
@@ -102,6 +102,21 @@ class NoticeSchema(BaseModel):
             "told in its words, and pushed to nobody."
         )
     )
+    new: bool = Field(
+        description=(
+            "It reached the list since you last opened it — given, or a notice "
+            "bundled into it, which moved it up — and is not your own: one the "
+            "bell counts, and a row to make stand out on this visit."
+        )
+    )
+    your_own: bool = Field(
+        description=(
+            "About something you did yourself and saw happen — *It's a game!* "
+            "for the yes that filled the game, or the seat you took. Born "
+            "seen: listed, never counted on the bell, never pushed, and never "
+            "to be shown as a banner."
+        )
+    )
 
     @classmethod
     def from_recent(cls, recent: RecentNotice) -> "NoticeSchema":
@@ -118,8 +133,32 @@ class NoticeSchema(BaseModel):
             sport=notice.sport,
             game_kind=SearchMode(notice.game_kind),
             gathered=notice.gathered,
+            new=notice.new,
+            your_own=notice.own,
         )
 
 
 class RecentNoticesResponse(BaseModel):
     notices: list[NoticeSchema] = Field(description="The newest first.")
+    new_count: int = Field(
+        description=(
+            "**The bell's number**: the notices that reached your list since you "
+            "last opened it — given, or bundled into one and moving it up — "
+            "never your own. Exact however many rows were asked for: the bell "
+            "writes *99+* past 99. The same on every phone."
+        )
+    )
+    last_opened_at: datetime | None = Field(
+        description=(
+            "When you last opened the list (`POST /players/me/notices/visit`), on "
+            "any phone — `null` before the first time."
+        )
+    )
+
+    @classmethod
+    def from_recent(cls, recent: RecentNotices) -> "RecentNoticesResponse":
+        return cls(
+            notices=[NoticeSchema.from_recent(notice) for notice in recent.notices],
+            new_count=recent.new_count,
+            last_opened_at=recent.last_opened_at,
+        )

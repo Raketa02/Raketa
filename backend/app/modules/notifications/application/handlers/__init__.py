@@ -16,6 +16,7 @@ from app.modules.notifications.domain.events import (
     NoticeBundled,
     NoticeGiven,
     NotificationChoiceSwitched,
+    RecentNoticesOpened,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ NotificationEvent = (
     | PushDeviceRemoved
     | NoticeGiven
     | NoticeBundled
+    | RecentNoticesOpened
 )
 
 _LINES: dict[type, str] = {
@@ -34,6 +36,7 @@ _LINES: dict[type, str] = {
     PushDeviceRemoved: "notifications.device.removed",
     NoticeGiven: "notifications.notice.given",
     NoticeBundled: "notifications.notice.bundled",
+    RecentNoticesOpened: "notifications.notices.opened",
 }
 
 

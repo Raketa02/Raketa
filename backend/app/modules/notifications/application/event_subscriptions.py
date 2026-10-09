@@ -23,6 +23,7 @@ from app.modules.notifications.domain.events import (
     NoticeBundled,
     NoticeGiven,
     NotificationChoiceSwitched,
+    RecentNoticesOpened,
 )
 
 _CONTRACTS = (
@@ -31,6 +32,7 @@ _CONTRACTS = (
     (PushDeviceRemoved, "notifications.push_device_removed"),
     (NoticeGiven, "notifications.notice_given"),
     (NoticeBundled, "notifications.notice_bundled"),
+    (RecentNoticesOpened, "notifications.recent_notices_opened"),
 )
 
 
@@ -45,6 +47,7 @@ def subscribe_notification_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(PushDeviceRemoved, LogNotificationEvent())
     dispatcher.subscribe(NoticeGiven, LogNotificationEvent())
     dispatcher.subscribe(NoticeBundled, LogNotificationEvent())
+    dispatcher.subscribe(RecentNoticesOpened, LogNotificationEvent())
 
 
 def subscribe_the_teller(dispatcher: EventDispatcher, teller: TellThePlayers) -> None:

@@ -1,6 +1,6 @@
-"""The player surface of **Notifications** (#549; the mechanics §17.2; the
-screens A7.2, A9): the three choices, a phone's push token, and the recent
-notices behind the bell on Home."""
+"""The player surface of **Notifications** (#549, #621; the mechanics §17.2,
+Q101, Q102; the screens A7.2, A9): the three choices, a phone's push token, the
+recent notices behind the bell on Home, and the bell's number."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from app.modules.notifications.application.preferences import (
     SetNotificationChoicesCommand,
 )
 from app.modules.notifications.presentation.dependencies import (
+    OpenRecentNoticesDep,
     ReadNotificationPreferencesDep,
     ReadRecentNoticesDep,
     RegisterAPhoneDep,
@@ -18,7 +19,6 @@ from app.modules.notifications.presentation.dependencies import (
     SetNotificationChoicesDep,
 )
 from app.modules.notifications.presentation.schemas import (
-    NoticeSchema,
     NotificationChoicesSchema,
     PushDeviceRequest,
     RecentNoticesResponse,
@@ -124,7 +124,10 @@ async def remove_a_phone(
         "Everything you were told — the list behind the bell on Home — the "
         "newest first, each in the words it was pushed in and with where a tap "
         "opens it. A notice past its kind's daily cap that was bundled is not "
-        "its own row: the row it joined says how many it holds (`gathered`)."
+        "its own row: the row it joined says how many it holds (`gathered`).\n\n"
+        "**The bell's number** travels here (`new_count`), with when you last "
+        "opened the list and, on each row, whether it is `new`. A notice of "
+        "your own act is listed `your_own` and never counted."
     ),
 )
 async def read_recent_notices(
@@ -132,9 +135,31 @@ async def read_recent_notices(
     read: ReadRecentNoticesDep,
     limit: int = Query(30, ge=1, le=100, description="The most notices to answer."),
 ) -> RecentNoticesResponse:
-    return RecentNoticesResponse(
-        notices=[
-            NoticeSchema.from_recent(recent)
-            for recent in await read.execute(user.id, limit=limit)
-        ]
-    )
+    return RecentNoticesResponse.from_recent(await read.execute(user.id, limit=limit))
+
+
+@router.post(
+    "/notices/visit",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "description": (
+                "Opened now: the bell's number is nought on every phone, and "
+                "only what reaches the list after counts. Also the answer when "
+                "nothing moved — opened again at the same moment, or with a "
+                "clock behind the last visit, which never moves it back."
+            ),
+        },
+    },
+    summary="I opened my notices",
+    description=(
+        "What the phone sends as the list behind the bell opens, **right after "
+        "the read the open list is drawn from**: the rows `new` in that read "
+        "are the ones to make stand out on this visit, and whatever is on the "
+        "list by the time this arrives counts as seen."
+    ),
+)
+async def open_recent_notices(
+    user: CurrentUserDep, open_them: OpenRecentNoticesDep
+) -> None:
+    await open_them.execute(user.id)

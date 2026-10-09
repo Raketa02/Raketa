@@ -1,5 +1,5 @@
-"""The Notifications context's two streams (#549; ``docs/adr/0189`` §5; the
-mechanics §17.2).
+"""The Notifications context's three streams (#549, #621; ``docs/adr/0189`` §5;
+the mechanics §17.2, Q101).
 
 **Notification preferences** — one stream per player, filed under the player's
 own id and born by being used: the three choices a player switches, and the
@@ -10,6 +10,10 @@ phones a push reaches.
 gathered into a notice already given. A day is the unit the caps are counted
 in, so a second process telling the same player on the same day collides on the
 stream rather than going past a cap.
+
+**The bell** — one stream per player, filed under the player's own id and born
+by being used: when they last opened their recent notices. The bell's number
+is the notices given since.
 
 **A notice records facts, never words.** The game it is about, the club, the
 hour, the money and the people it names travel as ids and numbers; the words a
@@ -72,6 +76,11 @@ class NoticeGiven:
     names (who left, who posted), ``amount_grosze`` the money it says and
     ``reason`` the code it says why with; each is ``None`` or empty where the
     kind says none.
+
+    ``own`` is a notice of the player's own act — the yes that filled the game,
+    the seat they took — which they saw happen on their own screen: **born
+    seen**, listed and never counted on the bell, nor pushed (the mechanics
+    Q102). Defaulted for the rows recorded before it was asked.
     """
 
     notice_id: UUID
@@ -93,6 +102,7 @@ class NoticeGiven:
     people: tuple[UUID, ...]
     reason: str | None
     occurred_at: datetime
+    own: bool = False
 
     def __post_init__(self) -> None:
         # JSON hands a list of strings back; the codec coerces a bare ``UUID``
@@ -115,4 +125,14 @@ class NoticeBundled:
     kind: str
     key: str
     game_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class RecentNoticesOpened:
+    """**The player opened their recent notices**, on any phone — so the bell's
+    number, the notices given since, starts again from nought. Recorded only
+    when it is later than the last time: the moment never moves back."""
+
+    player_id: UUID
     occurred_at: datetime

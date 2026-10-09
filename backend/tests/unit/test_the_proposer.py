@@ -793,7 +793,7 @@ def test_the_people_a_club_turned_down_are_dealt_a_new_card_first_elsewhere():
 
 def test_the_people_still_in_a_game_its_club_cancelled_are_dealt_a_new_card_first():
     cancelled = a_full_game(A, B, C, D)
-    cancelled.fill(first_side=(A, B), second_side=(C, D), at=NOW)
+    cancelled.fill(first_side=(A, B), second_side=(C, D), by=D, at=NOW)
     # D left before the club cancelled: the card is owed to the three still in.
     cancelled.club_cancelled((A, B, C), at=NOW)
     members = [member(p, 3.3) for p in (A, B, C, D)]

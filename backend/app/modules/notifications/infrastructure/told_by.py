@@ -98,6 +98,7 @@ class BookedAndProposedGames:
             cancel_reason=None
             if booking is None or booking.cancel_reason is None
             else booking.cancel_reason.value,
+            filled_by=proposal.filled_by,
         )
 
 

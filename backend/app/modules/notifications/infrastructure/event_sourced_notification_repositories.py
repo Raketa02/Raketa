@@ -1,4 +1,4 @@
-"""The Notifications context's two repositories, and the recent list.
+"""The Notifications context's three repositories, and the recent list.
 
 The same shape as the other aggregate repositories — the aggregate type spelled
 once, state rebuilt by replay, the version remembered from the load and expected
@@ -13,26 +13,30 @@ transaction.
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Mapping
 from datetime import date
 from typing import final
 from uuid import UUID
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import ColumnElement, and_, delete, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
+from sqlalchemy.orm.util import AliasedClass
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.infrastructure.database.stored_time import stored_instant
 from app.kernel import Sport
+from app.modules.notifications.domain.bell import Bell
 from app.modules.notifications.domain.events import (
     NoticeBundled,
     NoticeGiven,
     NotificationChoiceSwitched,
     PushDeviceRegistered,
     PushDeviceRemoved,
+    RecentNoticesOpened,
 )
 from app.modules.notifications.domain.notices import NoticesOfADay, day_id_for
-from app.modules.notifications.domain.ports import RecordedNotice
+from app.modules.notifications.domain.ports import RecordedNotice, RecordedNotices
 from app.modules.notifications.domain.preferences import (
     DEFAULT_CHOICES,
     NotificationChoice,
@@ -40,6 +44,7 @@ from app.modules.notifications.domain.preferences import (
 )
 from app.modules.notifications.infrastructure.notification_models import (
     NoticeORM,
+    NoticesOpenedORM,
     NotificationPreferencesORM,
     PushDeviceORM,
 )
@@ -54,6 +59,7 @@ _COLUMNS = {
     NotificationChoice.FILL_IN_ALERTS: _ROW.fill_in_alerts,
 }
 NOTICE_DAY_AGGREGATE = "notice_day"
+BELL_AGGREGATE = "notice_bell"
 
 
 @final
@@ -229,6 +235,7 @@ class EventSourcedNoticeDayRepository:
                         given_at=event.occurred_at,
                         sequence_no=record.sequence_no,
                         gathered=0,
+                        own=event.own,
                     )
                 )
             elif isinstance(event, NoticeBundled):
@@ -248,37 +255,142 @@ class EventSourcedNoticeDayRepository:
 
 
 @final
+class EventSourcedBellRepository:
+    """``BellRepository`` over ``DomainEventStore`` and the last visit."""
+
+    def __init__(
+        self,
+        *,
+        session: AsyncSession,
+        event_store: DomainEventStore,
+        events: DomainEventPublisher,
+    ) -> None:
+        self._session = session
+        self._event_store = event_store
+        self._events = events
+        self._versions: dict[UUID, int] = {}
+
+    async def load(self, player_id: UUID) -> Bell:
+        stored = await self._event_store.load_stream(
+            aggregate_type=BELL_AGGREGATE, aggregate_id=player_id
+        )
+        bell = Bell.from_history(player_id, (record.event for record in stored))
+        self._versions[player_id] = bell.version
+        return bell
+
+    async def save(self, bell: Bell) -> None:
+        pending = bell.pull_events()
+        if not pending:
+            return
+        stored = await self._event_store.append(
+            aggregate_type=BELL_AGGREGATE,
+            aggregate_id=bell.player_id,
+            expected_version=self._versions.get(bell.player_id, 0),
+            events=pending,
+        )
+        await self._events.publish_many(pending)
+        opened = [r.event for r in stored if isinstance(r.event, RecentNoticesOpened)]
+        if opened:
+            await self._session.execute(
+                delete(NoticesOpenedORM).where(
+                    NoticesOpenedORM.player_id == bell.player_id
+                )
+            )
+            await self._session.execute(
+                insert(NoticesOpenedORM).values(
+                    player_id=bell.player_id,
+                    # The bell records only a later visit: the last is the moment.
+                    opened_at=opened[-1].occurred_at,
+                    seen_through=await self._newest_listed(bell.player_id),
+                )
+            )
+        await self._session.flush()
+        # Deliberately no commit: the transaction boundary is the use case's.
+        self._versions[bell.player_id] = bell.version
+
+    async def _newest_listed(self, player_id: UUID) -> int:
+        """The newest place in the store among the notices the list holds now
+        — **never the visit's own place**. A store place is taken at insert,
+        not at commit, so a delivery still in flight holds a place below the
+        visit's and would read as seen; it is held from this read, and a later
+        notice of the same day's stream can only commit after it, above it."""
+
+        newest = await self._session.scalar(
+            select(func.max(NoticeORM.sequence_no)).where(
+                NoticeORM.player_id == player_id
+            )
+        )
+        return -1 if newest is None else newest
+
+
+@final
 class SqlAlchemyNoticeDirectory:
-    """``NoticeDirectory`` over the ``notices`` projection."""
+    """``NoticeDirectory`` over the ``notices`` projection and the last visit."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def recent(self, player_id: UUID, *, limit: int) -> Sequence[RecordedNotice]:
+    async def recent(self, player_id: UUID, *, limit: int) -> RecordedNotices:
+        visit = (
+            await self._session.execute(
+                select(NoticesOpenedORM.opened_at, NoticesOpenedORM.seen_through).where(
+                    NoticesOpenedORM.player_id == player_id
+                )
+            )
+        ).one_or_none()
+        # A player who never opened the list holds nothing seen.
+        seen_through = -1 if visit is None else visit.seen_through
+        counted = aliased(NoticeORM)
+        # One statement, so the rows' flags and the number are one reading.
+        new_count = (
+            select(func.count())
+            .select_from(counted)
+            .where(counted.player_id == player_id, _is_new(counted, seen_through))
+            .scalar_subquery()
+        )
+        is_new = _is_new(NoticeORM, seen_through)
         rows = (
-            await self._session.scalars(
-                select(NoticeORM)
+            await self._session.execute(
+                select(NoticeORM, is_new, new_count)
                 .where(NoticeORM.player_id == player_id)
                 .order_by(NoticeORM.given_at.desc(), NoticeORM.sequence_no.desc())
                 .limit(limit)
             )
         ).all()
-        return [
-            RecordedNotice(
-                notice_id=row.notice_id,
-                kind=row.kind,
-                game_id=row.game_id,
-                pool_id=row.pool_id,
-                sport=Sport(row.sport),
-                game_kind=row.game_kind,
-                club_id=row.club_id,
-                starts_at=stored_instant(row.starts_at),
-                opens=row.opens,
-                amount_grosze=row.amount_grosze,
-                people=tuple(UUID(one) for one in row.people.split(",") if one),
-                reason=row.reason,
-                given_at=stored_instant(row.given_at),
-                gathered=row.gathered,
-            )
-            for row in rows
-        ]
+        return RecordedNotices(
+            notices=[_recorded(row, new=bool(new)) for row, new, _ in rows],
+            # No rows, nothing new.
+            new_count=rows[0][2] if rows else 0,
+            last_opened_at=None if visit is None else stored_instant(visit.opened_at),
+        )
+
+
+def _is_new(
+    notice: type[NoticeORM] | AliasedClass[NoticeORM], seen_through: int
+) -> ColumnElement[bool]:
+    """**The bell's rule**, written once for the number and the rows' flags:
+    reached the list past the last visit — given, or gathered into and moved
+    up — and not the player's own."""
+
+    return and_(notice.sequence_no > seen_through, notice.own.is_(False))
+
+
+def _recorded(row: NoticeORM, *, new: bool) -> RecordedNotice:
+    return RecordedNotice(
+        notice_id=row.notice_id,
+        kind=row.kind,
+        game_id=row.game_id,
+        pool_id=row.pool_id,
+        sport=Sport(row.sport),
+        game_kind=row.game_kind,
+        club_id=row.club_id,
+        starts_at=stored_instant(row.starts_at),
+        opens=row.opens,
+        amount_grosze=row.amount_grosze,
+        people=tuple(UUID(one) for one in row.people.split(",") if one),
+        reason=row.reason,
+        given_at=stored_instant(row.given_at),
+        gathered=row.gathered,
+        own=row.own,
+        new=new,
+    )

@@ -9,6 +9,7 @@ from fastapi import Depends
 
 from app.api.dependencies import ClockDep, DbSession, UnitOfWorkDep
 from app.bootstrap.composition import (
+    build_bell_repository,
     build_notice_directory,
     build_notice_words,
     build_notification_preferences_repository,
@@ -19,6 +20,7 @@ from app.modules.notifications.application.preferences import (
     RemoveAPhone,
     SetNotificationChoices,
 )
+from app.modules.notifications.application.opening import OpenRecentNotices
 from app.modules.notifications.application.reading import ReadRecentNotices
 from app.modules.notifications.domain.ports import NotificationPreferencesRepository
 
@@ -88,3 +90,12 @@ def get_read_recent_notices(db: DbSession) -> ReadRecentNotices:
 
 
 ReadRecentNoticesDep = Annotated[ReadRecentNotices, Depends(get_read_recent_notices)]
+
+
+def get_open_recent_notices(
+    db: DbSession, uow: UnitOfWorkDep, clock: ClockDep
+) -> OpenRecentNotices:
+    return OpenRecentNotices(bells=build_bell_repository(db), uow=uow, clock=clock)
+
+
+OpenRecentNoticesDep = Annotated[OpenRecentNotices, Depends(get_open_recent_notices)]

@@ -10,7 +10,10 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
 **The table** (``_TELLING``) — what each event tells, and whom:
 
 - ``SeatChargeTaken`` — *It's a game! · you paid*, to the payer; or *the club
-  confirmed*, at an On request club's yes.
+  confirmed*, at an On request club's yes. **The payer whose own act booked the
+  seat** — the yes that filled the game, the seat they took — saw *It's a game!*
+  on their own screen, so theirs is **their own**: born seen, never counted nor
+  pushed (the mechanics Q102).
 - ``SeatChargeFailed`` — *Confirm your payment*, to the payer.
 - ``SeatChargeRefundDecided`` — *Game called off · with the refund* or *You've
   been refunded*, to the refunded; never a leaver's own refund.
@@ -132,6 +135,7 @@ def _notice(
     amount_grosze: int | None = None,
     people: tuple[UUID, ...] = (),
     reason: str | None = None,
+    own: bool = False,
 ) -> Notice:
     return Notice(
         kind=kind,
@@ -146,6 +150,7 @@ def _notice(
         amount_grosze=amount_grosze,
         people=people,
         reason=reason,
+        own=own,
     )
 
 
@@ -197,6 +202,12 @@ class TellThePlayers:
             game.asked_the_club and event.player_id not in game.seats_taken.values()
         )
         kind = NoticeKind.CLUB_CONFIRMED if confirmed else NoticeKind.GAME_BOOKED
+        # Their own yes filled it, or they took the seat: it is no news to
+        # them. The club's yes is the club's act, and news to all four.
+        own = (
+            event.player_id == game.filled_by
+            or event.player_id in game.seats_taken.values()
+        )
         await self._give.execute(
             event.player_id,
             _notice(
@@ -205,6 +216,7 @@ class TellThePlayers:
                 key=f"{kind}:{key}",
                 opens=Opens.BOOKING,
                 amount_grosze=game.share_grosze,
+                own=own,
             ),
             at=at,
         )

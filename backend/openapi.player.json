@@ -4950,7 +4950,7 @@
           "notifications"
         ],
         "summary": "My recent notices",
-        "description": "Everything you were told \u2014 the list behind the bell on Home \u2014 the newest first, each in the words it was pushed in and with where a tap opens it. A notice past its kind's daily cap that was bundled is not its own row: the row it joined says how many it holds (`gathered`).",
+        "description": "Everything you were told \u2014 the list behind the bell on Home \u2014 the newest first, each in the words it was pushed in and with where a tap opens it. A notice past its kind's daily cap that was bundled is not its own row: the row it joined says how many it holds (`gathered`).\n\n**The bell's number** travels here (`new_count`), with when you last opened the list and, on each row, whether it is `new`. A notice of your own act is listed `your_own` and never counted.",
         "operationId": "read_recent_notices_api_v1_players_me_notices_get",
         "security": [
           {
@@ -4995,6 +4995,26 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/players/me/notices/visit": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "I opened my notices",
+        "description": "What the phone sends as the list behind the bell opens, **right after the read the open list is drawn from**: the rows `new` in that read are the ones to make stand out on this visit, and whatever is on the list by the time this arrives counts as seen.",
+        "operationId": "open_recent_notices_api_v1_players_me_notices_visit_post",
+        "responses": {
+          "204": {
+            "description": "Opened now: the bell's number is nought on every phone, and only what reaches the list after counts. Also the answer when nothing moved \u2014 opened again at the same moment, or with a clock behind the last visit, which never moves it back."
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/proposals/{proposal_id}/yes": {
@@ -11166,6 +11186,16 @@
             "type": "integer",
             "title": "Gathered",
             "description": "How many more notices of its kind the day bundled into this one \u2014 told in its words, and pushed to nobody."
+          },
+          "new": {
+            "type": "boolean",
+            "title": "New",
+            "description": "It reached the list since you last opened it \u2014 given, or a notice bundled into it, which moved it up \u2014 and is not your own: one the bell counts, and a row to make stand out on this visit."
+          },
+          "your_own": {
+            "type": "boolean",
+            "title": "Your Own",
+            "description": "About something you did yourself and saw happen \u2014 *It's a game!* for the yes that filled the game, or the seat you took. Born seen: listed, never counted on the bell, never pushed, and never to be shown as a banner."
           }
         },
         "type": "object",
@@ -11180,7 +11210,9 @@
           "pool_id",
           "sport",
           "game_kind",
-          "gathered"
+          "gathered",
+          "new",
+          "your_own"
         ],
         "title": "NoticeSchema",
         "description": "One notice, in the words the phone was pushed \u2014 and where a tap opens."
@@ -12801,11 +12833,31 @@
             "type": "array",
             "title": "Notices",
             "description": "The newest first."
+          },
+          "new_count": {
+            "type": "integer",
+            "title": "New Count",
+            "description": "**The bell's number**: the notices that reached your list since you last opened it \u2014 given, or bundled into one and moving it up \u2014 never your own. Exact however many rows were asked for: the bell writes *99+* past 99. The same on every phone."
+          },
+          "last_opened_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Opened At",
+            "description": "When you last opened the list (`POST /players/me/notices/visit`), on any phone \u2014 `null` before the first time."
           }
         },
         "type": "object",
         "required": [
-          "notices"
+          "notices",
+          "new_count",
+          "last_opened_at"
         ],
         "title": "RecentNoticesResponse"
       },

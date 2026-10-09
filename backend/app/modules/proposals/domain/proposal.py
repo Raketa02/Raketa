@@ -226,6 +226,9 @@ class Proposal:
     #: Everybody still in when the club cancelled the booked game (#547) —
     #: ``None`` on a game no club cancelled.
     cancelled_for: tuple[UUID, ...] | None = None
+    #: The player whose own act filled the booked game (Q102) — ``None`` until
+    #: it is booked, and when the club's yes or a paused yes coming back did.
+    filled_by: UUID | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -547,11 +550,13 @@ class Proposal:
         *,
         first_side: tuple[UUID, ...],
         second_side: tuple[UUID, ...],
+        by: UUID | None,
         at: Instant,
     ) -> None:
         """**The last yes booked it**: every seat was taken, and these are the
         sides the people In were drawn on. Called by the fill once the money
-        is held — never before."""
+        is held — never before. ``by`` is the player whose own act filled it,
+        or ``None`` when no player's did (the club's yes, a resumed yes)."""
 
         self._refuse_unless_filling(at)
         invariant(self.open_seats == 0, f"filling {self.proposal_id} with seats open")
@@ -565,6 +570,7 @@ class Proposal:
                 first_side=first_side,
                 second_side=second_side,
                 occurred_at=at,
+                filled_by=by,
             )
         )
 
@@ -788,6 +794,7 @@ class Proposal:
             )
         elif isinstance(event, ProposalFilled):
             self.ending = Ending.FILLED
+            self.filled_by = event.filled_by
         elif isinstance(event, ProposalWithdrawn):
             self.ending = Ending.WITHDRAWN
         elif isinstance(event, ProposalExpired):

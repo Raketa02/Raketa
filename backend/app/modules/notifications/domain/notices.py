@@ -150,6 +150,9 @@ class Notice:
     amount_grosze: int | None = None
     people: tuple[UUID, ...] = ()
     reason: str | None = None
+    #: Of the player's own act, which they saw happen: born seen — listed, and
+    #: never counted on the bell nor pushed (the mechanics Q102).
+    own: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,6 +235,7 @@ class NoticesOfADay:
             people=notice.people,
             reason=notice.reason,
             occurred_at=at,
+            own=notice.own,
         )
         self._record_that(given)
         return given

@@ -161,12 +161,19 @@ class ProposalFilled:
 
     ``first_side`` and ``second_side`` are the people whose yeses filled it,
     **drawn for the most even game** — which is what a yes means: E said yes to
-    a card showing Marek, E, F and G, and plays with Marek, B and C (§7)."""
+    a card showing Marek, E, F and G, and plays with Marek, B and C (§7).
+
+    ``filled_by`` is the player whose own act filled it — the last yes, a join
+    or a confirmed payment — so what it booked is never told back to them as
+    news (the mechanics Q102); ``None`` when no player's act did: the club's
+    yes, a paused yes coming back. Defaulted for the rows recorded before it
+    was asked, which name nobody."""
 
     proposal_id: UUID
     first_side: tuple[UUID, ...]
     second_side: tuple[UUID, ...]
     occurred_at: datetime
+    filled_by: UUID | None = None
 
     def __post_init__(self) -> None:
         for side in ("first_side", "second_side"):

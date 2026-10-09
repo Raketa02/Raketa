@@ -211,6 +211,27 @@ async def test_a_booked_game_is_who_holds_a_seat_and_who_took_one(
 
 
 @pytest.mark.parametrize("implementation", registered(GameBriefs))
+async def test_a_booked_game_says_whose_own_yes_filled_it(implementation, session):
+    games: GameBriefs = implementation.build(session)
+    filled = await _a_proposal(session)
+    for player in (OLA, KUBA, EWA, TOMEK):
+        filled.say_yes(player, at=NOW)
+    filled.fill(first_side=(OLA, KUBA), second_side=(EWA, TOMEK), by=TOMEK, at=NOW)
+    await _saved(session, filled)
+    by_the_club = await _a_proposal(session)
+    for player in (OLA, KUBA, EWA, TOMEK):
+        by_the_club.say_yes(player, at=NOW)
+    by_the_club.fill(first_side=(OLA, KUBA), second_side=(EWA, TOMEK), by=None, at=NOW)
+    await _saved(session, by_the_club)
+    still_filling = await _saved(session, await _a_proposal(session))
+
+    later = NOW + timedelta(hours=1)
+    assert (await games.about(filled.proposal_id, at=later)).filled_by == TOMEK
+    assert (await games.about(by_the_club.proposal_id, at=later)).filled_by is None
+    assert (await games.about(still_filling.proposal_id, at=later)).filled_by is None
+
+
+@pytest.mark.parametrize("implementation", registered(GameBriefs))
 async def test_a_game_the_club_cancelled_says_why(implementation, session):
     games: GameBriefs = implementation.build(session)
     proposal = await _saved(session, await _a_proposal(session))

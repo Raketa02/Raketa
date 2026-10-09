@@ -145,7 +145,16 @@ class Fill:
         self._games_and_money = games_and_money
         self._booked = booked
 
-    async def run(self, proposal: Proposal, *, now: Instant) -> FillOutcome:
+    async def run(
+        self, proposal: Proposal, *, by: UUID | None, now: Instant
+    ) -> FillOutcome:
+        """``by`` is the player whose own act left no seat open — their yes, a
+        join, a confirmed payment — or ``None`` when no player's act did: a
+        paused yes coming back. A game booked now records it
+        (``ProposalFilled.filled_by``), so what it booked is never told back
+        to them as news (the mechanics Q102); one put to its club is filled by
+        the club's yes, which is nobody's."""
+
         invariant(proposal.open_seats == 0, f"{proposal.proposal_id} is not full")
         unfit = await self._no_longer_fit(proposal, now=now)
         if unfit:
@@ -171,6 +180,7 @@ class Fill:
             court_name=court.name,
             cut_off=court.cut_off,
             sides=None,
+            by=by,
             book=lambda first, second: self._bookings.book(
                 FullGame(
                     proposal_id=proposal.proposal_id,
@@ -212,6 +222,8 @@ class Fill:
             court_name=request.court_name,
             cut_off=request.cut_off,
             sides=(request.first_side, request.second_side),
+            # The club's yes: no player's own act filled it.
+            by=None,
             book=lambda first, second: self._requests.accept(
                 proposal.proposal_id, at=now
             ),
@@ -252,6 +264,7 @@ class Fill:
         court_name: str,
         cut_off: Instant,
         sides: tuple[tuple[UUID, ...], tuple[UUID, ...]] | None,
+        by: UUID | None,
         book: Callable[[tuple[UUID, ...], tuple[UUID, ...]], Awaitable[UUID]],
         now: Instant,
         asked: bool = False,
@@ -292,7 +305,7 @@ class Fill:
         first_side, second_side = (
             sides if sides is not None else await self._sides(proposal)
         )
-        proposal.fill(first_side=first_side, second_side=second_side, at=now)
+        proposal.fill(first_side=first_side, second_side=second_side, by=by, at=now)
         game_id = await book(first_side, second_side)
         # A refused payment somebody since took the seat from, or a hold a
         # player confirmed and this game was paid without, is let go.

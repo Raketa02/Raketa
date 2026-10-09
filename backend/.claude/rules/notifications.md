@@ -9,8 +9,8 @@ paths:
 
 # Notifications
 
-Decisions that are load-bearing and not obvious from the code (#549; ADR-0189 §5; the
-mechanics §17.2; the screens A7.2, A9).
+Decisions that are load-bearing and not obvious from the code (#549, #621; ADR-0189 §5 and
+its 2026-10-09 amendment; the mechanics §17.2, Q101, Q102; the screens A7.2, A9).
 
 - **A player is told, and nothing asks** (`.importlinter`'s *No context knows
   Notifications exists*). `notifications/application/telling.py` subscribes to
@@ -29,7 +29,7 @@ mechanics §17.2; the screens A7.2, A9).
   `MovableClock` and the drain runs on the wall clock. A game that moved on before the
   delivery is told as it is: a card that filled meanwhile needs nobody, and whoever took a
   leaver's seat before the `SeatLeft` was delivered is not told the seat was left.
-- **Two streams.** *Notification preferences*, one per player under the player's own id,
+- **Three streams.** *Notification preferences*, one per player under the player's own id,
   born by being used — three choices (*You complete it* and *Challenges for you* on,
   *Fill in alerts* off) and at most ten phones, the oldest let go — projected into
   `notification_preferences` (who wants a choice among a pool, one read) and
@@ -44,7 +44,40 @@ mechanics §17.2; the screens A7.2, A9).
   telling one player one day collide instead of passing a cap — projected into `notices`,
   the list behind the bell, ordered by the trigger's instant and then the store's
   `sequence_no` (the outbox delivers the rows of one transaction in any order) — a
-  notice a later one was bundled into takes that one's instant and moves up.
+  notice a later one was bundled into takes that one's instant and moves up. *The bell*,
+  one per player under the player's own id (`notice_bell`), below.
+- **Seen is one moment per player, never a flag per notice** (#621, Q101 — answering
+  #549's handover call 11, *no seen or unread marker*; old notices are still never
+  pruned). `POST /players/me/notices/visit` (`application/opening.py`) records
+  `RecentNoticesOpened` on the player's **Bell** — only when later than the last by the
+  clock, so it is idempotent and never moves back; two phones colliding on the stream
+  keep the other's visit — projected into `notices_opened`: when, and **`seen_through`,
+  the newest `sequence_no` among the player's notices at the visit**. **The bell's
+  number** is `GET /players/me/notices`' `new_count`: the rows past `seen_through`, none
+  `own`, counted whole past the rows sent (`ix_notices_player_id_sequence_no`), and each
+  row's `new` — one SQL rule (`_is_new`) in one statement, so the two are one reading;
+  `last_opened_at` is the moment. **New is read in the store's order, never off the
+  clock**: a row's `given_at` is the trigger's instant, and the outbox delivers after the
+  act — late by a whole backlog when a delivery is failing — so a notice that reached the
+  list after the visit is new whatever it tells happened before it; a bundle rewrites the
+  row's `sequence_no`, so a notice that moved up is new again. **The watermark is the
+  newest notice listed, never the visit's own place**: a store place is taken at insert,
+  not commit, and a delivery can hold one for seconds (a capture in the same delivery)
+  — still in flight it is not read, and a later notice of the same day's stream can only
+  commit after it, above it. Two windows stay open: a notice of *another* day's stream
+  committing between two of the same player's, and one listed between the phone's read
+  and its visit, which the route asks the phone to keep short. The count travels on the
+  notices' own read and never on Home's: nobody knows Notifications exists.
+- **A notice of the player's own act is born seen** (Q102): `Notice.own` →
+  `NoticeGiven.own` (defaulted `False` for older rows) → `notices.own` → `your_own` on the
+  wire. Listed, never counted, and **pushed to nobody** — `NoticePushes` answers `None`
+  for it, so the pusher skips it and the dev console's *Sent* pane says so. Today it is
+  `SeatChargeTaken`'s *It's a game! · you paid* to the payer whose own act booked the
+  seat: **the filler** — `ProposalFilled.filled_by`, recorded by the fill from the yes,
+  join or confirmed payment that left no seat open (`Fill.run(by=…)`), `None` for the
+  club's yes and a paused yes coming back, and read as `GameBrief.filled_by` — and **a
+  rescuer** (`seats_taken`), whose join showed them *It's a game!* too. The club's yes
+  (*… confirmed your game*) is the club's act and counted for all four.
 - **Caps and bundling are decided as each trigger is delivered** (`NoticesOfADay.give`);
   the screens' C3 *Notifications job* is not built. *You complete it* once a day,
   *Challenges for you* three times — past the cap each **joins the day's last notice of

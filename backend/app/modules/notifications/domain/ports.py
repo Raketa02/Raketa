@@ -1,6 +1,6 @@
-"""What the Notifications context stands on, in its own words (#549).
+"""What the Notifications context stands on, in its own words (#549, #621).
 
-**Its own**: the two streams' repositories, the recent list, and the **push
+**Its own**: the three streams' repositories, the recent list, and the **push
 service** — the outside world's, behind ``PushNotifications``, with Expo's
 adapter and a recording fake (``infrastructure/``).
 
@@ -23,6 +23,7 @@ from typing import Protocol
 from uuid import UUID
 
 from app.kernel import Instant, Sport
+from app.modules.notifications.domain.bell import Bell
 from app.modules.notifications.domain.notices import NoticesOfADay
 from app.modules.notifications.domain.preferences import (
     NotificationChoice,
@@ -67,6 +68,15 @@ class NoticeDayRepository(Protocol):
         ...
 
 
+class BellRepository(Protocol):
+    async def load(self, player_id: UUID) -> Bell: ...
+
+    async def save(self, bell: Bell) -> None:
+        """Append what was recorded, and keep the last visit beside it. **No
+        commit.**"""
+        ...
+
+
 @dataclass(frozen=True, slots=True)
 class RecordedNotice:
     """A notice as the recent list holds it: what was given, and how many more
@@ -87,11 +97,36 @@ class RecordedNotice:
     given_at: Instant
     #: How many notices of its kind the day gathered into this one.
     gathered: int
+    #: Of the player's own act: born seen, never counted nor pushed (Q102).
+    own: bool = False
+    #: Reached the list — given, or gathered into — since the player last
+    #: opened it, and not their own: one the bell counts.
+    new: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RecordedNotices:
+    """The newest of a player's notices, and the bell's number over all of
+    them."""
+
+    notices: Sequence[RecordedNotice]
+    #: **The bell's number**: every notice that reached the list since the
+    #: player last opened it, none of their own — past the rows read, too.
+    new_count: int
+    #: When they last opened it — ``None`` before the first time.
+    last_opened_at: Instant | None
 
 
 class NoticeDirectory(Protocol):
-    async def recent(self, player_id: UUID, *, limit: int) -> Sequence[RecordedNotice]:
-        """The player's notices, the newest first."""
+    async def recent(self, player_id: UUID, *, limit: int) -> RecordedNotices:
+        """The player's notices, the newest first, each saying whether it is
+        new to them — and how many are new in all, in the same reading.
+
+        **New is read in the store's order, never off the clock**: a notice
+        is new when it reached the list after the newest one the list held
+        when it was last opened — given, or gathered into and so moved up —
+        whatever the instant of what it tells, since the outbox delivers after
+        the act."""
         ...
 
 
@@ -178,6 +213,10 @@ class GameBrief:
     #: Why the club cancelled it, once it did — ``WEATHER``, ``REPAIR``,
     #: ``DOUBLE_BOOKING`` or ``OTHER``.
     cancel_reason: str | None
+    #: The player whose own act booked it — their yes, a join, a confirmed
+    #: payment — which they saw happen; ``None`` while it fills, and when the
+    #: club's yes or a paused yes coming back booked it.
+    filled_by: UUID | None
 
 
 class GameBriefs(Protocol):
@@ -233,6 +272,7 @@ class Names(Protocol):
 
 
 __all__ = [
+    "BellRepository",
     "Decks",
     "GameBrief",
     "GameBriefs",
@@ -247,5 +287,6 @@ __all__ = [
     "PushReceipt",
     "PushUnavailable",
     "RecordedNotice",
+    "RecordedNotices",
     "SeatOffers",
 ]

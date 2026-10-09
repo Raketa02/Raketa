@@ -24,6 +24,7 @@ from app.modules.proposals.domain.events import (
     GamesAndMoneySet,
     NoSaid,
     ProposalExpired,
+    ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
     VersionDealt,
@@ -59,6 +60,13 @@ EVENTS = [
     ProposalWithdrawn(proposal_id=PROPOSAL, withdrawn_by=PLAYER, occurred_at=NOW),
     ProposalExpired(proposal_id=PROPOSAL, occurred_at=NOW),
     CourtHourLost(proposal_id=PROPOSAL, occurred_at=NOW),
+    ProposalFilled(
+        proposal_id=PROPOSAL,
+        first_side=(PLAYER, uuid4()),
+        second_side=(uuid4(), uuid4()),
+        occurred_at=NOW,
+        filled_by=PLAYER,
+    ),
     GamesAndMoneySet(
         player_id=PLAYER, games_per_week=4, most_ill_pay_grosze=45_00, occurred_at=NOW
     ),
@@ -102,6 +110,38 @@ def test_each_event_is_filed_under_its_own_name_in_the_proposals_namespace():
         "proposals.proposal_withdrawn",
         "proposals.proposal_expired",
         "proposals.court_hour_lost",
+        "proposals.proposal_filled",
         "proposals.games_and_money_set",
         "proposals.games_and_money_set",
     ]
+
+
+def test_a_fill_stored_before_it_named_its_filler_names_nobody():
+    """``filled_by`` came with #621, defaulted rather than a version 2: a row
+    written before it reads as filled by nobody's own act, so nobody's notice
+    about it is their own."""
+
+    codec = _codec()
+    encoded = codec.encode(
+        ProposalFilled(
+            proposal_id=PROPOSAL,
+            first_side=(PLAYER, uuid4()),
+            second_side=(uuid4(), uuid4()),
+            occurred_at=NOW,
+            filled_by=PLAYER,
+        )
+    )
+    older = {key: value for key, value in encoded.payload.items() if key != "filled_by"}
+
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=uuid4(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=older,
+            occurred_at=NOW,
+        )
+    )
+
+    assert isinstance(decoded, ProposalFilled)
+    assert decoded.filled_by is None

@@ -314,7 +314,7 @@ async def _yes(
         proposal.say_yes(player_id, at=now)
     if proposal.open_seats > 0:
         return FillOutcome()
-    return await fill.run(proposal, now=now)
+    return await fill.run(proposal, by=player_id, now=now)
 
 
 def _answer(proposal: Proposal, player_id: UUID, outcome: FillOutcome) -> YesAnswer:

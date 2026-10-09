@@ -11,6 +11,7 @@ Nothing is given twice about the same thing.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, datetime, timezone
 from uuid import UUID
 
@@ -112,6 +113,18 @@ def test_nothing_is_given_twice_about_the_same_thing():
     assert again is None
     assert isinstance(bundled, NoticeBundled)
     assert bundled_again is None
+
+
+def test_a_notice_of_the_player_s_own_act_is_given_as_their_own():
+    """Born seen (the mechanics Q102): listed, and never counted or pushed."""
+
+    day = a_day()
+
+    own = day.give(replace(notice(NoticeKind.GAME_BOOKED), own=True), at=AT)
+    theirs = day.give(notice(NoticeKind.GAME_BOOKED), at=AT)
+
+    assert isinstance(own, NoticeGiven) and own.own is True
+    assert isinstance(theirs, NoticeGiven) and theirs.own is False
 
 
 def test_a_stream_folds_back_to_its_count():

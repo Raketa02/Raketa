@@ -6011,6 +6011,16 @@
             "type": "integer",
             "title": "Gathered",
             "description": "How many more notices of its kind the day bundled into this one \u2014 told in its words, and pushed to nobody."
+          },
+          "new": {
+            "type": "boolean",
+            "title": "New",
+            "description": "It reached the list since you last opened it \u2014 given, or a notice bundled into it, which moved it up \u2014 and is not your own: one the bell counts, and a row to make stand out on this visit."
+          },
+          "your_own": {
+            "type": "boolean",
+            "title": "Your Own",
+            "description": "About something you did yourself and saw happen \u2014 *It's a game!* for the yes that filled the game, or the seat you took. Born seen: listed, never counted on the bell, never pushed, and never to be shown as a banner."
           }
         },
         "type": "object",
@@ -6025,7 +6035,9 @@
           "pool_id",
           "sport",
           "game_kind",
-          "gathered"
+          "gathered",
+          "new",
+          "your_own"
         ],
         "title": "NoticeSchema",
         "description": "One notice, in the words the phone was pushed \u2014 and where a tap opens."
@@ -7647,8 +7659,15 @@
             "description": "As the bell lists it now \u2014 `GET /api/v1/players/me/notices`'s own row, `gathered` included."
           },
           "pushed": {
-            "$ref": "#/components/schemas/SentPush",
-            "description": "What it is pushed as \u2014 to each phone registered when it was given, and with none, what would have been: its words as given, before the day gathered anything into it, which pushes nobody. Drawn from its facts again now, as `listed` is, so a name changed since reads as it stands."
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SentPush"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it is pushed as \u2014 to each phone registered when it was given, and with none, what would have been: its words as given, before the day gathered anything into it, which pushes nobody. Drawn from its facts again now, as `listed` is, so a name changed since reads as it stands. `null` for a notice of their own act (`listed.your_own`), which is pushed to nobody."
           }
         },
         "type": "object",

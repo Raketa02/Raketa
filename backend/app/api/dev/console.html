@@ -596,12 +596,13 @@ function sentOf(row) {
   const notices = sent.notices.length ? `<table>
     <thead><tr><th>Given</th><th>In the list</th><th>Pushed as</th><th>Opens</th></tr></thead>
     <tbody>${sent.notices.map(({ listed, pushed }) => {
-      const same = pushed.title === listed.title && pushed.body === listed.body;
+      const same = pushed && pushed.title === listed.title && pushed.body === listed.body;
       return `<tr>
         <td>${when(listed.given_at)}</td>
         <td><strong>${esc(listed.title)}</strong><br>${esc(listed.body)}` +
           `${listed.gathered ? `<br><span class="note">+${listed.gathered} gathered into it</span>` : ""}</td>
-        <td>${same ? `<span class="note">the same words</span>`
+        <td>${!pushed ? `<span class="note">nothing — their own act, already seen</span>`
+          : same ? `<span class="note">the same words</span>`
           : `<strong>${esc(pushed.title)}</strong><br>${esc(pushed.body)}`}</td>
         <td>${esc(listed.opens)} <span class="mono">${esc(listed.game_id.slice(0, 8))}</span></td>
       </tr>`;

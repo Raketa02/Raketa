@@ -20,6 +20,8 @@ a phone can be taken back, so this is the price, not a bug to close.
 **What a notice is pushed as is decided once** (``NoticePushes``): the pusher
 sends it to every phone, and the dev console's *Sent* pane shows it for a
 player with none — every seed account — as what would have been pushed (#594).
+**A notice of the player's own act is pushed as nothing** (the mechanics Q102):
+they saw it happen on their own screen, and it is listed, already seen.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ from typing import final
 from app.application.events import DeliveryContext
 from app.kernel import Clock, instant
 from app.modules.notifications.application.reading import NoticeWords, recorded
+from app.modules.notifications.application.words import Words
 from app.modules.notifications.domain.events import NoticeGiven
 from app.modules.notifications.domain.ports import (
     NotificationPreferencesRepository,
@@ -65,17 +68,23 @@ class NoticePushes:
     its push is drawn as though nothing was gathered, while the list says how
     many it holds. The words are drawn from the notice's facts each time they
     are asked for, as the list's are: a name changed since reads as it stands.
+
+    **Never the player's own** (Q102): ``None`` — it is pushed to nobody.
     """
 
     def __init__(self, *, words: NoticeWords) -> None:
         self._words = words
 
-    async def of(self, notices: Sequence[RecordedNotice]) -> list[PushMessage]:
-        given = [replace(notice, gathered=0) for notice in notices]
+    async def of(self, notices: Sequence[RecordedNotice]) -> list[PushMessage | None]:
+        given = [replace(notice, gathered=0) for notice in notices if not notice.own]
+        drawn = iter(await self._words.of(given))
         return [
-            PushMessage(title=words.title, body=words.body, data=_opening(notice))
-            for notice, words in zip(given, await self._words.of(given), strict=True)
+            None if notice.own else _message(notice, next(drawn)) for notice in notices
         ]
+
+
+def _message(notice: RecordedNotice, words: Words) -> PushMessage:
+    return PushMessage(title=words.title, body=words.body, data=_opening(notice))
 
 
 def _opening(notice: RecordedNotice) -> dict[str, str]:
@@ -112,6 +121,8 @@ class PushTheNotice:
         if not tokens:
             return
         [message] = await self._pushes.of([recorded(event)])
+        if message is None:
+            return
         try:
             receipt = await self._push.send(
                 [

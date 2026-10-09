@@ -78,3 +78,18 @@ async def test_a_push_opens_the_app_on_its_notice() -> None:
         "sport": "PADEL",
         "game_kind": "COMPETITIVE",
     }
+
+
+async def test_a_notice_of_the_player_s_own_act_is_pushed_to_nobody() -> None:
+    """The filler saw *It's a game!* on their own screen (the mechanics Q102):
+    their notice is listed, already seen, and never announced back."""
+
+    own = replace(a_card_that_needs_only_you(gathered=0), own=True)
+    theirs = a_card_that_needs_only_you(gathered=0)
+
+    pushed = await NoticePushes(words=NoticeWords(names=StandInNames())).of(
+        [own, theirs]
+    )
+
+    assert pushed[0] is None
+    assert pushed[1] is not None and pushed[1].title == "A game needs only you"

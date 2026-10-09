@@ -1,6 +1,6 @@
-"""The Notifications context's three tables — **projections all three**, written
+"""The Notifications context's four tables — **projections all four**, written
 by the repositories' ``save`` beside the events in the act's own transaction;
-the streams are the record (#549).
+the streams are the record (#549, #621).
 
 ``notification_preferences`` is each player's three choices, one row per player
 who ever chose — so *who in this pool wants Fill in alerts* is one read, and a
@@ -8,7 +8,9 @@ player with no row is at the defaults. ``push_devices`` is which player each
 phone is pushed to as, one row per phone, so a phone signing in as somebody
 else is found and moved — and the one place a phone's push token is kept,
 which the stream may not hold. ``notices`` is the recent list: one row per notice
-given, and how many of its kind the day gathered into it.
+given, and how many of its kind the day gathered into it. ``notices_opened`` is
+when each player last opened it, and the newest notice it held then — what the
+bell's number counts from.
 """
 
 from __future__ import annotations
@@ -61,6 +63,8 @@ class NoticeORM(Base):
     __table_args__ = (
         # The list's read: a player's, newest first.
         Index("ix_notices_player_id_given_at", "player_id", "given_at", "sequence_no"),
+        # The bell's number: a player's, since the last visit.
+        Index("ix_notices_player_id_sequence_no", "player_id", "sequence_no"),
     )
 
     notice_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
@@ -81,7 +85,24 @@ class NoticeORM(Base):
     #: is what moves it up the list.
     given_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     #: Its event's place in the whole store — what orders two notices given at
-    #: one instant, which a fill's or a leaving's often are.
+    #: one instant, which a fill's or a leaving's often are, and what says
+    #: whether it reached the list since the player last opened it.
     sequence_no: Mapped[int] = mapped_column(BigInteger, nullable=False)
     #: How many notices of its kind the day gathered into it.
     gathered: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    #: Of the player's own act: born seen, never counted on the bell.
+    own: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class NoticesOpenedORM(Base):
+    """When a player last opened their recent notices, as their bell's stream
+    leaves it."""
+
+    __tablename__ = "notices_opened"
+
+    player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: The newest place in the store among the player's notices the list held
+    #: when it was opened — ``-1`` for none. A notice whose own place is past
+    #: it reached the list since: given, or gathered into and moved up.
+    seen_through: Mapped[int] = mapped_column(BigInteger, nullable=False)

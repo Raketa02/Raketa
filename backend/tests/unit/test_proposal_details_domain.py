@@ -204,7 +204,7 @@ def test_a_filled_game_is_filled():
     pick = a_pick((ME, A, B, C))
     for player in (ME, A, B, C):
         pick.say_yes(player, at=NOW)
-    pick.fill(first_side=(ME, A), second_side=(B, C), at=NOW)
+    pick.fill(first_side=(ME, A), second_side=(B, C), by=C, at=NOW)
 
     assert status_of_proposal(pick, now=NOW) is ProposalStatus.FILLED
 

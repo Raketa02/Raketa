@@ -346,6 +346,7 @@ from app.modules.notifications.application.pushing import NoticePushes, PushTheN
 from app.modules.notifications.application.reading import NoticeWords
 from app.modules.notifications.application.telling import GiveNotice, TellThePlayers
 from app.modules.notifications.domain.ports import (
+    BellRepository,
     Decks,
     GameBriefs,
     Names,
@@ -357,6 +358,7 @@ from app.modules.notifications.domain.ports import (
     SeatOffers,
 )
 from app.modules.notifications.infrastructure.event_sourced_notification_repositories import (  # noqa: E501
+    EventSourcedBellRepository,
     EventSourcedNoticeDayRepository,
     EventSourcedNotificationPreferencesRepository,
     SqlAlchemyNoticeDirectory,
@@ -3934,6 +3936,18 @@ def build_notice_day_repository(
     """One stream per player per day in Kraków — what they were told — and the
     recent list written beside it."""
     return EventSourcedNoticeDayRepository(
+        session=session,
+        event_store=build_domain_event_store(session, runtime=runtime),
+        events=build_event_publisher(session, runtime=runtime),
+    )
+
+
+def build_bell_repository(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> BellRepository:
+    """One stream per player — when they last opened their recent notices —
+    and the last visit written beside it."""
+    return EventSourcedBellRepository(
         session=session,
         event_store=build_domain_event_store(session, runtime=runtime),
         events=build_event_publisher(session, runtime=runtime),

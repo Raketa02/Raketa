@@ -8,9 +8,10 @@ Three places a person is told something, read in one press:
   ``GET /api/v1/players/me/notices`` answers them.
 - **The push each notice was given as** — ``NoticePushes``, the pusher's own,
   drawn from the notice's facts as the list is: what a phone registered when it
-  was given was pushed, and, with none, what would have been. ``phones`` counts
-  the phones registered now. No seed account has one, and the player app
-  registers none until push is switched on.
+  was given was pushed, and, with none, what would have been — nothing for a
+  notice of the player's own act (#621). ``phones`` counts the phones
+  registered now. No seed account has one, and the player app registers none
+  until push is switched on.
 - **Their emails**, from the outgoing mail queue: what was queued for their
   address, whether it went, and a link to it in the dev stack's mail catcher
   (``MAIL_CATCHER_URL``) — searched by the Message-ID the mail worker sends it
@@ -80,14 +81,15 @@ class SentNotice(BaseModel):
             "row, `gathered` included."
         ),
     )
-    pushed: SentPush = Field(
+    pushed: SentPush | None = Field(
         ...,
         description=(
             "What it is pushed as — to each phone registered when it was "
             "given, and with none, what would have been: its words as given, "
             "before the day gathered anything into it, which pushes nobody. "
             "Drawn from its facts again now, as `listed` is, so a name changed "
-            "since reads as it stands."
+            "since reads as it stands. `null` for a notice of their own act "
+            "(`listed.your_own`), which is pushed to nobody."
         ),
     )
 
@@ -166,7 +168,7 @@ async def read_sent(
     pushes: NoticePushesDep,
     preferences: NotificationPreferencesRepositoryDep,
 ) -> SentResponse:
-    recent = await notices.execute(account.id, limit=MOST_RECENT)
+    recent = (await notices.execute(account.id, limit=MOST_RECENT)).notices
     pushed = await pushes.of([listed.notice for listed in recent])
     phones = await preferences.tokens_of(account.id)
     address = account.email.value
@@ -191,7 +193,9 @@ async def read_sent(
         notices=[
             SentNotice(
                 listed=NoticeSchema.from_recent(listed),
-                pushed=SentPush(title=push.title, body=push.body, data=dict(push.data)),
+                pushed=None
+                if push is None
+                else SentPush(title=push.title, body=push.body, data=dict(push.data)),
             )
             for listed, push in zip(recent, pushed, strict=True)
         ],

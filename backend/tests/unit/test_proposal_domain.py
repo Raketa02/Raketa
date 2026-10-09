@@ -41,6 +41,7 @@ from app.modules.proposals.domain.events import (
     CourtHourLost,
     NoSaid,
     ProposalExpired,
+    ProposalFilled,
     ProposalMade,
     ProposalWithdrawn,
     Redealt,
@@ -570,9 +571,31 @@ def test_a_turned_down_game_owes_its_people_a_new_card_once():
 
 def a_booked_game() -> Proposal:
     proposal = a_full_game()
-    proposal.fill(first_side=(B, C), second_side=(D, E), at=LATER)
+    proposal.fill(first_side=(B, C), second_side=(D, E), by=E, at=LATER)
     proposal.pull_events()
     return proposal
+
+
+def test_a_booked_game_remembers_whose_own_yes_filled_it():
+    """The filler is never told back what their yes did (the mechanics Q102):
+    the fill records who it was — and nobody, when no player's act filled it,
+    as the club's yes does."""
+
+    proposal = a_pick()
+    proposal.deal((B, C, D, E), at=MADE_AT)
+    for player in (B, C, D, E):
+        proposal.say_yes(player, at=LATER)
+    proposal.fill(first_side=(B, C), second_side=(D, E), by=E, at=LATER)
+
+    *history, filled = proposal.pull_events()
+    assert isinstance(filled, ProposalFilled)
+    assert (filled.filled_by, proposal.filled_by) == (E, E)
+    assert Proposal.from_history([*history, filled]).filled_by == E
+
+    by_the_club = a_full_game()
+    by_the_club.fill(first_side=(B, C), second_side=(D, E), by=None, at=LATER)
+    assert by_the_club.filled_by is None
+    assert a_full_game().filled_by is None
 
 
 def test_a_game_its_club_cancelled_owes_the_people_still_in_a_new_card_once():
