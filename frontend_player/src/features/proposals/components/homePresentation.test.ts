@@ -366,7 +366,7 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
     money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF, backIfYouLeaveGrosze: 2855 },
   };
 
-  it('says the status, new, the sport, where, when, the money and the chat — commas for the dots', () => {
+  it('says the status, new, the sport, where, when and the money — commas for the dots', () => {
     expect(
       homeCardLabel({
         game,
@@ -378,10 +378,9 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
           paid: true,
           backIfYouLeave: BACK_BY_THE_CUT_OFF,
         },
-        chat: true,
       }),
     ).toBe(
-      'Booked, new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł, 28,55 zł back if you leave by Fri 16:00. Chat open.',
+      'Booked, new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł, 28,55 zł back if you leave by Fri 16:00.',
     );
   });
 
@@ -392,7 +391,6 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
         fresh: false,
         day: undefined,
         money: undefined,
-        chat: false,
       }),
     ).toBe('Counted. Padel. Bonarka Arena, Court 2. 16:00 until 17:00.');
   });
@@ -408,7 +406,6 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
         fresh: false,
         day: { kind: 'weekday', weekday: 6 },
         money: { kind: 'waiting', club: 'Kazimierz Padel', answerBy: ELEVEN_TODAY },
-        chat: false,
       }),
     ).toBe(
       'Waiting for the club. Padel. Kazimierz Padel. Saturday, 16:00 until 17:00. Kazimierz Padel answers by 11:00, Nobody pays until it confirms.',

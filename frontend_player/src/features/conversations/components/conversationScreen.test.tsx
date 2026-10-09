@@ -177,7 +177,7 @@ afterEach(async () => {
   await forgetPhonePreferences();
 });
 
-/** Where the booked game's room is — pushed over its details, the only way in. */
+/** Where the booked game's room is — pushed over its details, or over Home from its card (Q100). */
 const CHAT_ROUTE = `/booking/${BOOKING}/chat`;
 
 /**

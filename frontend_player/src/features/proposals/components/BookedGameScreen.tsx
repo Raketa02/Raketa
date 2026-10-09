@@ -41,12 +41,14 @@
  *   Leave. Taking the seat leaves this screen for the group under *It's a game!*; a seat that has
  *   gone meanwhile says so in one sentence (`offer`).
  *
- * ## The chat is reached from here, and only from here
+ * ## The chat is reached from here — and from Home's bubble
  *
  * **Chat** in the top bar opens the game's room (the mechanics §14.3) — found by the room join
  * keyed by the booking (`useBookingRoom`, #577), drawn while the join finds the room and the
  * status can have one (`chatIsOpen`) — the room's own life closes it as today, after the result as
- * well (§14.3). The room is pushed over this screen, so its back chevron returns here. **Chat · 2's
+ * well (§14.3). The room is pushed over this screen, so its back chevron returns here. The bubble
+ * on the game's Home card is the room's other door (Q100, #619): it pushes the room straight over
+ * Home, with no details under it, so Back from there is Home. **Chat · 2's
  * count, and its volt lit only when something is unread, are owed**: no read carries an unread
  * count, so the door is drawn volt, as the mock draws it, with no number (Part 16).
  *

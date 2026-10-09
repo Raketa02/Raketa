@@ -10,25 +10,25 @@
  * │ ▎DAY    Saturday  3 Oct                   │
  * │ ▎TIME   16:00  until 17:00                │
  * │ Paid · 30 zł · 28,55 zł back if you leave…│   the money line — none on a result state
- * │ [ Open game                        ]  ◯   │   the door, and the chat's bubble
+ * │ [ Open game                        ] [◯]  │   the two doors: the details, and the chat
  * └───────────────────────────────────────────┘
  * ```
  *
  * The Classic card's shell (`plans`' `GameCard`, 7.7's paging geometry, the footer on `marginTop:
  * auto`) with a booking's content, so one rail draws one language: **the body is one element with no
- * action** — its name the status, *new*, the sport, the facts, the money and whether the chat is open
- * (`homeCardLabel`) — and *Open game* is the one door, to the game's details (A4.1).
+ * action** — its name the status, *new*, the sport, the facts and the money (`homeCardLabel`) — and
+ * the footer holds the card's two doors: *Open game*, to the game's details (A4.1), and the bubble.
  *
- * ## The bubble says the chat is open, and is not a door
+ * ## The bubble is a door into the room
  *
- * A Home card has no chat door (A8; the mechanics §14.3: the chat is reached *only from the game
- * details*), and #556 asks for the bubble all the same — so it is drawn as what it can honestly be:
- * a mark that this game's room is open, not pressable and silent, its words in the body's name. It
- * is drawn where the room join finds a room and the status still has one (`chatIsOpen`). **Lit volt
- * when something is unread is owed**: the wire carries no unread count.
+ * **Q100** (#619) made the bubble what Classic play's was: a 6.14 icon door (`ChatDoor`), spoken
+ * *Open the chat* as the details' *Chat* is, that opens the game's room straight over Home — so
+ * Back from that room is Home, and Back from a room opened from the details is the details. It is
+ * drawn exactly where the room join finds a room and the status still has one (`chatIsOpen`), so
+ * never on *Waiting for the club* or *Called off*. **Its count, and lit volt when something is
+ * unread, are owed** with the details' *Chat · n* (F-HOME-21.1): the wire carries no unread count.
  */
 
-import Feather from '@expo/vector-icons/Feather';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { DarkCard, Button, theme } from '@/shared/ui';
@@ -38,6 +38,7 @@ import { moneyLineOf, type HomeGame } from '../domain/home';
 import { gameDayOf } from '../domain/when';
 
 import { CardTag } from './CardTag';
+import { ChatDoor } from './ChatDoor';
 import { clubName, detailsDay, timeWords } from './deckPresentation';
 import { GameFacts, type FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
@@ -60,14 +61,17 @@ export interface HomeGameCardProps {
   readonly now: number;
   /** Marked *new*: filled since the player last looked, and never opened. */
   readonly fresh: boolean;
-  /** The game's room is open — the bubble. */
-  readonly chat: boolean;
+  /**
+   * **The bubble's door** — the game's room is open, and this opens it over Home; nothing, and no
+   * bubble, while there is no room to open.
+   */
+  readonly onChat: (() => void) | undefined;
   /** The rail's card width — 7.7's paging geometry, handed down as the Classic card's is. */
   readonly width: number;
   readonly onOpen: () => void;
 }
 
-export function HomeGameCard({ game, now, fresh, chat, width, onOpen }: HomeGameCardProps) {
+export function HomeGameCard({ game, now, fresh, onChat, width, onOpen }: HomeGameCardProps) {
   const ink = STATUS_INK[game.status];
   const line = moneyLineOf(game, now);
 
@@ -89,13 +93,7 @@ export function HomeGameCard({ game, now, fresh, chat, width, onOpen }: HomeGame
     <DarkCard style={[s.card, { width }]}>
       <View
         accessible
-        accessibilityLabel={homeCardLabel({
-          game,
-          fresh,
-          day,
-          money: line,
-          chat,
-        })}
+        accessibilityLabel={homeCardLabel({ game, fresh, day, money: line })}
         style={s.body}
         testID={`home-game-${game.bookingId}`}
       >
@@ -125,17 +123,9 @@ export function HomeGameCard({ game, now, fresh, chat, width, onOpen }: HomeGame
           onPress={onOpen}
           style={s.door}
         />
-        {chat ? (
-          <View style={s.bubble} testID="home-game-chat">
-            <Feather
-              name="message-circle"
-              size={theme.size.tabIcon}
-              color={theme.color.onDarkTiny}
-              accessibilityElementsHidden
-              importantForAccessibility="no"
-            />
-          </View>
-        ) : null}
+        {onChat === undefined ? null : (
+          <ChatDoor onPress={onChat} testID={`home-game-chat-${game.bookingId}`} />
+        )}
       </View>
     </DarkCard>
   );
@@ -159,6 +149,4 @@ const s = StyleSheet.create({
   // 7.7: the footer takes `marginTop: auto`, so footers align across cards of differing height.
   footer: { flexDirection: 'row', alignItems: 'center', gap: theme.space.sm, marginTop: 'auto' },
   door: { flex: 1 },
-  // The bubble's box is the Classic card's door's width, so the two rails' footers line up.
-  bubble: { minWidth: theme.size.minTouch, alignItems: 'center', justifyContent: 'center' },
 });

@@ -45,8 +45,6 @@ export const HOME_GAME_COPY = {
   new: 'New',
   newSpoken: 'new',
   openGame: 'Open game',
-  /** The card's bubble, spoken — it says the chat is open, and is not a door (A8). */
-  chatOpenSpoken: 'Chat open',
   /** The money line's words (§14.1). */
   money: {
     paid: 'Paid',

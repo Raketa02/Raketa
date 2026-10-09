@@ -184,3 +184,9 @@ only the wire fixtures spell it. `homeAndBookedGame.test.tsx` proves the join by
 with their booking about the game: one filed under the booking and naming no game opens from Home's
 card and the details, and one filed under another booking but naming this game draws no bubble and
 no _Chat_.
+
+**A booked game's room has a second door** ([#619](https://github.com/Raketa02/Raketa/issues/619);
+the mechanics Q100). The bubble on the game's Home card opens the same route as the details'
+_Open the chat_, pushed straight over Home, so Back from the room is whichever screen opened it. The
+screen is unchanged — it never had a way into the details and still has none; the door is
+`proposals`' (`ChatDoor`), named by `OPEN_THE_CHAT` like the details' one.

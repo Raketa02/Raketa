@@ -56,7 +56,10 @@ export function bookedGameRoute(bookingId: string) {
   return { pathname: '/booking/[bookingId]', params: { bookingId } } as const;
 }
 
-/** The game's chat, over its details — *back* is the details (A4.4). */
+/**
+ * **The game's chat** — over its details (A4.4), or straight over Home from the card's bubble
+ * (Q100): *back* is whichever screen opened it.
+ */
 export function bookedChatRoute(bookingId: string) {
   return { pathname: '/booking/[bookingId]/chat', params: { bookingId } } as const;
 }

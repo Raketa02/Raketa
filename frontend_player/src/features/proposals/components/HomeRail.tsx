@@ -26,7 +26,9 @@
  *
  * The read's clock, whether it is *new*, and whether its room is open, from one join over the rooms
  * by booking (`useBookingRooms`) — and reads nothing itself. *Open game* pushes the details over
- * Home, so *back* is Home.
+ * Home, so *back* is Home; **the bubble pushes the room over Home** (Q100), with no details under
+ * it, so *back* from the room is Home too — and marks the game opened, as the details do, so its
+ * *New* goes.
  *
  * ## What it draws when it holds nothing, and when the read failed
  *
@@ -56,7 +58,7 @@ import { useHome, useOpenedGames, useReadClock } from '../hooks/useHome';
 
 import { HomeGameCard } from './HomeGameCard';
 import { gamesHeading } from './homePresentation';
-import { bookedGameRoute } from './proposalRoutes';
+import { bookedChatRoute, bookedGameRoute } from './proposalRoutes';
 
 export interface HomeRailProps {
   /**
@@ -71,7 +73,7 @@ export interface HomeRailProps {
 export function HomeRail({ empty }: HomeRailProps) {
   const home = useHome();
   const rooms = useBookingRooms();
-  const { opened } = useOpenedGames();
+  const { opened, open } = useOpenedGames();
   const { width: screen } = useWindowDimensions();
 
   /** Which card is on screen. Route-local, and the dots' only input. */
@@ -129,7 +131,14 @@ export function HomeRail({ empty }: HomeRailProps) {
                 game={game}
                 now={now}
                 fresh={isNew(game, opened)}
-                chat={chatIsOpen(game.status) && rooms.has(game.bookingId)}
+                onChat={
+                  chatIsOpen(game.status) && rooms.has(game.bookingId)
+                    ? () => {
+                        open(game.bookingId);
+                        router.push(bookedChatRoute(game.bookingId));
+                      }
+                    : undefined
+                }
                 width={cardWidth}
                 onOpen={() => router.push(bookedGameRoute(game.bookingId))}
               />

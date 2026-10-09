@@ -325,15 +325,14 @@ export function shortCodeSpoken(code: string): string {
 
 /**
  * **A Home card, spoken** — one element with no action, as the Classic card's body is: *Booked,
- * new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł. Chat open.* *Open
- * game* is an element of its own, so its verb is not here.
+ * new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł.* *Open game* and
+ * the bubble's *Open the chat* are elements of their own (Q100), so neither verb is here.
  */
 export function homeCardLabel({
   game,
   fresh,
   day,
   money,
-  chat,
 }: {
   readonly game: Pick<HomeGame, 'status' | 'sport' | 'kind' | 'club' | 'courtName' | 'startsAt'>;
   /** Marked *new*. */
@@ -342,8 +341,6 @@ export function homeCardLabel({
   readonly day: GameDay | undefined;
   /** The money line, or nothing. */
   readonly money: MoneyLine | undefined;
-  /** The game's chat is open. */
-  readonly chat: boolean;
 }): string {
   const time = timeWords(game.startsAt);
   const where =
@@ -358,7 +355,6 @@ export function homeCardLabel({
       SPOKEN_JOIN,
     ),
     ...(money === undefined ? [] : [moneySpoken(money)]),
-    ...(chat ? [COPY.chatOpenSpoken] : []),
   ]
     .map((sentence) => `${sentence}.`)
     .join(' ');

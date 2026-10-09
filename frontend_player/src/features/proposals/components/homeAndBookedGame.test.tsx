@@ -4,10 +4,10 @@
  * the screens A4.1, A4.4, A8; the mechanics §11.4, §14).
  *
  * The acceptance criteria are assertions here: a Home card says its status and its money line, is
- * *new* until opened, carries *Open game* and the chat's bubble — which is not a door; the details
- * draw the top bar, the game card with *paid* tiles and the court facts, the Game's forecast and the
- * code to show at the desk on the day; and the chat is reached from the details only, without the
- * plan card or a *Details* button, its back chevron returning to the details.
+ * *new* until opened, carries *Open game* and the chat's bubble — a door straight into the room,
+ * whose Back is Home (Q100, #619); the details draw the top bar, the game card with *paid* tiles
+ * and the court facts, the Game's forecast and the code to show at the desk on the day; and the
+ * chat opened from the details, without the plan card or a *Details* button, goes back to them.
  *
  * The rules are `domain/home.test.ts`'s and the words `homePresentation.test.ts`'s; what is asserted
  * here is that the screens are wired to both.
@@ -105,6 +105,8 @@ const card = () => screen.findByTestId(`home-game-${BOOKING}`);
 const OLD_LOOP_GAME = '3f2b8c1e-0000-4000-8000-0000000000f1';
 /** A second booking, still waiting for its club. */
 const SECOND_BOOKING = '3f2b8c1e-0000-4000-8000-0000000000b2';
+/** A room filed under the second booking. */
+const SECOND_ROOM = '3f2b8c1e-0000-4000-8000-0000000000c2';
 
 const HOUR = 60 * 60 * 1000;
 
@@ -252,7 +254,6 @@ describe('Home — a booked game’s card (A8)', () => {
     const drawn = await card();
     expect(within(drawn).getByText('Bonarka Arena')).toBeTruthy();
     expect(within(drawn).queryByText(/Court/)).toBeNull();
-    expect(within(drawn).queryByTestId('home-game-chat')).toBeNull();
   });
 
   it('says when the club answers, and drops it once that has passed (Q98)', async () => {
@@ -302,15 +303,62 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(within(await card()).queryByText(HOME.new)).toBeNull();
   });
 
-  it('carries the bubble while the game’s chat is open — and the bubble is not a door', async () => {
+  /**
+   * **The bubble is a door** (Q100; the design system's 6.14): it opens the game's room straight
+   * over Home, with no details pushed under it, so Back is Home — and the room is where the
+   * details' *Chat* leads, so Home stays the lit column while it is open (`shellTabs`).
+   */
+  it('opens the chat straight over Home from the bubble, and Back lands on Home (Q100)', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    stubBooking(transport, bookingDetails());
+    stubConversations(transport, [bookedRoomRow()]);
+    stubConversation(transport, bookedRoom());
+    stubEntries(transport, BOOKED_ROOM);
+    await launchSignedIn();
+
+    await card();
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
+    expect(await screen.findByTestId('conversation-stream')).toBeTruthy();
+    expect(screen.getByText('Padel · booked')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: DETAILS.back }));
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    expect(await card()).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Home', selected: true })).toBeTruthy();
+  });
+
+  it('clears New once the chat is opened from the bubble, as opening the details does', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    stubBooking(transport, bookingDetails());
+    stubConversations(transport, [bookedRoomRow()]);
+    stubConversation(transport, bookedRoom());
+    stubEntries(transport, BOOKED_ROOM);
+    await launchSignedIn();
+
+    expect(within(await card()).getByText(HOME.new)).toBeTruthy();
+    fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
+    fireEvent.press(await screen.findByRole('button', { name: DETAILS.back }));
+
+    await waitFor(() => expect(screen).toHavePathname('/'));
+    await waitFor(() =>
+      expect(within(screen.getByTestId(`home-game-${BOOKING}`)).queryByText(HOME.new)).toBeNull(),
+    );
+  });
+
+  it('is its own button, named as the details’ Chat — the card’s name no longer says it', async () => {
     stubHomeGames(transport, [homeGame()]);
     stubConversations(transport, [bookedRoomRow()]);
     await launchSignedIn();
 
     await card();
-    expect(await screen.findByTestId('home-game-chat')).toBeTruthy();
-    expect(screen.getByLabelText(/Chat open\.$/)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
+    expect(await screen.findByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
+    expect(
+      screen.getByLabelText(/^Booked, new\. Padel\. .* back if you leave by Fri 16:00\.$/),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText(/Chat open/)).toBeNull();
   });
 
   it('has no bubble with no room', async () => {
@@ -318,7 +366,7 @@ describe('Home — a booked game’s card (A8)', () => {
     await launchSignedIn();
 
     await card();
-    expect(screen.queryByTestId('home-game-chat')).toBeNull();
+    expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
   });
 
   it('keeps the bubble past the result while the room lives (§14.3: it closes as today)', async () => {
@@ -327,16 +375,24 @@ describe('Home — a booked game’s card (A8)', () => {
     await launchSignedIn();
 
     await card();
-    expect(await screen.findByTestId('home-game-chat')).toBeTruthy();
+    expect(await screen.findByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
   });
 
-  it('has no bubble on a called-off game, whatever the list still holds', async () => {
-    stubHomeGames(transport, [homeGame({ status: 'CALLED_OFF' })]);
-    stubConversations(transport, [bookedRoomRow()]);
+  it.each<[string, Partial<Wire['HomeGameSchema']>]>([
+    ['waiting for the club', waitingForKazimierz],
+    ['called off', { status: 'CALLED_OFF', called_off_reason: 'SHORT_AT_THE_CUT_OFF' }],
+  ])('has no bubble on a game %s, whatever the list still holds', async (_, extra) => {
+    stubHomeGames(transport, [homeGame(), homeGame({ booking_id: SECOND_BOOKING, ...extra })]);
+    stubConversations(transport, [
+      bookedRoomRow(),
+      { ...bookedRoomRow(), conversation_id: SECOND_ROOM, booking_id: SECOND_BOOKING },
+    ]);
     await launchSignedIn();
 
-    await card();
-    expect(screen.queryByTestId('home-game-chat')).toBeNull();
+    // The booked card's door says the list has answered; the other card still draws none.
+    expect(await screen.findByTestId(`home-game-chat-${BOOKING}`)).toBeTruthy();
+    expect(screen.queryByTestId(`home-game-chat-${SECOND_BOOKING}`)).toBeNull();
+    expect(screen.getAllByRole('button', { name: OPEN_THE_CHAT })).toHaveLength(1);
   });
 
   /**
@@ -666,7 +722,7 @@ describe('a booked game’s details (A4.1)', () => {
 // The chat
 // ---------------------------------------------------------------------------
 
-describe('the chat — reached from the details only (A4.4)', () => {
+describe('the chat — from the details (A4.4)', () => {
   it('opens the room without the plan card or a Details button, and back is the details', async () => {
     stubConversation(transport, bookedRoom());
     stubEntries(transport, BOOKED_ROOM);
@@ -750,9 +806,9 @@ describe('the chat — found by its booking', () => {
     await launchSignedIn();
 
     await card();
-    expect(await screen.findByTestId('home-game-chat')).toBeTruthy();
-    expect(screen.getByLabelText(/Chat open\.$/)).toBeTruthy();
+    expect(await screen.findByTestId(`home-game-chat-${BOOKING}`)).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: HOME.openGame }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
     fireEvent.press(await screen.findByRole('button', { name: OPEN_THE_CHAT }));
 
     await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}/chat`));
@@ -771,7 +827,6 @@ describe('the chat — found by its booking', () => {
     expect(screen.queryByRole('button', { name: OPEN_THE_CHAT })).toBeNull();
     act(() => router.back());
     await card();
-    expect(screen.queryByTestId('home-game-chat')).toBeNull();
-    expect(screen.queryByLabelText(/Chat open\.$/)).toBeNull();
+    expect(screen.queryByTestId(`home-game-chat-${BOOKING}`)).toBeNull();
   });
 });

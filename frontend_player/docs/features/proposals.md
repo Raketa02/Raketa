@@ -260,7 +260,8 @@ day (`CheckInCard`: the QR drawn by `qrPath.ts` over `qrcode`'s core as one path
 spoken a character at a time). The filling details and the booked ones share `GameFacts` and
 `OthersFaces`.
 
-**The chat is reached from the details and nowhere else** (A4.4, §14.3). _Chat_ is drawn while the
+**The chat is reached from the details** (A4.4, §14.3) — and, since #619, from the Home card's
+bubble too (Q100, below). _Chat_ is drawn while the
 join keyed by the booking finds the room (`conversations`' `useBookingRoom`, by the booking the room
 is filed under since [#577](https://github.com/Raketa02/Raketa/issues/577)) and the status can have
 one (`chatIsOpen`: not while the club decides, not once called off). **The room's own life decides
@@ -277,7 +278,7 @@ terminal sentence.
 
 - **The Home card's bubble is a mark, not a door.** The ticket asks for _the chat bubble_; A8 and
   §14.3 say a Home card has no chat door. It says the game's chat is open, silent, its words in the
-  card's spoken name.
+  card's spoken name. **Ruled otherwise by Q100** (2026-10-09): the bubble is a door — #619, below.
 - **_Chat · n_ has no number, and is always volt.** No read carries an unread count; the number and
   the lit-when-unread state are owed to the backend.
 - **_New until opened_ is the phone's memory** — a fourth value in `shared/lib/preferences`, which
@@ -286,8 +287,8 @@ terminal sentence.
   _new_ held for the session only, or a server-side _seen_. A reinstall, a second phone or a
   sign-out shows every live game as new once.
 - **_Chat_ follows the room's life, not the result** (§14.3 _closes as today_), where A4.1 says
-  _while the game isn't over_ — the details are the only way in, so a door that went at the result
-  would leave a room nobody can reach.
+  _while the game isn't over_ — the details were then the only way in, so a door that went at the
+  result would leave a room nobody can reach. Home's bubble (#619) follows the same life.
 - **The title names the others whole** (_Piotr Sowa, Inés Díaz, Bartek Lis_), where details 7 draws
   first names: ADR-0171 — a name is said whole, never a first name derived from it — as the filling
   details already do.
@@ -671,3 +672,21 @@ The wire's `free_to_leave_until` kept its name (#617 is additive), and so did th
 _free_ any more. The Games deck's _no free cancellation_, the line under _Leave the game_ and the
 leave sheet are unchanged. **Owed by a root session**: the root `CONTEXT.md`'s **Cut-off** still says
 _Leaving before it is free_.
+
+**The bubble opens the chat** ([#619](https://github.com/Raketa02/Raketa/issues/619); the mechanics
+Q100; story S-01A's F-HOME-15.1). Marta, on the tram, taps the bubble on her Thursday card, writes
+_10 min late_, presses Back and is on Home again. **Why**: the chat was two taps deep — _Open game_,
+then _Chat_ — for the one thing a player does with a game on its day, and the bubble already sat on
+the card looking like a door. The bubble is `ChatDoor`, the design system's 6.14 icon door: 44 pt
+wide and the wide door's height, `on-dark`'s fill with its pressed shade, spoken _Open the chat_
+(`OPEN_THE_CHAT`, the details' _Chat_'s name) with the glyph hidden. It pushes `/booking/[id]/chat`
+straight over Home with no details under it, so **Back returns to whichever screen opened the
+chat**: Home from the bubble, the details from _Chat_. The route and the screen are the same, so the
+bar stands down and the Home column stays lit as before (`shellTabs`). It is drawn exactly where
+the card drew the mark — the join finds the room and `chatIsOpen` allows one — so never on _Waiting
+for the club_ or _Called off_. **Opening the chat from the bubble clears _New_**: the rail marks the
+game opened (`useOpenedGames`' `open`) as it pushes, as drawing the details does. The card's spoken
+name no longer says _Chat open_ — the door says its own name. **No count and no lit state yet**:
+both come with the unread count owed to the details' _Chat · n_ (F-HOME-21.1), and the bubble then
+shows the same number. **Not seen on a device**: the door's pressed shade and its row with _Open
+game_ want a look.

@@ -517,8 +517,7 @@ one of them several features now read — `shared/date/`. The room is a booked g
 the booking and reached from the game's details, with no plan card, quick chips or details door
 in it since the old loop left ([#576](https://github.com/Raketa02/Raketa/issues/576)). The spec's
 Q100 (2026-10-09) makes the bubble on the game's Home card a second door: it opens the room
-straight over Home, and Back returns to whichever screen opened it. [#619](https://github.com/Raketa02/Raketa/issues/619)
-builds it; until then the bubble is only a mark and the details are the one way in. The
+straight over Home, and Back returns to whichever screen opened it ([#619](https://github.com/Raketa02/Raketa/issues/619)). The
 domain terms — Conversation, Message, System line, Member — are the **root glossary's** and are
 not restated here; what follows is only what this client had to invent to draw the room
 ([#364](https://github.com/Raketa02/Raketa/issues/364)) and to keep it current
@@ -544,8 +543,8 @@ not restated here; what follows is only what this client had to invent to draw t
   different platform days. A room lives at most a few days, so the fact worth having is _was this
   today_. _Avoid_: "timestamp".
 - **The chat door** — the way into a booked game's room: from its details, drawn as _Open the
-  chat_ (`OPEN_THE_CHAT`, in `features/conversations` so every door says the same words), and,
-  once #619 builds Q100, the bubble on its Home card, named the same. It is
+  chat_ (`OPEN_THE_CHAT`, in `features/conversations` so every door says the same words), and
+  the bubble on its Home card (Q100), named the same. It is
   a **client join over `GET /conversations`** by the row's `booking_id` (`useBookingRoom`, and
   `useBookingRooms` for Home's cards) and it **fails soft**: no read serves a booking its
   conversation, so the surface finds the row whose booking matches and draws nothing when there
