@@ -624,11 +624,18 @@ on, Needs a player** and **Held** are gone: the booking *is* the plan.
 
 | Status | When | Money line |
 | --- | --- | --- |
-| **Waiting for the club** | An On request club has not confirmed yet | *Nobody pays until Bonarka confirms* |
+| **Waiting for the club** | An On request club has not confirmed yet | Before the club's time to confirm runs out: *Bonarka answers by 20:45 · Nobody pays until it confirms*. After: *Nobody pays until Bonarka confirms* |
 | **Booked** | Full and booked | Before the cut-off: *Paid · 30 zł · free to leave until Sat 17:00*. After: *Paid · 30 zł* |
 | **Seat open** | Someone left | Before the cut-off: *1 seat open · fills by Sat 17:00 or the game is off and everyone is refunded*. After: *1 seat open · offered to others · the game goes ahead* |
 | **Needs result · Confirm the result · Counted · Uncounted · Never played** | Unchanged from today | — |
 | **Called off** | A seat was empty at the cut-off, the club cancelled, the club refused a request or didn't answer it, or a player left while it waited for the club | The reason, and *refunded 30 zł* or *nobody paid* |
+
+*Answers by* names the end of the club's **time to confirm** after the game filled
+([§11](#11-the-moment-a-game-fills)): the time its desk is given, in the request email's *Answer
+by …* and the countdown on its Bookings page ([§16.8](#168-answering-a-request-on-request)), so
+the players can tell five minutes from an hour (Q98). Once that time has passed the clause leaves
+the line, as *free to leave until …* leaves at the cut-off, until the game reads *Called off · no
+answer*. It moves no money.
 
 A game that **starts with a seat still open** (someone left after the cut-off and nobody took
 it) cannot take a result. It ends **Uncounted · a seat was empty**: no levels move, and nothing
@@ -653,7 +660,9 @@ The same screen serves two more readers (Q75, Q96):
 
 - **Before the game is booked** (tapping a card, its **i**, or a You're In row): the status row
   reads *Filling · 2 of 4 in* or *Waiting for the club*; WHERE names the club with no court
-  number; the money row reads *"30 zł if it fills · book by Sat 13:00"*; the overlap grid and one
+  number; the money row reads *"30 zł if it fills · book by Sat 13:00"* — while waiting for the
+  club, the share with *nobody pays until Bonarka confirms* and, until its time to confirm runs
+  out, *Bonarka answers by 20:45* ([§14.1](#141-home-and-the-statuses)); the overlap grid and one
   plain paragraph on what a yes means follow; the actions are **I'm in / Not this time**, or
   **Withdraw** if you are In — while waiting for the club, **Leave the game** with its sheet
   ([§13](#13-leaving-a-game)). No Chat.
@@ -1309,7 +1318,7 @@ Aug–Sep 2026).
 | 33 | The old loop is retired into the flag. → Q42 *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
 | 34 | Fill in has **You're In**, including your posts. |
 | 35 | The moment a game fills. |
-| 36 | The statuses. → updated by Q39/Q58 |
+| 36 | The statuses. → updated by Q39/Q58/Q98 |
 | 37 | The chat opens when the game fills. |
 | 38 | Fill in is the rescue board; games that are still filling stay in the deck; three card types. |
 | 39 | *Held/Booked* wording (Held later removed by Q54). |
@@ -1370,3 +1379,4 @@ Aug–Sep 2026).
 | 95 | The setup checklist sits on Overview until the club is live. |
 | 96 | The empty deck keeps today's cards plus Post a game; rescue details for non-members; public site unchanged; payment not in onboarding; the product owner runs to-spec and to-tickets. |
 | 97 | (2026-10-05, amends Q13) No live-yes cap: games per week and one game per hour already bound what a yes can book. The LIVE YESES list stays. |
+| 98 | (2026-10-09, amends Q36; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605), F-REQUEST-43.1) *Do the players see when the club must answer?* Yes: while their game waits for its club, the Home card and the details show the deadline the desk is given (*Bonarka answers by 20:45 · Nobody pays until it confirms*), and it disappears once the deadline passes. It moves no money. Evidence: the desk's email says *Answer by …* while the players read only *Waiting for the club*; Playmore's full game reads *Skład pełny · potwierdzimy o {time}*. |

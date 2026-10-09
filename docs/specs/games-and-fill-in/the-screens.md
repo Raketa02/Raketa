@@ -166,7 +166,10 @@ One screen (details 5–10, from Part 1), three readers.
 
 Same layout. Status *Filling · 2 of 4 in* (or *Waiting for the club*, amber); tiles with IN tags;
 WHERE shows the club and distance, no court number; the money row reads *30 zł if it fills · book
-by Sat 13:00*; the **overlap grid** follows the forecast; then one plain paragraph: *"Your yes
+by Sat 13:00* — while *waiting for the club*, *YOUR SHARE 30 zł* · *nobody pays until Bonarka
+Arena confirms*, with *Bonarka Arena answers by 20:45* beside it until that deadline passes
+([the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q98; its time is written as in
+[A8](#a8-home)); the **overlap grid** follows the forecast; then one plain paragraph: *"Your yes
 costs nothing until everybody is in. When the last yes lands, everyone's share is charged together
 and the court is booked."* Actions at the bottom: **I'm in** / **Not this time** if you haven't
 answered, **Withdraw** if you're In — while *waiting for the club*, **Leave the game** with its
@@ -331,6 +334,13 @@ The rail of game cards that was *Now*, renamed **Home**, showing the statuses of
 where the chat is reached — a Home card has no chat door
 ([the mechanics §14.3](the-mechanics.md#143-the-chat)). Games that filled since you last looked
 are marked *new*.
+
+A game **waiting for the club** says when the club must answer, the time its desk is given
+([the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q98): *Bonarka Arena answers
+by 20:45 · Nobody pays until it confirms*, and once that time has passed, *Nobody pays until
+Bonarka Arena confirms*. **The time is in Warsaw time, as every day and hour on Home is**: the hour
+alone when it falls today (*answers by 20:45*), else the weekday and the hour (*answers by Sun
+00:15*), in the form of *free to leave until Sun 17:00*.
 
 ## A9. Notifications delivery
 
