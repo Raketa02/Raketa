@@ -17,11 +17,13 @@ from app.modules.bookings.domain.events import (
     CardFixed,
     CardToFix,
     CourtMoved,
+    KeptSeatRanOut,
     NewBookingsSummarised,
     PaymentNotInTime,
     PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
+    SeatKept,
     SeatLeft,
     SeatRescued,
 )
@@ -45,6 +47,8 @@ _EVENTS = (
     (PaymentNotInTime, "bookings.payment_not_in_time"),
     (CardToFix, "bookings.card_to_fix"),
     (CardFixed, "bookings.card_fixed"),
+    (SeatKept, "bookings.seat_kept"),
+    (KeptSeatRanOut, "bookings.kept_seat_ran_out"),
 )
 
 
@@ -71,4 +75,6 @@ def subscribe_booking_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(PaymentNotInTime, LogBookingEvent())
     dispatcher.subscribe(CardToFix, LogBookingEvent())
     dispatcher.subscribe(CardFixed, LogBookingEvent())
+    dispatcher.subscribe(SeatKept, LogBookingEvent())
+    dispatcher.subscribe(KeptSeatRanOut, LogBookingEvent())
     dispatcher.subscribe(NewBookingsSummarised, LogNewBookingsSummary())

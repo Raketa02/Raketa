@@ -97,6 +97,10 @@ class NoticeGiven:
     less — *40 zł less the 1,76 zł kept on your payment* (#641) — so the notice
     says it whenever it is read; ``None`` everywhere else, and on the rows
     recorded before it was asked.
+
+    ``rescue`` is a notice about a seat the player went for on a booked game
+    and does not hold (#640) — *to take the seat*. Defaulted for the rows
+    recorded before it was asked.
     """
 
     notice_id: UUID
@@ -122,6 +126,7 @@ class NoticeGiven:
     until: datetime | None = None
     you_left: bool = False
     kept_grosze: int | None = None
+    rescue: bool = False
 
     def __post_init__(self) -> None:
         # JSON hands a list of strings back; the codec coerces a bare ``UUID``

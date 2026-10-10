@@ -19,6 +19,13 @@ on one payment holds the court too** (#626), until it comes or does not.
 record reads who ever held a seat — a mark is a leaver's — while every read of
 the game as it stands now reads only the seats still held. **A seat whose
 holding was refused is marked until when its card may be fixed** (#639).
+
+**``booking_keeps``** is one row per rescuer whose share was refused and a
+seat kept for them (#640) — not a seat of theirs, so never a ``booking_seats``
+row: the time-to-pay job reads the keeps run out by it, and a rescuer's *To
+confirm* rows theirs. Run out, the row stays, marked, while their refused
+payment is still theirs to confirm; it goes when they take a seat, and with the
+game.
 """
 
 from __future__ import annotations
@@ -27,7 +34,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy_utils.types.uuid import UUIDType
 
@@ -114,3 +121,25 @@ class BookingSeatORM(Base):
     card_to_fix_until: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+
+class BookingKeepORM(Base):
+    """A seat kept on one booked game for one rescuer whose share was refused,
+    and until when (#640)."""
+
+    __tablename__ = "booking_keeps"
+    __table_args__ = (
+        Index("ix_booking_keeps_player_id", "player_id"),
+        # The keeps run out — the time-to-pay job's read.
+        Index("ix_booking_keeps_until", "until"),
+    )
+
+    booking_id: Mapped[UUID] = mapped_column(
+        UUIDType(binary=False),
+        ForeignKey("bookings.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    player_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
+    until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    #: Its running out is recorded: out of the time-to-pay job's read.
+    ran_out: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

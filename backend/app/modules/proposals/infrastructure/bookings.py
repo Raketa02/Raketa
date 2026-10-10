@@ -6,7 +6,8 @@ an adapter **signed here**, so the arrow runs ``proposals → bookings`` only
 booking that opens its Game — over the Bookings context's own use cases;
 ``BookingsBookedGameChanges`` is what happens to a booked game after (#544,
 #545): a player leaving it, somebody taking the seat they left or saying no to
-it, and the cut-off calling off one still short.
+it, a seat kept for a rescuer whose share was refused (#640), and the cut-off
+calling off one still short.
 ``BookingsClubRequests`` is an On request club's (#543): the request a full game
 is put to the club as, the club's yes or no, and a seat opening while it waits.
 ``BookingsBookedGames`` answers *games per week* and *one game per hour* — the
@@ -48,7 +49,11 @@ from app.modules.bookings.application.leaving import (
     LeaveTheBooking,
     TimeToFixTheCard,
 )
-from app.modules.bookings.application.rescues import SayNoToTheSeat, RescueTheSeat
+from app.modules.bookings.application.rescues import (
+    KeepTheSeat,
+    RescueTheSeat,
+    SayNoToTheSeat,
+)
 from app.modules.bookings.application.requests import (
     BookTheRequest,
     CallOffForAPayment,
@@ -86,6 +91,7 @@ from app.modules.proposals.domain.home import (
     RefusedHolding,
     CheckIn,
     ClubCancelReason,
+    KeptSeat,
     OpenSeat,
 )
 from app.modules.proposals.domain.ports import (
@@ -153,6 +159,7 @@ class BookingsBookedGameChanges:
         say_no: SayNoToTheSeat,
         call_off: CallOffAtTheCutOff,
         fix: TimeToFixTheCard,
+        keep: KeepTheSeat,
         directory: BookingDirectory,
     ) -> None:
         self._leave = leave
@@ -160,6 +167,7 @@ class BookingsBookedGameChanges:
         self._say_no = say_no
         self._call_off = call_off
         self._fix = fix
+        self._keep = keep
         self._directory = directory
 
     async def leave(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
@@ -216,6 +224,37 @@ class BookingsBookedGameChanges:
 
     async def cards_to_fix_of(self, player_id: UUID) -> Sequence[UUID]:
         return await self._directory.cards_to_fix_of(player_id)
+
+    async def keep_the_seat(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        until: Instant,
+        refused: RefusedPayment,
+        time_to: TimeTo,
+        at: Instant,
+    ) -> None:
+        await self._keep.keep(
+            booking_id,
+            player_id,
+            until=until,
+            seat_charge_id=refused.seat_charge_id,
+            reason=refused.refusal.value,
+            to_fix_the_card=time_to is TimeTo.FIX_THE_CARD,
+            at=at,
+        )
+
+    async def kept_seat_ran_out(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> bool:
+        return await self._keep.ran_out(booking_id, player_id, at=at)
+
+    async def keeps_past(self, *, now: Instant) -> Sequence[UUID]:
+        return await self._directory.keeps_past(now=now)
+
+    async def kept_for(self, player_id: UUID) -> Sequence[UUID]:
+        return await self._directory.kept_for(player_id)
 
 
 @final
@@ -515,6 +554,16 @@ def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
             )
             for player, to_fix in booking.cards_to_fix.items()
         },
+        kept={
+            player: KeptSeat(
+                until=kept.until,
+                seat_charge_id=kept.seat_charge_id,
+                reason=ReopenReason(kept.reason),
+                time_to=TimeTo.FIX_THE_CARD if kept.to_fix_the_card else TimeTo.PAY,
+            )
+            for player, kept in booking.kept.items()
+        },
+        keeps_ran_out=booking.keeps_ran_out,
     )
 
 

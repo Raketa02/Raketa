@@ -13,7 +13,9 @@ or with a seat open (#544); and a player's games are every booking they have a
 seat on, whatever it came to — a request taken back because a seat opened is
 still the game of the people it left In (Q106), whose rows stay while the
 openers' go, and a leaver no longer has one. **A rescue is a seat row like any
-other** (#545): the game is the joiner's from the moment they take it.
+other** (#545): the game is the joiner's from the moment they take it — and a
+seat kept for a rescuer whose share was refused is a ``booking_keeps`` row,
+never a seat of theirs (#640).
 """
 
 from __future__ import annotations
@@ -44,15 +46,18 @@ from app.modules.bookings.domain.events import (
     CardFixed,
     CardToFix,
     CourtMoved,
+    KeptSeatRanOut,
     PaymentNotInTime,
     PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
+    SeatKept,
     SeatLeft,
     SeatRescued,
 )
 from app.modules.bookings.domain.ports import HeldCourtHour
 from app.modules.bookings.infrastructure.booking_models import (
+    BookingKeepORM,
     BookingORM,
     BookingSeatORM,
 )
@@ -208,16 +213,44 @@ class EventSourcedBookingRepository:
                     side=event.side,
                 )
             )
+            # A seat kept for them is the one they took (#640).
+            await self._unkeep(event.booking_id, event.player_id)
+        elif isinstance(event, SeatKept):
+            # Kept again, with the time they had: one row a rescuer.
+            await self._unkeep(event.booking_id, event.player_id)
+            self._session.add(
+                BookingKeepORM(
+                    booking_id=event.booking_id,
+                    player_id=event.player_id,
+                    until=event.until,
+                )
+            )
+        elif isinstance(event, KeptSeatRanOut):
+            # Their refused payment is still theirs to confirm while the seat
+            # is free: the row stays, out of the job's read.
+            await self._statement(
+                update(BookingKeepORM)
+                .where(
+                    BookingKeepORM.booking_id == event.booking_id,
+                    BookingKeepORM.player_id == event.player_id,
+                )
+                .values(ran_out=True)
+            )
         elif isinstance(event, NoSaidToTheSeat):
             # A no to a card is the booking's to fold; no read asks it of a row.
             pass
         elif isinstance(event, (CalledOffAtCutOff, CancelledByClub)):
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
-            # A game off has no card to fix (#639).
+            # A game off has no card to fix (#639), and no seat to keep (#640).
             await self._statement(
                 update(BookingSeatORM)
                 .where(BookingSeatORM.booking_id == event.booking_id)
                 .values(card_to_fix_until=None)
+            )
+            await self._statement(
+                delete(BookingKeepORM).where(
+                    BookingKeepORM.booking_id == event.booking_id
+                )
             )
         elif isinstance(event, CourtMoved):
             # The court hour's own index refuses a court another game holds.
@@ -278,6 +311,14 @@ class EventSourcedBookingRepository:
                     )
                 )
 
+    async def _unkeep(self, booking_id: UUID, player_id: UUID) -> None:
+        await self._statement(
+            delete(BookingKeepORM).where(
+                BookingKeepORM.booking_id == booking_id,
+                BookingKeepORM.player_id == player_id,
+            )
+        )
+
     async def _row(self, booking_id: UUID, **values: object) -> None:
         await self._statement(
             update(BookingORM).where(BookingORM.id == booking_id).values(**values)
@@ -336,6 +377,23 @@ class SqlAlchemyBookingDirectory:
                 BookingSeatORM.player_id == player_id,
                 BookingSeatORM.card_to_fix_until.is_not(None),
                 BookingSeatORM.left_at.is_(None),
+            )
+        )
+        return tuple(rows.all())
+
+    async def keeps_past(self, *, now: Instant) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingKeepORM.booking_id)
+            .where(BookingKeepORM.until <= now, BookingKeepORM.ran_out.is_(False))
+            .group_by(BookingKeepORM.booking_id)
+            .order_by(func.min(BookingKeepORM.until), BookingKeepORM.booking_id)
+        )
+        return tuple(rows.all())
+
+    async def kept_for(self, player_id: UUID) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingKeepORM.booking_id).where(
+                BookingKeepORM.player_id == player_id
             )
         )
         return tuple(rows.all())

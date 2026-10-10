@@ -101,6 +101,8 @@ class NoticeORM(Base):
     you_left: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     #: What was kept on the payment a refund gave back less (#641).
     kept_grosze: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    #: About a seat the player went for and does not hold — a rescue (#640).
+    rescue: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class NoticesOpenedORM(Base):

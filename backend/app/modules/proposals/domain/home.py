@@ -220,6 +220,19 @@ class RefusedHolding:
 
 @final
 @dataclass(frozen=True, slots=True)
+class KeptSeat:
+    """A seat kept for a rescuer whose share was refused (#640; Q113): until
+    when, the payment they confirm, why it was refused — and what their time
+    is for, to fix the card before the cut-off or to pay after it."""
+
+    until: Instant
+    seat_charge_id: UUID
+    reason: ReopenReason
+    time_to: TimeTo
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class BookedGame:
     """A booked game, as Home and its details read it: the booking's record."""
 
@@ -276,6 +289,12 @@ class BookedGame:
     #: Everybody on the booked game whose holding was refused, their time to
     #: fix the card still to end — each with the payment to confirm (#639).
     cards_to_fix: Mapping[UUID, RefusedHolding] = field(default_factory=dict)
+    #: Every rescuer whose share was refused and a seat kept for them (#640),
+    #: as the booking records it — their time up too, until they take a seat
+    #: or the game is off. ``kept_for`` reads it off the clock.
+    kept: Mapping[UUID, KeptSeat] = field(default_factory=dict)
+    #: Every rescuer whose kept seat ran out: none is kept for them again.
+    keeps_ran_out: frozenset[UUID] = frozenset()
 
     @property
     def taken_at(self) -> Instant:
@@ -343,6 +362,32 @@ class BookedGame:
 
     def has_a_seat_for(self, player_id: UUID) -> bool:
         return player_id in self.players
+
+    def kept_for(self, player_id: UUID, *, now: Instant) -> KeptSeat | None:
+        """The seat kept for this rescuer, while their time runs (#640)."""
+
+        kept = self.kept.get(player_id)
+        return kept if kept is not None and now < kept.until else None
+
+    def keep_to_run_out(self, player_id: UUID, *, now: Instant) -> bool:
+        """A seat kept for this rescuer whose time is up at ``now``, its
+        running out not yet recorded (#640)."""
+
+        return (
+            player_id in self.kept
+            and self.kept_for(player_id, now=now) is None
+            and player_id not in self.keeps_ran_out
+        )
+
+    def seats_kept(self, *, now: Instant, but: UUID | None = None) -> int:
+        """How many open seats are kept at ``now`` for rescuers whose time
+        runs (#640) — ``but``'s own not counted."""
+
+        return sum(
+            1
+            for player in self.kept
+            if player != but and self.kept_for(player, now=now)
+        )
 
     def seen_by(self, player_id: UUID) -> Sides:
         """The sides as this player reads them: theirs first, with them first

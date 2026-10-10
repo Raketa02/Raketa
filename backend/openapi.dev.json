@@ -3801,6 +3801,94 @@
         ],
         "title": "BookedClubSchema"
       },
+      "BookedMoneySchema": {
+        "properties": {
+          "share_grosze": {
+            "type": "integer",
+            "title": "Share Grosze",
+            "description": "Every seat's share, in grosze."
+          },
+          "paid": {
+            "type": "boolean",
+            "title": "Paid",
+            "description": "Every seat's share was **taken** \u2014 at the club's cut-off, or at once for a game booked after it. `false` while the shares are only held (`share_state` `HELD`), and for a reader not on the game, who has paid nothing (#545)."
+          },
+          "share_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShareState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`HELD` \u2014 every share is held on its card and taken at `taken_at`, the club's cut-off; leaving before it takes nothing. `CHECKED` \u2014 **the reader's** card was only checked when the game filled far ahead, and their share is held from `held_from`: *40 z\u0142 held from Sat 19:00 \u00b7 taken Wed 19:00* (#639) \u2014 free to leave until the cut-off all the same. `TAKEN` \u2014 taken (`paid`). `null` while nobody's money is on the game: waiting for its club or for a payment, called off, and for a reader not on the game. Switches by itself at `held_from` and at `taken_at`."
+          },
+          "held_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held From",
+            "description": "When the reader's share is held \u2014 its Holding time, four days before the cut-off \u2014 while it is only checked and that is ahead at `read_at` (`share_state` `CHECKED`, #639). `null` on every other line."
+          },
+          "taken_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taken At",
+            "description": "When the shares are taken \u2014 the club's cut-off \u2014 or were: the cut-off, or when a game booked after it was booked. Present exactly when `share_state` is."
+          },
+          "free_to_leave_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free To Leave Until",
+            "description": "The club's cut-off while it is still ahead at `read_at`: leaving before it takes nothing \u2014 the hold on the card is let go \u2014 so the line says *free to leave until Fri 17:00* (Q113). `null` from the cut-off on, for a game that filled after it, for a game still waiting for its club, and for a reader not on the game. The line switches by itself at this instant."
+          },
+          "refunded_grosze": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded Grosze",
+            "description": "What everybody still in is given back \u2014 the whole share, on a game its club cancelled after the cut-off had taken it (*refunded 30 z\u0142*). `null` where nothing is: a game short at its cut-off, or cancelled before it, took nothing (#637)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "share_grosze",
+          "paid",
+          "share_state",
+          "held_from",
+          "taken_at",
+          "free_to_leave_until",
+          "refunded_grosze"
+        ],
+        "title": "BookedMoneySchema",
+        "description": "The money line: *30 z\u0142 \u00b7 free to leave until Fri 17:00* while the share\nis held, *Paid \u00b7 30 z\u0142* once it is taken (#637; the mechanics \u00a714.1,\nQ113)."
+      },
       "BookedSchema": {
         "properties": {
           "booking_id": {
@@ -7924,6 +8012,16 @@
         "title": "SetScoreSchema",
         "description": "One set, **absolute**: what side A took, and what side B took.\n\nNever relative to the reader. A score stored from one point of view has to be\nflipped by whoever reads it next, and the first reader to forget publishes a\nloss as a win."
       },
+      "ShareState": {
+        "type": "string",
+        "enum": [
+          "HELD",
+          "CHECKED",
+          "TAKEN"
+        ],
+        "title": "ShareState",
+        "description": "Where the players' shares of a booked game stand (#637; the mechanics\n\u00a712.2, \u00a714.1, Q113)."
+      },
       "SheLeavesResponse": {
         "properties": {
           "before": {
@@ -8419,7 +8517,18 @@
               }
             ],
             "title": "Payment Awaited Until",
-            "description": "**This yes filled the game and a share was refused** (#625, #626; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer."
+            "description": "**This yes filled the game and a share was refused** (#625, #626; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer \u2014 a rescue's refused payment too, whose seat is kept for its player alone and no game waits on it (`your_payment.confirm_by`, #640)."
+          },
+          "money": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookedMoneySchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "**The seat this answer took on a booked game** \u2014 a rescue's join, or its payment confirmed (#640; Q113): the joiner's money line, as Home reads it. `HELD` \u2014 *27 z\u0142 held until Fri 17:00*, taken at the club's cut-off (`free_to_leave_until`), and free to leave until then like everybody else; `CHECKED` \u2014 far ahead of the cut-off the card was only checked, and the share is held from `held_from`; `TAKEN` \u2014 after the cut-off, *you paid 27 z\u0142* now. `null` on every other answer, and when the share was refused."
           }
         },
         "type": "object",
@@ -8453,7 +8562,7 @@
               }
             ],
             "title": "Confirm By",
-            "description": "**Their time to pay** (#625, #626; Q109) \u2014 before the club's cut-off, their time to fix the card (`time_to`, #638): the seat is theirs alone until then \u2014 *Confirm your payment by 14:40 to keep your seat*, or *Fix your card by 14:40* \u2014 every other hold kept, so paying in time books the game at once. Thirty minutes from the refusal, never past the book-by (nor, to fix, the cut-off). `null` once it ran out: the seat is open to others too, and still theirs to take back while it is free."
+            "description": "**Their time to pay** (#625, #626; Q109) \u2014 before the club's cut-off, their time to fix the card (`time_to`, #638): the seat is theirs alone until then \u2014 *Confirm your payment by 14:40 to keep your seat*, or *Fix your card by 14:40* \u2014 every other hold kept, so paying in time books the game at once. Thirty minutes from the refusal, never past the book-by (nor, to fix, the cut-off). `null` once it ran out: the seat is open to others too, and still theirs to take back while it is free. **On a rescue** (#640) the seat is kept for them alone until then \u2014 *Fix your card by 14:40 to take the seat*, or after the cut-off *Confirm your payment by 14:40* \u2014 never past the game's start; `null` when none was kept, as for a rescuer whose kept seat ran out once already."
           },
           "time_to": {
             "anyOf": [

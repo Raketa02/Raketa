@@ -42,11 +42,15 @@ time, it is simply theirs again; run out, it opens as a leaver's does — before
 the cut-off, which is how the record counts it.
 
 **An open seat is a rescue** (#545; the mechanics §10.1): somebody else takes
-it, paid at once, and sits where the leaver sat. **The seat that opened first is
-taken first** — the leavers are refunded in the order they left — and a seat
-stays open until the cut-off whatever their number, then until the start. A
-game whose seats are all taken is whole again, and *short at its cut-off* is read
-off the seats still open.
+it, their share held or taken like the others', and sits where the leaver sat.
+**The seat that opened first is taken first** — the leavers are refunded in the
+order they left — and a seat stays open until the cut-off whatever their
+number, then until the start. A game whose seats are all taken is whole again,
+and *short at its cut-off* is read off the seats still open. **A rescuer whose
+share was refused keeps a seat** for themselves alone (#640): offered to nobody
+else until their time to fix the card — or, after the cut-off, to pay — runs
+out, never past the start. It is a seat, not a particular one: the seats are
+still taken in the order they opened.
 
 **The club runs it** (#547; the mechanics §16.7–§16.10): it may **move** the
 game to another court of its sport at the same hour, or **cancel** it with its
@@ -81,7 +85,9 @@ from app.modules.bookings.domain.events import (
     PaymentNotInTime,
     PlayerCheckedIn,
     RequestWithdrawn,
+    KeptSeatRanOut,
     NoSaidToTheSeat,
+    SeatKept,
     SeatLeft,
     SeatRescued,
 )
@@ -158,6 +164,19 @@ class RefusedHolding:
 
 
 @dataclass(frozen=True, slots=True)
+class KeptSeat:
+    """A seat kept for a rescuer whose share was refused (#640): until when,
+    the payment to confirm, why it was refused — the refusal's code, which is
+    the money's to name — and whether their time is to fix the card, before
+    the cut-off, or to pay."""
+
+    until: Instant
+    seat_charge_id: UUID
+    reason: str
+    to_fix_the_card: bool
+
+
+@dataclass(frozen=True, slots=True)
 class Departure:
     """A player who left the booked game: from which side — where a rescue
     taking the seat sits (#545) — and when, which against the booking's
@@ -230,6 +249,13 @@ class Booking:
     #: Everybody whose holding was refused and whose time to fix the card runs
     #: (#639) — the game booked meanwhile.
     cards_to_fix: dict[UUID, RefusedHolding] = field(default_factory=dict)
+    #: Every rescuer whose share was refused, and the seat kept for them (#640)
+    #: — until they take one or the game is off. Read against the clock: one
+    #: whose time is up keeps nothing, whether or not its running out is
+    #: recorded, and stays here so their refused payment is still known.
+    kept: dict[UUID, KeptSeat] = field(default_factory=dict)
+    #: Every rescuer whose kept seat ran out: none is kept for them again here.
+    keeps_ran_out: frozenset[UUID] = frozenset()
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -404,6 +430,13 @@ class Booking:
         return {player: refused.until for player, refused in self.cards_to_fix.items()}
 
     @property
+    def kept_until(self) -> dict[UUID, Instant]:
+        """Every rescuer a seat was kept for, and until when (#640) — a time
+        already up included."""
+
+        return {player: kept.until for player, kept in self.kept.items()}
+
+    @property
     def seats(self) -> int:
         """Four for padel and badminton, two for tennis and squash."""
 
@@ -486,15 +519,25 @@ class Booking:
 
         return self.short_from is not None and now >= self.short_from
 
-    def rescuable_at(self, now: Instant) -> bool:
+    def seats_kept(self, *, at: Instant, but: UUID | None = None) -> int:
+        """How many open seats are kept at ``at`` for rescuers whose time runs
+        (#640) — ``but``'s own not counted."""
+
+        return sum(
+            1 for player, kept in self.kept.items() if player != but and at < kept.until
+        )
+
+    def rescuable_at(self, now: Instant, *, by: UUID | None = None) -> bool:
         """Whether a seat is open to be taken at ``now`` (the mechanics §10.1):
         **until the cut-off whatever their number**, since the leavers' refunds
         and the game itself depend on them being taken — **then until the
         start**, on a game that goes ahead short. Never on a game called off,
-        whether or not that is recorded yet."""
+        whether or not that is recorded yet. **By** a player, a seat kept for
+        another rescuer whose time runs is not one (#640)."""
 
+        kept = 0 if by is None else self.seats_kept(at=now, but=by)
         return (
-            self.open_seats > 0
+            self.open_seats > kept
             and not self.short_at_the_cut_off(now=now)
             and now < self.start
         )
@@ -589,14 +632,17 @@ class Booking:
         that they are neither on the game nor a leaver of it, is this one's."""
 
         invariant(
-            self.rescuable_at(at),
-            f"{self.booking_id} has no seat to take at {at}: {self.state}, "
-            f"{self.open_seats} open, cut-off {self.cut_off}, start {self.start}",
+            self.rescuable_at(at, by=player_id),
+            f"{self.booking_id} has no seat for {player_id} at {at}: {self.state}, "
+            f"{self.open_seats} open, {self.seats_kept(at=at, but=player_id)} kept, "
+            f"cut-off {self.cut_off}, start {self.start}",
         )
         invariant(
             player_id not in self.players and player_id not in self.leavers,
             f"{player_id} takes a seat on {self.booking_id}, which they are on or left",
         )
+        # The seats are taken in the order they opened, a kept one too: a keep
+        # holds a seat, not a particular one.
         taken = self.open_departures[0]
         self._record_that(
             SeatRescued(
@@ -608,6 +654,78 @@ class Booking:
             )
         )
         return taken
+
+    def keep_the_seat(
+        self,
+        player_id: UUID,
+        *,
+        until: Instant,
+        seat_charge_id: UUID,
+        reason: str,
+        to_fix_the_card: bool,
+        at: Instant,
+    ) -> None:
+        """This rescuer's share was refused (#640): a seat is kept for them
+        alone until ``until`` — to fix the card, before the cut-off, or to pay
+        — never past the start, nor, to fix, the cut-off. Refused again within
+        it, they keep the time they had. Whether they may take a seat at all —
+        in the pool, a fit, free — is the caller's question, asked before this;
+        that one is open to them, and that they are neither on the game, a
+        leaver of it, nor one whose kept seat ran out, is this one's."""
+
+        invariant(
+            self.rescuable_at(at, by=player_id),
+            f"{self.booking_id} has no seat to keep for {player_id} at {at}",
+        )
+        invariant(
+            player_id not in self.players
+            and player_id not in self.leavers
+            and player_id not in self.keeps_ran_out,
+            f"a seat on {self.booking_id} kept for {player_id}, who is on it, "
+            "left it or ran out already",
+        )
+        last = self.cut_off if to_fix_the_card else self.start
+        invariant(
+            at < until <= last,
+            f"a seat on {self.booking_id} kept until {until} at {at}, "
+            f"cut-off {self.cut_off}, start {self.start}",
+        )
+        kept = self.kept.get(player_id)
+        invariant(
+            kept is None or at >= kept.until or until == kept.until,
+            f"{player_id}'s seat on {self.booking_id} kept until {until}, "
+            f"not the time they had",
+        )
+        self._record_that(
+            SeatKept(
+                booking_id=self.booking_id,
+                player_id=player_id,
+                until=until,
+                seat_charge_id=seat_charge_id,
+                reason=reason,
+                to_fix_the_card=to_fix_the_card,
+                occurred_at=at,
+            )
+        )
+
+    def kept_seat_ran_out(self, player_id: UUID, *, at: Instant) -> bool:
+        """This rescuer's time ran out (#640): the seat kept for them is
+        offered again. Answers whether anything was recorded — nothing for a
+        seat not kept for them, one whose time still runs, or one whose
+        running out is recorded already."""
+
+        kept = self.kept.get(player_id)
+        if kept is None or at < kept.until or player_id in self.keeps_ran_out:
+            return False
+        self._record_that(
+            KeptSeatRanOut(
+                booking_id=self.booking_id,
+                player_id=player_id,
+                occurred_at=at,
+                to_fix_the_card=kept.to_fix_the_card,
+            )
+        )
+        return True
 
     def say_no(self, player_id: UUID, *, at: Instant) -> bool:
         """*Not this time* on a Seat open card (#545): the card does not come
@@ -951,6 +1069,11 @@ class Booking:
             )
             self.state = BookingState.SEAT_OPEN
         elif isinstance(event, SeatRescued):
+            self.kept = {
+                player: kept
+                for player, kept in self.kept.items()
+                if player != event.player_id
+            }
             if event.side == "A":
                 self.first_side = (*self.first_side, event.player_id)
             else:
@@ -973,11 +1096,26 @@ class Booking:
             )
         elif isinstance(event, NoSaidToTheSeat):
             self.said_no = self.said_no | {event.player_id}
+        elif isinstance(event, SeatKept):
+            self.kept = {
+                **self.kept,
+                event.player_id: KeptSeat(
+                    until=instant(event.until),
+                    seat_charge_id=event.seat_charge_id,
+                    reason=event.reason,
+                    to_fix_the_card=event.to_fix_the_card,
+                ),
+            }
+        elif isinstance(event, KeptSeatRanOut):
+            # Its time is up, so it keeps nothing; what was refused stays known.
+            self.keeps_ran_out = self.keeps_ran_out | {event.player_id}
         elif isinstance(event, CalledOffAtCutOff):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.SHORT_AT_THE_CUT_OFF
-            # A game off has no card to fix: its holds are all let go (#639).
+            # A game off has no card to fix: its holds are all let go (#639) —
+            # and no seat to keep (#640).
             self.cards_to_fix = {}
+            self.kept = {}
         elif isinstance(event, CourtMoved):
             self.court = BookedCourt(court_id=event.court_id, name=event.court_name)
         elif isinstance(event, CancelledByClub):
@@ -986,6 +1124,7 @@ class Booking:
             self.cancel_reason = CancelReason(event.reason)
             self.cancelled_at = instant(event.occurred_at)
             self.cards_to_fix = {}
+            self.kept = {}
         elif isinstance(event, PlayerCheckedIn):
             self.checked_in = {
                 **self.checked_in,

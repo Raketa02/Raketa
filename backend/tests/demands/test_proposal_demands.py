@@ -808,6 +808,64 @@ async def test_a_refused_holding_s_card_is_fixed_in_time_or_its_seat_opens(
     assert game.leavers == frozenset({EWA}) and game.cards_to_fix == {}
 
 
+@pytest.mark.parametrize("implementation", registered(BookedGameChanges))
+async def test_a_refused_rescuer_s_kept_seat_is_taken_or_runs_out_once(
+    implementation, session
+):
+    """#640: a seat kept for a refused rescuer is theirs until their time
+    ends — read off the clock, the rest offered to anybody — taken once they
+    pay; run out, it is offered again and never kept for them again, its
+    refused payment still known while the game is theirs to take."""
+
+    changes: BookedGameChanges = implementation.build(session)
+    bookings = registered_build(PlayerBookings, session)
+    start = _at(5 * 24)
+    booking = await _booked_with_its_game(session, start=start)
+    zosia, marek = new_uuid(), new_uuid()
+    await changes.leave(booking.booking_id, EWA, at=_at(1))
+    await changes.leave(booking.booking_id, KUBA, at=_at(1))
+    until = _at(2) + timedelta(minutes=30)
+    for player in (zosia, marek):
+        await changes.keep_the_seat(
+            booking.booking_id,
+            player,
+            until=until,
+            refused=RefusedPayment(
+                seat_charge_id=new_uuid(), refusal=PaymentRefusal.DECLINED
+            ),
+            time_to=TimeTo.FIX_THE_CARD,
+            at=_at(2),
+        )
+    await session.commit()
+
+    assert list(await changes.kept_for(zosia)) == [booking.booking_id]
+    assert await changes.keeps_past(now=until - timedelta(seconds=1)) == ()
+    assert list(await changes.keeps_past(now=until)) == [booking.booking_id]
+    game = await bookings.find(booking.booking_id)
+    assert game is not None
+    kept = game.kept_for(zosia, now=_at(2))
+    assert kept is not None and (kept.until, kept.time_to) == (
+        until,
+        TimeTo.FIX_THE_CARD,
+    )
+    assert game.seats_kept(now=_at(2)) == 2
+    assert game.seats_kept(now=_at(2), but=zosia) == 1
+    assert game.seats_kept(now=until) == 0
+
+    await changes.rescue(booking.booking_id, zosia, at=_at(2))
+    assert not await changes.kept_seat_ran_out(booking.booking_id, marek, at=_at(2))
+    assert await changes.kept_seat_ran_out(booking.booking_id, marek, at=until)
+    await session.commit()
+
+    assert await changes.kept_for(zosia) == ()
+    assert list(await changes.kept_for(marek)) == [booking.booking_id]
+    assert await changes.keeps_past(now=until) == ()
+    game = await bookings.find(booking.booking_id)
+    assert game is not None
+    assert set(game.kept) == {marek} and game.keeps_ran_out == frozenset({marek})
+    assert game.kept_for(marek, now=until) is None
+
+
 # --------------------------------------------------------------------------- #
 # SeatRefunds and LateRefunds — a paid share given back (#544), and what a
 # leaver after the cut-off would get back (#641)

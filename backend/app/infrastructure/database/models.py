@@ -7,6 +7,7 @@ from app.modules.administrators.infrastructure.administrator_model import (
     AdministratorORM,
 )
 from app.modules.bookings.infrastructure.booking_models import (
+    BookingKeepORM,
     BookingORM,
     BookingSeatORM,
 )
@@ -48,6 +49,7 @@ from app.modules.users.infrastructure.sqlalchemy_user_model import UserORM
 
 __all__ = [
     "AdministratorORM",
+    "BookingKeepORM",
     "BookingORM",
     "BookingSeatORM",
     "ClubAccountORM",

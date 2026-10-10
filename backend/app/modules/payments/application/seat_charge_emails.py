@@ -238,10 +238,13 @@ def confirm_payment_email(
     keep your seat* — nothing is paid now, and fixing it only places the hold
     again, taken at the cut-off. **On a rescue** (#545) — an open seat on a
     booked game — *to take the seat*: nothing was charged, and the seat is
-    theirs if they confirm before somebody else takes it. **At the Holding
-    time** (#639) the game is booked already: the share could not be held
-    again, and the seat is the player's until ``pay_by`` — then offered to
-    others, and nothing owed."""
+    theirs if they confirm before somebody else takes it — **kept for them
+    alone until ``pay_by``** (#640): *Fix your card by 14:40 to take the seat*
+    before the ``cut_off``, *Confirm your payment by 14:40 to take the seat*
+    after it, then offered to others again. **At the Holding time** (#639) the
+    game is booked already: the share could not be held again, and the seat is
+    the player's until ``pay_by`` — then offered to others, and nothing
+    owed."""
 
     if at_the_holding and pay_by is not None and cut_off is not None:
         by = f"{_wall(pay_by):%H:%M}"
@@ -255,6 +258,29 @@ def confirm_payment_email(
             f"hold on it, taken on {_short_hour(cut_off)}, the club's cut-off.",
             f"Your seat is kept for you until {by}. After that it's offered to "
             "others, and you owe nothing.",
+        )
+    elif rescue and pay_by is not None and cut_off is not None:
+        by = f"{_wall(pay_by):%H:%M}"
+        amount = zloty(amount_grosze)
+        subject = f"Fix your card by {by} to take the seat"
+        lines = (
+            f"You went for the open seat in {_SPORT_WORDS[sport].lower()} at {club} "
+            f"on {_day_and_time(starts_at)}, but your card didn't go through.",
+            _TO_FIX[reason].format(amount=amount),
+            f"Nothing is paid now: fixing your card only places the {amount} "
+            f"hold on it, taken on {_short_hour(cut_off)}, the club's cut-off.",
+            f"The seat is kept for you until {by}. After that it's offered to "
+            "others again, and you owe nothing.",
+        )
+    elif rescue and pay_by is not None:
+        by = f"{_wall(pay_by):%H:%M}"
+        subject = f"Confirm your payment by {by} to take the seat"
+        lines = (
+            f"You went for the open seat in {_SPORT_WORDS[sport].lower()} at {club} "
+            f"on {_day_and_time(starts_at)}, but your payment didn't go through.",
+            _WHAT_TO_DO[reason].format(amount=zloty(amount_grosze)),
+            f"Nothing was charged. The seat is kept for you until {by} — after "
+            "that it's offered to others again.",
         )
     elif rescue:
         subject = "Confirm your payment to take the seat"

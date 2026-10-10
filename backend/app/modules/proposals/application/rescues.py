@@ -13,16 +13,22 @@ A booked game that lost a player offers the seat. Three things here:
   the booking's own id — as every act on a game is, so two players going for
   the last seat are one after the other: **the first wins**, and the second
   reads it gone (``seat_just_taken``) before anybody asks their bank. Then the
-  joiner's share is held and taken in this transaction — the fill's own
-  all-or-nothing, for one seat (``SeatCharges``, ``rescue``) — the seat that
-  opened first is theirs on the booking and on its Game, and **the leaver who
-  left after the cut-off is refunded, less exactly the fee kept on their
-  payment, the moment the joiner's payment succeeds** (#641): the refund is
-  decided here, in the same transaction, and made — and told, to the grosz —
-  from the outbox, waiting for a fee not yet known. A refused payment takes no
-  seat: it is the joiner's to confirm, and **confirming it is the join again**
-  (``POST /seat-charges/{id}/confirmation``). The joiner's other yeses at the
-  hour are withdrawn and a full week pauses the rest, as a fill does;
+  joiner's share is **held until the cut-off, like the seats it joins** — or
+  checked, and held at its Holding time, far ahead of it — **or taken at once
+  after it** (#637, #639, #640): the fill's own all-or-nothing, for one seat
+  (``SeatCharges``, ``rescue``), and the answer says which (``money``). The
+  seat that opened first is theirs on the booking and on its Game, and **the
+  leaver who left after the cut-off is refunded, less exactly the fee kept on
+  their payment, the moment the joiner's payment succeeds** (#641): the refund
+  is decided here, in the same transaction, and made — and told, to the grosz
+  — from the outbox, waiting for a fee not yet known. **A refused payment
+  keeps a seat for the joiner alone** (#640) — thirty minutes to fix the card
+  before the cut-off, or to pay after it, never past the start — offered to
+  nobody else meanwhile, and **confirming it is the join again**
+  (``POST /seat-charges/{id}/confirmation``); run out, it is offered again,
+  theirs to take while it is free, and never kept for them again. The
+  joiner's other yeses at the hour are withdrawn and a full week pauses the
+  rest, as a fill does;
 - **a no to it** (``SayNoToARescue``) — the Seat open card leaves that reader's
   deck for good. The board still lists the seat: it is every rescue they fit.
 
@@ -41,7 +47,7 @@ from uuid import UUID
 
 from app.application.ports import UnitOfWork
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Clock, Instant, Sport, instant
+from app.kernel import Clock, Instant, Sport, instant, invariant
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.commands import (
     ReadFillInCommand,
@@ -66,7 +72,7 @@ from app.modules.proposals.domain.errors import (
     RescueNotOffered,
     SeatJustTaken,
 )
-from app.modules.proposals.domain.home import BookedGame
+from app.modules.proposals.domain.home import BookedGame, BookedMoney, money_of
 from app.modules.proposals.domain.ports import (
     BalanceForecasts,
     BookedGameChanges,
@@ -76,6 +82,7 @@ from app.modules.proposals.domain.ports import (
     DeckPerson,
     GamesAndMoneyRepository,
     GameToCharge,
+    HoldingTimes,
     PlayerBookings,
     PlayerFit,
     PlayersInPlay,
@@ -89,11 +96,12 @@ from app.modules.proposals.domain.ports import (
     WantedKinds,
 )
 from app.modules.proposals.domain.pool import Pool
-from app.modules.proposals.domain.proposal import Proposal
+from app.modules.proposals.domain.proposal import Proposal, TimeTo
 from app.modules.proposals.domain.rescues import (
     Candidate,
     best_fits,
     fills_by_the_cut_off,
+    kept_until,
     offered_to,
     rescue_deadline,
     rescuable,
@@ -157,8 +165,9 @@ class RescueOffers:
     async def in_pool(
         self, pool_id: UUID, *, sport: Sport, now: Instant
     ) -> list[BookedGame]:
-        """The pool's rescues in the sport with a seat to take now, soonest
-        first."""
+        """The pool's rescues in the sport with a seat open now, soonest first
+        — a seat kept for a refused rescuer too (#640), which only they are
+        offered."""
 
         return [
             game
@@ -263,7 +272,7 @@ class RescueOffers:
         """Whether this rescue is offered to this one player now — a member of
         its pool, as the board and the deck read only their own pool's."""
 
-        if not rescuable(game, now=now):
+        if not rescuable(game, now=now, by=player):
             return False
         pool = await self._pools.find(game.pool_id)
         if pool is None or not await self._pools.members_among(pool, [player]):
@@ -351,6 +360,7 @@ class Rescuer:
         charges: SeatCharges,
         refunds: SeatRefunds,
         undecided: UndecidedCharges,
+        holding_times: HoldingTimes,
         fill: Fill,
     ) -> None:
         self._bookings = bookings
@@ -361,6 +371,7 @@ class Rescuer:
         self._charges = charges
         self._refunds = refunds
         self._undecided = undecided
+        self._holding_times = holding_times
         self._fill = fill
 
     async def join(
@@ -374,7 +385,8 @@ class Rescuer:
     ) -> YesAnswer:
         """Take the seat that opened first, or refuse — ``confirmed`` is the
         refused payment the player has just confirmed, which the join takes
-        rather than asking the bank again."""
+        rather than asking the bank again. A refused payment keeps a seat for
+        them (#640)."""
 
         game = await self._bookings.find(booking_id)
         if (
@@ -394,12 +406,20 @@ class Rescuer:
                 await self._undecided.release(
                     booking_id, keeping=(), of_player=player, at=now
                 )
-            return _joined(game, open_seats=game.open_seats)
+            return await self._joined(game, player, open_seats=game.open_seats, now=now)
         if game.called_off_reason(now) is not None:
             raise BookingIsCalledOff()
         if now >= game.start:
             raise GameHasStarted()
-        if not rescuable(game, now=now):
+        if game.keep_to_run_out(player, now=now):
+            # Their own act come too late runs their time out first, as the
+            # job would have: the seat is offered to anybody now, them too.
+            await self._changes.kept_seat_ran_out(booking_id, player, at=now)
+            game = invariant(
+                await self._bookings.find(booking_id),
+                f"{booking_id} gone in its own transaction",
+            )
+        if not rescuable(game, now=now, by=player):
             raise SeatJustTaken()
         if not await self._offers.is_offered(game, player, now=now):
             raise RescueNotOffered()
@@ -412,6 +432,9 @@ class Rescuer:
             # A confirmed payment is held already: it needs no method to take.
             raise PaymentMethodRequired()
 
+        # Refused, a seat is kept for them — once (#640).
+        until = kept_until(game, player, now=now)
+        kept = game.kept_for(player, now=now)
         charged = await self._charges.charge(
             GameToCharge(
                 proposal_id=booking_id,
@@ -424,18 +447,34 @@ class Rescuer:
                     game.cut_off if fills_by_the_cut_off(game, now=now) else None
                 ),
                 rescue=True,
+                pay_by=until,
+                paying_until={} if kept is None else {player: kept.until},
             ),
             [player],
             # The booking's own record of its tries: a retried request is
-            # answered the same hold, and a seat that opened since asks afresh.
+            # answered the same hold, and a seat that opened since — or kept
+            # since — asks afresh.
             attempt=game.version,
             at=now,
         )
-        if charged.refused:
+        refused = charged.refused.get(player)
+        if refused is not None:
+            time_to = TimeTo.at(now, cut_off=game.cut_off)
+            if until is not None:
+                await self._changes.keep_the_seat(
+                    booking_id,
+                    player,
+                    until=until,
+                    refused=refused,
+                    time_to=time_to,
+                    at=now,
+                )
             return YesAnswer(
                 proposal_id=booking_id,
                 open_seats=game.open_seats,
-                your_payment=charged.refused.get(player),
+                your_payment=refused,
+                kept_until=until,
+                time_to=None if until is None else time_to,
             )
 
         taken = await self._changes.rescue(booking_id, player, at=now)
@@ -454,16 +493,26 @@ class Rescuer:
         await self._fill.other_yeses(
             [player], booked_id=booking_id, start=game.start, now=now
         )
-        return _joined(game, open_seats=still_open)
+        return await self._joined(game, player, open_seats=still_open, now=now)
 
+    async def _joined(
+        self, game: BookedGame, player: UUID, *, open_seats: int, now: Instant
+    ) -> YesAnswer:
+        """The seat taken, and the joiner's money line as Home reads it (#640):
+        held until the cut-off — or checked, and held from its Holding time —
+        or taken, after it."""
 
-def _joined(game: BookedGame, *, open_seats: int) -> YesAnswer:
-    assert game.game_id is not None, f"a booked game {game.booking_id} with no Game"
-    return YesAnswer(
-        proposal_id=game.booking_id,
-        open_seats=open_seats,
-        booked=Booked(booking_id=game.booking_id, game_id=game.game_id),
-    )
+        assert game.game_id is not None, f"a booked game {game.booking_id} with no Game"
+        held_from = await self._holding_times.of(player, [game.booking_id])
+        money: BookedMoney = money_of(
+            game, now=now, held_from=held_from.get(game.booking_id)
+        )
+        return YesAnswer(
+            proposal_id=game.booking_id,
+            open_seats=open_seats,
+            booked=Booked(booking_id=game.booking_id, game_id=game.game_id),
+            money=money,
+        )
 
 
 @final

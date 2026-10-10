@@ -243,7 +243,11 @@ from app.modules.bookings.application.leaving import (
     LeaveTheBooking,
     TimeToFixTheCard,
 )
-from app.modules.bookings.application.rescues import SayNoToTheSeat, RescueTheSeat
+from app.modules.bookings.application.rescues import (
+    KeepTheSeat,
+    RescueTheSeat,
+    SayNoToTheSeat,
+)
 from app.modules.bookings.application.requests import (
     BookTheRequest,
     CallOffForAPayment,
@@ -1687,9 +1691,10 @@ def build_game_bookings(
 def build_booked_game_changes(
     session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
 ) -> BookedGameChanges:
-    """Leaving a booked game, a rescue taking the seat or a no to it, and the
-    cut-off — over the Bookings context's own use cases, the cut-off's email to
-    the club opening its Bookings page (#544, #545)."""
+    """Leaving a booked game, a rescue taking the seat, a no to it or a seat
+    kept for a refused rescuer (#640), and the cut-off — over the Bookings
+    context's own use cases, the cut-off's email to the club opening its
+    Bookings page (#544, #545)."""
 
     def bookings() -> BookingRepository:
         return build_booking_repository(
@@ -1709,6 +1714,7 @@ def build_booked_game_changes(
         fix=TimeToFixTheCard(
             bookings=bookings(), games=build_game_changes(session, runtime=runtime)
         ),
+        keep=KeepTheSeat(bookings=bookings()),
         call_off=CallOffAtTheCutOff(
             bookings=bookings(),
             games=build_game_changes(session, runtime=runtime),
@@ -2440,6 +2446,7 @@ def build_rescuer(
         ),
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
+        holding_times=build_holding_times(session, runtime=runtime),
         fill=build_fill(
             session,
             proposals=proposals,

@@ -62,7 +62,7 @@ from app.modules.proposals.domain.home import (
 )
 from app.modules.proposals.domain.pool import Pool
 from app.modules.proposals.domain.post import LevelRange
-from app.modules.proposals.domain.proposal import ClubAnswer, Proposal
+from app.modules.proposals.domain.proposal import ClubAnswer, Proposal, TimeTo
 from app.modules.proposals.domain.proposer import CourtHourOnSale, PoolClubs
 
 # --------------------------------------------------------------------------- #
@@ -535,8 +535,8 @@ class GameBookings(Protocol):
 class BookedGameChanges(Protocol):
     """**A demand of the Bookings context**: what happens to a booked game
     after the fill (#544, #545) — a player leaving it, somebody taking the seat
-    they left, and the cut-off calling off one still short (the mechanics
-    §10.1, §12.3, §13)."""
+    they left or having one kept for them (#640), and the cut-off calling off
+    one still short (the mechanics §10.1, §12.3, §13)."""
 
     async def leave(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
         """*Leave the game* (#544): this player's seat on the booked game
@@ -612,6 +612,39 @@ class BookedGameChanges(Protocol):
 
     async def cards_to_fix_of(self, player_id: UUID) -> Sequence[UUID]:
         """Every booked game on which this player has a card to fix (#639)."""
+        ...
+
+    async def keep_the_seat(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        until: Instant,
+        refused: RefusedPayment,
+        time_to: TimeTo,
+        at: Instant,
+    ) -> None:
+        """This rescuer's share was refused (#640): a seat is kept for them
+        alone until ``until`` — their time to fix the card, or to pay. In the
+        caller's transaction."""
+        ...
+
+    async def kept_seat_ran_out(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> bool:
+        """This rescuer's time ran out (#640): the seat kept for them is
+        offered again. Whether anything was recorded: nothing while it still
+        runs. In the caller's transaction."""
+        ...
+
+    async def keeps_past(self, *, now: Instant) -> Sequence[UUID]:
+        """Every booked game with a seat kept for a rescuer whose time ran out
+        by ``now`` — candidates, the earliest first (#640)."""
+        ...
+
+    async def kept_for(self, player_id: UUID) -> Sequence[UUID]:
+        """Every booked game on which a seat was kept for this rescuer (#640),
+        their time running or up — until they take one, or the game is off."""
         ...
 
 

@@ -230,6 +230,35 @@ async def test_taking_the_seat_pays_and_seats_them_alike(
 
 
 @pytest.mark.parametrize("via", [PLAYER, CONSOLE])
+async def test_a_refused_rescuer_keeps_the_seat_alike(
+    client, session_factory, clock, world, via
+):
+    """Tomek's bank wants him there for every payment: refused, the seat is
+    kept for him to fix the card (#640) — offered to nobody else, and the
+    board's moment says when the time-to-pay job runs it out."""
+
+    booking = await a_rescue(client, session_factory, clock, world)
+    tomek = world.named("tomek")
+    steered = await client.put(
+        f"/dev/payments/cards/{tomek['id']}",
+        json={"outcome": "ASKS_FOR_VERIFICATION"},
+    )
+    assert steered.status_code == 200, steered.text
+
+    refused = await takes_the_seat(client, via, tomek, booking)
+
+    assert refused.status_code == 200, refused.text
+    fix_by = at(MONDAY_MORNING + timedelta(minutes=30))
+    payment = refused.json()["your_payment"]
+    assert (payment["confirm_by"], payment["time_to"]) == (fix_by, "FIX_THE_CARD")
+    assert booking not in await fill_in_of(client, world.named("ola"), world)
+    pane = pane_of(await board_of(client, world.group), booking)
+    assert {
+        (moment["moment"], moment["at"], moment["job"]) for moment in pane["moments"]
+    } >= {("PAYMENT_DUE", fix_by, "time-to-pay")}
+
+
+@pytest.mark.parametrize("via", [PLAYER, CONSOLE])
 async def test_taking_back_a_seat_they_left_is_refused_alike(
     client, session_factory, clock, world, via
 ):

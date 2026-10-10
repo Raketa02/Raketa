@@ -603,3 +603,82 @@ async def test_a_holding_that_falls_short_is_taken_at_its_last_safe_moment(
     [refund] = payments.called("refund")
     assert refund.arguments["payment_id"] == capture.arguments["payment_id"]
     assert refund.arguments["amount_grosze"] == SHARE
+
+
+# --------------------------------------------------------------------------- #
+# A rescue far ahead (#640)
+# --------------------------------------------------------------------------- #
+
+
+async def diego_takes_the_seat(client, four: dict, booking: str) -> dict:
+    taken = await client.post(
+        f"/api/v1/bookings/{booking}/seats", headers=four["diego"]["headers"]
+    )
+    assert taken.status_code == 200, taken.text
+    assert taken.json()["booked"]["booking_id"] == booking
+    return taken.json()
+
+
+async def test_a_rescue_before_the_holding_time_is_checked_and_held_at_it(
+    client, session_factory, clock, payments, mailbox, club, four
+):
+    """Diego takes Ivan's seat on Friday morning: his Visa's hold would not
+    last until Wednesday, so his card is checked now, like the seats he joins,
+    his share held at Saturday 19:00 with theirs and taken at the cut-off."""
+
+    booking = await fills(client, session_factory, clock, club[0], four)
+    clock.move(warsaw(9, 10) - clock.now())
+    await leaves(client, four["ivan"], booking)
+
+    answer = await diego_takes_the_seat(client, four, booking)
+
+    money = answer["money"]
+    assert (money["share_state"], money["held_from"]) == (
+        "CHECKED",
+        HOLDING_ON_THE_WIRE,
+    )
+    assert money["free_to_leave_until"] == CUT_OFF_ON_THE_WIRE
+    assert (await card_of(client, four["diego"]))["money"] == money
+    [email] = [
+        sent
+        for sent in await mailbox.to("diego@example.com")
+        if sent.subject.startswith("It's a game!")
+    ]
+    assert "Your card was checked. 40 zł will be held from Sat 19:00" in email.text
+    # Ivan left before the cut-off: nothing was taken, so nothing comes back.
+    assert payments.called("refund") == []
+
+    held = await holds(session_factory, clock, payments)
+
+    assert (held.held, held.refused) == (1, 0)
+    assert holds_asked(payments)[-1] == str(four["diego"]["id"])
+    assert (await card_of(client, four["diego"]))["money"]["share_state"] == "HELD"
+    await the_cut_off_comes(session_factory, clock, at=THE_CUT_OFF)
+    [receipt] = await receipts_of(client, mailbox, four["diego"])
+    assert (receipt["kind"], receipt["amount_grosze"]) == ("CHARGE", SHARE)
+
+
+async def test_a_rescue_after_the_holding_time_is_held_until_the_cut_off(
+    client, session_factory, clock, payments, mailbox, club, four
+):
+    booking = await fills(client, session_factory, clock, club[0], four)
+    await holds(session_factory, clock, payments)
+    clock.move(warsaw(12, 10) - clock.now())
+    await leaves(client, four["ivan"], booking)
+    await mailbox.drain()
+    asked = len(payments.called("authorise"))
+    cancelled = len(payments.called("cancel"))
+
+    answer = await diego_takes_the_seat(client, four, booking)
+
+    money = answer["money"]
+    assert (money["share_state"], money["held_from"]) == ("HELD", None)
+    assert money["taken_at"] == CUT_OFF_ON_THE_WIRE
+    # Held once, and kept: no check to let go.
+    await mailbox.drain()
+    assert len(payments.called("authorise")) == asked + 1
+    assert len(payments.called("cancel")) == cancelled
+    assert (await holds(session_factory, clock, payments)).held == 0
+    await the_cut_off_comes(session_factory, clock, at=THE_CUT_OFF)
+    [receipt] = await receipts_of(client, mailbox, four["diego"])
+    assert (receipt["kind"], receipt["amount_grosze"]) == ("CHARGE", SHARE)

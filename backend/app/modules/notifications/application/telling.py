@@ -25,8 +25,11 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
   while their time to pay runs (#625, #626); before the cut-off, where their
   time is to fix the card, *Fix your card by 14:40 to keep your seat* (#638) —
   and ``SeatChargeHoldingRefused`` the same, on a booked game whose holding
-  was refused (#639). ``SeatChargeChecked`` is *It's a game!* as a hold kept is,
-  free to leave until the cut-off all the same.
+  was refused (#639). **A rescuer's**, the seat kept for them, *… by 14:40 to
+  take the seat* (#640); ``KeptSeatRanOut`` tells them their time ran out and
+  the seat is offered again — unless they took it in the same act.
+  ``SeatChargeChecked`` is *It's a game!* as a hold kept is, free to leave
+  until the cut-off all the same.
 - ``TimeToPayGiven`` — *It's a game! · waiting for one payment until 14:40*
   to everybody In but the payer, never naming them — *Your Fri 19:00 is
   waiting for one payment, until 21:20* at the club's yes; the player whose
@@ -103,6 +106,7 @@ from app.modules.bookings.domain.events import (
     BookingRequested,
     BookingTimedOut,
     CalledOffAtCutOff,
+    KeptSeatRanOut,
     PaymentNotInTime,
     RequestWithdrawn,
     SeatLeft,
@@ -202,6 +206,7 @@ def _notice(
     until: Instant | None = None,
     you_left: bool = False,
     kept_grosze: int | None = None,
+    rescue: bool = False,
 ) -> Notice:
     return Notice(
         kind=kind,
@@ -220,6 +225,7 @@ def _notice(
         until=until,
         you_left=you_left,
         kept_grosze=kept_grosze,
+        rescue=rescue,
     )
 
 
@@ -360,6 +366,9 @@ class TellThePlayers:
             if until is not None and event.player_id in game.fixing
             else NoticeKind.CONFIRM_PAYMENT
         )
+        # A seat they went for and do not hold: a rescue's, kept for them
+        # while their time runs (#640).
+        rescue = game.booked and event.player_id not in game.seated
         await self._give.execute(
             event.player_id,
             _notice(
@@ -372,7 +381,30 @@ class TellThePlayers:
                 amount_grosze=event.amount_grosze,
                 reason=event.reason,
                 until=until,
+                rescue=rescue,
             ),
+            at=at,
+        )
+
+    async def _kept_seat_ran_out(
+        self, event: KeptSeatRanOut, *, key: str, at: Instant
+    ) -> None:
+        """**A refused rescuer's time ran out** (#640): the seat is offered to
+        others again — in the words of what their time was for — and still
+        theirs to take while it is free. Not told to one who took it in the
+        same act: their late confirmation ran it out, then took the seat."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        if game is None or not game.booked or event.player_id in game.seated:
+            return
+        kind = (
+            NoticeKind.TIME_TO_FIX_RAN_OUT
+            if event.to_fix_the_card
+            else NoticeKind.TIME_TO_PAY_RAN_OUT
+        )
+        await self._give.execute(
+            event.player_id,
+            _notice(kind, game, key=f"{kind}:{key}", opens=Opens.BOOKING, rescue=True),
             at=at,
         )
 
@@ -937,6 +969,7 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     BookingRefused: TellThePlayers._turned_down,
     BookingTimedOut: TellThePlayers._turned_down,
     SeatLeft: TellThePlayers._left,
+    KeptSeatRanOut: TellThePlayers._kept_seat_ran_out,
     CalledOffAtCutOff: TellThePlayers._called_off_short,
     RequestWithdrawn: TellThePlayers._fell_back,
     ProposalExpired: TellThePlayers._expired,

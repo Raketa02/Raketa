@@ -8,7 +8,9 @@ proposal's — the joiner's — and **nothing here commits**:
   booking and on its Game, whose room the newcomer joins with it; who the seat
   was, and when they left, is answered, for the caller to refund the leaver
   when their seat was a paid one after the cut-off;
-- **a no** — a member the seat was dealt to as a card said no to it.
+- **a no** — a member the seat was dealt to as a card said no to it;
+- **a seat kept** — a rescuer whose share was refused has a seat kept for them
+  alone until their time runs out (#640), and then it is offered again.
 
 Whether the joiner may — in the pool, a fit, free, paid — is the caller's
 question, asked before this.
@@ -40,6 +42,46 @@ class RescueTheSeat:
         await self._bookings.save(booking)
         await self._games.seat(booking_id, player_id, side=taken.side, at=at)
         return taken
+
+
+@final
+class KeepTheSeat:
+    """A seat kept for a rescuer whose share was refused, and its time run out
+    (#640). The money's part is the caller's."""
+
+    def __init__(self, *, bookings: BookingRepository) -> None:
+        self._bookings = bookings
+
+    async def keep(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        until: Instant,
+        seat_charge_id: UUID,
+        reason: str,
+        to_fix_the_card: bool,
+        at: Instant,
+    ) -> None:
+        booking = await _loaded(self._bookings, booking_id)
+        booking.keep_the_seat(
+            player_id,
+            until=until,
+            seat_charge_id=seat_charge_id,
+            reason=reason,
+            to_fix_the_card=to_fix_the_card,
+            at=at,
+        )
+        await self._bookings.save(booking)
+
+    async def ran_out(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> bool:
+        """Whether anything was recorded — nothing while the time still runs."""
+
+        booking = await _loaded(self._bookings, booking_id)
+        if not booking.kept_seat_ran_out(player_id, at=at):
+            return False
+        await self._bookings.save(booking)
+        return True
 
 
 @final

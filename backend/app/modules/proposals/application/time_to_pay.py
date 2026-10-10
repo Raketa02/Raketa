@@ -22,7 +22,10 @@ owed here:
 **And on a booked game, a refused holding's time to fix the card** (#639):
 run out, the player's seat opens to Fill in — on the record a leave before the
 cut-off — and their refused holding is let go; they owe nothing
-(``run_out_the_cards_to_fix``).
+(``run_out_the_cards_to_fix``). **And a refused rescuer's kept seat** (#640):
+run out, it is offered again — every read says so off the clock already — and
+their refused payment stays theirs to confirm while the seat is free
+(``run_out_the_keeps``).
 
 **Nothing here commits but the job**, which is one transaction per game, its
 game locked first, a conflict counted and stepped over.
@@ -171,6 +174,29 @@ async def run_out_the_cards_to_fix(
     return tuple(ran_out)
 
 
+async def run_out_the_keeps(
+    booking_id: UUID,
+    *,
+    games: BookedGameChanges,
+    bookings: PlayerBookings,
+    now: Instant,
+) -> tuple[UUID, ...]:
+    """**A refused rescuer's time run out** (#640): each seat kept for a
+    rescuer whose time is up at ``now`` is offered again — never kept for them
+    again here. Answers whose ran out. **No commit.**"""
+
+    game = await bookings.find(booking_id)
+    if game is None:
+        return ()
+    ran_out: list[UUID] = []
+    for player, kept in sorted(game.kept.items(), key=lambda one: str(one[0])):
+        if now >= kept.until and await games.kept_seat_ran_out(
+            booking_id, player, at=now
+        ):
+            ran_out.append(player)
+    return tuple(ran_out)
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class RanOut:
@@ -190,8 +216,10 @@ class RunOutTheTimeToPay:
     """**The deadline of every time to pay** (#625, #626) — the job's.
     **Correctness depends on it**: until it runs, a seat whose time ran out is
     still its payer's alone, and the holds kept for it stay on the others'
-    cards. **One transaction per game**, over a clock-derived list in one order
-    on every process, so a version conflict is counted and stepped over."""
+    cards. A seat kept for a refused rescuer (#640) is read off the clock, so
+    for it the job only records the run-out and tells the rescuer. **One
+    transaction per game**, over a clock-derived list in one order on every
+    process, so a version conflict is counted and stepped over."""
 
     def __init__(
         self,
@@ -227,7 +255,14 @@ class RunOutTheTimeToPay:
             self._run_out_the_cards,
             now=now,
         )
-        return RanOut(games=games + booked, conflicts=conflicts + booked_conflicts)
+        # A seat kept for a refused rescuer (#640).
+        kept, kept_conflicts = await self._each(
+            await self._games.keeps_past(now=now), self._run_out_the_keeps, now=now
+        )
+        return RanOut(
+            games=games + booked + kept,
+            conflicts=conflicts + booked_conflicts + kept_conflicts,
+        )
 
     async def _each(
         self,
@@ -263,6 +298,14 @@ class RunOutTheTimeToPay:
                 games=self._games,
                 cards=self._cards,
                 now=now,
+            )
+        )
+
+    async def _run_out_the_keeps(self, booking_id: UUID, *, now: Instant) -> bool:
+        await self._proposals.load_for_update(booking_id)
+        return bool(
+            await run_out_the_keeps(
+                booking_id, games=self._games, bookings=self._bookings, now=now
             )
         )
 

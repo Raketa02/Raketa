@@ -258,7 +258,8 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
             TIME_TO_PAY_JOB,
             "Not fixed or paid by then, the payer's seat reopens for everybody "
             "and the holds the others kept are let go — at a club that "
-            "confirms, the booking is called off and the court freed.",
+            "confirms, the booking is called off and the court freed; a seat "
+            "kept for a refused rescuer is offered to everybody again.",
         ),
         Moment.HOLDING: MomentRule(
             HOLDING_JOB,
@@ -1347,6 +1348,12 @@ class _Folded:
                     Moment.PAYMENT_DUE,
                     min(to_fix.until for to_fix in booking.cards_to_fix.values()),
                 )
+            )
+        kept = [] if booking is None else list(booking.kept_until.values())
+        if any(until > self._now for until in kept):
+            # A seat kept for a refused rescuer (#640), its time still running.
+            ahead.append(
+                (Moment.PAYMENT_DUE, min(until for until in kept if until > self._now))
             )
         if booking is not None:
             if (

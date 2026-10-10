@@ -93,6 +93,8 @@ class Said:
     you_left: bool = False
     #: What was kept on the payment a refund gave back less (#641).
     kept_grosze: int | None = None
+    #: About a seat the player went for and does not hold — a rescue (#640).
+    rescue: bool = False
 
 
 def _when(at: Instant) -> str:
@@ -169,6 +171,15 @@ def words_for(said: Said) -> Words:
                 "until it's in."
             ),
         )
+    if kind is NoticeKind.TIME_TO_PAY_RAN_OUT and said.rescue:
+        # A rescuer's kept seat (#640): offered again, still theirs to take.
+        return Words(
+            title=f"Your time to pay ran out · {_hour(said.starts_at)}",
+            body=(
+                "The seat is offered to others again — confirm your payment to "
+                "take it while it's free."
+            ),
+        )
     if kind is NoticeKind.TIME_TO_PAY_RAN_OUT:
         return Words(
             title=f"Your time to pay ran out · {_hour(said.starts_at)}",
@@ -178,6 +189,16 @@ def words_for(said: Said) -> Words:
             ),
         )
     if kind is NoticeKind.TIME_TO_FIX_RAN_OUT:
+        if said.rescue:
+            # A rescuer's kept seat (#640): offered again, still theirs to
+            # take, and nothing owed.
+            return Words(
+                title=f"Your time to fix your card ran out · {_hour(said.starts_at)}",
+                body=(
+                    "The seat is offered to others again, and you owe nothing — "
+                    "you can still take it while it's free."
+                ),
+            )
         if said.reason == NoticeReason.SEAT_OPEN:
             # At its holding, on a booked game (#639): the seat is offered to
             # others as a leaver's, never theirs to take back.
@@ -231,6 +252,8 @@ def words_for(said: Said) -> Words:
     if kind is NoticeKind.CONFIRM_PAYMENT:
         return _confirm_payment(said, game=game, money=money)
     if kind is NoticeKind.FIX_YOUR_CARD:
+        if said.rescue:
+            return _take_the_seat_by(said, money=money, fix=True)
         return _fix_by(said)
     if kind is NoticeKind.GAME_CALLED_OFF:
         return _game_called_off(said, sport=sport, when=when, game=game, money=money)
@@ -296,6 +319,8 @@ def words_for(said: Said) -> Words:
 
 
 def _confirm_payment(said: Said, *, game: str, money: str) -> Words:
+    if said.until is not None and said.rescue:
+        return _take_the_seat_by(said, money=money, fix=False)
     if said.until is not None and said.opens is not Opens.BOOKING:
         return _confirm_by(said, money=money)
     title = (
@@ -348,6 +373,40 @@ def _fix_by(said: Said) -> Words:
         ),
         body=body,
     )
+
+
+def _take_the_seat_by(said: Said, *, money: str, fix: bool) -> Words:
+    """*Fix your card by 14:40 to take the seat* — a rescuer's share refused
+    before the cut-off (#640), nothing paid now — or after it *Confirm your
+    payment by 14:40 to take the seat*: the seat is kept for them alone until
+    then."""
+
+    by = _by(invariant(said.until, "a seat kept until no time"), given_at=said.given_at)
+    sport = _SPORT_WORDS[said.sport]
+    kept = (
+        f"{sport} · {_hour(said.starts_at)} at {said.club} — the seat is kept for "
+        "you until then."
+    )
+    if fix:
+        kept = f"Nothing is paid now. {kept}"
+    if said.reason == FailureReason.TERMS_NEEDED:
+        body = (
+            "Accept the payment terms again — they changed, or your card's "
+            f"brand did. {kept}"
+        )
+    elif said.reason == FailureReason.NO_METHOD:
+        body = (
+            "There's no card to hold your share on — save one in You › "
+            f"Payments. {kept}"
+        )
+    elif said.reason == FailureReason.DECLINED:
+        what = f"the {money} hold — fix it" if fix else f"{money} — confirm it"
+        body = f"Your bank declined {what} with another card. {kept}"
+    else:
+        what = f"the {money} hold" if fix else money
+        body = f"Your bank wants you to confirm {what}. {kept}"
+    act = "Fix your card" if fix else "Confirm your payment"
+    return Words(title=f"{act} by {by} to take the seat", body=body)
 
 
 def _confirm_by(said: Said, *, money: str) -> Words:

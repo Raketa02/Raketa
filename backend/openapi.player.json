@@ -6089,7 +6089,7 @@
           "proposals"
         ],
         "summary": "I confirmed my payment \u2014 my yes again",
-        "description": "*Confirm your payment to keep your seat.* The player confirmed, in the app, the payment that could not be held when the game filled. It is **asked of the provider**, never taken on the phone's word; held now, it is the player's yes again \u2014 and if theirs was the seat still open, the game books on it and everybody else is charged then. Answers as a yes does. Somebody else took the seat first: the payment is let go.\n\n**A rescue's payment** (#545) \u2014 refused when the player went for an open seat on a booked game \u2014 confirmed is **the join again**: the seat that opened first is theirs, as `POST /bookings/{id}/seats` takes one, and the answer is the join's.",
+        "description": "*Confirm your payment to keep your seat.* The player confirmed, in the app, the payment that could not be held when the game filled. It is **asked of the provider**, never taken on the phone's word; held now, it is the player's yes again \u2014 and if theirs was the seat still open, the game books on it and everybody else is charged then. Answers as a yes does. Somebody else took the seat first: the payment is let go.\n\n**A rescue's payment** (#545) \u2014 refused when the player went for an open seat on a booked game \u2014 confirmed is **the join again**: the seat that opened first is theirs, as `POST /bookings/{id}/seats` takes one, and the answer is the join's, `money` included. Within their time the seat was kept for them alone (#640); past it, their time runs out first and the seat is theirs only if nobody took it meanwhile.",
         "operationId": "confirm_payment_api_v1_seat_charges__seat_charge_id__confirmation_post",
         "security": [
           {
@@ -6360,7 +6360,7 @@
           "proposals"
         ],
         "summary": "Take an open seat",
-        "description": "*I'm in \u00b7 27 z\u0142* on a rescue \u2014 a Seat open card, a Seats to fill row, a rescue's details (the client gives its ten seconds of *Undo* first). **The share is held** on the club's account until the cut-off, like every seat's, or taken at once after it (#637), and the player takes **the seat that opened first**, on its side \u2014 `booked` names the booking and its Game, now on their Home, and they are emailed *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off); they join the game's chat. **The leaver who left after the cut-off is refunded, less exactly the fee kept on their payment, the moment this payment succeeds** \u2014 told once the refund is made (*You've been refunded 38,24 z\u0142 \u00b7 your seat was taken*), which waits for a fee not yet known (#641); one who left before it had nothing taken. `open_seats` is what is still open. When the share could not be held, nothing was taken: `your_payment` names the refused payment, and confirming it (`POST /seat-charges/{id}/confirmation`) is the join again. A player already on the game is answered the same `booked`, and nothing is recorded.",
+        "description": "*I'm in \u00b7 27 z\u0142* on a rescue \u2014 a Seat open card, a Seats to fill row, a rescue's details (the client gives its ten seconds of *Undo* first). **The share is held** on the club's account until the cut-off, like every seat's \u2014 or, far ahead of it, the card checked and the share held at its Holding time \u2014 or taken at once after it (#637, #639, #640), and `money` says which: `HELD`, `CHECKED` or `TAKEN`. The player takes **the seat that opened first**, on its side \u2014 `booked` names the booking and its Game, now on their Home, and they are emailed *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off); they join the game's chat, and are free to leave until the cut-off like everybody else. **The leaver who left after the cut-off is refunded, less exactly the fee kept on their payment, the moment this payment succeeds** \u2014 told once the refund is made (*You've been refunded 38,24 z\u0142 \u00b7 your seat was taken*), which waits for a fee not yet known (#641); one who left before it had nothing taken. `open_seats` is what is still open. **When the share could not be held**, nothing was taken, and **a seat is kept for the player alone** (#640): `your_payment` names the refused payment, and its `confirm_by` and `time_to` the window \u2014 thirty minutes to fix the card before the cut-off (`FIX_THE_CARD`), or to pay after it (`PAY`), never past the start \u2014 emailed and told *Fix your card by 14:40 to take the seat* or *Confirm your payment by 14:40 to take the seat*. Meanwhile it is offered to nobody else; confirming the payment (`POST /seat-charges/{id}/confirmation`) is the join again, and a refusal for terms or a missing method is fixed and joined again here. Run out, the seat is offered again \u2014 still theirs to take while it is free, but never kept for them again on this game. A player already on the game is answered the same `booked`, and nothing is recorded.",
         "operationId": "join_a_rescue_api_v1_bookings__booking_id__seats_post",
         "security": [
           {
@@ -6401,7 +6401,7 @@
             }
           },
           "409": {
-            "description": "`seat_just_taken` \u2014 **the first join wins**: somebody took the seat a moment before, or none is open \u2014 *Someone just took it*. `booking_is_called_off` \u2014 the game is off (short at its cut-off). `game_has_started` \u2014 its hour has begun. `rescue_not_offered` \u2014 the seat is not one this player is offered (fit, free, Games & money, a seat they left); which is not said. `payment_to_confirm` \u2014 their earlier *I'm in* here waits on their bank: confirming it (`details.seat_charge_id`) is the join again. `payment_method_required` \u2014 no saved method. Nothing was recorded and nobody charged.",
+            "description": "`seat_just_taken` \u2014 **the first join wins**: somebody took the seat a moment before, or none is open \u2014 *Someone just took it* \u2014 or the one open is kept for a refused rescuer while their time runs (#640). `booking_is_called_off` \u2014 the game is off (short at its cut-off). `game_has_started` \u2014 its hour has begun. `rescue_not_offered` \u2014 the seat is not one this player is offered (fit, free, Games & money, a seat they left); which is not said. `payment_to_confirm` \u2014 their earlier *I'm in* here waits on their bank: confirming it (`details.seat_charge_id`) is the join again. `payment_method_required` \u2014 no saved method. Nothing was recorded and nobody charged.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7442,7 +7442,7 @@
               }
             ],
             "title": "Your Payment Due By",
-            "description": "**The reader's own** refused share and their time to pay \u2014 *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40* (`time_to`, #638) \u2014 while it runs, on a game waiting for it or one gone back to filling meanwhile (#625, #626). The payment is their *To confirm* row's (`GET /players/me/payments-to-confirm`). `null` for everybody else, and from the moment it runs out."
+            "description": "**The reader's own** refused share and their time to pay \u2014 *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40* (`time_to`, #638) \u2014 while it runs, on a game waiting for it or one gone back to filling meanwhile (#625, #626). The payment is their *To confirm* row's (`GET /players/me/payments-to-confirm`). **A rescuer whose share was refused** reads, from outside, the seat kept for them alone until then (#640) \u2014 *Fix your card by 14:40 to take the seat*, or after the cut-off *Confirm your payment by 14:40* \u2014 offered to nobody else meanwhile. `null` for everybody else, and from the moment it runs out."
           },
           "time_to": {
             "anyOf": [
@@ -10271,7 +10271,7 @@
               }
             ],
             "title": "Your Payment Due By",
-            "description": "**The reader's own** refused share and their time to pay \u2014 *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40* (`time_to`, #638) \u2014 while it runs, on a game waiting for it or one gone back to filling meanwhile (#625, #626). The payment is their *To confirm* row's (`GET /players/me/payments-to-confirm`). `null` for everybody else, and from the moment it runs out."
+            "description": "**The reader's own** refused share and their time to pay \u2014 *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40* (`time_to`, #638) \u2014 while it runs, on a game waiting for it or one gone back to filling meanwhile (#625, #626). The payment is their *To confirm* row's (`GET /players/me/payments-to-confirm`). **A rescuer whose share was refused** reads, from outside, the seat kept for them alone until then (#640) \u2014 *Fix your card by 14:40 to take the seat*, or after the cut-off *Confirm your payment by 14:40* \u2014 offered to nobody else meanwhile. `null` for everybody else, and from the moment it runs out."
           },
           "time_to": {
             "anyOf": [
@@ -14600,7 +14600,18 @@
               }
             ],
             "title": "Payment Awaited Until",
-            "description": "**This yes filled the game and a share was refused** (#625, #626; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer."
+            "description": "**This yes filled the game and a share was refused** (#625, #626; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer \u2014 a rescue's refused payment too, whose seat is kept for its player alone and no game waits on it (`your_payment.confirm_by`, #640)."
+          },
+          "money": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookedMoneySchema"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "**The seat this answer took on a booked game** \u2014 a rescue's join, or its payment confirmed (#640; Q113): the joiner's money line, as Home reads it. `HELD` \u2014 *27 z\u0142 held until Fri 17:00*, taken at the club's cut-off (`free_to_leave_until`), and free to leave until then like everybody else; `CHECKED` \u2014 far ahead of the cut-off the card was only checked, and the share is held from `held_from`; `TAKEN` \u2014 after the cut-off, *you paid 27 z\u0142* now. `null` on every other answer, and when the share was refused."
           }
         },
         "type": "object",
@@ -14634,7 +14645,7 @@
               }
             ],
             "title": "Confirm By",
-            "description": "**Their time to pay** (#625, #626; Q109) \u2014 before the club's cut-off, their time to fix the card (`time_to`, #638): the seat is theirs alone until then \u2014 *Confirm your payment by 14:40 to keep your seat*, or *Fix your card by 14:40* \u2014 every other hold kept, so paying in time books the game at once. Thirty minutes from the refusal, never past the book-by (nor, to fix, the cut-off). `null` once it ran out: the seat is open to others too, and still theirs to take back while it is free."
+            "description": "**Their time to pay** (#625, #626; Q109) \u2014 before the club's cut-off, their time to fix the card (`time_to`, #638): the seat is theirs alone until then \u2014 *Confirm your payment by 14:40 to keep your seat*, or *Fix your card by 14:40* \u2014 every other hold kept, so paying in time books the game at once. Thirty minutes from the refusal, never past the book-by (nor, to fix, the cut-off). `null` once it ran out: the seat is open to others too, and still theirs to take back while it is free. **On a rescue** (#640) the seat is kept for them alone until then \u2014 *Fix your card by 14:40 to take the seat*, or after the cut-off *Confirm your payment by 14:40* \u2014 never past the game's start; `null` when none was kept, as for a rescuer whose kept seat ran out once already."
           },
           "time_to": {
             "anyOf": [

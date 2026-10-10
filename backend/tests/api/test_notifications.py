@@ -421,14 +421,17 @@ async def test_a_rescue_s_refused_payment_asks_to_take_the_seat(
 
     assert refused.status_code == 200, refused.text
     assert refused.json()["booked"] is None
+    # Before the cut-off the seat is kept for her to fix the card (#640).
     assert await pushed_to(mailbox, pushes, zosia) == [
         (
-            "Confirm your payment to take the seat",
-            f"Your bank declined 30 zł — confirm it with another card. {THE_GAME}.",
+            "Fix your card by 08:30 to take the seat",
+            "Your bank declined the 30 zł hold — fix it with another card. "
+            "Nothing is paid now. Padel · Sat 17:00 at Bonarka Arena — the seat "
+            "is kept for you until then.",
         )
     ]
     [notice] = await notices_of(client, mailbox, zosia)
-    assert (notice["kind"], notice["opens"]) == ("CONFIRM_PAYMENT", "BOOKING")
+    assert (notice["kind"], notice["opens"]) == ("FIX_YOUR_CARD", "BOOKING")
 
 
 async def test_a_leaver_s_seat_tells_everybody_still_in_and_the_leaver_nothing(

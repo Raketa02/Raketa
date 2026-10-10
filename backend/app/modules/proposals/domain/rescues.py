@@ -5,7 +5,9 @@ mechanics §8.1–§8.2, §10.1, §14.2; the screens A2.3, A3.1, A4.3).
 still the others'. It is offered **until the club's cut-off, whatever the number
 of open seats** — the leavers' refunds and the game itself depend on them being
 taken — **then until the start**, on a game that goes ahead short; never on a
-game called off, whether or not that is recorded yet.
+game called off, whether or not that is recorded yet. **A seat kept for a
+rescuer whose share was refused** (#640) is offered to nobody else while their
+time runs — read off the clock, so it is offered again the moment it is up.
 
 **Offered to every member who fits and is free for the hour** (§10.1): the pair
 rule against everybody on the game, through the kind's level window (the
@@ -33,7 +35,7 @@ from typing import final
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Instant, invariant
+from app.kernel import Instant, instant, invariant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.player_profile.domain.weekly_hours import (
     WeeklyHours,
@@ -49,7 +51,7 @@ from app.modules.proposals.domain.deck import (
 )
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.home import BookedGame, BookingStage, OpenSeat
-from app.modules.proposals.domain.limits import NEXT_BEST_FITS_PER_SEAT
+from app.modules.proposals.domain.limits import NEXT_BEST_FITS_PER_SEAT, TIME_TO_PAY
 from app.modules.proposals.domain.overlap import Overlap
 
 
@@ -68,15 +70,34 @@ class Candidate:
     limits: GamesAndMoney
 
 
-def rescuable(game: BookedGame, *, now: Instant) -> bool:
-    """Whether a seat on this booked game is there to take at ``now``."""
+def rescuable(game: BookedGame, *, now: Instant, by: UUID | None = None) -> bool:
+    """Whether a seat on this booked game is there to take at ``now`` — **by**
+    a player, a seat kept for another rescuer whose time runs is not (#640);
+    with nobody named, whether any seat is open at all, kept or not."""
 
+    kept = 0 if by is None else game.seats_kept(now=now, but=by)
     return (
         game.stage is BookingStage.SEAT_OPEN
-        and bool(game.open)
+        and len(game.open) > kept
         and game.called_off_reason(now) is None
         and now < game.start
     )
+
+
+def kept_until(game: BookedGame, player: UUID, *, now: Instant) -> Instant | None:
+    """Until when a seat is kept for this rescuer if their share is refused at
+    ``now`` (#640) — **once**: refused again while it is kept, the time they
+    had; ``None`` once theirs ran out, so a refusal pressed again and again
+    holds no seat; otherwise ``TIME_TO_PAY`` on — to fix the card, never past
+    the cut-off; after it, to pay — never past the start."""
+
+    kept = game.kept_for(player, now=now)
+    if kept is not None:
+        return kept.until
+    if player in game.kept:
+        return None
+    last = game.cut_off if fills_by_the_cut_off(game, now=now) else game.start
+    return instant(min(now + TIME_TO_PAY, last))
 
 
 def fills_by_the_cut_off(game: BookedGame, *, now: Instant) -> bool:
@@ -112,7 +133,7 @@ def offered_to(
     court."""
 
     player = candidate.player_id
-    if not rescuable(game, now=now):
+    if not rescuable(game, now=now, by=player):
         return False
     if player in game.players or player in game.leavers:
         return False

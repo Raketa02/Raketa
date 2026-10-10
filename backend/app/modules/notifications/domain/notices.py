@@ -208,6 +208,9 @@ class Notice:
     #: What was kept on the payment a refund gave back less — *40 zł less the
     #: 1,76 zł kept on your payment* (#641).
     kept_grosze: int | None = None
+    #: About a seat the player went for on a booked game and does not hold —
+    #: a rescue (#640): *to take the seat*, never *to keep your seat*.
+    rescue: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -294,6 +297,7 @@ class NoticesOfADay:
             until=notice.until,
             you_left=notice.you_left,
             kept_grosze=notice.kept_grosze,
+            rescue=notice.rescue,
         )
         self._record_that(given)
         return given

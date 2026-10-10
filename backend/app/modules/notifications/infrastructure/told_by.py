@@ -115,13 +115,24 @@ class BookedAndProposedGames:
                 for left in booking.departures
                 if left.is_open and left.at < booking.cut_off
             ),
-            # And a booked game's: a holding refused, its card to fix (#639).
+            # And a booked game's: a holding refused, its card to fix (#639) —
+            # and a seat kept for a refused rescuer (#640).
             paying={
                 **proposal.payments_due,
                 **({} if booking is None else booking.fixing_until),
+                **({} if booking is None else booking.kept_until),
             },
             fixing=proposal.fixing
-            | (frozenset() if booking is None else frozenset(booking.cards_to_fix)),
+            | (frozenset() if booking is None else frozenset(booking.cards_to_fix))
+            | (
+                frozenset()
+                if booking is None
+                else frozenset(
+                    player
+                    for player, kept in booking.kept.items()
+                    if kept.to_fix_the_card
+                )
+            ),
             waiting_for_a_payment=filling and proposal.waiting_for_a_payment,
             booked_on_a_payment=proposal.booked_on_a_payment,
         )

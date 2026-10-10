@@ -105,6 +105,8 @@ class RecordedNotice:
     you_left: bool = False
     #: What was kept on the payment a refund gave back less (#641).
     kept_grosze: int | None = None
+    #: About a seat the player went for and does not hold — a rescue (#640).
+    rescue: bool = False
     #: Reached the list — given, or gathered into — since the player last
     #: opened it, and not their own: one the bell counts.
     new: bool = False

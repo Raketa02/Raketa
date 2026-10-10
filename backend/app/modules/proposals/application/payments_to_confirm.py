@@ -14,7 +14,10 @@ row stays without a time while the seat is still free to take back.
 
 **And a booked game whose holding was refused** (#639): the row says *Fix your
 card by 19:30* while that time runs — and goes once it ran out, the seat no
-longer theirs to take back.
+longer theirs to take back. **And a seat kept for a refused rescuer** (#640):
+*Fix your card by 14:40*, or after the cut-off *Confirm your payment by 14:40*,
+while their time runs — and once it ran out, as a reopened seat's, without a
+time while the seat is still free and a payment waits on their bank.
 """
 
 from __future__ import annotations
@@ -36,6 +39,12 @@ from app.modules.proposals.domain.proposal import (
     ReopenReason,
     Standing,
     TimeTo,
+)
+from app.modules.proposals.domain.rescues import rescuable
+
+#: The refusals whose payment waits on the player's bank — confirmed in the app.
+_ASKED_THE_BANK = frozenset(
+    {ReopenReason.AUTHENTICATION_REQUIRED, ReopenReason.DECLINED}
 )
 
 
@@ -117,11 +126,37 @@ async def owed_by(
 ) -> list[Owed]:
     """Every game still filling on which this player has a payment to confirm,
     with the charge, why it was refused and — within their time to pay — by
-    when (#625) — and every booked game whose holding of their share was
-    refused, while their time to fix the card runs (#639) — soonest first.
-    Home counts them among the games that need the player (#542)."""
+    when (#625) — every booked game whose holding of their share was refused,
+    while their time to fix the card runs (#639) — and every rescue whose seat
+    is kept for them while their time runs (#640) — soonest first. Home counts
+    them among the games that need the player (#542)."""
 
     owed: list[Owed] = []
+    for booking_id in await games.kept_for(player_id):
+        game = await bookings.find(booking_id)
+        kept = None if game is None else game.kept.get(player_id)
+        if game is None or kept is None:
+            continue
+        running = game.kept_for(player_id, now=now) is not None
+        # Run out, a payment that waits on their bank is still theirs to
+        # confirm while the seat is free — never one refused for terms or a
+        # method, which asked nobody's bank.
+        if not running and not (
+            kept.reason in _ASKED_THE_BANK and rescuable(game, now=now, by=player_id)
+        ):
+            continue
+        proposal = await proposals.load(booking_id)
+        if proposal is None:
+            continue
+        owed.append(
+            Owed(
+                proposal,
+                kept.seat_charge_id,
+                kept.reason,
+                kept.until if running else None,
+                kept.time_to if running else None,
+            )
+        )
     for booking_id in await games.cards_to_fix_of(player_id):
         game = await bookings.find(booking_id)
         to_fix = None if game is None else game.cards_to_fix.get(player_id)

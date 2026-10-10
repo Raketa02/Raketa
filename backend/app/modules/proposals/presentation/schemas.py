@@ -23,7 +23,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Instant, Sport
+from app.kernel import Instant, Sport, instant
 from app.modules.proposals.application.answers import YesAnswer
 from app.modules.proposals.application.booking_details import BookingDetails
 from app.modules.proposals.application.group_deck import GroupDeck
@@ -111,7 +111,11 @@ class YourPaymentSchema(BaseModel):
             "paying in time books the game at once. Thirty minutes from the "
             "refusal, never past the book-by (nor, to fix, the cut-off). `null` "
             "once it ran out: the seat is open to others too, and still theirs "
-            "to take back while it is free."
+            "to take back while it is free. **On a rescue** (#640) the seat is "
+            "kept for them alone until then — *Fix your card by 14:40 to take "
+            "the seat*, or after the cut-off *Confirm your payment by 14:40* — "
+            "never past the game's start; `null` when none was kept, as for a "
+            "rescuer whose kept seat ran out once already."
         ),
     )
     time_to: TimeTo | None = Field(
@@ -174,7 +178,22 @@ class YesAnswerResponse(BaseModel):
             "Q110): the game waits for that payment until then — *It's a game!* "
             "with *Waiting for one payment · until 14:40 · Nobody pays until "
             "it's in*. Somebody else's, or this player's own (`your_payment`). "
-            "`null` on every other answer."
+            "`null` on every other answer — a rescue's refused payment too, "
+            "whose seat is kept for its player alone and no game waits on it "
+            "(`your_payment.confirm_by`, #640)."
+        ),
+    )
+    money: BookedMoneySchema | None = Field(
+        default=None,
+        description=(
+            "**The seat this answer took on a booked game** — a rescue's join, "
+            "or its payment confirmed (#640; Q113): the joiner's money line, "
+            "as Home reads it. `HELD` — *27 zł held until Fri 17:00*, taken at "
+            "the club's cut-off (`free_to_leave_until`), and free to leave "
+            "until then like everybody else; `CHECKED` — far ahead of the "
+            "cut-off the card was only checked, and the share is held from "
+            "`held_from`; `TAKEN` — after the cut-off, *you paid 27 zł* now. "
+            "`null` on every other answer, and when the share was refused."
         ),
     )
 
@@ -197,11 +216,16 @@ class YesAnswerResponse(BaseModel):
                 else YourPaymentSchema(
                     seat_charge_id=mine.seat_charge_id,
                     refusal=mine.refusal,
-                    confirm_by=answer.paying_until,
+                    confirm_by=(
+                        answer.kept_until
+                        if answer.kept_until is not None
+                        else answer.paying_until
+                    ),
                     time_to=answer.time_to,
                 )
             ),
             payment_awaited_until=answer.paying_until,
+            money=None if answer.money is None else _money(answer.money),
         )
 
 
@@ -815,8 +839,11 @@ _YOUR_PAYMENT_DUE_BY = (
     "payment by 14:40*, or before the cut-off *Fix your card by 14:40* "
     "(`time_to`, #638) — while it runs, on a game waiting for it or one gone "
     "back to filling meanwhile (#625, #626). The payment is their *To confirm* "
-    "row's (`GET /players/me/payments-to-confirm`). `null` for everybody else, "
-    "and from the moment it runs out."
+    "row's (`GET /players/me/payments-to-confirm`). **A rescuer whose share "
+    "was refused** reads, from outside, the seat kept for them alone until "
+    "then (#640) — *Fix your card by 14:40 to take the seat*, or after the "
+    "cut-off *Confirm your payment by 14:40* — offered to nobody else "
+    "meanwhile. `null` for everybody else, and from the moment it runs out."
 )
 
 _CALLED_OFF_REASON = (
@@ -1171,24 +1198,35 @@ class HomeGameSchema(BaseModel):
             answer_by=card.state.answer_by,
             payment_due_by=card.state.pay_by,
             your_payment_due_by=yours,
-            time_to=_time_to(game, card.state.pay_by, yours),
+            time_to=_time_to(
+                game, card.state.pay_by, yours, reader=reader, read_at=read_at
+            ),
         )
 
 
 def _yours_due_by(
     game: BookedGame, reader: UUID, *, read_at: datetime
 ) -> datetime | None:
-    """The reader's own time to pay, while it runs."""
+    """The reader's own time to pay, while it runs — or, a rescuer whose share
+    was refused, the seat kept for them (#640)."""
 
+    kept = game.kept_for(reader, now=instant(read_at))
+    if kept is not None:
+        return kept.until
     until = game.paying.get(reader)
     return until if until is not None and read_at < until else None
 
 
-def _time_to(game: BookedGame, *due: datetime | None) -> TimeTo | None:
+def _time_to(
+    game: BookedGame, *due: datetime | None, reader: UUID, read_at: datetime
+) -> TimeTo | None:
     """What a payment due on the game is for — with either of its moments,
-    never without (#638)."""
+    never without (#638); the reader's own, a seat kept for them (#640)."""
 
-    return game.time_to if any(one is not None for one in due) else None
+    if not any(one is not None for one in due):
+        return None
+    kept = game.kept_for(reader, now=instant(read_at))
+    return kept.time_to if kept is not None else game.time_to
 
 
 class HomeResponse(BaseModel):
@@ -1478,7 +1516,13 @@ class BookingDetailsResponse(BaseModel):
             answer_by=details.state.answer_by,
             payment_due_by=details.state.pay_by,
             your_payment_due_by=yours,
-            time_to=_time_to(game, details.state.pay_by, yours),
+            time_to=_time_to(
+                game,
+                details.state.pay_by,
+                yours,
+                reader=reader,
+                read_at=details.read_at,
+            ),
             shows_forecast=details.shows_forecast,
             check_in=(
                 None

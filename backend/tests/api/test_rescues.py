@@ -29,7 +29,11 @@ import pytest
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import build_the_cut_off
 from app.core.config import get_settings
-from app.modules.payments.domain.entered_cards import A_CARD_THE_BANK_ALWAYS_CHECKS
+from app.modules.payments.domain.entered_cards import (
+    A_CARD,
+    A_CARD_THAT_DECLINES_LATER,
+    A_CARD_THE_BANK_ALWAYS_CHECKS,
+)
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -38,6 +42,7 @@ from tests.api.proposals_world import (
     a_member,
     live_ids,
     makes,
+    runs_out,
     saves_a_card,
     says_yes,
     warsaw,
@@ -50,6 +55,12 @@ SHARE = 30_00
 FEE = 1_45
 CUT_OFF = SATURDAY_FIVE - timedelta(hours=24)
 AFTER_THE_CUT_OFF = CUT_OFF + timedelta(hours=1)
+#: The seat a refused rescuer keeps for themselves alone (#640).
+TIME_TO_FIX = timedelta(minutes=30)
+#: The cut-off on the wire: Friday 17:00 in Kraków.
+CUT_OFF_ON_THE_WIRE = "2026-10-09T15:00:00Z"
+#: Thirty minutes from Monday 08:00: her time to fix the card, on the wire.
+FIX_BY_ON_THE_WIRE = "2026-10-05T06:30:00Z"
 EVENINGS = [{"day": day, "hour": hour} for day in range(1, 8) for hour in (17, 18)]
 MORNINGS = [{"day": day, "hour": hour} for day in range(1, 8) for hour in (8, 9)]
 
@@ -176,6 +187,39 @@ async def own_record(client, player: dict) -> dict:
     read = await client.get("/api/v1/players/me/record", headers=player["headers"])
     assert read.status_code == 200, read.text
     return read.json()
+
+
+async def details_of(client, player: dict, booking_id: str) -> dict:
+    read = await client.get(f"/api/v1/bookings/{booking_id}", headers=player["headers"])
+    assert read.status_code == 200, read.text
+    return read.json()
+
+
+async def to_confirm(client, player: dict) -> list[dict]:
+    read = await client.get(
+        "/api/v1/players/me/payments-to-confirm", headers=player["headers"]
+    )
+    assert read.status_code == 200, read.text
+    return read.json()["payments"]
+
+
+async def told(client, mailbox, player: dict) -> list[str]:
+    """The titles on their bell, the latest first."""
+
+    return [title for title, _ in await told_in_full(client, mailbox, player)]
+
+
+async def told_in_full(client, mailbox, player: dict) -> list[tuple[str, str]]:
+    """Each notice on their bell as its title and body, the latest first."""
+
+    await mailbox.drain()
+    read = await client.get("/api/v1/players/me/notices", headers=player["headers"])
+    assert read.status_code == 200, read.text
+    return [(notice["title"], notice["body"]) for notice in read.json()["notices"]]
+
+
+async def subjects_to(mailbox, name: str) -> list[str]:
+    return [email.subject for email in await mailbox.to(f"{name}@example.com")]
 
 
 # --------------------------------------------------------------------------- #
@@ -325,6 +369,11 @@ async def test_taking_a_seat_holds_the_share_and_the_game_is_whole_again(
     assert answer["booked"]["booking_id"] == booking
     assert answer["open_seats"] == 0
     assert answer["your_payment"] is None
+    # The join says so (#640): held until the cut-off, which takes it.
+    assert answer["money"]["share_state"] == "HELD"
+    assert answer["money"]["paid"] is False
+    assert answer["money"]["free_to_leave_until"] == CUT_OFF_ON_THE_WIRE
+    assert answer["money"]["taken_at"] == CUT_OFF_ON_THE_WIRE
     [card] = await home_of(client, zosia)
     assert (card["booking_id"], card["status"], card["open_seats"]) == (
         booking,
@@ -610,7 +659,8 @@ async def test_a_refused_payment_takes_no_seat_and_confirming_it_is_the_join_aga
     assert (again.status_code, again.json()["code"]) == (409, "payment_to_confirm")
     assert again.json()["details"]["seat_charge_id"] == payment["seat_charge_id"]
     [email] = await mailbox.to("zosia@example.com")
-    assert email.subject == "Confirm your payment to take the seat"
+    # Before the cut-off the seat is kept for her to fix the card (#640).
+    assert email.subject == "Fix your card by 08:30 to take the seat"
 
     charge = f"/api/v1/seat-charges/{payment['seat_charge_id']}"
     secret = (await client.get(charge, headers=zosia["headers"])).json()["to_confirm"][
@@ -627,7 +677,7 @@ async def test_a_refused_payment_takes_no_seat_and_confirming_it_is_the_join_aga
 
 
 async def test_a_payment_confirmed_after_somebody_else_took_the_seat_is_let_go(
-    client, payments, booking, crowd, mailbox
+    client, session_factory, clock, payments, booking, crowd, mailbox
 ):
     kuba, zosia, marek = crowd[1], crowd[4], crowd[5]
     await saves_a_card(
@@ -635,6 +685,9 @@ async def test_a_payment_confirmed_after_somebody_else_took_the_seat_is_let_go(
     )
     await leaves(client, kuba, booking)
     payment = (await joins(client, zosia, booking)).json()["your_payment"]
+    # Kept for her for thirty minutes (#640), then offered again.
+    clock.move(TIME_TO_FIX)
+    await runs_out(session_factory, clock)
     assert (await joins(client, marek, booking)).status_code == 200
 
     charge = f"/api/v1/seat-charges/{payment['seat_charge_id']}"
@@ -645,6 +698,338 @@ async def test_a_payment_confirmed_after_somebody_else_took_the_seat_is_let_go(
     # The last seat went to Marek, and Zosia's payment was let go with the board.
     assert (late.status_code, late.json()["code"]) == (409, "payment_not_confirmed")
     assert await receipts_of(client, mailbox, zosia) == []
+
+
+# --------------------------------------------------------------------------- #
+# Held before the cut-off, paid after it (#640)
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_rescuer_before_the_cut_off_leaves_free_and_nothing_is_taken(
+    client, payments, booking, crowd, mailbox
+):
+    """A rescue follows the seats it joins: held until the cut-off, so its
+    rescuer is free to leave until then like everybody else."""
+
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+    assert (await joins(client, zosia, booking)).status_code == 200
+    leaving = (await details_of(client, zosia, booking))["leaving"]
+    assert (leaving["kind"], leaving["refund_grosze"]) == ("BEFORE_THE_CUT_OFF", None)
+
+    await leaves(client, zosia, booking)
+
+    assert kinds_of(await receipts_of(client, mailbox, zosia)) == ["RELEASED"]
+    assert payments.called("capture") == []
+    assert payments.called("refund") == []
+    assert "You left the game · nothing was taken" in await subjects_to(
+        mailbox, "zosia"
+    )
+
+
+async def test_taking_a_seat_after_the_cut_off_takes_the_share_at_once(
+    client, session_factory, clock, booking, crowd, mailbox
+):
+    kuba, zosia = crowd[1], crowd[4]
+    clock.move(AFTER_THE_CUT_OFF - MONDAY_MORNING)
+    await cuts_off(session_factory, clock)
+    await leaves(client, kuba, booking)
+
+    taken = await joins(client, zosia, booking)
+
+    assert taken.status_code == 200, taken.text
+    money = taken.json()["money"]
+    assert (money["share_state"], money["paid"], money["free_to_leave_until"]) == (
+        "TAKEN",
+        True,
+        None,
+    )
+    [charge] = await receipts_of(client, mailbox, zosia)
+    assert (charge["kind"], charge["amount_grosze"]) == ("CHARGE", SHARE)
+    assert "It's a game! · you paid 30 zł" in await subjects_to(mailbox, "zosia")
+    assert "It's a game! · you paid 30 zł" in await told(client, mailbox, zosia)
+    [card] = await home_of(client, zosia)
+    assert (card["money"]["share_state"], card["money"]["paid"]) == ("TAKEN", True)
+    # And the leaver it replaced is refunded, less exactly the fee kept (#641).
+    refund, _ = await receipts_of(client, mailbox, kuba)
+    assert (refund["kind"], refund["amount_grosze"]) == ("REFUND", SHARE - FEE)
+
+
+async def test_taking_a_seat_before_the_cut_off_is_told_held(
+    client, booking, crowd, mailbox
+):
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+
+    assert (await joins(client, zosia, booking)).status_code == 200
+
+    assert "It's a game! · 30 zł held" in await told(client, mailbox, zosia)
+
+
+# --------------------------------------------------------------------------- #
+# A refused rescuer keeps the seat (#640)
+# --------------------------------------------------------------------------- #
+
+
+async def refused_rescuer(
+    client, payments, booking: str, zosia: dict, card=A_CARD_THE_BANK_ALWAYS_CHECKS
+) -> dict:
+    """Zosia's bank checks every payment — or, ``card`` says, declines it: her
+    *I'm in* is refused. Her payment, as the answer names it."""
+
+    await saves_a_card(client, payments, zosia["headers"], card)
+    refused = await joins(client, zosia, booking)
+    assert refused.status_code == 200, refused.text
+    assert refused.json()["booked"] is None
+    return refused.json()
+
+
+async def confirms(client, payments, player: dict, payment: dict, with_card=None):
+    """Her bank's check passed in the app — or, declined, she gave another
+    card there — and the payment confirmed."""
+
+    charge = f"/api/v1/seat-charges/{payment['seat_charge_id']}"
+    secret = (await client.get(charge, headers=player["headers"])).json()["to_confirm"][
+        "client_secret"
+    ]
+    payments.phone_confirms_payment(payment_of(secret), with_card=with_card)
+    return await client.post(f"{charge}/confirmation", headers=player["headers"])
+
+
+async def test_a_refused_rescuer_keeps_the_seat_to_fix_the_card_before_the_cut_off(
+    client, payments, group, booking, crowd, mailbox
+):
+    ola, kuba, zosia, marek = crowd[0], crowd[1], crowd[4], crowd[5]
+    await leaves(client, kuba, booking)
+
+    answer = await refused_rescuer(client, payments, booking, zosia)
+
+    payment = answer["your_payment"]
+    assert (payment["confirm_by"], payment["time_to"]) == (
+        FIX_BY_ON_THE_WIRE,
+        "FIX_THE_CARD",
+    )
+    # Nobody else's payment is awaited, and she holds no seat yet.
+    assert (answer["payment_awaited_until"], answer["money"]) == (None, None)
+    # Meanwhile the seat is offered to nobody else.
+    assert (await fill_in(client, marek, group))["seats_to_fill"] == []
+    assert await deck_cards(client, marek, group) == []
+    taken = await joins(client, marek, booking)
+    assert (taken.status_code, taken.json()["code"]) == (409, "seat_just_taken")
+    # Hers to find, with the window and its end.
+    [row] = await to_confirm(client, zosia)
+    assert (row["proposal_id"], row["seat_charge_id"]) == (
+        booking,
+        payment["seat_charge_id"],
+    )
+    assert (row["confirm_by"], row["time_to"]) == (FIX_BY_ON_THE_WIRE, "FIX_THE_CARD")
+    details = await details_of(client, zosia, booking)
+    assert (details["your_payment_due_by"], details["time_to"]) == (
+        FIX_BY_ON_THE_WIRE,
+        "FIX_THE_CARD",
+    )
+    assert "Fix your card by 08:30 to take the seat" in await subjects_to(
+        mailbox, "zosia"
+    )
+    assert "Fix your card by 08:30 to take the seat" in await told(
+        client, mailbox, zosia
+    )
+    # The others still read their seat open.
+    [olas] = await home_of(client, ola)
+    assert olas["status"] == "SEAT_OPEN"
+
+
+async def test_a_refused_rescuer_who_fixes_the_card_in_time_takes_the_seat_held(
+    client, payments, clock, booking, crowd, mailbox
+):
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+    answer = await refused_rescuer(client, payments, booking, zosia)
+    clock.move(timedelta(minutes=20))
+
+    confirmed = await confirms(client, payments, zosia, answer["your_payment"])
+
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["booked"]["booking_id"] == booking
+    assert confirmed.json()["open_seats"] == 0
+    assert confirmed.json()["money"]["share_state"] == "HELD"
+    assert await to_confirm(client, zosia) == []
+    [card] = await home_of(client, zosia)
+    assert (card["status"], card["money"]["share_state"]) == ("BOOKED", "HELD")
+    # Held, not taken: nothing to show for it until the cut-off.
+    assert await receipts_of(client, mailbox, zosia) == []
+
+
+async def test_a_refused_rescuer_whose_time_runs_out_has_the_seat_offered_again(
+    client, session_factory, clock, payments, group, booking, crowd, mailbox
+):
+    kuba, zosia, marek = crowd[1], crowd[4], crowd[5]
+    await leaves(client, kuba, booking)
+    await refused_rescuer(client, payments, booking, zosia)
+
+    clock.move(TIME_TO_FIX)
+
+    # Read off the clock: offered again before the job has run.
+    [row] = (await fill_in(client, marek, group))["seats_to_fill"]
+    assert row["booking_id"] == booking
+    assert (await runs_out(session_factory, clock)).games == 1
+    assert (
+        "Your time to fix your card ran out · Sat 17:00",
+        "The seat is offered to others again, and you owe nothing — you can "
+        "still take it while it's free.",
+    ) in await told_in_full(client, mailbox, zosia)
+    # Her payment is still hers to confirm while the seat is free — no time.
+    [row] = await to_confirm(client, zosia)
+    assert (row["proposal_id"], row["confirm_by"], row["time_to"]) == (
+        booking,
+        None,
+        None,
+    )
+    assert (await joins(client, marek, booking)).status_code == 200
+    assert await to_confirm(client, zosia) == []
+    # She owes nothing, and nothing was taken.
+    assert await receipts_of(client, mailbox, zosia) == []
+
+
+async def test_her_confirmation_past_her_time_takes_the_seat_while_it_is_free(
+    client, payments, clock, booking, crowd, mailbox
+):
+    """Her own act come too late runs her time out first, as the job would
+    have — and then it is a join on a seat open to anybody, which she takes."""
+
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+    answer = await refused_rescuer(client, payments, booking, zosia)
+    clock.move(TIME_TO_FIX + timedelta(minutes=10))
+
+    confirmed = await confirms(client, payments, zosia, answer["your_payment"])
+
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["booked"]["booking_id"] == booking
+    # Her time ran out and she took the seat in one act: nothing to tell her.
+    assert not [
+        title
+        for title in await told(client, mailbox, zosia)
+        if title.startswith("Your time to fix your card ran out")
+    ]
+
+
+async def test_a_refused_rescuer_after_the_cut_off_has_time_to_pay_until_the_start(
+    client, session_factory, clock, payments, booking, crowd, mailbox
+):
+    kuba, zosia = crowd[1], crowd[4]
+    clock.move(AFTER_THE_CUT_OFF - MONDAY_MORNING)
+    await cuts_off(session_factory, clock)
+    await leaves(client, kuba, booking)
+    # Saturday 16:50: thirty minutes would run past the start.
+    clock.move(SATURDAY_FIVE - timedelta(minutes=10) - clock.now())
+
+    answer = await refused_rescuer(client, payments, booking, zosia)
+
+    payment = answer["your_payment"]
+    assert (payment["confirm_by"], payment["time_to"]) == (
+        "2026-10-10T15:00:00Z",
+        "PAY",
+    )
+    assert "Confirm your payment by 17:00 to take the seat" in await subjects_to(
+        mailbox, "zosia"
+    )
+    assert "Confirm your payment by 17:00 to take the seat" in await told(
+        client, mailbox, zosia
+    )
+    clock.move(timedelta(minutes=5))
+
+    confirmed = await confirms(client, payments, zosia, payment)
+
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["money"]["share_state"] == "TAKEN"
+    [charge] = await receipts_of(client, mailbox, zosia)
+    assert (charge["kind"], charge["amount_grosze"]) == ("CHARGE", SHARE)
+    refund, _ = await receipts_of(client, mailbox, kuba)
+    assert (refund["kind"], refund["amount_grosze"]) == ("REFUND", SHARE - FEE)
+
+
+async def test_a_refused_rescuer_after_the_cut_off_whose_time_runs_out_is_told(
+    client, session_factory, clock, payments, group, booking, crowd, mailbox
+):
+    kuba, zosia, marek = crowd[1], crowd[4], crowd[5]
+    clock.move(AFTER_THE_CUT_OFF - MONDAY_MORNING)
+    await cuts_off(session_factory, clock)
+    await leaves(client, kuba, booking)
+    answer = await refused_rescuer(client, payments, booking, zosia)
+    assert answer["your_payment"]["time_to"] == "PAY"
+    assert (await fill_in(client, marek, group))["seats_to_fill"] == []
+
+    clock.move(TIME_TO_FIX)
+    assert (await runs_out(session_factory, clock)).games == 1
+
+    assert (
+        "Your time to pay ran out · Sat 17:00",
+        "The seat is offered to others again — confirm your payment to take it "
+        "while it's free.",
+    ) in await told_in_full(client, mailbox, zosia)
+    [row] = (await fill_in(client, marek, group))["seats_to_fill"]
+    assert row["booking_id"] == booking
+    # Still hers to take while it is free: confirmed now, it is the join.
+    confirmed = await confirms(client, payments, zosia, answer["your_payment"])
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["money"]["share_state"] == "TAKEN"
+
+
+async def test_a_declined_rescuer_who_gives_another_card_in_time_takes_the_seat(
+    client, payments, clock, booking, crowd, mailbox
+):
+    """*Confirm it with another card*: the declined payment, confirmed in the
+    app with the card she gives instead, is her share held (#640)."""
+
+    kuba, zosia = crowd[1], crowd[4]
+    await leaves(client, kuba, booking)
+    answer = await refused_rescuer(
+        client, payments, booking, zosia, card=A_CARD_THAT_DECLINES_LATER
+    )
+    payment = answer["your_payment"]
+    assert (payment["refusal"], payment["time_to"]) == ("DECLINED", "FIX_THE_CARD")
+    assert (
+        "Fix your card by 08:30 to take the seat",
+        "Your bank declined the 30 zł hold — fix it with another card. Nothing "
+        "is paid now. Padel · Sat 17:00 at Bonarka Arena — the seat is kept for "
+        "you until then.",
+    ) in await told_in_full(client, mailbox, zosia)
+    clock.move(timedelta(minutes=10))
+
+    confirmed = await confirms(client, payments, zosia, payment, with_card=A_CARD)
+
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["booked"]["booking_id"] == booking
+    assert confirmed.json()["money"]["share_state"] == "HELD"
+
+
+async def test_a_seat_kept_for_one_rescuer_leaves_the_other_open_seat_offered(
+    client, session_factory, payments, group, booking, crowd, mailbox
+):
+    ola, kuba, ewa, tomek, zosia, marek = crowd
+    ania = await a_member(client, session_factory, payments, "ania")
+    joined = await client.post(
+        f"/api/v1/groups/{group}/membership", headers=ania["headers"]
+    )
+    assert joined.status_code in (200, 201), joined.text
+    await leaves(client, kuba, booking)
+    await leaves(client, ewa, booking)
+    answer = await refused_rescuer(client, payments, booking, zosia)
+
+    [row] = (await fill_in(client, marek, group))["seats_to_fill"]
+    assert row["booking_id"] == booking
+    taken = await joins(client, marek, booking)
+    assert (taken.status_code, taken.json()["open_seats"]) == (200, 1)
+
+    # The one left is hers until her time runs out.
+    assert (await fill_in(client, ania, group))["seats_to_fill"] == []
+    gone = await joins(client, ania, booking)
+    assert (gone.status_code, gone.json()["code"]) == (409, "seat_just_taken")
+    confirmed = await confirms(client, payments, zosia, answer["your_payment"])
+    assert (confirmed.status_code, confirmed.json()["open_seats"]) == (200, 0)
+    [card] = await home_of(client, ola)
+    assert card["status"] == "BOOKED"
 
 
 # --------------------------------------------------------------------------- #

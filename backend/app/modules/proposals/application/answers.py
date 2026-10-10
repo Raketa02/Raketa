@@ -78,6 +78,7 @@ from app.modules.proposals.domain.ports import (
     SeatCharges,
     UndecidedCharges,
 )
+from app.modules.proposals.domain.home import BookedMoney
 from app.modules.proposals.domain.proposal import Origin, Proposal, Standing, TimeTo
 
 
@@ -102,6 +103,12 @@ class YesAnswer:
     paying_until: Instant | None = None
     #: What that time is for — to fix the card, or to pay (#638).
     time_to: TimeTo | None = None
+    #: A rescue's refused payment (#640): the seat kept for this player alone
+    #: until then — their own time, which no game waits on.
+    kept_until: Instant | None = None
+    #: The seat this answer took on a booked game — a rescue's join, or its
+    #: payment confirmed (#640): the joiner's money line, as Home reads it.
+    money: BookedMoney | None = None
 
 
 @final

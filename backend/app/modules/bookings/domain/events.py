@@ -25,8 +25,11 @@ holding was refused** (#639) has their time to fix the card: ``CardToFix``,
 then ``CardFixed`` — or, run out, ``SeatLeft`` marked ``card_not_fixed``.
 
 **And an open seat is a rescue** (#545): ``SeatRescued`` is somebody taking it
-— the leaver's seat and side, paid at once — and ``NoSaidToTheSeat`` is a member
-the seat was dealt to as a *Seat open* card saying no to it.
+— the leaver's seat and side, their share held or taken — and
+``NoSaidToTheSeat`` is a member the seat was dealt to as a *Seat open* card
+saying no to it. **A rescuer whose share was refused keeps a seat** (#640):
+``SeatKept``, then ``SeatRescued`` once they pay in time — or, run out,
+``KeptSeatRanOut``.
 
 **The club runs it** (#547): ``CourtMoved`` puts the game on another court of
 its sport at the same hour, ``CancelledByClub`` calls it off with the club's
@@ -302,6 +305,40 @@ class SeatRescued:
     #: The leaver whose seat this was.
     replacing: UUID
     occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatKept:
+    """**A rescuer's share was refused** (#640; the mechanics §10.1, Q113):
+    a seat is kept for ``player_id`` alone **until ``until``** — their time to
+    fix the card before the cut-off (``to_fix_the_card``), or to pay after it,
+    never past the game's start — and offered to nobody else meanwhile. They
+    take it as any rescue does, once paid: ``SeatRescued``. ``seat_charge_id``
+    is the payment to confirm, and ``reason`` why it was refused
+    (``AUTHENTICATION_REQUIRED``, ``DECLINED``, ``TERMS_NEEDED`` or
+    ``NO_METHOD``). Recorded again, with the time they had, when the same
+    rescuer is refused again within it."""
+
+    booking_id: UUID
+    player_id: UUID
+    until: datetime
+    seat_charge_id: UUID
+    reason: str
+    to_fix_the_card: bool
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class KeptSeatRanOut:
+    """The rescuer's time ran out before they paid (#640): the seat kept for
+    them is offered again, as before — still theirs to take while it is free,
+    and never kept for them again on this game. ``to_fix_the_card`` when their
+    time was to fix the card, before the cut-off, rather than to pay."""
+
+    booking_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+    to_fix_the_card: bool
 
 
 @dataclass(frozen=True)

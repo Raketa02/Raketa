@@ -76,6 +76,16 @@ class BookingDirectory(Protocol):
         card is still to fix (#639) — their *To confirm* rows."""
         ...
 
+    async def keeps_past(self, *, now: Instant) -> Sequence[UUID]:
+        """Every booked game with a seat kept for a rescuer whose time ran out
+        by ``now`` — the earliest first (#640)."""
+        ...
+
+    async def kept_for(self, player_id: UUID) -> Sequence[UUID]:
+        """Every booked game on which a seat was kept for this rescuer (#640),
+        their time running or up — until they take one, or the game is off."""
+        ...
+
     async def starts_for(
         self, player_id: UUID, *, start: Instant, end: Instant | None
     ) -> Sequence[Instant]:
