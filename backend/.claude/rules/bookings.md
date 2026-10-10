@@ -23,7 +23,8 @@ paths:
 # Bookings and the fill
 
 Decisions that are load-bearing and not obvious from the code (#541, #543, #544, #545,
-#547, #548; ADR-0189 §2–§5; the mechanics §10.1, §11–§13, §15, §16.7–§16.12).
+#547, #548, #623, #624; ADR-0189 §2–§5; the mechanics §10.1, §11–§13, §15, §16.7–§16.12,
+Q104–Q106, Q108).
 
 - **The last yes books the game, in that yes's own transaction** (`proposals/application/fill.py`).
   `SayYes` loads the proposal **locked** (`load_for_update`, `FOR UPDATE` on its row — SQLite
@@ -102,7 +103,10 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   `waiting_for_the_club` keeps it on the live reads. The club surface is
   `GET /api/v1/club/bookings/waiting` (the one due first, first; players by **Name** only; a
   request past its deadline not listed), `POST …/{id}/acceptance` and `POST …/{id}/refusal`
-  (an optional note, kept for the club and **never shown to a player**). **Accept** runs the
+  (an optional note, kept for the club and **never shown to a player**; #623 emails each
+  player on the request *Kazimierz Padel said no*, or *… didn't answer in time* on the
+  timeout, from `CallOffTheRequest` over its own `PlayerAddresses` — Q105, though no money
+  moves). **Accept** runs the
   fill's own all-or-nothing charge on the **reserved** court with the sides the players were reading
   (`Fill.accept`), then `BookingAccepted` opens the Game — and the chat — exactly as a booked
   game's; a share refused, or a pair In that stopped fitting while it waited, instead opens a
@@ -113,9 +117,12 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   owe the players a new card first — the proposer deals it by the first run that finds them an
   hour (`Redealt` once it has), never at the club and hour that turned them down. **A seat
   opening while it waits withdraws the request, in the same transaction** (`RequestWithdrawn`,
-  naming every seat that opened): **nobody keeps a seat on it**, so it leaves everybody's Home
-  — the people still In find the game filling again in You're In, and a `CALLED_OFF` card
-  beside a game still filling would say two things about one game. Whoever takes the yes away
+  naming every seat that opened, and in `left` those whose own act took their yes back —
+  #623, so the others are told the leaver's name and never why any other seat opened). **The
+  people still In keep their places** (#624, Q106): the seats that opened go, the others' and
+  their `booking_seats` rows stay (`Booking.taken_back_at` says when), and the game is on their
+  Home as *Seat open* — never a `CALLED_OFF` card beside a game still filling, which would say
+  two things about one game. Whoever takes the yes away
   calls `ClubRequests.withdraw` — `WithdrawYes` (*Leave the game*), a group leaver's
   withdrawals, and the fill's *one game per hour* and *games per week* on another booking —
   because the reserved court must be free the moment the seat is, or the proposer would read
@@ -191,8 +198,19 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   `answer_by`, the deadline the desk is given (Q98, #614) — `state_of`'s, so a card and its
   details agree: the latest request's, `null` on every other status though the booking keeps
   it, and `null` from the deadline on (`answer_by_ahead`), when the club can no longer say
-  yes, as `free_to_leave_until` is from the cut-off; a request taken back because a seat
-  opened is on nobody's Home; *seat open*, *called off · short at the cut-off* and
+  yes, as `free_to_leave_until` is from the cut-off. **A request taken back because a seat
+  opened is a full game gone back to filling** (#624, Q106): Proposals reads its booking as
+  `FILLING_AGAIN` and folds it against the proposal on every read (`as_it_stands` →
+  `domain/home.py`'s `as_filling_again`) — the people In now on the sides they were drawn
+  on, anybody In since in the first place free, a player who took their yes back since off
+  it — *seat open* with `filling_again`, nobody paid, `needs_you` false (the badge never
+  counts it), no Leave, no check-in code, no court; `club_confirms` says *… is asked again
+  when it's full*. *Called off* · `BOOK_BY_PASSED` once its book-by passes first (or a seat
+  opened after it while the club decided) and · `COURT_HOUR_LOST` once its court goes. A
+  departure on it withdraws the yes, as while the club decides. **The club never sees it**:
+  its day, its acts, a rescue and `GamesOver` refuse or skip it, and a seat's code on it is
+  unknown at the desk — the club's document keeps its own four-value `CalledOffReason`.
+  *seat open*, *called off · short at the cut-off* and
   *uncounted · a seat was empty* are #544's (below); the club's cancel is #547's. **The
   forecast is the Game's pairing** (`GET /games/{id}/pairing`) — the details only say
   whether it is drawn. **A check-in code is derived,
@@ -328,7 +346,10 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   through `GameChanges.call_off_whole`), refunds **in full** — `RefundReason.CANCELLED_BY_THE_CLUB`,
   emailed *Game cancelled by <club> · you're refunded*, with the reason — everybody still in
   **and a leaver whose seat was still open and paid** (left after the cut-off; one refunded
-  already is refunded nothing twice), releases undecided rescue payments, and records
+  already is refunded nothing twice), under a reason of their own
+  (`CANCELLED_AFTER_YOU_LEFT`, #623): told and emailed in a leaver's words, *The game you left
+  was cancelled · you're refunded*, and promised no new game — releases undecided rescue
+  payments, and records
   **`ClubCancelled` on the proposal** with the people still in: `Proposal.owes_a_new_card`
   and `owed_to` (the leaver is not owed), the projection's `proposals.club_cancelled`
   (migration 0043) beside `ended = 'TURNED_DOWN'` in `owed_a_new_card_in`, so the proposer

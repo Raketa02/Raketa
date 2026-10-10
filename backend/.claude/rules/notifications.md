@@ -9,8 +9,9 @@ paths:
 
 # Notifications
 
-Decisions that are load-bearing and not obvious from the code (#549, #621, #622; ADR-0189 §5
-and its 2026-10-09 amendment; the mechanics §17.2, Q101–Q103, Q107; the screens A7.2, A9).
+Decisions that are load-bearing and not obvious from the code (#549, #621, #622, #623;
+ADR-0189 §5 and its 2026-10-09 amendment; the mechanics §13, §17.2, Q101–Q105, Q107, Q108;
+the screens A7.2, A9).
 
 - **A player is told, and nothing asks** (`.importlinter`'s *No context knows
   Notifications exists*). `notifications/application/telling.py` subscribes to
@@ -130,12 +131,52 @@ and its 2026-10-09 amendment; the mechanics §17.2, Q101–Q103, Q107; the scree
   cut-off or by the club is *Game called off · with the refund*, a seat taken is *You've
   been refunded*, and **a leaver's own refund is told nobody** (their act, and emailed).
   The emails stay where they were, queued by the acts in `payments`.
-- **Somebody leaving**: `SeatLeft` tells everybody seated; `RequestWithdrawn` tells the
-  people still In **only for a yes taken back** (`GameBrief.withdrawn`) — a share refused
-  at the club's yes is the refused player's to be told, and nobody's departure. *Fill in
+- **Somebody leaving**: `SeatLeft` tells everybody seated. *Fill in
   alerts* go out on `SeatLeft`: who in the pool switched them on is read first (one query),
   and only they are put to `RescueOffers` — a pool nobody asked to be alerted in is never
   read whole.
+- **Every ending and fall-back of a full game is told to everybody still in it, in its own
+  words** (#623; Q104, Q105, Q108) — always on, never capped, and **never saying whose card
+  failed, whose week filled or who no longer fits**:
+  - **`RequestWithdrawn`** — a full game falling back while its club decided, to everybody
+    still In (`_fell_back`). The request now says **who took their own yes back**
+    (`RequestWithdrawn.left`, written by `withdraw_a_yes` — *Leave*, *Withdraw*, leaving the
+    group, a block — and empty from the fill's *one game per hour* and *games per week*, a
+    pair that stopped fitting and a share refused at the club's yes). A leaver still out is
+    named — *Oscar Bertran left your game — it's filling again* (`SOMEONE_LEFT`,
+    `FILLING_AGAIN`); anything else is *Your Fri 19:00 at Kazimierz Padel is filling again* /
+    *A seat opened — nobody paid.* (`SOMEONE_LEFT`, `FELL_BACK`). **Past the book-by** the
+    game can no longer fill: *Your Fri 19:00 is called off · nobody paid* / *Oscar Bertran
+    left after its last moment to book — Padel at Kazimierz Padel.* (`GAME_CALLED_OFF`,
+    `LEFT_AFTER_THE_BOOK_BY`; *A seat opened after …* with nobody named). A request whose
+    game was full again before the delivery — asked again, or booked — is told by that.
+  - **A full game gone back to filling that ends first** (`GameBrief.fell_back_at`, the
+    booking's `taken_back_at`): `ProposalExpired` — *… is called off · nobody paid* / *It
+    didn't fill again before its last moment to book …* (`BOOK_BY_PASSED`; told already, and
+    not again, when it fell back at or after its book-by; a post's poster is told this and
+    never *your post didn't fill*) — and `CourtHourLost` — *Its court went to another game
+    before it filled again …* (`COURT_HOUR_LOST`). A card that never filled is still told
+    nothing.
+  - **The club's no and its silence read apart** (`CLUB_COULD_NOT_TAKE_IT`'s reason):
+    *Kazimierz Padel said no* and *Kazimierz Padel didn't answer in time*, each with *Padel ·
+    Fri 19:00. Nobody paid — you'll get a new card first.* **Both are emailed** — the one
+    always-on notice emailed with no money moving — and the email is queued by the act, as
+    every email is: Bookings' `CallOffTheRequest`, to each player on the request, over its
+    own `PlayerAddresses` (users; `booking_demands.py`).
+  - **A leaver is told only when it touches them** (Q108), in a leaver's words and never
+    promised a new game: **`Notice.you_left`** → `NoticeGiven.you_left` (defaulted `False`) →
+    `notices.you_left` (migration 0052), opening the game they left (`PROPOSAL` — they have
+    no seat on the booking). `CalledOffAtCutOff` tells **each leaver whose empty seat called
+    it off** (`GameBrief.left_it_short`: an open departure from before the cut-off) *Tuesday's
+    19:00 at Bonarka Arena, which you left, was called off* / *Your seat stayed empty, so it
+    counts on your record. Your 38,40 zł refund stands.* — the refund read through
+    `PaidShares.of_player`, and never emailed: no money moves. A leaver whose seat was taken,
+    or whose game still plays, hears nothing. **The club's cancel refunds a paid leaver under
+    a reason of their own** (`RefundReason.CANCELLED_AFTER_YOU_LEFT`, split off by
+    `CancelTheGame`): *Tuesday's 19:00 at Bonarka Arena, which you left, was cancelled* /
+    *Bonarka Arena cancelled it because of the weather — you're refunded 40 zł.*, and the
+    email *The game you left was cancelled · you're refunded 40 zł*, with no *we'll look for
+    another game*. A leaver refunded already is refunded nothing twice, and told nothing.
 - **A push fails soft, and that is deliberate.** The outbox retries a raised delivery at
   the head of every batch with no backoff and rolls back everything delivered beside it,
   so a push service down for an hour, raising, would hold the queue for that hour.
@@ -148,7 +189,8 @@ and its 2026-10-09 amendment; the mechanics §17.2, Q101–Q103, Q107; the scree
   into it, and the data a tap opens): the pusher sends it, and the dev console's *Sent*
   pane shows it for a player with no phone (#594).
 - **A notice records facts, never words** (`NoticeGiven`: the game, pool, club, hour,
-  amount, the people it names by id, a reason code, a deadline (`until`), and where a tap
+  amount, the people it names by id, a reason code, a deadline (`until`), whether its reader
+  had left the game (`you_left`), and where a tap
   opens it — `BOOKING`, `PROPOSAL` or `DECK`). The words are `application/words.py`'s, drawn at push
   time and again at every read, as an email's copy lives in the backend: a push is shown by
   the phone's system before the app runs. Deployed, an `EXPO_ACCESS_TOKEN` with Expo's
