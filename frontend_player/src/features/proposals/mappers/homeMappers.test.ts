@@ -42,6 +42,8 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
     refunded_grosze: null,
   },
   answer_by: null,
+  payment_due_by: null,
+  your_payment_due_by: null,
   ...extra,
 });
 
@@ -177,6 +179,31 @@ describe('toHome', () => {
     expect(waiting?.answerBy).toBe('2026-10-01T09:00:00Z');
     expect(unset).not.toHaveProperty('answerBy');
     expect(older).not.toHaveProperty('answerBy');
+  });
+
+  it('carries the payment a game waits for, the reader’s own time, and nothing from a null or an older server’s silence', () => {
+    const [everybody, payer, unset, older] = toHome({
+      read_at: '2026-10-06T12:10:00Z',
+      needing_you: 0,
+      games: [
+        homeGame({ status: 'WAITING_FOR_A_PAYMENT', payment_due_by: '2026-10-06T12:40:00Z' }),
+        homeGame({
+          status: 'WAITING_FOR_A_PAYMENT',
+          payment_due_by: '2026-10-06T12:40:00Z',
+          your_payment_due_by: '2026-10-06T12:40:00Z',
+        }),
+        homeGame({ status: 'WAITING_FOR_A_PAYMENT' }),
+        homeGame({ payment_due_by: undefined, your_payment_due_by: undefined }),
+      ],
+    }).games;
+
+    expect(everybody?.status).toBe('WAITING_FOR_A_PAYMENT');
+    expect(everybody?.paymentDueBy).toBe('2026-10-06T12:40:00Z');
+    expect(everybody).not.toHaveProperty('yourPaymentDueBy');
+    expect(payer?.yourPaymentDueBy).toBe('2026-10-06T12:40:00Z');
+    expect(unset).not.toHaveProperty('paymentDueBy');
+    expect(older).not.toHaveProperty('paymentDueBy');
+    expect(older).not.toHaveProperty('yourPaymentDueBy');
   });
 
   it('carries what leaving gives back (Q99), and nothing from an older server’s silence', () => {
@@ -315,6 +342,8 @@ describe('toBookedGame', () => {
     leaving: null,
     rescue: null,
     answer_by: null,
+    payment_due_by: null,
+    your_payment_due_by: null,
     ...extra,
   });
 
@@ -391,6 +420,23 @@ describe('toBookedGame', () => {
     expect(waiting?.answerBy).toBe('2026-10-03T09:00:00Z');
     expect(toBookedGame(details())).not.toHaveProperty('answerBy');
     expect(toBookedGame(details({ answer_by: undefined }))).not.toHaveProperty('answerBy');
+  });
+
+  it('carries the payment a game waits for in detail, as Home does', () => {
+    const waiting = toBookedGame(
+      details({
+        status: 'WAITING_FOR_A_PAYMENT',
+        payment_due_by: '2026-10-06T12:40:00Z',
+        your_payment_due_by: '2026-10-06T12:40:00Z',
+      }),
+    );
+
+    expect(waiting).toMatchObject({
+      status: 'WAITING_FOR_A_PAYMENT',
+      paymentDueBy: '2026-10-06T12:40:00Z',
+      yourPaymentDueBy: '2026-10-06T12:40:00Z',
+    });
+    expect(toBookedGame(details())).not.toHaveProperty('paymentDueBy');
   });
 
   it('reads a full game gone back to filling in detail, as Home does', () => {

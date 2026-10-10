@@ -11,7 +11,8 @@ import type { components } from '@/generated/schema';
 import type { ProposalDetails } from '../domain/details';
 
 import { toChallenger, toClub, toDeckSides, toForecast, toKind, toOverlap } from './deckMappers';
-import { toAnswerBy } from './homeMappers';
+import { toYourPayment } from './fillMappers';
+import { toAnswerBy, toPaymentDueBy } from './homeMappers';
 
 type Schemas = components['schemas'];
 
@@ -32,14 +33,7 @@ export function toProposalDetails(
     readAt: wire.read_at,
     status: wire.status,
     actions: wire.actions,
-    ...(wire.your_payment === null
-      ? {}
-      : {
-          yourPayment: {
-            seatChargeId: wire.your_payment.seat_charge_id,
-            refusal: wire.your_payment.refusal,
-          },
-        }),
+    ...(wire.your_payment === null ? {} : { yourPayment: toYourPayment(wire.your_payment) }),
     inCount: wire.in_count,
     seats: wire.seats,
     startsAt: wire.starts_at,
@@ -52,6 +46,7 @@ export function toProposalDetails(
     noFreeCancellation: wire.no_free_cancellation,
     clubConfirms: wire.club_confirms,
     ...toAnswerBy(wire.answer_by),
+    ...toPaymentDueBy(wire),
     sides: toDeckSides(wire.sides),
     ...toForecast(wire.forecast),
     overlap,

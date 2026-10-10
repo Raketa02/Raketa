@@ -7,6 +7,8 @@ import {
   chargeLine,
   itsAGameLine,
   itsAGameSentence,
+  keepYourSeatBy,
+  toConfirmRowLine,
 } from './fillPresentation';
 
 describe('the Undo toast', () => {
@@ -40,6 +42,7 @@ describe('It’s a game! as a listener hears it', () => {
 
   it('says the line under the word after the picture, a sentence a clause (Q103)', () => {
     const line = itsAGameLine({
+      of: 'theClub',
       club: 'Kazimierz Padel',
       answerBy: { at: '2026-09-30T19:15:00Z', today: true },
     });
@@ -59,6 +62,7 @@ describe('It’s a game!’s line at a club that confirms (Q103)', () => {
   it('says when the club answers — the hour alone that day, as Home writes it', () => {
     expect(
       itsAGameLine({
+        of: 'theClub',
         club: 'Kazimierz Padel',
         answerBy: { at: '2026-09-30T19:15:00Z', today: true },
       }).drawn,
@@ -68,6 +72,7 @@ describe('It’s a game!’s line at a club that confirms (Q103)', () => {
   it('names the weekday when the deadline falls on another day', () => {
     expect(
       itsAGameLine({
+        of: 'theClub',
         club: 'Kazimierz Padel',
         answerBy: { at: '2026-10-01T07:00:00Z', today: false },
       }).drawn,
@@ -75,11 +80,43 @@ describe('It’s a game!’s line at a club that confirms (Q103)', () => {
   });
 
   it('says only that nobody pays until it confirms, with no deadline to give', () => {
-    expect(itsAGameLine({ club: 'Kazimierz Padel' })).toEqual({
+    expect(itsAGameLine({ of: 'theClub', club: 'Kazimierz Padel' })).toEqual({
       drawn: 'Nobody pays until Kazimierz Padel confirms',
       spoken: 'Nobody pays until Kazimierz Padel confirms',
     });
-    expect(itsAGameLine({}).drawn).toBe('Nobody pays until the club confirms');
+    expect(itsAGameLine({ of: 'theClub' }).drawn).toBe('Nobody pays until the club confirms');
+  });
+});
+
+/** Tuesday 6 October 2026 in Warsaw. */
+describe('It’s a game!’s line while one payment is missing (Q110)', () => {
+  it('says until when, the hour alone that day, and never whose — drawn with dots, spoken in sentences', () => {
+    expect(
+      itsAGameLine({ of: 'aPayment', until: { at: '2026-10-06T12:40:00Z', today: true } }),
+    ).toEqual({
+      drawn: 'Waiting for one payment · until 14:40 · Nobody pays until it’s in',
+      spoken: 'Waiting for one payment until 14:40. Nobody pays until it’s in',
+    });
+  });
+
+  it('names the weekday when the time falls on another day', () => {
+    expect(
+      itsAGameLine({ of: 'aPayment', until: { at: '2026-10-06T22:15:00Z', today: false } }).drawn,
+    ).toBe('Waiting for one payment · until Wed 00:15 · Nobody pays until it’s in');
+  });
+});
+
+describe('the time to pay, where the payer confirms (Q109)', () => {
+  it('names the time on the sheet, and on a To confirm row while it runs', () => {
+    const by = { at: '2026-10-06T12:40:00Z', today: true } as const;
+    expect(keepYourSeatBy(by)).toBe('Confirm your payment by 14:40 to keep your seat');
+    expect(toConfirmRowLine(by)).toBe('Confirm your payment by 14:40');
+  });
+
+  it('says the seat is open to others on a row whose time ran out', () => {
+    expect(toConfirmRowLine(undefined)).toBe(
+      'Your seat stays open until you confirm — or someone else takes it.',
+    );
   });
 });
 

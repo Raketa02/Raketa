@@ -41,9 +41,11 @@ import {
   clubName,
   gameDayWords,
   LINE_JOIN,
+  paymentAwaitedClauses,
   shortMoment,
   timeWords,
   waitingWords,
+  yourPaymentWords,
 } from './deckPresentation';
 import { seatWhen } from './fillInPresentation';
 import type { FactWords } from './GameFacts';
@@ -67,13 +69,14 @@ export function gamesHeading(count: number): string {
 
 /**
  * **The status's colour** — the tag's dot and the facts' accent line (A4.1, A8): *Waiting for the
- * club* and *Seat open* amber, *Booked* mint, *Called off* red, and the result states as the old
- * loop's cards drew them (needs a result and confirm amber, counted mint, the other two ends
- * hairline). On the dark card the amber is `arranging` and the red `gameRed`, each the shade that
- * carries on that ground.
+ * club*, *Waiting for one payment* and *Seat open* amber, *Booked* mint, *Called off* red, and the
+ * result states as the old loop's cards drew them (needs a result and confirm amber, counted mint,
+ * the other two ends hairline). On the dark card the amber is `arranging` and the red `gameRed`,
+ * each the shade that carries on that ground.
  */
 export const STATUS_INK: Readonly<Record<HomeStatus, string>> = {
   WAITING_FOR_THE_CLUB: theme.color.arranging,
+  WAITING_FOR_A_PAYMENT: theme.color.arranging,
   BOOKED: theme.color.mint,
   SEAT_OPEN: theme.color.arranging,
   NEEDS_RESULT: theme.color.arranging,
@@ -86,13 +89,14 @@ export const STATUS_INK: Readonly<Record<HomeStatus, string>> = {
 
 /**
  * **A game still filling's status, coloured** — its details' dot and accent line: the stage still
- * being arranged while it fills and while its club decides (`arranging`), mint once booked, red when
- * the club turned it down, the hairline on the three ways it ended unfilled — the colours above, for
- * the same facts on a game that has not filled.
+ * being arranged while it fills, while its club decides and while one payment is awaited
+ * (`arranging`), mint once booked, red when the club turned it down, the hairline on the three ways
+ * it ended unfilled — the colours above, for the same facts on a game that has not filled.
  */
 export const PROPOSAL_STATUS_INK: Readonly<Record<ProposalStatus, string>> = {
   FILLING: theme.color.arranging,
   WAITING_FOR_THE_CLUB: theme.color.arranging,
+  WAITING_FOR_A_PAYMENT: theme.color.arranging,
   FILLED: theme.color.mint,
   EXPIRED: theme.color.onDarkHair,
   WITHDRAWN: theme.color.onDarkHair,
@@ -107,6 +111,7 @@ export const PROPOSAL_STATUS_INK: Readonly<Record<ProposalStatus, string>> = {
  */
 export const OPEN_GAME_VARIANT: Readonly<Record<HomeStatus, ButtonVariant>> = {
   WAITING_FOR_THE_CLUB: 'settled',
+  WAITING_FOR_A_PAYMENT: 'settled',
   BOOKED: 'settled',
   SEAT_OPEN: 'settled',
   NEEDS_RESULT: 'settled',
@@ -156,6 +161,10 @@ function moneyParts(line: MoneyLine): readonly string[] {
           : money.booksWhenFull,
         money.nobodyPaidInLine,
       ];
+    case 'paymentAwaited':
+      return paymentAwaitedClauses(line.until);
+    case 'yourPayment':
+      return [yourPaymentWords(line.by)];
     case 'calledOff':
       return [
         ...(line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })]),
@@ -196,6 +205,7 @@ const SAID_OF_THE_CLUB: Readonly<
   SHORT_AT_THE_CUT_OFF: { ofTheClub: false, answer: false },
   BOOK_BY_PASSED: { ofTheClub: false, answer: false },
   COURT_HOUR_LOST: { ofTheClub: false, answer: false },
+  PAYMENT_NOT_IN_TIME: { ofTheClub: false, answer: false },
 };
 
 /**
@@ -310,7 +320,9 @@ export function bookedTime(
  * Sat 10:00* while the cut-off is ahead (`backIfYouLeaveAhead`, the line's own fold — Q99) — the
  * Home card's line without the figure the row already draws; the share nobody pays yet while the
  * club decides, over *Bonarka answers by 20:45 · Nobody
- * pays until it confirms* — the card's own line — until its deadline passes (Q98); and on a game a
+ * pays until it confirms* — the card's own line — until its deadline passes (Q98); the share nobody
+ * pays yet over *Waiting for one payment · until 14:40 · Nobody pays until it's in*, or the payer's
+ * own *Confirm your payment by 14:40* (Q111); and on a game a
  * player left, one called off or one that started short, the card's own line under the share —
  * *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off with what came back, *A seat
  * was empty* (§14.1). A full game gone back to filling is the share nobody pays over the card's
@@ -332,6 +344,8 @@ export function moneyRow(
     | 'rescue'
     | 'answerBy'
     | 'fillingAgain'
+    | 'paymentDueBy'
+    | 'yourPaymentDueBy'
   >,
   now: number,
 ): FactWords {
@@ -362,6 +376,8 @@ export function moneyRow(
     }
     case 'waiting':
       return { label: words.yourShare, value, below: waitingWords(line.club, line.answerBy) };
+    case 'paymentAwaited':
+    case 'yourPayment':
     case 'seatOpen':
     case 'fillingAgain':
     case 'seatEmpty':

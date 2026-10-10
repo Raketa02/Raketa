@@ -6,14 +6,18 @@
 import type { DeckCard, DeckPerson } from './deck';
 import {
   UNDO_WINDOW_MS,
+  aPaymentAwaited,
+  confirmationOf,
   fillOutcome,
   fillRefusal,
   itsAGamePicture,
   itsAGameWaiting,
+  paymentToConfirmOn,
   undoSecondsLeft,
   waitsForUndo,
   yesOnRescue,
   type YesAnswer,
+  type YourPayment,
 } from './fill';
 
 function person(name: string, extra: Partial<DeckPerson> = {}): DeckPerson {
@@ -132,9 +136,90 @@ describe('fillOutcome — what a yes did, read off the server’s answer', () =>
     });
   });
 
-  it('is a vote counted otherwise — seats still open, or somebody else’s share refused', () => {
+  it('is a vote counted otherwise — seats still open', () => {
     expect(fillOutcome(answer({ openSeats: 2 }))).toEqual({ kind: 'counted' });
     expect(fillOutcome(answer({ openSeats: 1 }))).toEqual({ kind: 'counted' });
+  });
+
+  // Q110: the four are matched, one payment missing — It's a game!, with until when.
+  it('is the game waiting for one payment when this yes filled it and somebody else’s share was refused', () => {
+    expect(
+      fillOutcome(answer({ openSeats: 0, paymentAwaitedUntil: '2026-10-06T12:40:00Z' })),
+    ).toEqual({ kind: 'paymentAwaited', bookingId: 'p-1', until: '2026-10-06T12:40:00Z' });
+  });
+
+  // Q110: a refusal of his own is no screen — his sheet, naming his time (Q109).
+  it('is his own payment to confirm, with his time to pay, when the share refused is his', () => {
+    expect(
+      fillOutcome(
+        answer({
+          openSeats: 0,
+          yourPayment: {
+            seatChargeId: 's-1',
+            refusal: 'AUTHENTICATION_REQUIRED',
+            confirmBy: '2026-10-06T12:40:00Z',
+          },
+          paymentAwaitedUntil: '2026-10-06T12:40:00Z',
+        }),
+      ),
+    ).toEqual({ kind: 'confirm', seatChargeId: 's-1', confirmBy: '2026-10-06T12:40:00Z' });
+  });
+});
+
+describe('confirmationOf — a refused share to confirm, and its time to pay', () => {
+  it('is the payment, with the time while one is given and none once it ran out', () => {
+    const refused: YourPayment = {
+      seatChargeId: 's-1',
+      refusal: 'DECLINED',
+      confirmBy: '2026-10-06T12:40:00Z',
+    };
+    expect(confirmationOf(refused)).toEqual({
+      seatChargeId: 's-1',
+      confirmBy: '2026-10-06T12:40:00Z',
+    });
+    expect(confirmationOf({ seatChargeId: 's-1' })).toEqual({ seatChargeId: 's-1' });
+  });
+});
+
+describe('paymentToConfirmOn — the reader’s refused share on one game', () => {
+  const on = (proposalId: string, seatChargeId: string) => ({
+    proposalId,
+    groupId: 'g-1',
+    sport: 'padel' as const,
+    kind: 'competitive' as const,
+    startsAt: '2026-10-03T14:00:00Z',
+    club: { id: 'c-1', name: 'Bonarka Arena' },
+    shareGrosze: 4000,
+    deadline: '2026-10-02T14:00:00Z',
+    seatChargeId,
+    refusal: 'AUTHENTICATION_REQUIRED' as const,
+  });
+
+  /** A booking takes its proposal's id (#541): the game Home opens is the one the row is for. */
+  it('is the row for the booking’s game, and nothing with none or no list', () => {
+    const list = [on('p-1', 's-1'), on('p-2', 's-2')];
+    expect(paymentToConfirmOn('p-2', list)?.seatChargeId).toBe('s-2');
+    expect(paymentToConfirmOn('p-3', list)).toBeUndefined();
+    expect(paymentToConfirmOn('p-1', undefined)).toBeUndefined();
+  });
+});
+
+describe('aPaymentAwaited — what It’s a game! says is missing while one payment is (Q110)', () => {
+  /** Tuesday 6 October, 14:10 in Warsaw. */
+  const NOW = Date.parse('2026-10-06T12:10:00Z');
+
+  it('is until when — the hour alone when it falls that day', () => {
+    expect(aPaymentAwaited('2026-10-06T12:40:00Z', NOW)).toEqual({
+      of: 'aPayment',
+      until: { at: '2026-10-06T12:40:00Z', today: true },
+    });
+  });
+
+  it('says it falls on another day, past the club’s midnight', () => {
+    expect(aPaymentAwaited('2026-10-06T22:15:00Z', NOW)).toEqual({
+      of: 'aPayment',
+      until: { at: '2026-10-06T22:15:00Z', today: false },
+    });
   });
 });
 
@@ -200,6 +285,7 @@ describe('itsAGameWaiting — what It’s a game! says is missing at a club that
 
   it('is the club’s deadline from the booking’s read, the hour alone when it falls that day', () => {
     expect(itsAGameWaiting('Kazimierz Padel', read('2026-09-30T19:15:00Z'))).toEqual({
+      of: 'theClub',
       club: 'Kazimierz Padel',
       answerBy: { at: '2026-09-30T19:15:00Z', today: true },
     });
@@ -207,6 +293,7 @@ describe('itsAGameWaiting — what It’s a game! says is missing at a club that
 
   it('says it falls on another day — a club given until the next morning', () => {
     expect(itsAGameWaiting('Kazimierz Padel', read('2026-10-01T07:00:00Z'))).toEqual({
+      of: 'theClub',
       club: 'Kazimierz Padel',
       answerBy: { at: '2026-10-01T07:00:00Z', today: false },
     });
@@ -214,23 +301,30 @@ describe('itsAGameWaiting — what It’s a game! says is missing at a club that
 
   it('names no deadline the read says is gone, or does not give', () => {
     expect(itsAGameWaiting('Kazimierz Padel', read('2026-09-30T07:59:00Z'))).toEqual({
+      of: 'theClub',
       club: 'Kazimierz Padel',
     });
     expect(itsAGameWaiting('Kazimierz Padel', read(undefined))).toEqual({
+      of: 'theClub',
       club: 'Kazimierz Padel',
     });
   });
 
   it('with no read, is the club the card named — and nothing when it named none', () => {
-    expect(itsAGameWaiting('Bonarka Arena', undefined)).toEqual({ club: 'Bonarka Arena' });
-    expect(itsAGameWaiting(undefined, undefined)).toEqual({});
+    expect(itsAGameWaiting('Bonarka Arena', undefined)).toEqual({
+      of: 'theClub',
+      club: 'Bonarka Arena',
+    });
+    expect(itsAGameWaiting(undefined, undefined)).toEqual({ of: 'theClub' });
   });
 
   it('takes the club’s name from the read, and the card’s when the read has none', () => {
     expect(itsAGameWaiting('Old name', read(undefined, 'Kazimierz Padel'))).toEqual({
+      of: 'theClub',
       club: 'Kazimierz Padel',
     });
     expect(itsAGameWaiting('Bonarka Arena', read(undefined, null))).toEqual({
+      of: 'theClub',
       club: 'Bonarka Arena',
     });
   });

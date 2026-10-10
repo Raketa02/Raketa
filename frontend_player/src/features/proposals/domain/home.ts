@@ -98,6 +98,19 @@ export interface HomeGame {
    * once its last moment to book passes first. Absent on every booked game, and from an older server.
    */
   readonly fillingAgain?: FillingAgain;
+  /**
+   * **When the payment the game waits for is due** (#625, #626; Q111) — one player's share was
+   * refused, and their seat is theirs alone until then: *Waiting for one payment · until 14:40*.
+   * Never whose. Present on `WAITING_FOR_A_PAYMENT` alone, and absent from an older server.
+   */
+  readonly paymentDueBy?: string;
+  /**
+   * **The reader's own refused share, and their time to pay** (#625, #626; Q111) — *Confirm your
+   * payment by 14:40*, beside their *To confirm* row — on a game waiting for it, or one gone back to
+   * filling meanwhile. Absent for everybody else, from the moment it runs out, and from an older
+   * server.
+   */
+  readonly yourPaymentDueBy?: string;
 }
 
 /** How a full game gone back to filling is booked once it is full again — the line's last clause. */
@@ -189,6 +202,10 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
  * - `fillingAgain` — a full game gone back to filling (Q106): *1 seat open*, *Kazimierz Padel is
  *   asked again when it's full* or *books when it's full*, and *nobody paid*. The club is carried
  *   for the first.
+ * - `paymentAwaited` — one player's payment awaited (Q111): *Waiting for one payment · until 14:40
+ *   · Nobody pays until it's in*, the time while it is ahead. Never whose.
+ * - `yourPayment` — the same game, or one gone back to filling meanwhile, read by the payer while
+ *   their time runs: *Confirm your payment by 14:40*.
  * - `calledOff` — why, and *refunded 30 zł* when the shares came back, *nobody paid* when none was
  *   taken. The club is carried for the two reasons that are the club's.
  * - `seatEmpty` — *Uncounted* because its hour came with a seat still open: no Level moved.
@@ -211,6 +228,8 @@ export type MoneyLine =
       readonly club?: string;
       readonly clubConfirms: boolean;
     }
+  | { readonly kind: 'paymentAwaited'; readonly until?: Deadline }
+  | { readonly kind: 'yourPayment'; readonly by: Deadline }
   | {
       readonly kind: 'calledOff';
       readonly reason?: CalledOffReason;
@@ -251,13 +270,30 @@ export function backIfYouLeaveAhead(money: BookedMoney, now: number): BackIfYouL
 }
 
 /**
- * *Bonarka answers by 20:45* — **the club's deadline to say yes** (Q98; the screens A8), and
- * whether it falls on `now`'s day on the club's calendar: the hour alone then, the weekday with it
- * on any other day.
+ * **A deadline Home names** — the club's to say yes (*Bonarka answers by 20:45*, Q98), a time to pay
+ * (*until 14:40*, *Confirm your payment by 14:40*, Q111) — and whether it falls on `now`'s day on the
+ * club's calendar: the hour alone then, the weekday with it on any other day (the screens A8).
  */
-export interface AnswerBy {
+export interface Deadline {
   readonly at: string;
   readonly today: boolean;
+}
+
+/** *Bonarka answers by 20:45* — the club's deadline to say yes (Q98). */
+export type AnswerBy = Deadline;
+
+/** **A deadline as Home writes it, from `now`** — whether it is still ahead or not. */
+export function deadlineOf(at: string, now: number): Deadline {
+  return { at, today: gameDayOf(at, now)?.kind === 'today' };
+}
+
+/**
+ * **A deadline, while it is still ahead of `now`** — the instant a clause naming it leaves a card's
+ * line and either details' money row, as *back if you leave by* leaves at the cut-off. Nothing for
+ * no deadline, or a value that is not an instant.
+ */
+export function deadlineAhead(at: string | undefined, now: number): Deadline | undefined {
+  return at === undefined || !(Date.parse(at) > now) ? undefined : deadlineOf(at, now);
 }
 
 /**
@@ -270,24 +306,34 @@ export function answerByAhead(
   game: { readonly answerBy?: string },
   now: number,
 ): AnswerBy | undefined {
-  const at = game.answerBy;
-  if (at === undefined || !(Date.parse(at) > now)) return undefined;
-  return { at, today: gameDayOf(at, now)?.kind === 'today' };
+  return deadlineAhead(game.answerBy, now);
 }
 
 /**
  * **Whether the game's line carries a clause that runs out by itself** — *back if you leave by* and
- * *fills by* at the cut-off, *answers by* at the club's deadline. While one is there the read's clock ticks
- * (`useReadClock`), so the clause leaves the screen at that instant rather than at the next read.
+ * *fills by* at the cut-off, *answers by* at the club's deadline, *until* and *Confirm your payment
+ * by* at a time to pay. While one is there the read's clock ticks (`useReadClock`), so the clause
+ * leaves the screen at that instant rather than at the next read.
  */
-export function lineCanRunOut(game: Pick<HomeGame, 'money' | 'answerBy'>): boolean {
-  return game.money.freeToLeaveUntil !== undefined || game.answerBy !== undefined;
+export function lineCanRunOut(
+  game: Pick<HomeGame, 'money' | 'answerBy' | 'paymentDueBy' | 'yourPaymentDueBy'>,
+): boolean {
+  return (
+    game.money.freeToLeaveUntil !== undefined ||
+    game.answerBy !== undefined ||
+    game.paymentDueBy !== undefined ||
+    game.yourPaymentDueBy !== undefined
+  );
 }
 
 /**
  * The line a card takes at `now`. **Nothing here is counted**: how many seats are open, why a game
  * is off and what came back are the read's (#544), and only the clauses that run out — at the
- * cut-off, and at the club's deadline — are folded on the clock.
+ * cut-off, at the club's deadline and at a time to pay — are folded on the clock.
+ *
+ * **The payer reads their own time first** (Q111): on a game waiting for their payment, or gone back
+ * to filling meanwhile, *Confirm your payment by 14:40* while it runs — the status tag still says
+ * which of the two it is. From the deadline on, the line is everybody's.
  */
 export function moneyLineOf(
   game: Pick<
@@ -302,11 +348,17 @@ export function moneyLineOf(
     | 'needsYou'
     | 'answerBy'
     | 'fillingAgain'
+    | 'paymentDueBy'
+    | 'yourPaymentDueBy'
   >,
   now: number,
 ): MoneyLine | undefined {
   const { money } = game;
   const club = game.club.name === undefined ? {} : { club: game.club.name };
+  const yours = deadlineAhead(game.yourPaymentDueBy, now);
+  if (yours !== undefined && (game.status === 'WAITING_FOR_A_PAYMENT' || isFillingAgain(game))) {
+    return { kind: 'yourPayment', by: yours };
+  }
   switch (game.status) {
     case 'BOOKED': {
       const back = backIfYouLeaveAhead(money, now);
@@ -320,6 +372,10 @@ export function moneyLineOf(
     case 'WAITING_FOR_THE_CLUB': {
       const by = answerByAhead(game, now);
       return { kind: 'waiting', ...club, ...(by === undefined ? {} : { answerBy: by }) };
+    }
+    case 'WAITING_FOR_A_PAYMENT': {
+      const until = deadlineAhead(game.paymentDueBy, now);
+      return { kind: 'paymentAwaited', ...(until === undefined ? {} : { until }) };
     }
     case 'SEAT_OPEN': {
       // Gone back to filling (Q106): nobody paid, so there is no cut-off to fill by.
@@ -397,6 +453,10 @@ function stageOf(game: Pick<HomeGame, 'status' | 'fillingAgain'>): Stage {
  * - `court` — the court is given: an On request club gives it with its yes (A4.2: *no court
  *   number* while waiting).
  *
+ * **A game waiting for one payment** (Q111) filled, so it is *new* until opened — the four are
+ * matched — but nobody paid and nothing is booked: no room and no court until the payment is in, at
+ * either kind of club (the wire gives none while it waits).
+ *
  * **A game gone back to filling is none of the four**: still live, not *new* — the tag marks a game
  * that filled, and this one is not full any more — and, like a game waiting for its club, no room
  * and no court until it is booked.
@@ -413,6 +473,7 @@ const STATUS: Readonly<
   >
 > = {
   WAITING_FOR_THE_CLUB: { ended: false, fresh: true, room: false, court: false },
+  WAITING_FOR_A_PAYMENT: { ended: false, fresh: true, room: false, court: false },
   BOOKED: { ended: false, fresh: true, room: true, court: true },
   SEAT_OPEN: { ended: false, fresh: true, room: true, court: true },
   NEEDS_RESULT: { ended: false, fresh: false, room: true, court: true },

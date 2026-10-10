@@ -15,6 +15,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import { youAreIn, type DeckCard, type Overlap } from './deck';
 import type { YesOn, YourPayment } from './fill';
+import { deadlineAhead, type Deadline } from './home';
 import type { CardType, CourtState, GameKind, ProposalStatus, ReaderAction } from './vocabulary';
 
 /** One game still filling, as its details read it. */
@@ -32,7 +33,10 @@ export interface ProposalDetails {
   readonly status: ProposalStatus;
   /** What the reader may do now, in the screen's order — empty once the game is over. */
   readonly actions: readonly ReaderAction[];
-  /** The refused payment to confirm — present exactly when `actions` holds `CONFIRM_PAYMENT`. */
+  /**
+   * The refused payment to confirm — present exactly when `actions` holds `CONFIRM_PAYMENT` — with
+   * their time to pay while it runs.
+   */
   readonly yourPayment?: YourPayment;
   /** People In on the whole game. */
   readonly inCount: number;
@@ -52,6 +56,13 @@ export interface ProposalDetails {
    * Absent on every other status, and from an older server.
    */
   readonly answerBy?: string;
+  /**
+   * **When the payment the game waits for is due** (#625, #626) — one player's share was refused and
+   * their seat is theirs alone until then: *Waiting for one payment · until 14:40*. Never whose; the
+   * reader's own is `yourPayment.confirmBy`. Present on `WAITING_FOR_A_PAYMENT` alone, and absent
+   * from an older server.
+   */
+  readonly paymentDueBy?: string;
   /**
    * Everybody drawn, the reader on their own side: their card as the deck deals it while they decide;
    * everybody In once they are In — the open seats drawn empty.
@@ -90,4 +101,41 @@ export function yesOnDetails(details: ProposalDetails): YesOn {
       ...(details.where.name === undefined ? {} : { name: details.where.name }),
     },
   };
+}
+
+/**
+ * **A time to pay, as the money row names it** (#625, #626; Q111) — the payment the game waits for
+ * (*until 14:40*), and the reader's own (*Confirm your payment by 14:40*), each only while it is
+ * ahead of `now`.
+ */
+export interface PaymentDue {
+  readonly dueBy?: Deadline;
+  readonly yoursBy?: Deadline;
+}
+
+export function paymentDueOf(
+  details: Pick<ProposalDetails, 'paymentDueBy' | 'yourPayment'>,
+  now: number,
+): PaymentDue {
+  const dueBy = deadlineAhead(details.paymentDueBy, now);
+  const yoursBy = deadlineAhead(details.yourPayment?.confirmBy, now);
+  return {
+    ...(dueBy === undefined ? {} : { dueBy }),
+    ...(yoursBy === undefined ? {} : { yoursBy }),
+  };
+}
+
+/**
+ * **Whether the money row names a deadline that leaves by itself** — the club's (*answers by*), a
+ * time to pay (*until*), or the reader's own: the details' clock ticks while one is there, as Home's
+ * does (`lineCanRunOut`).
+ */
+export function detailsCanRunOut(
+  details: Pick<ProposalDetails, 'answerBy' | 'paymentDueBy' | 'yourPayment'>,
+): boolean {
+  return (
+    details.answerBy !== undefined ||
+    details.paymentDueBy !== undefined ||
+    details.yourPayment?.confirmBy !== undefined
+  );
 }

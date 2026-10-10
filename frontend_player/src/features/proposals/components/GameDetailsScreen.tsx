@@ -26,7 +26,10 @@
  * **`GET /proposals/{id}`** (#542) is the whole of it: who is In, the sides and their forecast, the
  * club and its distance, the share and the book-by, the overlap, the status — *Filling · 2 of 4
  * in*, *Waiting for the club* in amber, booked, or how it ended unfilled — and **`actions`, what the
- * reader may do now**, in the screen's order. **One status it cannot word alone**: a game its club
+ * reader may do now**, in the screen's order. *Waiting for one payment* (#625, #626; Q111) is in
+ * amber too, with *Waiting for one payment · until 14:40 · Nobody pays until it's in* under the
+ * share — and to the payer *Confirm your payment by 14:40*, their own time, under it while it runs,
+ * there and on a game gone back to filling meanwhile. **One status it cannot word alone**: a game its club
  * turned down names one status for the club's no and its silence, so its booking — the same id —
  * is read for which (`clubsAnswer`, Q105): *Kazimierz Padel said no* or *… didn't answer in time*,
  * and *Called off* until that read says. Nothing about the game is kept by the screen: every
@@ -50,7 +53,7 @@
  *   nobody has paid and leaving withdraws the yes, and it is sent as the withdrawal, which calls off
  *   the request to the club (`LeaveTheGame`, the booked game's door).
  * - **Confirm your payment** while the reader's seat waits on a refused share (#541): the fill's
- *   confirmation, on the payment the read names.
+ *   confirmation, on the payment the read names, naming their time to pay while it runs (Q109).
  *
  * **No Chat, no court number**: a game still filling has neither (A4.2). A game the reader was never
  * dealt is `proposal_not_found`, said in one sentence; before the read lands the screen waits with
@@ -82,7 +85,13 @@ import { balanceLabel, balanceTone, balanceWord } from '@/shared/vocabulary/bala
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import { foldOf, peopleOn, refusalOutcome, rowsOf, type DeckPerson } from '../domain/deck';
-import { completesTheGame, yesOnDetails, type ProposalDetails } from '../domain/details';
+import {
+  completesTheGame,
+  detailsCanRunOut,
+  paymentDueOf,
+  yesOnDetails,
+  type ProposalDetails,
+} from '../domain/details';
 import { LEAVING_WHILE_WAITING, answerByAhead } from '../domain/home';
 import type { GameKind } from '../domain/vocabulary';
 import { gameDayOf, weekdayAt } from '../domain/when';
@@ -240,9 +249,10 @@ function Details({
   };
   const sayNo = () => answer.mutate({ proposalId, said: 'no' }, { onSuccess: () => router.back() });
 
-  // The read's clock — running while the club's deadline is ahead, so *answers by …* leaves the
-  // money row by itself; otherwise standing at the read, since nothing else here runs out.
-  const at = useReadClock(details.readAt, receivedAt, details.answerBy !== undefined);
+  // The read's clock — running while the club's deadline or a time to pay is ahead, so *answers by
+  // …* and *until …* leave the money row by themselves; otherwise standing at the read, since
+  // nothing else here runs out.
+  const at = useReadClock(details.readAt, receivedAt, detailsCanRunOut(details));
   const seats = courtSeatCount(sport);
   const { top, bottom } = rowsOf(details, seats / 2);
 
@@ -345,9 +355,7 @@ function Details({
               label={FILL_COPY.confirm.title}
               size="lg"
               onPress={() => {
-                if (details.yourPayment !== undefined) {
-                  fill.confirm(details.yourPayment.seatChargeId, yesOn);
-                }
+                if (details.yourPayment !== undefined) fill.confirm(details.yourPayment, yesOn);
               }}
             />
           ) : null}
@@ -377,6 +385,7 @@ function Facts({ details, at }: { readonly details: ProposalDetails; readonly at
     card,
     weekdayAt(details.deadline),
     answerByAhead(details, at),
+    paymentDueOf(details, at),
   );
   const facts: readonly FactWords[] = [
     {

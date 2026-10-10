@@ -7,6 +7,7 @@
  * Confirm your payment                      ✕
  * 32 zł to Bonarka Arena
  * Padel · Saturday · 16:00
+ * ▎Confirm your payment by 14:40 to keep your seat     — while their time to pay runs (Q109)
  * Your bank wants to check this payment once before the club can take it.
  * [ Confirm with your bank ]
  * ```
@@ -26,6 +27,12 @@
  *
  * The share is read when the sheet opens, without its secret; the secret is asked of the server
  * again for the press and handed straight to the provider (`useConfirmOnPhone`).
+ *
+ * **Their time to pay is named while it runs** (#625, #626; Q109) — an amber note, *Confirm your
+ * payment by 14:40 to keep your seat*, the notice's and the email's words, written as Home writes the
+ * time. The payment's own read does not carry it (it is the Payments context's, and the time is the
+ * game's), so whoever opens the sheet hands it in: the yes's answer, a *TO CONFIRM* row, a game's
+ * details. Once it ran out there is no time to name, and no note.
  */
 
 import { useState } from 'react';
@@ -36,31 +43,41 @@ import { codeMessage, offlineMessage, recoveryMessage, type AppError } from '@/s
 import { usePayments } from '@/shared/lib/platform';
 import { BottomSheet, Button, Note, theme } from '@/shared/ui';
 
+import { deadlineAhead } from '../domain/home';
+
 import { FILL_COPY } from './fillCopy';
-import { chargeGameLine, chargeLine } from './fillPresentation';
+import { chargeGameLine, chargeLine, keepYourSeatBy } from './fillPresentation';
 
 const WORDS = FILL_COPY.confirm;
 
 export interface ConfirmPaymentSheetProps {
   readonly seatChargeId: string;
+  /** **Their time to pay**, while it runs (Q109). */
+  readonly confirmBy?: string;
   /** Closed: the seat stays open until the player confirms, or somebody else takes it. */
   readonly onClose: () => void;
   /** The yes again, once the provider says the payment is confirmed. Rejects with the refusal. */
   readonly yesAgain: () => Promise<unknown>;
 }
 
-export function ConfirmPaymentSheet({ seatChargeId, onClose, yesAgain }: ConfirmPaymentSheetProps) {
+export function ConfirmPaymentSheet({
+  seatChargeId,
+  confirmBy,
+  onClose,
+  yesAgain,
+}: ConfirmPaymentSheetProps) {
   return (
     <BottomSheet visible onClose={onClose} title={WORDS.title} closeLabel={WORDS.close}>
-      <Confirmation seatChargeId={seatChargeId} yesAgain={yesAgain} />
+      <Confirmation seatChargeId={seatChargeId} confirmBy={confirmBy} yesAgain={yesAgain} />
     </BottomSheet>
   );
 }
 
 function Confirmation({
   seatChargeId,
+  confirmBy,
   yesAgain,
-}: Pick<ConfirmPaymentSheetProps, 'seatChargeId' | 'yesAgain'>) {
+}: Pick<ConfirmPaymentSheetProps, 'seatChargeId' | 'confirmBy' | 'yesAgain'>) {
   const read = useSeatCharge(seatChargeId);
   const confirmOnPhone = useConfirmOnPhone();
   const { CardFields } = usePayments();
@@ -95,6 +112,8 @@ function Confirmation({
   }
 
   const typed = confirmsWith(charge) === 'typed';
+  // Named only while it is ahead: a row read before the time ran out still hands it in.
+  const by = deadlineAhead(confirmBy, read.dataUpdatedAt);
 
   const confirm = async () => {
     if (busy) return;
@@ -123,6 +142,7 @@ function Confirmation({
           {chargeGameLine(charge.sport, charge.startsAt, read.dataUpdatedAt)}
         </Text>
       </View>
+      {by === undefined ? null : <Note variant="amber">{keepYourSeatBy(by)}</Note>}
       <Text style={s.line}>{typed ? WORDS.declinedLine : WORDS.checkLine}</Text>
       {typed ? (
         <CardFields

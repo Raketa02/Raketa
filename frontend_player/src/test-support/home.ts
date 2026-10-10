@@ -104,6 +104,8 @@ export function homeGame(extra: Partial<Wire['HomeGameSchema']> = {}): Wire['Hom
     sides: bookedSides(),
     money: bookedMoney(),
     answer_by: null,
+    payment_due_by: null,
+    your_payment_due_by: null,
     ...extra,
   };
 }
@@ -147,6 +149,8 @@ export function bookingDetails(
     leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: 2718, card_fee_grosze: 82 },
     rescue: null,
     answer_by: null,
+    payment_due_by: null,
+    your_payment_due_by: null,
     ...extra,
   };
 }

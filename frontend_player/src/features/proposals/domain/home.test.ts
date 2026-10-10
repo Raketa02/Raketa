@@ -227,6 +227,79 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     });
   });
 
+  /**
+   * **Waiting for one payment** (#625, #626; Q111): one player's share was refused, and their time
+   * to pay runs. Everybody reads until when, and never whose; the payer reads their own time.
+   */
+  describe('a full game waiting for one payment', () => {
+    /** Tuesday 6 October, 14:10 in Warsaw — the read; the time runs to 14:40. */
+    const READ = Date.parse('2026-10-06T12:10:00Z');
+    const TWENTY_TO_THREE = '2026-10-06T12:40:00Z';
+    const waiting = (extra: Partial<HomeGame> = {}) =>
+      game({
+        status: 'WAITING_FOR_A_PAYMENT',
+        gameId: undefined,
+        courtName: undefined,
+        money: { shareGrosze: 4000, paid: false },
+        paymentDueBy: TWENTY_TO_THREE,
+        ...extra,
+      });
+
+    it('says until when, while the time is ahead', () => {
+      expect(moneyLineOf(waiting(), READ)).toEqual({
+        kind: 'paymentAwaited',
+        until: { at: TWENTY_TO_THREE, today: true },
+      });
+    });
+
+    it('drops the time at the deadline itself — the line switches by itself', () => {
+      expect(moneyLineOf(waiting(), Date.parse(TWENTY_TO_THREE))).toEqual({
+        kind: 'paymentAwaited',
+      });
+    });
+
+    it('is the payer’s own time to them — Confirm your payment by … — while it runs', () => {
+      const yours = waiting({ yourPaymentDueBy: TWENTY_TO_THREE });
+      expect(moneyLineOf(yours, READ)).toEqual({
+        kind: 'yourPayment',
+        by: { at: TWENTY_TO_THREE, today: true },
+      });
+      expect(moneyLineOf(yours, Date.parse(TWENTY_TO_THREE))).toEqual({
+        kind: 'paymentAwaited',
+      });
+    });
+
+    /** A leave in the wait falls the game back, and the payer's time runs on (#625). */
+    it('names the payer’s time on a game gone back to filling meanwhile', () => {
+      const fellBack = game({
+        status: 'SEAT_OPEN',
+        openSeats: 1,
+        money: { shareGrosze: 4000, paid: false },
+        fillingAgain: { clubConfirms: false },
+        yourPaymentDueBy: TWENTY_TO_THREE,
+      });
+      expect(moneyLineOf(fellBack, READ)).toEqual({
+        kind: 'yourPayment',
+        by: { at: TWENTY_TO_THREE, today: true },
+      });
+      expect(moneyLineOf(fellBack, Date.parse(TWENTY_TO_THREE))).toEqual({
+        kind: 'fillingAgain',
+        seats: 1,
+        club: 'Bonarka Arena',
+        clubConfirms: false,
+      });
+    });
+
+    it('is called off with why when the payment did not come in before its last moment to book', () => {
+      expect(
+        moneyLineOf(
+          waiting({ status: 'CALLED_OFF', calledOffReason: 'PAYMENT_NOT_IN_TIME' }),
+          READ,
+        ),
+      ).toEqual({ kind: 'calledOff', reason: 'PAYMENT_NOT_IN_TIME', club: 'Bonarka Arena' });
+    });
+  });
+
   it('says why a game was called off, and what came back', () => {
     const short = game({
       status: 'CALLED_OFF',
@@ -308,6 +381,7 @@ describe('onHome — how long an ended game keeps its card', () => {
 
   it.each<HomeStatus>([
     'WAITING_FOR_THE_CLUB',
+    'WAITING_FOR_A_PAYMENT',
     'BOOKED',
     'SEAT_OPEN',
     'NEEDS_RESULT',
@@ -344,6 +418,21 @@ describe('lineCanRunOut — a clause that leaves the line by itself', () => {
     expect(lineCanRunOut({ ...waiting, answerBy: '2026-10-01T09:00:00Z' })).toBe(true);
     expect(lineCanRunOut(waiting)).toBe(false);
   });
+
+  it('runs out while a time to pay is there to pass — everybody’s, or the payer’s own', () => {
+    const paying = game({
+      status: 'WAITING_FOR_A_PAYMENT',
+      money: { shareGrosze: 4000, paid: false },
+    });
+    expect(lineCanRunOut(paying)).toBe(false);
+    expect(lineCanRunOut({ ...paying, paymentDueBy: '2026-10-06T12:40:00Z' })).toBe(true);
+    const fellBack = game({
+      status: 'SEAT_OPEN',
+      money: { shareGrosze: 4000, paid: false },
+      fillingAgain: { clubConfirms: false },
+    });
+    expect(lineCanRunOut({ ...fellBack, yourPaymentDueBy: '2026-10-06T12:40:00Z' })).toBe(true);
+  });
 });
 
 describe('isNew — marked until opened (the mechanics §11.4)', () => {
@@ -354,6 +443,7 @@ describe('isNew — marked until opened (the mechanics §11.4)', () => {
 
   it('is new only while the game is still ahead of its result', () => {
     expect(isNew(game({ status: 'WAITING_FOR_THE_CLUB' }), new Set())).toBe(true);
+    expect(isNew(game({ status: 'WAITING_FOR_A_PAYMENT' }), new Set())).toBe(true);
     expect(isNew(game({ status: 'SEAT_OPEN' }), new Set())).toBe(true);
     expect(isNew(game({ status: 'NEEDS_RESULT' }), new Set())).toBe(false);
     expect(isNew(game({ status: 'CALLED_OFF' }), new Set())).toBe(false);
@@ -399,6 +489,8 @@ describe('openedFrom / openedToKeep — what the phone keeps', () => {
 describe('chatIsOpen — the room lives its own life once booked, and closes as today (§14.3)', () => {
   it.each<[HomeStatus, boolean]>([
     ['WAITING_FOR_THE_CLUB', false],
+    // Nobody paid and nothing is booked yet: the chat opens when it is (Q111).
+    ['WAITING_FOR_A_PAYMENT', false],
     ['BOOKED', true],
     ['SEAT_OPEN', true],
     ['NEEDS_RESULT', true],
@@ -421,6 +513,7 @@ describe('chatIsOpen — the room lives its own life once booked, and closes as 
 describe('courtIsGiven — a court number once the club has said yes (A4.2)', () => {
   it.each<[HomeStatus, boolean]>([
     ['WAITING_FOR_THE_CLUB', false],
+    ['WAITING_FOR_A_PAYMENT', false],
     ['BOOKED', true],
     ['SEAT_OPEN', true],
     ['NEEDS_RESULT', true],

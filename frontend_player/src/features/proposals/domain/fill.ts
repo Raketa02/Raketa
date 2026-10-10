@@ -13,7 +13,7 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard, DeckPerson } from './deck';
-import { answerByAhead, type AnswerBy, type BookedGame } from './home';
+import { answerByAhead, deadlineOf, type AnswerBy, type BookedGame, type Deadline } from './home';
 import type { LiveYes } from './liveYes';
 import type { GameKind, PaymentRefusal } from './vocabulary';
 
@@ -100,10 +100,18 @@ export interface Booked {
   readonly gameId: string;
 }
 
-/** This player's share, refused when the game filled: nobody paid, and their seat is open again. */
+/**
+ * This player's share, refused when the game filled or when its club said yes: nobody paid, and
+ * their seat is theirs alone for their time to pay (Q109) — open to others too once it ran out.
+ */
 export interface YourPayment {
   readonly seatChargeId: string;
   readonly refusal: PaymentRefusal;
+  /**
+   * **Their time to pay** (#625, #626) — *Confirm your payment by 14:40 to keep your seat*. Absent
+   * once it ran out, where none was given, and from an older server.
+   */
+  readonly confirmBy?: string;
 }
 
 /** What a yes left on the game — `POST /proposals/{id}/yes`, and the payment confirmation's answer. */
@@ -117,6 +125,12 @@ export interface YesAnswer {
   readonly waitingForTheClub: boolean;
   /** This player's share could not be held. */
   readonly yourPayment: YourPayment | null;
+  /**
+   * **This yes filled the game, and a share was refused** (#625, #626; Q110) — the game waits for
+   * that payment until then: somebody else's, or this player's own (`yourPayment`). Absent on every
+   * other answer, and from an older server.
+   */
+  readonly paymentAwaitedUntil?: string;
 }
 
 /**
@@ -124,7 +138,9 @@ export interface YesAnswer {
  *
  * - `booked` — this yes filled the game, everybody paid: *It's a game!*, for this player alone.
  * - `confirm` — their share needs them: the bank wants to check it, or declined it. *Your payment
- *   didn't go through — confirm it to keep your seat*, and the confirmation on the same payment.
+ *   didn't go through — confirm it to keep your seat*, and the confirmation on the same payment,
+ *   naming their time to pay when they have one (Q109). **It comes before a payment awaited**: a
+ *   refusal of the player's own is no screen, only their sheet (Q110).
  * - `setUp` — no method at the fill: save one, and the yes again.
  * - `termsAgain` — the card's brand changed; its terms are accepted again on You › Payments.
  * - `waiting` — this yes filled a game an On request club has still to confirm (#543): nobody paid,
@@ -132,12 +148,17 @@ export interface YesAnswer {
  *   *It's a game!* all the same, for this player alone: it marks the players matched, not only
  *   booked (Q103), and says what is still missing. The charge follows the club's yes, which is told
  *   by a notice and never by a second *It's a game!*.
- * - `counted` — a vote, as every other: seats still open, or somebody else's share refused.
+ * - `paymentAwaited` — this yes filled the game and somebody else's share was refused (#625; Q110): nobody
+ *   paid, and the game is on Home *waiting for one payment* until `until`, by the booking's id — the
+ *   proposal's own. *It's a game!*, for this player alone, with what is still missing. When the
+ *   payment comes in the others are told *booked · you paid*, never a second *It's a game!*.
+ * - `counted` — a vote, as every other: seats still open.
  */
 export type FillOutcome =
   | { readonly kind: 'booked'; readonly bookingId: string }
   | { readonly kind: 'waiting'; readonly bookingId: string }
-  | { readonly kind: 'confirm'; readonly seatChargeId: string }
+  | { readonly kind: 'paymentAwaited'; readonly bookingId: string; readonly until: string }
+  | ({ readonly kind: 'confirm' } & Confirmation)
   | { readonly kind: 'setUp' }
   | { readonly kind: 'termsAgain' }
   | { readonly kind: 'counted' };
@@ -167,11 +188,16 @@ export function fillOutcome(answer: YesAnswer): FillOutcome {
   if (answer.booked !== null) return { kind: 'booked', bookingId: answer.booked.bookingId };
   if (answer.waitingForTheClub) return { kind: 'waiting', bookingId: answer.proposalId };
   const refused = answer.yourPayment;
-  if (refused === null) return { kind: 'counted' };
+  if (refused === null) {
+    const until = answer.paymentAwaitedUntil;
+    return until === undefined
+      ? { kind: 'counted' }
+      : { kind: 'paymentAwaited', bookingId: answer.proposalId, until };
+  }
   switch (refused.refusal) {
     case 'AUTHENTICATION_REQUIRED':
     case 'DECLINED':
-      return { kind: 'confirm', seatChargeId: refused.seatChargeId };
+      return { kind: 'confirm', ...confirmationOf(refused) };
     case 'NO_METHOD':
       return { kind: 'setUp' };
     case 'TERMS_NEEDED':
@@ -180,14 +206,45 @@ export function fillOutcome(answer: YesAnswer): FillOutcome {
 }
 
 /**
+ * **A refused share to confirm** — the payment the confirmation opens on, and the player's time to
+ * pay while one runs (Q109), which the sheet names. What every opener hands the fill: the yes's
+ * answer, a *TO CONFIRM* row, a game's details.
+ */
+export type Confirmation = Pick<YourPayment, 'seatChargeId' | 'confirmBy'>;
+
+export function confirmationOf(payment: Confirmation): Confirmation {
+  return {
+    seatChargeId: payment.seatChargeId,
+    ...(payment.confirmBy === undefined ? {} : { confirmBy: payment.confirmBy }),
+  };
+}
+
+/**
  * **A share of this player's refused when its game filled, waiting for them** — `GET
- * /players/me/payments-to-confirm` (#541): a game still filling whose seat reopened on it. What a
- * live yes knows of its game, and the payment.
+ * /players/me/payments-to-confirm` (#541): a game whose seat is held for them while their time to
+ * pay runs (#625, #626), or reopened once it ran out. What a live yes knows of its game, and the
+ * payment.
  */
 export interface PaymentToConfirm extends LiveYes {
   readonly seatChargeId: string;
   /** Only the two that wait for the player: the bank's check, or a decline. */
   readonly refusal: Extract<PaymentRefusal, 'AUTHENTICATION_REQUIRED' | 'DECLINED'>;
+  /**
+   * **Their time to pay** (Q109) — *Confirm your payment by 14:40*. Absent once it ran out: the row
+   * stays, without a time, while the seat is still free to take back.
+   */
+  readonly confirmBy?: string;
+}
+
+/**
+ * **The reader's refused share on one game** — a booked game's details offer its confirmation. A
+ * booking takes its proposal's id (#541), so the row for the game Home opens is found by it.
+ */
+export function paymentToConfirmOn(
+  bookingId: string,
+  payments: readonly PaymentToConfirm[] | undefined,
+): PaymentToConfirm | undefined {
+  return payments?.find((payment) => payment.proposalId === bookingId);
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +285,13 @@ function faceOf(person: DeckPerson): Face {
 }
 
 /**
+ * **What *It's a game!* says is still missing**, in one line under the word — the club's yes
+ * (Q103), or one payment (Q110). Nothing is missing at a club that books at once when every share
+ * held, and there is no line.
+ */
+export type StillMissing = ItsAGameWaiting | ItsAGamePaymentAwaited;
+
+/**
  * **What *It's a game!* says is still missing at a club that confirms** (Q103) — the club, and when
  * it must answer: *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*. The answer to
  * the yes names no deadline, so it is the booking's read (`GET /bookings/{id}`, the one Home's card
@@ -236,6 +300,7 @@ function faceOf(person: DeckPerson): Face {
  * name — the club the card named, and no deadline: *Nobody pays until Kazimierz Padel confirms*.
  */
 export interface ItsAGameWaiting {
+  readonly of: 'theClub';
   readonly club?: string;
   readonly answerBy?: AnswerBy;
 }
@@ -247,7 +312,23 @@ export function itsAGameWaiting(
   const name = read?.where.name ?? club;
   const by = read === undefined ? undefined : answerByAhead(read, Date.parse(read.readAt));
   return {
+    of: 'theClub',
     ...(name === undefined ? {} : { club: name }),
     ...(by === undefined ? {} : { answerBy: by }),
   };
+}
+
+/**
+ * **What *It's a game!* says is still missing while one payment is** (Q110) — until when: *Waiting
+ * for one payment · until 14:40 · Nobody pays until it's in*. Never whose. The answer to the yes
+ * names the time (`paymentAwaitedUntil`), so nothing is read; it is written as Home writes it, the
+ * hour alone when it falls on `now`'s day.
+ */
+export interface ItsAGamePaymentAwaited {
+  readonly of: 'aPayment';
+  readonly until: Deadline;
+}
+
+export function aPaymentAwaited(until: string, now: number): ItsAGamePaymentAwaited {
+  return { of: 'aPayment', until: deadlineOf(until, now) };
 }

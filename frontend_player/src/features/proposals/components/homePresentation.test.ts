@@ -125,6 +125,28 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
     ).toBe('Its court went to another game before it filled again · Nobody paid');
   });
 
+  /** Q111: one payment awaited — until when, never whose; the payer reads their own time. */
+  it('says a game waits for one payment, until when while it may, and the payer’s own time', () => {
+    expect(moneyWords({ kind: 'paymentAwaited', until: ELEVEN_TODAY })).toBe(
+      'Waiting for one payment · until 11:00 · Nobody pays until it’s in',
+    );
+    expect(moneyWords({ kind: 'paymentAwaited', until: SUNDAY_00_15 })).toBe(
+      'Waiting for one payment · until Sun 00:15 · Nobody pays until it’s in',
+    );
+    expect(moneyWords({ kind: 'paymentAwaited' })).toBe(
+      'Waiting for one payment · Nobody pays until it’s in',
+    );
+    expect(moneyWords({ kind: 'yourPayment', by: ELEVEN_TODAY })).toBe(
+      'Confirm your payment by 11:00',
+    );
+  });
+
+  it('says a payment didn’t go through in time, and nobody paid (#625)', () => {
+    expect(
+      moneyWords({ kind: 'calledOff', reason: 'PAYMENT_NOT_IN_TIME', club: 'Bonarka Arena' }),
+    ).toBe('A payment didn’t go through in time · Nobody paid');
+  });
+
   it('says a seat was empty on a game that started short', () => {
     expect(moneyWords({ kind: 'seatEmpty' })).toBe('A seat was empty · no Level moved');
   });
@@ -163,6 +185,10 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
 });
 
 describe('statusSubline — the details’ second line', () => {
+  it('says a game waiting for one payment, lower case', () => {
+    expect(statusSubline('padel', 'WAITING_FOR_A_PAYMENT')).toBe('Padel · waiting for one payment');
+  });
+
   it('is the sport and the status, lower case: Padel · booked', () => {
     expect(statusSubline('padel', 'BOOKED')).toBe('Padel · booked');
     expect(statusSubline('tennis', 'WAITING_FOR_THE_CLUB')).toBe('Tennis · waiting for the club');
@@ -347,6 +373,32 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
       label: 'Your share',
       value: '25 zł',
       below: 'Nobody pays until Bonarka Arena confirms',
+    });
+  });
+
+  /** Q111: the card's own line under the share nobody pays yet — and the payer's own time. */
+  it('is the share nobody pays yet while one payment is awaited, over until when — or the payer’s time', () => {
+    const waiting = booked({
+      status: 'WAITING_FOR_A_PAYMENT',
+      gameId: undefined,
+      courtName: undefined,
+      money: { shareGrosze: 4000, paid: false },
+      paymentDueBy: ELEVEN,
+    });
+    expect(moneyRow(waiting, BEFORE)).toEqual({
+      label: 'Your share',
+      value: '40 zł',
+      below: 'Waiting for one payment · until 11:00 · Nobody pays until it’s in',
+    });
+    expect(moneyRow({ ...waiting, yourPaymentDueBy: ELEVEN }, BEFORE)).toEqual({
+      label: 'Your share',
+      value: '40 zł',
+      below: 'Confirm your payment by 11:00',
+    });
+    expect(moneyRow({ ...waiting, yourPaymentDueBy: ELEVEN }, Date.parse(ELEVEN))).toEqual({
+      label: 'Your share',
+      value: '40 zł',
+      below: 'Waiting for one payment · Nobody pays until it’s in',
     });
   });
 

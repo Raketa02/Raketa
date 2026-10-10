@@ -63,11 +63,13 @@ export type PaymentRefusal = 'AUTHENTICATION_REQUIRED' | 'DECLINED' | 'TERMS_NEE
 /**
  * **What a game on Home is, right now** (the mechanics §14.1; #542, #556) — one status per card,
  * folded by the server at its `read_at` from the booking, its Game's result and the clock. The
- * wire's own spelling, because the copy is keyed by it: *Waiting for the club*, *Booked*, *Seat
- * open*, the five result states as today's cards name them, and *Called off*.
+ * wire's own spelling, because the copy is keyed by it: *Waiting for the club*, *Waiting for one
+ * payment* (#625, #626), *Booked*, *Seat open*, the five result states as today's cards name them,
+ * and *Called off*.
  */
 export type HomeStatus =
   | 'WAITING_FOR_THE_CLUB'
+  | 'WAITING_FOR_A_PAYMENT'
   | 'BOOKED'
   | 'SEAT_OPEN'
   | 'NEEDS_RESULT'
@@ -78,12 +80,13 @@ export type HomeStatus =
   | 'CALLED_OFF';
 
 /**
- * **Why a game on Home is called off** (#543, #544, #547, #624) — the club refused the request, or did
- * not answer it in time (nobody paid in either), a seat that opened before the club's cut-off was
- * still empty at it, or the club cancelled it (everybody still in is refunded in full in both); and,
+ * **Why a game on Home is called off** (#543, #544, #547, #624, #625) — the club refused the request,
+ * or did not answer it in time (nobody paid in either), a seat that opened before the club's cut-off
+ * was still empty at it, or the club cancelled it (everybody still in is refunded in full in both);
  * of a full game gone back to filling, its last moment to book passed with a seat open, or its court
- * went to another game first (nobody paid in either). The wire's own spelling: the line under the
- * card is keyed by it.
+ * went to another game first (nobody paid in either); and a payment the game waited for did not come
+ * in before its last moment to book (nobody paid). The wire's own spelling: the line under the card
+ * is keyed by it.
  */
 export type CalledOffReason =
   | 'REFUSED'
@@ -91,7 +94,8 @@ export type CalledOffReason =
   | 'SHORT_AT_THE_CUT_OFF'
   | 'CANCELLED_BY_THE_CLUB'
   | 'BOOK_BY_PASSED'
-  | 'COURT_HOUR_LOST';
+  | 'COURT_HOUR_LOST'
+  | 'PAYMENT_NOT_IN_TIME';
 
 /**
  * **Why the club cancelled a booked game** (#547; the mechanics §16.9) — the players are told it with
@@ -116,11 +120,13 @@ export type LeavingKind = 'BEFORE_THE_CUT_OFF' | 'AFTER_THE_CUT_OFF' | 'WHILE_WA
 
 /**
  * **Where a game still filling stands, for its details** (the mechanics §14.2; #542) — filling,
- * full and waiting for an On request club, booked, or one of the four ways it ended unfilled.
+ * full and waiting for an On request club, full and waiting for one player's payment (#625, #626),
+ * booked, or one of the four ways it ended unfilled.
  */
 export type ProposalStatus =
   | 'FILLING'
   | 'WAITING_FOR_THE_CLUB'
+  | 'WAITING_FOR_A_PAYMENT'
   | 'FILLED'
   | 'EXPIRED'
   | 'WITHDRAWN'

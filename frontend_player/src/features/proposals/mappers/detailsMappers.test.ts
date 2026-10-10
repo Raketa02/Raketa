@@ -64,6 +64,30 @@ describe('a game still filling, in detail', () => {
     );
   });
 
+  it('carries the payment the game waits for, and the reader’s own time to pay (#625)', () => {
+    const card = deckCard();
+    const waiting = proposalDetails(card, {
+      status: 'WAITING_FOR_A_PAYMENT',
+      actions: ['LEAVE', 'CONFIRM_PAYMENT'],
+      payment_due_by: '2026-10-06T12:40:00Z',
+      your_payment: {
+        seat_charge_id: 'a2000000-0000-4000-8000-000000000001',
+        refusal: 'AUTHENTICATION_REQUIRED',
+        confirm_by: '2026-10-06T12:40:00Z',
+      },
+    });
+
+    expect(toProposalDetails(waiting)).toMatchObject({
+      status: 'WAITING_FOR_A_PAYMENT',
+      paymentDueBy: '2026-10-06T12:40:00Z',
+      yourPayment: { confirmBy: '2026-10-06T12:40:00Z' },
+    });
+    expect(toProposalDetails(proposalDetails(card))).not.toHaveProperty('paymentDueBy');
+    expect(
+      toProposalDetails(proposalDetails(card, { payment_due_by: undefined })),
+    ).not.toHaveProperty('paymentDueBy');
+  });
+
   it('is nothing for a sport this build cannot name', () => {
     const wire = { ...proposalDetails(deckCard()), sport: 'CURLING' as Wire['Sport'] };
     expect(toProposalDetails(wire)).toBeUndefined();

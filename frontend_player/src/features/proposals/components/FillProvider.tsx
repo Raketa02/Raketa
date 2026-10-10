@@ -40,11 +40,14 @@
  * - **Booked** — every deck, the live yeses, the payments to confirm, Home's games and the receipts
  *   are read again, the details screen it was said on (if still open) goes back to the deck, and
  *   *It's a game!* covers the phone. *Open game* opens it from Home; *Later* leaves the player where
- *   they are. A confirmation opened from You › Payments holds no card to draw the faces from, so
- *   it says *It's a game!* in a toast and the game is in Home.
+ *   they are.
+ * - **Booked on a confirmed payment** (#625, #626; Q110) — a payment in time, or a payment that is
+ *   the yes again: *It's a game!* for the player whose payment completed the game, at either kind of
+ *   club (§12.2: *you see It's a game!*); the others are told *booked · you paid*, or the club's yes.
+ *   A *TO CONFIRM* row holds no card, so its faces are read off the booking.
  * - **A share to confirm** — *Your payment didn't go through — confirm it to keep your seat*, and
- *   the confirmation opens on that payment. A plain yes refused `payment_to_confirm` opens it too,
- *   and so does a row of You › Payments' *TO CONFIRM* (`confirm`).
+ *   the confirmation opens on that payment, naming the player's time to pay (Q109). A plain yes
+ *   refused `payment_to_confirm` opens it too, and so does a row of *TO CONFIRM* (`confirm`).
  * - **No method** — the setup, and the yes again once saved. **Terms needed** — a toast naming You ›
  *   Payments, where they are accepted.
  * - **Sent to the club** — the yes filled a game an On request club confirms (#543): nobody paid,
@@ -52,7 +55,12 @@
  *   players are matched — with one line under the word: *Kazimierz Padel answers by 21:15 · Nobody
  *   pays until it confirms*. *Open game* opens it from Home, as a booked game. The club's yes is told
  *   by its notice, *Kazimierz Padel confirmed your game*, never by a second *It's a game!*.
- * - **A vote** — nothing: seats are still open, or somebody else's share was refused.
+ * - **Waiting for one payment** — the yes filled the game at a club that books at once and somebody
+ *   else's share was refused (#625; Q110): nobody paid, and the game is on Home *waiting for one
+ *   payment*. *It's a game!*, with *Waiting for one payment · until 14:40 · Nobody pays until it's
+ *   in* under the word — the time is the answer's, so nothing is read for it. A refusal of the
+ *   player's own is no screen: their sheet, naming their time.
+ * - **A vote** — nothing: seats are still open.
  *
  * **A rescue joined from a *Seats to fill* row** (#557) holds no sides — the row lists the players,
  * not which side the open seat is on — so *It's a game!* observes the booking's read, the seat now
@@ -78,12 +86,15 @@ import { announce, theme, UndoToast } from '@/shared/ui';
 import { refusalOutcome, type DeckCard } from '../domain/deck';
 import {
   UNDO_WINDOW_MS,
+  aPaymentAwaited,
+  confirmationOf,
   fillOutcome,
   fillRefusal,
   itsAGameWaiting,
   undoSecondsLeft,
   waitsForUndo,
   type FillOutcome,
+  type ItsAGamePaymentAwaited,
 } from '../domain/fill';
 import {
   FillContext,
@@ -108,17 +119,18 @@ interface Counting extends BookAsk {
 }
 
 /**
- * **What *It's a game!* is raised for** — a game booked, or one sent to its club, which has still to
- * say yes (Q103): the booking, the sides the yes held if it held any, and the club the card named.
+ * **What *It's a game!* is raised for** — a game booked; one sent to its club, which has still to say
+ * yes (Q103); or one waiting for one payment (Q110): the booking, the sides the yes held if it held
+ * any, and what is still missing — the club the card named, or until when.
  */
-type Celebrating =
-  | { readonly kind: 'booked'; readonly bookingId: string; readonly sides?: DeckCard['sides'] }
-  | {
-      readonly kind: 'atTheClub';
-      readonly bookingId: string;
-      readonly sides?: DeckCard['sides'];
-      readonly club?: string;
-    };
+type Celebrating = {
+  readonly bookingId: string;
+  readonly sides?: DeckCard['sides'];
+} & (
+  | { readonly kind: 'booked' }
+  | { readonly kind: 'atTheClub'; readonly club?: string }
+  | { readonly kind: 'paymentAwaited'; readonly missing: ItsAGamePaymentAwaited }
+);
 
 export interface FillProviderProps {
   /** How far above the bottom inset the toast sits — the bar's height while the bar is drawn. */
@@ -152,38 +164,44 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
 
   /** What a screen, a sheet or the delayed send does next — read off one outcome, in one place. */
   const act = (outcome: FillOutcome, ask: FillAsk, then?: () => void) => {
+    const sides = ask.card?.sides;
+    const held = sides === undefined ? {} : { sides };
     switch (outcome.kind) {
       case 'booked': {
         void rereadAfterFill(client);
         ask.leave?.();
-        const { bookingId } = outcome;
-        if (ask.card === undefined) {
-          showToast({ message: FILL_COPY.itsAGameInHome, tone: 'ok' });
-        } else {
-          // A Seats to fill row holds no sides: the overlay reads them off the booking.
-          const { sides } = ask.card;
-          setCelebrating({ kind: 'booked', bookingId, ...(sides === undefined ? {} : { sides }) });
-        }
+        // A Seats to fill row, or a TO CONFIRM row, holds no sides: the overlay reads them off the
+        // booking.
+        setCelebrating({ kind: 'booked', bookingId: outcome.bookingId, ...held });
         return;
       }
       case 'waiting': {
         // The game is on Home now, waiting for the club; nothing was charged (#543). The players
         // are matched all the same (Q103): It's a game!, its line read off the booking.
         void rereadAfterFill(client);
-        const { bookingId } = outcome;
-        const sides = ask.card?.sides;
         const club = ask.card?.club?.name;
         setCelebrating({
           kind: 'atTheClub',
-          bookingId,
-          ...(sides === undefined ? {} : { sides }),
+          bookingId: outcome.bookingId,
+          ...held,
           ...(club === undefined ? {} : { club }),
         });
         return;
       }
+      case 'paymentAwaited':
+        // The game is on Home now, waiting for one payment; nothing was charged (#625). The players
+        // are matched (Q110): It's a game!, with until when — the answer's own time.
+        void rereadAfterFill(client);
+        setCelebrating({
+          kind: 'paymentAwaited',
+          bookingId: outcome.bookingId,
+          ...held,
+          missing: aPaymentAwaited(outcome.until, Date.now()),
+        });
+        return;
       case 'confirm':
         showToast({ message: FILL_COPY.paymentFailed, tone: 'bad' });
-        setConfirming({ ...ask, seatChargeId: outcome.seatChargeId });
+        setConfirming({ ...ask, ...confirmationOf(outcome) });
         return;
       case 'setUp':
         setSettingUp(then === undefined ? {} : { then });
@@ -314,6 +332,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
         <ConfirmPaymentSheet
           key={confirming.seatChargeId}
           seatChargeId={confirming.seatChargeId}
+          confirmBy={confirming.confirmBy}
           onClose={() => setConfirming(null)}
           yesAgain={() => confirmPayment(confirming)}
         />
@@ -344,43 +363,52 @@ interface ItsAGameDoors {
   readonly onUnreadable: () => void;
 }
 
-/** ***It's a game!* for one booking** — booked, or sent to its club. */
+/** ***It's a game!* for one booking** — booked, waiting for one payment, or sent to its club. */
 function ItsAGameFor({
   celebrating,
   ...doors
 }: ItsAGameDoors & { readonly celebrating: Celebrating }) {
-  return celebrating.kind === 'booked' ? (
-    <ItsAGameBooked bookingId={celebrating.bookingId} sides={celebrating.sides} {...doors} />
+  const { bookingId, sides } = celebrating;
+  return celebrating.kind === 'atTheClub' ? (
+    <ItsAGameAtTheClub bookingId={bookingId} sides={sides} club={celebrating.club} {...doors} />
   ) : (
-    <ItsAGameAtTheClub
-      bookingId={celebrating.bookingId}
-      sides={celebrating.sides}
-      club={celebrating.club}
+    <ItsAGameBooked
+      bookingId={bookingId}
+      sides={sides}
+      {...(celebrating.kind === 'paymentAwaited' ? { missing: celebrating.missing } : {})}
       {...doors}
     />
   );
 }
 
 /**
- * **A game booked** — drawn from the sides the yes held, or, for a *Seats to fill* row's join, from
- * the booking's own read (`useBooking`), observed for as long as the overlay waits for it: nothing is
- * drawn until it lands, and a booking that cannot be read — refused, or in a sport this build cannot
- * name — says *It's a game!* in a toast instead.
+ * **A game booked, or waiting for one payment** — drawn from the sides the yes held, or, for a
+ * *Seats to fill* row's join, from the booking's own read (`useBooking`), observed for as long as the
+ * overlay waits for it: nothing is drawn until it lands, and a booking that cannot be read — refused,
+ * or in a sport this build cannot name — says *It's a game!* in a toast instead. A game waiting for
+ * one payment carries its line, whose time is the answer's (Q110).
  */
 function ItsAGameBooked({
   bookingId,
   sides,
+  missing,
   onLater,
   onOpenGame,
   onUnreadable,
-}: ItsAGameDoors & { readonly bookingId: string; readonly sides: DeckCard['sides'] | undefined }) {
+}: ItsAGameDoors & {
+  readonly bookingId: string;
+  readonly sides: DeckCard['sides'] | undefined;
+  readonly missing?: ItsAGamePaymentAwaited;
+}) {
   const read = useBooking(bookingId, { enabled: sides === undefined });
   const drawn = sides ?? read.data?.sides;
   const unreadable = sides === undefined && (read.data === null || read.isError);
   useWhenUnreadable(unreadable, onUnreadable);
 
   if (drawn === undefined) return null;
-  return <ItsAGame card={{ sides: drawn }} onLater={onLater} onOpenGame={onOpenGame} />;
+  return (
+    <ItsAGame card={{ sides: drawn }} missing={missing} onLater={onLater} onOpenGame={onOpenGame} />
+  );
 }
 
 /**
@@ -411,7 +439,7 @@ function ItsAGameAtTheClub({
   return (
     <ItsAGame
       card={{ sides: drawn }}
-      waiting={itsAGameWaiting(club, read.booking ?? undefined)}
+      missing={itsAGameWaiting(club, read.booking ?? undefined)}
       onLater={onLater}
       onOpenGame={onOpenGame}
     />

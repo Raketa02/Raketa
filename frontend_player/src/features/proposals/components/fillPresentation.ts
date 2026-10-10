@@ -13,10 +13,19 @@ import { playerName } from '@/shared/formatting/playerName';
 import { platformClock } from '@/shared/date/platformZone';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { Face, ItsAGamePicture, ItsAGameWaiting, PaymentToConfirm } from '../domain/fill';
+import type { Face, ItsAGamePicture, PaymentToConfirm, StillMissing } from '../domain/fill';
+import type { Deadline } from '../domain/home';
 import { gameDayOf, type GameDay } from '../domain/when';
 
-import { clubName, gameDayWords, LINE_JOIN, shareWords, waitingClauses } from './deckPresentation';
+import {
+  clubName,
+  gameDayWords,
+  LINE_JOIN,
+  paymentAwaitedClauses,
+  shareWords,
+  waitingClauses,
+  yourPaymentWords,
+} from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
 import { liveYesTitle } from './liveYesesPresentation';
 
@@ -50,17 +59,46 @@ export function itsAGameSentence(picture: ItsAGamePicture, line?: string): strin
 }
 
 /**
- * *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms* — **the line under the word at a
- * club that confirms** (Q103; the screens A2.4), Home's own words for the game (A8, `waitingWords`):
- * the hour alone that day, the weekday with it on another; *Nobody pays until Kazimierz Padel
- * confirms* with no deadline to give. Drawn with the mocks' dot, and spoken a sentence a clause.
+ * **The line under the word**, Home's own words for the game (A8), drawn with the mocks' dot:
+ *
+ * - at a club that confirms (Q103; the screens A2.4), *Kazimierz Padel answers by 21:15 · Nobody
+ *   pays until it confirms* (`waitingWords`) — the hour alone that day, the weekday with it on
+ *   another; *Nobody pays until Kazimierz Padel confirms* with no deadline to give. Spoken a
+ *   sentence a clause;
+ * - while one payment is missing (Q110), *Waiting for one payment · until 14:40 · Nobody pays until
+ *   it's in*, never whose. Spoken *Waiting for one payment until 14:40. Nobody pays until it's in* —
+ *   *until 14:40* is no sentence of its own.
  */
-export function itsAGameLine(waiting: ItsAGameWaiting): {
+export function itsAGameLine(missing: StillMissing): {
   readonly drawn: string;
   readonly spoken: string;
 } {
-  const clauses = waitingClauses(waiting.club, waiting.answerBy);
-  return { drawn: clauses.join(LINE_JOIN), spoken: clauses.join('. ') };
+  if (missing.of === 'theClub') {
+    const clauses = waitingClauses(missing.club, missing.answerBy);
+    return { drawn: clauses.join(LINE_JOIN), spoken: clauses.join('. ') };
+  }
+  const [waiting, until, nobodyPays] = paymentAwaitedClauses(missing.until);
+  return {
+    drawn: [waiting, until, nobodyPays].join(LINE_JOIN),
+    spoken: `${waiting} ${until}. ${nobodyPays}`,
+  };
+}
+
+/**
+ * *Confirm your payment by 14:40 to keep your seat* — **the payer's time on the confirmation**
+ * (Q109): the notice's and the email's words, written as Home writes the time.
+ */
+export function keepYourSeatBy(by: Deadline): string {
+  return `${yourPaymentWords(by)} ${FILL_COPY.confirm.toKeepYourSeat}`;
+}
+
+/**
+ * **A *TO CONFIRM* row's line** — *Confirm your payment by 14:40* while the payer's time runs (Q109,
+ * the screens A7.3), the words Home's card says beside it; once it ran out, that the seat is open
+ * to others until they confirm.
+ */
+export function toConfirmRowLine(by: Deadline | undefined): string {
+  return by === undefined ? FILL_COPY.toConfirm.open : yourPaymentWords(by);
 }
 
 /** The share to confirm and the seller: *32 zł to Bonarka Arena*. */

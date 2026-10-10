@@ -17,7 +17,14 @@
 import { usePaymentSetupNeeded } from '@/features/payments/types';
 import type { AppError } from '@/shared/errors';
 
-import { waitsForUndo, type DealtIn, type YesAnswer, type YesOn } from '../domain/fill';
+import {
+  confirmationOf,
+  waitsForUndo,
+  type Confirmation,
+  type DealtIn,
+  type YesAnswer,
+  type YesOn,
+} from '../domain/fill';
 
 import { useFill } from './useFill';
 import type { AnswerOnCard } from './useGroupDeck';
@@ -41,8 +48,12 @@ export function useFillYes(dealtIn: DealtIn, leave?: () => void) {
     /** It waits — and another booking is counting already, so it must wait for that one. */
     held: (card: YesOn): boolean => waitsForUndo(card) && fill.counting !== null,
     book: (card: YesOn) => fill.book({ ...where, card }),
-    /** A refused share of this player's on this game — the confirmation, and the yes it carries. */
-    confirm: (seatChargeId: string, card: YesOn) => fill.confirm({ ...where, card, seatChargeId }),
+    /**
+     * A refused share of this player's on this game — the confirmation, and the yes it carries,
+     * naming their time to pay while it runs.
+     */
+    confirm: (payment: Confirmation, card: YesOn) =>
+      fill.confirm({ ...where, card, ...confirmationOf(payment) }),
     onAnswered: (answer: YesAnswer, asked: AnswerOnCard) => {
       if (asked.card !== undefined) fill.answered(answer, { ...where, card: asked.card });
     },

@@ -24,12 +24,13 @@
  * never the banner** (Q102): the yes that filled the game saw *It's a game!*, and the server pushes
  * no such notice either.
  *
- * **It re-reads, and changes nothing**: a push marks stale the list, Home's read (the bar's badge
- * counts what needs the player, and every always-on notice moves it) and the read behind the screen
- * it opens — a push never changes what the server did not say (`docs/architecture.md` Part 13).
- * **A notice the list's read brings re-reads Home too** (Q103), so the game it is about is there
- * before it is tapped: without it the minute's read would leave Home as it was until the app had
- * been away for longer than Home stays fresh.
+ * **It re-reads, and changes nothing**: a push marks stale the list, Home's reads (the bar's badge
+ * counts what needs the player, and every always-on notice moves it; *TO CONFIRM* above the games,
+ * which a time to pay adds to and runs out on — `rereadHome`) and the read behind the screen it
+ * opens — a push never changes what the server did not say (`docs/architecture.md` Part 13). **A
+ * notice the list's read brings re-reads Home too** (Q103), so the game it is about is there before
+ * it is tapped: without it the minute's read would leave Home as it was until the app had been away
+ * for longer than Home stays fresh.
  *
  * ## A push tapped opens its game
  *
@@ -41,7 +42,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { proposalKeys } from '@/features/proposals/types';
+import { rereadHome } from '@/features/proposals/types';
 import { usePush } from '@/shared/lib/platform';
 
 import { arrivalsOf, type NoticeTarget } from '../domain/notice';
@@ -88,7 +89,7 @@ export function useNotices(): {
     seen.current = new Set([...(known ?? []), ...notices.map((notice) => notice.id)]);
     if (known === undefined) return;
     const { arrived, banner: newest } = arrivalsOf(known, notices);
-    if (arrived) void client.invalidateQueries({ queryKey: proposalKeys.home() });
+    if (arrived) void rereadHome(client);
     if (newest === undefined) return;
     setBanner({
       key: newest.id,
@@ -104,7 +105,7 @@ export function useNotices(): {
         const read = noticeOfPush(notice.data);
         if (read !== undefined) seen.current?.add(read.noticeId);
         void client.invalidateQueries({ queryKey: notificationKeys.notices() });
-        void client.invalidateQueries({ queryKey: proposalKeys.home() });
+        void rereadHome(client);
         if (read?.target !== undefined) {
           void client.invalidateQueries({ queryKey: destinationOf(read.target).read });
         }

@@ -537,16 +537,14 @@ describe('Home — a booked game’s card (A8)', () => {
         club: { id: 'f1000000-0000-4000-8000-000000000004', name: 'Bonarka Arena' },
         share_grosze: 3200,
         book_by: '2026-10-02T11:00:00Z',
+        confirm_by: null,
       },
     ]);
     stubHomeGames(transport, [], { needing_you: 1 });
     await launchSignedIn();
 
-    expect(
-      await screen.findByRole('header', {
-        name: `${FILL_COPY.toConfirm.title}, ${FILL_COPY.toConfirm.line}`,
-      }),
-    ).toBeTruthy();
+    expect(await screen.findByRole('header', { name: FILL_COPY.toConfirm.title })).toBeTruthy();
+    expect(screen.getByText(FILL_COPY.toConfirm.open)).toBeTruthy();
   });
 
   it('says a read that failed, rather than drawing no games', async () => {

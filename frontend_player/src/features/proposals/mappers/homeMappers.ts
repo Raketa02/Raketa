@@ -60,6 +60,25 @@ export function toAnswerBy(wire: string | null | undefined): { readonly answerBy
 }
 
 /**
+ * **When the payment a game waits for is due** (#625, #626) — on Home, a booked game's details and a
+ * game still filling's. Nothing for a `null`, and nothing from a server older than it.
+ */
+export function toPaymentDueBy(wire: { readonly payment_due_by?: string | null }): {
+  readonly paymentDueBy?: string;
+} {
+  const due = wire.payment_due_by;
+  return due === null || due === undefined ? {} : { paymentDueBy: due };
+}
+
+/** **The reader's own time to pay** (#625, #626) — as `toPaymentDueBy`, for the payer alone. */
+function toYourPaymentDueBy(wire: {
+  readonly your_payment_due_by?: string | null;
+}): Pick<HomeGame, 'yourPaymentDueBy'> {
+  const due = wire.your_payment_due_by;
+  return due === null || due === undefined ? {} : { yourPaymentDueBy: due };
+}
+
+/**
  * **A full game gone back to filling** (#624) — and which way its line ends. Nothing for a booked
  * game, and nothing from a server older than it, which sends neither field.
  */
@@ -91,6 +110,8 @@ function toBooking(
     money: toMoney(wire.money),
     ...toAnswerBy(wire.answer_by),
     ...toFillingAgain(wire),
+    ...toPaymentDueBy(wire),
+    ...toYourPaymentDueBy(wire),
   };
 }
 

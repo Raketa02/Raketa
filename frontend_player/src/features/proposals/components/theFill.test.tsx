@@ -1011,6 +1011,7 @@ describe('a share refused while the player was elsewhere waits on You › Paymen
     club: card.club,
     share_grosze: card.share_grosze,
     book_by: card.deadline,
+    confirm_by: null,
   });
 
   async function onPayments() {
@@ -1020,7 +1021,9 @@ describe('a share refused while the player was elsewhere waits on You › Paymen
     fireEvent.press(await screen.findByLabelText(doorRowLabel('Payments', 'Card •••• 4312')));
   }
 
-  it('lists it under TO CONFIRM, and Confirm books the game on the same payment', async () => {
+  // Q110: the payment that completes the game shows its payer It's a game!, which they never saw —
+  // its faces read off the booking, since a row holds no card.
+  it('lists it under TO CONFIRM, and Confirm books the game on the same payment — It’s a game!', async () => {
     const card = bookItNow();
     let confirmed = false;
     transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
@@ -1031,13 +1034,11 @@ describe('a share refused while the player was elsewhere waits on You › Paymen
       confirmed = true;
       return json(booked(card));
     });
+    stubBooking(transport, bookingDetails({ booking_id: card.proposal_id, game_id: GAME_ID }));
     await onPayments();
 
-    expect(
-      await screen.findByRole('header', {
-        name: `${FILL.toConfirm.title}, ${FILL.toConfirm.line}`,
-      }),
-    ).toBeTruthy();
+    expect(await screen.findByRole('header', { name: FILL.toConfirm.title })).toBeTruthy();
+    expect(screen.getByText(FILL.toConfirm.open)).toBeTruthy();
     fireEvent.press(
       screen.getByRole('button', {
         name: 'Confirm your payment for Padel · Saturday 16:00 at Bonarka Arena, 32 zł',
@@ -1045,8 +1046,12 @@ describe('a share refused while the player was elsewhere waits on You › Paymen
     );
     fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.check }));
 
-    await waitFor(() => expect(toasts()).toContainEqual([FILL.itsAGameInHome, 'ok']));
-    expect(screen.queryByText(FILL.itsAGame.word)).toBeNull();
+    expect(
+      await screen.findByRole('header', {
+        name: 'It’s a game! You and Piotr Sowa against Inés Díaz and Bartek Lis',
+      }),
+    ).toBeTruthy();
+    expect(toasts()).toEqual([]);
     await waitFor(() => expect(screen.queryByTestId(`to-confirm-${SEAT_CHARGE}`)).toBeNull());
   });
 

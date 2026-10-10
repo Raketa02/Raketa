@@ -35,7 +35,8 @@ import {
   type Ribbon,
   type WeekCap,
 } from '../domain/deck';
-import type { AnswerBy } from '../domain/home';
+import type { PaymentDue } from '../domain/details';
+import type { AnswerBy, Deadline } from '../domain/home';
 import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
 import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
@@ -398,19 +399,30 @@ export function detailsSubline(sport: Sport, status: ProposalStatus): string {
  * **The money row's words on a game still filling** — *if it fills · book by Sat 13:00* beside the
  * share while it fills; under it while its club decides (A4.2), *Bonarka Arena answers by 20:45 ·
  * Nobody pays until it confirms* until that deadline passes (`answerByAhead`, Q98), then *Nobody
- * pays until Bonarka Arena confirms*; and nothing once it is booked or over: the share is the share.
+ * pays until Bonarka Arena confirms*; while one payment is awaited (Q111), *Waiting for one payment
+ * · until 14:40 · Nobody pays until it's in*; and nothing once it is booked or over: the share is the
+ * share. **The payer reads their own time under it** while it runs — *Confirm your payment by 14:40*
+ * — on a game waiting for their payment, and on one gone back to filling meanwhile.
  */
 export function detailsShareWords(
   status: ProposalStatus,
   card: Pick<DeckCard, 'deadline' | 'club'>,
   deadlineDay: Weekday | undefined,
   answerBy: AnswerBy | undefined,
+  payment: PaymentDue = {},
 ): Pick<FactWords, 'aside' | 'below'> {
+  const yours = payment.yoursBy === undefined ? undefined : yourPaymentWords(payment.yoursBy);
   switch (status) {
     case 'FILLING':
-      return { aside: shareAside(card.deadline, deadlineDay) };
+      return {
+        aside: shareAside(card.deadline, deadlineDay),
+        ...(yours === undefined ? {} : { below: yours }),
+      };
     case 'WAITING_FOR_THE_CLUB':
       return { below: waitingWords(card.club.name, answerBy) };
+    case 'WAITING_FOR_A_PAYMENT':
+      // The payer reads their own time; everybody else, until when — never whose (Q111).
+      return { below: yours ?? paymentAwaitedClauses(payment.dueBy).join(DOT) };
     case 'FILLED':
     case 'EXPIRED':
     case 'WITHDRAWN':
@@ -452,14 +464,39 @@ export function shortMoment(instant: string): string {
 }
 
 /**
+ * *20:45* · *Sun 00:15* — **a deadline Home names**, on the club's clock: the hour alone when it
+ * falls on the read's day, else the weekday with it, as *back if you leave by Sun 17:00* writes it
+ * (the screens A8).
+ */
+export function deadlineWords(deadline: Deadline): string {
+  return deadline.today ? (platformClock(deadline.at) ?? '') : shortMoment(deadline.at);
+}
+
+/**
  * *Bonarka Arena answers by 20:45* — **when an On request club must say yes** (Q98; the screens
- * A4.2, A8), on the club's clock: the hour alone when it falls on the read's day, else the weekday
- * with it, as *back if you leave by Sun 17:00* writes it. Said of *the club* for one the read no
- * longer names.
+ * A4.2, A8), written as `deadlineWords` writes it. Said of *the club* for one the read no longer
+ * names.
  */
 export function answersByWords(club: string | undefined, answerBy: AnswerBy): string {
-  const when = answerBy.today ? (platformClock(answerBy.at) ?? '') : shortMoment(answerBy.at);
-  return `${club ?? COPY.game.theClubLead} ${COPY.game.answersBy} ${when}`;
+  return `${club ?? COPY.game.theClubLead} ${COPY.game.answersBy} ${deadlineWords(answerBy)}`;
+}
+
+/**
+ * *Waiting for one payment · until 14:40 · Nobody pays until it's in* — **a full game waiting for
+ * one player's payment** (Q110, Q111), never whose: Home's line, the details' and *It's a game!*'s
+ * clauses, each whole. *until* only while the time is ahead.
+ */
+export function paymentAwaitedClauses(until: Deadline | undefined): readonly string[] {
+  return [
+    COPY.game.waitingForOnePayment,
+    ...(until === undefined ? [] : [`${COPY.game.until} ${deadlineWords(until)}`]),
+    COPY.game.nobodyPaysUntilItsIn,
+  ];
+}
+
+/** *Confirm your payment by 14:40* — **the payer's own time to pay** (Q109, Q111). */
+export function yourPaymentWords(by: Deadline): string {
+  return `${COPY.game.confirmYourPaymentBy} ${deadlineWords(by)}`;
 }
 
 /**

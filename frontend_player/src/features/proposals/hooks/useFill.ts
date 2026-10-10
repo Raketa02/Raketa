@@ -8,7 +8,7 @@ import { createContext, useContext } from 'react';
 
 import type { AppError } from '@/shared/errors';
 
-import type { DealtIn, YesAnswer, YesOn } from '../domain/fill';
+import type { Confirmation, DealtIn, YesAnswer, YesOn } from '../domain/fill';
 
 /**
  * A yes the fill acts on: the deck it was dealt in, what it was said on — absent for a
@@ -26,10 +26,11 @@ export interface BookAsk extends FillAsk {
   readonly card: YesOn;
 }
 
-/** A refused share to confirm, and the yes it carries. */
-export interface ConfirmAsk extends FillAsk {
-  readonly seatChargeId: string;
-}
+/**
+ * A refused share to confirm, and the yes it carries — with their time to pay when whoever opens it
+ * knows it (#625, #626): the sheet names it.
+ */
+export interface ConfirmAsk extends FillAsk, Confirmation {}
 
 export interface Fill {
   /** The proposal whose yes is counting down behind *Undo* — hidden from the deck — or `null`. */

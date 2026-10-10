@@ -20,6 +20,7 @@ export const HOME_GAME_COPY = {
   /** The status tag on a card and on the details — the mechanics §14.1's names. */
   status: {
     WAITING_FOR_THE_CLUB: 'Waiting for the club',
+    WAITING_FOR_A_PAYMENT: 'Waiting for one payment',
     BOOKED: 'Booked',
     SEAT_OPEN: 'Seat open',
     NEEDS_RESULT: 'Needs result',
@@ -32,6 +33,7 @@ export const HOME_GAME_COPY = {
   /** The same words mid-line — the details' second line, *Padel · booked*, and the room's. */
   statusInLine: {
     WAITING_FOR_THE_CLUB: 'waiting for the club',
+    WAITING_FOR_A_PAYMENT: 'waiting for one payment',
     BOOKED: 'booked',
     SEAT_OPEN: 'seat open',
     NEEDS_RESULT: 'needs result',
@@ -74,10 +76,10 @@ export const HOME_GAME_COPY = {
     /** After the club's no or its silence (Q105): the notice's and the email's words. */
     nobodyPaidNewCardFirst: 'Nobody paid — you’ll get a new card first',
     /**
-     * Why a game is off (§14.1, #543, #544, #624) — the club's three read with its name before them
-     * (`homePresentation`'s `SAID_OF_THE_CLUB`); the rest said of the game. The club's no and its silence
-     * are the notice's and the email's words (Q105). Keyed by the wire's reason, so a reason with no
-     * words fails here.
+     * Why a game is off (§14.1, #543, #544, #624, #625) — the club's three read with its name before
+     * them (`homePresentation`'s `SAID_OF_THE_CLUB`); the rest said of the game. The club's no and its
+     * silence, and a payment not in time, are the notice's and the email's words (Q105). Keyed by the
+     * wire's reason, so a reason with no words fails here.
      */
     calledOff: {
       SHORT_AT_THE_CUT_OFF: 'A seat was still empty at the cut-off',
@@ -86,6 +88,7 @@ export const HOME_GAME_COPY = {
       CANCELLED_BY_THE_CLUB: 'cancelled it',
       BOOK_BY_PASSED: 'A seat was open past its last moment to book',
       COURT_HOUR_LOST: 'Its court went to another game before it filled again',
+      PAYMENT_NOT_IN_TIME: 'A payment didn’t go through in time',
     } satisfies Readonly<Record<CalledOffReason, string>>,
     /**
      * Why the club cancelled (#547; the mechanics §16.9) — the clause after *cancelled it*. *Other*

@@ -9,10 +9,12 @@
  * notice *It's a game! · you paid*, never this screen.
  *
  * **It marks the players matched, not only booked** (Q103), so it comes at a club that confirms too,
- * with **one line under the word** for what is still missing — *Kazimierz Padel answers by 21:15 ·
- * Nobody pays until it confirms* — rising with it, and said after the picture. At a club that books
- * at once nothing is missing and there is no line. The club's yes, later, is a notice: nobody sees
- * this screen twice for one game.
+ * and while one payment is missing (Q110), with **one line under the word** for what is still
+ * missing — *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*, or *Waiting for one
+ * payment · until 14:40 · Nobody pays until it's in* — rising with it, and said after the picture.
+ * At a club that books at once with every share held nothing is missing and there is no line. The
+ * club's yes, later, is a notice, and so is the payment that comes in — to everybody but the payer
+ * whose payment completed the game, who sees this screen then (Q110, §12.2).
  *
  * The ground, the entrance's one beat and the tile are this screen's own (`YesGround`,
  * `YesEntrance`, `YesTile`), since [#574](https://github.com/Raketa02/Raketa/issues/574) brought
@@ -45,7 +47,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, ModalStage, theme, useLiveRegion } from '@/shared/ui';
 
 import type { DeckCard } from '../domain/deck';
-import { itsAGamePicture, type Face, type ItsAGameWaiting } from '../domain/fill';
+import { itsAGamePicture, type Face, type StillMissing } from '../domain/fill';
 
 import { FILL_COPY } from './fillCopy';
 import { itsAGameLine, itsAGameSentence } from './fillPresentation';
@@ -57,16 +59,18 @@ import { YesTile, type YesSeat } from './YesTile';
 export interface ItsAGameProps {
   /** The card the filling yes was said on. */
   readonly card: Pick<DeckCard, 'sides'>;
-  /** The game went to its club, which has still to say yes (Q103): the line under the word. */
-  readonly waiting?: ItsAGameWaiting;
+  /**
+   * What is still missing — the club's yes (Q103), or one payment (Q110): the line under the word.
+   */
+  readonly missing?: StillMissing;
   readonly onOpenGame: () => void;
   /** *Later*, and Android's back. */
   readonly onLater: () => void;
 }
 
-export function ItsAGame({ card, waiting, onOpenGame, onLater }: ItsAGameProps) {
+export function ItsAGame({ card, missing, onOpenGame, onLater }: ItsAGameProps) {
   const picture = itsAGamePicture(card);
-  const line = waiting === undefined ? undefined : itsAGameLine(waiting);
+  const line = missing === undefined ? undefined : itsAGameLine(missing);
   const sentence = itsAGameSentence(picture, line?.spoken);
   const size =
     picture.yours.length + picture.theirs.length > 2
@@ -151,7 +155,7 @@ const s = StyleSheet.create({
   // The yes screen's own `vs` and word (ADR-0167): h2 in the on-dark eyebrow grey, and the lime word.
   vs: { ...theme.type.h2, color: theme.color.onDarkEyebrow },
   word: { ...theme.type.yesWord, color: theme.color.volt },
-  // The word, and under it what is still missing (Q103): Home's line in the details' own role,
+  // The word, and under it what is still missing (Q103, Q110): Home's line in the details' own role,
   // tiny onDarkTiny (7.22's line under a value), on the ground.
   words: { alignItems: 'center', gap: theme.space.xs },
   line: { ...theme.type.tiny, color: theme.color.onDarkTiny, textAlign: 'center' },

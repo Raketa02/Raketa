@@ -9,7 +9,7 @@
  * the player's own games, made current by foregrounding.
  */
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
 import { currentUserQuery } from '@/features/auth/types';
@@ -27,6 +27,19 @@ export function useHome() {
     queryKey: proposalKeys.home(),
     queryFn: ({ signal }) => readHome({ signal }),
   });
+}
+
+/**
+ * **Home's two reads, read again** — the games, the badge with them, and *TO CONFIRM* above them
+ * (#556, #625): what a notice arriving changes. *Confirm your payment by 14:40 to keep your seat*
+ * puts a row there, and *Your time to pay ran out* takes the time off it, as the games' lines move
+ * with every other notice.
+ */
+export function rereadHome(client: QueryClient) {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: proposalKeys.home() }),
+    client.invalidateQueries({ queryKey: proposalKeys.paymentsToConfirm() }),
+  ]);
 }
 
 /** One booked game's read — the details', and *It's a game!*'s when a row's join is booked. */

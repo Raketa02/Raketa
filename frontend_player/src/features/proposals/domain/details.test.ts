@@ -1,5 +1,12 @@
 import type { DeckPerson } from './deck';
-import { completesTheGame, courtOfDetails, yesOnDetails, type ProposalDetails } from './details';
+import {
+  completesTheGame,
+  courtOfDetails,
+  detailsCanRunOut,
+  paymentDueOf,
+  yesOnDetails,
+  type ProposalDetails,
+} from './details';
 
 const person = (playerId: string, extra: Partial<DeckPerson> = {}): DeckPerson => ({
   playerId,
@@ -74,5 +81,48 @@ describe('yesOnDetails — what the fill holds for a yes said here', () => {
       sides: shown.sides,
       club: { id: 'club-1', name: 'Bonarka Arena' },
     });
+  });
+});
+
+/** Tuesday 6 October, 14:10 in Warsaw — the read; the time to pay runs to 14:40 (#625). */
+const READ = Date.parse('2026-10-06T12:10:00Z');
+const TWENTY_TO_THREE = '2026-10-06T12:40:00Z';
+const yours = {
+  seatChargeId: 's-1',
+  refusal: 'AUTHENTICATION_REQUIRED',
+  confirmBy: TWENTY_TO_THREE,
+} as const;
+
+describe('paymentDueOf — the times to pay the money row names (Q111)', () => {
+  it('is the payment the game waits for, and the reader’s own, while each is ahead', () => {
+    const waiting = details({
+      status: 'WAITING_FOR_A_PAYMENT',
+      paymentDueBy: TWENTY_TO_THREE,
+      yourPayment: yours,
+    });
+    expect(paymentDueOf(waiting, READ)).toEqual({
+      dueBy: { at: TWENTY_TO_THREE, today: true },
+      yoursBy: { at: TWENTY_TO_THREE, today: true },
+    });
+    expect(paymentDueOf(waiting, Date.parse(TWENTY_TO_THREE))).toEqual({});
+  });
+
+  it('is nothing where no time is given — a refused share whose time ran out included', () => {
+    expect(paymentDueOf(details(), READ)).toEqual({});
+    expect(
+      paymentDueOf(
+        details({ yourPayment: { seatChargeId: 's-1', refusal: 'AUTHENTICATION_REQUIRED' } }),
+        READ,
+      ),
+    ).toEqual({});
+  });
+});
+
+describe('detailsCanRunOut — a deadline the money row names that leaves by itself', () => {
+  it('runs while the club’s deadline, a time to pay, or the reader’s own time is there to pass', () => {
+    expect(detailsCanRunOut(details())).toBe(false);
+    expect(detailsCanRunOut(details({ answerBy: '2026-09-30T09:00:00Z' }))).toBe(true);
+    expect(detailsCanRunOut(details({ paymentDueBy: TWENTY_TO_THREE }))).toBe(true);
+    expect(detailsCanRunOut(details({ yourPayment: yours }))).toBe(true);
   });
 });

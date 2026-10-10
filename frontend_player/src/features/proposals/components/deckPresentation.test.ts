@@ -159,4 +159,28 @@ describe('a game’s details', () => {
     });
     expect(detailsShareWords('FILLED', card, 5, undefined)).toEqual({});
   });
+
+  /** Q111: one payment awaited — until when under the share; the payer reads their own time. */
+  it('says under the share that the game waits for one payment, and the payer’s own time', () => {
+    // 14:40 on Tuesday 6 October in Warsaw.
+    const twentyToThree = { at: '2026-10-06T12:40:00Z', today: true };
+    const card = { deadline: '2026-10-06T15:00:00Z', club: { id: 'c-1', name: 'Bonarka Arena' } };
+    expect(
+      detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined, { dueBy: twentyToThree }),
+    ).toEqual({ below: 'Waiting for one payment · until 14:40 · Nobody pays until it’s in' });
+    expect(detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined)).toEqual({
+      below: 'Waiting for one payment · Nobody pays until it’s in',
+    });
+    expect(
+      detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined, {
+        dueBy: twentyToThree,
+        yoursBy: twentyToThree,
+      }),
+    ).toEqual({ below: 'Confirm your payment by 14:40' });
+    // Gone back to filling while the payer's time runs on (#625): the book-by, and their time.
+    expect(detailsShareWords('FILLING', card, 2, undefined, { yoursBy: twentyToThree })).toEqual({
+      aside: 'if it fills · book by Tue 17:00',
+      below: 'Confirm your payment by 14:40',
+    });
+  });
 });

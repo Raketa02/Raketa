@@ -36,6 +36,12 @@
  * - **A game waiting for the club** (A4.2, #543) — the same, *Waiting for the club* in amber, no
  *   court and no Chat, and *Bonarka answers by 20:45* under the share until that passes (Q98);
  *   *Leave the game* there withdraws the yes, nobody having paid.
+ * - **A game waiting for one payment** (Q111, #630) — *Waiting for one payment* in amber, no court
+ *   and no Chat, the share nobody pays yet over *Waiting for one payment · until 14:40 · Nobody pays
+ *   until it's in*; *Leave the game* withdraws the yes, nobody having paid. **The payer** reads their
+ *   own time there, *Confirm your payment by 14:40*, and ***Confirm your payment*** under the card —
+ *   the payment their *TO CONFIRM* row holds for this game, opened on the fill's confirmation with
+ *   the same time — so the details that name the time also offer the act.
  * - **A full game gone back to filling** (Q106, #629) — *Seat open* in amber, no court and no Chat,
  *   the share nobody pays over *1 seat open · Kazimierz Padel is asked again when it's full · nobody
  *   paid*; its way out is a game still filling's, ***Withdraw***, free and never on the record, as
@@ -88,7 +94,7 @@ import { showToast } from '@/shared/store/toast.store';
 import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/shared/ui';
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
-import { yesOnRescue } from '../domain/fill';
+import { confirmationOf, paymentToConfirmOn, yesOnRescue } from '../domain/fill';
 import {
   chatIsOpen,
   completesTheRescue,
@@ -98,13 +104,16 @@ import {
   type BookedGame,
 } from '../domain/home';
 import { gameDayOf } from '../domain/when';
+import { useFill } from '../hooks/useFill';
 import { bookingReadState, useBooking, useOpenedGames, useReadClock } from '../hooks/useHome';
 import { useLeaveBooking, useWithdrawFillingAgain } from '../hooks/useLeaveBooking';
+import { usePaymentsToConfirm } from '../hooks/useLiveYeses';
 
 import { CardTag } from './CardTag';
 import { BookingAbsent } from './BookingAbsent';
 import { CheckInCard } from './CheckInCard';
 import { clubName, detailsDay, othersTitle, refusalMessage } from './deckPresentation';
+import { FILL_COPY } from './fillCopy';
 import { GameFacts, type FactWords } from './GameFacts';
 import { GameGround } from './GameGround';
 import { GameTiles } from './GameTiles';
@@ -168,6 +177,9 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
   const leave = useLeaveBooking(game.bookingId);
   const withdraw = useWithdrawFillingAgain(game.groupId, game.bookingId);
+  const fill = useFill();
+  // A refused share of the reader's on this game, waiting for them (#625, #626).
+  const toConfirm = paymentToConfirmOn(game.bookingId, usePaymentsToConfirm().data);
 
   // A seat taken from here leaves for the group — but only while this is still the screen on top:
   // the ten seconds can outlive it, and *back* from wherever the player went would be a stray.
@@ -257,6 +269,19 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
               label={COPY.resultAct[act]}
               size="lg"
               onPress={() => router.push(bookedResultRoute(game.bookingId))}
+            />
+          )}
+
+          {rescue !== undefined || toConfirm === undefined ? null : (
+            <Button
+              label={FILL_COPY.confirm.title}
+              size="lg"
+              onPress={() =>
+                fill.confirm({
+                  dealtIn: { groupId: game.groupId, sport: game.sport, kind: game.kind },
+                  ...confirmationOf(toConfirm),
+                })
+              }
             />
           )}
 

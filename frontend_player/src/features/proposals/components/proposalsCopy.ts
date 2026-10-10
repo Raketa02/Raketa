@@ -88,6 +88,7 @@ export const PROPOSALS_COPY = {
     status: {
       FILLING: 'Filling',
       WAITING_FOR_THE_CLUB: 'Waiting for the club',
+      WAITING_FOR_A_PAYMENT: 'Waiting for one payment',
       FILLED: 'Booked',
       EXPIRED: 'Didn’t fill in time',
       WITHDRAWN: 'Taken back',
@@ -98,6 +99,7 @@ export const PROPOSALS_COPY = {
     statusInLine: {
       FILLING: 'filling',
       WAITING_FOR_THE_CLUB: 'waiting for the club',
+      WAITING_FOR_A_PAYMENT: 'waiting for one payment',
       FILLED: 'booked',
       EXPIRED: 'didn’t fill',
       WITHDRAWN: 'taken back',
@@ -114,6 +116,15 @@ export const PROPOSALS_COPY = {
     answersBy: 'answers by',
     /** *The club* at the head of that clause, for a club the read no longer names. */
     theClubLead: 'The club',
+    /**
+     * *Waiting for one payment · until 14:40 · Nobody pays until it's in* (Q110, Q111) — one player's
+     * share was refused and their time to pay runs, never whose: Home's line, the details' and *It's a
+     * game!*'s. *until* is `until`, TIME's own word.
+     */
+    waitingForOnePayment: 'Waiting for one payment',
+    nobodyPaysUntilItsIn: 'Nobody pays until it’s in',
+    /** *Confirm your payment by 14:40* — the payer's own time to pay (Q109, Q111). */
+    confirmYourPaymentBy: 'Confirm your payment by',
   },
   /**
    * **What a refused answer says** (the screens A2.4) — a toast, and the card springs back or

@@ -12,6 +12,8 @@
 export type NoticeKind =
   | 'GAME_BOOKED'
   | 'WAITING_FOR_THE_CLUB'
+  | 'WAITING_FOR_A_PAYMENT'
+  | 'TIME_TO_PAY_RAN_OUT'
   | 'CONFIRM_PAYMENT'
   | 'GAME_CALLED_OFF'
   | 'SOMEONE_LEFT'
@@ -27,6 +29,8 @@ export type NoticeKind =
 export const NOTICE_KINDS = [
   'GAME_BOOKED',
   'WAITING_FOR_THE_CLUB',
+  'WAITING_FOR_A_PAYMENT',
+  'TIME_TO_PAY_RAN_OUT',
   'CONFIRM_PAYMENT',
   'GAME_CALLED_OFF',
   'SOMEONE_LEFT',

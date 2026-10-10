@@ -26,8 +26,8 @@ export const FILL_COPY = {
     later: 'Later',
   },
   /**
-   * A game booked with no faces to draw — a confirmation from You › Payments, which holds no card, or
-   * a row's join whose booking could not be read.
+   * A game booked with no faces to draw — a confirmation from a *TO CONFIRM* row, or a row's join,
+   * whose booking could not be read.
    */
   itsAGameInHome: 'It’s a game! You’ll find it in Home.',
   /** The toast at the fill, and the notice of the same name (A9). */
@@ -52,6 +52,11 @@ export const FILL_COPY = {
       placeholders: { number: '1234 1234 1234 1234', expiry: 'MM/YY', cvc: 'CVC' },
     },
     confirming: 'Confirming…',
+    /**
+     * After *Confirm your payment by 14:40* — the sheet's note while the payer's time runs (Q109), the
+     * notice's and the email's words.
+     */
+    toKeepYourSeat: 'to keep your seat',
     /** The seat is held again but somebody else's share still stands in the way. */
     kept: 'Payment confirmed — you’re In again.',
     /** What the provider said, when it was not *confirmed*. */
@@ -69,10 +74,14 @@ export const FILL_COPY = {
       payments_unavailable: 'Payments can’t be reached right now. Try again in a moment.',
     },
   },
-  /** You › Payments' *TO CONFIRM* — the way back to a seat whose share was refused. */
+  /**
+   * *TO CONFIRM*, on Home and You › Payments — the way back to a seat whose share was refused. A row
+   * names the payer's time while it runs (`fillPresentation`'s `toConfirmRowLine`, Q109), and says
+   * this once it ran out: the seat is open to others, and theirs to take back while it is free.
+   */
   toConfirm: {
     title: 'To confirm',
-    line: 'Your seat stays open until you confirm — or someone else takes it.',
+    open: 'Your seat stays open until you confirm — or someone else takes it.',
     action: 'Confirm',
   },
 } as const;
