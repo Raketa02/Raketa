@@ -62,15 +62,34 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   with no time left at the club's yes nobody is emailed — the game is called off. **A refund
   is decided in the act and made from the outbox** (#544): `SeatChargeRefundDecided` then
   `SeatChargeRefunded`; receipts list it as its own `REFUND` row (`card_fee_grosze`), dated
-  from the decision. **The settler computes the amount** (#636, `refund_to_ask_grosze`): the
+  from the decision — and since #641 a share held for a booked game and let go untaken is
+  its own `RELEASED` row (*40 zł held · released*, `SeatCharge.released_at`, read through
+  `SeatChargeRepository.receipts_of`); a hold the fill released because the game did not
+  book on it never is. **The settler computes the amount** (#636, `refund_to_ask_grosze`): the
   whole share, or the share less **the fee kept on that payment** (`fee_taken_grosze`), and
   records what was kept as the share less what came back. A fee not yet known at the capture
   is asked for again (`read_payment`, recorded `SeatChargeFeeReported`), and while it is still
   unknown the delivery raises `PaymentsUnavailable`, so the refund waits and the outbox
   retries. A Seat charge records each hold's `last_moment` (`SeatChargeAuthorised`, and
-  `SeatChargeConfirmed` for one its player confirmed). `domain/card_fee.py`'s **estimate**
-  (Stripe's EEA price, the personal EU card's) is still what the reads quote before the money
-  moves, until #641 retires it.
+  `SeatChargeConfirmed` for one its player confirmed). **No figure is an estimate** (#641,
+  Q113): `domain/card_fee.py` and proposals' `CardFees` are gone. Every read says the
+  provider's own fee or *not yet known* (`None`): `less_the_fee_kept_grosze` (what a late
+  leaver would get back, proposals' `LateRefunds` and the leave quote), `given_back_grosze`,
+  `card_fee_grosze` and `net_grosze` are each `None` while it is unknown, and **a share
+  taken whose fee is not yet known is not settled**, so its game's payout waits for it as a
+  refund less it does. **A late fee has a notice path**: Stripe's `charge.updated` on the
+  Connected accounts endpoint (`stripe_notices.FEE_READY_KIND`, naming the charge's
+  `payment_intent`) is read as `SeatPaymentChanged`, so `ReceivePaymentNotice` reads the
+  payment and `heard` records `SeatChargeFeeReported`; the fake's `reports_fee` records that
+  notice for the console to replay. **Whether Stripe's balance transaction ever carries an
+  IC+ club's fee is open (O7)** — its docs send IC+ users to the fees report instead.
+  **The seat-taken refund is emailed when it is made** (`EmailTheSeatTakenRefund`, an outbox
+  subscriber to `SeatChargeRefunded`, added per delivery run): *You've been refunded 38,24
+  zł · your seat was taken* / *(40 zł less the 1,76 zł kept on your payment)*. Every other
+  refund is emailed when decided, as before; **a leaver after the cut-off is emailed the
+  figure as they leave** (`TellTheLateLeaver`, through proposals' `SeatRefunds.
+  left_after_the_cut_off`), or none while the fee is unknown. **No email names BLIK**: a
+  refund says *Refunds can take up to two weeks to reach your card.*
   **Held until the cut-off, taken at it** (#637; ADR-0189's 2026-10-10 amendment): a game
   booked before its club's cut-off **keeps** each hold for the booked game (`SeatCharge.keep`,
   `SeatChargeKept` with `until`, status `HELD`, the projection's `held_until`), nothing moves at
@@ -142,8 +161,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `BookedGamesOver`, contracted in `payment_demands.py`) and **settled** (no capture or
   refund still on its way, `SeatCharge.settled`), for what they **kept**: each share taken,
   less what was given back, less **the card fee** (`SeatCharge.net_grosze` /
-  `card_fee_grosze` — the provider's own figure, recorded on `SeatChargeCaptured.fee_grosze`
-  or the refund that kept it back, the estimate until then). **A day that left less than
+  `card_fee_grosze` — the provider's own figure, recorded on `SeatChargeCaptured.fee_grosze`,
+  reported later, or kept back by a refund; a share whose fee is not yet known is not
+  settled, so its game waits, #641). **A day that left less than
   nothing pays nothing out**: its games wait and are netted against the next day that leaves
   the club something, so a payout never sends more than the games left (a game given back
   whole costs the club its card fees). **Decided in the job, made from the outbox**, as a

@@ -158,9 +158,17 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
   *Confirm your payment* (to take the seat, on a booked game). **A refund now says why**:
   `SeatChargeRefundDecided.reason` — the `RefundReason`, now in the payments domain —
   defaulted `None` for older rows: called off at the
-  cut-off or by the club is *Game called off · with the refund*, a seat taken is *You've
-  been refunded*, and **a leaver's own refund is told nobody** (their act, and emailed).
-  The emails stay where they were, queued by the acts in `payments`.
+  cut-off or by the club is *Game called off · with the refund*, and **a leaver's own refund
+  is told nobody** (their act, and emailed). **A seat taken is told when the refund is made**
+  (#641; `SeatChargeRefunded`, `_seat_taken_refunded`): *You've been refunded 38,24 zł ·
+  your seat was taken* / *40 zł less the 1,76 zł kept on your payment — Padel at …* — the
+  refund and what was kept, the provider's own figures (`PaidShare.refunded_grosze`,
+  `kept_grosze`, `seat_taken`), the fee kept recorded on the notice (`Notice.kept_grosze` →
+  `NoticeGiven.kept_grosze` → `notices.kept_grosze`, migration 0055) so it reads the same
+  later; a notice given before it says *Somebody took your seat*. **No figure a notice says
+  is an estimate**: a refund whose fee is not yet known waits, and so does its telling.
+  The emails stay where they were, queued by the acts in `payments` — but the seat-taken
+  refund's, queued when it is made (`EmailTheSeatTakenRefund`).
 - **Somebody leaving**: `SeatLeft` tells everybody seated. *Fill in
   alerts* go out on `SeatLeft`: who in the pool switched them on is read first (one query),
   and only they are put to `RescueOffers` — a pool nobody asked to be alerted in is never

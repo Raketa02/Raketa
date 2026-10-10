@@ -304,8 +304,12 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   its `booked_at`; `refunded_grosze` is the share only on a game its club cancelled after the
   cut-off (`BookedGame.cancelled_at`). What leaving would cost is on the details before the
   player leaves (`leaving`): **no quote before the cut-off** (`refund_grosze` and
-  `card_fee_grosze` `null` — nothing is taken), and after it the share less `card_fee_on`, the
-  payments' **estimate**, until #641 makes it exact. **The cut-off job** (`cut-off`, see
+  `card_fee_grosze` `null` — nothing is taken), and after it the share less **exactly the
+  fee kept on the reader's own payment** (#641, `LateRefunds`, asked only after the cut-off)
+  — *38,24 zł* of 40 zł on a business card — and `null` again while that fee is not yet known
+  (a club on its own pricing, or a take not yet captured): never an estimate. A leave after
+  the cut-off emails that figure, or none (`SeatRefunds.left_after_the_cut_off`). **The
+  cut-off job** (`cut-off`, see
   `jobs.md`; `TheCutOff`) does two things, the call-offs first: it calls off every game with a
   seat open since **before** its cut-off (`CalledOffAtCutOff`, naming everybody still in) —
   every hold let go, nobody pays anything, a share taken already (#639's fallback) refunded in
@@ -376,8 +380,11 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   replaces; the joiner's `booking_seats` row), on the Game too through games' own
   `TakeASeat` — a `LineUpReseated` with one more seat filled, so the room, whose members are
   the line-up, takes them in — and **the leaver who left at or after the cut-off is refunded,
-  less the card fee, in the same transaction** (`RefundReason.SEAT_TAKEN`, emailed *You've been
-  refunded · your seat was taken*); one who left before it was refunded when they left. The
+  less exactly the fee kept on their payment, decided in the same transaction**
+  (`RefundReason.SEAT_TAKEN`; #641) and **told when the refund is made** — the email and the
+  notice *You've been refunded 38,24 zł · your seat was taken* / *40 zł less the 1,76 zł kept
+  on your payment*; a fee not yet known makes the refund, and the telling, wait; one who left
+  before it had nothing taken. The
   joiner's other yeses at the hour are withdrawn and a full week pauses the rest
   (`Fill.other_yeses`). **A refused share takes no seat**: `your_payment` names it, a second
   tap is `payment_to_confirm`, and `POST /seat-charges/{id}/confirmation` on a booked game is
@@ -476,7 +483,10 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   whose game starts in the club's month (`ClubBookings.on_day` over the month's hours) and
   lists those that took money, soonest first — the court, the status, and from
   `BookingTakings` what was collected, refunded, the **card fees** and the **net** (what the
-  club keeps, below nought on a game given back whole) — with the month's totals, and
+  club keeps, below nought on a game given back whole) — **each the real figure or `null`,
+  *not yet known*** (#641; `known_sum`: a total is `null` if any part is), never an estimate:
+  a club on its own negotiated pricing is told its fees after the take — with the month's
+  totals, and
   `paid_out` once a payout carried it (the payouts themselves are `payments.md`'s). **The
   daily summary** is Bookings' (`application/daily_summary.py`, the `new-bookings-summary`
   job): at the close of each club day the desk is emailed *New bookings today* — every

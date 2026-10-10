@@ -53,7 +53,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   club's distance (the Player profile and `clubs`) — and, since #543, an On request club's
   requests and answers (`bookings`) and the players' Names on them (`users`), and since #544
   what happens to a booked game after the fill (`BookedGameChanges`), a paid share given back
-  (`SeatRefunds`) and the card fee on one (`CardFees`) — and since #545 a pool's rescues
+  (`SeatRefunds`, and since #641 a late leaver told the figure) and, since #641 in place of
+  the estimate's `CardFees`, what a leaver after the cut-off would get back (`LateRefunds`)
+  — and since #545 a pool's rescues
   (`PlayerBookings.rescues_in`), a seat taken or declined, and a seat-taken refund — and since
   #546 the pair rule and a player's level window (`PlayerFit`) and each member's Level, week,
   gender and preference (`PlayersInPlay`) — and since #547 the club's bookings as its desk
