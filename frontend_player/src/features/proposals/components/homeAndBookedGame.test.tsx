@@ -563,9 +563,7 @@ describe('a booked game’s details (A4.1)', () => {
     expect(screen.getByLabelText('Day, Saturday, 3 Oct')).toBeTruthy();
     expect(screen.getByLabelText('Time, 16:00, until 17:00')).toBeTruthy();
     expect(
-      screen.getByLabelText(
-        'Paid, 28 zł, your share · to the club · 27,18 zł back if you leave by Fri 16:00',
-      ),
+      screen.getByLabelText('Paid, 28 zł, Paid · 27,18 zł back if you leave by Fri 16:00'),
     ).toBeTruthy();
   });
 
@@ -573,13 +571,11 @@ describe('a booked game’s details (A4.1)', () => {
     await openDetails(bookingDetails({ money: CUT_OFF_AT_ELEVEN }));
 
     expect(
-      await screen.findByLabelText(
-        'Paid, 28 zł, your share · to the club · 27,18 zł back if you leave by Thu 11:00',
-      ),
+      await screen.findByLabelText('Paid, 28 zł, Paid · 27,18 zł back if you leave by Thu 11:00'),
     ).toBeTruthy();
 
     act(() => jest.advanceTimersByTime(HOUR));
-    expect(await screen.findByLabelText('Paid, 28 zł, your share · to the club')).toBeTruthy();
+    expect(await screen.findByLabelText('Paid, 28 zł, Paid')).toBeTruthy();
     expect(screen.queryByText(/back if you leave/)).toBeNull();
   });
 

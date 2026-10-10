@@ -13,7 +13,9 @@
  * │ ▎WHERE  Bonarka Arena  Court 2 · 3,1 km     │   and the court on the status's accent line
  * │ ▎DAY    Sunday  20 Sep                      │
  * │ ▎TIME   10:00  until 11:00                  │
- * │ ▎PAID   28 zł  your share · to the club …   │
+ * │ ▎PAID   28 zł                               │   the money row's words always under
+ * │ ▎       Paid · 27,18 zł back if you leave   │   the figure (`moneyRow`)
+ * │ ▎       by Sat 10:00                        │
  * └─────────────────────────────────────────────┘
  * [ We played ]                                     the result, once the hour has come
  * BALANCE FORECAST …                                the Game's own forecast (details 9)
@@ -32,7 +34,7 @@
  *   with the line saying what it costs now (`LeaveTheGame`, #557; details 10), drawn while the read
  *   says there is a button: not once the hour has come, nor on a game that is over.
  * - **A game waiting for the club** (A4.2, #543) — the same, *Waiting for the club* in amber, no
- *   court and no Chat, and *Bonarka answers by 20:45* beside the share until that passes (Q98);
+ *   court and no Chat, and *Bonarka answers by 20:45* under the share until that passes (Q98);
  *   *Leave the game* there withdraws the yes, nobody having paid.
  * - **A rescue seen from outside** (A4.3, #545) — opened from a *Seat open* card or a *Seats to fill*
  *   row, by a member the open seat is offered to: the players *paid*, the reader in the dashed seat

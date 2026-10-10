@@ -400,7 +400,7 @@ the game is off and everyone is refunded_ (`open_seats`), _1 seat open · offere
 goes ahead_ after the cut-off; _Called off_ with why — _A seat was still empty at the cut-off_,
 _Kazimierz Padel couldn't take it_, _… didn't answer in time_ — and what came back (_Refunded 28 zł_,
 `refunded_grosze`) or _Nobody paid_; _Uncounted_ with _A seat was empty · no Level moved_ — on Home's
-card, and beside the share on the details' money row (`moneyRow`). A booking
+card, and under the share on the details' money row (`moneyRow`). A booking
 waiting for its club has no Game yet (`gameId` absent): no room (and `chatIsOpen` keeps its door
 shut, since #577 finds a room by the booking), no forecast, no result, and it is not
 in the Classic half of the badge.
@@ -636,7 +636,13 @@ then _Nobody pays until Kazimierz Padel confirms_ once the deadline passes: the 
 from the card, and the filling details opened from a _You're In_ row (`GameFacts`' `below`). It
 first ran on after the figure with the clauses the other way round — _25 zł nobody pays until
 Kazimierz Padel confirms · Kazimierz Padel answers by 11:00_ — so the card and its details said one
-thing two ways; the user ruled it under the figure, as Home draws it (2026-10-09). The wire's `answer_by` becomes `answerBy`, absent for a `null` and for
+thing two ways; the user ruled it under the figure, as Home draws it (2026-10-09). **Every booked
+money row has drawn its words under the figure since** — _PAID 40 zł_ over _Paid · 38,40 zł back if
+you leave by Wed 19:00_, the seat open, why a game is off, the rescue's _fills by_ — the user's
+ruling of 2026-10-10, so the row reads the same way whatever the game's state. A booked game's line
+there is the Home card's without the figure the row already draws: _Paid_, then what comes back
+while the cut-off is ahead, so _Paid_ alone after it; _your share · to the club_ went the same day.
+The spoken row is label, figure, then the words. The wire's `answer_by` becomes `answerBy`, absent for a `null` and for
 an older server that sends none, and `answerByAhead` folds it on the read's clock as `cutOffAhead`
 folds the cut-off. **No screen shows a deadline that has passed**: the server nulls it from the
 deadline on, the phone drops it at `now` too, and the read's clock ticks while one is there
@@ -662,7 +668,7 @@ taken here.
 **What a leaver gets back** ([#618](https://github.com/Raketa02/Raketa/issues/618); the backend's
 #617; the mechanics Q99; story S-01A's F-LEAVE-20.1). While the cut-off is ahead, a booked card's
 line reads _Paid · 40 zł · 38,40 zł back if you leave by Wed 19:00_ and the details' money row
-_PAID 40 zł · your share · to the club · 38,40 zł back if you leave by Wed 19:00_. **Why**: _free
+_PAID 40 zł_ over _Paid · 38,40 zł back if you leave by Wed 19:00_. **Why**: _free
 to leave until_ was not true. Leaving before the cut-off is refunded less the card fee, which is
 never returned (Q47 stands), so Q99 has both screens say the sum rather than a word that promised
 the whole share. The wire's `money.back_if_you_leave_grosze` becomes `backIfYouLeaveGrosze`, absent

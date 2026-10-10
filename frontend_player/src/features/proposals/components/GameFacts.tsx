@@ -19,7 +19,8 @@ export interface FactWords {
   readonly aside?: string;
   /**
    * A line of its own under the value, in the aside's type — *Bonarka Arena answers by 20:45 ·
-   * Nobody pays until it confirms* under the share while the club decides, as Home's card draws it.
+   * Nobody pays until it confirms* under the share while the club decides, as Home's card draws it,
+   * and every other word of a booked game's money row (`moneyRow`).
    */
   readonly below?: string;
 }

@@ -253,13 +253,16 @@ export function bookedTime(
 
 /**
  * **The details' money row** (the screens A4.1), read off the card's own money line
- * (`moneyLineOf`): *PAID · 28 zł · your share · to the club*, with *· 27,18 zł back if you leave by
- * Sat 10:00* while the cut-off is ahead (`backIfYouLeaveAhead`, the line's own fold — Q99); the
- * share nobody pays yet while the club decides, with *Bonarka answers by 20:45 · Nobody pays until it
- * confirms* — the card's own line — on a line under it until its deadline passes (Q98); and on a game a player left, one called off or one that started short, the card's
- * own line beside the share — *1 seat open · fills by Fri 16:00 or the game is off…*, why it is
- * off with what came back, *A seat was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share
- * *I'm in* would pay and how long the seat is offered — the *Seats to fill* row's own words.
+ * (`moneyLineOf`), **its words always on a line of their own under the figure** (`below`, the
+ * user's ruling of 2026-10-10): *PAID 28 zł* over *Paid*, with *· 27,18 zł back if you leave by
+ * Sat 10:00* while the cut-off is ahead (`backIfYouLeaveAhead`, the line's own fold — Q99) — the
+ * Home card's line without the figure the row already draws; the share nobody pays yet while the
+ * club decides, over *Bonarka answers by 20:45 · Nobody
+ * pays until it confirms* — the card's own line — until its deadline passes (Q98); and on a game a
+ * player left, one called off or one that started short, the card's own line under the share —
+ * *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off with what came back, *A seat
+ * was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share *I'm in* would pay over how
+ * long the seat is offered — the *Seats to fill* row's own words.
  */
 export function moneyRow(
   game: Pick<
@@ -283,7 +286,7 @@ export function moneyRow(
   const share = money.paid ? words.paid : words.yourShare;
 
   if (game.rescue !== undefined) {
-    return { label: words.yourShare, value, aside: seatWhen(game.rescue) };
+    return { label: words.yourShare, value, below: seatWhen(game.rescue) };
   }
 
   const line = moneyLineOf({ ...game, club: game.where }, now);
@@ -291,11 +294,11 @@ export function moneyRow(
     case 'calledOff': {
       const why = line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })];
       return line.refundedGrosze === undefined
-        ? { label: words.yourShare, value, aside: [...why, words.nobodyPaid].join(LINE_JOIN) }
+        ? { label: words.yourShare, value, below: [...why, words.nobodyPaid].join(LINE_JOIN) }
         : {
             label: words.refunded,
             value: formatZloty(line.refundedGrosze),
-            ...(why.length === 0 ? {} : { aside: why.join(LINE_JOIN) }),
+            ...(why.length === 0 ? {} : { below: why.join(LINE_JOIN) }),
           };
     }
     case 'waiting':
@@ -303,16 +306,18 @@ export function moneyRow(
     case 'seatOpen':
     case 'seatEmpty':
     case 'noShow':
-      return { label: share, value, aside: moneyWords(line) };
+      return { label: share, value, below: moneyWords(line) };
     case 'booked':
     case undefined: {
       const back = backIfYouLeaveAhead(money, now);
+      const below = [
+        ...(money.paid ? [COPY.money.paid] : []),
+        ...(back === undefined ? [] : [backIfYouLeaveWords(back)]),
+      ];
       return {
         label: share,
         value,
-        aside: [words.toTheClub, ...(back === undefined ? [] : [backIfYouLeaveWords(back)])].join(
-          LINE_JOIN,
-        ),
+        ...(below.length === 0 ? {} : { below: below.join(LINE_JOIN) }),
       };
     }
   }

@@ -209,23 +209,23 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
 const bookedPaid = { shareGrosze: 2800, paid: true } as const;
 
 describe('moneyRow — the details’ money row (A4.1)', () => {
-  it('is PAID · 28 zł · your share · to the club, with what comes back while the cut-off is ahead (Q99)', () => {
+  it('is PAID 28 zł over Paid, with what comes back while the cut-off is ahead (Q99)', () => {
     expect(moneyRow(booked(), BEFORE)).toEqual({
       label: 'Paid',
       value: '28 zł',
-      aside: 'your share · to the club · 27,18 zł back if you leave by Fri 16:00',
+      below: 'Paid · 27,18 zł back if you leave by Fri 16:00',
     });
     expect(moneyRow(booked(), Date.parse(CUT_OFF))).toEqual({
       label: 'Paid',
       value: '28 zł',
-      aside: 'your share · to the club',
+      below: 'Paid',
     });
   });
 
   it('says nothing of leaving with the figure missing — never free, never worked out here', () => {
     expect(
       moneyRow(booked({ money: { ...bookedPaid, freeToLeaveUntil: CUT_OFF } }), BEFORE),
-    ).toEqual({ label: 'Paid', value: '28 zł', aside: 'your share · to the club' });
+    ).toEqual({ label: 'Paid', value: '28 zł', below: 'Paid' });
   });
 
   it('is the share nobody pays yet while the club decides', () => {
@@ -271,7 +271,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     ).toEqual({ label: 'Refunded', value: '28 zł' });
     expect(
       moneyRow(booked({ status: 'CALLED_OFF', money: { shareGrosze: 2800, paid: false } }), BEFORE),
-    ).toEqual({ label: 'Your share', value: '28 zł', aside: 'nobody paid' });
+    ).toEqual({ label: 'Your share', value: '28 zł', below: 'nobody paid' });
   });
 
   it('says the seat open and when it must fill, on a game a player left (§14.1)', () => {
@@ -279,16 +279,16 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     expect(moneyRow(open, BEFORE)).toEqual({
       label: 'Paid',
       value: '28 zł',
-      aside: '1 seat open · fills by Fri 16:00 or the game is off and everyone is refunded',
+      below: '1 seat open · fills by Fri 16:00 or the game is off and everyone is refunded',
     });
     expect(moneyRow(open, Date.parse(CUT_OFF))).toEqual({
       label: 'Paid',
       value: '28 zł',
-      aside: '1 seat open · offered to others · the game goes ahead',
+      below: '1 seat open · offered to others · the game goes ahead',
     });
   });
 
-  it('says why a game is off beside what came back', () => {
+  it('says why a game is off under what came back', () => {
     expect(
       moneyRow(
         booked({
@@ -301,7 +301,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     ).toEqual({
       label: 'Refunded',
       value: '28 zł',
-      aside: 'A seat was still empty at the cut-off',
+      below: 'A seat was still empty at the cut-off',
     });
     expect(
       moneyRow(
@@ -315,7 +315,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     ).toEqual({
       label: 'Your share',
       value: '28 zł',
-      aside: 'Bonarka Arena couldn’t take it · nobody paid',
+      below: 'Bonarka Arena couldn’t take it · nobody paid',
     });
   });
 
@@ -325,7 +325,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
         booked({ status: 'UNCOUNTED', uncountedReason: 'SEAT_EMPTY', money: bookedPaid }),
         BEFORE,
       ),
-    ).toEqual({ label: 'Paid', value: '28 zł', aside: 'A seat was empty · no Level moved' });
+    ).toEqual({ label: 'Paid', value: '28 zł', below: 'A seat was empty · no Level moved' });
   });
 
   it('is the share I’m in would pay, and how long the seat is offered, on a rescue seen from outside', () => {
@@ -339,12 +339,12 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     expect(moneyRow(rescue(true), BEFORE)).toEqual({
       label: 'Your share',
       value: '27 zł',
-      aside: 'fills by Fri 16:00',
+      below: 'fills by Fri 16:00',
     });
     expect(moneyRow(rescue(false), BEFORE)).toEqual({
       label: 'Your share',
       value: '27 zł',
-      aside: 'offered until the start',
+      below: 'offered until the start',
     });
   });
 });

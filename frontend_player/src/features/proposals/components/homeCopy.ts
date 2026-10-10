@@ -104,7 +104,6 @@ export const HOME_GAME_COPY = {
     paid: 'Paid',
     yourShare: 'Your share',
     refunded: 'Refunded',
-    toTheClub: 'your share · to the club',
     nobodyPaid: 'nobody paid',
     showAtTheDesk: 'Show at the desk',
     deskLine: 'Show this at the club’s desk when you arrive — or read them the code.',
