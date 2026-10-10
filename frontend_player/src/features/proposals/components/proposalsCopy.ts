@@ -82,7 +82,8 @@ export const PROPOSALS_COPY = {
     /**
      * **Where a game still filling stands** (#542, #557) — its details' status tag. *Filling* carries
      * its count (`fillingStatus`); the rest are the four ways it ended unfilled, booked, and the
-     * club's turn.
+     * club's turn. A game its club turned down says which answer it was once its booking is read
+     * (`clubsAnswer`, Q105) — *Called off*, Home's word for it, until then.
      */
     status: {
       FILLING: 'Filling',
@@ -91,7 +92,7 @@ export const PROPOSALS_COPY = {
       EXPIRED: 'Didn’t fill in time',
       WITHDRAWN: 'Taken back',
       COURT_HOUR_LOST: 'No court left at that hour',
-      TURNED_DOWN: 'The club couldn’t take it',
+      TURNED_DOWN: 'Called off',
     } satisfies Readonly<Record<ProposalStatus, string>>,
     /** The same, mid-line — the header's second line, *Padel · filling*. */
     statusInLine: {
@@ -101,7 +102,7 @@ export const PROPOSALS_COPY = {
       EXPIRED: 'didn’t fill',
       WITHDRAWN: 'taken back',
       COURT_HOUR_LOST: 'no court left',
-      TURNED_DOWN: 'turned down',
+      TURNED_DOWN: 'called off',
     } satisfies Readonly<Record<ProposalStatus, string>>,
     /** The line under the share while an On request club decides (A4.2) — Home's words. */
     nobodyPaysUntil: 'Nobody pays until',

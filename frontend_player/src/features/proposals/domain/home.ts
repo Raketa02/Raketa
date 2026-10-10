@@ -92,6 +92,18 @@ export interface HomeGame {
    * that deadline was ahead at the read. Absent on every other status, and from an older server.
    */
   readonly answerBy?: string;
+  /**
+   * **A full game gone back to filling before it was booked** (#624, Q106) — a player left while
+   * the club decided, or a yes was taken back. *Seat open* while it fills, nobody paid; *Called off*
+   * once its last moment to book passes first. Absent on every booked game, and from an older server.
+   */
+  readonly fillingAgain?: FillingAgain;
+}
+
+/** How a full game gone back to filling is booked once it is full again — the line's last clause. */
+export interface FillingAgain {
+  /** *Kazimierz Padel is asked again when it's full* — an On request club; else *books when it's full*. */
+  readonly clubConfirms: boolean;
 }
 
 /** **Home** — the reader's booked games, soonest first, and how many need them. */
@@ -174,6 +186,9 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
  *   deadline is ahead (Q98), then *Nobody pays until Bonarka confirms*.
  * - `seatOpen` — *1 seat open*, and *fills by Sat 17:00 or the game is off* before the cut-off;
  *   *offered to others · the game goes ahead* after it.
+ * - `fillingAgain` — a full game gone back to filling (Q106): *1 seat open*, *Kazimierz Padel is
+ *   asked again when it's full* or *books when it's full*, and *nobody paid*. The club is carried
+ *   for the first.
  * - `calledOff` — why, and *refunded 30 zł* when the shares came back, *nobody paid* when none was
  *   taken. The club is carried for the two reasons that are the club's.
  * - `seatEmpty` — *Uncounted* because its hour came with a seat still open: no Level moved.
@@ -190,6 +205,12 @@ export type MoneyLine =
     }
   | { readonly kind: 'waiting'; readonly club?: string; readonly answerBy?: AnswerBy }
   | { readonly kind: 'seatOpen'; readonly seats: number; readonly fillsBy?: string }
+  | {
+      readonly kind: 'fillingAgain';
+      readonly seats: number;
+      readonly club?: string;
+      readonly clubConfirms: boolean;
+    }
   | {
       readonly kind: 'calledOff';
       readonly reason?: CalledOffReason;
@@ -280,6 +301,7 @@ export function moneyLineOf(
     | 'uncountedReason'
     | 'needsYou'
     | 'answerBy'
+    | 'fillingAgain'
   >,
   now: number,
 ): MoneyLine | undefined {
@@ -300,6 +322,15 @@ export function moneyLineOf(
       return { kind: 'waiting', ...club, ...(by === undefined ? {} : { answerBy: by }) };
     }
     case 'SEAT_OPEN': {
+      // Gone back to filling (Q106): nobody paid, so there is no cut-off to fill by.
+      if (game.fillingAgain !== undefined) {
+        return {
+          kind: 'fillingAgain',
+          seats: game.openSeats,
+          ...club,
+          clubConfirms: game.fillingAgain.clubConfirms,
+        };
+      }
       const until = cutOffAhead(money, now);
       return {
         kind: 'seatOpen',
@@ -340,7 +371,20 @@ export function moneyLineOf(
 export const ENDED_HOME_SHELF_LIFE_MS = 24 * 60 * 60 * 1000;
 
 /**
- * **What each status says about a booked game** — one table, so a tenth status is one row and every
+ * **A status as Home draws it** — the wire's, with one more: a full game **gone back to filling**
+ * (#624, Q106) reads *Seat open* as a booked game a player left does, and is another thing under
+ * it — nobody paid, no Game, no room and no court.
+ */
+type Stage = HomeStatus | 'FILLING_AGAIN';
+
+function stageOf(game: Pick<HomeGame, 'status' | 'fillingAgain'>): Stage {
+  return game.status === 'SEAT_OPEN' && game.fillingAgain !== undefined
+    ? 'FILLING_AGAIN'
+    : game.status;
+}
+
+/**
+ * **What each stage says about a booked game** — one table, so a tenth status is one row and every
  * rule below answers for it at once:
  *
  * - `ended` — one of the four ends: a game that will not be played, or whose result is settled.
@@ -352,10 +396,14 @@ export const ENDED_HOME_SHELF_LIFE_MS = 24 * 60 * 60 * 1000;
  *   waiting for the club has none yet, and a called-off one none any more.
  * - `court` — the court is given: an On request club gives it with its yes (A4.2: *no court
  *   number* while waiting).
+ *
+ * **A game gone back to filling is none of the four**: still live, not *new* — the tag marks a game
+ * that filled, and this one is not full any more — and, like a game waiting for its club, no room
+ * and no court until it is booked.
  */
 const STATUS: Readonly<
   Record<
-    HomeStatus,
+    Stage,
     {
       readonly ended: boolean;
       readonly fresh: boolean;
@@ -373,6 +421,7 @@ const STATUS: Readonly<
   UNCOUNTED: { ended: true, fresh: false, room: true, court: true },
   NEVER_PLAYED: { ended: true, fresh: false, room: true, court: true },
   CALLED_OFF: { ended: true, fresh: false, room: false, court: true },
+  FILLING_AGAIN: { ended: false, fresh: false, room: false, court: false },
 };
 
 /**
@@ -389,8 +438,11 @@ const STATUS: Readonly<
  * who looks at Home that evening finds why there is no game — and a result settled later than a day
  * after the hour is not drawn, which is the Classic rail's own cost for a score counted by silence.
  */
-export function onHome(game: Pick<HomeGame, 'status' | 'startsAt'>, now: number): boolean {
-  if (!STATUS[game.status].ended) return true;
+export function onHome(
+  game: Pick<HomeGame, 'status' | 'fillingAgain' | 'startsAt'>,
+  now: number,
+): boolean {
+  if (!STATUS[stageOf(game)].ended) return true;
   const hourEnds = Date.parse(game.startsAt) + GAME_LENGTH_MS;
   return Number.isNaN(hourEnds) || now - hourEnds < ENDED_HOME_SHELF_LIFE_MS;
 }
@@ -405,10 +457,10 @@ export function onHome(game: Pick<HomeGame, 'status' | 'startsAt'>, now: number)
  * meant to cut through.
  */
 export function isNew(
-  game: Pick<HomeGame, 'bookingId' | 'status'>,
+  game: Pick<HomeGame, 'bookingId' | 'status' | 'fillingAgain'>,
   opened: ReadonlySet<string> | undefined,
 ): boolean {
-  return opened !== undefined && STATUS[game.status].fresh && !opened.has(game.bookingId);
+  return opened !== undefined && STATUS[stageOf(game)].fresh && !opened.has(game.bookingId);
 }
 
 /**
@@ -447,8 +499,8 @@ export function openedToKeep(
  * **Whether the game can have a room** — the Chat door's status half (the mechanics §14.2, §14.3);
  * the other half is the join finding the room, whose own life closes it as today (`STATUS`).
  */
-export function chatIsOpen(status: HomeStatus): boolean {
-  return STATUS[status].room;
+export function chatIsOpen(game: Pick<HomeGame, 'status' | 'fillingAgain'>): boolean {
+  return STATUS[stageOf(game)].room;
 }
 
 /**
@@ -459,9 +511,18 @@ export function completesTheRescue(game: Pick<BookedGame, 'rescue' | 'openSeats'
   return game.rescue !== undefined && game.openSeats === 1;
 }
 
+/**
+ * **A full game gone back to filling, while it fills** (Q106) — whose way out is a game still
+ * filling's, *Withdraw*. Not once it is called off: the read keeps the mark on that game, and
+ * there is nothing left to withdraw from.
+ */
+export function isFillingAgain(game: Pick<HomeGame, 'status' | 'fillingAgain'>): boolean {
+  return stageOf(game) === 'FILLING_AGAIN';
+}
+
 /** **Whether the court is given** — WHERE names it once the club has said yes (A4.2). */
-export function courtIsGiven(status: HomeStatus): boolean {
-  return STATUS[status].court;
+export function courtIsGiven(game: Pick<HomeGame, 'status' | 'fillingAgain'>): boolean {
+  return STATUS[stageOf(game)].court;
 }
 
 /**

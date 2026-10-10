@@ -5,6 +5,7 @@ import {
   chatIsOpen,
   completesTheRescue,
   courtIsGiven,
+  isFillingAgain,
   isNew,
   lineCanRunOut,
   moneyLineOf,
@@ -172,6 +173,60 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     expect(moneyLineOf(open, Date.parse(CUT_OFF))).toEqual({ kind: 'seatOpen', seats: 2 });
   });
 
+  /**
+   * **A full game gone back to filling** (#624, Q106): *Seat open*, the seats nobody is In on, and
+   * how it is booked once full again — the club asked again, or at once. Nobody paid, so no cut-off.
+   */
+  describe('a full game gone back to filling', () => {
+    const filling = (clubConfirms: boolean) =>
+      game({
+        status: 'SEAT_OPEN',
+        openSeats: 1,
+        gameId: undefined,
+        courtName: undefined,
+        club: { id: 'club-1', name: 'Kazimierz Padel' },
+        money: { shareGrosze: 2500, paid: false },
+        fillingAgain: { clubConfirms },
+      });
+
+    it('is a seat open, the club asked again when it is full, nobody paid', () => {
+      expect(moneyLineOf(filling(true), BEFORE_CUT_OFF)).toEqual({
+        kind: 'fillingAgain',
+        seats: 1,
+        club: 'Kazimierz Padel',
+        clubConfirms: true,
+      });
+    });
+
+    it('books when it is full at a club that books at once', () => {
+      expect(moneyLineOf(filling(false), BEFORE_CUT_OFF)).toEqual({
+        kind: 'fillingAgain',
+        seats: 1,
+        club: 'Kazimierz Padel',
+        clubConfirms: false,
+      });
+    });
+
+    it('says it of the club when the read no longer names it', () => {
+      expect(moneyLineOf({ ...filling(true), club: { id: 'club-1' } }, BEFORE_CUT_OFF)).toEqual({
+        kind: 'fillingAgain',
+        seats: 1,
+        clubConfirms: true,
+      });
+    });
+
+    it('is called off with why once its last moment to book passes, or its court goes', () => {
+      for (const reason of ['BOOK_BY_PASSED', 'COURT_HOUR_LOST'] as const) {
+        expect(
+          moneyLineOf(
+            { ...filling(true), status: 'CALLED_OFF', calledOffReason: reason, openSeats: 0 },
+            BEFORE_CUT_OFF,
+          ),
+        ).toEqual({ kind: 'calledOff', reason, club: 'Kazimierz Padel' });
+      }
+    });
+  });
+
   it('says why a game was called off, and what came back', () => {
     const short = game({
       status: 'CALLED_OFF',
@@ -272,6 +327,11 @@ describe('onHome — how long an ended game keeps its card', () => {
   it('keeps a game called off before its hour until a day after the hour it was for', () => {
     expect(onHome(game({ status: 'CALLED_OFF' }), BEFORE_CUT_OFF)).toBe(true);
   });
+
+  it('keeps a full game gone back to filling, which is live (Q106)', () => {
+    const filling = game({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: true } });
+    expect(onHome(filling, hourEnds + 30 * ENDED_HOME_SHELF_LIFE_MS)).toBe(true);
+  });
 });
 
 describe('lineCanRunOut — a clause that leaves the line by itself', () => {
@@ -301,6 +361,13 @@ describe('isNew — marked until opened (the mechanics §11.4)', () => {
 
   it('marks nothing new until the phone has said what was opened', () => {
     expect(isNew(game(), undefined)).toBe(false);
+  });
+
+  /** *New* marks a game that filled; one gone back to filling is not full any more. */
+  it('is not new while the game is filling again, and new once it is full again', () => {
+    const fillingAgain = { clubConfirms: true };
+    expect(isNew(game({ status: 'SEAT_OPEN', fillingAgain }), new Set())).toBe(false);
+    expect(isNew(game({ status: 'WAITING_FOR_THE_CLUB' }), new Set())).toBe(true);
   });
 });
 
@@ -342,7 +409,12 @@ describe('chatIsOpen — the room lives its own life once booked, and closes as 
     ['NEVER_PLAYED', true],
     ['CALLED_OFF', false],
   ])('%s → %s', (status, open) => {
-    expect(chatIsOpen(status)).toBe(open);
+    expect(chatIsOpen({ status })).toBe(open);
+  });
+
+  /** No Game and no room: the chat opens when the game is booked, as on *Waiting for the club*. */
+  it('has no room on a full game gone back to filling', () => {
+    expect(chatIsOpen({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: true } })).toBe(false);
   });
 });
 
@@ -354,7 +426,27 @@ describe('courtIsGiven — a court number once the club has said yes (A4.2)', ()
     ['NEEDS_RESULT', true],
     ['CALLED_OFF', true],
   ])('%s → %s', (status, given) => {
-    expect(courtIsGiven(status)).toBe(given);
+    expect(courtIsGiven({ status })).toBe(given);
+  });
+
+  it('gives no court to a full game gone back to filling', () => {
+    expect(courtIsGiven({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: false } })).toBe(
+      false,
+    );
+  });
+});
+
+describe('isFillingAgain — a full game gone back to filling, while it fills (Q106)', () => {
+  const fillingAgain = { clubConfirms: true };
+
+  it('is a Seat open the read marks filling again', () => {
+    expect(isFillingAgain({ status: 'SEAT_OPEN', fillingAgain })).toBe(true);
+    expect(isFillingAgain({ status: 'SEAT_OPEN' })).toBe(false);
+  });
+
+  /** The wire keeps the mark once it is called off; its way out has gone with it. */
+  it('is not one called off before it filled again', () => {
+    expect(isFillingAgain({ status: 'CALLED_OFF', fillingAgain })).toBe(false);
   });
 });
 

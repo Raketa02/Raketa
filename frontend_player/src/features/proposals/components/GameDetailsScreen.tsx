@@ -26,7 +26,10 @@
  * **`GET /proposals/{id}`** (#542) is the whole of it: who is In, the sides and their forecast, the
  * club and its distance, the share and the book-by, the overlap, the status — *Filling · 2 of 4
  * in*, *Waiting for the club* in amber, booked, or how it ended unfilled — and **`actions`, what the
- * reader may do now**, in the screen's order. Nothing about the game is kept by the screen: every
+ * reader may do now**, in the screen's order. **One status it cannot word alone**: a game its club
+ * turned down names one status for the club's no and its silence, so its booking — the same id —
+ * is read for which (`clubsAnswer`, Q105): *Kazimierz Padel said no* or *… didn't answer in time*,
+ * and *Called off* until that read says. Nothing about the game is kept by the screen: every
  * answer re-reads the details (`reread`), and each button is busy until the read has landed — so a
  * yes said here is drawn as the server has it, your tile In and *Withdraw* in place of the answers,
  * and a withdraw puts them back. A reader still deciding sees their own card as the deck deals it; a
@@ -86,7 +89,7 @@ import { gameDayOf, weekdayAt } from '../domain/when';
 import { useFillYes } from '../hooks/useFillYes';
 import { useAnswerCard, useWithdrawYes } from '../hooks/useGroupDeck';
 import { useLatest } from '../hooks/useLatest';
-import { useReadClock } from '../hooks/useHome';
+import { useBooking, useReadClock } from '../hooks/useHome';
 import { useLeaveWhileWaiting, useProposal } from '../hooks/useProposal';
 
 import {
@@ -102,7 +105,7 @@ import {
   timeWords,
 } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
-import { PROPOSAL_STATUS_INK } from './homePresentation';
+import { PROPOSAL_STATUS_INK, clubsAnswer } from './homePresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { CardTag } from './CardTag';
 import { GameFacts, type FactWords } from './GameFacts';
@@ -204,6 +207,10 @@ function Details({
   );
   const withdraw = useWithdrawYes(groupId, refused);
   const leaveWaiting = useLeaveWhileWaiting(groupId, proposalId);
+  // The club's no and its silence are one status here, and two on the booking (Q105).
+  const turnedDown = details.status === 'TURNED_DOWN';
+  const booking = useBooking(proposalId, { enabled: turnedDown }).data ?? undefined;
+  const answered = turnedDown && booking !== undefined ? clubsAnswer(booking) : undefined;
 
   /** This game's yes is counting down behind *Undo*. */
   const counting = fill.counting === proposalId;
@@ -255,7 +262,7 @@ function Details({
             <GameGround />
             <View accessible accessibilityRole="header">
               <CardTag
-                label={detailsStatus(details.status, details.inCount, details.seats)}
+                label={answered ?? detailsStatus(details.status, details.inCount, details.seats)}
                 tone="grey"
                 dot={PROPOSAL_STATUS_INK[details.status]}
               />

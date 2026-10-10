@@ -1815,7 +1815,7 @@ export interface paths {
          * Withdraw a yes
          * @description *Withdraw* on a You're In row: free and silent until the game fills. The seat is open again, and the player may say yes again while it fills. Withdrawing a yes never said records nothing. **A poster withdrawing with nobody else In takes the post with them**; with others In, the game carries on without them.
          *
-         *     **While an On request club decides, this is *Leave the game*** (#543): nobody has paid; the request to the club is called off (`CALLED_OFF` · `SEAT_OPENED` on the others' Home), the held court is free, and the game is back in the decks with this seat open — the others still In. Full again, it goes to the club again.
+         *     **While an On request club decides, this is *Leave the game*** (#543): nobody has paid; the request to the club is taken back, the held court is free, and the game is back in the decks with this seat open — the others still In, and on their Home as `SEAT_OPEN` with `filling_again` (#624). Full again, it goes to the club again; past its book-by it is `CALLED_OFF` · `BOOK_BY_PASSED` for them instead. On a game already `filling_again`, it takes the game off the player's own Home.
          */
         delete: operations["withdraw_yes_api_v1_proposals__proposal_id__yes_delete"];
         options?: never;
@@ -2142,7 +2142,7 @@ export interface paths {
         put?: never;
         /**
          * Leave a booked game
-         * @description *Leave the game* (the client shows the sheet first: the booking's `leaving` says what it costs). **Before the club's cut-off** the leaver is refunded at once, less the card fee, and the seat is offered to others — on their record only if the game is then called off because of it. **After the cut-off** the seat stays paid and is offered to others until the start; the leaver is refunded, less the fee, when somebody takes it, and it is on their record if nobody does. **While the club decides** nobody has paid: the yes and the request to the club are withdrawn, as `DELETE /proposals/{id}/yes` does. The leaver leaves the game's chat with their seat; everybody else's Home reads `SEAT_OPEN`. Refused once the hour has begun.
+         * @description *Leave the game* (the client shows the sheet first: the booking's `leaving` says what it costs). **Before the club's cut-off** the leaver is refunded at once, less the card fee, and the seat is offered to others — on their record only if the game is then called off because of it. **After the cut-off** the seat stays paid and is offered to others until the start; the leaver is refunded, less the fee, when somebody takes it, and it is on their record if nobody does. **While the club decides** nobody has paid: the yes and the request to the club are withdrawn, as `DELETE /proposals/{id}/yes` does, and the game is filling again — and so it is on a game already `filling_again` (#624). The leaver leaves the game's chat with their seat; everybody else's Home reads `SEAT_OPEN` (with `filling_again` when nobody had paid). Refused once the hour has begun.
          */
         post: operations["leave_the_game_api_v1_bookings__booking_id__departure_post"];
         delete?: never;
@@ -2664,9 +2664,9 @@ export interface components {
              * @description The instant the status and money line were folded against.
              */
             read_at: string;
-            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. */
+            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with `filling_again`** (#624, Q106) — a full game that went back to filling before it was booked: a player left while the club decided, or a yes was taken back because that player's week filled or two players stopped fitting at the club's yes. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (`club_confirms`), else *1 seat open · books when it's full · nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club that books at once); `CALLED_OFF` if its book-by passes first. */
             status: components["schemas"]["HomeStatus"];
-            /** @description Why a `CALLED_OFF` game will not be played — `null` on every other status. `REFUSED` — the On request club refused it. `NO_ANSWER` — the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` — a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` — the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547). */
+            /** @description Why a `CALLED_OFF` game will not be played — `null` on every other status. `REFUSED` — the On request club refused it: *Kazimierz Padel said no*. `NO_ANSWER` — the club did not answer in time: *Kazimierz Padel didn't answer in time*. In both nobody paid, and the players get a new card first. (A seat opening while it waited takes the request back instead: the game is `SEAT_OPEN` with `filling_again` for the people still In.) `BOOK_BY_PASSED` — a game that went back to filling reached its book-by before it was full again, or a seat opened after its book-by while the club decided (a player left, their week filled, or two stopped fitting): nobody paid. `COURT_HOUR_LOST` — a game that went back to filling lost its court to another game before it was full again: nobody paid, and its players are dealt a new card first. `SHORT_AT_THE_CUT_OFF` — a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` — the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547). */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
             /** @description Why the club cancelled a `CANCELLED_BY_THE_CLUB` game — `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` (no reason given). `null` on every other game. */
             club_cancel_reason: components["schemas"]["ClubCancelReason"] | null;
@@ -2674,11 +2674,21 @@ export interface components {
             uncounted_reason: components["schemas"]["UncountedReason"] | null;
             /**
              * Open Seats
-             * @description Seats a leaver left open — the dashed tiles; nought unless `SEAT_OPEN`. The sides list the seats still held.
+             * @description Seats a leaver left open — the dashed tiles; nought unless `SEAT_OPEN`. The sides list the seats still held. On a game `filling_again`, the seats nobody is In on, the sides listing everybody In now.
              */
             open_seats: number;
             /** Needs You */
             needs_you: boolean;
+            /**
+             * Filling Again
+             * @description A full game that went back to filling before it was booked (#624, Q106) — `SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by passes, or its court goes, before it is full again. `false` on every booked game.
+             */
+            filling_again: boolean;
+            /**
+             * Club Confirms
+             * @description The game's club confirms each game (On request): it waits for the club's yes once full. On a game `filling_again` the line is *Kazimierz Padel is asked again when it's full*; `false` is *books when it's full*.
+             */
+            club_confirms: boolean;
             /**
              * Starts At
              * Format: date-time
@@ -2710,7 +2720,7 @@ export interface components {
             shows_forecast: boolean;
             /** @description On the game's day — the club's calendar day — the reader's code to show at the desk. `null` on every other day, and for a game that will not be played. */
             check_in: components["schemas"]["CheckInSchema"] | null;
-            /** @description What *Leave the game* would cost now — the line under the button and its sheet (`POST /bookings/{id}/departure`). `null` where there is no button: once the hour has come, on a game that is over, and for a reader not on the game. */
+            /** @description What *Leave the game* would cost now — the line under the button and its sheet (`POST /bookings/{id}/departure`). `null` where there is no button: once the hour has come, on a game that is over, for a reader not on the game, and on a game `filling_again`, whose way out is a game still filling's — *Withdraw*, `DELETE /proposals/{id}/yes`. */
             leaving: components["schemas"]["LeavingSchema"] | null;
             /** @description Present for a reader **not on the game** whom its open seat is offered to — a Seat open card, a Seats to fill row (#545): they stand in the seat that opened first, unpaid (*You?*), and **I'm in · `money.share_grosze`** is `POST /bookings/{id}/seats`. No Chat and no Leave. `null` for a player in it. */
             rescue?: components["schemas"]["RescueOfferSchema"] | null;
@@ -2746,7 +2756,7 @@ export interface components {
          * @description Why a game will not be played (the mechanics §14.1).
          * @enum {string}
          */
-        CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB";
+        CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB" | "BOOK_BY_PASSED" | "COURT_HOUR_LOST";
         /**
          * CappedWeekSchema
          * @description A week the player has as many games booked in as they allow: nothing is
@@ -3481,7 +3491,7 @@ export interface components {
          * @description *Leave the game*, done.
          */
         DepartureResponse: {
-            /** @description `BEFORE_THE_CUT_OFF` — refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again. */
+            /** @description `BEFORE_THE_CUT_OFF` — refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again — `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn. */
             left: components["schemas"]["Leaving"];
         };
         /**
@@ -4407,9 +4417,9 @@ export interface components {
             sport: components["schemas"]["Sport"];
             /** @description Competitive, or for fun (a friendly). */
             kind: components["schemas"]["SearchMode"];
-            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. */
+            /** @description `WAITING_FOR_THE_CLUB` — an On request club has the full game and has not answered: nobody has paid, there is no Game yet (`game_id` is `null`) and no court given. `BOOKED` — full and booked, its hour still ahead. `NEEDS_RESULT` — its hour has come and nobody has said it happened. `CONFIRM_THE_RESULT` — a score is on the table. `COUNTED` — a score is agreed. `UNCOUNTED` — they played and no score is agreed. `NEVER_PLAYED` — nobody said it happened in time. `CALLED_OFF` — it will not be played; `called_off_reason` says why. `SEAT_OPEN` — somebody left and the seat is offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) *fills by then or the game is off and everyone is refunded*, after it *the game goes ahead*. A game whose hour comes with a seat still open is `UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with `filling_again`** (#624, Q106) — a full game that went back to filling before it was booked: a player left while the club decided, or a yes was taken back because that player's week filled or two players stopped fitting at the club's yes. Nobody paid, there is no Game and no court, and it asks nothing of the reader (`needs_you` is `false`): *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (`club_confirms`), else *1 seat open · books when it's full · nobody paid*. It is in the reader's live yeses too, where *Withdraw* (`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club that books at once); `CALLED_OFF` if its book-by passes first. */
             status: components["schemas"]["HomeStatus"];
-            /** @description Why a `CALLED_OFF` game will not be played — `null` on every other status. `REFUSED` — the On request club refused it. `NO_ANSWER` — the club did not answer in time. In both nobody paid. (A seat opening while it waited takes the request back instead: it leaves Home, and the people still In find the game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` — a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` — the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547). */
+            /** @description Why a `CALLED_OFF` game will not be played — `null` on every other status. `REFUSED` — the On request club refused it: *Kazimierz Padel said no*. `NO_ANSWER` — the club did not answer in time: *Kazimierz Padel didn't answer in time*. In both nobody paid, and the players get a new card first. (A seat opening while it waited takes the request back instead: the game is `SEAT_OPEN` with `filling_again` for the people still In.) `BOOK_BY_PASSED` — a game that went back to filling reached its book-by before it was full again, or a seat opened after its book-by while the club decided (a player left, their week filled, or two stopped fitting): nobody paid. `COURT_HOUR_LOST` — a game that went back to filling lost its court to another game before it was full again: nobody paid, and its players are dealt a new card first. `SHORT_AT_THE_CUT_OFF` — a seat that opened before the club's cut-off was still empty at it: everybody still in is refunded in full (`money.refunded_grosze`); read off the clock from the cut-off on. `CANCELLED_BY_THE_CLUB` — the club cancelled it, with its reason (`club_cancel_reason`): everybody still in is refunded in full (`money.refunded_grosze`), it is on nobody's record, and they are dealt a new card first (#547). */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
             /** @description Why the club cancelled a `CANCELLED_BY_THE_CLUB` game — `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` (no reason given). `null` on every other game. */
             club_cancel_reason: components["schemas"]["ClubCancelReason"] | null;
@@ -4417,14 +4427,24 @@ export interface components {
             uncounted_reason: components["schemas"]["UncountedReason"] | null;
             /**
              * Open Seats
-             * @description Seats a leaver left open — the dashed tiles; nought unless `SEAT_OPEN`. The sides list the seats still held.
+             * @description Seats a leaver left open — the dashed tiles; nought unless `SEAT_OPEN`. The sides list the seats still held. On a game `filling_again`, the seats nobody is In on, the sides listing everybody In now.
              */
             open_seats: number;
             /**
              * Needs You
-             * @description One of the games that need the reader: a result to enter, the other side's score waiting on their agreement, or a seat open in their game.
+             * @description One of the games that need the reader: a result to enter, the other side's score waiting on their agreement, or a seat open in their booked game — never a game `filling_again`, which asks nothing of them.
              */
             needs_you: boolean;
+            /**
+             * Filling Again
+             * @description A full game that went back to filling before it was booked (#624, Q106) — `SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by passes, or its court goes, before it is full again. `false` on every booked game.
+             */
+            filling_again: boolean;
+            /**
+             * Club Confirms
+             * @description The game's club confirms each game (On request): it waits for the club's yes once full. On a game `filling_again` the line is *Kazimierz Padel is asked again when it's full*; `false` is *books when it's full*.
+             */
+            club_confirms: boolean;
             /**
              * Starts At
              * Format: date-time
@@ -12143,7 +12163,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description `game_has_started` — its hour has begun; there is nothing to leave. `booking_is_called_off` — the game is off (refused, unanswered, or short at its cut-off) and everybody still in is refunded, or nobody paid. Nothing was recorded. */
+            /** @description `game_has_started` — its hour has begun; there is nothing to leave. `booking_is_called_off` — the game is off (refused, unanswered, short at its cut-off, cancelled, or gone back to filling and past its book-by) and everybody still in is refunded, or nobody paid. Nothing was recorded. */
             409: {
                 headers: {
                     [name: string]: unknown;

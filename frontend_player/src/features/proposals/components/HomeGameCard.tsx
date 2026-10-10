@@ -25,7 +25,8 @@
  * *Open the chat* as the details' *Chat* is, that opens the game's room straight over Home — so
  * Back from that room is Home, and Back from a room opened from the details is the details. It is
  * drawn exactly where the room join finds a room and the status still has one (`chatIsOpen`), so
- * never on *Waiting for the club* or *Called off*. **Its count, and lit volt when something is
+ * never on *Waiting for the club*, a game gone back to filling (Q106) or *Called off*: the chat
+ * opens when the game is booked. **Its count, and lit volt when something is
  * unread, are owed** with the details' *Chat · n* (F-HOME-21.1): the wire carries no unread count.
  */
 

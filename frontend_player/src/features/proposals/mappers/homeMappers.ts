@@ -59,6 +59,17 @@ export function toAnswerBy(wire: string | null | undefined): { readonly answerBy
   return wire === null || wire === undefined ? {} : { answerBy: wire };
 }
 
+/**
+ * **A full game gone back to filling** (#624) — and which way its line ends. Nothing for a booked
+ * game, and nothing from a server older than it, which sends neither field.
+ */
+function toFillingAgain(
+  wire: Pick<Schemas['HomeGameSchema'], 'filling_again' | 'club_confirms'>,
+): Pick<HomeGame, 'fillingAgain'> {
+  const fillingAgain: boolean | undefined = wire.filling_again;
+  return fillingAgain === true ? { fillingAgain: { clubConfirms: wire.club_confirms } } : {};
+}
+
 /** What Home and the details share of a booked game — every nullable read as an absent field. */
 function toBooking(
   wire: Schemas['HomeGameSchema'] | Schemas['BookingDetailsResponse'],
@@ -79,6 +90,7 @@ function toBooking(
     sides: toSides(wire.sides),
     money: toMoney(wire.money),
     ...toAnswerBy(wire.answer_by),
+    ...toFillingAgain(wire),
   };
 }
 

@@ -3,6 +3,7 @@ import { setDeviceZone } from '@/test-support/deviceZone';
 import type { BookedGame, HomeGame } from '../domain/home';
 
 import {
+  clubsAnswer,
   homeCardLabel,
   moneyRow,
   moneySpoken,
@@ -69,6 +70,19 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
     );
   });
 
+  /** A full game gone back to filling (Q106): mirroring a booked game's *Seat open*. */
+  it('says the seats open on a game filling again, and how it is booked once full', () => {
+    expect(
+      moneyWords({ kind: 'fillingAgain', seats: 1, club: 'Kazimierz Padel', clubConfirms: true }),
+    ).toBe('1 seat open · Kazimierz Padel is asked again when it’s full · nobody paid');
+    expect(
+      moneyWords({ kind: 'fillingAgain', seats: 1, club: 'Kazimierz Padel', clubConfirms: false }),
+    ).toBe('1 seat open · books when it’s full · nobody paid');
+    expect(moneyWords({ kind: 'fillingAgain', seats: 2, clubConfirms: true })).toBe(
+      '2 seats open · the club is asked again when it’s full · nobody paid',
+    );
+  });
+
   it('says the refund, or that nobody paid', () => {
     expect(moneyWords({ kind: 'calledOff', refundedGrosze: 3000 })).toBe('Refunded 30 zł');
     expect(moneyWords({ kind: 'calledOff' })).toBe('Nobody paid');
@@ -83,12 +97,32 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
         refundedGrosze: 3000,
       }),
     ).toBe('A seat was still empty at the cut-off · Refunded 30 zł');
+  });
+
+  /** The club's no and its silence, in the notice's and the email's words (Q105). */
+  it('says the club said no, or didn’t answer in time — never the one for the other', () => {
     expect(moneyWords({ kind: 'calledOff', reason: 'REFUSED', club: 'Kazimierz Padel' })).toBe(
-      'Kazimierz Padel couldn’t take it · Nobody paid',
+      'Kazimierz Padel said no · Nobody paid — you’ll get a new card first',
+    );
+    expect(moneyWords({ kind: 'calledOff', reason: 'NO_ANSWER', club: 'Kazimierz Padel' })).toBe(
+      'Kazimierz Padel didn’t answer in time · Nobody paid — you’ll get a new card first',
+    );
+    expect(moneyWords({ kind: 'calledOff', reason: 'REFUSED' })).toBe(
+      'The club said no · Nobody paid — you’ll get a new card first',
     );
     expect(moneyWords({ kind: 'calledOff', reason: 'NO_ANSWER' })).toBe(
-      'The club didn’t answer in time · Nobody paid',
+      'The club didn’t answer in time · Nobody paid — you’ll get a new card first',
     );
+  });
+
+  /** A game gone back to filling that ends before it is full again (#624) — said of the game. */
+  it('says a game filling again ran out of time, or lost its court', () => {
+    expect(
+      moneyWords({ kind: 'calledOff', reason: 'BOOK_BY_PASSED', club: 'Kazimierz Padel' }),
+    ).toBe('A seat was open past its last moment to book · Nobody paid');
+    expect(
+      moneyWords({ kind: 'calledOff', reason: 'COURT_HOUR_LOST', club: 'Kazimierz Padel' }),
+    ).toBe('Its court went to another game before it filled again · Nobody paid');
   });
 
   it('says a seat was empty on a game that started short', () => {
@@ -152,6 +186,11 @@ describe('whereAside — the court and how far it is (details 8)', () => {
   it('names no court the read does not hold', () => {
     expect(whereAside({ status: 'CALLED_OFF' }, 3.1)).toBe('3,1 km');
   });
+
+  it('names no court on a game gone back to filling, though the read held one', () => {
+    const filling = { ...at, status: 'SEAT_OPEN', fillingAgain: { clubConfirms: true } } as const;
+    expect(whereAside(filling, 3.1)).toBe('3,1 km');
+  });
 });
 
 describe('moneySpoken — the line aloud, its dots commas', () => {
@@ -177,6 +216,36 @@ describe('sportWords — a card’s sport word', () => {
   it('says the kind only when the game is a friendly', () => {
     expect(sportWords('padel', 'competitive')).toBe('Padel');
     expect(sportWords('padel', 'forFun')).toBe('Padel · For fun');
+  });
+});
+
+describe('clubsAnswer — the club’s answer to a game it turned down (Q105)', () => {
+  const where = { id: 'club-1', name: 'Kazimierz Padel' };
+
+  it('says the club said no, or didn’t answer in time', () => {
+    expect(clubsAnswer({ calledOffReason: 'REFUSED', where })).toBe('Kazimierz Padel said no');
+    expect(clubsAnswer({ calledOffReason: 'NO_ANSWER', where })).toBe(
+      'Kazimierz Padel didn’t answer in time',
+    );
+  });
+
+  it('says it of the club when the read no longer names it', () => {
+    expect(clubsAnswer({ calledOffReason: 'REFUSED', where: { id: 'club-1' } })).toBe(
+      'The club said no',
+    );
+  });
+
+  it.each([
+    'SHORT_AT_THE_CUT_OFF',
+    'CANCELLED_BY_THE_CLUB',
+    'BOOK_BY_PASSED',
+    'COURT_HOUR_LOST',
+  ] as const)('is nothing for %s, which is no answer to a request', (calledOffReason) => {
+    expect(clubsAnswer({ calledOffReason, where })).toBeUndefined();
+  });
+
+  it('is nothing for a game not called off', () => {
+    expect(clubsAnswer({ where })).toBeUndefined();
   });
 });
 
@@ -226,6 +295,28 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     expect(
       moneyRow(booked({ money: { ...bookedPaid, freeToLeaveUntil: CUT_OFF } }), BEFORE),
     ).toEqual({ label: 'Paid', value: '28 zł', below: 'Paid' });
+  });
+
+  /** A full game gone back to filling (Q106): the Home card's line word for word under the share. */
+  it('is the share nobody pays, over the seat open and how it is booked, on a game filling again', () => {
+    const filling = (clubConfirms: boolean) =>
+      booked({
+        status: 'SEAT_OPEN',
+        openSeats: 1,
+        where: { id: 'club-1', name: 'Kazimierz Padel', distanceKm: 3.1 },
+        money: { shareGrosze: 2500, paid: false },
+        fillingAgain: { clubConfirms },
+      });
+    expect(moneyRow(filling(true), BEFORE)).toEqual({
+      label: 'Your share',
+      value: '25 zł',
+      below: '1 seat open · Kazimierz Padel is asked again when it’s full · nobody paid',
+    });
+    expect(moneyRow(filling(false), BEFORE)).toEqual({
+      label: 'Your share',
+      value: '25 zł',
+      below: '1 seat open · books when it’s full · nobody paid',
+    });
   });
 
   it('is the share nobody pays yet while the club decides', () => {
@@ -315,7 +406,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     ).toEqual({
       label: 'Your share',
       value: '28 zł',
-      below: 'Bonarka Arena couldn’t take it · nobody paid',
+      below: 'Bonarka Arena said no · nobody paid — you’ll get a new card first',
     });
   });
 
@@ -393,6 +484,24 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
         money: undefined,
       }),
     ).toBe('Counted. Padel. Bonarka Arena, Court 2. 16:00 until 17:00.');
+  });
+
+  it('says a game gone back to filling with no court, and its line', () => {
+    expect(
+      homeCardLabel({
+        game: {
+          ...game,
+          status: 'SEAT_OPEN',
+          club: { id: 'club-1', name: 'Kazimierz Padel' },
+          fillingAgain: { clubConfirms: true },
+        },
+        fresh: false,
+        day: { kind: 'weekday', weekday: 6 },
+        money: { kind: 'fillingAgain', seats: 1, club: 'Kazimierz Padel', clubConfirms: true },
+      }),
+    ).toBe(
+      'Seat open. Padel. Kazimierz Padel. Saturday, 16:00 until 17:00. 1 seat open, Kazimierz Padel is asked again when it’s full, nobody paid.',
+    );
   });
 
   it('says when the club answers as part of the line', () => {

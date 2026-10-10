@@ -38,6 +38,7 @@ import {
 import { bookedSides, bookingDetails } from '@/test-support/home';
 import {
   GATE_USER,
+  HOME_PATH,
   bookingPath,
   launchSignedIn,
   resetClipboard,
@@ -387,6 +388,26 @@ describe('a You’re In row (A3.2, mock 13)', () => {
     );
     await waitFor(() => expect(screen.queryByTestId(`youre-in-${yes.proposal_id}`)).toBeNull());
     expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
+  });
+
+  /**
+   * **A full game gone back to filling is on Home too** (#629; Q106), and *Withdraw* here takes it
+   * off — so the withdrawal reads Home again, which the shell holds all session.
+   */
+  it('reads Home again once the yes is withdrawn — a game filling again leaves it', async () => {
+    const yes = yesInTheCrew();
+    stubLiveYeses(transport, [yes]);
+    transport.on('DELETE', yesPath(yes.proposal_id), () => noContent());
+    await openFillIn();
+
+    const withdraw = await screen.findByRole('button', { name: COPY.withdraw });
+    await waitFor(() => expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(0));
+    const before = transport.requestsTo('GET', HOME_PATH).length;
+    fireEvent.press(withdraw);
+
+    await waitFor(() =>
+      expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(before),
+    );
   });
 
   it('says waiting for the club while an On request club decides, and hides Withdraw', async () => {

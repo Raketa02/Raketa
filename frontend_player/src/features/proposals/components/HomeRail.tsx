@@ -132,7 +132,7 @@ export function HomeRail({ empty }: HomeRailProps) {
                 now={now}
                 fresh={isNew(game, opened)}
                 onChat={
-                  chatIsOpen(game.status) && rooms.has(game.bookingId)
+                  chatIsOpen(game) && rooms.has(game.bookingId)
                     ? () => {
                         open(game.bookingId);
                         router.push(bookedChatRoute(game.bookingId));

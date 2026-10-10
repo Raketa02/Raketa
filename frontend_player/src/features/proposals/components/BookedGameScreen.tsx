@@ -36,6 +36,10 @@
  * - **A game waiting for the club** (A4.2, #543) — the same, *Waiting for the club* in amber, no
  *   court and no Chat, and *Bonarka answers by 20:45* under the share until that passes (Q98);
  *   *Leave the game* there withdraws the yes, nobody having paid.
+ * - **A full game gone back to filling** (Q106, #629) — *Seat open* in amber, no court and no Chat,
+ *   the share nobody pays over *1 seat open · Kazimierz Padel is asked again when it's full · nobody
+ *   paid*; its way out is a game still filling's, ***Withdraw***, free and never on the record, as
+ *   on a *You're In* row — no sheet in front of it, and back to Home, which no longer holds it.
  * - **A rescue seen from outside** (A4.3, #545) — opened from a *Seat open* card or a *Seats to fill*
  *   row, by a member the open seat is offered to: the players *paid*, the reader in the dashed seat
  *   that opened (*You complete it* on the last one, *You?* while more are open), the court, the share
@@ -80,6 +84,7 @@ import { OPEN_THE_CHAT, useBookingRoom } from '@/features/conversations/types';
 import { GameForecast } from '@/features/games/types';
 import { PlayerRecordSheet } from '@/features/player_record/types';
 import { formatZloty } from '@/shared/formatting/ratingFormat';
+import { showToast } from '@/shared/store/toast.store';
 import { behindOverlay, Button, courtSeatCount, ScreenHeader, theme } from '@/shared/ui';
 
 import { peopleOn, rowsOf, type DeckPerson } from '../domain/deck';
@@ -87,18 +92,19 @@ import { yesOnRescue } from '../domain/fill';
 import {
   chatIsOpen,
   completesTheRescue,
+  isFillingAgain,
   lineCanRunOut,
   resultActOf,
   type BookedGame,
 } from '../domain/home';
 import { gameDayOf } from '../domain/when';
 import { bookingReadState, useBooking, useOpenedGames, useReadClock } from '../hooks/useHome';
-import { useLeaveBooking } from '../hooks/useLeaveBooking';
+import { useLeaveBooking, useWithdrawFillingAgain } from '../hooks/useLeaveBooking';
 
 import { CardTag } from './CardTag';
 import { BookingAbsent } from './BookingAbsent';
 import { CheckInCard } from './CheckInCard';
-import { clubName, detailsDay, othersTitle } from './deckPresentation';
+import { clubName, detailsDay, othersTitle, refusalMessage } from './deckPresentation';
 import { GameFacts, type FactWords } from './GameFacts';
 import { GameGround } from './GameGround';
 import { GameTiles } from './GameTiles';
@@ -114,6 +120,7 @@ import {
 } from './homePresentation';
 import { OthersFaces } from './OthersFaces';
 import { bookedChatRoute, bookedResultRoute } from './proposalRoutes';
+import { PROPOSALS_COPY } from './proposalsCopy';
 import { TakeTheSeat } from './TakeTheSeat';
 
 const COPY = HOME_GAME_COPY.details;
@@ -160,6 +167,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   const room = useBookingRoom(game.bookingId);
   const [reading, setReading] = useState<DeckPerson | undefined>(undefined);
   const leave = useLeaveBooking(game.bookingId);
+  const withdraw = useWithdrawFillingAgain(game.groupId, game.bookingId);
 
   // A seat taken from here leaves for the group — but only while this is still the screen on top:
   // the ten seconds can outlive it, and *back* from wherever the player went would be a stray.
@@ -196,7 +204,7 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   ];
 
   // Neither Chat nor Leave for a rescue seen from outside (A4.3): the reader is not in the game.
-  const chat = rescue === undefined && chatIsOpen(game.status) ? room.conversationId : undefined;
+  const chat = rescue === undefined && chatIsOpen(game) ? room.conversationId : undefined;
   const act = resultActOf(game);
 
   return (
@@ -276,6 +284,23 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
 
           {rescue !== undefined || game.leaving === undefined ? null : (
             <LeaveTheGame leaving={game.leaving} act={leave} afterLeaving={() => router.back()} />
+          )}
+
+          {rescue !== undefined || !isFillingAgain(game) ? null : (
+            <Button
+              label={PROPOSALS_COPY.game.withdraw}
+              variant="secondary"
+              size="lg"
+              busy={withdraw.isPending}
+              onPress={() =>
+                withdraw.mutate(undefined, {
+                  onSuccess: () => {
+                    if (here.current) router.back();
+                  },
+                  onError: (error) => showToast({ message: refusalMessage(error), tone: 'bad' }),
+                })
+              }
+            />
           )}
         </ScrollView>
       </SafeAreaView>

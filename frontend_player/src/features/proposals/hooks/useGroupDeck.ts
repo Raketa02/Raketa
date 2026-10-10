@@ -153,7 +153,10 @@ export function useAnswerCard<Card extends YesOn = YesOn>(
   });
 }
 
-/** **Withdraw a yes** — free and silent until the game fills. */
+/**
+ * **Withdraw a yes** — free and silent until the game fills. Home is read again too: a full game
+ * gone back to filling is on it, and a withdrawal takes it off (Q106, #629).
+ */
 export function useWithdrawYes(groupId: string, onRefused?: OnRefused<string>) {
   const client = useQueryClient();
   const handlers = useLatest({ onRefused });
@@ -161,7 +164,7 @@ export function useWithdrawYes(groupId: string, onRefused?: OnRefused<string>) {
   return useMutation<void, AppError, string>({
     mutationFn: withdrawYes,
     onError: (error, proposalId) => handlers.current.onRefused?.(error, proposalId),
-    onSettled: () => reread(client, groupId, { yeses: true }),
+    onSettled: () => rereadAfterWithdrawing(client, groupId),
   });
 }
 
@@ -181,5 +184,17 @@ export function reread(
     client.invalidateQueries({ queryKey: proposalKeys.group(groupId) }),
     client.invalidateQueries({ queryKey: proposalKeys.proposals() }),
     ...(yeses ? [client.invalidateQueries({ queryKey: proposalKeys.liveYeses() })] : []),
+  ]);
+}
+
+/**
+ * **What a yes taken back re-reads** — an answer's, the live yeses among them, and Home: a game
+ * waiting for its club is on it, and so is a full game gone back to filling (Q106), and the yes
+ * taken back takes either off.
+ */
+export function rereadAfterWithdrawing(client: QueryClient, groupId: string) {
+  return Promise.all([
+    reread(client, groupId, { yeses: true }),
+    client.invalidateQueries({ queryKey: proposalKeys.home() }),
   ]);
 }

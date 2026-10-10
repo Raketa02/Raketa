@@ -148,11 +148,19 @@ function moneyParts(line: MoneyLine): readonly string[] {
         ? [open, money.offeredToOthers, money.goesAhead]
         : [open, `${money.fillsBy} ${shortMoment(line.fillsBy)} ${money.orTheGameIsOff}`];
     }
+    case 'fillingAgain':
+      return [
+        counted(line.seats, money.seatOpen, money.seatsOpen),
+        line.clubConfirms
+          ? `${line.club ?? money.theClub} ${money.askedAgain}`
+          : money.booksWhenFull,
+        money.nobodyPaidInLine,
+      ];
     case 'calledOff':
       return [
         ...(line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })]),
         line.refundedGrosze === undefined
-          ? money.nobodyPaid
+          ? nobodyPaid(line.reason, money)
           : `${money.refunded} ${formatZloty(line.refundedGrosze)}`,
       ];
     case 'seatEmpty':
@@ -174,9 +182,39 @@ function backIfYouLeaveWords({ grosze, by }: BackIfYouLeave): string {
 }
 
 /**
- * *A seat was still empty at the cut-off* · *Kazimierz Padel couldn't take it* · *Bonarka Arena
- * cancelled it because of the weather* — why a game is off: the club named for the three that are
- * the club's, with its own reason after a cancel (#547).
+ * **What each reason a game is off says of the club** — `ofTheClub`, said with the club's name
+ * before it (the rest are said of the game); `answer`, the club's answer to a request — its no or
+ * its silence — told in the notice's and the email's words, a new card promised first (Q105). A
+ * `Record`, so a reason the wire adds is placed here before it can be drawn.
+ */
+const SAID_OF_THE_CLUB: Readonly<
+  Record<CalledOffReason, { readonly ofTheClub: boolean; readonly answer: boolean }>
+> = {
+  REFUSED: { ofTheClub: true, answer: true },
+  NO_ANSWER: { ofTheClub: true, answer: true },
+  CANCELLED_BY_THE_CLUB: { ofTheClub: true, answer: false },
+  SHORT_AT_THE_CUT_OFF: { ofTheClub: false, answer: false },
+  BOOK_BY_PASSED: { ofTheClub: false, answer: false },
+  COURT_HOUR_LOST: { ofTheClub: false, answer: false },
+};
+
+/**
+ * *Nobody paid*, and after the club's no or its silence *— you'll get a new card first* (Q105, the
+ * screens A8): the card's words or the details', whichever `words` are handed in.
+ */
+function nobodyPaid(
+  reason: CalledOffReason | undefined,
+  words: { readonly nobodyPaid: string; readonly nobodyPaidNewCardFirst: string },
+): string {
+  return reason !== undefined && SAID_OF_THE_CLUB[reason].answer
+    ? words.nobodyPaidNewCardFirst
+    : words.nobodyPaid;
+}
+
+/**
+ * *A seat was still empty at the cut-off* · *Kazimierz Padel said no* · *Bonarka Arena cancelled it
+ * because of the weather* — why a game is off: the club named for the three that are the club's,
+ * with its own reason after a cancel (#547); its no and its silence in the notice's words (Q105).
  */
 function calledOffWhy({
   reason,
@@ -188,12 +226,26 @@ function calledOffWhy({
   readonly clubCancelReason?: ClubCancelReason;
 }): string {
   const why = COPY.money.calledOff[reason];
-  if (reason === 'SHORT_AT_THE_CUT_OFF') return why;
+  if (!SAID_OF_THE_CLUB[reason].ofTheClub) return why;
   const clause =
     reason === 'CANCELLED_BY_THE_CLUB' && clubCancelReason !== undefined
       ? COPY.money.clubCancelled[clubCancelReason]
       : undefined;
   return [club ?? COPY.money.theClubLead, why, ...(clause === undefined ? [] : [clause])].join(' ');
+}
+
+/**
+ * ***Kazimierz Padel said no*** · ***… didn't answer in time*** — **the club's answer to a game it
+ * turned down** (Q105), off its booking's reason: the filling details' tag, which their own read
+ * cannot say, since it names one status for both. Nothing for any other ending.
+ */
+export function clubsAnswer(
+  booking: Pick<BookedGame, 'calledOffReason' | 'where'>,
+): string | undefined {
+  const reason = booking.calledOffReason;
+  if (reason === undefined || !SAID_OF_THE_CLUB[reason].answer) return undefined;
+  const club = booking.where.name;
+  return calledOffWhy({ reason, ...(club === undefined ? {} : { club }) });
 }
 
 /**
@@ -230,11 +282,11 @@ export function statusSubline(sport: Sport, status: HomeStatus): string {
  * is known. Nothing when neither is.
  */
 export function whereAside(
-  game: Pick<HomeGame, 'status' | 'courtName'>,
+  game: Pick<HomeGame, 'status' | 'fillingAgain' | 'courtName'>,
   distanceKm: number | undefined,
 ): string | undefined {
   const parts = [
-    ...(courtIsGiven(game.status) && game.courtName !== undefined ? [game.courtName] : []),
+    ...(courtIsGiven(game) && game.courtName !== undefined ? [game.courtName] : []),
     ...(distanceKm === undefined ? [] : [formatDistanceKm(distanceKm)]),
   ];
   return parts.length === 0 ? undefined : parts.join(LINE_JOIN);
@@ -261,8 +313,10 @@ export function bookedTime(
  * pays until it confirms* — the card's own line — until its deadline passes (Q98); and on a game a
  * player left, one called off or one that started short, the card's own line under the share —
  * *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off with what came back, *A seat
- * was empty* (§14.1). **A rescue seen from outside** (A4.3) is the share *I'm in* would pay over how
- * long the seat is offered — the *Seats to fill* row's own words.
+ * was empty* (§14.1). A full game gone back to filling is the share nobody pays over the card's
+ * *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (Q106). **A rescue
+ * seen from outside** (A4.3) is the share *I'm in* would pay over how long the seat is offered — the
+ * *Seats to fill* row's own words.
  */
 export function moneyRow(
   game: Pick<
@@ -277,6 +331,7 @@ export function moneyRow(
     | 'needsYou'
     | 'rescue'
     | 'answerBy'
+    | 'fillingAgain'
   >,
   now: number,
 ): FactWords {
@@ -294,7 +349,11 @@ export function moneyRow(
     case 'calledOff': {
       const why = line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })];
       return line.refundedGrosze === undefined
-        ? { label: words.yourShare, value, below: [...why, words.nobodyPaid].join(LINE_JOIN) }
+        ? {
+            label: words.yourShare,
+            value,
+            below: [...why, nobodyPaid(line.reason, words)].join(LINE_JOIN),
+          }
         : {
             label: words.refunded,
             value: formatZloty(line.refundedGrosze),
@@ -304,6 +363,7 @@ export function moneyRow(
     case 'waiting':
       return { label: words.yourShare, value, below: waitingWords(line.club, line.answerBy) };
     case 'seatOpen':
+    case 'fillingAgain':
     case 'seatEmpty':
     case 'noShow':
       return { label: share, value, below: moneyWords(line) };
@@ -339,7 +399,10 @@ export function homeCardLabel({
   day,
   money,
 }: {
-  readonly game: Pick<HomeGame, 'status' | 'sport' | 'kind' | 'club' | 'courtName' | 'startsAt'>;
+  readonly game: Pick<
+    HomeGame,
+    'status' | 'fillingAgain' | 'sport' | 'kind' | 'club' | 'courtName' | 'startsAt'
+  >;
   /** Marked *new*. */
   readonly fresh: boolean;
   /** The game's day, or nothing for an instant that names no day. */
@@ -349,7 +412,7 @@ export function homeCardLabel({
 }): string {
   const time = timeWords(game.startsAt);
   const where =
-    courtIsGiven(game.status) && game.courtName !== undefined
+    courtIsGiven(game) && game.courtName !== undefined
       ? `${clubName(game)}${SPOKEN_JOIN}${game.courtName}`
       : clubName(game);
   return [

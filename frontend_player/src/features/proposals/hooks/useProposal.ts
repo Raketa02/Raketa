@@ -22,7 +22,7 @@ import { withdrawYes } from '../use-cases/answers';
 import { readProposal } from '../use-cases/details';
 
 import { proposalKeys } from './proposalKeys';
-import { reread } from './useGroupDeck';
+import { rereadAfterWithdrawing } from './useGroupDeck';
 
 /** `null` is a game in a sport this build cannot name — read, and nothing to draw. */
 export function useProposal(proposalId: string) {
@@ -34,9 +34,9 @@ export function useProposal(proposalId: string) {
 
 /**
  * **Leave the game while the club decides** (the mechanics §13; #543) — sent as the withdrawal,
- * `DELETE /proposals/{id}/yes`, which also calls off the request to the club: nobody had paid. The
- * game leaves Home (it was waiting there), the people still In find it filling again, and the decks,
- * the details and the live yeses are read again.
+ * `DELETE /proposals/{id}/yes`, which also takes back the request to the club: nobody had paid. The
+ * game leaves the leaver's Home and stays on the others' as *Seat open*, filling again (Q106), and
+ * Home, the decks, the details and the live yeses are read again (`rereadAfterWithdrawing`).
  */
 export function useLeaveWhileWaiting(groupId: string, proposalId: string) {
   const client = useQueryClient();
@@ -46,10 +46,6 @@ export function useLeaveWhileWaiting(groupId: string, proposalId: string) {
       await withdrawYes(proposalId);
       return LEAVING_WHILE_WAITING.kind;
     },
-    onSettled: () =>
-      Promise.all([
-        reread(client, groupId, { yeses: true }),
-        client.invalidateQueries({ queryKey: proposalKeys.home() }),
-      ]),
+    onSettled: () => rereadAfterWithdrawing(client, groupId),
   });
 }

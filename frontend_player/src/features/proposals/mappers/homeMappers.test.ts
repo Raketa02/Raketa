@@ -28,6 +28,8 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
   uncounted_reason: null,
   open_seats: 0,
   needs_you: false,
+  filling_again: false,
+  club_confirms: false,
   starts_at: '2026-10-03T14:00:00Z',
   club: { id: 'club-1', name: 'Bonarka Arena' },
   court_name: 'Court 2',
@@ -223,6 +225,50 @@ describe('toHome', () => {
     expect(open).not.toHaveProperty('uncountedReason');
   });
 
+  /**
+   * **A full game gone back to filling** (#624, Q106) carries which way its line ends — asked of the
+   * club again, or booked at once — and a booked game carries nothing, from an older server too.
+   */
+  it('reads a full game gone back to filling, and whether its club is asked again', () => {
+    const [atTheClub, atOnce, booked, older] = toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      games: [
+        homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true, club_confirms: true }),
+        homeGame({ status: 'SEAT_OPEN', open_seats: 1, filling_again: true, club_confirms: false }),
+        homeGame({ status: 'SEAT_OPEN', open_seats: 1, club_confirms: true }),
+        homeGame({ status: 'SEAT_OPEN', filling_again: undefined, club_confirms: undefined }),
+      ],
+    }).games;
+
+    expect(atTheClub?.fillingAgain).toEqual({ clubConfirms: true });
+    expect(atOnce?.fillingAgain).toEqual({ clubConfirms: false });
+    expect(booked).not.toHaveProperty('fillingAgain');
+    expect(older).not.toHaveProperty('fillingAgain');
+  });
+
+  it('reads the two ways a game gone back to filling is called off', () => {
+    const [passed, lost] = toHome({
+      read_at: '2026-10-01T08:00:00Z',
+      needing_you: 0,
+      games: [
+        homeGame({
+          status: 'CALLED_OFF',
+          called_off_reason: 'BOOK_BY_PASSED',
+          filling_again: true,
+        }),
+        homeGame({
+          status: 'CALLED_OFF',
+          called_off_reason: 'COURT_HOUR_LOST',
+          filling_again: true,
+        }),
+      ],
+    }).games;
+
+    expect(passed?.calledOffReason).toBe('BOOK_BY_PASSED');
+    expect(lost?.calledOffReason).toBe('COURT_HOUR_LOST');
+  });
+
   it('drops a card in a sport this build cannot name, and keeps the rest', () => {
     const home = toHome({
       read_at: '2026-10-01T08:00:00Z',
@@ -250,6 +296,8 @@ describe('toBookedGame', () => {
     uncounted_reason: null,
     open_seats: 0,
     needs_you: false,
+    filling_again: false,
+    club_confirms: false,
     starts_at: '2026-10-03T14:00:00Z',
     ends_at: '2026-10-03T15:00:00Z',
     where: { id: 'club-1', name: 'Bonarka Arena', distance_km: 3.1 },
@@ -343,6 +391,22 @@ describe('toBookedGame', () => {
     expect(waiting?.answerBy).toBe('2026-10-03T09:00:00Z');
     expect(toBookedGame(details())).not.toHaveProperty('answerBy');
     expect(toBookedGame(details({ answer_by: undefined }))).not.toHaveProperty('answerBy');
+  });
+
+  it('reads a full game gone back to filling in detail, as Home does', () => {
+    const filling = toBookedGame(
+      details({
+        status: 'SEAT_OPEN',
+        open_seats: 1,
+        filling_again: true,
+        club_confirms: true,
+        leaving: null,
+      }),
+    );
+
+    expect(filling?.fillingAgain).toEqual({ clubConfirms: true });
+    expect(filling).not.toHaveProperty('leaving');
+    expect(toBookedGame(details())).not.toHaveProperty('fillingAgain');
   });
 
   it('is nothing for a sport this build cannot name', () => {

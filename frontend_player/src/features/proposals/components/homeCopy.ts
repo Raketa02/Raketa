@@ -61,17 +61,31 @@ export const HOME_GAME_COPY = {
     orTheGameIsOff: 'or the game is off and everyone is refunded',
     offeredToOthers: 'offered to others',
     goesAhead: 'the game goes ahead',
+    /**
+     * A full game gone back to filling (Q106): *1 seat open · Kazimierz Padel is asked again when
+     * it's full · nobody paid*, or *books when it's full* at a club that books at once.
+     */
+    askedAgain: 'is asked again when it’s full',
+    booksWhenFull: 'books when it’s full',
+    /** The same words mid-line, closing that one. */
+    nobodyPaidInLine: 'nobody paid',
     refunded: 'Refunded',
     nobodyPaid: 'Nobody paid',
+    /** After the club's no or its silence (Q105): the notice's and the email's words. */
+    nobodyPaidNewCardFirst: 'Nobody paid — you’ll get a new card first',
     /**
-     * Why a game is off (§14.1, #543, #544) — the club's two read with its name before them; the
-     * cut-off's said of the game. Keyed by the wire's reason, so a reason with no words fails here.
+     * Why a game is off (§14.1, #543, #544, #624) — the club's three read with its name before them
+     * (`homePresentation`'s `SAID_OF_THE_CLUB`); the rest said of the game. The club's no and its silence
+     * are the notice's and the email's words (Q105). Keyed by the wire's reason, so a reason with no
+     * words fails here.
      */
     calledOff: {
       SHORT_AT_THE_CUT_OFF: 'A seat was still empty at the cut-off',
-      REFUSED: 'couldn’t take it',
+      REFUSED: 'said no',
       NO_ANSWER: 'didn’t answer in time',
       CANCELLED_BY_THE_CLUB: 'cancelled it',
+      BOOK_BY_PASSED: 'A seat was open past its last moment to book',
+      COURT_HOUR_LOST: 'Its court went to another game before it filled again',
     } satisfies Readonly<Record<CalledOffReason, string>>,
     /**
      * Why the club cancelled (#547; the mechanics §16.9) — the clause after *cancelled it*. *Other*
@@ -105,6 +119,7 @@ export const HOME_GAME_COPY = {
     yourShare: 'Your share',
     refunded: 'Refunded',
     nobodyPaid: 'nobody paid',
+    nobodyPaidNewCardFirst: 'nobody paid — you’ll get a new card first',
     showAtTheDesk: 'Show at the desk',
     deskLine: 'Show this at the club’s desk when you arrive — or read them the code.',
     qrSpoken: 'Your check-in code as a QR code',

@@ -78,13 +78,20 @@ export type HomeStatus =
   | 'CALLED_OFF';
 
 /**
- * **Why a game on Home is called off** (#543, #544, #547) — the club refused the request, or did not
- * answer it in time (nobody paid in either), a seat that opened before the club's cut-off was still
- * empty at it, or the club cancelled it (everybody still in is refunded in full in both). The wire's
- * own spelling: the line under the card is keyed by it.
+ * **Why a game on Home is called off** (#543, #544, #547, #624) — the club refused the request, or did
+ * not answer it in time (nobody paid in either), a seat that opened before the club's cut-off was
+ * still empty at it, or the club cancelled it (everybody still in is refunded in full in both); and,
+ * of a full game gone back to filling, its last moment to book passed with a seat open, or its court
+ * went to another game first (nobody paid in either). The wire's own spelling: the line under the
+ * card is keyed by it.
  */
 export type CalledOffReason =
-  'REFUSED' | 'NO_ANSWER' | 'SHORT_AT_THE_CUT_OFF' | 'CANCELLED_BY_THE_CLUB';
+  | 'REFUSED'
+  | 'NO_ANSWER'
+  | 'SHORT_AT_THE_CUT_OFF'
+  | 'CANCELLED_BY_THE_CLUB'
+  | 'BOOK_BY_PASSED'
+  | 'COURT_HOUR_LOST';
 
 /**
  * **Why the club cancelled a booked game** (#547; the mechanics §16.9) — the players are told it with
