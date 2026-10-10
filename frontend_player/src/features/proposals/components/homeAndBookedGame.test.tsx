@@ -40,6 +40,8 @@ import {
   homeGame,
   stubBooking,
   stubHomeGames,
+  takenMoney,
+  unheldMoney,
 } from '@/test-support/home';
 import { deckCard, proposalDetails, stubProposal, yesPath } from '@/test-support/groupDeck';
 import {
@@ -127,7 +129,7 @@ const waitingForKazimierz = {
   status: 'WAITING_FOR_THE_CLUB',
   game_id: null,
   court_name: null,
-  money: bookedMoney({ share_grosze: 2500, paid: false, free_to_leave_until: null }),
+  money: unheldMoney({ share_grosze: 2500 }),
   answer_by: CLUB_ANSWERS_BY,
 } as const;
 const KAZIMIERZ = 'Kazimierz Padel';
@@ -149,7 +151,7 @@ const fillingAgainAtKazimierz = {
   filling_again: true,
   club_confirms: true,
   sides: { ...bookedSides(), theirs: bookedSides().theirs.slice(0, 1) },
-  money: bookedMoney({ share_grosze: 2500, paid: false, free_to_leave_until: null }),
+  money: unheldMoney({ share_grosze: 2500 }),
 } as const;
 
 /** Home is read again — what a notice arriving, or a foreground, does. */
@@ -157,8 +159,16 @@ function readHomeAgain() {
   act(() => void queryClient.invalidateQueries({ queryKey: proposalKeys.home() }));
 }
 
-/** **A cut-off an hour after the read** — Thursday 1 October, 11:00 in Warsaw. */
-const CUT_OFF_AT_ELEVEN = bookedMoney({ free_to_leave_until: '2026-10-01T09:00:00Z' });
+/** **A cut-off an hour after the read** — Thursday 1 October, 11:00 in Warsaw: held until then. */
+const ELEVEN = '2026-10-01T09:00:00Z';
+const CUT_OFF_AT_ELEVEN = bookedMoney({ free_to_leave_until: ELEVEN, taken_at: ELEVEN });
+
+/**
+ * **A game filled far ahead** (Q113; the mechanics §12.2): the reader's card was only checked, and
+ * the share is held at its Holding time — Thursday 1 October, 11:00 in Warsaw, an hour after the
+ * read — then taken at the cut-off on Friday at 16:00.
+ */
+const CHECKED_UNTIL_ELEVEN = bookedMoney({ share_state: 'CHECKED', held_from: ELEVEN });
 
 // ---------------------------------------------------------------------------
 // Home
@@ -173,38 +183,43 @@ describe('Home — a booked game’s card (A8)', () => {
     expect(within(drawn).getByText(HOME.status.BOOKED)).toBeTruthy();
     expect(within(drawn).getByText('Bonarka Arena')).toBeTruthy();
     expect(within(drawn).getByText('Saturday')).toBeTruthy();
-    expect(
-      within(drawn).getByText('Paid · 28 zł · 27,18 zł back if you leave by Fri 16:00'),
-    ).toBeTruthy();
+    expect(within(drawn).getByText('28 zł · free to leave until Fri 16:00')).toBeTruthy();
     expect(screen.getByRole('button', { name: HOME.openGame })).toBeTruthy();
     expect(screen.getByText('Your games · 1')).toBeTruthy();
   });
 
-  it('says what a leaver gets back as part of the line, and drops it at the cut-off (Q99)', async () => {
+  /** Q113: held at the fill and taken at the cut-off — leaving before it takes nothing. */
+  it('says the share is free to leave until the cut-off, and Paid from it by itself', async () => {
     stubHomeGames(transport, [homeGame({ money: CUT_OFF_AT_ELEVEN })]);
     await launchSignedIn();
 
     const drawn = await card();
-    expect(
-      within(drawn).getByText('Paid · 28 zł · 27,18 zł back if you leave by Thu 11:00'),
-    ).toBeTruthy();
-    expect(
-      screen.getByLabelText(/Paid, 28 zł, 27,18 zł back if you leave by Thu 11:00\./),
-    ).toBeTruthy();
+    expect(within(drawn).getByText('28 zł · free to leave until Thu 11:00')).toBeTruthy();
+    expect(screen.getByLabelText(/28 zł, free to leave until Thu 11:00\./)).toBeTruthy();
 
-    // The read's clock runs on while the cut-off is ahead, so the clause leaves by itself.
+    // The read's clock runs on while the cut-off is ahead, so the line turns at it by itself.
     act(() => jest.advanceTimersByTime(HOUR));
     expect(await within(await card()).findByText('Paid · 28 zł')).toBeTruthy();
-    expect(screen.queryByText(/back if you leave/)).toBeNull();
+    expect(screen.queryByText(/free to leave/)).toBeNull();
   });
 
-  it('says nothing of leaving from a server that sends no figure — and never that it is free', async () => {
-    const { back_if_you_leave_grosze: _figure, ...older } = bookedMoney();
-    stubHomeGames(transport, [homeGame({ money: older as Wire['BookedMoneySchema'] })]);
+  it('says the same while the reader’s card was only checked, the share to be held later', async () => {
+    stubHomeGames(transport, [homeGame({ money: CHECKED_UNTIL_ELEVEN })]);
+    await launchSignedIn();
+
+    expect(
+      await within(await card()).findByText('28 zł · free to leave until Fri 16:00'),
+    ).toBeTruthy();
+  });
+
+  it('reads Paid once the read says the share was taken', async () => {
+    stubHomeGames(transport, [
+      homeGame({ money: takenMoney(), sides: bookedSides({ paid: true }) }),
+    ]);
     await launchSignedIn();
 
     expect(await within(await card()).findByText('Paid · 28 zł')).toBeTruthy();
-    expect(screen.queryByText(/back if you leave|free to leave/)).toBeNull();
+    expect(screen.queryByText(/free to leave|back if you leave/)).toBeNull();
   });
 
   it.each<[Wire['HomeStatus'], Partial<Wire['HomeGameSchema']>, string | undefined]>([
@@ -213,18 +228,18 @@ describe('Home — a booked game’s card (A8)', () => {
       {
         game_id: null,
         court_name: null,
-        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+        money: unheldMoney(),
       },
       'Nobody pays until Bonarka Arena confirms',
     ],
     [
       'SEAT_OPEN',
       { open_seats: 2, sides: { ...bookedSides(), theirs: [] } },
-      '2 seats open · fills by Fri 16:00 or the game is off and everyone is refunded',
+      '2 seats open · fills by Fri 16:00 or the game is off and nothing is taken',
     ],
     [
       'SEAT_OPEN',
-      { open_seats: 1, money: bookedMoney({ free_to_leave_until: null }) },
+      { open_seats: 1, money: takenMoney() },
       '1 seat open · offered to others · the game goes ahead',
     ],
     ['NEEDS_RESULT', { needs_you: true }, undefined],
@@ -232,23 +247,33 @@ describe('Home — a booked game’s card (A8)', () => {
     ['COUNTED', {}, undefined],
     [
       'UNCOUNTED',
-      { uncounted_reason: 'SEAT_EMPTY', money: bookedMoney({ free_to_leave_until: null }) },
+      { uncounted_reason: 'SEAT_EMPTY', money: takenMoney() },
       'A seat was empty · no Level moved',
     ],
     [
       'CALLED_OFF',
+      { called_off_reason: 'SHORT_AT_THE_CUT_OFF', money: unheldMoney() },
+      'A seat was still empty at the cut-off · Nothing was taken',
+    ],
+    [
+      'CALLED_OFF',
+      { called_off_reason: 'CANCELLED_BY_THE_CLUB', money: unheldMoney() },
+      'Bonarka Arena cancelled it · Nothing was taken',
+    ],
+    [
+      'CALLED_OFF',
       {
-        called_off_reason: 'SHORT_AT_THE_CUT_OFF',
-        money: bookedMoney({ free_to_leave_until: null, refunded_grosze: 2800 }),
+        called_off_reason: 'CANCELLED_BY_THE_CLUB',
+        money: unheldMoney({ paid: true, refunded_grosze: 2800 }),
       },
-      'A seat was still empty at the cut-off · Refunded 28 zł',
+      'Bonarka Arena cancelled it · Refunded 28 zł',
     ],
     [
       'CALLED_OFF',
       {
         called_off_reason: 'REFUSED',
         game_id: null,
-        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+        money: unheldMoney(),
       },
       'Bonarka Arena said no · Nobody paid — you’ll get a new card first',
     ],
@@ -257,7 +282,7 @@ describe('Home — a booked game’s card (A8)', () => {
       {
         called_off_reason: 'NO_ANSWER',
         game_id: null,
-        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+        money: unheldMoney(),
       },
       'Bonarka Arena didn’t answer in time · Nobody paid — you’ll get a new card first',
     ],
@@ -280,7 +305,7 @@ describe('Home — a booked game’s card (A8)', () => {
         status: 'WAITING_FOR_THE_CLUB',
         game_id: null,
         court_name: null,
-        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+        money: unheldMoney(),
       }),
     ]);
     await launchSignedIn();
@@ -390,7 +415,7 @@ describe('Home — a booked game’s card (A8)', () => {
     await card();
     expect(await screen.findByRole('button', { name: OPEN_THE_CHAT })).toBeTruthy();
     expect(
-      screen.getByLabelText(/^Booked, new\. Padel\. .* back if you leave by Fri 16:00\.$/),
+      screen.getByLabelText(/^Booked, new\. Padel\. .* free to leave until Fri 16:00\.$/),
     ).toBeTruthy();
     expect(screen.queryByLabelText(/Chat open/)).toBeNull();
   });
@@ -538,6 +563,7 @@ describe('Home — a booked game’s card (A8)', () => {
         share_grosze: 3200,
         book_by: '2026-10-02T11:00:00Z',
         confirm_by: null,
+        time_to: null,
       },
     ]);
     stubHomeGames(transport, [], { needing_you: 1 });
@@ -675,7 +701,7 @@ describe('a booked game’s details (A4.1)', () => {
   });
 
   it('draws the game card: the status, the tiles with paid, the vs line and the court', async () => {
-    await openDetails();
+    await openDetails(bookingDetails({ money: takenMoney(), sides: bookedSides({ paid: true }) }));
 
     expect(await screen.findByRole('header', { name: HOME.status.BOOKED })).toBeTruthy();
     expect(screen.getByLabelText('You, level 2,71, paid')).toBeTruthy();
@@ -687,21 +713,50 @@ describe('a booked game’s details (A4.1)', () => {
     expect(screen.getByLabelText('Where, Bonarka Arena, Court 2 · 3,1 km')).toBeTruthy();
     expect(screen.getByLabelText('Day, Saturday, 3 Oct')).toBeTruthy();
     expect(screen.getByLabelText('Time, 16:00, until 17:00')).toBeTruthy();
+    expect(screen.getByLabelText('Paid, 28 zł, Paid')).toBeTruthy();
+  });
+
+  /** Q113: the money row says when the share is held and when it is taken. */
+  it('says the share is held on the card, when it is taken, and free to leave until then', async () => {
+    await openDetails();
+
     expect(
-      screen.getByLabelText('Paid, 28 zł, Paid · 27,18 zł back if you leave by Fri 16:00'),
+      await screen.findByLabelText(
+        'Your share, 28 zł, Held on your card · taken Fri 16:00 · free to leave until then',
+      ),
+    ).toBeTruthy();
+    // Held is not paid: no tile says so before the cut-off.
+    expect(screen.getByLabelText('You, level 2,71')).toBeTruthy();
+    expect(screen.queryByText(/back if you leave|card fee/)).toBeNull();
+  });
+
+  it('says when a checked share is held, and turns to held on the card at that time by itself', async () => {
+    await openDetails(bookingDetails({ money: CHECKED_UNTIL_ELEVEN }));
+
+    expect(
+      await screen.findByLabelText('Your share, 28 zł, Held from Thu 11:00 · taken Fri 16:00'),
+    ).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(HOUR));
+    expect(
+      await screen.findByLabelText(
+        'Your share, 28 zł, Held on your card · taken Fri 16:00 · free to leave until then',
+      ),
     ).toBeTruthy();
   });
 
-  it('drops what a leaver gets back from the money row at the cut-off (Q99)', async () => {
+  it('turns to Paid at the cut-off by itself', async () => {
     await openDetails(bookingDetails({ money: CUT_OFF_AT_ELEVEN }));
 
     expect(
-      await screen.findByLabelText('Paid, 28 zł, Paid · 27,18 zł back if you leave by Thu 11:00'),
+      await screen.findByLabelText(
+        'Your share, 28 zł, Held on your card · taken Thu 11:00 · free to leave until then',
+      ),
     ).toBeTruthy();
 
     act(() => jest.advanceTimersByTime(HOUR));
     expect(await screen.findByLabelText('Paid, 28 zł, Paid')).toBeTruthy();
-    expect(screen.queryByText(/back if you leave/)).toBeNull();
+    expect(screen.queryByText(/free to leave/)).toBeNull();
   });
 
   it('says the seat open and when it must fill, the leaver’s seat empty (§14.1)', async () => {
@@ -718,18 +773,18 @@ describe('a booked game’s details (A4.1)', () => {
     expect(screen.getByTestId('game-tile-empty')).toBeTruthy();
     expect(
       screen.getByLabelText(
-        'Paid, 28 zł, 1 seat open · fills by Fri 16:00 or the game is off and everyone is refunded',
+        'Your share, 28 zł, 1 seat open · fills by Fri 16:00 or the game is off and nothing is taken',
       ),
     ).toBeTruthy();
     expect(screen.queryByText(BALANCE_FORECAST)).toBeNull();
   });
 
-  it('says why a game was called off, and what came back', async () => {
+  it('says why a game was called off at its cut-off, and that nothing was taken', async () => {
     await openDetails(
       bookingDetails({
         status: 'CALLED_OFF',
         called_off_reason: 'SHORT_AT_THE_CUT_OFF',
-        money: bookedMoney({ free_to_leave_until: null, refunded_grosze: 2800 }),
+        money: unheldMoney(),
         shows_forecast: false,
         leaving: null,
       }),
@@ -738,7 +793,27 @@ describe('a booked game’s details (A4.1)', () => {
 
     expect(await screen.findByRole('header', { name: HOME.status.CALLED_OFF })).toBeTruthy();
     expect(
-      screen.getByLabelText('Refunded, 28 zł, A seat was still empty at the cut-off'),
+      screen.getByLabelText(
+        'Your share, 28 zł, A seat was still empty at the cut-off · nothing was taken',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Refunded/)).toBeNull();
+  });
+
+  it('says what came back from a game its club cancelled after the cut-off', async () => {
+    await openDetails(
+      bookingDetails({
+        status: 'CALLED_OFF',
+        called_off_reason: 'CANCELLED_BY_THE_CLUB',
+        money: unheldMoney({ paid: true, refunded_grosze: 2800 }),
+        shows_forecast: false,
+        leaving: null,
+      }),
+      [],
+    );
+
+    expect(
+      await screen.findByLabelText('Refunded, 28 zł, Bonarka Arena cancelled it'),
     ).toBeTruthy();
   });
 
@@ -941,7 +1016,7 @@ describe('the club’s no and its silence (Q105)', () => {
       called_off_reason: reason,
       game_id: null,
       court_name: null,
-      money: bookedMoney({ share_grosze: 2500, paid: false, free_to_leave_until: null }),
+      money: unheldMoney({ share_grosze: 2500 }),
     }) as const;
 
   it.each<[string, 'REFUSED' | 'NO_ANSWER']>([
@@ -1047,7 +1122,7 @@ describe('the chat — from the details (A4.4)', () => {
         status: 'WAITING_FOR_THE_CLUB',
         game_id: null,
         court_name: null,
-        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+        money: unheldMoney(),
         leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
       }),
       [bookedRoomRow()],

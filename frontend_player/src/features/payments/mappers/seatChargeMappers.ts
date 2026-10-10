@@ -46,7 +46,8 @@ export function toPaymentToConfirm(wire: Schemas['SeatChargeResponse']): Payment
 
 function toReceipt(wire: Schemas['ReceiptSchema']): Receipt | undefined {
   const sport = toSport(wire.sport);
-  if (sport === undefined) return undefined;
+  // A hold let go (#641) is the row's to draw (#644) — until then it would read as a refund.
+  if (sport === undefined || wire.kind === 'RELEASED') return undefined;
   return {
     seatChargeId: wire.seat_charge_id,
     kind: wire.kind,
@@ -57,7 +58,10 @@ function toReceipt(wire: Schemas['ReceiptSchema']): Receipt | undefined {
   };
 }
 
-/** The list in the server's order — a row whose sport this build cannot name is left out. */
+/**
+ * The list in the server's order — a row whose sport this build cannot name is left out, and so is a
+ * hold let go, until the row draws it (#644).
+ */
 export function toReceipts(wire: Schemas['ReceiptsResponse']): readonly Receipt[] {
   return wire.receipts.map(toReceipt).filter((row): row is Receipt => row !== undefined);
 }

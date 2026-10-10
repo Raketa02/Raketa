@@ -117,6 +117,7 @@ describe('the payments to confirm', () => {
     seat_charge_id: 'a2000000-0000-4000-8000-000000000001',
     refusal,
     confirm_by: confirmBy,
+    time_to: confirmBy === null ? null : ('FIX_THE_CARD' as const),
   });
 
   it('reads each as the live yes it reopened, with its payment', () => {

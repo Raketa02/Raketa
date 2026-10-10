@@ -9,7 +9,7 @@
  * │ ▎WHERE  Bonarka Arena  Court 2   (P)(I)(B)│   the facts on the status's accent line, the others
  * │ ▎DAY    Saturday  3 Oct                   │
  * │ ▎TIME   16:00  until 17:00                │
- * │ Paid · 30 zł · 28,55 zł back if you leave…│   the money line — none on a result state
+ * │ 30 zł · free to leave until Fri 16:00     │   the money line — none on a result state
  * │ [ Open game                        ] [◯]  │   the two doors: the details, and the chat
  * └───────────────────────────────────────────┘
  * ```

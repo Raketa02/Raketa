@@ -3,8 +3,9 @@
  * Home and details suites build on (#556).
  *
  * One game throughout: *you + Piotr against Inés + Bartek* at Bonarka Arena, Court 2, on Saturday 3
- * October 2026 at 16:00 in Warsaw, booked and paid, 27,18 zł back if you leave by Friday 16:00.
- * Each suite moves only what it is about — the status, the money, the day — off these.
+ * October 2026 at 16:00 in Warsaw, booked, every share held until the club's cut-off on Friday at
+ * 16:00 and free to leave until then (Q113). Each suite moves only what it is about — the status,
+ * the money, the day — off these.
  */
 
 import type { Transport, Wire } from './transport';
@@ -47,39 +48,59 @@ function seat(
     photo_id: null,
     photo_url: null,
     level,
-    paid: true,
+    paid: false,
     checked_in: false,
     ...extra,
   };
 }
 
-/** The four, the reader's side first and the reader first on it, as the wire orders them. */
-export function bookedSides(): Wire['BookedSidesSchema'] {
+/**
+ * The four, the reader's side first and the reader first on it, as the wire orders them — each
+ * *paid* once the shares are taken (`paid`), which is never before the cut-off (Q113).
+ */
+export function bookedSides({
+  paid = false,
+}: { readonly paid?: boolean } = {}): Wire['BookedSidesSchema'] {
   return {
     yours: [
-      seat(GATE_USER.id, GATE_USER.name ?? 'Ada', 2.71, { is_you: true }),
-      seat(PIOTR, 'Piotr Sowa', 2.95),
+      seat(GATE_USER.id, GATE_USER.name ?? 'Ada', 2.71, { is_you: true, paid }),
+      seat(PIOTR, 'Piotr Sowa', 2.95, { paid }),
     ],
-    theirs: [seat(INES, 'Inés Díaz', 3.4), seat(BARTEK, 'Bartek Lis', 2.35)],
+    theirs: [seat(INES, 'Inés Díaz', 3.4, { paid }), seat(BARTEK, 'Bartek Lis', 2.35, { paid })],
   };
 }
 
 /**
- * Paid, 28 zł a seat, 27,18 zł back if you leave by Friday 16:00 — the details' *Leave the game*
- * figure — and nothing refunded. **The figure goes with the cut-off**, as the server sends it (Q99):
- * a suite that clears the cut-off clears it too, unless it says otherwise.
+ * 28 zł a seat, **held** on the card until the club's cut-off on Friday at 16:00, free to leave
+ * until then, and nothing refunded (Q113).
  */
 export function bookedMoney(
   extra: Partial<Wire['BookedMoneySchema']> = {},
 ): Wire['BookedMoneySchema'] {
   return {
     share_grosze: 2800,
-    paid: true,
+    paid: false,
+    share_state: 'HELD',
+    held_from: null,
+    taken_at: BOOKED_CUT_OFF,
     free_to_leave_until: BOOKED_CUT_OFF,
-    back_if_you_leave_grosze: extra.free_to_leave_until === null ? null : 2718,
     refunded_grosze: null,
     ...extra,
   };
+}
+
+/** The same 28 zł **taken** at the cut-off, as a read after it says (Q113). */
+export function takenMoney(
+  extra: Partial<Wire['BookedMoneySchema']> = {},
+): Wire['BookedMoneySchema'] {
+  return bookedMoney({ paid: true, share_state: 'TAKEN', free_to_leave_until: null, ...extra });
+}
+
+/** Nobody's money on the game — waiting for its club or for a payment, or called off (#637). */
+export function unheldMoney(
+  extra: Partial<Wire['BookedMoneySchema']> = {},
+): Wire['BookedMoneySchema'] {
+  return bookedMoney({ share_state: null, taken_at: null, free_to_leave_until: null, ...extra });
 }
 
 /** One card on Home. */
@@ -106,6 +127,7 @@ export function homeGame(extra: Partial<Wire['HomeGameSchema']> = {}): Wire['Hom
     answer_by: null,
     payment_due_by: null,
     your_payment_due_by: null,
+    time_to: null,
     ...extra,
   };
 }
@@ -146,11 +168,12 @@ export function bookingDetails(
     money: bookedMoney(),
     shows_forecast: true,
     check_in: null,
-    leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: 2718, card_fee_grosze: 82 },
+    leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: null, card_fee_grosze: null },
     rescue: null,
     answer_by: null,
     payment_due_by: null,
     your_payment_due_by: null,
+    time_to: null,
     ...extra,
   };
 }

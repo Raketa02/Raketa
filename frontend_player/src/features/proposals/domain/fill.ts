@@ -151,7 +151,7 @@ export interface YesAnswer {
  * - `paymentAwaited` — this yes filled the game and somebody else's share was refused (#625; Q110): nobody
  *   paid, and the game is on Home *waiting for one payment* until `until`, by the booking's id — the
  *   proposal's own. *It's a game!*, for this player alone, with what is still missing. When the
- *   payment comes in the others are told *booked · you paid*, never a second *It's a game!*.
+ *   payment comes in the others are told *booked · 40 zł held*, never a second *It's a game!*.
  * - `counted` — a vote, as every other: seats still open.
  */
 export type FillOutcome =

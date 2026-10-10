@@ -28,11 +28,11 @@ import {
 } from '@/test-support/groupDeck';
 import {
   BOOKING,
-  bookedMoney,
   bookingDetails,
   homeGame,
   stubBooking,
   stubHomeGames,
+  unheldMoney,
 } from '@/test-support/home';
 import {
   DEVICES_PATH,
@@ -118,7 +118,7 @@ function notice(extra: Partial<Wire['NoticeSchema']> = {}): Wire['NoticeSchema']
   return {
     notice_id: `d0000000-0000-4000-8000-${String(given).padStart(12, '0')}`,
     kind: 'GAME_BOOKED',
-    title: 'It’s a game! · you paid 30 zł',
+    title: 'It’s a game! · 30 zł held',
     body: 'Padel · Sat 16:00 · Bonarka Arena',
     given_at: '2026-10-02T12:05:00Z',
     opens: 'BOOKING',
@@ -255,11 +255,11 @@ describe('the Notifications screen', () => {
   // The screens A7.2 as #620 amends it: the mechanics §17.2's always-on notices, eleven rows.
   it('lists the eleven always on, each inert with its green tag (mock 52)', async () => {
     const rows = [
-      'It’s a game! · you paid',
+      'It’s a game! · held',
       'It’s a game! · the club answers by …',
       'Waiting for one payment',
       'Confirm your payment by … to keep your seat',
-      'Game called off · with the refund',
+      'Game called off · nothing was taken, or with the refund',
       'Someone left your game · or it’s filling again',
       'You’ve been refunded',
       'The club confirmed / said no / didn’t answer in time',
@@ -667,7 +667,7 @@ describe('a notice while the app is open, on a phone not pushed', () => {
 
   // Q102: the yes that filled the game saw It's a game!; somebody else's act is still told.
   it('never draws the player’s own — the newest of somebody else’s is drawn instead', async () => {
-    const OWN = notice({ title: 'It’s a game! · you paid 40 zł', your_own: true });
+    const OWN = notice({ title: 'It’s a game! · 40 zł held', your_own: true });
     await launchSignedIn();
     await screen.findByLabelText('You');
     await sessionReadTheList();
@@ -680,7 +680,7 @@ describe('a notice while the app is open, on a phone not pushed', () => {
   });
 
   it('lists the player’s own, and never draws it as the banner', async () => {
-    const OWN = notice({ title: 'It’s a game! · you paid 40 zł', your_own: true });
+    const OWN = notice({ title: 'It’s a game! · 40 zł held', your_own: true });
     await launchSignedIn();
     await screen.findByLabelText('You');
     await sessionReadTheList();
@@ -717,7 +717,7 @@ describe('a notice while the app is open, on a phone not pushed', () => {
         status: 'WAITING_FOR_THE_CLUB',
         game_id: null,
         court_name: null,
-        money: bookedMoney({ paid: false, free_to_leave_until: null }),
+        money: unheldMoney(),
       }),
     ]);
     stubNotices(transport, [MATCHED]);

@@ -107,7 +107,7 @@ export function useHomeBadge(): number | undefined {
 /**
  * **Now, on the read's clock** — the read's `read_at` moved on by however long the phone has held
  * it. While a card's cut-off or its club's deadline is still ahead the clock ticks
- * (`useDeckClock`'s thirty seconds, `lineCanRunOut`), so *back if you leave by Sat 17:00* and
+ * (`useDeckClock`'s thirty seconds, `lineCanRunOut`), so *free to leave until Sat 17:00* and
  * *answers by 20:45* switch at that instant by themselves, as the wire asks; otherwise it stands at
  * the read.
  */

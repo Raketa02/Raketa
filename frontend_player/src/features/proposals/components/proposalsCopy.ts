@@ -75,8 +75,9 @@ export const PROPOSALS_COPY = {
     bookBy: 'book by',
     forecast: 'Balance forecast',
     overlap: 'Who is free',
+    /** A game still filling (A4.2): held at the fill, taken at the club's cut-off (Q113). */
     whatAYesMeans:
-      'Your yes costs nothing until everybody is in. When the last yes lands, everyone’s share is charged together and the court is booked.',
+      'Your yes costs nothing until everybody is in. When the last yes lands, everyone’s share is held and the court is booked; it’s taken at the club’s cut-off.',
     withdraw: 'Withdraw',
     gone: 'This game isn’t dealt to you any more.',
     /**

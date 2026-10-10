@@ -14,7 +14,7 @@
  * booked game's details (#556), so the walk is the details' now.
  */
 
-import { screen, waitFor } from 'expo-router/testing-library';
+import { screen, waitFor, within } from 'expo-router/testing-library';
 
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
@@ -167,8 +167,11 @@ describe('present and absent', () => {
     await openTheGame();
 
     expect(await screen.findByText(BALANCE_FORECAST)).toBeTruthy();
-    expect(screen.getByText('2,70')).toBeTruthy();
-    expect(screen.getByText('2,71')).toBeTruthy();
+    // The strengths, read in the block's own split: a tile above prints a Level too (Q113 left a
+    // held share's tile without *paid*, so the reader's reads a bare 2,71).
+    const split = screen.getByLabelText(/, gap −0,01$/);
+    expect(within(split).getByText('2,70')).toBeTruthy();
+    expect(within(split).getByText('2,71')).toBeTruthy();
     expect(screen.getByText(GAP_WORD)).toBeTruthy();
     expect(screen.getByText('90%')).toBeTruthy();
     expect(screen.getByText(balanceWord(90))).toBeTruthy();

@@ -112,11 +112,18 @@ export type UncountedReason = 'SEAT_EMPTY' | 'NO_SHOW';
 
 /**
  * **What *Leave the game* costs right now** (the mechanics §13; #544) — before the club's cut-off
- * (refunded at once, less the card fee), after it (refunded only when somebody takes the seat), or
- * while an On request club decides (nobody has paid; leaving withdraws the yes). The sheet's words
- * are keyed by it.
+ * (nothing is taken: the hold on the card is let go, Q113), after it (the share stays taken, and
+ * comes back less the fee kept on it only when somebody takes the seat), or while an On request
+ * club decides (nobody has paid; leaving withdraws the yes). The sheet's words are keyed by it.
  */
 export type LeavingKind = 'BEFORE_THE_CUT_OFF' | 'AFTER_THE_CUT_OFF' | 'WHILE_WAITING_FOR_THE_CLUB';
+
+/**
+ * **Where the shares of a booked game stand** (the mechanics §12.2; Q113) — held on the cards until
+ * the club's cut-off, the reader's only checked because a hold would not last that long (held at
+ * its holding time, four days before the cut-off), or taken.
+ */
+export type ShareState = 'HELD' | 'CHECKED' | 'TAKEN';
 
 /**
  * **Where a game still filling stands, for its details** (the mechanics §14.2; #542) — filling,

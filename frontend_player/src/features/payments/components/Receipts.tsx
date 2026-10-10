@@ -12,7 +12,7 @@
  * │ [↩]  Ogrody 33                 +26,58 zł │   a refund: ↩ on mintSoft, the amount in mintInk
  * │      Padel · Saturday · 18:00            │
  * └──────────────────────────────────────────┘
- * Refunds: BLIK within hours · cards up to two weeks.
+ * Refunds can take up to two weeks to reach your card.
  * ```
  *
  * **The club is the title** — the seller, named on every receipt (§12.1) — and the game under it.

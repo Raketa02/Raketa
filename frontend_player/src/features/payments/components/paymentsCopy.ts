@@ -12,10 +12,11 @@
  * recorded acceptance into a record of something nobody agreed to. The version is the day the
  * words were settled.
  *
- * They are §12.5 compressed, as the screens ask, from the mock's own sentences (45): who charges,
- * when, what leaving costs before and after the cut-off — and the one promise the mock dropped and
- * the terms make, that a game still short at the cut-off is called off with everything back. The
- * wording is reviewed by a lawyer before launch (open item O3), and ships under a new version.
+ * They are §12.5's words (Q113) less its first sentence — *Your card is saved* is not yet true on
+ * the step that shows them: who holds the share and when, the card check on a game far ahead, the
+ * take at the club's cut-off, what leaving costs before and after it, and that a game still short at
+ * the cut-off is called off with nothing taken. The wording is reviewed by a lawyer before launch
+ * (open item O3) — the clause after the cut-off above all — and ships under a new version.
  *
  * ## The wallet's name, in one place
  *
@@ -48,8 +49,9 @@ export const PAYMENTS_TITLE = 'Payments';
 /**
  * The identifier the backend holds in force and records with an acceptance (#536). Sent back with
  * *Accept and continue*; a phone showing any other words is refused (`payment_terms_outdated`).
+ * Since #637 it is Q113's, and a player who accepted an earlier version is asked again.
  */
-export const PAYMENT_TERMS_VERSION = '2026-09-29';
+export const PAYMENT_TERMS_VERSION = '2026-10-10';
 
 /** One run of the terms' text — bold where the mock sets it bold. */
 export interface TermsRun {
@@ -57,18 +59,39 @@ export interface TermsRun {
   readonly strong?: boolean;
 }
 
-/** The terms, version `2026-09-29` — the mechanics §12.5, compressed. Frozen: see the module note. */
+/** The terms, version `2026-10-10` — the mechanics §12.5 (Q113). Frozen: see the module note. */
 export const PAYMENT_TERMS: readonly TermsRun[] = [
   { text: 'When a game you said yes to fills, ' },
   { text: 'the club it is played at', strong: true },
   {
     text:
-      ' charges your share at once — the court’s price divided by the players. Free to leave ' +
-      'until the club’s cut-off — refunded minus the card fee; after it, refunded when someone ' +
-      'takes your seat. A game still missing a player at the cut-off is called off, and everyone ' +
-      'gets everything back.',
+      ' holds your share on your card — the court’s price divided by the players. If that hold ' +
+      'would not last until the club’s cut-off, your card is checked when the game fills (your ' +
+      'share held for a moment and let go), and your share is held four days before the cut-off. ' +
+      'Your share is taken at the club’s cut-off. Leave before the cut-off and nothing is taken. ' +
+      'After the cut-off your seat is offered to others; if someone takes it, you get your share ' +
+      'back less what was kept on your payment, and you see the exact sum before you leave. If a ' +
+      'game is still missing a player at the cut-off, it is called off and nothing is taken.',
   },
 ];
+
+/**
+ * **The runs earlier versions showed, by version** — kept, as the module note asks, so an acceptance
+ * recorded under one still points at what it was shown, bold where it was. Never shown again.
+ */
+export const RETIRED_PAYMENT_TERMS: Readonly<Record<string, readonly TermsRun[]>> = {
+  '2026-09-29': [
+    { text: 'When a game you said yes to fills, ' },
+    { text: 'the club it is played at', strong: true },
+    {
+      text:
+        ' charges your share at once — the court’s price divided by the players. Free to leave ' +
+        'until the club’s cut-off — refunded minus the card fee; after it, refunded when someone ' +
+        'takes your seat. A game still missing a player at the cut-off is called off, and everyone ' +
+        'gets everything back.',
+    },
+  ],
+};
 
 /** The terms as one string — their spoken form, and what a suite reads. */
 export const PAYMENT_TERMS_TEXT = PAYMENT_TERMS.map((run) => run.text).join('');
@@ -127,10 +150,10 @@ export const PAYMENTS_COPY = {
   accept: 'Accept and continue',
   accepting: 'Accepting…',
   bankLine:
-    'One-time 3-D Secure check — it lets the club charge your share later without you present.',
+    'One-time 3-D Secure check — it lets the club hold and take your share later without you present.',
   askTheBank: 'Open the bank app · confirm',
   asking: 'Waiting for your bank…',
-  /** The merchant the wallet's own sheet names — Raketa keeps the card; the clubs charge it. */
+  /** The merchant the wallet's own sheet names — Raketa keeps the card; the clubs hold and take it. */
   walletSheet: 'Raketa',
   chooseAgain: 'Change how you pay',
   /** What the open step says went wrong — every failure but a refusal the server named itself. */
@@ -150,14 +173,19 @@ export const PAYMENTS_COPY = {
     adult_attestation_missing: 'Finish Start playing before you save a way to pay.',
   } as Readonly<Record<string, string>>,
   method: {
-    charged: 'Charged by the club when a game fills',
+    /** The method card's line (the screens A7.3, Q113). */
+    heldAndTaken: 'Held when a game fills · taken by the club at its cut-off',
     change: 'Change',
     remove: 'Remove this method',
     removing: 'Removing…',
     keep: 'Keep this one',
     termsAgainTitle: 'Accept the terms again',
+    /**
+     * Either reason the read's `terms_needed` names, which it does not tell apart (#637): words no
+     * longer in force, or a card its bank moved to another brand.
+     */
     termsAgainLine:
-      'Your bank moved this card to another network. Clubs can’t charge it until you accept the terms again.',
+      'Clubs can’t hold your share on this card until you accept the terms in force — they changed, or your bank moved the card to another network.',
     termsAgain: 'Accept the terms',
   },
   /**
@@ -167,13 +195,14 @@ export const PAYMENTS_COPY = {
   setupSheet: {
     title: 'Before your first yes',
     close: 'Close the payment setup — your yes is not sent',
-    line: 'Save how you pay. The club charges your share only when a game you said yes to fills.',
+    line: 'Save how you pay. Nothing is held until a game you said yes to fills, and nothing is taken before the club’s cut-off.',
   },
   /** *RECEIPTS* (mock 49) — the club named as the seller, newest first. */
   receipts: {
     title: 'Receipts',
     empty: 'Nothing yet — charges and refunds land here, with the club named as the seller.',
-    footer: 'Refunds: BLIK within hours · cards up to two weeks.',
+    /** Under the rows — no BLIK line while BLIK isn't offered (the screens A7.3, Q113). */
+    footer: 'Refunds can take up to two weeks to reach your card.',
     today: 'Today',
     tomorrow: 'Tomorrow',
     yesterday: 'Yesterday',
@@ -204,7 +233,7 @@ export function methodBadge(method: SavedMethod): string {
 /** The method card's spoken name — the badge's words say the brand, which a square cannot. */
 export function methodCardLabel(method: SavedMethod): string {
   const through = method.wallet === null ? '' : `, in ${PAY_WITH_NAME[method.wallet]}`;
-  return `${cardLine(method)}${through}. ${PAYMENTS_COPY.method.charged}`;
+  return `${cardLine(method)}${through}. ${PAYMENTS_COPY.method.heldAndTaken}`;
 }
 
 /** *Changing* — the line over the checklist, saying the old method still pays until then. */

@@ -3,7 +3,8 @@
  * the one `Exact` in `@/shared/vocabulary/wireAgreement`, as `proposals` and `games` assert theirs.
  * A wallet added, removed or renamed on the wire fails here, where the method card's badge and the
  * row's line are keyed by it; so does a refusal, which the confirmation is worded by.
- * A receipt's kind is one of them too: refunds joined the list with the leaving rules (#544).
+ * A receipt's kind is one of them too: refunds joined the list with the leaving rules (#544), and
+ * a hold let go (`RELEASED`, #641) is left out by the mapper until the row draws it (#644).
  */
 
 import type { components } from '@/generated/schema';
@@ -18,5 +19,5 @@ type Schemas = components['schemas'];
 export const PAYMENTS_VOCABULARY_AGREES: {
   readonly wallet: Exact<Wallet, Schemas['Wallet']>;
   readonly chargeRefusal: Exact<ChargeRefusal, Schemas['FailureReason']>;
-  readonly receiptKind: Exact<ReceiptKind, Schemas['ReceiptSchema']['kind']>;
+  readonly receiptKind: Exact<ReceiptKind, Exclude<Schemas['ReceiptSchema']['kind'], 'RELEASED'>>;
 } = { wallet: true, chargeRefusal: true, receiptKind: true };

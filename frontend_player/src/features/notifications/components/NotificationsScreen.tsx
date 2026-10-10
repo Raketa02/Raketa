@@ -7,7 +7,7 @@
  * ‹ Notifications
  * [ Your phone doesn't show Raketa's notifications yet …   (Allow notifications) ]   while it may not
  * ALWAYS ON
- * ┌ It's a game! · you paid                         (on) ┐   inert rows, the green tag
+ * ┌ It's a game! · held                             (on) ┐   inert rows, the green tag
  * │ …                                                    │
  * └──────────────────────────────────────────────────────┘
  * YOUR CHOICE

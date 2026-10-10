@@ -46,7 +46,6 @@ import type { SetupStepName, SetupStepState } from '../domain/setupSteps';
 import {
   PAYMENTS_COPY,
   PAYMENTS_TITLE,
-  PAYMENT_TERMS_TEXT,
   PAYMENT_TERMS_VERSION,
   inUseLine,
   keepsWorkingLine,
@@ -58,6 +57,17 @@ const TERMS_PATH = '/api/v1/players/me/payment-methods/terms';
 const CONFIRMATION_PATH = '/api/v1/players/me/payment-methods/confirmation';
 
 const SECRET = 'seti_1_secret_abc';
+
+/** The terms in force since Q113 — the mechanics §12.5, version `2026-10-10` (#635, #637). */
+const TERMS_IN_FORCE =
+  'When a game you said yes to fills, the club it is played at holds your share on your card — ' +
+  'the court’s price divided by the players. If that hold would not last until the club’s ' +
+  'cut-off, your card is checked when the game fills (your share held for a moment and let go), ' +
+  'and your share is held four days before the cut-off. Your share is taken at the club’s ' +
+  'cut-off. Leave before the cut-off and nothing is taken. After the cut-off your seat is ' +
+  'offered to others; if someone takes it, you get your share back less what was kept on your ' +
+  'payment, and you see the exact sum before you leave. If a game is still missing a player at ' +
+  'the cut-off, it is called off and nothing is taken.';
 
 const VISA_4312: Wire['SavedMethodSchema'] = { brand: 'visa', last_four: '4312', wallet: null };
 
@@ -241,7 +251,7 @@ describe('state A — a numbered checklist, in the order Q82 set', () => {
     // Step 3: the terms, before anything is saved — and nothing asked of the terms route yet.
     expect(await screen.findByLabelText(step(3, 'terms', 'open'))).toBeTruthy();
     expect(screen.getByLabelText(step(2, 'card', 'done'))).toBeTruthy();
-    expect(screen.getByLabelText(PAYMENT_TERMS_TEXT)).toBeTruthy();
+    expect(screen.getByLabelText(TERMS_IN_FORCE)).toBeTruthy();
     expect(transport.requestsTo('POST', TERMS_PATH)).toHaveLength(0);
     expect(phone.confirmed).toEqual([]);
 
@@ -250,9 +260,11 @@ describe('state A — a numbered checklist, in the order Q82 set', () => {
     // Step 4 asked the bank by itself, with the secret the terms answered; this bank asks
     // nothing, so the method is saved and the screen is state B without another press.
     expect(await screen.findByText('Card •••• 4242')).toBeTruthy();
-    expect(screen.getByText(PAYMENTS_COPY.method.charged)).toBeTruthy();
+    expect(
+      screen.getByText('Held when a game fills · taken by the club at its cut-off'),
+    ).toBeTruthy();
     expect(transport.requestsTo('POST', TERMS_PATH).map((r) => r.body)).toEqual([
-      { terms_version: PAYMENT_TERMS_VERSION },
+      { terms_version: '2026-10-10' },
     ]);
     expect(phone.confirmed).toEqual([SECRET]);
     expect(phone.checks).toBe(0);
@@ -387,7 +399,7 @@ describe('state B — the method card', () => {
 
     expect(await screen.findByText('VISA')).toBeTruthy();
     expect(screen.getByText('Card •••• 4312')).toBeTruthy();
-    expect(screen.getByText(PAYMENTS_COPY.method.charged)).toBeTruthy();
+    expect(screen.getByText(PAYMENTS_COPY.method.heldAndTaken)).toBeTruthy();
     expect(screen.getByLabelText(PAYMENTS_COPY.method.change)).toBeTruthy();
     expect(screen.getByLabelText(PAYMENTS_COPY.method.remove)).toBeTruthy();
     expect(screen.queryByLabelText(step(1, 'choose', 'open'))).toBeNull();
@@ -464,6 +476,33 @@ describe('state B — the method card', () => {
     );
     expect(await screen.findByText(line)).toBeTruthy();
     expect(screen.getByText('Card •••• 4312')).toBeTruthy();
+  });
+
+  /** Q113: the words changed, so a player who accepted the earlier ones accepts these (#637). */
+  it('asks for the terms in force again of a player who accepted the earlier words', async () => {
+    stubPaymentMethod(transport, VISA_4312, { termsNeeded: true });
+    transport.on('POST', TERMS_PATH, () => {
+      stubPaymentMethod(transport, VISA_4312);
+      return json<Wire['PaymentTermsResponse']>({ client_secret: null });
+    });
+    await onPayments(`Card •••• 4312 · ${PAYMENTS_COPY.row.termsAgain}`);
+
+    expect(await screen.findByText(PAYMENTS_COPY.method.termsAgainTitle)).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Clubs can’t hold your share on this card until you accept the terms in force — they changed, or your bank moved the card to another network.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(TERMS_IN_FORCE)).toBeTruthy();
+
+    press(PAYMENTS_COPY.method.termsAgain);
+
+    await waitFor(() =>
+      expect(screen.queryByText(PAYMENTS_COPY.method.termsAgainTitle)).toBeNull(),
+    );
+    expect(transport.requestsTo('POST', TERMS_PATH).map((r) => r.body)).toEqual([
+      { terms_version: '2026-10-10' },
+    ]);
   });
 
   it('asks for the terms again when the bank moved the card to another brand', async () => {

@@ -13,9 +13,9 @@
  * │ ▎WHERE  Bonarka Arena  Court 2 · 3,1 km     │   and the court on the status's accent line
  * │ ▎DAY    Sunday  20 Sep                      │
  * │ ▎TIME   10:00  until 11:00                  │
- * │ ▎PAID   28 zł                               │   the money row's words always under
- * │ ▎       Paid · 27,18 zł back if you leave   │   the figure (`moneyRow`)
- * │ ▎       by Sat 10:00                        │
+ * │ ▎YOUR SHARE  28 zł                          │   the money row's words always under
+ * │ ▎       Held on your card · taken Sat 10:00 │   the figure (`moneyRow`)
+ * │ ▎       · free to leave until then          │
  * └─────────────────────────────────────────────┘
  * [ We played ]                                     the result, once the hour has come
  * BALANCE FORECAST …                                the Game's own forecast (details 9)
@@ -25,8 +25,8 @@
  * **One read, `GET /bookings/{id}`, and nothing re-derived.** The status, the sides, the share and
  * whether it was paid, the cut-off, the club's deadline, whether the forecast is drawn, the
  * check-in code and what leaving costs are the server's (#542, #544, #614); what is decided here is
- * how they are drawn, and the clock the money row's *back if you leave by* and *answers by* run on
- * is the read's (`useReadClock`).
+ * how they are drawn, and the clock the money row's *held from*, *taken* and *answers by* run on is
+ * the read's (`useReadClock`).
  *
  * ## Three readers, one screen (A4)
  *
@@ -99,6 +99,7 @@ import {
   chatIsOpen,
   completesTheRescue,
   isFillingAgain,
+  leavingAt,
   lineCanRunOut,
   resultActOf,
   type BookedGame,
@@ -191,9 +192,10 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
     [],
   );
 
-  // The money row's *back if you leave by* leaves by itself at the cut-off, *answers by* at the
-  // club's deadline.
+  // The money row turns to *Paid* by itself at the cut-off, *held from* to *held on your card* at a
+  // checked share's holding time, and *answers by* leaves at the club's deadline.
   const now = useReadClock(game.readAt, receivedAt, lineCanRunOut(game));
+  const leaving = leavingAt(game, now);
 
   const { rescue } = game;
   const ink = STATUS_INK[game.status];
@@ -307,8 +309,8 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
             />
           )}
 
-          {rescue !== undefined || game.leaving === undefined ? null : (
-            <LeaveTheGame leaving={game.leaving} act={leave} afterLeaving={() => router.back()} />
+          {rescue !== undefined || leaving === undefined ? null : (
+            <LeaveTheGame leaving={leaving} act={leave} afterLeaving={() => router.back()} />
           )}
 
           {rescue !== undefined || !isFillingAgain(game) ? null : (

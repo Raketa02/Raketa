@@ -465,7 +465,7 @@ export function shortMoment(instant: string): string {
 
 /**
  * *20:45* · *Sun 00:15* — **a deadline Home names**, on the club's clock: the hour alone when it
- * falls on the read's day, else the weekday with it, as *back if you leave by Sun 17:00* writes it
+ * falls on the read's day, else the weekday with it, as *free to leave until Sun 17:00* writes it
  * (the screens A8).
  */
 export function deadlineWords(deadline: Deadline): string {

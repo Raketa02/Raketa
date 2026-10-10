@@ -1146,8 +1146,8 @@ export function stubReceipts(
   );
 }
 
-/** The version of the payment terms the backend holds in force (#536). */
-export const PAYMENT_TERMS_IN_FORCE = '2026-09-29';
+/** The version of the payment terms the backend holds in force (#536; Q113's words since #637). */
+export const PAYMENT_TERMS_IN_FORCE = '2026-10-10';
 
 /**
  * The saved payment method, as `GET …/payment-methods/current` answers — **nothing saved** unless

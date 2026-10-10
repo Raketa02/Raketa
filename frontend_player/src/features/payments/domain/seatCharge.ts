@@ -3,10 +3,10 @@
  * filled, confirmed in the app ([#555](https://github.com/Raketa02/Raketa/issues/555); #541; the
  * mechanics §12.2).
  *
- * Every seat is charged automatically, *exactly like a subscription*, and only a bank that wants
- * the player present, or a decline, ever brings a share back to them. Then their seat is open again
- * until they confirm it — on the club's account, where the charge was made — or somebody else takes
- * it.
+ * Every seat's share is held automatically, *exactly like a subscription*, and taken at the club's
+ * cut-off (Q113); only a bank that wants the player present, or a decline, ever brings a share back
+ * to them. Then their seat is open again until they confirm it — on the club's account, where the
+ * hold was placed — or somebody else takes it.
  */
 
 import type { Sport } from '@/shared/vocabulary/sport';

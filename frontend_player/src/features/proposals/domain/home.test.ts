@@ -7,12 +7,15 @@ import {
   courtIsGiven,
   isFillingAgain,
   isNew,
+  leavingAt,
   lineCanRunOut,
   moneyLineOf,
   onHome,
   openedFrom,
   openedToKeep,
   resultActOf,
+  shareAt,
+  type BookedMoney,
   type HomeGame,
 } from './home';
 import type { HomeStatus } from './vocabulary';
@@ -20,6 +23,15 @@ import type { HomeStatus } from './vocabulary';
 const STARTS_AT = '2026-10-03T14:00:00Z';
 const BEFORE_CUT_OFF = Date.parse('2026-10-02T10:00:00Z');
 const CUT_OFF = '2026-10-02T14:00:00Z';
+
+/** Held on the card until the cut-off, which is still ahead at the read (Q113). */
+const HELD: BookedMoney = {
+  shareGrosze: 3000,
+  paid: false,
+  shareState: 'HELD',
+  takenAt: CUT_OFF,
+  freeToLeaveUntil: CUT_OFF,
+};
 
 const person = (playerId: string, extra: Partial<DeckPerson> = {}): DeckPerson => ({
   playerId,
@@ -46,22 +58,38 @@ function game(extra: Partial<HomeGame> = {}): HomeGame {
       yours: [person('me', { isYou: true }), person('piotr')],
       theirs: [person('ines'), person('bartek')],
     },
-    money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF, backIfYouLeaveGrosze: 2855 },
+    money: HELD,
     ...extra,
   };
 }
 
 describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', () => {
-  it('reads Paid with the share, and what comes back if you leave by the cut-off while it is ahead (Q99)', () => {
+  /**
+   * **Held until the cut-off, taken at it** (Q113): the share alone with *free to leave until* the
+   * club's cut-off, whether it is held yet or only checked — then *Paid* once it is taken.
+   */
+  it('reads the share, free to leave until the cut-off, while the share is held', () => {
     expect(moneyLineOf(game(), BEFORE_CUT_OFF)).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
-      paid: true,
-      backIfYouLeave: { grosze: 2855, by: CUT_OFF },
+      paid: false,
+      freeToLeaveUntil: CUT_OFF,
     });
   });
 
-  it('drops the clause at the cut-off itself — the line switches by itself', () => {
+  it('reads the same while the reader’s share is only checked, to be held later', () => {
+    const checked = game({
+      money: { ...HELD, shareState: 'CHECKED', heldFrom: '2026-09-28T14:00:00Z' },
+    });
+    expect(moneyLineOf(checked, Date.parse('2026-09-27T10:00:00Z'))).toEqual({
+      kind: 'booked',
+      shareGrosze: 3000,
+      paid: false,
+      freeToLeaveUntil: CUT_OFF,
+    });
+  });
+
+  it('reads Paid from the cut-off itself — the share is taken there, and the line switches by itself', () => {
     expect(moneyLineOf(game(), Date.parse(CUT_OFF))).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
@@ -69,26 +97,23 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     });
   });
 
-  it('has no clause once the read says the cut-off has passed', () => {
-    const late = game({ money: { shareGrosze: 3000, paid: true } });
-    expect(moneyLineOf(late, BEFORE_CUT_OFF)).toEqual({
+  it('reads Paid once the read says the share was taken', () => {
+    const taken = game({
+      money: { shareGrosze: 3000, paid: true, shareState: 'TAKEN', takenAt: CUT_OFF },
+    });
+    expect(moneyLineOf(taken, Date.parse(CUT_OFF) + 60_000)).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
       paid: true,
     });
   });
 
-  /**
-   * **The figure is the server's** (Q99): the card fee kept back is the payments' estimate, so the
-   * phone never works one out — with no figure, as from a server older than it, there is no clause,
-   * and never *free to leave* in its place.
-   */
-  it('leaves the clause out with the figure missing, though the cut-off is ahead', () => {
-    const older = game({ money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF } });
+  it('has no clause once the read says the cut-off has passed, though nothing says taken', () => {
+    const older = game({ money: { shareGrosze: 3000, paid: false } });
     expect(moneyLineOf(older, BEFORE_CUT_OFF)).toEqual({
       kind: 'booked',
       shareGrosze: 3000,
-      paid: true,
+      paid: false,
     });
   });
 
@@ -304,13 +329,12 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
     const short = game({
       status: 'CALLED_OFF',
       calledOffReason: 'SHORT_AT_THE_CUT_OFF',
-      money: { shareGrosze: 3000, paid: true, refundedGrosze: 3000 },
+      money: { shareGrosze: 3000, paid: false },
     });
     expect(moneyLineOf(short, BEFORE_CUT_OFF)).toEqual({
       kind: 'calledOff',
       reason: 'SHORT_AT_THE_CUT_OFF',
       club: 'Bonarka Arena',
-      refundedGrosze: 3000,
     });
     const refused = game({
       status: 'CALLED_OFF',
@@ -419,6 +443,14 @@ describe('lineCanRunOut — a clause that leaves the line by itself', () => {
     expect(lineCanRunOut(waiting)).toBe(false);
   });
 
+  it('runs out while a checked share is still to be held — the details’ row switches then', () => {
+    const checked = game({
+      money: { shareGrosze: 3000, paid: false, shareState: 'CHECKED', heldFrom: CUT_OFF },
+    });
+    expect(lineCanRunOut(checked)).toBe(true);
+    expect(lineCanRunOut(game({ money: { shareGrosze: 3000, paid: true } }))).toBe(false);
+  });
+
   it('runs out while a time to pay is there to pass — everybody’s, or the payer’s own', () => {
     const paying = game({
       status: 'WAITING_FOR_A_PAYMENT',
@@ -432,6 +464,84 @@ describe('lineCanRunOut — a clause that leaves the line by itself', () => {
       fillingAgain: { clubConfirms: false },
     });
     expect(lineCanRunOut({ ...fellBack, yourPaymentDueBy: '2026-10-06T12:40:00Z' })).toBe(true);
+  });
+});
+
+/**
+ * **Where the reader's share stands, on the read's clock** (Q113) — the details' money row says
+ * when it is held and when it is taken. The read's state is folded at the two instants it names:
+ * a checked share is held at `heldFrom`, and every share is taken at `takenAt`, the cut-off.
+ */
+describe('shareAt — held, checked or taken (the mechanics §12.2)', () => {
+  /** Monday 28 September, 16:00 in Warsaw: four days before the cut-off, the Holding time. */
+  const HOLDING = '2026-09-28T14:00:00Z';
+  const CHECKED: BookedMoney = { ...HELD, shareState: 'CHECKED', heldFrom: HOLDING };
+
+  it('is held until the cut-off, taken then', () => {
+    expect(shareAt(HELD, BEFORE_CUT_OFF)).toEqual({ kind: 'held', takenAt: CUT_OFF });
+    expect(shareAt(HELD, Date.parse(CUT_OFF))).toEqual({ kind: 'taken' });
+  });
+
+  it('is checked until its holding time, held from it, and taken at the cut-off', () => {
+    expect(shareAt(CHECKED, Date.parse(HOLDING) - 1)).toEqual({
+      kind: 'checked',
+      heldFrom: HOLDING,
+      takenAt: CUT_OFF,
+    });
+    expect(shareAt(CHECKED, Date.parse(HOLDING))).toEqual({ kind: 'held', takenAt: CUT_OFF });
+    expect(shareAt(CHECKED, Date.parse(CUT_OFF))).toEqual({ kind: 'taken' });
+  });
+
+  it('is taken whenever the read says so', () => {
+    expect(shareAt({ shareGrosze: 3000, paid: true }, BEFORE_CUT_OFF)).toEqual({ kind: 'taken' });
+    expect(
+      shareAt({ shareGrosze: 3000, paid: false, shareState: 'TAKEN', takenAt: CUT_OFF }, 0),
+    ).toEqual({ kind: 'taken' });
+  });
+
+  it('is nothing while nobody’s money is on the game', () => {
+    expect(shareAt({ shareGrosze: 3000, paid: false }, BEFORE_CUT_OFF)).toBeUndefined();
+  });
+});
+
+/**
+ * ***Leave the game* before the cut-off takes nothing** (Q113, the mechanics §13) — and lets go of
+ * the hold on the card when there is one: not while the share is only checked, which holds nothing.
+ */
+describe('leavingAt — what leaving lets go of, now', () => {
+  const booked = (money: BookedMoney) => ({
+    money,
+    leaving: { kind: 'BEFORE_THE_CUT_OFF' as const },
+  });
+
+  it('lets the hold go while the share is held', () => {
+    expect(leavingAt(booked(HELD), BEFORE_CUT_OFF)).toEqual({
+      kind: 'BEFORE_THE_CUT_OFF',
+      letsAHoldGo: true,
+    });
+  });
+
+  it('lets nothing go while the share is only checked — and the hold once it is placed', () => {
+    const checked = booked({ ...HELD, shareState: 'CHECKED', heldFrom: '2026-09-28T14:00:00Z' });
+    expect(leavingAt(checked, Date.parse('2026-09-27T10:00:00Z'))).toEqual({
+      kind: 'BEFORE_THE_CUT_OFF',
+      letsAHoldGo: false,
+    });
+    expect(leavingAt(checked, BEFORE_CUT_OFF)).toEqual({
+      kind: 'BEFORE_THE_CUT_OFF',
+      letsAHoldGo: true,
+    });
+  });
+
+  /** The money row turns to *Paid* at the cut-off by itself; what leaving costs turns with it. */
+  it('is after the cut-off from the cut-off itself, as the server will say', () => {
+    expect(leavingAt(booked(HELD), Date.parse(CUT_OFF))).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
+  });
+
+  it('is the read’s own after the cut-off, while the club decides, and where there is no button', () => {
+    const late = { money: HELD, leaving: { kind: 'AFTER_THE_CUT_OFF' as const } };
+    expect(leavingAt(late, BEFORE_CUT_OFF)).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
+    expect(leavingAt({ money: HELD }, BEFORE_CUT_OFF)).toBeUndefined();
   });
 });
 

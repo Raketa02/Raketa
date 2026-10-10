@@ -192,6 +192,7 @@ export function proposalDetails(
     club_confirms: card.club_confirms,
     answer_by: null,
     payment_due_by: null,
+    time_to: null,
     sides: card.sides,
     forecast: card.forecast,
     overlap: card.overlap,

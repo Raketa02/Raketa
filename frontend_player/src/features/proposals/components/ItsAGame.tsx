@@ -6,7 +6,7 @@
  * *Today's yes screen, with the new word*: the dark ground and its glow, your side sliding in from
  * the left and theirs from the right, `vs` between, the one lime word rising, two pills — **Open
  * game** and **Later**. Nothing else: the player knows the game, and everybody else is told by the
- * notice *It's a game! · you paid*, never this screen.
+ * notice *It's a game! · 30 zł held*, never this screen.
  *
  * **It marks the players matched, not only booked** (Q103), so it comes at a club that confirms too,
  * and while one payment is missing (Q110), with **one line under the word** for what is still

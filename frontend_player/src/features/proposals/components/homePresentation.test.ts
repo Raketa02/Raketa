@@ -5,6 +5,9 @@ import type { BookedGame, HomeGame } from '../domain/home';
 import {
   clubsAnswer,
   homeCardLabel,
+  leavingLine,
+  leavingSheetBody,
+  leftToast,
   moneyRow,
   moneySpoken,
   moneyWords,
@@ -18,8 +21,8 @@ import {
 const CUT_OFF = '2026-10-02T14:00:00Z';
 const BEFORE = Date.parse('2026-10-01T08:00:00Z');
 
-/** 28,55 zł back on a 30 zł share if you leave by the cut-off (Q99). */
-const BACK_BY_THE_CUT_OFF = { grosze: 2855, by: CUT_OFF } as const;
+/** Monday 28 September, 16:00 in Warsaw — a checked share's holding time, four days before it. */
+const HOLDING = '2026-09-28T14:00:00Z';
 
 /** The club's deadline to answer: 11:00 on the day of the read (Thursday, 10:00 in Warsaw). */
 const ELEVEN = '2026-10-01T09:00:00Z';
@@ -30,16 +33,12 @@ const SUNDAY_00_15 = { at: '2026-10-03T22:15:00Z', today: false } as const;
 beforeAll(() => setDeviceZone('America/New_York'));
 
 describe('moneyWords — the line under a Home card (the mechanics §14.1)', () => {
-  it('reads Paid with the share, and what comes back if you leave by the cut-off on the club’s clock (Q99)', () => {
+  it('reads the share, free to leave until the cut-off on the club’s clock, then Paid once taken (Q113)', () => {
     expect(
-      moneyWords({
-        kind: 'booked',
-        shareGrosze: 3000,
-        paid: true,
-        backIfYouLeave: BACK_BY_THE_CUT_OFF,
-      }),
-    ).toBe('Paid · 30 zł · 28,55 zł back if you leave by Fri 16:00');
+      moneyWords({ kind: 'booked', shareGrosze: 3000, paid: false, freeToLeaveUntil: CUT_OFF }),
+    ).toBe('30 zł · free to leave until Fri 16:00');
     expect(moneyWords({ kind: 'booked', shareGrosze: 2750, paid: true })).toBe('Paid · 27,50 zł');
+    expect(moneyWords({ kind: 'booked', shareGrosze: 2750, paid: false })).toBe('27,50 zł');
   });
 
   it('names the club a game waits for, or the club when the read no longer names it', () => {
@@ -63,7 +62,7 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
 
   it('counts the seats open, before the cut-off and after it', () => {
     expect(moneyWords({ kind: 'seatOpen', seats: 1, fillsBy: CUT_OFF })).toBe(
-      '1 seat open · fills by Fri 16:00 or the game is off and everyone is refunded',
+      '1 seat open · fills by Fri 16:00 or the game is off and nothing is taken',
     );
     expect(moneyWords({ kind: 'seatOpen', seats: 2 })).toBe(
       '2 seats open · offered to others · the game goes ahead',
@@ -92,11 +91,26 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
     expect(
       moneyWords({
         kind: 'calledOff',
-        reason: 'SHORT_AT_THE_CUT_OFF',
+        reason: 'CANCELLED_BY_THE_CLUB',
         club: 'Bonarka Arena',
         refundedGrosze: 3000,
       }),
-    ).toBe('A seat was still empty at the cut-off · Refunded 30 zł');
+    ).toBe('Bonarka Arena cancelled it · Refunded 30 zł');
+  });
+
+  /** Q113: the holds were let go — at the cut-off, or by the club's cancel before it. */
+  it('says nothing was taken where the shares were held and let go', () => {
+    expect(
+      moneyWords({ kind: 'calledOff', reason: 'SHORT_AT_THE_CUT_OFF', club: 'Bonarka Arena' }),
+    ).toBe('A seat was still empty at the cut-off · Nothing was taken');
+    expect(
+      moneyWords({
+        kind: 'calledOff',
+        reason: 'CANCELLED_BY_THE_CLUB',
+        clubCancelReason: 'WEATHER',
+        club: 'Bonarka Arena',
+      }),
+    ).toBe('Bonarka Arena cancelled it because of the weather · Nothing was taken');
   });
 
   /** The club's no and its silence, in the notice's and the email's words (Q105). */
@@ -222,13 +236,8 @@ describe('whereAside — the court and how far it is (details 8)', () => {
 describe('moneySpoken — the line aloud, its dots commas', () => {
   it('says each clause the line draws, and nothing it does not', () => {
     expect(
-      moneySpoken({
-        kind: 'booked',
-        shareGrosze: 3000,
-        paid: true,
-        backIfYouLeave: BACK_BY_THE_CUT_OFF,
-      }),
-    ).toBe('Paid, 30 zł, 28,55 zł back if you leave by Fri 16:00');
+      moneySpoken({ kind: 'booked', shareGrosze: 3000, paid: false, freeToLeaveUntil: CUT_OFF }),
+    ).toBe('30 zł, free to leave until Fri 16:00');
     expect(moneySpoken({ kind: 'seatOpen', seats: 1 })).toBe(
       '1 seat open, offered to others, the game goes ahead',
     );
@@ -296,7 +305,13 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
   where: { id: 'club-1', name: 'Bonarka Arena', distanceKm: 3.1 },
   courtName: 'Court 2',
   sides: { yours: [], theirs: [] },
-  money: { shareGrosze: 2800, paid: true, freeToLeaveUntil: CUT_OFF, backIfYouLeaveGrosze: 2718 },
+  money: {
+    shareGrosze: 2800,
+    paid: false,
+    shareState: 'HELD',
+    takenAt: CUT_OFF,
+    freeToLeaveUntil: CUT_OFF,
+  },
   showsForecast: true,
   ...extra,
 });
@@ -304,11 +319,12 @@ const booked = (extra: Partial<BookedGame> = {}): BookedGame => ({
 const bookedPaid = { shareGrosze: 2800, paid: true } as const;
 
 describe('moneyRow — the details’ money row (A4.1)', () => {
-  it('is PAID 28 zł over Paid, with what comes back while the cut-off is ahead (Q99)', () => {
+  /** Q113: when the share is held and when it is taken — then PAID 28 zł over Paid. */
+  it('is the share held on the card, when it is taken, and free to leave until then', () => {
     expect(moneyRow(booked(), BEFORE)).toEqual({
-      label: 'Paid',
+      label: 'Your share',
       value: '28 zł',
-      below: 'Paid · 27,18 zł back if you leave by Fri 16:00',
+      below: 'Held on your card · taken Fri 16:00 · free to leave until then',
     });
     expect(moneyRow(booked(), Date.parse(CUT_OFF))).toEqual({
       label: 'Paid',
@@ -317,10 +333,28 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     });
   });
 
-  it('says nothing of leaving with the figure missing — never free, never worked out here', () => {
-    expect(
-      moneyRow(booked({ money: { ...bookedPaid, freeToLeaveUntil: CUT_OFF } }), BEFORE),
-    ).toEqual({ label: 'Paid', value: '28 zł', below: 'Paid' });
+  it('is the share held from its holding time while it is only checked, then held', () => {
+    const checked = booked({
+      money: { ...booked().money, shareState: 'CHECKED', heldFrom: HOLDING },
+    });
+    expect(moneyRow(checked, Date.parse('2026-09-27T08:00:00Z'))).toEqual({
+      label: 'Your share',
+      value: '28 zł',
+      below: 'Held from Mon 16:00 · taken Fri 16:00',
+    });
+    expect(moneyRow(checked, Date.parse(HOLDING))).toEqual({
+      label: 'Your share',
+      value: '28 zł',
+      below: 'Held on your card · taken Fri 16:00 · free to leave until then',
+    });
+  });
+
+  it('is PAID over Paid once the read says the share was taken', () => {
+    expect(moneyRow(booked({ money: bookedPaid }), BEFORE)).toEqual({
+      label: 'Paid',
+      value: '28 zł',
+      below: 'Paid',
+    });
   });
 
   /** A full game gone back to filling (Q106): the Home card's line word for word under the share. */
@@ -402,7 +436,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     });
   });
 
-  it('is what came back, or nobody paid, once the game is called off', () => {
+  it('is what came back, nothing taken, or nobody paid, once the game is called off', () => {
     expect(
       moneyRow(
         booked({
@@ -415,14 +449,28 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     expect(
       moneyRow(booked({ status: 'CALLED_OFF', money: { shareGrosze: 2800, paid: false } }), BEFORE),
     ).toEqual({ label: 'Your share', value: '28 zł', below: 'nobody paid' });
+    expect(
+      moneyRow(
+        booked({
+          status: 'CALLED_OFF',
+          calledOffReason: 'SHORT_AT_THE_CUT_OFF',
+          money: { shareGrosze: 2800, paid: false },
+        }),
+        BEFORE,
+      ),
+    ).toEqual({
+      label: 'Your share',
+      value: '28 zł',
+      below: 'A seat was still empty at the cut-off · nothing was taken',
+    });
   });
 
   it('says the seat open and when it must fill, on a game a player left (§14.1)', () => {
     const open = booked({ status: 'SEAT_OPEN', openSeats: 1 });
     expect(moneyRow(open, BEFORE)).toEqual({
-      label: 'Paid',
+      label: 'Your share',
       value: '28 zł',
-      below: '1 seat open · fills by Fri 16:00 or the game is off and everyone is refunded',
+      below: '1 seat open · fills by Fri 16:00 or the game is off and nothing is taken',
     });
     expect(moneyRow(open, Date.parse(CUT_OFF))).toEqual({
       label: 'Paid',
@@ -436,7 +484,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
       moneyRow(
         booked({
           status: 'CALLED_OFF',
-          calledOffReason: 'SHORT_AT_THE_CUT_OFF',
+          calledOffReason: 'CANCELLED_BY_THE_CLUB',
           money: { shareGrosze: 2800, paid: true, refundedGrosze: 2800 },
         }),
         BEFORE,
@@ -444,7 +492,7 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     ).toEqual({
       label: 'Refunded',
       value: '28 zł',
-      below: 'A seat was still empty at the cut-off',
+      below: 'Bonarka Arena cancelled it',
     });
     expect(
       moneyRow(
@@ -506,7 +554,7 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
     club: { id: 'club-1', name: 'Bonarka Arena' },
     courtName: 'Court 2',
     sides: { yours: [], theirs: [] },
-    money: { shareGrosze: 3000, paid: true, freeToLeaveUntil: CUT_OFF, backIfYouLeaveGrosze: 2855 },
+    money: { shareGrosze: 3000, paid: false, freeToLeaveUntil: CUT_OFF },
   };
 
   it('says the status, new, the sport, where, when and the money — commas for the dots', () => {
@@ -515,15 +563,10 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
         game,
         fresh: true,
         day: { kind: 'weekday', weekday: 6 },
-        money: {
-          kind: 'booked',
-          shareGrosze: 3000,
-          paid: true,
-          backIfYouLeave: BACK_BY_THE_CUT_OFF,
-        },
+        money: { kind: 'booked', shareGrosze: 3000, paid: false, freeToLeaveUntil: CUT_OFF },
       }),
     ).toBe(
-      'Booked, new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł, 28,55 zł back if you leave by Fri 16:00.',
+      'Booked, new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. 30 zł, free to leave until Fri 16:00.',
     );
   });
 
@@ -570,6 +613,58 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
       }),
     ).toBe(
       'Waiting for the club. Padel. Kazimierz Padel. Saturday, 16:00 until 17:00. Kazimierz Padel answers by 11:00, Nobody pays until it confirms.',
+    );
+  });
+});
+
+/**
+ * ***Leave the game*** (the mechanics §13; Q113) — before the cut-off it is free and nothing is
+ * taken, the hold let go when there is one; after it the share stays taken, and what comes back if
+ * the seat is taken is #644's to say, so no figure is given here.
+ */
+describe('leavingLine, leavingSheetBody, leftToast — what leaving costs, said', () => {
+  it('says leaving is free before the cut-off, and nothing is taken', () => {
+    expect(leavingLine({ kind: 'BEFORE_THE_CUT_OFF' })).toBe(
+      'Free to leave now — nothing is taken',
+    );
+    expect(leavingSheetBody({ kind: 'BEFORE_THE_CUT_OFF', letsAHoldGo: true })).toEqual([
+      'Nothing is taken: the hold on your card is let go.',
+      'Your seat is offered to others.',
+      'On your record only if the game is then called off.',
+    ]);
+    expect(leftToast('BEFORE_THE_CUT_OFF')).toBe('You left the game. Nothing was taken.');
+  });
+
+  it('lets no hold go on a share only checked, which holds nothing yet', () => {
+    expect(leavingSheetBody({ kind: 'BEFORE_THE_CUT_OFF', letsAHoldGo: false })).toEqual([
+      'Nothing is taken.',
+      'Your seat is offered to others.',
+      'On your record only if the game is then called off.',
+    ]);
+  });
+
+  it('keeps today’s shape after the cut-off, with no figure — and never an estimate', () => {
+    expect(leavingLine({ kind: 'AFTER_THE_CUT_OFF' })).toBe(
+      'Refunded only if someone takes your seat',
+    );
+    expect(leavingSheetBody({ kind: 'AFTER_THE_CUT_OFF' })).toEqual([
+      'Your seat is offered to others.',
+      'If someone takes it, you get your share back less what was kept on your payment; if nobody does, you won’t.',
+      'On your record if nobody takes it.',
+    ]);
+    expect(leftToast('AFTER_THE_CUT_OFF')).toBe(
+      'You left the game. Your seat is offered to others.',
+    );
+  });
+
+  it('says nobody has paid while the club decides, and the yes is withdrawn', () => {
+    expect(leavingLine({ kind: 'WHILE_WAITING_FOR_THE_CLUB' })).toBe('Nobody has paid yet');
+    expect(leavingSheetBody({ kind: 'WHILE_WAITING_FOR_THE_CLUB' })).toEqual([
+      'Nobody has paid yet.',
+      'Leaving withdraws your yes.',
+    ]);
+    expect(leftToast('WHILE_WAITING_FOR_THE_CLUB')).toBe(
+      'You left the game. Your yes is withdrawn.',
     );
   });
 });

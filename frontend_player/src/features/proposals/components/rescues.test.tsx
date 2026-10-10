@@ -146,8 +146,10 @@ function rescueDetails(card: Wire['DeckCardSchema']): Wire['BookingDetailsRespon
     money: {
       share_grosze: card.share_grosze,
       paid: false,
+      share_state: null,
+      held_from: null,
+      taken_at: null,
       free_to_leave_until: null,
-      back_if_you_leave_grosze: null,
       refunded_grosze: null,
     },
     shows_forecast: false,

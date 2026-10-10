@@ -36,18 +36,21 @@ const homeGame = (extra: Partial<Wire['HomeGameSchema']> = {}): Wire['HomeGameSc
   sides: { yours: [tile({ player_id: 'me', is_you: true })], theirs: [tile()] },
   money: {
     share_grosze: 2800,
-    paid: true,
+    paid: false,
+    share_state: 'HELD',
+    held_from: null,
+    taken_at: '2026-10-02T14:00:00Z',
     free_to_leave_until: '2026-10-02T14:00:00Z',
-    back_if_you_leave_grosze: 2718,
     refunded_grosze: null,
   },
   answer_by: null,
   payment_due_by: null,
   your_payment_due_by: null,
+  time_to: null,
   ...extra,
 });
 
-/** The money as a server older than Q99 sends it — the cut-off, and no figure at all (#617). */
+/** The money as a server older than Q113 sends it — the cut-off, and no share's state (#637). */
 const OLDER_MONEY = {
   share_grosze: 2800,
   paid: true,
@@ -112,9 +115,10 @@ describe('toHome', () => {
           },
           money: {
             shareGrosze: 2800,
-            paid: true,
+            paid: false,
+            shareState: 'HELD',
+            takenAt: '2026-10-02T14:00:00Z',
             freeToLeaveUntil: '2026-10-02T14:00:00Z',
-            backIfYouLeaveGrosze: 2718,
           },
         },
       ],
@@ -135,8 +139,10 @@ describe('toHome', () => {
           money: {
             share_grosze: 2800,
             paid: false,
+            share_state: null,
+            held_from: null,
+            taken_at: null,
             free_to_leave_until: null,
-            back_if_you_leave_grosze: null,
             refunded_grosze: null,
           },
         }),
@@ -206,14 +212,29 @@ describe('toHome', () => {
     expect(older).not.toHaveProperty('yourPaymentDueBy');
   });
 
-  it('carries what leaving gives back (Q99), and nothing from an older server’s silence', () => {
-    const [booked, older] = toHome({
-      read_at: '2026-10-01T08:00:00Z',
+  /**
+   * **Held, checked or taken** (#637, #639; Q113) — the share's state and the two instants it
+   * switches at, and nothing from an older server's silence.
+   */
+  it('carries where the share stands and when it is held and taken', () => {
+    const checked = {
+      ...homeGame().money,
+      share_state: 'CHECKED',
+      held_from: '2026-09-28T14:00:00Z',
+    } as const;
+    const [held, check, older] = toHome({
+      read_at: '2026-09-27T08:00:00Z',
       needing_you: 0,
-      games: [homeGame(), homeGame({ money: OLDER_MONEY })],
+      games: [homeGame(), homeGame({ money: checked }), homeGame({ money: OLDER_MONEY })],
     }).games;
 
-    expect(booked?.money.backIfYouLeaveGrosze).toBe(2718);
+    expect(held?.money).toMatchObject({ shareState: 'HELD', takenAt: '2026-10-02T14:00:00Z' });
+    expect(held?.money).not.toHaveProperty('heldFrom');
+    expect(check?.money).toMatchObject({
+      shareState: 'CHECKED',
+      heldFrom: '2026-09-28T14:00:00Z',
+      takenAt: '2026-10-02T14:00:00Z',
+    });
     expect(older?.money).toEqual({
       shareGrosze: 2800,
       paid: true,
@@ -232,8 +253,10 @@ describe('toHome', () => {
           money: {
             share_grosze: 2800,
             paid: true,
+            share_state: null,
+            held_from: null,
+            taken_at: null,
             free_to_leave_until: null,
-            back_if_you_leave_grosze: null,
             refunded_grosze: 2800,
           },
         }),
@@ -333,8 +356,10 @@ describe('toBookedGame', () => {
     money: {
       share_grosze: 2800,
       paid: true,
+      share_state: 'TAKEN',
+      held_from: null,
+      taken_at: '2026-10-02T14:00:00Z',
       free_to_leave_until: null,
-      back_if_you_leave_grosze: null,
       refunded_grosze: null,
     },
     shows_forecast: true,
@@ -344,6 +369,7 @@ describe('toBookedGame', () => {
     answer_by: null,
     payment_due_by: null,
     your_payment_due_by: null,
+    time_to: null,
     ...extra,
   });
 
@@ -373,32 +399,32 @@ describe('toBookedGame', () => {
     expect(game).not.toHaveProperty('checkIn');
   });
 
-  it('carries what leaving gives back on the money row, as Home’s card does (Q99)', () => {
-    const money = { ...homeGame().money, share_grosze: 4000, back_if_you_leave_grosze: 3840 };
+  it('carries where the share stands on the money row, as Home’s card does (Q113)', () => {
+    const money = { ...homeGame().money, share_grosze: 4000 };
 
     expect(toBookedGame(details({ money }))?.money).toEqual({
       shareGrosze: 4000,
-      paid: true,
+      paid: false,
+      shareState: 'HELD',
+      takenAt: '2026-10-02T14:00:00Z',
       freeToLeaveUntil: '2026-10-02T14:00:00Z',
-      backIfYouLeaveGrosze: 3840,
     });
-    expect(toBookedGame(details({ money: OLDER_MONEY }))?.money).not.toHaveProperty(
-      'backIfYouLeaveGrosze',
-    );
   });
 
   it('reads what leaving would cost now, and nothing where there is no button', () => {
-    const game = toBookedGame(
+    const before = toBookedGame(
       details({
-        leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: 2758, card_fee_grosze: 142 },
+        leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: null, card_fee_grosze: null },
+      }),
+    );
+    const after = toBookedGame(
+      details({
+        leaving: { kind: 'AFTER_THE_CUT_OFF', refund_grosze: 2758, card_fee_grosze: 142 },
       }),
     );
 
-    expect(game?.leaving).toEqual({
-      kind: 'BEFORE_THE_CUT_OFF',
-      refundGrosze: 2758,
-      cardFeeGrosze: 142,
-    });
+    expect(before?.leaving).toEqual({ kind: 'BEFORE_THE_CUT_OFF' });
+    expect(after?.leaving).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
     expect(toBookedGame(details())).not.toHaveProperty('leaving');
   });
 

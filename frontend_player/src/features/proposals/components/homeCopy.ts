@@ -50,8 +50,8 @@ export const HOME_GAME_COPY = {
   /** The money line's words (§14.1). */
   money: {
     paid: 'Paid',
-    /** *27,18 zł back if you leave by Fri 16:00* — after the sum the read gives (Q99). */
-    backIfYouLeaveBy: 'back if you leave by',
+    /** *30 zł · free to leave until Fri 16:00* — the club's cut-off, before which nothing is taken (Q113). */
+    freeToLeaveUntil: 'free to leave until',
     nobodyPaysUntil: 'Nobody pays until',
     confirms: 'confirms',
     theClub: 'the club',
@@ -60,7 +60,7 @@ export const HOME_GAME_COPY = {
     seatOpen: 'seat open',
     seatsOpen: 'seats open',
     fillsBy: 'fills by',
-    orTheGameIsOff: 'or the game is off and everyone is refunded',
+    orTheGameIsOff: 'or the game is off and nothing is taken',
     offeredToOthers: 'offered to others',
     goesAhead: 'the game goes ahead',
     /**
@@ -75,6 +75,8 @@ export const HOME_GAME_COPY = {
     nobodyPaid: 'Nobody paid',
     /** After the club's no or its silence (Q105): the notice's and the email's words. */
     nobodyPaidNewCardFirst: 'Nobody paid — you’ll get a new card first',
+    /** The shares were held and let go — short at the cut-off, or the club's cancel before it (Q113). */
+    nothingWasTaken: 'Nothing was taken',
     /**
      * Why a game is off (§14.1, #543, #544, #624, #625) — the club's three read with its name before
      * them (`homePresentation`'s `SAID_OF_THE_CLUB`); the rest said of the game. The club's no and its
@@ -121,8 +123,18 @@ export const HOME_GAME_COPY = {
     paid: 'Paid',
     yourShare: 'Your share',
     refunded: 'Refunded',
+    /**
+     * When the share is held and when it is taken (Q113; the screens A4.1): *28 zł* over *Held on
+     * your card · taken Sat 10:00 · free to leave until then*, or for a share only checked, *Held
+     * from Tue 10:00 · taken Sat 10:00*. The times are `homePresentation`'s.
+     */
+    heldOnYourCard: 'Held on your card',
+    heldFrom: 'Held from',
+    taken: 'taken',
+    freeToLeaveUntilThen: 'free to leave until then',
     nobodyPaid: 'nobody paid',
     nobodyPaidNewCardFirst: 'nobody paid — you’ll get a new card first',
+    nothingWasTaken: 'nothing was taken',
     showAtTheDesk: 'Show at the desk',
     deskLine: 'Show this at the club’s desk when you arrive — or read them the code.',
     qrSpoken: 'Your check-in code as a QR code',
@@ -143,17 +155,29 @@ export const HOME_GAME_COPY = {
   },
   /**
    * ***Leave the game*** (the mechanics §13; #557) — the line under the button for the moment, the
-   * sheet's words (today's *Before you leave* sheet, `LeaveSheet`), the toast once it
-   * is done, and the route's three refusals. The sentences carrying a sum are `homePresentation.ts`.
+   * sheet's words (today's *Before you leave* sheet, `LeaveSheet`), the toast once it is done, and
+   * the route's three refusals. Before the cut-off nothing is taken (Q113); after it, today's words
+   * with no figure until the phone says the exact one the read quotes (#644), and never an estimate.
    */
   leave: {
+    /** The line under the button before the cut-off. */
+    freeNow: 'Free to leave now — nothing is taken',
+    /** …and after it. */
+    refundedIfTaken: 'Refunded only if someone takes your seat',
+    /** The sheet after the cut-off, between the seat offered and the record. */
+    backIfTaken:
+      'If someone takes it, you get your share back less what was kept on your payment; if nobody does, you won’t.',
     nobodyPaidYet: 'Nobody has paid yet',
+    /** The sheet's first line before the cut-off, while the share is held on the card. */
+    holdLetGo: 'Nothing is taken: the hold on your card is let go.',
+    /** …while it is only checked, which holds nothing until its holding time. */
+    nothingTaken: 'Nothing is taken.',
     offered: 'Your seat is offered to others.',
     onRecordIfCalledOff: 'On your record only if the game is then called off.',
     onRecordIfNobody: 'On your record if nobody takes it.',
     withdrawsYourYes: 'Leaving withdraws your yes.',
     left: 'You left the game.',
-    refundTakes: 'BLIK within hours, cards up to two weeks.',
+    nothingWasTaken: 'Nothing was taken.',
     yesWithdrawn: 'Your yes is withdrawn.',
     refused: {
       game_has_started: 'The game has started, so there’s nothing to leave now.',

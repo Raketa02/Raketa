@@ -9,7 +9,7 @@
  * refund.
  */
 
-import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
 import { LEAVE_THE_GAME } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -23,6 +23,8 @@ import {
   homeGame,
   stubBooking,
   stubHomeGames,
+  takenMoney,
+  unheldMoney,
 } from '@/test-support/home';
 import {
   HOME_PATH,
@@ -109,24 +111,39 @@ async function confirm() {
   fireEvent.press(acts[acts.length - 1]!);
 }
 
-describe('before the club’s cut-off (§13)', () => {
-  it('says the refund under the button, and the sheet says the rest before anything is sent', async () => {
+describe('before the club’s cut-off (§13; Q113)', () => {
+  it('says leaving is free under the button, and the sheet that the hold is let go, before anything is sent', async () => {
     await openDetails(bookingDetails());
 
-    expect(screen.getByText('Refunded 27,18 zł if you leave now')).toBeTruthy();
+    expect(screen.getByText('Free to leave now — nothing is taken')).toBeTruthy();
 
     leave();
 
     expect(await screen.findByText('Before you leave')).toBeTruthy();
-    expect(
-      screen.getByText('You’ll be refunded 27,18 zł now (the 0,82 zł card fee isn’t returned).'),
-    ).toBeTruthy();
-    expect(screen.getByText(HOME.leave.offered)).toBeTruthy();
-    expect(screen.getByText(HOME.leave.onRecordIfCalledOff)).toBeTruthy();
+    expect(screen.getByText('Nothing is taken: the hold on your card is let go.')).toBeTruthy();
+    expect(screen.getByText('Your seat is offered to others.')).toBeTruthy();
+    expect(screen.getByText('On your record only if the game is then called off.')).toBeTruthy();
+    expect(screen.queryByText(/refunded|card fee/i)).toBeNull();
     expect(transport.requestsTo('POST', DEPARTURE)).toHaveLength(0);
   });
 
-  it('leaves, says the refund is on its way and when it lands, and goes back to a Home without it', async () => {
+  /** A game filled far ahead: the card was only checked, so there is no hold yet to let go. */
+  it('lets no hold go while the share is only checked — nothing is taken all the same', async () => {
+    await openDetails(
+      bookingDetails({
+        money: bookedMoney({ share_state: 'CHECKED', held_from: '2026-10-02T08:00:00Z' }),
+      }),
+    );
+
+    expect(screen.getByText('Free to leave now — nothing is taken')).toBeTruthy();
+
+    leave();
+
+    expect(await screen.findByText('Nothing is taken.')).toBeTruthy();
+    expect(screen.queryByText(/hold on your card/)).toBeNull();
+  });
+
+  it('leaves, says nothing was taken, and goes back to a Home without it', async () => {
     await openDetails(bookingDetails());
     const receipts = transport.requestsTo('GET', RECEIPTS_PATH).length;
 
@@ -135,10 +152,7 @@ describe('before the club’s cut-off (§13)', () => {
 
     await waitFor(() => expect(screen).toHavePathname('/'));
     expect(transport.requestsTo('POST', DEPARTURE)).toHaveLength(1);
-    expect(toasts()).toContainEqual([
-      'You left the game. 27,18 zł is on its way back — BLIK within hours, cards up to two weeks.',
-      'ok',
-    ]);
+    expect(toasts()).toContainEqual(['You left the game. Nothing was taken.', 'ok']);
     await waitFor(() => expect(screen.queryByTestId(`home-game-${BOOKING}`)).toBeNull());
     expect(transport.requestsTo('GET', HOME_PATH).length).toBeGreaterThan(1);
     // Payments is not on screen, so its receipts are marked stale rather than read now.
@@ -160,23 +174,40 @@ describe('before the club’s cut-off (§13)', () => {
 describe('after the cut-off (§12.3)', () => {
   const late = () =>
     bookingDetails({
-      money: bookedMoney({ free_to_leave_until: null }),
-      leaving: { kind: 'AFTER_THE_CUT_OFF', refund_grosze: 2718, card_fee_grosze: 82 },
+      money: takenMoney(),
+      leaving: { kind: 'AFTER_THE_CUT_OFF', refund_grosze: 2758, card_fee_grosze: 42 },
     });
 
-  it('says the refund waits for somebody to take the seat, and so does the sheet', async () => {
+  /** The read's exact figure is #644's to say; until then today's words with no figure, no estimate. */
+  it('says the refund waits for somebody to take the seat, and so does the sheet — with no figure', async () => {
     await openDetails(late());
 
-    expect(screen.getByText('Refunded 27,18 zł only if someone takes your seat')).toBeTruthy();
+    expect(screen.getByText('Refunded only if someone takes your seat')).toBeTruthy();
 
     leave();
 
+    expect(await screen.findByText('Your seat is offered to others.')).toBeTruthy();
     expect(
-      await screen.findByText(
-        'You’ll be refunded 27,18 zł when someone takes it; if nobody does, you won’t be.',
+      screen.getByText(
+        'If someone takes it, you get your share back less what was kept on your payment; if nobody does, you won’t.',
       ),
     ).toBeTruthy();
-    expect(screen.getByText(HOME.leave.onRecordIfNobody)).toBeTruthy();
+    expect(screen.getByText('On your record if nobody takes it.')).toBeTruthy();
+    expect(screen.queryByText(/27,58|0,42|card fee|BLIK/)).toBeNull();
+  });
+
+  /** The details' money row turns to *Paid* at the cut-off by itself, and so does what leaving costs. */
+  it('turns from free to not at the cut-off, while the details are on screen', async () => {
+    const ELEVEN = '2026-10-01T09:00:00Z';
+    await openDetails(
+      bookingDetails({ money: bookedMoney({ free_to_leave_until: ELEVEN, taken_at: ELEVEN }) }),
+    );
+    expect(screen.getByText('Free to leave now — nothing is taken')).toBeTruthy();
+
+    act(() => jest.advanceTimersByTime(60 * 60 * 1000));
+
+    expect(await screen.findByText('Refunded only if someone takes your seat')).toBeTruthy();
+    expect(screen.queryByText(/Free to leave/)).toBeNull();
   });
 
   it('says the seat is offered once the player has left', async () => {
@@ -197,7 +228,7 @@ describe('while an On request club decides (A4.2, §13)', () => {
       status: 'WAITING_FOR_THE_CLUB',
       game_id: null,
       court_name: null,
-      money: bookedMoney({ paid: false, free_to_leave_until: null }),
+      money: unheldMoney(),
       leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
     });
 

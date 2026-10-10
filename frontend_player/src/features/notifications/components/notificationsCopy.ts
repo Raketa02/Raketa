@@ -43,11 +43,11 @@ export const NOTIFICATIONS_COPY = {
     title: 'Always on',
     tag: 'on',
     rows: [
-      'It’s a game! · you paid',
+      'It’s a game! · held',
       'It’s a game! · the club answers by …',
       'Waiting for one payment',
       'Confirm your payment by … to keep your seat',
-      'Game called off · with the refund',
+      'Game called off · nothing was taken, or with the refund',
       'Someone left your game · or it’s filling again',
       'You’ve been refunded',
       'The club confirmed / said no / didn’t answer in time',
@@ -125,7 +125,7 @@ export function choiceSpoken(key: ChoiceKey): string {
   return `${words.title}. ${spoken(words.line)}`;
 }
 
-/** A notice, spoken — the banner's name and announcement: *It's a game! · you paid. Padel · …* */
+/** A notice, spoken — the banner's name and announcement: *It's a game! · 30 zł held. Padel · …* */
 export function noticeSpoken(title: string, body: string): string {
   return body === '' ? title : `${title}. ${body}`;
 }

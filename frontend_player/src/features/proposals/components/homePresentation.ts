@@ -5,7 +5,7 @@
  * `homeCopy.ts`.
  *
  * **Every day and hour here is the club's** (`shared/date/platformZone`), as the court block's are:
- * *27,18 zł back if you leave by Fri 16:00* is the club's Friday, on every phone that reads it.
+ * *free to leave until Fri 16:00* is the club's Friday, on every phone that reads it.
  */
 
 import { sportLabel } from '@/features/onboarding/types';
@@ -17,14 +17,14 @@ import { theme, type ButtonVariant } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import {
-  backIfYouLeaveAhead,
   courtIsGiven,
   moneyLineOf,
-  type BackIfYouLeave,
+  shareAt,
   type BookedGame,
   type HomeGame,
   type Leaving,
   type MoneyLine,
+  type ShareAt,
 } from '../domain/home';
 import type {
   CalledOffReason,
@@ -137,10 +137,12 @@ function moneyParts(line: MoneyLine): readonly string[] {
   switch (line.kind) {
     case 'booked': {
       const share = formatZloty(line.shareGrosze);
+      if (line.paid) return [money.paid, share];
       return [
-        ...(line.paid ? [money.paid] : []),
         share,
-        ...(line.backIfYouLeave === undefined ? [] : [backIfYouLeaveWords(line.backIfYouLeave)]),
+        ...(line.freeToLeaveUntil === undefined
+          ? []
+          : [`${money.freeToLeaveUntil} ${shortMoment(line.freeToLeaveUntil)}`]),
       ];
     }
     case 'waiting':
@@ -169,7 +171,7 @@ function moneyParts(line: MoneyLine): readonly string[] {
       return [
         ...(line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })]),
         line.refundedGrosze === undefined
-          ? nobodyPaid(line.reason, money)
+          ? nothingCameBack(line.reason, money)
           : `${money.refunded} ${formatZloty(line.refundedGrosze)}`,
       ];
     case 'seatEmpty':
@@ -179,15 +181,6 @@ function moneyParts(line: MoneyLine): readonly string[] {
         ? [money.youWereMarked, money.sayIfYouWere]
         : [money.somebodyDidNotCome, money.noLevelMoved];
   }
-}
-
-/**
- * *27,18 zł back if you leave by Fri 16:00* — **what leaving gives back, and until when** (Q99): the
- * card's line and the details' money row say it in the same words, the sum the read's and the hour
- * written as *fills by* writes it. Never *free to leave*: the card fee is not returned.
- */
-function backIfYouLeaveWords({ grosze, by }: BackIfYouLeave): string {
-  return `${formatZloty(grosze)} ${COPY.money.backIfYouLeaveBy} ${shortMoment(by)}`;
 }
 
 /**
@@ -209,16 +202,37 @@ const SAID_OF_THE_CLUB: Readonly<
 };
 
 /**
- * *Nobody paid*, and after the club's no or its silence *— you'll get a new card first* (Q105, the
- * screens A8): the card's words or the details', whichever `words` are handed in.
+ * **The reasons a game is off whose shares were held and let go** (Q113, the mechanics §14.1) — at
+ * the cut-off, or by the club's cancel before it — where nothing came back because *nothing was
+ * taken*. On every other reason nothing was ever held. A `Record`, so a reason the wire adds is
+ * placed here first.
  */
-function nobodyPaid(
+const HOLDS_LET_GO: Readonly<Record<CalledOffReason, boolean>> = {
+  SHORT_AT_THE_CUT_OFF: true,
+  CANCELLED_BY_THE_CLUB: true,
+  REFUSED: false,
+  NO_ANSWER: false,
+  BOOK_BY_PASSED: false,
+  COURT_HOUR_LOST: false,
+  PAYMENT_NOT_IN_TIME: false,
+};
+
+/**
+ * *Nothing was taken* where the holds were let go; else *Nobody paid*, and after the club's no or its
+ * silence *— you'll get a new card first* (Q105, the screens A8): a game off with nothing given back,
+ * in the card's words or the details', whichever `words` are handed in.
+ */
+function nothingCameBack(
   reason: CalledOffReason | undefined,
-  words: { readonly nobodyPaid: string; readonly nobodyPaidNewCardFirst: string },
+  words: {
+    readonly nothingWasTaken: string;
+    readonly nobodyPaid: string;
+    readonly nobodyPaidNewCardFirst: string;
+  },
 ): string {
-  return reason !== undefined && SAID_OF_THE_CLUB[reason].answer
-    ? words.nobodyPaidNewCardFirst
-    : words.nobodyPaid;
+  if (reason === undefined) return words.nobodyPaid;
+  if (HOLDS_LET_GO[reason]) return words.nothingWasTaken;
+  return SAID_OF_THE_CLUB[reason].answer ? words.nobodyPaidNewCardFirst : words.nobodyPaid;
 }
 
 /**
@@ -259,15 +273,15 @@ export function clubsAnswer(
 }
 
 /**
- * **The line under a Home card**: *Paid · 30 zł · 28,55 zł back if you leave by Sat 17:00*, *Bonarka answers
- * by 20:45 · Nobody pays until it confirms*, *1 seat open · fills by Sat 17:00 or the game is off
- * and everyone is refunded*, *Refunded 30 zł*.
+ * **The line under a Home card**: *30 zł · free to leave until Sat 17:00*, *Paid · 30 zł*, *Bonarka
+ * answers by 20:45 · Nobody pays until it confirms*, *1 seat open · fills by Sat 17:00 or the game is
+ * off and nothing is taken*, *Refunded 30 zł*.
  */
 export function moneyWords(line: MoneyLine): string {
   return moneyParts(line).join(LINE_JOIN);
 }
 
-/** The same line aloud: *Paid, 30 zł, 28,55 zł back if you leave by Fri 16:00*. */
+/** The same line aloud: *30 zł, free to leave until Fri 16:00*. */
 export function moneySpoken(line: MoneyLine): string {
   return moneyParts(line).join(SPOKEN_JOIN);
 }
@@ -316,9 +330,10 @@ export function bookedTime(
 /**
  * **The details' money row** (the screens A4.1), read off the card's own money line
  * (`moneyLineOf`), **its words always on a line of their own under the figure** (`below`, the
- * user's ruling of 2026-10-10): *PAID 28 zł* over *Paid*, with *· 27,18 zł back if you leave by
- * Sat 10:00* while the cut-off is ahead (`backIfYouLeaveAhead`, the line's own fold — Q99) — the
- * Home card's line without the figure the row already draws; the share nobody pays yet while the
+ * user's ruling of 2026-10-10): a booked game says when the share is held and when it is taken
+ * (`shareAt`, Q113) — *YOUR SHARE 28 zł* over *Held on your card · taken Sat 10:00 · free to leave
+ * until then*, or *Held from Tue 10:00 · taken Sat 10:00* while it is only checked, and *PAID 28 zł*
+ * over *Paid* once it is taken; the share nobody pays yet while the
  * club decides, over *Bonarka answers by 20:45 · Nobody
  * pays until it confirms* — the card's own line — until its deadline passes (Q98); the share nobody
  * pays yet over *Waiting for one payment · until 14:40 · Nobody pays until it's in*, or the payer's
@@ -352,7 +367,8 @@ export function moneyRow(
   const { money } = game;
   const words = COPY.details;
   const value = formatZloty(money.shareGrosze);
-  const share = money.paid ? words.paid : words.yourShare;
+  const held = shareAt(money, now);
+  const share = held?.kind === 'taken' ? words.paid : words.yourShare;
 
   if (game.rescue !== undefined) {
     return { label: words.yourShare, value, below: seatWhen(game.rescue) };
@@ -366,7 +382,7 @@ export function moneyRow(
         ? {
             label: words.yourShare,
             value,
-            below: [...why, nobodyPaid(line.reason, words)].join(LINE_JOIN),
+            below: [...why, nothingCameBack(line.reason, words)].join(LINE_JOIN),
           }
         : {
             label: words.refunded,
@@ -385,17 +401,34 @@ export function moneyRow(
       return { label: share, value, below: moneyWords(line) };
     case 'booked':
     case undefined: {
-      const back = backIfYouLeaveAhead(money, now);
-      const below = [
-        ...(money.paid ? [COPY.money.paid] : []),
-        ...(back === undefined ? [] : [backIfYouLeaveWords(back)]),
-      ];
-      return {
-        label: share,
-        value,
-        ...(below.length === 0 ? {} : { below: below.join(LINE_JOIN) }),
-      };
+      const below = held === undefined ? undefined : heldWords(held);
+      return { label: share, value, ...(below === undefined ? {} : { below }) };
     }
+  }
+}
+
+/**
+ * *Held on your card · taken Sat 10:00 · free to leave until then* · *Held from Tue 10:00 · taken
+ * Sat 10:00* · *Paid* — **when the share is held and when it is taken** (Q113; the screens A4.1), on
+ * the club's clock as *fills by* writes it. A 40 zł hold that appeared and vanished the day a game
+ * filled far ahead is the card check this explains.
+ */
+function heldWords(share: ShareAt): string {
+  const words = COPY.details;
+  switch (share.kind) {
+    case 'held':
+      return [
+        words.heldOnYourCard,
+        `${words.taken} ${shortMoment(share.takenAt)}`,
+        words.freeToLeaveUntilThen,
+      ].join(LINE_JOIN);
+    case 'checked':
+      return [
+        `${words.heldFrom} ${shortMoment(share.heldFrom)}`,
+        `${words.taken} ${shortMoment(share.takenAt)}`,
+      ].join(LINE_JOIN);
+    case 'taken':
+      return COPY.money.paid;
   }
 }
 
@@ -449,53 +482,50 @@ export function homeCardLabel({
 // ---------------------------------------------------------------------------
 
 /**
- * **The line under *Leave the game*** — what leaving costs at this moment, from the read: *Refunded
- * 27,18 zł if you leave now* before the cut-off, *Refunded 27,18 zł only if someone takes your seat*
- * after it, *Nobody has paid yet* while the club decides.
+ * **The line under *Leave the game*** — what leaving costs at this moment, from the read (Q113):
+ * *Free to leave now — nothing is taken* before the cut-off, *Refunded only if someone takes your
+ * seat* after it, *Nobody has paid yet* while the club decides.
  */
 export function leavingLine(leaving: Leaving): string {
-  const refund = formatZloty(leaving.refundGrosze);
+  const words = COPY.leave;
   switch (leaving.kind) {
     case 'BEFORE_THE_CUT_OFF':
-      return `Refunded ${refund} if you leave now`;
+      return words.freeNow;
     case 'AFTER_THE_CUT_OFF':
-      return `Refunded ${refund} only if someone takes your seat`;
+      return words.refundedIfTaken;
     case 'WHILE_WAITING_FOR_THE_CLUB':
-      return COPY.leave.nobodyPaidYet;
+      return words.nobodyPaidYet;
   }
 }
 
-/** **The sheet's words** — the mechanics §13's table, a line a clause, the sums the read's. */
+/**
+ * **The sheet's words** — the mechanics §13's table, a line a clause: before the cut-off nothing is
+ * taken, and the hold on the card is let go when there is one (`leavingAt`); after it the seat is
+ * offered and comes back less what was kept on the payment if it is taken, with no figure until the
+ * phone says the read's exact one (#644).
+ */
 export function leavingSheetBody(leaving: Leaving): readonly string[] {
   const words = COPY.leave;
-  const refund = formatZloty(leaving.refundGrosze);
   switch (leaving.kind) {
     case 'BEFORE_THE_CUT_OFF':
       return [
-        `You’ll be refunded ${refund} now (the ${formatZloty(leaving.cardFeeGrosze)} card fee isn’t returned).`,
+        leaving.letsAHoldGo === true ? words.holdLetGo : words.nothingTaken,
         words.offered,
         words.onRecordIfCalledOff,
       ];
     case 'AFTER_THE_CUT_OFF':
-      return [
-        words.offered,
-        `You’ll be refunded ${refund} when someone takes it; if nobody does, you won’t be.`,
-        words.onRecordIfNobody,
-      ];
+      return [words.offered, words.backIfTaken, words.onRecordIfNobody];
     case 'WHILE_WAITING_FOR_THE_CLUB':
       return [`${words.nobodyPaidYet}.`, words.withdrawsYourYes];
   }
 }
 
-/**
- * **The toast once the player has left** — which of the three the server says it was, and the
- * refund the sheet quoted, with how long it takes to arrive (§12.3: *shown when it is issued*).
- */
-export function leftToast(left: LeavingKind, quoted: Leaving): string {
+/** **The toast once the player has left** — which of the three the server says it was (Q113). */
+export function leftToast(left: LeavingKind): string {
   const words = COPY.leave;
   switch (left) {
     case 'BEFORE_THE_CUT_OFF':
-      return `${words.left} ${formatZloty(quoted.refundGrosze)} is on its way back — ${words.refundTakes}`;
+      return `${words.left} ${words.nothingWasTaken}`;
     case 'AFTER_THE_CUT_OFF':
       return `${words.left} ${words.offered}`;
     case 'WHILE_WAITING_FOR_THE_CLUB':

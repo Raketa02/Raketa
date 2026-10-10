@@ -120,7 +120,9 @@ describe('RECEIPTS', () => {
       'receipt-a2000000-0000-4000-8000-000000000001',
       'receipt-a2000000-0000-4000-8000-000000000002',
     ]);
-    expect(screen.getByText(WORDS.footer)).toBeTruthy();
+    // No BLIK line while BLIK isn't offered (Q113).
+    expect(screen.getByText('Refunds can take up to two weeks to reach your card.')).toBeTruthy();
+    expect(screen.queryByText(/BLIK/)).toBeNull();
   });
 
   it('draws a refund beside the share it gave back — two rows under one payment (#544)', async () => {

@@ -37,7 +37,7 @@ import {
   youTile,
   ZOFIA,
 } from '@/test-support/groupDeck';
-import { bookedMoney, bookingDetails, stubBooking } from '@/test-support/home';
+import { bookingDetails, stubBooking, unheldMoney } from '@/test-support/home';
 import {
   HOME_PATH,
   PAYMENTS_TO_CONFIRM_PATH,
@@ -681,6 +681,21 @@ describe('a payment that did not go through is confirmed on the same payment (§
 // ---------------------------------------------------------------------------
 
 describe('I’m in on a game’s details', () => {
+  /** Q113: the fill holds every share and books the court; the club's cut-off takes them. */
+  it('says a yes costs nothing, and that the last one holds every share until the cut-off', async () => {
+    const card = bookItNow();
+    stubProposal(transport, card.proposal_id, proposalDetails(card));
+    await openGames([card]);
+    fireEvent.press(screen.getByRole('button', { name: COPY.details }));
+
+    expect(
+      await screen.findByText(
+        'Your yes costs nothing until everybody is in. When the last yes lands, everyone’s share is held and the court is booked; it’s taken at the club’s cut-off.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/charged/)).toBeNull();
+  });
+
   it('counts down too, and a booked game leaves the details for the deck under It’s a game!', async () => {
     const card = bookItNow({
       sides: {
@@ -749,7 +764,7 @@ describe('at an On request club the full game goes to the club (A2.4, §11)', ()
       read_at: new Date(DECK_READ_AT).toISOString(),
       status: 'WAITING_FOR_THE_CLUB',
       court_name: null,
-      money: bookedMoney({ paid: false, free_to_leave_until: null }),
+      money: unheldMoney(),
       leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
       answer_by: new Date(DECK_READ_AT + HOUR).toISOString(),
       ...extra,
@@ -865,8 +880,8 @@ describe('at an On request club the full game goes to the club (A2.4, §11)', ()
       {
         notice_id: 'd0000000-0000-4000-8000-000000000001',
         kind: 'CLUB_CONFIRMED',
-        title: 'Bonarka Arena confirmed your game',
-        body: 'Padel · Sat 16:00 — it’s a game, and you paid 32 zł.',
+        title: 'Bonarka Arena confirmed your game · 32 zł held',
+        body: 'Padel · Sat 16:00 — it’s a game. 32 zł is held on your card and taken at the club’s cut-off, Fri 16:00.',
         given_at: new Date(DECK_READ_AT + 10 * 60 * SECOND).toISOString(),
         opens: 'BOOKING',
         game_id: card.proposal_id,
@@ -880,7 +895,9 @@ describe('at an On request club the full game goes to the club (A2.4, §11)', ()
     ]);
     await act(async () => jest.advanceTimersByTime(60 * SECOND));
 
-    expect(await screen.findByText('Bonarka Arena confirmed your game')).toBeTruthy();
+    // The words are the server's (Q113): the share held, never *you paid*, before the cut-off.
+    expect(await screen.findByText('Bonarka Arena confirmed your game · 32 zł held')).toBeTruthy();
+    expect(screen.queryByText(/you paid/)).toBeNull();
     expect(screen.queryByTestId('its-a-game')).toBeNull();
     expect(screen.queryByText(FILL.itsAGame.word)).toBeNull();
   });
@@ -1012,6 +1029,7 @@ describe('a share refused while the player was elsewhere waits on You › Paymen
     share_grosze: card.share_grosze,
     book_by: card.deadline,
     confirm_by: null,
+    time_to: null,
   });
 
   async function onPayments() {
@@ -1058,7 +1076,7 @@ describe('a share refused while the player was elsewhere waits on You › Paymen
   it('draws nothing when nothing waits', async () => {
     await onPayments();
 
-    await screen.findByText(PAYMENTS_COPY.method.charged);
+    await screen.findByText(PAYMENTS_COPY.method.heldAndTaken);
     expect(screen.queryByText(FILL.toConfirm.title)).toBeNull();
   });
 });

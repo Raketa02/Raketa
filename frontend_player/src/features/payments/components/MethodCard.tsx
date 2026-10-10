@@ -2,9 +2,10 @@
  * **The method card** — state B's head (mocks 46, 47; the screens A7.3; design system 7.23).
  *
  * The dark card (5.2): the brand's square on the left — the network's short name, or the wallet's —
- * then *Card •••• 4312* over *Charged by the club when a game fills*, and **Change** on the right,
- * which reopens the setup; the method keeps working until a new one is saved. The square is words,
- * not a logo: the app draws no third party's mark, and Archivo has none to draw.
+ * then *Card •••• 4312* over *Held when a game fills · taken by the club at its cut-off*, and
+ * **Change** on the right, which reopens the setup; the method keeps working until a new one is
+ * saved. The square is words, not a logo: the app draws no third party's mark, and Archivo has none
+ * to draw.
  */
 
 import { StyleSheet, Text, View } from 'react-native';
@@ -37,7 +38,7 @@ export function MethodCard({ method, onChange }: MethodCardProps) {
           </View>
           <View style={s.words}>
             <Text style={s.title}>{cardLine(method)}</Text>
-            <Text style={s.line}>{PAYMENTS_COPY.method.charged}</Text>
+            <Text style={s.line}>{PAYMENTS_COPY.method.heldAndTaken}</Text>
           </View>
         </View>
         <Button label={PAYMENTS_COPY.method.change} variant="onDark" size="sm" onPress={onChange} />

@@ -43,7 +43,7 @@
  *   they are.
  * - **Booked on a confirmed payment** (#625, #626; Q110) — a payment in time, or a payment that is
  *   the yes again: *It's a game!* for the player whose payment completed the game, at either kind of
- *   club (§12.2: *you see It's a game!*); the others are told *booked · you paid*, or the club's yes.
+ *   club (§12.2: *you see It's a game!*); the others are told *booked · 40 zł held*, or the club's yes.
  *   A *TO CONFIRM* row holds no card, so its faces are read off the booking.
  * - **A share to confirm** — *Your payment didn't go through — confirm it to keep your seat*, and
  *   the confirmation opens on that payment, naming the player's time to pay (Q109). A plain yes

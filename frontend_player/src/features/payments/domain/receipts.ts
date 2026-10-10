@@ -14,9 +14,9 @@ import type { Weekday } from '@/shared/vocabulary/week';
 import type { Seller } from './seatCharge';
 
 /**
- * A charge (✓) or a refund (↩). **The wire serves charges alone today**; refunds join the list with
- * the leaving rules (#544), and the row draws both already — `mappers/wireVocabulary.ts` holds the
- * wire's kinds inside this union until the two are equal.
+ * A charge (✓) or a refund (↩). The wire serves a third, a hold let go (`RELEASED`, #641) — *40 zł
+ * held · released* — which this phone does not draw yet (#644): the mapper leaves those rows out,
+ * and `mappers/wireVocabulary.ts` holds the rest of the wire's kinds equal to this union.
  */
 export type ReceiptKind = 'CHARGE' | 'REFUND';
 

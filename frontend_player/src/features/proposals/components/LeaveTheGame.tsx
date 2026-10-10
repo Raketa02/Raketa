@@ -4,15 +4,15 @@
  * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A4.1, details 10; the
  * mechanics §13).
  *
- * **What it costs is the read's** (`leaving`, #544): refunded at once less the card fee before the
- * club's cut-off, refunded only when somebody takes the seat after it, and — while an On request
+ * **What it costs is the read's** (`leaving`, #544): before the club's cut-off nothing is taken and
+ * the hold on the card is let go (Q113), after it the share stays taken, and — while an On request
  * club decides — nobody has paid and leaving withdraws the yes. The server folds it on its own clock
  * and quotes the same words the departure answers with; nothing here works out a refund.
  *
  * **The door's shape is the group exit's** (`ExitDoor`): the sheet is the surface while the act is
  * in flight — its act busy, a refusal said on it in words with the act still there — and the door
  * is hidden from a listener while it is up, one label on the door and on the act. Success is a toast
- * saying what happened and, before the cut-off, when the refund arrives (§12.3); **from a booked
+ * saying what happened — before the cut-off, that nothing was taken (Q113); **from a booked
  * game the player goes back to Home**, which no longer holds it, and from a game still filling the
  * details stay, read again.
  *
@@ -66,7 +66,7 @@ export function LeaveTheGame({ leaving, act: leave, afterLeaving }: LeaveTheGame
     leave.mutate(undefined, {
       onSuccess: (left) => {
         setOpen(false);
-        showToast({ message: leftToast(left, leaving), tone: 'ok' });
+        showToast({ message: leftToast(left), tone: 'ok' });
         afterLeaving?.();
       },
     });

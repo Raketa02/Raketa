@@ -4,7 +4,7 @@
  *
  * ```
  * ┌──────────────────────────────────────────┐
- * │ It's a game! · you paid 30 zł          × │   night, radius toast, padding md × lg
+ * │ It's a game! · 30 zł held              × │   night, radius toast, padding md × lg
  * │ Padel · Sat 16:00 · Bonarka Arena        │   inlineTitle surface · tiny onDarkTiny
  * └──────────────────────────────────────────┘
  * ```

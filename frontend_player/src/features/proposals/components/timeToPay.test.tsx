@@ -50,6 +50,7 @@ import {
   homeGame,
   stubBooking,
   stubHomeGames,
+  unheldMoney,
 } from '@/test-support/home';
 import {
   HOME_PATH,
@@ -199,6 +200,7 @@ function toConfirmRow(
     share_grosze: 4000,
     book_by: '2026-10-02T14:00:00Z',
     confirm_by: DUE,
+    time_to: 'FIX_THE_CARD',
     ...extra,
   };
 }
@@ -212,7 +214,7 @@ function waitingForAPayment(extra: Partial<Wire['HomeGameSchema']> = {}): Wire['
     status: 'WAITING_FOR_A_PAYMENT',
     game_id: null,
     court_name: null,
-    money: bookedMoney({ share_grosze: 4000, paid: false, free_to_leave_until: null }),
+    money: unheldMoney({ share_grosze: 4000 }),
     payment_due_by: DUE,
     ...extra,
   });
@@ -226,7 +228,7 @@ function waitingDetails(
     status: 'WAITING_FOR_A_PAYMENT',
     game_id: null,
     court_name: null,
-    money: bookedMoney({ share_grosze: 4000, paid: false, free_to_leave_until: null }),
+    money: unheldMoney({ share_grosze: 4000 }),
     shows_forecast: false,
     leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
     payment_due_by: DUE,
@@ -643,7 +645,7 @@ describe('at a club that confirms, a card refused at the club’s Accept (#626)'
   const atKazimierz = {
     club: { ...homeGame().club, name: KAZIMIERZ },
     club_confirms: true,
-    money: bookedMoney({ share_grosze: 2500, paid: false, free_to_leave_until: null }),
+    money: unheldMoney({ share_grosze: 2500 }),
   } as const;
 
   it('reads the same — Waiting for one payment to the others, the payer’s time on their card and row', async () => {

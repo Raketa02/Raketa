@@ -4,7 +4,7 @@
  *
  * ```
  * ‹ Notifications                                   HOME
- * ┌ It's a game! · you paid 30 zł            ● 14:05 ›┐   newest first; the words the push used
+ * ┌ It's a game! · 30 zł held                ● 14:05 ›┐   newest first; the words the push used
  * │ Padel · Sat 16:00 · Bonarka Arena                 │   ● new since the last visit
  * │ Someone left your game                Yesterday ›│
  * └───────────────────────────────────────────────────┘

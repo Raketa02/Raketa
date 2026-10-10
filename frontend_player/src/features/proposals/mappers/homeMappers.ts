@@ -13,7 +13,7 @@ import type { components } from '@/generated/schema';
 
 import type { DeckPerson } from '../domain/deck';
 import type { BookedGame, BookedMoney, Home, HomeGame, Leaving, RescueOffer } from '../domain/home';
-import type { LeavingKind } from '../domain/vocabulary';
+import type { LeavingKind, ShareState } from '../domain/vocabulary';
 
 import { toClub, toKind } from './deckMappers';
 
@@ -38,15 +38,22 @@ function toSides(wire: Schemas['BookedSidesSchema']): HomeGame['sides'] {
   return { yours: wire.yours.map(toSeat), theirs: wire.theirs.map(toSeat) };
 }
 
+/**
+ * A booked game's money. Where the share stands and its two instants (#637, #639; Q113) are absent
+ * for a `null`, and for the fields missing altogether: a server older than them sends none, and the
+ * line then says only what `paid` and the cut-off say.
+ */
 function toMoney(wire: Schemas['BookedMoneySchema']): BookedMoney {
-  // What leaving gives back (Q99) — absent for a `null`, and for the field missing altogether: a
-  // server older than it sends none, and the line then has no clause.
-  const back: number | null | undefined = wire.back_if_you_leave_grosze;
+  const state: ShareState | null | undefined = wire.share_state;
+  const heldFrom: string | null | undefined = wire.held_from;
+  const takenAt: string | null | undefined = wire.taken_at;
   return {
     shareGrosze: wire.share_grosze,
     paid: wire.paid,
+    ...(state === null || state === undefined ? {} : { shareState: state }),
+    ...(heldFrom === null || heldFrom === undefined ? {} : { heldFrom }),
+    ...(takenAt === null || takenAt === undefined ? {} : { takenAt }),
     ...(wire.free_to_leave_until === null ? {} : { freeToLeaveUntil: wire.free_to_leave_until }),
-    ...(back === null || back === undefined ? {} : { backIfYouLeaveGrosze: back }),
     ...(wire.refunded_grosze === null ? {} : { refundedGrosze: wire.refunded_grosze }),
   };
 }
@@ -115,12 +122,12 @@ function toBooking(
   };
 }
 
+/**
+ * What leaving costs. After the cut-off the read quotes the refund if the seat is taken and the fee
+ * kept, to the grosz (#641) — dropped here until the phone says them (#644).
+ */
 function toLeaving(wire: Schemas['LeavingSchema']): Leaving {
-  return {
-    kind: wire.kind,
-    refundGrosze: wire.refund_grosze,
-    cardFeeGrosze: wire.card_fee_grosze,
-  };
+  return { kind: wire.kind };
 }
 
 function toRescue(wire: Schemas['RescueOfferSchema']): RescueOffer {
