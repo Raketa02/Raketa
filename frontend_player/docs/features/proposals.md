@@ -398,7 +398,7 @@ the yes.
 **Home's and the details' lines are the read's now** (§14.1): _2 seats open · fills by Fri 16:00 or
 the game is off and everyone is refunded_ (`open_seats`), _1 seat open · offered to others · the game
 goes ahead_ after the cut-off; _Called off_ with why — _A seat was still empty at the cut-off_,
-_Kazimierz Padel couldn't take it_, _… didn't answer in time_ — and what came back (_Refunded 28 zł_,
+_Kazimierz Padel said no_, _… didn't answer in time_ (Q105, since #629, below) — and what came back (_Refunded 28 zł_,
 `refunded_grosze`) or _Nobody paid_; _Uncounted_ with _A seat was empty · no Level moved_ — on Home's
 card, and under the share on the details' money row (`moneyRow`). A booking
 waiting for its club has no Game yet (`gameId` absent): no room (and `chatIsOpen` keeps its door
@@ -423,7 +423,8 @@ in the Classic half of the badge.
   _Saturday_ — the money line's and the details' own form.
 - **The leaving toast** says when a refund lands, as §12.3 asks of the moment a refund is issued.
 - **The details' ended statuses' words** (_Didn't fill in time_, _Taken back_, _No court left at that
-  hour_, _The club couldn't take it_) — no mock draws them.
+  hour_, and since #629 the club's answer read off the booking, _Called off_ until it is) — no mock
+  draws them.
 - **A game the details read as `FILLED`** says _Booked_ and offers nothing: the details have no
   route to Home's screen; Home holds the game.
 - **_Confirm your payment_ on the filling details** — A4.2 lists _I'm in_, _Not this time_,
@@ -434,9 +435,10 @@ in the Classic half of the badge.
 
 **Owed**: the chat lines _Kuba left — the seat is open_ / _Ola took the seat_ (conversations, with the
 backend's #545 note); the push and in-app notices of the club's answer and of a seat opening (#549,
-#559); _+ Post a game_ enabled (#558, below). **Owed to the backend**: a `called_off_reason` for the club's
-own cancel (#547) and for a request called off when a player left it — §14.1 lists both, and the
-wire names neither, so those cards say only what came back; and who is In and the club's turn on
+#559); _+ Post a game_ enabled (#558, below). **Owed to the backend**: ~~a `called_off_reason` for the
+club's own cancel and for a request called off when a player left it~~ — both came: the club's
+cancel is `CANCELLED_BY_THE_CLUB` (#547), and a request a player left is no longer called off but
+stays on the others' Home as _Seat open_ (#624, #629, below); and who is In and the club's turn on
 the live yes, which would save _You're In_ its read a row. **Nothing here has been seen on a
 device.**
 
@@ -742,3 +744,65 @@ matched, and they were matched once; only the yes that filled the game raises it
 rather than coming up at once and filling the line in a moment later. A line that changed under the
 screen's one announcement would be heard without its deadline. **Not seen on a device**: the line under
 the word wants a look on a narrow phone, where it wraps to two lines.
+
+**A full game that falls back stays on Home as _Seat open_**
+([#629](https://github.com/Raketa02/Raketa/issues/629); the backend's #624; the mechanics Q106, the
+screens A8; story S-01B's F-HOME-10.1, F-REQUEST-31.1, F-REQUEST-31.2). On Thursday at 20:40 Oscar
+leaves Friday's 19:00 at Kazimierz Padel while the club decides. Marta reads _Oscar Bertran left
+your game — it's filling again_, and the game stays on her Home: _Seat open_ in amber, _1 seat open
+· Kazimierz Padel is asked again when it's full · nobody paid_, and at a club that books at once _1
+seat open · books when it's full · nobody paid_. **Why**: the game used to leave everybody's Home
+while Play still had it filling (#543), so the notice pointed at a game Home no longer held. The
+wire's `filling_again` and `club_confirms` become `fillingAgain: { clubConfirms }`, absent on every
+booked game and from an older server that sends neither. `moneyLineOf` reads it as a line of its own
+(`fillingAgain`), never _fills by …_: nobody paid, so no cut-off applies. It is a stage of its own
+in the status table (`FILLING_AGAIN`): live, with no room and no court, and never _New_. The read
+says how it ends: _Waiting for the club_ again once it is full, or _Called off_ with
+`BOOK_BY_PASSED` (_A seat was open past its last moment to book · Nobody paid_) or `COURT_HOUR_LOST`
+(_Its court went to another game before it filled again · Nobody paid_). The wire keeps
+`filling_again` on the called-off game, so the stage is _Seat open_ and the mark together
+(`isFillingAgain`), never the mark alone. Home's badge is the server's `needing_you`, which never
+counts it, and the card has no bubble, as on _Waiting for the club_: the chat opens when the game is
+booked.
+
+**Its way out is a game still filling's** (#629). The details draw _Seat open_ with no court and no
+Chat, and the share over the card's line. At the foot, **_Withdraw_** stands where _Leave the game_
+does, since the read gives no `leaving`. It is free and never on the record, as on a _You're In_
+row, with no sheet and no toast: `DELETE /proposals/{id}/yes` with the booking's id, which is the
+game's (`useWithdrawFillingAgain`), then back to Home, which no longer holds the game. It is gone
+once the game is called off. A refused withdrawal (the game ended, or went to its club meanwhile) is
+a toast, and the booking is read again so the details draw what it is now. **Every withdrawal reads
+Home again** (`rereadAfterWithdrawing`), so _Withdraw_ on the game's _You're In_ row takes the card
+off Home too.
+
+**The club's no and its silence are told apart** (#629; the mechanics Q105; story S-01E's
+F-REQUEST-23.1, the phone's half). Home's card and the booked details say _Kazimierz Padel said no_
+where they said _couldn't take it_, and _Kazimierz Padel didn't answer in time_ as before, each with
+_Nobody paid — you'll get a new card first_: the notice's and the email's words (#623; A8). The
+filling details that a notice opens said _The club couldn't take it_ for both, because the game's
+own read has one status for both, `TURNED_DOWN`. They now also read the booking, which has the same
+id, for its `called_off_reason` (`clubsAnswer`). The tag says _Kazimierz Padel said no_ or
+_Kazimierz Padel didn't answer in time_, and _Called off_ (Home's word) until that read lands, or if
+it fails, with _Padel · called off_ under the names.
+
+**Calls made here, open for the product owner**:
+
+- **Not _New_ while filling again**: _New_ marks a game that filled, and this one is not full any
+  more. **Full again, it is _New_ only if it was never opened**: the phone keeps the booking's id as
+  opened, and the wire says nothing of a second fill. Marking a refill _New_ wants the server's
+  instant it filled, so the phone can keep `id@filledAt` as the bell keeps `id@givenAt` — owed to
+  the backend.
+- **The words for the two new endings.** The wire gives one reason, `BOOK_BY_PASSED`, both for a game
+  that didn't fill again in time and for a seat that opened after the book-by. _A seat was open past
+  its last moment to book_ is true of both. The notice says the first as _It didn't fill again before
+  its last moment to book_. The lost court uses the notice's own words.
+- **No toast after _Withdraw_**, as on a _You're In_ row: the details close onto a Home without the
+  card.
+- **The filling details read the booking** to learn which answer it was. That is a second read, on a
+  turned-down game only, rather than asking the backend for a reason on `GET /proposals/{id}`. Their
+  share row draws nothing more, as on every game that ended unfilled; their second line reads
+  _Padel · called off_, where it read _turned down_, for a silence too.
+
+**Owed by the root**: the root `CONTEXT.md`'s **Seat open** still says _decided and not yet built
+(#624)_, and doesn't name the lost court. **Nothing here has been seen on a device**: _Withdraw_ at the
+foot of the details, and the longer called-off lines on a narrow card, want a look.
