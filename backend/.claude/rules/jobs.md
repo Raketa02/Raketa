@@ -19,7 +19,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   *Run it now* in `app/api/dev/jobs.py`'s `RUN_IT_NOW`, run over the request's session and
   clock through the same builder the job calls, or a line in `NOT_RUN_HERE` saying why not —
   `tests/api/test_games_test_console_time.py` fails a registered job that is neither
-  (#592). Twelve jobs today — two went with the challenges (#578), five
+  (#592). Thirteen jobs today — two went with the challenges (#578), five
   with the searches (#579): the **exposure roll**, the two **prompt loops** (intent drift,
   availability staleness), the **interest expiry loop** and the **scale-pressure probe** —
   and two with the ranking (#580): the **candidate index's tail and refresh**, with trigger 4
@@ -127,3 +127,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`new-bookings-summary`, #548), which buys the record, not the fact — the Bookings page
   shows a booking the moment it is made: once a club day closes, its desk is emailed the
   day's new bookings, once (a stream per club per day, born with the email).
+  The twenty-first is **time to pay** (`time-to-pay`, #625, #626), and **correctness
+  depends on it**: a payer's own act past their time already runs it out first, but only
+  this reopens the seat for everybody else, lets the holds the others kept go and — at a
+  club that confirms — calls the booking off, frees the court and emails the desk; and
+  the book-by sweep leaves a game with a payment awaited for it. Its read names
+  **candidates** (`ProposalDirectory.paying_past`, over `proposals.paying_until`), each one
+  transaction that locks its game first, a conflict counted and stepped over. The thirty
+  minutes are domain (`TIME_TO_PAY`); only the cadence (thirty seconds) is a setting. It
+  has a *Run it now*, and a game's pane on the console carries its `PAYMENT_DUE` moment.

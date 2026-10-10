@@ -53,11 +53,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   payment, are both read as they stand — and a payment **waiting for its player** answers its
   secret (`AWAITING_THE_PLAYER`: the bank's check, or a decline confirmed with another card).
   The **Seat charge** — one stream per payment for one share, its verdict, its refund and the
-  provider's answers — is `bookings.md`'s. **A refund is decided in the act and made from the
-  outbox** (#544): `SeatChargeRefundDecided` then `SeatChargeRefunded` with the fee the
-  provider kept; receipts list it as its own `REFUND` row (`card_fee_grosze`), dated from the
-  decision. What the card fee on a share comes to before the money moves is
-  `domain/card_fee.py`'s **estimate** (Stripe's EEA price), which the fake withholds exactly.
+  provider's answers — is `bookings.md`'s. **A refusal with time to pay keeps every other
+  hold** (#625, #626; `GameToCharge.pay_by`): the holds just made are recorded held and none
+  is released, so the payment in time books on them; the confirm email names the time, and
+  with no time left at the club's yes nobody is emailed — the game is called off. **A refund
+  is decided in the act and made from the outbox** (#544): `SeatChargeRefundDecided` then
+  `SeatChargeRefunded` with the fee the provider kept; receipts list it as its own `REFUND`
+  row (`card_fee_grosze`), dated from the decision. What the card fee on a share comes to
+  before the money moves is `domain/card_fee.py`'s **estimate** (Stripe's EEA price),
+  which the fake withholds exactly.
   **The games test console steers the laptop's fake** (#591, `app/api/dev/provider.py`): it
   reads and sets a saved card's behaviour (`card_behaviour_of`, `card_behaves`), confirms a
   waiting payment as the phone's bank would (`phone_confirms_payment`), makes refunds wait

@@ -9,9 +9,9 @@ paths:
 
 # Notifications
 
-Decisions that are load-bearing and not obvious from the code (#549, #621, #622, #623;
-ADR-0189 §5 and its 2026-10-09 amendment; the mechanics §13, §17.2, Q101–Q105, Q107, Q108;
-the screens A7.2, A9).
+Decisions that are load-bearing and not obvious from the code (#549, #621, #622, #623,
+#625, #626; ADR-0189 §5 and its 2026-10-09 amendment; the mechanics §13, §17.2,
+Q101–Q105, Q107–Q110; the screens A7.2, A9).
 
 - **A player is told, and nothing asks** (`.importlinter`'s *No context knows
   Notifications exists*). `notifications/application/telling.py` subscribes to
@@ -105,6 +105,29 @@ the screens A7.2, A9).
     sport and kind). Once per card: `Redealt` is recorded once per owed game. **A card the
     proposer deals for any other reason tells nobody** — a lost court hour's new card first
     included, which no notice promised; older `Redealt` rows name no card and tell nobody.
+- **A time to pay names its time and never its payer** (#625, #626; Q109, Q110). Always
+  on, never capped, and emailed only where money is — the payer's confirm email:
+  - **`CONFIRM_PAYMENT`** with `until` — *Confirm your payment by 14:40 to keep your seat* /
+    *Padel · Tue 19:00 at Bonarka Arena — the others are waiting.* — while the payer's time
+    runs at the delivery (`GameBrief.paying`); a refused share on a game already over (the
+    club's yes past the book-by) tells nothing.
+  - **`WAITING_FOR_A_PAYMENT`** on `TimeToPayGiven` — *It's a game! · waiting for one payment
+    until 14:40* / *Padel · Tue 19:00 at Bonarka Arena. Nobody pays until it's in.*; at the
+    club's yes (`AT_THE_CLUBS_YES`) *Your Fri 19:00 is waiting for one payment, until 21:20*
+    / *Padel at Kazimierz Padel. Nobody pays until it's in.* — to everybody In but the
+    payers, the filler's copy their own; keyed by the game and the deadline, so two refused
+    at one fill, or a payer refused again, tell it once; only while the game still waits.
+  - **`GAME_BOOKED` · `PAYMENT_CAME_IN`** — *Your Tue 19:00 is booked · you paid 40 zł* /
+    *Padel at Bonarka Arena.* on a game that booked on the payment it waited for
+    (`GameBrief.booked_on_a_payment`); at the club's yes it stays *… confirmed your game*.
+  - **`TIME_TO_PAY_RAN_OUT`** on `TimeToPayRanOut` to the payers — *Your time to pay ran out
+    · Tue 19:00* / *Your seat is open to others now — confirm your payment to take it back
+    while it's free.* — and *filling again* (`FELL_BACK`) to everybody else still In; past
+    the book-by, `GAME_CALLED_OFF` · `PAYMENT_NOT_IN_TIME` to them all (*A payment didn't go
+    through in time*), as `PaymentNotInTime.at_once` tells the club's yes with no time left.
+  - **`FellBackToFilling`** — a leave or a paused week while it waited, at a club that books
+    at once — is told as `RequestWithdrawn` is; a court lost while it waited is *called off ·
+    nobody paid* with `COURT_LOST_WAITING_FOR_A_PAYMENT`.
 - **Caps and bundling are decided as each trigger is delivered** (`NoticesOfADay.give`);
   the screens' C3 *Notifications job* is not built. *You complete it* once a day,
   *Challenges for you* three times — past the cap each **joins the day's last notice of

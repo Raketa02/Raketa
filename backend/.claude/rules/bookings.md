@@ -18,13 +18,14 @@ paths:
   - "app/modules/games/application/no_shows.py"
   - "app/modules/proposals/application/club_money.py"
   - "app/modules/bookings/application/daily_summary.py"
+  - "app/modules/proposals/application/time_to_pay.py"
 ---
 
 # Bookings and the fill
 
 Decisions that are load-bearing and not obvious from the code (#541, #543, #544, #545,
-#547, #548, #623, #624; ADR-0189 §2–§5; the mechanics §10.1, §11–§13, §15, §16.7–§16.12,
-Q104–Q106, Q108).
+#547, #548, #623, #624, #625, #626; ADR-0189 §2–§5; the mechanics §10.1, §11–§13, §15,
+§16.7–§16.12, Q104–Q106, Q108–Q112).
 
 - **The last yes books the game, in that yes's own transaction** (`proposals/application/fill.py`).
   `SayYes` loads the proposal **locked** (`load_for_update`, `FOR UPDATE` on its row — SQLite
@@ -63,8 +64,68 @@ Q104–Q106, Q108).
   by a transaction that never committed is answered again within the hour or lapses at the
   provider untaken. A player whose card has a new brand (`terms_needed`), or no method at all, is
   refused **without asking the provider** (`TERMS_NEEDED`, `NO_METHOD`).
-- **A refused payment reopens the seat, and confirming it is the yes again.** The refused
-  player's **seat reopens** (`SeatReopened`, with the reason and the charge — not *Lapse*, which
+- **A refused share at the fill gets time to pay** (#625, #626; Q109–Q112;
+  `proposals/application/fill.py`, `time_to_pay.py`, `Proposal.paying`). *The reopening
+  waits*: the refused player **stays In**, the seat theirs alone until `TIME_TO_PAY`
+  (thirty minutes, `domain/limits.py`) from the refusal, **never past the book-by**
+  (`Proposal.time_to_pay_ends`; a payer refused again keeps the time they had). Every
+  refusal gets it — the bank's check, a decline, terms to accept again, no method; a
+  seat reopened because two no longer fit gets none. **Every other hold is kept**:
+  `GameToCharge.pay_by` makes `ChargeTheSeats` record the new holds held and release
+  nothing, and the confirm email names the time (*Confirm your payment by 14:40 to keep
+  your seat*). The game is **full, so nobody else is dealt the seat or may take it** —
+  every `open_seats` read stays nought — and `waiting_for_the_club` is false
+  (`waiting_for_a_payment` true; the book-by reads). **Paid in time** —
+  `ConfirmPayment` with the refused payment, or a plain yes once the terms or a method
+  are fixed (`SayYes._paying_again`) — the fill books at once on the kept holds and
+  nobody's bank is asked again (`ProposalFilled` marks `booked_on_a_payment`, so the
+  booking is told *booked · you paid*, never a second *It's a game!*); with a seat open
+  meanwhile it is `TimeToPayMet`, the payer In with their payment held. **Out of time**
+  the `time-to-pay` job (`RunOutTheTimeToPay`, see `jobs.md`) records `TimeToPayRanOut`:
+  the seat **reopens** exactly as a refused share's used to — offered to others, theirs
+  to take back while free — and **a payer's own act past the time runs it out first**
+  (`run_out_if_due`), so a late confirmation is a yes on a reopened seat. **What was
+  kept is let go** (`let_go_of_what_was_kept`): a leaver of a game waiting for a payment
+  takes their hold with them, and once no payment is awaited and the game did not book,
+  every hold is released but the payers' own (a confirmed one waiting for the fill, a
+  refused one for its player). **A seat opening while it waits** — a leave, a paused
+  week, a block — falls the game back (`FellBackToFilling`, named only for a player's
+  own act: another booking taking the hour is `own=False`) and the payer's time runs
+  on. **Full again while a payment is still awaited** it simply waits for that
+  payment: `Fill.run` fills only on the payer's own act, so no card is asked — hers
+  least of all, *nothing retries a card by itself* — and no club is asked meanwhile;
+  her payment then holds the newcomer's share, or puts the game to its club anew (her
+  time met). Each share refused gets its own thirty minutes; one refused again keeps
+  what it had. **At a club that books at once there is no
+  booking and no court held**: a card that books the court hour meanwhile ends it
+  (`CourtHourLost` by the proposer, or the fill's own court check when the payment
+  comes), its people dealt a new card first; Home and the details read the game off its
+  proposal (`domain/home.py`'s `without_a_booking`, found by
+  `ProposalDirectory.payment_awaited_of` over `proposals.payment_awaited_at`), *Waiting
+  for one payment*, then *Seat open*, or *called off* — `PAYMENT_NOT_IN_TIME` when the
+  time ran out on the book-by. **The book-by sweep leaves a game with a payment
+  awaited** (`proposals.paying_until`, migration 0053): the job ends it first.
+  **At the club's yes** (#626) `Fill.accept` gives the same time and records
+  `BookingAwaitingAPayment` — the booking `WAITING_FOR_A_PAYMENT`, accepted, its court
+  held (the index ignores only `CALLED_OFF`), out of *Waiting for you* and the timeout
+  job's read; the club's day reads *Accepted · waiting for one player's payment until …*
+  (`ClubStatus.WAITING_FOR_A_PAYMENT`, `payment_due_by`) and Accept answers
+  `WAITING_FOR_A_PAYMENT`. Paid in time, `Fill.run` books it through `requests.accept`
+  on the held court and the sides the players were reading (`Proposal.on_the_clubs_yes`),
+  **the desk not asked again**, the others told the club's yes; out of time
+  `PaymentNotInTime` calls it off — the court free, the desk emailed *A game didn't go
+  ahead* (`CallOffForAPayment`), the club's day *called off · `PAYMENT_NOT_IN_TIME`* —
+  and the people still In keep their places as after `RequestWithdrawn` (`taken_back`),
+  asked of the club again when full — the club's row still lists all four, so nobody
+  is named by being left off (Q112); the payers' seat rows go, so their Home drops it. **No time left at the club's yes** — its book-by
+  had come — calls it off at once (`PaymentNotInTime.at_once`, for good: everybody on
+  it reads it called off, nothing to confirm, no confirm email) and Accept answers
+  `CALLED_OFF`. A leave while the club's yes waits takes the request — and the yes —
+  back (`with_its_club`).
+- **A refused payment reopens the seat, and confirming it is the yes again.** Once its time
+  to pay ran out — or where no time was given: a rescue, the club's yes past the book-by —
+  the refused player's **seat reopens** (`SeatReopened` or `TimeToPayRanOut`, with the
+  reason and the charge — not *Lapse*, which
   is a seat's answer window; not a withdrawal, and no verdict on the card). They find the payment
   in `GET /players/me/payments-to-confirm` (proposals': games still filling whose seat reopened
   on a payment to confirm, so it never lists a game that moved on), and a plain swipe yes is
@@ -79,7 +140,9 @@ Q104–Q106, Q108).
   first — or a game that filled or ended — lets it go too (`proposal_is_full` /
   `proposal_is_over`). A fill releases every charge on its game it was not paid with, and a
   lost court hour (the fill's or the proposer's) and the book-by sweep release every charge on
-  theirs.
+  theirs. **The Stripe risk owed to #533**: confirming re-uses the payment that failed, on the
+  club's clone of the card, as before; Stripe's docs do not say whether a clone a failed
+  attempt used can be confirmed again — check it in test mode once keys exist.
 - **The provider's notices fold onto a charge, only forward.** The Connected accounts endpoint's
   `payment_intent.*` kinds are `SeatPaymentChanged`; `ReceivePaymentNotice` reads the payment as
   it stands and `SeatCharge.heard` records only a move the charge has not made yet — a hold heard
