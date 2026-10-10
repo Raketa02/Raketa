@@ -13,6 +13,7 @@ import logging
 from app.application.events import DeliveryContext
 from app.modules.proposals.domain.events import (
     CourtHourLost,
+    FellBackToFilling,
     GamesAndMoneySet,
     NoSaid,
     ProposalExpired,
@@ -22,6 +23,9 @@ from app.modules.proposals.domain.events import (
     ClubCancelled,
     Redealt,
     SeatReopened,
+    TimeToPayGiven,
+    TimeToPayMet,
+    TimeToPayRanOut,
     TurnedDown,
     VersionDealt,
     YesPaused,
@@ -48,6 +52,10 @@ ProposalEvent = (
     | TurnedDown
     | Redealt
     | ClubCancelled
+    | TimeToPayGiven
+    | TimeToPayMet
+    | TimeToPayRanOut
+    | FellBackToFilling
 )
 
 _LINES: dict[type, str] = {
@@ -66,6 +74,10 @@ _LINES: dict[type, str] = {
     TurnedDown: "proposals.proposal.turned_down",
     Redealt: "proposals.proposal.redealt",
     ClubCancelled: "proposals.proposal.club_cancelled",
+    TimeToPayGiven: "proposals.time_to_pay.given",
+    TimeToPayMet: "proposals.time_to_pay.met",
+    TimeToPayRanOut: "proposals.time_to_pay.ran_out",
+    FellBackToFilling: "proposals.proposal.fell_back_to_filling",
 }
 
 

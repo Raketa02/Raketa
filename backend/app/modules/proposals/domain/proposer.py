@@ -444,12 +444,14 @@ class _Batching:
             )
         ordered = sorted(filling, key=lambda p: (p.start, str(p.proposal_id)))
         still_held = frozenset(held)
-        # A game waiting for its club holds its court through its request, so
-        # the court gone from the hour is its own.
+        # A game its club has holds its court through its request — waiting
+        # for its answer, or for a payment its yes waits on (#626) — so the
+        # court gone from the hour is its own. One waiting for a payment at a
+        # club that books at once holds none, and loses it as any card does.
         self._lost = tuple(
             p
             for p in ordered
-            if not p.waiting_for_the_club and (p.club_id, p.start) not in still_held
+            if not p.with_its_club and (p.club_id, p.start) not in still_held
         )
         self._live = tuple(p for p in ordered if p not in self._lost)
         self._owed = tuple(sorted(owed, key=lambda p: (p.start, str(p.proposal_id))))
@@ -1026,7 +1028,7 @@ class _Batching:
             for proposal in self._live
             if proposal.origin is Origin.PICK
             # A request's court is off the hour's already: it holds it.
-            and not proposal.waiting_for_the_club
+            and not proposal.with_its_club
             and (proposal.club_id, proposal.start) == (hour.club_id, hour.start)
         ) + sum(
             1

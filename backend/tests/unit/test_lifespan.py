@@ -203,6 +203,7 @@ async def test_no_background_work_at_all_reaches_for_no_engine(monkeypatch):
         PROPOSAL_EXPIRY_ENABLED=False,
         PROPOSER_ENABLED=False,
         REQUEST_TIMEOUT_ENABLED=False,
+        TIME_TO_PAY_ENABLED=False,
         CUT_OFF_ENABLED=False,
         CLUB_PAYOUTS_ENABLED=False,
         NEW_BOOKINGS_SUMMARY_ENABLED=False,

@@ -173,6 +173,7 @@ async def test_a_yes_records_and_answers_as_the_player_s_own(
         "booked": None,
         "waiting_for_the_club": False,
         "your_payment": None,
+        "payment_awaited_until": None,
     }
     assert str(game) in await live_ids(client, world.kuba)
 

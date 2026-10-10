@@ -530,6 +530,45 @@ async def test_a_request_is_answered_once_and_a_withdrawn_one_asked_again(
     assert not await requests.withdraw(refused.proposal_id, player_ids=(OLA,), at=_at())
 
 
+@pytest.mark.parametrize("implementation", registered(ClubRequests))
+async def test_a_club_s_yes_waits_on_a_payment_then_books_or_is_called_off(
+    implementation, session
+):
+    """#626: a share refused at the club's yes keeps the yes and its court
+    until the payment's time; paid, the club's yes books it, not asked again —
+    not paid, it is called off, and a request no longer the club's records
+    nothing."""
+
+    club_id = new_uuid()
+    paid = _a_game_to_ask(club_id, start=_at(48), at=_at())
+    lapsed = _a_game_to_ask(club_id, start=_at(72), at=_at())
+    requests: ClubRequests = implementation.build(session)
+    for game in (paid, lapsed):
+        await requests.ask(game, at=_at())
+        await requests.await_a_payment(
+            game.proposal_id, player_ids=(TOMEK,), until=_at(1), at=_at()
+        )
+
+    awaiting = await requests.find(paid.proposal_id)
+    assert awaiting is not None
+    assert (awaiting.waiting, awaiting.pay_by) == (False, _at(1))
+    assert await requests.waiting_at(club_id) == []
+    assert await requests.unanswered(now=_at(48)) == []
+    assert await requests.accept(paid.proposal_id, at=_at()) is not None
+    assert await requests.payment_not_in_time(
+        lapsed.proposal_id, player_ids=(TOMEK,), for_good=False, at=_at(1)
+    )
+    assert not await requests.payment_not_in_time(
+        lapsed.proposal_id, player_ids=(TOMEK,), for_good=False, at=_at(1)
+    )
+    await session.commit()
+
+    booked = await requests.find(paid.proposal_id)
+    called_off = await requests.find(lapsed.proposal_id)
+    assert booked is not None and booked.pay_by is None
+    assert called_off is not None and called_off.waiting is False
+
+
 # --------------------------------------------------------------------------- #
 # PlayerNames — what the club sees of a player
 # --------------------------------------------------------------------------- #

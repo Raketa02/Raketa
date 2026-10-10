@@ -12,7 +12,8 @@ second's transaction fails, and nothing it held is taken. **A booking waiting
 for its club holds its court as a booked one does** (#543), and **a booking
 called off holds nothing**: the index is partial, so the hour is the club's to
 sell again the moment a request is refused, unanswered or withdrawn — and the
-called-off row stays, since its players still read why.
+called-off row stays, since its players still read why. **A club's yes waiting
+on one payment holds the court too** (#626), until it comes or does not.
 
 **A leaver keeps their seat row, marked with when they left** (#544): the
 record reads who ever held a seat — a mark is a leaver's — while every read of
@@ -60,7 +61,8 @@ class BookingORM(Base):
     start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     share_grosze: Mapped[int] = mapped_column(Integer, nullable=False)
     cut_off: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    #: ``WAITING_FOR_THE_CLUB``, ``BOOKED``, ``SEAT_OPEN`` or ``CALLED_OFF``.
+    #: ``WAITING_FOR_THE_CLUB``, ``WAITING_FOR_A_PAYMENT`` (#626), ``BOOKED``,
+    #: ``SEAT_OPEN`` or ``CALLED_OFF``.
     state: Mapped[str] = mapped_column(
         String(32), nullable=False, server_default="BOOKED"
     )

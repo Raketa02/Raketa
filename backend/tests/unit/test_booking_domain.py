@@ -281,3 +281,110 @@ def test_a_booking_born_booked_still_replays_as_booked():
 
     assert replayed.state is BookingState.BOOKED
     assert (replayed.game_id, replayed.answer_by) == (GAME, None)
+
+
+# --------------------------------------------------------------------------- #
+# The club's yes waits on one payment (#626; the mechanics Q109, Q112)
+# --------------------------------------------------------------------------- #
+
+
+def test_a_share_refused_at_the_club_s_yes_keeps_the_yes_and_the_court():
+    """The booking stays accepted — not waiting for the club, which has
+    answered — and its court held while Tomek has until then to pay."""
+
+    booking = _requested()
+
+    booking.await_a_payment((TOMEK,), until=_at(40), at=_at(10))
+
+    assert booking.state is BookingState.WAITING_FOR_A_PAYMENT
+    assert booking.is_waiting is False
+    assert booking.awaits_a_payment is True
+    assert booking.pay_by == _at(40)
+    assert booking.payers == (TOMEK,)
+    assert booking.players == (OLA, KUBA, EWA, TOMEK)
+    assert booking.game_id is None
+    replayed = _replayed(booking)
+    assert replayed.state is BookingState.WAITING_FOR_A_PAYMENT
+    assert (replayed.pay_by, replayed.payers) == (_at(40), (TOMEK,))
+
+
+def test_the_payment_in_time_books_it_without_asking_the_club_again():
+    booking = _requested()
+    booking.await_a_payment((TOMEK,), until=_at(40), at=_at(10))
+
+    booking.accept(game_id=GAME, at=_at(25))
+
+    assert booking.state is BookingState.BOOKED
+    assert booking.game_id == GAME
+    assert booking.pay_by is None
+    assert booking.payers == ()
+
+
+def test_the_payment_not_in_time_calls_it_off_and_frees_the_court():
+    """The players read the game as gone back to filling; the club as called
+    off — a player's payment did not come in time."""
+
+    booking = _requested()
+    booking.await_a_payment((TOMEK,), until=_at(40), at=_at(10))
+
+    assert booking.payment_not_in_time((TOMEK,), for_good=False, at=_at(40))
+
+    assert booking.state is BookingState.CALLED_OFF
+    assert booking.called_off is CalledOff.PAYMENT_NOT_IN_TIME
+    assert booking.taken_back is True
+    assert booking.taken_back_at == _at(40)
+    # Nobody is left off the club's row: that would name whose payment it was.
+    assert booking.players == (OLA, KUBA, EWA, TOMEK)
+    assert booking.called_off_for_good is False
+    assert _replayed(booking).called_off is CalledOff.PAYMENT_NOT_IN_TIME
+
+
+def test_a_share_refused_past_the_book_by_calls_it_off_at_once_for_good():
+    booking = _requested()
+
+    assert booking.payment_not_in_time((TOMEK,), for_good=True, at=_at(10))
+
+    assert booking.called_off is CalledOff.PAYMENT_NOT_IN_TIME
+    assert booking.called_off_for_good is True
+    assert booking.taken_back is False
+
+
+def test_full_again_after_the_time_ran_out_the_club_is_asked_again():
+    booking = _requested()
+    booking.await_a_payment((TOMEK,), until=_at(40), at=_at(10))
+    booking.payment_not_in_time((TOMEK,), for_good=False, at=_at(40))
+
+    booking.request_again(
+        court=COURT,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, ANIA),
+        cut_off=START - timedelta(hours=24),
+        answer_by=_at(90),
+        filled_by=ANIA,
+        at=_at(60),
+    )
+
+    assert booking.state is BookingState.WAITING_FOR_THE_CLUB
+    assert booking.called_off is None
+    assert booking.pay_by is None
+
+
+def test_a_seat_opening_while_the_payment_is_awaited_takes_the_request_back():
+    booking = _requested()
+    booking.await_a_payment((TOMEK,), until=_at(40), at=_at(10))
+
+    assert booking.withdraw_request((KUBA,), left=(KUBA,), at=_at(15))
+
+    assert booking.called_off is CalledOff.SEAT_OPENED
+    assert booking.pay_by is None
+    # Nothing is awaited of a booking taken back: the proposal keeps the time.
+    assert booking.payment_not_in_time((TOMEK,), for_good=False, at=_at(40)) is False
+
+
+def test_only_a_player_on_it_is_awaited_and_only_while_the_club_has_it():
+    with pytest.raises(InvariantViolated):
+        _requested().await_a_payment((ANIA,), until=_at(40), at=_at(10))
+    booked = _requested()
+    booked.accept(game_id=GAME, at=_at(5))
+    with pytest.raises(InvariantViolated):
+        booked.await_a_payment((TOMEK,), until=_at(40), at=_at(10))

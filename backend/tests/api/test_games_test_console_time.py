@@ -64,6 +64,7 @@ GAMES_JOBS = (
     "proposer",
     "proposal-expiry",
     "request-timeout",
+    "time-to-pay",
     "cut-off",
     "club-payouts",
     "new-bookings-summary",

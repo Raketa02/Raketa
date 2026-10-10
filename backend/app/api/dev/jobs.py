@@ -35,6 +35,7 @@ from app.api.dev.dependencies import (
     ExpireProposalsDep,
     ExpireUnansweredRequestsDep,
     ProposeGamesDep,
+    RunOutTheTimeToPayDep,
     SettleRatingsOnResultsDep,
     SummariseNewBookingsDep,
 )
@@ -51,6 +52,7 @@ from app.bootstrap.jobs import (
     PROPOSER_ON_CHANGES_JOB,
     RATING_CATCH_UP_JOB,
     REQUEST_TIMEOUT_JOB,
+    TIME_TO_PAY_JOB,
     propose_over,
 )
 from app.modules.clubs.domain.court_hours import DAY_CLOSES
@@ -65,6 +67,7 @@ RUN_IT_NOW: Final[Mapping[str, str]] = MappingProxyType(
         PROPOSER_JOB: "the proposer",
         PROPOSAL_EXPIRY_JOB: "the book-by sweep",
         REQUEST_TIMEOUT_JOB: "the club's answer window",
+        TIME_TO_PAY_JOB: "time to pay",
         CUT_OFF_JOB: "the cut-off",
         CLUB_PAYOUTS_JOB: "the day close · club payouts",
         NEW_BOOKINGS_SUMMARY_JOB: "the day close · new bookings summary",
@@ -217,6 +220,32 @@ async def run_the_request_timeout(expire: ExpireUnansweredRequestsDep) -> RanRes
             f"{unanswered.requests} request(s) past the club's answer called off."
             if unanswered.requests
             else "No request is past the club's answer yet: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{TIME_TO_PAY_JOB}",
+    response_model=RanResponse,
+    summary=_summary(TIME_TO_PAY_JOB),
+    description=(
+        "Runs out every refused share's time to pay that is up (#625, #626): "
+        "the payer's seat reopens — offered to others, theirs to take back "
+        "while free — the holds the others kept are let go, and at a club that "
+        "confirms the booking is called off, its desk emailed. A time to pay "
+        "still running is left as it is."
+    ),
+)
+async def run_the_time_to_pay(run_out: RunOutTheTimeToPayDep) -> RanResponse:
+    ran_out = await run_out.execute()
+    return RanResponse(
+        job=TIME_TO_PAY_JOB,
+        done=ran_out.games,
+        conflicts=ran_out.conflicts,
+        says=(
+            f"{ran_out.games} game(s) whose time to pay was up: the seat reopened."
+            if ran_out.games
+            else "No time to pay is up: nothing was done."
         ),
     )
 

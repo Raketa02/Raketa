@@ -69,18 +69,20 @@ check_ins_router = APIRouter(prefix="/check-ins", tags=["club"])
 money_router = APIRouter(prefix="/money", tags=["club"])
 
 
-# The four reasons a booking of the club's can come to, as its desk reads them.
+# The five reasons a booking of the club's can come to, as its desk reads them.
 # The players' reasons for a game gone back to filling (``BOOK_BY_PASSED``,
 # ``COURT_HOUR_LOST``, #624) are never the club's — such a game is on no page
-# of its — so the club's document keeps the players' enum's name and its four
+# of its — so the club's document keeps the players' enum's name and its own
 # values, and says nothing of them.
 class CalledOffReason(StrEnum):
-    """Why a game will not be played (the mechanics §14.1)."""
+    """Why a game will not be played (the mechanics §14.1, §16.7)."""
 
     REFUSED = "REFUSED"
     NO_ANSWER = "NO_ANSWER"
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+    #: You said yes, and a player's payment did not come in time (#626).
+    PAYMENT_NOT_IN_TIME = "PAYMENT_NOT_IN_TIME"
 
 
 def _reason_for_the_club(game: BookedGame, *, read_at: Instant) -> CalledOffReason:
@@ -170,19 +172,38 @@ class AcceptanceResponse(BaseModel):
     outcome: AcceptOutcome = Field(
         description=(
             "`BOOKED` — everybody paid, the game is booked on `court_name` and "
-            "the players are told. `SEAT_OPENED` — a player's payment did not go "
-            "through, or a player could no longer be on the game: **nobody "
-            "paid**, the request is off and the game is looking for a player "
-            "again; you are asked again when it is full."
+            "the players are told. `WAITING_FOR_A_PAYMENT` — accepted, and one "
+            "player's payment did not go through (#626): **your yes and the "
+            "court are kept** until `payment_due_by` while they pay. Nobody has "
+            "paid yet; when they do, it is booked and you are not asked again, "
+            "and if they don't, it is called off and you are emailed *A game "
+            "didn't go ahead*. `CALLED_OFF` — a player's payment did not go "
+            "through and the game's last moment to book had come, so there was "
+            "no time to pay: called off, nobody paid, and the hour is yours to "
+            "sell again. `SEAT_OPENED` — a player could no longer be on the "
+            "game: **nobody paid**, the request is off and the game is looking "
+            "for a player again; you are asked again when it is full."
         )
     )
     court_name: str | None = Field(
         description="The court the players were given — on a booked game only."
     )
+    payment_due_by: datetime | None = Field(
+        default=None,
+        description=(
+            "When the player's payment is due — *Accepted · waiting for one "
+            "player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` "
+            "only."
+        ),
+    )
 
     @classmethod
     def from_acceptance(cls, acceptance: Acceptance) -> "AcceptanceResponse":
-        return cls(outcome=acceptance.outcome, court_name=acceptance.court_name)
+        return cls(
+            outcome=acceptance.outcome,
+            court_name=acceptance.court_name,
+            payment_due_by=acceptance.pay_by,
+        )
 
 
 class RefusalRequest(BaseModel):
@@ -360,7 +381,11 @@ class ClubBookingSchema(BaseModel):
     status: ClubStatus = Field(
         description=(
             "`WAITING_FOR_YOU` — an On request game asking for the court: Accept "
-            "or Refuse before `answer_by`. `BOOKED` — full and paid. `SEAT_OPEN` — "
+            "or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` — you "
+            "accepted, and one player's payment is still to come until "
+            "`payment_due_by` (#626): *Accepted · waiting for one player's "
+            "payment until 21:20*. Your yes and the court are kept; nothing for "
+            "you to answer. `BOOKED` — full and paid. `SEAT_OPEN` — "
             "a player left and Raketa is finding a replacement; before the "
             "cut-off, a seat still open at it calls the game off and the court "
             "comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody "
@@ -374,7 +399,10 @@ class ClubBookingSchema(BaseModel):
             "`SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. "
             "`CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). "
             "`REFUSED` — you refused the request. `NO_ANSWER` — it was not "
-            "answered in time."
+            "answered in time. `PAYMENT_NOT_IN_TIME` — you accepted, and a "
+            "player's payment didn't come in time: nobody paid, and you were "
+            "emailed *A game didn't go ahead*. Full again, the game asks you "
+            "again as a new request."
         )
     )
     cancel_reason: ClubCancelReason | None = Field(
@@ -390,6 +418,12 @@ class ClubBookingSchema(BaseModel):
     )
     answer_by: datetime | None = Field(
         description="Your countdown, while it waits for your answer — else `null`."
+    )
+    payment_due_by: datetime | None = Field(
+        description=(
+            "When the player's payment your yes waits on is due — "
+            "`WAITING_FOR_A_PAYMENT` only, else `null`. Never who."
+        )
     )
     may_move_or_cancel: bool = Field(
         description=(
@@ -441,6 +475,9 @@ class ClubBookingSchema(BaseModel):
             ),
             answer_by=(
                 game.answer_by if row.status is ClubStatus.WAITING_FOR_YOU else None
+            ),
+            payment_due_by=(
+                game.pay_by if row.status is ClubStatus.WAITING_FOR_A_PAYMENT else None
             ),
             may_move_or_cancel=row.still_to_be_played,
         )

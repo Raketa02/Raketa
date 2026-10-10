@@ -3331,6 +3331,29 @@
         }
       }
     },
+    "/dev/jobs/time-to-pay": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 time to pay",
+        "description": "Runs out every refused share's time to pay that is up (#625, #626): the payer's seat reopens \u2014 offered to others, theirs to take back while free \u2014 the holds the others kept are let go, and at a club that confirms the booking is called off, its desk emailed. A time to pay still running is left as it is.",
+        "operationId": "run_the_time_to_pay_dev_jobs_time_to_pay_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/jobs/cut-off": {
       "post": {
         "tags": [
@@ -3572,6 +3595,8 @@
         "type": "string",
         "enum": [
           "BOOKED",
+          "WAITING_FOR_A_PAYMENT",
+          "CALLED_OFF",
           "SEAT_OPENED"
         ],
         "title": "AcceptOutcome",
@@ -3581,7 +3606,7 @@
         "properties": {
           "outcome": {
             "$ref": "#/components/schemas/AcceptOutcome",
-            "description": "`BOOKED` \u2014 everybody paid, the game is booked on `court_name` and the players are told. `SEAT_OPENED` \u2014 a player's payment did not go through, or a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
+            "description": "`BOOKED` \u2014 everybody paid, the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` \u2014 accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` \u2014 a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` \u2014 a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
           },
           "court_name": {
             "anyOf": [
@@ -3594,6 +3619,19 @@
             ],
             "title": "Court Name",
             "description": "The court the players were given \u2014 on a booked game only."
+          },
+          "payment_due_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Due By",
+            "description": "When the player's payment is due \u2014 *Accepted \u00b7 waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only."
           }
         },
         "type": "object",
@@ -3937,6 +3975,7 @@
         "type": "string",
         "enum": [
           "WAITING_FOR_THE_CLUB",
+          "WAITING_FOR_A_PAYMENT",
           "BOOKED",
           "SEAT_OPEN",
           "CALLED_OFF"
@@ -3951,7 +3990,8 @@
           "NO_ANSWER",
           "SEAT_OPENED",
           "SHORT_AT_THE_CUT_OFF",
-          "CANCELLED_BY_THE_CLUB"
+          "CANCELLED_BY_THE_CLUB",
+          "PAYMENT_NOT_IN_TIME"
         ],
         "title": "CalledOff",
         "description": "Why a booking will not be played."
@@ -4767,7 +4807,7 @@
         "properties": {
           "left": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
           }
         },
         "type": "object",
@@ -5680,6 +5720,7 @@
         "enum": [
           "BOOK_BY",
           "CLUB_ANSWER_DUE",
+          "PAYMENT_DUE",
           "CUT_OFF",
           "NEW_BOOKINGS_SUMMARY",
           "CLUB_PAYOUT",
@@ -5904,6 +5945,8 @@
         "enum": [
           "GAME_BOOKED",
           "WAITING_FOR_THE_CLUB",
+          "WAITING_FOR_A_PAYMENT",
+          "TIME_TO_PAY_RAN_OUT",
           "CONFIRM_PAYMENT",
           "GAME_CALLED_OFF",
           "SOMEONE_LEFT",
@@ -8180,7 +8223,7 @@
           "open_seats": {
             "type": "integer",
             "title": "Open Seats",
-            "description": "Seats nobody is In on yet, this player's yes counted. Nought on a game that booked \u2014 and on a full game an On request club has still to confirm. A payment that could not be held opens its seat again."
+            "description": "Seats nobody is In on yet, this player's yes counted. Nought on a game that booked \u2014 on a full game an On request club has still to confirm \u2014 and on a full game waiting for one payment, whose seat is its payer's alone for their time to pay (#625)."
           },
           "booked": {
             "anyOf": [
@@ -8208,7 +8251,20 @@
                 "type": "null"
               }
             ],
-            "description": "Present when **this player's** share could not be held: nobody paid and the game did not book. `null` otherwise \u2014 including when somebody else's could not, which leaves `open_seats` above nought."
+            "description": "Present when **this player's** share could not be held: nobody paid and the game did not book, and their time to pay runs to `confirm_by`. `null` otherwise \u2014 including when somebody else's could not (`payment_awaited_until`)."
+          },
+          "payment_awaited_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Awaited Until",
+            "description": "**This yes filled the game and a share was refused** (#625, #626; Q110): the game waits for that payment until then \u2014 *It's a game!* with *Waiting for one payment \u00b7 until 14:40 \u00b7 Nobody pays until it's in*. Somebody else's, or this player's own (`your_payment`). `null` on every other answer."
           }
         },
         "type": "object",
@@ -8230,6 +8286,19 @@
           "refusal": {
             "$ref": "#/components/schemas/PaymentRefusal",
             "description": "`AUTHENTICATION_REQUIRED` \u2014 the bank wants the player to confirm; `DECLINED` \u2014 confirm with another card; `TERMS_NEEDED` \u2014 accept the terms again, then say yes; `NO_METHOD` \u2014 save a method, then say yes."
+          },
+          "confirm_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirm By",
+            "description": "**Their time to pay** (#625, #626; Q109): the seat is theirs alone until then \u2014 *Confirm your payment by 14:40 to keep your seat* \u2014 every other hold kept, so paying in time books the game at once. Thirty minutes from the refusal, never past the book-by. `null` once it ran out: the seat is open to others too, and still theirs to take back while it is free."
           }
         },
         "type": "object",

@@ -12,6 +12,7 @@ import logging
 from app.application.events import DeliveryContext
 from app.modules.bookings.domain.events import (
     BookingAccepted,
+    BookingAwaitingAPayment,
     BookingConfirmed,
     BookingRefused,
     BookingRequested,
@@ -20,6 +21,7 @@ from app.modules.bookings.domain.events import (
     CancelledByClub,
     NewBookingsSummarised,
     CourtMoved,
+    PaymentNotInTime,
     PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
@@ -43,6 +45,8 @@ BookingEvent = (
     | CourtMoved
     | CancelledByClub
     | PlayerCheckedIn
+    | BookingAwaitingAPayment
+    | PaymentNotInTime
 )
 
 _NAMES = {
@@ -59,6 +63,8 @@ _NAMES = {
     CourtMoved: "bookings.booking.court_moved",
     CancelledByClub: "bookings.booking.cancelled_by_club",
     PlayerCheckedIn: "bookings.booking.player_checked_in",
+    BookingAwaitingAPayment: "bookings.booking.awaiting_a_payment",
+    PaymentNotInTime: "bookings.booking.payment_not_in_time",
 }
 
 

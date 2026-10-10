@@ -33,6 +33,7 @@ from app.modules.bookings.domain.events import (
     BookingRequested,
     BookingTimedOut,
     CancelledByClub,
+    PaymentNotInTime,
     RequestWithdrawn,
 )
 from app.modules.clubs.domain.club_courts_events import (
@@ -58,10 +59,12 @@ from app.modules.player_profile.domain.events import (
 )
 from app.modules.proposals.application.propose_games import DueForProposing
 from app.modules.proposals.domain.events import (
+    FellBackToFilling,
     GamesAndMoneySet,
     NoSaid,
     ProposalFilled,
     SeatReopened,
+    TimeToPayRanOut,
     YesPaused,
     YesResumed,
     YesSaid,
@@ -79,7 +82,8 @@ PLAYER_EVENTS = (
     GamesAndMoneySet,
 )
 #: A swipe on a game still filling — or a yes that stopped counting, which
-#: opens a seat as a withdrawal does.
+#: opens a seat as a withdrawal does: a time to pay that ran out reopens its
+#: seat, and a game that waited for a payment falls back with one open (#625).
 SWIPE_EVENTS = (
     YesSaid,
     NoSaid,
@@ -87,6 +91,8 @@ SWIPE_EVENTS = (
     SeatReopened,
     YesPaused,
     YesResumed,
+    TimeToPayRanOut,
+    FellBackToFilling,
 )
 #: A change to what a club sells.
 CLUB_EVENTS = (
@@ -113,6 +119,8 @@ CLUB_EVENTS = (
     BookingRefused,
     BookingTimedOut,
     RequestWithdrawn,
+    # A payment the club's yes waited on that did not come frees it (#626).
+    PaymentNotInTime,
     # The club's cancel frees its court hour, and owes its people a new card
     # first (#547).
     CancelledByClub,

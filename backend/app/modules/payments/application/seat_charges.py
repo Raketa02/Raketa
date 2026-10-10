@@ -27,7 +27,10 @@ otherwise the provider lets it lapse untaken, which costs nothing.
 **A hold the player confirmed in the app is taken rather than asked for again**
 — their bank may check every payment, and that is the one it gave — when the
 fill it confirmed for books. When another seat is refused instead, it is let go
-with every other hold: *if any fails, the others are cancelled*.
+with every other hold: *if any fails, the others are cancelled* — **unless the
+refused player is given time to pay** (#625, #626; the mechanics §12.2, Q109):
+then every other hold is **kept** on its card, the new ones recorded held, so
+that paying in time books the game on them and nobody's bank is asked again.
 
 **Nothing here commits**: the fill's transaction is the caller's.
 """
@@ -35,7 +38,7 @@ with every other hold: *if any fails, the others are cancelled*.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import final
 from uuid import UUID
@@ -92,6 +95,20 @@ class GameToCharge:
     #: — its holds are keyed apart from the fill's, and a refusal asks them to
     #: confirm the payment to **take** the seat rather than to keep one.
     rescue: bool = False
+    #: **Time to pay** (#625, #626): a refused share's seat is held for its
+    #: player until then, and every other hold is kept for it — the email
+    #: names the time. ``None`` lets every hold go: a rescue's refusal, and one
+    #: with no time left before the book-by.
+    pay_by: Instant | None = None
+    #: The players already given time to pay, and when it ends: refused
+    #: again, they keep it — and their email names it.
+    paying_until: Mapping[UUID, Instant] = field(default_factory=dict)
+    #: The game books on a payment it waited for (#625): the players were told
+    #: *It's a game!* when it filled, so the receipt says *booked · you paid*
+    #: (Q110) — but to the player whose payment booked it (``filled_by``), who
+    #: sees *It's a game!* on their phone.
+    booked_on_a_payment: bool = False
+    filled_by: UUID | None = None
 
 
 @final
@@ -279,6 +296,8 @@ class ChargeTheSeats:
                     free_to_leave_until=game.free_to_leave_until,
                     fee_estimate_grosze=estimated_card_fee(game.share_grosze),
                     app_link=self._app_link,
+                    booked_on_a_payment=game.booked_on_a_payment
+                    and player != game.filled_by,
                 ),
                 at=at,
             )
@@ -295,16 +314,19 @@ class ChargeTheSeats:
         at: Instant,
     ) -> SeatsCharged:
         assert seller.account_id is not None
-        let_go = [
-            *(
-                _a_hold(game, player, payment, seller=seller, at=at)
-                for player, payment in held.items()
-            ),
-            *confirmed,
+        made = [
+            _a_hold(game, player, payment, seller=seller, at=at)
+            for player, payment in held.items()
         ]
-        for charge in let_go:
-            charge.release(at=at)
-            await self._charges.save(charge)
+        if game.pay_by is None:
+            for charge in [*made, *confirmed]:
+                charge.release(at=at)
+                await self._charges.save(charge)
+        else:
+            # Time to pay: every hold waits on its card for the payment in
+            # time, and the game books on them (Q109).
+            for charge in made:
+                await self._charges.save(charge)
         seats: dict[UUID, RefusedSeat] = {}
         for player, (reason, answer) in refused.items():
             charge = SeatCharge.refused(
@@ -322,6 +344,10 @@ class ChargeTheSeats:
             )
             await self._charges.save(charge)
             seats[player] = RefusedSeat(charge_id=charge.charge_id, reason=reason)
+        if game.pay_by is None and not game.rescue:
+            # No time is left to pay — the book-by had come at the club's yes:
+            # the game is called off, and told so; there is nothing to confirm.
+            return SeatsCharged(taken={}, refused=seats)
         payers = await self._payers.of(list(refused))
         for player, seat in seats.items():
             payer = payers.get(player)
@@ -337,6 +363,7 @@ class ChargeTheSeats:
                     reason=seat.reason,
                     app_link=self._app_link,
                     rescue=game.rescue,
+                    pay_by=game.paying_until.get(player, game.pay_by),
                 ),
                 at=at,
             )

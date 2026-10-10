@@ -1,7 +1,7 @@
 """**A player's notices of one day** — what they were told, and the caps on
 what they may be (#549; the mechanics §17.2; the screens A7.2, A9).
 
-**Nine kinds are always on**: told whenever they happen, pushed and listed.
+**Every other kind is always on**: told whenever they happen, pushed and listed.
 **Three are the player's to switch** (``preferences.py``) and **capped per day
 in Kraków** — *You complete it* once, *Challenges for you* and *Fill in alerts*
 three times. Past its cap, *You complete it* and a challenge are **bundled**:
@@ -44,6 +44,14 @@ class NoticeKind(StrEnum):
     #: *It's a game! · Kazimierz Padel answers by 21:15* — the four are matched,
     #: and the game went to its On request club; nobody has paid (Q103).
     WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
+    #: *It's a game! · waiting for one payment until 14:40* — the four are
+    #: matched, and one share was refused: its player's time to pay runs, and
+    #: nobody pays until it is in (#625, Q110). At the club's yes, *Your Fri
+    #: 19:00 is waiting for one payment, until 21:20* (#626).
+    WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
+    #: *Your time to pay ran out · Tue 19:00* — to the payer: their seat is
+    #: open to others, and theirs to take back while it is free (#625).
+    TIME_TO_PAY_RAN_OUT = "TIME_TO_PAY_RAN_OUT"
     #: *Confirm your payment to keep your seat* — or to take one, on a rescue.
     CONFIRM_PAYMENT = "CONFIRM_PAYMENT"
     #: *Game called off · with the refund* — at the cut-off, or by the club.
@@ -106,6 +114,17 @@ class NoticeReason(StrEnum):
     REFUSED = "REFUSED"
     #: An On request club did not answer in time.
     NO_ANSWER = "NO_ANSWER"
+    #: The payment is awaited at the On request club's yes (#626).
+    AT_THE_CLUBS_YES = "AT_THE_CLUBS_YES"
+    #: The game booked the moment the payment it waited for came in: *booked ·
+    #: you paid*, never a second *It's a game!* (#625, Q110).
+    PAYMENT_CAME_IN = "PAYMENT_CAME_IN"
+    #: A payment the game waited for did not come in time and it could no
+    #: longer fill — called off, nobody paid (#625, #626).
+    PAYMENT_NOT_IN_TIME = "PAYMENT_NOT_IN_TIME"
+    #: Its court went to another game before the payment it waited for came in
+    #: (#625).
+    COURT_LOST_WAITING_FOR_A_PAYMENT = "COURT_LOST_WAITING_FOR_A_PAYMENT"
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,7 +190,7 @@ class Notice:
     #: never counted on the bell nor pushed (the mechanics Q102).
     own: bool = False
     #: The deadline it names — when the club must answer, on *It's a game!*
-    #: at a club that confirms.
+    #: at a club that confirms; when a payment is due, on a time to pay.
     until: Instant | None = None
     #: Told to a player who had left the game: said in a leaver's words
     #: (Q108).

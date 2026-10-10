@@ -18,7 +18,12 @@ client gave its ten seconds of *Undo* before sending it — or, at an On request
 club, puts the full game to the club, and nobody pays until it says yes (#543).
 **Confirming a refused payment is the yes again** (``ConfirmPayment``): the
 player's share is held now, so the game fills on it if the seat is still theirs
-to take.
+to take. **Within their time to pay** (#625, #626) the seat is theirs alone and
+they are still In: confirming books the game at once on the holds the others
+kept — at the club's yes, without asking the club again — or, a seat having
+opened meanwhile, leaves them In with their payment held. **Past it** their
+time is run out first, as the job would have (``time_to_pay.py``), and the
+confirmation is a yes on a reopened seat.
 
 **A member may join a post from the slot sheet** (#546; Q79): their yes on a
 post they were never dealt — held to everything a yes is, and to who the post
@@ -46,6 +51,10 @@ from app.modules.proposals.application.commands import (
 from app.modules.proposals.application.fill import Booked, Fill, FillOutcome
 from app.modules.proposals.application.guards import Guards
 from app.modules.proposals.application.making import loaded
+from app.modules.proposals.application.time_to_pay import (
+    let_go_of_what_was_kept,
+    run_out_if_due,
+)
 from app.modules.proposals.domain.errors import (
     BookingIsCalledOff,
     BookingNotFound,
@@ -84,6 +93,9 @@ class YesAnswer:
     #: This player's own share could not be held: nobody paid, and the payment
     #: is theirs to confirm.
     your_payment: RefusedPayment | None = None
+    #: The game waits for a refused payment until then — this player's own, or
+    #: somebody else's (#625, #626): *Waiting for one payment · until 14:40*.
+    paying_until: Instant | None = None
 
 
 @final
@@ -94,12 +106,16 @@ class SayYes:
         proposals: ProposalRepository,
         guards: Guards,
         fill: Fill,
+        requests: ClubRequests,
+        undecided: UndecidedCharges,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._proposals = proposals
         self._guards = guards
         self._fill = fill
+        self._requests = requests
+        self._undecided = undecided
         self._uow = uow
         self._clock = clock
 
@@ -112,6 +128,16 @@ class SayYes:
         now = instant(self._clock.now())
         player_id = command.player_id
         proposal = await _locked(self._proposals, command.proposal_id)
+        await run_out_if_due(
+            proposal,
+            player_id,
+            proposals=self._proposals,
+            requests=self._requests,
+            undecided=self._undecided,
+            now=now,
+        )
+        if player_id in proposal.paying:
+            return await self._paying_again(proposal, player_id, now=now)
         outcome = FillOutcome()
         # Joining a post from the slot sheet: a yes from somebody it was never
         # dealt to.
@@ -137,6 +163,59 @@ class SayYes:
             await self._proposals.save(proposal)
             await self._uow.commit()
         return _answer(proposal, player_id, outcome)
+
+    async def _paying_again(
+        self, proposal: Proposal, player_id: UUID, *, now: Instant
+    ) -> YesAnswer:
+        """A yes from a player whose time to pay runs (#625): a refused payment
+        is confirmed, never asked again — the bank would be asked the same
+        question; terms accepted again, or a method saved, is their payment
+        tried now, on the holds the others kept."""
+
+        paying = proposal.paying[player_id]
+        if paying.payment_to_confirm is not None:
+            raise PaymentToConfirm(seat_charge_id=str(paying.payment_to_confirm))
+        await self._guards.refuse_an_unchargeable_yes(player_id)
+        outcome = await _paid_in_time(
+            proposal,
+            player_id,
+            fill=self._fill,
+            undecided=self._undecided,
+            now=now,
+        )
+        await self._proposals.save(proposal)
+        await self._uow.commit()
+        return _answer(proposal, player_id, outcome)
+
+
+async def _paid_in_time(
+    proposal: Proposal,
+    player_id: UUID,
+    *,
+    fill: Fill,
+    undecided: UndecidedCharges,
+    now: Instant,
+) -> FillOutcome:
+    """This payer's share can be held now, within their time: the game books on
+    it and the holds the others kept, if it waits for nobody else's payment and
+    every seat is In; otherwise they are In with their payment held, and the
+    seat theirs — and once nobody's payment is awaited, what was kept for the
+    wait is let go. **No commit.**"""
+
+    was_paying = dict(proposal.paying)
+    if proposal.waiting_for_a_payment and set(proposal.paying) == {player_id}:
+        outcome = await fill.run(proposal, by=player_id, now=now)
+    else:
+        outcome = FillOutcome()
+    if (
+        outcome.booked is None
+        and player_id not in outcome.refused
+        and proposal.ending is None
+        and player_id in proposal.paying
+    ):
+        proposal.time_to_pay_met(player_id, at=now)
+    await let_go_of_what_was_kept(proposal, was_paying, undecided=undecided, at=now)
+    return outcome
 
 
 class JoinsARescue(Protocol):
@@ -180,6 +259,7 @@ class ConfirmPayment:
         fill: Fill,
         charges: SeatCharges,
         undecided: UndecidedCharges,
+        requests: ClubRequests,
         rescuer: JoinsARescue,
         uow: UnitOfWork,
         clock: Clock,
@@ -189,6 +269,7 @@ class ConfirmPayment:
         self._fill = fill
         self._charges = charges
         self._undecided = undecided
+        self._requests = requests
         self._rescuer = rescuer
         self._uow = uow
         self._clock = clock
@@ -209,6 +290,26 @@ class ConfirmPayment:
             return await self._rescue(
                 proposal, player_id, confirmed=command.seat_charge_id, now=now
             )
+        await run_out_if_due(
+            proposal,
+            player_id,
+            proposals=self._proposals,
+            requests=self._requests,
+            undecided=self._undecided,
+            now=now,
+        )
+        if player_id in proposal.paying:
+            # Paid within their time: the seat was theirs alone (#625, #626).
+            outcome = await _paid_in_time(
+                proposal,
+                player_id,
+                fill=self._fill,
+                undecided=self._undecided,
+                now=now,
+            )
+            await self._proposals.save(proposal)
+            await self._uow.commit()
+            return _answer(proposal, player_id, outcome)
         if player_id in proposal.yeses:
             # Confirmed and In already — a second tap, or the yes said again.
             await self._uow.commit()
@@ -326,6 +427,7 @@ def _answer(proposal: Proposal, player_id: UUID, outcome: FillOutcome) -> YesAns
         booked=outcome.booked,
         waiting_until=outcome.waiting_until,
         your_payment=outcome.refused.get(player_id),
+        paying_until=outcome.paying_until,
     )
 
 
@@ -360,11 +462,13 @@ class WithdrawYes:
         *,
         proposals: ProposalRepository,
         requests: ClubRequests,
+        undecided: UndecidedCharges,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
         self._proposals = proposals
         self._requests = requests
+        self._undecided = undecided
         self._uow = uow
         self._clock = clock
 
@@ -376,6 +480,7 @@ class WithdrawYes:
             command.player_id,
             proposals=self._proposals,
             requests=self._requests,
+            undecided=self._undecided,
             at=now,
         )
         await self._uow.commit()
@@ -387,17 +492,24 @@ async def withdraw_a_yes(
     *,
     proposals: ProposalRepository,
     requests: ClubRequests,
+    undecided: UndecidedCharges,
     at: Instant,
 ) -> None:
-    """The yes taken back — and, when it was a seat of a game waiting for its
-    club, the request to the club with it (#543), so the held court is free the
-    moment the seat is. **No commit.**"""
+    """The yes taken back — and, when it was a seat of a game its club has,
+    the request to the club with it (#543), so the held court is free the
+    moment the seat is; at the club's yes, the yes with it (#626). **A leave
+    from a game waiting for a payment** lets the leaver's hold go, and the
+    payer's time runs on (#625). **No commit.**"""
 
-    was_waiting = proposal.waiting_for_the_club
+    was_with_its_club = proposal.with_its_club
+    was_paying = dict(proposal.paying)
     proposal.withdraw_yes(player_id, at=at)
     await proposals.save(proposal)
-    if was_waiting and not proposal.waiting_for_the_club:
+    if was_with_its_club and not proposal.with_its_club:
         # Their own act: the others are told who left (Q104).
         await requests.withdraw(
             proposal.proposal_id, player_ids=(player_id,), left=(player_id,), at=at
         )
+    await let_go_of_what_was_kept(
+        proposal, was_paying, undecided=undecided, at=at, leaver=player_id
+    )

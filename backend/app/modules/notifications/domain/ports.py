@@ -17,7 +17,7 @@ the fact, and contracted in ``app/bootstrap/notification_demands.py``.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Protocol
 from uuid import UUID
@@ -228,13 +228,24 @@ class GameBrief:
     #: one waiting for its club excepted.
     book_by: Instant
     #: When it went back to filling, full: its request taken back because a
-    #: seat opened while the club decided (Q106) — ``None`` while it waits, once
-    #: asked again, and on a game never full.
+    #: seat opened while the club decided (Q106) — or, at a club that books at
+    #: once, a seat opening or a time to pay running out while it waited for a
+    #: payment (#625) — ``None`` while it waits, once asked again, and on a
+    #: game never full.
     fell_back_at: Instant | None
     #: Each leaver whose seat opened before the club's cut-off and nobody took
     #: — on a game called off at its cut-off, whose empty seat called it off
     #: (Q108). Empty on a game nobody left.
     left_it_short: tuple[UUID, ...]
+
+    #: Everybody In whose refused share the game waits for, and until when —
+    #: their time to pay (#625, #626).
+    paying: Mapping[UUID, Instant] = field(default_factory=dict)
+    #: Every seat is In and a payment is awaited: the game waits for it.
+    waiting_for_a_payment: bool = False
+    #: It booked the moment the payment it waited for came in: its players
+    #: were told *It's a game!* already (Q110).
+    booked_on_a_payment: bool = False
 
     @property
     def fell_back(self) -> bool:

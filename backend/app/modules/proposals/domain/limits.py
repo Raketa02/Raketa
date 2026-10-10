@@ -8,7 +8,13 @@ decides how the deck behaves.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Final
+
+#: **Time to pay** (#625; the mechanics §12.2, Q109): how long a player whose
+#: share was refused when the game filled — or when its club said yes — has to
+#: pay before their seat is offered to others. Never past the game's book-by.
+TIME_TO_PAY: Final = timedelta(minutes=30)
 
 #: How many views of one game may be dealt, each to different people.
 VERSIONS_PER_PROPOSAL: Final = 3

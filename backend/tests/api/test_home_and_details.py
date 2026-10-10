@@ -304,8 +304,9 @@ async def test_a_game_nobody_said_happened_ends_never_played(
 async def test_the_badge_counts_a_payment_to_confirm_beside_the_cards(
     client, session_factory, clock, payments, club, four
 ):
-    """A game still filling is not on Home, but a payment to confirm on one is
-    a game that needs the player (the mechanics §3)."""
+    """A payment to confirm is a game that needs the player (the mechanics §3)
+    — counted once: the game waiting for it is on Home too (#625), and asks
+    nothing more of anybody."""
 
     tomek = await a_player(
         client, payments, "tomek2", entered=A_CARD_THE_BANK_ALWAYS_CHECKS
@@ -320,7 +321,8 @@ async def test_the_badge_counts_a_payment_to_confirm_beside_the_cards(
 
     home = await home_of(client, tomek)
 
-    assert home["games"] == []
+    [card] = home["games"]
+    assert (card["status"], card["needs_you"]) == ("WAITING_FOR_A_PAYMENT", False)
     assert home["needing_you"] == 1
 
 
@@ -933,8 +935,9 @@ async def test_a_refused_payment_is_confirmed_from_the_details(
 
     details = (await proposal_of(client, tomek, proposal)).json()
 
-    assert details["status"] == "FILLING"
-    assert details["actions"] == ["CONFIRM_PAYMENT"]
+    # His seat is his alone while his time to pay runs (#625).
+    assert details["status"] == "WAITING_FOR_A_PAYMENT"
+    assert details["actions"] == ["CONFIRM_PAYMENT", "LEAVE"]
     owed = (
         await client.get(
             "/api/v1/players/me/payments-to-confirm", headers=tomek["headers"]
@@ -943,6 +946,7 @@ async def test_a_refused_payment_is_confirmed_from_the_details(
     assert details["your_payment"] == {
         "seat_charge_id": owed[0]["seat_charge_id"],
         "refusal": "AUTHENTICATION_REQUIRED",
+        "confirm_by": "2026-10-05T06:30:00Z",
     }
 
 

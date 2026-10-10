@@ -104,7 +104,11 @@ class BookedAndProposedGames:
             else booking.cancel_reason.value,
             filled_by=proposal.filled_by,
             book_by=proposal.book_by,
-            fell_back_at=None if booking is None else booking.taken_back_at,
+            fell_back_at=(
+                booking.taken_back_at
+                if booking is not None and booking.taken_back_at is not None
+                else proposal.fell_back_at
+            ),
             left_it_short=()
             if booking is None
             else tuple(
@@ -112,6 +116,9 @@ class BookedAndProposedGames:
                 for left in booking.departures
                 if left.is_open and left.at < booking.cut_off
             ),
+            paying=proposal.payments_due,
+            waiting_for_a_payment=filling and proposal.waiting_for_a_payment,
+            booked_on_a_payment=proposal.booked_on_a_payment,
         )
 
 

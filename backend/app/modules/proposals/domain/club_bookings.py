@@ -5,11 +5,16 @@
 **folded on every read** from the booking and the clock — never stored:
 
 - *waiting for you* — an On request club's full game, until its answer is due;
+- *accepted · waiting for one player's payment* — the club said yes and a
+  share could not be held: its yes and the court are kept until the player's
+  time to pay ends (#626; Q112) — never in *waiting for you*, since the club
+  has answered;
 - *booked* — full and paid, its hour still to come;
 - *seat open* — a player left and the seat is offered;
-- *called off* — refused, unanswered, short at the cut-off, or cancelled by the
-  club — each read off the clock from the moment it is true, whether or not
-  anything has recorded it yet;
+- *called off* — refused, unanswered, short at the cut-off, cancelled by the
+  club, or a player's payment that did not come in time after its yes — each
+  read off the clock from the moment it is true, whether or not anything has
+  recorded it yet;
 - *played* — a booked game whose hour has passed. The club is owed the court
   whatever happened on it, so a game that went ahead short, or one somebody
   did not come to, is *played* here.
@@ -43,6 +48,8 @@ class ClubStatus(StrEnum):
     """What a booking is to its club, right now (the mechanics §16.7)."""
 
     WAITING_FOR_YOU = "WAITING_FOR_YOU"
+    #: The club said yes, and one player's payment is still to come (#626).
+    WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
     BOOKED = "BOOKED"
     SEAT_OPEN = "SEAT_OPEN"
     CALLED_OFF = "CALLED_OFF"
@@ -61,9 +68,10 @@ class ClubFilter(StrEnum):
 def called_off_for_the_club(
     game: BookedGame, *, now: Instant
 ) -> CalledOffReason | None:
-    """Why the game will not be played, at ``now`` — the players' reasons, and
-    a request whose answer came due unanswered, which is *no answer* from that
-    moment whether or not the timeout has recorded it."""
+    """Why the game will not be played, at ``now`` — the players' reasons, a
+    request whose answer came due unanswered, which is *no answer* from that
+    moment whether or not the timeout has recorded it, and a payment the
+    club's yes waited on, which did not come by its time (#626)."""
 
     if (
         game.stage is BookingStage.WAITING_FOR_THE_CLUB
@@ -71,6 +79,12 @@ def called_off_for_the_club(
         and now >= game.answer_by
     ):
         return CalledOffReason.NO_ANSWER
+    if (
+        game.stage is BookingStage.WAITING_FOR_A_PAYMENT
+        and game.pay_by is not None
+        and now >= game.pay_by
+    ):
+        return CalledOffReason.PAYMENT_NOT_IN_TIME
     return game.called_off_reason(now)
 
 
@@ -79,6 +93,8 @@ def club_status(game: BookedGame, *, now: Instant) -> ClubStatus:
         return ClubStatus.CALLED_OFF
     if game.stage is BookingStage.WAITING_FOR_THE_CLUB:
         return ClubStatus.WAITING_FOR_YOU
+    if game.stage is BookingStage.WAITING_FOR_A_PAYMENT:
+        return ClubStatus.WAITING_FOR_A_PAYMENT
     if now >= game.start + GAME_LENGTH:
         return ClubStatus.PLAYED
     if game.stage is BookingStage.SEAT_OPEN:

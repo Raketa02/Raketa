@@ -33,7 +33,7 @@ window around a poster (the matcher's pair rule).
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol, final, runtime_checkable
 from uuid import UUID
@@ -131,8 +131,31 @@ class ProposalDirectory(Protocol):
 
     async def past_book_by(self, *, now: Instant) -> Sequence[UUID]:
         """Every proposal whose book-by has passed and whose ending nobody has
-        recorded, but a game waiting for its club — **candidates, not
-        conclusions**: the aggregate decides."""
+        recorded, but a game waiting for its club — or for a payment, whose
+        time to pay is what ends it (#625) — **candidates, not conclusions**:
+        the aggregate decides."""
+        ...
+
+    async def paying_past(self, *, now: Instant) -> Sequence[UUID]:
+        """Every game whose ending nobody has recorded with a time to pay up by
+        ``now`` — the earliest first (#625). **Candidates**: the aggregate says
+        whose time ran out."""
+        ...
+
+    async def paying_for(self, player_id: UUID) -> Sequence[UUID]:
+        """Every game whose ending nobody has recorded that waits for a
+        payment, with this player In — soonest first. Candidates: the
+        aggregate says whether the payment awaited is theirs."""
+        ...
+
+    async def payment_awaited_of(
+        self, player_id: UUID, *, since: Instant | None
+    ) -> Sequence[UUID]:
+        """Every game this player is In on that waited for a payment as it
+        filled at a club that books at once, and has not booked — waiting
+        still, filling again, or ended before it was full again — **soonest
+        first**, from the hour ``since`` (every one, with ``None``). It has no
+        booking, so Home reads it from here (#625)."""
         ...
 
     async def owed_a_new_card_in(
@@ -600,6 +623,9 @@ class ClubRequest:
     answer_by: Instant
     #: Still waiting for the club's answer.
     waiting: bool
+    #: The club said yes, and waits on a payment until then (#626) — ``None``
+    #: on every other request.
+    pay_by: Instant | None = None
 
     @property
     def players(self) -> tuple[UUID, ...]:
@@ -664,11 +690,38 @@ class ClubRequests(Protocol):
         left: tuple[UUID, ...] = (),
         at: Instant,
     ) -> bool:
-        """These players' seats opened while the game waited: the request is
-        off, and the people still In keep their places (Q106). ``left`` is
-        those of them who took their own yes back — told by name; every other
-        seat opened by what happened to its player, which nobody is told
-        (Q104). Whether one was waiting to withdraw."""
+        """These players' seats opened while the game waited — for the club's
+        answer, or for a payment its yes waits on: the request is off, and the
+        people still In keep their places (Q106). ``left`` is those of them who
+        took their own yes back — told by name; every other seat opened by what
+        happened to its player, which nobody is told (Q104). Whether one was
+        waiting to withdraw."""
+        ...
+
+    async def await_a_payment(
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        until: Instant,
+        at: Instant,
+    ) -> None:
+        """The club said yes and these players' shares could not be held: its
+        yes and the court are kept until ``until`` (#626)."""
+        ...
+
+    async def payment_not_in_time(
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        for_good: bool,
+        at: Instant,
+    ) -> bool:
+        """The payment the club's yes waited on did not come — or no time was
+        left at its yes: called off, nobody paid, the court the club's again
+        and its desk emailed. ``for_good`` when the game can no longer fill.
+        Whether the club still had it to call off."""
         ...
 
 
@@ -719,6 +772,18 @@ class GameToCharge:
     #: One player taking an open seat on the booked game (#545), rather than
     #: every seat of a game filling.
     rescue: bool = False
+    #: **Time to pay** (#625, #626): a share refused now has its seat held for
+    #: its player until then, and every other hold kept for it. ``None`` lets
+    #: every hold go — a rescue's, and one refused with no time left.
+    pay_by: Instant | None = None
+    #: The players already given time to pay, and when it ends: refused
+    #: again, they keep it.
+    paying_until: Mapping[UUID, Instant] = field(default_factory=dict)
+    #: The game books on a payment it waited for: its receipt says *booked ·
+    #: you paid*, never a second *It's a game!* (Q110) — but to the player
+    #: whose payment booked it (``filled_by``), who sees *It's a game!*.
+    booked_on_a_payment: bool = False
+    filled_by: UUID | None = None
 
 
 @final

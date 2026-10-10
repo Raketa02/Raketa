@@ -27,6 +27,7 @@ from app.modules.proposals.domain.ports import (
     ClubRequests,
     ProposalDirectory,
     ProposalRepository,
+    UndecidedCharges,
 )
 from app.modules.proposals.domain.proposal import Standing
 
@@ -39,10 +40,12 @@ class WithdrawALeaversYeses:
         proposals: ProposalRepository,
         directory: ProposalDirectory,
         requests: ClubRequests,
+        undecided: UndecidedCharges,
     ) -> None:
         self._proposals = proposals
         self._directory = directory
         self._requests = requests
+        self._undecided = undecided
 
     async def execute(self, *, pool_id: UUID, player_id: UUID, at: Instant) -> int:
         """Withdraw every live yes of this player in this pool. Answers how many
@@ -61,6 +64,7 @@ class WithdrawALeaversYeses:
                 player_id,
                 proposals=self._proposals,
                 requests=self._requests,
+                undecided=self._undecided,
                 at=at,
             )
             withdrawn += 1

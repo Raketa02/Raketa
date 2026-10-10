@@ -41,7 +41,7 @@ from app.modules.notifications.domain.ports import (
 from app.modules.payments.domain.provider import Payment, PaymentStatus
 from app.modules.payments.domain.seat_charge import RefundReason, SeatCharge
 from app.modules.proposals.domain.pool import Pool, PoolKind
-from app.modules.proposals.domain.proposal import Origin, Proposal
+from app.modules.proposals.domain.proposal import Origin, Proposal, ReopenReason
 from app.shared.ids import new_uuid
 
 OLA, KUBA, EWA, TOMEK, ZOSIA = (new_uuid() for _ in range(5))
@@ -357,6 +357,51 @@ async def test_a_full_game_gone_back_to_filling_says_since_when(
     await bookings.save(_booked(booked, at=NOW))
     await session.commit()
     assert (await games.about(booked.proposal_id, at=later)).fell_back is False
+
+
+@pytest.mark.parametrize("implementation", registered(GameBriefs))
+async def test_a_game_waiting_for_a_payment_says_whose_and_until_when(
+    implementation, session
+):
+    """Tomek's share was refused as the game filled (#625): it waits for his
+    payment until then — and, out of time, has fallen back to filling, the
+    moment said; booked on a payment in time, it says so (Q110)."""
+
+    games: GameBriefs = implementation.build(session)
+    pay_by = NOW + timedelta(minutes=30)
+    waiting = await _a_proposal(session)
+    paid = await _a_proposal(session)
+    for proposal in (waiting, paid):
+        for player in (OLA, KUBA, EWA, TOMEK):
+            proposal.say_yes(player, at=NOW)
+        proposal.give_time_to_pay(
+            TOMEK,
+            reason=ReopenReason.AUTHENTICATION_REQUIRED,
+            seat_charge_id=new_uuid(),
+            until=pay_by,
+            filled_by=TOMEK,
+            at=NOW,
+        )
+    paid.fill(first_side=(OLA, KUBA), second_side=(EWA, TOMEK), by=TOMEK, at=NOW)
+    await _saved(session, waiting)
+    await _saved(session, paid)
+
+    brief = await games.about(waiting.proposal_id, at=NOW + timedelta(minutes=5))
+    booked = await games.about(paid.proposal_id, at=NOW + timedelta(minutes=5))
+
+    assert brief is not None and booked is not None
+    assert (brief.waiting_for_a_payment, brief.paying) == (True, {TOMEK: pay_by})
+    assert (brief.waiting_for_the_club, brief.fell_back) == (False, False)
+    assert (booked.booked_on_a_payment, booked.paying) == (True, {})
+    proposals = build_proposal_repository(session, **_store(session))
+    lapsing = await proposals.load(waiting.proposal_id)
+    assert lapsing is not None and lapsing.run_out_of_time(at=pay_by) == (TOMEK,)
+    await proposals.save(lapsing)
+    await session.commit()
+    ran_out = await games.about(waiting.proposal_id, at=pay_by)
+    assert ran_out is not None
+    assert (ran_out.waiting_for_a_payment, ran_out.fell_back_at) == (False, pay_by)
+    assert ran_out.in_ == (OLA, KUBA, EWA)
 
 
 @pytest.mark.parametrize("implementation", registered(GameBriefs))

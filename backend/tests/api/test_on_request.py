@@ -37,7 +37,6 @@ from app.kernel import Sport
 from app.modules.conversations.infrastructure.conversation_model import (
     ConversationORM,
 )
-from app.modules.payments.domain.entered_cards import A_CARD_THAT_DECLINES_LATER
 from app.modules.proposals.application.propose_games import Proposed
 from tests.api import players_world as players
 from tests.api.proposals_world import (
@@ -424,7 +423,11 @@ async def test_accepting_charges_everybody_together_and_books_the_held_court(
     accepted = await accepts(client, desk, proposal)
 
     assert accepted.status_code == 200, accepted.text
-    assert accepted.json() == {"outcome": "BOOKED", "court_name": "Court 1"}
+    assert accepted.json() == {
+        "outcome": "BOOKED",
+        "court_name": "Court 1",
+        "payment_due_by": None,
+    }
     assert len(payments.called("authorise")) == 4
     await mailbox.drain()
     assert len(payments.called("capture")) == 4
@@ -464,69 +467,6 @@ async def test_the_chat_opens_when_the_club_says_yes_and_not_before(
     await accepts(client, desk, proposal)
     await mailbox.drain()
     assert await the_room() is not None
-
-
-async def test_a_payment_that_fails_on_the_club_s_yes_opens_its_seat_and_nobody_pays(
-    client, session_factory, clock, payments, mailbox, on_request, four
-):
-    club, desk = on_request
-    tomek = await a_player(
-        client, payments, "tomek2", entered=A_CARD_THAT_DECLINES_LATER
-    )
-    players = [*four[:3], tomek]
-    proposal = await a_full_game(
-        client, session_factory, clock, club=club, four=players
-    )
-
-    accepted = await accepts(client, desk, proposal)
-
-    assert accepted.status_code == 200, accepted.text
-    assert accepted.json() == {"outcome": "SEAT_OPENED", "court_name": None}
-    await mailbox.drain()
-    assert payments.called("capture") == []
-    for player in players:
-        assert await receipts(client, player) == []
-    # The request is taken back; the three still In find the game filling
-    # again, and on their Home as *Seat open* (Q106).
-    for player in players[:3]:
-        assert await falls_back_on_the_home_of(client, player, proposal) == 1
-        assert await live_ids(client, player) == [str(proposal)]
-    assert await home_of(client, tomek) == []
-    owed = await client.get(
-        "/api/v1/players/me/payments-to-confirm", headers=tomek["headers"]
-    )
-    [payment] = owed.json()["payments"]
-    assert payment["proposal_id"] == str(proposal)
-    assert await waiting_at(client, desk) == []
-    assert await the_court_is_on_sale(session_factory, clock, club)
-
-
-async def test_two_payments_failing_on_the_club_s_yes_open_both_seats(
-    client, session_factory, clock, payments, on_request, four
-):
-    club, desk = on_request
-    declining = [
-        await a_player(client, payments, name, entered=A_CARD_THAT_DECLINES_LATER)
-        for name in ("ewa2", "tomek2")
-    ]
-    players = [*four[:2], *declining]
-    proposal = await a_full_game(
-        client, session_factory, clock, club=club, four=players
-    )
-
-    accepted = await accepts(client, desk, proposal)
-
-    assert accepted.json()["outcome"] == "SEAT_OPENED"
-    for player in players[:2]:
-        assert await falls_back_on_the_home_of(client, player, proposal) == 2
-    for player in declining:
-        assert await home_of(client, player) == []
-        owed = await client.get(
-            "/api/v1/players/me/payments-to-confirm", headers=player["headers"]
-        )
-        assert [p["proposal_id"] for p in owed.json()["payments"]] == [str(proposal)]
-    details = await details_of(client, four[0], proposal)
-    assert (details["status"], details["in_count"]) == ("FILLING", 2)
 
 
 # --------------------------------------------------------------------------- #

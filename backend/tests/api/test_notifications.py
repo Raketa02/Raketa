@@ -383,10 +383,11 @@ async def test_a_refused_payment_asks_its_player_and_nobody_else(
     for player in (ola, kuba, ewa, tomek):
         assert (await says_yes(client, player, proposal)).status_code == 200
 
+    # Her time to pay: thirty minutes from 08:00 (#625, Q109).
     assert await pushed_to(mailbox, pushes, ewa) == [
         (
-            "Confirm your payment to keep your seat",
-            f"Your bank declined 30 zł — confirm it with another card. {THE_GAME}.",
+            "Confirm your payment by 08:30 to keep your seat",
+            "Padel · Sat 17:00 at Bonarka Arena — the others are waiting.",
         )
     ]
     [notice] = await notices_of(client, mailbox, ewa)
@@ -395,8 +396,14 @@ async def test_a_refused_payment_asks_its_player_and_nobody_else(
         "PROPOSAL",
         str(proposal),
     )
+    # The others are told the game waits for one payment — never whose — and
+    # Tomek's yes filled it, so his copy is his own (Q110).
     for player in (ola, kuba, tomek):
-        assert await notices_of(client, mailbox, player) == []
+        [waiting] = await notices_of(client, mailbox, player)
+        assert waiting["kind"] == "WAITING_FOR_A_PAYMENT"
+        assert "ewa" not in (waiting["title"] + waiting["body"]).lower()
+        assert waiting["your_own"] is (player is tomek)
+    assert await pushed_to(mailbox, pushes, tomek) == []
 
 
 async def test_a_rescue_s_refused_payment_asks_to_take_the_seat(

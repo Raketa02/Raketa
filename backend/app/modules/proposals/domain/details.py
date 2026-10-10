@@ -18,13 +18,18 @@ game untouched at an On request club until the club says yes (#541, #543), so a
 proposal with every seat In that has not ended is that game, whatever the club's
 settings say now.
 
+**Waiting for one payment is a full game too** (#625, #626): a share was
+refused, and its player's time to pay runs — their seat theirs alone.
+
 **The actions are what the routes would take.** *I'm in* and *Not this time*
 while the reader may answer and a seat is open; *Withdraw* when they are In;
-*Leave the game* in its place while the club decides (the mechanics §13); a
-refused payment is **confirmed**, never said again, since the bank would be
-asked the same question; and nothing once the game is over or the answer is
-final — a no, a seat reopened because they no longer fit, a yes paused by a full
-week, which comes back by itself.
+*Leave the game* in its place while the club decides, or a payment is awaited
+(the mechanics §13); a refused payment is **confirmed**, never said again,
+since the bank would be asked the same question — within the payer's time to
+pay too, when a share refused for terms or a missing method is said yes to
+again once fixed; and nothing once the game is over or the answer is final — a
+no, a seat reopened because they no longer fit, a yes paused by a full week,
+which comes back by itself.
 """
 
 from __future__ import annotations
@@ -47,6 +52,9 @@ class ProposalStatus(StrEnum):
     FILLING = "FILLING"
     #: Every seat is In and an On request club has still to say yes.
     WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
+    #: Every seat is In and one player's refused share is awaited: their time
+    #: to pay runs (#625, #626).
+    WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
     #: The last yes booked it: the booking has the proposal's id.
     FILLED = "FILLED"
     EXPIRED = "EXPIRED"
@@ -105,6 +113,8 @@ def status_of_proposal(proposal: Proposal, *, now: Instant) -> ProposalStatus:
     standing = proposal.standing_at(now)
     match standing:
         case Standing.FILLING:
+            if proposal.waiting_for_a_payment:
+                return ProposalStatus.WAITING_FOR_A_PAYMENT
             if proposal.open_seats == 0:
                 return ProposalStatus.WAITING_FOR_THE_CLUB
             return ProposalStatus.FILLING
@@ -167,9 +177,20 @@ def actions_for(
     if proposal.standing_at(now) is not Standing.FILLING:
         return ()
     if reader in proposal.yeses:
-        if proposal.open_seats == 0:
-            return (ReaderAction.LEAVE,)
-        return (ReaderAction.WITHDRAW,)
+        way_out = (
+            ReaderAction.LEAVE if proposal.open_seats == 0 else ReaderAction.WITHDRAW
+        )
+        paying = proposal.paying.get(reader)
+        if paying is not None:
+            # Their time to pay: the payment confirmed — or, refused for terms
+            # or a missing method, said yes to again once fixed.
+            pay = (
+                ReaderAction.CONFIRM_PAYMENT
+                if paying.payment_to_confirm is not None
+                else ReaderAction.YES
+            )
+            return (pay, way_out)
+        return (way_out,)
     if reader in proposal.declined or reader in proposal.paused:
         return ()
     reopened = proposal.reopened.get(reader)

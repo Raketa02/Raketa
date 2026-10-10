@@ -118,6 +118,7 @@ def build_lifespan(settings: Settings):
             or settings.PROPOSAL_EXPIRY_ENABLED
             or settings.PROPOSER_ENABLED
             or settings.REQUEST_TIMEOUT_ENABLED
+            or settings.TIME_TO_PAY_ENABLED
             or settings.CUT_OFF_ENABLED
             or settings.CLUB_PAYOUTS_ENABLED
             or settings.NEW_BOOKINGS_SUMMARY_ENABLED

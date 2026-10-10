@@ -24,7 +24,9 @@ from app.bootstrap.composition import (
     build_deal_version,
     build_expire_proposals,
     build_make_proposal,
+    build_run_out_the_time_to_pay,
 )
+from app.core.config import get_settings
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
 from app.modules.payments.domain.entered_cards import (
@@ -293,6 +295,16 @@ async def deals(
 async def sweeps(session_factory, clock):
     async with session_factory() as session:
         return await build_expire_proposals(session, clock=clock).execute()
+
+
+async def runs_out(session_factory, clock):
+    """The time-to-pay job: every refused share's time to pay that is up runs
+    out (#625, #626)."""
+
+    async with session_factory() as session:
+        return await build_run_out_the_time_to_pay(
+            session, clock=clock, settings=get_settings()
+        ).execute()
 
 
 def yes_path(proposal_id: UUID) -> str:

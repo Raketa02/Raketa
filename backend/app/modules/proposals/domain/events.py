@@ -206,6 +206,83 @@ class SeatReopened:
 
 
 @dataclass(frozen=True)
+class TimeToPayGiven:
+    """**Time to pay** (#625, #626; the mechanics §12.2, Q109): the game was
+    full and this player's share could not be held — when it filled, or when
+    its On request club said yes — so nobody paid, and **their seat is held for
+    them alone** until ``until``: thirty minutes, never past the book-by. They
+    stay In; nobody else is dealt the seat or may take it, and every other hold
+    on the game is kept, so paying in time books it at once.
+
+    ``reason`` is the ``ReopenReason`` code of the refusal and
+    ``seat_charge_id`` the refused payment. ``filled_by`` is the player whose
+    own act filled the game (Q102) — ``None`` when nobody's did: the club's yes,
+    a paused yes coming back. ``at_the_clubs_yes`` says the On request club had
+    said yes, and holds the court while it waits (#626)."""
+
+    proposal_id: UUID
+    player_id: UUID
+    seat_charge_id: UUID
+    reason: str
+    until: datetime
+    occurred_at: datetime
+    filled_by: UUID | None = None
+    at_the_clubs_yes: bool = False
+
+
+@dataclass(frozen=True)
+class TimeToPayMet:
+    """The player confirmed their payment in time, and the game could not book
+    on it yet — a seat opened while it waited (#625). They are In with their
+    payment held, as anybody who confirmed one is; the seat is no longer held
+    for them, since it is theirs."""
+
+    proposal_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class TimeToPayRanOut:
+    """**These players' time to pay ran out** (#625, #626; Q109): nobody paid,
+    and each seat **reopens** — offered to others as any open seat of a game
+    still filling, and theirs to take back while it is free by confirming the
+    payment. Recorded by the job that runs the deadline, or by the player's own
+    act come too late."""
+
+    proposal_id: UUID
+    player_ids: tuple[UUID, ...]
+    occurred_at: datetime
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "player_ids", tuple(UUID(str(one)) for one in self.player_ids)
+        )
+
+
+@dataclass(frozen=True)
+class FellBackToFilling:
+    """**A full game waiting for one payment went back to filling** (#625;
+    Q104, Q106): at a club that books at once, a seat opened while the payment
+    was awaited — ``player_ids``' — so the game is filling again, and the
+    payer's time runs on. ``left`` is those of them whose own act took their yes
+    back, who are named to the others; any other seat opened by what happened
+    to its player, which is never said. The club's own analogue is the
+    booking's ``RequestWithdrawn``."""
+
+    proposal_id: UUID
+    player_ids: tuple[UUID, ...]
+    occurred_at: datetime
+    left: tuple[UUID, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "player_ids", tuple(UUID(str(one)) for one in self.player_ids)
+        )
+        object.__setattr__(self, "left", tuple(UUID(str(one)) for one in self.left))
+
+
+@dataclass(frozen=True)
 class YesPaused:
     """Another game of this player's filled, and **their games per week are
     booked** for the week this one is in: the yes stops counting, and they are

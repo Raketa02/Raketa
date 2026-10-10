@@ -41,6 +41,7 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_expire_proposals,
     build_expire_unanswered_requests,
+    build_run_out_the_time_to_pay,
     build_call_off_short_games,
     build_decide_club_payouts,
     build_image_transcoder,
@@ -106,6 +107,13 @@ PROPOSAL_EXPIRY_JOB = "proposal-expiry"
 #: the court the request held and makes its players due a new card first.
 REQUEST_TIMEOUT_JOB = "request-timeout"
 
+#: Time to pay (#625, #626). It runs out every refused share's time to pay that
+#: is up — the seat reopens for everybody, the holds kept for it are let go, and
+#: at the club's yes the booking is called off and its court freed — and
+#: **correctness depends on it**: a payer's own act past the time already runs
+#: it out first, but nothing else does it for the others.
+TIME_TO_PAY_JOB = "time-to-pay"
+
 #: The cut-off (#544). It calls off every booked game whose cut-off came with
 #: a seat open since before it — **a game plays full or not at all** — and
 #: **correctness depends on it**: every read says *called off* from the cut-off
@@ -167,6 +175,7 @@ def build_scheduled_jobs(
         or settings.PROPOSAL_EXPIRY_ENABLED
         or settings.PROPOSER_ENABLED
         or settings.REQUEST_TIMEOUT_ENABLED
+        or settings.TIME_TO_PAY_ENABLED
         or settings.CUT_OFF_ENABLED
         or settings.CLUB_PAYOUTS_ENABLED
         or settings.NEW_BOOKINGS_SUMMARY_ENABLED
@@ -215,6 +224,12 @@ def build_scheduled_jobs(
         if settings.REQUEST_TIMEOUT_ENABLED:
             jobs.append(
                 build_request_timeout_job(
+                    session_factory=session_factory, settings=settings
+                )
+            )
+        if settings.TIME_TO_PAY_ENABLED:
+            jobs.append(
+                build_time_to_pay_job(
                     session_factory=session_factory, settings=settings
                 )
             )
@@ -382,6 +397,45 @@ def build_request_timeout_job(
     return PeriodicJob(
         name=REQUEST_TIMEOUT_JOB,
         interval_seconds=settings.REQUEST_TIMEOUT_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_time_to_pay_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Run out every time to pay that is up (the mechanics §12.2, Q109).
+
+    **Idempotent and safe beside itself with no lock**: each game is one
+    transaction that locks it first, the aggregate records nothing on a time
+    already run out or one still running, and a genuine race is caught by the
+    stream version and stepped over. **Correctness depends on it**: until it
+    runs, a seat whose time ran out is still its payer's alone, and the others'
+    money stays held on their cards.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_run_out_the_time_to_pay(
+                session, clock=clock, settings=settings
+            ).execute()
+        if done.games or done.conflicts:
+            logger.info(
+                "time to pay finished",
+                extra={
+                    "job": TIME_TO_PAY_JOB,
+                    "games": done.games,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=TIME_TO_PAY_JOB,
+        interval_seconds=settings.TIME_TO_PAY_INTERVAL_SECONDS,
         run=run,
     )
 

@@ -50,9 +50,11 @@ from app.modules.bookings.application.leaving import (
 from app.modules.bookings.application.rescues import SayNoToTheSeat, RescueTheSeat
 from app.modules.bookings.application.requests import (
     BookTheRequest,
+    CallOffForAPayment,
     GameToRequest,
     RequestTheGame,
     CallOffTheRequest,
+    WaitForThePayment,
     WithdrawTheRequest,
 )
 from app.modules.bookings.domain.booking import (
@@ -188,6 +190,8 @@ class BookingsClubRequests:
         accept: BookTheRequest,
         turn_down: CallOffTheRequest,
         withdraw: WithdrawTheRequest,
+        wait: WaitForThePayment,
+        not_in_time: CallOffForAPayment,
     ) -> None:
         self._bookings = bookings
         self._directory = directory
@@ -195,6 +199,8 @@ class BookingsClubRequests:
         self._accept = accept
         self._turn_down = turn_down
         self._withdraw = withdraw
+        self._wait = wait
+        self._not_in_time = not_in_time
 
     async def ask(self, game: GameToAsk, *, at: Instant) -> None:
         try:
@@ -265,6 +271,28 @@ class BookingsClubRequests:
             booking_id, player_ids=player_ids, left=left, at=at
         )
 
+    async def await_a_payment(
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        until: Instant,
+        at: Instant,
+    ) -> None:
+        await self._wait.execute(booking_id, player_ids=player_ids, until=until, at=at)
+
+    async def payment_not_in_time(
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        for_good: bool,
+        at: Instant,
+    ) -> bool:
+        return await self._not_in_time.execute(
+            booking_id, player_ids=player_ids, for_good=for_good, at=at
+        )
+
 
 def _request(booking: Booking) -> ClubRequest | None:
     """The request a booking was put to its club as — ``None`` for one born
@@ -285,6 +313,7 @@ def _request(booking: Booking) -> ClubRequest | None:
         cut_off=booking.cut_off,
         answer_by=booking.answer_by,
         waiting=booking.is_waiting,
+        pay_by=booking.pay_by,
     )
 
 
@@ -350,6 +379,7 @@ class BookingsPlayerBookings:
 
 _STAGES = {
     BookingState.WAITING_FOR_THE_CLUB: BookingStage.WAITING_FOR_THE_CLUB,
+    BookingState.WAITING_FOR_A_PAYMENT: BookingStage.WAITING_FOR_A_PAYMENT,
     BookingState.BOOKED: BookingStage.BOOKED,
     BookingState.SEAT_OPEN: BookingStage.SEAT_OPEN,
     BookingState.CALLED_OFF: BookingStage.CALLED_OFF,
@@ -360,6 +390,7 @@ _CALLED_OFF = {
     CalledOff.NO_ANSWER: CalledOffReason.NO_ANSWER,
     CalledOff.SHORT_AT_THE_CUT_OFF: CalledOffReason.SHORT_AT_THE_CUT_OFF,
     CalledOff.CANCELLED_BY_THE_CLUB: CalledOffReason.CANCELLED_BY_THE_CLUB,
+    CalledOff.PAYMENT_NOT_IN_TIME: CalledOffReason.PAYMENT_NOT_IN_TIME,
 }
 
 _CANCEL_REASONS = {
@@ -370,13 +401,15 @@ _CANCEL_REASONS = {
 }
 
 
-def _booked_game(booking: Booking) -> BookedGame:
+def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
     """The game a booking is to its players — a request taken back because a
-    seat opened is a game gone back to filling (``FILLING_AGAIN``), the people
-    still In as the booking left them: Proposals folds it against the proposal
-    (``as_filling_again``), and the club reads nothing of it (#624)."""
+    seat opened, or because the payment the club's yes waited on did not come
+    (#626), is a game gone back to filling (``FILLING_AGAIN``), the people still
+    In as the booking left them: Proposals folds it against the proposal
+    (``as_filling_again``). **To its club** a request taken back is nothing
+    (#624), and one whose payment did not come is called off (#626, Q112)."""
 
-    filling_again = booking.taken_back
+    filling_again = booking.taken_back and not for_the_club
     return BookedGame(
         booking_id=booking.booking_id,
         pool_id=booking.pool_id,
@@ -408,6 +441,11 @@ def _booked_game(booking: Booking) -> BookedGame:
         checked_in=dict(booking.checked_in),
         answer_by=booking.answer_by,
         version=booking.version,
+        paying=(
+            {}
+            if booking.pay_by is None
+            else {payer: booking.pay_by for payer in booking.payers}
+        ),
     )
 
 
@@ -451,9 +489,10 @@ class BookingsClubBookings:
         for booking_id in await self._directory.at_club(club_id, start=start, end=end):
             booking = await self._bookings.load(booking_id)
             # A request taken back is no booking of the club's: the game is
-            # filling again (#624).
-            if booking is not None and not booking.taken_back:
-                found.append(_booked_game(booking))
+            # filling again (#624). One whose payment did not come in time is
+            # called off at its club (#626).
+            if booking is not None and booking.called_off is not CalledOff.SEAT_OPENED:
+                found.append(_booked_game(booking, for_the_club=True))
         return found
 
     async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:

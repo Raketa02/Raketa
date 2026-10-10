@@ -22,6 +22,13 @@ Q104, Q105, Q108): *filling again* never says whose week filled, who no longer
 fits or whose card failed; the club's no and its silence read apart; and a
 leaver is told in a leaver's words — *which you left* — and never promised a
 new game.
+
+**A time to pay names its time and never its payer** (#625, #626; Q109, Q110):
+the payer reads *Confirm your payment by 14:40 to keep your seat*, the others
+*It's a game! · waiting for one payment until 14:40* — at the club's yes, *Your
+Fri 19:00 is waiting for one payment, until 21:20* — then *booked · you paid*,
+never a second *It's a game!*, or *filling again*; the payer, out of time, *Your
+time to pay ran out*.
 """
 
 from __future__ import annotations
@@ -128,7 +135,40 @@ def words_for(said: Said) -> Words:
     kind = said.kind
 
     if kind is NoticeKind.GAME_BOOKED:
+        if said.reason == NoticeReason.PAYMENT_CAME_IN:
+            # *It's a game!* was told when it filled; never twice (Q110).
+            return Words(
+                title=f"Your {_hour(said.starts_at)} is booked · you paid {money}",
+                body=f"{sport} at {said.club}.",
+            )
         return Words(title=f"It's a game! · you paid {money}", body=f"{game}.")
+    if kind is NoticeKind.WAITING_FOR_A_PAYMENT:
+        pay_by = invariant(said.until, "a game waiting for a payment, by no time")
+        by = _by(pay_by, given_at=said.given_at)
+        if said.reason == NoticeReason.AT_THE_CLUBS_YES:
+            # They had *It's a game!* when the club was asked (Q110).
+            return Words(
+                title=(
+                    f"Your {_hour(said.starts_at)} is waiting for one payment, "
+                    f"until {by}"
+                ),
+                body=f"{sport} at {said.club}. Nobody pays until it's in.",
+            )
+        return Words(
+            title=f"It's a game! · waiting for one payment until {by}",
+            body=(
+                f"{sport} · {_hour(said.starts_at)} at {said.club}. Nobody pays "
+                "until it's in."
+            ),
+        )
+    if kind is NoticeKind.TIME_TO_PAY_RAN_OUT:
+        return Words(
+            title=f"Your time to pay ran out · {_hour(said.starts_at)}",
+            body=(
+                "Your seat is open to others now — confirm your payment to take "
+                "it back while it's free."
+            ),
+        )
     if kind is NoticeKind.WAITING_FOR_THE_CLUB:
         answer_by = invariant(said.until, "a game waiting for its club, by no time")
         return Words(
@@ -216,6 +256,8 @@ def words_for(said: Said) -> Words:
 
 
 def _confirm_payment(said: Said, *, game: str, money: str) -> Words:
+    if said.until is not None and said.opens is not Opens.BOOKING:
+        return _confirm_by(said, money=money)
     title = (
         "Confirm your payment to take the seat"
         if said.opens is Opens.BOOKING
@@ -234,6 +276,33 @@ def _confirm_payment(said: Said, *, game: str, money: str) -> Words:
     return Words(title=title, body=body)
 
 
+def _confirm_by(said: Said, *, money: str) -> Words:
+    """*Confirm your payment by 14:40 to keep your seat* — the payer's time to
+    pay (#625, #626; Q109): the others are waiting."""
+
+    assert said.until is not None
+    sport = _SPORT_WORDS[said.sport]
+    waiting = (
+        f"{sport} · {_hour(said.starts_at)} at {said.club} — the others are waiting."
+    )
+    if said.reason == FailureReason.TERMS_NEEDED:
+        body = f"Your card's brand changed — accept the payment terms again. {waiting}"
+    elif said.reason == FailureReason.NO_METHOD:
+        body = (
+            "There's no payment method to charge — save one in You › Payments. "
+            f"{waiting}"
+        )
+    else:
+        body = waiting
+    return Words(
+        title=(
+            f"Confirm your payment by {_by(said.until, given_at=said.given_at)} "
+            "to keep your seat"
+        ),
+        body=body,
+    )
+
+
 #: Why a full game that went back to filling was called off before it was
 #: full again — nobody paid (Q104, Q106).
 _NOBODY_PAID: Final[dict[str, str]] = {
@@ -241,6 +310,9 @@ _NOBODY_PAID: Final[dict[str, str]] = {
     NoticeReason.BOOK_BY_PASSED: "It didn't fill again before its last moment to book",
     NoticeReason.COURT_HOUR_LOST: "Its court went to another game before it filled "
     "again",
+    NoticeReason.PAYMENT_NOT_IN_TIME: "A payment didn't go through in time",
+    NoticeReason.COURT_LOST_WAITING_FOR_A_PAYMENT: "Its court went to another game "
+    "before the payment came in",
 }
 
 

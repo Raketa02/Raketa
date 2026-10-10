@@ -13,7 +13,11 @@ whoever's seat opened — and **nothing here commits**:
 - **turned down** — refused, or not answered in time: called off, nobody paid,
   and each player emailed which it was (#623; Q105);
 - **withdrawn** — seats opened while it waited: nobody paid, nobody keeps a seat
-  on it, and the game is filling again.
+  on it, and the game is filling again;
+- **waiting for a payment** — the club said yes and a share could not be held:
+  the yes and the court are kept while its player has time to pay (#626), then
+  booked on the payment, or called off when it did not come in time — the desk
+  emailed *A game didn't go ahead*.
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, invariant
 from app.modules.bookings.application.request_emails import (
     club_turned_it_down_email,
+    payment_not_in_time_email,
     request_waiting_email,
 )
 from app.modules.bookings.domain.booking import BookedCourt, Booking
@@ -241,4 +246,82 @@ class WithdrawTheRequest:
         ):
             return False
         await self._bookings.save(booking)
+        return True
+
+
+@final
+class WaitForThePayment:
+    """The club said yes and a share could not be held: its yes and the court
+    are kept until ``until`` (#626; Q109, Q112). Whether there is time left is
+    the caller's question."""
+
+    def __init__(self, *, bookings: BookingRepository) -> None:
+        self._bookings = bookings
+
+    async def execute(
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        until: Instant,
+        at: Instant,
+    ) -> None:
+        booking = invariant(
+            await self._bookings.load(booking_id), f"no booking {booking_id}"
+        )
+        booking.await_a_payment(player_ids, until=until, at=at)
+        await self._bookings.save(booking)
+
+
+@final
+class CallOffForAPayment:
+    """**The payment the club's yes waited on did not come in time** — or no
+    time was left at its yes (#626; Q112): called off, nobody paid, the court
+    the club's again, and **its desk emailed at once**, *A game didn't go
+    ahead*, as the cut-off's is. The players are told by their own context."""
+
+    def __init__(
+        self,
+        *,
+        bookings: BookingRepository,
+        desks: ClubDesks,
+        mail: MailQueue,
+        bookings_page: str,
+    ) -> None:
+        self._bookings = bookings
+        self._desks = desks
+        self._mail = mail
+        self._bookings_page = bookings_page
+
+    async def execute(
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        for_good: bool,
+        at: Instant,
+    ) -> bool:
+        """Answers whether it was called off — nothing on a booking the club
+        no longer has: answered, or taken back when a seat opened first."""
+
+        booking = await self._bookings.load(booking_id)
+        if booking is None or not booking.payment_not_in_time(
+            player_ids, for_good=for_good, at=at
+        ):
+            return False
+        await self._bookings.save(booking)
+        desk = await self._desks.of(booking.club_id)
+        if desk is not None:
+            await self._mail.enqueue(
+                payment_not_in_time_email(
+                    to=desk.email,
+                    club=desk.club_name,
+                    court=booking.court.name,
+                    sport=booking.sport,
+                    starts_at=booking.start,
+                    for_good=for_good,
+                    link=self._bookings_page,
+                ),
+                at=at,
+            )
         return True

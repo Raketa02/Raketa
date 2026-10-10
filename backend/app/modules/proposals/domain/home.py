@@ -17,6 +17,13 @@ the request back, and the game stays on the Home of the people still In as
 folded against its proposal on every read (``as_filling_again``) — who is In
 now, and whether its book-by passed, or its court went, before it filled again,
 which calls it off.
+**A game may wait for one payment** (#625, #626; Q111): a share refused as the
+game filled — or as its club said yes — gives its player time to pay, and the
+game is *Waiting for one payment* on all four's Home until it comes, nobody
+paid. At a club that books at once it has no booking until it books, so its
+card is folded off its proposal (``without_a_booking``); and when the time runs
+out, or somebody else's seat opens, it is *Seat open* as any full game gone back
+to filling.
 **Somebody may leave a booked game** (#544): it is *seat open* until its hour —
 and **a game plays full or not at all**, so one with a seat open since before
 its cut-off is *called off* from the cut-off on, read off the clock whether or
@@ -51,7 +58,7 @@ from app.kernel import SPORT_SPECS, Instant, Sport, exhaustive, instant, invaria
 from app.modules.bookings.domain.check_in import is_the_game_day
 from app.modules.games.domain.windows import A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR
 from app.modules.proposals.domain.deck import GAME_LENGTH, Sides
-from app.modules.proposals.domain.proposal import Standing
+from app.modules.proposals.domain.proposal import Proposal, Standing
 
 
 class HomeStatus(StrEnum):
@@ -59,6 +66,9 @@ class HomeStatus(StrEnum):
 
     #: An On request club has not confirmed yet. Produced from #543.
     WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
+    #: Full, and one player's share was refused: their time to pay runs, and
+    #: nobody pays until it is in (#625, #626; Q111).
+    WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
     #: Full and booked, its hour still ahead.
     BOOKED = "BOOKED"
     #: Somebody left and their seat is offered (#544).
@@ -82,6 +92,9 @@ class BookingStage(StrEnum):
 
     #: Its On request club has not answered yet: no Game, nobody paid.
     WAITING_FOR_THE_CLUB = "WAITING_FOR_THE_CLUB"
+    #: A share was refused as it filled — or at its club's yes — and its
+    #: player's time to pay runs: no Game, nobody paid (#625, #626).
+    WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
     BOOKED = "BOOKED"
     #: Booked and paid, and somebody left: a seat is open (#544).
     SEAT_OPEN = "SEAT_OPEN"
@@ -110,9 +123,13 @@ class CalledOffReason(StrEnum):
     #: not fill again: nobody paid (#624, Q104, Q106).
     BOOK_BY_PASSED = "BOOK_BY_PASSED"
     #: It went back to filling and its court went to another game before it
-    #: was full again: nobody paid, and its people are dealt a new card first
-    #: (#624).
+    #: was full again — or before the payment it waited for came in: nobody
+    #: paid, and its people are dealt a new card first (#624, #625).
     COURT_HOUR_LOST = "COURT_HOUR_LOST"
+    #: A payment it waited for did not come in time and it could no longer
+    #: fill — the book-by had come — or, to its club, a payment its yes waited
+    #: on did not come in time (#625, #626; Q112): nobody paid.
+    PAYMENT_NOT_IN_TIME = "PAYMENT_NOT_IN_TIME"
 
 
 class ClubCancelReason(StrEnum):
@@ -227,6 +244,16 @@ class BookedGame:
     answer_by: Instant | None = None
     #: The booking's stream version — what a rescue's attempts are counted by.
     version: int = 0
+    #: Everybody whose refused share the game waits for, and until when —
+    #: their time to pay (#625, #626). Empty while nobody's is awaited.
+    paying: Mapping[UUID, Instant] = field(default_factory=dict)
+
+    @property
+    def pay_by(self) -> Instant | None:
+        """When the payment the game waits for is due — the earliest, if more
+        than one is awaited."""
+
+        return min(self.paying.values(), default=None)
 
     @property
     def players(self) -> tuple[UUID, ...]:
@@ -332,7 +359,8 @@ class Leaving(StrEnum):
     #: After it: refunded, less the card fee, only when somebody takes the
     #: seat.
     AFTER_THE_CUT_OFF = "AFTER_THE_CUT_OFF"
-    #: While the club decides: nobody has paid, and leaving withdraws the yes.
+    #: While the club decides — or a payment is awaited (#625): nobody has
+    #: paid, and leaving withdraws the yes.
     WHILE_WAITING_FOR_THE_CLUB = "WHILE_WAITING_FOR_THE_CLUB"
 
 
@@ -363,7 +391,11 @@ _FORECAST_SHOWN: Final = frozenset({HomeStatus.BOOKED, HomeStatus.NEEDS_RESULT})
 
 #: The statuses at which there is no game at the club's desk to check in to.
 _NO_GAME_AT_THE_DESK: Final = frozenset(
-    {HomeStatus.WAITING_FOR_THE_CLUB, HomeStatus.CALLED_OFF}
+    {
+        HomeStatus.WAITING_FOR_THE_CLUB,
+        HomeStatus.WAITING_FOR_A_PAYMENT,
+        HomeStatus.CALLED_OFF,
+    }
 )
 
 
@@ -376,6 +408,8 @@ def status_of(
 
     if game.stage is BookingStage.WAITING_FOR_THE_CLUB:
         return HomeStatus.WAITING_FOR_THE_CLUB
+    if game.stage is BookingStage.WAITING_FOR_A_PAYMENT:
+        return HomeStatus.WAITING_FOR_A_PAYMENT
     if game.called_off_reason(now) is not None:
         return HomeStatus.CALLED_OFF
     if game.stage is BookingStage.FILLING_AGAIN:
@@ -444,6 +478,9 @@ def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
             return result is not None and result.you_may_dispute
         case (
             HomeStatus.WAITING_FOR_THE_CLUB
+            # The payer's payment is the badge's already, as a payment to
+            # confirm.
+            | HomeStatus.WAITING_FOR_A_PAYMENT
             | HomeStatus.BOOKED
             | HomeStatus.COUNTED
             | HomeStatus.NEVER_PLAYED
@@ -494,7 +531,10 @@ def leaving_of(game: BookedGame, *, now: Instant) -> Leaving:
     """What leaving this game does at ``now`` — whether it may still be left
     at all is the caller's question."""
 
-    if game.stage is BookingStage.WAITING_FOR_THE_CLUB:
+    if game.stage in (
+        BookingStage.WAITING_FOR_THE_CLUB,
+        BookingStage.WAITING_FOR_A_PAYMENT,
+    ):
         return Leaving.WHILE_WAITING_FOR_THE_CLUB
     if now < game.cut_off:
         return Leaving.BEFORE_THE_CUT_OFF
@@ -549,6 +589,10 @@ class BookedState:
     #: while the game waits for it and the moment is ahead; ``None`` on every
     #: other status (Q98).
     answer_by: Instant | None = None
+    #: When the payment the game waits for is due — *Waiting for one payment ·
+    #: until 14:40* — while it waits for one; ``None`` on every other status
+    #: (#625, Q111).
+    pay_by: Instant | None = None
 
 
 def state_of(
@@ -581,6 +625,7 @@ def state_of(
             if status is HomeStatus.WAITING_FOR_THE_CLUB
             else None
         ),
+        pay_by=game.pay_by if status is HomeStatus.WAITING_FOR_A_PAYMENT else None,
     )
 
 
@@ -649,7 +694,11 @@ def check_in_shown(status: HomeStatus, *, start: Instant, now: Instant) -> bool:
 
 
 def as_filling_again(
-    game: BookedGame, *, in_: Sequence[UUID], standing: Standing
+    game: BookedGame,
+    *,
+    in_: Sequence[UUID],
+    standing: Standing,
+    paying: Mapping[UUID, Instant] | None = None,
 ) -> BookedGame:
     """**A full game that went back to filling, as its proposal has it now**
     (#624, Q106) — the booking keeps who was In when its request was taken
@@ -658,7 +707,8 @@ def as_filling_again(
     took their yes back since is off them. **Called off, nobody paid**, once
     the proposal is over before it was full again: its book-by passed — or a
     seat opened after it, while the club decided — or its court went to
-    another game."""
+    another game. A payer whose time to pay still runs (#625) is in
+    ``paying``, as the proposal has it."""
 
     invariant(
         game.stage is BookingStage.FILLING_AGAIN,
@@ -675,6 +725,7 @@ def as_filling_again(
         first_side=tuple(first),
         second_side=tuple(second),
         called_off=_filling_again_ended(game, standing),
+        paying=game.paying if paying is None else dict(paying),
     )
 
 
@@ -701,3 +752,56 @@ def _filling_again_ended(
             return None
         case _:
             exhaustive(standing)
+
+
+def without_a_booking(proposal: Proposal, *, now: Instant) -> BookedGame:
+    """**A game at a club that books at once that waited for a payment**
+    (#625; Q111) — full when its share was refused, so its players were told
+    *It's a game!* — has **no booking** until it books: no court is held, as for
+    any game still filling. So its card is folded off its proposal: *Waiting
+    for one payment* while the time to pay runs and every seat is In; *Seat
+    open* — gone back to filling — once the time ran out or somebody else's
+    seat opened; *called off*, nobody paid, once it ends before it is full
+    again — its book-by (*a payment that didn't come in time* when the time ran
+    out on it), or its court gone to another game. The people In stand in the
+    order they said yes; nothing about the money is anybody's yet."""
+
+    invariant(
+        proposal.payment_awaited_at is not None,
+        f"{proposal.proposal_id} never waited for a payment",
+    )
+    per_side = proposal.seats_per_side
+    standing = proposal.standing_at(now)
+    called_off: CalledOffReason | None = None
+    if standing is Standing.EXPIRED:
+        called_off = (
+            CalledOffReason.PAYMENT_NOT_IN_TIME
+            if proposal.ran_out_for_good or proposal.paying
+            else CalledOffReason.BOOK_BY_PASSED
+        )
+    elif standing is Standing.COURT_HOUR_LOST:
+        called_off = CalledOffReason.COURT_HOUR_LOST
+    waiting = called_off is None and proposal.waiting_for_a_payment
+    return BookedGame(
+        booking_id=proposal.proposal_id,
+        pool_id=proposal.pool.id,
+        club_id=proposal.club_id,
+        # No court is held for it, and none given.
+        court_name="",
+        sport=proposal.sport,
+        kind=proposal.kind,
+        start=proposal.start,
+        share_grosze=proposal.share_grosze,
+        first_side=proposal.yeses[:per_side],
+        second_side=proposal.yeses[per_side:],
+        # Nobody paid, so nothing reads when leaving stops being free.
+        cut_off=proposal.start,
+        game_id=None,
+        stage=(
+            BookingStage.WAITING_FOR_A_PAYMENT
+            if waiting
+            else BookingStage.FILLING_AGAIN
+        ),
+        called_off=called_off,
+        paying=proposal.payments_due,
+    )

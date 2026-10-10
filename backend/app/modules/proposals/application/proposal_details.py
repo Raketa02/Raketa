@@ -13,7 +13,8 @@ given at booking; the money row is the share and the book-by. The status says
 its id — and the actions are what the reader may do now. **Waiting for the club,
 it says when the club must answer** (Q98): the deadline its request was put with,
 while it is ahead — asked of the request only then, since the proposal alone
-says it waits.
+says it waits. **Waiting for one payment, it says until when** (#625, Q111),
+and to the payer that the payment is theirs.
 
 **A read, recorded nowhere**, against one instant, with one read per provider.
 
@@ -70,7 +71,7 @@ from app.modules.proposals.domain.ports import (
     Pools,
     ProposalRepository,
 )
-from app.modules.proposals.domain.proposal import Proposal, Reopened
+from app.modules.proposals.domain.proposal import Paying, Proposal, Reopened
 
 
 @final
@@ -90,6 +91,12 @@ class ProposalDetails:
     #: Why the reader's seat reopened, and the payment to confirm — ``None``
     #: unless the last yes reopened it.
     reopened: Reopened | None
+    #: The reader's own refused share and their time to pay, while it runs —
+    #: ``None`` for anybody else (#625, #626).
+    paying: Paying | None
+    #: When the payment the game waits for is due — *Waiting for one payment ·
+    #: until 14:40* — while it waits for one; ``None`` otherwise (Q111).
+    pay_by: Instant | None
     #: The club's cut-off has already passed for this game. ``False`` for a
     #: club no longer selling.
     no_free_cancellation: bool
@@ -206,6 +213,12 @@ class ReadProposalDetails:
                 zone=CLUB_ZONE,
             ),
             reopened=proposal.reopened.get(reader),
+            paying=proposal.paying.get(reader),
+            pay_by=(
+                proposal.pay_by
+                if status is ProposalStatus.WAITING_FOR_A_PAYMENT
+                else None
+            ),
             no_free_cancellation=terms is not None
             and cut_off_passed(
                 proposal.start, cut_off_hours=terms.cut_off_hours, now=now

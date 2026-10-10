@@ -114,10 +114,59 @@ class SqlAlchemyProposalDirectory:
                     ProposalORM.ended.is_(None),
                     ProposalORM.book_by <= now,
                     ProposalORM.waiting_for_the_club.is_(False),
+                    # A time to pay is ended by its own job, first (#625).
+                    ProposalORM.paying_until.is_(None),
                 )
                 .order_by(ProposalORM.book_by, ProposalORM.id)
             )
         ).all()
+
+    async def paying_past(self, *, now: Instant) -> Sequence[UUID]:
+        return (
+            await self._session.scalars(
+                select(ProposalORM.id)
+                .where(
+                    ProposalORM.ended.is_(None),
+                    ProposalORM.paying_until <= now,
+                )
+                .order_by(ProposalORM.paying_until, ProposalORM.id)
+            )
+        ).all()
+
+    async def paying_for(self, player_id: UUID) -> Sequence[UUID]:
+        return (
+            await self._session.scalars(
+                select(ProposalORM.id)
+                .join(ProposalPersonORM, _saying_yes(player_id))
+                .where(
+                    ProposalORM.ended.is_(None),
+                    ProposalORM.paying_until.is_not(None),
+                )
+                .order_by(ProposalORM.start, ProposalORM.id)
+            )
+        ).all()
+
+    async def payment_awaited_of(
+        self, player_id: UUID, *, since: Instant | None
+    ) -> Sequence[UUID]:
+        query = (
+            select(ProposalORM.id)
+            .join(ProposalPersonORM, _saying_yes(player_id))
+            .where(
+                ProposalORM.payment_awaited_at.is_not(None),
+                or_(
+                    ProposalORM.ended.is_(None),
+                    # Ended before it was full again: called off, on its card.
+                    ProposalORM.ended.in_(
+                        (Ending.EXPIRED.value, Ending.COURT_HOUR_LOST.value)
+                    ),
+                ),
+            )
+            .order_by(ProposalORM.start, ProposalORM.id)
+        )
+        if since is not None:
+            query = query.where(ProposalORM.start >= since)
+        return (await self._session.scalars(query)).all()
 
     async def filling_in(self, pool_id: UUID, *, now: Instant) -> Sequence[UUID]:
         return (

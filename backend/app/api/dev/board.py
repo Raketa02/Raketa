@@ -73,6 +73,7 @@ from app.bootstrap.jobs import (
     PROPOSAL_EXPIRY_JOB,
     RATING_CATCH_UP_JOB,
     REQUEST_TIMEOUT_JOB,
+    TIME_TO_PAY_JOB,
 )
 from app.core.exception_handlers import ErrorResponse
 from app.engines.matchfit.core import SearchMode
@@ -197,6 +198,8 @@ class Moment(StrEnum):
     BOOK_BY = "BOOK_BY"
     #: An On request club's answer is due.
     CLUB_ANSWER_DUE = "CLUB_ANSWER_DUE"
+    #: A refused share's time to pay ends (#625, #626).
+    PAYMENT_DUE = "PAYMENT_DUE"
     #: Leaving stops being free, and a seat still open calls the game off.
     CUT_OFF = "CUT_OFF"
     #: The close of the club day it was booked in: its desk is emailed it among
@@ -226,6 +229,12 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
         Moment.CLUB_ANSWER_DUE: MomentRule(
             REQUEST_TIMEOUT_JOB,
             "Unanswered by then, the game is called off — no answer, nobody paid.",
+        ),
+        Moment.PAYMENT_DUE: MomentRule(
+            TIME_TO_PAY_JOB,
+            "Not paid by then, the payer's seat reopens for everybody and the "
+            "holds the others kept are let go — at a club that confirms, the "
+            "booking is called off and the court freed.",
         ),
         Moment.CUT_OFF: MomentRule(
             CUT_OFF_JOB,
@@ -1263,6 +1272,8 @@ class _Folded:
             and not game.waiting_for_the_club
         ):
             ahead.append((Moment.BOOK_BY, game.book_by))
+        if game.ending is None and game.pay_by is not None:
+            ahead.append((Moment.PAYMENT_DUE, game.pay_by))
         if booking is not None:
             if (
                 booking.state is BookingState.WAITING_FOR_THE_CLUB

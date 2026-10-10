@@ -12,7 +12,9 @@ player confirms (the details' ``leave_terms``). One act, three outcomes:
 - **while the club decides** — nobody has paid, so leaving withdraws the yes and
   the request to the club with it, exactly as *Withdraw* does (#543) — and so
   it does on a full game gone back to filling (#624), whose details offer
-  *Withdraw* instead: a screen opened while the club still decided may press it.
+  *Withdraw* instead: a screen opened while the club still decided may press it;
+  and **while a payment is awaited** (#625, #626), a leave from a waiting game:
+  the leaver's hold is let go, and the payer's time runs on.
 
 After the start there is no button, and the route refuses it
 (``game_has_started``); a game already called off has nothing to leave
@@ -32,6 +34,7 @@ from uuid import UUID
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant, instant
 from app.modules.proposals.application.answers import withdraw_a_yes
+from app.modules.proposals.application.home import the_game
 from app.modules.proposals.application.commands import LeaveTheGameCommand
 from app.modules.proposals.domain.errors import (
     BookingIsCalledOff,
@@ -41,7 +44,6 @@ from app.modules.proposals.domain.errors import (
 from app.modules.proposals.domain.home import (
     BookingStage,
     Leaving,
-    as_filling_again,
     leaving_of,
 )
 from app.modules.proposals.domain.ports import (
@@ -51,6 +53,7 @@ from app.modules.proposals.domain.ports import (
     ProposalRepository,
     RefundReason,
     SeatRefunds,
+    UndecidedCharges,
 )
 from app.modules.proposals.domain.proposal import Proposal
 
@@ -65,6 +68,7 @@ class LeaveTheGame:
         games: BookedGameChanges,
         requests: ClubRequests,
         refunds: SeatRefunds,
+        undecided: UndecidedCharges,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
@@ -73,6 +77,7 @@ class LeaveTheGame:
         self._games = games
         self._requests = requests
         self._refunds = refunds
+        self._undecided = undecided
         self._uow = uow
         self._clock = clock
 
@@ -80,14 +85,18 @@ class LeaveTheGame:
         now = instant(self._clock.now())
         player = command.player_id
         proposal = await self._proposals.load_for_update(command.booking_id)
-        game = await self._bookings.find(command.booking_id)
-        if proposal is not None and game is not None and game.filling_again:
-            game = as_filling_again(
-                game, in_=proposal.yeses, standing=proposal.standing_at(now)
-            )
+        game = await the_game(
+            command.booking_id,
+            bookings=self._bookings,
+            proposals=self._proposals,
+            now=now,
+        )
         if proposal is None or game is None or not game.has_a_seat_for(player):
             raise BookingNotFound()
-        if game.stage is BookingStage.WAITING_FOR_THE_CLUB:
+        if game.stage in (
+            BookingStage.WAITING_FOR_THE_CLUB,
+            BookingStage.WAITING_FOR_A_PAYMENT,
+        ):
             return await self._withdraw(proposal, player, now=now)
         if game.called_off_reason(now) is not None:
             raise BookingIsCalledOff()
@@ -114,7 +123,12 @@ class LeaveTheGame:
         club, while it decides."""
 
         await withdraw_a_yes(
-            proposal, player, proposals=self._proposals, requests=self._requests, at=now
+            proposal,
+            player,
+            proposals=self._proposals,
+            requests=self._requests,
+            undecided=self._undecided,
+            at=now,
         )
         await self._uow.commit()
         return Leaving.WHILE_WAITING_FOR_THE_CLUB

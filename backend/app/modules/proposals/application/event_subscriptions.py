@@ -28,6 +28,7 @@ from app.modules.proposals.application.propose_games import DueForProposing
 from app.modules.proposals.application.resume_paused_yeses import ResumePausedYeses
 from app.modules.proposals.domain.events import (
     CourtHourLost,
+    FellBackToFilling,
     GamesAndMoneySet,
     NoSaid,
     ProposalExpired,
@@ -37,6 +38,9 @@ from app.modules.proposals.domain.events import (
     ClubCancelled,
     Redealt,
     SeatReopened,
+    TimeToPayGiven,
+    TimeToPayMet,
+    TimeToPayRanOut,
     TurnedDown,
     VersionDealt,
     YesPaused,
@@ -62,6 +66,10 @@ _EVENTS = (
     (TurnedDown, "proposals.turned_down"),
     (Redealt, "proposals.redealt"),
     (ClubCancelled, "proposals.club_cancelled"),
+    (TimeToPayGiven, "proposals.time_to_pay_given"),
+    (TimeToPayMet, "proposals.time_to_pay_met"),
+    (TimeToPayRanOut, "proposals.time_to_pay_ran_out"),
+    (FellBackToFilling, "proposals.fell_back_to_filling"),
 )
 
 
@@ -87,6 +95,10 @@ def subscribe_proposal_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(TurnedDown, LogProposalEvent())
     dispatcher.subscribe(Redealt, LogProposalEvent())
     dispatcher.subscribe(ClubCancelled, LogProposalEvent())
+    dispatcher.subscribe(TimeToPayGiven, LogProposalEvent())
+    dispatcher.subscribe(TimeToPayMet, LogProposalEvent())
+    dispatcher.subscribe(TimeToPayRanOut, LogProposalEvent())
+    dispatcher.subscribe(FellBackToFilling, LogProposalEvent())
 
 
 def subscribe_the_pool_leaver(

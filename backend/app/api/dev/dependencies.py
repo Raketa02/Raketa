@@ -53,6 +53,7 @@ from app.bootstrap.composition import (
     build_destroy_ended_conversations,
     build_expire_proposals,
     build_expire_unanswered_requests,
+    build_run_out_the_time_to_pay,
     build_make_proposal,
     build_notice_pushes,
     build_players_in_play,
@@ -96,6 +97,7 @@ from app.modules.proposals.application.club_requests import (
 )
 from app.modules.proposals.application.cut_off import CallOffShortGames
 from app.modules.proposals.application.expire_proposals import ExpireProposals
+from app.modules.proposals.application.time_to_pay import RunOutTheTimeToPay
 from app.modules.proposals.application.making import MakeProposal
 from app.modules.proposals.application.posting import PostAGame, ReadPosting
 from app.modules.proposals.application.propose_games import ProposeGames
@@ -206,6 +208,18 @@ def get_expire_unanswered_requests(
 
 ExpireUnansweredRequestsDep = Annotated[
     ExpireUnansweredRequests, Depends(get_expire_unanswered_requests)
+]
+
+
+def get_run_out_the_time_to_pay(
+    db: DbSession, clock: ClockDep, settings: SettingsDep
+) -> RunOutTheTimeToPay:
+    """The ``time-to-pay`` job's unit of work, over the real *now*."""
+    return build_run_out_the_time_to_pay(db, clock=clock, settings=settings)
+
+
+RunOutTheTimeToPayDep = Annotated[
+    RunOutTheTimeToPay, Depends(get_run_out_the_time_to_pay)
 ]
 
 

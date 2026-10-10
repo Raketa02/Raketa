@@ -24,6 +24,7 @@ from sqlalchemy.sql import Executable
 from app.application.ports import DomainEventPublisher, DomainEventStore
 from app.modules.proposals.domain.events import (
     CourtHourLost,
+    FellBackToFilling,
     NoSaid,
     ProposalExpired,
     ProposalFilled,
@@ -32,6 +33,9 @@ from app.modules.proposals.domain.events import (
     ClubCancelled,
     Redealt,
     SeatReopened,
+    TimeToPayGiven,
+    TimeToPayMet,
+    TimeToPayRanOut,
     TurnedDown,
     VersionDealt,
     YesPaused,
@@ -102,12 +106,17 @@ class EventSourcedProposalRepository:
         for event in pending:
             await self._project(event)
         # Whether every seat is In and the club still to answer — what the live
-        # reads keep past a book-by — written as the aggregate now says, on
-        # every save, so no event that fills or opens a seat can forget it.
+        # reads keep past a book-by — and the time to pay the game waits on
+        # (#625), written as the aggregate now says, on every save, so no event
+        # that fills or opens a seat can forget them.
         await self._statement(
             update(ProposalORM)
             .where(ProposalORM.id == proposal.proposal_id)
-            .values(waiting_for_the_club=proposal.waiting_for_the_club)
+            .values(
+                waiting_for_the_club=proposal.waiting_for_the_club,
+                paying_until=proposal.pay_by,
+                payment_awaited_at=proposal.payment_awaited_at,
+            )
         )
         await self._session.flush()
         # Deliberately no commit: the transaction boundary is the use case's.
@@ -178,6 +187,16 @@ class EventSourcedProposalRepository:
             await self._answer(
                 event.proposal_id, event.player_id, "WITHDRAWN", event.occurred_at
             )
+        elif isinstance(event, TimeToPayRanOut):
+            # Gone, and free to come back — as a seat reopened at the fill is.
+            for player_id in event.player_ids:
+                await self._answer(
+                    event.proposal_id, player_id, "WITHDRAWN", event.occurred_at
+                )
+        elif isinstance(event, (TimeToPayGiven, TimeToPayMet, FellBackToFilling)):
+            # The payer is In throughout; the row's deadline is the aggregate's,
+            # written on every save.
+            pass
         elif isinstance(event, YesPaused):
             await self._answer(
                 event.proposal_id, event.player_id, "PAUSED", event.occurred_at

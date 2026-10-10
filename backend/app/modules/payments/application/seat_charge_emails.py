@@ -62,6 +62,13 @@ def _day_and_time(at: Instant) -> str:
     return f"{wall:%A} {wall.day} {wall:%B}, {wall:%H:%M}"
 
 
+def _short_hour(at: Instant) -> str:
+    """*Tue 19:00* — as a notice says the game."""
+
+    wall = _wall(at)
+    return f"{wall:%a} {wall:%H:%M}"
+
+
 def _the_hour(at: Instant) -> str:
     """*Saturday 10 October, 17:00 until 18:00* — every game is one hour."""
 
@@ -80,12 +87,15 @@ def game_booked_email(
     free_to_leave_until: Instant | None,
     fee_estimate_grosze: int,
     app_link: str,
+    booked_on_a_payment: bool = False,
 ) -> OutgoingMessage:
     """*It's a game! · you paid* — the booking confirmation.
     ``free_to_leave_until`` is the club's cut-off, or ``None`` for a game that
     filled after it. Before it, the email says what leaving gives back — the
     share less the card fee, the estimate the card and the leave sheet quote —
-    and never *free* (Q99)."""
+    and never *free* (Q99). **A game booked on a payment it waited for** (#625,
+    Q110) was *It's a game!* already when it filled: *Your Tue 19:00 is booked
+    · you paid 40 zł*, never a second *It's a game!*."""
 
     leaving = (
         f"You can leave until {_day_and_time(free_to_leave_until)} and get "
@@ -95,12 +105,19 @@ def game_booked_email(
         else "This game has no free cancellation: if you leave, you're refunded "
         "only when someone takes your seat."
     )
+    if booked_on_a_payment:
+        hour = _short_hour(starts_at)
+        subject = f"Your {hour} is booked · you paid {zloty(paid_grosze)}"
+        heading = f"Your {hour} is booked"
+    else:
+        subject = f"It's a game! · you paid {zloty(paid_grosze)}"
+        heading = "It's a game!" if name is None else f"It's a game, {name}!"
     return render(
         ButtonEmail(
             kind=GAME_BOOKED_KIND,
             to=to,
-            subject=f"It's a game! · you paid {zloty(paid_grosze)}",
-            heading="It's a game!" if name is None else f"It's a game, {name}!",
+            subject=subject,
+            heading=heading,
             lines=(
                 f"{_SPORT_WORDS[sport]} at {club}, {court} — {_the_hour(starts_at)}.",
                 f"You paid {zloty(paid_grosze)}, your share of the court. {club} "
@@ -142,11 +159,15 @@ def confirm_payment_email(
     reason: FailureReason,
     app_link: str,
     rescue: bool = False,
+    pay_by: Instant | None = None,
 ) -> OutgoingMessage:
-    """*Confirm your payment to keep your seat.* Nobody paid; the seat is open
-    until somebody else takes it. **On a rescue** (#545) — an open seat on a
-    booked game — *to take the seat*: nothing was charged, and the seat is
-    theirs if they confirm before somebody else takes it."""
+    """*Confirm your payment to keep your seat.* Nobody paid. **With time to
+    pay** (#625, #626; Q109) the seat is held for them alone until ``pay_by``,
+    and the email names the time — *Confirm your payment by 14:40 to keep your
+    seat*: the others are waiting, and paying by then books the game at once.
+    **On a rescue** (#545) — an open seat on a booked game — *to take the
+    seat*: nothing was charged, and the seat is theirs if they confirm before
+    somebody else takes it."""
 
     if rescue:
         subject = "Confirm your payment to take the seat"
@@ -156,6 +177,17 @@ def confirm_payment_email(
             _WHAT_TO_DO[reason].format(amount=zloty(amount_grosze)),
             "Nothing was charged. If you confirm it before somebody else takes "
             "the seat, it's yours.",
+        )
+    elif pay_by is not None:
+        by = f"{_wall(pay_by):%H:%M}"
+        subject = f"Confirm your payment by {by} to keep your seat"
+        lines = (
+            f"Everybody said yes to {_SPORT_WORDS[sport].lower()} at {club} on "
+            f"{_day_and_time(starts_at)}, but your payment didn't go through.",
+            _WHAT_TO_DO[reason].format(amount=zloty(amount_grosze)),
+            f"Nobody has paid yet, and your seat is held for you until {by} — "
+            "the others are waiting. Confirm by then and the game books at "
+            "once; after that, your seat is open to others.",
         )
     else:
         subject = "Confirm your payment to keep your seat"

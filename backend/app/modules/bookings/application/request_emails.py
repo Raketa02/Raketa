@@ -1,6 +1,7 @@
 """*A booking is waiting for your answer*, as the desk reads it (the mechanics
 §16.8, §16.12; the screens B9) — and *a game was called off at the cut-off*
-(#544), the other email a club is sent at once — and *New bookings today*
+(#544) and *a game didn't go ahead* (#626), the other emails a club is sent at
+once — and *New bookings today*
 (#548), the one it is sent once a day. **And the club's answer, as each player
 reads it** (#623; Q105): *Kazimierz Padel said no* and *Kazimierz Padel didn't
 answer in time*, told apart, though no money moves — while push is off, email
@@ -185,6 +186,50 @@ def called_off_at_the_cut_off_email(
                     if hour_still_ahead
                     else "Its hour has already begun."
                 ),
+            ),
+            button_label="Open your bookings",
+            button_url=link,
+        )
+    )
+
+
+#: The ``kind`` a payment that did not come in time is queued under (#626).
+PAYMENT_NOT_IN_TIME_KIND: Final = "bookings.payment_not_in_time.club"
+
+
+def payment_not_in_time_email(
+    *,
+    to: str,
+    club: str,
+    court: str,
+    sport: Sport,
+    starts_at: Instant,
+    for_good: bool,
+    link: str,
+) -> OutgoingMessage:
+    """*A game didn't go ahead* (#626; the mechanics §16.12, Q112, at once): the
+    desk said yes, and a player's payment did not come in time — or could not,
+    the game's last moment to book having come — so the game is off and its
+    court the club's to sell again, in the manner of the cut-off's email.
+    **Never the player's name**: the desk is told what happened to its court.
+    ``for_good`` when the game can no longer fill, so nobody will ask again."""
+
+    return render(
+        ButtonEmail(
+            kind=PAYMENT_NOT_IN_TIME_KIND,
+            to=to,
+            subject="A game didn't go ahead",
+            heading="A game didn't go ahead",
+            lines=(
+                f"{_SPORT_WORDS[sport]} at {club}, {court} — "
+                f"{_day_and_time(starts_at)} until "
+                f"{_wall(starts_at + _A_GAME):%H:%M}.",
+                "A player's payment didn't come in time — the court is free "
+                "again. Nobody paid.",
+                "Its last moment to book has passed, so it won't come back."
+                if for_good
+                else "If the game is full again, you'll be asked again as for "
+                "any new request.",
             ),
             button_label="Open your bookings",
             button_url=link,

@@ -53,6 +53,7 @@ from tests.api.proposals_world import (
     every_hour_of_the_week,
     live_ids,
     makes,
+    runs_out,
     saves_a_card,
     says_yes,
     sweeps,
@@ -198,9 +199,13 @@ async def test_every_seat_is_held_before_any_is_taken(
     assert acts == ["authorise"] * 4 + ["capture"] * 4
 
 
-async def test_a_declined_card_means_nobody_pays_and_its_seat_reopens(
+async def test_a_declined_card_means_nobody_pays_and_its_seat_waits_for_him(
     client, session_factory, clock, payments, mailbox, club, four
 ):
+    """Nobody pays, and **his seat is held for him alone** for his time to pay
+    (#625, Q109): the three holds made wait on their cards, so paying in time
+    books the game on them."""
+
     tomek = await a_player(
         client, payments, "tomek2", entered=A_CARD_THAT_DECLINES_LATER
     )
@@ -215,18 +220,18 @@ async def test_a_declined_card_means_nobody_pays_and_its_seat_reopens(
     answer = last.json()
     assert last.status_code == 200, last.text
     assert answer["booked"] is None
-    assert answer["open_seats"] == 1
+    assert answer["open_seats"] == 0
     assert answer["your_payment"]["refusal"] == "DECLINED"
+    assert answer["your_payment"]["confirm_by"] == "2026-10-05T06:30:00Z"
     await mailbox.drain()
-    # The three holds made are let go, and nothing is taken.
-    assert len(payments.called("cancel")) == 3
+    # Nothing is taken, and the three holds made are kept.
+    assert payments.called("cancel") == []
     assert payments.called("capture") == []
     for player in players:
         assert await receipts(client, player) == []
-    # The three are still In; Tomek's seat is open again.
-    for player in players[:3]:
+    # Every one of them is still In: his seat is his until his time runs out.
+    for player in players:
         assert await live_ids(client, player) == [str(proposal)]
-    assert await live_ids(client, tomek) == []
     charge = await client.get(
         seat_charge_path(answer["your_payment"]["seat_charge_id"]),
         headers=tomek["headers"],
@@ -251,9 +256,11 @@ async def test_somebody_else_s_decline_books_nothing_and_says_nothing_of_theirs(
 
     answer = last.json()
     assert answer["booked"] is None
-    assert answer["open_seats"] == 1
-    # Not this player's payment, so nothing about it is theirs to confirm.
+    assert answer["open_seats"] == 0
+    # Not this player's payment, so nothing about it is theirs to confirm —
+    # only that the game waits for one, and until when (Q110).
     assert answer["your_payment"] is None
+    assert answer["payment_awaited_until"] == "2026-10-05T06:30:00Z"
 
 
 async def test_the_player_is_asked_by_email_to_confirm_and_the_others_are_not(
@@ -271,10 +278,11 @@ async def test_the_player_is_asked_by_email_to_confirm_and_the_others_are_not(
     await says_yes(client, tomek, proposal)
 
     [email] = await mailbox.to("tomek2@example.com")
-    assert email.subject == "Confirm your payment to keep your seat"
+    assert email.subject == "Confirm your payment by 08:30 to keep your seat"
     assert "Bonarka Arena" in email.text
     assert "30 zł" in email.text
     assert "another card" in email.text
+    assert "held for you until 08:30" in email.text
     for player in ("ola", "kuba", "ewa"):
         assert await mailbox.to(f"{player}@example.com") == []
 
@@ -333,7 +341,8 @@ async def test_a_payment_not_yet_confirmed_is_refused_and_moves_nothing(
     assert early.status_code == 409
     assert early.json()["code"] == "payment_not_confirmed"
     assert early.json()["details"] == {"status": "AUTHENTICATION_REQUIRED"}
-    assert await live_ids(client, tomek) == []
+    # Still In: his seat is his alone while his time to pay runs.
+    assert await live_ids(client, tomek) == [str(proposal)]
 
 
 async def test_confirming_the_payment_is_the_yes_again_and_books_the_game(
@@ -356,8 +365,9 @@ async def test_confirming_the_payment_is_the_yes_again_and_books_the_game(
     answer = confirmed.json()
     assert answer["booked"]["booking_id"] == str(proposal)
     assert answer["open_seats"] == 0
-    # Everybody else is held afresh; Tomek's confirmed payment is the one taken.
-    assert len(payments.called("authorise")) == held_before + 3
+    # Within his time to pay, everybody else's hold was kept: nobody's bank is
+    # asked again, and Tomek's confirmed payment is the one taken (#625).
+    assert len(payments.called("authorise")) == held_before
     await mailbox.drain()
     taken = {call.arguments["payment_id"] for call in payments.called("capture")}
     assert payment_of(secret) in taken
@@ -372,6 +382,9 @@ async def test_a_seat_somebody_else_took_lets_the_confirmed_payment_go(
     tomek, players, group, proposal, charge_id = await a_checked_fourth(
         client, session_factory, clock, payments, club, four
     )
+    # His time to pay runs out: his seat is offered to others.
+    clock.move(timedelta(minutes=30))
+    await runs_out(session_factory, clock)
     eve = await a_player(client, payments, "eve")
     joined = await client.post(
         f"/api/v1/groups/{group}/membership", headers=eve["headers"]
@@ -411,6 +424,9 @@ async def test_a_payment_confirmed_after_somebody_took_the_seat_is_let_go(
         await client.get(seat_charge_path(charge_id), headers=tomek["headers"])
     ).json()["to_confirm"]["client_secret"]
     payments.phone_confirms_payment(payment_of(secret))
+    # His time to pay runs out before he says so: his seat is offered.
+    clock.move(timedelta(minutes=30))
+    await runs_out(session_factory, clock)
     eve = await a_player(client, payments, "eve")
     await client.post(f"/api/v1/groups/{group}/membership", headers=eve["headers"])
     await deals(session_factory, clock, proposal, eve)
@@ -504,21 +520,27 @@ async def test_a_refused_player_who_was_not_the_last_yes_finds_the_payment(
     assert after.json()["payments"] == []
 
 
-async def test_a_confirmed_payment_is_let_go_when_another_seat_is_refused(
+async def test_a_confirmed_payment_waits_with_the_others_when_another_is_refused(
     client, session_factory, clock, payments, mailbox, club, four
 ):
-    """*If any fails, the others are cancelled* — the payment a player confirmed
-    in the app as well: nobody's money is held for a game that did not book."""
+    """Out of his time, Tomek takes his seat back by confirming — and this time
+    Ewa's card is refused. **Every hold is kept for her time to pay** (#625),
+    his confirmed payment among them: nobody's money is let go while one
+    payment is awaited."""
 
     tomek, players, _, proposal, charge_id = await a_checked_fourth(
         client, session_factory, clock, payments, club, four
     )
+    clock.move(timedelta(minutes=30))
+    await runs_out(session_factory, clock)
     ewa = players[2]
     await saves_a_card(client, payments, ewa["headers"], A_CARD_THAT_DECLINES_LATER)
     secret = (
         await client.get(seat_charge_path(charge_id), headers=tomek["headers"])
     ).json()["to_confirm"]["client_secret"]
     payments.phone_confirms_payment(payment_of(secret))
+    await mailbox.drain()
+    cancelled_before = len(payments.called("cancel"))
 
     confirmed = await client.post(
         f"{seat_charge_path(charge_id)}/confirmation", headers=tomek["headers"]
@@ -526,15 +548,15 @@ async def test_a_confirmed_payment_is_let_go_when_another_seat_is_refused(
 
     assert confirmed.status_code == 200, confirmed.text
     assert confirmed.json()["booked"] is None
-    assert confirmed.json()["open_seats"] == 1
+    assert confirmed.json()["open_seats"] == 0
     assert confirmed.json()["your_payment"] is None
+    assert confirmed.json()["payment_awaited_until"] == "2026-10-05T07:00:00Z"
     await mailbox.drain()
-    cancelled = {call.arguments["payment_id"] for call in payments.called("cancel")}
-    assert payment_of(secret) in cancelled
+    assert len(payments.called("cancel")) == cancelled_before
     assert payments.called("capture") == []
-    # Tomek's yes stands; Ewa's seat is the open one now.
+    # Both are In; Ewa's seat is hers alone for her time to pay.
     assert await live_ids(client, tomek) == [str(proposal)]
-    assert await live_ids(client, ewa) == []
+    assert await live_ids(client, ewa) == [str(proposal)]
 
 
 async def test_two_cards_that_read_one_court_free_book_two_courts(
@@ -1058,6 +1080,8 @@ async def test_a_confirmed_payment_on_a_game_that_never_filled_is_let_go(
         ),
     )
     clock.move(timedelta(days=6))
+    # His time to pay ran out long before; the job ends it, then the sweep.
+    await runs_out(session_factory, clock)
 
     await sweeps(session_factory, clock)
     await mailbox.drain()

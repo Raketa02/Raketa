@@ -201,6 +201,7 @@ from app.modules.proposals.application.club_bookings import (
     ReadFreeCourts,
 )
 from app.modules.proposals.application.club_money import ReadClubMoney
+from app.modules.proposals.application.time_to_pay import RunOutTheTimeToPay
 from app.modules.proposals.application.club_requests import (
     AcceptTheRequest,
     ExpireUnansweredRequests,
@@ -236,8 +237,10 @@ from app.modules.bookings.application.leaving import (
 from app.modules.bookings.application.rescues import SayNoToTheSeat, RescueTheSeat
 from app.modules.bookings.application.requests import (
     BookTheRequest,
+    CallOffForAPayment,
     CallOffTheRequest,
     RequestTheGame,
+    WaitForThePayment,
     WithdrawTheRequest,
 )
 from app.modules.bookings.domain.ports import (
@@ -1367,6 +1370,7 @@ def build_withdraw_a_leavers_yeses(
         ),
         directory=build_proposal_directory(session),
         requests=build_club_requests(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
     )
 
 
@@ -1384,6 +1388,7 @@ def build_withdraw_a_blockers_yeses(
         ),
         directory=build_proposal_directory(session),
         requests=build_club_requests(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
     )
 
 
@@ -1717,6 +1722,7 @@ def build_leave_the_game(
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         requests=build_club_requests(session, settings=settings, runtime=runtime),
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -1792,6 +1798,13 @@ def build_club_requests(
             app_link=f"{settings.APP_SCHEME}://",
         ),
         withdraw=WithdrawTheRequest(bookings=bookings()),
+        wait=WaitForThePayment(bookings=bookings()),
+        not_in_time=CallOffForAPayment(
+            bookings=bookings(),
+            desks=build_club_desks(session, runtime=runtime),
+            mail=build_mail_queue(session),
+            bookings_page=f"{settings.CLUB_WEBSITE_URL.rstrip('/')}/bookings",
+        ),
     )
 
 
@@ -1863,6 +1876,8 @@ def build_say_yes(
             settings=settings,
             runtime=runtime,
         ),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -1884,6 +1899,7 @@ def build_withdraw_yes(
             events=build_event_publisher(session, runtime=runtime),
         ),
         requests=build_club_requests(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -2157,6 +2173,29 @@ def build_expire_unanswered_requests(
     )
 
 
+def build_run_out_the_time_to_pay(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> RunOutTheTimeToPay:
+    """One run of the time-to-pay deadline over this session — the job's, the
+    console's and a test's (#625, #626)."""
+    return RunOutTheTimeToPay(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_proposal_directory(session),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
+        undecided=build_undecided_charges(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
+    )
+
+
 def build_confirm_payment(
     session: AsyncSession,
     *,
@@ -2185,6 +2224,7 @@ def build_confirm_payment(
             session, provider=provider, settings=settings, runtime=runtime
         ),
         undecided=build_undecided_charges(session, runtime=runtime),
+        requests=build_club_requests(session, settings=settings, runtime=runtime),
         rescuer=build_rescuer(
             session,
             proposals=proposals,

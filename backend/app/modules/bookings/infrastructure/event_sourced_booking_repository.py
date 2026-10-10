@@ -34,6 +34,7 @@ from app.modules.bookings.domain.booking import Booking, BookingState
 from app.modules.bookings.domain.errors import CourtTaken
 from app.modules.bookings.domain.events import (
     BookingAccepted,
+    BookingAwaitingAPayment,
     BookingConfirmed,
     BookingRefused,
     BookingRequested,
@@ -41,6 +42,7 @@ from app.modules.bookings.domain.events import (
     CalledOffAtCutOff,
     CancelledByClub,
     CourtMoved,
+    PaymentNotInTime,
     PlayerCheckedIn,
     RequestWithdrawn,
     NoSaidToTheSeat,
@@ -137,6 +139,22 @@ class EventSourcedBookingRepository:
             )
         elif isinstance(event, (BookingRefused, BookingTimedOut)):
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
+        elif isinstance(event, BookingAwaitingAPayment):
+            # The club's yes keeps the court: the row holds its hour still.
+            await self._row(
+                event.booking_id, state=BookingState.WAITING_FOR_A_PAYMENT.value
+            )
+        elif isinstance(event, PaymentNotInTime):
+            await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
+            if not event.for_good:
+                # The payers' seats reopen; the people still In keep theirs,
+                # so the game stays on their Home (Q106).
+                await self._statement(
+                    delete(BookingSeatORM).where(
+                        BookingSeatORM.booking_id == event.booking_id,
+                        BookingSeatORM.player_id.in_(event.player_ids),
+                    )
+                )
         elif isinstance(event, RequestWithdrawn):
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
             # The seats that opened go; the people still In keep theirs, so

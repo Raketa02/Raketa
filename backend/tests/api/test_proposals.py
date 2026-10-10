@@ -122,6 +122,7 @@ async def test_a_yes_lands_on_the_game_and_in_the_player_s_live_yeses(
         "booked": None,
         "waiting_for_the_club": False,
         "your_payment": None,
+        "payment_awaited_until": None,
     }
     assert await live_yeses(client, ola) == {
         "yeses": [

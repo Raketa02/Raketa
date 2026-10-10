@@ -36,6 +36,13 @@ In as *Seat open* — folded against its proposal (``as_it_stands``), so somebod
 who took their yes back since no longer finds it, and it is *called off* once
 its book-by passes, or its court goes, before it is full again.
 
+**A game waiting for one payment is here too** (#625, #626; Q111): *Waiting
+for one payment* on all four's Home while a refused share's time to pay runs.
+At a club that books at once it has **no booking** until it books — no court is
+held — so it is read off its proposal (``without_a_booking``) for everybody In,
+the payer among them: waiting, then *Seat open* once the time ran out or
+somebody else's seat opened, or *called off*.
+
 **Classic play's games are not here**: a game a challenge's line-up opened has
 no booking. Its card is ``GET /games``'.
 """
@@ -57,6 +64,7 @@ from app.modules.proposals.domain.home import (
     on_home,
     on_home_since,
     state_of,
+    without_a_booking,
 )
 from app.modules.proposals.domain.ports import (
     CardFees,
@@ -132,6 +140,10 @@ class ReadHome:
             # Gone back to filling, it is the game of the people In now.
             if game is not None and game.has_a_seat_for(reader)
         ]
+        booked = sorted(
+            [*booked, *await self._without_a_booking(booked, reader, since, now)],
+            key=lambda game: (game.start, game.booking_id),
+        )
         # A game still waiting for its club, or never booked by it, has none.
         results = await self._results.of(
             [game.game_id for game in booked if game.game_id is not None],
@@ -166,6 +178,29 @@ class ReadHome:
             people=await people_on([card.game for card in cards], self._people),
         )
 
+    async def _without_a_booking(
+        self,
+        booked: list[BookedGame],
+        reader: UUID,
+        since: Instant,
+        now: Instant,
+    ) -> list[BookedGame]:
+        """The reader's games at a club that books at once that waited for a
+        payment and have no booking (#625)."""
+
+        found: list[BookedGame] = []
+        seen = {game.booking_id for game in booked}
+        for proposal_id in await self._directory.payment_awaited_of(
+            reader, since=since
+        ):
+            proposal = await self._proposals.load(proposal_id)
+            if proposal is None or proposal_id in seen:
+                continue
+            game = without_a_booking(proposal, now=now)
+            if game.has_a_seat_for(reader):
+                found.append(game)
+        return found
+
     async def _older_still_waiting(
         self, since: Instant, *, reader: UUID, now: Instant
     ) -> list[BookedGame]:
@@ -191,8 +226,8 @@ async def as_it_stands(
 ) -> BookedGame | None:
     """A booked game as its players read it at ``now`` — **a full game gone
     back to filling folded against its proposal** (#624, Q106): who is In now,
-    and whether it ended before it was full again. ``None`` for one whose
-    proposal is gone."""
+    whether it ended before it was full again, and whose time to pay still
+    runs (#626). ``None`` for one whose proposal is gone."""
 
     if not game.filling_again:
         return game
@@ -200,5 +235,29 @@ async def as_it_stands(
     if proposal is None:
         return None
     return as_filling_again(
-        game, in_=proposal.yeses, standing=proposal.standing_at(now)
+        game,
+        in_=proposal.yeses,
+        standing=proposal.standing_at(now),
+        paying=proposal.payments_due,
     )
+
+
+async def the_game(
+    booking_id: UUID,
+    *,
+    bookings: PlayerBookings,
+    proposals: ProposalRepository,
+    now: Instant,
+) -> BookedGame | None:
+    """The game under this id as its players read it at ``now``: its booking,
+    as it stands — or, **a game at a club that books at once that waited for a
+    payment**, its proposal, since it has no booking until it books (#625).
+    ``None`` for neither."""
+
+    found = await bookings.find(booking_id)
+    if found is not None:
+        return await as_it_stands(found, proposals, now=now)
+    proposal = await proposals.load(booking_id)
+    if proposal is None or proposal.payment_awaited_at is None:
+        return None
+    return without_a_booking(proposal, now=now)

@@ -11,9 +11,13 @@ until it accepts. This is the club's side of that wait, and the clock's:
   answered, whether or not the timeout has recorded it yet;
 - **Accept** — everybody is charged now, all together or not at all, on the
   court held for the answer; the game is booked and its Game and chat open. A
-  share that cannot be held, or a pair In that stopped fitting while it
-  waited, opens a seat instead: nobody pays, the request is off, and the game
-  is filling again — the club is asked again once it is full;
+  share that cannot be held **waits for its player** (#626; Q109, Q112): the
+  club's yes and the court are kept for their time to pay, and the payment in
+  time books it without asking the club again — or, the game's book-by having
+  come, there is no time left and it is called off at once. A pair In that
+  stopped fitting while it waited opens a seat instead: nobody pays, the
+  request is off, and the game is filling again — the club is asked again once
+  it is full;
 - **Refuse**, with the club's own note, and **no answer** by the deadline —
   the timeout job's: *Called off · refused* or *· no answer*, nobody paid, the
   court the club's again, and **the same players dealt a new card first** — by
@@ -92,8 +96,14 @@ class AcceptOutcome(StrEnum):
 
     #: Everybody paid and the game is booked.
     BOOKED = "BOOKED"
-    #: A share could not be held, or a pair In stopped fitting: nobody paid, a
-    #: seat is open and the game is filling again.
+    #: A share could not be held: the yes and the court are kept while its
+    #: player has time to pay (#626).
+    WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
+    #: A share could not be held and no time was left to pay — the game's
+    #: book-by had come: called off, nobody paid (#626).
+    CALLED_OFF = "CALLED_OFF"
+    #: A pair In stopped fitting: nobody paid, a seat is open and the game is
+    #: filling again.
     SEAT_OPENED = "SEAT_OPENED"
 
 
@@ -103,6 +113,8 @@ class Acceptance:
     outcome: AcceptOutcome
     #: The court the players were given — on a booked game only.
     court_name: str | None
+    #: When the payment the yes waits on is due — waiting for one only.
+    pay_by: Instant | None = None
 
 
 @final
@@ -130,9 +142,19 @@ class AcceptTheRequest:
         outcome = await self._fill.accept(proposal, request, now=now)
         await self._proposals.save(proposal)
         await self._uow.commit()
-        if outcome.booked is None:
-            return Acceptance(outcome=AcceptOutcome.SEAT_OPENED, court_name=None)
-        return Acceptance(outcome=AcceptOutcome.BOOKED, court_name=request.court_name)
+        if outcome.booked is not None:
+            return Acceptance(
+                outcome=AcceptOutcome.BOOKED, court_name=request.court_name
+            )
+        if outcome.paying_until is not None:
+            return Acceptance(
+                outcome=AcceptOutcome.WAITING_FOR_A_PAYMENT,
+                court_name=None,
+                pay_by=outcome.paying_until,
+            )
+        if outcome.called_off:
+            return Acceptance(outcome=AcceptOutcome.CALLED_OFF, court_name=None)
+        return Acceptance(outcome=AcceptOutcome.SEAT_OPENED, court_name=None)
 
 
 @final

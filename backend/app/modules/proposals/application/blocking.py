@@ -46,6 +46,7 @@ from app.modules.proposals.domain.ports import (
     ClubRequests,
     ProposalDirectory,
     ProposalRepository,
+    UndecidedCharges,
 )
 from app.modules.proposals.domain.proposal import Proposal, Standing
 
@@ -58,10 +59,12 @@ class WithdrawABlockersYeses:
         proposals: ProposalRepository,
         directory: ProposalDirectory,
         requests: ClubRequests,
+        undecided: UndecidedCharges,
     ) -> None:
         self._proposals = proposals
         self._directory = directory
         self._requests = requests
+        self._undecided = undecided
 
     async def execute(self, *, blocker_id: UUID, blocked_id: UUID, at: Instant) -> int:
         """Withdraw every yes of the blocker — live or paused — on a game the
@@ -78,6 +81,7 @@ class WithdrawABlockersYeses:
                 blocker_id,
                 proposals=self._proposals,
                 requests=self._requests,
+                undecided=self._undecided,
                 at=at,
             )
             withdrawn += 1

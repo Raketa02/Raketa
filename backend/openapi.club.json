@@ -2422,6 +2422,8 @@
         "type": "string",
         "enum": [
           "BOOKED",
+          "WAITING_FOR_A_PAYMENT",
+          "CALLED_OFF",
           "SEAT_OPENED"
         ],
         "title": "AcceptOutcome",
@@ -2431,7 +2433,7 @@
         "properties": {
           "outcome": {
             "$ref": "#/components/schemas/AcceptOutcome",
-            "description": "`BOOKED` \u2014 everybody paid, the game is booked on `court_name` and the players are told. `SEAT_OPENED` \u2014 a player's payment did not go through, or a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
+            "description": "`BOOKED` \u2014 everybody paid, the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` \u2014 accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` \u2014 a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` \u2014 a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
           },
           "court_name": {
             "anyOf": [
@@ -2444,6 +2446,19 @@
             ],
             "title": "Court Name",
             "description": "The court the players were given \u2014 on a booked game only."
+          },
+          "payment_due_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Due By",
+            "description": "When the player's payment is due \u2014 *Accepted \u00b7 waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only."
           }
         },
         "type": "object",
@@ -2614,10 +2629,11 @@
           "REFUSED",
           "NO_ANSWER",
           "SHORT_AT_THE_CUT_OFF",
-          "CANCELLED_BY_THE_CLUB"
+          "CANCELLED_BY_THE_CLUB",
+          "PAYMENT_NOT_IN_TIME"
         ],
         "title": "CalledOffReason",
-        "description": "Why a game will not be played (the mechanics \u00a714.1)."
+        "description": "Why a game will not be played (the mechanics \u00a714.1, \u00a716.7)."
       },
       "CancelRequest": {
         "properties": {
@@ -2873,7 +2889,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/ClubStatus",
-            "description": "`WAITING_FOR_YOU` \u2014 an On request game asking for the court: Accept or Refuse before `answer_by`. `BOOKED` \u2014 full and paid. `SEAT_OPEN` \u2014 a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` \u2014 see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` \u2014 the hour has passed; you are paid whatever happened on the court."
+            "description": "`WAITING_FOR_YOU` \u2014 an On request game asking for the court: Accept or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` \u2014 you accepted, and one player's payment is still to come until `payment_due_by` (#626): *Accepted \u00b7 waiting for one player's payment until 21:20*. Your yes and the court are kept; nothing for you to answer. `BOOKED` \u2014 full and paid. `SEAT_OPEN` \u2014 a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` \u2014 see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` \u2014 the hour has passed; you are paid whatever happened on the court."
           },
           "called_off_reason": {
             "anyOf": [
@@ -2884,7 +2900,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` otherwise. `SHORT_AT_THE_CUT_OFF` \u2014 a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` \u2014 you cancelled it (`cancel_reason`). `REFUSED` \u2014 you refused the request. `NO_ANSWER` \u2014 it was not answered in time."
+            "description": "Why a `CALLED_OFF` game will not be played \u2014 `null` otherwise. `SHORT_AT_THE_CUT_OFF` \u2014 a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` \u2014 you cancelled it (`cancel_reason`). `REFUSED` \u2014 you refused the request. `NO_ANSWER` \u2014 it was not answered in time. `PAYMENT_NOT_IN_TIME` \u2014 you accepted, and a player's payment didn't come in time: nobody paid, and you were emailed *A game didn't go ahead*. Full again, the game asks you again as a new request."
           },
           "cancel_reason": {
             "anyOf": [
@@ -2937,6 +2953,19 @@
             "title": "Answer By",
             "description": "Your countdown, while it waits for your answer \u2014 else `null`."
           },
+          "payment_due_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Due By",
+            "description": "When the player's payment your yes waits on is due \u2014 `WAITING_FOR_A_PAYMENT` only, else `null`. Never who."
+          },
           "may_move_or_cancel": {
             "type": "boolean",
             "title": "May Move Or Cancel",
@@ -2959,6 +2988,7 @@
           "money",
           "booked_from",
           "answer_by",
+          "payment_due_by",
           "may_move_or_cancel"
         ],
         "title": "ClubBookingSchema",
@@ -3395,6 +3425,7 @@
         "type": "string",
         "enum": [
           "WAITING_FOR_YOU",
+          "WAITING_FOR_A_PAYMENT",
           "BOOKED",
           "SEAT_OPEN",
           "CALLED_OFF",

@@ -58,11 +58,22 @@ back, paused or reopened — leaves it filling again, the book-by reading again.
 proposal still filled — the booking says it was cancelled, and why — but the
 people still in when the club cancelled are dealt a new card first, as a
 turned-down game's are, and never at that club and hour.
+
+**A refused share waits for its player: time to pay** (#625, #626; the
+mechanics §12.2, Q109). When a share is refused as the game fills — or as its On
+request club says yes — nobody pays, and the player **stays In, their seat held
+for them alone** for thirty minutes, never past the book-by: nobody else is
+dealt it or may take it, since the game is still full. *The reopening waits*:
+paid in time, the game books on the holds the others kept; out of time, their
+seat **reopens** (``TimeToPayRanOut``), as a refused share's always did. A seat
+somebody else opens meanwhile falls the game back to filling while the payer's
+time runs on — told, at a club that books at once, as ``FellBackToFilling``; at
+the club's yes the request goes with the seat, and the club's yes with it.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Collection, Iterable, Sequence
 from uuid import UUID
@@ -78,6 +89,7 @@ from app.modules.proposals.domain.errors import (
 from app.modules.proposals.domain.events import (
     ClubCancelled,
     CourtHourLost,
+    FellBackToFilling,
     NoSaid,
     ProposalExpired,
     ProposalFilled,
@@ -85,6 +97,9 @@ from app.modules.proposals.domain.events import (
     ProposalWithdrawn,
     Redealt,
     SeatReopened,
+    TimeToPayGiven,
+    TimeToPayMet,
+    TimeToPayRanOut,
     TurnedDown,
     VersionDealt,
     YesPaused,
@@ -94,6 +109,7 @@ from app.modules.proposals.domain.events import (
 )
 from app.modules.proposals.domain.limits import (
     NEXT_BEST_FITS_PER_SEAT,
+    TIME_TO_PAY,
     VERSIONS_PER_PROPOSAL,
 )
 from app.modules.proposals.domain.pool import Pool, PoolKind
@@ -168,12 +184,58 @@ class Reopened:
     def payment_to_confirm(self) -> UUID | None:
         """The payment confirming which is their yes again (§12.2)."""
 
-        return (
-            self.seat_charge_id
-            if self.reason
-            in (ReopenReason.AUTHENTICATION_REQUIRED, ReopenReason.DECLINED)
-            else None
+        return _to_confirm(self.reason, self.seat_charge_id)
+
+
+def _to_confirm(reason: ReopenReason, seat_charge_id: UUID | None) -> UUID | None:
+    """A refused payment its player confirms in the app — the bank's check, or
+    a decline confirmed with another card; nothing for a refusal the provider
+    was never asked about, nor a seat reopened because two no longer fit."""
+
+    return (
+        seat_charge_id
+        if reason in (ReopenReason.AUTHENTICATION_REQUIRED, ReopenReason.DECLINED)
+        else None
+    )
+
+
+#: The refusals a share's player is given time to pay after (Q109) — every
+#: refusal of their payment; a seat reopened because two players no longer fit
+#: is no payment of theirs.
+PAYMENT_REFUSALS = frozenset(
+    {
+        ReopenReason.AUTHENTICATION_REQUIRED,
+        ReopenReason.DECLINED,
+        ReopenReason.TERMS_NEEDED,
+        ReopenReason.NO_METHOD,
+    }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class Paying:
+    """A player In whose share was refused, and their **time to pay**: why it
+    was refused, the refused payment, and until when the seat is theirs alone
+    (#625, Q109)."""
+
+    reason: ReopenReason
+    seat_charge_id: UUID
+    until: Instant
+    #: The On request club had said yes, and holds the court while it waits
+    #: (#626) — until a seat opening takes the request, and the yes, back.
+    at_the_clubs_yes: bool = False
+
+    def __post_init__(self) -> None:
+        invariant(
+            self.reason in PAYMENT_REFUSALS, f"time to pay after {self.reason}"
         )
+
+    @property
+    def payment_to_confirm(self) -> UUID | None:
+        """The payment confirming which pays in time — ``None`` where they
+        accept the terms again, or save a method, and say yes again."""
+
+        return _to_confirm(self.reason, self.seat_charge_id)
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,6 +291,25 @@ class Proposal:
     #: The player whose own act filled the booked game (Q102) — ``None`` until
     #: it is booked, and when the club's yes or a paused yes coming back did.
     filled_by: UUID | None = None
+    #: Everybody In whose share was refused and whose time to pay runs (#625).
+    paying: dict[UUID, Paying] = field(default_factory=dict)
+    #: When the game first waited for a payment as it filled, at a club that
+    #: books at once — it has no booking until it books, and is on its
+    #: players' Home from then on (#625). ``None`` on every other game.
+    payment_awaited_at: Instant | None = None
+    #: When a full game waiting for a payment last went back to filling: a
+    #: seat opened, or the time to pay ran out (#625) — ``None`` on any other.
+    fell_back_at: Instant | None = None
+    #: The last time to pay ran out at or after the book-by: the game cannot
+    #: fill again — called off, a payment that did not come in time.
+    ran_out_for_good: bool = False
+    #: The game booked the moment a payment it waited for came in (#625): the
+    #: four were told *It's a game!* already, so its booking is told as
+    #: *booked · you paid*, never twice (Q110).
+    booked_on_a_payment: bool = False
+    #: Everybody In who paid in time while a seat was open, and the payment
+    #: they confirmed — held for the fill, as any confirmed payment is.
+    paid_in_time: dict[UUID, UUID] = field(default_factory=dict)
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -360,11 +441,61 @@ class Proposal:
 
     @property
     def waiting_for_the_club(self) -> bool:
-        """Every seat is In and the game has not ended: its On request club has
-        it, and has not answered (#543). Only such a club leaves a full game
-        filling — any other books it, or reopens a seat, in the same act."""
+        """Every seat is In, nobody's payment is awaited, and the game has not
+        ended: its On request club has it, and has not answered (#543). Only
+        such a club leaves a full game filling with every share unasked — any
+        other books it, or gives a refused share its time to pay, in the same
+        act."""
 
-        return self.ending is None and self.open_seats == 0
+        return self.ending is None and self.open_seats == 0 and not self.paying
+
+    @property
+    def waiting_for_a_payment(self) -> bool:
+        """Every seat is In and a refused share's time to pay runs: the game
+        waits for that payment, nobody else may take the seat, and paying in
+        time books it (#625, #626; Q111)."""
+
+        return self.ending is None and self.open_seats == 0 and bool(self.paying)
+
+    @property
+    def on_the_clubs_yes(self) -> bool:
+        """Waiting for a payment its On request club's yes waits on (#626): the
+        club holds the court, and paying in time books it without asking the
+        club again."""
+
+        return self.waiting_for_a_payment and any(
+            paying.at_the_clubs_yes for paying in self.paying.values()
+        )
+
+    @property
+    def with_its_club(self) -> bool:
+        """Its On request club has the game: waiting for its answer, or for a
+        payment its yes waits on. A seat opening takes the request back."""
+
+        return self.waiting_for_the_club or self.on_the_clubs_yes
+
+    @property
+    def payments_due(self) -> dict[UUID, Instant]:
+        """Each player whose refused share the game waits for, and when their
+        time to pay ends."""
+
+        return {player: paying.until for player, paying in self.paying.items()}
+
+    @property
+    def pay_by(self) -> Instant | None:
+        """When the payment the game waits for is due — the earliest, if more
+        than one is awaited; ``None`` while none is."""
+
+        return min(self.payments_due.values(), default=None)
+
+    def time_to_pay_ends(self, now: Instant) -> Instant | None:
+        """When a share refused at ``now`` has to be paid by (Q109): thirty
+        minutes from now, **never past the book-by** — ``None`` when no time is
+        left, the book-by having come. A payer refused again keeps the time
+        they had (``give_time_to_pay``): it never moves."""
+
+        ends = min(instant(now + TIME_TO_PAY), self.book_by)
+        return ends if now < ends else None
 
     @property
     def owes_a_new_card(self) -> bool:
@@ -504,21 +635,25 @@ class Proposal:
             NoSaid(proposal_id=self.proposal_id, player_id=player_id, occurred_at=at)
         )
 
-    def withdraw_yes(self, player_id: UUID, *, at: Instant) -> None:
+    def withdraw_yes(self, player_id: UUID, *, at: Instant, own: bool = True) -> None:
         """The player takes their yes back. Withdrawing a yes they never said,
         or already took back, records nothing. **A poster withdrawing with
         nobody else In ends the post**; with others In the game carries on
-        without them (the mechanics §9.3)."""
+        without them (the mechanics §9.3). ``own`` is false where it is not
+        their act — another game booked their hour — which nobody is told
+        by name (Q104)."""
 
         self._refuse_a_stranger(player_id)
         self._refuse_unless_filling(at)
         if player_id not in self.yeses:
             return
+        waited = self._waiting_at_a_club_that_books_at_once
         self._record_that(
             YesWithdrawn(
                 proposal_id=self.proposal_id, player_id=player_id, occurred_at=at
             )
         )
+        self._fell_back_if(waited, player_id, left=own, at=at)
         if player_id == self.poster_id and not self.yeses:
             self._record_that(
                 ProposalWithdrawn(
@@ -588,6 +723,7 @@ class Proposal:
         invariant(
             player_id in self.yeses, f"{player_id} is not In on {self.proposal_id}"
         )
+        waited = self._waiting_at_a_club_that_books_at_once
         self._record_that(
             SeatReopened(
                 proposal_id=self.proposal_id,
@@ -597,6 +733,85 @@ class Proposal:
                 occurred_at=at,
             )
         )
+        self._fell_back_if(waited, player_id, left=False, at=at)
+
+    def give_time_to_pay(
+        self,
+        player_id: UUID,
+        *,
+        reason: ReopenReason,
+        seat_charge_id: UUID,
+        until: Instant,
+        filled_by: UUID | None,
+        at: Instant,
+        at_the_clubs_yes: bool = False,
+    ) -> None:
+        """This player's share of the full game was refused — as it filled,
+        or as its club said yes: **their seat is held for them alone** until
+        ``until`` (#625, #626; Q109). A player refused again keeps the time
+        they had: it never moves. Whether any time is left is the caller's
+        question, asked of ``time_to_pay_ends``."""
+
+        invariant(
+            self.ending is None and self.open_seats == 0,
+            f"{self.proposal_id} gives time to pay while not full",
+        )
+        invariant(
+            player_id in self.yeses, f"{player_id} is not In on {self.proposal_id}"
+        )
+        invariant(reason in PAYMENT_REFUSALS, f"time to pay after {reason}")
+        already = self.paying.get(player_id)
+        ends = already.until if already is not None else until
+        invariant(at < ends, f"{player_id} given until {ends} at {at}")
+        self._record_that(
+            TimeToPayGiven(
+                proposal_id=self.proposal_id,
+                player_id=player_id,
+                seat_charge_id=seat_charge_id,
+                reason=reason.value,
+                until=ends,
+                occurred_at=at,
+                filled_by=filled_by,
+                at_the_clubs_yes=at_the_clubs_yes
+                or (already is not None and already.at_the_clubs_yes),
+            )
+        )
+
+    def time_to_pay_met(self, player_id: UUID, *, at: Instant) -> None:
+        """This player paid in time, and the game cannot book on it yet: a
+        seat opened while it waited. They are In with their payment held."""
+
+        invariant(
+            player_id in self.paying and player_id in self.yeses,
+            f"{player_id} has no time to pay on {self.proposal_id}",
+        )
+        self._record_that(
+            TimeToPayMet(
+                proposal_id=self.proposal_id, player_id=player_id, occurred_at=at
+            )
+        )
+
+    def run_out_of_time(self, *, at: Instant) -> tuple[UUID, ...]:
+        """Every payer whose time to pay is up at ``at``: **their seat reopens**
+        (Q109) — offered to others, theirs to take back while it is free.
+        Answers whose; nothing on a game that ended, or whose times still run.
+        Past the book-by too, as long as nothing recorded its end: the time to
+        pay never outlasts it, and is what ends it."""
+
+        if self.ending is not None:
+            return ()
+        lapsed = tuple(
+            player
+            for player in self.yeses
+            if player in self.paying and self.paying[player].until <= at
+        )
+        if lapsed:
+            self._record_that(
+                TimeToPayRanOut(
+                    proposal_id=self.proposal_id, player_ids=lapsed, occurred_at=at
+                )
+            )
+        return lapsed
 
     def pause_yes(self, player_id: UUID, *, at: Instant) -> bool:
         """This player's games per week are booked for this game's week: their
@@ -605,9 +820,11 @@ class Proposal:
 
         if self.standing_at(at) is not Standing.FILLING or player_id not in self.yeses:
             return False
+        waited = self._waiting_at_a_club_that_books_at_once
         self._record_that(
             YesPaused(proposal_id=self.proposal_id, player_id=player_id, occurred_at=at)
         )
+        self._fell_back_if(waited, player_id, left=False, at=at)
         return True
 
     def resume_yes(self, player_id: UUID, *, at: Instant) -> bool:
@@ -706,6 +923,45 @@ class Proposal:
 
     # ------------------------------------------------------------------- fold
 
+    @property
+    def _waiting_at_a_club_that_books_at_once(self) -> bool:
+        return self.waiting_for_a_payment and not self.on_the_clubs_yes
+
+    def _fell_back_if(
+        self, waited: bool, player_id: UUID, *, left: bool, at: Instant
+    ) -> None:
+        """A seat opened on a full game that waited for a payment at a club
+        that books at once: it is filling again (Q104, Q106). At the club's
+        yes the request goes with the seat — the booking's to record."""
+
+        if waited and not self.waiting_for_a_payment:
+            self._record_that(
+                FellBackToFilling(
+                    proposal_id=self.proposal_id,
+                    player_ids=(player_id,),
+                    occurred_at=at,
+                    left=(player_id,) if left else (),
+                )
+            )
+
+    def _a_seat_opened(self, player_id: UUID) -> None:
+        """Somebody In is In no longer: their own time to pay — or the payment
+        they made in it — goes with them, and the club's yes with the request
+        a seat opening takes back."""
+
+        self.paying.pop(player_id, None)
+        self.paid_in_time.pop(player_id, None)
+        self._the_clubs_yes_goes()
+
+    def _the_clubs_yes_goes(self) -> None:
+        """The request — and the club's yes, if the game waited on it — is the
+        club's no longer: a payment still awaited is awaited at no club's yes."""
+
+        self.paying = {
+            payer: replace(paying, at_the_clubs_yes=False)
+            for payer, paying in self.paying.items()
+        }
+
     def _may_take_a_seat(self, player_id: UUID, *, at: Instant) -> bool:
         """What this game refuses of any yes: it is over, the player said no,
         or every seat is In. ``False`` for somebody already In."""
@@ -776,6 +1032,8 @@ class Proposal:
             )
         elif isinstance(event, YesWithdrawn):
             # A paused yes is withdrawn only by a block (`withdraw_paused_yes`).
+            if event.player_id in self.yeses:
+                self._a_seat_opened(event.player_id)
             self.yeses = tuple(
                 player for player in self.yeses if player != event.player_id
             )
@@ -784,6 +1042,7 @@ class Proposal:
             )
             self.withdrawn = (*self.withdrawn, event.player_id)
         elif isinstance(event, SeatReopened):
+            self._a_seat_opened(event.player_id)
             self.yeses = tuple(
                 player for player in self.yeses if player != event.player_id
             )
@@ -792,10 +1051,37 @@ class Proposal:
                 seat_charge_id=event.seat_charge_id,
             )
         elif isinstance(event, YesPaused):
+            self._a_seat_opened(event.player_id)
             self.yeses = tuple(
                 player for player in self.yeses if player != event.player_id
             )
             self.paused = (*self.paused, event.player_id)
+        elif isinstance(event, TimeToPayGiven):
+            self.paying[event.player_id] = Paying(
+                reason=ReopenReason(event.reason),
+                seat_charge_id=event.seat_charge_id,
+                until=instant(event.until),
+                at_the_clubs_yes=event.at_the_clubs_yes,
+            )
+            if not event.at_the_clubs_yes and self.payment_awaited_at is None:
+                self.payment_awaited_at = instant(event.occurred_at)
+        elif isinstance(event, TimeToPayMet):
+            met = self.paying.pop(event.player_id, None)
+            if met is not None:
+                self.paid_in_time[event.player_id] = met.seat_charge_id
+        elif isinstance(event, TimeToPayRanOut):
+            for player in event.player_ids:
+                paying = self.paying.pop(player)
+                self.yeses = tuple(p for p in self.yeses if p != player)
+                self.reopened[player] = Reopened(
+                    reason=paying.reason, seat_charge_id=paying.seat_charge_id
+                )
+            self._the_clubs_yes_goes()
+            at = instant(event.occurred_at)
+            self.fell_back_at = at
+            self.ran_out_for_good = at >= self.book_by
+        elif isinstance(event, FellBackToFilling):
+            self.fell_back_at = instant(event.occurred_at)
         elif isinstance(event, YesResumed):
             self.yeses = (*self.yeses, event.player_id)
             self.paused = tuple(
@@ -804,6 +1090,9 @@ class Proposal:
         elif isinstance(event, ProposalFilled):
             self.ending = Ending.FILLED
             self.filled_by = event.filled_by
+            self.booked_on_a_payment = bool(self.paying)
+            self.paying = {}
+            self.paid_in_time = {}
         elif isinstance(event, ProposalWithdrawn):
             self.ending = Ending.WITHDRAWN
         elif isinstance(event, ProposalExpired):

@@ -1,0 +1,438 @@
+"""**Time to pay** on the Proposal (#625, #626; the mechanics §12.2, Q109–Q111).
+
+A share refused when a full game fills — or when its On request club says yes —
+no longer reopens the seat at once: **the reopening waits**. The player stays In,
+their seat held for them alone until thirty minutes from the refusal, never past
+the book-by, and nobody else may be dealt it or take it. Four ends, each a rule
+here:
+
+- **paid in time** — the game books on the holds the others kept (the fill's,
+  so here only what the stream says once it has);
+- **paid, but a seat opened meanwhile** — they are In with their payment held,
+  and the seat is no longer held for them (``TimeToPayMet``);
+- **the time ran out** — their seat reopens, as Q24 always had it
+  (``TimeToPayRanOut``);
+- **somebody else left while it waited** — at a club that books at once the
+  game falls back to filling (``FellBackToFilling``), and the payer's time runs
+  on; at the club's yes the request goes with the seat, which is the booking's
+  to record.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from uuid import uuid4
+
+import pytest
+
+from app.engines.matchfit.core import SearchMode
+from app.kernel import InvariantViolated, Sport, instant
+from app.modules.proposals.domain.errors import ProposalIsFull
+from app.modules.proposals.domain.home import (
+    BookingStage,
+    CalledOffReason,
+    without_a_booking,
+)
+from app.modules.proposals.domain.events import (
+    FellBackToFilling,
+    ProposalFilled,
+    TimeToPayGiven,
+    TimeToPayMet,
+    TimeToPayRanOut,
+    YesPaused,
+    YesWithdrawn,
+)
+from app.modules.proposals.domain.limits import TIME_TO_PAY
+from app.modules.proposals.domain.pool import Pool, PoolKind
+from app.modules.proposals.domain.proposal import (
+    Origin,
+    Proposal,
+    ReopenReason,
+    Reopened,
+    Standing,
+)
+
+MADE_AT = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
+START = instant(datetime(2026, 10, 10, 15, tzinfo=timezone.utc))
+BOOK_BY = instant(datetime(2026, 10, 7, 15, tzinfo=timezone.utc))
+FILLED_AT = instant(datetime(2026, 10, 6, 12, 10, tzinfo=timezone.utc))
+PAY_BY = FILLED_AT + TIME_TO_PAY
+
+IVAN, MARTA, OSCAR, PAULA, DIEGO = (uuid4() for _ in range(5))
+PAULAS_CHARGE = uuid4()
+
+
+def a_card(*, book_by: datetime = BOOK_BY) -> Proposal:
+    """Ivan, Marta, Oscar and Paula's card, dealt and not yet answered — its
+    birth still to pull."""
+
+    proposal = Proposal.make(
+        proposal_id=uuid4(),
+        pool=Pool(id=uuid4(), kind=PoolKind.GROUP),
+        origin=Origin.PICK,
+        poster_id=None,
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        club_id=uuid4(),
+        start=START,
+        share_grosze=40_00,
+        book_by=instant(book_by),
+        at=MADE_AT,
+    )
+    proposal.deal((MARTA, OSCAR, PAULA, IVAN), at=MADE_AT)
+    for player in (MARTA, OSCAR, PAULA, IVAN):
+        proposal.say_yes(player, at=MADE_AT)
+    return proposal
+
+
+def a_full_card(*, book_by: datetime = BOOK_BY) -> Proposal:
+    """Ivan, Marta, Oscar and Paula, all In — the moment Ivan's yes filled
+    it."""
+
+    proposal = a_card(book_by=book_by)
+    proposal.pull_events()
+    return proposal
+
+
+def paulas_bank_checks(
+    proposal: Proposal, *, at_the_clubs_yes: bool = False, at: datetime = FILLED_AT
+) -> Proposal:
+    proposal.give_time_to_pay(
+        PAULA,
+        reason=ReopenReason.AUTHENTICATION_REQUIRED,
+        seat_charge_id=PAULAS_CHARGE,
+        until=proposal.time_to_pay_ends(instant(at)) or instant(at),
+        filled_by=IVAN,
+        at_the_clubs_yes=at_the_clubs_yes,
+        at=instant(at),
+    )
+    return proposal
+
+
+# --------------------------------------------------------------------------- #
+# The seat is held for her alone
+# --------------------------------------------------------------------------- #
+
+
+def test_a_refused_share_keeps_its_player_in_with_the_seat_held_for_her():
+    proposal = paulas_bank_checks(a_full_card())
+
+    [given] = proposal.pull_events()
+
+    assert isinstance(given, TimeToPayGiven)
+    assert (given.player_id, given.seat_charge_id, given.reason) == (
+        PAULA,
+        PAULAS_CHARGE,
+        "AUTHENTICATION_REQUIRED",
+    )
+    assert given.until == PAY_BY
+    assert given.filled_by == IVAN
+    assert PAULA in proposal.yeses
+    assert proposal.open_seats == 0
+    assert proposal.waiting_for_a_payment is True
+    assert proposal.paying[PAULA].until == PAY_BY
+    assert proposal.paying[PAULA].payment_to_confirm == PAULAS_CHARGE
+    # Not a game its club has: the book-by still reads.
+    assert proposal.waiting_for_the_club is False
+    assert proposal.standing_at(PAY_BY) is Standing.FILLING
+
+
+def test_nobody_else_may_take_a_seat_held_for_its_payer():
+    """Diego was dealt the card too: while Paula's time runs, the game is full
+    to him."""
+
+    proposal = Proposal.make(
+        proposal_id=uuid4(),
+        pool=Pool(id=uuid4(), kind=PoolKind.GROUP),
+        origin=Origin.PICK,
+        poster_id=None,
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        club_id=uuid4(),
+        start=START,
+        share_grosze=40_00,
+        book_by=BOOK_BY,
+        at=MADE_AT,
+    )
+    proposal.deal((MARTA, OSCAR, PAULA), at=MADE_AT)
+    proposal.deal((DIEGO,), at=MADE_AT)
+    for player in (MARTA, OSCAR, PAULA):
+        proposal.say_yes(player, at=MADE_AT)
+    proposal.say_yes(DIEGO, at=MADE_AT)
+    proposal.withdraw_yes(DIEGO, at=MADE_AT)
+    proposal.deal((IVAN,), at=MADE_AT, into=2)
+    proposal.say_yes(IVAN, at=MADE_AT)
+    paulas_bank_checks(proposal)
+
+    with pytest.raises(ProposalIsFull):
+        proposal.say_yes(DIEGO, at=FILLED_AT)
+
+
+def test_the_time_to_pay_is_thirty_minutes_never_past_the_book_by():
+    assert a_full_card().time_to_pay_ends(FILLED_AT) == FILLED_AT + timedelta(
+        minutes=30
+    )
+    close = BOOK_BY - timedelta(minutes=10)
+    assert a_full_card().time_to_pay_ends(close) == BOOK_BY
+    # No time is left from the book-by on.
+    assert a_full_card().time_to_pay_ends(BOOK_BY) is None
+
+
+def test_a_payer_refused_again_keeps_her_time_and_it_never_moves():
+    proposal = paulas_bank_checks(a_full_card())
+    later = FILLED_AT + timedelta(minutes=12)
+
+    proposal.give_time_to_pay(
+        PAULA,
+        reason=ReopenReason.TERMS_NEEDED,
+        seat_charge_id=uuid4(),
+        until=proposal.time_to_pay_ends(later) or later,
+        filled_by=PAULA,
+        at=later,
+    )
+
+    assert proposal.paying[PAULA].until == PAY_BY
+    assert proposal.paying[PAULA].reason is ReopenReason.TERMS_NEEDED
+    assert proposal.paying[PAULA].payment_to_confirm is None
+
+
+def test_time_to_pay_is_given_only_to_somebody_in_on_a_full_game():
+    proposal = a_full_card()
+    proposal.withdraw_yes(OSCAR, at=FILLED_AT)
+
+    with pytest.raises(InvariantViolated):
+        paulas_bank_checks(proposal)
+
+
+# --------------------------------------------------------------------------- #
+# The four ends
+# --------------------------------------------------------------------------- #
+
+
+def test_the_time_running_out_reopens_her_seat_as_a_refused_payment_does():
+    proposal = paulas_bank_checks(a_full_card())
+    proposal.pull_events()
+
+    assert proposal.run_out_of_time(at=PAY_BY - timedelta(seconds=1)) == ()
+    lapsed = proposal.run_out_of_time(at=PAY_BY)
+
+    assert lapsed == (PAULA,)
+    [ran_out] = proposal.pull_events()
+    assert isinstance(ran_out, TimeToPayRanOut)
+    assert ran_out.player_ids == (PAULA,)
+    assert PAULA not in proposal.yeses
+    assert proposal.reopened[PAULA] == Reopened(
+        reason=ReopenReason.AUTHENTICATION_REQUIRED, seat_charge_id=PAULAS_CHARGE
+    )
+    assert proposal.paying == {}
+    assert proposal.open_seats == 1
+    assert proposal.waiting_for_a_payment is False
+    # It fell back: nobody else's payment is awaited, and it is filling.
+    assert proposal.fell_back_at == PAY_BY
+    assert proposal.ran_out_for_good is False
+    assert proposal.run_out_of_time(at=PAY_BY) == ()
+
+
+def test_a_time_to_pay_cut_short_at_the_book_by_runs_out_for_good():
+    proposal = paulas_bank_checks(a_full_card(), at=BOOK_BY - timedelta(minutes=5))
+
+    assert proposal.paying[PAULA].until == BOOK_BY
+    # Past the book-by the game is over, and her time still runs out on it.
+    assert proposal.run_out_of_time(at=BOOK_BY + timedelta(seconds=20)) == (PAULA,)
+    assert proposal.ran_out_for_good is True
+
+
+def test_paying_in_time_with_a_seat_open_keeps_her_in_with_nothing_held():
+    proposal = paulas_bank_checks(a_full_card())
+    proposal.withdraw_yes(OSCAR, at=FILLED_AT + timedelta(minutes=5))
+    proposal.pull_events()
+
+    proposal.time_to_pay_met(PAULA, at=FILLED_AT + timedelta(minutes=9))
+
+    [met] = proposal.pull_events()
+    assert isinstance(met, TimeToPayMet)
+    assert PAULA in proposal.yeses
+    assert proposal.paying == {}
+    assert proposal.run_out_of_time(at=PAY_BY) == ()
+
+
+def test_the_game_filled_on_her_payment_says_so():
+    proposal = paulas_bank_checks(a_full_card())
+
+    proposal.fill(
+        first_side=(MARTA, OSCAR),
+        second_side=(PAULA, IVAN),
+        by=PAULA,
+        at=FILLED_AT + timedelta(minutes=9),
+    )
+
+    assert proposal.paying == {}
+    assert proposal.booked_on_a_payment is True
+    assert proposal.filled_by == PAULA
+    assert a_full_card().booked_on_a_payment is False
+
+
+# --------------------------------------------------------------------------- #
+# Somebody else's seat opening while it waits
+# --------------------------------------------------------------------------- #
+
+
+def test_a_leave_while_it_waits_falls_the_game_back_naming_the_leaver():
+    proposal = paulas_bank_checks(a_full_card())
+    proposal.pull_events()
+    at = FILLED_AT + timedelta(minutes=4)
+
+    proposal.withdraw_yes(OSCAR, at=at)
+
+    withdrawn, fell_back = proposal.pull_events()
+    assert isinstance(withdrawn, YesWithdrawn)
+    assert isinstance(fell_back, FellBackToFilling)
+    assert (fell_back.player_ids, fell_back.left) == ((OSCAR,), (OSCAR,))
+    # Her time runs on.
+    assert proposal.paying[PAULA].until == PAY_BY
+    assert proposal.waiting_for_a_payment is False
+    assert proposal.fell_back_at == at
+
+
+def test_a_week_that_filled_while_it_waits_falls_it_back_naming_nobody():
+    proposal = paulas_bank_checks(a_full_card())
+    proposal.pull_events()
+
+    assert proposal.pause_yes(MARTA, at=FILLED_AT + timedelta(minutes=4))
+
+    paused, fell_back = proposal.pull_events()
+    assert isinstance(paused, YesPaused)
+    assert isinstance(fell_back, FellBackToFilling)
+    assert (fell_back.player_ids, fell_back.left) == ((MARTA,), ())
+
+
+def test_the_payer_leaving_gives_up_her_seat_and_her_time():
+    proposal = paulas_bank_checks(a_full_card())
+    proposal.pull_events()
+
+    proposal.withdraw_yes(PAULA, at=FILLED_AT + timedelta(minutes=4))
+
+    _, fell_back = proposal.pull_events()
+    assert isinstance(fell_back, FellBackToFilling)
+    assert fell_back.left == (PAULA,)
+    assert proposal.paying == {}
+    assert PAULA not in proposal.reopened
+
+
+def test_at_the_club_s_yes_a_leave_takes_the_club_s_yes_and_nothing_falls_back():
+    """The request goes with the seat — the booking's to record — and full
+    again, the game is asked of the club again."""
+
+    proposal = paulas_bank_checks(a_full_card(), at_the_clubs_yes=True)
+    assert proposal.on_the_clubs_yes is True
+    assert proposal.payment_awaited_at is None
+    proposal.pull_events()
+
+    proposal.withdraw_yes(OSCAR, at=FILLED_AT + timedelta(minutes=4))
+
+    [withdrawn] = proposal.pull_events()
+    assert isinstance(withdrawn, YesWithdrawn)
+    assert proposal.on_the_clubs_yes is False
+    assert proposal.paying[PAULA].until == PAY_BY
+
+
+def test_a_game_waiting_for_a_payment_at_a_club_that_books_at_once_is_on_home():
+    proposal = paulas_bank_checks(a_full_card())
+
+    assert proposal.payment_awaited_at == FILLED_AT
+    assert proposal.on_the_clubs_yes is False
+    assert a_full_card().payment_awaited_at is None
+
+
+def test_the_stream_folds_back_to_the_same_wait():
+    proposal = paulas_bank_checks(a_card())
+    proposal.withdraw_yes(OSCAR, at=FILLED_AT + timedelta(minutes=4))
+
+    replayed = Proposal.from_history(proposal.pull_events())
+
+    assert replayed.paying == proposal.paying
+    assert replayed.fell_back_at == proposal.fell_back_at
+    assert replayed.payment_awaited_at == FILLED_AT
+    assert replayed.version == proposal.version
+
+
+def test_a_filled_game_was_never_waiting_for_a_payment():
+    proposal = a_full_card()
+    proposal.fill(
+        first_side=(MARTA, OSCAR), second_side=(PAULA, IVAN), by=IVAN, at=FILLED_AT
+    )
+
+    events = proposal.pull_events()
+
+    assert [type(event) for event in events] == [ProposalFilled]
+    assert proposal.waiting_for_a_payment is False
+
+
+# --------------------------------------------------------------------------- #
+# Home's card for a game with no booking (#625)
+# --------------------------------------------------------------------------- #
+
+
+def test_a_game_waiting_for_a_payment_at_a_club_that_books_at_once_is_read_off_it():
+    proposal = paulas_bank_checks(a_full_card())
+
+    waiting = without_a_booking(proposal, now=FILLED_AT)
+
+    assert waiting.stage is BookingStage.WAITING_FOR_A_PAYMENT
+    assert waiting.booking_id == proposal.proposal_id
+    assert waiting.paying == {PAULA: PAY_BY}
+    assert (waiting.game_id, waiting.court_given, waiting.club_confirms) == (
+        None,
+        False,
+        False,
+    )
+    assert set(waiting.players) == {MARTA, OSCAR, PAULA, IVAN}
+
+    proposal.run_out_of_time(at=PAY_BY)
+    fell_back = without_a_booking(proposal, now=PAY_BY)
+    assert (fell_back.stage, fell_back.called_off) == (BookingStage.FILLING_AGAIN, None)
+    assert PAULA not in fell_back.players
+    assert fell_back.open_seats == 1
+
+    over = without_a_booking(proposal, now=BOOK_BY)
+    assert over.called_off is CalledOffReason.BOOK_BY_PASSED
+
+
+def test_a_game_whose_time_ran_out_at_its_book_by_was_a_payment_not_in_time():
+    proposal = paulas_bank_checks(a_full_card(), at=BOOK_BY - timedelta(minutes=5))
+
+    # The job has not run: the clock already says the payment did not come.
+    assert (
+        without_a_booking(proposal, now=BOOK_BY).called_off
+        is CalledOffReason.PAYMENT_NOT_IN_TIME
+    )
+    proposal.run_out_of_time(at=BOOK_BY)
+    assert (
+        without_a_booking(proposal, now=BOOK_BY).called_off
+        is CalledOffReason.PAYMENT_NOT_IN_TIME
+    )
+
+
+def test_a_yes_another_booking_withdrew_while_it_waits_falls_it_back_unnamed():
+    """Oscar's hour went to another game of his: not his own act, so nobody is
+    told his name (Q104)."""
+
+    proposal = paulas_bank_checks(a_full_card())
+    proposal.pull_events()
+
+    proposal.withdraw_yes(OSCAR, at=FILLED_AT + timedelta(minutes=4), own=False)
+
+    _, fell_back = proposal.pull_events()
+    assert isinstance(fell_back, FellBackToFilling)
+    assert (fell_back.player_ids, fell_back.left) == ((OSCAR,), ())
+
+
+def test_her_payment_in_time_stays_hers_until_the_game_fills():
+    proposal = paulas_bank_checks(a_full_card())
+    proposal.withdraw_yes(OSCAR, at=FILLED_AT + timedelta(minutes=4))
+
+    proposal.time_to_pay_met(PAULA, at=FILLED_AT + timedelta(minutes=9))
+
+    assert proposal.paid_in_time == {PAULA: PAULAS_CHARGE}
+    proposal.withdraw_yes(PAULA, at=FILLED_AT + timedelta(minutes=10))
+    assert proposal.paid_in_time == {}

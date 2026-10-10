@@ -16,6 +16,13 @@ sweep has written it, so every live read compares ``book_by`` with its clock too
 — **unless it is ``waiting_for_the_club``** (#543): every seat In and its On
 request club still to answer, which the book-by no longer ends.
 
+**A time to pay is on the row too** (#625, #626): ``paying_until`` is the
+earliest deadline of the payments the game waits for — the job that runs it out
+reads it, and the book-by sweep leaves a game with one, since that job ends it —
+and ``payment_awaited_at`` the moment a game at a club that books at once first
+waited for a payment: such a game has no booking, and is on its players' Home
+from then on.
+
 ``proposal_people`` is **one row per person the game is anything to** — dealt a
 version, In, or gone — keyed by the game and the person, since each person is on
 one version at most. ``version`` is ``NULL`` for somebody In who was never dealt
@@ -69,6 +76,8 @@ class ProposalORM(Base):
         # Court hours are read by club and start (the screens C5).
         Index("ix_proposals_club_id_start", "club_id", "start"),
         Index("ix_proposals_pool_id_start", "pool_id", "start"),
+        # The time-to-pay job's read: the payments awaited, by deadline (#625).
+        Index("ix_proposals_paying_until", "paying_until"),
     )
 
     id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
@@ -98,6 +107,16 @@ class ProposalORM(Base):
     club_cancelled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default="false", default=False
     )
+    #: The earliest time to pay the game waits on — ``NULL`` while nobody's
+    #: payment is awaited (#625, #626).
+    paying_until: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: When the game first waited for a payment at a club that books at once
+    #: — on its players' Home from then on (#625).
+    payment_awaited_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class ProposalPersonORM(Base):
@@ -105,7 +124,8 @@ class ProposalPersonORM(Base):
     answer — ``YES`` while In, ``NO`` or ``WITHDRAWN`` once gone (a yes whose
     payment lapsed is ``WITHDRAWN`` too: gone, and free to come back),
     ``PAUSED`` while another booking holds their week, ``NULL`` while they have
-    not swiped."""
+    not swiped. A player whose time to pay runs is ``YES``: they are In, the
+    seat theirs alone (#625)."""
 
     __tablename__ = "proposal_people"
     __table_args__ = (

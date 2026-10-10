@@ -21,6 +21,11 @@ import pytest
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
 from app.modules.games.domain.windows import scores_still_waiting_since
+from app.modules.proposals.domain.club_bookings import (
+    ClubStatus,
+    called_off_for_the_club,
+    club_status,
+)
 from app.modules.proposals.domain.home import (
     BookedGame,
     BookedMoney,
@@ -167,6 +172,7 @@ def test_nothing_else_needs_you(status):
 
 LIVE = (
     HomeStatus.WAITING_FOR_THE_CLUB,
+    HomeStatus.WAITING_FOR_A_PAYMENT,
     HomeStatus.BOOKED,
     HomeStatus.SEAT_OPEN,
     HomeStatus.NEEDS_RESULT,
@@ -552,4 +558,78 @@ def test_a_game_that_fell_back_has_no_leave_of_its_own():
     assert (
         leave_terms(game, HomeStatus.SEAT_OPEN, card_fee_grosze=FEE, now=warsaw(5, 9))
         is None
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Waiting for one payment (#625, #626; Q111)
+# --------------------------------------------------------------------------- #
+
+
+def a_game_waiting_for_a_payment(**changes) -> BookedGame:
+    """Tomek's share was refused at the club's yes; he has until 08:40."""
+
+    return a_booked_game(
+        **{
+            "stage": BookingStage.WAITING_FOR_A_PAYMENT,
+            "game_id": None,
+            "answer_by": warsaw(5, 8, 30),
+            "paying": {TOMEK: warsaw(5, 8, 40)},
+            **changes,
+        }
+    )
+
+
+def test_a_game_waiting_for_a_payment_is_its_own_status_and_asks_nothing():
+    state = state_of(
+        a_game_waiting_for_a_payment(), None, card_fee_grosze=FEE, now=warsaw(5, 8, 10)
+    )
+
+    assert state.status is HomeStatus.WAITING_FOR_A_PAYMENT
+    assert state.pay_by == warsaw(5, 8, 40)
+    # The club answered: no *answers by*; and nobody paid.
+    assert state.answer_by is None
+    assert state.money.paid is False
+    assert state.money.free_to_leave_until is None
+    assert state.needs_you is False
+
+
+def test_leaving_a_game_waiting_for_a_payment_withdraws_the_yes():
+    game = a_game_waiting_for_a_payment()
+    state = state_of(game, None, card_fee_grosze=FEE, now=warsaw(5, 8, 10))
+
+    terms = leave_terms(game, state.status, card_fee_grosze=FEE, now=warsaw(5, 8, 10))
+
+    assert terms is not None
+    assert (terms.kind, terms.refund_grosze) == (Leaving.WHILE_WAITING_FOR_THE_CLUB, 0)
+    assert not check_in_shown(state.status, start=game.start, now=game.start)
+
+
+def test_a_game_gone_back_to_filling_keeps_the_payer_s_time():
+    game = a_booked_game(stage=BookingStage.FILLING_AGAIN, game_id=None)
+
+    folded = as_filling_again(
+        game,
+        in_=(OLA, EWA, TOMEK),
+        standing=Standing.FILLING,
+        paying={TOMEK: warsaw(5, 8, 40)},
+    )
+
+    assert folded.paying == {TOMEK: warsaw(5, 8, 40)}
+    assert status_of(folded, None, now=warsaw(5, 8, 10)) is HomeStatus.SEAT_OPEN
+
+
+def test_the_club_reads_a_payment_its_yes_waits_on_and_its_lapse_off_the_clock():
+    """*Accepted · waiting for one player's payment* — never *waiting for
+    you*, the club having answered — and *called off* from the moment the
+    payment's time is up, whether or not the job has recorded it (#626)."""
+
+    game = a_game_waiting_for_a_payment()
+
+    # Past the club's own answer window: the club answered, so no *no answer*.
+    assert club_status(game, now=warsaw(5, 8, 35)) is ClubStatus.WAITING_FOR_A_PAYMENT
+    assert club_status(game, now=warsaw(5, 8, 40)) is ClubStatus.CALLED_OFF
+    assert (
+        called_off_for_the_club(game, now=warsaw(5, 8, 40))
+        is CalledOffReason.PAYMENT_NOT_IN_TIME
     )
