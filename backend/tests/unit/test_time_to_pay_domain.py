@@ -16,6 +16,10 @@ here:
   game falls back to filling (``FellBackToFilling``), and the payer's time runs
   on; at the club's yes the request goes with the seat, which is the booking's
   to record.
+
+**Which time it is** (#638; Q113): before the club's cut-off nothing is taken,
+only held, so a refused share is **time to fix the card** — never past the
+cut-off; from the cut-off on money is taken at once, and it is **time to pay**.
 """
 
 from __future__ import annotations
@@ -50,6 +54,7 @@ from app.modules.proposals.domain.proposal import (
     ReopenReason,
     Reopened,
     Standing,
+    TimeTo,
 )
 
 MADE_AT = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
@@ -57,6 +62,9 @@ START = instant(datetime(2026, 10, 10, 15, tzinfo=timezone.utc))
 BOOK_BY = instant(datetime(2026, 10, 7, 15, tzinfo=timezone.utc))
 FILLED_AT = instant(datetime(2026, 10, 6, 12, 10, tzinfo=timezone.utc))
 PAY_BY = FILLED_AT + TIME_TO_PAY
+#: Saturday's cut-off at a club that keeps the default 24 hours — after this
+#: card's book-by, so every refusal here but the last section's is a card to fix.
+CUT_OFF = START - timedelta(hours=24)
 
 IVAN, MARTA, OSCAR, PAULA, DIEGO = (uuid4() for _ in range(5))
 PAULAS_CHARGE = uuid4()
@@ -95,16 +103,22 @@ def a_full_card(*, book_by: datetime = BOOK_BY) -> Proposal:
 
 
 def paulas_bank_checks(
-    proposal: Proposal, *, at_the_clubs_yes: bool = False, at: datetime = FILLED_AT
+    proposal: Proposal,
+    *,
+    at_the_clubs_yes: bool = False,
+    at: datetime = FILLED_AT,
+    cut_off: datetime = CUT_OFF,
 ) -> Proposal:
+    now = instant(at)
     proposal.give_time_to_pay(
         PAULA,
         reason=ReopenReason.AUTHENTICATION_REQUIRED,
         seat_charge_id=PAULAS_CHARGE,
-        until=proposal.time_to_pay_ends(instant(at)) or instant(at),
+        until=proposal.time_to_pay_ends(now, cut_off=instant(cut_off)) or now,
+        time_to=TimeTo.at(now, cut_off=instant(cut_off)),
         filled_by=IVAN,
         at_the_clubs_yes=at_the_clubs_yes,
-        at=instant(at),
+        at=now,
     )
     return proposal
 
@@ -169,13 +183,13 @@ def test_nobody_else_may_take_a_seat_held_for_its_payer():
 
 
 def test_the_time_to_pay_is_thirty_minutes_never_past_the_book_by():
-    assert a_full_card().time_to_pay_ends(FILLED_AT) == FILLED_AT + timedelta(
-        minutes=30
-    )
+    assert a_full_card().time_to_pay_ends(
+        FILLED_AT, cut_off=CUT_OFF
+    ) == FILLED_AT + timedelta(minutes=30)
     close = BOOK_BY - timedelta(minutes=10)
-    assert a_full_card().time_to_pay_ends(close) == BOOK_BY
+    assert a_full_card().time_to_pay_ends(close, cut_off=CUT_OFF) == BOOK_BY
     # No time is left from the book-by on.
-    assert a_full_card().time_to_pay_ends(BOOK_BY) is None
+    assert a_full_card().time_to_pay_ends(BOOK_BY, cut_off=CUT_OFF) is None
 
 
 def test_a_payer_refused_again_keeps_her_time_and_it_never_moves():
@@ -186,7 +200,8 @@ def test_a_payer_refused_again_keeps_her_time_and_it_never_moves():
         PAULA,
         reason=ReopenReason.TERMS_NEEDED,
         seat_charge_id=uuid4(),
-        until=proposal.time_to_pay_ends(later) or later,
+        until=proposal.time_to_pay_ends(later, cut_off=CUT_OFF) or later,
+        time_to=TimeTo.at(later, cut_off=CUT_OFF),
         filled_by=PAULA,
         at=later,
     )
@@ -436,3 +451,120 @@ def test_her_payment_in_time_stays_hers_until_the_game_fills():
     assert proposal.paid_in_time == {PAULA: PAULAS_CHARGE}
     proposal.withdraw_yes(PAULA, at=FILLED_AT + timedelta(minutes=10))
     assert proposal.paid_in_time == {}
+
+
+# --------------------------------------------------------------------------- #
+# Time to fix the card, or time to pay (#638; Q113)
+# --------------------------------------------------------------------------- #
+
+#: A card whose book-by is two hours before its hour — after its cut-off, as a
+#: club's usually is.
+LATE_BOOK_BY = START - timedelta(hours=2)
+
+
+def test_before_the_cut_off_a_refused_share_is_time_to_fix_the_card():
+    proposal = paulas_bank_checks(a_full_card())
+
+    [given] = proposal.pull_events()
+
+    assert isinstance(given, TimeToPayGiven)
+    assert given.time_to == "FIX_THE_CARD"
+    assert proposal.paying[PAULA].time_to is TimeTo.FIX_THE_CARD
+    assert proposal.time_to is TimeTo.FIX_THE_CARD
+
+
+def test_from_the_cut_off_on_it_is_time_to_pay():
+    assert TimeTo.at(CUT_OFF - timedelta(seconds=1), cut_off=CUT_OFF) is (
+        TimeTo.FIX_THE_CARD
+    )
+    assert TimeTo.at(CUT_OFF, cut_off=CUT_OFF) is TimeTo.PAY
+
+    proposal = paulas_bank_checks(
+        a_full_card(book_by=LATE_BOOK_BY), at=CUT_OFF + timedelta(hours=1)
+    )
+
+    [given] = proposal.pull_events()
+    assert given.time_to == "PAY"
+    assert proposal.time_to is TimeTo.PAY
+    assert proposal.paying[PAULA].until == CUT_OFF + timedelta(hours=1, minutes=30)
+
+
+def test_time_to_fix_the_card_never_runs_past_the_cut_off():
+    card = a_full_card(book_by=LATE_BOOK_BY)
+    close = CUT_OFF - timedelta(minutes=10)
+
+    assert card.time_to_pay_ends(close, cut_off=CUT_OFF) == CUT_OFF
+    # From the cut-off on it is time to pay: thirty minutes, to the book-by.
+    assert card.time_to_pay_ends(CUT_OFF, cut_off=CUT_OFF) == CUT_OFF + TIME_TO_PAY
+
+
+def test_nobody_s_time_is_anything_while_no_payment_is_awaited():
+    assert a_full_card().time_to is None
+
+
+def test_a_payer_refused_again_keeps_what_her_time_is_for():
+    proposal = paulas_bank_checks(a_full_card())
+    later = FILLED_AT + timedelta(minutes=12)
+
+    proposal.give_time_to_pay(
+        PAULA,
+        reason=ReopenReason.TERMS_NEEDED,
+        seat_charge_id=uuid4(),
+        until=later + TIME_TO_PAY,
+        time_to=TimeTo.PAY,
+        filled_by=PAULA,
+        at=later,
+    )
+
+    assert proposal.paying[PAULA].time_to is TimeTo.FIX_THE_CARD
+
+
+def test_running_out_says_whose_time_was_to_fix_the_card():
+    fixing = paulas_bank_checks(a_full_card())
+    fixing.pull_events()
+    paying = paulas_bank_checks(
+        a_full_card(book_by=LATE_BOOK_BY), at=CUT_OFF + timedelta(hours=1)
+    )
+    paying.pull_events()
+
+    fixing.run_out_of_time(at=PAY_BY)
+    paying.run_out_of_time(at=CUT_OFF + timedelta(hours=2))
+
+    [fixed_out] = fixing.pull_events()
+    [paid_out] = paying.pull_events()
+    assert isinstance(fixed_out, TimeToPayRanOut)
+    assert isinstance(paid_out, TimeToPayRanOut)
+    assert (fixed_out.player_ids, fixed_out.fixing) == ((PAULA,), (PAULA,))
+    assert (paid_out.player_ids, paid_out.fixing) == ((PAULA,), ())
+
+
+def test_a_time_to_pay_recorded_before_there_were_two_is_time_to_pay():
+    """A stream written before #638 says nothing of what its time was for: it
+    was time to pay, the only one there was."""
+
+    proposal = a_card()
+    events = proposal.pull_events()
+    given = TimeToPayGiven(
+        proposal_id=proposal.proposal_id,
+        player_id=PAULA,
+        seat_charge_id=PAULAS_CHARGE,
+        reason="AUTHENTICATION_REQUIRED",
+        until=PAY_BY,
+        occurred_at=FILLED_AT,
+    )
+
+    replayed = Proposal.from_history([*events, given])
+
+    assert replayed.paying[PAULA].time_to is TimeTo.PAY
+    ran_out = TimeToPayRanOut(
+        proposal_id=proposal.proposal_id, player_ids=(PAULA,), occurred_at=PAY_BY
+    )
+    assert ran_out.fixing == ()
+
+
+def test_a_game_with_no_booking_reads_what_its_time_is_for():
+    proposal = paulas_bank_checks(a_full_card())
+
+    assert without_a_booking(proposal, now=FILLED_AT).time_to is TimeTo.FIX_THE_CARD
+    proposal.run_out_of_time(at=PAY_BY)
+    assert without_a_booking(proposal, now=PAY_BY).time_to is None

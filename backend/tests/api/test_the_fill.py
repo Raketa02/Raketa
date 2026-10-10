@@ -289,7 +289,8 @@ async def test_the_player_is_asked_by_email_to_confirm_and_the_others_are_not(
     await says_yes(client, tomek, proposal)
 
     [email] = await mailbox.to("tomek2@example.com")
-    assert email.subject == "Confirm your payment by 08:30 to keep your seat"
+    # Before the cut-off nothing is taken: his card is to fix (#638).
+    assert email.subject == "Fix your card by 08:30 to keep your seat"
     assert "Bonarka Arena" in email.text
     assert "30 zł" in email.text
     assert "another card" in email.text
@@ -335,7 +336,8 @@ async def test_a_bank_that_wants_the_player_asks_them_to_confirm_the_same_paymen
     assert body["to_confirm"]["connected_account_id"].startswith("acct_")
     assert body["to_confirm"]["publishable_key"] == "pk_fake_raketa"
     [email] = await mailbox.to("tomek2@example.com")
-    assert "confirm the 30 zł payment" in email.text
+    # Before the cut-off it is a hold, never a payment (#638).
+    assert "confirm the 30 zł hold" in email.text
 
 
 async def test_a_payment_not_yet_confirmed_is_refused_and_moves_nothing(

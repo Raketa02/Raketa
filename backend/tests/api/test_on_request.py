@@ -429,6 +429,7 @@ async def test_accepting_holds_everybody_together_and_books_the_held_court(
         "outcome": "BOOKED",
         "court_name": "Court 1",
         "payment_due_by": None,
+        "time_to": None,
     }
     assert len(payments.called("authorise")) == 4
     await mailbox.drain()

@@ -71,7 +71,7 @@ from app.modules.proposals.domain.ports import (
     Pools,
     ProposalRepository,
 )
-from app.modules.proposals.domain.proposal import Paying, Proposal, Reopened
+from app.modules.proposals.domain.proposal import Paying, Proposal, Reopened, TimeTo
 
 
 @final
@@ -97,6 +97,9 @@ class ProposalDetails:
     #: When the payment the game waits for is due — *Waiting for one payment ·
     #: until 14:40* — while it waits for one; ``None`` otherwise (Q111).
     pay_by: Instant | None
+    #: What that time is for — to fix the card, or to pay (#638) — with
+    #: ``pay_by``.
+    time_to: TimeTo | None
     #: The club's cut-off has already passed for this game. ``False`` for a
     #: club no longer selling.
     no_free_cancellation: bool
@@ -216,6 +219,11 @@ class ReadProposalDetails:
             paying=proposal.paying.get(reader),
             pay_by=(
                 proposal.pay_by
+                if status is ProposalStatus.WAITING_FOR_A_PAYMENT
+                else None
+            ),
+            time_to=(
+                proposal.time_to
                 if status is ProposalStatus.WAITING_FOR_A_PAYMENT
                 else None
             ),

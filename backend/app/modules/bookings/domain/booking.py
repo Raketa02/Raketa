@@ -185,6 +185,9 @@ class Booking:
     pay_by: Instant | None = None
     #: Whose payment the club's yes waits on.
     payers: tuple[UUID, ...] = ()
+    #: Their time is to fix the card — the yes came before the cut-off — rather
+    #: than to pay (#638). ``False`` unless it waits for one.
+    to_fix_the_card: bool = False
     #: Called off as it could no longer fill — a payment refused at the club's
     #: yes with no time left before the book-by, or one whose time ran out on
     #: it (#626).
@@ -612,10 +615,16 @@ class Booking:
         )
 
     def await_a_payment(
-        self, player_ids: tuple[UUID, ...], *, until: Instant, at: Instant
+        self,
+        player_ids: tuple[UUID, ...],
+        *,
+        until: Instant,
+        at: Instant,
+        to_fix_the_card: bool = False,
     ) -> None:
         """The club said yes and these players' shares could not be held: the
-        yes and the court are kept until ``until`` (#626; Q109)."""
+        yes and the court are kept until ``until`` (#626; Q109) — their time
+        to fix the card, before the cut-off, or to pay (#638)."""
 
         self._refuse_unless_waiting()
         invariant(
@@ -629,6 +638,7 @@ class Booking:
                 player_ids=player_ids,
                 until=until,
                 occurred_at=at,
+                to_fix_the_card=to_fix_the_card,
             )
         )
 
@@ -780,16 +790,19 @@ class Booking:
             self.booked_at = instant(event.occurred_at)
             self.pay_by = None
             self.payers = ()
+            self.to_fix_the_card = False
         elif isinstance(event, BookingAwaitingAPayment):
             self.state = BookingState.WAITING_FOR_A_PAYMENT
             self.pay_by = instant(event.until)
             self.payers = tuple(event.player_ids)
+            self.to_fix_the_card = event.to_fix_the_card
         elif isinstance(event, PaymentNotInTime):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.PAYMENT_NOT_IN_TIME
             self.called_off_for_good = event.for_good
             self.pay_by = None
             self.payers = ()
+            self.to_fix_the_card = False
             if not event.for_good:
                 # The game is filling again: its players read it folded
                 # against the proposal, and the club still sees all four, so
@@ -808,6 +821,7 @@ class Booking:
             self.taken_back_at = instant(event.occurred_at)
             self.pay_by = None
             self.payers = ()
+            self.to_fix_the_card = False
             opened = set(event.player_ids)
             self.first_side = tuple(p for p in self.first_side if p not in opened)
             self.second_side = tuple(p for p in self.second_side if p not in opened)

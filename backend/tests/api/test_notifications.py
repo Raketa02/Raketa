@@ -383,16 +383,18 @@ async def test_a_refused_payment_asks_its_player_and_nobody_else(
     for player in (ola, kuba, ewa, tomek):
         assert (await says_yes(client, player, proposal)).status_code == 200
 
-    # Her time to pay: thirty minutes from 08:00 (#625, Q109).
+    # Her time to fix her card: thirty minutes from 08:00, before the cut-off
+    # (#625, #638; Q109, Q113).
     assert await pushed_to(mailbox, pushes, ewa) == [
         (
-            "Confirm your payment by 08:30 to keep your seat",
-            "Padel · Sat 17:00 at Bonarka Arena — the others are waiting.",
+            "Fix your card by 08:30 to keep your seat",
+            "Nothing is paid now. Padel · Sat 17:00 at Bonarka Arena — the "
+            "others are waiting.",
         )
     ]
     [notice] = await notices_of(client, mailbox, ewa)
     assert (notice["kind"], notice["opens"], notice["game_id"]) == (
-        "CONFIRM_PAYMENT",
+        "FIX_YOUR_CARD",
         "PROPOSAL",
         str(proposal),
     )

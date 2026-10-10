@@ -9,13 +9,20 @@ never saying whose. Paid in time, the game books at once on the kept holds and
 nobody's bank is asked again, nor the desk; out of time, the seat reopens, the
 holds are let go, and the others read *filling again*.
 
+**Before the club's cut-off it is time to fix the card** (#638; Q113): nothing
+is taken then, only held, so the player is never asked to pay — *Fix your card
+by 08:30 to keep your seat*, nothing paid now, never past the cut-off. **From
+the cut-off on**, where money is taken at once, it stays **time to pay** —
+*Confirm your payment by 08:30*. The reads say which it is (``time_to``).
+
 Every act is taken over HTTP as the phone and the desk take it, against the fake
 payment provider; the deadline is run by its job, as the scheduler runs it.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
 **Saturday 10 October, 17:00**, padel at 160 zł — 40 zł a seat — at Bonarka
 Arena, which books at once, or at Kazimierz Padel, which confirms. Its book-by
-is two hours before the hour.
+is two hours before the hour, and its cut-off the clubs' default 24 hours —
+**Friday 17:00** — so every refusal on Monday is a card to fix.
 """
 
 from __future__ import annotations
@@ -32,6 +39,7 @@ from app.modules.payments.domain.entered_cards import A_CARD_THE_BANK_ALWAYS_CHE
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
+    SATURDAY_FIVE_S_CUT_OFF,
     a_club_and_its_desk,
     a_group,
     a_member,
@@ -52,6 +60,10 @@ CLUB_BOOKINGS = "/api/v1/club/bookings"
 PAY_BY = "2026-10-05T06:30:00Z"
 #: The book-by: two hours' notice before the hour.
 BOOK_BY = SATURDAY_FIVE - timedelta(hours=2)
+#: Saturday 08:00 in Kraków — after Friday 17:00's cut-off, before the book-by.
+SATURDAY_MORNING = SATURDAY_FIVE - timedelta(hours=9)
+#: Thirty minutes from a last yes on Saturday morning: 08:30 in Kraków.
+PAY_BY_ON_SATURDAY = "2026-10-10T06:30:00Z"
 
 
 @pytest.fixture
@@ -212,6 +224,8 @@ async def test_a_refused_share_holds_her_seat_and_keeps_every_other_hold(
         assert await live_ids(client, player) == [str(proposal)]
     [owed] = await to_confirm(client, paula)
     assert (owed["proposal_id"], owed["confirm_by"]) == (str(proposal), PAY_BY)
+    # Before the cut-off nothing is taken: it is her time to fix her card.
+    assert owed["time_to"] == "FIX_THE_CARD"
     # The court is not held: the game is still filling.
     assert await the_court_is_on_sale(session_factory, clock, club)
 
@@ -229,7 +243,7 @@ async def test_nobody_else_may_take_her_seat_while_her_time_runs(
     assert late.json()["code"] == "proposal_is_full"
 
 
-async def test_her_notice_and_email_name_her_time_and_the_others_never_her(
+async def test_before_the_cut_off_she_is_told_to_fix_her_card_and_nothing_is_paid(
     client, session_factory, clock, payments, mailbox, bonarka, four
 ):
     club, _ = bonarka
@@ -237,13 +251,21 @@ async def test_her_notice_and_email_name_her_time_and_the_others_never_her(
 
     await a_game(client, session_factory, clock, club, four)
 
-    assert (await told(client, mailbox, paula))[0] == (
-        "Confirm your payment by 08:30 to keep your seat",
-        "Padel · Sat 17:00 at Bonarka Arena — the others are waiting.",
+    [hers, *_] = await notices_of(client, mailbox, paula)
+    assert (hers["kind"], hers["title"], hers["body"]) == (
+        "FIX_YOUR_CARD",
+        "Fix your card by 08:30 to keep your seat",
+        "Nothing is paid now. Padel · Sat 17:00 at Bonarka Arena — the others "
+        "are waiting.",
     )
-    assert await subjects_to(mailbox, paula) == [
-        "Confirm your payment by 08:30 to keep your seat"
-    ]
+    [email] = await mailbox.to("paula@example.com")
+    assert email.subject == "Fix your card by 08:30 to keep your seat"
+    assert "Your bank wants you to confirm the 40 zł hold yourself." in email.text
+    assert (
+        "Nothing is paid now: fixing your card only places the 40 zł hold on it "
+        "again, taken on Fri 17:00, the club's cut-off."
+    ) in email.text
+    assert "Confirm your payment" not in email.text
     waiting = (
         "It's a game! · waiting for one payment until 08:30",
         "Padel · Sat 17:00 at Bonarka Arena. Nobody pays until it's in.",
@@ -252,6 +274,7 @@ async def test_her_notice_and_email_name_her_time_and_the_others_never_her(
         [notice] = await notices_of(client, mailbox, player)
         assert (notice["title"], notice["body"]) == waiting
         assert notice["kind"] == "WAITING_FOR_A_PAYMENT"
+        # The others' words are the same whatever her time is for.
         # Ivan's own yes filled it: his copy is born seen.
         assert notice["your_own"] is (player is ivan)
         assert await subjects_to(mailbox, player) == []
@@ -276,17 +299,22 @@ async def test_home_and_the_details_read_waiting_for_one_payment(
         )
         # Her card says the payment is hers; nobody else's names it.
         assert card["your_payment_due_by"] == (PAY_BY if player is paula else None)
+        # Before the cut-off it is a card to fix.
+        assert card["time_to"] == "FIX_THE_CARD"
     booking = await client.get(f"/api/v1/bookings/{proposal}", headers=marta["headers"])
     assert booking.status_code == 200, booking.text
     assert booking.json()["status"] == "WAITING_FOR_A_PAYMENT"
     assert booking.json()["leaving"]["kind"] == "WHILE_WAITING_FOR_THE_CLUB"
+    assert booking.json()["time_to"] == "FIX_THE_CARD"
     details = await client.get(
         f"/api/v1/proposals/{proposal}", headers=paula["headers"]
     )
     assert details.json()["status"] == "WAITING_FOR_A_PAYMENT"
     assert details.json()["payment_due_by"] == PAY_BY
+    assert details.json()["time_to"] == "FIX_THE_CARD"
     assert details.json()["actions"] == ["CONFIRM_PAYMENT", "LEAVE"]
     assert details.json()["your_payment"]["confirm_by"] == PAY_BY
+    assert details.json()["your_payment"]["time_to"] == "FIX_THE_CARD"
     # Home's badge counts her payment once, as the payment to confirm it is.
     assert (await client.get(HOME, headers=paula["headers"])).json()["needing_you"] == 1
 
@@ -303,10 +331,11 @@ async def test_her_own_yes_last_answers_with_her_time(
 
     assert answer["your_payment"]["refusal"] == "AUTHENTICATION_REQUIRED"
     assert answer["your_payment"]["confirm_by"] == PAY_BY
+    assert answer["your_payment"]["time_to"] == "FIX_THE_CARD"
     assert answer["payment_awaited_until"] == PAY_BY
 
 
-async def test_paying_in_time_books_the_game_on_the_kept_holds(
+async def test_fixing_her_card_in_time_books_it_and_takes_nothing_till_the_cut_off(
     client, session_factory, clock, payments, mailbox, bonarka, four
 ):
     club, _ = bonarka
@@ -352,7 +381,7 @@ async def test_paying_in_time_books_the_game_on_the_kept_holds(
     assert await to_confirm(client, paula) == []
 
 
-async def test_out_of_time_her_seat_reopens_and_the_holds_are_let_go(
+async def test_out_of_time_to_fix_her_seat_reopens_and_the_holds_are_let_go(
     client, session_factory, clock, payments, mailbox, bonarka, four
 ):
     club, _ = bonarka
@@ -372,12 +401,16 @@ async def test_out_of_time_her_seat_reopens_and_the_holds_are_let_go(
     assert len(payments.called("cancel")) == 3
     assert await live_ids(client, paula) == []
     [owed] = await to_confirm(client, paula)
-    assert owed["confirm_by"] is None
-    assert (await told(client, mailbox, paula))[0] == (
-        "Your time to pay ran out · Sat 17:00",
-        "Your seat is open to others now — confirm your payment to take it back "
-        "while it's free.",
+    assert (owed["confirm_by"], owed["time_to"]) == (None, None)
+    [hers, *_] = await notices_of(client, mailbox, paula)
+    assert (hers["kind"], hers["title"], hers["body"]) == (
+        "TIME_TO_FIX_RAN_OUT",
+        "Your time to fix your card ran out · Sat 17:00",
+        "Your seat is open to others now, and you owe nothing — you can still "
+        "take it back while it's free.",
     )
+    # Nothing was ever taken from anybody.
+    assert payments.called("capture") == []
     for player in (marta, oscar, ivan):
         assert (await told(client, mailbox, player))[0] == (
             "Your Sat 17:00 at Bonarka Arena is filling again",
@@ -413,7 +446,7 @@ async def test_a_confirmation_past_her_time_runs_it_out_and_takes_the_seat_back(
     assert paid.status_code == 200, paid.text
     assert paid.json()["booked"]["booking_id"] == str(proposal)
     assert len(payments.called("authorise")) == asked + 3
-    assert "Your time to pay ran out · Sat 17:00" in [
+    assert "Your time to fix your card ran out · Sat 17:00" in [
         title for title, _ in await told(client, mailbox, paula)
     ]
 
@@ -444,7 +477,13 @@ async def test_a_leave_while_it_waits_lets_the_leaver_s_hold_go_and_her_time_run
         assert (card["status"], card["filling_again"]) == ("SEAT_OPEN", True)
     # Her time runs on.
     hers = await the_card(client, paula, proposal)
-    assert (hers["status"], hers["your_payment_due_by"]) == ("SEAT_OPEN", PAY_BY)
+    assert (hers["status"], hers["your_payment_due_by"], hers["time_to"]) == (
+        "SEAT_OPEN",
+        PAY_BY,
+        "FIX_THE_CARD",
+    )
+    # Nobody else's card names a time any more.
+    assert (await the_card(client, marta, proposal))["time_to"] is None
     [owed] = await to_confirm(client, paula)
     assert owed["confirm_by"] == PAY_BY
 
@@ -508,6 +547,8 @@ async def test_her_time_never_runs_past_the_book_by(
     proposal, answer = await a_game(client, session_factory, clock, club, four)
 
     assert answer["payment_awaited_until"] == "2026-10-10T13:00:00Z"
+    # Past Friday's cut-off: hers is a time to pay.
+    assert (await the_card(client, paula, proposal))["time_to"] == "PAY"
     clock.move(timedelta(minutes=10, seconds=20))
     assert (await runs_out(session_factory, clock)).games == 1
     for player in four:
@@ -555,20 +596,24 @@ async def test_a_share_refused_at_accept_keeps_the_club_s_yes_and_its_court(
         "outcome": "WAITING_FOR_A_PAYMENT",
         "court_name": None,
         "payment_due_by": "2026-10-05T06:40:00Z",
+        # Accepted before the cut-off: *waiting for one player's card*.
+        "time_to": "FIX_THE_CARD",
     }
     assert not await the_court_is_on_sale(session_factory, clock, club)
     waiting = await client.get(f"{CLUB_BOOKINGS}/waiting", headers=desk)
     assert waiting.json()["bookings"] == []
     [row] = await the_club_s_day(client, desk)
-    assert (row["status"], row["payment_due_by"]) == (
+    assert (row["status"], row["payment_due_by"], row["time_to"]) == (
         "WAITING_FOR_A_PAYMENT",
         "2026-10-05T06:40:00Z",
+        "FIX_THE_CARD",
     )
     for player in four:
         card = await the_card(client, player, proposal)
-        assert (card["status"], card["payment_due_by"]) == (
+        assert (card["status"], card["payment_due_by"], card["time_to"]) == (
             "WAITING_FOR_A_PAYMENT",
             "2026-10-05T06:40:00Z",
+            "FIX_THE_CARD",
         )
     for player in (marta, oscar, ivan):
         assert (await told(client, mailbox, player))[0] == (
@@ -576,10 +621,13 @@ async def test_a_share_refused_at_accept_keeps_the_club_s_yes_and_its_court(
             "Padel at Kazimierz Padel. Nobody pays until it's in.",
         )
     assert (await told(client, mailbox, paula))[0][0] == (
-        "Confirm your payment by 08:40 to keep your seat"
+        "Fix your card by 08:40 to keep your seat"
     )
     [owed] = await to_confirm(client, paula)
-    assert owed["confirm_by"] == "2026-10-05T06:40:00Z"
+    assert (owed["confirm_by"], owed["time_to"]) == (
+        "2026-10-05T06:40:00Z",
+        "FIX_THE_CARD",
+    )
 
 
 async def test_paying_in_time_books_it_without_asking_the_club_again(
@@ -614,7 +662,7 @@ async def test_paying_in_time_books_it_without_asking_the_club_again(
     assert (await the_card(client, marta, proposal))["status"] == "BOOKED"
 
 
-async def test_out_of_time_the_booking_is_called_off_and_the_desk_emailed(
+async def test_out_of_time_to_fix_the_booking_is_called_off_and_the_desk_emailed(
     client, session_factory, clock, payments, mailbox, kazimierz, four
 ):
     club, desk = kazimierz
@@ -641,10 +689,11 @@ async def test_out_of_time_the_booking_is_called_off_and_the_desk_emailed(
         for email in await mailbox.to("desk@kazimierz.pl")
         if email.subject == "A game didn't go ahead"
     ]
-    assert "payment didn't come in time" in email.text
+    # Accepted before the cut-off: it was her card to fix.
+    assert "A player's card wasn't fixed in time" in email.text
     assert "paula" not in email.text.lower()
     assert (await told(client, mailbox, paula))[0][0] == (
-        "Your time to pay ran out · Sat 17:00"
+        "Your time to fix your card ran out · Sat 17:00"
     )
     for player in (marta, oscar, ivan):
         assert (await told(client, mailbox, player))[0] == (
@@ -815,3 +864,153 @@ async def test_two_refused_one_paying_in_time_keeps_her_payment_when_he_runs_out
     assert len(payments.called("cancel")) == 2
     assert await live_ids(client, paula) == [str(proposal)]
     assert await live_ids(client, oscar) == []
+
+
+# --------------------------------------------------------------------------- #
+# Time to fix the card never runs past the cut-off (#638)
+# --------------------------------------------------------------------------- #
+
+
+async def test_a_card_refused_just_before_the_cut_off_has_until_the_cut_off(
+    client, session_factory, clock, payments, mailbox, bonarka, four
+):
+    """Friday 16:50, ten minutes before the cut-off: her time to fix her card
+    ends at it, not thirty minutes on."""
+
+    club, _ = bonarka
+    paula, *_ = four
+    clock.move(SATURDAY_FIVE_S_CUT_OFF - MONDAY_MORNING - timedelta(minutes=10))
+
+    proposal, answer = await a_game(client, session_factory, clock, club, four)
+
+    assert answer["payment_awaited_until"] == "2026-10-09T15:00:00Z"
+    [owed] = await to_confirm(client, paula)
+    assert (owed["confirm_by"], owed["time_to"]) == (
+        "2026-10-09T15:00:00Z",
+        "FIX_THE_CARD",
+    )
+    assert (await told(client, mailbox, paula))[0][0] == (
+        "Fix your card by 17:00 to keep your seat"
+    )
+    clock.move(timedelta(minutes=10))
+    assert (await runs_out(session_factory, clock)).games == 1
+    assert (await told(client, mailbox, paula))[0][0] == (
+        "Your time to fix your card ran out · Sat 17:00"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# After the cut-off, money is taken at once: time to pay (#638)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def after_the_cut_off(clock) -> MovableClock:
+    """Saturday 08:00 — Friday 17:00's cut-off has passed, the book-by not."""
+
+    clock.move(SATURDAY_MORNING - MONDAY_MORNING)
+    return clock
+
+
+async def test_a_game_filling_after_its_cut_off_gives_a_refused_payment_time_to_pay(
+    client, session_factory, after_the_cut_off, payments, mailbox, bonarka, four
+):
+    club, _ = bonarka
+    paula, marta, *_ = four
+
+    proposal, answer = await a_game(
+        client, session_factory, after_the_cut_off, club, four
+    )
+
+    assert answer["payment_awaited_until"] == PAY_BY_ON_SATURDAY
+    [hers, *_] = await notices_of(client, mailbox, paula)
+    assert (hers["kind"], hers["title"], hers["body"]) == (
+        "CONFIRM_PAYMENT",
+        "Confirm your payment by 08:30 to keep your seat",
+        "Padel · Sat 17:00 at Bonarka Arena — the others are waiting.",
+    )
+    [email] = await mailbox.to("paula@example.com")
+    assert email.subject == "Confirm your payment by 08:30 to keep your seat"
+    assert "Fix your card" not in email.text
+    card = await the_card(client, paula, proposal)
+    assert (card["your_payment_due_by"], card["time_to"]) == (
+        PAY_BY_ON_SATURDAY,
+        "PAY",
+    )
+    assert (await the_card(client, marta, proposal))["time_to"] == "PAY"
+    booking = await client.get(f"/api/v1/bookings/{proposal}", headers=paula["headers"])
+    assert booking.json()["time_to"] == "PAY"
+    details = await client.get(
+        f"/api/v1/proposals/{proposal}", headers=paula["headers"]
+    )
+    assert details.json()["time_to"] == "PAY"
+    assert details.json()["your_payment"]["time_to"] == "PAY"
+    [owed] = await to_confirm(client, paula)
+    assert (owed["confirm_by"], owed["time_to"]) == (PAY_BY_ON_SATURDAY, "PAY")
+
+
+async def test_paying_in_time_after_the_cut_off_takes_every_share_at_once(
+    client, session_factory, after_the_cut_off, payments, mailbox, bonarka, four
+):
+    club, _ = bonarka
+    paula, *_ = four
+    proposal, _ = await a_game(client, session_factory, after_the_cut_off, club, four)
+    [owed] = await to_confirm(client, paula)
+
+    paid = await confirms(client, payments, paula, owed["seat_charge_id"])
+
+    assert paid.json()["booked"]["booking_id"] == str(proposal), paid.text
+    await mailbox.drain()
+    assert (
+        len({call.arguments["payment_id"] for call in payments.called("capture")}) == 4
+    )
+
+
+async def test_out_of_time_to_pay_after_the_cut_off_her_seat_reopens(
+    client, session_factory, after_the_cut_off, payments, mailbox, bonarka, four
+):
+    club, _ = bonarka
+    paula, marta, *_ = four
+    proposal, _ = await a_game(client, session_factory, after_the_cut_off, club, four)
+    await mailbox.drain()
+    after_the_cut_off.move(timedelta(minutes=30))
+
+    assert (await runs_out(session_factory, after_the_cut_off)).games == 1
+
+    [hers, *_] = await notices_of(client, mailbox, paula)
+    assert (hers["kind"], hers["title"]) == (
+        "TIME_TO_PAY_RAN_OUT",
+        "Your time to pay ran out · Sat 17:00",
+    )
+    assert (await told(client, mailbox, marta))[0] == (
+        "Your Sat 17:00 at Bonarka Arena is filling again",
+        "A seat opened — nobody paid.",
+    )
+
+
+async def test_a_club_s_yes_after_its_cut_off_waits_on_a_payment(
+    client, session_factory, after_the_cut_off, payments, mailbox, kazimierz, four
+):
+    club, desk = kazimierz
+    paula, *_ = four
+    proposal, _ = await accepted_at(
+        client, session_factory, after_the_cut_off, kazimierz, four, mailbox
+    )
+
+    [row] = await the_club_s_day(client, desk)
+    assert (row["status"], row["time_to"]) == ("WAITING_FOR_A_PAYMENT", "PAY")
+    assert (await told(client, mailbox, paula))[0][0] == (
+        "Confirm your payment by 08:40 to keep your seat"
+    )
+    after_the_cut_off.move(timedelta(minutes=30))
+    assert (await runs_out(session_factory, after_the_cut_off)).games == 1
+    await mailbox.drain()
+    [email] = [
+        email
+        for email in await mailbox.to("desk@kazimierz.pl")
+        if email.subject == "A game didn't go ahead"
+    ]
+    assert "A player's payment didn't come in time" in email.text
+    assert (await told(client, mailbox, paula))[0][0] == (
+        "Your time to pay ran out · Sat 17:00"
+    )

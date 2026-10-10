@@ -74,7 +74,7 @@ from app.modules.proposals.domain.ports import (
     SeatCharges,
     UndecidedCharges,
 )
-from app.modules.proposals.domain.proposal import Origin, Proposal, Standing
+from app.modules.proposals.domain.proposal import Origin, Proposal, Standing, TimeTo
 
 
 @final
@@ -96,6 +96,8 @@ class YesAnswer:
     #: The game waits for a refused payment until then — this player's own, or
     #: somebody else's (#625, #626): *Waiting for one payment · until 14:40*.
     paying_until: Instant | None = None
+    #: What that time is for — to fix the card, or to pay (#638).
+    time_to: TimeTo | None = None
 
 
 @final
@@ -428,6 +430,7 @@ def _answer(proposal: Proposal, player_id: UUID, outcome: FillOutcome) -> YesAns
         waiting_until=outcome.waiting_until,
         your_payment=outcome.refused.get(player_id),
         paying_until=outcome.paying_until,
+        time_to=outcome.time_to,
     )
 
 

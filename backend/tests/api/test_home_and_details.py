@@ -948,6 +948,7 @@ async def test_a_refused_payment_is_confirmed_from_the_details(
         "seat_charge_id": owed[0]["seat_charge_id"],
         "refusal": "AUTHENTICATION_REQUIRED",
         "confirm_by": "2026-10-05T06:30:00Z",
+        "time_to": "FIX_THE_CARD",
     }
 
 

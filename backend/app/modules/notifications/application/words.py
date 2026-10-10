@@ -28,7 +28,10 @@ the payer reads *Confirm your payment by 14:40 to keep your seat*, the others
 *It's a game! · waiting for one payment until 14:40* — at the club's yes, *Your
 Fri 19:00 is waiting for one payment, until 21:20* — then *booked · you paid*,
 never a second *It's a game!*, or *filling again*; the payer, out of time, *Your
-time to pay ran out*.
+time to pay ran out*. **Before the cut-off it is the payer's time to fix the
+card** (#638; Q113) — nothing is taken then, so they are never asked to pay:
+*Fix your card by 14:40 to keep your seat*, and out of time *Your time to fix
+your card ran out*. The others' words are the same either way.
 """
 
 from __future__ import annotations
@@ -174,6 +177,14 @@ def words_for(said: Said) -> Words:
                 "it back while it's free."
             ),
         )
+    if kind is NoticeKind.TIME_TO_FIX_RAN_OUT:
+        return Words(
+            title=f"Your time to fix your card ran out · {_hour(said.starts_at)}",
+            body=(
+                "Your seat is open to others now, and you owe nothing — you can "
+                "still take it back while it's free."
+            ),
+        )
     if kind is NoticeKind.WAITING_FOR_THE_CLUB:
         answer_by = invariant(said.until, "a game waiting for its club, by no time")
         return Words(
@@ -212,6 +223,8 @@ def words_for(said: Said) -> Words:
         )
     if kind is NoticeKind.CONFIRM_PAYMENT:
         return _confirm_payment(said, game=game, money=money)
+    if kind is NoticeKind.FIX_YOUR_CARD:
+        return _fix_by(said)
     if kind is NoticeKind.GAME_CALLED_OFF:
         return _game_called_off(said, sport=sport, when=when, game=game, money=money)
     if kind is NoticeKind.REFUNDED:
@@ -297,6 +310,37 @@ def _confirm_payment(said: Said, *, game: str, money: str) -> Words:
     else:
         body = f"Your bank wants you to confirm {money}. {game}."
     return Words(title=title, body=body)
+
+
+def _fix_by(said: Said) -> Words:
+    """*Fix your card by 14:40 to keep your seat* — the payer's time to fix the
+    card, before the cut-off (#638; Q113): nothing is taken then, so nothing is
+    paid now, and the others are waiting."""
+
+    fix_by = invariant(said.until, "a card to fix by no time")
+    sport = _SPORT_WORDS[said.sport]
+    waiting = (
+        f"Nothing is paid now. {sport} · {_hour(said.starts_at)} at {said.club} — "
+        "the others are waiting."
+    )
+    if said.reason == FailureReason.TERMS_NEEDED:
+        body = (
+            "Accept the payment terms again — they changed, or your card's "
+            f"brand did. {waiting}"
+        )
+    elif said.reason == FailureReason.NO_METHOD:
+        body = (
+            "There's no card to hold your share on — save one in You › "
+            f"Payments. {waiting}"
+        )
+    else:
+        body = waiting
+    return Words(
+        title=(
+            f"Fix your card by {_by(fix_by, given_at=said.given_at)} to keep your seat"
+        ),
+        body=body,
+    )
 
 
 def _confirm_by(said: Said, *, money: str) -> Words:

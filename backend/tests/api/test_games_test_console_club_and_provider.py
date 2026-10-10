@@ -301,6 +301,7 @@ async def test_accepting_a_request_books_it_as_the_club_s_own(
         "outcome": "BOOKED",
         "court_name": "Court 1",
         "payment_due_by": None,
+        "time_to": None,
     }
     assert (await her_home_game(client, world, game))["status"] == "BOOKED"
     assert await waiting_at(client, world.kazimierz_desk) == []

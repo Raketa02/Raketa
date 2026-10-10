@@ -58,7 +58,7 @@ from app.kernel import SPORT_SPECS, Instant, Sport, exhaustive, instant, invaria
 from app.modules.bookings.domain.check_in import is_the_game_day
 from app.modules.games.domain.windows import A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR
 from app.modules.proposals.domain.deck import GAME_LENGTH, Sides
-from app.modules.proposals.domain.proposal import Proposal, Standing
+from app.modules.proposals.domain.proposal import Proposal, Standing, TimeTo
 
 
 class HomeStatus(StrEnum):
@@ -247,6 +247,9 @@ class BookedGame:
     #: Everybody whose refused share the game waits for, and until when —
     #: their time to pay (#625, #626). Empty while nobody's is awaited.
     paying: Mapping[UUID, Instant] = field(default_factory=dict)
+    #: What their time is for — to fix the card, before the cut-off, or to pay,
+    #: after it (#638); ``None`` while nobody's payment is awaited.
+    time_to: TimeTo | None = None
     #: When it was booked — at the fill, or at its On request club's yes.
     #: ``None`` until it is.
     booked_at: Instant | None = None
@@ -744,6 +747,7 @@ def as_filling_again(
     in_: Sequence[UUID],
     standing: Standing,
     paying: Mapping[UUID, Instant] | None = None,
+    time_to: TimeTo | None = None,
 ) -> BookedGame:
     """**A full game that went back to filling, as its proposal has it now**
     (#624, Q106) — the booking keeps who was In when its request was taken
@@ -753,7 +757,8 @@ def as_filling_again(
     the proposal is over before it was full again: its book-by passed — or a
     seat opened after it, while the club decided — or its court went to
     another game. A payer whose time to pay still runs (#625) is in
-    ``paying``, as the proposal has it."""
+    ``paying``, as the proposal has it, and what it is for in ``time_to``
+    (#638)."""
 
     invariant(
         game.stage is BookingStage.FILLING_AGAIN,
@@ -771,6 +776,7 @@ def as_filling_again(
         second_side=tuple(second),
         called_off=_filling_again_ended(game, standing),
         paying=game.paying if paying is None else dict(paying),
+        time_to=game.time_to if paying is None else time_to,
     )
 
 
@@ -849,4 +855,5 @@ def without_a_booking(proposal: Proposal, *, now: Instant) -> BookedGame:
         ),
         called_off=called_off,
         paying=proposal.payments_due,
+        time_to=proposal.time_to,
     )

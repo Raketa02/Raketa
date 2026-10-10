@@ -70,7 +70,7 @@ from app.modules.proposals.domain.ports import (
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.weekly_hours import WeeklyHours
 from app.modules.proposals.domain.post import LevelRange
-from app.modules.proposals.domain.proposal import ClubAnswer
+from app.modules.proposals.domain.proposal import ClubAnswer, TimeTo
 from app.kernel import minutes
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
@@ -547,7 +547,11 @@ async def test_a_club_s_yes_waits_on_a_payment_then_books_or_is_called_off(
     for game in (paid, lapsed):
         await requests.ask(game, at=_at())
         await requests.await_a_payment(
-            game.proposal_id, player_ids=(TOMEK,), until=_at(1), at=_at()
+            game.proposal_id,
+            player_ids=(TOMEK,),
+            until=_at(1),
+            to_fix_the_card=game is paid,
+            at=_at(),
         )
 
     awaiting = await requests.find(paid.proposal_id)
@@ -568,6 +572,34 @@ async def test_a_club_s_yes_waits_on_a_payment_then_books_or_is_called_off(
     called_off = await requests.find(lapsed.proposal_id)
     assert booked is not None and booked.pay_by is None
     assert called_off is not None and called_off.waiting is False
+
+
+@pytest.mark.parametrize("implementation", registered(ClubBookings))
+async def test_a_game_its_club_s_yes_waits_on_says_what_the_time_is_for(
+    implementation, session
+):
+    """#638: a yes before the cut-off waits on a card to fix; one after it, on
+    a payment — and the club's day reads which."""
+
+    fixing = await _waiting(session, start=_at(48))
+    paying = await _waiting(session, start=_at(72))
+    requests: ClubRequests = registered_build(ClubRequests, session)
+    for booking, to_fix_the_card in ((fixing, True), (paying, False)):
+        await requests.await_a_payment(
+            booking.booking_id,
+            player_ids=(TOMEK,),
+            until=_at(1),
+            to_fix_the_card=to_fix_the_card,
+            at=_at(),
+        )
+    await session.commit()
+    club: ClubBookings = implementation.build(session)
+
+    [fix] = await club.on_day(fixing.club_id, start=_at(47), end=_at(49))
+    [pay] = await club.on_day(paying.club_id, start=_at(71), end=_at(73))
+
+    assert (fix.pay_by, fix.time_to) == (_at(1), TimeTo.FIX_THE_CARD)
+    assert (pay.pay_by, pay.time_to) == (_at(1), TimeTo.PAY)
 
 
 # --------------------------------------------------------------------------- #

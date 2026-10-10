@@ -54,8 +54,16 @@ class NoticeKind(StrEnum):
     #: *Your time to pay ran out · Tue 19:00* — to the payer: their seat is
     #: open to others, and theirs to take back while it is free (#625).
     TIME_TO_PAY_RAN_OUT = "TIME_TO_PAY_RAN_OUT"
+    #: *Your time to fix your card ran out · Tue 19:00* — the same, before the
+    #: cut-off, where nothing was being taken: they owe nothing (#638, Q113).
+    TIME_TO_FIX_RAN_OUT = "TIME_TO_FIX_RAN_OUT"
     #: *Confirm your payment to keep your seat* — or to take one, on a rescue.
+    #: By a time, after the cut-off: their time to pay (#625).
     CONFIRM_PAYMENT = "CONFIRM_PAYMENT"
+    #: *Fix your card by 14:40 to keep your seat* — a hold refused before the
+    #: cut-off: nothing is taken then, so nothing is paid in their time to fix
+    #: the card (#638, Q113).
+    FIX_YOUR_CARD = "FIX_YOUR_CARD"
     #: *Game called off · with the refund* — at the cut-off, or by the club.
     GAME_CALLED_OFF = "GAME_CALLED_OFF"
     #: *Someone left your game.*

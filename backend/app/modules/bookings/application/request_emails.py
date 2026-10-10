@@ -208,13 +208,17 @@ def payment_not_in_time_email(
     starts_at: Instant,
     for_good: bool,
     link: str,
+    to_fix_the_card: bool = False,
 ) -> OutgoingMessage:
     """*A game didn't go ahead* (#626; the mechanics §16.12, Q112, at once): the
     desk said yes, and a player's payment did not come in time — or could not,
     the game's last moment to book having come — so the game is off and its
     court the club's to sell again, in the manner of the cut-off's email.
     **Never the player's name**: the desk is told what happened to its court.
-    ``for_good`` when the game can no longer fill, so nobody will ask again."""
+    ``for_good`` when the game can no longer fill, so nobody will ask again.
+    ``to_fix_the_card`` when the yes came before the cut-off, where nothing is
+    taken and the player's time was to fix their card (#638; Q113): *A
+    player's card wasn't fixed in time*."""
 
     return render(
         ButtonEmail(
@@ -226,8 +230,13 @@ def payment_not_in_time_email(
                 f"{_SPORT_WORDS[sport]} at {club}, {court} — "
                 f"{_day_and_time(starts_at)} until "
                 f"{_wall(starts_at + _A_GAME):%H:%M}.",
-                "A player's payment didn't come in time — the court is free "
-                "again. Nobody paid.",
+                (
+                    "A player's card wasn't fixed in time — the court is free "
+                    "again. Nobody paid."
+                    if to_fix_the_card
+                    else "A player's payment didn't come in time — the court is "
+                    "free again. Nobody paid."
+                ),
                 "Its last moment to book has passed, so it won't come back."
                 if for_good
                 else "If the game is full again, you'll be asked again as for "

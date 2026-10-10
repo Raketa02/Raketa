@@ -183,12 +183,18 @@ class BookingAwaitingAPayment:
     ``player_ids`` have until ``until`` to pay — thirty minutes, never past the
     game's book-by. Nobody paid; the other holds wait on their cards, and the
     payment in time books it (``BookingAccepted``) without asking the club
-    again. The desk reads *Accepted · waiting for one player's payment*."""
+    again. The desk reads *Accepted · waiting for one player's payment*.
+
+    ``to_fix_the_card`` when the yes came before the club's cut-off (#638;
+    Q113): nothing is taken then, only held, so their time is to fix the card
+    — *Accepted · waiting for one player's card* — never past the cut-off. A
+    row written before there were two says nothing: it was time to pay."""
 
     booking_id: UUID
     player_ids: tuple[UUID, ...]
     until: datetime
     occurred_at: datetime
+    to_fix_the_card: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "player_ids", _uuids(self.player_ids))

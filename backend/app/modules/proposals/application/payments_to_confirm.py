@@ -25,7 +25,12 @@ from app.modules.proposals.domain.ports import (
     ProposalDirectory,
     ProposalRepository,
 )
-from app.modules.proposals.domain.proposal import Proposal, ReopenReason, Standing
+from app.modules.proposals.domain.proposal import (
+    Proposal,
+    ReopenReason,
+    Standing,
+    TimeTo,
+)
 
 
 @final
@@ -38,6 +43,9 @@ class PaymentToConfirm:
     #: The end of their time to pay, while it runs — ``None`` once it ran out
     #: and the seat is open to others too.
     confirm_by: Instant | None = None
+    #: What that time is for — to fix the card, or to pay (#638) — with
+    #: ``confirm_by``.
+    time_to: TimeTo | None = None
 
 
 class Owed(NamedTuple):
@@ -47,6 +55,7 @@ class Owed(NamedTuple):
     seat_charge_id: UUID
     reason: ReopenReason
     confirm_by: Instant | None
+    time_to: TimeTo | None = None
 
 
 @final
@@ -79,6 +88,7 @@ class ReadPaymentsToConfirm:
                 reason=one.reason,
                 club_name=names.get(one.proposal.club_id),
                 confirm_by=one.confirm_by,
+                time_to=one.time_to,
             )
             for one in owed
         )
@@ -107,14 +117,16 @@ async def owed_by(
             or proposal.standing_at(now) is not Standing.FILLING
         ):
             continue
+        # Past it, until the job runs, the seat is no longer theirs alone: a
+        # confirmation runs their time out first.
+        running = now < paying.until
         owed.append(
             Owed(
                 proposal,
                 paying.payment_to_confirm,
                 paying.reason,
-                # Past it, until the job runs, the seat is no longer theirs
-                # alone: a confirmation runs their time out first.
-                paying.until if now < paying.until else None,
+                paying.until if running else None,
+                paying.time_to if running else None,
             )
         )
     for proposal_id in await directory.reopened_for(player_id, now=now):

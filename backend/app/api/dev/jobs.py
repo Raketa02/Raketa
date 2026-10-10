@@ -229,11 +229,12 @@ async def run_the_request_timeout(expire: ExpireUnansweredRequestsDep) -> RanRes
     response_model=RanResponse,
     summary=_summary(TIME_TO_PAY_JOB),
     description=(
-        "Runs out every refused share's time to pay that is up (#625, #626): "
-        "the payer's seat reopens — offered to others, theirs to take back "
-        "while free — the holds the others kept are let go, and at a club that "
-        "confirms the booking is called off, its desk emailed. A time to pay "
-        "still running is left as it is."
+        "Runs out every refused share's time to pay that is up (#625, #626) — "
+        "and its time to fix the card, before the cut-off (#638): the payer's "
+        "seat reopens — offered to others, theirs to take back while free — "
+        "the holds the others kept are let go, and at a club that confirms the "
+        "booking is called off, its desk emailed. A time still running is left "
+        "as it is."
     ),
 )
 async def run_the_time_to_pay(run_out: RunOutTheTimeToPayDep) -> RanResponse:

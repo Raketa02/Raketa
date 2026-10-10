@@ -380,6 +380,9 @@ class ChargeTheSeats:
                     app_link=self._app_link,
                     rescue=game.rescue,
                     pay_by=game.paying_until.get(player, game.pay_by),
+                    # Refused before the cut-off, where the share would only be
+                    # held: their time is to fix the card (#638).
+                    cut_off=game.free_to_leave_until,
                 ),
                 at=at,
             )

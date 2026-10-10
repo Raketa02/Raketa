@@ -243,6 +243,9 @@ class GameBrief:
     #: Everybody In whose refused share the game waits for, and until when —
     #: their time to pay (#625, #626).
     paying: Mapping[UUID, Instant] = field(default_factory=dict)
+    #: Those of them whose time is to fix the card, before the cut-off — every
+    #: other one's is to pay (#638).
+    fixing: frozenset[UUID] = frozenset()
     #: Every seat is In and a payment is awaited: the game waits for it.
     waiting_for_a_payment: bool = False
     #: It booked the moment the payment it waited for came in: its players

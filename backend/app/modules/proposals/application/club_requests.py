@@ -52,7 +52,7 @@ from app.modules.proposals.domain.ports import (
     ProposalRepository,
     UndecidedCharges,
 )
-from app.modules.proposals.domain.proposal import ClubAnswer, Proposal
+from app.modules.proposals.domain.proposal import ClubAnswer, Proposal, TimeTo
 
 #: The longest note a club may keep with a refusal — a line, not a letter.
 REFUSAL_REASON_MAX = 200
@@ -115,6 +115,8 @@ class Acceptance:
     court_name: str | None
     #: When the payment the yes waits on is due — waiting for one only.
     pay_by: Instant | None = None
+    #: What that time is for — to fix the card, or to pay (#638).
+    time_to: TimeTo | None = None
 
 
 @final
@@ -151,6 +153,7 @@ class AcceptTheRequest:
                 outcome=AcceptOutcome.WAITING_FOR_A_PAYMENT,
                 court_name=None,
                 pay_by=outcome.paying_until,
+                time_to=outcome.time_to,
             )
         if outcome.called_off:
             return Acceptance(outcome=AcceptOutcome.CALLED_OFF, court_name=None)

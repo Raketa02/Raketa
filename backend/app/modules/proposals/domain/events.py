@@ -218,7 +218,13 @@ class TimeToPayGiven:
     ``seat_charge_id`` the refused payment. ``filled_by`` is the player whose
     own act filled the game (Q102) — ``None`` when nobody's did: the club's yes,
     a paused yes coming back. ``at_the_clubs_yes`` says the On request club had
-    said yes, and holds the court while it waits (#626)."""
+    said yes, and holds the court while it waits (#626).
+
+    ``time_to`` is the ``TimeTo`` code of what the time is for (#638; Q113):
+    ``FIX_THE_CARD`` for a hold refused before the club's cut-off, where
+    nothing is taken and so nothing is paid — never past the cut-off — and
+    ``PAY`` from the cut-off on, where the money is taken at once. A stream
+    written before there were two says nothing, and was time to pay."""
 
     proposal_id: UUID
     player_id: UUID
@@ -228,6 +234,7 @@ class TimeToPayGiven:
     occurred_at: datetime
     filled_by: UUID | None = None
     at_the_clubs_yes: bool = False
+    time_to: str = "PAY"
 
 
 @dataclass(frozen=True)
@@ -248,16 +255,19 @@ class TimeToPayRanOut:
     and each seat **reopens** — offered to others as any open seat of a game
     still filling, and theirs to take back while it is free by confirming the
     payment. Recorded by the job that runs the deadline, or by the player's own
-    act come too late."""
+    act come too late. ``fixing`` is those of them whose time was to fix the
+    card, before the club's cut-off (#638) — every other one's was to pay."""
 
     proposal_id: UUID
     player_ids: tuple[UUID, ...]
     occurred_at: datetime
+    fixing: tuple[UUID, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(
             self, "player_ids", tuple(UUID(str(one)) for one in self.player_ids)
         )
+        object.__setattr__(self, "fixing", tuple(UUID(str(one)) for one in self.fixing))
 
 
 @dataclass(frozen=True)

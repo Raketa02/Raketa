@@ -167,6 +167,23 @@ _WHAT_TO_DO: Final = {
 }
 
 
+#: What to do about a hold refused before the cut-off (#638): nothing is being
+#: taken, so it is the card that is fixed, never a payment made.
+_TO_FIX: Final = {
+    FailureReason.AUTHENTICATION_REQUIRED: (
+        "Your bank wants you to confirm the {amount} hold yourself."
+    ),
+    FailureReason.DECLINED: (
+        "Your bank declined the {amount} hold. You can fix it with another card."
+    ),
+    FailureReason.TERMS_NEEDED: _WHAT_TO_DO[FailureReason.TERMS_NEEDED],
+    FailureReason.NO_METHOD: (
+        "There is no card to hold your share on. Save one in You › Payments, "
+        "then say yes again."
+    ),
+}
+
+
 def confirm_payment_email(
     *,
     to: str,
@@ -178,14 +195,18 @@ def confirm_payment_email(
     app_link: str,
     rescue: bool = False,
     pay_by: Instant | None = None,
+    cut_off: Instant | None = None,
 ) -> OutgoingMessage:
     """*Confirm your payment to keep your seat.* Nobody paid. **With time to
     pay** (#625, #626; Q109) the seat is held for them alone until ``pay_by``,
     and the email names the time — *Confirm your payment by 14:40 to keep your
     seat*: the others are waiting, and paying by then books the game at once.
-    **On a rescue** (#545) — an open seat on a booked game — *to take the
-    seat*: nothing was charged, and the seat is theirs if they confirm before
-    somebody else takes it."""
+    **Before the club's ``cut_off``** nothing is taken, only held, so it is
+    their **time to fix the card** (#638; Q113): *Fix your card by 14:40 to
+    keep your seat* — nothing is paid now, and fixing it only places the hold
+    again, taken at the cut-off. **On a rescue** (#545) — an open seat on a
+    booked game — *to take the seat*: nothing was charged, and the seat is
+    theirs if they confirm before somebody else takes it."""
 
     if rescue:
         subject = "Confirm your payment to take the seat"
@@ -195,6 +216,21 @@ def confirm_payment_email(
             _WHAT_TO_DO[reason].format(amount=zloty(amount_grosze)),
             "Nothing was charged. If you confirm it before somebody else takes "
             "the seat, it's yours.",
+        )
+    elif pay_by is not None and cut_off is not None:
+        by = f"{_wall(pay_by):%H:%M}"
+        amount = zloty(amount_grosze)
+        subject = f"Fix your card by {by} to keep your seat"
+        lines = (
+            f"Everybody said yes to {_SPORT_WORDS[sport].lower()} at {club} on "
+            f"{_day_and_time(starts_at)}, but your card didn't go through.",
+            _TO_FIX[reason].format(amount=amount),
+            f"Nothing is paid now: fixing your card only places the {amount} "
+            f"hold on it again, taken on {_short_hour(cut_off)}, the club's "
+            "cut-off.",
+            f"Your seat is held for you until {by} — the others are waiting. "
+            "Fix it by then and the game books at once; after that, your seat "
+            "is open to others.",
         )
     elif pay_by is not None:
         by = f"{_wall(pay_by):%H:%M}"

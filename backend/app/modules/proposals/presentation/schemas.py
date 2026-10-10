@@ -70,6 +70,7 @@ from app.modules.proposals.domain.home import (
     UncountedReason,
 )
 from app.modules.proposals.domain.ports import DeckPerson, PaymentRefusal
+from app.modules.proposals.domain.proposal import TimeTo
 from app.modules.proposals.domain.post import LevelRange, Who
 from app.modules.proposals.domain.posting_grid import GridCell
 
@@ -103,12 +104,26 @@ class YourPaymentSchema(BaseModel):
     confirm_by: datetime | None = Field(
         default=None,
         description=(
-            "**Their time to pay** (#625, #626; Q109): the seat is theirs alone "
-            "until then — *Confirm your payment by 14:40 to keep your seat* — "
-            "every other hold kept, so paying in time books the game at once. "
-            "Thirty minutes from the refusal, never past the book-by. `null` "
+            "**Their time to pay** (#625, #626; Q109) — before the club's "
+            "cut-off, their time to fix the card (`time_to`, #638): the seat is "
+            "theirs alone until then — *Confirm your payment by 14:40 to keep "
+            "your seat*, or *Fix your card by 14:40* — every other hold kept, so "
+            "paying in time books the game at once. Thirty minutes from the "
+            "refusal, never past the book-by (nor, to fix, the cut-off). `null` "
             "once it ran out: the seat is open to others too, and still theirs "
             "to take back while it is free."
+        ),
+    )
+    time_to: TimeTo | None = Field(
+        default=None,
+        description=(
+            "What the time to `confirm_by` is for (#638; Q113). `FIX_THE_CARD` "
+            "— refused **before the club's cut-off**, where nothing is taken, "
+            "only held: *Fix your card by 14:40 to keep your seat* — nothing is "
+            "paid now, the same hold runs again once it is fixed, and the time "
+            "never runs past the cut-off. `PAY` — refused from the cut-off on, "
+            "where the money is taken at once: *Confirm your payment by 14:40*. "
+            "`null` with `confirm_by`."
         ),
     )
 
@@ -183,6 +198,7 @@ class YesAnswerResponse(BaseModel):
                     seat_charge_id=mine.seat_charge_id,
                     refusal=mine.refusal,
                     confirm_by=answer.paying_until,
+                    time_to=answer.time_to,
                 )
             ),
             payment_awaited_until=answer.paying_until,
@@ -686,10 +702,20 @@ class PaymentToConfirmSchema(BaseModel):
     )
     confirm_by: datetime | None = Field(
         description=(
-            "**Their time to pay** (#625, #626; Q109): the seat is theirs alone "
-            "until then — *Confirm your payment by 14:40* — and the others' "
-            "holds wait for it. `null` once it ran out: the row stays, without "
-            "a time, while the seat is still free to take back."
+            "**Their time to pay** (#625, #626; Q109) — before the club's "
+            "cut-off, their time to fix the card (`time_to`, #638): the seat is "
+            "theirs alone until then — *Confirm your payment by 14:40*, or *Fix "
+            "your card by 14:40* — and the others' holds wait for it. `null` "
+            "once it ran out: the row stays, without a time, while the seat is "
+            "still free to take back."
+        )
+    )
+    time_to: TimeTo | None = Field(
+        description=(
+            "What the time to `confirm_by` is for (#638; Q113): `FIX_THE_CARD` "
+            "before the club's cut-off — *Fix your card by 14:40*, with a line "
+            "that nothing is paid now; `PAY` after it — *Confirm your payment "
+            "by 14:40*. `null` with `confirm_by`."
         )
     )
 
@@ -720,6 +746,7 @@ class PaymentsToConfirmResponse(BaseModel):
                     share_grosze=one.proposal.share_grosze,
                     book_by=one.proposal.book_by,
                     confirm_by=one.confirm_by,
+                    time_to=one.time_to,
                 )
                 for one in owed
             ]
@@ -759,9 +786,10 @@ _HOME_STATUS = (
     "*Waiting for one payment · until `payment_due_by` · Nobody pays until "
     "it's in*. Nobody paid, there is no Game and no court given, and it asks "
     "nothing of the reader (`needs_you` is `false`); to the payer it reads "
-    "*Confirm your payment by `your_payment_due_by`*, beside their *To "
-    "confirm* row. Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` "
-    "with `filling_again` — and so is a game one of the others left meanwhile."
+    "*Confirm your payment by `your_payment_due_by`* — *Fix your card by …* "
+    "before the cut-off (`time_to`, #638) — beside their *To confirm* row. "
+    "Paid in time it is `BOOKED`; out of time it is `SEAT_OPEN` with "
+    "`filling_again` — and so is a game one of the others left meanwhile."
 )
 
 _PAYMENT_DUE_BY = (
@@ -772,9 +800,20 @@ _PAYMENT_DUE_BY = (
     "`free_to_leave_until`, the line switches by itself at this instant."
 )
 
+_TIME_TO = (
+    "What the time to `payment_due_by` and `your_payment_due_by` is for (#638; "
+    "Q113). `FIX_THE_CARD` — the hold was refused **before the club's "
+    "cut-off**, where nothing is taken, only held: the payer reads *Fix your "
+    "card by 14:40 to keep your seat* — nothing is paid now — and the time "
+    "never runs past the cut-off. `PAY` — refused from the cut-off on, where "
+    "the money is taken at once: *Confirm your payment by 14:40*. The others "
+    "read *Waiting for one payment* either way. `null` while neither is set."
+)
+
 _YOUR_PAYMENT_DUE_BY = (
     "**The reader's own** refused share and their time to pay — *Confirm your "
-    "payment by 14:40* — while it runs, on a game waiting for it or one gone "
+    "payment by 14:40*, or before the cut-off *Fix your card by 14:40* "
+    "(`time_to`, #638) — while it runs, on a game waiting for it or one gone "
     "back to filling meanwhile (#625, #626). The payment is their *To confirm* "
     "row's (`GET /players/me/payments-to-confirm`). `null` for everybody else, "
     "and from the moment it runs out."
@@ -1078,6 +1117,7 @@ class HomeGameSchema(BaseModel):
     answer_by: datetime | None = Field(description=_ANSWER_BY)
     payment_due_by: datetime | None = Field(description=_PAYMENT_DUE_BY)
     your_payment_due_by: datetime | None = Field(description=_YOUR_PAYMENT_DUE_BY)
+    time_to: TimeTo | None = Field(description=_TIME_TO)
 
     @classmethod
     def from_card(
@@ -1089,6 +1129,7 @@ class HomeGameSchema(BaseModel):
         read_at: datetime,
     ) -> "HomeGameSchema":
         game = card.game
+        yours = _yours_due_by(game, reader, read_at=read_at)
         return cls(
             booking_id=game.booking_id,
             game_id=game.game_id,
@@ -1116,7 +1157,8 @@ class HomeGameSchema(BaseModel):
             money=_money(card.state.money),
             answer_by=card.state.answer_by,
             payment_due_by=card.state.pay_by,
-            your_payment_due_by=_yours_due_by(game, reader, read_at=read_at),
+            your_payment_due_by=yours,
+            time_to=_time_to(game, card.state.pay_by, yours),
         )
 
 
@@ -1127,6 +1169,13 @@ def _yours_due_by(
 
     until = game.paying.get(reader)
     return until if until is not None and read_at < until else None
+
+
+def _time_to(game: BookedGame, *due: datetime | None) -> TimeTo | None:
+    """What a payment due on the game is for — with either of its moments,
+    never without (#638)."""
+
+    return game.time_to if any(one is not None for one in due) else None
 
 
 class HomeResponse(BaseModel):
@@ -1334,6 +1383,7 @@ class BookingDetailsResponse(BaseModel):
     answer_by: datetime | None = Field(description=_ANSWER_BY)
     payment_due_by: datetime | None = Field(description=_PAYMENT_DUE_BY)
     your_payment_due_by: datetime | None = Field(description=_YOUR_PAYMENT_DUE_BY)
+    time_to: TimeTo | None = Field(description=_TIME_TO)
     shows_forecast: bool = Field(
         description=(
             "Draw the balance forecast — `GET /games/{game_id}/pairing`, the card "
@@ -1374,6 +1424,7 @@ class BookingDetailsResponse(BaseModel):
         cls, details: BookingDetails, *, reader: UUID
     ) -> "BookingDetailsResponse":
         game = details.game
+        yours = _yours_due_by(game, reader, read_at=details.read_at)
         return cls(
             booking_id=game.booking_id,
             game_id=game.game_id,
@@ -1413,7 +1464,8 @@ class BookingDetailsResponse(BaseModel):
             money=_money(details.state.money),
             answer_by=details.state.answer_by,
             payment_due_by=details.state.pay_by,
-            your_payment_due_by=_yours_due_by(game, reader, read_at=details.read_at),
+            your_payment_due_by=yours,
+            time_to=_time_to(game, details.state.pay_by, yours),
             shows_forecast=details.shows_forecast,
             check_in=(
                 None
@@ -1452,10 +1504,12 @@ def _your_payment(details: ProposalDetails) -> YourPaymentSchema | None:
 
     paying = details.paying
     if paying is not None:
+        running = details.read_at < paying.until
         return YourPaymentSchema(
             seat_charge_id=paying.seat_charge_id,
             refusal=PaymentRefusal(paying.reason.value),
-            confirm_by=paying.until if details.read_at < paying.until else None,
+            confirm_by=paying.until if running else None,
+            time_to=paying.time_to if running else None,
         )
     reopened = details.reopened
     if reopened is None or ReaderAction.CONFIRM_PAYMENT not in details.actions:
@@ -1549,6 +1603,15 @@ class ProposalDetailsResponse(BaseModel):
             "is `your_payment.confirm_by`."
         )
     )
+    time_to: TimeTo | None = Field(
+        description=(
+            "What the time to `payment_due_by` is for (#638; Q113): "
+            "`FIX_THE_CARD` — a hold refused before the club's cut-off, where "
+            "nothing is taken; `PAY` — refused from it on. The others read "
+            "*Waiting for one payment* either way; the payer's own words are "
+            "`your_payment.time_to`'s. `null` with `payment_due_by`."
+        )
+    )
     sides: DeckSidesSchema = Field(
         description=(
             "Everybody drawn, the reader on their own side: for a reader still "
@@ -1593,6 +1656,7 @@ class ProposalDetailsResponse(BaseModel):
             club_confirms=details.club_confirms,
             answer_by=details.answer_by,
             payment_due_by=details.pay_by,
+            time_to=details.time_to,
             sides=_deck_sides(
                 details.sides,
                 reader=reader,

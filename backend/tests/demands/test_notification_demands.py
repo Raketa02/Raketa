@@ -46,7 +46,12 @@ from app.modules.payments.domain.provider import (
 )
 from app.modules.payments.domain.seat_charge import RefundReason, SeatCharge
 from app.modules.proposals.domain.pool import Pool, PoolKind
-from app.modules.proposals.domain.proposal import Origin, Proposal, ReopenReason
+from app.modules.proposals.domain.proposal import (
+    Origin,
+    Proposal,
+    ReopenReason,
+    TimeTo,
+)
 from app.shared.ids import new_uuid
 
 OLA, KUBA, EWA, TOMEK, ZOSIA = (new_uuid() for _ in range(5))
@@ -384,6 +389,7 @@ async def test_a_game_waiting_for_a_payment_says_whose_and_until_when(
             reason=ReopenReason.AUTHENTICATION_REQUIRED,
             seat_charge_id=new_uuid(),
             until=pay_by,
+            time_to=TimeTo.FIX_THE_CARD,
             filled_by=TOMEK,
             at=NOW,
         )
@@ -396,8 +402,11 @@ async def test_a_game_waiting_for_a_payment_says_whose_and_until_when(
 
     assert brief is not None and booked is not None
     assert (brief.waiting_for_a_payment, brief.paying) == (True, {TOMEK: pay_by})
+    # His time is to fix his card (#638).
+    assert brief.fixing == {TOMEK}
     assert (brief.waiting_for_the_club, brief.fell_back) == (False, False)
     assert (booked.booked_on_a_payment, booked.paying) == (True, {})
+    assert booked.fixing == frozenset()
     proposals = build_proposal_repository(session, **_store(session))
     lapsing = await proposals.load(waiting.proposal_id)
     assert lapsing is not None and lapsing.run_out_of_time(at=pay_by) == (TOMEK,)

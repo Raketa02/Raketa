@@ -3338,7 +3338,7 @@
           "dev"
         ],
         "summary": "Run it now \u00b7 time to pay",
-        "description": "Runs out every refused share's time to pay that is up (#625, #626): the payer's seat reopens \u2014 offered to others, theirs to take back while free \u2014 the holds the others kept are let go, and at a club that confirms the booking is called off, its desk emailed. A time to pay still running is left as it is.",
+        "description": "Runs out every refused share's time to pay that is up (#625, #626) \u2014 and its time to fix the card, before the cut-off (#638): the payer's seat reopens \u2014 offered to others, theirs to take back while free \u2014 the holds the others kept are let go, and at a club that confirms the booking is called off, its desk emailed. A time still running is left as it is.",
         "operationId": "run_the_time_to_pay_dev_jobs_time_to_pay_post",
         "responses": {
           "200": {
@@ -3632,6 +3632,17 @@
             ],
             "title": "Payment Due By",
             "description": "When the player's payment is due \u2014 *Accepted \u00b7 waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only."
+          },
+          "time_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeTo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` \u2014 you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted \u00b7 waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` \u2014 you accepted after it, where the shares are taken at once: *Accepted \u00b7 waiting for one player's payment until 21:20*. `null` with `payment_due_by`."
           }
         },
         "type": "object",
@@ -6005,7 +6016,9 @@
           "WAITING_FOR_THE_CLUB",
           "WAITING_FOR_A_PAYMENT",
           "TIME_TO_PAY_RAN_OUT",
+          "TIME_TO_FIX_RAN_OUT",
           "CONFIRM_PAYMENT",
+          "FIX_YOUR_CARD",
           "GAME_CALLED_OFF",
           "SOMEONE_LEFT",
           "REFUNDED",
@@ -8206,6 +8219,15 @@
         ],
         "title": "SteeredCardResponse"
       },
+      "TimeTo": {
+        "type": "string",
+        "enum": [
+          "FIX_THE_CARD",
+          "PAY"
+        ],
+        "title": "TimeTo",
+        "description": "What a refused share's thirty minutes are for (#638; the mechanics\n\u00a712.2, Q113) \u2014 one machinery, two names, decided by the club's cut-off."
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -8406,7 +8428,18 @@
               }
             ],
             "title": "Confirm By",
-            "description": "**Their time to pay** (#625, #626; Q109): the seat is theirs alone until then \u2014 *Confirm your payment by 14:40 to keep your seat* \u2014 every other hold kept, so paying in time books the game at once. Thirty minutes from the refusal, never past the book-by. `null` once it ran out: the seat is open to others too, and still theirs to take back while it is free."
+            "description": "**Their time to pay** (#625, #626; Q109) \u2014 before the club's cut-off, their time to fix the card (`time_to`, #638): the seat is theirs alone until then \u2014 *Confirm your payment by 14:40 to keep your seat*, or *Fix your card by 14:40* \u2014 every other hold kept, so paying in time books the game at once. Thirty minutes from the refusal, never past the book-by (nor, to fix, the cut-off). `null` once it ran out: the seat is open to others too, and still theirs to take back while it is free."
+          },
+          "time_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeTo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the time to `confirm_by` is for (#638; Q113). `FIX_THE_CARD` \u2014 refused **before the club's cut-off**, where nothing is taken, only held: *Fix your card by 14:40 to keep your seat* \u2014 nothing is paid now, the same hold runs again once it is fixed, and the time never runs past the cut-off. `PAY` \u2014 refused from the cut-off on, where the money is taken at once: *Confirm your payment by 14:40*. `null` with `confirm_by`."
           }
         },
         "type": "object",

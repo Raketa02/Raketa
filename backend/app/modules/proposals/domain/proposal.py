@@ -69,6 +69,10 @@ seat **reopens** (``TimeToPayRanOut``), as a refused share's always did. A seat
 somebody else opens meanwhile falls the game back to filling while the payer's
 time runs on — told, at a club that books at once, as ``FellBackToFilling``; at
 the club's yes the request goes with the seat, and the club's yes with it.
+**Before the club's cut-off it is time to fix the card** (#638; Q113): nothing
+is taken then, only held, so the player is not asked to pay — the same thirty
+minutes, never past the cut-off either; from the cut-off on, where money is
+taken at once, it stays time to pay (``TimeTo``).
 """
 
 from __future__ import annotations
@@ -212,11 +216,31 @@ PAYMENT_REFUSALS = frozenset(
 )
 
 
+class TimeTo(StrEnum):
+    """What a refused share's thirty minutes are for (#638; the mechanics
+    §12.2, Q113) — one machinery, two names, decided by the club's cut-off."""
+
+    #: **Time to fix the card**: refused before the cut-off, where nothing is
+    #: taken, only held — so nothing is paid in it; the player confirms with
+    #: their bank or changes card, and the same hold runs again. Never past the
+    #: cut-off.
+    FIX_THE_CARD = "FIX_THE_CARD"
+    #: **Time to pay**: refused from the cut-off on, where the money is taken
+    #: at once.
+    PAY = "PAY"
+
+    @classmethod
+    def at(cls, now: Instant, *, cut_off: Instant) -> "TimeTo":
+        """What a share refused at ``now`` is given time for."""
+
+        return cls.FIX_THE_CARD if now < cut_off else cls.PAY
+
+
 @dataclass(frozen=True, slots=True)
 class Paying:
     """A player In whose share was refused, and their **time to pay**: why it
     was refused, the refused payment, and until when the seat is theirs alone
-    (#625, Q109)."""
+    (#625, Q109) — and what the time is for (#638)."""
 
     reason: ReopenReason
     seat_charge_id: UUID
@@ -224,6 +248,8 @@ class Paying:
     #: The On request club had said yes, and holds the court while it waits
     #: (#626) — until a seat opening takes the request, and the yes, back.
     at_the_clubs_yes: bool = False
+    #: To fix the card, before the cut-off — or to pay, from it on (#638).
+    time_to: TimeTo = TimeTo.PAY
 
     def __post_init__(self) -> None:
         invariant(
@@ -488,13 +514,37 @@ class Proposal:
 
         return min(self.payments_due.values(), default=None)
 
-    def time_to_pay_ends(self, now: Instant) -> Instant | None:
+    @property
+    def fixing(self) -> frozenset[UUID]:
+        """Those of the payers whose time is to fix the card (#638)."""
+
+        return frozenset(
+            player
+            for player, paying in self.paying.items()
+            if paying.time_to is TimeTo.FIX_THE_CARD
+        )
+
+    @property
+    def time_to(self) -> TimeTo | None:
+        """What the time of the payment due at ``pay_by`` is for — to fix the
+        card, or to pay (#638); ``None`` while none is awaited. Everybody's at
+        once is the same: a time to fix ends by the cut-off, and a payment is
+        refused after it only on its own payer's act, which runs out first."""
+
+        due = min(self.paying.values(), key=lambda one: one.until, default=None)
+        return None if due is None else due.time_to
+
+    def time_to_pay_ends(self, now: Instant, *, cut_off: Instant) -> Instant | None:
         """When a share refused at ``now`` has to be paid by (Q109): thirty
-        minutes from now, **never past the book-by** — ``None`` when no time is
-        left, the book-by having come. A payer refused again keeps the time
-        they had (``give_time_to_pay``): it never moves."""
+        minutes from now, **never past the book-by** — and, before the club's
+        ``cut_off``, where it is time to fix the card, never past the cut-off
+        either (#638). ``None`` when no time is left, the book-by having come.
+        A payer refused again keeps the time they had (``give_time_to_pay``):
+        it never moves."""
 
         ends = min(instant(now + TIME_TO_PAY), self.book_by)
+        if TimeTo.at(now, cut_off=cut_off) is TimeTo.FIX_THE_CARD:
+            ends = min(ends, cut_off)
         return ends if now < ends else None
 
     @property
@@ -742,15 +792,17 @@ class Proposal:
         reason: ReopenReason,
         seat_charge_id: UUID,
         until: Instant,
+        time_to: TimeTo,
         filled_by: UUID | None,
         at: Instant,
         at_the_clubs_yes: bool = False,
     ) -> None:
         """This player's share of the full game was refused — as it filled,
         or as its club said yes: **their seat is held for them alone** until
-        ``until`` (#625, #626; Q109). A player refused again keeps the time
-        they had: it never moves. Whether any time is left is the caller's
-        question, asked of ``time_to_pay_ends``."""
+        ``until`` (#625, #626; Q109), to fix the card or to pay (``time_to``,
+        #638). A player refused again keeps the time they had, and what it is
+        for: it never moves. Whether any time is left is the caller's question,
+        asked of ``time_to_pay_ends``."""
 
         invariant(
             self.ending is None and self.open_seats == 0,
@@ -774,6 +826,7 @@ class Proposal:
                 filled_by=filled_by,
                 at_the_clubs_yes=at_the_clubs_yes
                 or (already is not None and already.at_the_clubs_yes),
+                time_to=(time_to if already is None else already.time_to).value,
             )
         )
 
@@ -808,7 +861,10 @@ class Proposal:
         if lapsed:
             self._record_that(
                 TimeToPayRanOut(
-                    proposal_id=self.proposal_id, player_ids=lapsed, occurred_at=at
+                    proposal_id=self.proposal_id,
+                    player_ids=lapsed,
+                    occurred_at=at,
+                    fixing=tuple(player for player in lapsed if player in self.fixing),
                 )
             )
         return lapsed
@@ -1062,6 +1118,7 @@ class Proposal:
                 seat_charge_id=event.seat_charge_id,
                 until=instant(event.until),
                 at_the_clubs_yes=event.at_the_clubs_yes,
+                time_to=TimeTo(event.time_to),
             )
             if not event.at_the_clubs_yes and self.payment_awaited_at is None:
                 self.payment_awaited_at = instant(event.occurred_at)

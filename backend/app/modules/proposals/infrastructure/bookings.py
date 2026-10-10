@@ -92,7 +92,7 @@ from app.modules.proposals.domain.ports import (
     FullGame,
     GameToAsk,
 )
-from app.modules.proposals.domain.proposal import ClubAnswer
+from app.modules.proposals.domain.proposal import ClubAnswer, TimeTo
 
 
 @final
@@ -277,9 +277,16 @@ class BookingsClubRequests:
         *,
         player_ids: tuple[UUID, ...],
         until: Instant,
+        to_fix_the_card: bool,
         at: Instant,
     ) -> None:
-        await self._wait.execute(booking_id, player_ids=player_ids, until=until, at=at)
+        await self._wait.execute(
+            booking_id,
+            player_ids=player_ids,
+            until=until,
+            to_fix_the_card=to_fix_the_card,
+            at=at,
+        )
 
     async def payment_not_in_time(
         self,
@@ -445,6 +452,13 @@ def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
             {}
             if booking.pay_by is None
             else {payer: booking.pay_by for payer in booking.payers}
+        ),
+        time_to=(
+            None
+            if booking.pay_by is None
+            else TimeTo.FIX_THE_CARD
+            if booking.to_fix_the_card
+            else TimeTo.PAY
         ),
         booked_at=booking.booked_at,
         cancelled_at=booking.cancelled_at,

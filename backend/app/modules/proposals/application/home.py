@@ -234,6 +234,7 @@ async def as_it_stands(
         in_=proposal.yeses,
         standing=proposal.standing_at(now),
         paying=proposal.payments_due,
+        time_to=proposal.time_to,
     )
 
 

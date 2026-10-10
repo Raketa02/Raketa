@@ -22,8 +22,11 @@ the yes's own transaction:
    pays, and **that player is given time to pay** (#625, #626; Q109): thirty
    minutes, never past the book-by, their seat held for them alone and every
    other hold kept, so the payment in time books the game at once — at the
-   club's yes, without asking the club again. With no time left — the club said
-   yes past the book-by — the game is called off at once.
+   club's yes, without asking the club again. **Before the club's cut-off it
+   is time to fix the card** (#638; Q113): nothing is taken then, only held,
+   so nothing is paid in it, and it is never past the cut-off either. With no
+   time left — the club said yes past the book-by — the game is called off at
+   once.
 4. **The booking.** The sides are drawn for the most even game — the engine's
    own forecast over every way the four could stand, as a card's are — and the
    Booking opens on the first free court, opening the Game and its chat. Two
@@ -88,6 +91,7 @@ from app.modules.proposals.domain.proposal import (
     Proposal,
     ReopenReason,
     Standing,
+    TimeTo,
 )
 
 
@@ -119,6 +123,9 @@ class FillOutcome:
     #: A refused share's time to pay (#625, #626): the game waits for that
     #: payment until then, nobody paid. Set with ``refused``.
     paying_until: Instant | None = None
+    #: What that time is for — to fix the card, or to pay (#638). Set with
+    #: ``paying_until``.
+    time_to: TimeTo | None = None
     #: The club said yes with no time left to pay — its book-by had come: the
     #: game is called off, nobody paid (#626). Set with ``refused``.
     called_off: bool = False
@@ -173,7 +180,7 @@ class Fill:
             # that opened in the wait was taken: it waits for that payment, and
             # only the payer's own act fills it. Nothing retries a card by
             # itself, and no club is asked while a payment is awaited (Q109).
-            return FillOutcome(paying_until=proposal.pay_by)
+            return FillOutcome(paying_until=proposal.pay_by, time_to=proposal.time_to)
         on_the_clubs_yes = proposal.on_the_clubs_yes
         unfit = await self._no_longer_fit(proposal, now=now)
         if unfit:
@@ -330,8 +337,9 @@ class Fill:
 
         players = proposal.yeses
         # A share refused now has until then — ``None`` once the book-by has
-        # come; a payer refused again keeps the time they had.
-        pay_by = proposal.time_to_pay_ends(now)
+        # come; a payer refused again keeps the time they had. Before the
+        # cut-off it is time to fix the card, and never past it (#638).
+        pay_by = proposal.time_to_pay_ends(now, cut_off=cut_off)
         charged = await self._charges.charge(
             GameToCharge(
                 proposal_id=proposal.proposal_id,
@@ -356,7 +364,13 @@ class Fill:
         )
         if charged.refused:
             return await self._refused(
-                proposal, charged.refused, pay_by=pay_by, by=by, asked=asked, now=now
+                proposal,
+                charged.refused,
+                pay_by=pay_by,
+                time_to=TimeTo.at(now, cut_off=cut_off),
+                by=by,
+                asked=asked,
+                now=now,
             )
 
         first_side, second_side = (
@@ -385,14 +399,16 @@ class Fill:
         refused: Mapping[UUID, RefusedPayment],
         *,
         pay_by: Instant | None,
+        time_to: TimeTo,
         by: UUID | None,
         asked: bool,
         now: Instant,
     ) -> FillOutcome:
         """Nobody paid. **Each refused share's player has until ``pay_by``**,
-        their seat held for them alone — and, at the club's yes, the yes and
-        its court kept (#626). With no time left — the club said yes past the
-        book-by — the seats reopen and the game is called off at once."""
+        their seat held for them alone — to fix the card or to pay
+        (``time_to``, #638) — and, at the club's yes, the yes and its court
+        kept (#626). With no time left — the club said yes past the book-by —
+        the seats reopen and the game is called off at once."""
 
         payers = tuple(sorted(refused, key=str))
         if pay_by is None:
@@ -415,6 +431,7 @@ class Fill:
                 reason=ReopenReason(refused[player].refusal.value),
                 seat_charge_id=refused[player].seat_charge_id,
                 until=pay_by,
+                time_to=time_to,
                 filled_by=by,
                 at_the_clubs_yes=asked,
                 at=now,
@@ -422,9 +439,15 @@ class Fill:
         if asked and not already:
             # The club's yes is kept, and its court, while the payment comes.
             await self._requests.await_a_payment(
-                proposal.proposal_id, player_ids=payers, until=pay_by, at=now
+                proposal.proposal_id,
+                player_ids=payers,
+                until=pay_by,
+                to_fix_the_card=time_to is TimeTo.FIX_THE_CARD,
+                at=now,
             )
-        return FillOutcome(refused=refused, paying_until=proposal.pay_by)
+        return FillOutcome(
+            refused=refused, paying_until=proposal.pay_by, time_to=proposal.time_to
+        )
 
     async def _withdraw_the_request(
         self, proposal: Proposal, opened: Collection[UUID], *, now: Instant

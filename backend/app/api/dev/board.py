@@ -215,7 +215,8 @@ class Moment(StrEnum):
     BOOK_BY = "BOOK_BY"
     #: An On request club's answer is due.
     CLUB_ANSWER_DUE = "CLUB_ANSWER_DUE"
-    #: A refused share's time to pay ends (#625, #626).
+    #: A refused share's time to pay ends (#625, #626) — or, before the
+    #: cut-off, its time to fix the card (#638).
     PAYMENT_DUE = "PAYMENT_DUE"
     #: Leaving stops being free: a full game's held shares are taken, and a
     #: seat still open calls the game off with every hold let go (#637).
@@ -250,9 +251,9 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
         ),
         Moment.PAYMENT_DUE: MomentRule(
             TIME_TO_PAY_JOB,
-            "Not paid by then, the payer's seat reopens for everybody and the "
-            "holds the others kept are let go — at a club that confirms, the "
-            "booking is called off and the court freed.",
+            "Not fixed or paid by then, the payer's seat reopens for everybody "
+            "and the holds the others kept are let go — at a club that "
+            "confirms, the booking is called off and the court freed.",
         ),
         Moment.CUT_OFF: MomentRule(
             CUT_OFF_JOB,

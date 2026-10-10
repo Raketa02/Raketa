@@ -252,8 +252,9 @@ class WithdrawTheRequest:
 @final
 class WaitForThePayment:
     """The club said yes and a share could not be held: its yes and the court
-    are kept until ``until`` (#626; Q109, Q112). Whether there is time left is
-    the caller's question."""
+    are kept until ``until`` (#626; Q109, Q112) — the player's time to fix the
+    card, before the cut-off, or to pay (#638). Whether there is time left,
+    and which it is, are the caller's questions."""
 
     def __init__(self, *, bookings: BookingRepository) -> None:
         self._bookings = bookings
@@ -264,12 +265,15 @@ class WaitForThePayment:
         *,
         player_ids: tuple[UUID, ...],
         until: Instant,
+        to_fix_the_card: bool,
         at: Instant,
     ) -> None:
         booking = invariant(
             await self._bookings.load(booking_id), f"no booking {booking_id}"
         )
-        booking.await_a_payment(player_ids, until=until, at=at)
+        booking.await_a_payment(
+            player_ids, until=until, to_fix_the_card=to_fix_the_card, at=at
+        )
         await self._bookings.save(booking)
 
 
@@ -305,9 +309,11 @@ class CallOffForAPayment:
         no longer has: answered, or taken back when a seat opened first."""
 
         booking = await self._bookings.load(booking_id)
-        if booking is None or not booking.payment_not_in_time(
-            player_ids, for_good=for_good, at=at
-        ):
+        if booking is None:
+            return False
+        # A card not fixed in time, before the cut-off, is said so (#638).
+        to_fix_the_card = booking.to_fix_the_card
+        if not booking.payment_not_in_time(player_ids, for_good=for_good, at=at):
             return False
         await self._bookings.save(booking)
         desk = await self._desks.of(booking.club_id)
@@ -320,6 +326,7 @@ class CallOffForAPayment:
                     sport=booking.sport,
                     starts_at=booking.start,
                     for_good=for_good,
+                    to_fix_the_card=to_fix_the_card,
                     link=self._bookings_page,
                 ),
                 at=at,

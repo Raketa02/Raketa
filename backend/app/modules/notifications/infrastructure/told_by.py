@@ -116,6 +116,7 @@ class BookedAndProposedGames:
                 if left.is_open and left.at < booking.cut_off
             ),
             paying=proposal.payments_due,
+            fixing=proposal.fixing,
             waiting_for_a_payment=filling and proposal.waiting_for_a_payment,
             booked_on_a_payment=proposal.booked_on_a_payment,
         )

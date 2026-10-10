@@ -308,6 +308,23 @@ def test_a_share_refused_at_the_club_s_yes_keeps_the_yes_and_the_court():
     assert (replayed.pay_by, replayed.payers) == (_at(40), (TOMEK,))
 
 
+def test_a_yes_before_the_cut_off_waits_on_a_card_to_fix():
+    """#638: before the cut-off nothing is taken, only held, so the yes waits
+    on the player's card to be fixed — *waiting for one player's card* — and
+    that ends with the wait, whichever way."""
+
+    fixing = _requested()
+    paying = _requested()
+
+    fixing.await_a_payment((TOMEK,), until=_at(40), to_fix_the_card=True, at=_at(10))
+    paying.await_a_payment((TOMEK,), until=_at(40), at=_at(10))
+
+    assert (fixing.to_fix_the_card, paying.to_fix_the_card) == (True, False)
+    assert _replayed(fixing).to_fix_the_card is True
+    fixing.payment_not_in_time((TOMEK,), for_good=False, at=_at(40))
+    assert fixing.to_fix_the_card is False
+
+
 def test_the_payment_in_time_books_it_without_asking_the_club_again():
     booking = _requested()
     booking.await_a_payment((TOMEK,), until=_at(40), at=_at(10))

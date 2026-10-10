@@ -2459,6 +2459,17 @@
             ],
             "title": "Payment Due By",
             "description": "When the player's payment is due \u2014 *Accepted \u00b7 waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only."
+          },
+          "time_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeTo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` \u2014 you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted \u00b7 waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` \u2014 you accepted after it, where the shares are taken at once: *Accepted \u00b7 waiting for one player's payment until 21:20*. `null` with `payment_due_by`."
           }
         },
         "type": "object",
@@ -2979,6 +2990,17 @@
             "title": "Payment Due By",
             "description": "When the player's payment your yes waits on is due \u2014 `WAITING_FOR_A_PAYMENT` only, else `null`. Never who."
           },
+          "time_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeTo"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` \u2014 you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted \u00b7 waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` \u2014 you accepted after it, where the shares are taken at once: *Accepted \u00b7 waiting for one player's payment until 21:20*. `null` with `payment_due_by`."
+          },
           "may_move_or_cancel": {
             "type": "boolean",
             "title": "May Move Or Cancel",
@@ -3002,6 +3024,7 @@
           "booked_from",
           "answer_by",
           "payment_due_by",
+          "time_to",
           "may_move_or_cancel"
         ],
         "title": "ClubBookingSchema",
@@ -4723,6 +4746,15 @@
           "LOCKED"
         ],
         "title": "StepState"
+      },
+      "TimeTo": {
+        "type": "string",
+        "enum": [
+          "FIX_THE_CARD",
+          "PAY"
+        ],
+        "title": "TimeTo",
+        "description": "What a refused share's thirty minutes are for (#638; the mechanics\n\u00a712.2, Q113) \u2014 one machinery, two names, decided by the club's cut-off."
       },
       "TokenResponse": {
         "properties": {

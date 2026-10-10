@@ -705,10 +705,12 @@ class ClubRequests(Protocol):
         *,
         player_ids: tuple[UUID, ...],
         until: Instant,
+        to_fix_the_card: bool,
         at: Instant,
     ) -> None:
         """The club said yes and these players' shares could not be held: its
-        yes and the court are kept until ``until`` (#626)."""
+        yes and the court are kept until ``until`` (#626) — their time to fix
+        the card, before the cut-off, or else to pay (#638)."""
         ...
 
     async def payment_not_in_time(

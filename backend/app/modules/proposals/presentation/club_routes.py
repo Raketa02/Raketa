@@ -50,6 +50,7 @@ from app.modules.proposals.domain.club_bookings import (
 )
 from app.modules.proposals.domain.deck import GAME_LENGTH
 from app.modules.proposals.domain.home import BookedGame, ClubCancelReason
+from app.modules.proposals.domain.proposal import TimeTo
 from app.modules.proposals.presentation.dependencies import (
     AcceptTheRequestDep,
     CancelTheGameDep,
@@ -168,6 +169,17 @@ class WaitingBookingsResponse(BaseModel):
         )
 
 
+_TIME_TO = (
+    "What the player's time to `payment_due_by` is for (#638; Q113). "
+    "`FIX_THE_CARD` — you accepted **before your cut-off**, where every share "
+    "is only held, so it is their time to fix their card: *Accepted · waiting "
+    "for one player's card until 21:20*, never past your cut-off; a lapse "
+    "emails you *A player's card wasn't fixed in time*. `PAY` — you accepted "
+    "after it, where the shares are taken at once: *Accepted · waiting for "
+    "one player's payment until 21:20*. `null` with `payment_due_by`."
+)
+
+
 class AcceptanceResponse(BaseModel):
     outcome: AcceptOutcome = Field(
         description=(
@@ -197,6 +209,10 @@ class AcceptanceResponse(BaseModel):
             "only."
         ),
     )
+    time_to: TimeTo | None = Field(
+        default=None,
+        description=_TIME_TO,
+    )
 
     @classmethod
     def from_acceptance(cls, acceptance: Acceptance) -> "AcceptanceResponse":
@@ -204,6 +220,7 @@ class AcceptanceResponse(BaseModel):
             outcome=acceptance.outcome,
             court_name=acceptance.court_name,
             payment_due_by=acceptance.pay_by,
+            time_to=acceptance.time_to,
         )
 
 
@@ -444,6 +461,7 @@ class ClubBookingSchema(BaseModel):
             "`WAITING_FOR_A_PAYMENT` only, else `null`. Never who."
         )
     )
+    time_to: TimeTo | None = Field(description=_TIME_TO)
     may_move_or_cancel: bool = Field(
         description=(
             "**Move** and **Cancel** are yours: booked or with a seat open, and "
@@ -498,6 +516,9 @@ class ClubBookingSchema(BaseModel):
             ),
             payment_due_by=(
                 game.pay_by if row.status is ClubStatus.WAITING_FOR_A_PAYMENT else None
+            ),
+            time_to=(
+                game.time_to if row.status is ClubStatus.WAITING_FOR_A_PAYMENT else None
             ),
             may_move_or_cancel=row.still_to_be_played,
         )
