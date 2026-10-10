@@ -8,8 +8,8 @@ and its booking's when it has one — one id for both. ``ProposalsDecks`` asks
 **the deck itself** whether it shows a card to a reader
 (``ReadGroupDeck.shows``), and ``RescueSeatOffers`` asks the Fill in board's
 own ``RescueOffers`` who a seat is offered to — never a second reading of
-either rule. ``SeatChargeShares`` is what a refund gives back, the estimate of
-the card fee until the provider says. ``PlatformNames`` is a person's Name and
+either rule. ``SeatChargeShares`` is what a refund gives back — the provider's
+own figures, never an estimate (#641). ``PlatformNames`` is a person's Name and
 a club's.
 """
 
@@ -22,9 +22,8 @@ from uuid import UUID
 from app.kernel import Instant
 from app.modules.bookings.domain.ports import BookingRepository
 from app.modules.notifications.domain.ports import GameBrief, PaidShare
-from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.ports import SeatChargeRepository
-from app.modules.payments.domain.seat_charge import PAID, SeatCharge
+from app.modules.payments.domain.seat_charge import PAID, RefundReason, SeatCharge
 from app.modules.proposals.application.group_deck import ReadGroupDeck
 from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.ports import (
@@ -194,11 +193,17 @@ class SeatChargeShares:
 
 
 def _share(charge: SeatCharge) -> PaidShare:
-    withheld = (
-        estimated_card_fee(charge.amount_grosze) if charge.refund_withholds_fee else 0
-    )
+    given = charge.refund_given
     return PaidShare(
-        game_id=charge.game_id, refunded_grosze=charge.amount_grosze - withheld
+        game_id=charge.game_id,
+        refunded_grosze=(
+            charge.given_back_grosze
+            if charge.refund_withholds_fee is not None
+            # No refund decided: giving it back would give the share.
+            else charge.amount_grosze
+        ),
+        kept_grosze=None if given is None else given.fee_withheld_grosze,
+        seat_taken=charge.refund_reason is RefundReason.SEAT_TAKEN,
     )
 
 

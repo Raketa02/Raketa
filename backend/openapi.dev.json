@@ -375,7 +375,7 @@
           "dev"
         ],
         "summary": "Take the seat, as this person",
-        "description": "`POST /api/v1/bookings/{id}/seats` as the acting account \u2014 *I'm in* on a rescue: the share held until the cut-off \u2014 or taken at once after it (#637) \u2014 over the provider this process moves money through, the seat that opened first theirs, and a leaver after the cut-off refunded. The first join wins.",
+        "description": "`POST /api/v1/bookings/{id}/seats` as the acting account \u2014 *I'm in* on a rescue: the share held until the cut-off \u2014 or taken at once after it (#637) \u2014 over the provider this process moves money through, the seat that opened first theirs, and a leaver after the cut-off refunded less exactly the fee kept on their payment (#641). The first join wins.",
         "operationId": "take_the_seat_dev_as__player_id__bookings__booking_id__seats_post",
         "parameters": [
           {
@@ -4865,7 +4865,7 @@
         "properties": {
           "left": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less exactly the fee kept on the payment, when somebody takes it \u2014 emailed that figure now, or none while the fee is not yet known (#641). `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
           }
         },
         "type": "object",
@@ -6950,7 +6950,14 @@
             "title": "Charge Id"
           },
           "given_back_grosze": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Given Back Grosze"
           },
           "fee_withheld_grosze": {
@@ -7009,12 +7016,19 @@
           "withholds_fee": {
             "type": "boolean",
             "title": "Withholds Fee",
-            "description": "Whether the card fee is kept back."
+            "description": "Whether the fee kept on the payment is kept back."
           },
           "given_back_grosze": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Given Back Grosze",
-            "description": "What the provider gave back once it has; until then what was decided."
+            "description": "What the provider gave back once it has; until then what was decided \u2014 `null` while that waits on a fee not yet known (#641)."
           },
           "fee_withheld_grosze": {
             "anyOf": [

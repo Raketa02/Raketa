@@ -16,11 +16,12 @@ drawn — while the full game awaits its entry; never while a seat is open.
 **On the game's day, the reader's check-in code**: theirs alone, derived and
 never stored (``bookings/domain/check_in.py``).
 
-**What leaving would cost, before the reader leaves** (#544, #637; the mechanics
-§13): nothing before the cut-off — the hold is let go, so there is no quote —
-the share less the card fee when somebody takes the seat after it, nothing paid
-while the club decides — and no button once the hour has come. The card fee is
-the estimate the payments quote, asked once a read.
+**What leaving would cost, before the reader leaves** (#544, #637, #641; the
+mechanics §13): nothing before the cut-off — the hold is let go, so there is no
+quote — after it, the share less **exactly the fee kept on the reader's own
+payment** when somebody takes the seat, asked of the payments once a read and
+**never an estimate**: no figure while that fee is not yet known; nothing paid
+while the club decides — and no button once the hour has come.
 
 **The chat is a join, not a field** (``docs/adr/0149`` §3): the reader's rooms,
 ``GET /conversations``, carry the booked game's room by its ``game_id``.
@@ -62,8 +63,10 @@ from app.modules.proposals.domain.home import (
     BookedState,
     CheckIn,
     LeaveTerms,
+    Leaving,
     check_in_shown,
     leave_terms,
+    leaving_of,
     shows_forecast,
     state_of,
 )
@@ -78,7 +81,7 @@ from app.modules.proposals.domain.ports import (
     DeckPeople,
     DeckPerson,
     GameResults,
-    CardFees,
+    LateRefunds,
     PlayerBookings,
     ProposalRepository,
 )
@@ -129,7 +132,7 @@ class ReadBookingDetails:
         people: DeckPeople,
         clubs: ClubNames,
         distances: ClubDistances,
-        fees: CardFees,
+        late_refunds: LateRefunds,
         offers: RescueOffers,
         clock: Clock,
     ) -> None:
@@ -140,7 +143,7 @@ class ReadBookingDetails:
         self._people = people
         self._clubs = clubs
         self._distances = distances
-        self._fees = fees
+        self._late_refunds = late_refunds
         self._clock = clock
 
     async def execute(self, booking_id: UUID, reader: UUID) -> BookingDetails:
@@ -161,7 +164,11 @@ class ReadBookingDetails:
                 game.game_id
             )
         )
-        card_fee = self._fees.card_fee_on(game.share_grosze)
+        late_refund = (
+            await self._late_refunds.of(game.booking_id, reader)
+            if leaving_of(game, now=now) is Leaving.AFTER_THE_CUT_OFF
+            else None
+        )
         state = state_of(game, result, now=now)
         names = await self._clubs.names_of([game.club_id])
         distances = await self._distances.from_player(reader, [game.club_id])
@@ -181,7 +188,7 @@ class ReadBookingDetails:
             club_name=names.get(game.club_id),
             distance_km=distances.get(game.club_id),
             people=await people_on([game], self._people),
-            leaving=leave_terms(game, state.status, card_fee_grosze=card_fee, now=now),
+            leaving=leave_terms(game, state.status, late_refund=late_refund, now=now),
         )
 
     async def _from_outside(

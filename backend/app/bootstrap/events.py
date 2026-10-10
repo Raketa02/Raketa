@@ -65,6 +65,7 @@ from app.modules.payments.application.event_subscriptions import (
     subscribe_payment_handlers,
     subscribe_the_method_releaser,
     subscribe_the_club_payout_sender,
+    subscribe_the_seat_taken_refund_emailer,
     subscribe_the_seat_charge_settler,
 )
 from app.modules.payments.domain.provider import PaymentProvider
@@ -210,6 +211,7 @@ class EventRuntime:
         """
 
         from app.bootstrap.composition import (
+            build_email_the_seat_taken_refund,
             build_push_the_notice,
             build_resume_paused_yeses,
             build_send_club_payout,
@@ -231,6 +233,14 @@ class EventRuntime:
             dispatcher,
             build_settle_seat_charges(
                 session, provider=payments, clock=clock, runtime=self
+            ),
+        )
+        # A seat-taken refund, emailed once it is made — its sum known to the
+        # grosz only then (#641).
+        subscribe_the_seat_taken_refund_emailer(
+            dispatcher,
+            build_email_the_seat_taken_refund(
+                session, settings=get_settings(), runtime=self
             ),
         )
         # A club's payout, made at the provider and told to its desk in the

@@ -13,6 +13,7 @@ from app.modules.payments.domain.provider import Payment, PaymentStatus
 from app.modules.payments.domain.seat_charge import (
     PAID,
     FailureReason,
+    RefundReason,
     SeatCharge,
     SeatChargeStatus,
 )
@@ -101,12 +102,14 @@ def test_a_taken_charge_is_never_heard_cancelled():
 
 
 def test_the_club_pays_the_card_fee_the_provider_took_on_the_capture():
-    """A card from outside the EEA costs the club more than the estimate's
-    1,45 zł on a 30 zł share: what the provider says it took is the fee (#548)."""
+    """A card from outside the EEA costs the club more than a personal EU
+    card's 1,45 zł on a 30 zł share: what the provider says it took is the fee
+    (#548), and nothing stands in for it before then (#641)."""
 
     charge = a_hold()
     charge.take(booking_id=uuid4(), at=AT)
-    assert charge.card_fee_grosze == 1_45  # the estimate, until it is taken
+    # Never an estimate (#641): not yet known until the provider says.
+    assert charge.card_fee_grosze is None
 
     charge.heard(
         Payment(
@@ -284,3 +287,100 @@ def test_the_cut_off_takes_only_a_share_held_for_the_game():
     assert held.take_at_the_cut_off(at=CUT_OFF) is False
     assert undecided.take_at_the_cut_off(at=CUT_OFF) is False
     assert undecided.held_now
+
+
+# --------------------------------------------------------------------------- #
+# No estimate: real or not yet known (#641; the mechanics §12.1, §16.11, Q113)
+# --------------------------------------------------------------------------- #
+
+
+def a_share_taken(*, fee_grosze: int | None, amount_grosze: int = 40_00) -> SeatCharge:
+    charge = SeatCharge.held(
+        charge_id=uuid4(),
+        player_id=uuid4(),
+        game_id=uuid4(),
+        club_id=uuid4(),
+        account_id="acct_1",
+        payment=Payment(
+            payment_id="pi_1",
+            status=PaymentStatus.AUTHORISED,
+            amount_grosze=amount_grosze,
+        ),
+        sport=Sport.PADEL,
+        starts_at=GAME,
+        at=AT,
+    )
+    charge.keep(booking_id=charge.game_id, until=CUT_OFF, at=AT)
+    charge.take(booking_id=charge.game_id, at=CUT_OFF)
+    charge.captured(at=CUT_OFF, fee_grosze=fee_grosze)
+    return charge
+
+
+def test_a_share_taken_before_its_fee_is_known_has_no_fee_net_or_settlement():
+    """**No estimate stands in** (#641): the club's card fee and what is its
+    own are *not yet known*, and the payout waits for the fee — a club on its
+    own negotiated pricing is told it after the capture."""
+
+    charge = a_share_taken(fee_grosze=None)
+
+    assert (charge.card_fee_grosze, charge.net_grosze) == (None, None)
+    assert not charge.settled
+
+    charge.fee_reported(1_76, at=CUT_OFF)
+
+    assert (charge.card_fee_grosze, charge.net_grosze) == (1_76, 38_24)
+    assert charge.settled
+
+
+def test_a_late_leaver_would_get_the_share_less_exactly_the_fee_kept_on_it():
+    """*If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76
+    zł kept on your payment)* — a business card's fee, to the grosz (Q113)."""
+
+    assert a_share_taken(fee_grosze=1_76).less_the_fee_kept_grosze == 38_24
+    assert a_share_taken(fee_grosze=2_30).less_the_fee_kept_grosze == 37_70
+    assert a_share_taken(fee_grosze=1_60).less_the_fee_kept_grosze == 38_40
+
+
+def test_nothing_is_said_of_a_late_leave_s_refund_before_the_fee_is_known():
+    assert a_share_taken(fee_grosze=None).less_the_fee_kept_grosze is None
+    held = a_hold()
+    held.keep(booking_id=uuid4(), until=CUT_OFF, at=AT)
+    assert held.less_the_fee_kept_grosze is None  # nothing taken yet
+
+
+def test_a_refund_waiting_on_a_fee_not_yet_known_gives_back_what_is_not_yet_known():
+    charge = a_share_taken(fee_grosze=None)
+
+    charge.refund(withhold_fee=True, at=CUT_OFF)
+
+    assert charge.given_back_grosze is None
+    assert charge.net_grosze is None
+    charge.fee_reported(1_76, at=CUT_OFF)
+    assert (charge.given_back_grosze, charge.net_grosze) == (38_24, 0)
+
+
+def test_a_refund_records_why_it_was_decided():
+    charge = a_share_taken(fee_grosze=1_76)
+
+    charge.refund(withhold_fee=True, at=CUT_OFF, reason=RefundReason.SEAT_TAKEN)
+
+    assert charge.refund_reason is RefundReason.SEAT_TAKEN
+    replayed = SeatCharge.from_history(charge.pull_events())
+    assert replayed.refund_reason is RefundReason.SEAT_TAKEN
+
+
+def test_a_held_share_let_go_records_when_and_an_undecided_hold_released_does_not():
+    """*40 zł held · released* is a receipt of its own (#641), dated when the
+    hold was let go; a hold the fill released because the game did not book
+    on it never held anything for a game."""
+
+    held, undecided = a_hold(), a_hold()
+    held.keep(booking_id=uuid4(), until=CUT_OFF, at=AT)
+    let_go_at = AT + timedelta(hours=3)
+
+    held.let_go(at=let_go_at, reason=RefundReason.LEFT)
+    undecided.release(at=AT)
+
+    assert held.released_at == let_go_at
+    assert SeatCharge.from_history(held.pull_events()).released_at == let_go_at
+    assert undecided.released_at is None

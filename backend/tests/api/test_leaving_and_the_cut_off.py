@@ -46,8 +46,8 @@ from tests.unit.fake_clock import MovableClock
 HOME = "/api/v1/home"
 RECEIPTS = "/api/v1/players/me/receipts"
 SHARE = 30_00
-#: The card fee the leave sheet quotes on a 30 zł share after the cut-off:
-#: 1.5 % and 1 zł.
+#: What a personal EU card keeps on a 30 zł share — 1.5 % and 1 zł — which
+#: the leave sheet quotes after the cut-off, exactly (#641).
 FEE = 1_45
 CUT_OFF = SATURDAY_FIVE - timedelta(hours=24)
 DESK_EMAIL = "desk@bonarka.pl"
@@ -162,6 +162,13 @@ async def receipts_of(client, mailbox, player: dict) -> list[dict]:
     return read.json()["receipts"]
 
 
+def kinds_of(receipts: list[dict]) -> list[str]:
+    """Each receipt's kind — a share let go untaken is *held · released*
+    (#641): nothing was taken, and the hold the bank app showed is explained."""
+
+    return [receipt["kind"] for receipt in receipts]
+
+
 # --------------------------------------------------------------------------- #
 # Leaving before the cut-off
 # --------------------------------------------------------------------------- #
@@ -179,7 +186,7 @@ async def test_leaving_before_the_cut_off_takes_nothing_and_offers_the_seat(
 
     assert left.status_code == 200, left.text
     assert left.json()["left"] == "BEFORE_THE_CUT_OFF"
-    assert await receipts_of(client, mailbox, kuba) == []
+    assert kinds_of(await receipts_of(client, mailbox, kuba)) == ["RELEASED"]
     [card] = await home_of(client, ola)
     assert (card["status"], card["open_seats"], card["needs_you"]) == (
         "SEAT_OPEN",
@@ -197,12 +204,15 @@ async def test_leaving_before_the_cut_off_takes_nothing_and_offers_the_seat(
 
 
 async def test_the_details_say_what_leaving_costs_before_the_player_leaves(
-    client, clock, booking, four
+    client, session_factory, clock, booking, four, mailbox
 ):
     ola = four[0]
 
     before = (await details_of(client, ola, booking))["leaving"]
     clock.move(CUT_OFF - MONDAY_MORNING)
+    # The cut-off takes the share, and the provider says what it kept on it.
+    await cuts_off(session_factory, clock)
+    await mailbox.drain()
     after = (await details_of(client, ola, booking))["leaving"]
     clock.move(SATURDAY_FIVE - CUT_OFF)
     started = (await details_of(client, ola, booking))["leaving"]
@@ -354,7 +364,7 @@ async def test_a_game_still_short_at_its_cut_off_is_called_off_and_every_hold_le
 
     assert (run.games, run.conflicts) == (1, 0)
     for player in four:
-        assert await receipts_of(client, mailbox, player) == []
+        assert kinds_of(await receipts_of(client, mailbox, player)) == ["RELEASED"]
     assert await the_court_is_on_sale(session_factory, clock, club)
     assert await rooms_of(client, ola) == []
     [called_off] = [
@@ -463,7 +473,7 @@ async def test_a_cut_off_reached_only_after_the_hour_still_lets_the_holds_go(
 
     assert (await cuts_off(session_factory, clock)).games == 1
 
-    assert await receipts_of(client, mailbox, ola) == []
+    assert kinds_of(await receipts_of(client, mailbox, ola)) == ["RELEASED"]
     assert len(payments.called("cancel")) == 4
     assert payments.called("capture") == []
     [desk] = await mailbox.to(DESK_EMAIL)

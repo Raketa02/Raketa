@@ -590,19 +590,22 @@ class ReadSeatCharge:
 
 
 class ReceiptKind(StrEnum):
-    """Which way the money went."""
+    """Which way the money went — or that it never moved."""
 
     #: A share paid.
     CHARGE = "CHARGE"
     #: A share given back (#544).
     REFUND = "REFUND"
+    #: A share held for a booked game and let go untaken (#641): *40 zł held ·
+    #: released*, so the hold the bank app showed is explained.
+    RELEASED = "RELEASED"
 
 
 @final
 @dataclass(frozen=True, slots=True)
 class Receipt:
-    """Money that moved for the player: to whom, for which game, how much,
-    which way, when."""
+    """Money that moved for the player, or was held and let go: to whom, for
+    which game, how much, which way, when."""
 
     charge: SeatCharge
     club_name: str | None
@@ -610,7 +613,8 @@ class Receipt:
 
     @property
     def amount_grosze(self) -> int:
-        """What was paid, or what came back — always positive."""
+        """What was paid, what came back, or what was held — always
+        positive."""
 
         if self.kind is ReceiptKind.REFUND:
             assert self.charge.refund_given is not None
@@ -619,7 +623,8 @@ class Receipt:
 
     @property
     def card_fee_grosze(self) -> int | None:
-        """The card fee kept back from a refund; ``None`` on a charge."""
+        """Exactly what was kept on the payment, on a refund — nought on one in
+        full; ``None`` on a charge and on a hold let go."""
 
         if self.kind is ReceiptKind.REFUND:
             assert self.charge.refund_given is not None
@@ -630,37 +635,50 @@ class Receipt:
     def at(self) -> Instant:
         """When the money moved: taken, or given back — the act that decided
         the refund, a leaving or a call-off, rather than the provider's answer
-        moments later."""
+        moments later — or when the hold was let go."""
 
         if self.kind is ReceiptKind.REFUND:
             assert self.charge.refund_decided_at is not None
             return self.charge.refund_decided_at
+        if self.kind is ReceiptKind.RELEASED:
+            assert self.charge.released_at is not None
+            return self.charge.released_at
         return self.charge.taken_at or self.charge.opened_at
 
 
 @final
 class ReadReceipts:
     """You › Payments' *RECEIPTS*: every share the reader paid and every share
-    given back (#544), **the club named as the seller**, the latest first. A
-    hold let go is not a receipt — nobody paid it — and a refund is one once the
-    provider has given it, with the card fee it kept."""
+    given back (#544), **the club named as the seller**, the latest first — a
+    refund once the provider has given it, with exactly what was kept on the
+    payment — and every share held for a booked game and let go untaken, *held
+    · released* (#641): a leave, a call-off or the club's cancel before the
+    cut-off. A hold the fill released because the game did not book on it is
+    not here: it never held anything for a game."""
 
     def __init__(self, *, charges: SeatChargeRepository, sellers: Sellers) -> None:
         self._charges = charges
         self._sellers = sellers
 
     async def execute(self, player_id: UUID) -> tuple[Receipt, ...]:
-        paid = [
+        charges = [
             charge
-            for charge in await self._charges.paid_by(player_id)
-            if charge.status in PAID
+            for charge in await self._charges.receipts_of(player_id)
+            if charge.status in PAID or charge.released_at is not None
         ]
-        sellers = await self._sellers.of({charge.club_id for charge in paid})
+        sellers = await self._sellers.of({charge.club_id for charge in charges})
         receipts: list[Receipt] = []
-        for charge in paid:
+        for charge in charges:
             club_name = (
                 sellers[charge.club_id].name if charge.club_id in sellers else None
             )
+            if charge.status not in PAID:
+                receipts.append(
+                    Receipt(
+                        charge=charge, club_name=club_name, kind=ReceiptKind.RELEASED
+                    )
+                )
+                continue
             receipts.append(Receipt(charge=charge, club_name=club_name))
             if charge.refund_given is not None:
                 receipts.append(

@@ -46,12 +46,12 @@ from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.proposals.domain.home import BookingStage, ResultStage
 from app.modules.proposals.domain.club_bookings import CodeAtTheDesk
-from app.modules.proposals.domain.home import ClubCancelReason
+from app.modules.proposals.domain.home import ClubCancelReason, LateRefund
 from app.modules.proposals.domain.ports import (
     BookableCourt,
     BookedGameChanges,
     BookingTakings,
-    CardFees,
+    LateRefunds,
     ClubBookings,
     ClubDistances,
     ClubRequests,
@@ -729,7 +729,8 @@ async def test_a_seat_left_after_the_cut_off_calls_nothing_off(implementation, s
 
 
 # --------------------------------------------------------------------------- #
-# SeatRefunds and CardFees — a paid share given back, and the fee on one (#544)
+# SeatRefunds and LateRefunds — a paid share given back (#544), and what a
+# leaver after the cut-off would get back (#641)
 # --------------------------------------------------------------------------- #
 
 
@@ -940,13 +941,87 @@ async def test_the_shares_held_for_a_game_are_due_at_its_cut_off_and_taken_then(
     assert await held.take(game_id, at=cut_off) == 0
 
 
-@pytest.mark.parametrize("implementation", registered(CardFees))
-def test_the_card_fee_on_a_share_is_the_provider_s_standard_price(implementation):
-    fees: CardFees = implementation.build(None)
+async def _a_share_taken(
+    session, *, game_id: UUID, player_id: UUID, fee_grosze: int | None
+) -> SeatCharge:
+    charge = SeatCharge.held(
+        charge_id=new_uuid(),
+        player_id=player_id,
+        game_id=game_id,
+        club_id=new_uuid(),
+        account_id="acct_fake_club",
+        payment=Payment(
+            payment_id="pi_fake_4000g_x",
+            status=PaymentStatus.AUTHORISED,
+            amount_grosze=40_00,
+        ),
+        sport=Sport.PADEL,
+        starts_at=_at(5 * 24),
+        at=_at(),
+    )
+    charge.keep(booking_id=game_id, until=_at(4 * 24), at=_at())
+    charge.take(booking_id=game_id, at=_at(4 * 24))
+    charge.captured(at=_at(4 * 24), fee_grosze=fee_grosze)
+    await _charges(session).save(charge)
+    await session.commit()
+    return charge
 
-    # The mechanics §12.3: about 1,60 zł on a 40 zł share.
-    assert fees.card_fee_on(40_00) == 1_60
-    assert fees.card_fee_on(30_00) == 1_45
+
+@pytest.mark.parametrize("implementation", registered(SeatRefunds))
+async def test_a_leaver_after_the_cut_off_is_given_nothing_back_yet(
+    implementation, session
+):
+    """Leaving after the cut-off moves no money (#641): the share stays paid
+    until somebody takes the seat — the leaver is only told what would come
+    back."""
+
+    refunds: SeatRefunds = implementation.build(session)
+    game_id = new_uuid()
+    kubas = await _a_share_taken(
+        session, game_id=game_id, player_id=KUBA, fee_grosze=1_76
+    )
+
+    await refunds.left_after_the_cut_off(game_id, KUBA, at=_at(4 * 24 + 1))
+    await session.commit()
+
+    kuba_now = await _charges(session).load(kubas.charge_id)
+    assert kuba_now is not None
+    assert kuba_now.status is SeatChargeStatus.CAPTURED
+    assert kuba_now.refund_withholds_fee is None
+
+
+@pytest.mark.parametrize("implementation", registered(LateRefunds))
+async def test_a_late_leaver_would_get_the_share_less_exactly_the_fee_kept(
+    implementation, session
+):
+    """*If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76
+    zł kept on your payment)* — the fee kept on the reader's own payment, never
+    an estimate (#641, Q113)."""
+
+    refunds: LateRefunds = implementation.build(session)
+    game_id = new_uuid()
+    await _a_share_taken(session, game_id=game_id, player_id=KUBA, fee_grosze=1_76)
+    await _a_share_taken(session, game_id=game_id, player_id=OLA, fee_grosze=2_30)
+
+    assert await refunds.of(game_id, KUBA) == LateRefund(
+        refund_grosze=38_24, fee_kept_grosze=1_76
+    )
+    assert await refunds.of(game_id, OLA) == LateRefund(
+        refund_grosze=37_70, fee_kept_grosze=2_30
+    )
+
+
+@pytest.mark.parametrize("implementation", registered(LateRefunds))
+async def test_nothing_is_said_while_the_fee_kept_is_not_yet_known(
+    implementation, session
+):
+    refunds: LateRefunds = implementation.build(session)
+    game_id = new_uuid()
+    await _a_share_taken(session, game_id=game_id, player_id=KUBA, fee_grosze=None)
+
+    assert await refunds.of(game_id, KUBA) is None
+    # Nor for a player with no share taken on the game.
+    assert await refunds.of(game_id, OLA) is None
 
 
 # --------------------------------------------------------------------------- #
@@ -1167,6 +1242,27 @@ async def test_a_booking_s_takings_are_what_was_paid_and_given_back(
     assert (found[game_id].collected_grosze, found[game_id].refunded_grosze) == (
         60_00,
         30_00,
+    )
+    # Neither share's fee was said on its capture: not yet known, never an
+    # estimate (#641) — and so neither is what is the club's.
+    assert (found[game_id].card_fees_grosze, found[game_id].net_grosze) == (None, None)
+
+
+@pytest.mark.parametrize("implementation", registered(BookingTakings))
+async def test_a_booking_s_card_fees_are_the_ones_the_provider_kept(
+    implementation, session
+):
+    takings: BookingTakings = implementation.build(session)
+    game_id = new_uuid()
+    await _a_share_taken(session, game_id=game_id, player_id=OLA, fee_grosze=1_76)
+    await _a_share_taken(session, game_id=game_id, player_id=KUBA, fee_grosze=2_30)
+
+    found = (await takings.of([game_id]))[game_id]
+
+    assert (found.collected_grosze, found.card_fees_grosze, found.net_grosze) == (
+        80_00,
+        4_06,
+        75_94,
     )
 
 

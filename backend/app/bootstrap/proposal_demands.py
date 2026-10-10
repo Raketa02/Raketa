@@ -10,7 +10,8 @@ check-in code (``bookings``), where each booked game's result stands
 put to it as and its answer (``bookings``) and what each player is called on it
 (``users``) — and, for
 leaving and the cut-off (#544), what happens to a booked game after the fill
-(``bookings``), a paid share given back and the card fee on one (``payments``)
+(``bookings``), a paid share given back and what a late leaver would get back
+(``payments``, #641)
 — and, for posting (#546), whether two people may share a court and the window
 a player's Level makes (the matcher's pair rule over blocks, the Player profile
 and rating) and each member's Level, week, gender and preference (rating and
@@ -37,7 +38,7 @@ from typing import TypeVar
 from app.bootstrap.composition import (
     build_booked_game_changes,
     build_booking_takings,
-    build_card_fees,
+    build_late_refunds,
     build_club_bookings,
     build_desk_check_ins,
     build_pool_origins,
@@ -56,7 +57,7 @@ from app.core.config import get_settings
 from app.modules.proposals.domain.ports import (
     BookedGameChanges,
     BookingTakings,
-    CardFees,
+    LateRefunds,
     ClubBookings,
     ClubDistances,
     ClubRequests,
@@ -85,7 +86,7 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     BookedGameChanges,
     SeatRefunds,
     HeldShares,
-    CardFees,
+    LateRefunds,
     PlayerFit,
     PlayersInPlay,
     ClubBookings,
@@ -139,9 +140,9 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         build=lambda session: build_held_shares(session),
     ),
     RegisteredImplementation(
-        port=CardFees,
-        name="PaymentsCardFees",
-        build=lambda session: build_card_fees(),
+        port=LateRefunds,
+        name="PaymentsLateRefunds",
+        build=build_late_refunds,
     ),
     RegisteredImplementation(
         port=PlayerFit,

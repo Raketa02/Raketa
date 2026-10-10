@@ -38,7 +38,12 @@ from app.modules.notifications.domain.ports import (
     PaidShares,
     SeatOffers,
 )
-from app.modules.payments.domain.provider import Payment, PaymentStatus
+from app.modules.payments.domain.provider import (
+    Payment,
+    PaymentStatus,
+    Refund,
+    RefundStatus,
+)
 from app.modules.payments.domain.seat_charge import RefundReason, SeatCharge
 from app.modules.proposals.domain.pool import Pool, PoolKind
 from app.modules.proposals.domain.proposal import Origin, Proposal, ReopenReason
@@ -440,7 +445,13 @@ async def test_no_such_game_is_nothing(implementation, session):
 # --------------------------------------------------------------------------- #
 
 
-async def _a_paid_share(session, *, withhold_fee: bool) -> SeatCharge:
+async def _a_paid_share(
+    session,
+    *,
+    withhold_fee: bool,
+    fee_grosze: int | None = 1_76,
+    given: bool = False,
+) -> SeatCharge:
     game_id = new_uuid()
     charge = SeatCharge.held(
         charge_id=new_uuid(),
@@ -449,36 +460,64 @@ async def _a_paid_share(session, *, withhold_fee: bool) -> SeatCharge:
         club_id=new_uuid(),
         account_id="acct_fake_club",
         payment=Payment(
-            payment_id="pi_fake_3000g_x",
+            payment_id="pi_fake_4000g_x",
             status=PaymentStatus.AUTHORISED,
-            amount_grosze=30_00,
+            amount_grosze=40_00,
         ),
         sport=Sport.PADEL,
         starts_at=START,
         at=NOW,
     )
     charge.take(booking_id=game_id, at=NOW)
-    charge.captured(at=NOW)
+    charge.captured(at=NOW, fee_grosze=fee_grosze)
     charge.refund(withhold_fee=withhold_fee, at=NOW, reason=RefundReason.SEAT_TAKEN)
+    if given:
+        amount = charge.refund_to_ask_grosze
+        assert amount is not None
+        charge.refunded(
+            Refund(
+                refund_id="re_1", status=RefundStatus.SUCCEEDED, amount_grosze=amount
+            ),
+            at=NOW,
+        )
     await build_seat_charge_repository(session, **_store(session)).save(charge)
     await session.commit()
     return charge
 
 
 @pytest.mark.parametrize("implementation", registered(PaidShares))
-async def test_a_share_given_back_less_the_card_fee_or_whole(implementation, session):
+async def test_a_share_given_back_less_the_fee_kept_on_it_or_whole(
+    implementation, session
+):
+    """Never an estimate (#641): a business card kept 1,76 zł on a 40 zł
+    share, so 38,24 zł goes back — and once it has, what was kept is said."""
+
     shares: PaidShares = implementation.build(session)
     less = await _a_paid_share(session, withhold_fee=True)
+    given = await _a_paid_share(session, withhold_fee=True, given=True)
     whole = await _a_paid_share(session, withhold_fee=False)
 
     given_less = await shares.of(less.charge_id)
+    made = await shares.of(given.charge_id)
     given_whole = await shares.of(whole.charge_id)
 
-    # 30 zł less Stripe's EEA card fee: 1.5 % and 1 zł.
-    assert given_less is not None and given_less.refunded_grosze == 28_55
+    assert given_less is not None and given_less.refunded_grosze == 38_24
     assert given_less.game_id == less.game_id
-    assert given_whole is not None and given_whole.refunded_grosze == 30_00
+    assert given_less.seat_taken
+    assert made is not None
+    assert (made.refunded_grosze, made.kept_grosze) == (38_24, 1_76)
+    assert given_whole is not None and given_whole.refunded_grosze == 40_00
     assert await shares.of(new_uuid()) is None
+
+
+@pytest.mark.parametrize("implementation", registered(PaidShares))
+async def test_a_refund_less_a_fee_not_yet_known_says_no_sum(implementation, session):
+    shares: PaidShares = implementation.build(session)
+    waiting = await _a_paid_share(session, withhold_fee=True, fee_grosze=None)
+
+    found = await shares.of(waiting.charge_id)
+
+    assert found is not None and found.refunded_grosze is None
 
 
 @pytest.mark.parametrize("implementation", registered(PaidShares))
@@ -488,7 +527,7 @@ async def test_a_player_s_share_of_a_game_is_found_by_the_game(implementation, s
 
     given = await shares.of_player(less.game_id, KUBA)
 
-    assert given is not None and given.refunded_grosze == 28_55
+    assert given is not None and given.refunded_grosze == 38_24
     assert await shares.of_player(less.game_id, OLA) is None
     assert await shares.of_player(new_uuid(), KUBA) is None
 

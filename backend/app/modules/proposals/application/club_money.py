@@ -10,7 +10,11 @@ a request refused or never answered — is not money, and is not listed.
 **The club is the seller**, so every figure is its own account's: the players'
 shares were taken there, refunds come out of it, and the provider's card fee on
 every share taken is the club's to pay, as at its own terminal — a game called
-off and given back whole costs the club those fees.
+off and given back whole costs the club those fees. **Every fee is the real
+one, or not yet known** (#641): a club on its own negotiated pricing is told
+its fees after the take, and until then the figure — and what it moves, a
+refund less it and the net, and the month's totals — is ``None``, never an
+estimate.
 
 Assembled here, as the Bookings page is, because a booking is the Bookings
 context's and its money the Payments context's (``BookingTakings``).
@@ -30,7 +34,12 @@ from app.modules.clubs.domain.court_hours import (
     hour_start,
     local_day,
 )
-from app.modules.proposals.domain.club_bookings import ClubStatus, Takings, club_status
+from app.modules.proposals.domain.club_bookings import (
+    ClubStatus,
+    Takings,
+    club_status,
+    known_sum,
+)
 from app.modules.proposals.domain.home import BookedGame
 from app.modules.proposals.domain.ports import BookingTakings, ClubBookings
 
@@ -47,9 +56,10 @@ class MoneyRow:
 @dataclass(frozen=True, slots=True)
 class MoneyTotals:
     collected_grosze: int
-    refunded_grosze: int
-    card_fees_grosze: int
-    net_grosze: int
+    #: Each of the three ``None`` while a booking's is not yet known (#641).
+    refunded_grosze: int | None
+    card_fees_grosze: int | None
+    net_grosze: int | None
 
 
 @final
@@ -108,8 +118,10 @@ class ReadClubMoney:
             rows=rows,
             totals=MoneyTotals(
                 collected_grosze=sum(row.takings.collected_grosze for row in rows),
-                refunded_grosze=sum(row.takings.refunded_grosze for row in rows),
-                card_fees_grosze=sum(row.takings.card_fees_grosze for row in rows),
-                net_grosze=sum(row.takings.net_grosze for row in rows),
+                refunded_grosze=known_sum(row.takings.refunded_grosze for row in rows),
+                card_fees_grosze=known_sum(
+                    row.takings.card_fees_grosze for row in rows
+                ),
+                net_grosze=known_sum(row.takings.net_grosze for row in rows),
             ),
         )

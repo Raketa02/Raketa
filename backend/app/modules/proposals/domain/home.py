@@ -386,8 +386,8 @@ class Leaving(StrEnum):
 
     #: Before the club's cut-off: nothing is taken — the hold is let go (#637).
     BEFORE_THE_CUT_OFF = "BEFORE_THE_CUT_OFF"
-    #: After it: refunded, less the card fee, only when somebody takes the
-    #: seat.
+    #: After it: refunded, less exactly the fee kept on the payment, only when
+    #: somebody takes the seat.
     AFTER_THE_CUT_OFF = "AFTER_THE_CUT_OFF"
     #: While the club decides — or a payment is awaited (#625): nobody has
     #: paid, and leaving withdraws the yes.
@@ -396,18 +396,32 @@ class Leaving(StrEnum):
 
 @final
 @dataclass(frozen=True, slots=True)
+class LateRefund:
+    """What a player who leaves after the club's cut-off gets back if somebody
+    takes their seat (Q113): their share less **exactly the fee kept on their
+    payment** — *38,24 zł back (40 zł less the 1,76 zł kept on your
+    payment)*."""
+
+    refund_grosze: int
+    fee_kept_grosze: int
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class LeaveTerms:
     """What leaving would cost the reader, said before they confirm — after the
-    cut-off, *"If someone takes your seat, you get 38,40 zł back (40 zł less
-    the 1,60 zł kept on your payment)"*. **No quote before the cut-off**
-    (#637): nothing is taken, so nothing comes back."""
+    cut-off, *"If someone takes your seat, you get 38,24 zł back (40 zł less
+    the 1,76 zł kept on your payment)"*, to the grosz (#641, Q113). **No quote
+    before the cut-off** (#637): nothing is taken, so nothing comes back. **No
+    figure while the fee kept is not yet known**: never an estimate."""
 
     kind: Leaving
-    #: What comes back if somebody takes the seat — the share less the card
-    #: fee; nought when nobody paid; ``None`` before the cut-off.
+    #: What comes back if somebody takes the seat — the share less exactly
+    #: the fee kept on the payment; nought when nobody paid; ``None`` before
+    #: the cut-off, and while that fee is not yet known.
     refund_grosze: int | None
-    #: The card fee kept back — an estimate; what the provider keeps is on the
-    #: receipt. ``None`` before the cut-off.
+    #: Exactly what was kept on the payment; ``None`` where ``refund_grosze``
+    #: is.
     card_fee_grosze: int | None
 
 #: The two statuses at which the game awaits its entry with every seat filled —
@@ -574,12 +588,18 @@ def leaving_of(game: BookedGame, *, now: Instant) -> Leaving:
 
 
 def leave_terms(
-    game: BookedGame, status: HomeStatus, *, card_fee_grosze: int, now: Instant
+    game: BookedGame,
+    status: HomeStatus,
+    *,
+    late_refund: LateRefund | None,
+    now: Instant,
 ) -> LeaveTerms | None:
     """What *Leave the game* would cost now — ``None`` where there is no such
     button: once the hour has come, and on a game that is over. **Before the
     cut-off there is no quote** (#637): nothing is taken, and the hold is let
-    go."""
+    go. **After it**, ``late_refund`` — the share less exactly the fee kept on
+    the reader's payment — or no figure while that fee is not yet known
+    (#641)."""
 
     if game.filling_again:
         # Its way out is a game still filling's: *Withdraw*, free (#624).
@@ -593,8 +613,8 @@ def leave_terms(
         return LeaveTerms(kind=leaving, refund_grosze=None, card_fee_grosze=None)
     return LeaveTerms(
         kind=leaving,
-        refund_grosze=game.share_grosze - card_fee_grosze,
-        card_fee_grosze=card_fee_grosze,
+        refund_grosze=None if late_refund is None else late_refund.refund_grosze,
+        card_fee_grosze=None if late_refund is None else late_refund.fee_kept_grosze,
     )
 
 

@@ -206,8 +206,8 @@ async def leave_the_game(
         "`POST /api/v1/bookings/{id}/seats` as the acting account — *I'm in* on "
         "a rescue: the share held until the cut-off — or taken at once after it "
         "(#637) — over the provider this process moves money through, the seat "
-        "that opened first theirs, and a leaver after the cut-off refunded. The "
-        "first join wins."
+        "that opened first theirs, and a leaver after the cut-off refunded less "
+        "exactly the fee kept on their payment (#641). The first join wins."
     ),
 )
 async def take_the_seat(

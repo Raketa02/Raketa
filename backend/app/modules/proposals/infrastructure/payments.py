@@ -13,8 +13,9 @@ own use cases, its refusals translated into this context's words.
 
 ``PaymentsSeatRefunds`` gives a booked game's shares back — a share only held
 let go, a share taken refunded (#544, #637) — ``PaymentsHeldShares`` is what the
-cut-off takes (#637), and ``PaymentsCardFees`` says what the card fee on a share
-comes to, the estimate the leaving sheet quotes after the cut-off.
+cut-off takes (#637), and ``PaymentsLateRefunds`` says what a leaver after the
+cut-off would get back if somebody took their seat: the share less exactly the
+fee kept on their payment, never an estimate (#641).
 
 ``BookedGamesOver`` answers **payments'** demand — *which games are over for
 good*, so their money is the club's to be paid out (#548) — off the bookings as
@@ -34,7 +35,10 @@ from uuid import UUID
 
 from app.kernel import Instant
 from app.modules.bookings.domain.ports import BookingDirectory
-from app.modules.payments.application.refunds import GiveTheSharesBack
+from app.modules.payments.application.refunds import (
+    GiveTheSharesBack,
+    TellTheLateLeaver,
+)
 from app.modules.payments.application.refunds import (
     RefundReason as PaymentsRefundReason,
 )
@@ -46,7 +50,6 @@ from app.modules.payments.application.seat_charges import (
     ReleaseCharges,
     TakeTheHeldShares,
 )
-from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.application.seat_charges import (
     GameToCharge as ChargedGame,
 )
@@ -61,8 +64,10 @@ from app.modules.proposals.domain.club_bookings import (
     ClubStatus,
     Takings,
     club_status,
+    known_sum,
 )
 from app.modules.proposals.domain.home import BookingStage, ClubCancelReason
+from app.modules.proposals.domain.home import LateRefund
 from app.modules.proposals.domain.ports import (
     GameToCharge,
     PaymentRefusal,
@@ -179,8 +184,11 @@ _REASONS = {
 
 @final
 class PaymentsSeatRefunds:
-    def __init__(self, refund: GiveTheSharesBack) -> None:
+    def __init__(
+        self, refund: GiveTheSharesBack, *, late_leaver: TellTheLateLeaver
+    ) -> None:
         self._refund = refund
+        self._late_leaver = late_leaver
 
     async def refund(
         self,
@@ -199,6 +207,12 @@ class PaymentsSeatRefunds:
             at=at,
             because=None if because is None else CancelledBecause(because.value),
         )
+
+    async def left_after_the_cut_off(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> None:
+        # A booking takes its proposal's id, which every charge was made for.
+        await self._late_leaver.execute(booking_id, player_id, at=at)
 
 
 @final
@@ -220,7 +234,9 @@ class PaymentsBookingTakings:
     taken — a share being captured or captured; **never a share only held**,
     which is listed as held and collects nothing (#637) — and what was given
     back, at what the provider gave or, until it answers, what was decided; the
-    card fees and what is the club's, and whether a payout carried it (#548)."""
+    card fees and what is the club's, and whether a payout carried it (#548).
+    **Never an estimate** (#641): a fee the provider has not said yet leaves
+    the card fees — and a refund less it, and the net — not yet known."""
 
     def __init__(
         self, charges: SeatChargeRepository, payouts: ClubPayoutRepository
@@ -244,8 +260,12 @@ class PaymentsBookingTakings:
                 takings[booking_id] = Takings(
                     paid=frozenset(charge.player_id for charge in paid),
                     collected_grosze=sum(charge.amount_grosze for charge in paid),
-                    refunded_grosze=sum(charge.given_back_grosze for charge in paid),
-                    card_fees_grosze=sum(charge.card_fee_grosze for charge in paid),
+                    refunded_grosze=known_sum(
+                        charge.given_back_grosze for charge in paid
+                    ),
+                    card_fees_grosze=known_sum(
+                        charge.card_fee_grosze for charge in paid
+                    ),
                     paid_out=booking_id in paid_out,
                     held=held,
                 )
@@ -253,9 +273,24 @@ class PaymentsBookingTakings:
 
 
 @final
-class PaymentsCardFees:
-    def card_fee_on(self, share_grosze: int) -> int:
-        return estimated_card_fee(share_grosze)
+class PaymentsLateRefunds:
+    def __init__(self, charges: SeatChargeRepository) -> None:
+        self._charges = charges
+
+    async def of(self, booking_id: UUID, player_id: UUID) -> LateRefund | None:
+        # A booking takes its proposal's id, which every charge was made for;
+        # a player pays one share of a game at most.
+        taken = [
+            charge
+            for charge in await self._charges.of_game(booking_id)
+            if charge.player_id == player_id and charge.status in PAID
+        ]
+        if not taken:
+            return None
+        back, fee = taken[-1].less_the_fee_kept_grosze, taken[-1].fee_kept_grosze
+        if back is None or fee is None:
+            return None
+        return LateRefund(refund_grosze=back, fee_kept_grosze=fee)
 
 
 @final

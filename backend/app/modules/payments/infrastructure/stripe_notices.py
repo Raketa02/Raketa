@@ -17,7 +17,10 @@ bank updated. The **Connected accounts** endpoint (#537) notifies about each
 club's account and the payments made on it: a notice there names the connected
 account **at its top level** (``account``) — ``account.updated``, and the
 ``payment_intent.*`` kinds of a seat's payment (#541), which name the
-PaymentIntent and nothing of its state. Stripe still sends that
+PaymentIntent and nothing of its state — and ``charge.updated`` on that
+payment's charge, which is how Stripe says **the fee kept on it is ready**
+(#641): a club on its own negotiated pricing learns its fees after the take, so
+the payment is read again and the fee recorded. Stripe still sends that
 v1 notice for an Accounts v2 account, to a Connected accounts endpoint and never
 to the platform's — where an ``account.updated`` names no connected account and
 is about the platform itself, so it is read as nothing. Every other kind is
@@ -47,6 +50,11 @@ from app.modules.payments.domain.notices import (
 #: How old a signed notice may be, in seconds: the libraries' own default,
 #: which their verifier applies only when it is passed.
 TOLERANCE_SECONDS = 300
+
+#: Stripe's word that a captured payment's charge changed — its fee became
+#: readable (#641; "readiness is signalled by ``charge.updated``"). A prompt to
+#: read the payment again, like every other.
+FEE_READY_KIND = "charge.updated"
 
 #: The kinds that say a seat's payment moved (the mechanics Appendix A): held,
 #: taken, released, refused, or waiting for its player. Each is only a prompt.
@@ -108,6 +116,16 @@ class StripeNotices:
             # through the Connected accounts endpoint naming that account.
             return SeatPaymentChanged(
                 notice_id=notice_id, account_id=connected, payment_id=subject["id"]
+            )
+        payment = subject.get("payment_intent")
+        if (
+            kind == FEE_READY_KIND
+            and isinstance(connected, str)
+            and isinstance(payment, str)
+        ):
+            # The charge names its payment: read as it stands, its fee too.
+            return SeatPaymentChanged(
+                notice_id=notice_id, account_id=connected, payment_id=payment
             )
         if kind == "account.updated" and isinstance(connected, str):
             # The account's id and nothing of its state: it is read from

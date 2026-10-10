@@ -2796,9 +2796,16 @@
             "description": "Every share taken from the players, on your account \u2014 at your cut-off, or at once after it. A share only held is not collected (#637)."
           },
           "refunded_grosze": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Refunded Grosze",
-            "description": "Everything given back of a share taken \u2014 to a leaver whose seat was taken after the cut-off, less the card fee; in full on a game cancelled after it. A hold let go before the cut-off refunds nothing: nothing was taken. Refunds are automatic: you never refund anybody by hand."
+            "description": "Everything given back of a share taken \u2014 to a leaver whose seat was taken after the cut-off, less exactly the fee kept on their payment; in full on a game cancelled after it. A hold let go before the cut-off refunds nothing: nothing was taken. Refunds are automatic: you never refund anybody by hand. `null` \u2014 *not yet known* \u2014 while a refund less the fee waits for a fee the provider has not told you yet (#641); never an estimate."
           }
         },
         "type": "object",
@@ -3967,16 +3974,40 @@
             "title": "Collected Grosze"
           },
           "refunded_grosze": {
-            "type": "integer",
-            "title": "Refunded Grosze"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded Grosze",
+            "description": "`null` while a refund less the fee kept is not yet known."
           },
           "card_fees_grosze": {
-            "type": "integer",
-            "title": "Card Fees Grosze"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Fees Grosze",
+            "description": "The real fee the provider kept on each share taken, or `null` \u2014 *not yet known* \u2014 until it has said every one (#641)."
           },
           "net_grosze": {
-            "type": "integer",
-            "title": "Net Grosze"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Net Grosze",
+            "description": "`null` while the card fees or the refunds are not yet known."
           },
           "paid_out": {
             "type": "boolean",
@@ -4008,19 +4039,40 @@
             "description": "Every share taken from the players \u2014 at your cut-off, or at once after it; never a share only held (#637)."
           },
           "refunded_grosze": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Refunded Grosze",
-            "description": "Everything given back \u2014 automatically: you never refund anybody by hand."
+            "description": "Everything given back \u2014 automatically: you never refund anybody by hand. `null` while a booking's is not yet known."
           },
           "card_fees_grosze": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Card Fees Grosze",
-            "description": "The provider's card fee on every share taken, yours to pay as at your own terminal. A refund never returns it."
+            "description": "The provider's card fee on every share taken, yours to pay as at your own terminal. A refund never returns it. **The real fees, or `null` \u2014 *not yet known*** \u2014 while any booking's is (#641): a club on its own negotiated pricing is told its fees after the take. Never an estimate."
           },
           "net_grosze": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Net Grosze",
-            "description": "Yours: collected, less refunded, less the card fees. Below nought when games given back whole cost you their card fees."
+            "description": "Yours: collected, less refunded, less the card fees. Below nought when games given back whole cost you their card fees. `null` while the card fees or the refunds are not yet known."
           }
         },
         "type": "object",

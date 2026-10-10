@@ -441,8 +441,8 @@ async def test_a_leaver_s_seat_tells_everybody_still_in_and_the_leaver_nothing(
             "kuba left your game",
             f"{THE_GAME} — the seat is open.",
         )
-    # Kuba left before the cut-off and was refunded less the card fee: his own
-    # act, emailed and never pushed.
+    # Kuba left before the cut-off and his hold was let go: his own act,
+    # emailed and never pushed.
     assert await titles_pushed_to(mailbox, pushes, kuba) == [
         "It's a game! · 30 zł held"
     ]
@@ -505,10 +505,11 @@ async def test_a_leaver_whose_seat_was_taken_is_told_they_were_refunded(
 
     await joins(client, zosia, booking)
 
-    # 30 zł less the 1,45 zł card fee the bank keeps.
+    # 30 zł less exactly the 1,45 zł kept on his payment, told once the
+    # refund is made (#641).
     assert (await pushed_to(mailbox, pushes, kuba))[-1] == (
-        "You've been refunded 28,55 zł",
-        f"Somebody took your seat — {THE_GAME}.",
+        "You've been refunded 28,55 zł · your seat was taken",
+        f"30 zł less the 1,45 zł kept on your payment — {THE_GAME}.",
     )
     # Zosia took the seat herself and saw *It's a game!*: her notice is her
     # own, listed and pushed to nobody (Q102).

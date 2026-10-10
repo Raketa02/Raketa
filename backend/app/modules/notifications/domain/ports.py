@@ -103,6 +103,8 @@ class RecordedNotice:
     until: Instant | None = None
     #: Told to a player who had left the game (Q108).
     you_left: bool = False
+    #: What was kept on the payment a refund gave back less (#641).
+    kept_grosze: int | None = None
     #: Reached the list — given, or gathered into — since the player last
     #: opened it, and not their own: one the bell counts.
     new: bool = False
@@ -276,9 +278,16 @@ class PaidShare:
     """A share a player paid, and what giving it back gives them."""
 
     game_id: UUID
-    #: What the player gets back: the share, less the card fee where it is
-    #: withheld — the estimate until the provider has said.
-    refunded_grosze: int
+    #: What the player gets back: what the provider gave, once it has —
+    #: until then the share, or the share less exactly the fee kept on the
+    #: payment; ``None`` while that fee is not yet known (#641). Never an
+    #: estimate.
+    refunded_grosze: int | None
+    #: What was kept on the payment, once a refund less it was given (#641).
+    kept_grosze: int | None = None
+    #: Given back because somebody took the seat its player left after the
+    #: cut-off — told when the refund is made (#641).
+    seat_taken: bool = False
 
 
 class PaidShares(Protocol):

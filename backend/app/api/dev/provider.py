@@ -226,7 +226,8 @@ class RefundsResponse(BaseModel):
 
 class RefundDeliveredResponse(BaseModel):
     charge_id: UUID
-    given_back_grosze: int
+    #: ``None`` while a refund less the fee waits for a fee not yet known.
+    given_back_grosze: int | None
     fee_withheld_grosze: int | None
     given_at: datetime | None
     says: str = Field(description="What happened, for the tester.")
@@ -504,15 +505,17 @@ async def deliver_a_refund(
         await uow.commit()
         charge = await _seed_charge(charges, users, charge_id)
     given = charge.refund_given
+    back = charge.given_back_grosze
     return RefundDeliveredResponse(
         charge_id=charge_id,
-        given_back_grosze=charge.given_back_grosze,
+        given_back_grosze=back,
         fee_withheld_grosze=None if given is None else given.fee_withheld_grosze,
         given_at=None if given is None else given.at,
         says=(
             "Given already."
             if given_already
-            else f"Given back: {charge.given_back_grosze / 100:.2f} zł."
+            # Settled just now, so what came back is the provider's answer.
+            else f"Given back: {invariant(back, 'a refund given') / 100:.2f} zł."
         ),
     )
 

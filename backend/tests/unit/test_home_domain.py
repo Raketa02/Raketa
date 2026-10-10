@@ -35,6 +35,7 @@ from app.modules.proposals.domain.home import (
     CalledOffReason,
     GameResult,
     HomeStatus,
+    LateRefund,
     Leaving,
     ResultStage,
     ShareState,
@@ -82,7 +83,9 @@ def a_booked_game(**changes) -> BookedGame:
 
 
 #: The card fee the payments estimate on a 30 zł share: 1.5 % and 1 zł.
-FEE = 1_45
+#: What a late leaver paying by a business card would get back of a 30 zł
+#: share: 1.9 % and 1 zł kept on their payment (#641).
+A_BUSINESS_CARD_S = LateRefund(refund_grosze=28_43, fee_kept_grosze=1_57)
 
 ENTRY_OPEN = GameResult(stage=ResultStage.ENTRY_OPEN, awaits_your_agreement=False)
 
@@ -302,23 +305,41 @@ def test_before_the_cut_off_leaving_quotes_nothing_since_nothing_is_taken(stage)
     now = warsaw(5, 8)
 
     state = state_of(game, ENTRY_OPEN, now=now)
-    terms = leave_terms(game, state.status, card_fee_grosze=FEE, now=now)
+    terms = leave_terms(game, state.status, late_refund=A_BUSINESS_CARD_S, now=now)
 
     assert terms is not None
     assert terms.kind is Leaving.BEFORE_THE_CUT_OFF
     assert (terms.refund_grosze, terms.card_fee_grosze) == (None, None)
 
 
-def test_after_the_cut_off_leaving_quotes_the_share_less_the_card_fee():
+def test_after_the_cut_off_leaving_quotes_the_share_less_exactly_the_fee_kept():
+    """*If someone takes your seat, you get 28,43 zł back (30 zł less the 1,57
+    zł kept on your payment)* — the reader's own payment's fee (#641)."""
+
     game = a_booked_game()
     now = warsaw(9, 18)
 
     state = state_of(game, ENTRY_OPEN, now=now)
-    terms = leave_terms(game, state.status, card_fee_grosze=FEE, now=now)
+    terms = leave_terms(game, state.status, late_refund=A_BUSINESS_CARD_S, now=now)
 
     assert terms is not None
     assert terms.kind is Leaving.AFTER_THE_CUT_OFF
-    assert (terms.refund_grosze, terms.card_fee_grosze) == (30_00 - FEE, FEE)
+    assert (terms.refund_grosze, terms.card_fee_grosze) == (28_43, 1_57)
+
+
+def test_after_the_cut_off_leaving_quotes_no_figure_while_the_fee_is_unknown():
+    """Never an estimate (#641): no figure and no clause until the provider
+    has said what it kept."""
+
+    game = a_booked_game()
+    now = warsaw(9, 18)
+
+    state = state_of(game, ENTRY_OPEN, now=now)
+    terms = leave_terms(game, state.status, late_refund=None, now=now)
+
+    assert terms is not None
+    assert terms.kind is Leaving.AFTER_THE_CUT_OFF
+    assert (terms.refund_grosze, terms.card_fee_grosze) == (None, None)
 
 
 def test_a_game_short_at_its_cut_off_took_nothing_and_refunds_nothing():
@@ -602,7 +623,9 @@ def test_a_game_that_fell_back_has_no_leave_of_its_own():
     )
 
     assert (
-        leave_terms(game, HomeStatus.SEAT_OPEN, card_fee_grosze=FEE, now=warsaw(5, 9))
+        leave_terms(
+            game, HomeStatus.SEAT_OPEN, late_refund=A_BUSINESS_CARD_S, now=warsaw(5, 9)
+        )
         is None
     )
 
@@ -642,7 +665,9 @@ def test_leaving_a_game_waiting_for_a_payment_withdraws_the_yes():
     game = a_game_waiting_for_a_payment()
     state = state_of(game, None, now=warsaw(5, 8, 10))
 
-    terms = leave_terms(game, state.status, card_fee_grosze=FEE, now=warsaw(5, 8, 10))
+    terms = leave_terms(
+        game, state.status, late_refund=A_BUSINESS_CARD_S, now=warsaw(5, 8, 10)
+    )
 
     assert terms is not None
     assert (terms.kind, terms.refund_grosze) == (Leaving.WHILE_WAITING_FOR_THE_CLUB, 0)

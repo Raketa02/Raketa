@@ -27,6 +27,7 @@ from app.modules.payments.infrastructure.fake_payments import (
     NOTICE_KINDS,
     FakePayments,
 )
+from app.modules.payments.infrastructure import fake_payments, stripe_notices
 from app.modules.payments.infrastructure.stripe_notices import SEAT_PAYMENT_KINDS
 from app.shared.ids import new_uuid
 
@@ -128,6 +129,8 @@ def test_every_notice_it_records_is_of_a_kind_stripe_notices_reads():
     nothing."""
 
     assert set(NOTICE_KINDS.values()) <= SEAT_PAYMENT_KINDS
+    # And a fee reported late, which Stripe tells as the charge updated (#641).
+    assert fake_payments.FEE_READY_KIND == stripe_notices.FEE_READY_KIND
 
 
 # --------------------------------------------------------------------------- #

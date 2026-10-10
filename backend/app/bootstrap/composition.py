@@ -149,7 +149,7 @@ from app.modules.proposals.domain.ports import (
     BookedGameChanges,
     BookedGames,
     BookingTakings,
-    CardFees,
+    LateRefunds,
     ClubBookings,
     ClubDistances,
     ClubRequests,
@@ -293,7 +293,11 @@ from app.modules.payments.application.payouts import (
     DecideClubPayouts,
     ReadClubPayouts,
 )
-from app.modules.payments.application.refunds import GiveTheSharesBack
+from app.modules.payments.application.refunds import (
+    EmailTheSeatTakenRefund,
+    GiveTheSharesBack,
+    TellTheLateLeaver,
+)
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
@@ -336,7 +340,7 @@ from app.modules.proposals.infrastructure.payments import (
     LiveYesCommitments,
     PaymentsBookingTakings,
     PaymentsSavedMethods,
-    PaymentsCardFees,
+    PaymentsLateRefunds,
     PaymentsHeldShares,
     PaymentsSeatCharges,
     PaymentsSeatRefunds,
@@ -1229,6 +1233,20 @@ def build_settle_seat_charges(
     )
 
 
+def build_email_the_seat_taken_refund(
+    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+) -> EmailTheSeatTakenRefund:
+    """A seat-taken refund emailed once it is made, to the grosz (#641) —
+    built per delivery run, over the session the delivery commits in."""
+    return EmailTheSeatTakenRefund(
+        charges=_seat_charge_repository(session, runtime),
+        sellers=build_sellers(session, runtime=runtime),
+        payers=build_payers(session),
+        mail=build_mail_queue(session),
+        app_link=f"{settings.APP_SCHEME}://",
+    )
+
+
 def build_notice_inbox(session: AsyncSession) -> NoticeInbox:
     return SqlAlchemyNoticeInbox(session)
 
@@ -1685,24 +1703,40 @@ def build_booked_game_changes(
     )
 
 
-def build_card_fees() -> CardFees:
-    """What the card fee on a share comes to — the payments' estimate (#544)."""
-    return PaymentsCardFees()
+def build_late_refunds(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> LateRefunds:
+    """What a leaver after the cut-off would get back if somebody took their
+    seat — the share less exactly the fee kept on their payment (#641)."""
+    return PaymentsLateRefunds(_seat_charge_repository(session, runtime))
 
 
 def build_seat_refunds(
     session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
 ) -> SeatRefunds:
     """A booked game's paid shares given back — decided in the act, refunded
-    at the provider from the outbox — and each player emailed (#544)."""
+    at the provider from the outbox — and each player emailed (#544); and a
+    leaver after the cut-off told what would come back (#641)."""
+    charges = _seat_charge_repository(session, runtime)
+    sellers = build_sellers(session, runtime=runtime)
+    payers = build_payers(session)
+    mail = build_mail_queue(session)
+    app_link = f"{settings.APP_SCHEME}://"
     return PaymentsSeatRefunds(
         GiveTheSharesBack(
-            charges=_seat_charge_repository(session, runtime),
-            sellers=build_sellers(session, runtime=runtime),
-            payers=build_payers(session),
-            mail=build_mail_queue(session),
-            app_link=f"{settings.APP_SCHEME}://",
-        )
+            charges=charges,
+            sellers=sellers,
+            payers=payers,
+            mail=mail,
+            app_link=app_link,
+        ),
+        late_leaver=TellTheLateLeaver(
+            charges=charges,
+            sellers=sellers,
+            payers=payers,
+            mail=mail,
+            app_link=app_link,
+        ),
     )
 
 
@@ -2647,7 +2681,7 @@ def build_read_booking_details(
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
-        fees=build_card_fees(),
+        late_refunds=build_late_refunds(session, runtime=runtime),
         offers=build_rescue_offers(session, settings=settings, runtime=runtime),
         clock=clock,
     )

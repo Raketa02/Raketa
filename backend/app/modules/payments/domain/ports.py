@@ -115,9 +115,10 @@ class SeatChargeRepository(Protocol):
         which names a payment and never a player, finds its stream."""
         ...
 
-    async def paid_by(self, player_id: UUID) -> Sequence[SeatCharge]:
-        """Every charge this player has paid — taken, or being taken — **the
-        latest taken first**. What their receipts list."""
+    async def receipts_of(self, player_id: UUID) -> Sequence[SeatCharge]:
+        """Every charge of this player's that is a receipt (#641): each one
+        taken, or being taken, and each held for a booked game and let go
+        untaken — **the latest taken first**."""
         ...
 
     async def games_held_until(self, moment: Instant) -> Sequence[UUID]:

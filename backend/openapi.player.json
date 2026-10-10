@@ -6168,7 +6168,7 @@
           "payments"
         ],
         "summary": "My receipts",
-        "description": "You \u203a Payments' *RECEIPTS*: every share the reader paid, the latest first, **the club named as the seller**. A hold let go \u2014 a game that did not book \u2014 is not here: nobody paid it.",
+        "description": "You \u203a Payments' *RECEIPTS*: every share the reader paid, every refund with exactly what was kept on the payment, and every share held for a booked game and let go untaken (*held \u00b7 released*, #641) \u2014 the latest first, **the club named as the seller**. A hold released because the game did not book on it is not here, nor is a card check.",
         "operationId": "read_receipts_api_v1_players_me_receipts_get",
         "responses": {
           "200": {
@@ -6360,7 +6360,7 @@
           "proposals"
         ],
         "summary": "Take an open seat",
-        "description": "*I'm in \u00b7 27 z\u0142* on a rescue \u2014 a Seat open card, a Seats to fill row, a rescue's details (the client gives its ten seconds of *Undo* first). **The share is held** on the club's account until the cut-off, like every seat's, or taken at once after it (#637), and the player takes **the seat that opened first**, on its side \u2014 `booked` names the booking and its Game, now on their Home, and they are emailed *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off); they join the game's chat. **The leaver who left after the cut-off is refunded, less the card fee, the moment this payment succeeds** (emailed *You've been refunded \u00b7 your seat was taken*); one who left before it had nothing taken. `open_seats` is what is still open. When the share could not be held, nothing was taken: `your_payment` names the refused payment, and confirming it (`POST /seat-charges/{id}/confirmation`) is the join again. A player already on the game is answered the same `booked`, and nothing is recorded.",
+        "description": "*I'm in \u00b7 27 z\u0142* on a rescue \u2014 a Seat open card, a Seats to fill row, a rescue's details (the client gives its ten seconds of *Undo* first). **The share is held** on the club's account until the cut-off, like every seat's, or taken at once after it (#637), and the player takes **the seat that opened first**, on its side \u2014 `booked` names the booking and its Game, now on their Home, and they are emailed *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off); they join the game's chat. **The leaver who left after the cut-off is refunded, less exactly the fee kept on their payment, the moment this payment succeeds** \u2014 told once the refund is made (*You've been refunded 38,24 z\u0142 \u00b7 your seat was taken*), which waits for a fee not yet known (#641); one who left before it had nothing taken. `open_seats` is what is still open. When the share could not be held, nothing was taken: `your_payment` names the refused payment, and confirming it (`POST /seat-charges/{id}/confirmation`) is the join again. A player already on the game is answered the same `booked`, and nothing is recorded.",
         "operationId": "join_a_rescue_api_v1_bookings__booking_id__seats_post",
         "security": [
           {
@@ -8694,7 +8694,7 @@
         "properties": {
           "left": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less exactly the fee kept on the payment, when somebody takes it \u2014 emailed that figure now, or none while the fee is not yet known (#641). `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
           }
         },
         "type": "object",
@@ -10580,7 +10580,7 @@
         "properties": {
           "kind": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 *Nothing is taken: the hold on your card is let go. Your seat is offered to others. On your record only if the game is then called off.* (Q113) `AFTER_THE_CUT_OFF` \u2014 *Your seat is offered to others. If someone takes it, you get 38,40 z\u0142 back (40 z\u0142 less the 1,60 z\u0142 kept on your payment); if nobody does, you won't. On your record if nobody takes it.* `WHILE_WAITING_FOR_THE_CLUB` \u2014 *Nobody has paid yet. Leaving withdraws your yes.* The same words the departure answers with."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 *Nothing is taken: the hold on your card is let go. Your seat is offered to others. On your record only if the game is then called off.* (Q113) `AFTER_THE_CUT_OFF` \u2014 *Your seat is offered to others. If someone takes it, you get 38,24 z\u0142 back (40 z\u0142 less the 1,76 z\u0142 kept on your payment); if nobody does, you won't. On your record if nobody takes it.* \u2014 with no figure and no clause while the fee kept is not yet known (#641). `WHILE_WAITING_FOR_THE_CLUB` \u2014 *Nobody has paid yet. Leaving withdraws your yes.* The same words the departure answers with."
           },
           "refund_grosze": {
             "anyOf": [
@@ -10592,7 +10592,7 @@
               }
             ],
             "title": "Refund Grosze",
-            "description": "After the cut-off, what comes back if somebody takes the seat \u2014 the share less the card fee; nought when nobody paid. `null` before the cut-off, when nothing is taken and nothing comes back (#637)."
+            "description": "After the cut-off, what comes back if somebody takes the seat \u2014 the share less **exactly the fee kept on the reader's own payment**, to the grosz (#641); nought when nobody paid. `null` before the cut-off, when nothing is taken and nothing comes back (#637), and **while that fee is not yet known** \u2014 a club on its own negotiated pricing is told it after the share is taken: no figure and no clause, never an estimate."
           },
           "card_fee_grosze": {
             "anyOf": [
@@ -10604,7 +10604,7 @@
               }
             ],
             "title": "Card Fee Grosze",
-            "description": "After the cut-off, the card fee that isn't returned \u2014 the provider's standard price, an estimate; what it kept is on the receipt. `null` before the cut-off (#637)."
+            "description": "After the cut-off, exactly what was kept on the reader's payment \u2014 *1,76 z\u0142* on a 40 z\u0142 share paid by a business card \u2014 the provider's own figure, as the refund's receipt will say it. `null` wherever `refund_grosze` is."
           }
         },
         "type": "object",
@@ -12883,10 +12883,11 @@
             "type": "string",
             "enum": [
               "CHARGE",
-              "REFUND"
+              "REFUND",
+              "RELEASED"
             ],
             "title": "Kind",
-            "description": "`CHARGE` \u2014 a share paid (\u2713): taken at the club's cut-off, or at once after it; a share only held is no receipt (#637). `REFUND` \u2014 a share given back (\u21a9): less the card fee to a player who left after the cut-off when somebody took their seat, whole on a game its club cancelled after the cut-off."
+            "description": "`CHARGE` \u2014 a share paid (\u2713, *\u221240 z\u0142 \u00b7 paid*): taken at the club's cut-off, or at once after it; a share still held is no receipt (#637). `REFUND` \u2014 a share given back (\u21a9, *+38,24 z\u0142 \u00b7 refunded*): less exactly what was kept on the payment to a player who left after the cut-off when somebody took their seat, whole on a game its club cancelled after the cut-off. `RELEASED` \u2014 a share held for a booked game and let go untaken (*40 z\u0142 held \u00b7 released*, #641): a leave before the cut-off, a game short at it, the club's cancel before it \u2014 so the hold the bank app showed is explained. Nothing was taken. A card checked when a game filled far ahead is never a receipt."
           },
           "club": {
             "$ref": "#/components/schemas/SellerSchema"
@@ -12902,7 +12903,7 @@
           "amount_grosze": {
             "type": "integer",
             "title": "Amount Grosze",
-            "description": "What was paid, or what came back, in grosze \u2014 always positive."
+            "description": "What was paid, what came back, or what was held, in grosze \u2014 always positive."
           },
           "card_fee_grosze": {
             "anyOf": [
@@ -12914,13 +12915,13 @@
               }
             ],
             "title": "Card Fee Grosze",
-            "description": "On a `REFUND`, the card fee the provider kept back \u2014 nought on a refund in full. `null` on a `CHARGE`."
+            "description": "On a `REFUND`, exactly what was kept on the payment \u2014 *1,76 z\u0142 kept on your payment* \u2014 nought on a refund in full; never an estimate (#641). `null` on a `CHARGE` and a `RELEASED`."
           },
           "paid_at": {
             "type": "string",
             "format": "date-time",
             "title": "Paid At",
-            "description": "When the money moved: taken, or \u2014 on a `REFUND` \u2014 given back."
+            "description": "When the money moved: taken, or \u2014 on a `REFUND` \u2014 given back; on a `RELEASED`, when the hold was let go."
           }
         },
         "type": "object",
@@ -12935,7 +12936,7 @@
           "paid_at"
         ],
         "title": "ReceiptSchema",
-        "description": "One share the reader paid, or got back \u2014 *the club named as the\nseller*."
+        "description": "One share the reader paid, got back, or had held and let go \u2014 *the club\nnamed as the seller*."
       },
       "ReceiptsResponse": {
         "properties": {

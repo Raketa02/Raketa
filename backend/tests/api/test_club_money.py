@@ -44,6 +44,10 @@ from tests.api.proposals_world import (
     the_cut_off_comes,
     warsaw,
 )
+from tests.api.test_the_exact_refund_after_the_cut_off import (
+    CONNECT_SECRET,
+    the_provider_says_the_fee_is_ready,
+)
 from tests.unit.fake_clock import MovableClock
 
 MONEY = "/api/v1/club/money"
@@ -100,6 +104,14 @@ async def booking(client, session_factory, clock, club, group, four) -> str:
     last = await says_yes(client, four[3], proposal)
     assert last.status_code == 200, last.text
     return last.json()["booked"]["booking_id"]
+
+
+@pytest.fixture
+def the_connect_secret(monkeypatch):
+    monkeypatch.setenv("STRIPE_CONNECT_WEBHOOK_SECRET", CONNECT_SECRET)
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 async def money_of(client, desk: dict, month: str | None = None) -> dict:
@@ -296,6 +308,53 @@ async def test_a_day_that_cost_the_club_is_netted_against_the_next_one_paid(
     money = await money_of(client, desk, "2026-10")
     assert [row["net_grosze"] for row in money["bookings"]] == [-5_80, 114_20]
     assert all(row["paid_out"] for row in money["bookings"])
+
+
+async def test_card_fees_not_yet_known_are_said_so_and_the_payout_waits_for_them(
+    client, session_factory, clock, club, booking, payments, mailbox, the_connect_secret
+):
+    """**Never an estimate** (#641; the mechanics §16.11, Q113): a club on its
+    own negotiated pricing is told its fees after the take. Until then its card
+    fees — and so what is its own — are *not yet known*, and the game is not
+    paid out; once the provider says them (Stripe's ``charge.updated``), they
+    are the real ones and the payout follows."""
+
+    club_id, desk = club
+    payments.fees_reported_later.add(payments.account_opened_for(UUID(club_id)))
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
+    clock.at = at(10, 23)
+
+    await pays_out(session_factory, clock, mailbox)
+    unknown = await money_of(client, desk, "2026-10")
+
+    assert payments.called("pay_out") == []
+    [row] = unknown["bookings"]
+    assert (row["collected_grosze"], row["card_fees_grosze"], row["net_grosze"]) == (
+        4 * SHARE,
+        None,
+        None,
+    )
+    assert (unknown["totals"]["card_fees_grosze"], unknown["totals"]["net_grosze"]) == (
+        None,
+        None,
+    )
+
+    for number, call in enumerate(payments.called("capture")):
+        payments.reports_fee(call.arguments["payment_id"])
+        told = await the_provider_says_the_fee_is_ready(
+            client,
+            account=call.arguments["account_id"],
+            payment_id=call.arguments["payment_id"],
+            notice_id=f"evt_fee_{number}",
+        )
+        assert told.status_code == 204, told.text
+    await pays_out(session_factory, clock, mailbox)
+
+    [row] = (await money_of(client, desk, "2026-10"))["bookings"]
+    assert (row["card_fees_grosze"], row["net_grosze"]) == (4 * FEE, 114_20)
+    [sent] = payments.called("pay_out")
+    assert sent.arguments["amount_grosze"] == 114_20
 
 
 async def test_a_game_short_at_its_cut_off_is_not_paid_out_before_its_refunds(

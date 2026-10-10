@@ -197,6 +197,9 @@ class Notice:
     #: Told to a player who had left the game: said in a leaver's words
     #: (Q108).
     you_left: bool = False
+    #: What was kept on the payment a refund gave back less — *40 zł less the
+    #: 1,76 zł kept on your payment* (#641).
+    kept_grosze: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -282,6 +285,7 @@ class NoticesOfADay:
             own=notice.own,
             until=notice.until,
             you_left=notice.you_left,
+            kept_grosze=notice.kept_grosze,
         )
         self._record_that(given)
         return given

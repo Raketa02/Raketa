@@ -13,7 +13,7 @@ from collections.abc import Sequence
 from typing import final
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
@@ -123,14 +123,29 @@ class EventSourcedSeatChargeRepository:
         )
         return tuple(ids.all())
 
-    async def paid_by(self, player_id: UUID) -> Sequence[SeatCharge]:
+    async def receipts_of(self, player_id: UUID) -> Sequence[SeatCharge]:
         return await self._loaded(
             select(SeatChargeORM.charge_id)
             .where(
                 SeatChargeORM.player_id == player_id,
-                SeatChargeORM.taken_at.is_not(None),
+                or_(
+                    SeatChargeORM.taken_at.is_not(None),
+                    # Held for a booked game, and let go untaken (#641): which
+                    # of these the stream says was let go is the read's to ask.
+                    and_(
+                        SeatChargeORM.held_until.is_not(None),
+                        SeatChargeORM.status.in_(
+                            (
+                                SeatChargeStatus.RELEASING.value,
+                                SeatChargeStatus.CANCELLED.value,
+                            )
+                        ),
+                    ),
+                ),
             )
-            .order_by(SeatChargeORM.taken_at.desc(), SeatChargeORM.charge_id)
+            .order_by(
+                SeatChargeORM.taken_at.desc().nulls_last(), SeatChargeORM.charge_id
+            )
         )
 
     async def _loaded(self, ids_query) -> list[SeatCharge]:  # type: ignore[no-untyped-def]

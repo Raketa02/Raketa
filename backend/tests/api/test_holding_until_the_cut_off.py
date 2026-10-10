@@ -135,6 +135,13 @@ async def receipts_of(client, mailbox, player: dict) -> list[dict]:
     return read.json()["receipts"]
 
 
+def kinds_of(receipts: list[dict]) -> list[str]:
+    """Each receipt's kind — a share let go untaken is *held · released*
+    (#641): nothing was taken, and the hold the bank app showed is explained."""
+
+    return [receipt["kind"] for receipt in receipts]
+
+
 async def money_of(client, desk: dict) -> dict:
     read = await client.get(MONEY, params={"month": "2026-10"}, headers=desk)
     assert read.status_code == 200, read.text
@@ -271,7 +278,7 @@ async def test_a_game_short_at_its_cut_off_lets_every_hold_go_and_nobody_pays(
     assert card["money"]["share_state"] is None
     assert card["money"]["refunded_grosze"] is None
     for player in four:
-        assert await receipts_of(client, mailbox, player) == []
+        assert kinds_of(await receipts_of(client, mailbox, player)) == ["RELEASED"]
     [called_off] = [
         sent
         for sent in await mailbox.to("ola@example.com")
@@ -305,7 +312,7 @@ async def test_leaving_before_the_cut_off_takes_nothing(
     [cancelled] = payments.called("cancel")
     assert calls(payments, "refund") == 0
     assert calls(payments, "capture") == 0
-    assert await receipts_of(client, mailbox, kuba) == []
+    assert kinds_of(await receipts_of(client, mailbox, kuba)) == ["RELEASED"]
     [email] = [
         sent
         for sent in await mailbox.to("kuba@example.com")
@@ -319,21 +326,31 @@ async def test_leaving_before_the_cut_off_takes_nothing(
 
 
 async def test_the_leave_quote_is_null_before_the_cut_off(
-    client, session_factory, clock, club, four
+    client, session_factory, clock, club, four, mailbox
 ):
     booking = await a_booked_game(client, session_factory, clock, club[0], four)
 
     before = (await details_of(client, four[0], booking))["leaving"]
     clock.move(CUT_OFF - MONDAY_MORNING)
-    after = (await details_of(client, four[0], booking))["leaving"]
+    still_held = (await details_of(client, four[0], booking))["leaving"]
+    await cuts_off(session_factory, clock)
+    await mailbox.drain()
+    taken = (await details_of(client, four[0], booking))["leaving"]
 
     assert before == {
         "kind": "BEFORE_THE_CUT_OFF",
         "refund_grosze": None,
         "card_fee_grosze": None,
     }
-    assert after["kind"] == "AFTER_THE_CUT_OFF"
-    assert after["refund_grosze"] is not None
+    # The cut-off has come and the job has not taken the share yet: nothing
+    # was kept on a payment not taken, so there is no figure (#641).
+    assert still_held == {
+        "kind": "AFTER_THE_CUT_OFF",
+        "refund_grosze": None,
+        "card_fee_grosze": None,
+    }
+    assert taken["kind"] == "AFTER_THE_CUT_OFF"
+    assert taken["refund_grosze"] is not None
 
 
 async def test_a_leaver_after_the_cut_off_has_their_share_taken_with_the_rest(
@@ -385,7 +402,7 @@ async def test_a_club_cancelling_before_the_cut_off_lets_every_hold_go(
     card = await card_of(client, four[0])
     assert card["called_off_reason"] == "CANCELLED_BY_THE_CLUB"
     assert card["money"]["refunded_grosze"] is None
-    assert await receipts_of(client, mailbox, four[0]) == []
+    assert kinds_of(await receipts_of(client, mailbox, four[0])) == ["RELEASED"]
     [email] = [
         sent
         for sent in await mailbox.to("ola@example.com")

@@ -6,9 +6,9 @@ board to every member who fits and is free for the hour, and as a **Seat open**
 card to the best fits' decks. **Taking it is the joiner's share held** until
 the cut-off, like every seat's, or taken at once after it (#637) — the first
 join wins and a second is told the seat was just taken — and **the leaver who
-left after the cut-off is refunded, less the card fee, the moment the joiner's
-payment succeeds**. Open seats stay until the cut-off whatever their number, then until
-the start.
+left after the cut-off is refunded, less exactly the fee kept on their payment,
+the moment the joiner's payment succeeds** (#641). Open seats stay until the
+cut-off whatever their number, then until the start.
 
 Every act is taken over HTTP as the phone takes it, against the fake payment
 provider, and every claim is read where somebody would read it — the board, the
@@ -45,7 +45,8 @@ from tests.api.proposals_world import (
 from tests.unit.fake_clock import MovableClock
 
 SHARE = 30_00
-#: The card fee the fake provider keeps on a 30 zł refund: 1.5 % and 1 zł.
+#: What a personal EU card keeps on a 30 zł share — 1.5 % and 1 zł — and so
+#: what a refund less it keeps back, exactly (#641).
 FEE = 1_45
 CUT_OFF = SATURDAY_FIVE - timedelta(hours=24)
 AFTER_THE_CUT_OFF = CUT_OFF + timedelta(hours=1)
@@ -148,6 +149,13 @@ async def receipts_of(client, mailbox, player: dict) -> list[dict]:
     read = await client.get("/api/v1/players/me/receipts", headers=player["headers"])
     assert read.status_code == 200, read.text
     return read.json()["receipts"]
+
+
+def kinds_of(receipts: list[dict]) -> list[str]:
+    """Each receipt's kind — a share let go untaken is *held · released*
+    (#641): nothing was taken, and the hold the bank app showed is explained."""
+
+    return [receipt["kind"] for receipt in receipts]
 
 
 async def rooms_of(client, mailbox, player: dict) -> list[str]:
@@ -291,8 +299,8 @@ async def test_open_seats_stay_until_the_cut_off_whatever_their_number(
 
     # Still short at the cut-off: everybody still in, the rescue too, has
     # their hold let go — nothing was taken (#637).
-    assert await receipts_of(client, mailbox, zosia) == []
-    assert await receipts_of(client, mailbox, ola) == []
+    assert kinds_of(await receipts_of(client, mailbox, zosia)) == ["RELEASED"]
+    assert kinds_of(await receipts_of(client, mailbox, ola)) == ["RELEASED"]
 
 
 # --------------------------------------------------------------------------- #
@@ -436,8 +444,8 @@ async def test_a_leaver_after_the_cut_off_is_refunded_less_the_fee_once_it_is_ta
         for sent in await mailbox.to("kuba@example.com")
         if sent.subject.startswith("You've been refunded")
     ]
-    assert email.subject == "You've been refunded · your seat was taken"
-    assert "30 zł share is being refunded" in email.text
+    assert email.subject == "You've been refunded 28,55 zł · your seat was taken"
+    assert "(30 zł less the 1,45 zł kept on your payment)" in email.text
 
 
 async def test_a_leaver_before_the_cut_off_had_nothing_taken_and_gets_nothing_back(
@@ -451,7 +459,7 @@ async def test_a_leaver_before_the_cut_off_had_nothing_taken_and_gets_nothing_ba
 
     assert (await joins(client, zosia, booking)).status_code == 200
 
-    assert await receipts_of(client, mailbox, kuba) == []
+    assert kinds_of(await receipts_of(client, mailbox, kuba)) == ["RELEASED"]
     assert payments.called("refund") == []
     assert not [
         sent

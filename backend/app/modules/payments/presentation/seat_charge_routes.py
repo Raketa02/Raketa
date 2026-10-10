@@ -70,9 +70,11 @@ async def read_seat_charge(
     response_model=ReceiptsResponse,
     summary="My receipts",
     description=(
-        "You › Payments' *RECEIPTS*: every share the reader paid, the latest "
-        "first, **the club named as the seller**. A hold let go — a game that "
-        "did not book — is not here: nobody paid it."
+        "You › Payments' *RECEIPTS*: every share the reader paid, every refund "
+        "with exactly what was kept on the payment, and every share held for a "
+        "booked game and let go untaken (*held · released*, #641) — the latest "
+        "first, **the club named as the seller**. A hold released because the "
+        "game did not book on it is not here, nor is a card check."
     ),
 )
 async def read_receipts(

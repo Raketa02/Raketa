@@ -12,7 +12,9 @@ most, as a normal payout would be, and one email.
 
 **What is owed, game by game**: every share taken, less what was given back,
 less the provider's card fee on it (``SeatCharge.net_grosze``) — below nought
-for a game given back whole, whose fees the club bears. A day whose games left
+for a game given back whole, whose fees the club bears. **Never an estimate**
+(#641): a share whose fee is not yet known is not settled, so its game waits
+for the provider to say it. A day whose games left
 less than nothing pays nothing out: they wait, and are netted against the next
 day that leaves the club something, so a payout never sends more than the
 club's games left it.
@@ -75,7 +77,12 @@ def releasable(
             if game_id in over and all(charge.settled for charge in charges)
         )
     )
-    amount = sum(charge.net_grosze for game in games for charge in charges_of[game])
+    amount = sum(
+        # Settled, so what is the club's of it is known (#641).
+        invariant(charge.net_grosze, f"{charge.charge_id} settled, net unknown")
+        for game in games
+        for charge in charges_of[game]
+    )
     if not games or amount <= 0:
         return None
     return Releasable(game_ids=games, amount_grosze=amount)

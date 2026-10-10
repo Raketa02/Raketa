@@ -587,10 +587,13 @@ class ResultPane(BaseModel):
 
 class RefundPane(BaseModel):
     decided_at: datetime | None
-    withholds_fee: bool = Field(description="Whether the card fee is kept back.")
-    given_back_grosze: int = Field(
+    withholds_fee: bool = Field(
+        description="Whether the fee kept on the payment is kept back."
+    )
+    given_back_grosze: int | None = Field(
         description=(
-            "What the provider gave back once it has; until then what was decided."
+            "What the provider gave back once it has; until then what was "
+            "decided — `null` while that waits on a fee not yet known (#641)."
         )
     )
     fee_withheld_grosze: int | None = Field(

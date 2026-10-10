@@ -7,8 +7,10 @@ player confirms (the details' ``leave_terms``). One act, three outcomes:
   is refunded and no fee arises (#637), and their seat is offered to others; it
   is on their record only if the game is then called off because of it;
 - **after the cut-off** — the seat stays paid and is offered to others until
-  the start; the leaver is refunded, less the card fee, when somebody takes it
-  (#545), and it is on their record if nobody does;
+  the start; the leaver is refunded, less exactly the fee kept on their
+  payment, when somebody takes it (#545, #641) — and is emailed that figure as
+  they leave, or none while the fee is not yet known — and it is on their
+  record if nobody does;
 - **while the club decides** — nobody has paid, so leaving withdraws the yes and
   the request to the club with it, exactly as *Withdraw* does (#543) — and so
   it does on a full game gone back to filling (#624), whose details offer
@@ -113,6 +115,10 @@ class LeaveTheGame:
                 reason=RefundReason.LEFT_BEFORE_THE_CUT_OFF,
                 at=now,
             )
+        else:
+            # Nothing comes back yet: they are told what will, if somebody
+            # takes the seat (#641).
+            await self._refunds.left_after_the_cut_off(game.booking_id, player, at=now)
         await self._uow.commit()
         return left
 

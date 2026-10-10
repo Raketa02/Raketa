@@ -53,6 +53,7 @@ def recorded(given: NoticeGiven) -> RecordedNotice:
         own=given.own,
         until=None if given.until is None else instant(given.until),
         you_left=given.you_left,
+        kept_grosze=given.kept_grosze,
     )
 
 
@@ -85,6 +86,7 @@ class NoticeWords:
                     until=notice.until,
                     given_at=notice.given_at,
                     you_left=notice.you_left,
+                    kept_grosze=notice.kept_grosze,
                 )
             )
             for notice in notices

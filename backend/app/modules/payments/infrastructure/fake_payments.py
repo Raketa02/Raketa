@@ -160,6 +160,11 @@ NOTICE_KINDS: Mapping[PaymentStatus, str] = {
 }
 
 
+#: The kind Stripe sends when a captured payment's fee becomes readable — a
+#: club on its own negotiated pricing is told it after the take (#641).
+FEE_READY_KIND = "charge.updated"
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class SentNotice:
@@ -362,9 +367,22 @@ class FakePayments:
 
     def reports_fee(self, payment_id: str) -> None:
         """The provider reports the fee it kept on a payment taken at a club on
-        its own negotiated pricing: a reading says it from now on."""
+        its own negotiated pricing: a reading says it from now on, and the
+        notice Stripe sends then — ``charge.updated`` — is recorded (#641)."""
 
-        self._payment(payment_id).fee_known = True
+        payment = self._payment(payment_id)
+        payment.fee_known = True
+        self.notices.append(
+            SentNotice(
+                notice=SeatPaymentChanged(
+                    notice_id=_id("evt"),
+                    account_id=payment.account_id,
+                    payment_id=payment.payment_id,
+                ),
+                kind=FEE_READY_KIND,
+                status=payment.status,
+            )
+        )
 
     def gives_refund(self, payment_id: str) -> None:
         """Let this payment's refund through, while refunds wait: the next time

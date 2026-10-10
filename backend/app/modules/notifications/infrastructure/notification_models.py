@@ -99,6 +99,8 @@ class NoticeORM(Base):
     )
     #: Told to a player who had left the game, in a leaver's words (Q108).
     you_left: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    #: What was kept on the payment a refund gave back less (#641).
+    kept_grosze: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
 
 class NoticesOpenedORM(Base):

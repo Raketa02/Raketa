@@ -34,9 +34,13 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
   club that books at once: as ``RequestWithdrawn`` is told (#625).
 - ``PaymentNotInTime`` — a share refused at the club's yes with no time left:
   *called off · nobody paid* to everybody on it (#626).
-- ``SeatChargeRefundDecided`` — *Game called off · with the refund* or *You've
-  been refunded*, to the refunded; never a leaver's own refund. A leaver the
-  club's cancel refunds is told in a leaver's words (Q108).
+- ``SeatChargeRefundDecided`` — *Game called off · with the refund*, to the
+  refunded; never a leaver's own refund. A leaver the club's cancel refunds is
+  told in a leaver's words (Q108).
+- ``SeatChargeRefunded`` — a seat-taken refund, **told when it is made**
+  (#641): *You've been refunded 38,24 zł · your seat was taken* / *40 zł less
+  the 1,76 zł kept on your payment* — the sum is known to the grosz only then,
+  since a fee not yet known makes the refund wait.
 - ``SeatChargeReleased`` with a reason — a held share let go: *Game called off ·
   nothing was taken*, at the cut-off or the club's cancel before it (#637);
   never a leaver's own let-go.
@@ -118,6 +122,7 @@ from app.modules.payments.domain.events import (
     SeatChargeFailed,
     SeatChargeKept,
     SeatChargeRefundDecided,
+    SeatChargeRefunded,
     SeatChargeReleased,
     SeatChargeTaken,
 )
@@ -135,9 +140,11 @@ from app.modules.proposals.domain.events import (
 )
 from app.shared.domain import DomainEvent
 
-#: A refund's reason, and what the player is told — a leaver's own refund is
-#: told nobody: it is their act, and its email says so. ``None`` is the club's
-#: own reason for cancelling.
+#: A refund's reason, and what the player is told when it is decided — a
+#: leaver's own refund is told nobody: it is their act, and its email says so.
+#: **A seat-taken refund is told when it is made** (#641,
+#: ``_seat_taken_refunded``): its sum is known to the grosz only then. ``None``
+#: is the club's own reason for cancelling.
 _REFUNDS: Final[dict[RefundReason, tuple[NoticeKind, NoticeReason | None]]] = {
     RefundReason.CALLED_OFF_AT_THE_CUT_OFF: (
         NoticeKind.GAME_CALLED_OFF,
@@ -145,17 +152,6 @@ _REFUNDS: Final[dict[RefundReason, tuple[NoticeKind, NoticeReason | None]]] = {
     ),
     RefundReason.CANCELLED_BY_THE_CLUB: (NoticeKind.GAME_CALLED_OFF, None),
     RefundReason.CANCELLED_AFTER_YOU_LEFT: (NoticeKind.GAME_CALLED_OFF, None),
-    RefundReason.SEAT_TAKEN: (NoticeKind.REFUNDED, None),
-}
-
-#: What a held share let go tells its player, by why (#637): what a refund
-#: would have, but nothing was taken. A leaver's own let-go is told nobody —
-#: their act, and emailed — and so is one whose seat was taken before the
-#: cut-off took their share.
-_LET_GO: Final[dict[RefundReason, tuple[NoticeKind, NoticeReason | None]]] = {
-    reason: told
-    for reason, told in _REFUNDS.items()
-    if reason is not RefundReason.SEAT_TAKEN
 }
 
 
@@ -196,6 +192,7 @@ def _notice(
     own: bool = False,
     until: Instant | None = None,
     you_left: bool = False,
+    kept_grosze: int | None = None,
 ) -> Notice:
     return Notice(
         kind=kind,
@@ -213,6 +210,7 @@ def _notice(
         own=own,
         until=until,
         you_left=you_left,
+        kept_grosze=kept_grosze,
     )
 
 
@@ -481,6 +479,34 @@ class TellThePlayers:
             at=at,
         )
 
+    async def _seat_taken_refunded(
+        self, event: SeatChargeRefunded, *, key: str, at: Instant
+    ) -> None:
+        """**A leaver whose seat was taken is told when the refund is made**
+        (#641; the mechanics §13, Q113): *You've been refunded 38,24 zł · your
+        seat was taken* / *40 zł less the 1,76 zł kept on your payment* — the
+        sum and what was kept, both the provider's own. Every other refund was
+        told when it was decided."""
+
+        share = await self._shares.of(event.charge_id)
+        if share is None or not share.seat_taken:
+            return
+        game = await self._games.about(share.game_id, at=at)
+        if game is None:
+            return
+        await self._give.execute(
+            event.player_id,
+            _notice(
+                NoticeKind.REFUNDED,
+                game,
+                key=f"{NoticeKind.REFUNDED}:{key}",
+                opens=Opens.BOOKING,
+                amount_grosze=share.refunded_grosze,
+                kept_grosze=share.kept_grosze,
+            ),
+            at=at,
+        )
+
     async def _let_go(
         self, event: SeatChargeReleased, *, key: str, at: Instant
     ) -> None:
@@ -488,7 +514,12 @@ class TellThePlayers:
         game called off at its cut-off, or cancelled by its club before it.
         An undecided hold released at the fill tells nothing."""
 
-        told = None if event.reason is None else _LET_GO.get(RefundReason(event.reason))
+        # What a refund would have told, but nothing was taken (#637): a
+        # leaver's own let-go is told nobody — their act, and emailed — and so
+        # is one whose seat was taken before the cut-off took their share.
+        told = (
+            None if event.reason is None else _REFUNDS.get(RefundReason(event.reason))
+        )
         if told is None:
             return
         kind, reason = told
@@ -843,6 +874,7 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     FellBackToFilling: TellThePlayers._fell_back,
     PaymentNotInTime: TellThePlayers._called_off_at_once,
     SeatChargeRefundDecided: TellThePlayers._refunded,
+    SeatChargeRefunded: TellThePlayers._seat_taken_refunded,
     SeatChargeReleased: TellThePlayers._let_go,
     BookingRefused: TellThePlayers._turned_down,
     BookingTimedOut: TellThePlayers._turned_down,

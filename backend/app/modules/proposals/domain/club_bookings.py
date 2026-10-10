@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from collections.abc import Iterable
 from typing import Final, final
 from uuid import UUID
 
@@ -137,9 +138,12 @@ class Takings:
     #: Everybody whose share was taken.
     paid: frozenset[UUID]
     collected_grosze: int
-    refunded_grosze: int
-    #: The provider's card fee on every share taken — never returned.
-    card_fees_grosze: int = 0
+    #: ``None`` while a refund less the fee kept waits for a fee not yet known
+    #: (#641).
+    refunded_grosze: int | None
+    #: The provider's card fee on every share taken — never returned; the real
+    #: one, or ``None`` while any is not yet known (#641). Never an estimate.
+    card_fees_grosze: int | None = 0
     #: Whether a payout carried it to the club's bank; until then it waits on
     #: the club's account, where a refund before the start can come out of it.
     paid_out: bool = False
@@ -148,11 +152,26 @@ class Takings:
     held: frozenset[UUID] = frozenset()
 
     @property
-    def net_grosze(self) -> int:
+    def net_grosze(self) -> int | None:
         """What is the club's: collected, less refunded, less the card fees —
-        below nought on a game everybody was given back whole."""
+        below nought on a game everybody was given back whole; ``None`` while
+        either is not yet known."""
 
+        if self.refunded_grosze is None or self.card_fees_grosze is None:
+            return None
         return self.collected_grosze - self.refunded_grosze - self.card_fees_grosze
+
+
+def known_sum(figures: Iterable[int | None]) -> int | None:
+    """The sum of figures each real or not yet known: not yet known if any of
+    them is — never a total that leaves one out (#641)."""
+
+    total = 0
+    for figure in figures:
+        if figure is None:
+            return None
+        total += figure
+    return total
 
 
 NOTHING_TAKEN: Final = Takings(paid=frozenset(), collected_grosze=0, refunded_grosze=0)

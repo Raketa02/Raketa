@@ -16,10 +16,11 @@ A booked game that lost a player offers the seat. Three things here:
   joiner's share is held and taken in this transaction — the fill's own
   all-or-nothing, for one seat (``SeatCharges``, ``rescue``) — the seat that
   opened first is theirs on the booking and on its Game, and **the leaver who
-  left after the cut-off is refunded, less the card fee, the moment the
-  joiner's payment succeeds**: the refund is decided here, in the same
-  transaction, and made from the outbox. A refused payment takes no seat: it is
-  the joiner's to confirm, and **confirming it is the join again**
+  left after the cut-off is refunded, less exactly the fee kept on their
+  payment, the moment the joiner's payment succeeds** (#641): the refund is
+  decided here, in the same transaction, and made — and told, to the grosz —
+  from the outbox, waiting for a fee not yet known. A refused payment takes no
+  seat: it is the joiner's to confirm, and **confirming it is the join again**
   (``POST /seat-charges/{id}/confirmation``). The joiner's other yeses at the
   hour are withdrawn and a full week pauses the rest, as a fill does;
 - **a no to it** (``SayNoToARescue``) — the Seat open card leaves that reader's

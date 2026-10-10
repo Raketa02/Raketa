@@ -222,8 +222,8 @@ class SeatChargeResponse(BaseModel):
 
 
 class ReceiptSchema(BaseModel):
-    """One share the reader paid, or got back — *the club named as the
-    seller*."""
+    """One share the reader paid, got back, or had held and let go — *the club
+    named as the seller*."""
 
     seat_charge_id: UUID = Field(
         description=(
@@ -231,29 +231,42 @@ class ReceiptSchema(BaseModel):
             "charge and the refund — told apart by `kind`."
         )
     )
-    kind: Literal["CHARGE", "REFUND"] = Field(
+    kind: Literal["CHARGE", "REFUND", "RELEASED"] = Field(
         description=(
-            "`CHARGE` — a share paid (✓): taken at the club's cut-off, or at "
-            "once after it; a share only held is no receipt (#637). `REFUND` — "
-            "a share given back (↩): less the card fee to a player who left "
-            "after the cut-off when somebody took their seat, whole on a game "
-            "its club cancelled after the cut-off."
+            "`CHARGE` — a share paid (✓, *−40 zł · paid*): taken at the club's "
+            "cut-off, or at once after it; a share still held is no receipt "
+            "(#637). `REFUND` — a share given back (↩, *+38,24 zł · "
+            "refunded*): less exactly what was kept on the payment to a player "
+            "who left after the cut-off when somebody took their seat, whole on "
+            "a game its club cancelled after the cut-off. `RELEASED` — a share "
+            "held for a booked game and let go untaken (*40 zł held · "
+            "released*, #641): a leave before the cut-off, a game short at it, "
+            "the club's cancel before it — so the hold the bank app showed is "
+            "explained. Nothing was taken. A card checked when a game filled "
+            "far ahead is never a receipt."
         )
     )
     club: SellerSchema
     sport: Sport
     starts_at: datetime
     amount_grosze: int = Field(
-        description="What was paid, or what came back, in grosze — always positive."
+        description=(
+            "What was paid, what came back, or what was held, in grosze — "
+            "always positive."
+        )
     )
     card_fee_grosze: int | None = Field(
         description=(
-            "On a `REFUND`, the card fee the provider kept back — nought on a "
-            "refund in full. `null` on a `CHARGE`."
+            "On a `REFUND`, exactly what was kept on the payment — *1,76 zł "
+            "kept on your payment* — nought on a refund in full; never an "
+            "estimate (#641). `null` on a `CHARGE` and a `RELEASED`."
         )
     )
     paid_at: datetime = Field(
-        description="When the money moved: taken, or — on a `REFUND` — given back."
+        description=(
+            "When the money moved: taken, or — on a `REFUND` — given back; on a "
+            "`RELEASED`, when the hold was let go."
+        )
     )
 
 

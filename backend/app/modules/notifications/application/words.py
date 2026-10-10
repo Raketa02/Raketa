@@ -88,6 +88,8 @@ class Said:
     given_at: Instant | None = None
     #: Told to a player who had left the game: in a leaver's words (Q108).
     you_left: bool = False
+    #: What was kept on the payment a refund gave back less (#641).
+    kept_grosze: int | None = None
 
 
 def _when(at: Instant) -> str:
@@ -213,9 +215,17 @@ def words_for(said: Said) -> Words:
     if kind is NoticeKind.GAME_CALLED_OFF:
         return _game_called_off(said, sport=sport, when=when, game=game, money=money)
     if kind is NoticeKind.REFUNDED:
+        if said.kept_grosze is None:
+            # Told before what was kept was kept on the notice (#641).
+            return Words(
+                title=f"You've been refunded {money}",
+                body=f"Somebody took your seat — {game}.",
+            )
+        share = zloty((said.amount_grosze or 0) + said.kept_grosze)
         return Words(
-            title=f"You've been refunded {money}",
-            body=f"Somebody took your seat — {game}.",
+            title=f"You've been refunded {money} · your seat was taken",
+            body=f"{share} less the {zloty(said.kept_grosze)} kept on your payment "
+            f"— {game}.",
         )
     if kind is NoticeKind.SOMEONE_LEFT:
         if said.reason == NoticeReason.FELL_BACK:

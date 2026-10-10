@@ -351,13 +351,15 @@ class ClubBookingMoneySchema(BaseModel):
             "(#637)."
         )
     )
-    refunded_grosze: int = Field(
+    refunded_grosze: int | None = Field(
         description=(
             "Everything given back of a share taken — to a leaver whose seat "
-            "was taken after the cut-off, less the card fee; in full on a game "
-            "cancelled after it. A hold let go before the cut-off refunds "
-            "nothing: nothing was taken. Refunds are automatic: you never "
-            "refund anybody by hand."
+            "was taken after the cut-off, less exactly the fee kept on their "
+            "payment; in full on a game cancelled after it. A hold let go "
+            "before the cut-off refunds nothing: nothing was taken. Refunds are "
+            "automatic: you never refund anybody by hand. `null` — *not yet "
+            "known* — while a refund less the fee waits for a fee the provider "
+            "has not told you yet (#641); never an estimate."
         )
     )
 
@@ -788,21 +790,26 @@ class MoneyTotalsSchema(BaseModel):
             "after it; never a share only held (#637)."
         )
     )
-    refunded_grosze: int = Field(
+    refunded_grosze: int | None = Field(
         description=(
-            "Everything given back — automatically: you never refund anybody by hand."
+            "Everything given back — automatically: you never refund anybody by "
+            "hand. `null` while a booking's is not yet known."
         )
     )
-    card_fees_grosze: int = Field(
+    card_fees_grosze: int | None = Field(
         description=(
             "The provider's card fee on every share taken, yours to pay as at "
-            "your own terminal. A refund never returns it."
+            "your own terminal. A refund never returns it. **The real fees, or "
+            "`null` — *not yet known*** — while any booking's is (#641): a club "
+            "on its own negotiated pricing is told its fees after the take. "
+            "Never an estimate."
         )
     )
-    net_grosze: int = Field(
+    net_grosze: int | None = Field(
         description=(
             "Yours: collected, less refunded, less the card fees. Below nought "
-            "when games given back whole cost you their card fees."
+            "when games given back whole cost you their card fees. `null` while "
+            "the card fees or the refunds are not yet known."
         )
     )
 
@@ -818,9 +825,18 @@ class MoneyBookingSchema(BaseModel):
         description="What the booking is now, as on the Bookings page."
     )
     collected_grosze: int
-    refunded_grosze: int
-    card_fees_grosze: int
-    net_grosze: int
+    refunded_grosze: int | None = Field(
+        description="`null` while a refund less the fee kept is not yet known."
+    )
+    card_fees_grosze: int | None = Field(
+        description=(
+            "The real fee the provider kept on each share taken, or `null` — "
+            "*not yet known* — until it has said every one (#641)."
+        )
+    )
+    net_grosze: int | None = Field(
+        description="`null` while the card fees or the refunds are not yet known."
+    )
     paid_out: bool = Field(
         description=(
             "A payout carried its money to your bank. Until then it waits on "

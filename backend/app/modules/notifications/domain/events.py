@@ -92,6 +92,11 @@ class NoticeGiven:
     club's cancel that refunded them — said in a leaver's words, never
     promising them a new game (Q108). Defaulted for the rows recorded before
     it was asked.
+
+    ``kept_grosze`` is what the provider kept on the payment a refund gave back
+    less — *40 zł less the 1,76 zł kept on your payment* (#641) — so the notice
+    says it whenever it is read; ``None`` everywhere else, and on the rows
+    recorded before it was asked.
     """
 
     notice_id: UUID
@@ -116,6 +121,7 @@ class NoticeGiven:
     own: bool = False
     until: datetime | None = None
     you_left: bool = False
+    kept_grosze: int | None = None
 
     def __post_init__(self) -> None:
         # JSON hands a list of strings back; the codec coerces a bare ``UUID``

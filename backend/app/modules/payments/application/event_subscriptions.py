@@ -31,6 +31,7 @@ from app.modules.payments.domain.events import (
     SeatChargeReleased,
     SeatChargeTaken,
 )
+from app.modules.payments.application.refunds import EmailTheSeatTakenRefund
 from app.modules.payments.domain.provider import PaymentProvider
 
 _EVENTS = (
@@ -108,6 +109,16 @@ def subscribe_the_seat_charge_settler(
     dispatcher.subscribe(SeatChargeTaken, settle)
     dispatcher.subscribe(SeatChargeReleased, settle)
     dispatcher.subscribe(SeatChargeRefundDecided, settle)
+
+
+def subscribe_the_seat_taken_refund_emailer(
+    dispatcher: EventDispatcher, email: EmailTheSeatTakenRefund
+) -> None:
+    """The subscriber that emails a seat-taken refund once it is made (#641):
+    its sum is known to the grosz only then. It **writes** the mail queue, so it
+    is added per delivery run over that run's session, as the settler is."""
+
+    dispatcher.subscribe(SeatChargeRefunded, email)
 
 
 def subscribe_the_club_payout_sender(

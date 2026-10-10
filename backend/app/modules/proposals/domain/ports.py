@@ -57,6 +57,7 @@ from app.modules.proposals.domain.home import (
     CheckIn,
     ClubCancelReason,
     GameResult,
+    LateRefund,
     OpenSeat,
 )
 from app.modules.proposals.domain.pool import Pool
@@ -837,7 +838,7 @@ class RefundReason(StrEnum):
     #: The game was called off at the club's cut-off: every hold let go.
     CALLED_OFF_AT_THE_CUT_OFF = "CALLED_OFF_AT_THE_CUT_OFF"
     #: The player left after the cut-off and somebody took their seat (#545):
-    #: less the card fee.
+    #: less exactly the fee kept on their payment (#641).
     SEAT_TAKEN = "SEAT_TAKEN"
     #: The club cancelled the booked game (#547): every hold let go before
     #: the cut-off, in full after it.
@@ -853,8 +854,9 @@ class SeatRefunds(Protocol):
     (#544, #545, #637). **A share only held is let go** — nothing was taken, so
     nothing is refunded and no fee arises: a leave before the cut-off, a game
     short at it, the club's cancel before it. **A share taken is refunded** —
-    less the card fee to a leaver whose seat somebody takes after the cut-off;
-    whole on a game called off at its cut-off or cancelled by its club."""
+    less exactly the fee kept on it to a leaver whose seat somebody takes after
+    the cut-off (#641); whole on a game called off at its cut-off or cancelled
+    by its club."""
 
     async def refund(
         self,
@@ -870,6 +872,15 @@ class SeatRefunds(Protocol):
         follows the commit.
         ``because`` is the club's reason, on a game it cancelled — what the
         email tells the player (#547)."""
+        ...
+
+    async def left_after_the_cut_off(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> None:
+        """This player left after the club's cut-off: nothing comes back yet,
+        and they are emailed what will if somebody takes their seat — the share
+        less exactly the fee kept on their payment, or no figure while that fee
+        is not yet known (#641) — in the caller's transaction."""
         ...
 
 
@@ -891,12 +902,16 @@ class HeldShares(Protocol):
 
 
 @runtime_checkable
-class CardFees(Protocol):
-    """**A demand of the Payments context**: what the card fee on a share
-    comes to — the estimate the *Leave the game* sheet quotes, since a leaver
-    before the cut-off is refunded their share less it (#544)."""
+class LateRefunds(Protocol):
+    """**A demand of the Payments context**: what leaving after the cut-off
+    would give back, said before the player leaves (#641) — **never an
+    estimate**: the fee is the provider's own, on that player's payment."""
 
-    def card_fee_on(self, share_grosze: int) -> int: ...
+    async def of(self, booking_id: UUID, player_id: UUID) -> LateRefund | None:
+        """This player's share of this game less exactly the fee kept on it —
+        ``None`` while that fee is not yet known (a club on its own negotiated
+        pricing, or a take not yet captured), and for a share not taken."""
+        ...
 
 
 @runtime_checkable

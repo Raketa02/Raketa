@@ -1215,9 +1215,10 @@ class LeavingSchema(BaseModel):
             "`BEFORE_THE_CUT_OFF` — *Nothing is taken: the hold on your card is "
             "let go. Your seat is offered to others. On your record only if the "
             "game is then called off.* (Q113) `AFTER_THE_CUT_OFF` — *Your seat "
-            "is offered to others. If someone takes it, you get 38,40 zł back "
-            "(40 zł less the 1,60 zł kept on your payment); if nobody does, you "
-            "won't. On your record if nobody takes it.* "
+            "is offered to others. If someone takes it, you get 38,24 zł back "
+            "(40 zł less the 1,76 zł kept on your payment); if nobody does, you "
+            "won't. On your record if nobody takes it.* — with no figure and no "
+            "clause while the fee kept is not yet known (#641). "
             "`WHILE_WAITING_FOR_THE_CLUB` — *Nobody has paid yet. Leaving "
             "withdraws your yes.* The same words the departure answers with."
         )
@@ -1225,16 +1226,20 @@ class LeavingSchema(BaseModel):
     refund_grosze: int | None = Field(
         description=(
             "After the cut-off, what comes back if somebody takes the seat — "
-            "the share less the card fee; nought when nobody paid. `null` "
+            "the share less **exactly the fee kept on the reader's own "
+            "payment**, to the grosz (#641); nought when nobody paid. `null` "
             "before the cut-off, when nothing is taken and nothing comes back "
-            "(#637)."
+            "(#637), and **while that fee is not yet known** — a club on its "
+            "own negotiated pricing is told it after the share is taken: no "
+            "figure and no clause, never an estimate."
         )
     )
     card_fee_grosze: int | None = Field(
         description=(
-            "After the cut-off, the card fee that isn't returned — the "
-            "provider's standard price, an estimate; what it kept is on the "
-            "receipt. `null` before the cut-off (#637)."
+            "After the cut-off, exactly what was kept on the reader's payment "
+            "— *1,76 zł* on a 40 zł share paid by a business card — the "
+            "provider's own figure, as the refund's receipt will say it. `null` "
+            "wherever `refund_grosze` is."
         )
     )
 
@@ -1255,7 +1260,9 @@ class DepartureResponse(BaseModel):
             "`BEFORE_THE_CUT_OFF` — nothing was taken: the hold on the card is "
             "let go, nobody is refunded (#637); the seat is offered to others. "
             "`AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others "
-            "until the start; refunded, less the card fee, when somebody takes it. "
+            "until the start; refunded, less exactly the fee kept on the payment, "
+            "when somebody takes it — emailed that figure now, or none while the "
+            "fee is not yet known (#641). "
             "`WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the "
             "request to the club are withdrawn, and the game is filling again — "
             "`SEAT_OPEN` with `filling_again` on the others' Home. So it is on a "

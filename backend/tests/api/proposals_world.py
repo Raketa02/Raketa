@@ -204,11 +204,13 @@ async def a_member(
     gender: str = "WOMAN",
     gender_preference: str | None = None,
     card: bool = True,
+    entered: EnteredCard = A_CARD,
     domain: str = "example.com",
 ) -> dict:
     """A member rated at ``mu`` in ``sports``, free every hour of the week
     unless told otherwise, with a declared intent and — unless told otherwise
-    — a saved card, addressed at ``domain``."""
+    — a saved card (``entered``: a personal EU Visa that pays), addressed at
+    ``domain``."""
 
     player_id, token = await players.register(client, name, domain=domain)
     profile: dict = {"weekly_hours": week, "gender": gender}
@@ -221,7 +223,7 @@ async def a_member(
             await players.declare_intent(client, token, intent=intent, sport=sport)
     headers = players.auth(token)
     if card:
-        await saves_a_card(client, payments, headers)
+        await saves_a_card(client, payments, headers, entered)
     return {"id": player_id, "token": token, "headers": headers, "name": name}
 
 

@@ -3,9 +3,16 @@
 seller, saying when the share is taken (*you paid* when it was taken at once),
 and *Confirm your payment to keep your seat* — and a share given back (#544):
 *You left the game*, *Game called off* — and a rescue's (#545): *You've been
-refunded · your seat was taken*, and *Confirm your payment to take the seat* —
-and the club's cancel (#547): *Game cancelled by the club*, saying why — and, to
-a player who had left it, *The game you left was cancelled* (#623).
+refunded 38,24 zł · your seat was taken*, and *Confirm your payment to take the
+seat* — and the club's cancel (#547): *Game cancelled by the club*, saying why —
+and, to a player who had left it, *The game you left was cancelled* (#623).
+
+**After the cut-off every figure is exact** (#641; the mechanics §13, Q113): a
+leaver whose seat is taken gets the share less exactly the fee kept on their
+payment, and is told both — *40 zł less the 1,76 zł kept on your payment* —
+and a leaver is told the same figure when they leave, or none while that fee is
+not yet known. **No email names BLIK**, which isn't offered: a refund says it
+can take up to two weeks to reach a card.
 
 **A share only held is let go, never refunded** (#637; the mechanics Q113): a
 leave before the cut-off, a game short at it and the club's cancel before it
@@ -222,6 +229,10 @@ def confirm_payment_email(
     )
 
 
+#: How long a refund takes to reach a card, said when it is issued (Q113) —
+#: and nothing about BLIK, which isn't offered.
+_REFUNDS_TAKE: Final = "Refunds can take up to two weeks to reach your card."
+
 #: The ``kind`` each refund email is queued under (#544, #545).
 LEFT_THE_GAME_KIND: Final = "payments.left_the_game.player"
 GAME_CALLED_OFF_KIND: Final = "payments.game_called_off.player"
@@ -272,7 +283,49 @@ def left_the_game_email(
                 f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)}.",
                 f"Your {zloty(share_grosze)} share is being refunded in full by "
                 f"{club}. Your seat is offered to others.",
-                "Refunds reach BLIK within hours and cards within up to two weeks.",
+                _REFUNDS_TAKE,
+            ),
+            button_label="Open Raketa",
+            button_url=app_link,
+        )
+    )
+
+
+def left_after_the_cut_off_email(
+    *,
+    to: str,
+    name: str | None,
+    club: str,
+    sport: Sport,
+    starts_at: Instant,
+    share_grosze: int,
+    refund_grosze: int | None,
+    fee_kept_grosze: int | None,
+    app_link: str,
+) -> OutgoingMessage:
+    """*You left the game* — after the club's cut-off (#641; the mechanics §13,
+    Q113): the share stays paid and the seat is offered to others, and what
+    comes back if somebody takes it is said **to the grosz**: the share less
+    exactly the fee kept on the payment. While that fee is not yet known there
+    is no figure and no clause — never an estimate."""
+
+    heading = "You left the game" if name is None else f"You left the game, {name}"
+    offered = "Your seat is offered to others."
+    if refund_grosze is not None and fee_kept_grosze is not None:
+        offered += (
+            f" If someone takes it, you get {zloty(refund_grosze)} back "
+            f"({zloty(share_grosze)} less the {zloty(fee_kept_grosze)} kept on "
+            "your payment)."
+        )
+    return render(
+        ButtonEmail(
+            kind=LEFT_THE_GAME_KIND,
+            to=to,
+            subject="You left the game",
+            heading=heading,
+            lines=(
+                f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)}.",
+                offered,
             ),
             button_label="Open Raketa",
             button_url=app_link,
@@ -312,7 +365,7 @@ def game_called_off_email(
         lines = (
             off,
             f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
-            "Refunds reach BLIK within hours and cards within up to two weeks.",
+            _REFUNDS_TAKE,
         )
     return render(
         ButtonEmail(
@@ -388,7 +441,7 @@ def game_cancelled_email(
             f"Your {zloty(refunded_grosze)} is refunded in full by {club}, and "
             "nothing about it goes on your record.",
             "We'll look for another game for you first.",
-            "Refunds reach BLIK within hours and cards within up to two weeks.",
+            _REFUNDS_TAKE,
         )
     return render(
         ButtonEmail(
@@ -439,7 +492,7 @@ def game_you_left_cancelled_email(
         )
         money = (
             f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
-            "Refunds reach BLIK within hours and cards within up to two weeks.",
+            _REFUNDS_TAKE,
         )
     return render(
         ButtonEmail(
@@ -467,43 +520,24 @@ def seat_taken_email(
     sport: Sport,
     starts_at: Instant,
     share_grosze: int,
-    fee_estimate_grosze: int,
+    refunded_grosze: int,
+    fee_kept_grosze: int,
     app_link: str,
-    held: bool = False,
 ) -> OutgoingMessage:
-    """*You've been refunded · your seat was taken* (#545; the mechanics §12.3,
-    §17.2) — left after the club's cut-off, so refunded only now that somebody
-    took the seat, less the card fee the bank doesn't return. The amount here is
-    the estimate; what the provider kept back is on the receipt. A share the
-    cut-off had not taken yet — still only ``held`` — is let go instead: *your
-    seat was taken · nothing was taken* (#637)."""
+    """*You've been refunded 38,24 zł · your seat was taken* (#545, #641; the
+    mechanics §12.3, §13, §17.2) — left after the club's cut-off, so refunded
+    only now that somebody took the seat: the share less **exactly the fee kept
+    on the payment**, both said — *(40 zł less the 1,76 zł kept on your
+    payment)*. Sent once the refund is made, when the sum is known to the
+    grosz."""
 
-    if held:
-        return render(
-            ButtonEmail(
-                kind=SEAT_TAKEN_KIND,
-                to=to,
-                subject="Your seat was taken · nothing was taken",
-                heading=(
-                    "Your seat was taken"
-                    if name is None
-                    else f"Your seat was taken, {name}"
-                ),
-                lines=(
-                    f"Somebody took your seat in {_SPORT_WORDS[sport].lower()} at "
-                    f"{club} — {_the_hour(starts_at)}.",
-                    f"The {zloty(share_grosze)} hold on your card is let go: "
-                    "nothing was taken.",
-                ),
-                button_label="Open Raketa",
-                button_url=app_link,
-            )
-        )
     return render(
         ButtonEmail(
             kind=SEAT_TAKEN_KIND,
             to=to,
-            subject="You've been refunded · your seat was taken",
+            subject=(
+                f"You've been refunded {zloty(refunded_grosze)} · your seat was taken"
+            ),
             heading=(
                 "Your seat was taken"
                 if name is None
@@ -512,10 +546,46 @@ def seat_taken_email(
             lines=(
                 f"Somebody took your seat in {_SPORT_WORDS[sport].lower()} at {club} "
                 f"— {_the_hour(starts_at)}.",
-                f"Your {zloty(share_grosze)} share is being refunded by {club}, less "
-                f"the card fee that isn't returned (about "
-                f"{zloty(fee_estimate_grosze)}).",
-                "Refunds reach BLIK within hours and cards within up to two weeks.",
+                f"{club} refunded you {zloty(refunded_grosze)} "
+                f"({zloty(share_grosze)} less the {zloty(fee_kept_grosze)} kept on "
+                "your payment).",
+                _REFUNDS_TAKE,
+            ),
+            button_label="Open Raketa",
+            button_url=app_link,
+        )
+    )
+
+
+def seat_taken_nothing_taken_email(
+    *,
+    to: str,
+    name: str | None,
+    club: str,
+    sport: Sport,
+    starts_at: Instant,
+    share_grosze: int,
+    app_link: str,
+) -> OutgoingMessage:
+    """*Your seat was taken · nothing was taken* (#637) — left after the
+    club's cut-off, but the cut-off had not taken the share yet when somebody
+    took the seat: it was only held, and is let go."""
+
+    return render(
+        ButtonEmail(
+            kind=SEAT_TAKEN_KIND,
+            to=to,
+            subject="Your seat was taken · nothing was taken",
+            heading=(
+                "Your seat was taken"
+                if name is None
+                else f"Your seat was taken, {name}"
+            ),
+            lines=(
+                f"Somebody took your seat in {_SPORT_WORDS[sport].lower()} at "
+                f"{club} — {_the_hour(starts_at)}.",
+                f"The {zloty(share_grosze)} hold on your card is let go: "
+                "nothing was taken.",
             ),
             button_label="Open Raketa",
             button_url=app_link,
