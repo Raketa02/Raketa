@@ -65,7 +65,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`CheckedShares`, registered over a fresh fake: what is due and a holding of nothing ask
   the provider nothing), a refused holding kept or let go (`CardsToFix`), when a checked
   share is held (`HoldingTimes`), and a refused holding's time to fix the card on the booked
-  game (`BookedGameChanges`' card methods).
+  game (`BookedGameChanges`' card methods) — and since #640 a seat kept for a refused rescuer,
+  taken or run out once (`BookedGameChanges`' keep methods).
   The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
   over HTTP only and are owed rows there.
   **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first

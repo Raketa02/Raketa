@@ -166,7 +166,7 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   record it is a leave before the cut-off** — on it only if the game is then called off (a
   call made without a ruling, #634).
 - **A refused payment reopens the seat, and confirming it is the yes again.** Once its time
-  to pay ran out — or where no time was given: a rescue, the club's yes past the book-by —
+  to pay ran out — or where no time was given: the club's yes past the book-by —
   the refused player's **seat reopens** (`SeatReopened` or `TimeToPayRanOut`, with the
   reason and the charge — not *Lapse*, which
   is a seat's answer window; not a withdrawal, and no verdict on the card). They find the payment
@@ -425,10 +425,14 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   it gone** (`seat_just_taken`) **before its bank is asked**. Then the money is the fill's own
   all-or-nothing for one seat (`SeatCharges.charge` with `rescue=True`: its holds keyed
   `raketa-rescue-…`, the attempt the booking's version) — **held until the cut-off like every
-  seat it joins, or taken in the act after it** (#637), so a crash leaves a hold that lapses
-  rather than money taken for no seat; the joiner is emailed *It's a game! · 30 zł held*, or
-  *you paid* after the cut-off. A leaver before the cut-off whose seat a rescue takes had
-  nothing taken, and is refunded nothing.
+  seat it joins, or taken in the act after it** (#637) — **or, far ahead of the cut-off,
+  checked and held at its Holding time**, by the reach rule the fill's seats follow (#639,
+  #640) — so a crash leaves a hold that lapses rather than money taken for no seat; the
+  joiner is emailed *It's a game! · 30 zł held* (*Your card was checked …* far ahead), or
+  *you paid* after the cut-off, and the join answers the joiner's money line as Home reads it
+  (`money`: `HELD`, `CHECKED` or `TAKEN`; `money_of` over `HoldingTimes`, on a second tap
+  too). The rescuer is free to leave until the cut-off like everybody else. A leaver before
+  the cut-off whose seat a rescue takes had nothing taken, and is refunded nothing.
   **The seat that opened first is taken, on its side** (`SeatRescued`, naming the leaver it
   replaces; the joiner's `booking_seats` row), on the Game too through games' own
   `TakeASeat` — a `LineUpReseated` with one more seat filled, so the room, whose members are
@@ -439,12 +443,33 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   on your payment*; a fee not yet known makes the refund, and the telling, wait; one who left
   before it had nothing taken. The
   joiner's other yeses at the hour are withdrawn and a full week pauses the rest
-  (`Fill.other_yeses`). **A refused share takes no seat**: `your_payment` names it, a second
-  tap is `payment_to_confirm`, and `POST /seat-charges/{id}/confirmation` on a booked game is
-  **the join again** (`ConfirmPayment` hands a `FILLED` proposal's payment to the `Rescuer`),
-  the confirmed hold taken rather than asked for again — and let go if somebody took the seat
-  first. The last seat taken releases every rescue payment still pending on the game; so
-  does the cut-off's call-off. **The record**: a leaver whose seat was taken broke nothing,
+  (`Fill.other_yeses`). **A refused share keeps a seat for its rescuer** (#640; Q113, a call
+  made without a ruling): `SeatKept` on the booking — until `TIME_TO_PAY` on, to fix the
+  card before the cut-off (never past it) or to pay after it (never past the start;
+  `kept_until`), with the payment and why — and **offered to nobody else meanwhile**: every
+  offer read is keeper-aware (`rescuable(…, by=)`, `Booking.rescuable_at(…, by=)`,
+  `seats_kept`) and **off the clock**, so a keep whose time is up keeps nothing whether or
+  not its running out is recorded. A keep holds **a seat, not a particular one**: the seats
+  are still taken in the order they opened. The answer's `your_payment` carries
+  `confirm_by` and `time_to` (`YesAnswer.kept_until`; no `payment_awaited_until`: no game
+  waits on it), a second tap is `payment_to_confirm`, and `POST /seat-charges/{id}/
+  confirmation` on a booked game is **the join again** (`ConfirmPayment` hands a `FILLED`
+  proposal's payment to the `Rescuer`), the confirmed hold taken rather than asked for again
+  — or, refused for terms or a method, the join itself once fixed. Refused again within it,
+  the rescuer keeps the time they had (`SeatKept` again). The keeper reads it on their *To
+  confirm* rows (`kept_for`, over the `booking_keeps` projection, migration 0057) and on
+  `GET /bookings/{id}` from outside (`your_payment_due_by`, `time_to`), and is emailed and
+  told *Fix your card by 14:40 to take the seat* / *Confirm your payment by 14:40 to take
+  the seat*. **Run out** — the `time-to-pay` job (`run_out_the_keeps`, over `keeps_past`), or
+  the rescuer's own late act, which runs it out first and is then a join like anybody's —
+  `KeptSeatRanOut`: the seat is offered again, still theirs to take while it is free (their
+  refused payment stays to confirm — on their *To confirm* rows without a time, while the
+  seat is free and the payment waits on their bank, as a reopened seat's does; the
+  projection's row stays, marked `ran_out`), but **never kept for them again on that game**
+  (`keeps_ran_out`; `domain/rescues.py`'s `kept_until`), so a refusal for terms pressed
+  again and again cannot hold a seat. A game called off or cancelled keeps no seat. The
+  last seat taken releases every rescue payment still pending on the game; so does the
+  cut-off's call-off. **The record**: a leaver whose seat was taken broke nothing,
   whatever becomes of the game; the joiner keeps the game when its hour comes whole.
   **Seeded by `app/seeds/rescues.py`**: two of the crowd's games she is not on, each left by
   one of its four — one **past the cut-off by a day** (*fills by the cut-off*, on every run)

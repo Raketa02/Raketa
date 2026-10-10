@@ -63,7 +63,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   before the cut-off** (`GameToCharge.free_to_leave_until` set: the share would only be held)
   it is the player's time to fix the card (#638): *Fix your card by 14:40 to keep your seat*,
   the reason said of the hold, and *Nothing is paid now: fixing your card only places the 40
-  zł hold on it again, taken on Fri 17:00, the club's cut-off.* **A refund
+  zł hold on it again, taken on Fri 17:00, the club's cut-off.* **A rescue's refusal names
+  the time its seat is kept** (#640; the caller's `pay_by`, `rescue`): *Fix your card by
+  14:40 to take the seat* before the cut-off, *Confirm your payment by 14:40 to take the
+  seat* after it — *The seat is kept for you until 14:40. After that it's offered to others
+  again* — and, with none kept (one ran out already), *Confirm your payment to take the seat*
+  as before. A rescue's `pay_by` moves no hold: there is only its own. **A refund
   is decided in the act and made from the outbox** (#544): `SeatChargeRefundDecided` then
   `SeatChargeRefunded`; receipts list it as its own `REFUND` row (`card_fee_grosze`), dated
   from the decision — and since #641 a share held for a booked game and let go untaken is

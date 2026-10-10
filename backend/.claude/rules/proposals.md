@@ -166,7 +166,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   booking's details for an outsider offered the seat, taking it (`POST /bookings/{id}/seats`)
   and a no to its card (`POST /bookings/{id}/no`) — over `PlayerBookings.rescues_in`,
   `BookedGameChanges.rescue`/`say_no_to_the_seat`, `SeatCharges` (`rescue=True`, `to_confirm`) and
-  `SeatRefunds` (`SEAT_TAKEN`). The Games badge still counts cards with somebody **In**: a
+  `SeatRefunds` (`SEAT_TAKEN`). **A refused rescuer keeps a seat** for thirty minutes (#640),
+  over `BookedGameChanges.keep_the_seat`/`kept_seat_ran_out`/`keeps_past`/`kept_for` — see
+  `bookings.md`. The Games badge still counts cards with somebody **In**: a
   rescue's players have paid, and are not In.
 - **A member posts a game; posting is their yes** (#546; the mechanics §9; the screens A5):
   `application/posting.py` over `domain/post.py` (*Who* and the Level range) and

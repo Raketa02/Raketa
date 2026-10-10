@@ -140,6 +140,19 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
     *Your seat is open to others now, and you owe nothing.* (never *take it back*: a leaver is
     never offered their seat), opening the game they left (`you_left`); everybody else is told
     as for any leave.
+  - **A rescuer whose share was refused has a seat kept** (#640): `SeatChargeFailed` on a
+    booked game the payer holds no seat on is a rescue's (`GameBrief.seated`), told with a
+    fact of its own, **`Notice.rescue`** → `NoticeGiven.rescue` (defaulted `False`) →
+    `notices.rescue` (migration 0057), so the words say *to take the seat*, never *to keep
+    your seat*: `FIX_YOUR_CARD` — *Fix your card by 14:40 to take the seat* / *Your bank
+    declined the 27 zł hold — fix it with another card. Nothing is paid now. Padel · Sat 17:00
+    at Bonarka Arena — the seat is kept for you until then.* — before the cut-off, and
+    `CONFIRM_PAYMENT` by its time after it, `GameBrief.paying`/`fixing` folding in the
+    booking's kept seats. `KeptSeatRanOut` tells the rescuer `TIME_TO_FIX_RAN_OUT` (or
+    `TIME_TO_PAY_RAN_OUT`, its `to_fix_the_card` saying which) with `rescue` — *The seat is
+    offered to others again, and you owe nothing — you can still take it while it's free.* —
+    opening the booking; never one who took the seat in the same act (their late
+    confirmation ran it out first). Both always on; nobody else is told.
   - **`FellBackToFilling`** — a leave or a paused week while it waited, at a club that books
     at once — is told as `RequestWithdrawn` is; a court lost while it waited is *called off ·
     nobody paid* with `COURT_LOST_WAITING_FOR_A_PAYMENT`.

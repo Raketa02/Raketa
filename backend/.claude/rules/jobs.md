@@ -145,6 +145,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   Holding time, its candidates `BookedGameChanges.cards_to_fix_past` (over
   `booking_seats.card_to_fix_until`), each game one transaction locked first — the player's
   seat opens to Fill in as a leaver's before the cut-off, and their refused holding is let go.
+  **And a seat kept for a refused rescuer** (#640): its candidates
+  `BookedGameChanges.keeps_past` (over `booking_keeps.until`), each game one transaction
+  locked first — `KeptSeatRanOut`, and the rescuer told their time ran out. Correctness
+  does not depend on this pass: every read of the keep is off the clock, so the seat is
+  offered to everybody the moment it is up; the job records it, clears the projection's row
+  and tells the rescuer.
   The twenty-second is **the holding** (`holding`, #639; `TheHolding`), and **correctness
   depends on it**: a share the fill only **checked** — its card's hold would not have lasted
   until the cut-off — is held nowhere until this holds it again at its **Holding time**, four
