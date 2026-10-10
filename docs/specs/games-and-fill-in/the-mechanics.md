@@ -29,19 +29,21 @@
 1. **The app builds games.** For every free court in the next 14 days at the group's
    clubs, the engine finds the members who are free for that hour, want that kind of game
    and fit each other, and deals the best four (or two) as a card to each of them.
-2. **A swipe right is a free, silent yes.** "I'm in — if everybody is, book it and charge my
-   share." No money moves, no court is held, nobody is notified.
+2. **A swipe right is a free, silent yes.** "I'm in — if everybody is, book it and take my
+   share at the club's cut-off." No money moves, no court is held, nobody is notified.
 3. **Yeses are visible on the card.** Other players see your tile marked **In**, and cards
    with more people In rise to the top of their decks. The card that needs only you says
    **You complete it**.
-4. **The last yes books the game.** Every player's saved card is charged at that moment,
-   all together or not at all, the court is booked with the club, and everyone sees
-   **It's a game!**. Nobody has to confirm anything.
-5. **Leaving before the club's cut-off is refunded.** Leave before it and you are refunded
-   at once (minus the card fee); your seat becomes a **rescue** that others can take. Leave
-   after it and you are refunded only when someone takes your seat.
+4. **The last yes books the game.** Every player's share is **held** on their saved card at
+   that moment, all together or not at all, the court is booked with the club, and everyone sees
+   **It's a game!**. Nobody has to confirm anything. The shares are **taken at the club's
+   cut-off**, the one deadline, the same for everyone in the game (Q113).
+5. **Leaving before the club's cut-off is free.** Leave before it and nothing is taken: the hold
+   on your card is let go, and your seat becomes a **rescue** that others can take. Leave after it
+   and, only if someone takes your seat, you get your share back less exactly what was kept on
+   your payment.
 6. **A game is full at the cut-off, or it is off.** If a seat is still empty at the club's
-   cut-off, the game is called off and everyone still in gets all their money back. Nobody ever
+   cut-off, the game is called off and every hold is let go: nobody pays anything. Nobody ever
    pays more for an empty seat; a seat left after the cut-off may stay empty, and the game goes
    ahead short ([§14.1](#141-home-and-the-statuses)).
 7. **Fill in is the rescue board.** It holds the seats of booked games that lost a player,
@@ -69,10 +71,14 @@
 | **Yes / No** | Swipe right / swipe left on a card. |
 | **In** | A player who said yes to a game that has not filled yet. |
 | **Momentum** | How many players are In on a game. |
-| **Fills** | The moment the last seat says yes. The game is then **Booked** — or, at an On request club, *waiting for the club* until it confirms ([§11](#11-the-moment-a-game-fills)). |
+| **Fills** | The moment the last seat says yes. The game is then **Booked**, every share **held** on its player's card — or, at an On request club, *waiting for the club* until it confirms ([§11](#11-the-moment-a-game-fills)). |
 | **Book-by** | The latest moment a card can still fill ([§5.4](#54-the-only-deadline-the-courts-book-by)). |
-| **Cut-off** | The club's free-cancellation deadline, for example 24 hours before the game. A club setting. |
-| **Time to pay** | The 30 minutes a player whose payment failed when the game filled, or when its On request club accepted it, has to pay, with their seat held for them, never past the book-by ([§12.2](#122-when-a-game-fills)). |
+| **Cut-off** | The club's free-cancellation deadline, for example 24 hours before the game. A club setting, and the one deadline in a game, the same for everyone: leaving before it is free, and at it a full game's shares are taken and a short game is called off ([§12.3](#123-leaving-before-and-after-the-cut-off)). |
+| **Held · Taken** | A share is **held** when its amount is reserved on the player's card and nothing has moved; the hold is **let go** on a leave, a call-off or a club's cancel before the cut-off, and costs nobody anything. It is **taken** at the cut-off, or at once after it ([§12.2](#122-when-a-game-fills), Q113). A card hold is never called *a Hold*, which is the account gate in the glossary. |
+| **Card check** | A share held for a few seconds and let go at the fill, when that seat's hold would not last until the cut-off. It proves the money is there that day ([§12.2](#122-when-a-game-fills)). |
+| **Holding time** | When a seat's share is held to stay until the cut-off: at the fill when its hold reaches the cut-off, otherwise **four days before the cut-off** ([§12.2](#122-when-a-game-fills)). |
+| **Time to fix the card** | The 30 minutes a player whose card was refused **before the cut-off** — at the fill, at its On request club's yes, at the holding time, or taking a rescue — has to fix it, with their seat kept for them; nothing is paid. Never past the cut-off or the book-by ([§12.2](#122-when-a-game-fills)). |
+| **Time to pay** | The 30 minutes a player whose payment failed **after the cut-off**, where money is taken at once — when the game filled, when its On request club accepted it, or taking a rescue — has to pay, with their seat held for them, never past the book-by (a rescue: never past the start) ([§12.2](#122-when-a-game-fills)). |
 | **Rescue** | An open seat in a booked game that lost a player. |
 | **Post** | A game a member creates by picking the hour and the court. Its players see it as a **Challenge**. |
 | **Home** | The first tab of the bottom bar: your games. |
@@ -228,7 +234,8 @@ back to filling is the exception: it is on its players' Home as *Seat open*, and
 to everyone still In ([§14.1](#141-home-and-the-statuses), Q104, Q106).
 
 A card whose club **cut-off has already passed** (a last-minute game) says **No free
-cancellation** on it before anyone swipes ([§12.3](#123-leaving-before-and-after-the-cut-off)).
+cancellation** on it before anyone swipes: its shares are taken the moment it fills
+([§12.3](#123-leaving-before-and-after-the-cut-off)).
 
 ---
 
@@ -236,7 +243,8 @@ cancellation** on it before anyone swipes ([§12.3](#123-leaving-before-and-afte
 
 ### 6.1 A yes
 
-- A yes means: **"I'm in. If everybody on this game says yes, book it and charge my share."**
+- A yes means: **"I'm in. If everybody on this game says yes, book it and take my share at the
+  club's cut-off."** Until the cut-off the share is only held, and leaving is free (Q113).
 - It is **silent**: no push, no challenge sent, nothing in Home.
 - **No money moves and no court is held.** The court stays available to every other card
   until some card fills.
@@ -277,8 +285,8 @@ message:
 ### 6.5 Undo
 
 **Every action that moves money** — the yes that fills a game, and **every** rescue join, not
-only the last seat (Q74) — shows a toast *"Booking in 10 s · Undo"* with a draining ring; the
-money moves only when the ten seconds are up. Any other yes is only a vote, and you can withdraw
+only the last seat (Q74); since Q113 they hold the share, or take it after the cut-off — shows a toast *"Booking in 10 s · Undo"* with a draining ring;
+nothing is held or taken until the ten seconds are up. Any other yes is only a vote, and you can withdraw
 it free from **Fill in › You're In** until its game fills.
 
 ### 6.6 Limits
@@ -363,8 +371,9 @@ Every card shows, top to bottom (the full anatomy is in [the-screens.md](the-scr
 - **The ribbon countdown** — only when the deadline is under 24 h: *21 h 00*, then *45 min*,
   coral under an hour (Q72).
 - **The stamps** — I'M IN / NOT THIS TIME while dragging; **I'M IN · 32 zł** whenever the yes
-  charges at once (Book it now, or a rescue). At an On request club the charge waits for the
-  club ([§11](#11-the-moment-a-game-fills)), so its *Book it now* stamp carries no price.
+  books at once (Book it now, or a rescue): it holds the share until the cut-off, or takes it at
+  once after the cut-off. At an On request club the hold waits for the club
+  ([§11](#11-the-moment-a-game-fills)), so its *Book it now* stamp carries no price.
 
 ### 8.2 The order
 
@@ -426,7 +435,8 @@ The **Post a game** button in Fill in walks through:
 6. **Court** — tapping a cell opens its sheet: your best fits free then, and the **free courts**
    in that range, home club first — each with its hour, club, distance, share, book-by and its
    own *"n free"*. Tapping a court picks it (one hour, one court). **Already happening here**
-   lists, first, **rescues** at that time you fit (**I'm in · 27 zł**, pays at once) and then
+   lists, first, **rescues** at that time you fit (**I'm in · 27 zł**, booked at once: held until
+   the cut-off, or paid at once after it) and then
    **posts still filling** you fit (**I'm in**, free until it fills), so you can join instead of
    duplicating (Q79, Q93).
 7. **Post — you're In** — disabled until a court is picked. There is no review card; posting is
@@ -435,7 +445,8 @@ The **Post a game** button in Fill in walks through:
 
 ### 9.2 What happens next
 
-- Posting **is your yes**. Nothing is charged until the game fills.
+- Posting **is your yes**. Nothing is held until the game fills, and nothing taken until the
+  club's cut-off.
 - The engine builds **versions** from your best fits free at that hour: one per full set of
   them, **up to 3** (for doubles: 9 or more fits → 3 versions, 6–8 → 2, 3–5 → 1; fewer than 3 →
   one version with open seats). They see it in their decks as a **Challenge** — *Marek challenged
@@ -471,13 +482,19 @@ seat in singles, one to three in doubles — **before or after the cut-off**.
   **free for that hour**.
 - The same seat is also dealt as a **Seat open** card to the best fits' decks, and announced to
   people who switched on **Fill in alerts** ([§17.2](#172-notifications)).
-- **I'm in · 30 zł** takes the seat and pays at once, because the game already exists; every
-  rescue join gets the 10-second undo ([§6.5](#65-undo)), then **It's a game!**, and the game goes
-  straight to **Home**.
+- **I'm in · 30 zł** takes the seat at once, because the game already exists. The money follows
+  the game's: before the cut-off your share is held, or checked and held at the holding time, and
+  you are free to leave until the cut-off like everyone else; after it your share is taken at once
+  ([§12.2](#122-when-a-game-fills), Q113). Every rescue join gets the 10-second undo
+  ([§6.5](#65-undo)), then **It's a game!**, and the game goes straight to **Home**.
+- **A rescuer whose card is refused keeps the seat** for themselves alone for 30 minutes — time to
+  fix the card before the cut-off, time to pay after it — never past the game's start. Meanwhile
+  the seat isn't offered to others; run out, it is offered again. *(A call made without a ruling,
+  Q113: before, a refused rescuer simply didn't get the seat.)*
 - Two people go for the same seat at once: the first wins; the second is told immediately.
 - **How long a seat stays:** until the cut-off, whatever the number of open seats (a doubles
-  that lost three keeps all three open, because the leavers' refunds depend on them being
-  taken). After the cut-off, until the start.
+  that lost three keeps all three open, because a seat still empty at the cut-off calls the game
+  off). After the cut-off, until the start, because a late leaver's refund depends on it.
 
 Games that are still filling are **never offered** in Fill in — they are offered only in decks,
 and *You're In* lists only your own yeses. Otherwise nobody would need to swipe.
@@ -499,11 +516,12 @@ game still filling, and stays on Home as *Seat open* ([§14.1](#141-home-and-the
 
 When the last yes lands (after the 10-second undo, when it applies):
 
-1. **Everyone pays together, or nobody pays** ([§12.2](#122-when-a-game-fills)). A payment that
-   fails gives its player **time to pay**, and the others' payments wait for it.
+1. **Every share is held together, or none is** ([§12.2](#122-when-a-game-fills)). Nothing is
+   taken until the club's cut-off. A card that is refused gives its player **time to fix the
+   card** (after the cut-off, **time to pay**), and the others' holds wait for it.
 2. The court is booked with the club and gets its number. At an **On request** club, the game
    first waits for the club to confirm (within the club's time to confirm, 30 minutes by
-   default); nobody pays until it does ([§16.3](#163-three-ways-to-work-with-raketa)).
+   default); nothing is held until it does ([§16.3](#163-three-ways-to-work-with-raketa)).
 3. **It's a game!** marks the four (or two) being **matched**, not only booked (Q103). The player
    whose yes filled it sees it full screen, at every kind of club — the faces and one word, with
    **Open game** and **Later** — and so does a player whose confirmed payment completes a game
@@ -518,16 +536,21 @@ When the last yes lands (after the 10-second undo, when it applies):
    the bell doesn't count it, though the row is in their list
    ([§17.2](#172-notifications)).
 4. Everyone else is told, and the game appears in their **Home**, marked new until opened:
-   - **booked at once:** *It's a game! · you paid 30 zł*. Each player gets an email receipt from
-     the club, also kept in You › Payments;
+   - **booked at once:** *It's a game! · 30 zł held* — after the cut-off, *It's a game! · you paid
+     30 zł*. Each player gets an email from the club saying when the share is taken (*30 zł is held
+     on your card and taken on Wed 19:00, the club's cut-off. Leave before then and nothing is
+     taken.*; for a checked seat, *Your card was checked. 30 zł will be held from Sat 19:00 and
+     taken on Wed 19:00, the club's cut-off. Leave before then and nothing is taken.*), and the
+     receipt follows when the share is taken, also kept in You › Payments (Q113);
    - **at a club that confirms:** *It's a game! · Kazimierz Padel answers by 21:15* (*Padel · Fri
      19:00. Nobody pays until it confirms.*), always on and not emailed (Q103). The club's yes is
-     then one notice to all four, *Kazimierz Padel confirmed your game · you paid 25 zł*, with the
-     email receipt — never a second *It's a game!*. A game that goes back to filling, refills and
-     goes to the club again is told to all four again, with the new time;
+     then one notice to all four, *Kazimierz Padel confirmed your game · 25 zł held* (*you paid
+     25 zł* after the cut-off), with the booking email — never a second *It's a game!*. A game that
+     goes back to filling, refills and goes to the club again is told to all four again, with the
+     new time;
    - **while one payment is missing:** *It's a game! · waiting for one payment until 14:40*, and
-     *Your Tue 19:00 is booked · you paid 40 zł* when it is in (Q110). Nobody is told *It's a
-     game!* twice.
+     *Your Tue 19:00 is booked · 40 zł held* (*you paid 40 zł* after the cut-off) when it is in
+     (Q110). Nobody is told *It's a game!* twice.
 5. At the same moment:
    - every version and every card of that game disappears;
    - the players' other yeses at that hour are withdrawn;
@@ -547,54 +570,131 @@ When the last yes lands (after the 10-second undo, when it applies):
   terminal. Raketa takes **no fee** and pays none.
 - **Money goes from players to the club through Raketa** — never from one player to another,
   and no player ever pays another player's share.
-- **Nothing is charged until a game exists.** A yes costs nothing; so does a card that never
-  fills.
+- **Nothing is held until a game exists, and nothing is taken until the club's cut-off.** A yes
+  costs nothing; so does a card that never fills. When a game fills, each share is **held** on
+  its player's card, and it is **taken** at the club's cut-off (Q113).
+- **The club's cut-off is the one deadline, the same for everyone in the game.** Leaving before
+  it is free; after it, it isn't. No player's card gives them a deadline of their own.
+- **The club never pays for a player's leave.** Stripe charges nothing for letting a hold go and
+  never returns its fee on a refund. So a leave before the cut-off costs nobody anything, and a
+  late leaver whose seat is taken bears the fee kept on their own payment
+  ([§12.3](#123-leaving-before-and-after-the-cut-off)).
 - **The share** is the court's price divided by the seats, fixed on the card.
+- **No estimated card fee is printed anywhere**, to players or to clubs. A fee is shown only once
+  Stripe has reported it, on the payment it was kept on (Q113).
 
 ### 12.2 When a game fills
 
-- Every player's saved method is charged **automatically — no screen, no tap** — exactly like a
-  subscription: the screen before the first yes was the permission.
-- It is **all or nothing**: each payment is authorised first and all are taken only if all
-  succeeded, seconds apart. If one fails, **nobody pays**.
-- **If your payment fails** (the card is declined, or your bank asks you to confirm — rare, but
-  allowed even with permission on file), when the game fills or when an On request club accepts
-  it: nobody is charged, and **your seat is held for you alone for your time to pay** — 30
-  minutes, and never past the game's book-by (Q109).
-  - The other players' payments stay held on their cards, one they confirmed with their bank
-    included. At a club that confirms, the club's yes and its court stay too. At a club that books
-    at once the court is not held, as for any game still filling.
-  - Your notice, your email and your *To confirm* row name the time: *"Confirm your payment by
-    14:40 to keep your seat."* Meanwhile the game is *Waiting for one payment* on everyone's Home
+- Every player's share is **held** on their saved method **automatically — no screen, no tap** —
+  exactly like a subscription: the screen before the first yes was the permission.
+- It is **all or nothing**: each share is authorised on its player's card, and the game is booked
+  only if every one succeeded, seconds apart. Nothing is taken.
+- **A hold lasts only a few days**: 4 days 18 hours on a Visa charged without the player present,
+  7 days on Mastercard ([Appendix A](#appendix-a--payments-with-stripe-notes-for-development)). A
+  seat's hold **reaches the cut-off** when its last moment is **at least 6 hours after the
+  cut-off** — Stripe captures its own delayed payments about 6 hours before a hold lapses. Such a
+  hold simply stays until the cut-off.
+- **A seat whose hold doesn't reach the cut-off gets a card check.** Its share is held for a few
+  seconds and let go at once, all or nothing with the others, which proves the money is there that
+  day. It is held again at its **holding time, four days before the cut-off**, inside the
+  shortest documented window with margin. The reach margin (6 hours) and the holding lead (4 days)
+  are domain constants, never configuration. *(A call made without a ruling, Q113.)*
+
+  > Thursday 19:00's padel at Bonarka Arena has its cut-off on Wednesday at 19:00, and fills a week
+  > ahead, on the Thursday before. Ivan's Visa hold wouldn't last until Wednesday, so his card is
+  > **checked**: 40 zł held for seconds and let go. Oscar's Mastercard hold reaches Wednesday, so it
+  > **stays**. On Saturday at 19:00, the holding time, Ivan's 40 zł is held again, and this time it
+  > stays. On Wednesday at 19:00 both are **taken**. Until then either of them can leave, and
+  > nothing is taken. Both read *40 zł · free to leave until Wed 19:00* from the moment the game
+  > filled.
+
+- **At an On request club** the shares are held when the club accepts, under the same rules
+  ([§16.8](#168-answering-a-request-on-request)).
+- **At the cut-off**, every held share of a full game is **taken**, and the real card fee is
+  recorded once Stripe reports it. Each player's money line becomes *Paid · 40 zł*. The take is a
+  quiet row in their recent notices, never pushed or bannered, and a receipt
+  ([§17.2](#172-notifications)). *(A call made without a ruling, Q113: a quiet row, not a push.)*
+  A game still short at its cut-off is called off and every hold is let go: nobody pays anything
+  ([§12.3](#123-leaving-before-and-after-the-cut-off)).
+- **After the cut-off, money is taken at once.** A game that fills after its cut-off (a last-minute
+  game), an On request club's yes after it, and a rescue taken after it are authorised and taken
+  in one go.
+- **If your card is refused** — declined, or your bank asks you to confirm (rare, but allowed even
+  with permission on file) — nobody pays, and your seat is kept for you alone for **30 minutes**.
+  Which window it is depends on the cut-off:
+  - **Before the cut-off: time to fix the card.** It covers a refusal at the fill, at an On request
+    club's yes, at the holding time, or taking a rescue. Nothing is being taken, so you are not
+    asked to pay. You confirm with your bank in the app, or change card, and the same check or hold
+    runs again at your press. Nothing is paid in that window. Your notice, your email and your
+    *To confirm* row read *"Fix your card by 14:40 to keep your seat."*, and the email says nothing
+    is paid now and the hold is only placed again. It is never past the cut-off or the book-by.
+  - **After the cut-off: time to pay** (Q109), where the money is taken at once: *"Confirm your
+    payment by 14:40 to keep your seat."* It is never past the book-by.
+  - Taking a rescue, either window ends at the game's start at the latest
+    ([§10.1](#101-seats-to-fill--the-rescue-board)).
+- **While a refused card waits at the fill or at the club's yes:**
+  - The other players' holds stay on their cards, one they confirmed with their bank included. At a
+    club that confirms, the club's yes and its court stay too. At a club that books at once the
+    court is not held, as for any game still filling.
+  - The game is *Waiting for one payment* on everyone's Home
     ([§14.1](#141-home-and-the-statuses), Q111). The others are told *It's a game! · waiting for one
     payment until 14:40* — at a club that confirms, where they already had *It's a game!*, *Your
-    Fri 19:00 is waiting for one payment, until 21:20* (Q110). Nobody is told whose payment it is.
-  - **If you pay in time,** the game books at once on the payments already held: nobody's bank is
-    asked again, and the club's desk isn't asked again. You see *It's a game!*; the others read
-    *Your Tue 19:00 is booked · you paid 40 zł*, or *Kazimierz Padel confirmed your game · you
-    paid 25 zł* at a club that confirms.
-  - **If you don't,** the held payments are let go and your seat is offered to others as any
-    open seat of a game still filling. You may still take it back while it is free: confirming in
-    the app is your yes again, and if it goes through before somebody else takes the seat, the
-    game fills and everyone else is charged automatically. You are told your time ran out, and the
-    others that the game is filling again ([§17.2](#172-notifications)).
+    Fri 19:00 is waiting for one payment, until 21:20* (Q110). Nobody is told whose card it is. The
+    others' words are the same in both windows; only the refused player's change. *(Written in
+    while recording Q113.)*
+  - **If you fix it, or pay, in time,** the game books at once on the holds already kept: nobody's
+    bank is asked again, and the club's desk isn't asked again. You see *It's a game!*; the others
+    read *Your Tue 19:00 is booked · 40 zł held* (*you paid 40 zł* after the cut-off), or *Kazimierz
+    Padel confirmed your game · 25 zł held* at a club that confirms.
+  - **If you don't,** the kept holds are let go and your seat is offered to others as any open seat
+    of a game still filling. You owe nothing. You may still take it back while it is free:
+    confirming in the app is your yes again, and if it goes through before somebody else takes the
+    seat, the game fills and everyone else's share is held automatically. You are told your time ran
+    out (*Your time to fix your card ran out*, or *Your time to pay ran out*), and the others that
+    the game is filling again ([§17.2](#172-notifications)).
   - **If no time is left** before the book-by, the game is called off at once and everyone is
-    told. So is a game whose court another card books during the time to pay, at a club that
-    books at once; its people are dealt a new card first, as when any card loses its court
+    told. So is a game whose court another card books during the wait, at a club that books at
+    once; its people are dealt a new card first, as when any card loses its court
     ([§5.2](#52-what-a-card-promises)).
   - Nothing retries a card by itself.
+- **A card refused at the holding time** is on a game already booked. The game stays booked while
+  its player fixes the card, and the others aren't told. Fixed in time, the share is held. Not
+  fixed, the player's seat opens as a **rescue** and goes to Fill in; they owe nothing, and the
+  others are told as for a leave. On the record it counts as **leaving before the cut-off**: on it
+  only if the game is then called off ([§15.4](#154-the-record)). *(A call made without a ruling,
+  Q113.)*
+- **The fallback, never expected under the documented windows.** A holding whose last moment still
+  falls short of the cut-off plus 6 hours is **taken at its last safe moment**, its last moment
+  less 6 hours. A leave before the cut-off after that is refunded in full, as is that share if the
+  game is then called off. This is the one place the club could pay for a leave. *(A call made
+  without a ruling, Q113.)*
+- **BLIK can't be held** ([Appendix A](#appendix-a--payments-with-stripe-notes-for-development)).
+  Its rule is decided when BLIK launches ([O1](#21-open-items)); until then, cards only.
 
 ### 12.3 Leaving, before and after the cut-off
 
 | When | What happens to your money | Your seat |
 | --- | --- | --- |
-| **Before the club's cut-off** | Refunded **at once**, minus the card fee (about 1.60 zł on a 40 zł share) | Becomes a rescue |
-| **At the cut-off, if a seat is still empty** | The game is **called off**. Everyone still in is refunded **in full** (the club absorbs those fees — it is its own free-cancellation rule) | The court goes back to the club |
-| **After the cut-off** | Refunded (minus the card fee) **only when someone takes your seat**; otherwise not | Becomes a rescue until the start |
-| **A last-minute game** (filled after its cut-off) | As *after the cut-off*, from the start. Its card said **No free cancellation** | — |
+| **Before the club's cut-off** | **Nothing is taken.** The hold on your card is let go (a checked share has none yet): no refund, and no fee for you or for the club | Becomes a rescue |
+| **At the cut-off, if the game is full** | Every share is **taken** | — |
+| **At the cut-off, if a seat is still empty** | The game is **called off** and every hold is let go: nobody pays anything, the club included | The court goes back to the club |
+| **After the cut-off** | Your share was taken. **Only if someone takes your seat**, you get it back less exactly what was kept on your payment — *38,24 zł* of a 40 zł share paid by a business card — shown to the grosz before you leave and on your receipt. Otherwise nothing comes back | Becomes a rescue until the start |
+| **A last-minute game** (filled after its cut-off) | Taken at once; then as *after the cut-off*, from the start. Its card said **No free cancellation** | — |
+| **The club cancels**, before the cut-off | Every hold is let go: nothing was taken, nobody is refunded, and nobody pays a fee, the club included | The game is off; a new card first ([§16.9](#169-cancelling-a-booking)) |
+| **The club cancels**, after the cut-off | Everyone still in is refunded **in full**, and the club bears the card fees, as the seller (Q44) | The same |
 
-How long a refund takes to arrive is shown when it is issued: **BLIK within hours, cards up to
-two weeks**.
+**What was kept on your payment** is Stripe's real fee on it, known once the share is taken: 1,5 % +
+1 zł on a personal card from the EEA, 1,9 % + 1 zł on a business card, 2,5 % + 1 zł on a UK card
+and 3,25 % + 1 zł on a card from outside Europe
+([Appendix A](#appendix-a--payments-with-stripe-notes-for-development)). On a 40 zł share that is
+38,40, 38,24, 38,00 or 37,70 zł back. The club neither earns nor loses on a late leave (Q47, as
+Q113 amends it). For a club on its own negotiated Stripe pricing the fee arrives later: until it
+does, the leave sheet gives no figure and no clause, and the refund waits until the fee is known.
+**This deduction waits for the lawyer** (O3); if it is refused on personal EU cards, the fallback is
+everything back on those cards ([§12.5](#125-saving-a-payment-method-and-the-terms)).
+
+How long a refund takes to reach a card, up to two weeks, is shown when it is issued. Nothing
+mentions BLIK while BLIK isn't offered.
 
 ### 12.4 Payment methods
 
@@ -604,7 +704,9 @@ two weeks**.
 - **BLIK:** Stripe's BLIK page says a saved BLIK can be charged later without the player
   present; another Stripe page contradicts it, and the recurring version is a preview. **Confirm
   with Stripe before building.** If confirmed, BLIK launches beside cards; if not, it follows
-  when Stripe opens it. See also open item [O1](#21-open-items).
+  when Stripe opens it. See also open item [O1](#21-open-items). **BLIK can't be held** (Stripe:
+  no manual capture), so it can't wait for the cut-off as a card does: its rule is decided when
+  BLIK launches, and until then it is cards only (Q113).
 - **Przelewy24** cannot be saved, so it cannot be used.
 
 ### 12.5 Saving a payment method, and the terms
@@ -623,28 +725,42 @@ the first time you say yes or post without one — never during onboarding (Q96)
 **Change** keeps the old method working until the new one is saved; **Remove this method** is
 allowed only with no live yeses and no upcoming booked games (Q83).
 
-The terms, in full:
+The terms, in full (Q113):
 
-> Your card (or BLIK) is saved. When a game you said yes to fills, the club it is played at
-> charges your share at once — the court's price divided by the players. You can leave free
-> until the club's cut-off and are refunded at once, minus the card fee. After the cut-off your
-> seat is offered to others, and you are refunded (minus the fee) when someone takes it. If a
-> game is still missing a player at the cut-off, it is called off and everyone still in gets
-> everything back. Refunds reach BLIK within hours and cards within up to two weeks.
+> Your card is saved. When a game you said yes to fills, the club it is played at holds your
+> share on your card — the court's price divided by the players. If that hold would not last until
+> the club's cut-off, your card is checked when the game fills (your share held for a moment and
+> let go), and your share is held four days before the cut-off. Your share is taken at the club's
+> cut-off. Leave before the cut-off and nothing is taken. After the cut-off your seat is offered to
+> others; if someone takes it, you get your share back less what was kept on your payment, and you
+> see the exact sum before you leave. If a game is still missing a player at the cut-off, it is
+> called off and nothing is taken.
 
-The wording is reviewed by a lawyer before launch. The app asks again only if the bank changes
-the card's brand (Visa → Mastercard), because a changed brand cannot be charged without it.
+**These are a new version of the terms.** The backend's version in force moves with the client's
+text, and a game holds only the share of a player who accepted the version in force, so a player
+who accepted the earlier words is asked to accept these, through the same step, before their next
+game holds their money.
 
-**A note for that review (Q99):** the card, the details and the booking email don't say *free to
-leave*; they say the sum a leaver gets back (*38,40 zł back if you leave by Wed 19:00*). The
-review should word the leave the same way: the share back less the card fee, until the club's
-cut-off, and not *free*.
+The wording is reviewed by a lawyer before launch. Beyond a new version of the terms, the app asks
+again only if the bank changes the card's brand (Visa → Mastercard), because a changed brand cannot
+be charged without it.
+
+**A note for that review (Q113, O3):** before the cut-off nothing is ever taken, so the review
+there is only the hold's disclosure. **The clause after the cut-off waits for the lawyer**:
+keeping back exactly what was kept on a leaver's own payment when someone takes their seat. A
+leaver after the cut-off has no right to money back (a dated sports booking carries no
+withdrawal right), and the sum kept is the real cost, but Polish payment law bars a payee's charge
+for using a personal card issued in the EU (art. 37a ust. 3 UUP). If the lawyer finds the
+deduction is such a charge, **the fallback is everything back on personal EU cards**; business
+cards and cards from outside the EU keep the rule. No figure is ever an estimate
+([§12.3](#123-leaving-before-and-after-the-cut-off)).
 
 ### 12.6 The club's money
 
-The club is paid **after the game is played**, as a normal payout. Until the start, refunds can
-still happen, so the money stays where it can pay them. Wording in the app: *"the club's payment
-is on its way"*, never *"the club is paid"*.
+The club is paid **after the game is played**, as a normal payout. A share is the club's money
+only once it is taken at the cut-off; a held share is not collected yet. Until the start, a late
+leaver's refund can still happen, so the money stays where it can pay it. Wording in the app:
+*"the club's payment is on its way"*, never *"the club is paid"*.
 
 ---
 
@@ -655,10 +771,16 @@ is on its way"*, never *"the club is paid"*.
 
 | When | The sheet says |
 | --- | --- |
-| Before the cut-off | *"You'll be refunded 38,40 zł now (the 1,60 zł card fee isn't returned). Your seat is offered to others. On your record only if the game is then called off."* |
-| After the cut-off | *"Your seat is offered to others. You'll be refunded 38,40 zł when someone takes it; if nobody does, you won't be. On your record if nobody takes it."* |
-| Waiting for the club, or for one payment | *"Nobody has paid yet. Leaving withdraws your yes."* Any request to the club is taken back and the game goes back to filling, your seat open: the others stay In, and the game stays on their Home as *Seat open* until it is full again — at a club that confirms, it then goes back to the club as a new request (Q106). A player waiting to pay keeps their time to pay. After the game's book-by it can no longer refill, so it is called off, nobody paid. |
+| Before the cut-off | Leaving is free: *"Nothing is taken: the hold on your card is let go. Your seat is offered to others. On your record only if the game is then called off."* (a checked share has no hold yet: *"Nothing is taken."*). The line under the button says the same, and the toast reads *"You left the game. Nothing was taken."* (Q113) |
+| After the cut-off | *"Your seat is offered to others. If someone takes it, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment); if nobody does, you won't. On your record if nobody takes it."* The figure is the exact one for that payment; while its fee isn't known yet, the sheet gives no figure and no clause (Q113) |
+| Waiting for the club, or for one payment | *"Nobody has paid yet. Leaving withdraws your yes."* Any request to the club is taken back and the game goes back to filling, your seat open: the others stay In, and the game stays on their Home as *Seat open* until it is full again — at a club that confirms, it then goes back to the club as a new request (Q106). A player whose card waits keeps their time to fix it, or to pay. After the game's book-by it can no longer refill, so it is called off, nobody paid. |
 | After the start | No button. |
+
+The leaver's email says the same (Q113): before the cut-off, *You left the game · nothing was
+taken* / *"The 40 zł hold on your card is let go. Your seat is offered to others."*; after it, *You
+left the game* / *"Your seat is offered to others. If someone takes it, you get 38,24 zł back (40 zł
+less the 1,76 zł kept on your payment)."*, with no figure while the fee isn't known yet. No email
+says when a refund reaches BLIK. *(The bodies were written in while recording Q113.)*
 
 The others in the game are told, with the new state of the game:
 
@@ -669,11 +791,15 @@ The others in the game are told, with the new state of the game:
   paid"* / *"Oscar Bertran left after its last moment to book — Padel at Kazimierz Padel."* (Q104).
 
 **A leaver is told only when it touches them** (Q108). Once you have left, you hear about the game
-again in two cases only, and nothing else about it reaches a leaver who was already refunded:
+again in two cases only. Apart from the refund a late leaver gets when someone takes their seat —
+*"You've been refunded 38,24 zł · your seat was taken"* / *"40 zł less the 1,76 zł kept on your
+payment."*, the notice and the email (Q113, [§17.2](#172-notifications)) — nothing else about it
+reaches a leaver:
 
 - **your empty seat called it off at the cut-off:** *"Tuesday's 19:00 at Bonarka Arena, which you
-  left, was called off"* / *"Your seat stayed empty, so it counts on your record. Your 38,40 zł
-  refund stands."* It changes no money, so it isn't emailed. The mark is §15.4's, unchanged;
+  left, was called off"* / *"Your seat stayed empty, so it counts on your record. Nothing was
+  taken from you."* (Q113: a leave before the cut-off took nothing, so there is no refund to
+  stand). It changes no money, so it isn't emailed. The mark is §15.4's, unchanged;
 - **the club's cancel refunded you** — you left after the cut-off and your seat was still paid
   for: you are told in a leaver's words, with the club's reason and your refund, and never promised
   a new game. The notice and the refund email both use those words.
@@ -690,12 +816,12 @@ on, Needs a player** and **Held** are gone: the booking *is* the plan.
 | Status | When | Money line |
 | --- | --- | --- |
 | **Waiting for the club** | An On request club has not confirmed yet | Before the club's time to confirm runs out: *Bonarka answers by 20:45 · Nobody pays until it confirms*. After: *Nobody pays until Bonarka confirms* |
-| **Waiting for one payment** | One player's payment failed when the game filled or when the club accepted it, and their time to pay runs ([§12.2](#122-when-a-game-fills), Q111) | *Waiting for one payment · until 14:40 · Nobody pays until it's in*. The payer's own card reads *Confirm your payment by 14:40*, beside their *To confirm* row |
-| **Booked** | Full and booked | Before the cut-off: *Paid · 30 zł · 28,55 zł back if you leave by Sat 17:00*. After: *Paid · 30 zł* |
-| **Seat open** | Someone left a booked game | Before the cut-off: *1 seat open · fills by Sat 17:00 or the game is off and everyone is refunded*. After: *1 seat open · offered to others · the game goes ahead* |
+| **Waiting for one payment** | One player's card was refused when the game filled or when the club accepted it, and their time to fix the card (before the cut-off) or time to pay (after it) runs ([§12.2](#122-when-a-game-fills), Q111, Q113) | *Waiting for one payment · until 14:40 · Nobody pays until it's in*, in both windows. The refused player's own card reads *Fix your card by 14:40* before the cut-off and *Confirm your payment by 14:40* after it, beside their *To confirm* row |
+| **Booked** | Full and booked | Before the cut-off, whether the share is held yet or only checked: *30 zł · free to leave until Sat 17:00*. After it, once the share is taken: *Paid · 30 zł* (Q113). A player whose card was refused at the holding time reads *Fix your card by 14:40* until it is fixed; the game stays booked, and the others' cards don't change |
+| **Seat open** | Someone left a booked game | Before the cut-off: *1 seat open · fills by Sat 17:00 or the game is off and nothing is taken*. After: *1 seat open · offered to others · the game goes ahead* |
 | **Seat open** | A full game went back to filling before it was booked (Q106) | At a club that confirms: *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid*. At a club that books at once: *1 seat open · books when it's full · nobody paid* |
 | **Needs result · Confirm the result · Counted · Uncounted · Never played** | Unchanged from today | — |
-| **Called off** | A seat was empty at the cut-off; the club cancelled; the club said no or didn't answer in time; a game that went back to filling reached its book-by; a player left it after its book-by while the club decided; a failed payment had no time left before the book-by, or the court went to another card while it waited for that payment | The reason, and *refunded 30 zł* or *nobody paid* |
+| **Called off** | A seat was empty at the cut-off; the club cancelled; the club said no or didn't answer in time; a game that went back to filling reached its book-by; a player left it after its book-by while the club decided; a failed payment had no time left before the book-by, or the court went to another card while it waited for that payment | The reason, and *nothing was taken* (the holds were let go: at the cut-off, or a club's cancel before it), *refunded 30 zł* (a club's cancel after the cut-off) or *nobody paid* |
 
 **A full game that falls back stays on Home** (Q106). It goes back to filling before it is booked
 when a player leaves it while the club decides, when a yes is taken back because that player's
@@ -714,16 +840,22 @@ The club's answer reads the same way on the called-off card, its details, the no
 let its time to confirm run out, each with *Padel · Fri 19:00. Nobody paid — you'll get a new card
 first.*
 
-*Back if you leave by* names what leaving before the club's cut-off gives back: the share less
-its card fee (1,45 zł on 30 zł), the sum the leave sheet then states ([§13](#13-leaving-a-game)),
-so the card never promises what the sheet takes back (Q99). The leaver still bears the fee (Q47).
-At the cut-off the clause leaves the line.
+*Free to leave until* names the club's cut-off, the same moment for everyone in the game. Until
+then nothing has been taken, and leaving lets the hold go, so the word is true
+([§13](#13-leaving-a-game); Q113, amending Q99, whose reason — never call a leave free when it
+costs a fee — is now met). At the cut-off the share is taken and the line becomes *Paid · 30 zł*.
+
+The game's details say when the share is held and when it is taken: *30 zł held on your card ·
+taken Sat 17:00 · free to leave until then*, or for a checked share *30 zł held from Tue 17:00 ·
+taken Sat 17:00*, and *Paid · 30 zł* after the cut-off ([§14.2](#142-the-game-details)). So a
+40 zł hold that appeared and vanished the day a game filled far ahead is explained as the card
+check.
 
 *Answers by* names the end of the club's **time to confirm** after the game filled
 ([§11](#11-the-moment-a-game-fills)): the time its desk is given, in the request email's *Answer
 by …* and the countdown on its Bookings page ([§16.8](#168-answering-a-request-on-request)), so
 the players can tell five minutes from an hour (Q98). Once that time has passed the clause leaves
-the line, as *… back if you leave by …* leaves at the cut-off, until the game is called off as
+the line, as *free to leave until …* leaves at the cut-off, until the game is called off as
 *Kazimierz Padel didn't answer in time* (Q105). It moves no money.
 
 A game that **starts with a seat still open** (someone left after the cut-off and nobody took
@@ -739,7 +871,8 @@ From the mocks (details 5–10, in [`mocks/game-details/`](mocks/game-details/))
   it is not over, lit volt when something is unread.
 - **The game card:** status row (dot + status); player tiles — two rows for doubles, one for
   singles — with the *vs* line naming the sides; tapping a tile opens that player's record;
-  the court facts (**WHERE** club · court · distance, **DAY**, **TIME** start–end, the money row).
+  the court facts (**WHERE** club · court · distance, **DAY**, **TIME** start–end, the money row,
+  which says when the share is held and when it is taken — [§14.1](#141-home-and-the-statuses)).
 - **The balance forecast**, as today. Hidden while a seat is open.
 - **On the day:** a **QR code** to show at the club desk, with a short code under it
   ([§15.1](#151-check-in-at-the-club)).
@@ -758,8 +891,8 @@ The same screen serves two more readers (Q75, Q96):
   **Withdraw** if you are In — while waiting for the club, **Leave the game** with its sheet
   ([§13](#13-leaving-a-game)). No Chat.
 - **A rescue, seen by a member who is not in it** (a Seat open card or a Seats to fill row):
-  the paid tiles, the dashed *You?* tile, the court number, and **I'm in · 27 zł**. No Chat, no
-  Leave.
+  the paid tiles, the dashed *You?* tile, the court number, and **I'm in · 27 zł** — said as
+  *held until the cut-off* before it, and *paid now* after it (Q113). No Chat, no Leave.
 
 ### 14.3 The chat
 
@@ -808,6 +941,10 @@ sportsmanship stars.
 | Never on the record | A mark | The strongest mark |
 | --- | --- | --- |
 | Swiping left · withdrawing a yes · a card or post that never filled · a failed payment you fixed · leaving before the cut-off when your seat is taken or the game still plays · a game the club cancelled | Leaving before the cut-off when your seat stays empty and the game is called off because of it · leaving after the cut-off when nobody takes your seat | Not turning up |
+
+A seat lost because its player's card wasn't fixed at the holding time counts as **leaving before
+the cut-off**: on the record only if the game is then called off because of it
+([§12.2](#122-when-a-game-fills)). *(A call made without a ruling, Q113.)*
 
 The reliability score stops counting *answers challenges* (challenges no longer wait for
 answers) and counts *keeps booked games* from the table above.
@@ -925,7 +1062,7 @@ One page, by day, listing every Raketa booking at the club ◇:
 | --- | --- |
 | **When · court** | Day, hour, court number (with **Move** to another free court) |
 | **Sport · kind** | Padel · Competitive, Tennis · friendly… |
-| **Players** | Each player's name, **paid ✓**, and **checked in ✓** when the club checks in |
+| **Players** | Each player's name, their share **held** or **taken** (Q113), and **checked in ✓** when the club checks in |
 | **Status** | See below |
 | **Money** | Court price, collected, refunded |
 | **Where it came from** | The group it was booked in (official or player group) |
@@ -935,10 +1072,10 @@ The statuses the club sees:
 | Status | Meaning for the club |
 | --- | --- |
 | **Waiting for you** | On request only: a full game asks for the court; **Accept** or **Refuse** before the countdown ends |
-| **Accepted · waiting for one player's payment** | On request only: the club accepted, and one player's payment failed; the court stays held until their time to pay ends ([§16.8](#168-answering-a-request-on-request), Q112). Not in *Waiting for you*: the club has answered |
-| **Booked** | Full and paid; before the cut-off it can still be called off if a player leaves and nobody replaces them |
+| **Accepted · waiting for one player's payment** | On request only: the club accepted, and one player's card was refused; the court stays held until their time to fix the card (before the cut-off) or time to pay (after it) ends ([§16.8](#168-answering-a-request-on-request), Q112, Q113). Not in *Waiting for you*: the club has answered |
+| **Booked** | Full; its shares are held until the cut-off and taken at it. Before the cut-off it can still be called off if a player leaves and nobody replaces them |
 | **Seat open** | A player left; Raketa is finding a replacement. Before the cut-off: if nobody is found, the game is called off at the cut-off and the court comes back to the club |
-| **Called off** | With the reason: short at the cut-off, cancelled by the club, refused, no answer, or a player's payment didn't come in time after the club accepted (Q112). Everyone was refunded or nobody paid; the hour is free again |
+| **Called off** | With the reason: short at the cut-off, cancelled by the club, refused, no answer, or a player's payment didn't come in time after the club accepted (Q112). Every hold was let go, everyone was refunded (a cancel after the cut-off), or nobody paid; the hour is free again |
 | **Played** | The hour has passed |
 
 Filters: all · waiting for you · seat open · called off
@@ -947,11 +1084,16 @@ Filters: all · waiting for you · seat open · called off
 ### 16.8 Answering a request (On request)
 
 - A **Waiting for you** booking shows the players, the hour, the sport, the price and the countdown.
-- **Accept** books it: everyone is charged at that moment, all together or not at all
-  ([§12.2](#122-when-a-game-fills)), and a court number is given.
-- **An Accept that meets a refused payment waits on one payment** (Q112). The club's yes and the
-  court are kept for that player's time to pay — 30 minutes, never past the book-by — and the
-  booking reads *Accepted · waiting for one player's payment until 21:20*, never naming the player.
+- **Accept** books it: every share is held at that moment, all together or not at all, and taken
+  at the cut-off — or, when the club accepts after its cut-off, taken at once
+  ([§12.2](#122-when-a-game-fills), Q113) — and a court number is given. The request email says
+  so: *the shares are held when you accept and taken at the cut-off*.
+- **An Accept that meets a refused card waits on one payment** (Q112). The club's yes and the
+  court are kept for that player's time to fix the card (before the cut-off) or time to pay (after
+  it) — 30 minutes, never past the book-by — and the booking reads *Accepted · waiting for one
+  player's payment until 21:20*, never naming the player; before the cut-off, *Accepted · waiting
+  for one player's card until 21:20*, and a lapse is emailed *A player's card wasn't fixed in time —
+  the court is free again.* *(Written in while recording Q113.)*
   It isn't in *Waiting for you*, because the desk has answered. If the player pays in time, the
   game books and the desk isn't asked again. If the time runs out — or none is left, because the
   book-by has passed — the desk is emailed as for a cut-off, *"A game didn't go ahead"* / *"A
@@ -969,13 +1111,17 @@ Filters: all · waiting for you · seat open · called off
 ### 16.9 Cancelling a booking
 
 - **Cancel** on a booking, with a reason ◇: *weather*, *repair*, *double booking*, *other*.
-- Everyone is **refunded in full**, it goes on **nobody's record**, and the same players are dealt a
-  new card first. They are told the club cancelled, with the reason, and told again when the new
-  card arrives ([§17.2](#172-notifications), Q107). A leaver the cancel refunds — one who left after
-  the cut-off, whose seat was still paid — is told in a leaver's words and never promised a new
-  game ([§13](#13-leaving-a-game), Q108).
-- The card fees on those payments are not returned by Stripe; as the seller, **the club bears
-  them** (Q44).
+- **Before the cut-off every hold is let go**: nothing was taken, nobody is refunded, and nobody
+  pays a fee, the club included (Q113). **After the cut-off everyone is refunded in full.** Either
+  way it goes on **nobody's record**, and the same players are dealt a new card first. They are
+  told the club cancelled, with the reason, and told again when the new card arrives
+  ([§17.2](#172-notifications), Q107). A leaver the cancel refunds — one who left after the
+  cut-off, whose seat was still paid — is told in a leaver's words and never promised a new game
+  ([§13](#13-leaving-a-game), Q108).
+- After the cut-off, the card fees on those payments are not returned by Stripe; as the seller,
+  **the club bears them** (Q44). The cancel dialog says which: before the cut-off *every hold is
+  let go and nobody pays a fee*; after it *everyone is refunded in full; the card fees are not
+  returned*.
 - Not possible once the game has started ◇.
 - An Instant club that sold the hour at its desk too cancels here with *double booking*.
 - Raketa keeps count of a club's cancellations; frequent cancellations are a quality matter
@@ -995,14 +1141,22 @@ Filters: all · waiting for you · seat open · called off
 ### 16.11 Money
 
 - **The club is the seller.** Its name is on the players' receipts and bank statements.
-- **Collected:** each booking's shares, taken from the players when the game filled (or when the
-  club accepted a request).
-- **Refunds happen automatically** — a leaver before the cut-off, a leaver whose seat was taken
-  after it, a game called off, a club cancellation. The club never refunds anybody by hand ◇.
-- **Fees:** Stripe's card fee on each payment, paid by the club as at its own terminal (about
-  1.5 % + 1 zł per share on EEA cards). Fees on refunded payments are not returned.
-- **Payouts:** after the game is played, to the club's IBAN, as normal Stripe payouts. Refunds
-  before the start are paid from that money, which is why it waits (open item O2).
+- **Collected:** each booking's shares **once taken** — at the club's cut-off, or at once for a
+  game booked after it (Q113). A held share is not collected yet; Bookings shows it as *held*.
+- **Holds are let go, never refunded** — a leaver before the cut-off, a game short at the
+  cut-off, a club's cancel before it: nothing was taken, so nothing comes back and no fee arises.
+- **Refunds happen automatically** — a leaver whose seat was taken after the cut-off (the share
+  less the fee kept on their payment), a club's cancel after the cut-off (in full), and the
+  fallback of [§12.2](#122-when-a-game-fills) (in full). The club never refunds anybody by hand ◇.
+- **Fees:** Stripe's real card fee on each share taken, paid by the club as at its own terminal,
+  shown once Stripe reports it — or *not yet known* for a club on its own negotiated Stripe
+  pricing, whose fee arrives later. **No estimate is ever shown** (Q113). A hold let go costs
+  nothing. Fees on refunded payments are not returned; on a late leaver's refund the fee kept is
+  the leaver's, so the club neither earns nor loses on it. *(A call made without a ruling, Q113:
+  the ruling named the players' screens; the club's figures drop the estimate too.)*
+- **Payouts:** after the game is played, to the club's IBAN, as normal Stripe payouts. A hold let
+  go counts as settled. Refunds before the start are paid from that money, which is why it waits
+  (open item O2).
 - **The Money page** ◇: per booking — collected, refunded, card fee, net; the list of payouts; a
   link to the club's own Stripe dashboard for the detail.
 - **Disputes** (a player's bank reverses a payment): handled through Stripe on the club's account,
@@ -1017,11 +1171,11 @@ On the website (badges on Bookings and Overview), and by **email** where marked 
 
 | Event | Email |
 | --- | --- |
-| **A request is waiting for you** (On request), with the countdown | yes, at once |
+| **A request is waiting for you** (On request), with the countdown, and that the shares are held when you accept and taken at the cut-off (Q113) | yes, at once |
 | A new booking | a daily summary |
 | A booking lost a player (Seat open) | no |
 | A game was called off at the cut-off — the hour is free again | yes, at once |
-| A game didn't go ahead — a player's payment didn't come in time after you accepted (Q112) | yes, at once |
+| A game didn't go ahead — a player's payment didn't come in time after you accepted (Q112); before the cut-off, a player's card wasn't fixed in time (Q113) | yes, at once |
 | A payout was sent | yes |
 | Stripe needs something from you (account details, a dispute) | yes, at once |
 
@@ -1040,7 +1194,7 @@ On the website (badges on Bookings and Overview), and by **email** where marked 
 - **One login per club**, as today ◇. Separate staff logins (desk staff, managers) come later; until
   then the desk uses the club's login.
 - **About players** ◇, the club sees only what running the court needs: each player's **name**, whether
-  they **paid**, and whether they were **checked in**. No email, no phone, no level, no record, no
+  their share is **held** or **taken**, and whether they were **checked in**. No email, no phone, no level, no record, no
   access to the game's chat. The club cannot message players; everything players need to know comes
   from Raketa.
 
@@ -1055,14 +1209,14 @@ On the website (badges on Bookings and Overview), and by **email** where marked 
 
 | Situation | What happens |
 | --- | --- |
-| The desk sold an hour Raketa had already booked (Instant) | The club cancels with *double booking*: full refund, nobody's record, the players get a new card first. |
+| The desk sold an hour Raketa had already booked (Instant) | The club cancels with *double booking*: every hold let go before the cut-off, a full refund after it; nobody's record; the players get a new card first. |
 | The club forgets to answer a request | It expires: nobody paid, *Called off · no answer*, the players get a new card first. |
-| A player's payment fails when the club accepts | *Accepted · waiting for one player's payment until …*, the court held for 30 minutes at most; paid in time, it books without asking the club again; otherwise the club is emailed *A game didn't go ahead* and the hour is free again ([§16.8](#168-answering-a-request-on-request)). |
+| A player's card is refused when the club accepts | *Accepted · waiting for one player's payment until …* (before the cut-off, *… one player's card until …*), the court held for 30 minutes at most; fixed or paid in time, it books without asking the club again; otherwise the club is emailed *A game didn't go ahead* and the hour is free again ([§16.8](#168-answering-a-request-on-request)). |
 | The club closes an hour that has cards on it but no booking | The cards move to another free court at that hour or disappear; nobody was charged. |
 | A court breaks on the day | **Move** the game to another free court; if there is none, **Cancel** with *repair*. |
 | The club changes a price after cards were dealt | The dealt cards and booked games keep their price. |
-| A player leaves after the cut-off and nobody replaces them | The game goes ahead short; the club has been paid in full. |
-| A game is still short at the cut-off | Called off; the players are refunded; the hour is free again for the club. |
+| A player leaves after the cut-off and nobody replaces them | The game goes ahead short; every share was taken at the cut-off, so the club is paid in full. |
+| A game is still short at the cut-off | Called off; every hold is let go, so nobody paid and no fee arises; the hour is free again for the club. |
 | A player's bank disputes a payment | Handled on the club's Stripe account; the check-in and the result are the evidence. |
 | The club's Stripe account needs attention | New cards stop until it is fixed; booked games are unaffected. |
 | The club wants to stop | Pause, then disconnect once everything booked has been played and paid out. |
@@ -1097,7 +1251,7 @@ The You tab gains an **Account** group of three rows (screens in [the-screens.md
   row's subtitle repeats it. Settings apply across sports.
 - **Payments** — the setup ([§12.5](#125-saving-a-payment-method-and-the-terms)) until a method is
   saved; then the method card, **LIVE YESES · n** (every yes that hasn't filled, across groups)
-  and **RECEIPTS** (charges and refunds, the club named as the seller).
+  and **RECEIPTS** (shares taken, holds let go and refunds, the club named as the seller).
 - **Notifications** — the always-on list and the three choices ([§17.2](#172-notifications)).
 
 **Your week** stays in *Finding players* ([§4.2](#42-weekly-hours-availability)).
@@ -1108,10 +1262,19 @@ Delivered by **push** (built with this feature, through Expo's push service: fre
 on iPhone it needs the Apple Developer membership, which publishing the app needs anyway), by an
 **in-app banner** when the app is open, and in a **recent notices** list behind the bell on Home.
 Every notice about money is **also emailed** — the standard for bookings and payments (Q85, Q94):
-*It's a game! · you paid* (the booking confirmation), *Game called off · with the refund*,
-*You've been refunded* and *Confirm your payment by 14:40 to keep your seat*. So are **the club's
-no and its silence** (Q105), though no money moves: while push is off, email is the only way to
-reach a player outside the app.
+*It's a game! · 40 zł held* (the booking confirmation, saying when the share is taken; *you paid*
+after the cut-off), *Game called off · nothing was taken* (or *with the refund*, after a club's
+cancel after the cut-off), *You've been refunded*, *Fix your card by 14:40 to keep your seat* and
+*Confirm your payment by 14:40 to keep your seat*; a leaver's own *You left the game* is emailed
+too — *nothing was taken* before the cut-off, the exact refund if their seat is taken after it
+([§13](#13-leaving-a-game), Q113). So are **the club's no and its silence** (Q105), though no money
+moves: while push is off, email is the only way to reach a player outside the app.
+
+**The take at the cut-off is quiet** (Q113): *Your 40 zł for Thu 19:00 was taken* is a row in the
+recent notices, counted on the bell like any notice but never pushed or bannered, and a receipt —
+emailed, and kept in You › Payments. It isn't a row of the settings below, which list the notices
+that are pushed. *(A call made without a ruling, Q113: the booking already said when the money
+would be taken, so its moment needs no push. The row's words were written in while recording it.)*
 
 **The bell shows a number** (Q101): the notices given since the player last opened the list, *99+*
 above 99. The server keeps it, so it is the same on every phone. Opening the list clears it, and
@@ -1127,8 +1290,8 @@ push.
 - **Your own act is never announced back to you.** The player whose yes filled a game sees *It's a
   game!* and gets no banner for it, and the bell doesn't count it; the row is still in their list.
   The same holds for a payment confirmed in the app that completes a game. Their only banner is
-  the one about money taken by someone else's act, such as *Kazimierz Padel confirmed your game ·
-  you paid 25 zł*.
+  the one about money held or taken by someone else's act, such as *Kazimierz Padel confirmed
+  your game · 25 zł held*.
 - **Home is read again whenever a notice arrives**, so the game is there when the notice is tapped.
 
 **Every ending and fall-back of a full game is told to everyone still in it** (Q104). A game that
@@ -1141,13 +1304,14 @@ untold ([§5.4](#54-the-only-deadline-the-courts-book-by)).
 
 | Notification | Setting |
 | --- | --- |
-| **It's a game! · you paid 30 zł** — or, after one payment was missing, *Your Tue 19:00 is booked · you paid 40 zł* | always on |
+| **It's a game! · 30 zł held** (*you paid 30 zł* after the cut-off) — or, after one payment was missing, *Your Tue 19:00 is booked · 40 zł held* | always on |
 | **It's a game! · Kazimierz Padel answers by 21:15** (On request; [§11](#11-the-moment-a-game-fills), Q103) | always on · not emailed |
 | **Waiting for one payment** — *It's a game! · waiting for one payment until 14:40*; at a club that confirms, *Your Fri 19:00 is waiting for one payment, until 21:20* ([§12.2](#122-when-a-game-fills), Q110) | always on · not emailed |
-| **Confirm your payment by 14:40 to keep your seat** — and *Your time to pay ran out*, when it did | always on |
-| **Game called off** (with the reason, and the refund or *nobody paid*) | always on · emailed with a refund |
+| **Fix your card by 14:40 to keep your seat** — before the cut-off; and *Your time to fix your card ran out*, when it did (Q113) | always on |
+| **Confirm your payment by 14:40 to keep your seat** — after the cut-off; and *Your time to pay ran out*, when it did | always on |
+| **Game called off** (with the reason, and *nothing was taken*, the refund, or *nobody paid*) | always on · emailed with *nothing was taken* or a refund |
 | **Someone left your game**, or **it's filling again** | always on · not emailed |
-| **You've been refunded** (your seat was taken) | always on |
+| **You've been refunded** (you left after the cut-off and your seat was taken: the exact sum and the fee kept on your payment) | always on |
 | **The club confirmed / said no / didn't answer in time** (On request) — *Kazimierz Padel said no* and *Kazimierz Padel didn't answer in time*, each with *Padel · Fri 19:00. Nobody paid — you'll get a new card first.* (Q105) | always on |
 | **Your new game** — *Your new game · Sat 10:00 at Bonarka Arena* / *The same players · 40 zł a share — say yes to book it.*, whenever a notice or email promised *you'll get a new card first* (the club said no, didn't answer, or cancelled), to the players it is dealt to (Q107) | always on · not emailed |
 | **A game you left** — called off by your empty seat, or cancelled by the club with your refund ([§13](#13-leaving-a-game), Q108) | always on · emailed only for the club's cancel |
@@ -1174,13 +1338,18 @@ No notification is ever sent for a single swipe.
 | Games per week | 1–7, default 2, Monday to Sunday |
 | Live posts | 2 |
 | Undo | 10 seconds, on every action that moves money: the yes that fills a game and every rescue join |
-| Time to pay | 30 minutes, never past the last moment to book (the book-by) |
+| A card hold lasts (charged without the player present) | Visa 4 days 18 hours · Mastercard 7 days ([Appendix A](#appendix-a--payments-with-stripe-notes-for-development)) |
+| A hold reaches the cut-off | when its last moment is at least **6 hours** after it (a domain constant; a call, Q113) |
+| Holding time, when the fill's hold doesn't reach | **4 days** before the cut-off (a domain constant; a call, Q113) |
+| Time to fix the card | 30 minutes, before the cut-off; never past the cut-off or the book-by |
+| Time to pay | 30 minutes, after the cut-off; never past the last moment to book (the book-by) |
+| A refused rescuer keeps the seat | 30 minutes (to fix the card, or to pay), never past the game's start (a call, Q113) |
 | Recent notices | the newest 30 · the bell's number shows *99+* above 99 |
 | Book-by | release time (Only Raketa) or start − minimum notice |
 | Club defaults | release 3 days · cut-off 24 h · minimum notice 2 h · confirm 30 min · other clubs 10 km |
 | Player group reach | home club + 10 km |
 | No-show dispute | 24 hours |
-| Card fee (club pays; a refunded leaver bears it) | about 1.5 % + 1 zł per share on EEA cards |
+| Card fee | Stripe's real fee on each share taken, paid by the club; a leaver refunded after the cut-off bears the fee kept on their own payment. Known only once the share is taken, by card kind ([Appendix A](#appendix-a--payments-with-stripe-notes-for-development)), and **never estimated or printed in advance** (Q113) |
 
 ---
 
@@ -1198,19 +1367,23 @@ No notification is ever sent for a single swipe.
 | You have no payment method yet | Your first yes opens the payment screen; the yes lands when it is done. |
 | You have no intent for the sport | Asked once, inline, the first time you open Games for it. |
 | Nobody in the group fits you | An empty deck with **Post a game**. |
-| A payment fails when the game fills | Nobody pays; your seat is yours alone for 30 minutes, never past the book-by, and the others' payments stay held; pay in time and the game books. Otherwise your seat is offered to others, and you can still take it back while it is free ([§12.2](#122-when-a-game-fills)). |
-| A payment fails when an On request club accepts | The same, with the club's yes and its court kept; the desk isn't asked again if you pay in time ([§16.8](#168-answering-a-request-on-request)). |
+| A card is refused when the game fills | Nobody pays; your seat is yours alone for 30 minutes — time to fix the card before the cut-off, never past it or the book-by; time to pay after it, never past the book-by — and the others' holds stay; fix it or pay in time and the game books. Otherwise your seat is offered to others, you owe nothing, and you can still take it back while it is free ([§12.2](#122-when-a-game-fills)). |
+| A card is refused when an On request club accepts | The same, with the club's yes and its court kept; the desk isn't asked again if you fix it or pay in time ([§16.8](#168-answering-a-request-on-request)). |
+| A game fills far ahead of its cut-off | A seat whose hold wouldn't last until the cut-off is a card check at the fill, and its share is held four days before the cut-off; everyone is free to leave until the cut-off ([§12.2](#122-when-a-game-fills)). |
+| A card is refused at the holding time | The game stays booked; the player has 30 minutes to fix the card. Not fixed, their seat opens as a rescue, they owe nothing, and it counts as leaving before the cut-off on their record ([§12.2](#122-when-a-game-fills), a call). |
+| A holding still wouldn't last until the cut-off | Never expected: the share is taken at its last safe moment, and a leave before the cut-off after that is refunded in full ([§12.2](#122-when-a-game-fills), a call). |
+| A rescuer's card is refused | The seat is theirs alone for 30 minutes — time to fix the card before the cut-off, time to pay after it — never past the game's start; then it is offered again ([§10.1](#101-seats-to-fill--the-rescue-board), a call). |
 | Your card's brand changes | You are asked to accept the terms again; until then, a game filling fails your payment as above. |
 | The poster withdraws | The game carries on if others are In; the ribbon drops the name. |
 | A post or a picked card reaches book-by unfilled | It disappears; nobody paid; a poster is told. |
 | A doubles loses three players before the cut-off | All three seats stay rescues until the cut-off; then the cut-off rule applies. |
-| A game is still short at the cut-off | Called off; everyone still in refunded in full; leavers keep their earlier refund. |
+| A game is still short at the cut-off | Called off; every hold is let go, so nobody pays anything; the leavers had nothing taken. |
 | Someone leaves after the cut-off and nobody takes the seat | The game goes ahead short; it ends **Uncounted · a seat was empty**. |
-| A last-minute game | No free cancellation from the start; the card said so. |
+| A last-minute game | Its shares are taken the moment it fills; no free cancellation from the start; the card said so. |
 | An On request club refuses or does not answer | Nobody paid; the players are told *said no* or *didn't answer in time*, by notice and email; the same people are dealt a new card first, and told when it arrives. |
 | A player leaves, or a yes is taken back, while the club decides | The game goes back to filling and stays on the others' Home as *Seat open*. They are told it is filling again: a leaver by name, anything else never why. After its book-by it is called off instead. |
-| An Instant club double-sold the court | The club cancels; full refund; a new card first; nobody's record. |
-| The club cancels a booked game | Called off; full refund; nobody's record; a new card first. A leaver it refunds is told in a leaver's words, with no new card. |
+| An Instant club double-sold the court | The club cancels; every hold let go before the cut-off, a full refund after it; a new card first; nobody's record. |
+| The club cancels a booked game | Called off; before the cut-off every hold is let go and nobody pays a fee, after it a full refund; nobody's record; a new card first. A leaver it refunds is told in a leaver's words, with no new card. |
 | The club changes its prices | Only new cards carry the new price. |
 | You leave a group | Your yeses there are withdrawn. Your booked games stay. |
 | Somebody you blocked | Never on a card with you. Your yeses where they are In are taken back, until the club confirms. Your booked games stay. |
@@ -1242,13 +1415,18 @@ To settle with Stripe (and a lawyer) before building payments:
   made on the club's own Stripe account, with the player's card copied there for that payment.
   Stripe copies **cards only** — not BLIK. Ask Stripe: can a saved BLIK be used for a club's
   payments (for example, one approval in the bank app per club), and is saved BLIK available to
-  Raketa at all? If neither, BLIK waits.
+  Raketa at all? If neither, BLIK waits. Either way, **BLIK can't be held** (no manual capture),
+  so it can't wait for the club's cut-off as a card does: when BLIK launches, its own rule for
+  leaving and the cut-off is decided with it (Q113).
 - **O2 — Keeping the club's money until after the game.** Refunds before the start come out of
   the club's Stripe balance. Confirm how Raketa can keep the club's payouts until after the game
   when the club is the seller.
 - **O3 — The terms' wording** ([§12.5](#125-saving-a-payment-method-and-the-terms)), naming the club as
-  the one charging, reviewed by a lawyer. The review should word the leave as the card does
-  (Q99): the share back less the card fee, until the cut-off, and not *free*.
+  the one charging, reviewed by a lawyer. Before the cut-off nothing is taken, so only the hold's
+  disclosure is reviewed there. **The clause after the cut-off waits for the lawyer** (Q113): a
+  late leaver whose seat is taken gets the share back less exactly what was kept on their own
+  payment. If the lawyer finds that deduction a charge for using a personal card issued in the EU
+  (art. 37a ust. 3 UUP), the fallback is everything back on those cards.
 - **O4 — Apple Pay** for one-off charges without the player present: test before launch.
 - **O5 — The club's receipts and invoices.** The club is the seller, so the Polish rules on fiscal
   receipts and invoices for online sales apply to the club. Confirm with a lawyer or accountant what
@@ -1257,7 +1435,10 @@ To settle with Stripe (and a lawyer) before building payments:
 - **O6 — Apple Developer membership** (a human step): iPhone push needs it, as does publishing the
   app. Until it exists, iPhones get the in-app banner, the recent-notices list and the emails.
 - **O7 — A Stripe test account** (a human step): its test keys go into `.env` by a person, never by
-  an agent. Until then, everything runs on the fake payments adapter.
+  an agent. Until then, everything runs on the fake payments adapter. Three questions Q113 left
+  open are checked with it before launch: whether a manual capture's response carries the balance
+  transaction (the fee) at once; whether the fee on a partial capture falls on the captured amount
+  only; and whether Stripe objects to a second hold placed days after a card check was let go.
 
 ---
 
@@ -1266,7 +1447,8 @@ To settle with Stripe (and a lawyer) before building payments:
 ### 22.1 From the PDFs, removed on purpose
 
 - A hold on the player's money at every swipe; the 5-second background queue built around it;
-  the three-shares ceiling.
+  the three-shares ceiling. (Holds came back with Q113, but only from the moment a game fills,
+  never on a swipe.)
 - The two clocks (a 2-hour answer window and a 4-hour court reservation restarted by every
   acceptance up to 12 hours) and the third clock before the first yes.
 - The court *spoken for* by a swipe.
@@ -1309,7 +1491,8 @@ claim by claim, and each record carries a note pointing at it:
 
 ## Appendix A — Payments with Stripe: notes for development
 
-Researched from Stripe's official documentation on 2026-09-28. Every line has its source.
+Researched from Stripe's official documentation on 2026-09-28; the holds, their windows, the fees
+and refunds were read again on 2026-10-10 for Q113. Every line has its source.
 
 **Objects**
 
@@ -1341,10 +1524,15 @@ Researched from Stripe's official documentation on 2026-09-28. Every line has it
 **The fill (all or nothing)**
 
 - For each seat: `capture_method=manual`, `off_session=true`, `confirm=true`, the saved method,
-  an idempotency key. When every seat is `requires_capture`, capture them all; if any fails,
-  cancel the others — cancelling an uncaptured payment costs nothing.
+  an idempotency key. When every seat is `requires_capture`, **keep the holds** and capture them
+  at the club's cut-off (Q113) — at once only when the game is booked after its cut-off; if any
+  fails, cancel the others — cancelling an uncaptured payment costs nothing: *"You can cancel a
+  payment before it's completed at no cost."*
   [place-a-hold](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method),
   [refunds](https://docs.stripe.com/refunds)
+- A seat whose hold doesn't reach the cut-off (below) is cancelled at once — the **card check** —
+  and authorised again at its holding time, four days before the cut-off, as a second, separate
+  off-session payment on the saved card.
 - Off-session payments can still come back `authentication_required`; recovery is the player
   confirming **the same** PaymentIntent in the app (`confirmPayment`); for other declines, a new
   method on the same PaymentIntent. At most 8 retries.
@@ -1357,17 +1545,86 @@ Researched from Stripe's official documentation on 2026-09-28. Every line has it
   (`payment_method.automatically_updated`).
   [cits-and-mits](https://docs.stripe.com/payments/cits-and-mits)
 
+**Holds (Q113)**
+
+- **How long a hold lasts.** Online card authorisation windows, merchant-initiated against
+  customer-initiated: Visa *"5 days\*"* against *"7 days"*, *"\* The exact authorization window is
+  4 days and 18 hours"*; Mastercard, Amex and Discover 7 days either way. Raketa's charges are
+  merchant-initiated, so a Visa hold lasts 4 days 18 hours and a Mastercard 7 days.
+  [place-a-hold](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method)
+- **A hold's last moment** is the authorised charge's `payment_method_details.card.capture_before`
+  — *"the most reliable and accurate way to determine your charge's authorization window"* —
+  read on the club's account, where the direct charge lives.
+  [cits-and-mits](https://docs.stripe.com/payments/cits-and-mits)
+- **A lapsed hold is gone:** on expiry *"the funds are released and the payment status changes to
+  `canceled`"*. Stripe's own delayed capture runs *"about 6 hours before the expiration time"*,
+  which is where the reach margin comes from: a hold reaches the cut-off when its last moment is at
+  least 6 hours after it.
+  [place-a-hold](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method)
+- **Letting a hold go costs nothing**, and Stripe advises it for leaves close to the payment:
+  *"Manual authorization and capture lets you better control costs by canceling payments before
+  they're captured, or by reducing your captured amount rather than processing a refund."*
+  [refunds, cost optimization](https://docs.stripe.com/refunds#cost-optimization)
+- **Extended authorisation is not used.** It is offered on IC+ pricing (blended pricing must ask
+  Stripe), costs 0,08 % more on Visa, and *"The extended window only applies to Customer-Initiated
+  Transactions"*. Incremental authorisations *"don't extend the validity period"*.
+  [extended-authorization](https://docs.stripe.com/payments/extended-authorization),
+  [incremental-authorization](https://docs.stripe.com/payments/incremental-authorization)
+- **Renewing a hold is undocumented.** Neither the hold page nor the CIT/MIT page mentions
+  re-authorising after a hold lapses. The holding time therefore places a second, separate hold
+  on the saved card, after the card check was cancelled, which uses only documented steps; whether
+  Stripe objects to it is checked with the test account (O7).
+  [cits-and-mits](https://docs.stripe.com/payments/cits-and-mits)
+- **BLIK can't be held:** *"Manual capture support: No"*.
+  [blik](https://docs.stripe.com/payments/blik)
+
+**The fee, known only at capture (Q113)**
+
+- *"A PaymentIntent must be captured and have a status of `succeeded` for the Stripe fees to be
+  available"*; readiness is signalled by `charge.updated`. A direct charge's balance transaction
+  is read on the club's account and *"includes a detailed fee breakdown"*.
+  [expand use cases](https://docs.stripe.com/expand/use-cases),
+  [direct-charges](https://docs.stripe.com/connect/direct-charges)
+- A club on its own negotiated pricing gets no fee on the balance transaction: *"IC+ users can't
+  retrieve payment fee information from the balance transaction"*, and under standalone fees it
+  arrives *"typically within 36 hours"*. The port reports such a fee as **not yet known**, never
+  a guess. [expand use cases](https://docs.stripe.com/expand/use-cases),
+  [standalone-fees](https://docs.stripe.com/standalone-fees)
+- **A card's price tier can't be known before the charge:** *"Stripe determines a card's
+  classification based on information from card networks at the point of capture"*; no field of
+  a saved card says business or personal. So no fee is printed before the share is taken.
+  [standard and premium cards](https://support.stripe.com/questions/what-s-the-difference-between-standard-and-premium-cards),
+  [PaymentMethod object](https://docs.stripe.com/api/payment_methods/object)
+
 **Refunds and payouts**
 
-- Refunds are free to issue, but the original processing fee is not returned.
-  [pricing FAQ](https://stripe.com/en-pl/pricing)
+- Refunds are free to issue, but the original processing fee is not returned: *"Stripe's
+  processing fees from the original transaction aren't returned."* So **a refund is an exact
+  amount** the caller computes — the share less the fee kept on that payment, or the whole share —
+  never a flag asking Stripe to withhold a fee (Q113).
+  [refunds](https://docs.stripe.com/refunds), [pricing FAQ](https://stripe.com/en-pl/pricing)
+- A refund issued shortly after the charge may be a reversal, of which Stripe says it *"doesn't
+  withhold any fees"*; whether the original fee then comes back is not stated. The refund amount
+  is computed from the fee kept at capture either way.
+  [refund and reversal](https://docs.stripe.com/refunds#refund-and-reversal)
 - With direct charges, refunds come out of the club's balance and stay pending when it is empty
   — see open item O2. Default payouts in Poland: first after 7 days, then 3 business days.
   [connect charges](https://docs.stripe.com/connect/charges#refunds),
   [payouts](https://docs.stripe.com/payouts)
 
-**Fees (Poland, standard):** EEA cards 1.5 % + 1.00 zł (premium 1.9 %), BLIK 1.6 % + 1.00 zł,
-dispute 90 zł, no fee for cancelling an uncaptured payment.
+**Fees (Poland, standard)** — what Stripe keeps on a share once it is taken, which is never shown
+as an estimate (Q113):
+
+| Card | Fee | On a 40 zł share | Back to a late leaver whose seat is taken |
+| --- | --- | --- | --- |
+| A personal card from the EEA | 1,5 % + 1,00 zł | 1,60 zł | 38,40 zł |
+| A business (premium) card | 1,9 % + 1,00 zł | 1,76 zł | 38,24 zł |
+| A UK card | 2,5 % + 1,00 zł | 2,00 zł | 38,00 zł |
+| A card from outside Europe | 3,25 % + 1,00 zł | 2,30 zł | 37,70 zł |
+
+Each *"+ 2% if currency conversion is required"*. BLIK 1,6 % + 1,00 zł, dispute 90 zł, no fee for
+cancelling an uncaptured payment. The fake payments adapter models the four card kinds with these
+fees, and the hold windows above (ADR-0190, as amended).
 [pricing](https://stripe.com/en-pl/pricing)
 
 **Robustness**
@@ -1375,7 +1632,8 @@ dispute 90 zł, no fee for cancelling an uncaptured payment.
 - Idempotency keys may be forgotten after 24 h: Raketa's own records must prevent duplicates.
   [idempotent requests](https://docs.stripe.com/api/idempotent_requests)
 - Webhooks: `setup_intent.succeeded/setup_failed`, `payment_intent.amount_capturable_updated`,
-  `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.captured`,
+  `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.captured`, `charge.updated`
+  (the fee is ready),
   `charge.refunded`, `refund.*`, `charge.dispute.created`, `payment_method.automatically_updated`,
   account events. Direct-charge events arrive only on a **Connected accounts** endpoint; events
   can arrive twice and out of order.
@@ -1415,10 +1673,10 @@ Aug–Sep 2026).
 
 | | Playtomic (open matches) | Raketa |
 | --- | --- | --- |
-| When you pay | When you **join**, charged at once | When the game **fills** — nothing for games that never form |
+| When you pay | When you **join**, charged at once | Held when the game **fills**, taken at the club's cut-off (Q113) — nothing for games that never form |
 | Court | Booked in stages (2 players > 12 h before, 3 > 4 h, 4 always) | Booked when the game fills |
-| Not full | Cancelled about 1 h before; everyone refunded | Cards simply expire at book-by; nobody ever paid |
-| Leaving | Free until 24 h before; then locked — only the club can swap | Free until the club's cut-off; after it, the seat is a rescue and you are refunded when it is taken |
+| Not full | Cancelled about 1 h before; everyone refunded | Cards simply expire at book-by; nobody ever paid. A booked game short at its cut-off lets every hold go |
+| Leaving | Free until 24 h before; then locked — only the club can swap | Free until the club's cut-off, nothing taken; after it, the seat is a rescue, and when it is taken you get your share back less the fee kept on your payment |
 | A queue for freed seats | None (Polish users ask for one) | Rescues in Fill in, the deck and alerts |
 | Poland | Cards, Apple Pay, Google Pay; no BLIK | Cards and wallets; BLIK when Stripe confirms |
 | Player fee | 20 %, capped 1.24–3.99 zł per seat | None |
@@ -1453,7 +1711,7 @@ Aug–Sep 2026).
 | 21 | Another player learns of a yes from the card. |
 | 22 | → replaced by Q38 |
 | 23 | → replaced by Q54/Q58 |
-| 24 | A failed payment at the fill: nobody pays, the seat reopens, the player can take it back. → amended by Q109 |
+| 24 | A failed payment at the fill: nobody pays, the seat reopens, the player can take it back. → amended by Q109 → amended by Q113 |
 | 25 | The Leave button's rules. → updated by Q58 |
 | 26 | The record's rules. |
 | 27 | Settings: games per week, most I'll pay, notifications. |
@@ -1465,7 +1723,7 @@ Aug–Sep 2026).
 | 33 | The old loop is retired into the flag. → Q42 *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
 | 34 | Fill in has **You're In**, including your posts. |
 | 35 | The moment a game fills. → amended by Q103/Q110 |
-| 36 | The statuses. → updated by Q39/Q58/Q98/Q99/Q105/Q106/Q111 |
+| 36 | The statuses. → updated by Q39/Q58/Q98/Q99/Q105/Q106/Q111/Q113 |
 | 37 | The chat opens when the game fills. |
 | 38 | Fill in is the rescue board; games that are still filling stay in the deck; three card types. |
 | 39 | *Held/Booked* wording (Held later removed by Q54). |
@@ -1476,17 +1734,17 @@ Aug–Sep 2026).
 | 44 | The club is the seller and pays the card fees. |
 | 45 | Cards, Google Pay, Apple Pay if tested; BLIK evaluated in Q57. |
 | 46 | → replaced by Q58 |
-| 47 | A refunded leaver bears the card fee. |
+| 47 | A refunded leaver bears the card fee. → amended by Q113 |
 | 48 | → replaced by Q59 |
 | 49 | Versions at half-In. |
 | 50 | Open seats stay until the cut-off, however many. |
 | 51 | The deck order. |
 | 52 | One game, shared yeses across versions. |
 | 53 | Posts are not in Fill in; a Challenges alert, on by default. |
-| 54 | Pay when the game fills; free to leave until the cut-off (B1), after researching Playtomic. |
+| 54 | Pay when the game fills; free to leave until the cut-off (B1), after researching Playtomic. → amended by Q113 |
 | 55–56 | → replaced by Q58/Q59 |
 | 57 | BLIK: confirm with Stripe first; cards and wallets launch either way. |
-| 58 | The money timeline. |
+| 58 | The money timeline. → amended by Q113 |
 | 59 | The screen before the first yes. |
 | 60 | Versions are not a card type; thin posts; singles versions. |
 | 61 | Nobody confirms anything at the fill; receipts by email and in the app. |
@@ -1527,7 +1785,7 @@ Aug–Sep 2026).
 | 96 | The empty deck keeps today's cards plus Post a game; rescue details for non-members; public site unchanged; payment not in onboarding; the product owner runs to-spec and to-tickets. |
 | 97 | (2026-10-05, amends Q13) No live-yes cap: games per week and one game per hour already bound what a yes can book. The LIVE YESES list stays. |
 | 98 | (2026-10-09, amends Q36; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605), F-REQUEST-43.1) *Do the players see when the club must answer?* Yes: while their game waits for its club, the Home card and the details show the deadline the desk is given (*Bonarka answers by 20:45 · Nobody pays until it confirms*), and it disappears once the deadline passes. It moves no money. Evidence: the desk's email says *Answer by …* while the players read only *Waiting for the club*; Playmore's full game reads *Skład pełny · potwierdzimy o {time}*. |
-| 99 | (2026-10-09, amends Q36's *Booked* money line; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605), F-LEAVE-20.1) *Does the card say "free to leave"?* No. The card, the details and the booking email say the sum: *38,40 zł back if you leave by Wed 19:00*, dropping to *Paid · 40 zł* at the cut-off as before. The booking email (*It's a game! · you paid 40 zł*) says *You can leave until Wed 19:00 and get 38,40 zł back at once (the 1,60 zł card fee isn't returned).*, with the day and time written as the email writes them; a game that filled after its cut-off keeps its sentence. Q47 stands: a refunded leaver still bears the card fee, and the club is still the seller that pays its card fees (Q44). The terms (§12.5, with a note to the lawyer's review, and O3), the deck's *no free cancellation*, the club's *Free-cancellation cut-off*, the line under *Leave the game* and the leave sheet keep their words. Evidence: Playtomic reviewers in Germany and Spain complain of a "free" cancellation that cost a fee (*Die App verlangt 0,95 € Bearbeitungsgebühr!*); Kraków's own systems say *bezpłatnie* and keep a fee (tenis4U keeps 2 %, Playmore its service fee); Playmore's preview says *ze zwrotem wpisowego*. |
+| 99 | (2026-10-09, amends Q36's *Booked* money line; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605), F-LEAVE-20.1) *Does the card say "free to leave"?* No. The card, the details and the booking email say the sum: *38,40 zł back if you leave by Wed 19:00*, dropping to *Paid · 40 zł* at the cut-off as before. The booking email (*It's a game! · you paid 40 zł*) says *You can leave until Wed 19:00 and get 38,40 zł back at once (the 1,60 zł card fee isn't returned).*, with the day and time written as the email writes them; a game that filled after its cut-off keeps its sentence. Q47 stands: a refunded leaver still bears the card fee, and the club is still the seller that pays its card fees (Q44). The terms (§12.5, with a note to the lawyer's review, and O3), the deck's *no free cancellation*, the club's *Free-cancellation cut-off*, the line under *Leave the game* and the leave sheet keep their words. Evidence: Playtomic reviewers in Germany and Spain complain of a "free" cancellation that cost a fee (*Die App verlangt 0,95 € Bearbeitungsgebühr!*); Kraków's own systems say *bezpłatnie* and keep a fee (tenis4U keeps 2 %, Playmore its service fee); Playmore's preview says *ze zwrotem wpisowego*. → amended by Q113 |
 | 100 | (2026-10-09, amends §14.3's *reached only from the game details* and §2's *Chat has no tab* line, the screens' A4.4 (*the back chevron returns to the details*) and A8's *a Home card has no chat door* (added by the consistency pass [#531](https://github.com/Raketa02/Raketa/issues/531)), and ADR-0189 §6; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605), F-HOME-15.1) *Does the Home card's bubble open the chat?* Yes: straight over Home, with Back to whichever screen opened it (Home from the bubble, the details from their *Chat*). The room stays only the conversation, with no way into the details. Opening it from the bubble clears *new*, as opening the details does. The bubble shows when it did before (the chat is open; never on *Waiting for the club* or *Called off*) and carries no count until the unread count owed to the details' *Chat · n* is built (F-HOME-21.1); then it shows the same number. Evidence: a chat icon is a button in every app a player uses, and Playtomic opens a match's chat from the match itself. |
 | 101 | (2026-10-09, settles the build's *no count, nothing marked read* ([#549](https://github.com/Raketa02/Raketa/issues/549)); ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-NOTIFY-17.1, F-NOTIFY-16.1) *Does the bell show a number?* Yes: the notices given since the player last opened the list, *99+* above 99. The server keeps it, so it is the same on every phone. Opening the list clears it, and the rows that came since the last visit stand out on that visit; nothing is marked read row by row, and there is no *mark all*. **Nothing comes down at launch**: what was told while Raketa was closed is in the number. Coming back from the background still shows a banner for the newest notice only, and the number counts the rest. The list stays the newest 30, and the app icon's number waits for push ([§17.2](#172-notifications), the screens A9). Evidence: Playmore's bell counts unread notices to *99+* and opening the list reads them; tenis4U counts them in its header; WhatsApp counts per chat and on its icon; Playtomic lights a dot. No rival was found showing a banner at launch. |
 | 102 | (2026-10-09; ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-NOTIFY-18.1) *Is your own fill announced back to you?* No. The player whose yes filled a game sees *It's a game!*, gets no banner for it, and the bell doesn't count it; the row is still in their list. The same holds for a payment confirmed in the app that completes a game: the payer sees the screen, and their own notice is already seen. Their only banner is the one about money taken by someone else's act, such as *Kazimierz Padel confirmed your game · you paid 25 zł*. §11's *everyone else* already left the filler out. Evidence: the build bannered the filler their own *It's a game! · you paid* up to a minute after the screen ([#549](https://github.com/Raketa02/Raketa/issues/549)), telling them what they had just done. |
@@ -1536,8 +1794,9 @@ Aug–Sep 2026).
 | 105 | (2026-10-09, extends Q94: until now only money was emailed; ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-REQUEST-23.1) *Are the club's no and its silence told apart?* Yes, and both are emailed. The words are *Kazimierz Padel said no* and *Kazimierz Padel didn't answer in time*, both with *Padel · Fri 19:00. Nobody paid — you'll get a new card first.* The same words appear in the notice, the email and on Home's called-off card and details, and the club's Refuse dialog promises the desk exactly those words (§16.8). Evidence: bookings that wait for a yes, outside sport, email the answer (Airbnb's *Declined* / *Expired*, TableCheck's confirmation); push is off on every phone today, so email is the only way to reach a player outside the app. |
 | 106 | (2026-10-09, amends §14.1's *Called off* row, which listed *a player left while it waited for the club*, and §13's *Waiting for the club* row, which called the booking off; ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-HOME-10.1, F-REQUEST-31.1, F-REQUEST-31.2) *Where does a full game that falls back go?* It stays on Home as **Seat open** for those still In: *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid*, or *1 seat open · books when it's full · nobody paid* at a club that books at once. It becomes *Waiting for the club* again when it refills, and *Called off · nobody paid* if its last moment to book passes first. It is also in *You're In*. This mirrors a booked game's *Seat open*. Evidence: the build dropped the spec's *Called off* card for a leave while the club decided, because the same game would read *called off* on Home and *filling* in Play, so it vanished from Home for everybody ([#543](https://github.com/Raketa02/Raketa/issues/543)). |
 | 107 | (2026-10-09; ruled by the product owner while grilling story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), with no finding of its own) *Is the new card announced?* Yes. Whenever a notice or email promised *you'll get a new card first* (the club said no, didn't answer, or cancelled), the players it is dealt to are told when it arrives: *Your new game · Sat 10:00 at Bonarka Arena* / *The same players · 40 zł a share — say yes to book it.* Tapping it — the banner, the row in the list or, later, a push — opens the group's Games deck with that card on top. It is always on and isn't emailed. Evidence: the four were promised a new card first, and the build deals it into their decks without a word ([#622](https://github.com/Raketa02/Raketa/issues/622)). |
-| 108 | (2026-10-09; ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-LEAVE-26.1, F-EMAIL-13.1) *Is a leaver told what happens to the game?* Only when it touches them. When their empty seat calls the game off at the cut-off: *Tuesday's 19:00 at Bonarka Arena, which you left, was called off* / *Your seat stayed empty, so it counts on your record. Your 38,40 zł refund stands.* When the club's cancel refunds them (they left after the cut-off and their seat was still paid), they are told in a leaver's words, with the reason and the refund, and never promised a new game; the notice and the email both use those words. A leaver already refunded hears nothing more about the game. §15.4 is unchanged: the mark stands, and this only tells the leaver. Evidence: in the build a leaver whose empty seat called the game off is told nothing though it marks their record, and a leaver the club's cancel refunds reads the others' words, a new game promised included ([#623](https://github.com/Raketa02/Raketa/issues/623)). |
-| 109 | (2026-10-09, amends Q24 and §12.2; ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-PAY-39.1, F-EMAIL-5.2, F-EMAIL-7.1, F-FILL-42.1, F-REQUEST-15.1, F-REQUEST-14.1) *How long does a player whose payment failed have to pay?* **Time to pay**: 30 minutes. Q24's rule — nobody pays, the seat reopens, the player can take it back — stands; what changes is that the reopening waits. When a share is refused at the fill, or at the club's Accept, the seat is held for that player alone for 30 minutes, and never past the game's last moment to book. The other holds stay on their cards, a confirmed one included; at a club that confirms, the club's yes and its court stay too. The player's notice, email and *To confirm* row name the time: *Confirm your payment by 14:40 to keep your seat.* If they pay in time, the game books at once on the kept holds: nobody's bank is asked again, and the desk isn't asked again. If they don't, the holds are let go, their seat is offered to others as before (they may still take it back while it's free), and the others are told it is filling again. At a club that books at once the court isn't held, as for any game still filling. If no time is left before the last moment to book, the game is called off at once and everyone is told. Nothing retries a card by itself. The book-by stays the only deadline on a card (§5.4): time to pay is one player's, and never outlasts it. Evidence: Playmore gives 30 minutes to pay for a court booking (*dokonaj płatności w ciągu 30 minut*, *Zostało {minutes} min*), and its league seat holds a place (*Trzymamy dla Ciebie miejsce do {time}*); Airbnb gives a guest 24 hours with the dates held; a card hold lasts 4–7 days at Stripe; Stripe can't pass a bank's check without the customer, and its automatic retrying covers only subscriptions. |
+| 108 | (2026-10-09; ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-LEAVE-26.1, F-EMAIL-13.1) *Is a leaver told what happens to the game?* Only when it touches them. When their empty seat calls the game off at the cut-off: *Tuesday's 19:00 at Bonarka Arena, which you left, was called off* / *Your seat stayed empty, so it counts on your record. Your 38,40 zł refund stands.* When the club's cancel refunds them (they left after the cut-off and their seat was still paid), they are told in a leaver's words, with the reason and the refund, and never promised a new game; the notice and the email both use those words. A leaver already refunded hears nothing more about the game. §15.4 is unchanged: the mark stands, and this only tells the leaver. Evidence: in the build a leaver whose empty seat called the game off is told nothing though it marks their record, and a leaver the club's cancel refunds reads the others' words, a new game promised included ([#623](https://github.com/Raketa02/Raketa/issues/623)). → amended by Q113 |
+| 109 | (2026-10-09, amends Q24 and §12.2; ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-PAY-39.1, F-EMAIL-5.2, F-EMAIL-7.1, F-FILL-42.1, F-REQUEST-15.1, F-REQUEST-14.1) *How long does a player whose payment failed have to pay?* **Time to pay**: 30 minutes. Q24's rule — nobody pays, the seat reopens, the player can take it back — stands; what changes is that the reopening waits. When a share is refused at the fill, or at the club's Accept, the seat is held for that player alone for 30 minutes, and never past the game's last moment to book. The other holds stay on their cards, a confirmed one included; at a club that confirms, the club's yes and its court stay too. The player's notice, email and *To confirm* row name the time: *Confirm your payment by 14:40 to keep your seat.* If they pay in time, the game books at once on the kept holds: nobody's bank is asked again, and the desk isn't asked again. If they don't, the holds are let go, their seat is offered to others as before (they may still take it back while it's free), and the others are told it is filling again. At a club that books at once the court isn't held, as for any game still filling. If no time is left before the last moment to book, the game is called off at once and everyone is told. Nothing retries a card by itself. The book-by stays the only deadline on a card (§5.4): time to pay is one player's, and never outlasts it. Evidence: Playmore gives 30 minutes to pay for a court booking (*dokonaj płatności w ciągu 30 minut*, *Zostało {minutes} min*), and its league seat holds a place (*Trzymamy dla Ciebie miejsce do {time}*); Airbnb gives a guest 24 hours with the dates held; a card hold lasts 4–7 days at Stripe; Stripe can't pass a bank's check without the customer, and its automatic retrying covers only subscriptions. → amended by Q113 |
 | 110 | (2026-10-09, amends Q35 with Q103; ruled by the product owner from story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), F-FILL-35.1) *What does It's a game! say while one payment is missing?* At a club that books at once, when another player's card fails, the last yes sees *It's a game!* with *Waiting for one payment · until 14:40 · Nobody pays until it's in*, and the others get *It's a game! · waiting for one payment until 14:40*. When the payment comes in, they read *Your Tue 19:00 is booked · you paid 40 zł*: nobody is told *It's a game!* twice. The player whose payment completed it sees the *It's a game!* screen. At a club that confirms, where the four already had *It's a game!*, the others read *Your Fri 19:00 is waiting for one payment, until 21:20*, and the payment then brings *Kazimierz Padel confirmed your game · you paid 25 zł*. Evidence: as Q109's; in the build the last yes sees nothing special and the others are told nothing while one payment is missing. |
 | 111 | (2026-10-09, adds a status to Q36's; ruled by the product owner while grilling story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), with no finding of its own) *What does Home show while one payment is missing?* For the 30 minutes the game is on all four's Home as **Waiting for one payment**: *Waiting for one payment · until 14:40 · Nobody pays until it's in*. The payer's card reads *Confirm your payment by 14:40*, beside their *To confirm* row. At the end it becomes *Booked*, or *Seat open* (Q106). Evidence: as Q109's — Playmore's held seat says until when (*Trzymamy dla Ciebie miejsce do {time}*). |
 | 112 | (2026-10-09, extends §16.7, §16.8 and §16.12; ruled by the product owner when the tickets for story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), were cut, with no finding of its own) *What does the desk see during the time to pay?* The accepted booking reads *Accepted · waiting for one player's payment until 21:20* in the club's Bookings. It isn't in *Waiting for you*, because the desk has answered. If the time runs out, the desk is emailed as for a cut-off: *A game didn't go ahead* / *A player's payment didn't come in time — the court is free again.* When the game is full again, the desk is asked again as for any new request. Evidence: as Q109's; in the build the desk's yes is thrown away when one card fails, and the desk is asked a second time once the game is full again ([#626](https://github.com/Raketa02/Raketa/issues/626)). |
+| 113 | (2026-10-10, amends Q24, Q47, Q54, Q58, Q99, Q108 and Q109, and Q36's money lines; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605#issuecomment-6097600856), F-LEAVE-6.1; specified by [#634](https://github.com/Raketa02/Raketa/issues/634); recorded by ADR-0189's 2026-10-10 amendment and ADR-0190's §1 amendment) *When does a share move, and what does leaving cost?* **The share is held when the game fills and taken at the club's cut-off, the one deadline, the same for everyone; leaving before it is free.** The product owner's rules: the law first; the club never pays for a player's leave; the club's cut-off is the one deadline. At the fill, or at an On request club's yes, every seat's share is held, all or nothing, and the court is booked as before; nothing is taken (amends Q54 and Q58). A seat whose hold would not reach the cut-off — its last moment less than 6 hours after it — gets a **card check**: held for seconds and let go, which proves the money is there that day, and held again at its **holding time**, four days before the cut-off. At the cut-off a full game's shares are taken; a game still short is called off and every hold is let go, so nobody pays anything. A leave before the cut-off lets the hold go: nothing is taken or refunded, and no fee arises for the leaver or the club. The card reads *40 zł · free to leave until Wed 19:00* from the moment the game fills (amends Q99, whose reason — never call a leave free when it costs a fee — is now met), and a leaver whose empty seat called the game off is told *Nothing was taken from you* (amends Q108). A card refused before the cut-off — at the fill, the club's yes, the holding or a rescue — gets **time to fix the card**: 30 minutes with the seat kept and nothing paid, *Fix your card by 14:40 to keep your seat*; not fixed, the seat goes to others and nothing is owed (amends Q109, and Q24, whose rule stands under the new names). After the cut-off money is taken at once — a game filling after it, a club's yes after it, a rescue after it — and a refusal gets time to pay as before. A leaver after the cut-off whose seat is taken gets the share back less exactly what Stripe kept on their payment, shown to the grosz before leaving and on the receipt: *If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)*. The club neither earns nor loses on it (amends Q47: only after the cut-off, and at the real fee). The terms' wording for it waits for the lawyer (O3); if the lawyer refuses it for personal EU cards, the fallback is everything back on those cards. No estimated card fee is printed anywhere. BLIK can't be held: its rule is decided when it launches, and it is cards only until then. A club's cancel before the cut-off lets every hold go; after it, everyone is refunded in full and the club bears the fees, as before. The terms get a new version, which every player accepts before their next game holds money. **Six calls #634 made without a ruling** are written in as rules, each marked *a call* where it stands, for the product owner to overrule: a seat lost because the card wasn't fixed at its holding counts as leaving before the cut-off on the record (§15.4); the take at the cut-off is a quiet row and a receipt, not a push (§17.2); a refused rescuer keeps the seat for 30 minutes, never past the start (§10.1); the reach margin is 6 hours and the holding lead 4 days, both domain constants (§12.2); the fallback takes a holding early when its last moment still falls short, and refunds a later timely leave in full, the one place the club could pay for a leave (§12.2); and the club's figures drop the estimate too (§16.11). **Words the ruling and its tickets didn't give** were written in while recording it, each marked where it stands: the others' words while one card is being fixed stay *Waiting for one payment* (§12.2); the leaver's emails (§13); the desk reads *Accepted · waiting for one player's card until 21:20*, and is emailed *A player's card wasn't fixed in time* on a lapse (§16.8); the quiet row reads *Your 40 zł for Thu 19:00 was taken* (§17.2); and, in the screens, the toast for a card refused at the fill (A2.4), the method card's line, the terms step and the receipts' footer (A7.3). **Evidence:** Stripe never returns its fee on a refund — *"Stripe's processing fees from the original transaction aren't returned"* — and letting a hold go is free — *"You can cancel a payment before it's completed at no cost"* ([Stripe: refunds](https://docs.stripe.com/refunds)); a Visa hold placed without the customer lasts *"4 days and 18 hours"* and a Mastercard 7 days, and Stripe's own delayed capture runs *"about 6 hours before the expiration time"* ([Stripe: place a hold](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method)); *"the `payment_method_details.card.capture_before` attribute on the charge is the most reliable and accurate way to determine your charge's authorization window"* ([Stripe: CITs and MITs](https://docs.stripe.com/payments/cits-and-mits)); the fee exists only once the money is taken — *"A PaymentIntent must be captured and have a status of `succeeded` for the Stripe fees to be available"* ([Stripe: expand use cases](https://docs.stripe.com/expand/use-cases)) — and a card's tier is known only *"at the point of capture"* ([Stripe support: standard and premium cards](https://support.stripe.com/questions/what-s-the-difference-between-standard-and-premium-cards)), so the 1,60 zł the card and the leave sheet printed was an estimate: in Poland Stripe keeps *"1.5% + 1.00zł for standard European Economic Area cards"*, *"1.9% + 1.00zł for premium"*, *"2.5% + 1.00zł for UK cards"* and *"3.25% + 1.00zł for international cards"* ([Stripe pricing, Poland](https://stripe.com/en-pl/pricing)), so a leaver on a business Visa would have had 1,76 zł kept where 1,60 zł was promised. Stripe's terms say *"Except to the extent the Card Network Rules or Law permits, User must not charge surcharges, other fees, or Taxes for accepting payment cards"* (§3.4(e), [Stripe Services Agreement](https://stripe.com/legal/ssa-service-terms)). Polish payment law says *"Odbiorca nie pobiera opłat za korzystanie z instrumentów płatniczych, w przypadku których opłaty interchange są regulowane w przepisach rozdziału II rozporządzenia (UE) 2015/751"* — no charge for using the personal EU cards whose interchange the EU caps (art. 37a ust. 3, [ustawa o usługach płatniczych, Dz.U. 2026 poz. 623](https://api.sejm.gov.pl/eli/acts/DU/2026/623/text.pdf)). The civil code caps any payment fee at cost — *"Przedsiębiorca nie może żądać od konsumenta opłaty za skorzystanie z określonego sposobu zapłaty przewyższającej poniesione przez przedsiębiorcę koszty w związku z tym sposobem zapłaty"* (art. 383¹, [Kodeks cywilny, Dz.U. 2026 poz. 795](https://api.sejm.gov.pl/eli/acts/DU/2026/795/text.pdf)) — and the European Commission reads that rule as covering *"all kind of fees which are linked to a means of payment, regardless of how they are presented to consumers"* ([guidance on the Consumer Rights Directive, 2021/C 525/01, §8.2](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:52021XC1229(04))). UOKiK says a leisure business whose customer resigns *"może zatrzymać jedynie kwotę odpowiadającą faktycznie poniesionym kosztom"* ([UOKiK, 2014](https://archiwum.uokik.gov.pl/aktualnosci.php?news_id=11103)). A dated sports booking carries no statutory withdrawal right: art. 38 ust. 1 pkt 12 excludes services *"związanych z wypoczynkiem, wydarzeniami rozrywkowymi, sportowymi lub kulturalnymi, jeżeli w umowie oznaczono dzień lub okres świadczenia usługi"* ([ustawa o prawach konsumenta, Dz.U. 2026 poz. 1244](https://api.sejm.gov.pl/eli/acts/DU/2026/1244/text.pdf)), so the leave is the club's own rule and a late leaver is owed nothing back. Stripe's extended authorisation *"only applies to Customer-Initiated Transactions"* on Visa ([Stripe: extended authorization](https://docs.stripe.com/payments/extended-authorization)), and BLIK has *"Manual capture support: No"* ([Stripe: BLIK](https://docs.stripe.com/payments/blik)). |
