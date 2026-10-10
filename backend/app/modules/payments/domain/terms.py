@@ -18,8 +18,11 @@ from datetime import timedelta
 from typing import Final
 
 #: The payment terms in force, named by the day their words were settled: the
-#: mechanics §12.5, as grilled on 2026-09-29.
-PAYMENT_TERMS_VERSION: Final = "2026-09-29"
+#: mechanics §12.5 as Q113 rewrote them on 2026-10-10 — the share held when a
+#: game fills and taken at the club's cut-off, leaving before it free (#637).
+#: **A player who accepted older words is asked again** before their next game
+#: holds anything (``PaymentMethod.terms_needed``).
+PAYMENT_TERMS_VERSION: Final = "2026-10-10"
 
 #: At most this many setups started in any day, per player (the mechanics
 #: Appendix A, *card testing*): card testers target card-saving, and a signed-in

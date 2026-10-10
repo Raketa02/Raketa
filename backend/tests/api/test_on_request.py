@@ -51,6 +51,7 @@ from tests.api.proposals_world import (
     makes,
     says_yes,
     sweeps,
+    the_cut_off_comes,
     warsaw,
     withdraws,
 )
@@ -239,7 +240,8 @@ async def test_a_full_game_waits_for_the_club_and_nobody_is_charged(
             "share_grosze": 30_00,
             "paid": False,
             "free_to_leave_until": None,
-            "back_if_you_leave_grosze": None,
+            "share_state": None,
+            "taken_at": None,
             "refunded_grosze": None,
         }
         assert not any(
@@ -413,7 +415,7 @@ async def test_a_player_cannot_answer_for_the_club(
 # --------------------------------------------------------------------------- #
 
 
-async def test_accepting_charges_everybody_together_and_books_the_held_court(
+async def test_accepting_holds_everybody_together_and_books_the_held_court(
     client, session_factory, clock, payments, mailbox, on_request, four
 ):
     club, desk = on_request
@@ -430,22 +432,28 @@ async def test_accepting_charges_everybody_together_and_books_the_held_court(
     }
     assert len(payments.called("authorise")) == 4
     await mailbox.drain()
-    assert len(payments.called("capture")) == 4
+    # Held until the cut-off, which takes them (#637).
+    assert payments.called("capture") == []
     for player in four:
         card = await the_card(client, player)
         assert card["status"] == "BOOKED"
         assert card["game_id"] is not None
         assert card["court_name"] == "Court 1"
-        assert card["money"]["paid"] is True
+        assert card["money"]["share_state"] == "HELD"
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
+    assert len(payments.called("capture")) == 4
+    for player in four:
+        assert (await the_card(client, player))["money"]["paid"] is True
         [receipt] = await receipts(client, player)
         assert receipt["amount_grosze"] == 30_00
         assert await live_ids(client, player) == []
     assert await waiting_at(client, desk) == []
     assert (await details_of(client, four[0], proposal))["status"] == "FILLED"
     assert not await the_court_is_on_sale(session_factory, clock, club)
-    # *It's a game! · you paid*, to each.
+    # *It's a game! · 30 zł held*, to each.
     [email] = await mailbox.to("ola@example.com")
-    assert email.subject == "It's a game! · you paid 30 zł"
+    assert email.subject == "It's a game! · 30 zł held"
 
 
 async def test_the_chat_opens_when_the_club_says_yes_and_not_before(

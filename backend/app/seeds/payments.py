@@ -115,12 +115,25 @@ async def write_the_payment_methods(
     provider = build_fake_payments()
 
     async def saved(session: AsyncSession, player_id: UUID, card: EnteredCard) -> bool:
-        """One player through the setup, unless a method is saved already."""
+        """One player through the setup, unless a method is saved already — and
+        then the terms in force accepted for it, where it was saved under
+        older words (#637), as the phone's *accept again* does."""
 
-        if (await _methods(session).load(player_id)).method is not None:
-            return False
         clock = FixedClock(at=now)
         uow = build_unit_of_work(session)
+        already = await _methods(session).load(player_id)
+        if already.method is not None:
+            if already.terms_needed:
+                await AcceptPaymentTerms(
+                    methods=_methods(session), provider=provider, uow=uow, clock=clock
+                ).execute(
+                    AcceptPaymentTermsCommand(
+                        player_id=player_id,
+                        terms_version=PAYMENT_TERMS_VERSION,
+                        ip=None,
+                    )
+                )
+            return False
         opened = await StartPaymentSetup(
             methods=_methods(session), provider=provider, uow=uow, clock=clock
         ).execute(player_id)

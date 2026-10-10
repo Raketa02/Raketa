@@ -120,6 +120,12 @@ class SeatChargeRepository(Protocol):
         latest taken first**. What their receipts list."""
         ...
 
+    async def games_held_until(self, moment: Instant) -> Sequence[UUID]:
+        """Every game with a share still held for it whose cut-off is at or
+        before ``moment`` — what the cut-off takes (#637) — the earliest
+        first."""
+        ...
+
 
 @final
 @dataclass(frozen=True, slots=True)

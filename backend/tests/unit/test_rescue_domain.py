@@ -193,10 +193,27 @@ def test_a_rescue_card_is_a_seat_open_card_on_a_booked_court():
     assert card.type is CardType.SEAT_OPEN
     assert card.court is CourtState.BOOKED
     assert card.court_name == "Court 2"
-    assert card.paid == (OLA, EWA, TOMEK)
+    # Their shares are held until the cut-off, and paid once it took them
+    # (#637).
+    assert card.paid == ()
     assert card.in_ == ()
     assert card.open_seats_after_your_yes == 0
     assert card.deadline == CUT_OFF
     assert not card.no_free_cancellation
     assert not card.club_confirms
     assert card.proposal_id == rescue.booking_id
+
+
+def test_a_rescue_card_after_the_cut_off_shows_everybody_on_it_paid():
+    rescue = a_rescue()
+
+    card = card_of_a_rescue(
+        rescue,
+        sides=sides_for(rescue, ZOSIA),
+        forecast=CardForecast(pct=80, provisional=False),
+        overlap=overlap_of([EVERY_HOUR] * 4, start=START, zone=CLUB_ZONE),
+        now=CUT_OFF,
+    )
+
+    assert card.paid == (OLA, EWA, TOMEK)
+    assert card.no_free_cancellation

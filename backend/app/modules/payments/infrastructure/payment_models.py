@@ -67,8 +67,8 @@ class SeatChargeORM(Base):
     __tablename__ = "seat_charges"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('AUTHORISED', 'FAILED', 'TAKING', 'CAPTURED', 'RELEASING', "
-            "'CANCELLED')",
+            "status IN ('AUTHORISED', 'FAILED', 'HELD', 'TAKING', 'CAPTURED', "
+            "'RELEASING', 'CANCELLED')",
             name="ck_seat_charges_status",
         ),
         Index("ix_seat_charges_game_id", "game_id"),
@@ -76,6 +76,9 @@ class SeatChargeORM(Base):
         Index("ix_seat_charges_payment_id", "payment_id"),
         # The games a club may be owed for — the payouts job's read (#548).
         Index("ix_seat_charges_starts_at", "starts_at"),
+        # The shares held until a cut-off that has come — the cut-off job's
+        # read (#637).
+        Index("ix_seat_charges_status_held_until", "status", "held_until"),
     )
 
     charge_id: Mapped[UUID] = mapped_column(UUIDType(binary=False), primary_key=True)
@@ -93,6 +96,11 @@ class SeatChargeORM(Base):
     #: The game's hour (#548). ``NULL`` on a charge made before it was kept,
     #: which the payouts job reads as a candidate on every run.
     starts_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: The cut-off a share held for the booked game is taken at (#637);
+    #: ``NULL`` on a charge never held for one.
+    held_until: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

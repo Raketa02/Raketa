@@ -11,10 +11,10 @@ every seat's share all or nothing, a refused payment its player confirmed, and
 the charges a game will not be paid with let go — over the Payments context's
 own use cases, its refusals translated into this context's words.
 
-``PaymentsSeatRefunds`` gives a booked game's paid shares back — a leaver's
-before the cut-off, less the card fee, and everybody's still in on a game
-called off at its cut-off, in full (#544) — and ``PaymentsCardFees`` says what
-the card fee on a share comes to, the estimate the leaving sheet quotes.
+``PaymentsSeatRefunds`` gives a booked game's shares back — a share only held
+let go, a share taken refunded (#544, #637) — ``PaymentsHeldShares`` is what the
+cut-off takes (#637), and ``PaymentsCardFees`` says what the card fee on a share
+comes to, the estimate the leaving sheet quotes after the cut-off.
 
 ``BookedGamesOver`` answers **payments'** demand — *which games are over for
 good*, so their money is the club's to be paid out (#548) — off the bookings as
@@ -34,7 +34,7 @@ from uuid import UUID
 
 from app.kernel import Instant
 from app.modules.bookings.domain.ports import BookingDirectory
-from app.modules.payments.application.refunds import RefundTheSeats
+from app.modules.payments.application.refunds import GiveTheSharesBack
 from app.modules.payments.application.refunds import (
     RefundReason as PaymentsRefundReason,
 )
@@ -44,6 +44,7 @@ from app.modules.payments.application.seat_charges import (
     ConfirmSeatCharge,
     PaymentToConfirmOn,
     ReleaseCharges,
+    TakeTheHeldShares,
 )
 from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.application.seat_charges import (
@@ -55,7 +56,7 @@ from app.modules.payments.domain.ports import (
     PaymentMethodRepository,
     SeatChargeRepository,
 )
-from app.modules.payments.domain.seat_charge import PAID
+from app.modules.payments.domain.seat_charge import PAID, SeatChargeStatus
 from app.modules.proposals.domain.club_bookings import (
     ClubStatus,
     Takings,
@@ -178,7 +179,7 @@ _REASONS = {
 
 @final
 class PaymentsSeatRefunds:
-    def __init__(self, refund: RefundTheSeats) -> None:
+    def __init__(self, refund: GiveTheSharesBack) -> None:
         self._refund = refund
 
     async def refund(
@@ -201,11 +202,25 @@ class PaymentsSeatRefunds:
 
 
 @final
+class PaymentsHeldShares:
+    def __init__(self, take: TakeTheHeldShares) -> None:
+        self._take = take
+
+    async def due(self, *, at: Instant) -> Sequence[UUID]:
+        return await self._take.due(at=at)
+
+    async def take(self, booking_id: UUID, *, at: Instant) -> int:
+        # A booking takes its proposal's id, which every charge was made for.
+        return await self._take.execute(booking_id, at=at)
+
+
+@final
 class PaymentsBookingTakings:
     """``BookingTakings`` over each booking's Seat charges (#547): what was
-    taken — a share being captured or captured — and what was given back, at
-    what the provider gave or, until it answers, what was decided; the card
-    fees and what is the club's, and whether a payout carried it (#548)."""
+    taken — a share being captured or captured; **never a share only held**,
+    which is listed as held and collects nothing (#637) — and what was given
+    back, at what the provider gave or, until it answers, what was decided; the
+    card fees and what is the club's, and whether a payout carried it (#548)."""
 
     def __init__(
         self, charges: SeatChargeRepository, payouts: ClubPayoutRepository
@@ -218,18 +233,21 @@ class PaymentsBookingTakings:
         paid_out = await self._payouts.paid_out(set(booking_ids))
         for booking_id in sorted(set(booking_ids)):
             # A booking takes its proposal's id, which every charge was made for.
-            paid = [
-                charge
-                for charge in await self._charges.of_game(booking_id)
-                if charge.status in PAID
-            ]
-            if paid:
+            charges = await self._charges.of_game(booking_id)
+            paid = [charge for charge in charges if charge.status in PAID]
+            held = frozenset(
+                charge.player_id
+                for charge in charges
+                if charge.status is SeatChargeStatus.HELD
+            )
+            if paid or held:
                 takings[booking_id] = Takings(
                     paid=frozenset(charge.player_id for charge in paid),
                     collected_grosze=sum(charge.amount_grosze for charge in paid),
                     refunded_grosze=sum(charge.given_back_grosze for charge in paid),
                     card_fees_grosze=sum(charge.card_fee_grosze for charge in paid),
                     paid_out=booking_id in paid_out,
+                    held=held,
                 )
         return takings
 

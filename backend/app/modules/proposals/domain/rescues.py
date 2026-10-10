@@ -198,5 +198,6 @@ def card_of_a_rescue(
         no_free_cancellation=not fills_by_the_cut_off(game, now=now),
         club_confirms=False,
         court_name=game.court_name,
-        paid=game.players,
+        # Held until the cut-off, taken at it (#637).
+        paid=() if fills_by_the_cut_off(game, now=now) else game.players,
     )

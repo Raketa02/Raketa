@@ -135,13 +135,16 @@ def words_for(said: Said) -> Words:
     kind = said.kind
 
     if kind is NoticeKind.GAME_BOOKED:
+        # Held until the cut-off it keeps as ``until``, or taken at once after
+        # it (#637, Q113).
+        moved = f"{money} held" if said.until is not None else f"you paid {money}"
         if said.reason == NoticeReason.PAYMENT_CAME_IN:
             # *It's a game!* was told when it filled; never twice (Q110).
             return Words(
-                title=f"Your {_hour(said.starts_at)} is booked · you paid {money}",
+                title=f"Your {_hour(said.starts_at)} is booked · {moved}",
                 body=f"{sport} at {said.club}.",
             )
-        return Words(title=f"It's a game! · you paid {money}", body=f"{game}.")
+        return Words(title=f"It's a game! · {moved}", body=f"{game}.")
     if kind is NoticeKind.WAITING_FOR_A_PAYMENT:
         pay_by = invariant(said.until, "a game waiting for a payment, by no time")
         by = _by(pay_by, given_at=said.given_at)
@@ -179,6 +182,13 @@ def words_for(said: Said) -> Words:
             body=f"{sport} · {_hour(said.starts_at)}. Nobody pays until it confirms.",
         )
     if kind is NoticeKind.CLUB_CONFIRMED:
+        if said.until is not None:
+            # Held until the cut-off, taken at it (#637, Q113).
+            return Words(
+                title=f"{said.club} confirmed your game · {money} held",
+                body=f"{sport} · {when} — it's a game. {money} is held on your "
+                f"card and taken at the club's cut-off, {_hour(said.until)}.",
+            )
         return Words(
             title=f"{said.club} confirmed your game",
             body=f"{sport} · {when} — it's a game, and you paid {money}.",
@@ -264,7 +274,10 @@ def _confirm_payment(said: Said, *, game: str, money: str) -> Words:
         else "Confirm your payment to keep your seat"
     )
     if said.reason == FailureReason.TERMS_NEEDED:
-        body = f"Your card's brand changed — accept the payment terms again. {game}."
+        body = (
+            "Accept the payment terms again — they changed, or your card's "
+            f"brand did. {game}."
+        )
     elif said.reason == FailureReason.NO_METHOD:
         body = (
             f"There's no payment method to charge — save one in You › Payments. {game}."
@@ -286,7 +299,10 @@ def _confirm_by(said: Said, *, money: str) -> Words:
         f"{sport} · {_hour(said.starts_at)} at {said.club} — the others are waiting."
     )
     if said.reason == FailureReason.TERMS_NEEDED:
-        body = f"Your card's brand changed — accept the payment terms again. {waiting}"
+        body = (
+            "Accept the payment terms again — they changed, or your card's "
+            f"brand did. {waiting}"
+        )
     elif said.reason == FailureReason.NO_METHOD:
         body = (
             "There's no payment method to charge — save one in You › Payments. "
@@ -332,8 +348,10 @@ def _game_called_off(
         # money — never a new game (Q108).
         left = f"{_whose(said.starts_at)} at {said.club}, which you left"
         if said.reason == NoticeReason.SHORT_AT_THE_CUT_OFF:
+            # Their hold was let go when they left (#637, Q113); a share taken
+            # before they left was refunded then.
             stands = (
-                "Your refund stands."
+                "Nothing was taken from you."
                 if said.amount_grosze is None
                 else f"Your {money} refund stands."
             )
@@ -345,7 +363,19 @@ def _game_called_off(
         cancelled = f"{said.club} cancelled it" + (f" {because}" if because else "")
         return Words(
             title=f"{left}, was cancelled",
-            body=f"{cancelled} — you're refunded {money}.",
+            body=f"{cancelled} — "
+            + (
+                "nothing was taken."
+                if said.amount_grosze is None
+                else f"you're refunded {money}."
+            ),
+        )
+    if said.amount_grosze is None:
+        # Every hold let go: at the cut-off, or the club's cancel before it
+        # (#637, Q113).
+        return Words(
+            title="Game called off · nothing was taken",
+            body=_called_off(said, sport=sport, when=when, game=game),
         )
     return Words(
         title=f"Game called off · you're refunded {money}",

@@ -145,9 +145,16 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
   complete it*, a challenge and *Your new game* go only to a reader whose deck shows the
   card now (`Decks` → `ReadGroupDeck.shows`: intent, Games & money, a week or an hour already
   booked, the club, pool membership, the pair rule, *Mixed pairs*).
-- **The money notices hang off the money's events.** `SeatChargeTaken` is *It's a game! ·
-  you paid* — or, on a booking that waited for its club and to anybody but a rescuer, *the
-  club confirmed*: one notice for the club's yes, never two. `SeatChargeFailed` is
+- **The money notices hang off the money's events.** `SeatChargeKept` is *It's a game! · 30
+  zł held* — the cut-off kept on the notice as `until`, when the share is taken (#637) — and
+  `SeatChargeTaken` at once after the cut-off is *It's a game! · you paid*; or, on a booking
+  that waited for its club and to anybody but a rescuer, *the club confirmed* (*· 25 zł held*
+  before the cut-off): one notice for the club's yes, never two. **The take at the cut-off
+  tells nothing** (`SeatChargeTaken.kept`) — the quiet row and receipt of Q113 are not built
+  yet. **A hold let go says why** (`SeatChargeReleased.reason`): at the cut-off or the club's
+  cancel before it, *Game called off · nothing was taken* (`amount_grosze` `null`); a
+  leaver's own let-go is told nobody, and a leaver whose empty seat called the game off reads
+  *Nothing was taken from you*. `SeatChargeFailed` is
   *Confirm your payment* (to take the seat, on a booked game). **A refund now says why**:
   `SeatChargeRefundDecided.reason` — the `RefundReason`, now in the payments domain —
   defaulted `None` for older rows: called off at the

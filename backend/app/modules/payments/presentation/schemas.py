@@ -104,9 +104,11 @@ class PaymentMethodResponse(BaseModel):
     )
     terms_needed: bool = Field(
         description=(
-            "`true` when the bank moved the saved card to another brand: it "
-            "cannot be charged until the player accepts the terms again "
-            "(`POST …/terms` with no setup open). Always `false` with no method."
+            "`true` when the saved card cannot be held until the player accepts "
+            "the terms in force again (`POST …/terms` with no setup open): its "
+            "bank moved it to another brand, or the terms were accepted in "
+            "words no longer in force (`terms_version`, #637). Always `false` "
+            "with no method."
         )
     )
     terms_version: str = Field(description="The version of the terms in force.")
@@ -170,7 +172,9 @@ class SeatChargeResponse(BaseModel):
     status: SeatChargeStatus = Field(
         description=(
             "`AUTHORISED` held, `FAILED` refused and waiting for its player, "
-            "`TAKING`/`CAPTURED` paid, `RELEASING`/`CANCELLED` let go untaken."
+            "`HELD` held for the booked game until the club's cut-off and not "
+            "paid (#637), `TAKING`/`CAPTURED` paid, `RELEASING`/`CANCELLED` let "
+            "go untaken."
         )
     )
     refusal: FailureReason | None = Field(
@@ -229,9 +233,11 @@ class ReceiptSchema(BaseModel):
     )
     kind: Literal["CHARGE", "REFUND"] = Field(
         description=(
-            "`CHARGE` — a share paid (✓). `REFUND` — a share given back (↩): "
-            "less the card fee to a player who left before the cut-off, whole "
-            "on a game called off at its cut-off."
+            "`CHARGE` — a share paid (✓): taken at the club's cut-off, or at "
+            "once after it; a share only held is no receipt (#637). `REFUND` — "
+            "a share given back (↩): less the card fee to a player who left "
+            "after the cut-off when somebody took their seat, whole on a game "
+            "its club cancelled after the cut-off."
         )
     )
     club: SellerSchema

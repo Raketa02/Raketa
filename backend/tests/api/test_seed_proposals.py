@@ -320,7 +320,7 @@ async def seeded_world(client, session_factory, payments, now):
     return her, proposals
 
 
-async def test_she_has_a_game_on_the_day_and_one_before_its_cut_off_and_paid_both(
+async def test_she_has_a_game_on_the_day_paid_and_one_before_its_cut_off_held(
     client, session_factory, payments, now, under_it
 ):
     her, proposals = await seeded_world(client, session_factory, payments, now)
@@ -340,7 +340,9 @@ async def test_she_has_a_game_on_the_day_and_one_before_its_cut_off_and_paid_bot
     receipts = (
         await client.get("/api/v1/players/me/receipts", headers=her["headers"])
     ).json()["receipts"]
-    assert seeded.receipts == len(receipts) == 2
+    # The game after its cut-off was taken at once; next week's is held until
+    # its cut-off (#637).
+    assert seeded.receipts == len(receipts) == 1
     assert {receipt["club"]["name"] for receipt in receipts} == {"Bonarka Arena"}
     games = (await client.get("/api/v1/games", headers=her["headers"])).json()
     assert len(games["games"]) == 2
@@ -364,7 +366,7 @@ async def test_a_second_run_books_nothing_twice(
     )
 
     assert [booking.made for booking in again.bookings] == [False, False]
-    assert again.receipts == 2
+    assert again.receipts == 1
 
 
 def next_at(now, *, weekday: int, hour: int):

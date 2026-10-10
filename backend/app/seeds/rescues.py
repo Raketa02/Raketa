@@ -11,7 +11,7 @@ the three still on it. Nothing here opens a table.
 **Two states the board draws**:
 
 - **fills by the cut-off** — a game more than a day past Bonarka's cut-off,
-  left now: the leaver refunded less the card fee, the seat open until the
+  left now: the leaver's hold let go (#637), the seat open until the
   cut-off, when the game is off unless it is taken. Always seedable: her week
   has an hour that far ahead in every fortnight;
 - **offered until the start** — a game inside the cut-off, booked as a

@@ -1,11 +1,12 @@
 """**Leaving a booked game, and the cut-off** (#544; the mechanics §12.3, §13,
 §14.1, §15.4, §16.12, §19).
 
-Leaving is free until the club's cut-off — refunded at once, less the card fee —
-and after it the seat stays paid until somebody takes it. **A game plays full or
-not at all**: a seat still empty at the cut-off calls the game off and gives
-everybody still in all their money back; a seat left after it lets the game go
-ahead short, and a game that starts short ends *uncounted · a seat was empty*.
+Leaving is free until the club's cut-off — the share was only held, and the
+hold is let go (#637) — and after it the seat stays paid until somebody takes
+it. **A game plays full or not at all**: a seat still empty at the cut-off
+calls the game off and lets every hold go, so nobody pays; a seat left after it
+lets the game go ahead short, and a game that starts short ends *uncounted · a
+seat was empty*.
 
 Every act is taken over HTTP as the phone takes it, against the fake payment
 provider; the cut-off job runs as the job does, the clock moved to it; and every
@@ -14,8 +15,8 @@ the mailbox, the record.
 
 The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
 **Saturday 10 October, 17:00** at Bonarka Arena, padel at 120 zł — 30 zł a
-seat — with a 24-hour cut-off, so 28,55 zł back if you leave by **Friday
-17:00**.
+seat — with a 24-hour cut-off: free to leave until **Friday 17:00**, when the share
+is taken.
 """
 
 from __future__ import annotations
@@ -26,10 +27,9 @@ from uuid import UUID
 import pytest
 
 from app.api.dependencies import get_clock
-from app.bootstrap.composition import build_call_off_short_games, build_court_hours
+from app.bootstrap.composition import build_the_cut_off, build_court_hours
 from app.core.config import get_settings
 from app.kernel import Sport
-from app.modules.payments.domain.card_fee import estimated_card_fee
 from tests.api.proposals_world import (
     MONDAY_MORNING,
     SATURDAY_FIVE,
@@ -46,7 +46,8 @@ from tests.unit.fake_clock import MovableClock
 HOME = "/api/v1/home"
 RECEIPTS = "/api/v1/players/me/receipts"
 SHARE = 30_00
-#: The card fee the fake provider keeps on a 30 zł refund: 1.5 % and 1 zł.
+#: The card fee the leave sheet quotes on a 30 zł share after the cut-off:
+#: 1.5 % and 1 zł.
 FEE = 1_45
 CUT_OFF = SATURDAY_FIVE - timedelta(hours=24)
 DESK_EMAIL = "desk@bonarka.pl"
@@ -120,7 +121,7 @@ async def cuts_off(session_factory, clock):
     """One run of the cut-off job, at the clock's now."""
 
     async with session_factory() as session:
-        return await build_call_off_short_games(
+        return await build_the_cut_off(
             session, clock=clock, settings=get_settings()
         ).execute()
 
@@ -166,23 +167,19 @@ async def receipts_of(client, mailbox, player: dict) -> list[dict]:
 # --------------------------------------------------------------------------- #
 
 
-async def test_leaving_before_the_cut_off_refunds_the_leaver_less_the_card_fee(
+async def test_leaving_before_the_cut_off_takes_nothing_and_offers_the_seat(
     client, booking, four, mailbox
 ):
+    """The share was only held (#637): the hold is let go, nobody is refunded
+    and nothing appears on the leaver's receipts."""
+
     ola, kuba, *_ = four
 
     left = await leaves(client, kuba, booking)
 
     assert left.status_code == 200, left.text
     assert left.json()["left"] == "BEFORE_THE_CUT_OFF"
-    assert FEE == estimated_card_fee(SHARE)
-    refund, charge = await receipts_of(client, mailbox, kuba)
-    assert (charge["kind"], charge["amount_grosze"]) == ("CHARGE", SHARE)
-    assert (refund["kind"], refund["amount_grosze"], refund["card_fee_grosze"]) == (
-        "REFUND",
-        SHARE - FEE,
-        FEE,
-    )
+    assert await receipts_of(client, mailbox, kuba) == []
     [card] = await home_of(client, ola)
     assert (card["status"], card["open_seats"], card["needs_you"]) == (
         "SEAT_OPEN",
@@ -195,7 +192,8 @@ async def test_leaving_before_the_cut_off_refunds_the_leaver_less_the_card_fee(
         for sent in await mailbox.to("kuba@example.com")
         if sent.subject.startswith("You left the game")
     ]
-    assert "30 zł share is being refunded" in email.text
+    assert email.subject == "You left the game · nothing was taken"
+    assert "The 30 zł hold on your card is let go." in email.text
 
 
 async def test_the_details_say_what_leaving_costs_before_the_player_leaves(
@@ -209,21 +207,25 @@ async def test_the_details_say_what_leaving_costs_before_the_player_leaves(
     clock.move(SATURDAY_FIVE - CUT_OFF)
     started = (await details_of(client, ola, booking))["leaving"]
 
+    # Nothing is taken before the cut-off, so nothing is quoted (#637).
     assert before == {
         "kind": "BEFORE_THE_CUT_OFF",
+        "refund_grosze": None,
+        "card_fee_grosze": None,
+    }
+    assert after == {
+        "kind": "AFTER_THE_CUT_OFF",
         "refund_grosze": SHARE - FEE,
         "card_fee_grosze": FEE,
     }
-    assert after["kind"] == "AFTER_THE_CUT_OFF"
     assert started is None
 
 
-async def test_the_money_line_promises_what_the_leave_sheet_then_refunds(
+async def test_the_money_line_is_free_to_leave_until_the_cut_off_then_paid(
     client, clock, booking, four
 ):
-    """*28,55 zł back if you leave by Fri 17:00* is the sheet's own figure, on
-    the card and in the details alike — one estimate, so they never disagree
-    (Q99) — until the cut-off takes the clause off the line."""
+    """*30 zł · free to leave until Fri 17:00* on the card and in the details
+    alike, until the cut-off takes the share: *Paid · 30 zł* (#637, Q113)."""
 
     ola = four[0]
 
@@ -232,13 +234,12 @@ async def test_the_money_line_promises_what_the_leave_sheet_then_refunds(
     clock.move(CUT_OFF - MONDAY_MORNING)
     [after] = await home_of(client, ola)
 
-    assert details["money"]["back_if_you_leave_grosze"] == SHARE - FEE
-    assert (
-        details["money"]["back_if_you_leave_grosze"]
-        == details["leaving"]["refund_grosze"]
-    )
     assert card["money"] == details["money"]
-    assert after["money"]["back_if_you_leave_grosze"] is None
+    assert card["money"]["free_to_leave_until"] == "2026-10-09T15:00:00Z"
+    assert (card["money"]["paid"], card["money"]["share_state"]) == (False, "HELD")
+    assert "back_if_you_leave_grosze" not in card["money"]
+    assert after["money"]["free_to_leave_until"] is None
+    assert (after["money"]["paid"], after["money"]["share_state"]) == (True, "TAKEN")
 
 
 # --------------------------------------------------------------------------- #
@@ -247,10 +248,11 @@ async def test_the_money_line_promises_what_the_leave_sheet_then_refunds(
 
 
 async def test_leaving_after_the_cut_off_keeps_the_seat_paid_and_offers_it(
-    client, clock, booking, four, mailbox
+    client, session_factory, clock, booking, four, mailbox
 ):
     ola, kuba, *_ = four
     clock.move(CUT_OFF - MONDAY_MORNING + timedelta(hours=1))
+    await cuts_off(session_factory, clock)
 
     left = await leaves(client, kuba, booking)
 
@@ -261,7 +263,6 @@ async def test_leaving_after_the_cut_off_keeps_the_seat_paid_and_offers_it(
     [card] = await home_of(client, ola)
     assert (card["status"], card["open_seats"]) == ("SEAT_OPEN", 1)
     assert card["money"]["free_to_leave_until"] is None
-    assert card["money"]["back_if_you_leave_grosze"] is None
     assert card["money"]["paid"] is True
 
 
@@ -331,7 +332,7 @@ async def test_the_leaver_leaves_the_game_s_chat_and_the_others_keep_it(
 # --------------------------------------------------------------------------- #
 
 
-async def test_a_game_still_short_at_its_cut_off_is_called_off_and_everybody_refunded(
+async def test_a_game_still_short_at_its_cut_off_is_called_off_and_every_hold_let_go(
     client, session_factory, clock, club, booking, four, mailbox
 ):
     ola, kuba, ewa, tomek = four
@@ -345,23 +346,15 @@ async def test_a_game_still_short_at_its_cut_off_is_called_off_and_everybody_ref
         "CALLED_OFF",
         "SHORT_AT_THE_CUT_OFF",
     )
-    assert card["money"]["refunded_grosze"] == SHARE
+    # Nothing was taken, so nothing is refunded (#637).
+    assert card["money"]["refunded_grosze"] is None
     assert not await the_court_is_on_sale(session_factory, clock, club)
 
     run = await cuts_off(session_factory, clock)
 
     assert (run.games, run.conflicts) == (1, 0)
-    for player in (ola, ewa, tomek):
-        refund, charge = await receipts_of(client, mailbox, player)
-        assert (refund["kind"], refund["amount_grosze"], refund["card_fee_grosze"]) == (
-            "REFUND",
-            SHARE,
-            0,
-        )
-    assert [r["kind"] for r in await receipts_of(client, mailbox, kuba)] == [
-        "REFUND",
-        "CHARGE",
-    ]
+    for player in four:
+        assert await receipts_of(client, mailbox, player) == []
     assert await the_court_is_on_sale(session_factory, clock, club)
     assert await rooms_of(client, ola) == []
     [called_off] = [
@@ -369,7 +362,7 @@ async def test_a_game_still_short_at_its_cut_off_is_called_off_and_everybody_ref
         for sent in await mailbox.to("ola@example.com")
         if sent.subject.startswith("Game called off")
     ]
-    assert called_off.subject == "Game called off · you're refunded 30 zł"
+    assert called_off.subject == "Game called off · nothing was taken"
     [desk] = await mailbox.to(DESK_EMAIL)
     assert desk.subject == (
         "A game was called off at the cut-off — the hour is free again"
@@ -461,8 +454,8 @@ async def test_a_paused_yes_comes_back_when_its_player_leaves_the_game_that_paus
     assert str(sunday) in await live_ids(client, ola)
 
 
-async def test_a_cut_off_reached_only_after_the_hour_still_gives_the_money_back(
-    client, session_factory, clock, booking, four, mailbox
+async def test_a_cut_off_reached_only_after_the_hour_still_lets_the_holds_go(
+    client, session_factory, clock, booking, four, payments, mailbox
 ):
     ola, kuba, *_ = four
     assert (await leaves(client, kuba, booking)).status_code == 200
@@ -470,8 +463,9 @@ async def test_a_cut_off_reached_only_after_the_hour_still_gives_the_money_back(
 
     assert (await cuts_off(session_factory, clock)).games == 1
 
-    refund, _charge = await receipts_of(client, mailbox, ola)
-    assert (refund["kind"], refund["amount_grosze"]) == ("REFUND", SHARE)
+    assert await receipts_of(client, mailbox, ola) == []
+    assert len(payments.called("cancel")) == 4
+    assert payments.called("capture") == []
     [desk] = await mailbox.to(DESK_EMAIL)
     assert desk.subject == "A game was called off at the cut-off"
     assert "Its hour has already begun." in desk.text

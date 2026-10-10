@@ -217,7 +217,8 @@ class Moment(StrEnum):
     CLUB_ANSWER_DUE = "CLUB_ANSWER_DUE"
     #: A refused share's time to pay ends (#625, #626).
     PAYMENT_DUE = "PAYMENT_DUE"
-    #: Leaving stops being free, and a seat still open calls the game off.
+    #: Leaving stops being free: a full game's held shares are taken, and a
+    #: seat still open calls the game off with every hold let go (#637).
     CUT_OFF = "CUT_OFF"
     #: The close of the club day it was booked in: its desk is emailed it among
     #: the day's new bookings.
@@ -255,8 +256,9 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
         ),
         Moment.CUT_OFF: MomentRule(
             CUT_OFF_JOB,
-            "Leaving stops being free, and a seat still open then calls the game "
-            "off with everybody refunded in full.",
+            "Leaving stops being free: a full game has every held share taken, "
+            "and a seat still open then calls the game off with every hold let "
+            "go — nobody pays.",
         ),
         Moment.NEW_BOOKINGS_SUMMARY: MomentRule(
             NEW_BOOKINGS_SUMMARY_JOB,
@@ -609,6 +611,14 @@ class ChargePane(BaseModel):
         description="The payment at the provider; `null` if it was never asked."
     )
     opened_at: datetime
+    held_until: datetime | None = Field(
+        description=(
+            "The cut-off a share held for the booked game is taken at (#637) — "
+            "`HELD` until then, let go (`RELEASING`, `CANCELLED`) by a leave, a "
+            "game short at it or the club's cancel before it. `null` for a "
+            "share never held for the game."
+        )
+    )
     taken_at: datetime | None
     refund: RefundPane | None
 
@@ -1437,6 +1447,7 @@ class _Folded:
             failure=charge.failure,
             payment_id=charge.payment_id,
             opened_at=charge.opened_at,
+            held_until=charge.held_until,
             taken_at=charge.taken_at,
             refund=None
             if charge.refund_withholds_fee is None

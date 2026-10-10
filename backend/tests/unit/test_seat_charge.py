@@ -11,6 +11,7 @@ from uuid import uuid4
 from app.kernel import Sport, instant
 from app.modules.payments.domain.provider import Payment, PaymentStatus
 from app.modules.payments.domain.seat_charge import (
+    PAID,
     FailureReason,
     SeatCharge,
     SeatChargeStatus,
@@ -193,3 +194,82 @@ def test_a_fee_not_yet_known_at_the_capture_is_recorded_when_a_reading_reports_i
     assert charge.heard(reported, at=AT) is True
     assert charge.heard(reported, at=AT) is False
     assert charge.fee_taken_grosze == 1_45
+
+
+# --------------------------------------------------------------------------- #
+# Held until the cut-off, then taken (#637; ADR-0189's 2026-10-10 amendment)
+# --------------------------------------------------------------------------- #
+
+CUT_OFF = GAME - timedelta(hours=24)
+
+
+def test_a_hold_kept_for_the_booked_game_is_held_not_paid_and_not_settled():
+    """**A held charge is not paid**: nothing is taken until the cut-off, so a
+    receipt, *Collected* and a payout all wait for it."""
+
+    charge = a_hold()
+    booking = uuid4()
+
+    charge.keep(booking_id=booking, until=CUT_OFF, at=AT)
+
+    assert charge.status is SeatChargeStatus.HELD
+    assert (charge.booking_id, charge.held_until) == (booking, CUT_OFF)
+    assert not charge.held_now  # decided: no later fill may take it
+    assert charge.status not in PAID
+    assert not charge.settled
+    assert charge.net_grosze == 0 and charge.card_fee_grosze == 0
+    replayed = SeatCharge.from_history(charge.pull_events())
+    assert (replayed.status, replayed.held_until) == (SeatChargeStatus.HELD, CUT_OFF)
+
+
+def test_the_cut_off_takes_a_held_share():
+    charge = a_hold()
+    booking = uuid4()
+    charge.keep(booking_id=booking, until=CUT_OFF, at=AT)
+
+    charge.take(booking_id=booking, at=CUT_OFF)
+
+    assert charge.status is SeatChargeStatus.TAKING
+    assert charge.taken_at == CUT_OFF
+    assert charge.status in PAID
+
+
+def test_a_held_share_let_go_is_released_untaken_and_settled():
+    charge = a_hold()
+    charge.keep(booking_id=uuid4(), until=CUT_OFF, at=AT)
+
+    assert charge.let_go(at=AT) is True
+    assert charge.status is SeatChargeStatus.RELEASING
+    assert charge.settled
+    assert charge.cancelled(at=AT) is True
+    assert charge.status is SeatChargeStatus.CANCELLED
+    assert charge.net_grosze == 0
+
+
+def test_only_a_held_share_is_let_go():
+    taken = a_hold()
+    taken.take(booking_id=uuid4(), at=AT)
+    undecided = a_hold()
+
+    assert taken.let_go(at=AT) is False
+    assert undecided.let_go(at=AT) is False
+    assert undecided.held_now
+
+
+def test_a_held_share_is_never_released_as_an_undecided_one():
+    """The fill's *release what this game was not paid with* lets go of
+    undecided charges only: a share held for the booked game is the game's."""
+
+    charge = a_hold()
+    charge.keep(booking_id=uuid4(), until=CUT_OFF, at=AT)
+
+    assert charge.release(at=AT) is False
+    assert charge.status is SeatChargeStatus.HELD
+
+
+def test_a_held_share_whose_hold_the_provider_dropped_is_cancelled():
+    charge = a_hold()
+    charge.keep(booking_id=uuid4(), until=CUT_OFF, at=AT)
+
+    assert charge.heard(payment(PaymentStatus.CANCELLED), at=AT) is True
+    assert charge.status is SeatChargeStatus.CANCELLED

@@ -133,7 +133,7 @@ class StartPaymentSetup:
 class AcceptPaymentTerms:
     """The player accepted the terms — for the open setup, whose secret is then
     handed out, or again for the method already saved, after its bank moved it
-    to another brand."""
+    to another brand or the terms in force changed (#637)."""
 
     def __init__(
         self,

@@ -53,8 +53,10 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   (`payments/application/seat_charges.py`, ADR-0190 §4). `ChargeTheSeats` clones each player's
   card onto the club's account and **authorises** it with manual capture — inline, because the
   answer *is* the response (*It's a game!* or *your payment didn't go through*) — then records the
-  **verdict** on each **Seat charge**: every hold `SeatChargeTaken` with the booking, or the
-  refused seats `SeatChargeFailed` and every other hold `SeatChargeReleased`. The capture or the
+  **verdict** on each **Seat charge**: every hold `SeatChargeKept` with the booking — **held
+  until the club's cut-off** (`HELD`, `held_until`), which takes it (#637, below) — or, for a
+  game booked after its cut-off, `SeatChargeTaken` at once; or the refused seats
+  `SeatChargeFailed` and every other hold `SeatChargeReleased`. The capture or the
   cancellation is `SettleSeatCharges`' — an outbox subscriber added per delivery run over its
   session and provider (`subscribe_the_seat_charge_settler`) — which records the provider's answer
   (`Captured`, `Cancelled`). So a crash between the verdict and the money leaves a decision a
@@ -225,15 +227,18 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   projected `PAUSED`) — counted nowhere, and **back** when one of those games stops being
   theirs (#544, below). The proposer is told everywhere (`ProposalFilled` is a club change: a
   court hour left).
-- **Emails are the money's** (`payments/application/seat_charge_emails.py`): *It's a game! · you
-  paid* to every player when the seats are taken, the club named as the seller and the cut-off
-  line (what leaving by it gives back, Q99), and *Confirm your payment to keep your seat* to
-  each refused player, worded by reason.
+- **Emails are the money's** (`payments/application/seat_charge_emails.py`): *It's a game! · 30 zł
+  held* to every player when the game books before its cut-off — *30 zł is held on your card and
+  taken on Fri 17:00, the club's cut-off. Leave before then and nothing is taken.* (#637) — or
+  *It's a game! · you paid 30 zł* when it books after it, the club named as the seller; and
+  *Confirm your payment to keep your seat* to each refused player, worded by reason.
 - **Seeded by `app/seeds/bookings.py`**: two of the protagonist's games at Bonarka Arena — the
   first hour on sale today (else inside the cut-off) and the first next week — each made by
-  `MakeProposal` and filled by four `SayYes`, hers last, through the run's fake; the seed's outbox
-  then captures them (the fake **adopts a hold another process made**, as it answers a card it
-  never saved). **And one game waiting for Kazimierz Padel** (On request, a kilometre away, an
+  `MakeProposal` and filled by four `SayYes`, hers last, through the run's fake — today's taken
+  at once, after its cut-off, and the seed's outbox captures it (the fake **adopts a hold another
+  process made**, as it answers a card it never saved); next week's **held** until its cut-off
+  (#637), so her receipts list one. The played history (`booked_history.py`) runs the cut-off
+  job at each past game's cut-off, so every past game is taken and settled. **And one game waiting for Kazimierz Padel** (On request, a kilometre away, an
   hour to confirm): the same four yeses at its first padel hour clear of her games, the last
   answered *waiting for the club* — it waits an hour from the run's now, then the timeout calls
   it off; a re-run puts a fresh one. `FakePayments.phone_confirms_payment` is a phone confirming a payment.
@@ -281,33 +286,38 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   key drawn from `JWT_SECRET_KEY` with its own prefix (`KeyedCheckInCodes`), six characters in
   the typed-code alphabet plus a `RAKETA-CHECK-IN:1:<booking>:<player>:<code>` QR payload, shown
   on the club's calendar day of the game while it stands — #547's desk recomputes it.
-- **Leaving is refunded at once until the club's cut-off, less the card fee, and a game plays
-  full or not at all** (#544;
-  `proposals/application/leave_the_game.py`, `cut_off.py`, `bookings/application/leaving.py`;
-  the mechanics §12.3, §13, §14.1, §15.4). `POST /bookings/{id}/departure` locks the game's
-  proposal row first, as every act on a game does. **Before the cut-off** the leaver's seat
-  opens (`SeatLeft` — the booking `SEAT_OPEN`, their `booking_seats` row kept with `left_at`,
-  the Game's seat vacated through games' own `VacateSeat`, so they drop out of the room, whose
-  members are the line-up) and their charge is refunded **less the card fee**; **after it**
-  the seat opens and stays paid — refunded, less the fee, when a rescue takes it (below);
-  **while the club decides** it is `WithdrawYes`' act (#543); **after the start**
-  `game_has_started`. What
-  leaving would cost is on the details before the player leaves (`leaving`: the share less
-  `card_fee_on`, the payments' **estimate** — Stripe's EEA price, 1.5 % + 1 zł, which the
-  fake withholds exactly) — and **on the money line, never as *free*** (Q99, #617): while
-  the cut-off is ahead, Home's card and the details carry `back_if_you_leave_grosze`
-  (*28,55 zł back if you leave by Fri 17:00*), `null` whenever `free_to_leave_until` is.
-  It is the sheet's figure — `money_of` and `leave_terms` share one subtraction and a read
-  asks the estimate once — and the booking email says it from the same estimate (*You can
-  leave until … and get 28,55 zł back at once*). **The cut-off job** (`cut-off`, see
-  `jobs.md`) calls off every game with a seat open since **before** its cut-off
-  (`CalledOffAtCutOff`, naming everybody still in): everybody still in is refunded **in full** (the club bears those fees), the
-  court is free (the partial index), the Game is called off by nobody (`CallOffGame`, which
-  steps over a game that already started short) and its room with it, the desk is emailed
-  *A game was called off at the cut-off*, each player *Game called off · with the refund*.
+- **Held until the cut-off, taken at it; leaving before it takes nothing; a game plays full or
+  not at all** (#544, #637; `proposals/application/leave_the_game.py`, `cut_off.py`,
+  `bookings/application/leaving.py`; the mechanics §12.2, §12.3, §13, §14.1, §15.4, Q113).
+  `POST /bookings/{id}/departure` locks the game's proposal row first, as every act on a game
+  does. **Before the cut-off** the leaver's seat opens (`SeatLeft` — the booking `SEAT_OPEN`,
+  their `booking_seats` row kept with `left_at`, the Game's seat vacated through games' own
+  `VacateSeat`, so they drop out of the room, whose members are the line-up) and their **hold
+  is let go** (`SeatRefunds.refund` → payments' `GiveTheSharesBack`: a `HELD` charge is
+  `let_go`, `SeatChargeReleased` with the reason, cancelled from the outbox — no refund, no
+  fee, emailed *You left the game · nothing was taken*); **after it** the seat opens and stays
+  paid — refunded, less the fee, when a rescue takes it (below); **while the club decides** it
+  is `WithdrawYes`' act (#543); **after the start** `game_has_started`. **The money line is
+  folded off the clock** (`domain/home.py`'s `money_of`): `share_state` `HELD` with
+  `free_to_leave_until` and `taken_at` the cut-off until it comes, then `TAKEN` and `paid` —
+  `paid` means taken, never only held — and for a game booked after its cut-off `TAKEN` from
+  its `booked_at`; `refunded_grosze` is the share only on a game its club cancelled after the
+  cut-off (`BookedGame.cancelled_at`). What leaving would cost is on the details before the
+  player leaves (`leaving`): **no quote before the cut-off** (`refund_grosze` and
+  `card_fee_grosze` `null` — nothing is taken), and after it the share less `card_fee_on`, the
+  payments' **estimate**, until #641 makes it exact. **The cut-off job** (`cut-off`, see
+  `jobs.md`; `TheCutOff`) does two things, the call-offs first: it calls off every game with a
+  seat open since **before** its cut-off (`CalledOffAtCutOff`, naming everybody still in) —
+  every hold let go, nobody pays anything, a share taken already (#639's fallback) refunded in
+  full — the court is free (the partial index), the Game is called off by nobody
+  (`CallOffGame`, which steps over a game that already started short) and its room with it,
+  the desk is emailed *A game was called off at the cut-off*, each player *Game called off ·
+  nothing was taken*; and it **takes every share held for a full game** whose cut-off has
+  come (`HeldShares.due`/`take`, over the `seat_charges` projection's `status`/`held_until`,
+  migration 0054), captured from the outbox with the real fee.
   **Short at the cut-off is read off the clock** (`Booking.short_from`,
-  `BookedGame.called_off_reason`), so Home reads *called off · `SHORT_AT_THE_CUT_OFF`* with
-  `refunded_grosze` from the cut-off on, before the job runs. A seat left **after** the
+  `BookedGame.called_off_reason`), so Home reads *called off · `SHORT_AT_THE_CUT_OFF`* from
+  the cut-off on, before the job runs. A seat left **after** the
   cut-off lets the game go ahead short: at its hour the Game's standing is **`STARTED_SHORT`**
   — derived from `starts_at` and the line-up, refusing a result (`the_game_started_short`),
   in no tally — and Home reads *uncounted · `SEAT_EMPTY`*. **A seat a rescue took is not
@@ -356,10 +366,12 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   **Joining** (`POST /bookings/{id}/seats`, `JoinARescue` over `Rescuer`) locks the proposal
   row first, so two joiners for the last seat are one after the other and **the second reads
   it gone** (`seat_just_taken`) **before its bank is asked**. Then the money is the fill's own
-  all-or-nothing for one seat — **held and taken in the act, captured from the outbox**
-  (`SeatCharges.charge` with `rescue=True`: its holds keyed `raketa-rescue-…`, the attempt the
-  booking's version), never the provider's `charge_now`, so a crash leaves a hold that lapses
-  rather than money taken for no seat; the joiner is emailed *It's a game! · you paid*.
+  all-or-nothing for one seat (`SeatCharges.charge` with `rescue=True`: its holds keyed
+  `raketa-rescue-…`, the attempt the booking's version) — **held until the cut-off like every
+  seat it joins, or taken in the act after it** (#637), so a crash leaves a hold that lapses
+  rather than money taken for no seat; the joiner is emailed *It's a game! · 30 zł held*, or
+  *you paid* after the cut-off. A leaver before the cut-off whose seat a rescue takes had
+  nothing taken, and is refunded nothing.
   **The seat that opened first is taken, on its side** (`SeatRescued`, naming the leaver it
   replaces; the joiner's `booking_seats` row), on the Game too through games' own
   `TakeASeat` — a `LineUpReseated` with one more seat filled, so the room, whose members are
@@ -395,9 +407,10 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   that went ahead short, or one somebody did not come to, is *played* — the club is paid),
   else *seat open* or *booked*. **What the club sees of a player is the name, `paid` (a
   charge `TAKING`/`CAPTURED`, `BookingTakings` over each booking's Seat charges — one
-  `of_game` read per booking listed) and `checked_in_at`**; the money is the court's price
-  (share × seats), what was collected, and what was refunded (given, or decided and not yet
-  given: the share, less the fee estimate where withheld); the group comes from `groups`
+  `of_game` read per booking listed), `held` (a charge `HELD` until the cut-off, #637) and
+  `checked_in_at`**; the money is the court's price (share × seats), what was collected —
+  **taken shares only** — and what was refunded (given, or decided and not yet given: the
+  share, less the fee kept where withheld); the group comes from `groups`
   (`PoolOrigins`). **Move and Cancel are the club's while the game is booked or seat open, not
   short at its cut-off, and not started** (`booking_not_booked`, `booking_is_called_off`,
   `game_has_started`). **Move** (`CourtMoved`) is onto a court of `ClubCourtsAtTheHour.free_courts`
@@ -407,7 +420,9 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   payments account needs attention) has no court to move to**, and cancels instead. **Cancel**
   (`CancelledByClub`, reason `WEATHER`/`REPAIR`/`DOUBLE_BOOKING`/`OTHER`) frees the court
   (partial index), calls the Game off by nobody **whole or with a seat open** (`Game.call_off_whole`,
-  through `GameChanges.call_off_whole`), refunds **in full** — `RefundReason.CANCELLED_BY_THE_CLUB`,
+  through `GameChanges.call_off_whole`), **before the cut-off lets every hold go** — nothing
+  taken, nobody refunded, no fee for anybody, emailed *Game cancelled by <club> · nothing was
+  taken* (#637) — and **after it** refunds **in full** — `RefundReason.CANCELLED_BY_THE_CLUB`,
   emailed *Game cancelled by <club> · you're refunded*, with the reason — everybody still in
   **and a leaver whose seat was still open and paid** (left after the cut-off; one refunded
   already is refunded nothing twice), under a reason of their own

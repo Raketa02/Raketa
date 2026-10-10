@@ -54,8 +54,6 @@ CONVERSATIONS = "/api/v1/conversations"
 IN_KRAKOW = (50.03, 19.95)
 SATURDAY_FIVE_UTC = "2026-10-10T15:00:00Z"
 FRIDAY_FIVE_UTC = "2026-10-09T15:00:00Z"
-#: What leaving by the cut-off gives back: 30 zł less its 1,45 zł card fee.
-BACK_IF_YOU_LEAVE = 28_55
 A_SCORE = {"score": {"sets": [{"a": 6, "b": 4}, {"a": 6, "b": 3}]}}
 
 
@@ -186,9 +184,10 @@ async def test_every_player_finds_the_booked_game_on_home_with_its_money_line(
         assert card["court_name"] == "Court 1"
         assert card["money"] == {
             "share_grosze": 30_00,
-            "paid": True,
+            "paid": False,
+            "share_state": "HELD",
+            "taken_at": FRIDAY_FIVE_UTC,
             "free_to_leave_until": FRIDAY_FIVE_UTC,
-            "back_if_you_leave_grosze": BACK_IF_YOU_LEAVE,
             "refunded_grosze": None,
         }
         yours, theirs = card["sides"]["yours"], card["sides"]["theirs"]
@@ -198,11 +197,12 @@ async def test_every_player_finds_the_booked_game_on_home_with_its_money_line(
         assert {tile["player_id"] for tile in yours + theirs} == {
             str(one["id"]) for one in four
         }
-        assert all(tile["paid"] for tile in yours + theirs)
+        # Held until the cut-off, which takes them (#637).
+        assert not any(tile["paid"] for tile in yours + theirs)
         assert sorted(names_of(yours + theirs)) == ["ewa", "kuba", "ola", "tomek"]
 
 
-async def test_from_the_cut_off_on_the_money_line_is_only_paid(
+async def test_from_the_cut_off_on_the_money_line_is_paid(
     client, session_factory, clock, club, four, group
 ):
     await a_booked_game(
@@ -213,9 +213,9 @@ async def test_from_the_cut_off_on_the_money_line_is_only_paid(
     [card] = (await home_of(client, four[0]))["games"]
 
     assert card["status"] == "BOOKED"
-    assert card["money"]["paid"] is True
+    assert (card["money"]["paid"], card["money"]["share_state"]) == (True, "TAKEN")
     assert card["money"]["free_to_leave_until"] is None
-    assert card["money"]["back_if_you_leave_grosze"] is None
+    assert all(tile["paid"] for tile in card["sides"]["yours"])
 
 
 async def test_from_its_hour_the_game_needs_its_result_and_the_badge_counts_it(
@@ -667,16 +667,17 @@ async def test_a_player_in_the_game_reads_its_details(
     assert details["court_name"] == "Court 1"
     assert details["money"] == {
         "share_grosze": 30_00,
-        "paid": True,
+        "paid": False,
+        "share_state": "HELD",
+        "taken_at": FRIDAY_FIVE_UTC,
         "free_to_leave_until": FRIDAY_FIVE_UTC,
-        "back_if_you_leave_grosze": BACK_IF_YOU_LEAVE,
         "refunded_grosze": None,
     }
     yours, theirs = details["sides"]["yours"], details["sides"]["theirs"]
     assert yours[0]["player_id"] == str(four[0]["id"])
     assert yours[0]["name"] == "ola"
     assert [tile["is_you"] for tile in yours + theirs] == [True, False, False, False]
-    assert all(tile["paid"] for tile in yours + theirs)
+    assert not any(tile["paid"] for tile in yours + theirs)
     assert all(tile["level"] is not None for tile in yours + theirs)
     assert details["shows_forecast"] is True
     # Monday: not the game's day.

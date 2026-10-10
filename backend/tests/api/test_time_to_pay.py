@@ -40,6 +40,7 @@ from tests.api.proposals_world import (
     runs_out,
     saves_a_card,
     says_yes,
+    the_cut_off_comes,
 )
 from tests.unit.fake_clock import MovableClock
 
@@ -324,24 +325,28 @@ async def test_paying_in_time_books_the_game_on_the_kept_holds(
     assert len(payments.called("authorise")) == asked
     await mailbox.drain()
     assert payments.called("cancel") == []
+    # Held on the kept holds until the cut-off, which takes all four (#637).
+    assert payments.called("capture") == []
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
     assert (
         len({call.arguments["payment_id"] for call in payments.called("capture")}) == 4
     )
     for player in (marta, oscar, ivan):
         notices = await notices_of(client, mailbox, player)
         assert (notices[0]["title"], notices[0]["body"]) == (
-            "Your Sat 17:00 is booked · you paid 40 zł",
+            "Your Sat 17:00 is booked · 40 zł held",
             "Padel at Bonarka Arena.",
         )
-        assert "Your Sat 17:00 is booked · you paid 40 zł" in await subjects_to(
+        assert "Your Sat 17:00 is booked · 40 zł held" in await subjects_to(
             mailbox, player
         )
         # Nobody is told *It's a game!* twice.
         assert sum(n["title"].startswith("It's a game!") for n in notices) == 1
     # Hers is her own *It's a game!* — she sees it on her phone.
     [hers, *_] = await notices_of(client, mailbox, paula)
-    assert (hers["title"], hers["your_own"]) == ("It's a game! · you paid 40 zł", True)
-    assert "It's a game! · you paid 40 zł" in await subjects_to(mailbox, paula)
+    assert (hers["title"], hers["your_own"]) == ("It's a game! · 40 zł held", True)
+    assert "It's a game! · 40 zł held" in await subjects_to(mailbox, paula)
     for player in four:
         assert (await the_card(client, player, proposal))["status"] == "BOOKED"
     assert await to_confirm(client, paula) == []
@@ -595,11 +600,12 @@ async def test_paying_in_time_books_it_without_asking_the_club_again(
     assert paid.json()["booked"]["booking_id"] == str(proposal)
     assert len(payments.called("authorise")) == asked
     await mailbox.drain()
-    assert len(payments.called("capture")) == 4
+    # Held until the cut-off, which takes them (#637).
+    assert payments.called("capture") == []
     assert await mailbox.to("desk@kazimierz.pl") == desk_mail
     for player in (marta, oscar, ivan):
         assert (await told(client, mailbox, player))[0][0] == (
-            "Kazimierz Padel confirmed your game"
+            "Kazimierz Padel confirmed your game · 40 zł held"
         )
     [hers, *_] = await notices_of(client, mailbox, paula)
     assert (hers["kind"], hers["your_own"]) == ("CLUB_CONFIRMED", True)

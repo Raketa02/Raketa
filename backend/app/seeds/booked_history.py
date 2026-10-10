@@ -5,11 +5,12 @@ makes games on.** That is the protagonist's own evenings, which fill the record
 she reads about herself, and every declared game the runner hands in: the
 cohort's own (``PLAYED_GAMES``). Each is a game the way the Games deck makes
 one — ``MakeProposal`` at an hour Ogrody 33 sells, then ``SayYes`` from
-everybody on it, so the last yes **books** it: the seats charged through the
+everybody on it, so the last yes **books** it: the seats held through the
 run's own fake provider, a Booking on a free court and the ordinary Game it
-opens. Then the result is stated and answered through
-``games``' own two acts. Nothing here opens a table, and nothing here imports the
-challenge loop.
+opens — and **the cut-off job runs at the club's cut-off**, as the API's would
+have, so every past game's shares are taken and settled (#637). Then the result
+is stated and answered through ``games``' own two acts. Nothing here opens a
+table, and nothing here imports the challenge loop.
 
 **A game is always made in a group**, so she runs one per sport at Ogrody 33 —
 *Tenis na Ogrodach* and *Padel na Ogrodach* — and everybody a game seats joins
@@ -72,6 +73,7 @@ from app.bootstrap.composition import (
     build_read_booking_details,
     build_settled_courts,
     build_sportsmanship_ledger,
+    build_the_cut_off,
     build_unit_of_work,
     build_user_repository,
 )
@@ -647,6 +649,15 @@ async def _book(
             f"the {sport.value} game at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} "
             f"filled and did not book: {answer!r}"
         )
+    # Held until the club's cut-off, which takes the shares (#637): the cut-off
+    # job runs at that moment, as the API's would have.
+    booked = await build_player_bookings(session, settings=settings).find(
+        answer.booked.booking_id
+    )
+    if booked is not None and made_at < booked.cut_off:
+        await build_the_cut_off(
+            session, clock=FixedClock(at=booked.cut_off), settings=settings
+        ).execute()
     return answer.booked.game_id
 
 

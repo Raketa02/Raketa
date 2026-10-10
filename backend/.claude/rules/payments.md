@@ -71,6 +71,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `SeatChargeConfirmed` for one its player confirmed). `domain/card_fee.py`'s **estimate**
   (Stripe's EEA price, the personal EU card's) is still what the reads quote before the money
   moves, until #641 retires it.
+  **Held until the cut-off, taken at it** (#637; ADR-0189's 2026-10-10 amendment): a game
+  booked before its club's cut-off **keeps** each hold for the booked game (`SeatCharge.keep`,
+  `SeatChargeKept` with `until`, status `HELD`, the projection's `held_until`), nothing moves at
+  the provider, and the cut-off job takes it (`TakeTheHeldShares`, `SeatChargeTaken` with
+  `kept=True`); one booked after it is taken at once. A `HELD` charge is **not paid** (`PAID`
+  is `TAKING`/`CAPTURED`: no receipt, no *Collected*) and **not settled** (the payout waits for
+  the take); `release` lets go undecided holds only, so **a held share is let go by `let_go`**
+  (`SeatChargeReleased` with the reason), which `GiveTheSharesBack` (was `RefundTheSeats`) does
+  for a leave before the cut-off, a game short at it and the club's cancel before it — a share
+  taken is refunded as before. **The terms in force are `2026-10-10`**: `terms_needed` is also
+  true for a consent to older words, so the fill refuses `TERMS_NEEDED` without asking the
+  provider until the player accepts again (the seed accepts them on a re-run).
   **The fake models card kinds and hold windows** (#636): `EnteredCard.kind`
   (`domain/entered_cards.py` — personal EU by default, business, UK, outside Europe) keeps
   that kind's real fee when the share is taken (`CARD_PRICES`: 1,5 / 1,9 / 2,5 / 3,25 % + 1 zł,

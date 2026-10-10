@@ -1851,7 +1851,7 @@
           "club"
         ],
         "summary": "Accept a request",
-        "description": "**Accept** books the game: everybody is charged at this moment, all together or not at all, on your account \u2014 you are the seller \u2014 and the players are given the court that was reserved for them. Their game, its chat and their receipts open; *It's a game! \u00b7 you paid* is emailed to each.",
+        "description": "**Accept** books the game: every share is held at this moment, all together or not at all, on your account \u2014 you are the seller \u2014 and taken at your cut-off, or at once when you accept after it (#637); the players are given the court that was reserved for them. Their game and its chat open; *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off) is emailed to each.",
         "operationId": "accept_api_v1_club_bookings__booking_id__acceptance_post",
         "security": [
           {
@@ -2433,7 +2433,7 @@
         "properties": {
           "outcome": {
             "$ref": "#/components/schemas/AcceptOutcome",
-            "description": "`BOOKED` \u2014 everybody paid, the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` \u2014 accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` \u2014 a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` \u2014 a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
+            "description": "`BOOKED` \u2014 every share is held, and taken at your cut-off (or taken now, after it \u2014 #637); the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` \u2014 accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` \u2014 a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` \u2014 a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
           },
           "court_name": {
             "anyOf": [
@@ -2793,12 +2793,12 @@
           "collected_grosze": {
             "type": "integer",
             "title": "Collected Grosze",
-            "description": "Every share taken from the players, on your account."
+            "description": "Every share taken from the players, on your account \u2014 at your cut-off, or at once after it. A share only held is not collected (#637)."
           },
           "refunded_grosze": {
             "type": "integer",
             "title": "Refunded Grosze",
-            "description": "Everything given back \u2014 to a leaver less the card fee, in full on a game called off or cancelled. Refunds are automatic: you never refund anybody by hand."
+            "description": "Everything given back of a share taken \u2014 to a leaver whose seat was taken after the cut-off, less the card fee; in full on a game cancelled after it. A hold let go before the cut-off refunds nothing: nothing was taken. Refunds are automatic: you never refund anybody by hand."
           }
         },
         "type": "object",
@@ -2833,6 +2833,11 @@
             "title": "Paid",
             "description": "Their share was taken \u2014 *paid \u2713*."
           },
+          "held": {
+            "type": "boolean",
+            "title": "Held",
+            "description": "Their share is held on their card, and taken at the cut-off \u2014 *held*. Not paid, and not in `collected_grosze` (#637). Never `true` with `paid`."
+          },
           "checked_in_at": {
             "anyOf": [
               {
@@ -2852,10 +2857,11 @@
           "player_id",
           "name",
           "paid",
+          "held",
           "checked_in_at"
         ],
         "title": "ClubBookingPlayerSchema",
-        "description": "A player on the game, as the club sees them \u2014 **a name, whether they\npaid, and whether the desk checked them in**, and nothing else (\u00a716.14)."
+        "description": "A player on the game, as the club sees them \u2014 **a name, whether they\npaid or their share is only held, and whether the desk checked them in**,\nand nothing else (\u00a716.14)."
       },
       "ClubBookingSchema": {
         "properties": {
@@ -2889,7 +2895,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/ClubStatus",
-            "description": "`WAITING_FOR_YOU` \u2014 an On request game asking for the court: Accept or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` \u2014 you accepted, and one player's payment is still to come until `payment_due_by` (#626): *Accepted \u00b7 waiting for one player's payment until 21:20*. Your yes and the court are kept; nothing for you to answer. `BOOKED` \u2014 full and paid. `SEAT_OPEN` \u2014 a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` \u2014 see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` \u2014 the hour has passed; you are paid whatever happened on the court."
+            "description": "`WAITING_FOR_YOU` \u2014 an On request game asking for the court: Accept or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` \u2014 you accepted, and one player's payment is still to come until `payment_due_by` (#626): *Accepted \u00b7 waiting for one player's payment until 21:20*. Your yes and the court are kept; nothing for you to answer. `BOOKED` \u2014 full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` \u2014 a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` \u2014 see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` \u2014 the hour has passed; you are paid whatever happened on the court."
           },
           "called_off_reason": {
             "anyOf": [
@@ -3999,7 +4005,7 @@
           "collected_grosze": {
             "type": "integer",
             "title": "Collected Grosze",
-            "description": "Every share taken from the players."
+            "description": "Every share taken from the players \u2014 at your cut-off, or at once after it; never a share only held (#637)."
           },
           "refunded_grosze": {
             "type": "integer",

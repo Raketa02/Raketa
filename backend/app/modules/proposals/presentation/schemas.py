@@ -66,6 +66,7 @@ from app.modules.proposals.domain.home import (
     HomeStatus,
     LeaveTerms,
     Leaving,
+    ShareState,
     UncountedReason,
 )
 from app.modules.proposals.domain.ports import DeckPerson, PaymentRefusal
@@ -128,8 +129,9 @@ class YesAnswerResponse(BaseModel):
     booked: BookedSchema | None = Field(
         default=None,
         description=(
-            "Present when this yes booked the game: every seat was charged, and "
-            "the booking and its Game are open. `null` otherwise."
+            "Present when this yes booked the game: every seat's share was held "
+            "until the club's cut-off, or taken after it (#637), and the booking "
+            "and its Game are open. `null` otherwise."
         ),
     )
     waiting_for_the_club: bool = Field(
@@ -900,43 +902,51 @@ class BookedSidesSchema(BaseModel):
 
 
 class BookedMoneySchema(BaseModel):
-    """The money line: *Paid · 30 zł · 28,55 zł back if you leave by Sat 17:00*."""
+    """The money line: *30 zł · free to leave until Fri 17:00* while the share
+    is held, *Paid · 30 zł* once it is taken (#637; the mechanics §14.1,
+    Q113)."""
 
     share_grosze: int = Field(description="Every seat's share, in grosze.")
     paid: bool = Field(
         description=(
-            "Every seat's share was taken — `false` for a reader not on the game, "
-            "who has paid nothing (#545)."
+            "Every seat's share was **taken** — at the club's cut-off, or at "
+            "once for a game booked after it. `false` while the shares are only "
+            "held (`share_state` `HELD`), and for a reader not on the game, who "
+            "has paid nothing (#545)."
+        )
+    )
+    share_state: ShareState | None = Field(
+        description=(
+            "`HELD` — every share is held on its card and taken at `taken_at`, "
+            "the club's cut-off; leaving before it takes nothing. `TAKEN` — "
+            "taken (`paid`). `null` while nobody's money is on the game: "
+            "waiting for its club or for a payment, called off, and for a "
+            "reader not on the game. Switches by itself at `taken_at`."
+        )
+    )
+    taken_at: datetime | None = Field(
+        description=(
+            "When the shares are taken — the club's cut-off — or were: the "
+            "cut-off, or when a game booked after it was booked. Present "
+            "exactly when `share_state` is."
         )
     )
     free_to_leave_until: datetime | None = Field(
         description=(
             "The club's cut-off while it is still ahead at `read_at`: leaving "
-            "before it is refunded at once, less the card fee, which is never "
-            "returned (`back_if_you_leave_grosze`) — so the line says what comes "
-            "back, never that leaving is free (Q99). `null` from the cut-off on, "
-            "for a game that filled after it, for a game still waiting for its "
-            "club, and for a reader not on the game. The line switches by itself "
-            "at this instant."
-        )
-    )
-    back_if_you_leave_grosze: int | None = Field(
-        description=(
-            "What the reader gets back if they leave now, in grosze: the share "
-            "less the card fee the payments estimate — *28,55 zł back if you "
-            "leave by Sat 17:00*; 3840 on a 40 zł share. The same figure the "
-            "details' `leaving.refund_grosze` gives before the cut-off, so the "
-            "card, the leave sheet and the booking email never disagree. `null` "
-            "whenever `free_to_leave_until` is: from the cut-off on, for a game "
-            "that filled after it, for a game still waiting for its club, and "
-            "for a reader not on the game."
+            "before it takes nothing — the hold on the card is let go — so the "
+            "line says *free to leave until Fri 17:00* (Q113). `null` from the "
+            "cut-off on, for a game that filled after it, for a game still "
+            "waiting for its club, and for a reader not on the game. The line "
+            "switches by itself at this instant."
         )
     )
     refunded_grosze: int | None = Field(
         description=(
             "What everybody still in is given back — the whole share, on a game "
-            "called off at its cut-off or cancelled by its club (*refunded 30 "
-            "zł*). `null` where nothing is."
+            "its club cancelled after the cut-off had taken it (*refunded 30 "
+            "zł*). `null` where nothing is: a game short at its cut-off, or "
+            "cancelled before it, took nothing (#637)."
         )
     )
 
@@ -1011,8 +1021,9 @@ def _money(money: BookedMoney) -> BookedMoneySchema:
     return BookedMoneySchema(
         share_grosze=money.share_grosze,
         paid=money.paid,
+        share_state=money.share_state,
+        taken_at=money.taken_at,
         free_to_leave_until=money.free_to_leave_until,
-        back_if_you_leave_grosze=money.back_if_you_leave_grosze,
         refunded_grosze=money.refunded_grosze,
     )
 
@@ -1201,26 +1212,29 @@ class LeavingSchema(BaseModel):
 
     kind: Leaving = Field(
         description=(
-            "`BEFORE_THE_CUT_OFF` — *You'll be refunded 38,40 zł now (the 1,60 zł "
-            "card fee isn't returned). Your seat is offered to others. On your "
-            "record only if the game is then called off.* `AFTER_THE_CUT_OFF` — "
-            "*Your seat is offered to others. You'll be refunded 38,40 zł when "
-            "someone takes it; if nobody does, you won't be. On your record if "
-            "nobody takes it.* `WHILE_WAITING_FOR_THE_CLUB` — *Nobody has paid "
-            "yet. Leaving withdraws your yes.* The same words the departure "
-            "answers with."
+            "`BEFORE_THE_CUT_OFF` — *Nothing is taken: the hold on your card is "
+            "let go. Your seat is offered to others. On your record only if the "
+            "game is then called off.* (Q113) `AFTER_THE_CUT_OFF` — *Your seat "
+            "is offered to others. If someone takes it, you get 38,40 zł back "
+            "(40 zł less the 1,60 zł kept on your payment); if nobody does, you "
+            "won't. On your record if nobody takes it.* "
+            "`WHILE_WAITING_FOR_THE_CLUB` — *Nobody has paid yet. Leaving "
+            "withdraws your yes.* The same words the departure answers with."
         )
     )
-    refund_grosze: int = Field(
+    refund_grosze: int | None = Field(
         description=(
-            "What comes back — the share less the card fee; nought when nobody "
-            "paid."
+            "After the cut-off, what comes back if somebody takes the seat — "
+            "the share less the card fee; nought when nobody paid. `null` "
+            "before the cut-off, when nothing is taken and nothing comes back "
+            "(#637)."
         )
     )
-    card_fee_grosze: int = Field(
+    card_fee_grosze: int | None = Field(
         description=(
-            "The card fee that isn't returned — the provider's standard price, "
-            "an estimate; what it kept is on the receipt."
+            "After the cut-off, the card fee that isn't returned — the "
+            "provider's standard price, an estimate; what it kept is on the "
+            "receipt. `null` before the cut-off (#637)."
         )
     )
 
@@ -1238,8 +1252,8 @@ class DepartureResponse(BaseModel):
 
     left: Leaving = Field(
         description=(
-            "`BEFORE_THE_CUT_OFF` — refunded at once, less the card fee (the "
-            "receipt follows within moments); the seat is offered to others. "
+            "`BEFORE_THE_CUT_OFF` — nothing was taken: the hold on the card is "
+            "let go, nobody is refunded (#637); the seat is offered to others. "
             "`AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others "
             "until the start; refunded, less the card fee, when somebody takes it. "
             "`WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the "
@@ -1381,9 +1395,13 @@ class BookingDetailsResponse(BaseModel):
                 game=game,
                 reader=reader,
                 people=details.people,
-                # A rescue's players have paid, whatever the reader outside
-                # has (#545).
-                paid=details.state.money.paid or details.rescue is not None,
+                # A rescue's players have paid once the cut-off took their
+                # shares, whatever the reader outside has (#545, #637).
+                paid=details.state.money.paid
+                or (
+                    details.rescue is not None
+                    and not details.rescue.fills_by_the_cut_off
+                ),
             ),
             money=_money(details.state.money),
             answer_by=details.state.answer_by,
@@ -1620,8 +1638,9 @@ class SeatToFillSchema(BaseModel):
     )
     players: list[BookedTileSchema] = Field(
         description=(
-            "Everybody on the game, each *paid* — the small posters, first side "
-            "first. Long-press a poster for their record."
+            "Everybody on the game, each *paid* once the cut-off took their "
+            "shares (#637) — the small posters, first side first. Long-press a "
+            "poster for their record."
         )
     )
 
@@ -1652,7 +1671,8 @@ class SeatToFillSchema(BaseModel):
                     player,
                     reader=reader,
                     sport_people=people,
-                    paid=True,
+                    # Held until the cut-off, taken at it (#637).
+                    paid=not fills_by_the_cut_off,
                     checked_in=player in game.checked_in,
                 )
                 for player in game.players

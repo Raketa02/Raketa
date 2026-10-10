@@ -129,7 +129,8 @@ def price_of(game: BookedGame) -> int:
 @dataclass(frozen=True, slots=True)
 class Takings:
     """A booking's money as its club reads it (the mechanics §16.7, §16.11):
-    who paid, what was collected, what was given back — and, on the Money page
+    who paid and whose share is only held, what was collected — taken shares
+    only (#637) — what was given back — and, on the Money page
     (#548), the card fees the club pays on it, what is the club's, and whether
     a payout has carried that to its bank."""
 
@@ -142,6 +143,9 @@ class Takings:
     #: Whether a payout carried it to the club's bank; until then it waits on
     #: the club's account, where a refund before the start can come out of it.
     paid_out: bool = False
+    #: Everybody whose share is held on their card for the game until the
+    #: club's cut-off, which takes it (#637) — not paid, and not collected.
+    held: frozenset[UUID] = frozenset()
 
     @property
     def net_grosze(self) -> int:

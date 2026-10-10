@@ -535,9 +535,9 @@ async def test_empty_seat_at_the_cut_off_opens_a_seat_before_the_next_cut_off(
     pane = pane_of(await board_of(client, world.group), game)
     assert pane["booking"]["state"] == "SEAT_OPEN"
     assert moments_of(pane)["CUT_OFF"] == (at(warsaw(5, 9)), "cut-off")
-    refunds = {c["player"]["name"]: c["refund"] for c in pane["charges"]}
-    assert refunds["kuba"]["withholds_fee"] is True
-    assert refunds["marta"] is None
+    # Kuba's hold let go when he left; hers still held (#637).
+    statuses = {c["player"]["name"]: c["status"] for c in pane["charges"]}
+    assert (statuses["kuba"], statuses["marta"]) == ("CANCELLED", "HELD")
 
     # Not due: the cut-off leaves it as it is.
     clock.move(timedelta(minutes=59))
@@ -547,7 +547,7 @@ async def test_empty_seat_at_the_cut_off_opens_a_seat_before_the_next_cut_off(
         == "SEAT_OPEN"
     )
 
-    # Due: called off, and everybody still in refunded in full.
+    # Due: called off, and every hold let go — nobody pays (#637).
     clock.move(timedelta(minutes=1))
     home = await her_home_game(client, world, game)
     assert (home["status"], home["called_off_reason"]) == (
@@ -557,8 +557,9 @@ async def test_empty_seat_at_the_cut_off_opens_a_seat_before_the_next_cut_off(
     assert (await runs(client, "cut-off"))["done"] == 1
     pane = pane_of(await board_of(client, world.group), game)
     assert pane["booking"]["state"] == "CALLED_OFF"
-    refunds = {c["player"]["name"]: c["refund"] for c in pane["charges"]}
-    assert refunds["marta"]["withholds_fee"] is False
+    marta = next(c for c in pane["charges"] if c["player"]["name"] == "marta")
+    assert marta["status"] in ("RELEASING", "CANCELLED")
+    assert marta["refund"] is None
     assert (await runs(client, "cut-off"))["done"] == 0
 
 

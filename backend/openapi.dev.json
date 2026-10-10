@@ -288,7 +288,7 @@
           "dev"
         ],
         "summary": "Leave the game, as this person",
-        "description": "`POST /api/v1/bookings/{id}/departure` as the acting account: before the cut-off refunded at once less the card fee, after it the seat offered until the start and refunded when it is taken, while the club decides the request withdrawn \u2014 and the seat offered to the group.",
+        "description": "`POST /api/v1/bookings/{id}/departure` as the acting account: before the cut-off the hold let go and nothing taken (#637), after it the seat offered until the start and refunded when it is taken, while the club decides the request withdrawn \u2014 and the seat offered to the group.",
         "operationId": "leave_the_game_dev_as__player_id__bookings__booking_id__departure_post",
         "parameters": [
           {
@@ -2736,7 +2736,7 @@
           "dev"
         ],
         "summary": "Situation 6 \u00b7 Kuba leaves before the cut-off",
-        "description": "A rescue for her phone: the soonest hour of her week whose cut-off is 2 hours off at least, at a club of the group's that books at once \u2014 booked by four of the group as if earlier, never her, in the kind her deck shows \u2014 and the first of the four leaves it now, through the leave their phone runs: refunded at once less the card fee, and the seat offered to everybody who fits and is free, as a *Seat open* card to its best fits. *Take the seat* or *No* from her phone or the rows; still open at the cut-off, *Run it now* on the cut-off calls the game off.",
+        "description": "A rescue for her phone: the soonest hour of her week whose cut-off is 2 hours off at least, at a club of the group's that books at once \u2014 booked by four of the group as if earlier, never her, in the kind her deck shows \u2014 and the first of the four leaves it now, through the leave their phone runs: their hold let go, nothing taken, and the seat offered to everybody who fits and is free, as a *Seat open* card to its best fits. *Take the seat* or *No* from her phone or the rows; still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go.",
         "operationId": "one_leaves_before_the_cut_off_dev_situations_one_leaves_before_the_cut_off_post",
         "requestBody": {
           "content": {
@@ -3361,7 +3361,7 @@
           "dev"
         ],
         "summary": "Run it now \u00b7 the cut-off",
-        "description": "Calls off every booked game with a seat open since before its cut-off once the cut-off has come \u2014 everybody still in refunded in full, the court free, the club emailed. A game whose cut-off is still ahead is left as it is, seat open or not.",
+        "description": "Once a booked game's cut-off has come: a full game has every share held for it taken \u2014 the money moves then, and the club's Collected with it \u2014 and a game with a seat open since before its cut-off is called off, every hold let go so nobody pays anything, the court free, the club emailed. A game whose cut-off is still ahead is left as it is, held, seat open or not.",
         "operationId": "run_the_cut_off_dev_jobs_cut_off_post",
         "responses": {
           "200": {
@@ -3606,7 +3606,7 @@
         "properties": {
           "outcome": {
             "$ref": "#/components/schemas/AcceptOutcome",
-            "description": "`BOOKED` \u2014 everybody paid, the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` \u2014 accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` \u2014 a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` \u2014 a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
+            "description": "`BOOKED` \u2014 every share is held, and taken at your cut-off (or taken now, after it \u2014 #637); the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` \u2014 accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` \u2014 a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` \u2014 a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full."
           },
           "court_name": {
             "anyOf": [
@@ -4175,6 +4175,19 @@
             "format": "date-time",
             "title": "Opened At"
           },
+          "held_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held Until",
+            "description": "The cut-off a share held for the booked game is taken at (#637) \u2014 `HELD` until then, let go (`RELEASING`, `CANCELLED`) by a leave, a game short at it or the club's cancel before it. `null` for a share never held for the game."
+          },
           "taken_at": {
             "anyOf": [
               {
@@ -4207,6 +4220,7 @@
           "failure",
           "payment_id",
           "opened_at",
+          "held_until",
           "taken_at",
           "refund"
         ],
@@ -4851,7 +4865,7 @@
         "properties": {
           "left": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
           }
         },
         "type": "object",
@@ -6300,7 +6314,7 @@
           },
           "left": {
             "$ref": "#/components/schemas/PersonRef",
-            "description": "Who left, just now \u2014 refunded at once, less the card fee."
+            "description": "Who left, just now \u2014 their hold let go, nothing taken (#637)."
           },
           "offered_to": {
             "items": {
@@ -7508,6 +7522,7 @@
         "enum": [
           "AUTHORISED",
           "FAILED",
+          "HELD",
           "TAKING",
           "CAPTURED",
           "RELEASING",
@@ -7590,7 +7605,7 @@
             },
             "type": "array",
             "title": "Players",
-            "description": "Everybody on the game, each *paid* \u2014 the small posters, first side first. Long-press a poster for their record."
+            "description": "Everybody on the game, each *paid* once the cut-off took their shares (#637) \u2014 the small posters, first side first. Long-press a poster for their record."
           }
         },
         "type": "object",
@@ -7861,7 +7876,7 @@
         "properties": {
           "before": {
             "$ref": "#/components/schemas/GameToLeave",
-            "description": "Its cut-off ahead: leaving refunds her at once, less the card fee, and offers the seat until the cut-off."
+            "description": "Its cut-off ahead: leaving lets her hold go \u2014 nothing taken (#637) \u2014 and offers the seat until the cut-off."
           },
           "after": {
             "$ref": "#/components/schemas/GameToLeave",
@@ -8313,7 +8328,7 @@
                 "type": "null"
               }
             ],
-            "description": "Present when this yes booked the game: every seat was charged, and the booking and its Game are open. `null` otherwise."
+            "description": "Present when this yes booked the game: every seat's share was held until the club's cut-off, or taken after it (#637), and the booking and its Game are open. `null` otherwise."
           },
           "waiting_for_the_club": {
             "type": "boolean",

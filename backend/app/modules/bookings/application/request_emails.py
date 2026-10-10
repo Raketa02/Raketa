@@ -75,7 +75,9 @@ def request_waiting_email(
     answer_by: Instant,
     link: str,
 ) -> OutgoingMessage:
-    """*A booking is waiting for your answer* — with the countdown."""
+    """*A booking is waiting for your answer* — with the countdown, and that
+    the shares are held when the club accepts and taken at its cut-off (#637;
+    the mechanics §16.8, Q113)."""
 
     players = SPORT_SPECS[sport].players
     return render(
@@ -90,9 +92,9 @@ def request_waiting_email(
                 f"{_wall(starts_at + _A_GAME):%H:%M}.",
                 f"{_PLAYERS_IN_WORDS.get(players, str(players))} players want it, "
                 f"{_zloty(share_grosze * players)} for the court. Nobody has paid: "
-                f"everybody is charged the moment you accept.",
+                f"the shares are held when you accept and taken at the cut-off.",
                 f"Answer by {_day_and_time(answer_by)}. If you don't, the request "
-                f"expires, nobody is charged and the hour is yours to sell again.",
+                f"expires, nobody pays and the hour is yours to sell again.",
             ),
             button_label="Answer the request",
             button_url=link,

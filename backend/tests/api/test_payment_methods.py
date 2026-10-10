@@ -43,8 +43,8 @@ TERMS = f"{BASE}/terms"
 CONFIRMATION = f"{BASE}/confirmation"
 CURRENT = f"{BASE}/current"
 
-#: The payment terms in force — the mechanics §12.5, settled on 2026-09-29.
-TERMS_IN_FORCE = "2026-09-29"
+#: The payment terms in force — the mechanics §12.5, as Q113 rewrote them on 2026-10-10.
+TERMS_IN_FORCE = "2026-10-10"
 
 A_MASTERCARD = EnteredCard(brand="mastercard", last_four="4444")
 

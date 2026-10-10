@@ -13,15 +13,16 @@ from collections.abc import Sequence
 from typing import final
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
+from app.kernel import Instant
 from app.modules.payments.domain.events import (
     SeatChargeAuthorised,
     SeatChargeFailed,
 )
-from app.modules.payments.domain.seat_charge import SeatCharge
+from app.modules.payments.domain.seat_charge import SeatCharge, SeatChargeStatus
 from app.modules.payments.infrastructure.payment_models import SeatChargeORM
 
 SEAT_CHARGE_AGGREGATE = "seat_charge"
@@ -77,6 +78,7 @@ class EventSourcedSeatChargeRepository:
                     opened_at=charge.opened_at,
                     taken_at=charge.taken_at,
                     starts_at=charge.starts_at,
+                    held_until=charge.held_until,
                 )
             )
             await self._session.flush()
@@ -85,7 +87,11 @@ class EventSourcedSeatChargeRepository:
             await self._session.execute(
                 update(SeatChargeORM)
                 .where(SeatChargeORM.charge_id == charge.charge_id)
-                .values(status=charge.status.value, taken_at=charge.taken_at)
+                .values(
+                    status=charge.status.value,
+                    taken_at=charge.taken_at,
+                    held_until=charge.held_until,
+                )
             )
         # Deliberately no commit: the transaction boundary is the use case's.
         self._versions[charge.charge_id] = charge.version
@@ -104,6 +110,18 @@ class EventSourcedSeatChargeRepository:
             )
         )
         return None if found is None else await self.load(found)
+
+    async def games_held_until(self, moment: Instant) -> Sequence[UUID]:
+        ids = await self._session.scalars(
+            select(SeatChargeORM.game_id)
+            .where(
+                SeatChargeORM.status == SeatChargeStatus.HELD.value,
+                SeatChargeORM.held_until <= moment,
+            )
+            .group_by(SeatChargeORM.game_id)
+            .order_by(func.min(SeatChargeORM.held_until), SeatChargeORM.game_id)
+        )
+        return tuple(ids.all())
 
     async def paid_by(self, player_id: UUID) -> Sequence[SeatCharge]:
         return await self._loaded(

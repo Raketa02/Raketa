@@ -79,7 +79,8 @@ _NOT_STARTED = (
     summary="Start saving a payment method",
     description=(
         "Opens a setup at the provider for a card saved for **off-session** use "
-        "— charged by the club when a game fills, without the player present. "
+        "— held by the club when a game fills and taken at its cut-off, without "
+        "the player present (#637). "
         "The first opens the player's customer at the provider. A method already "
         "saved **keeps working** until a setup saves another (*Change*); a setup "
         "left open is replaced by the next one. Answers what the phone opens the "

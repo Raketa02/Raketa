@@ -41,6 +41,7 @@ from tests.api.proposals_world import (
     a_player,
     makes,
     says_yes,
+    the_cut_off_comes,
     warsaw,
 )
 from tests.unit.fake_clock import MovableClock
@@ -145,10 +146,14 @@ async def leaves(client, player: dict, booking_id: str):
 
 
 async def test_the_club_reads_a_month_of_its_money_booking_by_booking(
-    client, club, booking, four, mailbox
+    client, session_factory, clock, club, booking, four, mailbox
 ):
     _, desk = club
-    # Kuba leaves before the cut-off: refunded his share less its card fee.
+    await mailbox.drain()
+    # Held until the cut-off, nothing is collected yet (#637).
+    assert (await money_of(client, desk, "2026-10"))["bookings"] == []
+    await the_cut_off_comes(session_factory, clock)
+    # Kuba leaves after the cut-off: his seat stays paid.
     await leaves(client, four[1], booking)
     await mailbox.drain()
 
@@ -160,16 +165,16 @@ async def test_the_club_reads_a_month_of_its_money_booking_by_booking(
     assert row["starts_at"].startswith("2026-10-10T15:00:00")
     assert (row["court_name"], row["sport"]) == ("Court 1", "PADEL")
     assert row["collected_grosze"] == 4 * SHARE
-    assert row["refunded_grosze"] == SHARE - FEE
+    assert row["refunded_grosze"] == 0
     assert row["card_fees_grosze"] == 4 * FEE
-    # 120 zł, less 28,55 zł given back, less 5,80 zł of card fees.
-    assert row["net_grosze"] == 85_65
+    # 120 zł, less 5,80 zł of card fees.
+    assert row["net_grosze"] == 114_20
     assert row["paid_out"] is False
     assert money["totals"] == {
         "collected_grosze": 120_00,
-        "refunded_grosze": 28_55,
+        "refunded_grosze": 0,
         "card_fees_grosze": 5_80,
-        "net_grosze": 85_65,
+        "net_grosze": 114_20,
     }
     november = await money_of(client, desk, "2026-11")
     assert november["bookings"] == []
@@ -190,6 +195,7 @@ async def test_the_club_is_paid_a_day_s_games_once_the_day_closes(
     client, session_factory, clock, club, booking, payments, mailbox
 ):
     _, desk = club
+    await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
     # The last Raketa hour of Saturday has ended.
     clock.at = at(10, 23)
@@ -213,6 +219,7 @@ async def test_nothing_is_paid_out_before_the_day_of_the_game_closes(
     client, session_factory, clock, club, booking, payments, mailbox
 ):
     _, desk = club
+    await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
 
     clock.at = at(10, 17, 30)  # playing
@@ -229,10 +236,12 @@ async def test_nothing_is_paid_out_before_the_day_of_the_game_closes(
 async def test_a_payout_waits_for_the_money_still_on_its_way(
     client, session_factory, clock, club, booking, payments, mailbox
 ):
-    """The shares were taken when the game filled and are captured from the
-    outbox: until every one is, the game's money is not the club's to be paid
-    — the same for a refund decided and not yet made."""
+    """The shares were taken at the cut-off and are captured from the outbox:
+    until every one is, the game's money is not the club's to be paid — the
+    same for a refund decided and not yet made."""
 
+    await mailbox.drain()
+    await the_cut_off_comes(session_factory, clock)
     clock.at = at(10, 23)
 
     await pays_out(session_factory, clock, mailbox)
@@ -248,11 +257,14 @@ async def test_a_payout_waits_for_the_money_still_on_its_way(
 async def test_a_day_that_cost_the_club_is_netted_against_the_next_one_paid(
     client, session_factory, clock, club, group, booking, four, payments, mailbox
 ):
-    """The club cancels Saturday's game: everybody is given back whole, and its
-    card fees are the club's — 5,80 zł it is owed nothing for. Sunday's game is
-    played whole, and Sunday's payout carries both: 114,20 zł less 5,80 zł."""
+    """The club cancels Saturday's game after its cut-off took the shares:
+    everybody is given back whole, and its card fees are the club's — 5,80 zł
+    it is owed nothing for. Sunday's game is played whole, and Sunday's payout
+    carries both: 114,20 zł less 5,80 zł."""
 
     club_id, desk = club
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
     cancelled = await client.post(
         f"{BOOKINGS}/{booking}/cancellation", json={"reason": "WEATHER"}, headers=desk
     )
@@ -270,6 +282,9 @@ async def test_a_day_that_cost_the_club_is_netted_against_the_next_one_paid(
     await mailbox.drain()
 
     clock.at = at(10, 23)
+    # Sunday's cut-off has come too: its shares are taken.
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
     await pays_out(session_factory, clock, mailbox)
     assert payments.called("pay_out") == []
 
@@ -287,8 +302,9 @@ async def test_a_game_short_at_its_cut_off_is_not_paid_out_before_its_refunds(
     client, session_factory, clock, club, booking, four, payments, mailbox
 ):
     """Kuba left and nobody took his seat, so the game was off from its
-    cut-off — but until the cut-off job gives the others their money back,
-    their shares still read paid, and none of it is the club's."""
+    cut-off — but until the cut-off job lets the others' holds go, their
+    shares are still held, not settled, and none of it is the club's; and it
+    took nothing, so the Money page lists nothing for it (#637)."""
 
     _, desk = club
     await leaves(client, four[1], booking)
@@ -298,8 +314,7 @@ async def test_a_game_short_at_its_cut_off_is_not_paid_out_before_its_refunds(
     await pays_out(session_factory, clock, mailbox)
 
     assert payments.called("pay_out") == []
-    [row] = (await money_of(client, desk, "2026-10"))["bookings"]
-    assert row["status"] == "CALLED_OFF"
+    assert (await money_of(client, desk, "2026-10"))["bookings"] == []
 
 
 async def test_a_payout_the_provider_cannot_take_yet_is_made_by_a_later_delivery(
@@ -309,6 +324,7 @@ async def test_a_payout_the_provider_cannot_take_yet_is_made_by_a_later_delivery
     from the outbox once the provider takes it — once, and told once."""
 
     _, desk = club
+    await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
     clock.at = at(10, 23)
     payments.unreachable = True

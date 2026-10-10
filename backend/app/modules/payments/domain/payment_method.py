@@ -17,7 +17,9 @@ had.
 card whose bank moved it to another cannot be charged off-session until its
 holder agrees again (the mechanics Appendix A). So ``terms_needed`` is read off
 the stream — the brand the latest consent was given for, against the brand the
-card has now — and never recorded.
+card has now — and never recorded. **And it covers the words**: consent given to
+terms no longer in force asks again too (#637), since the fill holds only a
+player who accepted the version in force.
 
 **Born by being used**: ``unwritten`` is a player who never opened the setup,
 and every act starts from it.
@@ -150,10 +152,14 @@ class PaymentMethod:
     @property
     def terms_needed(self) -> bool:
         """Whether the saved method waits on the terms being accepted again —
-        its card is of another brand than the one they were accepted for."""
+        its card is of another brand than the one they were accepted for, or
+        they were accepted in words no longer in force (#637): the fill holds
+        nothing on terms the player did not see."""
 
         return self.method is not None and (
-            self.consent is None or self.consent.brand != self.method.brand
+            self.consent is None
+            or self.consent.brand != self.method.brand
+            or self.consent.terms_version != PAYMENT_TERMS_VERSION
         )
 
     @property

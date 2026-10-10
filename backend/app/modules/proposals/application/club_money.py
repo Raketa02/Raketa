@@ -99,7 +99,8 @@ class ReadClubMoney:
                 takings=takings[game.booking_id],
             )
             for game in games
-            if game.booking_id in takings
+            # A game whose shares are only held has collected nothing yet.
+            if game.booking_id in takings and takings[game.booking_id].paid
         )
         return ClubMoney(
             month=first,

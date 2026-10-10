@@ -4,9 +4,11 @@
 the way the dealer makes a pick — ``MakeProposal``, at an hour Bonarka Arena
 sells padel — dealt to her and three of *Padel po pracy*'s crowd, and then said
 yes to through ``SayYes``, the use case the phone's swipe runs, her yes last. So
-the last yes **books** it: every seat charged together through the run's own
-fake provider, a Booking on the first free court, the ordinary Game it opens
-and its chat — and a receipt for each of the four. Nothing here opens a table.
+the last yes **books** it: every seat held together through the run's own fake
+provider — **taken at once** for the game on the day, which is after its
+cut-off, and **held until the cut-off** for next week's (#637) — a Booking on
+the first free court, the ordinary Game it opens and its chat, and a receipt
+for each of the four whose share was taken. Nothing here opens a table.
 
 **Two games, three states the screens draw**:
 
@@ -426,12 +428,16 @@ async def all_say_yes(
 def booking_lines(seeded: SeededBookings) -> list[str]:
     """The report's section: her booked games, and her receipts."""
 
-    lines = [f"Her booked games at {GAMES_CLUB.name}, each four seats paid:"]
+    lines = [
+        f"Her booked games at {GAMES_CLUB.name}, four seats each — held until "
+        "the cut-off, taken after it:"
+    ]
     for booking in seeded.bookings:
         state = "booked" if booking.made else "already booked"
+        money = "held" if booking.state == BEFORE_THE_CUT_OFF else "taken"
         lines.append(
             f"  {booking.start.astimezone(CLUB_ZONE):%a %d %b %H:%M} · "
-            f"{booking.state} · {state}"
+            f"{booking.state} · {state} · {money}"
         )
     lines.append(f"  her receipts: {seeded.receipts}")
     if seeded.waiting is not None:

@@ -193,25 +193,53 @@ class SeatChargeConfirmed:
 
 
 @dataclass(frozen=True)
+class SeatChargeKept:
+    """**The game booked on this hold, which is kept on the card until the
+    club's cut-off** (#637; ADR-0189's 2026-10-10 amendment) — and taken then.
+    Raketa's decision, recorded with the booking; nothing moves at the
+    provider. Not paid: leaving before ``until`` lets it go, and nothing is
+    taken."""
+
+    charge_id: UUID
+    player_id: UUID
+    booking_id: UUID
+    #: The club's cut-off, as the booking holds it: when the share is taken.
+    until: datetime
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class SeatChargeTaken:
-    """**The game booked, so the hold is taken.** Raketa's decision, recorded
-    with the booking; captured at the provider after the commit."""
+    """**The share is taken.** Raketa's decision — the game booked after its
+    cut-off, or the cut-off came — recorded in that act's transaction; captured
+    at the provider after the commit."""
 
     charge_id: UUID
     player_id: UUID
     booking_id: UUID
     occurred_at: datetime
+    #: Taken at the cut-off off a hold kept for the booked game (#637), not at
+    #: the fill: nobody is told *It's a game!* again. ``False`` on every take
+    #: recorded before holds were kept — each was a fill's.
+    kept: bool = False
 
 
 @dataclass(frozen=True)
 class SeatChargeReleased:
-    """**The game did not book on it, so the hold is let go** — another seat
-    failed, or somebody else took this one. Raketa's decision; cancelled at the
-    provider after the commit, which costs nothing."""
+    """**The hold is let go** — the game did not book on it (another seat
+    failed, or somebody else took this one), or a share held for the booked
+    game is given up before the cut-off: a leave, a game short at it, the
+    club's cancel (#637). Raketa's decision; cancelled at the provider after
+    the commit, which costs nothing."""
 
     charge_id: UUID
     player_id: UUID
     occurred_at: datetime
+    #: Why a held share was let go — the ``RefundReason`` code its giving back
+    #: was decided for (#637). ``None`` for an undecided hold the game did not
+    #: book on, and on every release recorded before: a default rather than a
+    #: version 2, since every such row is one.
+    reason: str | None = None
 
 
 @dataclass(frozen=True)

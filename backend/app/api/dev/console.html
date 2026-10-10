@@ -478,7 +478,7 @@ async function rowAct(button) {
     say(done, done.ok ? `${words} → ${esc(done.json.left)}` : words);
   } else if (verb === "take") {
     done = await call("POST", at(`bookings/${booking}/seats`));
-    say(done, done.ok ? `${words} → ${done.json.booked ? "seated, paid" : `payment refused (${esc(done.json.your_payment?.refusal ?? "")})`}` : words);
+    say(done, done.ok ? `${words} → ${done.json.booked ? "seated" : `payment refused (${esc(done.json.your_payment?.refusal ?? "")})`}` : words);
   } else if (verb === "no-seat") {
     done = await call("POST", at(`bookings/${booking}/no`));
     say(done, done.ok ? `${words} → the card is gone from their deck` : words);
@@ -675,11 +675,12 @@ function drawGames() {
           (d.rescued_by ? ` · seat taken by ${nameOf(d.rescued_by)}` : " · seat open")).join("<br>")
       : "—";
     const charges = game.charges.length ? `<table>
-      <thead><tr><th>Who</th><th>Share</th><th>Status</th><th>Taken</th><th>Refund</th><th>Provider</th></tr></thead>
+      <thead><tr><th>Who</th><th>Share</th><th>Status</th><th>Held until</th><th>Taken</th><th>Refund</th><th>Provider</th></tr></thead>
       <tbody>${game.charges.map((c) => `<tr>
         <td>${nameOf(c.player)}</td>
         <td>${zl(c.amount_grosze)}</td>
         <td>${pill(c.status)}${c.failure ? ` <span class="bad">${esc(c.failure)}</span>` : ""}</td>
+        <td>${when(c.held_until)}</td>
         <td>${when(c.taken_at)}</td>
         <td>${c.refund ? `${zl(c.refund.given_back_grosze)}` +
           (c.refund.withholds_fee ? " less fee" : " in full") +

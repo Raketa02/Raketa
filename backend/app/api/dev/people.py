@@ -176,7 +176,7 @@ async def withdraw_yes(
     summary="Leave the game, as this person",
     description=(
         "`POST /api/v1/bookings/{id}/departure` as the acting account: before "
-        "the cut-off refunded at once less the card fee, after it the seat "
+        "the cut-off the hold let go and nothing taken (#637), after it the seat "
         "offered until the start and refunded when it is taken, while the club "
         "decides the request withdrawn — and the seat offered to the group."
     ),

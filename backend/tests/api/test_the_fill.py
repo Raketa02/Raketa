@@ -1,7 +1,8 @@
 """**The last yes books the game** (#541; the mechanics §11–§12.2; ADR-0189 §2,
-§4–§5): every seat charged together on the club's account, or nobody; a
-Booking on the first free court, opening an ordinary Game and its chat; and
-what that does to everybody's other yeses and to the club's hours.
+§4–§5): every seat held together on the club's account until the cut-off
+(#637), or nobody; a Booking on the first free court, opening an ordinary Game
+and its chat; and what that does to everybody's other yeses and to the club's
+hours.
 
 Every act is taken over HTTP as the phone takes it, against the **fake payment
 provider** the application holds, and every claim is read where somebody would
@@ -57,6 +58,7 @@ from tests.api.proposals_world import (
     saves_a_card,
     says_yes,
     sweeps,
+    the_cut_off_comes,
     warsaw,
 )
 from tests.api.test_payment_notices import notice
@@ -145,7 +147,7 @@ def payment_of(secret: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-async def test_the_last_yes_books_the_game_and_every_seat_pays_together(
+async def test_the_last_yes_books_the_game_and_holds_every_seat_together(
     client, session_factory, clock, payments, mailbox, club, four, group
 ):
     proposal = await a_full_card_but_one(
@@ -168,8 +170,13 @@ async def test_the_last_yes_books_the_game_and_every_seat_pays_together(
         str(player["id"]) for player in four
     }
     await mailbox.drain()
-    assert len(payments.called("capture")) == 4
+    # Held until the club's cut-off, which takes them (#637).
+    assert payments.called("capture") == []
     assert payments.called("cancel") == []
+    assert await receipts(client, four[0]) == []
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
+    assert len(payments.called("capture")) == 4
     for player in four:
         [receipt] = await receipts(client, player)
         assert receipt["kind"] == "CHARGE"
@@ -183,8 +190,8 @@ async def test_the_last_yes_books_the_game_and_every_seat_pays_together(
 async def test_every_seat_is_held_before_any_is_taken(
     client, session_factory, clock, payments, mailbox, club, four, group
 ):
-    """The money moves only once every hold is in, and only after the booking
-    is on the record — the captures follow the commit."""
+    """The money moves only once every hold is in, and only at the club's
+    cut-off (#637) — the captures follow the cut-off's commit."""
 
     proposal = await a_full_card_but_one(
         client, session_factory, clock, club=club, group=group, four=four
@@ -192,10 +199,14 @@ async def test_every_seat_is_held_before_any_is_taken(
 
     await says_yes(client, four[3], proposal)
     await mailbox.drain()
+    at_the_fill = [call.name for call in payments.calls if call.name == "capture"]
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
 
     acts = [
         call.name for call in payments.calls if call.name in ("authorise", "capture")
     ]
+    assert at_the_fill == []
     assert acts == ["authorise"] * 4 + ["capture"] * 4
 
 
@@ -368,6 +379,7 @@ async def test_confirming_the_payment_is_the_yes_again_and_books_the_game(
     # Within his time to pay, everybody else's hold was kept: nobody's bank is
     # asked again, and Tomek's confirmed payment is the one taken (#625).
     assert len(payments.called("authorise")) == held_before
+    await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
     taken = {call.arguments["payment_id"] for call in payments.called("capture")}
     assert payment_of(secret) in taken
@@ -854,7 +866,7 @@ async def test_a_method_with_a_booked_game_ahead_cannot_be_removed(
 # --------------------------------------------------------------------------- #
 
 
-async def test_everybody_is_emailed_it_s_a_game_with_what_they_paid(
+async def test_everybody_is_emailed_it_s_a_game_with_their_share_held(
     client, session_factory, clock, mailbox, club, four, group
 ):
     proposal = await a_full_card_but_one(
@@ -865,16 +877,15 @@ async def test_everybody_is_emailed_it_s_a_game_with_what_they_paid(
 
     for name in ("ola", "kuba", "ewa", "tomek"):
         [email] = await mailbox.to(f"{name}@example.com")
-        assert email.subject == "It's a game! · you paid 30 zł"
+        assert email.subject == "It's a game! · 30 zł held"
         assert "Bonarka Arena, Court 1" in email.text
         assert "Saturday 10 October, 17:00 until 18:00" in email.text
-        # What leaving by the cut-off gives back, never *free* (Q99): the
-        # 30 zł share less the 1,45 zł card fee the payments estimate.
+        # Held until the cut-off, and leaving before it takes nothing (#637).
         assert (
-            "You can leave until Friday 9 October, 17:00 and get 28,55 zł back "
-            "at once (the 1,45 zł card fee isn't returned)."
+            "30 zł is held on your card and taken on Fri 17:00, the club's "
+            "cut-off. Leave before then and nothing is taken."
         ) in email.text
-        assert "free to leave" not in email.text
+        assert "card fee" not in email.text
 
 
 async def test_a_game_that_fills_after_its_cut_off_says_so(
@@ -947,6 +958,7 @@ async def test_a_singles_game_books_one_against_one(
     assert last.json()["booked"] is not None
     [game] = (await client.get(GAMES, headers=ola["headers"])).json()["games"]
     assert sorted(seat["side"] for seat in game["seats"]) == ["A", "B"]
+    await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
     [receipt] = await receipts(client, kuba)
     # Tennis at 80 zł, between two.
@@ -1037,6 +1049,7 @@ async def test_a_capture_heard_after_it_was_recorded_records_nothing(
         client, session_factory, clock, club=club, group=group, four=four
     )
     await says_yes(client, four[3], proposal)
+    await the_cut_off_comes(session_factory, clock)
     await mailbox.drain()
     capture = payments.called("capture")[0]
     [receipt] = await receipts(client, four[0])

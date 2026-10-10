@@ -171,7 +171,8 @@ class WaitingBookingsResponse(BaseModel):
 class AcceptanceResponse(BaseModel):
     outcome: AcceptOutcome = Field(
         description=(
-            "`BOOKED` — everybody paid, the game is booked on `court_name` and "
+            "`BOOKED` — every share is held, and taken at your cut-off (or "
+            "taken now, after it — #637); the game is booked on `court_name` and "
             "the players are told. `WAITING_FOR_A_PAYMENT` — accepted, and one "
             "player's payment did not go through (#626): **your yes and the "
             "court are kept** until `payment_due_by` while they pay. Nobody has "
@@ -267,11 +268,12 @@ async def waiting(
     },
     summary="Accept a request",
     description=(
-        "**Accept** books the game: everybody is charged at this moment, all "
+        "**Accept** books the game: every share is held at this moment, all "
         "together or not at all, on your account — you are the seller — and "
-        "the players are given the court that was reserved for them. Their game, "
-        "its chat and their receipts open; *It's a game! · you paid* is emailed "
-        "to each."
+        "taken at your cut-off, or at once when you accept after it (#637); the "
+        "players are given the court that was reserved for them. Their game and "
+        "its chat open; *It's a game! · 30 zł held* (*you paid* after the "
+        "cut-off) is emailed to each."
     ),
 )
 async def accept(
@@ -318,7 +320,8 @@ async def refuse(
 
 class ClubBookingPlayerSchema(BaseModel):
     """A player on the game, as the club sees them — **a name, whether they
-    paid, and whether the desk checked them in**, and nothing else (§16.14)."""
+    paid or their share is only held, and whether the desk checked them in**,
+    and nothing else (§16.14)."""
 
     player_id: UUID
     name: str | None = Field(
@@ -327,6 +330,13 @@ class ClubBookingPlayerSchema(BaseModel):
         )
     )
     paid: bool = Field(description="Their share was taken — *paid ✓*.")
+    held: bool = Field(
+        description=(
+            "Their share is held on their card, and taken at the cut-off — "
+            "*held*. Not paid, and not in `collected_grosze` (#637). Never "
+            "`true` with `paid`."
+        )
+    )
     checked_in_at: datetime | None = Field(
         description="When the desk checked them in — *checked in ✓* — or `null`."
     )
@@ -335,12 +345,18 @@ class ClubBookingPlayerSchema(BaseModel):
 class ClubBookingMoneySchema(BaseModel):
     price_grosze: int = Field(description="The court's price for the hour.")
     collected_grosze: int = Field(
-        description="Every share taken from the players, on your account."
+        description=(
+            "Every share taken from the players, on your account — at your "
+            "cut-off, or at once after it. A share only held is not collected "
+            "(#637)."
+        )
     )
     refunded_grosze: int = Field(
         description=(
-            "Everything given back — to a leaver less the card fee, in full on a "
-            "game called off or cancelled. Refunds are automatic: you never "
+            "Everything given back of a share taken — to a leaver whose seat "
+            "was taken after the cut-off, less the card fee; in full on a game "
+            "cancelled after it. A hold let go before the cut-off refunds "
+            "nothing: nothing was taken. Refunds are automatic: you never "
             "refund anybody by hand."
         )
     )
@@ -385,7 +401,8 @@ class ClubBookingSchema(BaseModel):
             "accepted, and one player's payment is still to come until "
             "`payment_due_by` (#626): *Accepted · waiting for one player's "
             "payment until 21:20*. Your yes and the court are kept; nothing for "
-            "you to answer. `BOOKED` — full and paid. `SEAT_OPEN` — "
+            "you to answer. `BOOKED` — full; each share held until your cut-off "
+            "and taken at it (#637). `SEAT_OPEN` — "
             "a player left and Raketa is finding a replacement; before the "
             "cut-off, a seat still open at it calls the game off and the court "
             "comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody "
@@ -454,6 +471,7 @@ class ClubBookingSchema(BaseModel):
                     player_id=player,
                     name=day.names.get(player),
                     paid=player in row.takings.paid,
+                    held=player in row.takings.held,
                     checked_in_at=game.checked_in.get(player),
                 )
                 for player in game.players
@@ -761,7 +779,12 @@ async def check_in(
 
 
 class MoneyTotalsSchema(BaseModel):
-    collected_grosze: int = Field(description="Every share taken from the players.")
+    collected_grosze: int = Field(
+        description=(
+            "Every share taken from the players — at your cut-off, or at once "
+            "after it; never a share only held (#637)."
+        )
+    )
     refunded_grosze: int = Field(
         description=(
             "Everything given back — automatically: you never refund anybody by hand."

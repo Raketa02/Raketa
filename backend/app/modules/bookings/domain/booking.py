@@ -195,6 +195,8 @@ class Booking:
     refusal_reason: str | None = None
     #: When it was booked — ``None`` while it waits, and if it never was.
     booked_at: Instant | None = None
+    #: When its club cancelled it, once it did (#637).
+    cancelled_at: Instant | None = None
     #: Everybody who left the booked game, in the order they did (#544) — each
     #: with who took their seat, once somebody did (#545).
     departures: tuple[Departure, ...] = ()
@@ -854,6 +856,7 @@ class Booking:
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.CANCELLED_BY_THE_CLUB
             self.cancel_reason = CancelReason(event.reason)
+            self.cancelled_at = instant(event.occurred_at)
         elif isinstance(event, PlayerCheckedIn):
             self.checked_in = {
                 **self.checked_in,

@@ -829,16 +829,18 @@ class SeatCharges(Protocol):
 
 
 class RefundReason(StrEnum):
-    """Why a paid share is given back (the mechanics §12.3)."""
+    """Why a share is given back (the mechanics §12.3) — let go while it is
+    only held, refunded once taken (#637)."""
 
-    #: The player left before the club's cut-off: less the card fee.
+    #: The player left before the club's cut-off: their hold let go.
     LEFT_BEFORE_THE_CUT_OFF = "LEFT_BEFORE_THE_CUT_OFF"
-    #: The game was called off at the club's cut-off: in full.
+    #: The game was called off at the club's cut-off: every hold let go.
     CALLED_OFF_AT_THE_CUT_OFF = "CALLED_OFF_AT_THE_CUT_OFF"
     #: The player left after the cut-off and somebody took their seat (#545):
     #: less the card fee.
     SEAT_TAKEN = "SEAT_TAKEN"
-    #: The club cancelled the booked game (#547): in full.
+    #: The club cancelled the booked game (#547): every hold let go before
+    #: the cut-off, in full after it.
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
     #: The club cancelled a booked game the player had left, their seat still
     #: paid (#623, Q108): in full, in a leaver's words, no new game owed.
@@ -847,10 +849,12 @@ class RefundReason(StrEnum):
 
 @runtime_checkable
 class SeatRefunds(Protocol):
-    """**A demand of the Payments context**: give a booked game's paid shares
-    back (#544, #545) — less the card fee to a leaver before the cut-off, and
-    to one after it when somebody takes their seat; whole on a game called off
-    at its cut-off."""
+    """**A demand of the Payments context**: give a booked game's shares back
+    (#544, #545, #637). **A share only held is let go** — nothing was taken, so
+    nothing is refunded and no fee arises: a leave before the cut-off, a game
+    short at it, the club's cancel before it. **A share taken is refunded** —
+    less the card fee to a leaver whose seat somebody takes after the cut-off;
+    whole on a game called off at its cut-off or cancelled by its club."""
 
     async def refund(
         self,
@@ -861,10 +865,28 @@ class SeatRefunds(Protocol):
         at: Instant,
         because: ClubCancelReason | None = None,
     ) -> None:
-        """Give back what each of these players paid for this game, emailing
-        each, in the caller's transaction — the money follows the commit.
+        """Give back each of these players' share of this game — let go, or
+        refunded — emailing each, in the caller's transaction: the money
+        follows the commit.
         ``because`` is the club's reason, on a game it cancelled — what the
         email tells the player (#547)."""
+        ...
+
+
+@runtime_checkable
+class HeldShares(Protocol):
+    """**A demand of the Payments context**: the shares held for a booked game
+    until its club's cut-off, which takes them (#637; ADR-0189's 2026-10-10
+    amendment)."""
+
+    async def due(self, *, at: Instant) -> Sequence[UUID]:
+        """Every booked game with a share still held whose cut-off has come by
+        ``at``, the earliest first."""
+        ...
+
+    async def take(self, booking_id: UUID, *, at: Instant) -> int:
+        """Take every share held for this game, in the caller's transaction —
+        captured at the provider after the commit. Answers how many."""
         ...
 
 

@@ -96,7 +96,7 @@ class BookingStage(StrEnum):
     #: player's time to pay runs: no Game, nobody paid (#625, #626).
     WAITING_FOR_A_PAYMENT = "WAITING_FOR_A_PAYMENT"
     BOOKED = "BOOKED"
-    #: Booked and paid, and somebody left: a seat is open (#544).
+    #: Booked, and somebody left: a seat is open (#544).
     SEAT_OPEN = "SEAT_OPEN"
     CALLED_OFF = "CALLED_OFF"
     #: Its request was taken back because a seat opened while the club decided:
@@ -247,6 +247,21 @@ class BookedGame:
     #: Everybody whose refused share the game waits for, and until when —
     #: their time to pay (#625, #626). Empty while nobody's is awaited.
     paying: Mapping[UUID, Instant] = field(default_factory=dict)
+    #: When it was booked — at the fill, or at its On request club's yes.
+    #: ``None`` until it is.
+    booked_at: Instant | None = None
+    #: When its club cancelled it, once it did (#637).
+    cancelled_at: Instant | None = None
+
+    @property
+    def taken_at(self) -> Instant:
+        """When the players' shares are taken (#637): the club's cut-off — or,
+        for a game booked after it, when it was booked, which took them at
+        once."""
+
+        if self.booked_at is not None and self.booked_at > self.cut_off:
+            return self.booked_at
+        return self.cut_off
 
     @property
     def pay_by(self) -> Instant | None:
@@ -328,25 +343,40 @@ class CheckIn:
     qr_payload: str
 
 
+class ShareState(StrEnum):
+    """Where the players' shares of a booked game stand (#637; the mechanics
+    §12.2, §14.1, Q113)."""
+
+    #: Held on each card until the club's cut-off, which takes it — *30 zł ·
+    #: free to leave until Fri 17:00*. Not paid.
+    HELD = "HELD"
+    #: Taken — at the cut-off, or at once for a game booked after it: *Paid ·
+    #: 30 zł*.
+    TAKEN = "TAKEN"
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class BookedMoney:
     """The money line (the mechanics §14.1)."""
 
     share_grosze: int
-    #: Every seat's share was taken — *Paid · 30 zł*.
+    #: Every seat's share was **taken** — *Paid · 30 zł*. Never while it is
+    #: only held (#637).
     paid: bool
-    #: The club's cut-off while it is still ahead — leaving before it is
-    #: refunded at once, less the card fee — and ``None`` from it on, and for a
-    #: game that filled after it.
+    #: The club's cut-off while it is still ahead — leaving before it takes
+    #: nothing: the hold is let go — and ``None`` from it on, and for a game
+    #: that filled after it.
     free_to_leave_until: Instant | None
-    #: What leaving now gives back — the share less its card fee: *28,55 zł
-    #: back if you leave by Sat 17:00* (Q99) — whenever there is a
-    #: ``free_to_leave_until``, and ``None`` whenever there is not. The leave
-    #: sheet's own figure (``leave_terms``).
-    back_if_you_leave_grosze: int | None
-    #: What everybody still in is given back — the whole share, on a game
-    #: called off at its cut-off (#544); ``None`` where nothing is.
+    #: Whether the shares are held or taken (#637); ``None`` while nobody's
+    #: money is on the game — waiting for its club or a payment, called off.
+    share_state: ShareState | None = None
+    #: When the shares are, or were, taken — the cut-off, or when a game booked
+    #: after it was booked — whenever ``share_state`` is.
+    taken_at: Instant | None = None
+    #: What everybody still in is given back — the whole share, on a game its
+    #: club cancelled after its cut-off (#547); ``None`` where nothing is, and
+    #: where nothing was taken (#637).
     refunded_grosze: int | None = None
 
 
@@ -354,7 +384,7 @@ class Leaving(StrEnum):
     """What *Leave the game* does, by when it is pressed (the mechanics §13) —
     said on the details before, and answered by the act after."""
 
-    #: Before the club's cut-off: refunded at once, less the card fee.
+    #: Before the club's cut-off: nothing is taken — the hold is let go (#637).
     BEFORE_THE_CUT_OFF = "BEFORE_THE_CUT_OFF"
     #: After it: refunded, less the card fee, only when somebody takes the
     #: seat.
@@ -367,23 +397,18 @@ class Leaving(StrEnum):
 @final
 @dataclass(frozen=True, slots=True)
 class LeaveTerms:
-    """What leaving would cost the reader, said before they confirm —
-    *"You'll be refunded 38,40 zł now (the 1,60 zł card fee isn't
-    returned)"*."""
+    """What leaving would cost the reader, said before they confirm — after the
+    cut-off, *"If someone takes your seat, you get 38,40 zł back (40 zł less
+    the 1,60 zł kept on your payment)"*. **No quote before the cut-off**
+    (#637): nothing is taken, so nothing comes back."""
 
     kind: Leaving
-    #: What comes back — the share less the card fee; nought when nobody paid.
-    refund_grosze: int
+    #: What comes back if somebody takes the seat — the share less the card
+    #: fee; nought when nobody paid; ``None`` before the cut-off.
+    refund_grosze: int | None
     #: The card fee kept back — an estimate; what the provider keeps is on the
-    #: receipt.
-    card_fee_grosze: int
-
-
-#: Why a game everybody still in is given all their money back from was called
-#: off: the club's own rules — its cut-off, and its cancel (#547).
-_REFUNDED_IN_FULL: Final = frozenset(
-    {CalledOffReason.SHORT_AT_THE_CUT_OFF, CalledOffReason.CANCELLED_BY_THE_CLUB}
-)
+    #: receipt. ``None`` before the cut-off.
+    card_fee_grosze: int | None
 
 #: The two statuses at which the game awaits its entry with every seat filled —
 #: the forecast's (the mechanics §14.2: *as today, hidden while a seat is open*).
@@ -491,28 +516,35 @@ def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
             exhaustive(status)
 
 
-def money_of(game: BookedGame, *, card_fee_grosze: int, now: Instant) -> BookedMoney:
-    """The money line: every seat held paid its share of a booked game —
-    nobody anything while its club decides, or once it turned it down — and
-    what leaving gives back while the club's cut-off is ahead (Q99), and
-    everybody still in gets it all back from a game called off at its
-    cut-off, or cancelled by its club (#547)."""
+def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
+    """The money line, **read off the clock** (#637; the mechanics §14.1,
+    Q113): every seat of a booked game is held until the club's cut-off and
+    taken at it — *30 zł · free to leave until Fri 17:00*, then *Paid · 30 zł*
+    — nobody's money is on it while its club decides, once it turned it down or
+    once it is called off, and everybody still in gets it all back only from a
+    game its club cancelled after the cut-off had taken it (#547). A game short
+    at its cut-off, or cancelled before it, took nothing."""
 
     called_off = game.called_off_reason(now)
-    paid = (
+    on_it = (
         game.stage in (BookingStage.BOOKED, BookingStage.SEAT_OPEN)
         and called_off is None
     )
-    free_to_leave = paid and now < game.cut_off
+    taken = on_it and now >= game.cut_off
     return BookedMoney(
         share_grosze=game.share_grosze,
-        paid=paid,
-        free_to_leave_until=game.cut_off if free_to_leave else None,
-        back_if_you_leave_grosze=(
-            _less_the_card_fee(game, card_fee_grosze) if free_to_leave else None
+        paid=taken,
+        free_to_leave_until=game.cut_off if on_it and not taken else None,
+        share_state=(
+            None if not on_it else ShareState.TAKEN if taken else ShareState.HELD
         ),
+        taken_at=game.taken_at if on_it else None,
         refunded_grosze=(
-            game.share_grosze if called_off in _REFUNDED_IN_FULL else None
+            game.share_grosze
+            if called_off is CalledOffReason.CANCELLED_BY_THE_CLUB
+            and game.cancelled_at is not None
+            and game.cancelled_at >= game.cut_off
+            else None
         ),
     )
 
@@ -541,19 +573,13 @@ def leaving_of(game: BookedGame, *, now: Instant) -> Leaving:
     return Leaving.AFTER_THE_CUT_OFF
 
 
-def _less_the_card_fee(game: BookedGame, card_fee_grosze: int) -> int:
-    """What a leaver is refunded: their share, less the card fee the provider
-    never returns — one figure for the line and the sheet; the booking email
-    works it from the same estimate (Q99)."""
-
-    return game.share_grosze - card_fee_grosze
-
-
 def leave_terms(
     game: BookedGame, status: HomeStatus, *, card_fee_grosze: int, now: Instant
 ) -> LeaveTerms | None:
     """What *Leave the game* would cost now — ``None`` where there is no such
-    button: once the hour has come, and on a game that is over."""
+    button: once the hour has come, and on a game that is over. **Before the
+    cut-off there is no quote** (#637): nothing is taken, and the hold is let
+    go."""
 
     if game.filling_again:
         # Its way out is a game still filling's: *Withdraw*, free (#624).
@@ -563,9 +589,11 @@ def leave_terms(
         return LeaveTerms(kind=leaving, refund_grosze=0, card_fee_grosze=0)
     if status not in (HomeStatus.BOOKED, HomeStatus.SEAT_OPEN) or now >= game.start:
         return None
+    if leaving is Leaving.BEFORE_THE_CUT_OFF:
+        return LeaveTerms(kind=leaving, refund_grosze=None, card_fee_grosze=None)
     return LeaveTerms(
         kind=leaving,
-        refund_grosze=_less_the_card_fee(game, card_fee_grosze),
+        refund_grosze=game.share_grosze - card_fee_grosze,
         card_fee_grosze=card_fee_grosze,
     )
 
@@ -599,20 +627,17 @@ def state_of(
     game: BookedGame,
     result: GameResult | None,
     *,
-    card_fee_grosze: int,
     now: Instant,
 ) -> BookedState:
     """Everything Home and the details fold off the booking, its Game's result
-    and the clock — once, so a card and its details cannot disagree.
-    ``card_fee_grosze`` is the estimate on the game's share, as the leave
-    sheet is given it."""
+    and the clock — once, so a card and its details cannot disagree."""
 
     status = status_of(game, result, now=now)
     return BookedState(
         status=status,
         # A game gone back to filling asks nothing of those still In (Q106).
         needs_you=needs_you(status, result) and not game.filling_again,
-        money=money_of(game, card_fee_grosze=card_fee_grosze, now=now),
+        money=money_of(game, now=now),
         called_off=game.called_off_reason(now)
         if status is HomeStatus.CALLED_OFF
         else None,

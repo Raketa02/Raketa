@@ -158,6 +158,7 @@ from app.modules.proposals.domain.ports import (
     GameBookings,
     PlayerNames as ProposalPlayerNames,
     GameResults,
+    HeldShares,
     PlayerBookings,
     SeatCharges,
     SeatRefunds,
@@ -208,7 +209,7 @@ from app.modules.proposals.application.club_requests import (
     ReadWaitingRequests,
     RefuseTheRequest,
 )
-from app.modules.proposals.application.cut_off import CallOffShortGames
+from app.modules.proposals.application.cut_off import TheCutOff
 from app.modules.proposals.application.fill import Fill
 from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.infrastructure.bookings import (
@@ -292,7 +293,7 @@ from app.modules.payments.application.payouts import (
     DecideClubPayouts,
     ReadClubPayouts,
 )
-from app.modules.payments.application.refunds import RefundTheSeats
+from app.modules.payments.application.refunds import GiveTheSharesBack
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
@@ -300,6 +301,7 @@ from app.modules.payments.application.seat_charges import (
     ReadReceipts,
     ReadSeatCharge,
     ReleaseCharges,
+    TakeTheHeldShares,
 )
 from app.modules.payments.infrastructure.event_sourced_club_payout_repository import (  # noqa: E501
     EventSourcedClubPayoutRepository,
@@ -335,6 +337,7 @@ from app.modules.proposals.infrastructure.payments import (
     PaymentsBookingTakings,
     PaymentsSavedMethods,
     PaymentsCardFees,
+    PaymentsHeldShares,
     PaymentsSeatCharges,
     PaymentsSeatRefunds,
     PaymentsUndecidedCharges,
@@ -1693,7 +1696,7 @@ def build_seat_refunds(
     """A booked game's paid shares given back — decided in the act, refunded
     at the provider from the outbox — and each player emailed (#544)."""
     return PaymentsSeatRefunds(
-        RefundTheSeats(
+        GiveTheSharesBack(
             charges=_seat_charge_repository(session, runtime),
             sellers=build_sellers(session, runtime=runtime),
             payers=build_payers(session),
@@ -1710,8 +1713,8 @@ def build_leave_the_game(
     settings: Settings,
     runtime: EventRuntime | None = None,
 ) -> LeaveTheGame:
-    """*Leave the game* — refunded at once before the cut-off, offered to
-    others after it, and the yes withdrawn while the club decides (#544)."""
+    """*Leave the game* — the hold let go before the cut-off (#637), offered
+    to others after it, and the yes withdrawn while the club decides (#544)."""
     return LeaveTheGame(
         proposals=build_proposal_repository(
             session,
@@ -1728,22 +1731,35 @@ def build_leave_the_game(
     )
 
 
-def build_call_off_short_games(
+def build_held_shares(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> HeldShares:
+    """The shares held for booked games until their cut-off, which takes them
+    (#637)."""
+    return PaymentsHeldShares(
+        TakeTheHeldShares(charges=_seat_charge_repository(session, runtime))
+    )
+
+
+def build_the_cut_off(
     session: AsyncSession,
     *,
     clock: Clock,
     settings: Settings,
     runtime: EventRuntime | None = None,
-) -> CallOffShortGames:
-    """One cut-off run over this session — the job's, and a test's (#544)."""
-    return CallOffShortGames(
+) -> TheCutOff:
+    """One cut-off run over this session — the job's, and a test's (#544,
+    #637): short games called off, full games' held shares taken."""
+    return TheCutOff(
         proposals=build_proposal_repository(
             session,
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
+        held=build_held_shares(session, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
@@ -2608,7 +2624,6 @@ def build_read_home(
         directory=build_proposal_directory(session),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
-        fees=build_card_fees(),
         clock=clock,
     )
 

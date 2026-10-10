@@ -59,6 +59,7 @@ from tests.api.proposals_world import (
     a_player,
     every_hour_of_the_week,
     makes,
+    the_cut_off_comes,
     warsaw,
 )
 from tests.unit.fake_clock import MovableClock
@@ -173,12 +174,25 @@ async def a_request(client, session_factory, clock, world: World, **kwargs) -> U
 async def a_booked_game(
     client, session_factory, payments, clock, world: World, **kwargs
 ) -> UUID:
-    """The four's game at Bonarka, her yes last — booked, every share taken."""
+    """The four's game at Bonarka, her yes last — booked, every share held
+    until the cut-off (#637)."""
 
     game = await a_card(session_factory, clock, world, world.bonarka, **kwargs)
     await all_but_hers(client, game, world)
     hers = await says(client, PLAYER, "yes", world.marta, game)
     assert hers.json()["booked"] is not None, hers.text
+    await players.deliver_the_outbox(session_factory, payments=payments)
+    return game
+
+
+async def a_taken_game(
+    client, session_factory, payments, clock, world: World, **kwargs
+) -> UUID:
+    """``a_booked_game``, and its cut-off come: every share taken and
+    captured."""
+
+    game = await a_booked_game(client, session_factory, payments, clock, world)
+    await the_cut_off_comes(session_factory, clock)
     await players.deliver_the_outbox(session_factory, payments=payments)
     return game
 
@@ -631,7 +645,7 @@ async def test_a_card_steered_back_to_succeed_pays_again(
     steered = await card_does(client, world.marta, "SUCCEEDS")
 
     assert steered.status_code == 200, steered.text
-    await a_booked_game(client, session_factory, payments, clock, world)
+    await a_taken_game(client, session_factory, payments, clock, world)
     [receipt] = await receipts_of(client, world.marta)
     assert (receipt["kind"], receipt["starts_at"]) == ("CHARGE", at(SATURDAY_FIVE))
 
@@ -716,13 +730,16 @@ async def test_the_controls_refuse_a_provider_that_is_not_the_process_s_fake(
 # --------------------------------------------------------------------------- #
 
 
-async def kuba_leaves(client, game: UUID, world: World) -> None:
-    """From his own phone, days before the cut-off: refunded less the fee."""
+async def the_club_cancels(client, game: UUID, world: World) -> None:
+    """From its desk, after the cut-off took the shares: everybody refunded in
+    full (#637) — a refund decided, and made from the outbox."""
 
-    left = await client.post(
-        f"/api/v1/bookings/{game}/departure", headers=world.kuba["headers"]
+    cancelled = await client.post(
+        f"/api/v1/club/bookings/{game}/cancellation",
+        json={"reason": "WEATHER"},
+        headers=world.bonarka_desk,
     )
-    assert left.status_code == 200, left.text
+    assert cancelled.status_code == 204, cancelled.text
 
 
 def kinds(receipts: list[dict]) -> list[str]:
@@ -732,26 +749,26 @@ def kinds(receipts: list[dict]) -> list[str]:
 async def test_a_refund_decided_is_delivered_from_the_console(
     client, session_factory, payments, clock, world
 ):
-    game = await a_booked_game(client, session_factory, payments, clock, world)
-    await kuba_leaves(client, game, world)
+    game = await a_taken_game(client, session_factory, payments, clock, world)
+    await the_club_cancels(client, game, world)
     assert kinds(await receipts_of(client, world.kuba)) == ["CHARGE"]
     charge = charge_of(await board_of(client, world.group), game, world.kuba)
 
     delivered = await client.post(f"/dev/payments/charges/{charge['charge_id']}/refund")
 
     assert delivered.status_code == 200, delivered.text
-    assert delivered.json()["given_at"] == at(MONDAY_MORNING)
-    assert 0 < delivered.json()["given_back_grosze"] < 30_00
+    assert delivered.json()["given_at"] == at(clock.now())
+    assert delivered.json()["given_back_grosze"] == 30_00
     assert kinds(await receipts_of(client, world.kuba)) == ["CHARGE", "REFUND"]
 
 
 async def test_refunds_that_wait_land_only_when_one_is_delivered(
     client, session_factory, payments, clock, world
 ):
-    game = await a_booked_game(client, session_factory, payments, clock, world)
+    game = await a_taken_game(client, session_factory, payments, clock, world)
     waits = await client.put("/dev/payments/refunds", json={"wait": True})
     assert waits.status_code == 200, waits.text
-    await kuba_leaves(client, game, world)
+    await the_club_cancels(client, game, world)
 
     # The outbox asks the provider, which has not given it.
     await players.deliver_the_outbox(session_factory, payments=payments)
@@ -801,7 +818,7 @@ async def delivers(client, *notice_ids: str):
 async def test_a_game_s_notices_are_listed_in_the_order_its_payments_moved(
     client, session_factory, payments, clock, world
 ):
-    game = await a_booked_game(client, session_factory, payments, clock, world)
+    game = await a_taken_game(client, session_factory, payments, clock, world)
 
     notices = await notices_of(client, game)
 
@@ -816,7 +833,7 @@ async def test_a_game_s_notices_are_listed_in_the_order_its_payments_moved(
 async def test_a_confirmation_replayed_twice_is_read_once(
     client, session_factory, payments, clock, world
 ):
-    game = await a_booked_game(client, session_factory, payments, clock, world)
+    game = await a_taken_game(client, session_factory, payments, clock, world)
     [taken] = [
         n
         for n in await notices_of(client, game)
@@ -840,7 +857,7 @@ async def test_a_confirmation_replayed_twice_is_read_once(
 async def test_confirmations_out_of_order_move_nothing_the_provider_does_not_say(
     client, session_factory, payments, clock, world
 ):
-    game = await a_booked_game(client, session_factory, payments, clock, world)
+    game = await a_taken_game(client, session_factory, payments, clock, world)
     newest_first = [n["notice_id"] for n in reversed(await notices_of(client, game))]
 
     delivered = await delivers(client, *newest_first)

@@ -16,11 +16,11 @@ drawn — while the full game awaits its entry; never while a seat is open.
 **On the game's day, the reader's check-in code**: theirs alone, derived and
 never stored (``bookings/domain/check_in.py``).
 
-**What leaving would cost, before the reader leaves** (#544; the mechanics §13):
-refunded now less the card fee before the cut-off, when somebody takes the seat
-after it, nothing paid while the club decides — and no button once the hour
-has come. The card fee is the estimate the payments quote, asked once a read:
-the money line's *back if you leave by* is the same figure (Q99).
+**What leaving would cost, before the reader leaves** (#544, #637; the mechanics
+§13): nothing before the cut-off — the hold is let go, so there is no quote —
+the share less the card fee when somebody takes the seat after it, nothing paid
+while the club decides — and no button once the hour has come. The card fee is
+the estimate the payments quote, asked once a read.
 
 **The chat is a join, not a field** (``docs/adr/0149`` §3): the reader's rooms,
 ``GET /conversations``, carry the booked game's room by its ``game_id``.
@@ -162,7 +162,7 @@ class ReadBookingDetails:
             )
         )
         card_fee = self._fees.card_fee_on(game.share_grosze)
-        state = state_of(game, result, card_fee_grosze=card_fee, now=now)
+        state = state_of(game, result, now=now)
         names = await self._clubs.names_of([game.club_id])
         distances = await self._distances.from_player(reader, [game.club_id])
         return BookingDetails(
@@ -197,12 +197,7 @@ class ReadBookingDetails:
                 game.game_id
             )
         )
-        state = state_of(
-            game,
-            result,
-            card_fee_grosze=self._fees.card_fee_on(game.share_grosze),
-            now=now,
-        )
+        state = state_of(game, result, now=now)
         names = await self._clubs.names_of([game.club_id])
         distances = await self._distances.from_player(reader, [game.club_id])
         people = await people_on([game], self._people)
@@ -226,7 +221,6 @@ class ReadBookingDetails:
                     share_grosze=game.share_grosze,
                     paid=False,
                     free_to_leave_until=None,
-                    back_if_you_leave_grosze=None,
                 ),
                 called_off=state.called_off,
                 uncounted=state.uncounted,

@@ -3,10 +3,11 @@ screens A2.3, A3.1, A4.3).
 
 A booked game that lost a player offers the seat: on the group's **Fill in**
 board to every member who fits and is free for the hour, and as a **Seat open**
-card to the best fits' decks. **Taking it pays at once** — the first join wins
-and a second is told the seat was just taken — and **the leaver who left after
-the cut-off is refunded, less the card fee, the moment the joiner's payment
-succeeds**. Open seats stay until the cut-off whatever their number, then until
+card to the best fits' decks. **Taking it is the joiner's share held** until
+the cut-off, like every seat's, or taken at once after it (#637) — the first
+join wins and a second is told the seat was just taken — and **the leaver who
+left after the cut-off is refunded, less the card fee, the moment the joiner's
+payment succeeds**. Open seats stay until the cut-off whatever their number, then until
 the start.
 
 Every act is taken over HTTP as the phone takes it, against the fake payment
@@ -26,7 +27,7 @@ from uuid import UUID
 import pytest
 
 from app.api.dependencies import get_clock
-from app.bootstrap.composition import build_call_off_short_games
+from app.bootstrap.composition import build_the_cut_off
 from app.core.config import get_settings
 from app.modules.payments.domain.entered_cards import A_CARD_THE_BANK_ALWAYS_CHECKS
 from tests.api.proposals_world import (
@@ -158,7 +159,7 @@ async def rooms_of(client, mailbox, player: dict) -> list[str]:
 
 async def cuts_off(session_factory, clock):
     async with session_factory() as session:
-        return await build_call_off_short_games(
+        return await build_the_cut_off(
             session, clock=clock, settings=get_settings()
         ).execute()
 
@@ -199,7 +200,8 @@ async def test_a_seat_left_is_on_the_board_of_a_member_who_fits_and_is_free(
         str(ewa["id"]),
         str(tomek["id"]),
     }
-    assert all(tile["paid"] for tile in row["players"])
+    # Held until the cut-off, which takes them: not paid yet (#637).
+    assert not any(tile["paid"] for tile in row["players"])
     # Nobody on the game, nor the leaver, is offered a seat on it.
     assert (await fill_in(client, ola, group))["seats_to_fill"] == []
     assert (await fill_in(client, kuba, group))["seats_to_fill"] == []
@@ -287,15 +289,10 @@ async def test_open_seats_stay_until_the_cut_off_whatever_their_number(
     clock.move(CUT_OFF - MONDAY_MORNING)
     assert (await cuts_off(session_factory, clock)).games == 1
 
-    # Still short at the cut-off: everybody still in, the rescue too, gets it
-    # all back.
-    refund, charge = await receipts_of(client, mailbox, zosia)
-    assert (refund["kind"], refund["amount_grosze"], refund["card_fee_grosze"]) == (
-        "REFUND",
-        SHARE,
-        0,
-    )
-    assert charge["kind"] == "CHARGE"
+    # Still short at the cut-off: everybody still in, the rescue too, has
+    # their hold let go — nothing was taken (#637).
+    assert await receipts_of(client, mailbox, zosia) == []
+    assert await receipts_of(client, mailbox, ola) == []
 
 
 # --------------------------------------------------------------------------- #
@@ -303,9 +300,12 @@ async def test_open_seats_stay_until_the_cut_off_whatever_their_number(
 # --------------------------------------------------------------------------- #
 
 
-async def test_taking_a_seat_pays_at_once_and_the_game_is_whole_again(
-    client, group, booking, crowd, mailbox
+async def test_taking_a_seat_holds_the_share_and_the_game_is_whole_again(
+    client, session_factory, clock, payments, group, booking, crowd, mailbox
 ):
+    """Before the cut-off a rescue follows the seats it joins (#637): its share
+    is held, and the cut-off takes it with everybody's."""
+
     ola, kuba, *_ = crowd
     zosia = crowd[4]
     await leaves(client, kuba, booking)
@@ -323,17 +323,21 @@ async def test_taking_a_seat_pays_at_once_and_the_game_is_whole_again(
         "BOOKED",
         0,
     )
-    assert card["money"]["paid"] is True
+    assert (card["money"]["paid"], card["money"]["share_state"]) == (False, "HELD")
     [olas] = await home_of(client, ola)
     assert (olas["status"], olas["needs_you"]) == ("BOOKED", False)
-    [charge] = await receipts_of(client, mailbox, zosia)
-    assert (charge["kind"], charge["amount_grosze"]) == ("CHARGE", SHARE)
+    assert await receipts_of(client, mailbox, zosia) == []
     [email] = [
         sent
         for sent in await mailbox.to("zosia@example.com")
         if sent.subject.startswith("It's a game!")
     ]
-    assert email.subject == "It's a game! · you paid 30 zł"
+    assert email.subject == "It's a game! · 30 zł held"
+    clock.move(CUT_OFF - MONDAY_MORNING)
+    await cuts_off(session_factory, clock)
+    [charge] = await receipts_of(client, mailbox, zosia)
+    assert (charge["kind"], charge["amount_grosze"]) == ("CHARGE", SHARE)
+    assert len(payments.called("capture")) == 4
     assert booking in await rooms_of(client, mailbox, zosia)
     assert (await fill_in(client, crowd[5], group))["seats_to_fill"] == []
 
@@ -368,7 +372,9 @@ async def test_a_second_tap_of_the_joiner_charges_nothing_more(
     assert again.status_code == 200, again.text
     assert again.json()["booked"] == first.json()["booked"]
     assert len(payments.called("authorise")) == held
-    assert len(await receipts_of(client, mailbox, zosia)) == 1
+    # Held, not taken, until the cut-off (#637): nothing charged twice.
+    await receipts_of(client, mailbox, zosia)
+    assert len(payments.called("authorise")) == held
 
 
 async def test_nobody_takes_a_seat_on_a_game_they_left_or_are_in(
@@ -408,10 +414,11 @@ async def test_a_whole_game_has_no_seat_to_take(client, booking, crowd):
 
 
 async def test_a_leaver_after_the_cut_off_is_refunded_less_the_fee_once_it_is_taken(
-    client, clock, booking, crowd, mailbox
+    client, session_factory, clock, booking, crowd, mailbox
 ):
     kuba, zosia = crowd[1], crowd[4]
     clock.move(AFTER_THE_CUT_OFF - MONDAY_MORNING)
+    await cuts_off(session_factory, clock)
     await leaves(client, kuba, booking)
     [charge] = await receipts_of(client, mailbox, kuba)
     assert charge["kind"] == "CHARGE"
@@ -433,16 +440,19 @@ async def test_a_leaver_after_the_cut_off_is_refunded_less_the_fee_once_it_is_ta
     assert "30 zł share is being refunded" in email.text
 
 
-async def test_a_leaver_before_the_cut_off_was_refunded_once_and_only_once(
-    client, booking, crowd, mailbox
+async def test_a_leaver_before_the_cut_off_had_nothing_taken_and_gets_nothing_back(
+    client, payments, booking, crowd, mailbox
 ):
+    """His hold was let go when he left (#637): his seat taken gives him
+    nothing back, since nothing was taken."""
+
     kuba, zosia = crowd[1], crowd[4]
     await leaves(client, kuba, booking)
 
     assert (await joins(client, zosia, booking)).status_code == 200
 
-    refund, _charge = await receipts_of(client, mailbox, kuba)
-    assert (refund["kind"], refund["amount_grosze"]) == ("REFUND", SHARE - FEE)
+    assert await receipts_of(client, mailbox, kuba) == []
+    assert payments.called("refund") == []
     assert not [
         sent
         for sent in await mailbox.to("kuba@example.com")
@@ -491,7 +501,8 @@ async def test_a_seat_open_card_is_dealt_to_the_best_fits(
         for tile in [*card["sides"]["yours"], *card["sides"]["theirs"]]
         if tile["paid"]
     }
-    assert paid == {str(ola["id"]), str(ewa["id"]), str(tomek["id"])}
+    # Held until the cut-off, which takes them: not paid yet (#637).
+    assert paid == set()
     assert (await deck_cards(client, ola, group)) == []
 
 
@@ -543,8 +554,9 @@ async def test_a_member_offered_the_seat_reads_the_game_from_outside(
     assert details["money"] == {
         "share_grosze": SHARE,
         "paid": False,
+        "share_state": None,
+        "taken_at": None,
         "free_to_leave_until": None,
-        "back_if_you_leave_grosze": None,
         "refunded_grosze": None,
     }
     [you, *partner] = details["sides"]["yours"]
@@ -553,7 +565,8 @@ async def test_a_member_offered_the_seat_reads_the_game_from_outside(
         True,
         False,
     )
-    assert all(tile["paid"] for tile in [*partner, *details["sides"]["theirs"]])
+    # The others' shares are held until the cut-off, not paid yet (#637).
+    assert not any(tile["paid"] for tile in [*partner, *details["sides"]["theirs"]])
     assert (outside.status_code, outside.json()["code"]) == (404, "booking_not_found")
 
 

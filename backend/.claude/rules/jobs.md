@@ -105,14 +105,19 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `answer_by`), each one transaction that locks its game first, a conflict counted and
   stepped over. The deadline is the club's time to confirm, a Raketa setting; only the
   cadence (thirty seconds — the window is minutes long) is a setting here.
-  The eighteenth is the **cut-off** (`cut-off`, #544), and **correctness depends on it** as
-  on the timeout: a booked game with a seat open since before its cut-off reads *called off ·
-  short at the cut-off* at every read from the cut-off on (`BookedGame.called_off_reason`,
-  `keeping_of`), but only this gives everybody still in their money back, frees the court
-  and emails the club. Its read names **candidates** (`short_at_the_cut_off`: `SEAT_OPEN`,
-  `open_since < cut_off`, `cut_off <= now` — **no upper bound on the hour**, so a run late
-  past a game's start still owes the money back), each one transaction that locks the
-  game's proposal row first, a conflict counted and stepped over. The cut-off is the
+  The eighteenth is the **cut-off** (`cut-off`, #544, #637; `TheCutOff`), and **correctness
+  depends on it** as on the timeout, twice over. A booked game with a seat open since before
+  its cut-off reads *called off · short at the cut-off* at every read from the cut-off on
+  (`BookedGame.called_off_reason`, `keeping_of`), but only this lets everybody's hold go,
+  frees the court and emails the club; and **a full game's shares read *paid* from the
+  cut-off on** (`money_of`), but only this takes them — until it runs the club has collected
+  nothing and the payout waits. Its reads name **candidates** — the call-offs first
+  (`short_at_the_cut_off`: `SEAT_OPEN`, `open_since < cut_off`, `cut_off <= now`), then the
+  games with a share still held whose cut-off has come (`HeldShares.due`: the `seat_charges`
+  projection, `status = 'HELD'` and `held_until <= now`) — **no upper bound on the hour**, so
+  a run late past a game's start still does both; each one transaction that locks the game's
+  proposal row first, a conflict counted and stepped over, and a game short at its cut-off is
+  never taken (the take re-reads it). The cut-off is the
   club's free-cancellation setting, kept on each booking as it stood at the fill; only the
   cadence (thirty seconds) is a setting here.
   The nineteenth is **club payouts** (`club-payouts`, #548), and **correctness depends on

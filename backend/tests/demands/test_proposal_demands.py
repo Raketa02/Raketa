@@ -41,7 +41,7 @@ from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.game import Game
 from app.modules.payments.domain.provider import Payment, PaymentStatus
-from app.modules.payments.domain.seat_charge import SeatCharge
+from app.modules.payments.domain.seat_charge import SeatCharge, SeatChargeStatus
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.proposals.domain.home import BookingStage, ResultStage
@@ -58,6 +58,7 @@ from app.modules.proposals.domain.ports import (
     DeskCheckIns,
     GameResults,
     GameToAsk,
+    HeldShares,
     PlayerBookings,
     PlayerFit,
     PlayerNames,
@@ -843,6 +844,97 @@ async def test_a_game_its_club_cancelled_gives_everybody_everything_back(
 
     ola_now = await _charges(session).load(olas.charge_id)
     assert ola_now is not None and ola_now.refund_withholds_fee is False
+
+
+async def _a_held_share(
+    session, *, game_id: UUID, player_id: UUID, until: Instant
+) -> SeatCharge:
+    """A share held for the booked game until ``until``, its cut-off (#637)."""
+
+    charge = SeatCharge.held(
+        charge_id=new_uuid(),
+        player_id=player_id,
+        game_id=game_id,
+        club_id=new_uuid(),
+        account_id="acct_fake_club",
+        payment=Payment(
+            payment_id="pi_fake_3000g_y",
+            status=PaymentStatus.AUTHORISED,
+            amount_grosze=30_00,
+        ),
+        sport=Sport.PADEL,
+        starts_at=until + timedelta(hours=24),
+        at=_at(),
+    )
+    charge.keep(booking_id=game_id, until=until, at=_at())
+    await _charges(session).save(charge)
+    await session.commit()
+    return charge
+
+
+@pytest.mark.parametrize("implementation", registered(SeatRefunds))
+@pytest.mark.parametrize(
+    "reason",
+    [
+        RefundReason.LEFT_BEFORE_THE_CUT_OFF,
+        RefundReason.CALLED_OFF_AT_THE_CUT_OFF,
+        RefundReason.CANCELLED_BY_THE_CLUB,
+    ],
+)
+async def test_a_share_only_held_is_let_go_and_never_refunded(
+    implementation, session, reason
+):
+    """#637: nothing was taken before the cut-off, so giving the share back
+    lets the hold go — nothing to refund, no fee for anybody."""
+
+    refunds: SeatRefunds = implementation.build(session)
+    game_id = new_uuid()
+    kubas = await _a_held_share(
+        session, game_id=game_id, player_id=KUBA, until=_at(4 * 24)
+    )
+
+    await refunds.refund(
+        game_id,
+        [KUBA],
+        reason=reason,
+        because=(
+            ClubCancelReason.WEATHER
+            if reason is RefundReason.CANCELLED_BY_THE_CLUB
+            else None
+        ),
+        at=_at(1),
+    )
+    await session.commit()
+
+    kuba_now = await _charges(session).load(kubas.charge_id)
+    assert kuba_now is not None
+    assert kuba_now.status is SeatChargeStatus.RELEASING
+    assert kuba_now.refund_withholds_fee is None
+
+
+@pytest.mark.parametrize("implementation", registered(HeldShares))
+async def test_the_shares_held_for_a_game_are_due_at_its_cut_off_and_taken_then(
+    implementation, session
+):
+    held: HeldShares = implementation.build(session)
+    game_id, later_game = new_uuid(), new_uuid()
+    cut_off = _at(4 * 24)
+    olas = await _a_held_share(session, game_id=game_id, player_id=OLA, until=cut_off)
+    kubas = await _a_held_share(session, game_id=game_id, player_id=KUBA, until=cut_off)
+    await _a_held_share(
+        session, game_id=later_game, player_id=EWA, until=cut_off + timedelta(hours=1)
+    )
+
+    assert await held.due(at=cut_off - timedelta(seconds=1)) == ()
+    assert list(await held.due(at=cut_off)) == [game_id]
+    assert await held.take(game_id, at=cut_off) == 2
+    await session.commit()
+
+    for charge in (olas, kubas):
+        now = await _charges(session).load(charge.charge_id)
+        assert now is not None and now.status is SeatChargeStatus.TAKING
+    assert list(await held.due(at=cut_off + timedelta(hours=1))) == [later_game]
+    assert await held.take(game_id, at=cut_off) == 0
 
 
 @pytest.mark.parametrize("implementation", registered(CardFees))

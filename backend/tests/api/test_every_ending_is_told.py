@@ -27,7 +27,7 @@ import pytest
 
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import (
-    build_call_off_short_games,
+    build_the_cut_off,
     build_expire_unanswered_requests,
     build_propose_games,
 )
@@ -158,7 +158,7 @@ async def leaves(client, player: dict, booking: UUID) -> None:
 
 async def cuts_off(session_factory, clock):
     async with session_factory() as session:
-        return await build_call_off_short_games(
+        return await build_the_cut_off(
             session, clock=clock, settings=get_settings()
         ).execute()
 
@@ -209,7 +209,7 @@ async def test_a_week_that_fills_with_another_game_is_told_as_filling_again(
     # Sergio is told of his own other game, and nothing of this one.
     assert [
         title for title, _ in (await told(client, mailbox, sergio))[: -len(told_sergio)]
-    ] == ["It's a game! · you paid 30 zł"]
+    ] == ["It's a game! · 30 zł held"]
 
 
 async def test_a_paused_yes_that_comes_back_and_refills_it_is_told_as_any_fill(
@@ -421,9 +421,9 @@ async def test_the_club_s_no_and_its_silence_are_told_apart_and_emailed(
 async def test_a_leaver_whose_empty_seat_calls_the_game_off_is_told_it_counts(
     client, session_factory, clock, four, booked, mailbox
 ):
-    """Oscar left before the cut-off — 38,40 zł back — and nobody took his
-    seat: at the cut-off the game is off, and it counts on his record. He is
-    told in the app only: no money moves."""
+    """Oscar left before the cut-off — his hold let go, nothing taken (#637) —
+    and nobody took his seat: at the cut-off the game is off, and it counts on
+    his record. He is told in the app only: no money moves."""
 
     marta, oscar, ewa, sergio = four
     await leaves(client, oscar, booked)
@@ -435,13 +435,13 @@ async def test_a_leaver_whose_empty_seat_calls_the_game_off_is_told_it_counts(
 
     assert await last_told(client, mailbox, oscar) == (
         "Saturday's 17:00 at Bonarka Arena, which you left, was called off",
-        "Your seat stayed empty, so it counts on your record. Your 38,40 zł "
-        "refund stands.",
+        "Your seat stayed empty, so it counts on your record. Nothing was "
+        "taken from you.",
     )
     assert await subjects_to(mailbox, oscar) == emails_before
     for player in (marta, ewa, sergio):
         assert await last_told(client, mailbox, player) == (
-            "Game called off · you're refunded 40 zł",
+            "Game called off · nothing was taken",
             "Padel at Bonarka Arena · Sat 10 Oct, 17:00 was still short at the "
             "club's cut-off.",
         )
@@ -498,15 +498,16 @@ async def test_a_leaver_whose_game_still_plays_is_told_nothing(
 
 
 async def test_a_paid_leaver_the_club_s_cancel_refunds_is_told_as_a_leaver(
-    client, clock, bonarka, four, booked, mailbox
+    client, session_factory, clock, bonarka, four, booked, mailbox
 ):
-    """Oscar left after the cut-off, his 40 zł still paid; then Bonarka
-    cancels for rain and refunds him. He reads a leaver's words, in the notice
-    and the email — and is promised no new game. The others keep theirs."""
+    """Oscar left after the cut-off took his 40 zł; then Bonarka cancels for
+    rain and refunds him. He reads a leaver's words, in the notice and the
+    email — and is promised no new game. The others keep theirs."""
 
     _, desk = bonarka
     marta, oscar = four[:2]
     clock.move(CUT_OFF + timedelta(hours=1) - MONDAY_MORNING)
+    await cuts_off(session_factory, clock)
     await leaves(client, oscar, booked)
 
     cancelled = await client.post(

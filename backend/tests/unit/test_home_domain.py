@@ -4,14 +4,15 @@ mechanics §14.1–§14.2, §15.1; the screens A4.1, A8).
 **A booked game's status is folded on every read** from the booking, its
 ordinary Game's result and the clock — never stored. Booked until its hour; then
 the result states, unchanged from today's cards. **The money line** is the share
-every seat paid, and — while the club's cut-off is still ahead — what leaving
-by then gives back, the share less the card fee. **The forecast** shows while
+every seat holds until the club's cut-off and takes at it — *free to leave
+until* then, *Paid* from it on (#637). **The forecast** shows while
 the game awaits its entry, and **the check-in code** on the game's day, while
 the game stands.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
@@ -36,6 +37,7 @@ from app.modules.proposals.domain.home import (
     HomeStatus,
     Leaving,
     ResultStage,
+    ShareState,
     as_filling_again,
     check_in_shown,
     leave_terms,
@@ -194,7 +196,6 @@ def a_state(status: HomeStatus, *, needs: bool = False) -> BookedState:
             share_grosze=30_00,
             paid=True,
             free_to_leave_until=None,
-            back_if_you_leave_grosze=None,
         ),
     )
 
@@ -257,58 +258,101 @@ def test_a_score_still_waits_if_it_was_put_on_the_table_inside_the_last_day():
 # --------------------------------------------------------------------------- #
 
 
-def test_before_the_cut_off_the_line_says_what_leaving_by_it_gives_back():
-    """*Paid · 30 zł · 28,55 zł back if you leave by Fri 17:00* — the share less
-    its card fee, never *free* (Q99)."""
+def test_before_the_cut_off_the_share_is_held_and_free_to_leave():
+    """*30 zł · free to leave until Fri 17:00* (#637, Q113): the share is held
+    on the card and taken at the cut-off, and nothing is paid until then."""
 
-    money = money_of(a_booked_game(), card_fee_grosze=FEE, now=warsaw(5, 8))
+    money = money_of(a_booked_game(), now=warsaw(5, 8))
 
     assert money.share_grosze == 30_00
-    assert money.paid
+    assert money.paid is False
+    assert money.share_state is ShareState.HELD
+    assert money.taken_at == warsaw(9, 17)
     assert money.free_to_leave_until == warsaw(9, 17)
-    assert money.back_if_you_leave_grosze == 30_00 - FEE
+    assert money.refunded_grosze is None
 
 
-def test_on_a_40_zl_share_a_leaver_gets_38_40_back():
-    game = a_booked_game(share_grosze=40_00)
-
-    money = money_of(game, card_fee_grosze=1_60, now=warsaw(5, 8))
-
-    assert money.back_if_you_leave_grosze == 38_40
-
-
-def test_from_the_cut_off_on_it_is_only_paid():
-    money = money_of(a_booked_game(), card_fee_grosze=FEE, now=warsaw(9, 17))
+def test_from_the_cut_off_on_the_share_is_taken_and_paid():
+    money = money_of(a_booked_game(), now=warsaw(9, 17))
 
     assert money.paid
+    assert money.share_state is ShareState.TAKEN
+    assert money.taken_at == warsaw(9, 17)
     assert money.free_to_leave_until is None
-    assert money.back_if_you_leave_grosze is None
 
 
-def test_a_game_that_filled_inside_its_cut_off_says_nothing_about_leaving():
-    game = a_booked_game(cut_off=warsaw(9, 17))
+def test_a_game_booked_after_its_cut_off_was_taken_when_it_was_booked():
+    game = replace(a_booked_game(), booked_at=warsaw(9, 20))
 
-    money = money_of(game, card_fee_grosze=FEE, now=warsaw(10, 9))
+    money = money_of(game, now=warsaw(10, 9))
 
-    assert (money.free_to_leave_until, money.back_if_you_leave_grosze) == (None, None)
+    assert (money.paid, money.share_state) == (True, ShareState.TAKEN)
+    assert money.taken_at == warsaw(9, 20)
+    assert money.free_to_leave_until is None
 
 
 @pytest.mark.parametrize(
     "stage", [BookingStage.BOOKED, BookingStage.SEAT_OPEN], ids=["booked", "seat"]
 )
-def test_the_line_promises_what_the_leave_sheet_then_takes(stage):
-    """The card, the details and the sheet are one figure (Q99): what the line
-    says comes back is what *Leave the game* says it refunds now."""
+def test_before_the_cut_off_leaving_quotes_nothing_since_nothing_is_taken(stage):
+    """The leave quote is null before the cut-off (#637): the hold is let go,
+    and nothing comes back because nothing was taken."""
 
     game = a_booked_game(stage=stage)
     now = warsaw(5, 8)
 
-    state = state_of(game, ENTRY_OPEN, card_fee_grosze=FEE, now=now)
+    state = state_of(game, ENTRY_OPEN, now=now)
     terms = leave_terms(game, state.status, card_fee_grosze=FEE, now=now)
 
     assert terms is not None
     assert terms.kind is Leaving.BEFORE_THE_CUT_OFF
-    assert state.money.back_if_you_leave_grosze == terms.refund_grosze
+    assert (terms.refund_grosze, terms.card_fee_grosze) == (None, None)
+
+
+def test_after_the_cut_off_leaving_quotes_the_share_less_the_card_fee():
+    game = a_booked_game()
+    now = warsaw(9, 18)
+
+    state = state_of(game, ENTRY_OPEN, now=now)
+    terms = leave_terms(game, state.status, card_fee_grosze=FEE, now=now)
+
+    assert terms is not None
+    assert terms.kind is Leaving.AFTER_THE_CUT_OFF
+    assert (terms.refund_grosze, terms.card_fee_grosze) == (30_00 - FEE, FEE)
+
+
+def test_a_game_short_at_its_cut_off_took_nothing_and_refunds_nothing():
+    game = replace(
+        a_booked_game(stage=BookingStage.SEAT_OPEN), short_from=warsaw(9, 17)
+    )
+
+    money = money_of(game, now=warsaw(9, 18))
+
+    assert (money.paid, money.share_state, money.refunded_grosze) == (
+        False,
+        None,
+        None,
+    )
+
+
+@pytest.mark.parametrize(
+    ("cancelled_at", "refunded"),
+    [(warsaw(7, 12), None), (warsaw(9, 18), 30_00)],
+    ids=["before-the-cut-off", "after-it"],
+)
+def test_a_club_s_cancel_refunds_only_what_the_cut_off_had_taken(
+    cancelled_at, refunded
+):
+    game = replace(
+        a_booked_game(stage=BookingStage.CALLED_OFF),
+        called_off=CalledOffReason.CANCELLED_BY_THE_CLUB,
+        cancelled_at=cancelled_at,
+    )
+
+    money = money_of(game, now=warsaw(9, 20))
+
+    assert (money.paid, money.share_state) == (False, None)
+    assert money.refunded_grosze == refunded
 
 
 # --------------------------------------------------------------------------- #
@@ -386,11 +430,11 @@ def test_a_game_its_club_has_not_answered_is_waiting_and_nobody_paid():
     game = a_request()
 
     assert status_of(game, None, now=warsaw(5, 8)) is HomeStatus.WAITING_FOR_THE_CLUB
-    money = money_of(game, card_fee_grosze=FEE, now=warsaw(5, 8))
+    money = money_of(game, now=warsaw(5, 8))
     assert (
         money.paid,
         money.free_to_leave_until,
-        money.back_if_you_leave_grosze,
+        money.share_state,
     ) == (False, None, None)
     assert game.court_given is False
     assert needs_you(HomeStatus.WAITING_FOR_THE_CLUB, None) is False
@@ -404,7 +448,7 @@ def test_a_request_turned_down_or_withdrawn_is_called_off_with_nobody_paid(reaso
     game = a_booked_game(game_id=None, stage=BookingStage.CALLED_OFF, called_off=reason)
 
     assert status_of(game, None, now=warsaw(5, 8)) is HomeStatus.CALLED_OFF
-    assert money_of(game, card_fee_grosze=FEE, now=warsaw(5, 8)).paid is False
+    assert money_of(game, now=warsaw(5, 8)).paid is False
     assert game.court_given is False
     shown = check_in_shown(HomeStatus.CALLED_OFF, start=game.start, now=game.start)
     assert shown is False
@@ -416,8 +460,8 @@ def test_a_waiting_game_says_when_its_club_must_answer_until_that_moment():
 
     game = a_request(answer_by=warsaw(5, 8, 30))
 
-    before = state_of(game, None, card_fee_grosze=FEE, now=warsaw(5, 8))
-    at = state_of(game, None, card_fee_grosze=FEE, now=warsaw(5, 8, 30))
+    before = state_of(game, None, now=warsaw(5, 8))
+    at = state_of(game, None, now=warsaw(5, 8, 30))
 
     assert before.answer_by == warsaw(5, 8, 30)
     assert at.answer_by is None
@@ -437,7 +481,7 @@ def test_a_waiting_game_says_when_its_club_must_answer_until_that_moment():
     ids=["accepted", "refused"],
 )
 def test_a_game_its_club_answered_keeps_its_deadline_off_the_line(answered):
-    state = state_of(answered, None, card_fee_grosze=FEE, now=warsaw(5, 8))
+    state = state_of(answered, None, now=warsaw(5, 8))
 
     assert state.answer_by is None
 
@@ -447,7 +491,9 @@ def test_a_game_its_club_accepted_is_booked_on_the_court_it_gave():
 
     assert game.stage is BookingStage.BOOKED
     assert game.court_given is True
-    assert money_of(game, card_fee_grosze=FEE, now=warsaw(5, 8)).paid is True
+    # Held until the cut-off, taken at it (#637).
+    assert money_of(game, now=warsaw(5, 8)).share_state is ShareState.HELD
+    assert money_of(game, now=warsaw(9, 17)).paid is True
 
 
 # --------------------------------------------------------------------------- #
@@ -477,7 +523,7 @@ def test_a_full_game_that_fell_back_is_seat_open_and_nobody_paid():
         a_game_filling_again(), in_=(OLA, EWA, TOMEK), standing=Standing.FILLING
     )
 
-    state = state_of(game, None, card_fee_grosze=FEE, now=warsaw(5, 9))
+    state = state_of(game, None, now=warsaw(5, 9))
 
     assert game.filling_again is True
     assert (state.status, state.called_off, state.answer_by) == (
@@ -489,7 +535,7 @@ def test_a_full_game_that_fell_back_is_seat_open_and_nobody_paid():
     assert (
         state.money.paid,
         state.money.free_to_leave_until,
-        state.money.back_if_you_leave_grosze,
+        state.money.share_state,
         state.money.refunded_grosze,
     ) == (False, None, None, None)
     # It asks nothing of those still In: Home's badge does not count it.
@@ -540,7 +586,7 @@ def test_a_game_that_fell_back_and_ended_first_is_called_off_nobody_paid(
         a_game_filling_again(), in_=(OLA, EWA, TOMEK), standing=standing
     )
 
-    state = state_of(game, None, card_fee_grosze=FEE, now=warsaw(10, 16))
+    state = state_of(game, None, now=warsaw(10, 16))
 
     assert (state.status, state.called_off) == (HomeStatus.CALLED_OFF, reason)
     assert (state.money.paid, state.money.refunded_grosze) == (False, None)
@@ -581,9 +627,7 @@ def a_game_waiting_for_a_payment(**changes) -> BookedGame:
 
 
 def test_a_game_waiting_for_a_payment_is_its_own_status_and_asks_nothing():
-    state = state_of(
-        a_game_waiting_for_a_payment(), None, card_fee_grosze=FEE, now=warsaw(5, 8, 10)
-    )
+    state = state_of(a_game_waiting_for_a_payment(), None, now=warsaw(5, 8, 10))
 
     assert state.status is HomeStatus.WAITING_FOR_A_PAYMENT
     assert state.pay_by == warsaw(5, 8, 40)
@@ -596,7 +640,7 @@ def test_a_game_waiting_for_a_payment_is_its_own_status_and_asks_nothing():
 
 def test_leaving_a_game_waiting_for_a_payment_withdraws_the_yes():
     game = a_game_waiting_for_a_payment()
-    state = state_of(game, None, card_fee_grosze=FEE, now=warsaw(5, 8, 10))
+    state = state_of(game, None, now=warsaw(5, 8, 10))
 
     terms = leave_terms(game, state.status, card_fee_grosze=FEE, now=warsaw(5, 8, 10))
 

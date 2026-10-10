@@ -139,7 +139,8 @@ def assert_seat_open_filling_again(card: dict, *, open_seats: int = 1) -> None:
         "share_grosze": 30_00,
         "paid": False,
         "free_to_leave_until": None,
-        "back_if_you_leave_grosze": None,
+        "share_state": None,
+        "taken_at": None,
         "refunded_grosze": None,
     }
     assert all(

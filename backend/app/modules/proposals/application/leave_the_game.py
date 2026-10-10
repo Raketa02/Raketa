@@ -3,9 +3,9 @@
 Leaving is free until the club's cut-off, and what it costs is said before the
 player confirms (the details' ``leave_terms``). One act, three outcomes:
 
-- **before the cut-off** — the leaver is refunded at once, less the card fee,
-  and their seat is offered to others; it is on their record only if the game
-  is then called off because of it;
+- **before the cut-off** — nothing is taken: the leaver's hold is let go, nobody
+  is refunded and no fee arises (#637), and their seat is offered to others; it
+  is on their record only if the game is then called off because of it;
 - **after the cut-off** — the seat stays paid and is offered to others until
   the start; the leaver is refunded, less the card fee, when somebody takes it
   (#545), and it is on their record if nobody does;

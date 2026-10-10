@@ -624,12 +624,14 @@ async def test_the_pane_of_a_booked_game_shows_its_court_sides_and_every_charge(
     assert {charge["player"]["player_id"] for charge in charges} == {
         str(m["id"]) for m in four
     }
-    assert {(c["amount_grosze"], c["status"], c["refund"]) for c in charges} == {
-        (30_00, "CAPTURED", None)
-    }
+    # Held for the game until its cut-off, which takes them (#637).
+    assert {
+        (c["amount_grosze"], c["status"], c["held_until"], c["refund"])
+        for c in charges
+    } == {(30_00, "HELD", at(SATURDAY_FIVE - timedelta(hours=24)), None)}
 
 
-async def test_the_pane_shows_a_refund_once_somebody_leaves(
+async def test_the_pane_shows_a_hold_let_go_once_somebody_leaves(
     client, session_factory, payments, clock, world
 ):
     four = (world.marta, world.kuba, world.zofia, world.marek)
@@ -639,8 +641,8 @@ async def test_the_pane_shows_a_refund_once_somebody_leaves(
     await says(client, PLAYER, "yes", world.marta, game)
     await players.deliver_the_outbox(session_factory, payments=payments)
 
-    # Kuba leaves from his own phone, before the cut-off: refunded at once,
-    # less the card fee.
+    # Kuba leaves from his own phone, before the cut-off: his hold is let go,
+    # nothing taken and nothing refunded (#637).
     left = await client.post(
         f"/api/v1/bookings/{game}/departure", headers=world.kuba["headers"]
     )
@@ -653,10 +655,6 @@ async def test_the_pane_shows_a_refund_once_somebody_leaves(
     [departure] = pane["booking"]["departures"]
     assert departure["player"]["player_id"] == str(world.kuba["id"])
     assert departure["rescued_by"] is None
-    refunds = {charge["player"]["name"]: charge["refund"] for charge in pane["charges"]}
-    assert refunds["marta"] is None
-    kuba = refunds["kuba"]
-    assert kuba["withholds_fee"] is True
-    assert kuba["given_at"] is not None
-    assert 0 < kuba["given_back_grosze"] < 30_00
-    assert kuba["given_back_grosze"] + kuba["fee_withheld_grosze"] == 30_00
+    charges = {charge["player"]["name"]: charge for charge in pane["charges"]}
+    assert (charges["kuba"]["status"], charges["kuba"]["refund"]) == ("CANCELLED", None)
+    assert (charges["marta"]["status"], charges["marta"]["refund"]) == ("HELD", None)

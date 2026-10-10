@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from app.api.dependencies import DbSession
 from app.api.dev.dependencies import (
-    CallOffShortGamesDep,
+    TheCutOffDep,
     DecideClubPayoutsDep,
     DestroyEndedConversationsDep,
     ExpireProposalsDep,
@@ -255,23 +255,28 @@ async def run_the_time_to_pay(run_out: RunOutTheTimeToPayDep) -> RanResponse:
     response_model=RanResponse,
     summary=_summary(CUT_OFF_JOB),
     description=(
-        "Calls off every booked game with a seat open since before its cut-off "
-        "once the cut-off has come — everybody still in refunded in full, the "
-        "court free, the club emailed. A game whose cut-off is still ahead is "
-        "left as it is, seat open or not."
+        "Once a booked game's cut-off has come: a full game has every share "
+        "held for it taken — the money moves then, and the club's Collected "
+        "with it — and a game with a seat open since before its cut-off is "
+        "called off, every hold let go so nobody pays anything, the court "
+        "free, the club emailed. A game whose cut-off is still ahead is left as "
+        "it is, held, seat open or not."
     ),
 )
-async def run_the_cut_off(call_off: CallOffShortGamesDep) -> RanResponse:
-    called_off = await call_off.execute()
+async def run_the_cut_off(cut_off: TheCutOffDep) -> RanResponse:
+    ran = await cut_off.execute()
+    done = ran.games + ran.taken
     return RanResponse(
         job=CUT_OFF_JOB,
-        done=called_off.games,
-        conflicts=called_off.conflicts,
+        done=done,
+        conflicts=ran.conflicts,
         says=(
-            f"{called_off.games} game(s) short at their cut-off called off, "
-            f"everybody still in refunded."
-            if called_off.games
-            else "No game is short at a cut-off that has come: nothing was done."
+            f"{ran.taken} full game(s) had their held shares taken; "
+            f"{ran.games} game(s) short at their cut-off called off, every hold "
+            "let go."
+            if done
+            else "No game has a cut-off that has come with anything to do: "
+            "nothing was done."
         ),
     )
 

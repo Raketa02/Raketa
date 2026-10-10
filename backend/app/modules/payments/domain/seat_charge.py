@@ -6,12 +6,22 @@ charge is born at the fill and never before — a yes moves no money — either
 **held** on the player's card or **refused**, and is then moved by two kinds of
 fact. Three rules shape it.
 
-**The fill decides, the provider acts.** Whether a hold is *taken* or *released*
-is decided with the booking, in its transaction (``take``, ``release``); the
-capture or the cancellation at the provider follows the commit, from the
-outbox, and is recorded when the provider answers (``captured``,
-``cancelled``). So a crash between the two leaves a decision on the record and a
-subscriber that retries it, never money moved with nothing written.
+**The fill decides, the provider acts.** Whether a hold is *kept*, *taken* or
+*released* is decided with the booking, in its transaction (``keep``, ``take``,
+``release``); the capture or the cancellation at the provider follows the
+commit, from the outbox, and is recorded when the provider answers
+(``captured``, ``cancelled``). So a crash between the two leaves a decision on
+the record and a subscriber that retries it, never money moved with nothing
+written.
+
+**Held until the cut-off, taken then** (#637; ADR-0189's 2026-10-10
+amendment). A game that books before its club's cut-off **keeps** each hold for
+the booked game (``HELD``, ``held_until`` the cut-off) and takes nothing; the
+cut-off **takes** it. Before then it is **let go** (``let_go``) — a leave, a
+game short at its cut-off, the club's cancel — which costs nobody anything. A
+held charge is **not paid** and **not settled**: no receipt, no *Collected*, no
+payout until it is taken. A game that books after its cut-off is taken at
+once.
 
 **A refused charge waits for its player.** The bank wanted them present, or
 refused the card: the player can confirm **this same payment** in the app, and
@@ -40,6 +50,7 @@ from app.modules.payments.domain.events import (
     SeatChargeConfirmed,
     SeatChargeFailed,
     SeatChargeFeeReported,
+    SeatChargeKept,
     SeatChargeRefundDecided,
     SeatChargeRefunded,
     SeatChargeReleased,
@@ -57,24 +68,33 @@ class SeatChargeStatus(StrEnum):
     AUTHORISED = "AUTHORISED"
     #: Refused at the fill; waits for its player.
     FAILED = "FAILED"
-    #: The game booked: to be captured.
+    #: The game booked before its cut-off: held for it until then (#637).
+    #: **Not paid.**
+    HELD = "HELD"
+    #: Taken — at the cut-off, or the game booked after it: to be captured.
     TAKING = "TAKING"
     #: Taken. **Paid.**
     CAPTURED = "CAPTURED"
-    #: The game did not book on it: to be cancelled.
+    #: The game did not book on it, or its held share was let go: to be
+    #: cancelled.
     RELEASING = "RELEASING"
     #: Released untaken. Nobody paid.
     CANCELLED = "CANCELLED"
 
 
-#: The two a player has paid in: taken, or being taken.
+#: The two a player has paid in: taken, or being taken. Never ``HELD``.
 PAID = frozenset({SeatChargeStatus.TAKING, SeatChargeStatus.CAPTURED})
 
 
 class RefundReason(StrEnum):
-    """Why a paid share is given back."""
+    """Why a share is given back. **A share held for the booked game is let go**
+    whatever the reason — nothing was taken, so nothing is refunded and no fee
+    arises (#637) — and **a share already taken is refunded**, by its reason's
+    amount."""
 
-    #: The player left before the club's cut-off: less the card fee.
+    #: The player left before the club's cut-off: a held share is let go. A
+    #: share taken already — only the fallback of #639 takes one before the
+    #: cut-off — is refunded less the card fee.
     LEFT = "LEFT"
     #: The game was called off at the club's cut-off: in full.
     CALLED_OFF_AT_THE_CUT_OFF = "CALLED_OFF_AT_THE_CUT_OFF"
@@ -97,8 +117,9 @@ class FailureReason(StrEnum):
     AUTHENTICATION_REQUIRED = "AUTHENTICATION_REQUIRED"
     #: The bank refused the card — they confirm the payment with another one.
     DECLINED = "DECLINED"
-    #: The card's brand changed since the terms were accepted — they accept
-    #: them again. The provider was never asked.
+    #: The terms in force were not accepted for the card — its brand changed,
+    #: or the words did (#637) — they accept them again. The provider was
+    #: never asked.
     TERMS_NEEDED = "TERMS_NEEDED"
     #: There is no method to charge. The provider was never asked.
     NO_METHOD = "NO_METHOD"
@@ -131,8 +152,13 @@ class SeatCharge:
     failure: FailureReason | None
     #: When it was born.
     opened_at: Instant
-    #: The booking it was taken for, once it was.
+    #: The booking it was kept or taken for, once it was.
     booking_id: UUID | None = None
+    #: The club's cut-off a share held for the booked game is taken at — while
+    #: it is held, and kept on the record after (#637).
+    held_until: Instant | None = None
+    #: Why a held share was let go, when it was (#637).
+    let_go_because: RefundReason | None = None
     #: When it was taken — the moment the player paid.
     taken_at: Instant | None = None
     #: Whether the refund decided on it keeps the card fee back — ``None``
@@ -360,9 +386,13 @@ class SeatCharge:
     @property
     def settled(self) -> bool:
         """Nothing about this share's money is still on its way (#548): no
-        capture still to make, no refund decided and not yet given."""
+        share held to be taken (#637), no capture still to make, no refund
+        decided and not yet given. A share let go is settled."""
 
-        return self.status is not SeatChargeStatus.TAKING and not self.owes_a_refund
+        return (
+            self.status not in (SeatChargeStatus.HELD, SeatChargeStatus.TAKING)
+            and not self.owes_a_refund
+        )
 
     @property
     def awaits_its_player(self) -> bool:
@@ -389,28 +419,68 @@ class SeatCharge:
         )
         return True
 
-    def take(self, *, booking_id: UUID, at: Instant) -> None:
-        """The game booked on this hold."""
+    def keep(self, *, booking_id: UUID, until: Instant, at: Instant) -> None:
+        """The game booked on this hold before its club's cut-off, ``until``:
+        it is kept for the game and taken then (#637)."""
 
-        invariant(self.held_now, f"taking {self.charge_id}, {self.status}")
+        invariant(self.held_now, f"keeping {self.charge_id}, {self.status}")
+        self._record_that(
+            SeatChargeKept(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                booking_id=booking_id,
+                until=until,
+                occurred_at=at,
+            )
+        )
+
+    def take(self, *, booking_id: UUID, at: Instant) -> None:
+        """The share is taken: the game booked on this hold after its cut-off,
+        or the cut-off came for a share held for it."""
+
+        invariant(
+            self.held_now or self.status is SeatChargeStatus.HELD,
+            f"taking {self.charge_id}, {self.status}",
+        )
         self._record_that(
             SeatChargeTaken(
                 charge_id=self.charge_id,
                 player_id=self.player_id,
                 booking_id=booking_id,
                 occurred_at=at,
+                kept=self.status is SeatChargeStatus.HELD,
             )
         )
 
     def release(self, *, at: Instant) -> bool:
         """The game will not book on this charge. Answers whether anything was
-        recorded — nothing for one already taken, released or settled."""
+        recorded — nothing for one already taken, released or settled, and
+        nothing for a share held for the booked game, which is the game's to
+        let go (``let_go``)."""
 
         if self.status not in (SeatChargeStatus.AUTHORISED, SeatChargeStatus.FAILED):
             return False
         self._record_that(
             SeatChargeReleased(
                 charge_id=self.charge_id, player_id=self.player_id, occurred_at=at
+            )
+        )
+        return True
+
+    def let_go(self, *, at: Instant, reason: RefundReason | None = None) -> bool:
+        """A share held for the booked game is given up before it is taken —
+        for ``reason``: nothing was taken, so nothing is refunded and no fee
+        arises (#637). Answers whether anything was recorded: nothing for a
+        share not held for a game."""
+
+        if self.status is not SeatChargeStatus.HELD:
+            return False
+        self._record_that(
+            SeatChargeReleased(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                occurred_at=at,
+                reason=None if reason is None else reason.value,
             )
         )
         return True
@@ -503,6 +573,7 @@ class SeatCharge:
         if self.status not in (
             SeatChargeStatus.RELEASING,
             SeatChargeStatus.AUTHORISED,
+            SeatChargeStatus.HELD,
             SeatChargeStatus.FAILED,
         ):
             return False
@@ -543,12 +614,18 @@ class SeatCharge:
             self.status = SeatChargeStatus.AUTHORISED
             if event.last_moment is not None:
                 self.last_moment = instant(event.last_moment)
+        elif isinstance(event, SeatChargeKept):
+            self.status = SeatChargeStatus.HELD
+            self.booking_id = event.booking_id
+            self.held_until = instant(event.until)
         elif isinstance(event, SeatChargeTaken):
             self.status = SeatChargeStatus.TAKING
             self.booking_id = event.booking_id
             self.taken_at = instant(event.occurred_at)
         elif isinstance(event, SeatChargeReleased):
             self.status = SeatChargeStatus.RELEASING
+            if event.reason is not None:
+                self.let_go_because = RefundReason(event.reason)
         elif isinstance(event, SeatChargeCaptured):
             self.status = SeatChargeStatus.CAPTURED
             self.fee_taken_grosze = event.fee_grosze

@@ -43,6 +43,7 @@ from tests.api.proposals_world import (
     every_hour_of_the_week,
     makes,
     says_yes,
+    the_cut_off_comes,
     warsaw,
 )
 from tests.unit.fake_clock import MovableClock
@@ -179,13 +180,22 @@ async def test_the_club_reads_its_bookings_by_day_with_what_it_may_see(
         "ola",
         "tomek",
     ]
-    assert all(player["paid"] for player in row["players"])
+    # Held until the cut-off, which takes them (#637): not paid, not
+    # collected yet.
+    assert all((p["paid"], p["held"]) == (False, True) for p in row["players"])
     assert all(player["checked_in_at"] is None for player in row["players"])
-    # Nothing about a player but the name, whether they paid, and the check-in.
-    assert set(row["players"][0]) == {"player_id", "name", "paid", "checked_in_at"}
+    # Nothing about a player but the name, whether they paid or are held, and
+    # the check-in.
+    assert set(row["players"][0]) == {
+        "player_id",
+        "name",
+        "paid",
+        "held",
+        "checked_in_at",
+    }
     assert row["money"] == {
         "price_grosze": 120_00,
-        "collected_grosze": 4 * SHARE,
+        "collected_grosze": 0,
         "refunded_grosze": 0,
     }
     assert row["booked_from"]["name"] == "Sobotni padel"
@@ -218,8 +228,8 @@ async def test_the_filters_narrow_the_day_and_a_seat_open_is_its_own(
         1,
         3,
     )
-    # The leaver was refunded, less the card fee.
-    assert 0 < row["money"]["refunded_grosze"] < SHARE
+    # The leaver's hold was let go: nothing taken, nothing refunded (#637).
+    assert row["money"]["refunded_grosze"] == 0
     assert called_off["bookings"] == []
     assert called_off["counts"]["seat_open"] == 1
 
@@ -319,7 +329,13 @@ async def test_a_court_that_is_not_free_is_refused_and_so_is_a_move_once_started
 async def test_the_club_cancels_with_a_reason_and_everybody_is_refunded_in_full(
     client, session_factory, clock, club, group, booking, four, mailbox
 ):
+    """After the cut-off took the shares: everybody is refunded in full, and
+    the club bears the fees (#637; before it, every hold is let go —
+    ``test_holding_until_the_cut_off.py``)."""
+
     club_id, desk = club
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
 
     cancelled = await client.post(
         f"{BOOKINGS}/{booking}/cancellation", json={"reason": "WEATHER"}, headers=desk
@@ -371,10 +387,12 @@ async def test_the_club_cancels_with_a_reason_and_everybody_is_refunded_in_full(
 
 
 async def test_a_cancelled_game_is_on_nobody_s_record(
-    client, clock, club, booking, four
+    client, session_factory, clock, club, booking, four, mailbox
 ):
     _, desk = club
     clock.move(CUT_OFF - MONDAY_MORNING + timedelta(hours=1))
+    await the_cut_off_comes(session_factory, clock)
+    await mailbox.drain()
     # Kuba left after the cut-off: his seat is still paid for, and nobody took it.
     left = await client.post(
         f"/api/v1/bookings/{booking}/departure", headers=four[1]["headers"]

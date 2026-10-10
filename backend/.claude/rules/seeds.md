@@ -59,7 +59,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
     its declared day, and the report counts them. Every game also ends at least two days
     before the run, so every result window on it has closed.
   - **The fill draws the sides**, so a declared doubles row says who was on the court and
-    who won, never who partnered whom.
+    who won, never who partnered whom. **It holds the shares, and the cut-off job is run at
+    each game's cut-off** on its backdated clock (#637), so every past game is taken and
+    settled as the API's job would have left it.
   - **Levels move through the rating catch-up**, the API's job. Cards are answered the day
     after their evening (`sportsmanship.RATED_AFTER`), inside their week on any weekday.
   - **`assert_her_history` fails the run by name** if any of these is missing:

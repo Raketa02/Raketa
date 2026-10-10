@@ -40,19 +40,19 @@ make seed``.
 6. **Kuba leaves before the cut-off** — a rescue for her phone: four of the
    group, never her, booked as if earlier at the soonest hour of her week whose
    cut-off is ``TIME_TO_ANSWER`` off at least, and the first of them — *Kuba* —
-   leaves now: refunded less the card fee, and the seat offered to everybody
-   who fits and is free, her among them, as a *Seat open* card to its best
-   fits.
+   leaves now: his hold let go, nothing taken (#637), and the seat offered to
+   everybody who fits and is free, her among them, as a *Seat open* card to its
+   best fits.
 7. **Empty seat at the cut-off** — her game booked at the hour whose cut-off is
    the next full hour the rules allow, at a club of the group's that books at
    once: filled by her and three of the group as if earlier, when the hour was
    on sale, and left by one of the three just now — so a seat is open since
-   before the cut-off, the leaver refunded less the fee and the seat offered.
+   before the cut-off, the leaver's hold let go and the seat offered.
 8. **Ania leaves** — two of her games to leave from the phone, made and filled
    by her and three of the group as if earlier, at a club of the group's that
    books at once: the soonest hour whose cut-off has passed, and the soonest
    whose cut-off is still ahead — each ``TIME_TO_ANSWER`` off at least. One
-   refunds her at once less the fee; the other keeps her seat paid until a row
+   lets her hold go, nothing taken; the other keeps her seat paid until a row
    takes it.
 9. **A posted game** — her post, for anybody in the kind her deck shows, at
    the hour whose book-by is the next full hour the rules allow and her sheet
@@ -136,6 +136,7 @@ from app.api.dev.dependencies import (
 from app.api.dev.board import CardOutcome
 from app.api.dev.club import is_a_seed_club
 from app.api.dev.provider import NoSavedCard, TheFakeDep, steer
+from app.bootstrap.composition import build_the_cut_off
 from app.core.config import Settings
 from app.core.exception_handlers import ErrorResponse
 from app.engines.matchfit.core import SearchMode
@@ -387,7 +388,9 @@ class OneLeavesResponse(BaseModel):
     club_name: str | None
     people_in: list[PersonRef] = Field(description="Everybody still on it.")
     left: PersonRef = Field(
-        description="Who left, just now — refunded at once, less the card fee."
+        description=(
+            "Who left, just now — their hold let go, nothing taken (#637)."
+        )
     )
     offered_to: list[PersonRef] = Field(
         description="Every member the seat is offered to now: on their *Fill in*."
@@ -410,8 +413,8 @@ class GameToLeave(BaseModel):
 class SheLeavesResponse(BaseModel):
     before: GameToLeave = Field(
         description=(
-            "Its cut-off ahead: leaving refunds her at once, less the card fee, "
-            "and offers the seat until the cut-off."
+            "Its cut-off ahead: leaving lets her hold go — nothing taken (#637) "
+            "— and offers the seat until the cut-off."
         )
     )
     after: GameToLeave = Field(
@@ -822,7 +825,9 @@ class EarlierYeses:
     """A game at an hour, made and said yes to by everybody on it in turn — her
     last, where she is on it — on a clock stopped earlier: the seed's own
     building block (``all_say_yes``), over this request's session and the
-    provider it moves money through."""
+    provider it moves money through. **And the cut-off job run at a cut-off
+    that has passed** (#637), as the API's would have run it then, so a game
+    filled before it reads taken."""
 
     def __init__(
         self, *, db: AsyncSession, settings: Settings, provider: PaymentProvider
@@ -856,6 +861,14 @@ class EarlierYeses:
             sport=sport,
             kind=kind,
         )
+
+    async def the_cut_off_came(self, *, at: Instant) -> None:
+        """The cut-off job, at ``at``: every share held for a game whose cut-off
+        has come by then is taken."""
+
+        await build_the_cut_off(
+            self._db, clock=FixedClock(at=at), settings=self._settings
+        ).execute()
 
 
 def get_earlier_yeses(
@@ -1360,11 +1373,11 @@ async def about_to_expire(
         f"{TIME_TO_ANSWER // timedelta(hours=1)} hours off at least, at a club of "
         "the group's that books at once — booked by four of the group as if "
         "earlier, never her, in the kind her deck shows — and the first of the "
-        "four leaves it now, through the leave their phone runs: refunded at "
-        "once less the card fee, and the seat offered to everybody who fits and "
+        "four leaves it now, through the leave their phone runs: their hold "
+        "let go, nothing taken, and the seat offered to everybody who fits and "
         "is free, as a *Seat open* card to its best fits. *Take the seat* or "
         "*No* from her phone or the rows; still open at the cut-off, *Run it "
-        "now* on the cut-off calls the game off."
+        "now* on the cut-off calls the game off and lets every hold go."
     ),
 )
 async def one_leaves_before_the_cut_off(
@@ -1479,10 +1492,10 @@ async def one_leaves_before_the_cut_off(
         dealt_to=[PersonRef(player_id=p, name=named.get(p)) for p in dealt],
         says=(
             f"{named.get(leaver, 'One of the four')} left {_when(hour.start)} at "
-            f"{club or 'the club'} just now — refunded at once, less the card fee; "
+            f"{club or 'the club'} just now — their hold let go, nothing taken; "
             f"the seat is offered to {len(offered)} of the group, and {hers}. The "
             f"cut-off {fires_at(cut_off, now=now)}: a seat still open then calls "
-            f"the game off."
+            f"the game off and lets every hold go."
         ),
     )
 
@@ -1588,10 +1601,9 @@ async def empty_seat_at_the_cut_off(
         says=(
             f"Her game {_when(hour.start)} at {club or 'the club'}, booked earlier; "
             f"{named.get(leaver, 'one of the three')} left it just now — a seat is "
-            f"open, their share refunded less the card fee, the seat offered to "
-            f"the group's best fits. The cut-off {fires_at(cut_off, now=now)}: a "
-            f"seat still open then calls the game off and refunds everybody in "
-            f"full."
+            f"open, their hold let go, the seat offered to the group's best fits. "
+            f"The cut-off {fires_at(cut_off, now=now)}: a seat still open then "
+            f"calls the game off and lets every hold go — nobody pays."
         ),
     )
 
@@ -1689,6 +1701,9 @@ class HerGameToLeave:
             ),
             hour,
         )
+        if past_the_cut_off and filled_at < cut_off:
+            # Filled before its cut-off, which has passed since: taken then.
+            await self._earlier.the_cut_off_came(at=cut_off)
         named = await self._names.names_of(people)
         return GameToLeave(
             game_id=answer.proposal_id,
@@ -1755,7 +1770,7 @@ async def she_leaves(
             f"{_when(instant(before.starts_at))} at "
             f"{before.club_name or 'the club'}: its cut-off "
             f"{fires_at(instant(before.cut_off), now=now)} — leaving before it "
-            f"refunds her at once, less the card fee. "
+            f"lets her hold go, nothing taken. "
             f"{_when(instant(after.starts_at))} at "
             f"{after.club_name or 'the club'}: past its cut-off — leaving keeps her "
             f"seat paid until a row takes it, and refunds her then."

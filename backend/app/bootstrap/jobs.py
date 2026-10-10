@@ -42,7 +42,7 @@ from app.bootstrap.composition import (
     build_expire_proposals,
     build_expire_unanswered_requests,
     build_run_out_the_time_to_pay,
-    build_call_off_short_games,
+    build_the_cut_off,
     build_decide_club_payouts,
     build_image_transcoder,
     build_mailer,
@@ -445,29 +445,32 @@ def build_cut_off_job(
     session_factory: async_sessionmaker[AsyncSession],
     settings: Settings,
 ) -> PeriodicJob:
-    """Call off every booked game still short at its cut-off, and give
-    everybody still in their money back (the mechanics §12.3, §16.12).
+    """At each booked game's cut-off, take the shares of a full game and call
+    off one still short, letting every hold go (the mechanics §12.2, §12.3,
+    §16.12, Q113; #544, #637).
 
     **Idempotent and safe beside itself with no lock**: each game is one
     transaction that locks it first, the aggregate records nothing on a game no
-    longer short, and a genuine race is caught by the stream version and
-    stepped over. **Correctness depends on it**: until it runs, the money of a
-    game called off at its cut-off has not been given back.
+    longer short and takes nothing no longer held, and a genuine race is caught
+    by the stream version and stepped over. **Correctness depends on it**:
+    until it runs, a full game's shares are only held — its club has collected
+    nothing — and the holds of a game called off at its cut-off are not let go.
     """
 
     clock = build_clock()
 
     async def run() -> None:
         async with session_factory() as session:
-            done = await build_call_off_short_games(
+            done = await build_the_cut_off(
                 session, clock=clock, settings=settings
             ).execute()
-        if done.games or done.conflicts:
+        if done.games or done.taken or done.conflicts:
             logger.info(
                 "cut-off finished",
                 extra={
                     "job": CUT_OFF_JOB,
                     "games": done.games,
+                    "taken": done.taken,
                     "conflicts": done.conflicts,
                 },
             )

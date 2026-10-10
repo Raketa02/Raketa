@@ -43,7 +43,7 @@ from app.api.dependencies import (
 )
 from app.bootstrap.composition import (
     build_booking_repository,
-    build_call_off_short_games,
+    build_the_cut_off,
     build_check_in_codes,
     build_club_payout_repository,
     build_club_terms,
@@ -95,7 +95,7 @@ from app.modules.payments.presentation.dependencies import PaymentProviderDep
 from app.modules.proposals.application.club_requests import (
     ExpireUnansweredRequests,
 )
-from app.modules.proposals.application.cut_off import CallOffShortGames
+from app.modules.proposals.application.cut_off import TheCutOff
 from app.modules.proposals.application.expire_proposals import ExpireProposals
 from app.modules.proposals.application.time_to_pay import RunOutTheTimeToPay
 from app.modules.proposals.application.making import MakeProposal
@@ -242,14 +242,14 @@ def get_expire_proposals(db: DbSession, clock: ClockDep) -> ExpireProposals:
 ExpireProposalsDep = Annotated[ExpireProposals, Depends(get_expire_proposals)]
 
 
-def get_call_off_short_games(
+def get_the_cut_off(
     db: DbSession, clock: ClockDep, settings: SettingsDep
-) -> CallOffShortGames:
+) -> TheCutOff:
     """The ``cut-off`` job's unit of work, over the real *now*."""
-    return build_call_off_short_games(db, clock=clock, settings=settings)
+    return build_the_cut_off(db, clock=clock, settings=settings)
 
 
-CallOffShortGamesDep = Annotated[CallOffShortGames, Depends(get_call_off_short_games)]
+TheCutOffDep = Annotated[TheCutOff, Depends(get_the_cut_off)]
 
 
 def get_decide_club_payouts(

@@ -446,6 +446,8 @@ def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
             if booking.pay_by is None
             else {payer: booking.pay_by for payer in booking.payers}
         ),
+        booked_at=booking.booked_at,
+        cancelled_at=booking.cancelled_at,
     )
 
 

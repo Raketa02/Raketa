@@ -1,12 +1,16 @@
 """The money emails (the mechanics §17.2; the screens A9): the fill's two —
-*It's a game! · you paid*, the booking confirmation, from the club as the
-seller, and *Confirm your payment to keep your seat* — and a refund's two
-(#544): *You left the game · your refund is on its way* and *Game called off ·
-with the refund* — and a rescue's (#545): *You've been refunded · your seat was
-taken*, and *Confirm your payment to take the seat* — and the club's cancel
-(#547): *Game cancelled by the club · with the refund*, saying why — and, to a
-player who had left it, *The game you left was cancelled · with the refund*
-(#623).
+*It's a game! · 30 zł held*, the booking confirmation, from the club as the
+seller, saying when the share is taken (*you paid* when it was taken at once),
+and *Confirm your payment to keep your seat* — and a share given back (#544):
+*You left the game*, *Game called off* — and a rescue's (#545): *You've been
+refunded · your seat was taken*, and *Confirm your payment to take the seat* —
+and the club's cancel (#547): *Game cancelled by the club*, saying why — and, to
+a player who had left it, *The game you left was cancelled* (#623).
+
+**A share only held is let go, never refunded** (#637; the mechanics Q113): a
+leave before the cut-off, a game short at it and the club's cancel before it
+take nothing, so their emails say *nothing was taken* — *the 30 zł hold on
+your card is let go* — and never *refunded*.
 
 **Every notice about money is also emailed**. The
 words live here, beside the use case that queues them (``docs/adr/0186`` §4);
@@ -83,35 +87,44 @@ def game_booked_email(
     court: str,
     sport: Sport,
     starts_at: Instant,
-    paid_grosze: int,
-    free_to_leave_until: Instant | None,
-    fee_estimate_grosze: int,
+    share_grosze: int,
+    held_until: Instant | None,
     app_link: str,
     booked_on_a_payment: bool = False,
 ) -> OutgoingMessage:
-    """*It's a game! · you paid* — the booking confirmation.
-    ``free_to_leave_until`` is the club's cut-off, or ``None`` for a game that
-    filled after it. Before it, the email says what leaving gives back — the
-    share less the card fee, the estimate the card and the leave sheet quote —
-    and never *free* (Q99). **A game booked on a payment it waited for** (#625,
-    Q110) was *It's a game!* already when it filled: *Your Tue 19:00 is booked
-    · you paid 40 zł*, never a second *It's a game!*."""
+    """*It's a game! · 30 zł held* — the booking confirmation, saying when the
+    share is taken (#637; the mechanics §12.2, Q113): ``held_until`` is the
+    club's cut-off, which takes it — *30 zł is held on your card and taken on
+    Fri 17:00, the club's cut-off. Leave before then and nothing is taken.* —
+    or ``None`` for a share taken at once, after the cut-off: *It's a game! ·
+    you paid 30 zł*. **A game booked on a payment it waited for** (#625, Q110)
+    was *It's a game!* already when it filled: *Your Tue 19:00 is booked · 30
+    zł held*, never a second *It's a game!*."""
 
-    leaving = (
-        f"You can leave until {_day_and_time(free_to_leave_until)} and get "
-        f"{zloty(paid_grosze - fee_estimate_grosze)} back at once (the "
-        f"{zloty(fee_estimate_grosze)} card fee isn't returned)."
-        if free_to_leave_until is not None
-        else "This game has no free cancellation: if you leave, you're refunded "
-        "only when someone takes your seat."
-    )
+    share = zloty(share_grosze)
+    said = f"{share} held" if held_until is not None else f"you paid {share}"
     if booked_on_a_payment:
         hour = _short_hour(starts_at)
-        subject = f"Your {hour} is booked · you paid {zloty(paid_grosze)}"
+        subject = f"Your {hour} is booked · {said}"
         heading = f"Your {hour} is booked"
     else:
-        subject = f"It's a game! · you paid {zloty(paid_grosze)}"
+        subject = f"It's a game! · {said}"
         heading = "It's a game!" if name is None else f"It's a game, {name}!"
+    money: tuple[str, ...] = (
+        (
+            f"{share} is held on your card and taken on {_short_hour(held_until)}, "
+            "the club's cut-off. Leave before then and nothing is taken.",
+            f"{share} is your share of the court. {club} is the seller and holds "
+            "it on your card.",
+        )
+        if held_until is not None
+        else (
+            f"You paid {share}, your share of the court. {club} is the seller "
+            "and charged your card.",
+            "This game has no free cancellation: if you leave, you're refunded "
+            "only when someone takes your seat.",
+        )
+    )
     return render(
         ButtonEmail(
             kind=GAME_BOOKED_KIND,
@@ -120,9 +133,7 @@ def game_booked_email(
             heading=heading,
             lines=(
                 f"{_SPORT_WORDS[sport]} at {club}, {court} — {_the_hour(starts_at)}.",
-                f"You paid {zloty(paid_grosze)}, your share of the court. {club} "
-                f"is the seller and charged your card.",
-                leaving,
+                *money,
             ),
             button_label="Open the game",
             button_url=app_link,
@@ -138,9 +149,9 @@ _WHAT_TO_DO: Final = {
         "Your bank declined the {amount} payment. You can confirm it with another card."
     ),
     FailureReason.TERMS_NEEDED: (
-        "Your card's brand changed, so the payment terms have to be accepted "
-        "again before it can be charged. Accept them in You › Payments, then "
-        "say yes again."
+        "The payment terms have to be accepted again before your card can be "
+        "held — they changed, or your card's brand did. Accept them in You › "
+        "Payments, then say yes again."
     ),
     FailureReason.NO_METHOD: (
         "There is no payment method to charge. Save one in You › Payments, "
@@ -227,20 +238,37 @@ def left_the_game_email(
     share_grosze: int,
     fee_estimate_grosze: int,
     app_link: str,
+    held: bool = False,
 ) -> OutgoingMessage:
-    """*You left the game · your refund is on its way* — left before the
-    club's cut-off, so refunded at once, less the card fee the bank doesn't
-    return. The amount here is the estimate the sheet quoted; what the provider
-    kept back is on the receipt."""
+    """*You left the game · nothing was taken* — left before the club's
+    cut-off with the share only ``held``: the hold is let go (#637, Q113). A
+    share taken already — a rescuer's — is *your refund is on its way*:
+    refunded at once, less the card fee the bank doesn't return. The amount
+    there is the estimate; what the provider kept back is on the receipt."""
 
+    heading = "You left the game" if name is None else f"You left the game, {name}"
+    if held:
+        return render(
+            ButtonEmail(
+                kind=LEFT_THE_GAME_KIND,
+                to=to,
+                subject="You left the game · nothing was taken",
+                heading=heading,
+                lines=(
+                    f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)}.",
+                    f"The {zloty(share_grosze)} hold on your card is let go. "
+                    "Your seat is offered to others.",
+                ),
+                button_label="Open Raketa",
+                button_url=app_link,
+            )
+        )
     return render(
         ButtonEmail(
             kind=LEFT_THE_GAME_KIND,
             to=to,
             subject="You left the game · your refund is on its way",
-            heading=(
-                "You left the game" if name is None else f"You left the game, {name}"
-            ),
+            heading=heading,
             lines=(
                 f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)}.",
                 f"Your {zloty(share_grosze)} share is being refunded by {club}, less "
@@ -263,23 +291,38 @@ def game_called_off_email(
     starts_at: Instant,
     refunded_grosze: int,
     app_link: str,
+    held: bool = False,
 ) -> OutgoingMessage:
-    """*Game called off · with the refund* — a seat was still empty at the
-    club's cut-off, so the game is off and everybody still in gets all of their
-    money back."""
+    """*Game called off · nothing was taken* — a seat was still empty at the
+    club's cut-off, so the game is off and every share ``held`` is let go: nobody
+    pays anything (#637, Q113). A share taken already is *with the refund*, in
+    full."""
 
+    off = (
+        f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — is off: "
+        f"a seat was still empty at the club's cut-off."
+    )
+    if held:
+        subject = "Game called off · nothing was taken"
+        lines: tuple[str, ...] = (
+            off,
+            f"The {zloty(refunded_grosze)} hold on your card is let go, so "
+            "nothing was taken.",
+        )
+    else:
+        subject = f"Game called off · you're refunded {zloty(refunded_grosze)}"
+        lines = (
+            off,
+            f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
+            "Refunds reach BLIK within hours and cards within up to two weeks.",
+        )
     return render(
         ButtonEmail(
             kind=GAME_CALLED_OFF_KIND,
             to=to,
-            subject=f"Game called off · you're refunded {zloty(refunded_grosze)}",
+            subject=subject,
             heading="Game called off",
-            lines=(
-                f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — is off: "
-                f"a seat was still empty at the club's cut-off.",
-                f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
-                "Refunds reach BLIK within hours and cards within up to two weeks.",
-            ),
+            lines=lines,
             button_label="Open Raketa",
             button_url=app_link,
         )
@@ -319,27 +362,43 @@ def game_cancelled_email(
     refunded_grosze: int,
     because: CancelledBecause,
     app_link: str,
+    held: bool = False,
 ) -> OutgoingMessage:
-    """*Game cancelled by the club · with the refund* (#547): the club cancelled
-    the booked game, so everybody in it gets all of their money back, nothing
-    goes on anybody's record, and they are dealt a new game first."""
+    """*Game cancelled by the club* (#547): the club cancelled the booked game,
+    nothing goes on anybody's record, and everybody in it is dealt a new game
+    first. **Before the cut-off** every share was only ``held`` and is let go —
+    *nothing was taken* (#637, Q113); after it everybody gets all of their
+    money back — *you're refunded*."""
 
     reason = _CANCELLED_BECAUSE[because]
+    cancelled = (
+        f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — was "
+        f"cancelled by the club" + ("." if reason is None else f" {reason}.")
+    )
+    if held:
+        subject = f"Game cancelled by {club} · nothing was taken"
+        lines: tuple[str, ...] = (
+            cancelled,
+            f"The {zloty(refunded_grosze)} hold on your card is let go: nothing "
+            "was taken, and nothing about it goes on your record.",
+            "We'll look for another game for you first.",
+        )
+    else:
+        subject = f"Game cancelled by {club} · you're refunded {zloty(refunded_grosze)}"
+        lines = (
+            cancelled,
+            f"Your {zloty(refunded_grosze)} is refunded in full by {club}, and "
+            "nothing about it goes on your record.",
+            "We'll look for another game for you first.",
+            "Refunds reach BLIK within hours and cards within up to two weeks.",
+        )
     return render(
         ButtonEmail(
             kind=GAME_CANCELLED_KIND,
             to=to,
-            subject=f"Game cancelled by {club} · you're refunded "
-            f"{zloty(refunded_grosze)}",
+            subject=subject,
             heading="Game cancelled",
-            lines=(
-                f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — was "
-                f"cancelled by the club" + ("." if reason is None else f" {reason}."),
-                f"Your {zloty(refunded_grosze)} is refunded in full by {club}, and "
-                "nothing about it goes on your record.",
-                "We'll look for another game for you first.",
-                "Refunds reach BLIK within hours and cards within up to two weeks.",
-            ),
+            lines=lines,
             button_label="Open Raketa",
             button_url=app_link,
         )
@@ -359,27 +418,42 @@ def game_you_left_cancelled_email(
     refunded_grosze: int,
     because: CancelledBecause,
     app_link: str,
+    held: bool = False,
 ) -> OutgoingMessage:
-    """*The game you left was cancelled · with the refund* (#623; the mechanics
-    §13, Q108): the player left after the club's cut-off and their seat was
-    still paid, and the club cancelled the game — so their share comes back in
-    full. **In a leaver's words**: the club's reason and the refund, and never
-    a new game, which is owed only to the people still in."""
+    """*The game you left was cancelled* (#623; the mechanics §13, Q108): the
+    player left after the club's cut-off and their seat was still paid, and
+    the club cancelled the game — so their share comes back in full, or, still
+    only ``held`` because the cut-off had not taken it yet, is let go (#637).
+    **In a leaver's words**: the club's reason and the money, and never a new
+    game, which is owed only to the people still in."""
 
     reason = _CANCELLED_BECAUSE[because]
+    if held:
+        subject = "The game you left was cancelled · nothing was taken"
+        money: tuple[str, ...] = (
+            f"The {zloty(refunded_grosze)} hold on your card is let go: nothing "
+            "was taken.",
+        )
+    else:
+        subject = (
+            f"The game you left was cancelled · you're refunded "
+            f"{zloty(refunded_grosze)}"
+        )
+        money = (
+            f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
+            "Refunds reach BLIK within hours and cards within up to two weeks.",
+        )
     return render(
         ButtonEmail(
             kind=GAME_YOU_LEFT_CANCELLED_KIND,
             to=to,
-            subject=f"The game you left was cancelled · you're refunded "
-            f"{zloty(refunded_grosze)}",
+            subject=subject,
             heading="The game you left was cancelled",
             lines=(
                 f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — "
                 f"which you left, was cancelled by the club"
                 + ("." if reason is None else f" {reason}."),
-                f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
-                "Refunds reach BLIK within hours and cards within up to two weeks.",
+                *money,
             ),
             button_label="Open Raketa",
             button_url=app_link,
@@ -397,12 +471,36 @@ def seat_taken_email(
     share_grosze: int,
     fee_estimate_grosze: int,
     app_link: str,
+    held: bool = False,
 ) -> OutgoingMessage:
     """*You've been refunded · your seat was taken* (#545; the mechanics §12.3,
     §17.2) — left after the club's cut-off, so refunded only now that somebody
     took the seat, less the card fee the bank doesn't return. The amount here is
-    the estimate; what the provider kept back is on the receipt."""
+    the estimate; what the provider kept back is on the receipt. A share the
+    cut-off had not taken yet — still only ``held`` — is let go instead: *your
+    seat was taken · nothing was taken* (#637)."""
 
+    if held:
+        return render(
+            ButtonEmail(
+                kind=SEAT_TAKEN_KIND,
+                to=to,
+                subject="Your seat was taken · nothing was taken",
+                heading=(
+                    "Your seat was taken"
+                    if name is None
+                    else f"Your seat was taken, {name}"
+                ),
+                lines=(
+                    f"Somebody took your seat in {_SPORT_WORDS[sport].lower()} at "
+                    f"{club} — {_the_hour(starts_at)}.",
+                    f"The {zloty(share_grosze)} hold on your card is let go: "
+                    "nothing was taken.",
+                ),
+                button_label="Open Raketa",
+                button_url=app_link,
+            )
+        )
     return render(
         ButtonEmail(
             kind=SEAT_TAKEN_KIND,

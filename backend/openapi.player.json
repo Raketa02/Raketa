@@ -4552,7 +4552,7 @@
           "payments"
         ],
         "summary": "Start saving a payment method",
-        "description": "Opens a setup at the provider for a card saved for **off-session** use \u2014 charged by the club when a game fills, without the player present. The first opens the player's customer at the provider. A method already saved **keeps working** until a setup saves another (*Change*); a setup left open is replaced by the next one. Answers what the phone opens the provider's card fields with \u2014 **never the setup's secret**, which is the answer to accepting the terms.",
+        "description": "Opens a setup at the provider for a card saved for **off-session** use \u2014 held by the club when a game fills and taken at its cut-off, without the player present (#637). The first opens the player's customer at the provider. A method already saved **keeps working** until a setup saves another (*Change*); a setup left open is replaced by the next one. Answers what the phone opens the provider's card fields with \u2014 **never the setup's secret**, which is the answer to accepting the terms.",
         "operationId": "start_payment_setup_api_v1_players_me_payment_methods_setup_post",
         "responses": {
           "201": {
@@ -5023,7 +5023,7 @@
           "proposals"
         ],
         "summary": "Say yes to a game",
-        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**A member may join a post they were never dealt** (#546) \u2014 *I'm in* on a sheet's *Already happening here*: a yes like any other, held to who the post is for (`no_longer_fits` otherwise) and to what dealing it would ask of them now \u2014 free for its hour, no game then, within their Games & money (`post_not_open_to_you`, which is not said).\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account and then all are taken, or none is \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 you paid*. When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. **At an On request club the last yes puts the game to the club** (#543): `waiting_for_the_club`, `open_seats` nought, nothing booked and nobody charged \u2014 the court is held, the club is emailed, and the charge and *It's a game!* follow its yes.",
+        "description": "*I'm in \u2014 if everybody is, book it and charge my share.* **Silent, free, and it holds nothing** \u2014 no money moves, no court is held, nobody is told (the others see the player In on the card) \u2014 **unless it is the last**. Yeses are the game's, not a version's: a yes on any version counts toward the one game. A yes already said records nothing and answers the same.\n\n**A member may join a post they were never dealt** (#546) \u2014 *I'm in* on a sheet's *Already happening here*: a yes like any other, held to who the post is for (`no_longer_fits` otherwise) and to what dealing it would ask of them now \u2014 free for its hour, no game then, within their Games & money (`post_not_open_to_you`, which is not said).\n\n**The last yes books the game** (the client gives its ten seconds of *Undo* before sending it): every seat's share is held on the club's account, all or none \u2014 kept until the club's cut-off, which takes them, or taken at once after it (#637) \u2014 `booked` names the booking and its Game, and everybody is emailed *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off). When a share could not be held, **nobody paid**: that player's seat is open again (`open_seats`), and when it is this player's own, `your_payment` names the refused payment to confirm. **At an On request club the last yes puts the game to the club** (#543): `waiting_for_the_club`, `open_seats` nought, nothing booked and nobody charged \u2014 the court is held, the club is emailed, and the holds and *It's a game!* follow its yes.",
         "operationId": "say_yes_api_v1_proposals__proposal_id__yes_post",
         "security": [
           {
@@ -6291,7 +6291,7 @@
           "proposals"
         ],
         "summary": "Leave a booked game",
-        "description": "*Leave the game* (the client shows the sheet first: the booking's `leaving` says what it costs). **Before the club's cut-off** the leaver is refunded at once, less the card fee, and the seat is offered to others \u2014 on their record only if the game is then called off because of it. **After the cut-off** the seat stays paid and is offered to others until the start; the leaver is refunded, less the fee, when somebody takes it, and it is on their record if nobody does. **While the club decides** nobody has paid: the yes and the request to the club are withdrawn, as `DELETE /proposals/{id}/yes` does, and the game is filling again \u2014 and so it is on a game already `filling_again` (#624). The leaver leaves the game's chat with their seat; everybody else's Home reads `SEAT_OPEN` (with `filling_again` when nobody had paid). Refused once the hour has begun.",
+        "description": "*Leave the game* (the client shows the sheet first: the booking's `leaving` says what it costs). **Before the club's cut-off** nothing is taken: the leaver's hold is let go, nobody is refunded (#637), and the seat is offered to others \u2014 on their record only if the game is then called off because of it. **After the cut-off** the seat stays paid and is offered to others until the start; the leaver is refunded, less the fee, when somebody takes it, and it is on their record if nobody does. **While the club decides** nobody has paid: the yes and the request to the club are withdrawn, as `DELETE /proposals/{id}/yes` does, and the game is filling again \u2014 and so it is on a game already `filling_again` (#624). The leaver leaves the game's chat with their seat; everybody else's Home reads `SEAT_OPEN` (with `filling_again` when nobody had paid). Refused once the hour has begun.",
         "operationId": "leave_the_game_api_v1_bookings__booking_id__departure_post",
         "security": [
           {
@@ -6360,7 +6360,7 @@
           "proposals"
         ],
         "summary": "Take an open seat",
-        "description": "*I'm in \u00b7 27 z\u0142* on a rescue \u2014 a Seat open card, a Seats to fill row, a rescue's details (the client gives its ten seconds of *Undo* first). **Pays at once**: the share is held on the club's account and taken, and the player takes **the seat that opened first**, on its side \u2014 `booked` names the booking and its Game, now on their Home, and they are emailed *It's a game! \u00b7 you paid*; they join the game's chat. **The leaver who left after the cut-off is refunded, less the card fee, the moment this payment succeeds** (emailed *You've been refunded \u00b7 your seat was taken*); one who left before it was refunded when they left. `open_seats` is what is still open. When the share could not be held, nothing was taken: `your_payment` names the refused payment, and confirming it (`POST /seat-charges/{id}/confirmation`) is the join again. A player already on the game is answered the same `booked`, and nothing is recorded.",
+        "description": "*I'm in \u00b7 27 z\u0142* on a rescue \u2014 a Seat open card, a Seats to fill row, a rescue's details (the client gives its ten seconds of *Undo* first). **The share is held** on the club's account until the cut-off, like every seat's, or taken at once after it (#637), and the player takes **the seat that opened first**, on its side \u2014 `booked` names the booking and its Game, now on their Home, and they are emailed *It's a game! \u00b7 30 z\u0142 held* (*you paid* after the cut-off); they join the game's chat. **The leaver who left after the cut-off is refunded, less the card fee, the moment this payment succeeds** (emailed *You've been refunded \u00b7 your seat was taken*); one who left before it had nothing taken. `open_seats` is what is still open. When the share could not be held, nothing was taken: `your_payment` names the refused payment, and confirming it (`POST /seat-charges/{id}/confirmation`) is the join again. A player already on the game is answered the same `booked`, and nothing is recorded.",
         "operationId": "join_a_rescue_api_v1_bookings__booking_id__seats_post",
         "security": [
           {
@@ -7070,7 +7070,31 @@
           "paid": {
             "type": "boolean",
             "title": "Paid",
-            "description": "Every seat's share was taken \u2014 `false` for a reader not on the game, who has paid nothing (#545)."
+            "description": "Every seat's share was **taken** \u2014 at the club's cut-off, or at once for a game booked after it. `false` while the shares are only held (`share_state` `HELD`), and for a reader not on the game, who has paid nothing (#545)."
+          },
+          "share_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ShareState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`HELD` \u2014 every share is held on its card and taken at `taken_at`, the club's cut-off; leaving before it takes nothing. `TAKEN` \u2014 taken (`paid`). `null` while nobody's money is on the game: waiting for its club or for a payment, called off, and for a reader not on the game. Switches by itself at `taken_at`."
+          },
+          "taken_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taken At",
+            "description": "When the shares are taken \u2014 the club's cut-off \u2014 or were: the cut-off, or when a game booked after it was booked. Present exactly when `share_state` is."
           },
           "free_to_leave_until": {
             "anyOf": [
@@ -7083,19 +7107,7 @@
               }
             ],
             "title": "Free To Leave Until",
-            "description": "The club's cut-off while it is still ahead at `read_at`: leaving before it is refunded at once, less the card fee, which is never returned (`back_if_you_leave_grosze`) \u2014 so the line says what comes back, never that leaving is free (Q99). `null` from the cut-off on, for a game that filled after it, for a game still waiting for its club, and for a reader not on the game. The line switches by itself at this instant."
-          },
-          "back_if_you_leave_grosze": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Back If You Leave Grosze",
-            "description": "What the reader gets back if they leave now, in grosze: the share less the card fee the payments estimate \u2014 *28,55 z\u0142 back if you leave by Sat 17:00*; 3840 on a 40 z\u0142 share. The same figure the details' `leaving.refund_grosze` gives before the cut-off, so the card, the leave sheet and the booking email never disagree. `null` whenever `free_to_leave_until` is: from the cut-off on, for a game that filled after it, for a game still waiting for its club, and for a reader not on the game."
+            "description": "The club's cut-off while it is still ahead at `read_at`: leaving before it takes nothing \u2014 the hold on the card is let go \u2014 so the line says *free to leave until Fri 17:00* (Q113). `null` from the cut-off on, for a game that filled after it, for a game still waiting for its club, and for a reader not on the game. The line switches by itself at this instant."
           },
           "refunded_grosze": {
             "anyOf": [
@@ -7107,19 +7119,20 @@
               }
             ],
             "title": "Refunded Grosze",
-            "description": "What everybody still in is given back \u2014 the whole share, on a game called off at its cut-off or cancelled by its club (*refunded 30 z\u0142*). `null` where nothing is."
+            "description": "What everybody still in is given back \u2014 the whole share, on a game its club cancelled after the cut-off had taken it (*refunded 30 z\u0142*). `null` where nothing is: a game short at its cut-off, or cancelled before it, took nothing (#637)."
           }
         },
         "type": "object",
         "required": [
           "share_grosze",
           "paid",
+          "share_state",
+          "taken_at",
           "free_to_leave_until",
-          "back_if_you_leave_grosze",
           "refunded_grosze"
         ],
         "title": "BookedMoneySchema",
-        "description": "The money line: *Paid \u00b7 30 z\u0142 \u00b7 28,55 z\u0142 back if you leave by Sat 17:00*."
+        "description": "The money line: *30 z\u0142 \u00b7 free to leave until Fri 17:00* while the share\nis held, *Paid \u00b7 30 z\u0142* once it is taken (#637; the mechanics \u00a714.1,\nQ113)."
       },
       "BookedSchema": {
         "properties": {
@@ -8681,7 +8694,7 @@
         "properties": {
           "left": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 refunded at once, less the card fee (the receipt follows within moments); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 nothing was taken: the hold on the card is let go, nobody is refunded (#637); the seat is offered to others. `AFTER_THE_CUT_OFF` \u2014 the seat stays paid and is offered to others until the start; refunded, less the card fee, when somebody takes it. `WHILE_WAITING_FOR_THE_CLUB` \u2014 nobody had paid: the yes and the request to the club are withdrawn, and the game is filling again \u2014 `SEAT_OPEN` with `filling_again` on the others' Home. So it is on a game already `filling_again`: the yes is withdrawn \u2014 and on one `WAITING_FOR_A_PAYMENT` (#625, #626): nobody had paid, the leaver's hold is let go, and the payer's time runs on."
           }
         },
         "type": "object",
@@ -10567,17 +10580,31 @@
         "properties": {
           "kind": {
             "$ref": "#/components/schemas/Leaving",
-            "description": "`BEFORE_THE_CUT_OFF` \u2014 *You'll be refunded 38,40 z\u0142 now (the 1,60 z\u0142 card fee isn't returned). Your seat is offered to others. On your record only if the game is then called off.* `AFTER_THE_CUT_OFF` \u2014 *Your seat is offered to others. You'll be refunded 38,40 z\u0142 when someone takes it; if nobody does, you won't be. On your record if nobody takes it.* `WHILE_WAITING_FOR_THE_CLUB` \u2014 *Nobody has paid yet. Leaving withdraws your yes.* The same words the departure answers with."
+            "description": "`BEFORE_THE_CUT_OFF` \u2014 *Nothing is taken: the hold on your card is let go. Your seat is offered to others. On your record only if the game is then called off.* (Q113) `AFTER_THE_CUT_OFF` \u2014 *Your seat is offered to others. If someone takes it, you get 38,40 z\u0142 back (40 z\u0142 less the 1,60 z\u0142 kept on your payment); if nobody does, you won't. On your record if nobody takes it.* `WHILE_WAITING_FOR_THE_CLUB` \u2014 *Nobody has paid yet. Leaving withdraws your yes.* The same words the departure answers with."
           },
           "refund_grosze": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Refund Grosze",
-            "description": "What comes back \u2014 the share less the card fee; nought when nobody paid."
+            "description": "After the cut-off, what comes back if somebody takes the seat \u2014 the share less the card fee; nought when nobody paid. `null` before the cut-off, when nothing is taken and nothing comes back (#637)."
           },
           "card_fee_grosze": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Card Fee Grosze",
-            "description": "The card fee that isn't returned \u2014 the provider's standard price, an estimate; what it kept is on the receipt."
+            "description": "After the cut-off, the card fee that isn't returned \u2014 the provider's standard price, an estimate; what it kept is on the receipt. `null` before the cut-off (#637)."
           }
         },
         "type": "object",
@@ -11569,7 +11596,7 @@
           "terms_needed": {
             "type": "boolean",
             "title": "Terms Needed",
-            "description": "`true` when the bank moved the saved card to another brand: it cannot be charged until the player accepts the terms again (`POST \u2026/terms` with no setup open). Always `false` with no method."
+            "description": "`true` when the saved card cannot be held until the player accepts the terms in force again (`POST \u2026/terms` with no setup open): its bank moved it to another brand, or the terms were accepted in words no longer in force (`terms_version`, #637). Always `false` with no method."
           },
           "terms_version": {
             "type": "string",
@@ -12859,7 +12886,7 @@
               "REFUND"
             ],
             "title": "Kind",
-            "description": "`CHARGE` \u2014 a share paid (\u2713). `REFUND` \u2014 a share given back (\u21a9): less the card fee to a player who left before the cut-off, whole on a game called off at its cut-off."
+            "description": "`CHARGE` \u2014 a share paid (\u2713): taken at the club's cut-off, or at once after it; a share only held is no receipt (#637). `REFUND` \u2014 a share given back (\u21a9): less the card fee to a player who left after the cut-off when somebody took their seat, whole on a game its club cancelled after the cut-off."
           },
           "club": {
             "$ref": "#/components/schemas/SellerSchema"
@@ -13283,7 +13310,7 @@
           },
           "status": {
             "$ref": "#/components/schemas/SeatChargeStatus",
-            "description": "`AUTHORISED` held, `FAILED` refused and waiting for its player, `TAKING`/`CAPTURED` paid, `RELEASING`/`CANCELLED` let go untaken."
+            "description": "`AUTHORISED` held, `FAILED` refused and waiting for its player, `HELD` held for the booked game until the club's cut-off and not paid (#637), `TAKING`/`CAPTURED` paid, `RELEASING`/`CANCELLED` let go untaken."
           },
           "refusal": {
             "anyOf": [
@@ -13343,6 +13370,7 @@
         "enum": [
           "AUTHORISED",
           "FAILED",
+          "HELD",
           "TAKING",
           "CAPTURED",
           "RELEASING",
@@ -13407,7 +13435,7 @@
             },
             "type": "array",
             "title": "Players",
-            "description": "Everybody on the game, each *paid* \u2014 the small posters, first side first. Long-press a poster for their record."
+            "description": "Everybody on the game, each *paid* once the cut-off took their shares (#637) \u2014 the small posters, first side first. Long-press a poster for their record."
           }
         },
         "type": "object",
@@ -13558,6 +13586,15 @@
         ],
         "title": "SetWeeklyHoursRequest",
         "description": "The weekly hours, replaced whole \u2014 *Save your week*.\n\n**No floor, and that is the difference from the commit.** An empty list is a\ncleared week and is recorded; ``weekly_hours_empty`` refuses the answer a\nplayer is *asked for* at the end of onboarding, not every later edit of it.\n\nRepeated hours are collapsed rather than refused, and the response carries\nthe week as it was stored \u2014 so a client that sent the same hour twice, or\nsent the week in its own order, can see what the profile now holds."
+      },
+      "ShareState": {
+        "type": "string",
+        "enum": [
+          "HELD",
+          "TAKEN"
+        ],
+        "title": "ShareState",
+        "description": "Where the players' shares of a booked game stand (#637; the mechanics\n\u00a712.2, \u00a714.1, Q113)."
       },
       "SkillPanelSchema": {
         "properties": {
@@ -14469,7 +14506,7 @@
                 "type": "null"
               }
             ],
-            "description": "Present when this yes booked the game: every seat was charged, and the booking and its Game are open. `null` otherwise."
+            "description": "Present when this yes booked the game: every seat's share was held until the club's cut-off, or taken after it (#637), and the booking and its Game are open. `null` otherwise."
           },
           "waiting_for_the_club": {
             "type": "boolean",

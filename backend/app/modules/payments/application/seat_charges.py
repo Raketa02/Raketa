@@ -3,8 +3,16 @@
 
 **Every seat is held first, on the club's account, off-session** — the player's
 saved card cloned onto the seller's account for that one payment, authorised
-with manual capture. Only when **every** seat is held is any taken; when one is
-not, every hold is let go and **nobody pays**. A hold let go costs nothing.
+with manual capture. Only when **every** seat is held does the game book; when
+one is not, every hold is let go and **nobody pays**. A hold let go costs
+nothing.
+
+**Booked before the club's cut-off, every hold is kept and nothing is taken**
+(#637; ADR-0189's 2026-10-10 amendment): each share stays held on its card for
+the booked game until the cut-off, which takes it (``proposals``' cut-off job,
+through ``TakeTheHeldShares``), and leaving before then lets it go — a
+rescue's share too, which follows the seats it joins. **Booked after it, every
+share is taken at once**, as before.
 
 **The holds are asked inline, because their answer is the response** — *It's a
 game!* or *your payment didn't go through* — and before anything is written
@@ -50,7 +58,6 @@ from app.modules.payments.application.seat_charge_emails import (
     game_booked_email,
 )
 from app.modules.payments.application.setup import key_hour
-from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.errors import (
     PaymentNotConfirmed,
     SeatChargeNotFound,
@@ -89,7 +96,9 @@ class GameToCharge:
     share_grosze: int
     #: The court it is booked on, for the confirmation.
     court_name: str
-    #: The club's cut-off, or ``None`` when the game filled after it.
+    #: The club's cut-off while it is ahead — every share is **held** for the
+    #: booked game until then, and taken at it (#637) — or ``None`` when the
+    #: game filled after it, and every share is taken at once.
     free_to_leave_until: Instant | None
     #: A seat a leaver left open on a booked game, taken by one player (#545)
     #: — its holds are keyed apart from the fill's, and a refusal asks them to
@@ -123,10 +132,11 @@ class RefusedSeat:
 @final
 @dataclass(frozen=True, slots=True)
 class SeatsCharged:
-    """Every seat taken — ``refused`` is empty — or nobody: ``refused`` names
-    whose share could not be held, and nothing was taken."""
+    """Every seat held for the booked game or taken — ``refused`` is empty —
+    or nobody: ``refused`` names whose share could not be held, and nothing
+    was taken."""
 
-    #: Each player's charge, when every seat was taken.
+    #: Each player's charge, when every seat was held for the game or taken.
     taken: Mapping[UUID, UUID]
     refused: Mapping[UUID, RefusedSeat]
 
@@ -210,7 +220,7 @@ class ChargeTheSeats:
                 refused[player] = outcome
 
         if not refused:
-            return await self._take_every_seat(
+            return await self._book_every_seat(
                 game, players, held=held, confirmed=confirmed, seller=seller, at=at
             )
         return await self._nobody_pays(
@@ -261,7 +271,7 @@ class ChargeTheSeats:
             return payment
         return _refusal_of(payment), payment
 
-    async def _take_every_seat(
+    async def _book_every_seat(
         self,
         game: GameToCharge,
         players: Sequence[UUID],
@@ -271,12 +281,19 @@ class ChargeTheSeats:
         seller: Seller,
         at: Instant,
     ) -> SeatsCharged:
+        """Every hold is the game's: kept until the cut-off — a rescue's too,
+        like every seat it joins — or, booked after it, taken now."""
+
+        until = game.free_to_leave_until
         taken: dict[UUID, UUID] = {}
         for player in players:
             charge = confirmed.get(player) or _a_hold(
                 game, player, held[player], seller=seller, at=at
             )
-            charge.take(booking_id=game.game_id, at=at)
+            if until is not None:
+                charge.keep(booking_id=game.game_id, until=until, at=at)
+            else:
+                charge.take(booking_id=game.game_id, at=at)
             await self._charges.save(charge)
             taken[player] = charge.charge_id
         payers = await self._payers.of(players)
@@ -292,9 +309,8 @@ class ChargeTheSeats:
                     court=game.court_name,
                     sport=game.sport,
                     starts_at=game.starts_at,
-                    paid_grosze=game.share_grosze,
-                    free_to_leave_until=game.free_to_leave_until,
-                    fee_estimate_grosze=estimated_card_fee(game.share_grosze),
+                    share_grosze=game.share_grosze,
+                    held_until=until,
                     app_link=self._app_link,
                     booked_on_a_payment=game.booked_on_a_payment
                     and player != game.filled_by,
@@ -387,6 +403,34 @@ def _a_hold(
         starts_at=game.starts_at,
         at=at,
     )
+
+
+@final
+class TakeTheHeldShares:
+    """**The club's cut-off takes the shares held for its booked game** (#637;
+    ADR-0189's 2026-10-10 amendment): each one is taken in the caller's
+    transaction, and captured at the provider from the outbox after the
+    commit, which records the real fee kept on it. **No commit.**"""
+
+    def __init__(self, *, charges: SeatChargeRepository) -> None:
+        self._charges = charges
+
+    async def due(self, *, at: Instant) -> Sequence[UUID]:
+        """Every game with a share still held whose cut-off has come."""
+
+        return await self._charges.games_held_until(at)
+
+    async def execute(self, game_id: UUID, *, at: Instant) -> int:
+        """Take every share held for this game. Answers how many."""
+
+        taken = 0
+        for charge in await self._charges.of_game(game_id):
+            if charge.status is SeatChargeStatus.HELD:
+                assert charge.booking_id is not None
+                charge.take(booking_id=charge.booking_id, at=at)
+                await self._charges.save(charge)
+                taken += 1
+        return taken
 
 
 @final

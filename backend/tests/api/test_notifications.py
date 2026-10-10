@@ -30,7 +30,7 @@ import pytest
 
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import (
-    build_call_off_short_games,
+    build_the_cut_off,
     build_expire_unanswered_requests,
     build_notice_day_repository,
     build_propose_games,
@@ -199,7 +199,7 @@ async def joins(client, player: dict, booking_id: str) -> None:
 
 async def cuts_off(session_factory, clock):
     async with session_factory() as session:
-        return await build_call_off_short_games(
+        return await build_the_cut_off(
             session, clock=clock, settings=get_settings()
         ).execute()
 
@@ -256,7 +256,7 @@ async def test_a_phone_signed_out_is_pushed_nothing_more(
 ):
     ola, kuba, ewa = crowd[:3]
     assert await titles_pushed_to(mailbox, pushes, ola) == [
-        "It's a game! · you paid 30 zł"
+        "It's a game! · 30 zł held"
     ]
 
     signed_out = await client.post(
@@ -266,7 +266,7 @@ async def test_a_phone_signed_out_is_pushed_nothing_more(
 
     assert signed_out.status_code == 204, signed_out.text
     assert await titles_pushed_to(mailbox, pushes, ola) == [
-        "It's a game! · you paid 30 zł"
+        "It's a game! · 30 zł held"
     ]
     assert "kuba left your game" in await titles_pushed_to(mailbox, pushes, ewa)
     # Still told — the list holds it, whatever became of the phone.
@@ -347,7 +347,7 @@ async def test_a_game_that_fills_tells_every_player_they_paid(
     # Tomek's yes filled it: his own copy is pushed to nobody (Q102).
     for player in crowd[:3]:
         assert await pushed_to(mailbox, pushes, player) == [
-            ("It's a game! · you paid 30 zł", f"{THE_GAME}.")
+            ("It's a game! · 30 zł held", f"{THE_GAME}.")
         ]
     assert await pushed_to(mailbox, pushes, crowd[3]) == []
     [notice] = await notices_of(client, mailbox, crowd[0])
@@ -356,7 +356,7 @@ async def test_a_game_that_fills_tells_every_player_they_paid(
         for key in ("kind", "title", "body", "opens", "game_id", "sport", "gathered")
     } == {
         "kind": "GAME_BOOKED",
-        "title": "It's a game! · you paid 30 zł",
+        "title": "It's a game! · 30 zł held",
         "body": f"{THE_GAME}.",
         "opens": "BOOKING",
         "game_id": booking,
@@ -444,11 +444,11 @@ async def test_a_leaver_s_seat_tells_everybody_still_in_and_the_leaver_nothing(
     # Kuba left before the cut-off and was refunded less the card fee: his own
     # act, emailed and never pushed.
     assert await titles_pushed_to(mailbox, pushes, kuba) == [
-        "It's a game! · you paid 30 zł"
+        "It's a game! · 30 zł held"
     ]
 
 
-async def test_a_game_still_short_at_the_cut_off_is_called_off_with_the_refund(
+async def test_a_game_still_short_at_the_cut_off_is_called_off_and_nothing_taken(
     client, session_factory, clock, booking, crowd, mailbox, pushes
 ):
     ola, kuba, ewa, tomek = crowd[:4]
@@ -460,7 +460,7 @@ async def test_a_game_still_short_at_the_cut_off_is_called_off_with_the_refund(
 
     for player in (ola, ewa, tomek):
         assert (await pushed_to(mailbox, pushes, player))[-1] == (
-            "Game called off · you're refunded 30 zł",
+            "Game called off · nothing was taken",
             f"{THE_GAME} was still short at the club's cut-off.",
         )
     # Kuba's empty seat called it off: he is told so, as a leaver, and that
@@ -469,8 +469,8 @@ async def test_a_game_still_short_at_the_cut_off_is_called_off_with_the_refund(
     assert (notice["kind"], notice["title"], notice["body"]) == (
         "GAME_CALLED_OFF",
         "Saturday's 17:00 at Bonarka Arena, which you left, was called off",
-        "Your seat stayed empty, so it counts on your record. Your 28,55 zł "
-        "refund stands.",
+        "Your seat stayed empty, so it counts on your record. Nothing was "
+        "taken from you.",
     )
     # He has no seat on it: it opens the game he left.
     assert notice["opens"] == "PROPOSAL"
@@ -490,16 +490,17 @@ async def test_a_game_the_club_cancels_is_called_off_with_its_reason(
     assert cancelled.status_code == 204, cancelled.text
     for player in crowd[:4]:
         assert (await pushed_to(mailbox, pushes, player))[-1] == (
-            "Game called off · you're refunded 30 zł",
+            "Game called off · nothing was taken",
             "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the weather.",
         )
 
 
 async def test_a_leaver_whose_seat_was_taken_is_told_they_were_refunded(
-    client, clock, booking, crowd, mailbox, pushes
+    client, session_factory, clock, booking, crowd, mailbox, pushes
 ):
     kuba, zosia = crowd[1], crowd[4]
     clock.move(CUT_OFF + timedelta(hours=1) - MONDAY_MORNING)
+    await cuts_off(session_factory, clock)
     await leaves(client, kuba, booking)
 
     await joins(client, zosia, booking)
@@ -513,6 +514,7 @@ async def test_a_leaver_whose_seat_was_taken_is_told_they_were_refunded(
     # own, listed and pushed to nobody (Q102).
     assert await titles_pushed_to(mailbox, pushes, zosia) == []
     [joined] = await notices_of(client, mailbox, zosia)
+    # After the cut-off her share was taken at once.
     assert (joined["title"], joined["your_own"]) == (
         "It's a game! · you paid 30 zł",
         True,
@@ -700,7 +702,7 @@ async def test_a_request_taken_back_before_it_was_told_is_told_by_what_came_of_i
     assert await notices_of(client, mailbox, kuba) == []
 
 
-async def test_the_club_s_yes_is_one_notice_that_it_confirmed_and_they_paid(
+async def test_the_club_s_yes_is_one_notice_that_it_confirmed_and_they_are_held(
     client, on_request, crowd, mailbox, pushes, a_game_asked
 ):
     _, desk = on_request
@@ -711,8 +713,9 @@ async def test_the_club_s_yes_is_one_notice_that_it_confirmed_and_they_paid(
 
     assert accepted.status_code == 200, accepted.text
     confirmed = (
-        "Kazimierz Padel confirmed your game",
-        "Padel · Sat 10 Oct, 17:00 — it's a game, and you paid 30 zł.",
+        "Kazimierz Padel confirmed your game · 30 zł held",
+        "Padel · Sat 10 Oct, 17:00 — it's a game. 30 zł is held on your card "
+        "and taken at the club's cut-off, Fri 17:00.",
     )
     for player in crowd[:3]:
         assert await pushed_to(mailbox, pushes, player) == [
@@ -723,7 +726,7 @@ async def test_the_club_s_yes_is_one_notice_that_it_confirmed_and_they_paid(
     assert await pushed_to(mailbox, pushes, crowd[3]) == [confirmed]
     for player in crowd[:4]:
         [email] = await mailbox.to(f"{player['name']}@example.com")
-        assert email.subject == "It's a game! · you paid 30 zł"
+        assert email.subject == "It's a game! · 30 zł held"
 
 
 async def test_the_club_s_no_tells_everybody_waiting_on_it(
@@ -1293,7 +1296,7 @@ async def test_the_recent_list_is_the_newest_first_and_as_long_as_asked(
     assert [n["title"] for n in notices] == [
         "ewa left your game",
         "kuba left your game",
-        "It's a game! · you paid 30 zł",
+        "It's a game! · 30 zł held",
     ]
     assert [n["title"] for n in await notices_of(client, mailbox, ola, limit=1)] == [
         "ewa left your game"
@@ -1358,7 +1361,7 @@ async def test_every_notice_is_new_until_the_list_is_opened_and_then_only_later_
     assert later["new_count"] == 1
     assert [(n["title"], n["new"]) for n in later["notices"]] == [
         ("kuba left your game", True),
-        ("It's a game! · you paid 30 zł", False),
+        ("It's a game! · 30 zł held", False),
     ]
 
 

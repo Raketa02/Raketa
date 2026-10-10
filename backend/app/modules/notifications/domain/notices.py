@@ -39,7 +39,9 @@ from app.shared.domain.events import EventRecorder
 class NoticeKind(StrEnum):
     """Every notice a player can be told (the mechanics §17.2)."""
 
-    #: *It's a game! · you paid 30 zł* — the seats were taken.
+    #: *It's a game! · 30 zł held* — the shares held until the cut-off, which
+    #: the notice keeps as ``until`` (#637); *you paid 30 zł* when taken at once
+    #: after it.
     GAME_BOOKED = "GAME_BOOKED"
     #: *It's a game! · Kazimierz Padel answers by 21:15* — the four are matched,
     #: and the game went to its On request club; nobody has paid (Q103).

@@ -142,6 +142,10 @@ def refunds_on(pane: dict) -> dict[str, dict | None]:
     return {charge["player"]["name"]: charge["refund"] for charge in pane["charges"]}
 
 
+def statuses_on(pane: dict) -> dict[str, str]:
+    return {charge["player"]["name"]: charge["status"] for charge in pane["charges"]}
+
+
 # --------------------------------------------------------------------------- #
 # Leave the game
 # --------------------------------------------------------------------------- #
@@ -161,11 +165,11 @@ async def test_leaving_before_the_cut_off_opens_the_seat_alike(
     # Read on the phones: hers shows the seat open, his no longer the game.
     assert await status_on_home(client, world.marta, booking) == "SEAT_OPEN"
     assert await status_on_home(client, kuba, booking) is None
-    # Refunded at once, less the card fee.
+    # His hold let go: nothing taken, nothing refunded (#637).
     await players.deliver_the_outbox(session_factory, payments=payments)
-    refund = refunds_on(pane_of(await board_of(client, world.group), booking))["kuba"]
-    assert refund["withholds_fee"] is True
-    assert refund["given_at"] is not None
+    pane = pane_of(await board_of(client, world.group), booking)
+    assert statuses_on(pane)["kuba"] == "CANCELLED"
+    assert refunds_on(pane)["kuba"] is None
 
 
 @pytest.mark.parametrize("via", [PLAYER, CONSOLE])
@@ -357,11 +361,11 @@ async def test_kuba_leaves_before_the_cut_off_and_his_seat_is_offered_to_her(
     # Her phone: the seat on her Fill in, and a Seat open card in her deck.
     assert booking in await fill_in_of(client, world.marta, world)
     assert booking in await seat_open_cards(client, world.marta, world)
-    # Kuba refunded at once, less the card fee.
+    # Kuba's hold let go: nothing taken, nothing refunded (#637).
     await players.deliver_the_outbox(session_factory, payments=payments)
-    assert refunds_on(pane_of(await board_of(client, world.group), booking))["kuba"][
-        "withholds_fee"
-    ]
+    pane = pane_of(await board_of(client, world.group), booking)
+    assert statuses_on(pane)["kuba"] == "CANCELLED"
+    assert refunds_on(pane)["kuba"] is None
 
     # A row takes it, and it is gone from her board.
     taker = next(
@@ -417,7 +421,7 @@ async def test_she_leaves_has_one_game_before_its_cut_off_and_one_after(
         assert str(world.marta["id"]) in {p["player_id"] for p in game["people"]}
         assert await status_on_home(client, world.marta, game["game_id"]) == "BOOKED"
 
-    # She leaves both from her phone: one refunded at once…
+    # She leaves both from her phone: one whose hold is let go…
     left = await leaves(client, PLAYER, world.marta, before["game_id"])
     assert left.json() == {"left": "BEFORE_THE_CUT_OFF"}, left.text
     # …and one whose seat stays paid until somebody takes it.
@@ -425,7 +429,8 @@ async def test_she_leaves_has_one_game_before_its_cut_off_and_one_after(
     assert left.json() == {"left": "AFTER_THE_CUT_OFF"}, left.text
     await players.deliver_the_outbox(session_factory, payments=payments)
     board = await board_of(client, world.group)
-    assert refunds_on(pane_of(board, before["game_id"]))["marta"]["withholds_fee"]
+    assert statuses_on(pane_of(board, before["game_id"]))["marta"] == "CANCELLED"
+    assert refunds_on(pane_of(board, before["game_id"]))["marta"] is None
     assert refunds_on(pane_of(board, after["game_id"]))["marta"] is None
 
     # A row takes her seat, and her refund lands.

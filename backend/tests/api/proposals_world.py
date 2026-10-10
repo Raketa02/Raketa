@@ -16,7 +16,7 @@ a literal the calendar can check: the sixth is a Tuesday, the tenth a Saturday.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -25,6 +25,7 @@ from app.bootstrap.composition import (
     build_expire_proposals,
     build_make_proposal,
     build_run_out_the_time_to_pay,
+    build_the_cut_off,
 )
 from app.core.config import get_settings
 from app.engines.matchfit.core import SearchMode
@@ -56,7 +57,7 @@ WARSAW = ZoneInfo("Europe/Warsaw")
 GROUPS = "/api/v1/groups"
 LIVE_YESES = "/api/v1/players/me/live-yeses"
 PAYMENT_METHODS = "/api/v1/players/me/payment-methods"
-TERMS_IN_FORCE = "2026-09-29"
+TERMS_IN_FORCE = "2026-10-10"
 
 
 def warsaw(day: int, hour: int, month: int = 10) -> datetime:
@@ -303,6 +304,25 @@ async def runs_out(session_factory, clock):
 
     async with session_factory() as session:
         return await build_run_out_the_time_to_pay(
+            session, clock=clock, settings=get_settings()
+        ).execute()
+
+
+#: Saturday 17:00's cut-off at a club that keeps the default 24 hours.
+SATURDAY_FIVE_S_CUT_OFF = SATURDAY_FIVE - timedelta(hours=24)
+
+
+async def the_cut_off_comes(session_factory, clock, *, at: datetime | None = None):
+    """The clock moved to a game's cut-off — Saturday 17:00's, unless ``at``
+    says another — and the cut-off job run then: a full game's held shares are
+    taken, a short one called off (#637). The outbox is the caller's to
+    drain."""
+
+    moment = SATURDAY_FIVE_S_CUT_OFF if at is None else at
+    if clock.now() < moment:
+        clock.move(moment - clock.now())
+    async with session_factory() as session:
+        return await build_the_cut_off(
             session, clock=clock, settings=get_settings()
         ).execute()
 
