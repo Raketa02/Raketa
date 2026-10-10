@@ -37,9 +37,9 @@
 4. **The last yes books the game.** Every player's saved card is charged at that moment,
    all together or not at all, the court is booked with the club, and everyone sees
    **It's a game!**. Nobody has to confirm anything.
-5. **Free to leave until the club's cut-off.** Leave before it and you are refunded at once
-   (minus the card fee); your seat becomes a **rescue** that others can take. Leave after it
-   and you are refunded only when someone takes your seat.
+5. **Leaving before the club's cut-off is refunded.** Leave before it and you are refunded
+   at once (minus the card fee); your seat becomes a **rescue** that others can take. Leave
+   after it and you are refunded only when someone takes your seat.
 6. **A game is full at the cut-off, or it is off.** If a seat is still empty at the club's
    cut-off, the game is called off and everyone still in gets all their money back. Nobody ever
    pays more for an empty seat; a seat left after the cut-off may stay empty, and the game goes

@@ -1261,7 +1261,8 @@ website, and lists there the courts, hours and prices it sells through Raketa.
   configuration. Confirmed only once a Way of working is chosen, since which of them matter
   depends on it.
 - **Cut-off** — the club's free-cancellation deadline, a Raketa setting (0–72 h, default 24 h
-  before). Leaving before it is free; a game still short at it is called off.
+  before). Leaving before it is refunded at once, less the card fee; a game still short at it
+  is called off.
 - **Book-by** — the latest moment a proposal can still fill: the release time (Only Raketa) or the
   start minus the club's minimum notice (Instant, On request). **Derived, never chosen** — once,
   from the club's terms, and carried on every sellable court hour. No other clock runs on a
