@@ -755,16 +755,21 @@ export interface components {
          * @description What the club's yes came to.
          * @enum {string}
          */
-        AcceptOutcome: "BOOKED" | "SEAT_OPENED";
+        AcceptOutcome: "BOOKED" | "WAITING_FOR_A_PAYMENT" | "CALLED_OFF" | "SEAT_OPENED";
         /** AcceptanceResponse */
         AcceptanceResponse: {
-            /** @description `BOOKED` — everybody paid, the game is booked on `court_name` and the players are told. `SEAT_OPENED` — a player's payment did not go through, or a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full. */
+            /** @description `BOOKED` — everybody paid, the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` — accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` — a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` — a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full. */
             outcome: components["schemas"]["AcceptOutcome"];
             /**
              * Court Name
              * @description The court the players were given — on a booked game only.
              */
             court_name: string | null;
+            /**
+             * Payment Due By
+             * @description When the player's payment is due — *Accepted · waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only.
+             */
+            payment_due_by?: string | null;
         };
         /** AdministratorGroupSchema */
         AdministratorGroupSchema: {
@@ -857,10 +862,10 @@ export interface components {
         };
         /**
          * CalledOffReason
-         * @description Why a game will not be played (the mechanics §14.1).
+         * @description Why a game will not be played (the mechanics §14.1, §16.7).
          * @enum {string}
          */
-        CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB";
+        CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB" | "PAYMENT_NOT_IN_TIME";
         /** CancelRequest */
         CancelRequest: {
             /** @description `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the players with their refund. */
@@ -1020,9 +1025,9 @@ export interface components {
             sport: components["schemas"]["Sport"];
             /** @description Competitive, or for fun (a friendly). */
             kind: components["schemas"]["SearchMode"];
-            /** @description `WAITING_FOR_YOU` — an On request game asking for the court: Accept or Refuse before `answer_by`. `BOOKED` — full and paid. `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
+            /** @description `WAITING_FOR_YOU` — an On request game asking for the court: Accept or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` — you accepted, and one player's payment is still to come until `payment_due_by` (#626): *Accepted · waiting for one player's payment until 21:20*. Your yes and the court are kept; nothing for you to answer. `BOOKED` — full and paid. `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
             status: components["schemas"]["ClubStatus"];
-            /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). `REFUSED` — you refused the request. `NO_ANSWER` — it was not answered in time. */
+            /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). `REFUSED` — you refused the request. `NO_ANSWER` — it was not answered in time. `PAYMENT_NOT_IN_TIME` — you accepted, and a player's payment didn't come in time: nobody paid, and you were emailed *A game didn't go ahead*. Full again, the game asks you again as a new request. */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
             /** @description Why you cancelled it — on a game you cancelled, else `null`. */
             cancel_reason: components["schemas"]["ClubCancelReason"] | null;
@@ -1044,6 +1049,11 @@ export interface components {
              * @description Your countdown, while it waits for your answer — else `null`.
              */
             answer_by: string | null;
+            /**
+             * Payment Due By
+             * @description When the player's payment your yes waits on is due — `WAITING_FOR_A_PAYMENT` only, else `null`. Never who.
+             */
+            payment_due_by: string | null;
             /**
              * May Move Or Cancel
              * @description **Move** and **Cancel** are yours: booked or with a seat open, and not started yet.
@@ -1320,7 +1330,7 @@ export interface components {
          * @description What a booking is to its club, right now (the mechanics §16.7).
          * @enum {string}
          */
-        ClubStatus: "WAITING_FOR_YOU" | "BOOKED" | "SEAT_OPEN" | "CALLED_OFF" | "PLAYED";
+        ClubStatus: "WAITING_FOR_YOU" | "WAITING_FOR_A_PAYMENT" | "BOOKED" | "SEAT_OPEN" | "CALLED_OFF" | "PLAYED";
         /**
          * CourtChangeRequest
          * @description A court's edit form: the three facts it was added with, and whether it
@@ -1916,20 +1926,15 @@ export interface components {
         };
         /**
          * SearchMode
-         * @description What kind of evening this search is for. **Two values, never three.**
+         * @description What kind of game this is. **Two values, never three.**
          *
-         *     ``PlayIntent`` is the *candidate's* declaration and has three values;
-         *     ``SearchMode`` is the *searcher's* setting — which tab they are on, right
-         *     now — and has two. ``app/modules/player_profile/domain/play_intent.py`` says
-         *     where this type belongs when it arrives: *"it belongs to the matcher and not
-         *     to this module"*. Here it is.
+         *     ``PlayIntent`` is a player's declaration and has three values; this is the
+         *     *game's* kind — a Games card is competitive or for fun — and has two. The
+         *     arities differ on purpose, so the likeliest bug in reading one as the other
+         *     is a type error rather than a paragraph in a document.
          *
-         *     **There is never a ``NO_PREFERENCE`` weight vector.** A candidate who
-         *     declared ``NO_PREFERENCE`` is indifferent about the kind of evening, so their
-         *     reverse fit runs under the *searcher's* mode: ``NO_PREFERENCE`` never selects
-         *     a weight vector, it inherits one (``ranking-weights.md`` §9). The arities
-         *     differ on purpose, so the likeliest bug in the matcher is a type error rather
-         *     than a paragraph in a document.
+         *     It picks the level window's tolerance (``matchmaking/domain/level_window.py``)
+         *     and nothing else here.
          * @enum {string}
          */
         SearchMode: "COMPETITIVE" | "FOR_FUN";

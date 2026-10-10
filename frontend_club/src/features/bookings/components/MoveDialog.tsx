@@ -61,12 +61,15 @@ function MoveForm({
  */
 export function MoveDialog({
   game,
+  clubName,
   answer,
   action,
   onClose,
 }: {
   /** The game asked about, or `null` while nothing is asked. */
   game: Asked | null;
+  /** As the players read it. */
+  clubName: string;
   /** The free courts, or why there are none to read; `null` while they are being read. */
   answer: FreeCourtsAnswer | null;
   action: (form: FormData) => void;
@@ -82,7 +85,11 @@ export function MoveDialog({
       );
     }
     if (read.refusal !== null) {
-      return <Notice tone="error">{actRefusal({ code: read.refusal, name: asked.name })}</Notice>;
+      return (
+        <Notice tone="error">
+          {actRefusal({ code: read.refusal, name: asked.name }, clubName)}
+        </Notice>
+      );
     }
     return (
       <p className={styles.none}>

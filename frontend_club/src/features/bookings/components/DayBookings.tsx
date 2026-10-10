@@ -25,7 +25,16 @@ type Asking =
  * questions *Refuse*, *Move* and *Cancel* ask first, and over it all what came of the last act.
  * *Move* reads the free courts as it opens, keeping the answer for the game it asked about.
  */
-export function DayBookings({ day, pointedAt }: { day: BookingsDay; pointedAt: string | null }) {
+export function DayBookings({
+  day,
+  clubName,
+  pointedAt,
+}: {
+  day: BookingsDay;
+  /** As the players read it. */
+  clubName: string;
+  pointedAt: string | null;
+}) {
   const [state, act, acting] = useActionState(actOnBooking, NOTHING_DONE);
   const [asking, setAsking] = useState<Asking | null>(null);
   const [free, setFree] = useState<{ id: string; answer: FreeCourtsAnswer } | null>(null);
@@ -51,7 +60,7 @@ export function DayBookings({ day, pointedAt }: { day: BookingsDay; pointedAt: s
 
   return (
     <>
-      <ActNotice state={state} />
+      <ActNotice state={state} clubName={clubName} />
       {day.bookings.length === 0 ? (
         <p className={styles.none}>{BOOKINGS_COPY.empty[day.filter]}</p>
       ) : (
@@ -67,11 +76,13 @@ export function DayBookings({ day, pointedAt }: { day: BookingsDay; pointedAt: s
       )}
       <RefuseDialog
         game={asking?.kind === 'refuse' ? asking.game : null}
+        clubName={clubName}
         action={act}
         onClose={close}
       />
       <MoveDialog
         game={moving}
+        clubName={clubName}
         answer={moving !== null && free?.id === moving.id ? free.answer : null}
         action={act}
         onClose={close}

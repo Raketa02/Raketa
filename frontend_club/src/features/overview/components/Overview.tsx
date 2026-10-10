@@ -42,7 +42,11 @@ export function Overview({
       {passwordSet ? <Notice tone="success">{RESET_COPY.done}</Notice> : null}
       {stripeFailed ? <Notice tone="error">{OVERVIEW_COPY.stripeFailed}</Notice> : null}
       <LiveLine live={setup.live} told={toldLive} />
-      {setup.live ? <WaitingRequests requests={requests} /> : <SetupChecklist setup={setup} />}
+      {setup.live ? (
+        <WaitingRequests requests={requests} clubName={club.name} />
+      ) : (
+        <SetupChecklist setup={setup} />
+      )}
     </>
   );
 }

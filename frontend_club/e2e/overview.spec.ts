@@ -169,12 +169,26 @@ test.describe('Overview', () => {
     const padel = club.raketa.courts[0];
     if (padel === undefined) throw new Error('ready() seats a court');
     club.bookings.add(booking({ court: padel, day: dayFromToday(1), hour: 19 }));
+    // Accepted, and waiting on one player's payment: the desk has answered it (Q112).
+    club.bookings.add(
+      booking({ court: padel, day: dayFromToday(1), hour: 20, stage: 'WAITING_FOR_A_PAYMENT' }),
+    );
     await signIn(page);
 
     const waiting = page.getByRole('region', { name: 'Waiting for your answer' });
     await expect(waiting).toContainText('Nothing is waiting for you.');
     await expect(waiting.getByRole('listitem')).toHaveCount(0);
     await expect(page.getByText('Nothing to show here yet.')).toHaveCount(0);
+    await expect(
+      page.getByRole('navigation', { name: 'Club website' }).getByRole('link', {
+        name: 'Bookings',
+        exact: true,
+      }),
+    ).toBeVisible();
+    // What a request left unanswered comes to, in the players' own words (Q105).
+    await expect(waiting).toContainText(
+      'a request not answered in time is called off: the players read “Ogrody 33 didn’t answer in time”.',
+    );
   });
 
   test('a live club sees only what waits for its answer, and answers it there', async ({

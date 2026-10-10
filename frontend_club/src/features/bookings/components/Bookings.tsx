@@ -22,10 +22,13 @@ const COPY = BOOKINGS_COPY;
  */
 export function Bookings({
   day,
+  clubName,
   pointedAt,
   checksIn,
 }: {
   day: BookingsDay;
+  /** As the players read it. */
+  clubName: string;
   pointedAt: string | null;
   checksIn: boolean;
 }) {
@@ -67,7 +70,12 @@ export function Bookings({
             current: filter === day.filter,
           }))}
         />
-        <DayBookings key={`${day.day} ${day.filter}`} day={day} pointedAt={pointedAt} />
+        <DayBookings
+          key={`${day.day} ${day.filter}`}
+          day={day}
+          clubName={clubName}
+          pointedAt={pointedAt}
+        />
       </Card>
     </>
   );

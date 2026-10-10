@@ -98,6 +98,7 @@ export const BOOKINGS_COPY = {
   kinds: { COMPETITIVE: 'Competitive', FOR_FUN: 'Friendly' } satisfies Record<Kind, string>,
   statuses: {
     WAITING_FOR_YOU: 'Waiting for you',
+    WAITING_FOR_A_PAYMENT: 'Accepted',
     BOOKED: 'Booked',
     SEAT_OPEN: 'Seat open',
     CALLED_OFF: 'Called off',
@@ -108,7 +109,10 @@ export const BOOKINGS_COPY = {
     NO_ANSWER: 'No answer',
     SHORT_AT_THE_CUT_OFF: 'Short at the cut-off',
     CANCELLED_BY_THE_CLUB: 'Cancelled by you',
+    PAYMENT_NOT_IN_TIME: 'Payment didn’t come in time',
   } satisfies Record<CalledOffReason, string>,
+  /** Under *Accepted*, while the club's yes waits on one player's payment: never whose. */
+  waitingForAPayment: (until: string) => `Waiting for one player’s payment until ${until}`,
   cancelReasons: {
     WEATHER: 'Weather',
     REPAIR: 'Repair',
@@ -137,9 +141,11 @@ export const BOOKINGS_COPY = {
   cancel: 'Cancel',
   refuseDialog: {
     title: (game: string) => `Refuse ${game}?`,
-    lead:
-      'Nobody has paid. The players read “Called off · refused” and are offered another game ' +
-      'first, never at this court hour. The hour is yours to sell again.',
+    /** What the players read, word for word (the mechanics §16.8). */
+    lead: (clubName: string) =>
+      `Nobody has paid. The players read “${clubName} said no” and “Nobody paid — you’ll get a ` +
+      'new card first”: they are offered another game first, never at this court hour. The ' +
+      'hour is yours to sell again.',
     note: 'Note',
     noteHint: 'For your own records: the players never see it.',
     back: 'Back',
@@ -170,8 +176,17 @@ export const BOOKINGS_COPY = {
   done: {
     accepted: (game: string, court: string) =>
       `${opening(game)} is booked on ${court}. Everybody paid.`,
+    /** A yes that met a refused payment: the court is kept for that player's time to pay. */
+    acceptedWaitingForAPayment: (game: string, until: string) =>
+      `You accepted ${game}. One player’s payment is still to come, until ${until}: the court ` +
+      'is kept for it, and once it’s in the game is booked. If it doesn’t come, the game is ' +
+      'called off and you’re emailed.',
+    /** A yes that met a refused payment when the game's last moment to book had come. */
+    noTimeToPay: (game: string) =>
+      `A player’s payment didn’t go through for ${game}, and there was no time left to pay, so ` +
+      'it is called off. Nobody paid, and the hour is yours to sell again.',
     seatOpened: (game: string) =>
-      `A player’s payment didn’t go through for ${game}, so nobody paid. It is looking for a ` +
+      `One of the players can no longer play ${game}, so nobody paid. It is looking for a ` +
       'player again, and you’ll be asked again once it’s full.',
     refused: (game: string) =>
       `You refused ${game}. Nobody paid, and the hour is yours to sell again.`,
@@ -181,9 +196,10 @@ export const BOOKINGS_COPY = {
   },
   waiting: {
     title: 'Waiting for your answer',
-    lead:
+    /** What a request left unanswered comes to, in the players' own words (the mechanics §16.8). */
+    lead: (clubName: string) =>
       'Full games asking for one of your courts. Nobody pays until you accept, and a request ' +
-      'not answered in time is called off.',
+      `not answered in time is called off: the players read “${clubName} didn’t answer in time”.`,
     none: 'Nothing is waiting for you.',
     /** *140 zł · 35 zł each*. */
     price: (price: string, share: string) => `${price} · ${share} each`,
@@ -198,14 +214,18 @@ export function requestsBadge(count: number): Pick<NavItem, 'badge'> {
   return count > 0 ? { badge: { count, label: `${count} waiting for your answer` } } : {};
 }
 
-/** What can be refused about an act on a game, said about the game the desk saw. */
-const ACT_REFUSALS: Readonly<Record<string, (game: string) => string>> = {
+/**
+ * What can be refused about an act on a game, said about the game the desk saw, by the club
+ * whose name the players read.
+ */
+const actRefusals = (clubName: string): Readonly<Record<string, (game: string) => string>> => ({
   booking_not_found: (game) => `${opening(game)} isn’t one of your bookings any more.`,
   request_not_waiting: (game) =>
     `${opening(game)} isn’t waiting for your answer any more: it was answered already, or a ` +
     'player left and it is looking for a player again.',
   request_timed_out: (game) =>
-    `Your time to answer ${game} ran out: it was called off as unanswered.`,
+    `Your time to answer ${game} ran out: it was called off as unanswered, and the players ` +
+    `read “${clubName} didn’t answer in time”.`,
   payments_unavailable: (game) =>
     `We couldn’t reach the payment provider to charge the players for ${game}. Nothing was ` +
     'recorded; try again.',
@@ -219,9 +239,9 @@ const ACT_REFUSALS: Readonly<Record<string, (game: string) => string>> = {
   court_required: () => 'Choose the court to move it to.',
   cancel_reason_required: () => 'Choose why you’re cancelling: the players are told it.',
   refusal_note_too_long: () => `Keep the note to ${REFUSAL_NOTE_MOST} characters.`,
-};
+});
 
-/** The sentence for a refusal of an act on a game. */
-export function actRefusal(refusal: RefusalAbout): string {
-  return sentenceAbout(refusal, ACT_REFUSALS);
+/** The sentence for a refusal of an act on a game, at the club named `clubName`. */
+export function actRefusal(refusal: RefusalAbout, clubName: string): string {
+  return sentenceAbout(refusal, actRefusals(clubName));
 }

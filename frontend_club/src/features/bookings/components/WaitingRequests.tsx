@@ -24,14 +24,25 @@ const COPY = BOOKINGS_COPY;
  * with its hour, court, sport, players, price and countdown, and *Accept* or *Refuse*. Answered,
  * it goes, and what came of it is said over the list.
  */
-export function WaitingRequests({ requests }: { requests: readonly WaitingRequest[] }) {
+export function WaitingRequests({
+  requests,
+  clubName,
+}: {
+  requests: readonly WaitingRequest[];
+  /** As the players read it. */
+  clubName: string;
+}) {
   const [state, act, acting] = useActionState(actOnBooking, NOTHING_DONE);
   const [refusing, setRefusing] = useState<Asked | null>(null);
 
   return (
     <Card labelledBy="waiting-title">
-      <SectionHeader id="waiting-title" title={COPY.waiting.title} lead={COPY.waiting.lead} />
-      <ActNotice state={state} />
+      <SectionHeader
+        id="waiting-title"
+        title={COPY.waiting.title}
+        lead={COPY.waiting.lead(clubName)}
+      />
+      <ActNotice state={state} clubName={clubName} />
       {requests.length === 0 ? (
         <p className={styles.none}>{COPY.waiting.none}</p>
       ) : (
@@ -69,7 +80,12 @@ export function WaitingRequests({ requests }: { requests: readonly WaitingReques
           })}
         </ul>
       )}
-      <RefuseDialog game={refusing} action={act} onClose={() => setRefusing(null)} />
+      <RefuseDialog
+        game={refusing}
+        clubName={clubName}
+        action={act}
+        onClose={() => setRefusing(null)}
+      />
     </Card>
   );
 }

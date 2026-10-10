@@ -44,20 +44,33 @@ function redrawIfStale(error: { readonly status: number }): void {
   if (error.status === 404 || error.status === 409) redraw();
 }
 
-function settle<T>(outcome: Outcome<T>, name: string, done: (data: T) => Done): BookingActState {
+/**
+ * What came of an act: what was refused, or what landed. A reply the contract does not allow
+ * (`done` finds nothing true to say of it) is the backend failing; whatever landed is on the
+ * page, drawn again.
+ */
+function settle<T>(
+  outcome: Outcome<T>,
+  name: string,
+  done: (data: T) => Done | null,
+): BookingActState {
   if (!outcome.ok) {
     redrawIfStale(outcome.error);
     return { done: null, refusal: { code: outcome.error.code, name } };
   }
   redraw();
-  return { done: done(outcome.data), refusal: null };
+  const landed = done(outcome.data);
+  return landed === null
+    ? { done: null, refusal: { code: 'backend_failed', name } }
+    : { done: landed, refusal: null };
 }
 
 /**
  * **Accept**, **Refuse**, **Move** or **Cancel** one game: which is the hidden `act`.
  *
- * - *Accept* books an On request game: everybody is charged now, all together or not at all;
- *   a payment that does not go through leaves nobody paid and the game looking for a player.
+ * - *Accept* books an On request game: everybody is charged now, all together or not at all.
+ *   A payment that does not go through keeps the yes and the court while its player has time to
+ *   pay, or, with no time left, calls the game off; nobody has paid either way.
  * - *Refuse*, with a note for the club's own records: nobody paid.
  * - *Move* onto another free court of its sport at its hour, until it starts.
  * - *Cancel*, with the reason the players are told: everybody is refunded in full.
@@ -81,7 +94,10 @@ export async function actOnBooking(
           api.POST('/api/v1/club/bookings/{booking_id}/acceptance', { ...auth, ...path }),
         ),
         name,
-        (data) => ({ act, id, name, accepted: toAccepted(data) }),
+        (data) => {
+          const accepted = toAccepted(data);
+          return accepted === null ? null : { act, id, name, accepted };
+        },
       );
     case 'refuse':
       return settle(

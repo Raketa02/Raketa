@@ -114,6 +114,18 @@ export interface AnswerBy {
   readonly readAt: number;
 }
 
+/**
+ * **The one payment the club's yes waits on** (the mechanics §16.8): due by `until` on the
+ * club's clock, and never whose. When it is due, and when the page read it, are kept as a
+ * request's clock is, so the page reads itself again once the time comes.
+ */
+export interface PaymentDue {
+  /** `21:20`. */
+  readonly until: string;
+  readonly at: number;
+  readonly readAt: number;
+}
+
 /** **One Raketa booking at the club**, as a row of the Bookings page draws it. */
 export interface Booking {
   readonly id: string;
@@ -139,6 +151,8 @@ export interface Booking {
   readonly from: BookedFrom | null;
   /** While it waits for the club's answer; `null` otherwise. */
   readonly answerBy: AnswerBy | null;
+  /** While the club's yes waits on one player's payment; `null` otherwise. */
+  readonly paymentDue: PaymentDue | null;
   /** **Move** and **Cancel** are the club's: booked or with a seat open, and not started. */
   readonly mayMoveOrCancel: boolean;
 }
@@ -184,6 +198,14 @@ function toBooking(wire: WireBooking, readAt: number): Booking {
         ? null
         : { name: wire.booked_from.name, official: wire.booked_from.official },
     answerBy: wire.answer_by === null ? null : { at: Date.parse(wire.answer_by), readAt },
+    paymentDue:
+      wire.payment_due_by === null
+        ? null
+        : {
+            until: clubClock(wire.payment_due_by),
+            at: Date.parse(wire.payment_due_by),
+            readAt,
+          },
     mayMoveOrCancel: wire.may_move_or_cancel,
   };
 }
@@ -235,16 +257,34 @@ export function toRequests(wire: WireWaitingList): readonly WaitingRequest[] {
 }
 
 /**
- * **What the club's yes came to**: booked, everybody paid, on that court; or a payment that did
- * not go through, so nobody paid and the game is looking for a player again.
+ * **What the club's yes came to**: booked, everybody paid, on that court; accepted and waiting
+ * on one player's payment until a time on the club's clock, the court kept for it; called off,
+ * because that payment had no time left to come; or a player who could no longer be on the
+ * game, so nobody paid and it is looking for a player again.
  */
 export type Accepted =
-  { readonly booked: true; readonly court: string } | { readonly booked: false };
+  | { readonly outcome: 'BOOKED'; readonly court: string }
+  | { readonly outcome: 'WAITING_FOR_A_PAYMENT'; readonly until: string }
+  | { readonly outcome: 'CALLED_OFF' }
+  | { readonly outcome: 'SEAT_OPENED' };
 
-export function toAccepted(wire: WireAcceptance): Accepted {
-  return wire.outcome === 'BOOKED' && wire.court_name !== null
-    ? { booked: true, court: wire.court_name }
-    : { booked: false };
+/**
+ * The court comes with `BOOKED` and the time with `WAITING_FOR_A_PAYMENT`, as the contract says.
+ * A reply without one is a backend that broke it, and no sentence the desk could be told about
+ * it is true: `null`.
+ */
+export function toAccepted(wire: WireAcceptance): Accepted | null {
+  switch (wire.outcome) {
+    case 'BOOKED':
+      return wire.court_name === null ? null : { outcome: 'BOOKED', court: wire.court_name };
+    case 'WAITING_FOR_A_PAYMENT':
+      return wire.payment_due_by == null
+        ? null
+        : { outcome: 'WAITING_FOR_A_PAYMENT', until: clubClock(wire.payment_due_by) };
+    case 'CALLED_OFF':
+    case 'SEAT_OPENED':
+      return { outcome: wire.outcome };
+  }
 }
 
 /** A court a game can be moved to: another of its sport, free at its hour. */

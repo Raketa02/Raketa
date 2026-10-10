@@ -1,5 +1,5 @@
 /**
- * **The club's Raketa bookings, as the backend would keep them** (#543, #547): each booking's
+ * **The club's Raketa bookings, as the backend would keep them** (#543, #547, #626): each booking's
  * court, hour, players and money, and its status **folded on every read** from where it stands
  * and the clock, as `proposals/domain/club_bookings.py` folds it. The rules are the club
  * surface's own, from `backend/openapi.club.json`, kept just deep enough that a test can list a
@@ -37,10 +37,12 @@ export interface CheckInCode {
 }
 
 /**
- * Where a booking stands, before the clock is read: waiting for the club's answer, booked whole
- * or with a seat open, or called off. *Played* and *no answer* are read off the clock.
+ * Where a booking stands, before the clock is read: waiting for the club's answer, accepted and
+ * waiting on one player's payment, booked whole or with a seat open, or called off. *Played*,
+ * *no answer* and a payment not in time are read off the clock.
  */
-export type Stage = 'WAITING_FOR_YOU' | 'BOOKED' | 'SEAT_OPEN' | 'CALLED_OFF';
+export type Stage =
+  'WAITING_FOR_YOU' | 'WAITING_FOR_A_PAYMENT' | 'BOOKED' | 'SEAT_OPEN' | 'CALLED_OFF';
 
 /** **A booking as the fake keeps it**: the wire's row, but where it stands rather than its status. */
 export type FakeBooking = Omit<ClubBooking, 'status' | 'ends_at' | 'may_move_or_cancel'> & {
@@ -56,7 +58,8 @@ const NAMES = ['Anna Nowak', 'Piotr Sikora', 'Kasia Wiśniewska', 'Marek Zając'
 /**
  * **A booking on `court` at `hour` of the local `day`**: booked, full and paid, from an official
  * group, unless the test says otherwise. A waiting request is answered within half an hour and
- * nobody has paid it; one with a seat open lacks its last player.
+ * nobody has paid it; an accepted one waits half an hour for one player's payment, nobody paid
+ * yet; one with a seat open lacks its last player.
  */
 export function booking(
   fields: { court: Court; day: string; hour: number; stage?: Stage } & Partial<
@@ -67,7 +70,8 @@ export function booking(
   const seats = SEATS[court.sport];
   const share = 35_00;
   const seated = stage === 'SEAT_OPEN' ? seats - 1 : seats;
-  const paid = stage !== 'WAITING_FOR_YOU';
+  const paid = stage !== 'WAITING_FOR_YOU' && stage !== 'WAITING_FOR_A_PAYMENT';
+  const inHalfAnHour = new Date(Date.now() + 30 * MINUTE_MS).toISOString();
   const players = NAMES.slice(0, seated).map((name) => ({
     player_id: randomUUID(),
     name,
@@ -92,8 +96,8 @@ export function booking(
       refunded_grosze: 0,
     },
     booked_from: { group_id: randomUUID(), name: 'Ogrody 33 Club', official: true },
-    answer_by:
-      stage === 'WAITING_FOR_YOU' ? new Date(Date.now() + 30 * MINUTE_MS).toISOString() : null,
+    answer_by: stage === 'WAITING_FOR_YOU' ? inHalfAnHour : null,
+    payment_due_by: stage === 'WAITING_FOR_A_PAYMENT' ? inHalfAnHour : null,
     refusal_reason: null,
     ...rest,
   };
@@ -182,11 +186,17 @@ export class FakeClubBookings {
     return undefined;
   }
 
-  /** Why the game will not be played, now: a request unanswered past its time is *no answer*. */
+  /**
+   * Why the game will not be played, now: a request unanswered past its time is *no answer*, and
+   * a yes whose payment did not come by its time is *payment not in time*.
+   */
   private calledOff(held: FakeBooking): CalledOffReason | null {
     if (held.stage === 'CALLED_OFF') return held.called_off_reason;
     if (held.stage === 'WAITING_FOR_YOU' && held.answer_by !== null) {
       if (Date.now() >= Date.parse(held.answer_by)) return 'NO_ANSWER';
+    }
+    if (held.stage === 'WAITING_FOR_A_PAYMENT' && held.payment_due_by !== null) {
+      if (Date.now() >= Date.parse(held.payment_due_by)) return 'PAYMENT_NOT_IN_TIME';
     }
     return null;
   }
@@ -194,6 +204,7 @@ export class FakeClubBookings {
   status(held: FakeBooking): ClubStatus {
     if (this.calledOff(held) !== null) return 'CALLED_OFF';
     if (held.stage === 'WAITING_FOR_YOU') return 'WAITING_FOR_YOU';
+    if (held.stage === 'WAITING_FOR_A_PAYMENT') return 'WAITING_FOR_A_PAYMENT';
     if (Date.now() >= Date.parse(held.starts_at) + HOUR_MS) return 'PLAYED';
     return held.stage === 'SEAT_OPEN' ? 'SEAT_OPEN' : 'BOOKED';
   }
@@ -231,6 +242,7 @@ export class FakeClubBookings {
       money: held.money,
       booked_from: held.booked_from,
       answer_by: status === 'WAITING_FOR_YOU' ? held.answer_by : null,
+      payment_due_by: status === 'WAITING_FOR_A_PAYMENT' ? held.payment_due_by : null,
       may_move_or_cancel: this.stillToBePlayed(held),
     };
   }

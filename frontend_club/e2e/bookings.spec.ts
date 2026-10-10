@@ -4,7 +4,7 @@ import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
 import { booking } from './stub/bookings';
 import { fromNow } from './stub/club';
-import { clubTime, dayFromToday } from './stub/clock';
+import { atClubHour, clubTime, dayFromToday } from './stub/clock';
 import { court, week } from './stub/courts';
 
 /**
@@ -384,6 +384,11 @@ test.describe('Bookings', () => {
         .click();
       let dialog = page.getByRole('dialog', { name: /^Refuse the 18:00 game on .+\?$/ });
       await expect(dialog).toContainText('Nobody has paid.');
+      // It promises the desk exactly the words the players read (Q105).
+      await expect(dialog).toContainText(
+        'The players read “Ogrody 33 said no” and “Nobody paid — you’ll get a new card first”',
+      );
+      await expect(dialog).not.toContainText('Called off');
       await dialog.getByRole('button', { name: 'Back' }).click();
       await expect(dialog).toBeHidden();
       expect(refusals()).toEqual([]);
@@ -416,7 +421,155 @@ test.describe('Bookings', () => {
       expect(refusals()).toEqual([{ reason: 'Court maintenance' }, { reason: null }]);
     });
 
-    test('a yes whose payment did not go through says nobody paid', async ({
+    test('a yes that waits on one payment says until when, and is no longer the desk’s to answer', async ({
+      page,
+      stub,
+      club,
+    }) => {
+      const padel = court({ name: 'Court 1', sport: 'PADEL' });
+      club.raketa.courts = [padel];
+      const day = dayFromToday(1);
+      const dueBy = atClubHour(day, 18, 20);
+      const waiting = club.bookings.add(
+        booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }),
+      );
+      stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', () => {
+        waiting.stage = 'WAITING_FOR_A_PAYMENT';
+        waiting.answer_by = null;
+        waiting.payment_due_by = dueBy;
+        return {
+          status: 200,
+          body: {
+            outcome: 'WAITING_FOR_A_PAYMENT' as const,
+            court_name: null,
+            payment_due_by: dueBy,
+          },
+        };
+      });
+      await openDay(page, day);
+      const bar = page.getByRole('navigation', { name: 'Club website' });
+      const filters = page.getByRole('navigation', { name: 'Filter bookings' });
+      await expect(
+        bar.getByRole('link', { name: 'Bookings, 1 waiting for your answer' }),
+      ).toBeVisible();
+      const row = rowAt(page, '19:00–20:00');
+      await row.getByRole('button', { name: /^Accept/ }).click();
+
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^You accepted the 19:00 game on .+\. One player’s payment is still to come, until 18:20: the court is kept for it, and once it’s in the game is booked\. If it doesn’t come, the game is called off and you’re emailed\.$/,
+      );
+      await expect(page.getByRole('main').getByRole('status')).not.toContainText('seat');
+      await expect(row.getByRole('cell').nth(2)).toHaveText(
+        /^Accepted\s*Waiting for one player’s payment until 18:20$/,
+      );
+      // Nobody has paid yet, and nobody is named as the one it waits on.
+      await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
+        'Anna Nowak',
+        'Piotr Sikora',
+        'Kasia Wiśniewska',
+        'Marek Zając',
+      ]);
+      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł/);
+      // The desk has answered: nothing to press, and nothing waits for it.
+      await expect(row.getByRole('button')).toHaveCount(0);
+      await expect(row.getByRole('timer')).toHaveCount(0);
+      await expect(filters.getByRole('link')).toHaveText([
+        'All 1',
+        'Waiting for you 0',
+        'Seat open 0',
+        'Called off 0',
+      ]);
+      await expect(bar.getByRole('link', { name: 'Bookings', exact: true })).toBeVisible();
+
+      // The payment came in: an ordinary booked game.
+      waiting.stage = 'BOOKED';
+      waiting.payment_due_by = null;
+      waiting.players = waiting.players.map((player) => ({ ...player, paid: true }));
+      waiting.money = { ...waiting.money, collected_grosze: waiting.money.price_grosze };
+      await page.reload();
+      await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
+      await expect(row.getByRole('button', { name: /^Move/ })).toBeVisible();
+    });
+
+    test('a yes whose time to pay runs out reads called off from that moment', async ({
+      page,
+      club,
+    }) => {
+      const padel = court({ name: 'Court 1', sport: 'PADEL' });
+      club.raketa.courts = [padel];
+      const day = dayFromToday(1);
+      club.bookings.add(
+        booking({
+          court: padel,
+          day,
+          hour: 19,
+          stage: 'WAITING_FOR_A_PAYMENT',
+          payment_due_by: fromNow(4_000),
+        }),
+      );
+      await openDay(page, day);
+      const row = rowAt(page, '19:00–20:00');
+      await expect(row.getByRole('cell').nth(2)).toHaveText(
+        /^Accepted\s*Waiting for one player’s payment until \d\d:\d\d$/,
+      );
+
+      await expect(row.getByRole('cell').nth(2)).toHaveText(
+        /^Called off\s*Payment didn’t come in time$/,
+        { timeout: 10_000 },
+      );
+      await expect(row.getByRole('button')).toHaveCount(0);
+      await expect(
+        page.getByRole('navigation', { name: 'Filter bookings' }).getByRole('link'),
+      ).toHaveText(['All 1', 'Waiting for you 0', 'Seat open 0', 'Called off 1']);
+    });
+
+    test('a yes with no time left to pay is called off, and one a player can no longer play opens a seat', async ({
+      page,
+      stub,
+      club,
+    }) => {
+      const padel = court({ name: 'Court 1', sport: 'PADEL' });
+      club.raketa.courts = [padel];
+      const day = dayFromToday(1);
+      const tooLate = club.bookings.add(
+        booking({ court: padel, day, hour: 18, stage: 'WAITING_FOR_YOU' }),
+      );
+      const unfit = club.bookings.add(
+        booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }),
+      );
+      stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', ({ params }) => {
+        if (params.booking_id === tooLate.booking_id) {
+          tooLate.stage = 'CALLED_OFF';
+          tooLate.called_off_reason = 'PAYMENT_NOT_IN_TIME';
+          return { status: 200, body: { outcome: 'CALLED_OFF' as const, court_name: null } };
+        }
+        unfit.stage = 'SEAT_OPEN';
+        unfit.players = unfit.players.slice(0, 3);
+        unfit.open_seats = 1;
+        return { status: 200, body: { outcome: 'SEAT_OPENED' as const, court_name: null } };
+      });
+      await openDay(page, day);
+
+      await rowAt(page, '18:00–19:00')
+        .getByRole('button', { name: /^Accept/ })
+        .click();
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^A player’s payment didn’t go through for the 18:00 game on .+, and there was no time left to pay, so it is called off\. Nobody paid, and the hour is yours to sell again\.$/,
+      );
+      await expect(rowAt(page, '18:00–19:00').getByRole('cell').nth(2)).toHaveText(
+        /^Called off\s*Payment didn’t come in time$/,
+      );
+
+      await rowAt(page, '19:00–20:00')
+        .getByRole('button', { name: /^Accept/ })
+        .click();
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^One of the players can no longer play the 19:00 game on .+, so nobody paid\. It is looking for a player again, and you’ll be asked again once it’s full\.$/,
+      );
+      await expect(rowAt(page, '19:00–20:00').getByRole('cell').nth(2)).toHaveText('Seat open');
+    });
+
+    test('a yes the backend answers outside its contract says something went wrong, and the day shows what landed', async ({
       page,
       stub,
       club,
@@ -427,21 +580,27 @@ test.describe('Bookings', () => {
       const waiting = club.bookings.add(
         booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }),
       );
+      // Waiting for a payment, with no time to say it waits until.
       stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', () => {
-        waiting.stage = 'SEAT_OPEN';
-        waiting.players = waiting.players.slice(0, 3);
-        waiting.open_seats = 1;
-        return { status: 200, body: { outcome: 'SEAT_OPENED' as const, court_name: null } };
+        waiting.stage = 'WAITING_FOR_A_PAYMENT';
+        waiting.answer_by = null;
+        waiting.payment_due_by = fromNow(30 * MINUTE_MS);
+        return {
+          status: 200,
+          body: { outcome: 'WAITING_FOR_A_PAYMENT' as const, court_name: null },
+        };
       });
       await openDay(page, day);
       await rowAt(page, '19:00–20:00')
         .getByRole('button', { name: /^Accept/ })
         .click();
 
-      await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^A player’s payment didn’t go through for the 19:00 game on .+, so nobody paid\. It is looking for a player again, and you’ll be asked again once it’s full\.$/,
+      await expect(page.getByRole('main').getByRole('alert')).toHaveText(
+        'Something went wrong on our side. Try again in a moment.',
       );
-      await expect(rowAt(page, '19:00–20:00').getByRole('cell').nth(2)).toHaveText('Seat open');
+      await expect(rowAt(page, '19:00–20:00').getByRole('cell').nth(2)).toHaveText(
+        /^Accepted\s*Waiting for one player’s payment until \d\d:\d\d$/,
+      );
     });
 
     test('an answer that came too late, or with nobody to charge through, says so', async ({
@@ -471,7 +630,7 @@ test.describe('Bookings', () => {
         .getByRole('button', { name: /^Accept/ })
         .click();
       await expect(page.getByRole('main').getByRole('alert')).toHaveText(
-        /^Your time to answer the 18:00 game on .+ ran out: it was called off as unanswered\.$/,
+        /^Your time to answer the 18:00 game on .+ ran out: it was called off as unanswered, and the players read “Ogrody 33 didn’t answer in time”\.$/,
       );
       await expect(rowAt(page, '18:00–19:00').getByRole('cell').nth(2)).toHaveText(
         /Called off\s*No answer/,

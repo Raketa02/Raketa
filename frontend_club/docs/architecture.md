@@ -220,9 +220,11 @@ points.
   which the club answers whoever runs it. Its Raketa offer, `club.raketa`
   (`e2e/stub/courts.ts`), keeps #535's rules for courts, hours, exceptions, prices and settings
   and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
-  makes the club live. Its bookings, `club.bookings` (`e2e/stub/bookings.ts`), keep #543's and
-  #547's rules: each status folded from where the booking stands and the clock, as the backend
-  folds it, and a booking still to be played holds its court for Courts & prices. Its money,
+  makes the club live. Its bookings, `club.bookings` (`e2e/stub/bookings.ts`), keep #543's,
+  #547's and #626's rules: each status folded from where the booking stands and the clock, as
+  the backend folds it (a request unanswered by its time reads _no answer_, a yes whose one
+  payment is not in by its time reads _payment not in time_), and a booking still to be played,
+  or whose yes waits on a payment, holds its court for Courts & prices. Its money,
   `club.money` (`e2e/stub/money.ts`), answers a month's rows soonest first with their totals,
   and its payouts newest first. A test seats its people in `club.administrators`, its groups in
   `club.groups` (`officialGroup(…)`, with `requests: [joinRequest(…)]` or just a

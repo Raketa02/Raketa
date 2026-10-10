@@ -51,17 +51,20 @@ function RefuseForm({
 }
 
 /**
- * **"Refuse the 19:00 game on Sat 3 Oct?"** (the mechanics §16.8): what refusing means, a note
- * for the club's own records, then *Back* or *Refuse*. Refusing posts it and closes the question
- * at once; the page says what came of it.
+ * **"Refuse the 19:00 game on Sat 3 Oct?"** (the mechanics §16.8): what refusing means, with the
+ * words the players will read, a note for the club's own records, then *Back* or *Refuse*.
+ * Refusing posts it and closes the question at once; the page says what came of it.
  */
 export function RefuseDialog({
   game,
+  clubName,
   action,
   onClose,
 }: {
   /** The request asked about, or `null` while nothing is asked. */
   game: Asked | null;
+  /** As the players read it. */
+  clubName: string;
   action: (form: FormData) => void;
   onClose: () => void;
 }) {
@@ -71,7 +74,7 @@ export function RefuseDialog({
       title={game === null ? '' : COPY.title(game.name)}
       onClose={onClose}
     >
-      <p className={styles.lead}>{COPY.lead}</p>
+      <p className={styles.lead}>{COPY.lead(clubName)}</p>
       {game === null ? null : (
         <RefuseForm key={game.id} game={game} action={action} onClose={onClose} />
       )}
