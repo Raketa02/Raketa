@@ -189,8 +189,9 @@ never copied into a store:
   player whose share was refused **while they were elsewhere** — somebody else's yes filled the game.
   Placed above _LIVE YESES_ on Payments' state B by the route file, as _LIVE YESES_ is; a row is the
   game as a live yes draws it, with **Confirm**. No card is held there, so a confirmation that books
-  the game says _It's a game! You'll find it in Home._ in a toast rather than drawing faces it has
-  not got. A booking, a confirmation and every yes that answers _confirm_ re-read it.
+  the game draws _It's a game!_'s faces off the booking (#630, below), and says _It's a game! You'll
+  find it in Home._ in a toast only when that read fails. A booking, a confirmation and every yes that
+  answers _confirm_ re-read it.
 
 **The rules are the domain's** (`domain/fill.ts`): `waitsForUndo`, `fillOutcome` over a yes's
 answer, `fillRefusal` over a refused yes (`payment_method_required` → the setup,
@@ -210,7 +211,7 @@ deck's answers wait for a connection; no method at the fill opening the setup (t
 acceptance only a toast); the confirmation's _you're In again_ toast; a declined share paid with a
 card typed for it alone, the saved method unchanged; _TO CONFIRM_ on Payments (no spec draws it — the
 way back until Home and the notices, #556 and #559); and a confirmation from it saying _It's a game!_
-in a toast.
+in a toast (since #630 the screen, drawn off the booking).
 **Owed**: the backend's laptop provider never confirms a payment (payments.md). **Nothing here has
 been seen on a device.**
 
@@ -806,3 +807,83 @@ it fails, with _Padel · called off_ under the names.
 **Owed by the root**: the root `CONTEXT.md`'s **Seat open** still says _decided and not yet built
 (#624)_, and doesn't name the lost court. **Nothing here has been seen on a device**: _Withdraw_ at the
 foot of the details, and the longer called-off lines on a narrow card, want a look.
+
+**Time to pay, on the phone**
+([#630](https://github.com/Raketa02/Raketa/issues/630); the backend's #625 and #626; the mechanics
+Q109–Q112, the screens A2.4, A7.3, A8; story S-01B's F-PAY-39.1, F-EMAIL-5.2, F-FILL-35.1,
+F-REQUEST-15.1). At 14:10 on Tuesday Ivan's yes fills the 19:00 at Bonarka Arena (40 zł a share), but
+Paula's bank wants to check her payment. She has until 14:40, the other three holds wait, and her
+seat is hers alone. **Why**: the product owner ruled that a failed card gets thirty minutes, never past
+the book-by, where it used to reopen the seat at once (Q109); the market's pay windows say until when.
+
+- **Ivan, the last yes, sees _It's a game!_** with _Waiting for one payment · until 14:40 · Nobody pays
+  until it's in_ under the word. The answer to his yes carries `payment_awaited_until`, which
+  `fillOutcome` reads as `paymentAwaited`; the line is #628's role with its second face (`aPaymentAwaited`,
+  `itsAGameLine`), spoken _Waiting for one payment until 14:40. Nobody pays until it's in_. The time is
+  the answer's, so nothing is read for it. **A refusal of his own comes first**: no screen, only his
+  sheet, naming his time (`confirm` carries the `Confirmation`). **Why** (Q110): the four are matched, and
+  _It's a game!_ marks that.
+- **Home** draws `WAITING_FOR_A_PAYMENT` as a stage of the status table: live, _New_ until opened (it
+  filled), and no room and no court, at either kind of club, since nobody paid. Its line is
+  `paymentAwaited` — _until 14:40_ only while the time is ahead, so it leaves at the deadline on the
+  read's clock (`lineCanRunOut`). **The payer reads their own time first** (`yourPayment`, off
+  `your_payment_due_by`): _Confirm your payment by 14:40_, on that game and on one gone back to filling
+  meanwhile, whose tag still says _Seat open_. A game called off `PAYMENT_NOT_IN_TIME` reads _A payment
+  didn't go through in time · Nobody paid_.
+- **The payer's other places name the time too.** The details' money row says the card's line under
+  the share, both on the booked details Home opens and on the game's details a notice opens. A _TO
+  CONFIRM_ row says it in amber (`toConfirmRowLine`), and drops it at the deadline on the phone's clock,
+  ticking while a time is there (the read names no instant of its own). The sheet says _Confirm your
+  payment by 14:40 to keep your seat_, the time handed in by whoever opens it (`confirmationOf`;
+  `payments.md`), and named only while it is still ahead. The booked details add **_Confirm your
+  payment_** under the game card while _TO CONFIRM_ holds a payment for that game
+  (`paymentToConfirmOn`), so the screen that names the time offers the act. Which times the details'
+  money row names, and whether their clock ticks, are `domain/details.ts`' (`paymentDueOf`,
+  `detailsCanRunOut`).
+- **Paying in time shows the payer _It's a game!_** (Q110; §12.2: _you see It's a game!_), at either
+  kind of club. The others are told by the server: _booked · you paid 40 zł_, or _Kazimierz Padel
+  confirmed your game · you paid 25 zł_ at a club that confirms. The payer's own copy is born seen,
+  because the backend records the payer as the one whose act filled it. A confirmation's booked answer
+  is the fill's `booked`, drawn from the card the sheet was opened on, or off the booking for a _TO
+  CONFIRM_ row, which holds no card. This replaces the toast that confirming from _TO CONFIRM_ showed,
+  now said only when that read fails.
+- **At a club that confirms** a card failing at the desk's _Accept_ gives the same status and the same
+  time (#626). Out of time the club's yes is called off, and those still In keep their places: _Seat
+  open · Kazimierz Padel is asked again when it's full · nobody paid_ (Q106, Q112). Paid in time, Home
+  reads _Booked_ after the re-read.
+- **After 14:40** the server tells the payer their time ran out and the others that the game is filling
+  again. The phone re-reads Home's two reads on that notice (`rereadHome`, `notifications.md`), so the
+  others' game turns _Seat open_ (#629) and the payer's _TO CONFIRM_ row stays without a time while the
+  seat is free to take back. The notice opens the game's details, where _Confirm your payment_ names
+  no time.
+
+**Calls made here, open for the product owner**:
+
+- **The payer at a club that confirms sees _It's a game!_ on paying in time**, as §12.2 says, though
+  the four were told _It's a game!_ when the game went to the club. The ticket's _paying in time ends on
+  the club's yes notice_ is read as what the others are told. A payer whose own yes filled the game
+  sees the screen twice; the other way would be a toast in the club's yes notice's words.
+- **_Confirm your payment_ on the booked details.** A4.1 draws no such button, but without it the
+  details would name a time with no way to act on it from that screen.
+- **_TO CONFIRM_'s line moved into each row**, and the header stands alone (design-system Part 16).
+- **On a game gone back to filling, the payer reads _Confirm your payment by 14:40_** where the others
+  read _1 seat open · books when it's full · nobody paid_. The tag still says _Seat open_.
+- **The phone's clock, where no read names an instant.** _It's a game!_ writes _until 14:40_ against
+  the phone's clock when the answer lands. A _TO CONFIRM_ row drops its time on the phone's clock,
+  ticking every thirty seconds, and the sheet names a time only while it is ahead of its read. Home and
+  the details run on their reads' own clocks.
+- **An answer carrying `payment_awaited_until` without a refusal of the reader's own** raises _It's a
+  game!_ with the waiting line, whatever the act was. Examples are a payer's confirmation while a
+  second refused payment is still awaited, or a newcomer's yes that refills the game during the wait.
+  The wire documents the field as _this yes filled the game_.
+
+**Open**: a share refused for **terms to accept again or no method** gets its time to pay as well. Its
+player's Home card reads _Confirm your payment by 14:40_, but _TO CONFIRM_ lists only the bank's check
+and a decline, so there is no row beside it. Their own fill opens the terms toast or the setup, which
+name no time. The way through is the game's details (their _I'm in_ once mended), reached from the
+notice. Which words and which surface this wants is a ruling.
+
+**Owed**: the Stripe test-mode check that a refused payment's copy on the club's account can be
+confirmed again (#533, the backend's handover), and the laptop provider that never confirms a payment
+(`payments.md`). **Nothing here has been seen on a device**: the amber line on a _TO CONFIRM_ row, the
+sheet's note, the line under the word and the details' _Confirm your payment_ all want a look.

@@ -249,3 +249,15 @@ from the banner, a row behind the bell and a tapped push** (`useOpenNotice`). Th
 two codes (`domain/vocabulary.ts`, held to the wire by `wireVocabulary.ts`); the words and where each
 opens are the backend's, read by the one `targetOf`. Before #628 a build listed both and opened
 neither, and a code this build cannot name still opens nothing.
+
+**A time to pay is told by the server, and an arrival re-reads _TO CONFIRM_ too**
+([#630](https://github.com/Raketa02/Raketa/issues/630); the backend's #625 and #626; the mechanics
+Q109–Q111). Paula's bank wants to check her payment when Ivan's yes fills the game: she is told
+_Confirm your payment by 14:40 to keep your seat_, the others _It's a game! · waiting for one payment
+until 14:40_, and at 14:40 she reads _Your time to pay ran out · Tue 19:00_ while the rest read that
+it is filling again. The phone adds the two new codes, `WAITING_FOR_A_PAYMENT` and
+`TIME_TO_PAY_RAN_OUT`, and opens each where the backend says, as #628 did for its two. **A notice
+arriving now re-reads Home's two reads** (`proposals`' `rereadHome`): the games, the badge with them,
+and _TO CONFIRM_ above them. **Why**: the confirm notice puts a row there and the time-ran-out notice
+takes its time off, and before this only the games were read again — a row could be missing, or keep a
+time that had run out, until the app came back to the foreground.

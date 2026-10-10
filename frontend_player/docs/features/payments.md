@@ -136,3 +136,18 @@ in-process provider confirms setups as they are read but never a payment, so the
 refused `payment_not_confirmed` on a laptop — only a test key (O7) walks it end to end. **Not seen on
 a device**, and `retrievePaymentIntent` / `confirmPayment` on a connected account have met only the
 type checker.
+
+**The confirmation names the time to pay** ([#630](https://github.com/Raketa02/Raketa/issues/630);
+the backend's #625 and #626; the mechanics Q109). A refused share now holds its player's seat for
+thirty minutes, never past the book-by, and the sheet says until when in an amber note: _Confirm your
+payment by 14:40 to keep your seat_, the notice's and the email's words, the time written as Home
+writes it. **The seat charge's read does not carry the time**: `GET /seat-charges/{id}` is the
+Payments context's, and the time to pay is the game's, held by Proposals. So whoever opens the sheet
+hands it in (`ConfirmAsk.confirmBy`): the yes's answer (`your_payment.confirm_by`), a _TO CONFIRM_
+row (`confirm_by`), a game's details. Once the time ran out there is nothing to name, and no note —
+nor for a time already past when the sheet reads the payment, which a row read earlier can hand in.
+Each _TO CONFIRM_ row now says its own state — _Confirm your payment by 14:40_ in amber while the time
+runs, _Your seat stays open until you confirm — or someone else takes it._ once it ran out — where the
+section used to say the second for every row. **Why**: the old sentence was false for a held seat,
+which nobody else can take until the time ends, and one list can hold both. The rows, the yes again
+and what a booked confirmation shows are `proposals.md`'s.
