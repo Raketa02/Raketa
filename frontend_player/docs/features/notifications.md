@@ -31,8 +31,8 @@ the player was. The read behind the screen is marked stale first, so a deck read
 does not open without the card the notice is about. A notice whose sport or kind this build cannot
 name is listed, words and all, and opens nothing.
 
-**The deck opens at the card** (A9: _the deck opens with the card on top for You complete it and
-Challenges_). The group page's route takes the card's sport, kind and id beside the group's
+**The deck opens at the card** (A9: _the deck opens with the card on top for You complete it,
+Challenges and Your new game_). The group page's route takes the card's sport, kind and id beside the group's
 (`parseGroupRouteParams`' `arrival` — all three or none; an arrival this build cannot read opens the
 page as it always opens). The page stands on the card's sport until the player picks another —
 **opening is not picking**, so the phone's last sport is untouched (ADR-0188 §2) — moves the switch to
@@ -46,9 +46,17 @@ writes its answer, a refusal says so under the cards and the three are read agai
 taps are held. The row's line is the chosen ones that are on, short — _You complete it · Challenges ·
 Fill in alerts_ (mock 50) — or _Only the ones always on_.
 
-**The seven always on are words and a tag, never controls.** Mock 52's seven rows — _The club
-confirmed / couldn't take it_ is two notices on one row — each with 6.4's green **on** tag, one
-element to a listener (_…, always on_). The three choices are **switches** (`OnOffChip`): 6.2's pill
+**The eleven always on are words and a tag, never controls.** Mock 52 drew seven; the rows are
+A7.2's as [#620](https://github.com/Raketa02/Raketa/issues/620) amends it, a row a line of the
+mechanics §17.2's table, in its order ([#628](https://github.com/Raketa02/Raketa/issues/628)): _It's a
+game! · you paid_ · _It's a game! · the club answers by …_ · _Waiting for one payment_ · _Confirm your
+payment by … to keep your seat_ · _Game called off · with the refund_ · _Someone left your game · or
+it's filling again_ · _You've been refunded_ · _The club confirmed / said no / didn't answer in time_ ·
+_Your new game_ · _A game you left_ · _Your post didn't fill_. One row can be several notices — _the
+club confirmed / said no / didn't answer in time_ is three, _A game you left_ two — and a row names a
+notice before the backend gives it: _Waiting for one payment_ comes with #625, _A game you left_ and
+_filling again_ with #623. Each has 6.4's green **on** tag, one element to a listener (_…, always
+on_). The three choices are **switches** (`OnOffChip`): 6.2's pill
 drawn _On_ ink-filled and _Off_ outlined, spoken as the choice's name and line with its `checked`
 state, because the word drawn is the state.
 
@@ -204,6 +212,13 @@ permission is asked, the choices save and the list is read, and nothing is pushe
 17. **The banner still comes down over the open list** for a notice that arrives while it is open,
     as over any screen — the row stands out beneath it too.
 18. **The bell is spoken with the exact number** past 99, where it draws _99+_.
+19. **_It's a game! · answers by_ opens the game's details in its group, under Play**, as the backend
+    sends it (`PROPOSAL`), while Home's card for the same game opens the booked details over Home.
+    Both draw it waiting for the club with _Leave the game_. The phone could open the booking for
+    this kind as it does a Fill in alert, but the backend's call is kept (#628).
+20. **The always-on rows name notices the backend does not give yet** (_Waiting for one payment_,
+    _A game you left_, _or it's filling again_): A7.2 lists the amended table, and #623 and #625 bring
+    them.
 
 **Owed**: #533's Expo project id into `shared/config/push.ts` (and Android's FCM credentials), and
 O6 before `IPHONE_PUSH` turns true — both then need a development build rebuilt. **A development
@@ -212,3 +227,25 @@ and `CONTEXT.md`'s _Notice_ and _Notification preferences_ (#549's handover). Ag
 the user: `frontend_player/CLAUDE.md` still says six platform ports, and
 `.claude/rules/auth-and-http.md`'s sign-out sequence does not name the phone's removal (Part 5 does). **Nothing here has been seen on a device**, and no push has
 been delivered to one.
+
+**The four matched at a club that confirms are told It's a game!, which opens the game**
+([#628](https://github.com/Raketa02/Raketa/issues/628); the backend's #622; the mechanics Q103). At
+20:15 Paula's yes fills Friday's 19:00 at Kazimierz Padel. The three others are told _It's a game! ·
+Kazimierz Padel answers by 21:15_ / _Padel · Fri 19:00. Nobody pays until it confirms._, and Paula
+sees the screen: at a club that confirms with that line under the word, at a club that books at once
+as before (`proposals.md`). Her own copy is listed already seen, never bannered or counted (Q102,
+#627's `yourOwn`). **Why**: the product owner ruled that _It's a game!_ marks the four being matched,
+not only booked. The notice is `WAITING_FOR_THE_CLUB`, sent as `PROPOSAL`: the game's details in its
+group under Play, which draw it _Waiting for the club_ with _Leave the game_. The club's yes stays one
+notice, _Kazimierz Padel confirmed your game_, which opens the booked game.
+
+**A new card first is told as Your new game, which opens the deck with it on top** (#628; the
+mechanics Q107). If the club says no, the four are told when the card they were promised arrives:
+_Your new game · Fri 19:00 at Bonarka Arena_ / _The same players · 40 zł a share — say yes to book
+it._ **Why**: a notice that promises _you'll get a new card first_ is answered when the card comes,
+rather than by a card dealt without a word. The notice is `NEW_GAME`, sent as `DECK`: the group's deck
+in the card's sport and kind, the card on top, as _You complete it_ arrives. **Both open the same way
+from the banner, a row behind the bell and a tapped push** (`useOpenNotice`). The phone adds only the
+two codes (`domain/vocabulary.ts`, held to the wire by `wireVocabulary.ts`); the words and where each
+opens are the backend's, read by the one `targetOf`. Before #628 a build listed both and opened
+neither, and a code this build cannot name still opens nothing.

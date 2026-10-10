@@ -165,7 +165,7 @@ never copied into a store:
 - **Every yes's answer** — the deck's, the details', the delayed send's and the confirmation's — is
   read by `fillOutcome`: **booked** re-reads every deck, the live yeses, Home's games and the
   receipts, sends a details screen still on screen back to the deck, and raises **It's a game!**; a
-  **refused share** (the bank's check, a decline) says _Your payment didn't go through — confirm it
+  game **sent to its club** raises it too, with its line (#628, below); a **refused share** (the bank's check, a decline) says _Your payment didn't go through — confirm it
   to keep your seat_ and opens the confirmation on it; no method at the fill is the setup and the yes
   again; a new card brand names You › Payments; anything else is a vote. A yes the card called free
   can still be the last — the others got there first — so the deck's plain yes is read too.
@@ -389,10 +389,11 @@ _Book it now_).
 
 **On request** (#543; A2.4, §11): a _Book it now_ yes at an On request club counts its ten seconds
 like any other; the server answers `waiting_for_the_club`, and the fill reads it as its own outcome
-(`fillOutcome`'s `waiting`) — Home and every deck re-read, and a toast: _Waiting for Bonarka Arena to
-confirm — nobody pays until it does._ No _It's a game!_: the charge and the celebration follow the
-club's yes, told by the notices (#549). Home and the booked details say _Waiting for the club_ with no
-court; their _Leave the game_ withdraws the yes.
+(`fillOutcome`'s `waiting`) — Home and every deck re-read, and, since #628, _It's a game!_ with when
+the club answers (below). The toast that stood here, _Waiting for Bonarka Arena to confirm — nobody
+pays until it does._, is gone. The charge follows the club's yes, told by the notices (#549). Home
+and the booked details say _Waiting for the club_ with no court; their _Leave the game_ withdraws
+the yes.
 
 **Home's and the details' lines are the read's now** (§14.1): _2 seats open · fills by Fri 16:00 or
 the game is off and everyone is refunded_ (`open_seats`), _1 seat open · offered to others · the game
@@ -411,8 +412,8 @@ in the Classic half of the badge.
   than from a card, and a failed read says _It's a game!_ in a toast.
 - **_You complete it_ on a rescue's details too**, where A4.3 words the tile _You?_ — the card's own
   rule (A2.3: the last seat completes it), so one seat says one thing on both surfaces.
-- **The On request toast** — A2.4 says the game goes to the club at zero and nothing about what the
-  player sees; silence after ten seconds of _Booking_ would read as a failure.
+- ~~**The On request toast**~~ — **answered** by Q103 (2026-10-09, the product owner): _It's a
+  game!_ with the club's deadline under the word, in its place (#628).
 - **_Leave the game_ and _Withdraw_ are 6.1's `secondary`**, where details 10 and mock 13 draw dark
   red text: the group exit's call (red is _ended badly_, 1.3), and the sheet is what makes it
   deliberate.
@@ -698,3 +699,40 @@ shows the same number. **From the bubble the booking is not yet cached**, so the
 `BookedGameChat`'s spinner for `GET /bookings/{id}` — the header's second line is the booking's
 word — where from the details it opens at once. **Not seen on a device**: the door's pressed shade
 and its row with _Open game_ want a look.
+
+**It's a game! comes at a club that confirms too, with when the club answers under the word**
+([#628](https://github.com/Raketa02/Raketa/issues/628); the backend's #622; the mechanics Q103, the
+screens A2.4; story S-01B's F-REQUEST-40.1). At 20:15 on Thursday Paula's yes fills Friday's 19:00 at
+Kazimierz Padel (25 zł a share). Her screen counts _Booking in 10 s_ and at zero shows the whole _It's
+a game!_: the four faces, the word, _Open game_ and _Later_, with one line under the word, _Kazimierz
+Padel answers by 21:15 · Nobody pays until it confirms_. **Why**: the product owner ruled that _It's a
+game!_ marks the four being matched, not only a booking that is paid. The toast that stood here said
+the yes had gone somewhere, never that the game was made. **At a club that books at once the screen is
+unchanged**: nothing is still missing, so there is no line. The line is Home's words for the game
+(`waitingWords`): the hour alone when the deadline falls on the read's day, the weekday with it on
+another (_answers by Thu 09:00_). It is drawn in `tiny` `onDarkTiny`, the details' role for the same
+words, centred under the word and rising with it, and said after the picture in the header's sentence
+(design-system Part 16, 2026-10-10). It shows only to the player whose yes filled the game. The other
+three are told _It's a game! · Kazimierz Padel answers by 21:15_, and after a club's no the new card
+first is announced as _Your new game_ (both in `notifications.md`). _Open game_ opens the waiting
+game's booked details over Home, the screen Home's card opens. A yes said on the details leaves them
+under the screen, now _Waiting for the club_; only a booked fill sends them back to the deck.
+
+**The line is read off the booking, and only a read made since the yes counts** (#628). The answer to
+the yes names no deadline, so `ItsAGameAtTheClub` reads `GET /bookings/{id}` (the id is the
+proposal's) through `useBookingSinceMount`, and folds it as Home does (`itsAGameWaiting` over
+`answerByAhead`). **Why**: the game may have gone to the club before — a seat opened and it filled
+again — and a booking cached then names that request's deadline. A read that fails since leaves the
+same one behind, so the hook reads again on mount and gives only what landed since. The screen comes
+once that read lands. A read that is refused, or held offline, still brings it, with the line _Nobody
+pays until Kazimierz Padel confirms_ and no deadline. A yes that held no card draws its faces off the
+same read, and says _It's a game!_ in a toast when it cannot.
+
+**The club's yes is its notice, never a second It's a game!** (#628, Q103). _Kazimierz Padel confirmed
+your game_ is bannered as any other notice (`notifications.md`). **Why**: the screen marks the players
+matched, and they were matched once; only the yes that filled the game raises it.
+
+**Open for the product owner**: the screen waits for the booking's read, a beat on a good connection,
+rather than coming up at once and filling the line in a moment later. A line that changed under the
+screen's one announcement would be heard without its deadline. **Not seen on a device**: the line under
+the word wants a look on a narrow phone, where it wraps to two lines.
