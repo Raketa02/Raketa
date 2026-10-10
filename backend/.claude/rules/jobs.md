@@ -141,3 +141,23 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   transaction that locks its game first, a conflict counted and stepped over. The thirty
   minutes are domain (`TIME_TO_PAY`); only the cadence (thirty seconds) is a setting. It
   has a *Run it now*, and a game's pane on the console carries its `PAYMENT_DUE` moment.
+  **It runs out a booked game's time to fix the card too** (#639): a holding refused at its
+  Holding time, its candidates `BookedGameChanges.cards_to_fix_past` (over
+  `booking_seats.card_to_fix_until`), each game one transaction locked first — the player's
+  seat opens to Fill in as a leaver's before the cut-off, and their refused holding is let go.
+  The twenty-second is **the holding** (`holding`, #639; `TheHolding`), and **correctness
+  depends on it**: a share the fill only **checked** — its card's hold would not have lasted
+  until the cut-off — is held nowhere until this holds it again at its **Holding time**, four
+  days before the cut-off, and until then the cut-off has nothing of that player's to take.
+  It is **the one job that asks the provider inline** (over the process's own provider,
+  `build_payment_provider`), as the fill does, because whether the hold is made decides what
+  the booked game asks of its player: a refused one gives them time to fix the card. Its
+  read names **candidates** (`CheckedShares.due`: the `seat_charges` projection, `CHECKED`
+  and `hold_at <= now`, and a holding refused for terms or a method, asked again once they
+  are fixed), each one transaction that locks the game's proposal row first — a time to fix
+  already up run out first — a conflict counted and stepped over; a key per charge, attempt
+  and hour, so two processes are answered one hold. **Only while the cut-off is ahead**: a
+  game the job reaches only after its cut-off — days of outage — is an operator's question.
+  The four days and the six hours a hold must outlast the cut-off by are domain
+  (`payments/domain/seat_charge.py`); only the cadence (thirty seconds) is a setting. It has
+  a *Run it now* (*hold the shares*), and a game's pane carries its `HOLDING` moment.

@@ -60,7 +60,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   #546 the pair rule and a player's level window (`PlayerFit`) and each member's Level, week,
   gender and preference (`PlayersInPlay`) — and since #547 the club's bookings as its desk
   reads and runs them (`ClubBookings`), what each took and gave back (`BookingTakings`), the
-  group each pool is (`PoolOrigins`) and whether a club checks players in (`DeskCheckIns`).
+  group each pool is (`PoolOrigins`) and whether a club checks players in (`DeskCheckIns`)
+  — and since #639 the shares checked at the fill and held at their Holding time
+  (`CheckedShares`, registered over a fresh fake: what is due and a holding of nothing ask
+  the provider nothing), a refused holding kept or let go (`CardsToFix`), when a checked
+  share is held (`HoldingTimes`), and a refused holding's time to fix the card on the booked
+  game (`BookedGameChanges`' card methods).
   The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
   over HTTP only and are owed rows there.
   **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first

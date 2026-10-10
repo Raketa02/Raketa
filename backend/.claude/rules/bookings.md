@@ -19,6 +19,7 @@ paths:
   - "app/modules/proposals/application/club_money.py"
   - "app/modules/bookings/application/daily_summary.py"
   - "app/modules/proposals/application/time_to_pay.py"
+  - "app/modules/proposals/application/holding.py"
 ---
 
 # Bookings and the fill
@@ -65,7 +66,13 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   request is answered the same holds and the next try after a refusal asks afresh; a hold orphaned
   by a transaction that never committed is answered again within the hour or lapses at the
   provider untaken. A player whose card has a new brand (`terms_needed`), or no method at all, is
-  refused **without asking the provider** (`TERMS_NEEDED`, `NO_METHOD`).
+  refused **without asking the provider** (`TERMS_NEEDED`, `NO_METHOD`). **A hold that would not
+  last until the cut-off is a Card check** (#639): booked before its cut-off, a seat whose hold's
+  last moment is less than six hours past it — a Visa held over 4½ days ahead — is let go at
+  once (`SeatChargeChecked`) and held again at its Holding time, four days before the cut-off,
+  by the `holding` job (below); one whose Holding time has come already is kept and taken by its
+  last safe moment (the fallback, `payments.md`). The booking email says so: *Your card was
+  checked. 40 zł will be held from Sat 19:00 and taken on Wed 19:00, the club's cut-off.*
 - **A refused share at the fill gets time to pay** (#625, #626; Q109–Q112;
   `proposals/application/fill.py`, `time_to_pay.py`, `Proposal.paying`). *The reopening
   waits*: the refused player **stays In**, the seat theirs alone until `TIME_TO_PAY`
@@ -139,6 +146,25 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   or `PAY`): Home's card and `GET /bookings/{id}` (one for `payment_due_by` and
   `your_payment_due_by`), the proposal details and `your_payment`, the To confirm
   rows, the club's day and Accept.
+  **At the Holding time, on a booked game** (#639; `application/holding.py`, `TheHolding`,
+  the `holding` job): every checked share due is held again — one transaction per game,
+  locked first, only while its cut-off is ahead — and **a refused holding gives its player
+  time to fix the card on the booked game**: `Booking.card_to_fix` (`CardToFix`, the payment
+  and why, until thirty minutes on and never past the cut-off; `booking_seats.
+  card_to_fix_until`, migration 0056). **The game stays booked**; only the payer reads it —
+  `your_payment_due_by` with `time_to` `FIX_THE_CARD` (`BookedGame.cards_to_fix`, folded into
+  `paying`), and a *To confirm* row while the time runs (`owed_by`, over
+  `BookedGameChanges.cards_to_fix_of`) — nobody else is told or asked anything. **Fixed in
+  time** — `POST /seat-charges/{id}/confirmation` on that payment (`ConfirmPayment.
+  _card_fixed`) — the share is kept until the cut-off (`CardsToFix.keep_fixed`) and
+  `CardFixed` recorded; a refusal for terms or a method is held again by the job once they
+  are fixed. **Run out** — the `time-to-pay` job (`run_out_the_cards_to_fix`, over
+  `cards_to_fix_past`), the holding itself, or the payer's own late confirmation, which runs
+  it out first and is then a leaver's (`rescue_not_offered`) — their seat opens as a
+  leaver's (`SeatLeft` with `card_not_fixed`, the Game's seat vacated), offered on Fill in,
+  the others told *Ivan left your game*, their refused holding let go, nothing owed; **on the
+  record it is a leave before the cut-off** — on it only if the game is then called off (a
+  call made without a ruling, #634).
 - **A refused payment reopens the seat, and confirming it is the yes again.** Once its time
   to pay ran out — or where no time was given: a rescue, the club's yes past the book-by —
   the refused player's **seat reopens** (`SeatReopened` or `TimeToPayRanOut`, with the
@@ -252,7 +278,12 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   `MakeProposal` and filled by four `SayYes`, hers last, through the run's fake — today's taken
   at once, after its cut-off, and the seed's outbox captures it (the fake **adopts a hold another
   process made**, as it answers a card it never saved); next week's **held** until its cut-off
-  (#637), so her receipts list one. The played history (`booked_history.py`) runs the cut-off
+  (#637) — or, run early in the week, only **checked**, its hold not lasting until the cut-off
+  (#639) — so her receipts list one. **And one game of the crowd's filled far ahead** (#639):
+  four crowd members with no game that week fill Bonarka's first padel hour whose cut-off is
+  more than five days off (`FAR_AHEAD`), every seat checked and held at its Holding time —
+  the console's *hold the shares* — the run failing by name if none was checked; later layers
+  keep out of its hour (`SeededBookings.starts`). The played history (`booked_history.py`) runs the cut-off
   job at each past game's cut-off, so every past game is taken and settled. **And one game waiting for Kazimierz Padel** (On request, a kilometre away, an
   hour to confirm): the same four yeses at its first padel hour clear of her games, the last
   answered *waiting for the club* — it waits an hour from the run's now, then the timeout calls
@@ -311,10 +342,15 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   is let go** (`SeatRefunds.refund` → payments' `GiveTheSharesBack`: a `HELD` charge is
   `let_go`, `SeatChargeReleased` with the reason, cancelled from the outbox — no refund, no
   fee, emailed *You left the game · nothing was taken*); **after it** the seat opens and stays
-  paid — refunded, less the fee, when a rescue takes it (below); **while the club decides** it
+  paid — refunded, less the fee, when a rescue takes it (below); a share only **checked**
+  (#639) has nothing held, and leaving closes it — nothing let go, never a receipt; **while
+  the club decides** it
   is `WithdrawYes`' act (#543); **after the start** `game_has_started`. **The money line is
   folded off the clock** (`domain/home.py`'s `money_of`): `share_state` `HELD` with
-  `free_to_leave_until` and `taken_at` the cut-off until it comes, then `TAKEN` and `paid` —
+  `free_to_leave_until` and `taken_at` the cut-off until it comes — `CHECKED` with `held_from`,
+  its Holding time, while **the reader's own** share is only checked and that time is ahead
+  (#639; `HoldingTimes`, over the `seat_charges` projection's `hold_at`) — then `TAKEN` and
+  `paid` —
   `paid` means taken, never only held — and for a game booked after its cut-off `TAKEN` from
   its `booked_at`; `refunded_grosze` is the share only on a game its club cancelled after the
   cut-off (`BookedGame.cancelled_at`). What leaving would cost is on the details before the
@@ -333,7 +369,9 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   the desk is emailed *A game was called off at the cut-off*, each player *Game called off ·
   nothing was taken*; and it **takes every share held for a full game** whose cut-off has
   come (`HeldShares.due`/`take`, over the `seat_charges` projection's `status`/`held_until`,
-  migration 0054), captured from the outbox with the real fee.
+  migration 0054), captured from the outbox with the real fee — each share at its own
+  `held_until`, so a holding's fallback is taken by its last safe moment, before the cut-off
+  (#639).
   **Short at the cut-off is read off the clock** (`Booking.short_from`,
   `BookedGame.called_off_reason`), so Home reads *called off · `SHORT_AT_THE_CUT_OFF`* from
   the cut-off on, before the job runs. A seat left **after** the

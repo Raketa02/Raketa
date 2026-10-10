@@ -133,6 +133,13 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
     names — *Your time to fix your card ran out · Tue 19:00* / *Your seat is open to others
     now, and you owe nothing — you can still take it back while it's free.* Both always
     on; the others keep *Waiting for one payment* either way.
+  - **At the Holding time, on a booked game** (#639): `SeatChargeHoldingRefused` is told as
+    `SeatChargeFailed` is — *Fix your card by 19:30 to keep your seat* while the time runs,
+    `GameBrief.paying`/`fixing` folding in the booking's cards to fix — and a time run out
+    (`SeatLeft.card_not_fixed`) tells the payer `TIME_TO_FIX_RAN_OUT` with reason `SEAT_OPEN`,
+    *Your seat is open to others now, and you owe nothing.* (never *take it back*: a leaver is
+    never offered their seat), opening the game they left (`you_left`); everybody else is told
+    as for any leave.
   - **`FellBackToFilling`** — a leave or a paused week while it waited, at a club that books
     at once — is told as `RequestWithdrawn` is; a court lost while it waited is *called off ·
     nobody paid* with `COURT_LOST_WAITING_FOR_A_PAYMENT`.
@@ -154,8 +161,11 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
   card now (`Decks` → `ReadGroupDeck.shows`: intent, Games & money, a week or an hour already
   booked, the club, pool membership, the pair rule, *Mixed pairs*).
 - **The money notices hang off the money's events.** `SeatChargeKept` is *It's a game! · 30
-  zł held* — the cut-off kept on the notice as `until`, when the share is taken (#637) — and
-  `SeatChargeTaken` at once after the cut-off is *It's a game! · you paid*; or, on a booking
+  zł held* — the cut-off kept on the notice as `until`, when the share is taken (#637), and
+  `SeatChargeChecked` the same for a seat only checked far ahead (#639): free to leave until
+  the cut-off all the same; a share kept because its card was fixed at its holding
+  (`SeatChargeKept.fixed`) and one held again there (`SeatChargeHeldAgain`) tell nothing —
+  and `SeatChargeTaken` at once after the cut-off is *It's a game! · you paid*; or, on a booking
   that waited for its club and to anybody but a rescuer, *the club confirmed* (*· 25 zł held*
   before the cut-off): one notice for the club's yes, never two. **The take at the cut-off
   tells nothing** (`SeatChargeTaken.kept`) — the quiet row and receipt of Q113 are not built

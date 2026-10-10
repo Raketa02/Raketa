@@ -38,8 +38,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   lists every job with a press (`RUN_IT_NOW`) and every other job the scheduler registers
   with why it has none (`NOT_RUN_HERE`); `test_games_test_console_time.py` builds the
   register and fails a job that is neither. Each game's pane carries its **pending
-  moments** (`board.py`'s `Moment`: book-by, the club's answer, cut-off, the day close that
-  tells the desk and the one that pays the club, and a stated score confirming, #593), each
+  moments** (`board.py`'s `Moment`: book-by, the club's answer, a payment due — at the fill or
+  at a refused holding — the holding of the shares checked at the fill (#639), cut-off, the
+  day close that tells the desk and the one that pays the club, and a stated score
+  confirming, #593), each
   with the job that acts at it — every press over the request's clock, the rating catch-up's
   too, whose builder takes one from the console alone — and the page's **one timer** redraws
   their countdowns and nothing else — the page test holds that it fetches and presses

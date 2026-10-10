@@ -106,12 +106,37 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   taken is refunded as before. **The terms in force are `2026-10-10`**: `terms_needed` is also
   true for a consent to older words, so the fill refuses `TERMS_NEEDED` without asking the
   provider until the player accepts again (the seed accepts them on a re-run).
+  **A game that fills far ahead is checked, and held at its Holding time** (#639;
+  ADR-0189's 2026-10-10 amendment). A hold **reaches** the cut-off when its last moment is
+  at least **6 hours** after it (`REACH_MARGIN`, `reaches`, `domain/seat_charge.py` — domain,
+  never configuration; a hold whose last moment the provider did not say reaches). One that
+  does not is a **Card check** (`SeatCharge.check`, `SeatChargeChecked` with `hold_at`, status
+  `CHECKED`): let go at once — the settler cancels the check's own payment under
+  `raketa-cancel-check-<charge>` and records nothing — and **held again at its Holding
+  time**, `HOLDING_LEAD` (four days) before the cut-off, on a **new payment on the same
+  stream** (`HoldTheCheckedShares`, `SeatChargeHeldAgain`; the projection's `payment_id`
+  follows it, and `hold_at` is the holding job's read, migration 0056). A share is **one
+  stream, one payment at a time**: the check's notices find nothing once the holding replaced
+  it. A `CHECKED` charge is **not paid, not held and not settled**, never a receipt; a leave
+  before the holding **closes** it (`let_go` straight to `CANCELLED`, `released_at` unset —
+  nothing was held). **A refused holding** (`SeatChargeHoldingRefused`, status `FAILED` with
+  its `booking_id` — `refused_at_its_holding`) is the booked game's: `release` never touches
+  it, its player is emailed *Fix your card by 19:30 to keep your seat* (`confirm_payment_email`
+  `at_the_holding`), a confirmation is kept by `KeepTheFixedShare` (`SeatChargeKept` with
+  `fixed`), and a time run out is let go by `LetTheUnfixedShareGo` — nothing owed. One
+  refused for want of terms or a method asked the provider nothing, and the holding asks again
+  on every run once its player fixed them, recording nothing until then. **The fallback**: a
+  hold kept that still would not reach is taken at its **last safe moment**, its last moment
+  less six hours (`taken_by`, recorded as its `held_until`), and `TakeTheHeldShares` takes
+  each share whose own moment has come; a leave before the cut-off after that is refunded in
+  full. Documented windows never call for it — only a test's fake (`hold_windows`) does.
   **The fake models card kinds and hold windows** (#636): `EnteredCard.kind`
   (`domain/entered_cards.py` — personal EU by default, business, UK, outside Europe) keeps
   that kind's real fee when the share is taken (`CARD_PRICES`: 1,5 / 1,9 / 2,5 / 3,25 % + 1 zł,
   so 1,60 / 1,76 / 2,00 / 2,30 zł on 40 zł); a hold made without its player lasts its network's
   window on the fake's `clock` (`HOLD_WINDOWS`: Visa 4 days 18 hours, Mastercard 7 days; 7 days
-  on either once confirmed in the app) and **lapses** after its last moment — read cancelled,
+  on either once confirmed in the app — `hold_windows` per fake, which only a test shortens,
+  #639) and **lapses** after its last moment — read cancelled,
   and a capture refused (`FakeRefusal`); `fees_reported_later` holds a club's fee back until
   `reports_fee`. **A test's fake has no clock** unless the test gives it one, and then says no
   last moment and lets nothing lapse; a test that lets a capture wait days gives its players
