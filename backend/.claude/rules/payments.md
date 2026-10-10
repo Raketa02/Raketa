@@ -59,7 +59,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   provider's answers — is `bookings.md`'s. **A refusal with time to pay keeps every other
   hold** (#625, #626; `GameToCharge.pay_by`): the holds just made are recorded held and none
   is released, so the payment in time books on them; the confirm email names the time, and
-  with no time left at the club's yes nobody is emailed — the game is called off. **A refund
+  with no time left at the club's yes nobody is emailed — the game is called off. **Refused
+  before the cut-off** (`GameToCharge.free_to_leave_until` set: the share would only be held)
+  it is the player's time to fix the card (#638): *Fix your card by 14:40 to keep your seat*,
+  the reason said of the hold, and *Nothing is paid now: fixing your card only places the 40
+  zł hold on it again, taken on Fri 17:00, the club's cut-off.* **A refund
   is decided in the act and made from the outbox** (#544): `SeatChargeRefundDecided` then
   `SeatChargeRefunded`; receipts list it as its own `REFUND` row (`card_fee_grosze`), dated
   from the decision — and since #641 a share held for a booked game and let go untaken is

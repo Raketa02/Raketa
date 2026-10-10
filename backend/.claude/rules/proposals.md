@@ -49,10 +49,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   already bound what a yes can book).
   **A refused share at the fill holds its seat for its player** (#625, #626): the
   player stays In with `Proposal.paying` until their time to pay ends — the game full to
-  everybody else, `waiting_for_a_payment` — and `TimeToPayRanOut` reopens it; see
-  `bookings.md`. `with_its_club` (waiting for its answer, or for a payment its yes waits on)
-  is what a withdrawal asks before taking a request back, and what the proposer asks before
-  reading a card's court as lost.
+  everybody else, `waiting_for_a_payment` — and `TimeToPayRanOut` reopens it; before the
+  club's cut-off the same time is **to fix the card** (`TimeTo`, #638); see `bookings.md`.
+  `with_its_club` (waiting for its answer, or for a payment its yes waits on) is what a
+  withdrawal asks before taking a request back, and what the proposer asks before reading
+  a card's court as lost.
   **No route makes a proposal**: `MakeProposal` and `DealVersion` are the dealer's, built by
   the composition root for the proposer (#540), seeds and tests; **the yes that leaves
   `open_seats` at nought books the game** — `FILLED`, every version gone — or reopens the seat

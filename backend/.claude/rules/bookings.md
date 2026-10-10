@@ -124,6 +124,21 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   it reads it called off, nothing to confirm, no confirm email) and Accept answers
   `CALLED_OFF`. A leave while the club's yes waits takes the request — and the yes —
   back (`with_its_club`).
+  **Before the club's cut-off it is time to fix the card** (#638; Q113): one machinery,
+  two names. The fill decides off the cut-off it already holds — the court's, or the
+  request's — with `TimeTo.at(now, cut_off=…)`, records it on `TimeToPayGiven.time_to`
+  (`Paying.time_to`, `Proposal.time_to`; older rows read `PAY`), and
+  `time_to_pay_ends(now, cut_off=…)` never runs a time to fix past the cut-off. A time
+  to fix ends by the cut-off and a payment is refused after it only on its payer's own
+  act, which runs out first, so everybody's at once is the same. Everything else is
+  time to pay's: the kept holds, the job, confirming the same payment, running out
+  (`TimeToPayRanOut.fixing` names whose was to fix). At the club's yes the booking
+  records it (`BookingAwaitingAPayment.to_fix_the_card`), so the desk's day and Accept
+  read it, and a lapse emails *A player's card wasn't fixed in time — the court is free
+  again.* Every read beside a payment-due moment says which (`time_to`, `FIX_THE_CARD`
+  or `PAY`): Home's card and `GET /bookings/{id}` (one for `payment_due_by` and
+  `your_payment_due_by`), the proposal details and `your_payment`, the To confirm
+  rows, the club's day and Accept.
 - **A refused payment reopens the seat, and confirming it is the yes again.** Once its time
   to pay ran out — or where no time was given: a rescue, the club's yes past the book-by —
   the refused player's **seat reopens** (`SeatReopened` or `TimeToPayRanOut`, with the

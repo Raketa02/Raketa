@@ -125,6 +125,14 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
     while it's free.* — and *filling again* (`FELL_BACK`) to everybody else still In; past
     the book-by, `GAME_CALLED_OFF` · `PAYMENT_NOT_IN_TIME` to them all (*A payment didn't go
     through in time*), as `PaymentNotInTime.at_once` tells the club's yes with no time left.
+  - **Before the cut-off it is the payer's time to fix the card** (#638; Q113), and only the
+    payer's words change: **`FIX_YOUR_CARD`** in place of `CONFIRM_PAYMENT` — *Fix your card
+    by 14:40 to keep your seat* / *Nothing is paid now. Padel · Tue 19:00 at Bonarka Arena —
+    the others are waiting.* — chosen while the time runs and the payer is in
+    `GameBrief.fixing`; and **`TIME_TO_FIX_RAN_OUT`** for those `TimeToPayRanOut.fixing`
+    names — *Your time to fix your card ran out · Tue 19:00* / *Your seat is open to others
+    now, and you owe nothing — you can still take it back while it's free.* Both always
+    on; the others keep *Waiting for one payment* either way.
   - **`FellBackToFilling`** — a leave or a paused week while it waited, at a club that books
     at once — is told as `RequestWithdrawn` is; a court lost while it waited is *called off ·
     nobody paid* with `COURT_LOST_WAITING_FOR_A_PAYMENT`.
