@@ -17,12 +17,15 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `app/modules/payments/` holds the **Payment method** — event-sourced, one stream per player
   under the player's own id, born by being used — and **`PaymentProvider`**
   (`domain/provider.py`), the one port every movement of money goes through, in Raketa's words:
-  a setup, a card on file, an authorised payment, a refund with the fee withheld, a club
-  account's three states. It covers what #537, #541 and #545 needed, and **#548 widened it
-  twice** — `pay_out` (a club's money released to its bank, below) and `Payment.fee_grosze`
-  (the card fee the provider took on a capture) — so reach for it rather than widening it
-  again; a rescue (#545) reaches for the hold, not `charge_now`, which has no caller: one
-  share held and taken in the act, as the fill's are. Four things are
+  a setup, a card on file, an authorised payment and its hold's **last moment**, a capture and
+  the **real fee** kept on it, an **exact refund**, a club account's three states. It covers
+  what #537, #541 and #545 needed, **#548 widened it twice** — `pay_out` (a club's money
+  released to its bank, below) and `Payment.fee_grosze` — and **#636 once more**, for Q113
+  (ADR-0190's 2026-10-10 amendment): `Payment.last_moment` (Stripe's
+  `payment_method_details.card.capture_before` on the authorised charge), a fee that may be
+  *not yet known* (`None` — a club on its own negotiated pricing is told it later), and
+  `refund(amount_grosze=…)` in place of the withhold-the-fee flag. `charge_now` is gone: money
+  taken at once is a hold taken in the act, as the fill's and a rescue's are. Four things are
   load-bearing. **Two adapters, one demand suite**:
   `StripePayments` (Connect direct charges on the club's account, Accounts v2 with
   `fees_collector`/`losses_collector` = `stripe`, v1 Customers, a clone per charge, a key on every
@@ -58,12 +61,30 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   is released, so the payment in time books on them; the confirm email names the time, and
   with no time left at the club's yes nobody is emailed — the game is called off. **A refund
   is decided in the act and made from the outbox** (#544): `SeatChargeRefundDecided` then
-  `SeatChargeRefunded` with the fee the provider kept; receipts list it as its own `REFUND`
-  row (`card_fee_grosze`), dated from the decision. What the card fee on a share comes to
-  before the money moves is `domain/card_fee.py`'s **estimate** (Stripe's EEA price),
-  which the fake withholds exactly.
+  `SeatChargeRefunded`; receipts list it as its own `REFUND` row (`card_fee_grosze`), dated
+  from the decision. **The settler computes the amount** (#636, `refund_to_ask_grosze`): the
+  whole share, or the share less **the fee kept on that payment** (`fee_taken_grosze`), and
+  records what was kept as the share less what came back. A fee not yet known at the capture
+  is asked for again (`read_payment`, recorded `SeatChargeFeeReported`), and while it is still
+  unknown the delivery raises `PaymentsUnavailable`, so the refund waits and the outbox
+  retries. A Seat charge records each hold's `last_moment` (`SeatChargeAuthorised`, and
+  `SeatChargeConfirmed` for one its player confirmed). `domain/card_fee.py`'s **estimate**
+  (Stripe's EEA price, the personal EU card's) is still what the reads quote before the money
+  moves, until #641 retires it.
+  **The fake models card kinds and hold windows** (#636): `EnteredCard.kind`
+  (`domain/entered_cards.py` — personal EU by default, business, UK, outside Europe) keeps
+  that kind's real fee when the share is taken (`CARD_PRICES`: 1,5 / 1,9 / 2,5 / 3,25 % + 1 zł,
+  so 1,60 / 1,76 / 2,00 / 2,30 zł on 40 zł); a hold made without its player lasts its network's
+  window on the fake's `clock` (`HOLD_WINDOWS`: Visa 4 days 18 hours, Mastercard 7 days; 7 days
+  on either once confirmed in the app) and **lapses** after its last moment — read cancelled,
+  and a capture refused (`FakeRefusal`); `fees_reported_later` holds a club's fee back until
+  `reports_fee`. **A test's fake has no clock** unless the test gives it one, and then says no
+  last moment and lets nothing lapse; a test that lets a capture wait days gives its players
+  Mastercards (`test_club_money.py`).
   **The games test console steers the laptop's fake** (#591, `app/api/dev/provider.py`): it
-  reads and sets a saved card's behaviour (`card_behaviour_of`, `card_behaves`), confirms a
+  reads and sets a saved card's behaviour (`card_behaviour_of`, `card_behaves`) and, since
+  #636, its kind and network (`card_is`, `card_kind_of`, `card_network_of` — the fake's record
+  only; the player's method keeps the brand they saved), confirms a
   waiting payment as the phone's bank would (`phone_confirms_payment`), makes refunds wait
   (`refunds_wait` answers a refund `PaymentsUnavailable`, so the outbox retries, until
   `gives_refund` or the wait is lifted) and delivers one through `SettleSeatCharges.settle`

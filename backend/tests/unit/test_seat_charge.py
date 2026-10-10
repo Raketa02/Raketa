@@ -5,7 +5,7 @@ already moved past is the past arriving late and records nothing.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from app.kernel import Sport, instant
@@ -130,3 +130,66 @@ def test_a_share_given_back_whole_costs_the_club_its_card_fee():
 
     assert (charge.given_back_grosze, charge.net_grosze) == (30_00, -1_45)
     assert charge.settled is False  # until the provider gives it back
+
+
+def test_a_hold_records_its_last_moment():
+    """**Whether a hold reaches the club's cut-off** is decided off when it
+    ends, which the provider reports when it holds the share (ADR-0190's
+    2026-10-10 amendment)."""
+
+    ends = AT + timedelta(days=4, hours=18)
+    charge = SeatCharge.held(
+        charge_id=uuid4(),
+        player_id=uuid4(),
+        game_id=uuid4(),
+        club_id=uuid4(),
+        account_id="acct_1",
+        payment=Payment(
+            payment_id="pi_1",
+            status=PaymentStatus.AUTHORISED,
+            amount_grosze=30_00,
+            last_moment=ends,
+        ),
+        sport=Sport.PADEL,
+        starts_at=GAME,
+        at=AT,
+    )
+
+    assert charge.last_moment == ends
+    assert SeatCharge.from_history(charge.pull_events()).last_moment == ends
+
+
+def test_a_payment_its_player_confirmed_records_the_last_moment_of_its_hold():
+    ends = AT + timedelta(days=7)
+    charge = a_refusal()
+
+    charge.heard(
+        Payment(
+            payment_id="pi_1",
+            status=PaymentStatus.AUTHORISED,
+            amount_grosze=30_00,
+            last_moment=ends,
+        ),
+        at=AT,
+    )
+
+    assert charge.last_moment == ends
+    assert SeatCharge.from_history(charge.pull_events()).last_moment == ends
+
+
+def test_a_fee_not_yet_known_at_the_capture_is_recorded_when_a_reading_reports_it():
+    charge = a_hold()
+    charge.take(booking_id=uuid4(), at=AT)
+    charge.heard(payment(PaymentStatus.CAPTURED), at=AT)
+    assert charge.fee_taken_grosze is None
+
+    reported = Payment(
+        payment_id="pi_1",
+        status=PaymentStatus.CAPTURED,
+        amount_grosze=30_00,
+        fee_grosze=1_45,
+    )
+
+    assert charge.heard(reported, at=AT) is True
+    assert charge.heard(reported, at=AT) is False
+    assert charge.fee_taken_grosze == 1_45

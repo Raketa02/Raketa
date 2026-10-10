@@ -24,6 +24,7 @@ from app.modules.payments.domain.events import (
     SeatChargeCaptured,
     SeatChargeConfirmed,
     SeatChargeFailed,
+    SeatChargeFeeReported,
     SeatChargeRefundDecided,
     SeatChargeRefunded,
     SeatChargeReleased,
@@ -45,6 +46,7 @@ _EVENTS = (
     (SeatChargeReleased, "payments.seat_charge_released"),
     (SeatChargeCaptured, "payments.seat_charge_captured"),
     (SeatChargeCancelled, "payments.seat_charge_cancelled"),
+    (SeatChargeFeeReported, "payments.seat_charge_fee_reported"),
     (SeatChargeRefundDecided, "payments.seat_charge_refund_decided"),
     (SeatChargeRefunded, "payments.seat_charge_refunded"),
     (ClubPayoutDecided, "payments.club_payout_decided"),
@@ -71,6 +73,7 @@ def subscribe_payment_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(SeatChargeReleased, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeCaptured, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeCancelled, LogSeatChargeEvent())
+    dispatcher.subscribe(SeatChargeFeeReported, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeRefundDecided, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeRefunded, LogSeatChargeEvent())
     dispatcher.subscribe(ClubPayoutDecided, LogClubPayoutEvent())

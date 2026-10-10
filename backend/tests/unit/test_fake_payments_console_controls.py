@@ -175,7 +175,7 @@ async def test_a_refund_is_given_at_once_unless_refunds_wait():
     payment = await _a_captured_share(fake)
 
     refund = await fake.refund(
-        account_id=ACCOUNT, payment_id=payment, withhold_fee=False, idempotency_key="r"
+        account_id=ACCOUNT, payment_id=payment, amount_grosze=30_00, idempotency_key="r"
     )
 
     assert refund.amount_grosze == 30_00
@@ -190,12 +190,12 @@ async def test_a_refund_that_waits_is_not_given_until_it_is_let_through():
         await fake.refund(
             account_id=ACCOUNT,
             payment_id=payment,
-            withhold_fee=False,
+            amount_grosze=30_00,
             idempotency_key="r",
         )
     fake.gives_refund(payment)
     refund = await fake.refund(
-        account_id=ACCOUNT, payment_id=payment, withhold_fee=False, idempotency_key="r"
+        account_id=ACCOUNT, payment_id=payment, amount_grosze=30_00, idempotency_key="r"
     )
 
     assert refund.amount_grosze == 30_00
@@ -209,13 +209,13 @@ async def test_letting_refunds_go_again_gives_every_one_asked_for():
         await fake.refund(
             account_id=ACCOUNT,
             payment_id=payment,
-            withhold_fee=False,
+            amount_grosze=30_00,
             idempotency_key="r",
         )
 
     fake.refunds_wait = False
     refund = await fake.refund(
-        account_id=ACCOUNT, payment_id=payment, withhold_fee=False, idempotency_key="r"
+        account_id=ACCOUNT, payment_id=payment, amount_grosze=30_00, idempotency_key="r"
     )
 
     assert refund.amount_grosze == 30_00

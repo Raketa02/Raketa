@@ -31,12 +31,12 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Awaitable, Literal, Mapping, TypeVar, final
+from typing import Any, Awaitable, Mapping, TypeVar, final
 from uuid import UUID
 
 import stripe
 
-from app.kernel import instant, invariant
+from app.kernel import Instant, instant, invariant
 from app.modules.payments.domain.errors import PaymentsUnavailable
 from app.modules.payments.domain.provider import (
     AWAITING_THE_PLAYER,
@@ -113,10 +113,11 @@ _THE_FEE = "latest_charge.balance_transaction"
 
 
 def _fee_of(intent: Any) -> int | None:
-    """The card fee Stripe took on a captured payment, when the expanded
-    balance transaction says it — ``None`` where it was not expanded or is not
-    settled yet (Stripe documents it missing right after an asynchronous
-    capture), and the estimate stands in until it is."""
+    """The real fee Stripe kept on a captured payment, when the expanded
+    balance transaction says it — ``None``, *not yet known*, where it was not
+    expanded or is not settled yet (Stripe documents it missing right after an
+    asynchronous capture, and a club on its own negotiated pricing is told its
+    fee later)."""
 
     charge = getattr(intent, "latest_charge", None)
     settled = getattr(charge, "balance_transaction", None)
@@ -124,6 +125,21 @@ def _fee_of(intent: Any) -> int | None:
     if not isinstance(fee, int) or getattr(settled, "currency", CURRENCY) != CURRENCY:
         return None
     return fee
+
+
+def _last_moment_of(intent: Any) -> Instant | None:
+    """When an authorised payment's hold ends unless it is captured: its
+    charge's ``payment_method_details.card.capture_before``, on the club's
+    account where the direct charge lives — Stripe's own word for it, and the
+    most reliable one. ``None`` where the charge was not expanded."""
+
+    charge = getattr(intent, "latest_charge", None)
+    details = getattr(charge, "payment_method_details", None)
+    card = getattr(details, "card", None)
+    capture_before = getattr(card, "capture_before", None)
+    if not isinstance(capture_before, int):
+        return None
+    return instant(datetime.fromtimestamp(capture_before, tz=timezone.utc))
 
 
 def card_of(method: Mapping[str, Any]) -> CardOnFile:
@@ -476,50 +492,6 @@ class StripePayments:
         metadata: Mapping[str, str],
         idempotency_key: str,
     ) -> Payment:
-        return await self._pay(
-            account_id=account_id,
-            method_id=method_id,
-            amount_grosze=amount_grosze,
-            description=description,
-            metadata=metadata,
-            idempotency_key=idempotency_key,
-            capture_method="manual",
-        )
-
-    async def charge_now(
-        self,
-        *,
-        account_id: str,
-        method_id: str,
-        amount_grosze: int,
-        description: str,
-        metadata: Mapping[str, str],
-        idempotency_key: str,
-    ) -> Payment:
-        # `automatic`, not the default `automatic_async`: the charge's fee is
-        # then known in the answer, and a refund that withholds it can be made
-        # at once rather than an hour later.
-        return await self._pay(
-            account_id=account_id,
-            method_id=method_id,
-            amount_grosze=amount_grosze,
-            description=description,
-            metadata=metadata,
-            idempotency_key=idempotency_key,
-            capture_method="automatic",
-        )
-
-    async def _pay(
-        self,
-        *,
-        account_id: str,
-        method_id: str,
-        amount_grosze: int,
-        description: str,
-        metadata: Mapping[str, str],
-        idempotency_key: str,
-        capture_method: Literal["manual", "automatic"],
-    ) -> Payment:
         try:
             intent = await self._call(
                 self._client.v1.payment_intents.create_async(
@@ -530,11 +502,13 @@ class StripePayments:
                         # account — so none is named.
                         "payment_method": method_id,
                         "payment_method_types": ["card"],
-                        "capture_method": capture_method,
+                        "capture_method": "manual",
                         "off_session": True,
                         "confirm": True,
                         "description": description,
                         "metadata": dict(metadata),
+                        # The charge, for when its hold ends.
+                        "expand": ["latest_charge"],
                     },
                     options={
                         "stripe_account": account_id,
@@ -611,40 +585,17 @@ class StripePayments:
         *,
         account_id: str,
         payment_id: str,
-        withhold_fee: bool,
+        amount_grosze: int,
         idempotency_key: str,
     ) -> Refund:
-        intent = await self._call(
-            self._client.v1.payment_intents.retrieve_async(
-                payment_id,
-                params={"expand": ["latest_charge.balance_transaction"]},
-                options={"stripe_account": account_id},
-            )
-        )
-        charge = intent.latest_charge
-        # What is left to give back: a share is refunded once, but a payment
-        # refunded in part before would otherwise be refunded past its total.
-        remaining = intent.amount_received - (
-            getattr(charge, "amount_refunded", 0) or 0
-        )
-        fee = 0
-        if withhold_fee:
-            # Stripe never returns its processing fee on a refund, and this is
-            # the fee it took: the charge's balance transaction, on the club's
-            # account — which settles in złoty, so the two amounts share a unit.
-            settled = getattr(charge, "balance_transaction", None)
-            if settled is None:
-                raise PaymentsUnavailable("the charge's fee is not known yet")
-            invariant(settled.currency == CURRENCY, "a club settling outside złoty")
-            fee = settled.fee
         # A share is at least 2,50 zł (the club's price floor over four seats)
         # and its fee about 1,04 zł, so there is always something to give back.
-        invariant(remaining - fee > 0, "a refund of nothing")
+        invariant(amount_grosze > 0, "a refund of nothing")
         refund = await self._call(
             self._client.v1.refunds.create_async(
                 # No reason: Stripe's three are a customer's request, a
                 # duplicate and fraud, and a game called off is none of them.
-                params={"payment_intent": payment_id, "amount": remaining - fee},
+                params={"payment_intent": payment_id, "amount": amount_grosze},
                 options={
                     "stripe_account": account_id,
                     "idempotency_key": idempotency_key,
@@ -655,7 +606,6 @@ class StripePayments:
             refund_id=refund.id,
             status=_REFUND_STATUSES.get(refund.status or "", RefundStatus.PENDING),
             amount_grosze=refund.amount,
-            fee_withheld_grosze=fee,
         )
 
     # -------------------------------------------------------------- internals
@@ -671,6 +621,9 @@ class StripePayments:
             status=status,
             amount_grosze=intent.amount,
             fee_grosze=(_fee_of(intent) if status is PaymentStatus.CAPTURED else None),
+            last_moment=(
+                _last_moment_of(intent) if status is PaymentStatus.AUTHORISED else None
+            ),
             client_secret=(
                 intent.client_secret if status in AWAITING_THE_PLAYER else None
             ),

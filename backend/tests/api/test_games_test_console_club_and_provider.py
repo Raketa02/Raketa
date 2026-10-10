@@ -539,6 +539,8 @@ async def test_each_row_shows_their_saved_card_and_what_it_will_do(
         "brand": "visa",
         "last_four": "4242",
         "outcome": "SUCCEEDS",
+        "kind": "PERSONAL_EU",
+        "network": "visa",
     }
 
     steered = await card_does(client, world.marta, "DECLINES")
@@ -552,6 +554,48 @@ async def test_each_row_shows_their_saved_card_and_what_it_will_do(
         "steerable": True,
         "refunds_wait": False,
     }
+
+
+async def test_a_card_is_set_to_a_kind_and_a_network_each_on_its_own(
+    client, payments, clock, world
+):
+    """**The fee kept and how long a hold lasts** (ADR-0190's 2026-10-10
+    amendment): a business card keeps 1,9 % + 1 zł, and a Mastercard holds a
+    share 7 days. Each press moves one thing and leaves the rest."""
+
+    as_business = await client.put(
+        f"/dev/payments/cards/{world.marta['id']}", json={"kind": "BUSINESS"}
+    )
+    on_mastercard = await client.put(
+        f"/dev/payments/cards/{world.marta['id']}", json={"network": "mastercard"}
+    )
+
+    assert as_business.status_code == 200, as_business.text
+    assert (as_business.json()["kind"], as_business.json()["network"]) == (
+        "BUSINESS",
+        "visa",
+    )
+    assert on_mastercard.status_code == 200, on_mastercard.text
+    assert on_mastercard.json()["outcome"] == "SUCCEEDS"
+    assert "business card" in on_mastercard.json()["says"]
+    assert "7 days" in on_mastercard.json()["says"]
+    card = rows_of(await board_of(client, world.group))["marta"]["card"]
+    assert (card["brand"], card["kind"], card["network"]) == (
+        "visa",
+        "BUSINESS",
+        "mastercard",
+    )
+    assert rows_of(await board_of(client, world.group))["kuba"]["card"]["kind"] == (
+        "PERSONAL_EU"
+    )
+
+
+async def test_a_card_kind_the_provider_does_not_know_is_refused(client, world):
+    pressed = await client.put(
+        f"/dev/payments/cards/{world.marta['id']}", json={"kind": "PLATINUM"}
+    )
+
+    assert pressed.status_code == 422, pressed.text
 
 
 @pytest.mark.parametrize(

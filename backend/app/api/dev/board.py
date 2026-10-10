@@ -101,7 +101,7 @@ from app.modules.games.presentation.dependencies import GameRepositoryDep
 from app.modules.groups.domain.errors import GroupNotFound
 from app.modules.groups.domain.ports import GroupDirectory, GroupListing
 from app.modules.groups.presentation.dependencies import GroupDirectoryDep
-from app.modules.payments.domain.entered_cards import CardBehaviour
+from app.modules.payments.domain.entered_cards import CardBehaviour, CardKind
 from app.modules.payments.domain.ports import (
     PaymentMethodRepository,
     SeatChargeRepository,
@@ -172,6 +172,23 @@ CARD_BEHAVIOURS: Mapping[CardOutcome, CardBehaviour] = MappingProxyType(
         CardOutcome.ASKS_FOR_VERIFICATION: CardBehaviour.CHECKED_EVERY_TIME,
     }
 )
+
+
+class CardNetwork(StrEnum):
+    """The network a saved card holds a share on — which says how long a hold
+    made without its player lasts at the provider (ADR-0190's 2026-10-10
+    amendment): 4 days 18 hours on a Visa, 7 days on a Mastercard. Spelled as
+    the provider names a brand."""
+
+    VISA = "visa"
+    MASTERCARD = "mastercard"
+
+
+def network_of(brand: str) -> CardNetwork:
+    """The network a card's brand holds on; any other is held as a Visa, the
+    shortest window — as the fake holds it."""
+
+    return CardNetwork.MASTERCARD if brand == "mastercard" else CardNetwork.VISA
 
 
 def outcome_of(behaviour: CardBehaviour) -> CardOutcome:
@@ -407,6 +424,19 @@ class CardOnFilePane(BaseModel):
         description=(
             "What the provider does with the next payment on it; `null` where "
             "the provider is not the fake the console steers."
+        )
+    )
+    kind: CardKind | None = Field(
+        description=(
+            "Which kind of card the provider takes it for, and so the fee it "
+            "keeps when the share is taken; `null` where the provider is not "
+            "the fake."
+        )
+    )
+    network: CardNetwork | None = Field(
+        description=(
+            "The network the provider holds a share on, and so how long the "
+            "hold lasts; `null` where the provider is not the fake."
         )
     )
 
@@ -954,6 +984,10 @@ async def _cards_of(
             outcome=None
             if fake is None
             else outcome_of(fake.card_behaviour_of(saved.method_id)),
+            kind=None if fake is None else fake.card_kind_of(saved.method_id),
+            network=None
+            if fake is None
+            else network_of(fake.card_network_of(saved.method_id)),
         )
     return cards
 

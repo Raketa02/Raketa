@@ -20,6 +20,7 @@ The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the game is
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import timedelta
 from uuid import UUID
 
@@ -31,6 +32,7 @@ from app.bootstrap.composition import (
     build_summarise_new_bookings,
 )
 from app.core.config import get_settings
+from app.modules.payments.domain.entered_cards import A_CARD
 from app.modules.payments.domain.provider import PayoutStatus
 from tests.api.proposals_world import (
     MONDAY_MORNING,
@@ -66,10 +68,16 @@ async def club(client) -> tuple[str, dict]:
     return await a_club_and_its_desk(client, way="INSTANT")
 
 
+#: The four pay by Mastercard, whose hold lasts seven days: a payout test lets
+#: a capture wait until the game's evening, and a Visa held on Monday morning
+#: lapses on Saturday at 02:00 (ADR-0190's 2026-10-10 amendment).
+MASTERCARD = replace(A_CARD, brand="mastercard", last_four="4444")
+
+
 @pytest.fixture
 async def four(client, payments) -> list[dict]:
     return [
-        await a_player(client, payments, name)
+        await a_player(client, payments, name, entered=MASTERCARD)
         for name in ("ola", "kuba", "ewa", "tomek")
     ]
 

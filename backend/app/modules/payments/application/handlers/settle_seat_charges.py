@@ -17,9 +17,16 @@ method — has nothing at the provider to cancel, and is settled at once.
 **A refund needs the money taken first.** A player may leave seconds after the
 fill, before the capture's delivery has run: whichever of the two deliveries
 arrives first captures the share, then gives it back, and the other finds
-nothing left to do. What the provider gave back, and the card fee it kept, is
-recorded on the charge — which is what the receipt reads; and so is the card
-fee the provider took on a capture, which the club pays (#548).
+nothing left to do. What the provider gave back is recorded on the charge —
+which is what the receipt reads; and so is the real fee the provider kept on a
+capture, which the club pays (#548).
+
+**The refund is computed here, to the grosz** (ADR-0190's 2026-10-10
+amendment): the whole share, or the share less **the fee kept on that
+payment** — never an estimate. A fee not yet known when the share was taken (a
+club on its own negotiated pricing) is asked of the provider again; while it is
+still not known the refund **waits**, the delivery failing as on a provider
+that is down, and the outbox asks again.
 """
 
 from __future__ import annotations
@@ -29,6 +36,7 @@ from uuid import UUID
 
 from app.application.events import DeliveryContext
 from app.kernel import Clock, instant
+from app.modules.payments.domain.errors import PaymentsUnavailable
 from app.modules.payments.domain.events import (
     SeatChargeRefundDecided,
     SeatChargeReleased,
@@ -101,10 +109,21 @@ class SettleSeatCharges:
             charge.cancelled(at=now)
         if charge.owes_a_refund and charge.status is SeatChargeStatus.CAPTURED:
             assert charge.payment_id is not None
+            if charge.refund_to_ask_grosze is None:
+                # The fee kept on it was not known when it was taken.
+                reading = await self._provider.read_payment(
+                    account_id=charge.account_id, payment_id=charge.payment_id
+                )
+                charge.fee_reported(reading.fee_grosze, at=now)
+            amount = charge.refund_to_ask_grosze
+            if amount is None:
+                raise PaymentsUnavailable(
+                    "the fee kept on the payment is not known yet"
+                )
             refund = await self._provider.refund(
                 account_id=charge.account_id,
                 payment_id=charge.payment_id,
-                withhold_fee=bool(charge.refund_withholds_fee),
+                amount_grosze=amount,
                 idempotency_key=refund_key(charge.charge_id),
             )
             charge.refunded(refund, at=now)

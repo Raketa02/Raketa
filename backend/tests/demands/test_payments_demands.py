@@ -18,6 +18,7 @@ four digits are theirs — so both halves are asked the same question.
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Callable, Protocol
 
 import pytest
@@ -30,6 +31,7 @@ from app.core.config import get_settings
 from app.modules.payments.domain.errors import PaymentsUnavailable
 from app.modules.payments.domain.provider import (
     ClubAccountStatus,
+    Payment,
     PaymentProvider,
     PaymentStatus,
     PayoutStatus,
@@ -441,6 +443,24 @@ async def _cloned(provider, phone, club_account, card: EnteredCard) -> str:
     )
 
 
+async def _taken(provider, phone, club_account, amount_grosze: int) -> Payment:
+    """A share held on a saved card and taken at once — every capture, the
+    cut-off's or a late rescue's, is a hold taken."""
+
+    clone = await _cloned(provider, phone, club_account, A_CARD)
+    held = await provider.authorise(
+        account_id=club_account,
+        method_id=clone,
+        amount_grosze=amount_grosze,
+        description="Padel · Bonarka Arena",
+        metadata={},
+        idempotency_key=_key(),
+    )
+    return await provider.capture(
+        account_id=club_account, payment_id=held.payment_id, idempotency_key=_key()
+    )
+
+
 async def test_an_authorised_payment_is_captured_whole(provider, phone, club_account):
     """**The fill's two halves**: hold every seat, then take them all."""
 
@@ -472,9 +492,48 @@ async def test_an_authorised_payment_is_captured_whole(provider, phone, club_acc
     assert held_again.payment_id == held.payment_id
     assert taken.status is PaymentStatus.CAPTURED
     assert taken.amount_grosze == 4000
-    # The card fee the provider took on it, which the club pays (#548).
-    assert taken.fee_grosze is not None and 0 < taken.fee_grosze < 4000
     assert held.fee_grosze is None
+
+
+async def test_an_authorisation_reports_its_last_moment(provider, phone, club_account):
+    """**A hold lasts days, not until the game** (ADR-0190's 2026-10-10
+    amendment): 4 days 18 hours on a Visa charged without its player, 7 days on
+    Mastercard. Whether a hold reaches the club's cut-off is the caller's to
+    decide, so the provider says when this one ends — and says it again when
+    the payment is read."""
+
+    before = datetime.now(timezone.utc)
+    clone = await _cloned(provider, phone, club_account, A_CARD)
+
+    held = await provider.authorise(
+        account_id=club_account,
+        method_id=clone,
+        amount_grosze=4000,
+        description="Padel · Bonarka Arena",
+        metadata={},
+        idempotency_key=_key(),
+    )
+    read = await provider.read_payment(
+        account_id=club_account, payment_id=held.payment_id
+    )
+
+    assert held.last_moment is not None
+    assert before + timedelta(days=4) < held.last_moment
+    assert held.last_moment <= before + timedelta(days=7, hours=1)
+    assert read.last_moment == held.last_moment
+
+
+async def test_a_capture_reports_the_real_fee_or_that_it_is_not_yet_known(
+    provider, phone, club_account
+):
+    """**The fee exists only once the money is taken**, and the provider never
+    guesses it: the fee it kept on this payment, which the club pays (#548) —
+    or ``None``, *not yet known*, for a club on its own negotiated pricing,
+    whose fee is reported later."""
+
+    taken = await _taken(provider, phone, club_account, 4000)
+
+    assert taken.fee_grosze is None or 0 < taken.fee_grosze < 4000
 
 
 async def test_a_held_payment_can_be_released_untaken(provider, phone, club_account):
@@ -493,8 +552,46 @@ async def test_a_held_payment_can_be_released_untaken(provider, phone, club_acco
     released = await provider.cancel(
         account_id=club_account, payment_id=held.payment_id, idempotency_key=_key()
     )
+    read = await provider.read_payment(
+        account_id=club_account, payment_id=held.payment_id
+    )
 
     assert released.status is PaymentStatus.CANCELLED
+    assert read.status is PaymentStatus.CANCELLED
+
+
+async def test_cancelling_an_uncaptured_payment_takes_nothing(
+    provider, phone, club_account
+):
+    """**Letting a hold go is free** (ADR-0190's 2026-10-10 amendment): it is
+    how a leave before the cut-off, a game short at it and a club's cancel
+    before it cost nobody anything. Nothing was taken, so there is no fee on it
+    and nothing to give back."""
+
+    clone = await _cloned(provider, phone, club_account, A_CARD)
+    held = await provider.authorise(
+        account_id=club_account,
+        method_id=clone,
+        amount_grosze=4000,
+        description="Padel · Bonarka Arena",
+        metadata={},
+        idempotency_key=_key(),
+    )
+
+    released = await provider.cancel(
+        account_id=club_account, payment_id=held.payment_id, idempotency_key=_key()
+    )
+
+    assert released.status is PaymentStatus.CANCELLED
+    assert released.fee_grosze is None
+    with pytest.raises(Exception) as refused:
+        await provider.refund(
+            account_id=club_account,
+            payment_id=held.payment_id,
+            amount_grosze=4000,
+            idempotency_key=_key(),
+        )
+    assert not isinstance(refused.value, PaymentsUnavailable)
 
 
 async def test_a_payment_released_untaken_can_never_be_taken(
@@ -646,57 +743,65 @@ async def test_a_payment_its_player_confirmed_is_held_to_be_taken(
     assert taken.status is PaymentStatus.CAPTURED
 
 
-async def test_a_rescue_is_charged_at_once(provider, phone, club_account):
-    clone = await _cloned(provider, phone, club_account, A_CARD)
+async def test_a_share_taken_after_the_cut_off_is_held_and_taken_at_once(
+    provider, phone, club_account
+):
+    """**After the cut-off money is taken at once** — a rescue, a game filling
+    late — and still through a hold taken in the act, the path production
+    uses: a crash between the provider and the record leaves a hold that
+    lapses, never money taken for no seat."""
 
-    taken = await provider.charge_now(
-        account_id=club_account,
-        method_id=clone,
-        amount_grosze=2700,
-        description="Padel · Bonarka Arena",
-        metadata={},
-        idempotency_key=_key(),
-    )
+    taken = await _taken(provider, phone, club_account, 2700)
 
     assert taken.status is PaymentStatus.CAPTURED
     assert taken.amount_grosze == 2700
 
 
-async def test_a_refund_keeps_the_card_fee_back_only_when_asked(
-    provider, phone, club_account
-):
-    """**Leaving before the cut-off** is refunded minus the card fee; **a game
-    called off at the cut-off** is refunded in full (the mechanics §12.3)."""
+async def test_a_refund_returns_exactly_the_amount_asked(provider, phone, club_account):
+    """**The caller computes a refund** (ADR-0190's 2026-10-10 amendment): the
+    share less the fee kept on that payment, for a late leaver whose seat is
+    taken; the whole share, for a club's cancel after the cut-off. The
+    provider gives back exactly that, and never decides a fee of its own."""
 
-    async def captured() -> str:
-        clone = await _cloned(provider, phone, club_account, A_CARD)
-        taken = await provider.charge_now(
-            account_id=club_account,
-            method_id=clone,
-            amount_grosze=4000,
-            description="Padel · Bonarka Arena",
-            metadata={},
-            idempotency_key=_key(),
-        )
-        return taken.payment_id
-
-    left = await provider.refund(
+    less_the_fee = await provider.refund(
         account_id=club_account,
-        payment_id=await captured(),
-        withhold_fee=True,
+        payment_id=(await _taken(provider, phone, club_account, 4000)).payment_id,
+        amount_grosze=38_24,
         idempotency_key=_key(),
     )
-    called_off = await provider.refund(
+    whole = await provider.refund(
         account_id=club_account,
-        payment_id=await captured(),
-        withhold_fee=False,
+        payment_id=(await _taken(provider, phone, club_account, 4000)).payment_id,
+        amount_grosze=4000,
         idempotency_key=_key(),
     )
 
-    assert 0 < left.fee_withheld_grosze < 4000
-    assert left.amount_grosze == 4000 - left.fee_withheld_grosze
-    assert left.status in (RefundStatus.PENDING, RefundStatus.SUCCEEDED)
-    assert (called_off.amount_grosze, called_off.fee_withheld_grosze) == (4000, 0)
+    assert less_the_fee.amount_grosze == 38_24
+    assert whole.amount_grosze == 4000
+    assert {less_the_fee.status, whole.status} <= {
+        RefundStatus.PENDING,
+        RefundStatus.SUCCEEDED,
+    }
+
+
+async def test_a_refund_is_made_once_per_key(provider, phone, club_account):
+    taken = await _taken(provider, phone, club_account, 4000)
+    key = _key()
+
+    first = await provider.refund(
+        account_id=club_account,
+        payment_id=taken.payment_id,
+        amount_grosze=4000,
+        idempotency_key=key,
+    )
+    again = await provider.refund(
+        account_id=club_account,
+        payment_id=taken.payment_id,
+        amount_grosze=4000,
+        idempotency_key=key,
+    )
+
+    assert again.refund_id == first.refund_id
 
 
 # ---------------------------------------------------------------------------

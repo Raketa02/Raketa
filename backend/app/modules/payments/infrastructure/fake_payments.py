@@ -16,6 +16,19 @@ that waited for them in the app, ``club_account_is`` sets an account's state,
 ``onboarding_completes`` finishes every club's onboarding the moment its link
 is made, and ``unreachable`` makes every call fail as an outage does.
 
+**It knows card kinds and hold windows** (ADR-0190's 2026-10-10 amendment).
+A card is a personal one issued in the EU unless a test or the console says
+otherwise (``card_is``) — a business card, a UK card, one from outside Europe —
+and when its money is taken the fake keeps **that kind's real fee**
+(``CARD_PRICES``), which is what a late leaver's refund is the share less. A
+hold made without its player lasts its network's window on the fake's
+``clock`` (``HOLD_WINDOWS``: 4 days 18 hours on a Visa, 7 days on a
+Mastercard; 7 days on either once the player confirmed it in the app), and
+**lapses** after its last moment: it is read cancelled, and a capture is
+refused. A club on its own negotiated pricing (``fees_reported_later``) is
+told its fee after the capture — *not yet known* until ``reports_fee``. A fake
+with no clock says no last moment and lets nothing lapse.
+
 **It pays a club out only when asked** (#548) — the club's money is held until
 after the game, which is what Raketa asks it for — and dates the payout's
 arrival two days after its ``clock``'s now; a fake with no clock cannot date
@@ -26,8 +39,9 @@ one, and refuses.
 
 **It refuses what Stripe refuses as an invalid request** (``FakeRefusal``): a key
 reused with other arguments, capturing what is not held, cancelling what was
-taken, refunding what was never taken, cloning a card that was released. Each is
-a bug in the caller, and a fake that answered it would hide one.
+taken, refunding what was never taken or more than was, cloning a card that was
+released. Each is a bug in the caller, and a fake that answered it would hide
+one.
 
 **A payment it never made is taken or let go as a hold** (``_on_account``): a
 seed run fills games through its own fake, and a laptop's server reloads, so the
@@ -64,10 +78,10 @@ from app.kernel import Clock, Instant, instant
 from app.modules.payments.domain.entered_cards import (
     A_CARD,
     CardBehaviour,
+    CardKind,
     EnteredCard,
 )
 from app.modules.payments.domain.errors import PaymentsUnavailable
-from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.notices import SeatPaymentChanged
 from app.modules.payments.domain.provider import (
     AWAITING_THE_PLAYER,
@@ -85,10 +99,41 @@ from app.modules.payments.domain.provider import (
     StartedSetup,
 )
 
-
-
 #: How long the fake says a payout takes to reach a club's bank.
 PAYOUT_TAKES = timedelta(days=2)
+
+#: What the provider keeps when a card's money is taken, by the kind of card:
+#: a rate in hundredths of a per cent, and a fixed part in grosze — Stripe's
+#: own prices for a club in Poland (the mechanics Appendix A).
+CARD_PRICES: Mapping[CardKind, tuple[int, int]] = {
+    CardKind.PERSONAL_EU: (150, 100),  # 1,5 % + 1 zł
+    CardKind.BUSINESS: (190, 100),  # 1,9 % + 1 zł
+    CardKind.UK: (250, 100),  # 2,5 % + 1 zł
+    CardKind.OUTSIDE_EUROPE: (325, 100),  # 3,25 % + 1 zł
+}
+
+#: How long a hold made **without its player** lasts, by network — Stripe's
+#: merchant-initiated windows. Any other network is given the shortest.
+HOLD_WINDOWS: Mapping[str, timedelta] = {
+    "visa": timedelta(days=4, hours=18),
+    "mastercard": timedelta(days=7),
+}
+
+#: How long a hold its player confirmed in the app lasts — customer-initiated,
+#: 7 days on every network.
+CONFIRMED_HOLD_LASTS = timedelta(days=7)
+
+
+def fee_on(amount_grosze: int, kind: CardKind) -> int:
+    """The fee kept on ``amount_grosze`` taken from a card of ``kind``, half a
+    grosz rounding up."""
+
+    rate, fixed = CARD_PRICES[kind]
+    return (amount_grosze * rate + 5000) // 10000 + fixed
+
+
+def _hold_lasts(network: str) -> timedelta:
+    return HOLD_WINDOWS.get(network, min(HOLD_WINDOWS.values()))
 
 
 class FakeRefusal(Exception):
@@ -152,11 +197,18 @@ class _Payment:
     amount_grosze: int
     status: PaymentStatus
     client_secret: str
-    #: Taken at once when confirmed (``charge_now``), or held to be captured.
-    captures: bool = False
     decline_code: str | None = None
     #: Made by another process's fake, and answered here as it stands there.
     adopted: bool = False
+    #: The kind of card it was made on — which fee is kept when it is taken.
+    kind: CardKind = CardKind.PERSONAL_EU
+    #: When its hold ends unless it is taken; ``None`` where nothing is held,
+    #: or the fake has no clock to say it on.
+    last_moment: Instant | None = None
+    #: Whether the fee kept on it is known yet — once it is taken.
+    fee_known: bool = True
+    #: What was given back of it so far.
+    refunded_grosze: int = 0
 
 
 def _id(prefix: str) -> str:
@@ -193,7 +245,7 @@ class FakePayments:
         clock: Clock | None = None,
     ) -> None:
         self._auto_card = confirms_every_setup_with
-        #: What a payout's arrival is dated from.
+        #: What a payout's arrival, and a hold's last moment, are dated from.
         self.clock = clock
         #: Set to finish a club's onboarding the moment its link is made — the
         #: link then lands where the provider's would, back on the club website.
@@ -219,6 +271,9 @@ class FakePayments:
         self.refunds_wait = False
         # Payments whose refund the console let through while refunds wait.
         self._refunds_let_through: set[str] = set()
+        #: The club accounts on their own negotiated pricing: the fee on a
+        #: payment taken there is not known until ``reports_fee``.
+        self.fees_reported_later: set[str] = set()
 
     # ----------------------------------------------------------------- controls
 
@@ -261,10 +316,11 @@ class FakePayments:
                 CardBehaviour.DECLINES_PAYMENTS,
             ):
                 return
-        payment.status = (
-            PaymentStatus.CAPTURED if payment.captures else PaymentStatus.AUTHORISED
-        )
+            payment.kind = with_card.kind
+        payment.status = PaymentStatus.AUTHORISED
         payment.decline_code = None
+        if self.clock is not None:
+            payment.last_moment = instant(self.clock.now() + CONFIRMED_HOLD_LASTS)
         self._notify(payment)
 
     def card_behaves(self, method_id: str, behaviour: CardBehaviour) -> None:
@@ -278,6 +334,37 @@ class FakePayments:
         answers as the card every seed saves, until it is told otherwise."""
 
         return self._method(method_id).card.behaviour
+
+    def card_is(
+        self,
+        method_id: str,
+        *,
+        kind: CardKind | None = None,
+        network: str | None = None,
+    ) -> None:
+        """A saved card is of this kind, on this network, from its next payment
+        on — what the console and a test choose (ADR-0190's 2026-10-10
+        amendment). Only the fake's own record moves: the player's method is
+        not told, as no bank would tell it."""
+
+        method = self._method(method_id)
+        method.card = replace(
+            method.card,
+            kind=method.card.kind if kind is None else kind,
+            brand=method.card.brand if network is None else network,
+        )
+
+    def card_kind_of(self, method_id: str) -> CardKind:
+        return self._method(method_id).card.kind
+
+    def card_network_of(self, method_id: str) -> str:
+        return self._method(method_id).card.brand
+
+    def reports_fee(self, payment_id: str) -> None:
+        """The provider reports the fee it kept on a payment taken at a club on
+        its own negotiated pricing: a reading says it from now on."""
+
+        self._payment(payment_id).fee_known = True
 
     def gives_refund(self, payment_id: str) -> None:
         """Let this payment's refund through, while refunds wait: the next time
@@ -561,7 +648,7 @@ class FakePayments:
         return self._once(
             idempotency_key,
             {"account": account_id, "method_id": method_id, "amount": amount_grosze},
-            lambda: self._paid(account_id, method_id, amount_grosze, capture=False),
+            lambda: self._held(account_id, method_id, amount_grosze),
         )
 
     async def read_payment(self, *, account_id: str, payment_id: str) -> Payment:
@@ -577,6 +664,7 @@ class FakePayments:
         payment = self._on_account(payment_id, account_id)
         if payment.status is PaymentStatus.AUTHORISED:
             payment.status = PaymentStatus.CAPTURED
+            payment.fee_known = account_id not in self.fees_reported_later
             self._notify(payment)
         elif payment.status is not PaymentStatus.CAPTURED:
             raise FakeRefusal(f"{payment_id} is {payment.status} and cannot be taken")
@@ -596,44 +684,19 @@ class FakePayments:
             self._notify(payment)
         return self._answer(payment)
 
-    async def charge_now(
-        self,
-        *,
-        account_id: str,
-        method_id: str,
-        amount_grosze: int,
-        description: str,
-        metadata: Mapping[str, str],
-        idempotency_key: str,
-    ) -> Payment:
-        self._record(
-            "charge_now",
-            account_id=account_id,
-            method_id=method_id,
-            amount_grosze=amount_grosze,
-            description=description,
-            metadata=dict(metadata),
-            key=idempotency_key,
-        )
-        return self._once(
-            idempotency_key,
-            {"account": account_id, "method_id": method_id, "amount": amount_grosze},
-            lambda: self._paid(account_id, method_id, amount_grosze, capture=True),
-        )
-
     async def refund(
         self,
         *,
         account_id: str,
         payment_id: str,
-        withhold_fee: bool,
+        amount_grosze: int,
         idempotency_key: str,
     ) -> Refund:
         self._record(
             "refund",
             account_id=account_id,
             payment_id=payment_id,
-            withhold_fee=withhold_fee,
+            amount_grosze=amount_grosze,
             key=idempotency_key,
         )
         if (
@@ -654,21 +717,22 @@ class FakePayments:
                 payment.status = PaymentStatus.CAPTURED
             if payment.status is not PaymentStatus.CAPTURED:
                 raise FakeRefusal(f"{payment_id} was never taken; cancel it instead")
-            paid = payment.amount_grosze
-            # The fake withholds exactly what the sheet estimated — never more
-            # than was paid, which an adopted payment of an id that does not
-            # say its amount (a fake older than #544) would otherwise be.
-            fee = min(estimated_card_fee(paid), paid) if withhold_fee else 0
+            left = payment.amount_grosze - payment.refunded_grosze
+            if not 0 < amount_grosze <= left:
+                raise FakeRefusal(
+                    f"a refund of {amount_grosze} grosze of {payment_id}, "
+                    f"which has {left} left to give back"
+                )
+            payment.refunded_grosze += amount_grosze
             return Refund(
                 refund_id=_id("re"),
                 status=RefundStatus.SUCCEEDED,
-                amount_grosze=paid - fee,
-                fee_withheld_grosze=fee,
+                amount_grosze=amount_grosze,
             )
 
         return self._once(
             idempotency_key,
-            {"account": account_id, "payment_id": payment_id, "fee": withhold_fee},
+            {"account": account_id, "payment_id": payment_id, "amount": amount_grosze},
             refunded,
         )
 
@@ -717,7 +781,21 @@ class FakePayments:
             )
         if payment.account_id != account_id:
             raise FakeRefusal(f"{payment_id} is not on {account_id}")
+        self._lapse_if_due(payment)
         return payment
+
+    def _lapse_if_due(self, payment: _Payment) -> None:
+        """A hold past its last moment on the fake's clock has lapsed: Stripe
+        cancels it, untaken, and says so."""
+
+        if (
+            payment.status is PaymentStatus.AUTHORISED
+            and payment.last_moment is not None
+            and self.clock is not None
+            and self.clock.now() > payment.last_moment
+        ):
+            payment.status = PaymentStatus.CANCELLED
+            self._notify(payment)
 
     @staticmethod
     def _saves(card: EnteredCard, *, authenticated: bool) -> bool:
@@ -752,25 +830,24 @@ class FakePayments:
             card=card,
         )
 
-    def _paid(
-        self, account_id: str, method_id: str, amount_grosze: int, *, capture: bool
-    ) -> Payment:
-        source = self._clones.get(method_id, method_id)
-        behaviour = self._method(source).card.behaviour
+    def _held(self, account_id: str, method_id: str, amount_grosze: int) -> Payment:
+        card = self._method(self._clones.get(method_id, method_id)).card
         payment_id = _payment_id(amount_grosze)
         payment = _Payment(
             payment_id=payment_id,
             account_id=account_id,
             amount_grosze=amount_grosze,
-            status=PaymentStatus.CAPTURED if capture else PaymentStatus.AUTHORISED,
+            status=PaymentStatus.AUTHORISED,
             client_secret=f"{payment_id}_secret_{uuid4().hex[:12]}",
-            captures=capture,
+            kind=card.kind,
         )
-        if behaviour is CardBehaviour.DECLINES_PAYMENTS:
+        if card.behaviour is CardBehaviour.DECLINES_PAYMENTS:
             payment.status = PaymentStatus.DECLINED
             payment.decline_code = "generic_decline"
-        elif behaviour is CardBehaviour.CHECKED_EVERY_TIME:
+        elif card.behaviour is CardBehaviour.CHECKED_EVERY_TIME:
             payment.status = PaymentStatus.AUTHENTICATION_REQUIRED
+        elif self.clock is not None:
+            payment.last_moment = instant(self.clock.now() + _hold_lasts(card.brand))
         self._payments[payment_id] = payment
         self._notify(payment)
         return self._answer(payment)
@@ -804,10 +881,14 @@ class FakePayments:
                 else None
             ),
             decline_code=payment.decline_code,
-            # The fake takes exactly the fee the estimate says.
             fee_grosze=(
-                estimated_card_fee(payment.amount_grosze)
-                if payment.status is PaymentStatus.CAPTURED
+                fee_on(payment.amount_grosze, payment.kind)
+                if payment.status is PaymentStatus.CAPTURED and payment.fee_known
+                else None
+            ),
+            last_moment=(
+                payment.last_moment
+                if payment.status is PaymentStatus.AUTHORISED
                 else None
             ),
         )

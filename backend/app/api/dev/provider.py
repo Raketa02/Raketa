@@ -12,8 +12,12 @@ steer Stripe with, and a console that tried would be moving real money.
 
 - **A saved card set to succeed, decline or ask for the bank's check** — the
   saved card the player's payments are cloned from, so the next fill's hold
-  answers as that card would. Only a seed account's card (``not_a_seed_account``),
-  and only one that is saved (``no_saved_card``).
+  answers as that card would — **and of a kind and a network** (ADR-0190's
+  2026-10-10 amendment): a personal EU, business, UK or non-European card, whose
+  fee is kept when the share is taken, on Visa or Mastercard, whose hold lasts
+  4 days 18 hours or 7 days. Only the fake's record of the card moves — the
+  player's own method still says the brand they saved. Only a seed account's
+  card (``not_a_seed_account``), and only one that is saved (``no_saved_card``).
 - **The bank confirms a payment that waited for its player.** A phone confirms
   a refused payment with the provider itself; a laptop's phone has no provider
   to confirm with (its key is the fake's), so its *Confirm* would find the
@@ -55,11 +59,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import DbSession, UnitOfWorkDep, UserRepositoryDep
 from app.api.dev.accounts import refuse_unless_a_seed_account
-from app.api.dev.board import CARD_BEHAVIOURS, CardOutcome, PersonRef, steerable
+from app.api.dev.board import (
+    CARD_BEHAVIOURS,
+    CardNetwork,
+    CardOutcome,
+    PersonRef,
+    network_of,
+    outcome_of,
+    steerable,
+)
 from app.api.dev.dependencies import PlayerNamesDep, SettleSeatChargesDep
 from app.core.exception_handlers import ErrorResponse
 from app.kernel import invariant
-from app.modules.payments.domain.entered_cards import A_CARD
+from app.modules.payments.domain.entered_cards import A_CARD, CardKind
 from app.modules.payments.domain.errors import SeatChargeNotFound
 from app.modules.payments.domain.payment_method import SavedMethod
 from app.modules.payments.domain.ports import (
@@ -161,7 +173,24 @@ TheFakeDep = Annotated[FakePayments, Depends(the_fake)]
 
 
 class SteerCardRequest(BaseModel):
-    outcome: CardOutcome
+    outcome: CardOutcome | None = Field(
+        default=None,
+        description="What the next payment does; left as it is if omitted.",
+    )
+    kind: CardKind | None = Field(
+        default=None,
+        description=(
+            "Which kind of card it is — the fee kept when a share is taken; "
+            "left as it is if omitted."
+        ),
+    )
+    network: CardNetwork | None = Field(
+        default=None,
+        description=(
+            "Which network holds a share on it — how long a hold lasts; left "
+            "as it is if omitted."
+        ),
+    )
 
 
 class SteeredCardResponse(BaseModel):
@@ -169,6 +198,8 @@ class SteeredCardResponse(BaseModel):
     brand: str
     last_four: str
     outcome: CardOutcome
+    kind: CardKind
+    network: CardNetwork
     says: str = Field(description="What happened, for the tester.")
 
 
@@ -279,10 +310,12 @@ _REFUSED: dict[int | str, dict[str, Any]] = {
     "/cards/{player_id}",
     response_model=SteeredCardResponse,
     responses=_REFUSED,
-    summary="Set a player's saved card to succeed, decline or ask for the check",
+    summary="Set a player's saved card: what it does, its kind and its network",
     description=(
         "What the next payment cloned from this player's saved card does — the "
-        "next fill's hold, a rescue's, a club's acceptance."
+        "next fill's hold, a rescue's, a club's acceptance — which kind of card "
+        "it is, so the fee kept when its share is taken, and which network "
+        "holds it, so how long a hold lasts. Each field omitted is left as it is."
     ),
 )
 async def steer_a_card(
@@ -294,14 +327,24 @@ async def steer_a_card(
 ) -> SteeredCardResponse:
     await refuse_unless_a_seed_account(users, player_id)
     saved = await steer(fake, methods, player_id, payload.outcome)
+    fake.card_is(
+        saved.method_id,
+        kind=payload.kind,
+        network=None if payload.network is None else payload.network.value,
+    )
+    outcome = outcome_of(fake.card_behaviour_of(saved.method_id))
+    kind = fake.card_kind_of(saved.method_id)
+    network = network_of(fake.card_network_of(saved.method_id))
     return SteeredCardResponse(
         player_id=player_id,
         brand=saved.brand,
         last_four=saved.last_four,
-        outcome=payload.outcome,
+        outcome=outcome,
+        kind=kind,
+        network=network,
         says=(
-            f"Their {saved.brand} •••• {saved.last_four} "
-            f"{_SAYS[payload.outcome]} from the next payment on."
+            f"Their {saved.brand} •••• {saved.last_four} {_SAYS[outcome]}, "
+            f"{_KINDS[kind]}, {_NETWORKS[network]}, from the next payment on."
         ),
     )
 
@@ -310,15 +353,17 @@ async def steer(
     fake: FakePayments,
     methods: PaymentMethodRepository,
     player_id: UUID,
-    outcome: CardOutcome,
+    outcome: CardOutcome | None,
 ) -> SavedMethod:
     """Set what the player's saved card does with its next payment — or
-    ``no_saved_card``. The card it is, as the player's stream has it."""
+    ``no_saved_card``; ``None`` leaves it as it is. The card it is, as the
+    player's stream has it."""
 
     saved = (await methods.load(player_id)).method
     if saved is None:
         raise NoSavedCard()
-    fake.card_behaves(saved.method_id, CARD_BEHAVIOURS[outcome])
+    if outcome is not None:
+        fake.card_behaves(saved.method_id, CARD_BEHAVIOURS[outcome])
     return saved
 
 
@@ -326,6 +371,20 @@ _SAYS: Mapping[CardOutcome, str] = {
     CardOutcome.SUCCEEDS: "pays",
     CardOutcome.DECLINES: "is declined",
     CardOutcome.ASKS_FOR_VERIFICATION: "asks for the bank's check",
+}
+
+_KINDS: Mapping[CardKind, str] = {
+    CardKind.PERSONAL_EU: "as a personal EU card (1,5 % + 1 zł kept when taken)",
+    CardKind.BUSINESS: "as a business card (1,9 % + 1 zł kept when taken)",
+    CardKind.UK: "as a UK card (2,5 % + 1 zł kept when taken)",
+    CardKind.OUTSIDE_EUROPE: (
+        "as a card from outside Europe (3,25 % + 1 zł kept when taken)"
+    ),
+}
+
+_NETWORKS: Mapping[CardNetwork, str] = {
+    CardNetwork.VISA: "held on Visa (a hold lasts 4 days 18 hours)",
+    CardNetwork.MASTERCARD: "held on Mastercard (a hold lasts 7 days)",
 }
 
 

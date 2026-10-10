@@ -316,8 +316,9 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
 - **Refunds are decided in the act and made from the outbox** (`payments/application/refunds.py`,
   `SeatCharge.refund`): `SeatChargeRefundDecided` (withhold the fee, or not) in the leaving's
   or the call-off's transaction; `SettleSeatCharges` captures first if the capture's own
-  delivery has not run yet, then refunds under `raketa-refund-<charge>` and records
-  `SeatChargeRefunded` with the amount and **the fee the provider kept**. A receipt's refund row
+  delivery has not run yet, then refunds **exactly** the share or the share less the fee kept
+  on that payment (#636) under `raketa-refund-<charge>` and records `SeatChargeRefunded` with
+  the amount and what was kept — a fee not yet known makes the refund wait. A receipt's refund row
   is dated from the decision (`refund_decided_at`), not the provider's answer. **The fake's
   payment ids carry their amount** (`pi_fake_3000g_…`) so a fake in another process — a seed
   run, a laptop after a reload — adopts a taken payment for a refund at what it was for.

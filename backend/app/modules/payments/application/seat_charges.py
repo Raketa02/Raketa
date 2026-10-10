@@ -481,7 +481,7 @@ class ConfirmSeatCharge:
         )
         if payment.status is not PaymentStatus.AUTHORISED:
             raise PaymentNotConfirmed(status=payment.status.value)
-        charge.confirm(at=at)
+        charge.confirm(at=at, last_moment=payment.last_moment)
         await self._charges.save(charge)
         return ConfirmedCharge(charge_id=charge_id, game_id=charge.game_id)
 

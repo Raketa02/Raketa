@@ -12,6 +12,12 @@ Stripe's test mode is confirmed with the matching test PaymentMethod
 its players typed (``app/seeds/payments.py``). A card number never reaches the
 backend in any mode; this is the part of one a provider tells Raketa about,
 plus how it will behave.
+
+**And the kind of card it is** (ADR-0190's 2026-10-10 amendment): what Stripe
+keeps on a payment depends on whether the card is a personal one issued in the
+EU, a business card, a UK card or one from outside Europe, and a late leaver's
+refund is the share less exactly that. Every test card is a personal EU one
+unless a test says otherwise — the kind nine players in ten pay with.
 """
 
 from __future__ import annotations
@@ -40,15 +46,32 @@ class CardBehaviour(StrEnum):
     CHECKED_EVERY_TIME = "CHECKED_EVERY_TIME"
 
 
+class CardKind(StrEnum):
+    """Which price the provider charges on a card — the fee kept when its
+    money is taken."""
+
+    #: A personal card issued in the EU — Stripe's standard EEA price.
+    PERSONAL_EU = "PERSONAL_EU"
+    #: A business card issued in the EU.
+    BUSINESS = "BUSINESS"
+    #: A card issued in the United Kingdom.
+    UK = "UK"
+    #: A card issued outside Europe.
+    OUTSIDE_EUROPE = "OUTSIDE_EUROPE"
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class EnteredCard:
-    """A card as a phone entered it: what it is, and how its bank answers."""
+    """A card as a phone entered it: what it is, how its bank answers, and
+    which kind of card it is. ``brand`` is its network — ``visa`` or
+    ``mastercard`` — which says how long a hold on it lasts."""
 
     brand: str = "visa"
     last_four: str = "4242"
     wallet: Wallet | None = None
     behaviour: CardBehaviour = CardBehaviour.SUCCEEDS
+    kind: CardKind = CardKind.PERSONAL_EU
 
 
 #: 4242 4242 4242 4242 — saved, and always pays.

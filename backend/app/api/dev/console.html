@@ -817,6 +817,11 @@ async function clubAct(button) {
 // --------------------------------------------------------------------------
 
 const OUTCOMES = { SUCCEEDS: "pays", DECLINES: "declines", ASKS_FOR_VERIFICATION: "asks for the bank's check" };
+// The fee kept when a share is taken, by the kind of card (ADR-0190, 2026-10-10).
+const KINDS = { PERSONAL_EU: "personal EU · 1,5 % + 1 zł", BUSINESS: "business · 1,9 % + 1 zł",
+  UK: "UK · 2,5 % + 1 zł", OUTSIDE_EUROPE: "outside Europe · 3,25 % + 1 zł" };
+// How long a hold made without the player lasts, by network.
+const NETWORKS = { visa: "Visa · held 4 d 18 h", mastercard: "Mastercard · held 7 d" };
 
 function drawProvider() {
   const payments = state.board.payments;
@@ -829,15 +834,22 @@ function drawProvider() {
 
 function cardOnFile(row) {
   if (!row.card) return `<div class="card-on-file note">no card saved</div>`;
-  const options = Object.entries(OUTCOMES).map(([value, label]) =>
-    `<option value="${value}" ${row.card.outcome === value ? "selected" : ""}>${label}</option>`).join("");
+  const choose = (field, choices, chosen) => {
+    const options = Object.entries(choices).map(([value, label]) =>
+      `<option value="${value}" ${chosen === value ? "selected" : ""}>${label}</option>`).join("");
+    return `<select data-card-for="${row.player_id}" data-card-field="${field}" ` +
+      `data-who="${esc(row.name ?? row.email)}">${options}</select>`;
+  };
   return `<div class="card-on-file"><span class="mono">${esc(row.card.brand)} •••• ${esc(row.card.last_four)}</span>
-    ${row.card.outcome ? `<select data-card-for="${row.player_id}" data-who="${esc(row.name ?? row.email)}">${options}</select>` : ""}</div>`;
+    ${row.card.outcome ? choose("outcome", OUTCOMES, row.card.outcome) : ""}
+    ${row.card.kind ? choose("kind", KINDS, row.card.kind) : ""}
+    ${row.card.network ? choose("network", NETWORKS, row.card.network) : ""}</div>`;
 }
 
 async function steerCard(select) {
   const words = `${esc(select.dataset.who)}'s card`;
-  const done = await call("PUT", `/dev/payments/cards/${select.dataset.cardFor}`, { outcome: select.value });
+  const done = await call("PUT", `/dev/payments/cards/${select.dataset.cardFor}`,
+    { [select.dataset.cardField]: select.value });
   say(done, done.ok ? `${words} → ${esc(done.json.says)}` : words);
   await loadBoard();
 }

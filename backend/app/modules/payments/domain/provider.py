@@ -147,9 +147,19 @@ class Payment:
     """One payment on a club's account. ``client_secret`` is present exactly
     while the payment waits for its player (``AWAITING_THE_PLAYER``) — a secret,
     asked of the provider when it is handed out and never recorded
-    (``docs/adr/0184`` §4). ``fee_grosze`` is the card fee the provider took on
-    it, which the club pays (#548) — once it is ``CAPTURED``, and ``None``
-    before, or where the provider has not settled it yet."""
+    (``docs/adr/0184`` §4).
+
+    **``last_moment`` is when its hold ends** (ADR-0190's 2026-10-10
+    amendment): a hold lasts days, not until the game — 4 days 18 hours on a
+    Visa charged without its player, 7 days on Mastercard — and lapses untaken
+    after it. Present while the payment is ``AUTHORISED``; ``None`` on every
+    other status, and where the provider did not say. Whether a hold reaches
+    the club's cut-off is the caller's to decide.
+
+    **``fee_grosze`` is the real fee** the provider kept on it, which the club
+    pays (#548) — once it is ``CAPTURED``. ``None`` before, and ``None`` after
+    while it is **not yet known**: a club on its own negotiated pricing is told
+    its fee later than the capture. The port never guesses one."""
 
     payment_id: str
     status: PaymentStatus
@@ -157,6 +167,7 @@ class Payment:
     client_secret: str | None = None
     decline_code: str | None = None
     fee_grosze: int | None = None
+    last_moment: Instant | None = None
 
 
 class RefundStatus(StrEnum):
@@ -168,14 +179,13 @@ class RefundStatus(StrEnum):
 @final
 @dataclass(frozen=True, slots=True)
 class Refund:
-    """Money given back out of a captured payment. ``fee_withheld_grosze`` is
-    the card fee kept back — the processing fee the provider never returns —
-    and nought on a refund in full (the mechanics §12.3)."""
+    """Money given back out of a captured payment: exactly the amount it was
+    asked for. What was kept back of the share is the caller's to know — the
+    caller computed the amount."""
 
     refund_id: str
     status: RefundStatus
     amount_grosze: int
-    fee_withheld_grosze: int
 
 
 class ClubAccountStatus(StrEnum):
@@ -328,7 +338,8 @@ class PaymentProvider(Protocol):
         idempotency_key: str,
     ) -> Payment:
         """Hold ``amount_grosze`` on a cloned card, off-session, to be captured
-        or cancelled — the first half of the all-or-nothing fill."""
+        or cancelled — the first half of the all-or-nothing fill — and say the
+        hold's ``last_moment``."""
         ...
 
     async def read_payment(self, *, account_id: str, payment_id: str) -> Payment:
@@ -339,26 +350,18 @@ class PaymentProvider(Protocol):
 
     async def capture(
         self, *, account_id: str, payment_id: str, idempotency_key: str
-    ) -> Payment: ...
+    ) -> Payment:
+        """Take a hold — all of it — and say the real fee kept on it, or that
+        it is not yet known. A hold past its last moment has lapsed and cannot
+        be taken."""
+        ...
 
     async def cancel(
         self, *, account_id: str, payment_id: str, idempotency_key: str
-    ) -> Payment: ...
-
-    async def charge_now(
-        self,
-        *,
-        account_id: str,
-        method_id: str,
-        amount_grosze: int,
-        description: str,
-        metadata: Mapping[str, str],
-        idempotency_key: str,
     ) -> Payment:
-        """Take ``amount_grosze`` at once, off-session. **No caller yet**: a
-        rescue (#545) holds its one share and takes the hold in its own
-        transaction, as the fill does, so a crash between the provider and the
-        record leaves a hold that lapses rather than money taken for no seat."""
+        """Let a payment go untaken — a hold, or one waiting for its player —
+        which **costs nothing**: how a leave before the cut-off, a game short
+        at it and a club's cancel before it cost nobody anything."""
         ...
 
     async def refund(
@@ -366,9 +369,11 @@ class PaymentProvider(Protocol):
         *,
         account_id: str,
         payment_id: str,
-        withhold_fee: bool,
+        amount_grosze: int,
         idempotency_key: str,
     ) -> Refund:
-        """Give a captured payment back — all of it, or all of it but the card
-        fee, which the provider never returns (the mechanics §12.3)."""
+        """Give back exactly ``amount_grosze`` of a captured payment. **The
+        caller computes it** (ADR-0190's 2026-10-10 amendment): the share less
+        the fee kept on that payment, which the provider never returns, or the
+        whole share."""
         ...

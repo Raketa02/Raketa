@@ -1831,8 +1831,8 @@
           "dev",
           "dev"
         ],
-        "summary": "Set a player's saved card to succeed, decline or ask for the check",
-        "description": "What the next payment cloned from this player's saved card does \u2014 the next fill's hold, a rescue's, a club's acceptance.",
+        "summary": "Set a player's saved card: what it does, its kind and its network",
+        "description": "What the next payment cloned from this player's saved card does \u2014 the next fill's hold, a rescue's, a club's acceptance \u2014 which kind of card it is, so the fee kept when its share is taken, and which network holds it, so how long a hold lasts. Each field omitted is left as it is.",
         "operationId": "steer_a_card_dev_payments_cards__player_id__put",
         "parameters": [
           {
@@ -4047,6 +4047,26 @@
         ],
         "title": "CancelRequest"
       },
+      "CardKind": {
+        "type": "string",
+        "enum": [
+          "PERSONAL_EU",
+          "BUSINESS",
+          "UK",
+          "OUTSIDE_EUROPE"
+        ],
+        "title": "CardKind",
+        "description": "Which price the provider charges on a card \u2014 the fee kept when its\nmoney is taken."
+      },
+      "CardNetwork": {
+        "type": "string",
+        "enum": [
+          "visa",
+          "mastercard"
+        ],
+        "title": "CardNetwork",
+        "description": "The network a saved card holds a share on \u2014 which says how long a hold\nmade without its player lasts at the provider (ADR-0190's 2026-10-10\namendment): 4 days 18 hours on a Visa, 7 days on a Mastercard. Spelled as\nthe provider names a brand."
+      },
       "CardOnFilePane": {
         "properties": {
           "brand": {
@@ -4067,13 +4087,37 @@
               }
             ],
             "description": "What the provider does with the next payment on it; `null` where the provider is not the fake the console steers."
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which kind of card the provider takes it for, and so the fee it keeps when the share is taken; `null` where the provider is not the fake."
+          },
+          "network": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardNetwork"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The network the provider holds a share on, and so how long the hold lasts; `null` where the provider is not the fake."
           }
         },
         "type": "object",
         "required": [
           "brand",
           "last_four",
-          "outcome"
+          "outcome",
+          "kind",
+          "network"
         ],
         "title": "CardOnFilePane"
       },
@@ -8055,13 +8099,40 @@
       "SteerCardRequest": {
         "properties": {
           "outcome": {
-            "$ref": "#/components/schemas/CardOutcome"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the next payment does; left as it is if omitted."
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which kind of card it is \u2014 the fee kept when a share is taken; left as it is if omitted."
+          },
+          "network": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardNetwork"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Which network holds a share on it \u2014 how long a hold lasts; left as it is if omitted."
           }
         },
         "type": "object",
-        "required": [
-          "outcome"
-        ],
         "title": "SteerCardRequest"
       },
       "SteeredCardResponse": {
@@ -8082,6 +8153,12 @@
           "outcome": {
             "$ref": "#/components/schemas/CardOutcome"
           },
+          "kind": {
+            "$ref": "#/components/schemas/CardKind"
+          },
+          "network": {
+            "$ref": "#/components/schemas/CardNetwork"
+          },
           "says": {
             "type": "string",
             "title": "Says",
@@ -8094,6 +8171,8 @@
           "brand",
           "last_four",
           "outcome",
+          "kind",
+          "network",
           "says"
         ],
         "title": "SteeredCardResponse"

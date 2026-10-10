@@ -148,6 +148,11 @@ class SeatChargeAuthorised:
     sport: str
     starts_at: datetime
     occurred_at: datetime
+    #: When the hold ends unless it is taken — the provider's ``last_moment``
+    #: (ADR-0190's 2026-10-10 amendment). ``None`` where the provider did not
+    #: say, and on every hold recorded before it was asked: a default rather
+    #: than a version 2, since a row without it is such a hold.
+    last_moment: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -182,6 +187,9 @@ class SeatChargeConfirmed:
     charge_id: UUID
     player_id: UUID
     occurred_at: datetime
+    #: When the hold the player confirmed ends unless it is taken — as on
+    #: ``SeatChargeAuthorised``, and ``None`` on the same terms.
+    last_moment: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -221,6 +229,18 @@ class SeatChargeCaptured:
 
 
 @dataclass(frozen=True)
+class SeatChargeFeeReported:
+    """**The provider reported the real fee it kept on a share already taken**
+    (ADR-0190's 2026-10-10 amendment) — a club on its own negotiated pricing is
+    told its fee later than the capture, which recorded it *not yet known*."""
+
+    charge_id: UUID
+    player_id: UUID
+    fee_grosze: int
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
 class SeatChargeCancelled:
     """The provider released the payment untaken, or there was nothing there to
     release."""
@@ -255,7 +275,8 @@ class SeatChargeRefundDecided:
 @dataclass(frozen=True)
 class SeatChargeRefunded:
     """The provider gave the share back: ``amount_grosze`` to the player, and
-    ``fee_withheld_grosze`` kept — the card fee, nought on a refund in full."""
+    ``fee_withheld_grosze`` kept — the fee kept on that payment, nought on a
+    refund in full. Raketa asked for exactly that amount."""
 
     charge_id: UUID
     player_id: UUID

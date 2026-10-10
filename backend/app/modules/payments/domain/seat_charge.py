@@ -39,6 +39,7 @@ from app.modules.payments.domain.events import (
     SeatChargeCaptured,
     SeatChargeConfirmed,
     SeatChargeFailed,
+    SeatChargeFeeReported,
     SeatChargeRefundDecided,
     SeatChargeRefunded,
     SeatChargeReleased,
@@ -142,8 +143,13 @@ class SeatCharge:
     refund_decided_at: Instant | None = None
     #: What the provider gave back, once it did.
     refund_given: RefundGiven | None = None
-    #: The card fee the provider said it took on the capture (#548).
+    #: The real fee the provider kept when it took the share (#548) — said on
+    #: the capture, or reported later; ``None`` while it is not yet known.
     fee_taken_grosze: int | None = None
+    #: When the hold ends unless it is taken, as the provider said when it
+    #: held the share — or when its player confirmed it (ADR-0190's 2026-10-10
+    #: amendment). ``None`` where it did not say.
+    last_moment: Instant | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -180,6 +186,7 @@ class SeatCharge:
             sport=sport.value,
             starts_at=starts_at,
             occurred_at=at,
+            last_moment=payment.last_moment,
         )
         charge = cls._born(authorised)
         charge._events.record(authorised)
@@ -264,6 +271,12 @@ class SeatCharge:
                 else None
             ),
             opened_at=instant(opening.occurred_at),
+            last_moment=(
+                instant(opening.last_moment)
+                if isinstance(opening, SeatChargeAuthorised)
+                and opening.last_moment is not None
+                else None
+            ),
             version=1,
         )
 
@@ -285,11 +298,26 @@ class SeatCharge:
         return self.refund_withholds_fee is not None and self.refund_given is None
 
     @property
+    def refund_to_ask_grosze(self) -> int | None:
+        """Exactly what the refund decided on this share asks the provider for
+        (ADR-0190's 2026-10-10 amendment): the whole share, or the share less
+        **the fee kept on this payment** — ``None`` while that fee is not yet
+        known, and the refund waits for it. ``None`` with no refund owed."""
+
+        if not self.owes_a_refund:
+            return None
+        if not self.refund_withholds_fee:
+            return self.amount_grosze
+        if self.fee_taken_grosze is None:
+            return None
+        return self.amount_grosze - min(self.fee_taken_grosze, self.amount_grosze)
+
+    @property
     def given_back_grosze(self) -> int:
         """What this share gives back (#547): what the provider gave, once it
-        has answered — until then what was decided, the share less the card
-        fee's estimate where the fee is withheld, never below nought — and
-        nought with no refund decided."""
+        has answered — until then what was decided, the share less the fee
+        kept on it where the fee is withheld (the estimate while that is not
+        yet known), never below nought — and nought with no refund decided."""
 
         if self.refund_given is not None:
             return self.refund_given.amount_grosze
@@ -297,9 +325,12 @@ class SeatCharge:
             return 0
         if not self.refund_withholds_fee:
             return self.amount_grosze
-        return self.amount_grosze - min(
-            estimated_card_fee(self.amount_grosze), self.amount_grosze
+        fee = (
+            self.fee_taken_grosze
+            if self.fee_taken_grosze is not None
+            else estimated_card_fee(self.amount_grosze)
         )
+        return self.amount_grosze - min(fee, self.amount_grosze)
 
     @property
     def card_fee_grosze(self) -> int:
@@ -341,16 +372,19 @@ class SeatCharge:
 
     # ----------------------------------------------------------------- acts
 
-    def confirm(self, *, at: Instant) -> bool:
-        """The provider holds a payment that was refused: the player confirmed
-        it in the app. Answers whether anything was recorded — nothing for a
-        charge no longer waiting."""
+    def confirm(self, *, at: Instant, last_moment: Instant | None = None) -> bool:
+        """The provider holds a payment that was refused, until
+        ``last_moment``: the player confirmed it in the app. Answers whether
+        anything was recorded — nothing for a charge no longer waiting."""
 
         if self.status is not SeatChargeStatus.FAILED or self.payment_id is None:
             return False
         self._record_that(
             SeatChargeConfirmed(
-                charge_id=self.charge_id, player_id=self.player_id, occurred_at=at
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                occurred_at=at,
+                last_moment=last_moment,
             )
         )
         return True
@@ -402,8 +436,9 @@ class SeatCharge:
         return True
 
     def refunded(self, refund: Refund, *, at: Instant) -> bool:
-        """The provider's answer to the refund decided on this share. Nothing
-        is recorded for one already answered."""
+        """The provider's answer to the refund decided on this share — which
+        gave back what it was asked, so what was kept of the share is the rest.
+        Nothing is recorded for one already answered."""
 
         invariant(
             self.refund_withholds_fee is not None,
@@ -417,7 +452,7 @@ class SeatCharge:
                 player_id=self.player_id,
                 refund_id=refund.refund_id,
                 amount_grosze=refund.amount_grosze,
-                fee_withheld_grosze=refund.fee_withheld_grosze,
+                fee_withheld_grosze=self.amount_grosze - refund.amount_grosze,
                 occurred_at=at,
             )
         )
@@ -435,6 +470,27 @@ class SeatCharge:
                 player_id=self.player_id,
                 occurred_at=at,
                 fee_grosze=fee_grosze,
+            )
+        )
+        return True
+
+    def fee_reported(self, fee_grosze: int | None, *, at: Instant) -> bool:
+        """The real fee kept on a share taken while it was not yet known,
+        reported now — a club on its own negotiated pricing. Nothing is
+        recorded for a fee still unknown, nor for one already recorded."""
+
+        if (
+            fee_grosze is None
+            or self.status is not SeatChargeStatus.CAPTURED
+            or self.fee_taken_grosze is not None
+        ):
+            return False
+        self._record_that(
+            SeatChargeFeeReported(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                fee_grosze=fee_grosze,
+                occurred_at=at,
             )
         )
         return True
@@ -467,9 +523,11 @@ class SeatCharge:
             f"{payment.payment_id} read for {self.charge_id}",
         )
         if payment.status is PaymentStatus.AUTHORISED:
-            return self.confirm(at=at)
+            return self.confirm(at=at, last_moment=payment.last_moment)
         if payment.status is PaymentStatus.CAPTURED:
-            return self.captured(at=at, fee_grosze=payment.fee_grosze)
+            return self.captured(
+                at=at, fee_grosze=payment.fee_grosze
+            ) or self.fee_reported(payment.fee_grosze, at=at)
         if payment.status is PaymentStatus.CANCELLED:
             return self.cancelled(at=at)
         return False
@@ -483,6 +541,8 @@ class SeatCharge:
     def _apply(self, event: DomainEvent) -> None:
         if isinstance(event, SeatChargeConfirmed):
             self.status = SeatChargeStatus.AUTHORISED
+            if event.last_moment is not None:
+                self.last_moment = instant(event.last_moment)
         elif isinstance(event, SeatChargeTaken):
             self.status = SeatChargeStatus.TAKING
             self.booking_id = event.booking_id
@@ -491,6 +551,8 @@ class SeatCharge:
             self.status = SeatChargeStatus.RELEASING
         elif isinstance(event, SeatChargeCaptured):
             self.status = SeatChargeStatus.CAPTURED
+            self.fee_taken_grosze = event.fee_grosze
+        elif isinstance(event, SeatChargeFeeReported):
             self.fee_taken_grosze = event.fee_grosze
         elif isinstance(event, SeatChargeCancelled):
             self.status = SeatChargeStatus.CANCELLED

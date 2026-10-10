@@ -7,7 +7,6 @@ would, for the amount the payment was made for.
 
 from __future__ import annotations
 
-from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.entered_cards import A_CARD
 from app.modules.payments.domain.provider import PaymentStatus
 from app.modules.payments.infrastructure.fake_payments import FakePayments
@@ -45,6 +44,8 @@ async def _a_captured_share(fake: FakePayments, *, account: str) -> str:
 
 
 async def test_a_share_another_process_took_is_refunded_for_what_it_was():
+    """Given back as a payment taken, since Raketa refunds only a share it
+    recorded paid — and never more than its id says it was for."""
     account = "acct_fake_club"
     payment_id = await _a_captured_share(FakePayments(), account=account)
     after_a_reload = FakePayments()
@@ -52,11 +53,10 @@ async def test_a_share_another_process_took_is_refunded_for_what_it_was():
     refund = await after_a_reload.refund(
         account_id=account,
         payment_id=payment_id,
-        withhold_fee=True,
+        amount_grosze=28_55,
         idempotency_key="r",
     )
 
-    assert refund.amount_grosze == 30_00 - estimated_card_fee(30_00)
-    assert refund.fee_withheld_grosze == estimated_card_fee(30_00)
+    assert refund.amount_grosze == 28_55
     read = await after_a_reload.read_payment(account_id=account, payment_id=payment_id)
     assert read.status is PaymentStatus.CAPTURED
