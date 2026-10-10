@@ -583,12 +583,13 @@ _Matched!_ — left with the old loop ([#576](https://github.com/Raketa02/Raketa
 ground, the entrance and the tile came to `features/proposals` with the face that stays (#574).
 
 - **It's a game!** — the full-phone screen a yes lands on when it **filled a game** dealt in a
-  group's deck (#555): your side and theirs sliding in to meet with a `vs` between, one lime
-  word, two pills, on the app's one dark ground (`YesGround`), moved once by `YesEntrance`. The
-  faces are drawn off **the card the yes was said on**, and the doors are _Open game_ (Home laid
-  down, the game pushed over it) and _Later_. Raised by the fill over the whole phone, the bar
-  included, on `ModalStage`'s top layer rather than pushed as a route, because it answers
-  wherever the player is by then. **A tile** (`YesTile`) is the face the app draws everywhere,
+  group's deck (#555) — booked, or gone to its On request club, with one line under the word for
+  what is still missing (#628, Q103): your side and theirs sliding in to meet with a `vs`
+  between, one lime word, two pills, on the app's one dark ground (`YesGround`), moved once by
+  `YesEntrance`. The faces are drawn off **the card the yes was said on**, and the doors are
+  _Open game_ (Home laid down, the game pushed over it) and _Later_. Raised by the fill over the
+  whole phone, the bar included, on `ModalStage`'s top layer rather than pushed as a route,
+  because it answers wherever the player is by then. **A tile** (`YesTile`) is the face the app draws everywhere,
   with two initials over a poster and an outlined empty seat as its two additions; **the spoken
   sentence** is the picture as one header, built from whole Names. _Avoid_: "the celebration"
   or "the moment" (not terms); showing it to anybody but the player whose yes filled the game —

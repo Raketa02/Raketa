@@ -1,5 +1,5 @@
 /**
- * **You › Account › Notifications** — the seven notices that are always on, and the three a player
+ * **You › Account › Notifications** — the notices that are always on, and the three a player
  * chooses, saved as they tap ([#559](https://github.com/Raketa02/Raketa/issues/559); the screens
  * A7.2; mocks 52, 53; the mechanics §17.2).
  *
@@ -7,7 +7,7 @@
  * ‹ Notifications
  * [ Your phone doesn't show Raketa's notifications yet …   (Allow notifications) ]   while it may not
  * ALWAYS ON
- * ┌ It's a game! · you paid                         (on) ┐   seven inert rows, the green tag
+ * ┌ It's a game! · you paid                         (on) ┐   inert rows, the green tag
  * │ …                                                    │
  * └──────────────────────────────────────────────────────┘
  * YOUR CHOICE
@@ -30,7 +30,7 @@
  *
  * No *Save* button, as Games & money: a tap turns the chip at once and sends all three
  * (`useSaveNotificationChoices`); a refusal says so under the cards and the three are read again.
- * The seven always on are not controls — a row and a tag, never pressable (6.4).
+ * The ones always on are not controls — a row and a tag, never pressable (6.4).
  */
 
 import { useRouter } from 'expo-router';

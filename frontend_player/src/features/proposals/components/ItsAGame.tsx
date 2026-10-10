@@ -8,6 +8,12 @@
  * game** and **Later**. Nothing else: the player knows the game, and everybody else is told by the
  * notice *It's a game! · you paid*, never this screen.
  *
+ * **It marks the players matched, not only booked** (Q103), so it comes at a club that confirms too,
+ * with **one line under the word** for what is still missing — *Kazimierz Padel answers by 21:15 ·
+ * Nobody pays until it confirms* — rising with it, and said after the picture. At a club that books
+ * at once nothing is missing and there is no line. The club's yes, later, is a notice: nobody sees
+ * this screen twice for one game.
+ *
  * The ground, the entrance's one beat and the tile are this screen's own (`YesGround`,
  * `YesEntrance`, `YesTile`), since [#574](https://github.com/Raketa02/Raketa/issues/574) brought
  * them here from the challenge's yes screen, which is the old loop's.
@@ -16,7 +22,8 @@
  *
  * Drawn off the card the yes was said on — the reader's own version, the one the last yes filled,
  * whose rows are the sides the booking drew (`itsAGamePicture`) — with every photograph it carries,
- * the reader's own among them. Nothing is read: the screen is up the moment the answer is.
+ * the reader's own among them. Nothing is read here: the screen is up the moment the fill's host
+ * raises it, which for a game sent to its club is once the booking's read has given the line.
  *
  * ## An overlay over the phone, not a route
  *
@@ -38,10 +45,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, ModalStage, theme, useLiveRegion } from '@/shared/ui';
 
 import type { DeckCard } from '../domain/deck';
-import { itsAGamePicture, type Face } from '../domain/fill';
+import { itsAGamePicture, type Face, type ItsAGameWaiting } from '../domain/fill';
 
 import { FILL_COPY } from './fillCopy';
-import { itsAGameSentence } from './fillPresentation';
+import { itsAGameLine, itsAGameSentence } from './fillPresentation';
 import { PROPOSALS_COPY } from './proposalsCopy';
 import { YesEntrance } from './YesEntrance';
 import { YesGround } from './YesGround';
@@ -50,14 +57,17 @@ import { YesTile, type YesSeat } from './YesTile';
 export interface ItsAGameProps {
   /** The card the filling yes was said on. */
   readonly card: Pick<DeckCard, 'sides'>;
+  /** The game went to its club, which has still to say yes (Q103): the line under the word. */
+  readonly waiting?: ItsAGameWaiting;
   readonly onOpenGame: () => void;
   /** *Later*, and Android's back. */
   readonly onLater: () => void;
 }
 
-export function ItsAGame({ card, onOpenGame, onLater }: ItsAGameProps) {
+export function ItsAGame({ card, waiting, onOpenGame, onLater }: ItsAGameProps) {
   const picture = itsAGamePicture(card);
-  const sentence = itsAGameSentence(picture);
+  const line = waiting === undefined ? undefined : itsAGameLine(waiting);
+  const sentence = itsAGameSentence(picture, line?.spoken);
   const size =
     picture.yours.length + picture.theirs.length > 2
       ? theme.size.yesTile.doubles
@@ -77,7 +87,12 @@ export function ItsAGame({ card, onOpenGame, onLater }: ItsAGameProps) {
             left={<Side faces={picture.yours} size={size} />}
             between={<Text style={s.vs}>{PROPOSALS_COPY.versus}</Text>}
             right={<Side faces={picture.theirs} size={size} />}
-            word={<Text style={s.word}>{FILL_COPY.itsAGame.word}</Text>}
+            word={
+              <View style={s.words}>
+                <Text style={s.word}>{FILL_COPY.itsAGame.word}</Text>
+                {line === undefined ? null : <Text style={s.line}>{line.drawn}</Text>}
+              </View>
+            }
             buttons={
               <View style={s.doors}>
                 <Button
@@ -136,5 +151,9 @@ const s = StyleSheet.create({
   // The yes screen's own `vs` and word (ADR-0167): h2 in the on-dark eyebrow grey, and the lime word.
   vs: { ...theme.type.h2, color: theme.color.onDarkEyebrow },
   word: { ...theme.type.yesWord, color: theme.color.volt },
+  // The word, and under it what is still missing (Q103): Home's line in the details' own role,
+  // tiny onDarkTiny (7.22's line under a value), on the ground.
+  words: { alignItems: 'center', gap: theme.space.xs },
+  line: { ...theme.type.tiny, color: theme.color.onDarkTiny, textAlign: 'center' },
   doors: { flexDirection: 'row', gap: theme.space.xs },
 });

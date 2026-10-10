@@ -5,6 +5,7 @@ import {
   bookingIn,
   chargeGameLine,
   chargeLine,
+  itsAGameLine,
   itsAGameSentence,
 } from './fillPresentation';
 
@@ -35,6 +36,50 @@ describe('It’s a game! as a listener hears it', () => {
     expect(itsAGameSentence({ yours: [{ playerId: 'me' }], theirs: [{ playerId: 'gone' }] })).toBe(
       'It’s a game! You against ?',
     );
+  });
+
+  it('says the line under the word after the picture, a sentence a clause (Q103)', () => {
+    const line = itsAGameLine({
+      club: 'Kazimierz Padel',
+      answerBy: { at: '2026-09-30T19:15:00Z', today: true },
+    });
+    expect(
+      itsAGameSentence(
+        { yours: [{ playerId: 'me' }], theirs: [{ playerId: 'k', name: 'Kuba Wiśniewski' }] },
+        line.spoken,
+      ),
+    ).toBe(
+      'It’s a game! You against Kuba Wiśniewski. Kazimierz Padel answers by 21:15. Nobody pays until it confirms',
+    );
+  });
+});
+
+/** Wednesday 30 September 2026 in Warsaw. */
+describe('It’s a game!’s line at a club that confirms (Q103)', () => {
+  it('says when the club answers — the hour alone that day, as Home writes it', () => {
+    expect(
+      itsAGameLine({
+        club: 'Kazimierz Padel',
+        answerBy: { at: '2026-09-30T19:15:00Z', today: true },
+      }).drawn,
+    ).toBe('Kazimierz Padel answers by 21:15 · Nobody pays until it confirms');
+  });
+
+  it('names the weekday when the deadline falls on another day', () => {
+    expect(
+      itsAGameLine({
+        club: 'Kazimierz Padel',
+        answerBy: { at: '2026-10-01T07:00:00Z', today: false },
+      }).drawn,
+    ).toBe('Kazimierz Padel answers by Thu 09:00 · Nobody pays until it confirms');
+  });
+
+  it('says only that nobody pays until it confirms, with no deadline to give', () => {
+    expect(itsAGameLine({ club: 'Kazimierz Padel' })).toEqual({
+      drawn: 'Nobody pays until Kazimierz Padel confirms',
+      spoken: 'Nobody pays until Kazimierz Padel confirms',
+    });
+    expect(itsAGameLine({}).drawn).toBe('Nobody pays until the club confirms');
   });
 });
 

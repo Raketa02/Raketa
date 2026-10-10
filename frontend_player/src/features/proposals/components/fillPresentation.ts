@@ -13,10 +13,10 @@ import { playerName } from '@/shared/formatting/playerName';
 import { platformClock } from '@/shared/date/platformZone';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { Face, ItsAGamePicture, PaymentToConfirm } from '../domain/fill';
+import type { Face, ItsAGamePicture, ItsAGameWaiting, PaymentToConfirm } from '../domain/fill';
 import { gameDayOf, type GameDay } from '../domain/when';
 
-import { clubName, gameDayWords, LINE_JOIN, shareWords } from './deckPresentation';
+import { clubName, gameDayWords, LINE_JOIN, shareWords, waitingClauses } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
 import { liveYesTitle } from './liveYesesPresentation';
 
@@ -38,21 +38,29 @@ function spoken(face: Face): string {
 
 /**
  * *It's a game! You and Zofia Bielecka against Ania Kowalska and Ewa Majewska* — the screen's
- * header, spoken; singles are *You against Kuba Wiśniewski*.
+ * header, spoken; singles are *You against Kuba Wiśniewski*. The line under the word, when there is
+ * one, follows the picture (`itsAGameLine`'s `spoken`).
  */
-export function itsAGameSentence(picture: ItsAGamePicture): string {
+export function itsAGameSentence(picture: ItsAGamePicture, line?: string): string {
   const [, ...partners] = picture.yours;
   const yours = [playerName({ kind: 'you' }), ...partners.map(spoken)].join(' and ');
   const theirs = picture.theirs.map(spoken).join(' and ');
-  return `${FILL_COPY.itsAGame.word} ${yours} against ${theirs}`;
+  const said = `${FILL_COPY.itsAGame.word} ${yours} against ${theirs}`;
+  return line === undefined ? said : `${said}. ${line}`;
 }
 
 /**
- * *Waiting for Kazimierz Padel to confirm — nobody pays until it does.* — the toast when a yes filled
- * a game an On request club confirms (#543); *the club* when the card no longer names it.
+ * *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms* — **the line under the word at a
+ * club that confirms** (Q103; the screens A2.4), Home's own words for the game (A8, `waitingWords`):
+ * the hour alone that day, the weekday with it on another; *Nobody pays until Kazimierz Padel
+ * confirms* with no deadline to give. Drawn with the mocks' dot, and spoken a sentence a clause.
  */
-export function sentToTheClub(club: string | undefined): string {
-  return `Waiting for ${club ?? 'the club'} to confirm — nobody pays until it does.`;
+export function itsAGameLine(waiting: ItsAGameWaiting): {
+  readonly drawn: string;
+  readonly spoken: string;
+} {
+  const clauses = waitingClauses(waiting.club, waiting.answerBy);
+  return { drawn: clauses.join(LINE_JOIN), spoken: clauses.join('. ') };
 }
 
 /** The share to confirm and the seller: *32 zł to Bonarka Arena*. */

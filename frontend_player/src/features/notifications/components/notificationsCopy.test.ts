@@ -21,7 +21,7 @@ describe('the row’s line', () => {
     expect(notificationsRowLine(['fillInAlerts'])).toBe('Fill in alerts');
   });
 
-  it('says only the seven always on are left when none is', () => {
+  it('says only the ones always on are left when none is', () => {
     expect(notificationsRowLine([])).toBe(NOTIFICATIONS_COPY.noneChosen);
   });
 });

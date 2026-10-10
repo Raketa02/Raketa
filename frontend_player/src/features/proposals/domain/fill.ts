@@ -13,6 +13,7 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard, DeckPerson } from './deck';
+import { answerByAhead, type AnswerBy, type BookedGame } from './home';
 import type { LiveYes } from './liveYes';
 import type { GameKind, PaymentRefusal } from './vocabulary';
 
@@ -127,12 +128,15 @@ export interface YesAnswer {
  * - `setUp` — no method at the fill: save one, and the yes again.
  * - `termsAgain` — the card's brand changed; its terms are accepted again on You › Payments.
  * - `waiting` — this yes filled a game an On request club has still to confirm (#543): nobody paid,
- *   the game is on Home *waiting for the club*, and the charge and *It's a game!* follow its yes.
+ *   and the game is on Home *waiting for the club*, by the booking's id — the proposal's own. It is
+ *   *It's a game!* all the same, for this player alone: it marks the players matched, not only
+ *   booked (Q103), and says what is still missing. The charge follows the club's yes, which is told
+ *   by a notice and never by a second *It's a game!*.
  * - `counted` — a vote, as every other: seats still open, or somebody else's share refused.
  */
 export type FillOutcome =
   | { readonly kind: 'booked'; readonly bookingId: string }
-  | { readonly kind: 'waiting' }
+  | { readonly kind: 'waiting'; readonly bookingId: string }
   | { readonly kind: 'confirm'; readonly seatChargeId: string }
   | { readonly kind: 'setUp' }
   | { readonly kind: 'termsAgain' }
@@ -161,7 +165,7 @@ export function fillRefusal(
 
 export function fillOutcome(answer: YesAnswer): FillOutcome {
   if (answer.booked !== null) return { kind: 'booked', bookingId: answer.booked.bookingId };
-  if (answer.waitingForTheClub) return { kind: 'waiting' };
+  if (answer.waitingForTheClub) return { kind: 'waiting', bookingId: answer.proposalId };
   const refused = answer.yourPayment;
   if (refused === null) return { kind: 'counted' };
   switch (refused.refusal) {
@@ -220,5 +224,30 @@ function faceOf(person: DeckPerson): Face {
     playerId: person.playerId,
     ...(person.name === undefined ? {} : { name: person.name }),
     ...(person.photoUrl === undefined ? {} : { photoUrl: person.photoUrl }),
+  };
+}
+
+/**
+ * **What *It's a game!* says is still missing at a club that confirms** (Q103) — the club, and when
+ * it must answer: *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*. The answer to
+ * the yes names no deadline, so it is the booking's read (`GET /bookings/{id}`, the one Home's card
+ * opens), folded as Home folds it (`answerByAhead`): on the read's clock, the hour alone when it
+ * falls that day, and nothing once it has gone. With no read — refused, or a sport this build cannot
+ * name — the club the card named, and no deadline: *Nobody pays until Kazimierz Padel confirms*.
+ */
+export interface ItsAGameWaiting {
+  readonly club?: string;
+  readonly answerBy?: AnswerBy;
+}
+
+export function itsAGameWaiting(
+  club: string | undefined,
+  read: Pick<BookedGame, 'readAt' | 'where' | 'answerBy'> | undefined,
+): ItsAGameWaiting {
+  const name = read?.where.name ?? club;
+  const by = read === undefined ? undefined : answerByAhead(read, Date.parse(read.readAt));
+  return {
+    ...(name === undefined ? {} : { club: name }),
+    ...(by === undefined ? {} : { answerBy: by }),
   };
 }

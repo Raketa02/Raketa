@@ -34,17 +34,25 @@ interface ChoiceWords {
 export const NOTIFICATIONS_COPY = {
   loading: 'Reading your notifications…',
   readAgain: 'Try again',
-  /** Seven always on (A7.2; mock 52) — *the club confirmed / couldn't take it* is two notices. */
+  /**
+   * Eleven always on (A7.2 as #620 amends it; mock 52 drew seven) — the mechanics §17.2's table, a
+   * row a line of it: *the club confirmed / said no / didn't answer in time* is one row for three
+   * notices, as *A game you left* is for two.
+   */
   alwaysOn: {
     title: 'Always on',
     tag: 'on',
     rows: [
       'It’s a game! · you paid',
-      'Confirm your payment to keep your seat',
+      'It’s a game! · the club answers by …',
+      'Waiting for one payment',
+      'Confirm your payment by … to keep your seat',
       'Game called off · with the refund',
-      'Someone left your game',
+      'Someone left your game · or it’s filling again',
       'You’ve been refunded',
-      'The club confirmed / couldn’t take it',
+      'The club confirmed / said no / didn’t answer in time',
+      'Your new game',
+      'A game you left',
       'Your post didn’t fill',
     ],
   },
@@ -85,7 +93,7 @@ export const NOTIFICATIONS_COPY = {
       button: 'Open settings',
     },
   },
-  /** The row's line when only the seven always on are left. */
+  /** The row's line when only the ones always on are left. */
   noneChosen: 'Only the ones always on',
   /** The bell on Home, and the list behind it. */
   bell: 'Recent notifications',

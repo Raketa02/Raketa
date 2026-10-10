@@ -4,19 +4,21 @@
  * one file whose job is saying so (#559).
  *
  * The wire's own spellings, kept, because the list keys nothing by them yet and the push carries
- * them as they are: a notice's kind (the mechanics §17.2's ten, *the club confirmed* and *couldn't
- * take it* two of them) and where a tap opens it.
+ * them as they are: a notice's kind — every notice the mechanics §17.2 tells, *the club confirmed*
+ * and *couldn't take it* two of them — and where a tap opens it.
  */
 
 /** Every notice a player can be told. */
 export type NoticeKind =
   | 'GAME_BOOKED'
+  | 'WAITING_FOR_THE_CLUB'
   | 'CONFIRM_PAYMENT'
   | 'GAME_CALLED_OFF'
   | 'SOMEONE_LEFT'
   | 'REFUNDED'
   | 'CLUB_CONFIRMED'
   | 'CLUB_COULD_NOT_TAKE_IT'
+  | 'NEW_GAME'
   | 'POST_DID_NOT_FILL'
   | 'YOU_COMPLETE_IT'
   | 'CHALLENGE'
@@ -24,12 +26,14 @@ export type NoticeKind =
 
 export const NOTICE_KINDS = [
   'GAME_BOOKED',
+  'WAITING_FOR_THE_CLUB',
   'CONFIRM_PAYMENT',
   'GAME_CALLED_OFF',
   'SOMEONE_LEFT',
   'REFUNDED',
   'CLUB_CONFIRMED',
   'CLUB_COULD_NOT_TAKE_IT',
+  'NEW_GAME',
   'POST_DID_NOT_FILL',
   'YOU_COMPLETE_IT',
   'CHALLENGE',

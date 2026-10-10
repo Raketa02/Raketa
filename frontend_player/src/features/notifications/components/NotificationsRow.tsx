@@ -4,7 +4,7 @@
  *
  * *You complete it · Challenges · Fill in alerts* — the three chosen notices that are on, in the
  * screen's order, off the screen's own read, so a tap there is on the row the moment the player
- * comes back. With none on, the seven always on are what is left, and the line says so.
+ * comes back. With none on, the ones always on are what is left, and the line says so.
  */
 
 import { useRouter } from 'expo-router';

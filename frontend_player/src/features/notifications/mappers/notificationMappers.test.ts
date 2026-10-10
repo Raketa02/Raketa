@@ -106,6 +106,46 @@ describe('where a tap goes', () => {
     ).toEqual({ opens: 'booking', bookingId: GAME });
   });
 
+  // Q103: the four matched at a club that confirms — the game is still the proposal's, waiting.
+  it('It’s a game! · the club answers by, to the game’s details in its group', () => {
+    expect(
+      toTarget({
+        kind: 'WAITING_FOR_THE_CLUB',
+        opens: 'PROPOSAL',
+        gameId: GAME,
+        poolId: POOL,
+        sport: 'PADEL',
+        gameKind: 'COMPETITIVE',
+      }),
+    ).toEqual({
+      opens: 'game',
+      groupId: POOL,
+      proposalId: GAME,
+      sport: 'padel',
+      kind: 'competitive',
+    });
+  });
+
+  // Q107: the card first the club's no promised, on top of the deck it was dealt in.
+  it('Your new game, to the group’s deck with the card on top', () => {
+    expect(
+      toTarget({
+        kind: 'NEW_GAME',
+        opens: 'DECK',
+        gameId: GAME,
+        poolId: POOL,
+        sport: 'PADEL',
+        gameKind: 'FOR_FUN',
+      }),
+    ).toEqual({
+      opens: 'deck',
+      groupId: POOL,
+      proposalId: GAME,
+      sport: 'padel',
+      kind: 'forFun',
+    });
+  });
+
   it('a Fill in alert, to the open seat seen from outside', () => {
     expect(
       toTarget({

@@ -41,8 +41,10 @@ export interface NoticeFacts {
 /**
  * **Where a tap opens** (A9): `BOOKING` the booked game's details, `PROPOSAL` the game's details in
  * its group — one still filling, or one that did not fill — and `DECK` the group's deck in the
- * card's sport and kind, **with the card on top**: *You complete it* and a challenge are a card
- * waiting for the player, and the deck is where it is answered.
+ * card's sport and kind, **with the card on top**: *You complete it*, a challenge and *Your new
+ * game* (Q107) are a card waiting for the player, and the deck is where it is answered. *It's a
+ * game! · Kazimierz Padel answers by 21:15* (Q103) opens a game still the proposal's — nobody has
+ * paid and there is no Game until its club says yes — so its details in the group.
  *
  * **A Fill in alert is the one notice whose kind decides**: the backend sends it as `BOOKING` — the
  * booked game — to a reader who is **not in it**, so its details are the ones a *Seats to fill* row

@@ -469,9 +469,17 @@ export function answersByWords(club: string | undefined, answerBy: AnswerBy): st
  * the deadline has passed (`answerByAhead`).
  */
 export function waitingWords(club: string | undefined, answerBy: AnswerBy | undefined): string {
+  return waitingClauses(club, answerBy).join(DOT);
+}
+
+/** `waitingWords`' clauses, each whole — for a sentence that joins them its own way. */
+export function waitingClauses(
+  club: string | undefined,
+  answerBy: AnswerBy | undefined,
+): readonly string[] {
   return answerBy === undefined
-    ? `${COPY.game.nobodyPaysUntil} ${club ?? COPY.game.theClub} ${COPY.game.confirms}`
-    : `${answersByWords(club, answerBy)}${DOT}${COPY.game.nobodyPaysUntilItConfirms}`;
+    ? [`${COPY.game.nobodyPaysUntil} ${club ?? COPY.game.theClub} ${COPY.game.confirms}`]
+    : [answersByWords(club, answerBy), COPY.game.nobodyPaysUntilItConfirms];
 }
 
 /** *if it fills · book by Sat 13:00* — the money row's aside, off the card's deadline. */

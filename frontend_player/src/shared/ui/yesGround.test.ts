@@ -58,6 +58,15 @@ describe('the yes screen’s ground', () => {
     expect(onCentre).toBeGreaterThanOrEqual(AA);
   });
 
+  // Q103 (#628): *It's a game!* at a club that confirms says under the word what is still missing.
+  it('carries the line under the word in the on-dark tiny grey past AA on both ends', () => {
+    const onCentre = contrast(over(theme.color.onDarkTiny, CENTRE), parse(CENTRE).rgb);
+    const onEdge = contrast(over(theme.color.onDarkTiny, EDGE), parse(EDGE).rgb);
+    expect(onCentre).toBe(6.34);
+    expect(onEdge).toBe(7.98);
+    expect(onCentre).toBeGreaterThanOrEqual(AA);
+  });
+
   /**
    * Under AA, and recorded as such: the `vs` is decorative — hidden with the tiles inside the
    * header, whose sentence says *against* — so nothing a listener needs rides on it. The figure

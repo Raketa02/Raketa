@@ -5096,7 +5096,7 @@ export interface components {
          * @description Every notice a player can be told (the mechanics §17.2).
          * @enum {string}
          */
-        NoticeKind: "GAME_BOOKED" | "CONFIRM_PAYMENT" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "CLUB_CONFIRMED" | "CLUB_COULD_NOT_TAKE_IT" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT";
+        NoticeKind: "GAME_BOOKED" | "WAITING_FOR_THE_CLUB" | "CONFIRM_PAYMENT" | "GAME_CALLED_OFF" | "SOMEONE_LEFT" | "REFUNDED" | "CLUB_CONFIRMED" | "CLUB_COULD_NOT_TAKE_IT" | "NEW_GAME" | "POST_DID_NOT_FILL" | "YOU_COMPLETE_IT" | "CHALLENGE" | "FILL_IN_ALERT";
         /**
          * NoticeSchema
          * @description One notice, in the words the phone was pushed — and where a tap opens.
@@ -5151,7 +5151,7 @@ export interface components {
         };
         /**
          * NotificationChoicesSchema
-         * @description The three notices a player chooses. The seven that are always on are
+         * @description The three notices a player chooses. The nine that are always on are
          *     no choice, and are not here.
          */
         NotificationChoicesSchema: {

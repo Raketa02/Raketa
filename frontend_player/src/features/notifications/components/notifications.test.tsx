@@ -238,7 +238,7 @@ describe('the Notifications row, in the ACCOUNT group', () => {
     ).toBeTruthy();
   });
 
-  it('says only the seven always on are left once all three are off', async () => {
+  it('says only the ones always on are left once all three are off', async () => {
     stubNotificationChoices(transport, { you_complete_it: false, challenges_for_you: false });
     await launchSignedIn();
     fireEvent.press(await screen.findByLabelText('You'));
@@ -252,15 +252,29 @@ describe('the Notifications row, in the ACCOUNT group', () => {
 // ---------------------------------------------------------------------------
 
 describe('the Notifications screen', () => {
-  it('lists the seven always on, each inert with its green tag (mock 52)', async () => {
+  // The screens A7.2 as #620 amends it: the mechanics §17.2's always-on notices, eleven rows.
+  it('lists the eleven always on, each inert with its green tag (mock 52)', async () => {
+    const rows = [
+      'It’s a game! · you paid',
+      'It’s a game! · the club answers by …',
+      'Waiting for one payment',
+      'Confirm your payment by … to keep your seat',
+      'Game called off · with the refund',
+      'Someone left your game · or it’s filling again',
+      'You’ve been refunded',
+      'The club confirmed / said no / didn’t answer in time',
+      'Your new game',
+      'A game you left',
+      'Your post didn’t fill',
+    ];
     await onNotifications();
 
-    for (const row of COPY.alwaysOn.rows) {
-      const drawn = screen.getByText(row);
-      expect(screen.getByLabelText(`${row.split(' · ').join(', ')}, always on`)).toBeTruthy();
-      expect(drawn).toBeTruthy();
-    }
-    expect(screen.getAllByText(COPY.alwaysOn.tag)).toHaveLength(7);
+    for (const row of rows) expect(screen.getByText(row)).toBeTruthy();
+    // In the table's order, each one element to a listener.
+    expect(
+      screen.getAllByLabelText(/, always on$/).map((row) => row.props.accessibilityLabel),
+    ).toEqual(rows.map((row) => `${row.split(' · ').join(', ')}, always on`));
+    expect(screen.getAllByText(COPY.alwaysOn.tag)).toHaveLength(rows.length);
     // Words and a tag — never a control.
     expect(screen.queryByRole('button', { name: /always on/ })).toBeNull();
   });
@@ -1060,6 +1074,144 @@ describe('the recent notices, behind the bell on Home', () => {
 
     expect(await screen.findByText(notice().title)).toBeTruthy();
     expect(screen.queryByRole('button', { name: /^It’s a game!/ })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// It's a game! while the club decides, and the new card after its no
+// ---------------------------------------------------------------------------
+
+/**
+ * Q103 and Q107 (#622): the four matched at a club that confirms are told *It's a game! · the club
+ * answers by …*, which opens the game — still the proposal's, waiting for its club; and after the
+ * club's no, the new card first is told as *Your new game*, which opens the deck with it on top.
+ * Each is opened the same way from the banner and from its row behind the bell.
+ */
+describe('It’s a game! while the club decides, and Your new game (Q103, Q107)', () => {
+  const MATCHED = deckCard({
+    in_count: 4,
+    open_seats_after_your_yes: 0,
+    club: { id: 'c0000000-0000-4000-8000-000000000009', name: 'Kazimierz Padel' },
+    club_confirms: true,
+  });
+  const ANSWERS_BY = notice({
+    kind: 'WAITING_FOR_THE_CLUB',
+    title: 'It’s a game! · Kazimierz Padel answers by 21:15',
+    body: 'Padel · Fri 19:00. Nobody pays until it confirms.',
+    opens: 'PROPOSAL',
+    game_id: MATCHED.proposal_id,
+    new: true,
+  });
+
+  const FIRST = deckCard();
+  const REDEALT = deckCard({ open_seats_after_your_yes: 1 });
+  const NEW_GAME = notice({
+    kind: 'NEW_GAME',
+    title: 'Your new game · Fri 19:00 at Bonarka Arena',
+    body: 'The same players · 40 zł a share — say yes to book it.',
+    opens: 'DECK',
+    game_id: REDEALT.proposal_id,
+    new: true,
+  });
+
+  beforeEach(() => {
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', `/api/v1/groups/${CREW_ID}`, () => json(CREW_PAGE));
+    stubGroupDeck(transport, CREW_ID, groupDeck({ cards: [FIRST, REDEALT] }));
+    stubProposal(
+      transport,
+      MATCHED.proposal_id,
+      proposalDetails(MATCHED, {
+        pool_id: CREW_ID,
+        status: 'WAITING_FOR_THE_CLUB',
+        actions: ['LEAVE'],
+      }),
+    );
+    stubProposal(transport, REDEALT.proposal_id, proposalDetails(REDEALT, { pool_id: CREW_ID }));
+  });
+
+  /** Signed in on Home at the deck's read, the list read once, and then told this. */
+  async function told(wire: Wire['NoticeSchema']) {
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    await screen.findByLabelText('You');
+    await sessionReadTheList();
+    stubNotices(transport, [wire], { newCount: 1 });
+    await act(async () => jest.advanceTimersByTime(60_000));
+  }
+
+  /** The card on top is the one the notice was about: its details are the ones the deck opens. */
+  async function onTopOfTheDeck(card: Wire['DeckCardSchema']) {
+    await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}`));
+    fireEvent.press(await screen.findByRole('button', { name: 'Game details' }));
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${card.proposal_id}`),
+    );
+  }
+
+  it('the banner It’s a game! · answers by opens the game, waiting for its club', async () => {
+    await told(ANSWERS_BY);
+
+    fireEvent.press(
+      await screen.findByRole('button', { name: `${ANSWERS_BY.title}. ${ANSWERS_BY.body}` }),
+    );
+
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${MATCHED.proposal_id}`),
+    );
+    expect(await screen.findByText('Waiting for the club')).toBeTruthy();
+  });
+
+  it('its row behind the bell opens the game too — back is the list', async () => {
+    stubNotices(transport, [ANSWERS_BY], { newCount: 1 });
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. It’s a game! · Kazimierz/ }));
+
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${MATCHED.proposal_id}`),
+    );
+    expect(await screen.findByText('Waiting for the club')).toBeTruthy();
+    fireEvent.press(await screen.findByLabelText('Back'));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+  });
+
+  it('the banner Your new game opens the deck with the new card on top', async () => {
+    await told(NEW_GAME);
+
+    fireEvent.press(
+      await screen.findByRole('button', { name: `${NEW_GAME.title}. ${NEW_GAME.body}` }),
+    );
+
+    await onTopOfTheDeck(REDEALT);
+  });
+
+  it('its row behind the bell opens the deck with the new card on top', async () => {
+    stubNotices(transport, [NEW_GAME], { newCount: 1 });
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByRole('button', { name: 'Recent notifications, 1 new' }));
+    await waitFor(() => expect(screen).toHavePathname('/notices'));
+
+    fireEvent.press(await screen.findByRole('button', { name: /^New\. Your new game/ }));
+
+    await onTopOfTheDeck(REDEALT);
+  });
+
+  it('a push of either, tapped, opens the same place', async () => {
+    phone.tap(payloadOf(NEW_GAME));
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+
+    await onTopOfTheDeck(REDEALT);
+
+    act(() => phone.tap(payloadOf(ANSWERS_BY)));
+    await waitFor(() =>
+      expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${MATCHED.proposal_id}`),
+    );
   });
 });
 

@@ -48,14 +48,19 @@
  * - **No method** — the setup, and the yes again once saved. **Terms needed** — a toast naming You ›
  *   Payments, where they are accepted.
  * - **Sent to the club** — the yes filled a game an On request club confirms (#543): nobody paid,
- *   the game is on Home *waiting for the club*, and a toast names the club. The charge and *It's a
- *   game!* follow its yes, told by the notices (#549).
+ *   and the game is on Home *waiting for the club*. It is *It's a game!* all the same (Q103) — the
+ *   players are matched — with one line under the word: *Kazimierz Padel answers by 21:15 · Nobody
+ *   pays until it confirms*. *Open game* opens it from Home, as a booked game. The club's yes is told
+ *   by its notice, *Kazimierz Padel confirmed your game*, never by a second *It's a game!*.
  * - **A vote** — nothing: seats are still open, or somebody else's share was refused.
  *
  * **A rescue joined from a *Seats to fill* row** (#557) holds no sides — the row lists the players,
  * not which side the open seat is on — so *It's a game!* observes the booking's read, the seat now
- * taken, and draws its sides once it lands (`ItsAGameFor`); a read that fails says *It's a game!* in
- * a toast, as a confirmation does.
+ * taken, and draws its sides once it lands (`ItsAGameBooked`); a read that fails says *It's a game!* in
+ * a toast, as a confirmation does. **A game sent to its club** names no deadline in the answer, so
+ * the screen waits for the booking's read in the same way (`ItsAGameAtTheClub`) — one made since the yes, never an older
+ * request's — and draws the line from it; a read that fails, or cannot be made offline, still draws
+ * the screen, its line *Nobody pays until Kazimierz Padel confirms*.
  *
  * A delayed yes refused for a game that is gone — full, over, no longer the player's — leaves the
  * details it was said on, as the details' own refusal does.
@@ -75,6 +80,7 @@ import {
   UNDO_WINDOW_MS,
   fillOutcome,
   fillRefusal,
+  itsAGameWaiting,
   undoSecondsLeft,
   waitsForUndo,
   type FillOutcome,
@@ -88,18 +94,31 @@ import {
 } from '../hooks/useFill';
 import { rereadAfterFill, useBookingYes, useConfirmPaymentYes } from '../hooks/useFillWrites';
 import { dropCard } from '../hooks/useGroupDeck';
-import { useBooking } from '../hooks/useHome';
+import { useBooking, useBookingSinceMount } from '../hooks/useHome';
 import { useLatest } from '../hooks/useLatest';
 
 import { ConfirmPaymentSheet } from './ConfirmPaymentSheet';
 import { refusalMessage } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
-import { bookingAnnouncement, bookingIn, sentToTheClub } from './fillPresentation';
+import { bookingAnnouncement, bookingIn } from './fillPresentation';
 import { ItsAGame } from './ItsAGame';
 
 interface Counting extends BookAsk {
   readonly endsAt: number;
 }
+
+/**
+ * **What *It's a game!* is raised for** — a game booked, or one sent to its club, which has still to
+ * say yes (Q103): the booking, the sides the yes held if it held any, and the club the card named.
+ */
+type Celebrating =
+  | { readonly kind: 'booked'; readonly bookingId: string; readonly sides?: DeckCard['sides'] }
+  | {
+      readonly kind: 'atTheClub';
+      readonly bookingId: string;
+      readonly sides?: DeckCard['sides'];
+      readonly club?: string;
+    };
 
 export interface FillProviderProps {
   /** How far above the bottom inset the toast sits — the bar's height while the bar is drawn. */
@@ -118,11 +137,11 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
   const [, setTick] = useState(0);
   const [settingUp, setSettingUp] = useState<{ readonly then?: () => void } | null>(null);
   const [confirming, setConfirming] = useState<ConfirmAsk | null>(null);
-  /** *It's a game!* up — with the sides the yes held, or read off the booking when it held none. */
-  const [celebrating, setCelebrating] = useState<{
-    readonly sides?: DeckCard['sides'];
-    readonly bookingId: string;
-  } | null>(null);
+  /**
+   * *It's a game!* up — with the sides the yes held, or read off the booking when it held none; and,
+   * for a game sent to its club, the club the card named (Q103).
+   */
+  const [celebrating, setCelebrating] = useState<Celebrating | null>(null);
 
   const book = useCallback<Fill['book']>((ask) => {
     const endsAt = Date.now() + UNDO_WINDOW_MS;
@@ -143,15 +162,25 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
         } else {
           // A Seats to fill row holds no sides: the overlay reads them off the booking.
           const { sides } = ask.card;
-          setCelebrating(sides === undefined ? { bookingId } : { sides, bookingId });
+          setCelebrating({ kind: 'booked', bookingId, ...(sides === undefined ? {} : { sides }) });
         }
         return;
       }
-      case 'waiting':
-        // The game is on Home now, waiting for the club; nothing was charged (#543).
+      case 'waiting': {
+        // The game is on Home now, waiting for the club; nothing was charged (#543). The players
+        // are matched all the same (Q103): It's a game!, its line read off the booking.
         void rereadAfterFill(client);
-        showToast({ message: sentToTheClub(ask.card?.club?.name), tone: 'ok' });
+        const { bookingId } = outcome;
+        const sides = ask.card?.sides;
+        const club = ask.card?.club?.name;
+        setCelebrating({
+          kind: 'atTheClub',
+          bookingId,
+          ...(sides === undefined ? {} : { sides }),
+          ...(club === undefined ? {} : { club }),
+        });
         return;
+      }
       case 'confirm':
         showToast({ message: FILL_COPY.paymentFailed, tone: 'bad' });
         setConfirming({ ...ask, seatChargeId: outcome.seatChargeId });
@@ -292,8 +321,7 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
 
       {celebrating === null ? null : (
         <ItsAGameFor
-          bookingId={celebrating.bookingId}
-          {...(celebrating.sides === undefined ? {} : { sides: celebrating.sides })}
+          celebrating={celebrating}
           onLater={() => setCelebrating(null)}
           onOpenGame={() => {
             setCelebrating(null);
@@ -309,36 +337,93 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
   );
 }
 
-/**
- * ***It's a game!* for one booking** — drawn from the sides the yes held, or, for a *Seats to fill*
- * row's join, from the booking's own read (`useBooking`), observed for as long as the overlay waits
- * for it: nothing is drawn until it lands, and a booking that cannot be read — refused, or in a sport
- * this build cannot name — says *It's a game!* in a toast instead.
- */
+/** What *It's a game!* does with its doors, and with a booking it cannot draw. */
+interface ItsAGameDoors {
+  readonly onLater: () => void;
+  readonly onOpenGame: () => void;
+  readonly onUnreadable: () => void;
+}
+
+/** ***It's a game!* for one booking** — booked, or sent to its club. */
 function ItsAGameFor({
+  celebrating,
+  ...doors
+}: ItsAGameDoors & { readonly celebrating: Celebrating }) {
+  return celebrating.kind === 'booked' ? (
+    <ItsAGameBooked bookingId={celebrating.bookingId} sides={celebrating.sides} {...doors} />
+  ) : (
+    <ItsAGameAtTheClub
+      bookingId={celebrating.bookingId}
+      sides={celebrating.sides}
+      club={celebrating.club}
+      {...doors}
+    />
+  );
+}
+
+/**
+ * **A game booked** — drawn from the sides the yes held, or, for a *Seats to fill* row's join, from
+ * the booking's own read (`useBooking`), observed for as long as the overlay waits for it: nothing is
+ * drawn until it lands, and a booking that cannot be read — refused, or in a sport this build cannot
+ * name — says *It's a game!* in a toast instead.
+ */
+function ItsAGameBooked({
   bookingId,
   sides,
   onLater,
   onOpenGame,
   onUnreadable,
-}: {
-  readonly bookingId: string;
-  readonly sides?: DeckCard['sides'];
-  readonly onLater: () => void;
-  readonly onOpenGame: () => void;
-  readonly onUnreadable: () => void;
-}) {
+}: ItsAGameDoors & { readonly bookingId: string; readonly sides: DeckCard['sides'] | undefined }) {
   const read = useBooking(bookingId, { enabled: sides === undefined });
   const drawn = sides ?? read.data?.sides;
   const unreadable = sides === undefined && (read.data === null || read.isError);
-  const settle = useLatest(onUnreadable);
-
-  useEffect(() => {
-    if (unreadable) settle.current();
-  }, [unreadable, settle]);
+  useWhenUnreadable(unreadable, onUnreadable);
 
   if (drawn === undefined) return null;
   return <ItsAGame card={{ sides: drawn }} onLater={onLater} onOpenGame={onOpenGame} />;
+}
+
+/**
+ * **A game sent to its club** (Q103) — read too, for the line under the word: the club's deadline is
+ * the booking's, and only a read made since the yes gives it (`useBookingSinceMount`). The screen
+ * comes once that read lands, or once it cannot — refused, or held offline — its line then saying
+ * only that nobody pays until the club confirms. A yes that held no sides draws them off the same
+ * read, and says *It's a game!* in a toast when it cannot.
+ */
+function ItsAGameAtTheClub({
+  bookingId,
+  sides,
+  club,
+  onLater,
+  onOpenGame,
+  onUnreadable,
+}: ItsAGameDoors & {
+  readonly bookingId: string;
+  readonly sides: DeckCard['sides'] | undefined;
+  readonly club: string | undefined;
+}) {
+  const read = useBookingSinceMount(bookingId);
+  const drawn = sides ?? read.booking?.sides;
+  const unreadable = sides === undefined && (read.failed || read.booking === null);
+  useWhenUnreadable(unreadable, onUnreadable);
+
+  if (drawn === undefined || !read.settled) return null;
+  return (
+    <ItsAGame
+      card={{ sides: drawn }}
+      waiting={itsAGameWaiting(club, read.booking ?? undefined)}
+      onLater={onLater}
+      onOpenGame={onOpenGame}
+    />
+  );
+}
+
+/** Says the booking could not be drawn, once it is known — the toast in place of the screen. */
+function useWhenUnreadable(unreadable: boolean, onUnreadable: () => void) {
+  const settle = useLatest(onUnreadable);
+  useEffect(() => {
+    if (unreadable) settle.current();
+  }, [unreadable, settle]);
 }
 
 const s = StyleSheet.create({

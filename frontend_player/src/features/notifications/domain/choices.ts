@@ -1,6 +1,6 @@
 /**
  * **The three notices a player chooses** (#559; the screens A7.2; the mechanics §17.2) — *You
- * complete it* and *Challenges for you* on, *Fill in alerts* off, until changed. The seven always
+ * complete it* and *Challenges for you* on, *Fill in alerts* off, until changed. The ones always
  * on are no choice, and are not here: they are words on the screen and nothing else.
  *
  * Every tap saves all three (`PUT /players/me/notifications` replaces them), so what a tap leaves

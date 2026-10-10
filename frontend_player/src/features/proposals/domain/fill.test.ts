@@ -9,6 +9,7 @@ import {
   fillOutcome,
   fillRefusal,
   itsAGamePicture,
+  itsAGameWaiting,
   undoSecondsLeft,
   waitsForUndo,
   yesOnRescue,
@@ -123,9 +124,11 @@ describe('fillOutcome — what a yes did, read off the server’s answer', () =>
     ).toEqual({ kind: 'termsAgain' });
   });
 
+  // Q103: It's a game! at once, for the game the yes filled — the booking it went to the club as.
   it('is the game sent to the club when an On request club has it to confirm (#543)', () => {
     expect(fillOutcome(answer({ openSeats: 0, waitingForTheClub: true }))).toEqual({
       kind: 'waiting',
+      bookingId: 'p-1',
     });
   });
 
@@ -182,6 +185,54 @@ describe('itsAGamePicture — the faces It’s a game! draws', () => {
     const picture = itsAGamePicture(card({ sides: { yours: [YOU], theirs: [nobody] } }));
 
     expect(picture.theirs).toEqual([{ playerId: 'id-gone' }]);
+  });
+});
+
+describe('itsAGameWaiting — what It’s a game! says is missing at a club that confirms (Q103)', () => {
+  /** Read at 10:00 in Warsaw, Wednesday 30 September. */
+  const READ_AT = '2026-09-30T08:00:00Z';
+  /** `null` — a read that no longer names the club. */
+  const read = (answerBy: string | undefined, name: string | null = 'Kazimierz Padel') => ({
+    readAt: READ_AT,
+    where: { id: 'c-9', ...(name === null ? {} : { name }) },
+    ...(answerBy === undefined ? {} : { answerBy }),
+  });
+
+  it('is the club’s deadline from the booking’s read, the hour alone when it falls that day', () => {
+    expect(itsAGameWaiting('Kazimierz Padel', read('2026-09-30T19:15:00Z'))).toEqual({
+      club: 'Kazimierz Padel',
+      answerBy: { at: '2026-09-30T19:15:00Z', today: true },
+    });
+  });
+
+  it('says it falls on another day — a club given until the next morning', () => {
+    expect(itsAGameWaiting('Kazimierz Padel', read('2026-10-01T07:00:00Z'))).toEqual({
+      club: 'Kazimierz Padel',
+      answerBy: { at: '2026-10-01T07:00:00Z', today: false },
+    });
+  });
+
+  it('names no deadline the read says is gone, or does not give', () => {
+    expect(itsAGameWaiting('Kazimierz Padel', read('2026-09-30T07:59:00Z'))).toEqual({
+      club: 'Kazimierz Padel',
+    });
+    expect(itsAGameWaiting('Kazimierz Padel', read(undefined))).toEqual({
+      club: 'Kazimierz Padel',
+    });
+  });
+
+  it('with no read, is the club the card named — and nothing when it named none', () => {
+    expect(itsAGameWaiting('Bonarka Arena', undefined)).toEqual({ club: 'Bonarka Arena' });
+    expect(itsAGameWaiting(undefined, undefined)).toEqual({});
+  });
+
+  it('takes the club’s name from the read, and the card’s when the read has none', () => {
+    expect(itsAGameWaiting('Old name', read(undefined, 'Kazimierz Padel'))).toEqual({
+      club: 'Kazimierz Padel',
+    });
+    expect(itsAGameWaiting('Bonarka Arena', read(undefined, null))).toEqual({
+      club: 'Bonarka Arena',
+    });
   });
 });
 
