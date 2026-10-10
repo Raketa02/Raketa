@@ -273,3 +273,14 @@ def test_a_held_share_whose_hold_the_provider_dropped_is_cancelled():
 
     assert charge.heard(payment(PaymentStatus.CANCELLED), at=AT) is True
     assert charge.status is SeatChargeStatus.CANCELLED
+
+
+def test_the_cut_off_takes_only_a_share_held_for_the_game():
+    held, undecided = a_hold(), a_hold()
+    held.keep(booking_id=uuid4(), until=CUT_OFF, at=AT)
+
+    assert held.take_at_the_cut_off(at=CUT_OFF) is True
+    assert held.status is SeatChargeStatus.TAKING
+    assert held.take_at_the_cut_off(at=CUT_OFF) is False
+    assert undecided.take_at_the_cut_off(at=CUT_OFF) is False
+    assert undecided.held_now

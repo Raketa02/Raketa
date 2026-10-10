@@ -557,7 +557,7 @@ class CancelRequest(BaseModel):
     reason: ClubCancelReason = Field(
         description=(
             "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the "
-            "players with their refund."
+            "players with what comes of their money."
         )
     )
 
@@ -712,11 +712,14 @@ async def move(
     },
     summary="Cancel a game",
     description=(
-        "**Cancel** a booked game, with your reason, until it starts: everybody "
-        "is **refunded in full** — the card fees on those payments are not "
-        "returned, and as the seller you bear them — it goes on **nobody's "
-        "record**, the hour is yours to sell again, and the players are told "
-        "you cancelled, with the reason, and dealt a new game first."
+        "**Cancel** a booked game, with your reason, until it starts. **Before "
+        "your cut-off** every share is only held, and every hold is let go: "
+        "nothing was taken, nobody is refunded and nobody pays a fee, you "
+        "included (#637). **After it** everybody is **refunded in full** — the "
+        "card fees on those payments are not returned, and as the seller you "
+        "bear them. Either way it goes on **nobody's record**, the hour is "
+        "yours to sell again, and the players are told you cancelled, with the "
+        "reason, and dealt a new game first."
     ),
 )
 async def cancel(

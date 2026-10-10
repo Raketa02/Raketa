@@ -27,6 +27,7 @@ come — the call-offs first, so a game short at its cut-off is never taken.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import final
 from uuid import UUID
@@ -83,28 +84,40 @@ class TheCutOff:
 
     async def execute(self) -> CutOffRun:
         now = instant(self._clock.now())
-        called_off = taken = conflicts = 0
-        for booking_id in await self._games.short_at_the_cut_off(now=now):
+        called_off, short_conflicts = await self._each(
+            await self._games.short_at_the_cut_off(now=now), self._call_off, now=now
+        )
+        taken, taking_conflicts = await self._each(
+            await self._held.due(at=now), self._take, now=now
+        )
+        return CutOffRun(
+            games=called_off,
+            conflicts=short_conflicts + taking_conflicts,
+            taken=taken,
+        )
+
+    async def _each(
+        self,
+        booking_ids: Sequence[UUID],
+        act: Callable[..., Awaitable[bool]],
+        *,
+        now: Instant,
+    ) -> tuple[int, int]:
+        """``act`` on each game in its own transaction: how many it recorded,
+        and how many another process reached first."""
+
+        recorded = conflicts = 0
+        for booking_id in booking_ids:
             try:
-                if await self._call_off(booking_id, now=now):
+                if await act(booking_id, now=now):
                     await self._uow.commit()
-                    called_off += 1
+                    recorded += 1
                 else:
                     await self._uow.rollback()
             except EventStreamVersionConflict:
                 await self._uow.rollback()
                 conflicts += 1
-        for booking_id in await self._held.due(at=now):
-            try:
-                if await self._take(booking_id, now=now):
-                    await self._uow.commit()
-                    taken += 1
-                else:
-                    await self._uow.rollback()
-            except EventStreamVersionConflict:
-                await self._uow.rollback()
-                conflicts += 1
-        return CutOffRun(games=called_off, conflicts=conflicts, taken=taken)
+        return recorded, conflicts
 
     async def _call_off(self, booking_id: UUID, *, now: Instant) -> bool:
         # The booking's id is its proposal's, whose row every act on the game

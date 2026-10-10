@@ -59,6 +59,7 @@ from app.bootstrap.composition import (
     build_pools,
     build_read_receipts,
     build_say_yes,
+    build_the_cut_off,
 )
 from app.core.config import Settings
 from app.engines.matchfit.core import SearchMode
@@ -423,6 +424,19 @@ async def all_say_yes(
             session, clock=clock, provider=provider, settings=settings
         ).execute(AnswerProposalCommand(proposal_id=proposal_id, player_id=player))
     return answer
+
+
+async def the_cut_off_came(
+    session: AsyncSession, *, settings: Settings, at: Instant
+) -> None:
+    """The cut-off job, run at ``at`` on a stopped clock — as the API's would
+    have run it then (#637): every share held for a game whose cut-off has
+    come by then is taken, and a game short at it called off. What a game
+    filled before a cut-off that has passed since needs to read taken."""
+
+    await build_the_cut_off(
+        session, clock=FixedClock(at=at), settings=settings
+    ).execute()
 
 
 def booking_lines(seeded: SeededBookings) -> list[str]:

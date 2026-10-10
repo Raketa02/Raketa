@@ -50,8 +50,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # A share still held reads as taken to the code before this: let nothing
-    # be held when going back.
+    # The code before this knows no held share: the old check refuses to be
+    # put back while any row is ``HELD``, so take or let go of every held share
+    # before going back.
     op.drop_index("ix_seat_charges_status_held_until", table_name="seat_charges")
     op.drop_column("seat_charges", "held_until")
     op.drop_constraint("ck_seat_charges_status", "seat_charges", type_="check")

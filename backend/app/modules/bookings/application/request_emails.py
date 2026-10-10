@@ -160,9 +160,9 @@ def called_off_at_the_cut_off_email(
     """*A game was called off at the cut-off — the hour is free again* (#544;
     the mechanics §16.12, at once): a seat that opened before the club's own
     cut-off was still empty at it, so the game is off and its court the club's
-    to sell again. Everybody still in is refunded in full, from the club's
-    account, which bears the card fees — it is its own free-cancellation rule.
-    A job that reaches the game only after its hour has begun has no hour to
+    to sell again. Every share was only held, and every hold is let go: nobody
+    pays anything and no card fee arises, the club's included (#637, Q113). A
+    job that reaches the game only after its hour has begun has no hour to
     offer back, and says so."""
 
     return render(
@@ -180,9 +180,9 @@ def called_off_at_the_cut_off_email(
                 f"{_day_and_time(starts_at)} until "
                 f"{_wall(starts_at + _A_GAME):%H:%M}.",
                 "A player left and nobody took the seat before your free "
-                "cancellation ended, so the game is off. Everybody still in is "
-                "refunded in full; the card fees on those payments are not "
-                "returned.",
+                "cancellation ended, so the game is off. Every share was only "
+                "held, and every hold is let go: nobody pays, and no card fee "
+                "is yours.",
                 (
                     "The hour is free again: it is yours to sell."
                     if hour_still_ahead

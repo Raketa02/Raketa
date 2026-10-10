@@ -94,7 +94,7 @@ class RefundReason(StrEnum):
 
     #: The player left before the club's cut-off: a held share is let go. A
     #: share taken already — only the fallback of #639 takes one before the
-    #: cut-off — is refunded less the card fee.
+    #: cut-off — is refunded in full.
     LEFT = "LEFT"
     #: The game was called off at the club's cut-off: in full.
     CALLED_OFF_AT_THE_CUT_OFF = "CALLED_OFF_AT_THE_CUT_OFF"
@@ -157,8 +157,6 @@ class SeatCharge:
     #: The club's cut-off a share held for the booked game is taken at — while
     #: it is held, and kept on the record after (#637).
     held_until: Instant | None = None
-    #: Why a held share was let go, when it was (#637).
-    let_go_because: RefundReason | None = None
     #: When it was taken — the moment the player paid.
     taken_at: Instant | None = None
     #: Whether the refund decided on it keeps the card fee back — ``None``
@@ -434,6 +432,17 @@ class SeatCharge:
             )
         )
 
+    def take_at_the_cut_off(self, *, at: Instant) -> bool:
+        """The club's cut-off came: a share held for the booked game is taken
+        (#637). Answers whether anything was recorded — nothing for a share
+        not held."""
+
+        if self.status is not SeatChargeStatus.HELD:
+            return False
+        assert self.booking_id is not None
+        self.take(booking_id=self.booking_id, at=at)
+        return True
+
     def take(self, *, booking_id: UUID, at: Instant) -> None:
         """The share is taken: the game booked on this hold after its cut-off,
         or the cut-off came for a share held for it."""
@@ -624,8 +633,6 @@ class SeatCharge:
             self.taken_at = instant(event.occurred_at)
         elif isinstance(event, SeatChargeReleased):
             self.status = SeatChargeStatus.RELEASING
-            if event.reason is not None:
-                self.let_go_because = RefundReason(event.reason)
         elif isinstance(event, SeatChargeCaptured):
             self.status = SeatChargeStatus.CAPTURED
             self.fee_taken_grosze = event.fee_grosze

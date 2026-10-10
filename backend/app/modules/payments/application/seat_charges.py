@@ -425,9 +425,7 @@ class TakeTheHeldShares:
 
         taken = 0
         for charge in await self._charges.of_game(game_id):
-            if charge.status is SeatChargeStatus.HELD:
-                assert charge.booking_id is not None
-                charge.take(booking_id=charge.booking_id, at=at)
+            if charge.take_at_the_cut_off(at=at):
                 await self._charges.save(charge)
                 taken += 1
         return taken

@@ -375,7 +375,7 @@
           "dev"
         ],
         "summary": "Take the seat, as this person",
-        "description": "`POST /api/v1/bookings/{id}/seats` as the acting account \u2014 *I'm in* on a rescue: the share taken at once over the provider this process moves money through, the seat that opened first theirs, and a leaver after the cut-off refunded. The first join wins.",
+        "description": "`POST /api/v1/bookings/{id}/seats` as the acting account \u2014 *I'm in* on a rescue: the share held until the cut-off \u2014 or taken at once after it (#637) \u2014 over the provider this process moves money through, the seat that opened first theirs, and a leaver after the cut-off refunded. The first join wins.",
         "operationId": "take_the_seat_dev_as__player_id__bookings__booking_id__seats_post",
         "parameters": [
           {
@@ -1655,7 +1655,7 @@
           "dev"
         ],
         "summary": "Cancel a game, as the club",
-        "description": "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: everybody refunded in full, on nobody's record, a new card owed.",
+        "description": "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: every hold let go before the cut-off, everybody refunded in full after it, on nobody's record, a new card owed.",
         "operationId": "cancel_dev_clubs__club_id__bookings__booking_id__cancellation_post",
         "parameters": [
           {
@@ -2809,7 +2809,7 @@
           "dev"
         ],
         "summary": "Situation 7 \u00b7 Empty seat at the cut-off",
-        "description": "Books her game at the hour whose cut-off is the next full hour the rules allow, at a club of the group's that books at once \u2014 filled by her and three of the group as if earlier, when the hour was on sale \u2014 and one of the three leaves it now, through the leave their phone runs: a seat open since before the cut-off. Still open at the cut-off, *Run it now* on the cut-off calls the game off and refunds everybody in full; taken first, the game plays.",
+        "description": "Books her game at the hour whose cut-off is the next full hour the rules allow, at a club of the group's that books at once \u2014 filled by her and three of the group as if earlier, when the hour was on sale \u2014 and one of the three leaves it now, through the leave their phone runs: a seat open since before the cut-off. Still open at the cut-off, *Run it now* on the cut-off calls the game off and lets every hold go \u2014 nobody pays; taken first, the game plays.",
         "operationId": "empty_seat_at_the_cut_off_dev_situations_empty_seat_at_the_cut_off_post",
         "requestBody": {
           "content": {
@@ -2882,7 +2882,7 @@
           "dev"
         ],
         "summary": "Situation 8 \u00b7 Ania leaves",
-        "description": "Two games of hers to leave from the phone, at a club of the group's that books at once, each made and filled by her and three of the group as if earlier: the soonest hour whose cut-off has passed, and the soonest whose cut-off is still 2 hours off at least \u2014 each with that long to leave it in. Leaving the first refunds her at once, less the card fee; leaving the second keeps her seat paid until a row takes it, and then refunds her.",
+        "description": "Two games of hers to leave from the phone, at a club of the group's that books at once, each made and filled by her and three of the group as if earlier: the soonest hour whose cut-off has passed, and the soonest whose cut-off is still 2 hours off at least \u2014 each with that long to leave it in. Leaving the first lets her hold go \u2014 nothing taken (#637); leaving the second keeps her seat paid until a row takes it, and then refunds her.",
         "operationId": "she_leaves_dev_situations_she_leaves_post",
         "requestBody": {
           "content": {
@@ -4038,7 +4038,7 @@
         "properties": {
           "reason": {
             "$ref": "#/components/schemas/ClubCancelReason",
-            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with their refund."
+            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with what comes of their money."
           }
         },
         "type": "object",

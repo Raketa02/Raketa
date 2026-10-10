@@ -200,7 +200,8 @@ async def move(
     summary="Cancel a game, as the club",
     description=(
         "`POST /api/v1/club/bookings/{id}/cancellation` as the acting club: "
-        "everybody refunded in full, on nobody's record, a new card owed."
+        "every hold let go before the cut-off, everybody refunded in full after "
+        "it, on nobody's record, a new card owed."
     ),
 )
 async def cancel(

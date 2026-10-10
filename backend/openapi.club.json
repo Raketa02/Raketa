@@ -2224,7 +2224,7 @@
           "club"
         ],
         "summary": "Cancel a game",
-        "description": "**Cancel** a booked game, with your reason, until it starts: everybody is **refunded in full** \u2014 the card fees on those payments are not returned, and as the seller you bear them \u2014 it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.",
+        "description": "**Cancel** a booked game, with your reason, until it starts. **Before your cut-off** every share is only held, and every hold is let go: nothing was taken, nobody is refunded and nobody pays a fee, you included (#637). **After it** everybody is **refunded in full** \u2014 the card fees on those payments are not returned, and as the seller you bear them. Either way it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.",
         "operationId": "cancel_api_v1_club_bookings__booking_id__cancellation_post",
         "security": [
           {
@@ -2639,7 +2639,7 @@
         "properties": {
           "reason": {
             "$ref": "#/components/schemas/ClubCancelReason",
-            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with their refund."
+            "description": "`WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` \u2014 told to the players with what comes of their money."
           }
         },
         "type": "object",

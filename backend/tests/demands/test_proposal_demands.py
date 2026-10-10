@@ -765,9 +765,12 @@ def _charges(session):
 
 
 @pytest.mark.parametrize("implementation", registered(SeatRefunds))
-async def test_a_leaver_s_share_is_given_back_less_the_card_fee_and_only_theirs(
+async def test_a_leaver_s_share_taken_before_the_cut_off_comes_back_whole(
     implementation, session
 ):
+    """Leaving before the cut-off costs nothing (#637, Q113): a share taken
+    that early — only #639's fallback takes one — is given back in full."""
+
     refunds: SeatRefunds = implementation.build(session)
     game_id = new_uuid()
     kubas = await _a_paid_share(session, game_id=game_id, player_id=KUBA)
@@ -780,7 +783,7 @@ async def test_a_leaver_s_share_is_given_back_less_the_card_fee_and_only_theirs(
 
     kuba_now = await _charges(session).load(kubas.charge_id)
     ola_now = await _charges(session).load(olas.charge_id)
-    assert kuba_now is not None and kuba_now.refund_withholds_fee is True
+    assert kuba_now is not None and kuba_now.refund_withholds_fee is False
     assert ola_now is not None and ola_now.refund_withholds_fee is None
 
 

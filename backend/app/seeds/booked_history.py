@@ -73,7 +73,6 @@ from app.bootstrap.composition import (
     build_read_booking_details,
     build_settled_courts,
     build_sportsmanship_ledger,
-    build_the_cut_off,
     build_unit_of_work,
     build_user_repository,
 )
@@ -99,7 +98,7 @@ from app.modules.proposals.domain.home import HomeStatus
 from app.modules.sportsmanship.application.answer_the_card import AnswerTheCard
 from app.modules.sportsmanship.application.commands import AnswerTheCardCommand
 from app.modules.sportsmanship.domain.card import StarsGiven
-from app.seeds.bookings import all_say_yes, club_id_of
+from app.seeds.bookings import all_say_yes, club_id_of, the_cut_off_came
 from app.seeds.catalog import THE_POPULATED_PLAYER, SeedAccount
 from app.seeds.clock import FixedClock, days_before
 from app.seeds.clubs import SEED_CLUBS
@@ -655,9 +654,7 @@ async def _book(
         answer.booked.booking_id
     )
     if booked is not None and made_at < booked.cut_off:
-        await build_the_cut_off(
-            session, clock=FixedClock(at=booked.cut_off), settings=settings
-        ).execute()
+        await the_cut_off_came(session, settings=settings, at=booked.cut_off)
     return answer.booked.game_id
 
 

@@ -236,15 +236,14 @@ def left_the_game_email(
     sport: Sport,
     starts_at: Instant,
     share_grosze: int,
-    fee_estimate_grosze: int,
     app_link: str,
     held: bool = False,
 ) -> OutgoingMessage:
     """*You left the game · nothing was taken* — left before the club's
     cut-off with the share only ``held``: the hold is let go (#637, Q113). A
-    share taken already — a rescuer's — is *your refund is on its way*:
-    refunded at once, less the card fee the bank doesn't return. The amount
-    there is the estimate; what the provider kept back is on the receipt."""
+    share taken already — only #639's fallback takes one that early — is *your
+    refund is on its way*: everything back, since leaving before the cut-off
+    costs nothing."""
 
     heading = "You left the game" if name is None else f"You left the game, {name}"
     if held:
@@ -271,9 +270,8 @@ def left_the_game_email(
             heading=heading,
             lines=(
                 f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)}.",
-                f"Your {zloty(share_grosze)} share is being refunded by {club}, less "
-                f"the card fee that isn't returned (about "
-                f"{zloty(fee_estimate_grosze)}). Your seat is offered to others.",
+                f"Your {zloty(share_grosze)} share is being refunded in full by "
+                f"{club}. Your seat is offered to others.",
                 "Refunds reach BLIK within hours and cards within up to two weeks.",
             ),
             button_label="Open Raketa",

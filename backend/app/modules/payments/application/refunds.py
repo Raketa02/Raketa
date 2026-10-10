@@ -16,8 +16,9 @@ a subscriber retries.
 
 **Five reasons, two amounts for a share taken.** A player who **left after**
 the club's cut-off is refunded **less the card fee** the moment somebody takes
-their seat (#545) — and so, for now, is one who left before it with their share
-taken already, which only #639's fallback does. A game **called off
+their seat (#545). One who left **before** it with their share taken already —
+only #639's fallback takes one that early — gets **everything back**: leaving
+before the cut-off costs nobody anything (Q113). A game **called off
 at its cut-off** gives a share taken **everything back** — the fallback of
 #639 — and so does a game **the club cancelled** (#547) after its cut-off, its
 reason said in the email, to everybody still in and to **a leaver whose seat
@@ -48,9 +49,12 @@ from app.modules.payments.domain.ports import Payers, SeatChargeRepository, Sell
 from app.modules.payments.domain.seat_charge import RefundReason, SeatCharge
 
 
-#: The reasons that give a share taken everything back: the club's own rules.
+#: The reasons that give a share taken everything back: the club's own rules —
+#: and a leave before the cut-off, which takes nothing from anybody (#637): a
+#: share taken before it — only #639's fallback takes one — comes back whole.
 _IN_FULL = frozenset(
     {
+        RefundReason.LEFT,
         RefundReason.CALLED_OFF_AT_THE_CUT_OFF,
         RefundReason.CANCELLED_BY_THE_CLUB,
         RefundReason.CANCELLED_AFTER_YOU_LEFT,
@@ -145,7 +149,6 @@ class GiveTheSharesBack:
                     sport=charge.sport,
                     starts_at=charge.starts_at,
                     share_grosze=charge.amount_grosze,
-                    fee_estimate_grosze=estimated_card_fee(charge.amount_grosze),
                     app_link=self._app_link,
                     held=held,
                 )

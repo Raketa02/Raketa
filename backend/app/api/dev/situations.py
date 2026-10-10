@@ -136,7 +136,6 @@ from app.api.dev.dependencies import (
 from app.api.dev.board import CardOutcome
 from app.api.dev.club import is_a_seed_club
 from app.api.dev.provider import NoSavedCard, TheFakeDep, steer
-from app.bootstrap.composition import build_the_cut_off
 from app.core.config import Settings
 from app.core.exception_handlers import ErrorResponse
 from app.engines.matchfit.core import SearchMode
@@ -232,7 +231,7 @@ from app.modules.proposals.presentation.dependencies import (
 )
 from app.modules.users.domain.ports import UserRepository
 from app.seeds.booked_history import SCORES
-from app.seeds.bookings import all_say_yes
+from app.seeds.bookings import all_say_yes, the_cut_off_came
 from app.seeds.clock import FixedClock
 from app.seeds.proposals import GAMES_KIND
 from app.shared.domain.errors import ConflictError
@@ -863,12 +862,9 @@ class EarlierYeses:
         )
 
     async def the_cut_off_came(self, *, at: Instant) -> None:
-        """The cut-off job, at ``at``: every share held for a game whose cut-off
-        has come by then is taken."""
+        """The seed's own ``the_cut_off_came``: the cut-off job at ``at``."""
 
-        await build_the_cut_off(
-            self._db, clock=FixedClock(at=at), settings=self._settings
-        ).execute()
+        await the_cut_off_came(self._db, settings=self._settings, at=at)
 
 
 def get_earlier_yeses(
@@ -1516,8 +1512,8 @@ async def one_leaves_before_the_cut_off(
         "her and three of the group as if earlier, when the hour was on sale — "
         "and one of the three leaves it now, through the leave their phone "
         "runs: a seat open since before the cut-off. Still open at the cut-off, "
-        "*Run it now* on the cut-off calls the game off and refunds everybody "
-        "in full; taken first, the game plays."
+        "*Run it now* on the cut-off calls the game off and lets every hold go "
+        "— nobody pays; taken first, the game plays."
     ),
 )
 async def empty_seat_at_the_cut_off(
@@ -1745,8 +1741,8 @@ HerGameToLeaveDep = Annotated[HerGameToLeave, Depends(get_her_game_to_leave)]
         "as if earlier: the soonest hour whose cut-off has passed, and the "
         "soonest whose cut-off is still "
         f"{TIME_TO_ANSWER // timedelta(hours=1)} hours off at least — each with "
-        "that long to leave it in. Leaving the first refunds her at once, less "
-        "the card fee; leaving the second keeps her seat paid until a row takes "
+        "that long to leave it in. Leaving the first lets her hold go — nothing "
+        "taken (#637); leaving the second keeps her seat paid until a row takes "
         "it, and then refunds her."
     ),
 )
