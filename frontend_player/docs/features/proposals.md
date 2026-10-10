@@ -686,8 +686,7 @@ The wire's `free_to_leave_until` kept its name (#617 is additive), and so did th
 Home or the details says _free_ any more. The payment terms (`payments`' `PAYMENT_TERMS`, versioned)
 still say _Free to leave until the club's cut-off — refunded minus the card fee_; they keep their
 words until the lawyer's review (the spec's O3). The Games deck's _no free cancellation_, the line under _Leave the game_ and the
-leave sheet are unchanged. **Owed by a root session**: the root `CONTEXT.md`'s **Cut-off** still says
-_Leaving before it is free_.
+leave sheet are unchanged.
 
 **The bubble opens the chat** ([#619](https://github.com/Raketa02/Raketa/issues/619); the mechanics
 Q100; story S-01A's F-HOME-15.1). Marta, on the tram, taps the bubble on her Thursday card, writes
@@ -887,3 +886,20 @@ notice. Which words and which surface this wants is a ruling.
 confirmed again (#533, the backend's handover), and the laptop provider that never confirms a payment
 (`payments.md`). **Nothing here has been seen on a device**: the amber line on a _TO CONFIRM_ row, the
 sheet's note, the line under the word and the details' _Confirm your payment_ all want a look.
+
+**Decided, not built here: the share is held until the club's cut-off, and leaving before it is
+free** (the mechanics Q113, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; story S-01A's F-LEAVE-6.1; root
+[#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a refund always cost somebody Stripe's fee, the 1,60 zł this feature prints was
+an estimate of a fee that depends on the card, and keeping it is exposed under Polish payment law.
+Letting a hold go costs nothing. So the fill holds the shares and the cut-off takes them. What it
+reverses here, for the tickets that build it:
+
+- **The money line** goes back to _40 zł · free to leave until Wed 19:00_, and _Paid · 40 zł_ once
+  taken; the details' row says when the share is held and when it is taken.
+  `back_if_you_leave_grosze` leaves the wire ([#637](https://github.com/Raketa02/Raketa/issues/637); the phone's words [#642](https://github.com/Raketa02/Raketa/issues/642)).
+- **Leaving before the cut-off** takes nothing: the line under _Leave the game_, the sheet and the
+  toast say so ([#642](https://github.com/Raketa02/Raketa/issues/642)). After it, they give the exact refund the server sends, or no figure
+  ([#641](https://github.com/Raketa02/Raketa/issues/641), [#644](https://github.com/Raketa02/Raketa/issues/644)).
+- **A refused card before the cut-off** is the root glossary's **Time to fix the card**: _Fix your
+  card by 14:40_ where this feature says _Confirm your payment_ ([#643](https://github.com/Raketa02/Raketa/issues/643)); a rescue's button says
+  _held until the cut-off_ or _paid now_ ([#645](https://github.com/Raketa02/Raketa/issues/645)).

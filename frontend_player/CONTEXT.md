@@ -591,9 +591,13 @@ ground, the entrance and the tile came to `features/proposals` with the face tha
   whole phone, the bar included, on `ModalStage`'s top layer rather than pushed as a route,
   because it answers wherever the player is by then. **A tile** (`YesTile`) is the face the app draws everywhere,
   with two initials over a poster and an outlined empty seat as its two additions; **the spoken
-  sentence** is the picture as one header, built from whole Names. _Avoid_: "the celebration"
-  or "the moment" (not terms); showing it to anybody but the player whose yes filled the game —
-  the others are told by a notice — and re-showing it, which nothing does.
+  sentence** is the picture as one header, built from whole Names. Since the mechanics' Q113 (in
+  the root glossary, the share is **held** at the fill and taken at the club's **Cut-off**) its
+  lines and the
+  notices beside it say _held_, never _you paid_, before the cut-off — owed by
+  [#642](https://github.com/Raketa02/Raketa/issues/642). _Avoid_: "the celebration" or "the moment"
+  (not terms); showing it to anybody but the player whose yes filled the game — the others are
+  told by a notice — and re-showing it, which nothing does.
 
 ### The fill
 
@@ -605,14 +609,18 @@ One client-only concept, in `features/proposals/` (#555; the Games & Fill in mec
   **payment setup sheet** a first yes needs, **It's a game!** and the **confirmation** of a refused
   share; the screens reach it through `useFill`. _Avoid_: "the booking flow" (a Booking is the
   backend's aggregate), "checkout".
-- **A yes that waits** (`waitsForUndo`) — a yes on _Book it now_ or on any rescue: it moves money,
-  so it waits ten seconds behind **Undo** (the toast _Booking in 10 s · Undo_, a draining ring)
-  and is sent at zero; its card stays in the deck's read, **hidden**, so Undo deals it back where
-  it was. Every other yes is a free vote, sent at once.
-- **A payment to confirm** — this player's share refused when the game filled (the bank wants them
-  present, or a decline): nobody paid, their seat is open again, and confirming it on the phone —
-  on the club's account, the same payment — is their yes again. _Avoid_: "retry the payment" (the
-  server never retries it; the player confirms it).
+- **A yes that waits** (`waitsForUndo`) — a yes on _Book it now_ or on any rescue: it books and
+  commits money — the share held, or taken after the cut-off (the root glossary's **Fills**) — so
+  it waits ten seconds behind **Undo** (the toast _Booking in 10 s · Undo_, a draining ring) and
+  is sent at zero; its card stays in the deck's read, **hidden**, so Undo deals it back where it
+  was. Every other yes is a free vote, sent at once.
+- **A payment to confirm** — this player's share refused (the bank wants them present, or a
+  decline): nobody paid, their seat is kept for them alone for the window the server names, and
+  confirming it on the phone — on the club's account, the same payment — books it. The window is
+  the root glossary's **Time to pay**, or since Q113 its **Time to fix the card** (owed by
+  [#643](https://github.com/Raketa02/Raketa/issues/643) and
+  [#645](https://github.com/Raketa02/Raketa/issues/645)). _Avoid_: "retry the payment" (the server
+  never retries it; the player confirms it).
 
 ### Home
 

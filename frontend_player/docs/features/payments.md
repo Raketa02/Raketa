@@ -151,3 +151,13 @@ runs, _Your seat stays open until you confirm — or someone else takes it._ onc
 section used to say the second for every row. **Why**: the old sentence was false for a held seat,
 which nobody else can take until the time ends, and one list can hold both. The rows, the yes again
 and what a booked confirmation shows are `proposals.md`'s.
+
+**Decided, not built here: new terms, and receipts that explain every movement** (the mechanics
+Q113 and §12.5, the screens A7.3; [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is
+now held when its game fills and taken at the club's cut-off, so the terms, the method card's
+_Charged by the club when a game fills_ and the receipts must say what really happens. `PAYMENT_TERMS`
+gets a new version with §12.5's words, under the version the backend puts in force, and a player who
+accepted the old one accepts again before their next game holds money ([#637](https://github.com/Raketa02/Raketa/issues/637), [#642](https://github.com/Raketa02/Raketa/issues/642)).
+Receipts read _−40 zł · paid_ for a share taken, _+38,24 zł · refunded_ over _1,76 zł kept on your
+payment_ for a refund, and _40 zł held · released_ for a hold let go; the card check never appears,
+and the footer loses its BLIK line ([#641](https://github.com/Raketa02/Raketa/issues/641), [#644](https://github.com/Raketa02/Raketa/issues/644)).

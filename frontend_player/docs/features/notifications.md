@@ -261,3 +261,11 @@ arriving now re-reads Home's two reads** (`proposals`' `rereadHome`): the games,
 and _TO CONFIRM_ above them. **Why**: the confirm notice puts a row there and the time-ran-out notice
 takes its time off, and before this only the games were read again — a row could be missing, or keep a
 time that had run out, until the app came back to the foreground.
+
+**Decided, not built here: twelve always on, and the take is quiet** (the mechanics Q113 and §17.2;
+[ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is now held when its game fills and
+taken at the club's cut-off, and a card refused before the cut-off is fixed, not paid. The first row
+reads _It's a game! · held_, the called-off row _Game called off · nothing was taken, or with the
+refund_, and _Fix your card by … to keep your seat_ joins before _Confirm your payment_
+([#642](https://github.com/Raketa02/Raketa/issues/642), [#643](https://github.com/Raketa02/Raketa/issues/643)). The take at the cut-off is a quiet row in the list, never pushed, so it is
+not a row here.
