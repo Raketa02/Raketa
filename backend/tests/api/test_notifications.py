@@ -4,7 +4,8 @@ mechanics §6.1–§6.4, §9.2, §10.1, §12–§13, §17.2; the screens A7.2, A
 Nine notices are always on — *It's a game! · you paid*, *It's a game! · the
 club answers by …* (#622), *Confirm your payment*, *Game called off · with the
 refund*, *Someone left your game*, *You've been refunded*, *The club confirmed /
-couldn't take it*, *Your new game* (#622), *Your post didn't fill* — and each
+said no / didn't answer in time* (#623), *Your new game* (#622), *Your post
+didn't fill* — and each
 is pushed to the player's phones and listed. Three are the player's:
 *You complete it* (on, once a day, bundled), *Challenges for you* (on, three a
 day, bundled), *Fill in alerts* (off, three a day). **No notice is ever sent for
@@ -455,9 +456,17 @@ async def test_a_game_still_short_at_the_cut_off_is_called_off_with_the_refund(
             "Game called off · you're refunded 30 zł",
             f"{THE_GAME} was still short at the club's cut-off.",
         )
-    assert "GAME_CALLED_OFF" not in [
-        n["kind"] for n in await notices_of(client, mailbox, kuba)
-    ]
+    # Kuba's empty seat called it off: he is told so, as a leaver, and that
+    # it counts on his record (Q108).
+    [notice, *_] = await notices_of(client, mailbox, kuba)
+    assert (notice["kind"], notice["title"], notice["body"]) == (
+        "GAME_CALLED_OFF",
+        "Saturday's 17:00 at Bonarka Arena, which you left, was called off",
+        "Your seat stayed empty, so it counts on your record. Your 28,55 zł "
+        "refund stands.",
+    )
+    # He has no seat on it: it opens the game he left.
+    assert notice["opens"] == "PROPOSAL"
 
 
 async def test_a_game_the_club_cancels_is_called_off_with_its_reason(
@@ -725,8 +734,8 @@ async def test_the_club_s_no_tells_everybody_waiting_on_it(
     for player in crowd[:4]:
         assert (await pushed_to(mailbox, pushes, player))[-1:] == [
             (
-                "Kazimierz Padel couldn't take your game",
-                "Padel · Sat 10 Oct, 17:00. Nobody paid — you'll get a new card first.",
+                "Kazimierz Padel said no",
+                "Padel · Sat 17:00. Nobody paid — you'll get a new card first.",
             )
         ]
 
@@ -744,7 +753,7 @@ async def test_the_club_s_silence_tells_everybody_waiting_on_it_too(
     assert done.requests == 1
     for player in crowd[:4]:
         assert (await titles_pushed_to(mailbox, pushes, player))[-1:] == [
-            "Kazimierz Padel couldn't take your game"
+            "Kazimierz Padel didn't answer in time"
         ]
 
 

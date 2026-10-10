@@ -4,7 +4,9 @@ seller, and *Confirm your payment to keep your seat* — and a refund's two
 (#544): *You left the game · your refund is on its way* and *Game called off ·
 with the refund* — and a rescue's (#545): *You've been refunded · your seat was
 taken*, and *Confirm your payment to take the seat* — and the club's cancel
-(#547): *Game cancelled by the club · with the refund*, saying why.
+(#547): *Game cancelled by the club · with the refund*, saying why — and, to a
+player who had left it, *The game you left was cancelled · with the refund*
+(#623).
 
 **Every notice about money is also emailed**. The
 words live here, beside the use case that queues them (``docs/adr/0186`` §4);
@@ -304,6 +306,47 @@ def game_cancelled_email(
                 f"Your {zloty(refunded_grosze)} is refunded in full by {club}, and "
                 "nothing about it goes on your record.",
                 "We'll look for another game for you first.",
+                "Refunds reach BLIK within hours and cards within up to two weeks.",
+            ),
+            button_label="Open Raketa",
+            button_url=app_link,
+        )
+    )
+
+
+GAME_YOU_LEFT_CANCELLED_KIND: Final = "payments.game_you_left_cancelled.player"
+
+
+def game_you_left_cancelled_email(
+    *,
+    to: str,
+    name: str | None,
+    club: str,
+    sport: Sport,
+    starts_at: Instant,
+    refunded_grosze: int,
+    because: CancelledBecause,
+    app_link: str,
+) -> OutgoingMessage:
+    """*The game you left was cancelled · with the refund* (#623; the mechanics
+    §13, Q108): the player left after the club's cut-off and their seat was
+    still paid, and the club cancelled the game — so their share comes back in
+    full. **In a leaver's words**: the club's reason and the refund, and never
+    a new game, which is owed only to the people still in."""
+
+    reason = _CANCELLED_BECAUSE[because]
+    return render(
+        ButtonEmail(
+            kind=GAME_YOU_LEFT_CANCELLED_KIND,
+            to=to,
+            subject=f"The game you left was cancelled · you're refunded "
+            f"{zloty(refunded_grosze)}",
+            heading="The game you left was cancelled",
+            lines=(
+                f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)} — "
+                f"which you left, was cancelled by the club"
+                + ("." if reason is None else f" {reason}."),
+                f"Your {zloty(refunded_grosze)} is refunded in full by {club}.",
                 "Refunds reach BLIK within hours and cards within up to two weeks.",
             ),
             button_label="Open Raketa",

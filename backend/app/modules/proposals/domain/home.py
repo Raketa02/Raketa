@@ -670,19 +670,34 @@ def as_filling_again(
     for player in in_:
         if player not in first and player not in second:
             (first if len(first) < per_side else second).append(player)
-    ended = (
-        None
-        if standing is Standing.FILLING
-        else _FILLING_AGAIN_ENDS.get(standing, CalledOffReason.BOOK_BY_PASSED)
-    )
     return replace(
-        game, first_side=tuple(first), second_side=tuple(second), called_off=ended
+        game,
+        first_side=tuple(first),
+        second_side=tuple(second),
+        called_off=_filling_again_ended(game, standing),
     )
 
 
-#: How a game gone back to filling ends before it is full again, as its card
-#: says it. A post its poster withdrew with nobody else In is nobody's to read.
-_FILLING_AGAIN_ENDS: Final = {
-    Standing.EXPIRED: CalledOffReason.BOOK_BY_PASSED,
-    Standing.COURT_HOUR_LOST: CalledOffReason.COURT_HOUR_LOST,
-}
+def _filling_again_ended(
+    game: BookedGame, standing: Standing
+) -> CalledOffReason | None:
+    """How a game gone back to filling ended before it was full again, as its
+    card says it — ``None`` while it fills."""
+
+    match standing:
+        case Standing.FILLING | Standing.WITHDRAWN:
+            # A post its poster withdrew with nobody else In: nobody is on it
+            # to read it.
+            return None
+        case Standing.EXPIRED:
+            return CalledOffReason.BOOK_BY_PASSED
+        case Standing.COURT_HOUR_LOST:
+            return CalledOffReason.COURT_HOUR_LOST
+        case Standing.FILLED | Standing.TURNED_DOWN:
+            # Full again, it is asked of its club again — a new request, and
+            # a booking no longer taken back — before it is booked or turned
+            # down.
+            invariant(False, f"{game.booking_id} is taken back and {standing.value}")
+            return None
+        case _:
+            exhaustive(standing)

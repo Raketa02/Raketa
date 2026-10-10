@@ -254,9 +254,16 @@ class BookingsClubRequests:
             await self._turn_down.unanswered(booking_id, at=at)
 
     async def withdraw(
-        self, booking_id: UUID, *, player_ids: tuple[UUID, ...], at: Instant
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        left: tuple[UUID, ...] = (),
+        at: Instant,
     ) -> bool:
-        return await self._withdraw.execute(booking_id, player_ids=player_ids, at=at)
+        return await self._withdraw.execute(
+            booking_id, player_ids=player_ids, left=left, at=at
+        )
 
 
 def _request(booking: Booking) -> ClubRequest | None:
@@ -369,7 +376,7 @@ def _booked_game(booking: Booking) -> BookedGame:
     still In as the booking left them: Proposals folds it against the proposal
     (``as_filling_again``), and the club reads nothing of it (#624)."""
 
-    filling_again = booking.called_off is CalledOff.SEAT_OPENED
+    filling_again = booking.taken_back
     return BookedGame(
         booking_id=booking.booking_id,
         pool_id=booking.pool_id,
@@ -445,7 +452,7 @@ class BookingsClubBookings:
             booking = await self._bookings.load(booking_id)
             # A request taken back is no booking of the club's: the game is
             # filling again (#624).
-            if booking is not None and booking.called_off is not CalledOff.SEAT_OPENED:
+            if booking is not None and not booking.taken_back:
                 found.append(_booked_game(booking))
         return found
 

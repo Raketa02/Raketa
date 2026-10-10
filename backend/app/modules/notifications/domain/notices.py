@@ -54,7 +54,8 @@ class NoticeKind(StrEnum):
     REFUNDED = "REFUNDED"
     #: *The club confirmed* (On request) — and the seats were taken.
     CLUB_CONFIRMED = "CLUB_CONFIRMED"
-    #: *The club couldn't take it* (On request) — refused, or no answer.
+    #: *Kazimierz Padel said no*, or *… didn't answer in time* (On request) —
+    #: told apart by its reason, and emailed (Q105).
     CLUB_COULD_NOT_TAKE_IT = "CLUB_COULD_NOT_TAKE_IT"
     #: *Your new game · Fri 19:00 at Bonarka Arena* — the card first the club's
     #: no, its silence or its cancel promised (Q107).
@@ -89,6 +90,16 @@ class NoticeReason(StrEnum):
     SEAT_OPEN = "SEAT_OPEN"
     #: Somebody left a game waiting for its club: it is filling again.
     FILLING_AGAIN = "FILLING_AGAIN"
+    #: A full game went back to filling and nobody is named: whose week
+    #: filled, who no longer fits, whose card failed is never said (Q104).
+    FELL_BACK = "FELL_BACK"
+    #: A seat opened after the book-by while the club decided: the game can
+    #: no longer fill — called off, nobody paid (Q104).
+    LEFT_AFTER_THE_BOOK_BY = "LEFT_AFTER_THE_BOOK_BY"
+    #: A full game gone back to filling reached its book-by first (Q106).
+    BOOK_BY_PASSED = "BOOK_BY_PASSED"
+    #: A full game gone back to filling lost its court hour first.
+    COURT_HOUR_LOST = "COURT_HOUR_LOST"
     #: A game still short at the club's cut-off.
     SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
     #: An On request club said no.
@@ -162,6 +173,9 @@ class Notice:
     #: The deadline it names — when the club must answer, on *It's a game!*
     #: at a club that confirms.
     until: Instant | None = None
+    #: Told to a player who had left the game: said in a leaver's words
+    #: (Q108).
+    you_left: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -246,6 +260,7 @@ class NoticesOfADay:
             occurred_at=at,
             own=notice.own,
             until=notice.until,
+            you_left=notice.you_left,
         )
         self._record_that(given)
         return given

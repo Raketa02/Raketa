@@ -397,4 +397,7 @@ async def withdraw_a_yes(
     proposal.withdraw_yes(player_id, at=at)
     await proposals.save(proposal)
     if was_waiting and not proposal.waiting_for_the_club:
-        await requests.withdraw(proposal.proposal_id, player_ids=(player_id,), at=at)
+        # Their own act: the others are told who left (Q104).
+        await requests.withdraw(
+            proposal.proposal_id, player_ids=(player_id,), left=(player_id,), at=at
+        )

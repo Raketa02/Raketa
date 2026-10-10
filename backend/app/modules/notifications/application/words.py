@@ -16,6 +16,12 @@ said as the money emails say it (``zloty``): *30 zł*, *28,55 zł*. **A deadline
 is said against the moment it was told**, as Home's *answers by* is against
 now: *21:15* that day, *Fri 09:00* on another — so a notice read later in the
 list says what it said when it was given.
+
+**Every ending and fall-back of a full game has words of its own** (#623;
+Q104, Q105, Q108): *filling again* never says whose week filled, who no longer
+fits or whose card failed; the club's no and its silence read apart; and a
+leaver is told in a leaver's words — *which you left* — and never promised a
+new game.
 """
 
 from __future__ import annotations
@@ -73,6 +79,8 @@ class Said:
     until: Instant | None = None
     #: When it was given — what its deadline is said against.
     given_at: Instant | None = None
+    #: Told to a player who had left the game: in a leaver's words (Q108).
+    you_left: bool = False
 
 
 def _when(at: Instant) -> str:
@@ -95,6 +103,13 @@ def _by(deadline: Instant, *, given_at: Instant | None) -> str:
     if given_at is not None and local_day(deadline) == local_day(given_at):
         return f"{deadline.astimezone(CLUB_ZONE):%H:%M}"
     return _hour(deadline)
+
+
+def _whose(at: Instant) -> str:
+    """*Tuesday's 19:00*."""
+
+    wall = at.astimezone(CLUB_ZONE)
+    return f"{wall:%A}'s {wall:%H:%M}"
 
 
 def _people(names: Sequence[str]) -> str:
@@ -129,9 +144,14 @@ def words_for(said: Said) -> Words:
             body=f"{sport} · {when} — it's a game, and you paid {money}.",
         )
     if kind is NoticeKind.CLUB_COULD_NOT_TAKE_IT:
+        # Its no and its silence read apart, as the email and Home say them
+        # (Q105).
         return Words(
-            title=f"{said.club} couldn't take your game",
-            body=f"{sport} · {when}. Nobody paid — you'll get a new card first.",
+            title=f"{said.club} said no"
+            if said.reason == NoticeReason.REFUSED
+            else f"{said.club} didn't answer in time",
+            body=f"{sport} · {_hour(said.starts_at)}. Nobody paid — you'll get a new "
+            "card first.",
         )
     if kind is NoticeKind.NEW_GAME:
         return Words(
@@ -141,16 +161,20 @@ def words_for(said: Said) -> Words:
     if kind is NoticeKind.CONFIRM_PAYMENT:
         return _confirm_payment(said, game=game, money=money)
     if kind is NoticeKind.GAME_CALLED_OFF:
-        return Words(
-            title=f"Game called off · you're refunded {money}",
-            body=_called_off(said, sport=sport, when=when, game=game),
-        )
+        return _game_called_off(said, sport=sport, when=when, game=game, money=money)
     if kind is NoticeKind.REFUNDED:
         return Words(
             title=f"You've been refunded {money}",
             body=f"Somebody took your seat — {game}.",
         )
     if kind is NoticeKind.SOMEONE_LEFT:
+        if said.reason == NoticeReason.FELL_BACK:
+            # Never whose week filled, who no longer fits or whose card failed
+            # (Q104).
+            return Words(
+                title=f"Your {_hour(said.starts_at)} at {said.club} is filling again",
+                body="A seat opened — nobody paid.",
+            )
         if said.reason == NoticeReason.FILLING_AGAIN:
             after = "it's filling again"
         else:
@@ -208,6 +232,53 @@ def _confirm_payment(said: Said, *, game: str, money: str) -> Words:
     else:
         body = f"Your bank wants you to confirm {money}. {game}."
     return Words(title=title, body=body)
+
+
+#: Why a full game that went back to filling was called off before it was
+#: full again — nobody paid (Q104, Q106).
+_NOBODY_PAID: Final[dict[str, str]] = {
+    NoticeReason.LEFT_AFTER_THE_BOOK_BY: "A seat opened after its last moment to book",
+    NoticeReason.BOOK_BY_PASSED: "It didn't fill again before its last moment to book",
+    NoticeReason.COURT_HOUR_LOST: "Its court went to another game before it filled "
+    "again",
+}
+
+
+def _game_called_off(
+    said: Said, *, sport: str, when: str, game: str, money: str
+) -> Words:
+    why = _NOBODY_PAID.get(said.reason or "")
+    if why is not None:
+        if said.reason == NoticeReason.LEFT_AFTER_THE_BOOK_BY and said.names:
+            why = f"{_people(said.names)} left after its last moment to book"
+        return Words(
+            title=f"Your {_hour(said.starts_at)} is called off · nobody paid",
+            body=f"{why} — {sport} at {said.club}.",
+        )
+    if said.you_left:
+        # A leaver's words: what became of the game they left, and their
+        # money — never a new game (Q108).
+        left = f"{_whose(said.starts_at)} at {said.club}, which you left"
+        if said.reason == NoticeReason.SHORT_AT_THE_CUT_OFF:
+            stands = (
+                "Your refund stands."
+                if said.amount_grosze is None
+                else f"Your {money} refund stands."
+            )
+            return Words(
+                title=f"{left}, was called off",
+                body=f"Your seat stayed empty, so it counts on your record. {stands}",
+            )
+        because = _CALLED_OFF_BECAUSE.get(said.reason or CancelReason.OTHER)
+        cancelled = f"{said.club} cancelled it" + (f" {because}" if because else "")
+        return Words(
+            title=f"{left}, was cancelled",
+            body=f"{cancelled} — you're refunded {money}.",
+        )
+    return Words(
+        title=f"Game called off · you're refunded {money}",
+        body=_called_off(said, sport=sport, when=when, game=game),
+    )
 
 
 def _called_off(said: Said, *, sport: str, when: str, game: str) -> str:

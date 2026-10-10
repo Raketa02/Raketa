@@ -83,6 +83,10 @@ class RefundReason(StrEnum):
     #: The club cancelled the booked game (#547): in full — the club bears the
     #: fees, as the seller.
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+    #: The club cancelled a booked game the player had left after the cut-off,
+    #: their seat still open and paid (#623, Q108): in full, as everybody's —
+    #: told in a leaver's words, and owed no new game.
+    CANCELLED_AFTER_YOU_LEFT = "CANCELLED_AFTER_YOU_LEFT"
 
 
 class FailureReason(StrEnum):

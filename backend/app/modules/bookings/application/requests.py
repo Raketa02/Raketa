@@ -10,7 +10,8 @@ whoever's seat opened — and **nothing here commits**:
   emailed at once, since its window is short;
 - **accepted** — the ordinary Game opens, exactly as a booked game's does, and
   the booking is booked; the money is the caller's, taken before this;
-- **turned down** — refused, or not answered in time: called off, nobody paid;
+- **turned down** — refused, or not answered in time: called off, nobody paid,
+  and each player emailed which it was (#623; Q105);
 - **withdrawn** — seats opened while it waited: nobody paid, nobody keeps a seat
   on it, and the game is filling again.
 """
@@ -24,12 +25,16 @@ from uuid import UUID
 from app.application.ports.mail import MailQueue
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, invariant
-from app.modules.bookings.application.request_emails import request_waiting_email
+from app.modules.bookings.application.request_emails import (
+    club_turned_it_down_email,
+    request_waiting_email,
+)
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.bookings.domain.ports import (
     BookingRepository,
     ClubDesks,
     GameOpening,
+    PlayerAddresses,
 )
 
 
@@ -151,10 +156,25 @@ class BookTheRequest:
 
 @final
 class CallOffTheRequest:
-    """The club refused it, with its own note — or never answered."""
+    """The club refused it, with its own note — or never answered. **Each
+    player on it is emailed which** (#623; the mechanics Q105), in the same
+    transaction: no money moves, but while push is off, email is the only way
+    to reach a player outside the app."""
 
-    def __init__(self, *, bookings: BookingRepository) -> None:
+    def __init__(
+        self,
+        *,
+        bookings: BookingRepository,
+        desks: ClubDesks,
+        players: PlayerAddresses,
+        mail: MailQueue,
+        app_link: str,
+    ) -> None:
         self._bookings = bookings
+        self._desks = desks
+        self._players = players
+        self._mail = mail
+        self._app_link = app_link
 
     async def refused(
         self, booking_id: UUID, *, reason: str | None, at: Instant
@@ -162,11 +182,33 @@ class CallOffTheRequest:
         booking = await self._loaded(booking_id)
         booking.refuse(reason=reason, at=at)
         await self._bookings.save(booking)
+        await self._email(booking, refused=True, at=at)
 
     async def unanswered(self, booking_id: UUID, *, at: Instant) -> None:
         booking = await self._loaded(booking_id)
         booking.time_out(at=at)
         await self._bookings.save(booking)
+        await self._email(booking, refused=False, at=at)
+
+    async def _email(self, booking: Booking, *, refused: bool, at: Instant) -> None:
+        desk = await self._desks.of(booking.club_id)
+        club = "the club" if desk is None else desk.club_name
+        addresses = await self._players.of(booking.players)
+        for player in booking.players:
+            address = addresses.get(player)
+            if address is None:
+                continue
+            await self._mail.enqueue(
+                club_turned_it_down_email(
+                    to=address.email,
+                    club=club,
+                    sport=booking.sport,
+                    starts_at=booking.start,
+                    refused=refused,
+                    link=self._app_link,
+                ),
+                at=at,
+            )
 
     async def _loaded(self, booking_id: UUID) -> Booking:
         return invariant(
@@ -182,13 +224,21 @@ class WithdrawTheRequest:
         self._bookings = bookings
 
     async def execute(
-        self, booking_id: UUID, *, player_ids: tuple[UUID, ...], at: Instant
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        left: tuple[UUID, ...] = (),
+        at: Instant,
     ) -> bool:
         """Answers whether a request was withdrawn — nothing for a game that
-        never went to its club, or whose club already answered."""
+        never went to its club, or whose club already answered. ``left`` is
+        those whose own act took their yes back."""
 
         booking = await self._bookings.load(booking_id)
-        if booking is None or not booking.withdraw_request(player_ids, at=at):
+        if booking is None or not booking.withdraw_request(
+            player_ids, left=left, at=at
+        ):
             return False
         await self._bookings.save(booking)
         return True

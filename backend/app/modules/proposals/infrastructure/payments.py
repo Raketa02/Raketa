@@ -166,6 +166,9 @@ _REASONS = {
     ),
     RefundReason.SEAT_TAKEN: PaymentsRefundReason.SEAT_TAKEN,
     RefundReason.CANCELLED_BY_THE_CLUB: PaymentsRefundReason.CANCELLED_BY_THE_CLUB,
+    RefundReason.CANCELLED_AFTER_YOU_LEFT: (
+        PaymentsRefundReason.CANCELLED_AFTER_YOU_LEFT
+    ),
 }
 
 

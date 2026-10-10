@@ -250,6 +250,7 @@ from app.modules.bookings.domain.ports import (
     GameChanges,
     GameNoShows,
     GameOpening,
+    PlayerAddresses,
     SummaryRepository,
 )
 from app.modules.bookings.infrastructure.booking_history import (
@@ -257,6 +258,7 @@ from app.modules.bookings.infrastructure.booking_history import (
 )
 from app.modules.bookings.application.daily_summary import SummariseNewBookings
 from app.modules.bookings.infrastructure.club_desks import AccountClubDesks
+from app.modules.bookings.infrastructure.player_addresses import UserPlayerAddresses
 from app.modules.bookings.infrastructure.event_sourced_summary_repository import (  # noqa: E501
     EventSourcedSummaryRepository,
 )
@@ -1782,9 +1784,20 @@ def build_club_requests(
         accept=BookTheRequest(
             bookings=bookings(), games=build_game_opening(session, runtime=runtime)
         ),
-        turn_down=CallOffTheRequest(bookings=bookings()),
+        turn_down=CallOffTheRequest(
+            bookings=bookings(),
+            desks=build_club_desks(session, runtime=runtime),
+            players=build_player_addresses(session),
+            mail=build_mail_queue(session),
+            app_link=f"{settings.APP_SCHEME}://",
+        ),
         withdraw=WithdrawTheRequest(bookings=bookings()),
     )
+
+
+def build_player_addresses(session: AsyncSession) -> PlayerAddresses:
+    """Whom the club's no, or its silence, is emailed to (#623)."""
+    return UserPlayerAddresses(build_user_repository(session))
 
 
 def build_proposal_player_names(session: AsyncSession) -> ProposalPlayerNames:

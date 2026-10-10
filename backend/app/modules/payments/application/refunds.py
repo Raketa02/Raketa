@@ -6,14 +6,16 @@ caller's transaction (``SeatChargeRefundDecided``), and ``SettleSeatCharges``
 refunds it from the outbox and records what the provider gave back and the card
 fee it kept. A crash between the two leaves a decision a subscriber retries.
 
-**Four reasons, two amounts.** A player who **left before the club's
+**Five reasons, two amounts.** A player who **left before the club's
 cut-off** is refunded at once **less the card fee**, which the provider never
 returns — the leaver bears it — and so is one who left **after** it, the moment
 somebody takes their seat (#545). A game **called off at its cut-off** gives
 everybody still in **everything back**: it is the club's own free-cancellation
 rule, so the club bears the fees — and so does a game **the club cancelled**
-(#547), its reason said in the email. Each player is emailed — every notice
-about money is.
+(#547), its reason said in the email, to everybody still in and to **a leaver
+whose seat it left open and paid**, who is told in a leaver's words and
+promised no new game (#623, Q108). Each player is emailed — every notice about
+money is.
 
 **Nothing here commits**: the act is the caller's.
 """
@@ -30,6 +32,7 @@ from app.modules.payments.application.seat_charge_emails import (
     CancelledBecause,
     game_called_off_email,
     game_cancelled_email,
+    game_you_left_cancelled_email,
     left_the_game_email,
     seat_taken_email,
 )
@@ -40,7 +43,16 @@ from app.modules.payments.domain.seat_charge import RefundReason, SeatCharge
 
 #: The reasons that give everything back: the club's own rules.
 _IN_FULL = frozenset(
-    {RefundReason.CALLED_OFF_AT_THE_CUT_OFF, RefundReason.CANCELLED_BY_THE_CLUB}
+    {
+        RefundReason.CALLED_OFF_AT_THE_CUT_OFF,
+        RefundReason.CANCELLED_BY_THE_CLUB,
+        RefundReason.CANCELLED_AFTER_YOU_LEFT,
+    }
+)
+
+#: The club's cancel, which says its reason.
+_CANCELLED = frozenset(
+    {RefundReason.CANCELLED_BY_THE_CLUB, RefundReason.CANCELLED_AFTER_YOU_LEFT}
 )
 
 
@@ -76,7 +88,7 @@ class RefundTheSeats:
         club's reason, on a game it cancelled."""
 
         invariant(
-            (reason is RefundReason.CANCELLED_BY_THE_CLUB) == (because is not None),
+            (reason in _CANCELLED) == (because is not None),
             f"a {reason} refund of {game_id} because {because}",
         )
         withhold_fee = reason not in _IN_FULL
@@ -128,6 +140,19 @@ class RefundTheSeats:
                     starts_at=charge.starts_at,
                     share_grosze=charge.amount_grosze,
                     fee_estimate_grosze=estimated_card_fee(charge.amount_grosze),
+                    app_link=self._app_link,
+                )
+            elif (
+                reason is RefundReason.CANCELLED_AFTER_YOU_LEFT and because is not None
+            ):
+                message = game_you_left_cancelled_email(
+                    to=payer.email,
+                    name=payer.name,
+                    club=club,
+                    sport=charge.sport,
+                    starts_at=charge.starts_at,
+                    refunded_grosze=charge.amount_grosze,
+                    because=because,
                     app_link=self._app_link,
                 )
             elif because is not None:

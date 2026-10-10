@@ -16,7 +16,8 @@ has for Raketa at an hour, its cut-off and its time to confirm (``clubs``, over
 what it sells); the ordinary Game a booking opens (``games``, over the use case
 a completed line-up opens one with); and, for an On request club, whom to tell
 that a game waits for its answer and what the club is called (``clubs``, over
-its own account and details — #543).
+its own account and details — #543) — and whom to tell it said no, or let its
+time run out (``users``, the players' addresses — #623).
 """
 
 from __future__ import annotations
@@ -314,6 +315,24 @@ class ClubDesks(Protocol):
 
     async def of(self, club_id: UUID) -> ClubDesk | None:
         """The club's desk, or ``None`` for a club that no longer exists."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class PlayerAddress:
+    """Whom an email to a player is addressed to."""
+
+    email: str
+
+
+@runtime_checkable
+class PlayerAddresses(Protocol):
+    """**A demand of the users context**: whom the club's no, or its silence,
+    is emailed to — each player on the request (#623; the mechanics Q105)."""
+
+    async def of(self, player_ids: Collection[UUID]) -> Mapping[UUID, PlayerAddress]:
+        """Each of these players. An account that no longer exists is absent."""
         ...
 
 

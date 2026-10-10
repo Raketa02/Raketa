@@ -1,7 +1,10 @@
 """*A booking is waiting for your answer*, as the desk reads it (the mechanics
 §16.8, §16.12; the screens B9) — and *a game was called off at the cut-off*
 (#544), the other email a club is sent at once — and *New bookings today*
-(#548), the one it is sent once a day.
+(#548), the one it is sent once a day. **And the club's answer, as each player
+reads it** (#623; Q105): *Kazimierz Padel said no* and *Kazimierz Padel didn't
+answer in time*, told apart, though no money moves — while push is off, email
+is the only way to reach a player outside the app.
 
 **At once, because the window is short**: an On request club has its time to
 confirm — thirty minutes by default — and nobody may be watching the website,
@@ -91,6 +94,47 @@ def request_waiting_email(
                 f"expires, nobody is charged and the hour is yours to sell again.",
             ),
             button_label="Answer the request",
+            button_url=link,
+        )
+    )
+
+
+#: The ``kind`` each of the club's two turn-downs is queued under (#623).
+CLUB_SAID_NO_KIND: Final = "bookings.club_said_no.player"
+CLUB_DID_NOT_ANSWER_KIND: Final = "bookings.club_did_not_answer.player"
+
+
+def club_turned_it_down_email(
+    *,
+    to: str,
+    club: str,
+    sport: Sport,
+    starts_at: Instant,
+    refused: bool,
+    link: str,
+) -> OutgoingMessage:
+    """*Kazimierz Padel said no*, or *… didn't answer in time* (#623; the
+    mechanics Q105) — the notice's title as the subject: the game, nobody paid,
+    and a new card first. Its no and its silence are told apart; the club's own
+    note on a refusal is its, never the player's."""
+
+    said = f"{club} said no" if refused else f"{club} didn't answer in time"
+    # *The club said no*, for a club that can no longer be named.
+    said = said[:1].upper() + said[1:]
+    return render(
+        ButtonEmail(
+            kind=CLUB_SAID_NO_KIND if refused else CLUB_DID_NOT_ANSWER_KIND,
+            to=to,
+            subject=said,
+            heading=said,
+            lines=(
+                f"{_SPORT_WORDS[sport]} at {club} — {_day_and_time(starts_at)} "
+                f"until {_wall(starts_at + _A_GAME):%H:%M}.",
+                "Nobody paid.",
+                "You'll get a new card first: the same players, at another hour "
+                "or club.",
+            ),
+            button_label="Open Raketa",
             button_url=link,
         )
     )

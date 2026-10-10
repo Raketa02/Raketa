@@ -35,11 +35,14 @@ from app.modules.bookings.domain.ports import (
     GameChanges,
     GameNoShows,
     GameOpening,
+    PlayerAddress,
+    PlayerAddresses,
 )
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.standing import GameStanding
 from app.shared.ids import new_uuid
+from tests.api import players_world as players
 from tests.api.administration_world import club_signs_up
 from tests.api.proposals_world import (
     MONDAY_MORNING,
@@ -143,6 +146,22 @@ async def test_a_club_s_desk_is_its_one_sign_in_and_its_name(
         email="desk@ogrody.pl", club_name="Ogrody 33"
     )
     assert await desks.of(new_uuid()) is None
+
+
+# --------------------------------------------------------------------------- #
+# PlayerAddresses — whom the club's no, or its silence, is emailed to (#623)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerAddresses))
+async def test_a_player_is_addressed_at_their_sign_in(implementation, client, session):
+    ola, _ = await players.register(client, "ola")
+    addresses: PlayerAddresses = implementation.build(session)
+
+    found = await addresses.of([ola, new_uuid()])
+
+    assert found == {ola: PlayerAddress(email="ola@example.com")}
+    assert await addresses.of([]) == {}
 
 
 # --------------------------------------------------------------------------- #

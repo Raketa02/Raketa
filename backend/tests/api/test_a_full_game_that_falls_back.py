@@ -149,6 +149,24 @@ def assert_seat_open_filling_again(card: dict, *, open_seats: int = 1) -> None:
     )
 
 
+async def falls_back_for(client, player: dict, booking: UUID) -> dict:
+    """The game on the player's Home as *Seat open*, nobody paid, uncounted by
+    the badge — and so on its details, with no Leave and no code. The card."""
+
+    read = await home_of(client, player)
+    [card] = read["games"]
+    assert card["booking_id"] == str(booking)
+    assert_seat_open_filling_again(card)
+    # Home's badge does not count it: it asks nothing of them.
+    assert read["needing_you"] == 0
+    details = await details_of(client, player, booking)
+    assert details.status_code == 200, details.text
+    assert_seat_open_filling_again(details.json())
+    # Its way out is *Withdraw*, a game still filling's — no Leave, no code.
+    assert (details.json()["leaving"], details.json()["check_in"]) == (None, None)
+    return card
+
+
 # --------------------------------------------------------------------------- #
 # Into Seat open
 # --------------------------------------------------------------------------- #
@@ -163,20 +181,10 @@ async def test_a_leave_while_the_club_decides_keeps_the_game_on_the_others_home(
 
     assert left.status_code == 204, left.text
     for player in (marta, ewa, sergio):
-        read = await home_of(client, player)
-        [card] = read["games"]
-        assert card["booking_id"] == str(waiting)
-        assert_seat_open_filling_again(card)
+        card = await falls_back_for(client, player, waiting)
         assert on_the_card(card) == {marta["id"], ewa["id"], sergio["id"]}
-        # Home's badge does not count it: it asks nothing of them.
-        assert read["needing_you"] == 0
         # It is in You're In too.
         assert await live_ids(client, player) == [str(waiting)]
-        details = await details_of(client, player, waiting)
-        assert details.status_code == 200, details.text
-        assert_seat_open_filling_again(details.json())
-        # Its way out is *Withdraw*, a game still filling's — no Leave, no code.
-        assert (details.json()["leaving"], details.json()["check_in"]) == (None, None)
     # The leaver's own Home: gone, as before.
     assert await cards_of(client, oscar) == []
     assert (await details_of(client, oscar, waiting)).status_code == 404
@@ -215,8 +223,7 @@ async def test_a_week_that_fills_with_another_game_falls_back_the_same(
     )
 
     for player in (marta, oscar, ewa):
-        [card] = await cards_of(client, player)
-        assert_seat_open_filling_again(card)
+        card = await falls_back_for(client, player, waiting)
         assert on_the_card(card) == {marta["id"], oscar["id"], ewa["id"]}
     assert str(waiting) not in [
         card["booking_id"] for card in await cards_of(client, sergio)
@@ -241,8 +248,7 @@ async def test_two_players_who_no_longer_fit_at_the_club_s_yes_fall_back_the_sam
 
     assert accepted.json()["outcome"] == "SEAT_OPENED", accepted.text
     for player in (marta, ewa, sergio):
-        [card] = await cards_of(client, player)
-        assert_seat_open_filling_again(card)
+        await falls_back_for(client, player, waiting)
     assert await cards_of(client, oscar) == []
 
 

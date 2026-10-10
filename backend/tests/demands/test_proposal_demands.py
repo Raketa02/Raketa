@@ -44,7 +44,7 @@ from app.modules.payments.domain.provider import Payment, PaymentStatus
 from app.modules.payments.domain.seat_charge import SeatCharge
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
-from app.modules.proposals.domain.home import ResultStage
+from app.modules.proposals.domain.home import BookingStage, ResultStage
 from app.modules.proposals.domain.club_bookings import CodeAtTheDesk
 from app.modules.proposals.domain.home import ClubCancelReason
 from app.modules.proposals.domain.ports import (
@@ -156,8 +156,12 @@ async def _booked(
     return await _saved_booking(session, booking)
 
 
-async def _waiting(session, *, start: Instant) -> Booking:
-    """A full game its On request club has not answered: no Game yet."""
+async def _waiting(
+    session, *, start: Instant, taken_back_from: UUID | None = None
+) -> Booking:
+    """A full game its On request club has not answered: no Game yet — or,
+    ``taken_back_from`` a player whose seat opened while it waited, a game
+    filling again (#624)."""
 
     booking = Booking.requested(
         booking_id=new_uuid(),
@@ -175,6 +179,10 @@ async def _waiting(session, *, start: Instant) -> Booking:
         filled_by=None,
         at=_at(),
     )
+    if taken_back_from is not None:
+        booking.withdraw_request(
+            (taken_back_from,), left=(taken_back_from,), at=_at()
+        )
     return await _saved_booking(session, booking)
 
 
@@ -210,6 +218,38 @@ async def test_a_player_s_booked_games_come_soonest_first_as_booked(
     assert (game.share_grosze, game.game_id) == (30_00, later.game_id)
     assert (game.sport, game.kind) == (Sport.PADEL, SearchMode.COMPETITIVE)
     assert await bookings.of_player(new_uuid(), since=None) == []
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerBookings))
+async def test_a_request_taken_back_is_a_game_filling_again_to_those_still_in(
+    implementation, session
+):
+    """Kuba's seat opened while the club decided (#624, Q106): the others keep
+    their places, and he no longer has one."""
+
+    booking = await _waiting(session, start=_at(48), taken_back_from=KUBA)
+    bookings: PlayerBookings = implementation.build(session)
+
+    [game] = await bookings.of_player(EWA, since=None)
+
+    assert game.booking_id == booking.booking_id
+    assert (game.stage, game.called_off) == (BookingStage.FILLING_AGAIN, None)
+    assert (game.first_side, game.second_side) == ((OLA,), (EWA, TOMEK))
+    assert await bookings.of_player(KUBA, since=None) == []
+    found = await bookings.find(booking.booking_id)
+    assert found is not None and found.filling_again
+
+
+@pytest.mark.parametrize("implementation", registered(ClubBookings))
+async def test_a_request_taken_back_is_no_booking_of_the_club_s(
+    implementation, session
+):
+    booking = await _waiting(session, start=_at(48), taken_back_from=KUBA)
+    club: ClubBookings = implementation.build(session)
+
+    assert (
+        await club.on_day(booking.club_id, start=_at(47), end=_at(49))
+    ) == []
 
 
 @pytest.mark.parametrize("implementation", registered(PlayerBookings))
@@ -474,7 +514,9 @@ async def test_a_request_is_answered_once_and_a_withdrawn_one_asked_again(
     await requests.turn_down(
         refused.proposal_id, answer=ClubAnswer.REFUSED, reason=None, at=_at()
     )
-    assert await requests.withdraw(accepted.proposal_id, player_ids=(KUBA,), at=_at())
+    assert await requests.withdraw(
+        accepted.proposal_id, player_ids=(KUBA,), left=(KUBA,), at=_at()
+    )
     await requests.ask(accepted, at=_at())
     game_id = await requests.accept(accepted.proposal_id, at=_at())
     await session.commit()

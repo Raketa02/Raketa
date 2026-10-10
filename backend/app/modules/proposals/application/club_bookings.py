@@ -259,11 +259,22 @@ class CancelTheGame:
         cancelled = await self._club.cancel(booking_id, because=because, at=now)
         await self._refunds.refund(
             booking_id,
-            cancelled.refunded,
+            cancelled.still_in,
             reason=RefundReason.CANCELLED_BY_THE_CLUB,
             because=because,
             at=now,
         )
+        # A leaver whose seat was still open and paid is refunded too — in a
+        # leaver's words, and owed no new game (Q108).
+        leavers = [p for p in cancelled.refunded if p not in cancelled.still_in]
+        if leavers:
+            await self._refunds.refund(
+                booking_id,
+                leavers,
+                reason=RefundReason.CANCELLED_AFTER_YOU_LEFT,
+                because=because,
+                at=now,
+            )
         # A rescue's payment somebody confirmed for a seat here and never took
         # is let go with the game: nobody pays it.
         await self._undecided.release(booking_id, keeping=(), at=now)
@@ -338,16 +349,18 @@ class CheckInAtTheDesk:
         if not await self._desk.checks_players_in(club_id):
             raise CheckInIsOff()
         seat = await self._club.seat_for(code, club_id=club_id, now=now)
+        if seat.booking_id is not None:
+            found = await self._bookings.find(seat.booking_id)
+            if found is not None and found.filling_again:
+                # A seat on a request taken back, at any club: no Game at a
+                # desk to check in to (#624).
+                raise CheckInCodeUnknown()
         if seat.where is CodeAtTheDesk.ANOTHER_CLUB:
             raise CheckInCodeForAnotherClub()
         if seat.booking_id is None or seat.player_id is None:
             raise CheckInCodeUnknown()
         booking_id, player_id = seat.booking_id, seat.player_id
         await self._proposals.load_for_update(booking_id)
-        found = await self._bookings.find(booking_id)
-        if found is not None and found.filling_again:
-            # A seat on a request taken back: no Game at the desk (#624).
-            raise CheckInCodeUnknown()
         game = await _the_clubs(self._bookings, club_id, booking_id)
         if seat.where is CodeAtTheDesk.ANOTHER_DAY:
             raise CheckInCodeForAnotherDay(starts_at=game.start.isoformat())

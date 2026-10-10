@@ -97,6 +97,8 @@ class NoticeORM(Base):
     until: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    #: Told to a player who had left the game, in a leaver's words (Q108).
+    you_left: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class NoticesOpenedORM(Base):

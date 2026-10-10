@@ -101,6 +101,8 @@ class RecordedNotice:
     own: bool = False
     #: The deadline it names, if its kind names one.
     until: Instant | None = None
+    #: Told to a player who had left the game (Q108).
+    you_left: bool = False
     #: Reached the list — given, or gathered into — since the player last
     #: opened it, and not their own: one the bell counts.
     new: bool = False
@@ -222,6 +224,23 @@ class GameBrief:
     #: payment — which they saw happen; ``None`` while it fills, and when the
     #: club's yes or a paused yes coming back booked it.
     filled_by: UUID | None
+    #: The last moment it can fill: past it, a game still filling is over —
+    #: one waiting for its club excepted.
+    book_by: Instant
+    #: When it went back to filling, full: its request taken back because a
+    #: seat opened while the club decided (Q106) — ``None`` while it waits, once
+    #: asked again, and on a game never full.
+    fell_back_at: Instant | None
+    #: Each leaver whose seat opened before the club's cut-off and nobody took
+    #: — on a game called off at its cut-off, whose empty seat called it off
+    #: (Q108). Empty on a game nobody left.
+    left_it_short: tuple[UUID, ...]
+
+    @property
+    def fell_back(self) -> bool:
+        """A full game gone back to filling before it was booked (Q106)."""
+
+        return self.fell_back_at is not None
 
 
 class GameBriefs(Protocol):
@@ -253,6 +272,11 @@ class PaidShare:
 
 class PaidShares(Protocol):
     async def of(self, charge_id: UUID) -> PaidShare | None: ...
+
+    async def of_player(self, game_id: UUID, player_id: UUID) -> PaidShare | None:
+        """The share this player paid for this game, and what giving it back
+        gives them — ``None`` for one who paid none."""
+        ...
 
 
 class SeatOffers(Protocol):

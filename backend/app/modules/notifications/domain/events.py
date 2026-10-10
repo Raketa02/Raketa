@@ -86,6 +86,12 @@ class NoticeGiven:
     game!* at a club that confirms (Q103) — kept, so the notice says the same
     whenever it is read; ``None`` where the kind names none, and on the rows
     recorded before it was asked.
+
+    ``you_left`` is a notice told to a player who had left the game, about
+    what then became of it — the call-off their empty seat caused, or the
+    club's cancel that refunded them — said in a leaver's words, never
+    promising them a new game (Q108). Defaulted for the rows recorded before
+    it was asked.
     """
 
     notice_id: UUID
@@ -109,6 +115,7 @@ class NoticeGiven:
     occurred_at: datetime
     own: bool = False
     until: datetime | None = None
+    you_left: bool = False
 
     def __post_init__(self) -> None:
         # JSON hands a list of strings back; the codec coerces a bare ``UUID``

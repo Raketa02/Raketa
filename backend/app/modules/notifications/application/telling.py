@@ -19,14 +19,24 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
   whose act put it there saw it happen, so theirs is their own (Q103).
 - ``SeatChargeFailed`` — *Confirm your payment*, to the payer.
 - ``SeatChargeRefundDecided`` — *Game called off · with the refund* or *You've
-  been refunded*, to the refunded; never a leaver's own refund.
-- ``BookingRefused``, ``BookingTimedOut`` — *The club couldn't take it*, to
-  everybody waiting on it.
+  been refunded*, to the refunded; never a leaver's own refund. A leaver the
+  club's cancel refunds is told in a leaver's words (Q108).
+- ``BookingRefused``, ``BookingTimedOut`` — *Kazimierz Padel said no* and
+  *… didn't answer in time*, to everybody waiting on it (Q105).
 - ``SeatLeft`` — *Someone left your game*, to everybody still seated; and *Fill
   in alerts*, to the pool the seat is offered to.
-- ``RequestWithdrawn`` — *Someone left your game*, to everybody still In, only
-  for a yes taken back.
-- ``ProposalExpired`` — *Your post didn't fill*, to its poster, still In.
+- ``CalledOffAtCutOff`` — to each leaver whose empty seat called it off, in a
+  leaver's words: it counts on their record, and their refund stands (Q108).
+- ``RequestWithdrawn`` — a full game falling back, to everybody still In
+  (Q104): *Oscar Bertran left your game — it's filling again* for a yes taken
+  back, *Your Fri 19:00 at Kazimierz Padel is filling again* for anything else,
+  never saying whose week filled, who no longer fits or whose card failed —
+  and, after the book-by, *Your Fri 19:00 is called off · nobody paid*.
+- ``ProposalExpired`` — *Your post didn't fill*, to its poster, still In; and
+  a full game gone back to filling, *called off · nobody paid*, to everybody
+  still In.
+- ``CourtHourLost`` — a full game gone back to filling, *called off · nobody
+  paid*, to everybody still In. A card that never filled still goes untold.
 - ``YesSaid``, ``YesResumed`` — *You complete it*, to the people named on the
   card whose yes would book it.
 - ``VersionDealt`` on a post — *Challenges for you*, to the newly dealt.
@@ -62,6 +72,7 @@ from app.modules.bookings.domain.events import (
     BookingRefused,
     BookingRequested,
     BookingTimedOut,
+    CalledOffAtCutOff,
     RequestWithdrawn,
     SeatLeft,
 )
@@ -90,6 +101,7 @@ from app.modules.payments.domain.events import (
 )
 from app.modules.payments.domain.seat_charge import RefundReason
 from app.modules.proposals.domain.events import (
+    CourtHourLost,
     ProposalExpired,
     Redealt,
     VersionDealt,
@@ -99,13 +111,15 @@ from app.modules.proposals.domain.events import (
 from app.shared.domain import DomainEvent
 
 #: A refund's reason, and what the player is told — a leaver's own refund is
-#: told nobody: it is their act, and its email says so.
+#: told nobody: it is their act, and its email says so. ``None`` is the club's
+#: own reason for cancelling.
 _REFUNDS: Final[dict[RefundReason, tuple[NoticeKind, NoticeReason | None]]] = {
     RefundReason.CALLED_OFF_AT_THE_CUT_OFF: (
         NoticeKind.GAME_CALLED_OFF,
         NoticeReason.SHORT_AT_THE_CUT_OFF,
     ),
     RefundReason.CANCELLED_BY_THE_CLUB: (NoticeKind.GAME_CALLED_OFF, None),
+    RefundReason.CANCELLED_AFTER_YOU_LEFT: (NoticeKind.GAME_CALLED_OFF, None),
     RefundReason.SEAT_TAKEN: (NoticeKind.REFUNDED, None),
 }
 
@@ -146,6 +160,7 @@ def _notice(
     reason: str | None = None,
     own: bool = False,
     until: Instant | None = None,
+    you_left: bool = False,
 ) -> Notice:
     return Notice(
         kind=kind,
@@ -162,6 +177,7 @@ def _notice(
         reason=reason,
         own=own,
         until=until,
+        you_left=you_left,
     )
 
 
@@ -278,16 +294,20 @@ class TellThePlayers:
         game = None if share is None else await self._games.about(share.game_id, at=at)
         if share is None or game is None:
             return
+        # A leaver the club's cancel refunds is told in a leaver's words, and
+        # opens the game they left, which they no longer have a seat on (Q108).
+        you_left = event.reason == RefundReason.CANCELLED_AFTER_YOU_LEFT
         await self._give.execute(
             event.player_id,
             _notice(
                 kind,
                 game,
                 key=f"{kind}:{key}",
-                opens=Opens.BOOKING,
+                opens=Opens.PROPOSAL if you_left else Opens.BOOKING,
                 amount_grosze=share.refunded_grosze,
                 # The club's cancel says the club's own reason.
                 reason=reason if reason is not None else game.cancel_reason,
+                you_left=you_left,
             ),
             at=at,
         )
@@ -388,36 +408,118 @@ class TellThePlayers:
             at=at,
         )
 
-    async def _left_while_waiting(
-        self, event: RequestWithdrawn, *, key: str, at: Instant
+    async def _called_off_short(
+        self, event: CalledOffAtCutOff, *, key: str, at: Instant
     ) -> None:
+        """**A leaver is told only when it touches them** (Q108): each leaver
+        whose empty seat called the game off at its cut-off — it counts on
+        their record, and their refund stands. Everybody still in is told by
+        their refund."""
+
         game = await self._games.about(event.booking_id, at=at)
         if game is None:
             return
-        # A seat opens while the club decides because somebody left — or because
-        # a share was refused at its yes, which is the refused player's to be
-        # told and nobody's departure.
-        leavers = tuple(p for p in event.player_ids if p in game.withdrawn)
-        if not leavers:
+        for leaver in game.left_it_short:
+            share = await self._shares.of_player(game.game_id, leaver)
+            await self._give.execute(
+                leaver,
+                _notice(
+                    NoticeKind.GAME_CALLED_OFF,
+                    game,
+                    key=f"{NoticeKind.GAME_CALLED_OFF}:{key}",
+                    # They have no seat on it: the game they left opens.
+                    opens=Opens.PROPOSAL,
+                    amount_grosze=None if share is None else share.refunded_grosze,
+                    reason=NoticeReason.SHORT_AT_THE_CUT_OFF,
+                    you_left=True,
+                ),
+                at=at,
+            )
+
+    async def _fell_back(
+        self, event: RequestWithdrawn, *, key: str, at: Instant
+    ) -> None:
+        """**A full game falls back, and everybody still In is told** (Q104):
+        a seat opened while the club decided, so the request is off. Somebody
+        who took their own yes back is named — *it's filling again*; any other
+        seat opened by what happened to its player, which is never said. Past
+        its book-by it can no longer fill: *called off · nobody paid*."""
+
+        game = await self._games.about(event.booking_id, at=at)
+        # Full again before this was delivered — asked again, or booked — it
+        # is told by that.
+        if game is None or game.waiting_for_the_club or game.booked:
             return
+        opened = set(event.player_ids)
+        # Still out by their own act; one who came back since is nobody's
+        # departure.
+        left = tuple(player for player in event.left if player in game.withdrawn)
+        if at >= game.book_by:
+            kind, reason = (
+                NoticeKind.GAME_CALLED_OFF,
+                NoticeReason.LEFT_AFTER_THE_BOOK_BY,
+            )
+        elif left:
+            kind, reason = NoticeKind.SOMEONE_LEFT, NoticeReason.FILLING_AGAIN
+        else:
+            kind, reason = NoticeKind.SOMEONE_LEFT, NoticeReason.FELL_BACK
         await self._tell(
-            [player for player in game.in_ if player not in event.player_ids],
+            [player for player in game.in_ if player not in opened],
             _notice(
-                NoticeKind.SOMEONE_LEFT,
+                kind,
                 game,
-                key=f"{NoticeKind.SOMEONE_LEFT}:{key}",
+                key=f"{kind}:{key}",
                 opens=Opens.PROPOSAL,
-                people=leavers,
-                reason=NoticeReason.FILLING_AGAIN,
+                people=left,
+                reason=reason,
             ),
             at=at,
         )
 
-    async def _post_unfilled(
-        self, event: ProposalExpired, *, key: str, at: Instant
-    ) -> None:
+    async def _expired(self, event: ProposalExpired, *, key: str, at: Instant) -> None:
+        """A full game gone back to filling that reached its book-by first is
+        called off, nobody paid, to everybody still In (Q104, Q106) — told
+        already if it fell back after its book-by. Any other card that never
+        filled goes untold, a post's poster but for *your post didn't fill*."""
+
         game = await self._games.about(event.proposal_id, at=at)
-        if game is None or game.posted_by is None or game.posted_by not in game.in_:
+        if game is None:
+            return
+        if game.fell_back_at is None:
+            await self._post_unfilled(game, key=key, at=at)
+        elif game.fell_back_at < game.book_by:
+            await self._fallen_back_ended(
+                game, NoticeReason.BOOK_BY_PASSED, key=key, at=at
+            )
+
+    async def _court_lost(self, event: CourtHourLost, *, key: str, at: Instant) -> None:
+        """A full game gone back to filling whose court went to another game
+        first is called off, nobody paid (Q104). A card that never filled goes
+        untold."""
+
+        game = await self._games.about(event.proposal_id, at=at)
+        if game is not None and game.fell_back:
+            await self._fallen_back_ended(
+                game, NoticeReason.COURT_HOUR_LOST, key=key, at=at
+            )
+
+    async def _fallen_back_ended(
+        self, game: GameBrief, reason: NoticeReason, *, key: str, at: Instant
+    ) -> None:
+        await self._tell(
+            game.in_,
+            _notice(
+                NoticeKind.GAME_CALLED_OFF,
+                game,
+                key=f"{NoticeKind.GAME_CALLED_OFF}:{key}",
+                opens=Opens.PROPOSAL,
+                reason=reason,
+            ),
+            at=at,
+        )
+
+    async def _post_unfilled(self, game: GameBrief, *, key: str, at: Instant) -> None:
+        if game.posted_by is None or game.posted_by not in game.in_:
             return
         await self._give.execute(
             game.posted_by,
@@ -513,8 +615,10 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     BookingRefused: TellThePlayers._turned_down,
     BookingTimedOut: TellThePlayers._turned_down,
     SeatLeft: TellThePlayers._left,
-    RequestWithdrawn: TellThePlayers._left_while_waiting,
-    ProposalExpired: TellThePlayers._post_unfilled,
+    CalledOffAtCutOff: TellThePlayers._called_off_short,
+    RequestWithdrawn: TellThePlayers._fell_back,
+    ProposalExpired: TellThePlayers._expired,
+    CourtHourLost: TellThePlayers._court_lost,
     YesSaid: TellThePlayers._one_seat_left,
     YesResumed: TellThePlayers._one_seat_left,
     VersionDealt: TellThePlayers._dealt,

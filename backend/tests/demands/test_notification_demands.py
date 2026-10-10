@@ -93,6 +93,25 @@ async def _saved(session, proposal: Proposal) -> Proposal:
     return proposal
 
 
+def _requested(proposal: Proposal, *, at: Instant) -> Booking:
+    return Booking.requested(
+        booking_id=proposal.proposal_id,
+        pool_id=proposal.pool.id,
+        club_id=proposal.club_id,
+        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        start=START,
+        share_grosze=30_00,
+        first_side=(OLA, KUBA),
+        second_side=(EWA, TOMEK),
+        cut_off=START - timedelta(hours=24),
+        answer_by=at + timedelta(minutes=30),
+        filled_by=TOMEK,
+        at=at,
+    )
+
+
 def _booked(proposal: Proposal, *, at: Instant) -> Booking:
     return Booking.confirmed(
         booking_id=proposal.proposal_id,
@@ -297,6 +316,74 @@ async def test_a_game_the_club_cancelled_says_why(implementation, session):
 
 
 @pytest.mark.parametrize("implementation", registered(GameBriefs))
+async def test_a_full_game_gone_back_to_filling_says_since_when(
+    implementation, session
+):
+    """Kuba left while the club decided: the request was taken back, and the
+    game is filling again (Q106) — until it is asked again."""
+
+    games: GameBriefs = implementation.build(session)
+    proposal = await _a_proposal(session)
+    for player in (OLA, KUBA, EWA, TOMEK):
+        proposal.say_yes(player, at=NOW)
+    proposal.withdraw_yes(KUBA, at=NOW + timedelta(minutes=5))
+    await _saved(session, proposal)
+    booking = _requested(proposal, at=NOW)
+    booking.withdraw_request((KUBA,), left=(KUBA,), at=NOW + timedelta(minutes=5))
+    bookings = build_booking_repository(session, **_store(session))
+    await bookings.save(booking)
+    await session.commit()
+    later = NOW + timedelta(minutes=10)
+
+    brief = await games.about(proposal.proposal_id, at=later)
+
+    assert brief is not None
+    assert (brief.fell_back, brief.fell_back_at) == (True, NOW + timedelta(minutes=5))
+    assert (brief.filling, brief.book_by) == (True, START - timedelta(hours=2))
+    assert brief.in_ == (OLA, EWA, TOMEK)
+    booking.request_again(
+        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
+        first_side=(OLA, ZOSIA),
+        second_side=(EWA, TOMEK),
+        cut_off=START - timedelta(hours=24),
+        answer_by=later + timedelta(minutes=30),
+        filled_by=ZOSIA,
+        at=later,
+    )
+    await bookings.save(booking)
+    await session.commit()
+    assert (await games.about(proposal.proposal_id, at=later)).fell_back is False
+    booked = await _saved(session, await _a_proposal(session))
+    await bookings.save(_booked(booked, at=NOW))
+    await session.commit()
+    assert (await games.about(booked.proposal_id, at=later)).fell_back is False
+
+
+@pytest.mark.parametrize("implementation", registered(GameBriefs))
+async def test_a_game_called_off_at_its_cut_off_names_whose_empty_seat_did_it(
+    implementation, session
+):
+    """Kuba and Ewa left before the cut-off; Zosia took the seat that opened
+    first, Kuba's. Ewa's empty seat called it off."""
+
+    games: GameBriefs = implementation.build(session)
+    proposal = await _saved(session, await _a_proposal(session))
+    booking = _booked(proposal, at=NOW)
+    booking.leave(KUBA, at=NOW + timedelta(hours=1))
+    booking.leave(EWA, at=NOW + timedelta(hours=2))
+    booking.rescue(ZOSIA, at=NOW + timedelta(hours=3))
+    cut_off = START - timedelta(hours=24)
+    booking.call_off_at_the_cut_off(at=cut_off)
+    await build_booking_repository(session, **_store(session)).save(booking)
+    await session.commit()
+
+    brief = await games.about(proposal.proposal_id, at=cut_off)
+
+    assert brief is not None
+    assert brief.left_it_short == (EWA,)
+
+
+@pytest.mark.parametrize("implementation", registered(GameBriefs))
 async def test_no_such_game_is_nothing(implementation, session):
     games: GameBriefs = implementation.build(session)
 
@@ -347,6 +434,18 @@ async def test_a_share_given_back_less_the_card_fee_or_whole(implementation, ses
     assert given_less.game_id == less.game_id
     assert given_whole is not None and given_whole.refunded_grosze == 30_00
     assert await shares.of(new_uuid()) is None
+
+
+@pytest.mark.parametrize("implementation", registered(PaidShares))
+async def test_a_player_s_share_of_a_game_is_found_by_the_game(implementation, session):
+    shares: PaidShares = implementation.build(session)
+    less = await _a_paid_share(session, withhold_fee=True)
+
+    given = await shares.of_player(less.game_id, KUBA)
+
+    assert given is not None and given.refunded_grosze == 28_55
+    assert await shares.of_player(less.game_id, OLA) is None
+    assert await shares.of_player(new_uuid(), KUBA) is None
 
 
 # --------------------------------------------------------------------------- #

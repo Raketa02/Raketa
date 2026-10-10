@@ -349,6 +349,13 @@ class Booking:
         return self.seats - len(self.players)
 
     @property
+    def taken_back(self) -> bool:
+        """Its request was taken back because a seat opened: the game is
+        filling again, its people still In keeping their places (Q106)."""
+
+        return self.called_off is CalledOff.SEAT_OPENED
+
+    @property
     def is_booked(self) -> bool:
         """Booked and not called off — whole, or with a seat open."""
 

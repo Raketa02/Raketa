@@ -24,6 +24,7 @@ from app.modules.bookings.domain.ports import BookingRepository
 from app.modules.notifications.domain.ports import GameBrief, PaidShare
 from app.modules.payments.domain.card_fee import estimated_card_fee
 from app.modules.payments.domain.ports import SeatChargeRepository
+from app.modules.payments.domain.seat_charge import PAID, SeatCharge
 from app.modules.proposals.application.group_deck import ReadGroupDeck
 from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.ports import (
@@ -102,6 +103,15 @@ class BookedAndProposedGames:
             if booking is None or booking.cancel_reason is None
             else booking.cancel_reason.value,
             filled_by=proposal.filled_by,
+            book_by=proposal.book_by,
+            fell_back_at=None if booking is None else booking.taken_back_at,
+            left_it_short=()
+            if booking is None
+            else tuple(
+                left.player_id
+                for left in booking.departures
+                if left.is_open and left.at < booking.cut_off
+            ),
         )
 
 
@@ -164,16 +174,25 @@ class SeatChargeShares:
 
     async def of(self, charge_id: UUID) -> PaidShare | None:
         charge = await self._charges.load(charge_id)
-        if charge is None:
-            return None
-        withheld = (
-            estimated_card_fee(charge.amount_grosze)
-            if charge.refund_withholds_fee
-            else 0
-        )
-        return PaidShare(
-            game_id=charge.game_id, refunded_grosze=charge.amount_grosze - withheld
-        )
+        return None if charge is None else _share(charge)
+
+    async def of_player(self, game_id: UUID, player_id: UUID) -> PaidShare | None:
+        paid = [
+            charge
+            for charge in await self._charges.of_game(game_id)
+            if charge.player_id == player_id and charge.status in PAID
+        ]
+        # A share given back is the one that was paid; there is one at most.
+        return _share(paid[-1]) if paid else None
+
+
+def _share(charge: SeatCharge) -> PaidShare:
+    withheld = (
+        estimated_card_fee(charge.amount_grosze) if charge.refund_withholds_fee else 0
+    )
+    return PaidShare(
+        game_id=charge.game_id, refunded_grosze=charge.amount_grosze - withheld
+    )
 
 
 @final

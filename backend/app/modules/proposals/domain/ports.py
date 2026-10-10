@@ -657,11 +657,18 @@ class ClubRequests(Protocol):
         ...
 
     async def withdraw(
-        self, booking_id: UUID, *, player_ids: tuple[UUID, ...], at: Instant
+        self,
+        booking_id: UUID,
+        *,
+        player_ids: tuple[UUID, ...],
+        left: tuple[UUID, ...] = (),
+        at: Instant,
     ) -> bool:
         """These players' seats opened while the game waited: the request is
-        off, and nobody keeps a seat on it. Whether one was waiting to
-        withdraw."""
+        off, and the people still In keep their places (Q106). ``left`` is
+        those of them who took their own yes back — told by name; every other
+        seat opened by what happened to its player, which nobody is told
+        (Q104). Whether one was waiting to withdraw."""
         ...
 
 
@@ -768,6 +775,9 @@ class RefundReason(StrEnum):
     SEAT_TAKEN = "SEAT_TAKEN"
     #: The club cancelled the booked game (#547): in full.
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+    #: The club cancelled a booked game the player had left, their seat still
+    #: paid (#623, Q108): in full, in a leaver's words, no new game owed.
+    CANCELLED_AFTER_YOU_LEFT = "CANCELLED_AFTER_YOU_LEFT"
 
 
 @runtime_checkable
