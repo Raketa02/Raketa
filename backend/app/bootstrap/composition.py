@@ -2570,6 +2570,11 @@ def build_read_booking_details(
     """A booked game's details, for a player in it (#542)."""
     return ReadBookingDetails(
         bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
         results=build_game_results(session, runtime=runtime),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),

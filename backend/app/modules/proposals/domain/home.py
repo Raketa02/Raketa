@@ -11,9 +11,12 @@ it unchanged (Q6).
 **Home holds a game its club has still to answer too** (#543): at an On request
 club a full game is a booking *waiting for the club* — nobody has paid, there is
 no Game yet and no court given — and the club's no, or its silence, calls it
-off, with nobody paid and the reason said. A seat opening while it waited takes
-the request back: it leaves Home, and the people still In find the game filling
-again in You're In.
+off, with nobody paid and the reason said. **A seat opening while it waited takes
+the request back, and the game stays on the Home of the people still In as
+*Seat open*** (#624, Q106): nobody paid, it asks nothing of them, and it is
+folded against its proposal on every read (``as_filling_again``) — who is In
+now, and whether its book-by passed, or its court went, before it filled again,
+which calls it off.
 **Somebody may leave a booked game** (#544): it is *seat open* until its hour —
 and **a game plays full or not at all**, so one with a seat open since before
 its cut-off is *called off* from the cut-off on, read off the clock whether or
@@ -36,18 +39,19 @@ reads from moves when one of them does.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from dataclasses import dataclass, field
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from datetime import timedelta
 from enum import StrEnum
 from typing import Final, final
 from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
-from app.kernel import SPORT_SPECS, Instant, Sport, exhaustive, instant
+from app.kernel import SPORT_SPECS, Instant, Sport, exhaustive, instant, invariant
 from app.modules.bookings.domain.check_in import is_the_game_day
 from app.modules.games.domain.windows import A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR
 from app.modules.proposals.domain.deck import GAME_LENGTH, Sides
+from app.modules.proposals.domain.proposal import Standing
 
 
 class HomeStatus(StrEnum):
@@ -82,6 +86,10 @@ class BookingStage(StrEnum):
     #: Booked and paid, and somebody left: a seat is open (#544).
     SEAT_OPEN = "SEAT_OPEN"
     CALLED_OFF = "CALLED_OFF"
+    #: Its request was taken back because a seat opened while the club decided:
+    #: a full game gone back to filling, nobody paid, its people still In
+    #: keeping their places (#624, Q106).
+    FILLING_AGAIN = "FILLING_AGAIN"
 
 
 class CalledOffReason(StrEnum):
@@ -97,6 +105,14 @@ class CalledOffReason(StrEnum):
     #: The club cancelled it, with its reason: everybody still in is refunded
     #: in full, and it is on nobody's record (#547).
     CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+    #: It went back to filling and its book-by came before it was full again —
+    #: or a seat opened after its book-by while the club decided, so it could
+    #: not fill again: nobody paid (#624, Q104, Q106).
+    BOOK_BY_PASSED = "BOOK_BY_PASSED"
+    #: It went back to filling and its court went to another game before it
+    #: was full again: nobody paid, and its people are dealt a new card first
+    #: (#624).
+    COURT_HOUR_LOST = "COURT_HOUR_LOST"
 
 
 class ClubCancelReason(StrEnum):
@@ -218,11 +234,27 @@ class BookedGame:
 
     @property
     def open_seats(self) -> int:
-        """Seats a leaver left open on a booked game (#544)."""
+        """Seats a leaver left open on a booked game (#544) — and the seats
+        nobody is In on, on a game gone back to filling while it fills (#624)."""
 
+        if self.stage is BookingStage.FILLING_AGAIN and self.called_off is None:
+            return SPORT_SPECS[self.sport].players - len(self.players)
         if self.stage is not BookingStage.SEAT_OPEN:
             return 0
         return SPORT_SPECS[self.sport].players - len(self.players)
+
+    @property
+    def filling_again(self) -> bool:
+        """A full game that went back to filling before it was booked (Q106)."""
+
+        return self.stage is BookingStage.FILLING_AGAIN
+
+    @property
+    def club_confirms(self) -> bool:
+        """Its club confirms each game: it was put to the club once full — and,
+        gone back to filling, is put to it again once full again (#624)."""
+
+        return self.answer_by is not None
 
     def called_off_reason(self, now: Instant) -> CalledOffReason | None:
         """Why it will not be played at ``now`` — a seat open since before the
@@ -346,6 +378,9 @@ def status_of(
         return HomeStatus.WAITING_FOR_THE_CLUB
     if game.called_off_reason(now) is not None:
         return HomeStatus.CALLED_OFF
+    if game.stage is BookingStage.FILLING_AGAIN:
+        # A full game gone back to filling: a seat open, nobody paid (Q106).
+        return HomeStatus.SEAT_OPEN
     stage = ResultStage.ENTRY_OPEN if result is None else result.stage
     if stage is ResultStage.ENTRY_OPEN and game.stage is BookingStage.SEAT_OPEN:
         # A Game folded before its hour reads it ahead; one that could not be
@@ -480,6 +515,9 @@ def leave_terms(
     """What *Leave the game* would cost now — ``None`` where there is no such
     button: once the hour has come, and on a game that is over."""
 
+    if game.filling_again:
+        # Its way out is a game still filling's: *Withdraw*, free (#624).
+        return None
     leaving = leaving_of(game, now=now)
     if leaving is Leaving.WHILE_WAITING_FOR_THE_CLUB:
         return LeaveTerms(kind=leaving, refund_grosze=0, card_fee_grosze=0)
@@ -528,7 +566,8 @@ def state_of(
     status = status_of(game, result, now=now)
     return BookedState(
         status=status,
-        needs_you=needs_you(status, result),
+        # A game gone back to filling asks nothing of those still In (Q106).
+        needs_you=needs_you(status, result) and not game.filling_again,
         money=money_of(game, card_fee_grosze=card_fee_grosze, now=now),
         called_off=game.called_off_reason(now)
         if status is HomeStatus.CALLED_OFF
@@ -607,3 +646,43 @@ def check_in_shown(status: HomeStatus, *, start: Instant, now: Instant) -> bool:
     there is a game at the desk to check in to (the mechanics §15.1)."""
 
     return status not in _NO_GAME_AT_THE_DESK and is_the_game_day(start, now=now)
+
+
+def as_filling_again(
+    game: BookedGame, *, in_: Sequence[UUID], standing: Standing
+) -> BookedGame:
+    """**A full game that went back to filling, as its proposal has it now**
+    (#624, Q106) — the booking keeps who was In when its request was taken
+    back; the proposal, everything since. The people In now stand on the sides
+    they were drawn on, anybody In since in the first place free; somebody who
+    took their yes back since is off them. **Called off, nobody paid**, once
+    the proposal is over before it was full again: its book-by passed — or a
+    seat opened after it, while the club decided — or its court went to
+    another game."""
+
+    invariant(
+        game.stage is BookingStage.FILLING_AGAIN,
+        f"{game.booking_id} is folded as filling again from {game.stage}",
+    )
+    per_side = SPORT_SPECS[game.sport].players // 2
+    first = [player for player in game.first_side if player in in_]
+    second = [player for player in game.second_side if player in in_]
+    for player in in_:
+        if player not in first and player not in second:
+            (first if len(first) < per_side else second).append(player)
+    ended = (
+        None
+        if standing is Standing.FILLING
+        else _FILLING_AGAIN_ENDS.get(standing, CalledOffReason.BOOK_BY_PASSED)
+    )
+    return replace(
+        game, first_side=tuple(first), second_side=tuple(second), called_off=ended
+    )
+
+
+#: How a game gone back to filling ends before it is full again, as its card
+#: says it. A post its poster withdrew with nobody else In is nobody's to read.
+_FILLING_AGAIN_ENDS: Final = {
+    Standing.EXPIRED: CalledOffReason.BOOK_BY_PASSED,
+    Standing.COURT_HOUR_LOST: CalledOffReason.COURT_HOUR_LOST,
+}

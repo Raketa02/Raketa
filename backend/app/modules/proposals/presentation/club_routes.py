@@ -18,6 +18,7 @@ every act on a game locks its proposal first.
 from __future__ import annotations
 
 from datetime import date, datetime
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -26,7 +27,7 @@ from pydantic import BaseModel, Field
 
 from app.core.exception_handlers import ErrorResponse
 from app.engines.matchfit.core import SearchMode
-from app.kernel import Sport
+from app.kernel import Instant, Sport, invariant
 from app.modules.clubs.presentation.dependencies import CurrentClubAccountDep
 from app.modules.proposals.application.club_bookings import (
     CheckedIn,
@@ -48,7 +49,7 @@ from app.modules.proposals.domain.club_bookings import (
     price_of,
 )
 from app.modules.proposals.domain.deck import GAME_LENGTH
-from app.modules.proposals.domain.home import CalledOffReason, ClubCancelReason
+from app.modules.proposals.domain.home import BookedGame, ClubCancelReason
 from app.modules.proposals.presentation.dependencies import (
     AcceptTheRequestDep,
     CancelTheGameDep,
@@ -66,6 +67,28 @@ router = APIRouter(prefix="/bookings", tags=["club"])
 check_ins_router = APIRouter(prefix="/check-ins", tags=["club"])
 #: The Money page reads here (#548).
 money_router = APIRouter(prefix="/money", tags=["club"])
+
+
+# The four reasons a booking of the club's can come to, as its desk reads them.
+# The players' reasons for a game gone back to filling (``BOOK_BY_PASSED``,
+# ``COURT_HOUR_LOST``, #624) are never the club's — such a game is on no page
+# of its — so the club's document keeps the players' enum's name and its four
+# values, and says nothing of them.
+class CalledOffReason(StrEnum):
+    """Why a game will not be played (the mechanics §14.1)."""
+
+    REFUSED = "REFUSED"
+    NO_ANSWER = "NO_ANSWER"
+    SHORT_AT_THE_CUT_OFF = "SHORT_AT_THE_CUT_OFF"
+    CANCELLED_BY_THE_CLUB = "CANCELLED_BY_THE_CLUB"
+
+
+def _reason_for_the_club(game: BookedGame, *, read_at: Instant) -> CalledOffReason:
+    reason = invariant(
+        called_off_for_the_club(game, now=read_at),
+        f"{game.booking_id} is called off for the club with no reason",
+    )
+    return CalledOffReason(reason.value)
 
 
 class WaitingPlayerSchema(BaseModel):
@@ -386,11 +409,9 @@ class ClubBookingSchema(BaseModel):
             sport=game.sport,
             kind=game.kind,
             status=row.status,
-            called_off_reason=(
-                called_off_for_the_club(game, now=day.read_at)
-                if row.status is ClubStatus.CALLED_OFF
-                else None
-            ),
+            called_off_reason=_reason_for_the_club(game, read_at=day.read_at)
+            if row.status is ClubStatus.CALLED_OFF
+            else None,
             cancel_reason=(
                 game.cancel_reason if row.status is ClubStatus.CALLED_OFF else None
             ),

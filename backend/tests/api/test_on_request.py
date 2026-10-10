@@ -125,6 +125,17 @@ async def the_card(client, player: dict) -> dict:
     return card
 
 
+async def falls_back_on_the_home_of(client, player: dict, proposal: UUID) -> int:
+    """The game, gone back to filling, on the player's Home as *Seat open* —
+    nobody paid (#624, Q106). How many seats are open."""
+
+    [card] = await home_of(client, player)
+    assert card["booking_id"] == str(proposal)
+    assert (card["status"], card["filling_again"]) == ("SEAT_OPEN", True)
+    assert card["money"]["paid"] is False
+    return card["open_seats"]
+
+
 async def waiting_at(client, desk: dict) -> list[dict]:
     read = await client.get(WAITING, headers=desk)
     assert read.status_code == 200, read.text
@@ -475,10 +486,10 @@ async def test_a_payment_that_fails_on_the_club_s_yes_opens_its_seat_and_nobody_
     assert payments.called("capture") == []
     for player in players:
         assert await receipts(client, player) == []
-    # The request is taken back from everybody; the three still In find the
-    # game filling again.
+    # The request is taken back; the three still In find the game filling
+    # again, and on their Home as *Seat open* (Q106).
     for player in players[:3]:
-        assert await home_of(client, player) == []
+        assert await falls_back_on_the_home_of(client, player, proposal) == 1
         assert await live_ids(client, player) == [str(proposal)]
     assert await home_of(client, tomek) == []
     owed = await client.get(
@@ -506,9 +517,10 @@ async def test_two_payments_failing_on_the_club_s_yes_open_both_seats(
     accepted = await accepts(client, desk, proposal)
 
     assert accepted.json()["outcome"] == "SEAT_OPENED"
-    for player in players:
-        assert await home_of(client, player) == []
+    for player in players[:2]:
+        assert await falls_back_on_the_home_of(client, player, proposal) == 2
     for player in declining:
+        assert await home_of(client, player) == []
         owed = await client.get(
             "/api/v1/players/me/payments-to-confirm", headers=player["headers"]
         )
@@ -657,9 +669,9 @@ async def test_leaving_while_it_waits_withdraws_the_yes_and_the_request(
     assert await home_of(client, kuba) == []
     assert await live_ids(client, kuba) == []
     for player in (four[0], *four[2:]):
-        # The request leaves Home; still In, they find the game back in the
-        # decks with Kuba's seat open.
-        assert await home_of(client, player) == []
+        # The request is taken back; still In, they find the game back in the
+        # decks with Kuba's seat open — and on their Home as *Seat open*.
+        assert await falls_back_on_the_home_of(client, player, proposal) == 1
         assert await live_ids(client, player) == [str(proposal)]
     details = await details_of(client, four[0], proposal)
     assert (details["status"], details["in_count"]) == ("FILLING", 3)
@@ -713,7 +725,7 @@ async def test_leaving_the_group_while_it_waits_takes_the_request_with_the_yes(
 
     assert await waiting_at(client, desk) == []
     assert await home_of(client, four[2]) == []
-    assert await home_of(client, four[0]) == []
+    assert await falls_back_on_the_home_of(client, four[0], proposal) == 1
 
 
 async def test_one_game_per_hour_takes_a_waiting_game_s_request_with_the_yes(
@@ -744,7 +756,7 @@ async def test_one_game_per_hour_takes_a_waiting_game_s_request_with_the_yes(
 
     assert await waiting_at(client, desk) == []
     assert await the_court_is_on_sale(session_factory, clock, club)
-    assert await home_of(client, four[1]) == []
+    assert await falls_back_on_the_home_of(client, four[1], waiting) == 1
     assert str(waiting) not in await live_ids(client, four[0])
 
 

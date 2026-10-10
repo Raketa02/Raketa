@@ -10,9 +10,9 @@ money.
 answer is due — and the court is reserved for it until the club answers.
 ``BookingAccepted`` books it and names the Game it opened; ``BookingRefused`` and
 ``BookingTimedOut`` call it off with nobody paid; and ``RequestWithdrawn`` takes
-it back because a seat opened while it waited — nobody has a seat on it any
-more, the game is filling again, and full again it is ``BookingRequested`` once
-more on the same stream.
+it back because a seat opened while it waited — the game is filling again, the
+people still In keep their places on it, and full again it is
+``BookingRequested`` once more on the same stream.
 
 **Then the booked game is lived** (#544): ``SeatLeft`` is a player leaving it —
 their seat open, the game still the others' — and ``CalledOffAtCutOff`` is a
@@ -152,15 +152,25 @@ class BookingTimedOut:
 class RequestWithdrawn:
     """A seat opened while the game waited for the club — each of
     ``player_ids`` left, or could no longer be In — so the request is off and
-    nobody paid. **Nobody keeps a seat on it**: the people still In are on the
-    game, filling again, and when it is full the club is asked again."""
+    nobody paid. **The people still In keep their places** (Q106): the game is
+    filling again, *Seat open* on their Home, and when it is full the club is
+    asked again.
+
+    ``left`` is those of them who took their own yes back — *Leave*,
+    *Withdraw*, leaving the group, a block — whom the others are told by name;
+    every other seat opened by what happened to its player (another game took
+    their hour or their week, a pair stopped fitting, a share refused at the
+    club's yes), which nobody is told (Q104). Empty on the rows recorded before
+    it was asked."""
 
     booking_id: UUID
     player_ids: tuple[UUID, ...]
     occurred_at: datetime
+    left: tuple[UUID, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "player_ids", _uuids(self.player_ids))
+        object.__setattr__(self, "left", _uuids(self.left))
 
 
 @dataclass(frozen=True)

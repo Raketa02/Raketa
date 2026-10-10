@@ -226,10 +226,12 @@ async def say_no(proposal_id: UUID, user: CurrentUserDep, say: SayNoDep) -> Resp
         "takes the post with them**; with others In, the game carries on without "
         "them.\n\n"
         "**While an On request club decides, this is *Leave the game*** (#543): "
-        "nobody has paid; the request to the club is called off "
-        "(`CALLED_OFF` · `SEAT_OPENED` on the others' Home), the held court is "
-        "free, and the game is back in the decks with this seat open — the "
-        "others still In. Full again, it goes to the club again."
+        "nobody has paid; the request to the club is taken back, the held court "
+        "is free, and the game is back in the decks with this seat open — the "
+        "others still In, and on their Home as `SEAT_OPEN` with `filling_again` "
+        "(#624). Full again, it goes to the club again; past its book-by it is "
+        "`CALLED_OFF` · `BOOK_BY_PASSED` for them instead. On a game already "
+        "`filling_again`, it takes the game off the player's own Home."
     ),
 )
 async def withdraw_yes(
@@ -551,7 +553,8 @@ async def read_booking_details(
             "description": (
                 "`game_has_started` — its hour has begun; there is nothing to "
                 "leave. `booking_is_called_off` — the game is off (refused, "
-                "unanswered, or short at its cut-off) and everybody still in is "
+                "unanswered, short at its cut-off, cancelled, or gone back to "
+                "filling and past its book-by) and everybody still in is "
                 "refunded, or nobody paid. Nothing was recorded."
             ),
         },
@@ -566,9 +569,11 @@ async def read_booking_details(
         "others until the start; the leaver is refunded, less the fee, when "
         "somebody takes it, and it is on their record if nobody does. **While "
         "the club decides** nobody has paid: the yes and the request to the club "
-        "are withdrawn, as `DELETE /proposals/{id}/yes` does. The leaver leaves "
-        "the game's chat with their seat; everybody else's Home reads "
-        "`SEAT_OPEN`. Refused once the hour has begun."
+        "are withdrawn, as `DELETE /proposals/{id}/yes` does, and the game is "
+        "filling again — and so it is on a game already `filling_again` (#624). "
+        "The leaver leaves the game's chat with their seat; everybody else's "
+        "Home reads `SEAT_OPEN` (with `filling_again` when nobody had paid). "
+        "Refused once the hour has begun."
     ),
 )
 async def leave_the_game(

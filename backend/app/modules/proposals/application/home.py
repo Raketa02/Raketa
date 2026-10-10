@@ -30,6 +30,12 @@ them, every payment they have to confirm — a game still filling, which is not 
 Home, but which the mechanics count among the games that need you (§3): its seat
 is the reader's only until somebody else takes it.
 
+**A full game gone back to filling is here too** (#624, Q106): its request was
+taken back because a seat opened, and it stays on the Home of the people still
+In as *Seat open* — folded against its proposal (``as_it_stands``), so somebody
+who took their yes back since no longer finds it, and it is *called off* once
+its book-by passes, or its court goes, before it is full again.
+
 **Classic play's games are not here**: a game a challenge's line-up opened has
 no booking. Its card is ``GET /games``'.
 """
@@ -47,6 +53,7 @@ from app.modules.proposals.application.payments_to_confirm import owed_by
 from app.modules.proposals.domain.home import (
     BookedGame,
     BookedState,
+    as_filling_again,
     on_home,
     on_home_since,
     state_of,
@@ -114,8 +121,16 @@ class ReadHome:
         now = instant(self._clock.now())
         since = on_home_since(now)
         booked = [
-            *await self._older_still_waiting(since, reader=reader, now=now),
-            *await self._bookings.of_player(reader, since=since),
+            game
+            for game in [
+                *await self._older_still_waiting(since, reader=reader, now=now),
+                *[
+                    await as_it_stands(game, self._proposals, now=now)
+                    for game in await self._bookings.of_player(reader, since=since)
+                ],
+            ]
+            # Gone back to filling, it is the game of the people In now.
+            if game is not None and game.has_a_seat_for(reader)
         ]
         # A game still waiting for its club, or never booked by it, has none.
         results = await self._results.of(
@@ -169,3 +184,21 @@ class ReadHome:
             if game is not None:
                 found.append(game)
         return sorted(found, key=lambda game: (game.start, game.booking_id))
+
+
+async def as_it_stands(
+    game: BookedGame, proposals: ProposalRepository, *, now: Instant
+) -> BookedGame | None:
+    """A booked game as its players read it at ``now`` — **a full game gone
+    back to filling folded against its proposal** (#624, Q106): who is In now,
+    and whether it ended before it was full again. ``None`` for one whose
+    proposal is gone."""
+
+    if not game.filling_again:
+        return game
+    proposal = await proposals.load(game.booking_id)
+    if proposal is None:
+        return None
+    return as_filling_again(
+        game, in_=proposal.yeses, standing=proposal.standing_at(now)
+    )

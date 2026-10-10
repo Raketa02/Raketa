@@ -276,7 +276,9 @@ async def _the_clubs(
     bookings: PlayerBookings, club_id: UUID, booking_id: UUID
 ) -> BookedGame:
     game = await bookings.find(booking_id)
-    if game is None or game.club_id != club_id:
+    # A request taken back is no booking of the club's: the game is filling
+    # again, as it was before it was full (#624).
+    if game is None or game.club_id != club_id or game.filling_again:
         raise BookingNotFound()
     return game
 
@@ -342,6 +344,10 @@ class CheckInAtTheDesk:
             raise CheckInCodeUnknown()
         booking_id, player_id = seat.booking_id, seat.player_id
         await self._proposals.load_for_update(booking_id)
+        found = await self._bookings.find(booking_id)
+        if found is not None and found.filling_again:
+            # A seat on a request taken back: no Game at the desk (#624).
+            raise CheckInCodeUnknown()
         game = await _the_clubs(self._bookings, club_id, booking_id)
         if seat.where is CodeAtTheDesk.ANOTHER_DAY:
             raise CheckInCodeForAnotherDay(starts_at=game.start.isoformat())

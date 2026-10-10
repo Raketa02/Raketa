@@ -14,10 +14,11 @@ say yes (the mechanics §16.3, §16.8). While it waits the court is **reserved**
 for it — nobody else is offered that court — and nobody has paid. The club's
 yes books it and opens the Game; its no, or no answer by the deadline, calls it
 off; and **a seat opening while it waits** — somebody left, or could no longer
-be In — withdraws the request: nobody paid, **nobody keeps a seat on it**, and
-the game is filling again, where the people still In find it. **Full again,
-the same game is asked again on the same stream**, with whoever is In then: one
-id from the first card to the court.
+be In — withdraws the request: nobody paid, the game is filling again, and
+**the people still In keep their places**, a seat open where each opener sat,
+so it stays on their Home as *Seat open* (Q106). **Full again, the same game is
+asked again on the same stream**, with whoever is In then: one id from the
+first card to the court.
 
 **A player leaves a booked game** (#544; the mechanics §12.3, §13): their seat
 opens — *seat open* — and the game is still the others'. **A game plays full or
@@ -157,6 +158,9 @@ class Booking:
     #: When the club's answer is due, while it waits — ``None`` on a booking
     #: born booked, and kept once answered.
     answer_by: Instant | None = None
+    #: When its request was taken back because a seat opened — ``None`` while
+    #: it waits, once asked again, and on a booking that never was.
+    taken_back_at: Instant | None = None
     #: Why it will not be played, once called off.
     called_off: CalledOff | None = None
     #: The club's own note when it refused — for its records, never a player's.
@@ -570,10 +574,17 @@ class Booking:
         )
         self._record_that(BookingTimedOut(booking_id=self.booking_id, occurred_at=at))
 
-    def withdraw_request(self, player_ids: tuple[UUID, ...], *, at: Instant) -> bool:
+    def withdraw_request(
+        self,
+        player_ids: tuple[UUID, ...],
+        *,
+        left: tuple[UUID, ...] = (),
+        at: Instant,
+    ) -> bool:
         """These players' seats opened while the game waited: the request is
-        off, and nobody keeps a seat on it. Answers whether anything was
-        recorded — nothing on a booking not waiting for the club."""
+        off, and the others keep their places (Q106). ``left`` is those of them
+        who took their own yes back. Answers whether anything was recorded —
+        nothing on a booking not waiting for the club."""
 
         if not self.is_waiting:
             return False
@@ -581,9 +592,16 @@ class Booking:
             bool(player_ids) and set(player_ids) <= set(self.players),
             f"{player_ids} are not all on {self.booking_id}",
         )
+        invariant(
+            set(left) <= set(player_ids),
+            f"{left} left {self.booking_id}, whose seats {player_ids} opened",
+        )
         self._record_that(
             RequestWithdrawn(
-                booking_id=self.booking_id, player_ids=player_ids, occurred_at=at
+                booking_id=self.booking_id,
+                player_ids=player_ids,
+                occurred_at=at,
+                left=left,
             )
         )
         return True
@@ -665,8 +683,10 @@ class Booking:
         elif isinstance(event, RequestWithdrawn):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.SEAT_OPENED
-            self.first_side = ()
-            self.second_side = ()
+            self.taken_back_at = instant(event.occurred_at)
+            opened = set(event.player_ids)
+            self.first_side = tuple(p for p in self.first_side if p not in opened)
+            self.second_side = tuple(p for p in self.second_side if p not in opened)
         elif isinstance(event, SeatLeft):
             side = "A" if event.player_id in self.first_side else "B"
             self.first_side = tuple(p for p in self.first_side if p != event.player_id)
@@ -725,6 +745,7 @@ class Booking:
             self.answer_by = instant(event.answer_by)
             self.state = BookingState.WAITING_FOR_THE_CLUB
             self.called_off = None
+            self.taken_back_at = None
         else:
             raise TypeError(f"Unsupported booking event {event!r}")
         self.version += 1

@@ -379,6 +379,9 @@ class Rescuer:
         if (
             proposal is None
             or game is None
+            # Gone back to filling, it has no seat to rescue: a yes takes one
+            # (#624).
+            or game.filling_again
             or not await self._guards.in_the_pool(proposal.pool, [player])
         ):
             # A stranger learns nothing about a group's games.

@@ -146,20 +146,47 @@ def test_it_cannot_time_out_before_its_answer_is_due():
         booking.time_out(at=_at(29))
 
 
-def test_seats_opening_while_it_waits_take_the_request_back_from_everybody():
+def test_seats_opening_while_it_waits_take_the_request_back_and_the_others_stay():
+    """The request is off, and nobody paid — but the people still In keep their
+    places, a seat open where each opener sat: the game stays on their Home as
+    *Seat open* (Q106)."""
+
     booking = _requested()
 
     withdrawn = booking.withdraw_request((KUBA, TOMEK), at=_at(5))
 
     assert withdrawn is True
+    assert booking.state is BookingState.CALLED_OFF
     assert booking.called_off is CalledOff.SEAT_OPENED
-    # Nobody keeps a seat on it: the people still In are on the game, filling.
-    assert booking.players == ()
+    assert (booking.first_side, booking.second_side) == ((OLA,), (EWA,))
+    assert booking.taken_back_at == _at(5)
     events = booking.pull_events()
     assert events[-1] == RequestWithdrawn(
         booking_id=booking.booking_id, player_ids=(KUBA, TOMEK), occurred_at=_at(5)
     )
-    assert Booking.from_history(events).players == ()
+    replayed = Booking.from_history(events)
+    assert (replayed.first_side, replayed.second_side) == ((OLA,), (EWA,))
+    assert replayed.taken_back_at == _at(5)
+
+
+def test_a_request_taken_back_says_who_took_their_own_yes_back():
+    """Kuba left; Tomek's week filled with another game. The others are told
+    Kuba's name, and never why Tomek's seat opened (Q104)."""
+
+    booking = _requested()
+
+    booking.withdraw_request((KUBA, TOMEK), left=(KUBA,), at=_at(5))
+
+    [_, withdrawn] = booking.pull_events()
+    assert isinstance(withdrawn, RequestWithdrawn)
+    assert withdrawn.left == (KUBA,)
+
+
+def test_only_a_player_whose_seat_opened_left_it():
+    booking = _requested()
+
+    with pytest.raises(InvariantViolated):
+        booking.withdraw_request((KUBA,), left=(TOMEK,), at=_at(5))
 
 
 def test_only_a_player_on_the_request_opens_a_seat_on_it():
@@ -195,6 +222,7 @@ def test_full_again_the_same_game_asks_the_club_again_with_whoever_is_in():
 
     assert booking.state is BookingState.WAITING_FOR_THE_CLUB
     assert booking.called_off is None
+    assert booking.taken_back_at is None
     assert (booking.court, booking.answer_by) == (other_court, _at(70))
     assert booking.players == (OLA, ANIA, EWA, TOMEK)
     replayed = _replayed(booking)

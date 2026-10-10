@@ -311,9 +311,8 @@ class BookingsPlayerBookings:
         found: list[BookedGame] = []
         for booking_id in await self._directory.of_player(player_id, since=since):
             booking = await self._bookings.load(booking_id)
-            game = None if booking is None else _booked_game(booking)
-            if game is not None:
-                found.append(game)
+            if booking is not None:
+                found.append(_booked_game(booking))
         return found
 
     async def games_before(
@@ -364,13 +363,13 @@ _CANCEL_REASONS = {
 }
 
 
-def _booked_game(booking: Booking) -> BookedGame | None:
-    """The game a booking is to its players — ``None`` for a request taken
-    back because a seat opened, which is nobody's game: the people still In
-    find it filling again."""
+def _booked_game(booking: Booking) -> BookedGame:
+    """The game a booking is to its players — a request taken back because a
+    seat opened is a game gone back to filling (``FILLING_AGAIN``), the people
+    still In as the booking left them: Proposals folds it against the proposal
+    (``as_filling_again``), and the club reads nothing of it (#624)."""
 
-    if booking.called_off is CalledOff.SEAT_OPENED:
-        return None
+    filling_again = booking.called_off is CalledOff.SEAT_OPENED
     return BookedGame(
         booking_id=booking.booking_id,
         pool_id=booking.pool_id,
@@ -384,9 +383,11 @@ def _booked_game(booking: Booking) -> BookedGame | None:
         second_side=booking.second_side,
         cut_off=booking.cut_off,
         game_id=booking.game_id,
-        stage=_STAGES[booking.state],
+        stage=BookingStage.FILLING_AGAIN if filling_again else _STAGES[booking.state],
         called_off=(
-            None if booking.called_off is None else _CALLED_OFF[booking.called_off]
+            None
+            if booking.called_off is None or filling_again
+            else _CALLED_OFF[booking.called_off]
         ),
         short_from=booking.short_from,
         open=tuple(_open_seat(left) for left in booking.open_departures),
@@ -442,9 +443,10 @@ class BookingsClubBookings:
         found: list[BookedGame] = []
         for booking_id in await self._directory.at_club(club_id, start=start, end=end):
             booking = await self._bookings.load(booking_id)
-            game = None if booking is None else _booked_game(booking)
-            if game is not None:
-                found.append(game)
+            # A request taken back is no booking of the club's: the game is
+            # filling again (#624).
+            if booking is not None and booking.called_off is not CalledOff.SEAT_OPENED:
+                found.append(_booked_game(booking))
         return found
 
     async def free_courts(self, booking_id: UUID) -> Sequence[CourtToMoveTo]:

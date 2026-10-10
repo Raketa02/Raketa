@@ -31,6 +31,11 @@ in the seat that opened first (*You?*, unpaid), the court, the players *paid*,
 and ``rescue``: when the seat leaves the board, and so what *I'm in* costs.
 No check-in code, no *Leave*, and nothing that needs them.
 
+**A full game gone back to filling** (#624, Q106) is read as Home reads it —
+folded against its proposal, for the people In now: *Seat open*, nobody paid,
+no court and no code, and no *Leave* of its own — its way out is a game still
+filling's, *Withdraw*.
+
 **Refused with one code** — ``booking_not_found`` — for a booking that does not
 exist and one the reader has no seat on and is not offered, so a booking id
 says nothing about whose evening it is.
@@ -45,6 +50,7 @@ from uuid import UUID
 
 from app.kernel import Clock, Instant, Sport, instant
 from app.modules.proposals.application.booked_people import people_on
+from app.modules.proposals.application.home import as_it_stands
 from app.modules.proposals.application.rescues import RescueOffers
 from app.modules.proposals.domain.deck import Sides
 from app.modules.proposals.domain.errors import BookingNotFound
@@ -72,6 +78,7 @@ from app.modules.proposals.domain.ports import (
     GameResults,
     CardFees,
     PlayerBookings,
+    ProposalRepository,
 )
 
 
@@ -115,6 +122,7 @@ class ReadBookingDetails:
         self,
         *,
         bookings: PlayerBookings,
+        proposals: ProposalRepository,
         results: GameResults,
         people: DeckPeople,
         clubs: ClubNames,
@@ -125,6 +133,7 @@ class ReadBookingDetails:
     ) -> None:
         self._offers = offers
         self._bookings = bookings
+        self._proposals = proposals
         self._results = results
         self._people = people
         self._clubs = clubs
@@ -134,7 +143,12 @@ class ReadBookingDetails:
 
     async def execute(self, booking_id: UUID, reader: UUID) -> BookingDetails:
         now = instant(self._clock.now())
-        game = await self._bookings.find(booking_id)
+        found = await self._bookings.find(booking_id)
+        game = (
+            None
+            if found is None
+            else await as_it_stands(found, self._proposals, now=now)
+        )
         if game is None:
             raise BookingNotFound()
         if not game.has_a_seat_for(reader):
@@ -160,7 +174,9 @@ class ReadBookingDetails:
             shows_forecast=shows_forecast(state.status),
             check_in=(
                 self._bookings.check_in(game.booking_id, reader)
-                if check_in_shown(state.status, start=game.start, now=now)
+                # A game gone back to filling has no Game at the desk (#624).
+                if not game.filling_again
+                and check_in_shown(state.status, start=game.start, now=now)
                 else None
             ),
             club_name=names.get(game.club_id),

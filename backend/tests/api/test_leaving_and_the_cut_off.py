@@ -306,7 +306,10 @@ async def test_leaving_while_the_club_decides_withdraws_the_yes_and_nobody_paid(
 
     assert left.status_code == 200, left.text
     assert left.json()["left"] == "WHILE_WAITING_FOR_THE_CLUB"
-    assert await home_of(client, ola) == []
+    # The game is filling again, *Seat open* on the others' Home (Q106).
+    [card] = await home_of(client, ola)
+    assert (card["status"], card["filling_again"]) == ("SEAT_OPEN", True)
+    assert await home_of(client, kuba) == []
 
 
 async def test_the_leaver_leaves_the_game_s_chat_and_the_others_keep_it(

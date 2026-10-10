@@ -705,15 +705,33 @@ _HOME_STATUS = (
     "offered (`open_seats`); before the cut-off (`money.free_to_leave_until`) "
     "*fills by then or the game is off and everyone is refunded*, after it *the "
     "game goes ahead*. A game whose hour comes with a seat still open is "
-    "`UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`."
+    "`UNCOUNTED` with `uncounted_reason` `SEAT_EMPTY`. **`SEAT_OPEN` with "
+    "`filling_again`** (#624, Q106) — a full game that went back to filling "
+    "before it was booked: a player left while the club decided, or a yes was "
+    "taken back because that player's week filled or two players stopped "
+    "fitting at the club's yes. Nobody paid, there is no Game and no court, and "
+    "it asks nothing of the reader (`needs_you` is `false`): *1 seat open · "
+    "Kazimierz Padel is asked again when it's full · nobody paid* "
+    "(`club_confirms`), else *1 seat open · books when it's full · nobody "
+    "paid*. It is in the reader's live yeses too, where *Withdraw* "
+    "(`DELETE /proposals/{id}/yes`, the same id) takes it off their Home. "
+    "Full again, it reads `WAITING_FOR_THE_CLUB` again (`BOOKED` at a club "
+    "that books at once); `CALLED_OFF` if its book-by passes first."
 )
 
 _CALLED_OFF_REASON = (
     "Why a `CALLED_OFF` game will not be played — `null` on every other status. "
-    "`REFUSED` — the On request club refused it. `NO_ANSWER` — the club did not "
-    "answer in time. In both nobody paid. (A seat opening while it waited takes "
-    "the request back instead: it leaves Home, and the people still In find the "
-    "game filling again in their live yeses.) `SHORT_AT_THE_CUT_OFF` — a seat "
+    "`REFUSED` — the On request club refused it: *Kazimierz Padel said no*. "
+    "`NO_ANSWER` — the club did not answer in time: *Kazimierz Padel didn't "
+    "answer in time*. In both nobody paid, and the players get a new card "
+    "first. (A seat opening while it waited takes the request back instead: "
+    "the game is `SEAT_OPEN` with `filling_again` for the people still In.) "
+    "`BOOK_BY_PASSED` — a game that went back to filling reached its book-by "
+    "before it was full again, or a player left it after its book-by while the "
+    "club decided: nobody paid. `COURT_HOUR_LOST` — a game that went back to "
+    "filling lost its court to another game before it was full again: nobody "
+    "paid, and its players are dealt a new card first. "
+    "`SHORT_AT_THE_CUT_OFF` — a seat "
     "that opened before the club's cut-off was still empty at it: everybody "
     "still in is refunded in full (`money.refunded_grosze`); read off the clock "
     "from the cut-off on. `CANCELLED_BY_THE_CLUB` — the club cancelled it, "
@@ -741,7 +759,21 @@ _UNCOUNTED_REASON = (
 
 _OPEN_SEATS = (
     "Seats a leaver left open — the dashed tiles; nought unless `SEAT_OPEN`. "
-    "The sides list the seats still held."
+    "The sides list the seats still held. On a game `filling_again`, the seats "
+    "nobody is In on, the sides listing everybody In now."
+)
+
+_FILLING_AGAIN = (
+    "A full game that went back to filling before it was booked (#624, Q106) — "
+    "`SEAT_OPEN` while it fills, nobody paid; `CALLED_OFF` once its book-by "
+    "passes, or its court goes, before it is full again. `false` on every "
+    "booked game."
+)
+
+_CLUB_CONFIRMS = (
+    "The game's club confirms each game (On request): it waits for the club's "
+    "yes once full. On a game `filling_again` the line is *Kazimierz Padel is "
+    "asked again when it's full*; `false` is *books when it's full*."
 )
 
 _ANSWER_BY = (
@@ -951,9 +983,13 @@ class HomeGameSchema(BaseModel):
     needs_you: bool = Field(
         description=(
             "One of the games that need the reader: a result to enter, the other "
-            "side's score waiting on their agreement, or a seat open in their game."
+            "side's score waiting on their agreement, or a seat open in their "
+            "booked game — never a game `filling_again`, which asks nothing of "
+            "them."
         )
     )
+    filling_again: bool = Field(description=_FILLING_AGAIN)
+    club_confirms: bool = Field(description=_CLUB_CONFIRMS)
     starts_at: datetime = Field(description="The court hour's start; games are 1 h.")
     club: BookedClubSchema
     court_name: str | None = Field(
@@ -987,6 +1023,8 @@ class HomeGameSchema(BaseModel):
             uncounted_reason=card.state.uncounted,
             open_seats=game.open_seats,
             needs_you=card.state.needs_you,
+            filling_again=game.filling_again,
+            club_confirms=game.club_confirms,
             starts_at=game.start,
             club=BookedClubSchema(id=game.club_id, name=card.club_name),
             court_name=game.court_name if game.court_given else None,
@@ -1125,7 +1163,9 @@ class DepartureResponse(BaseModel):
             "`AFTER_THE_CUT_OFF` — the seat stays paid and is offered to others "
             "until the start; refunded, less the card fee, when somebody takes it. "
             "`WHILE_WAITING_FOR_THE_CLUB` — nobody had paid: the yes and the "
-            "request to the club are withdrawn, and the game is filling again."
+            "request to the club are withdrawn, and the game is filling again — "
+            "`SEAT_OPEN` with `filling_again` on the others' Home. So it is on a "
+            "game already `filling_again`: the yes is withdrawn."
         )
     )
 
@@ -1175,6 +1215,8 @@ class BookingDetailsResponse(BaseModel):
     uncounted_reason: UncountedReason | None = Field(description=_UNCOUNTED_REASON)
     open_seats: int = Field(description=_OPEN_SEATS)
     needs_you: bool
+    filling_again: bool = Field(description=_FILLING_AGAIN)
+    club_confirms: bool = Field(description=_CLUB_CONFIRMS)
     starts_at: datetime
     ends_at: datetime = Field(description="An hour after `starts_at`: TIME's *until*.")
     where: WhereSchema
@@ -1205,8 +1247,10 @@ class BookingDetailsResponse(BaseModel):
         description=(
             "What *Leave the game* would cost now — the line under the button and "
             "its sheet (`POST /bookings/{id}/departure`). `null` where there is "
-            "no button: once the hour has come, on a game that is over, and for "
-            "a reader not on the game."
+            "no button: once the hour has come, on a game that is over, for a "
+            "reader not on the game, and on a game `filling_again`, whose way "
+            "out is a game still filling's — *Withdraw*, "
+            "`DELETE /proposals/{id}/yes`."
         )
     )
     rescue: RescueOfferSchema | None = Field(
@@ -1238,6 +1282,8 @@ class BookingDetailsResponse(BaseModel):
             uncounted_reason=details.state.uncounted,
             open_seats=game.open_seats,
             needs_you=details.state.needs_you,
+            filling_again=game.filling_again,
+            club_confirms=game.club_confirms,
             starts_at=game.start,
             ends_at=_an_hour_after(game.start),
             where=WhereSchema(

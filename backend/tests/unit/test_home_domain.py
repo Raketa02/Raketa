@@ -31,6 +31,7 @@ from app.modules.proposals.domain.home import (
     HomeStatus,
     Leaving,
     ResultStage,
+    as_filling_again,
     check_in_shown,
     leave_terms,
     money_of,
@@ -41,6 +42,7 @@ from app.modules.proposals.domain.home import (
     state_of,
     status_of,
 )
+from app.modules.proposals.domain.proposal import Standing
 
 WARSAW = ZoneInfo("Europe/Warsaw")
 OLA, KUBA, EWA, TOMEK = (uuid4() for _ in range(4))
@@ -440,3 +442,114 @@ def test_a_game_its_club_accepted_is_booked_on_the_court_it_gave():
     assert game.stage is BookingStage.BOOKED
     assert game.court_given is True
     assert money_of(game, card_fee_grosze=FEE, now=warsaw(5, 8)).paid is True
+
+
+# --------------------------------------------------------------------------- #
+# A full game that went back to filling (#624, Q106)
+# --------------------------------------------------------------------------- #
+
+ANIA = uuid4()
+
+
+def a_game_filling_again(**changes) -> BookedGame:
+    """The same game at an On request club, whose request was taken back when
+    Kuba left: the others keep their places, nobody paid, and there is no Game."""
+
+    fields = dict(
+        game_id=None,
+        stage=BookingStage.FILLING_AGAIN,
+        first_side=(OLA,),
+        second_side=(EWA, TOMEK),
+        answer_by=warsaw(5, 8, 30),
+    )
+    fields.update(changes)
+    return a_booked_game(**fields)
+
+
+def test_a_full_game_that_fell_back_is_seat_open_and_nobody_paid():
+    game = as_filling_again(
+        a_game_filling_again(), in_=(OLA, EWA, TOMEK), standing=Standing.FILLING
+    )
+
+    state = state_of(game, None, card_fee_grosze=FEE, now=warsaw(5, 9))
+
+    assert game.filling_again is True
+    assert (state.status, state.called_off, state.answer_by) == (
+        HomeStatus.SEAT_OPEN,
+        None,
+        None,
+    )
+    assert game.open_seats == 1
+    assert (
+        state.money.paid,
+        state.money.free_to_leave_until,
+        state.money.back_if_you_leave_grosze,
+        state.money.refunded_grosze,
+    ) == (False, None, None, None)
+    # It asks nothing of those still In: Home's badge does not count it.
+    assert state.needs_you is False
+
+
+def test_a_game_that_fell_back_asks_its_club_again_when_it_is_full():
+    game = as_filling_again(
+        a_game_filling_again(), in_=(OLA, EWA, TOMEK), standing=Standing.FILLING
+    )
+
+    assert game.club_confirms is True
+    assert a_booked_game(answer_by=None).club_confirms is False
+
+
+def test_somebody_in_since_it_fell_back_takes_the_first_place_free():
+    game = as_filling_again(
+        a_game_filling_again(first_side=(OLA,), second_side=(EWA,)),
+        in_=(OLA, EWA, ANIA),
+        standing=Standing.FILLING,
+    )
+
+    assert (game.first_side, game.second_side) == ((OLA, ANIA), (EWA,))
+    assert game.open_seats == 1
+
+
+def test_a_player_who_took_their_yes_back_since_is_off_its_sides():
+    game = as_filling_again(
+        a_game_filling_again(), in_=(OLA, EWA), standing=Standing.FILLING
+    )
+
+    assert (game.first_side, game.second_side) == ((OLA,), (EWA,))
+    assert game.open_seats == 2
+    assert not game.has_a_seat_for(TOMEK)
+
+
+@pytest.mark.parametrize(
+    ("standing", "reason"),
+    [
+        (Standing.EXPIRED, CalledOffReason.BOOK_BY_PASSED),
+        (Standing.COURT_HOUR_LOST, CalledOffReason.COURT_HOUR_LOST),
+    ],
+)
+def test_a_game_that_fell_back_and_ended_first_is_called_off_nobody_paid(
+    standing, reason
+):
+    game = as_filling_again(
+        a_game_filling_again(), in_=(OLA, EWA, TOMEK), standing=standing
+    )
+
+    state = state_of(game, None, card_fee_grosze=FEE, now=warsaw(10, 16))
+
+    assert (state.status, state.called_off) == (HomeStatus.CALLED_OFF, reason)
+    assert (state.money.paid, state.money.refunded_grosze) == (False, None)
+    assert state.needs_you is False
+    assert game.open_seats == 0
+
+
+def test_a_game_that_fell_back_has_no_leave_of_its_own():
+    """Its way out is the one a game still filling has: *Withdraw*, free."""
+
+    game = as_filling_again(
+        a_game_filling_again(), in_=(OLA, EWA, TOMEK), standing=Standing.FILLING
+    )
+
+    assert (
+        leave_terms(game, HomeStatus.SEAT_OPEN, card_fee_grosze=FEE, now=warsaw(5, 9))
+        is None
+    )

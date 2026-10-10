@@ -10,9 +10,10 @@ sells, and the game counted in the player's week, the moment the fill commits.
 holds its court hour, as a booked one does, and a called-off one holds nothing;
 only a **booked** game is a game in a player's week or a group's *Games* — whole,
 or with a seat open (#544); and a player's games are every booking they have a
-seat on, whatever it came to — and nobody keeps a seat on a request taken back
-because a seat opened, and a leaver no longer has one. **A rescue is a seat row
-like any other** (#545): the game is the joiner's from the moment they take it.
+seat on, whatever it came to — a request taken back because a seat opened is
+still the game of the people it left In (Q106), whose rows stay while the
+openers' go, and a leaver no longer has one. **A rescue is a seat row like any
+other** (#545): the game is the joiner's from the moment they take it.
 """
 
 from __future__ import annotations
@@ -138,9 +139,12 @@ class EventSourcedBookingRepository:
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
         elif isinstance(event, RequestWithdrawn):
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
+            # The seats that opened go; the people still In keep theirs, so
+            # the game stays on their Home (Q106).
             await self._statement(
                 delete(BookingSeatORM).where(
-                    BookingSeatORM.booking_id == event.booking_id
+                    BookingSeatORM.booking_id == event.booking_id,
+                    BookingSeatORM.player_id.in_(event.player_ids),
                 )
             )
         elif isinstance(event, SeatLeft):
