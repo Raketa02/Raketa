@@ -582,7 +582,9 @@ about blocks, and the record asks only about the reader's own. The player app's 
   load.
 - **Hold** — the platform stopping a player from starting anything new while an unsettled case
   is open against them. A **held account** is an account under a Hold. Nothing can place one
-  today, because the `cases` context does not exist.
+  today, because the `cases` context does not exist. **Never a card hold**: money reserved on a
+  player's card (Payments) is never written *a Hold* — the **share is held**, and the hold is
+  **let go** or the share **taken**.
 - **AccountHoldQuery** — the port the Hold gate reads. Its only adapter today is
   **`NoHoldsExist`**, named for the fact it asserts rather than for being empty.
 - **Disabled account** — an account that may no longer be used at all. **Not a Hold**: a Hold
@@ -1261,8 +1263,12 @@ website, and lists there the courts, hours and prices it sells through Raketa.
   configuration. Confirmed only once a Way of working is chosen, since which of them matter
   depends on it.
 - **Cut-off** — the club's free-cancellation deadline, a Raketa setting (0–72 h, default 24 h
-  before). Leaving before it is refunded at once, less the card fee; a game still short at it
-  is called off.
+  before), and **the one deadline in a game, the same for everyone in it**. Leaving before it is
+  free: nothing is taken, and the share's hold is let go. At it, a full game's shares are
+  **taken**, and a game still short is called off with every hold let go, nobody paying anything.
+  Decided by ADR-0189's 2026-10-10 amendment (the mechanics Q113) and not yet built
+  ([#637](https://github.com/Raketa02/Raketa/issues/637)); until then a leave before it is
+  refunded at once, less the card fee.
 - **Book-by** — the latest moment a proposal can still fill: the release time (Only Raketa) or the
   start minus the club's minimum notice (Instant, On request). **Derived, never chosen** — once,
   from the club's terms, and carried on every sellable court hour. No other clock runs on a
@@ -1430,13 +1436,23 @@ charges' (**Payments**), its result the Game's (**Games**).
   *seat open*, *called off*, *played*. An **event-sourced aggregate, one stream per filled
   proposal**. Born *booked*, or *waiting for the club* at an On request club, which accepts,
   refuses or lets its time run out; *played* is read off the clock and never recorded. It opens
-  the ordinary **Game** when it is booked. _Avoid_: reservation, held.
-- **Leaver** — a player who left a booking. Before the cut-off, refunded at once minus the card
-  fee; after it, refunded (minus the fee) only when the seat is taken. Told to the Game as a
-  **Departure**.
+  the ordinary **Game** when it is booked. _Avoid_: reservation, and *held* for a booking (a
+  **Seat charge**'s share is held — Payments).
+- **Leaver** — a player who left a booking. **Before the cut-off, nothing is taken**: the share's
+  hold is let go, nobody is refunded, and no fee arises for the leaver or the club. **After it**,
+  the share was taken, and comes back only when the seat is taken, **less exactly the fee kept on
+  the leaver's own payment** — never an estimate. Told to the Game as a **Departure**. Decided by
+  ADR-0189's 2026-10-10 amendment (the mechanics Q113) and not yet built
+  ([#637](https://github.com/Raketa02/Raketa/issues/637),
+  [#641](https://github.com/Raketa02/Raketa/issues/641)); until then a leaver before the cut-off is
+  refunded at once less the estimated card fee. _Avoid_: a refund for a leave before the cut-off
+  (only the **Holding time**'s fallback, a share taken early, is refunded).
 - **Rescue** — an open seat in a **booked** game that lost a player. Shown in **Fill in** and dealt
-  to the best fits as a Seat open card; taking it pays at once, and the rescuer sits where the
-  leaver sat. The seat that opened first is taken first.
+  to the best fits as a Seat open card; taking it books at once, and the rescuer sits where the
+  leaver sat. The seat that opened first is taken first. Since ADR-0189's 2026-10-10 amendment
+  (Q113, not yet built — [#640](https://github.com/Raketa02/Raketa/issues/640)) the rescuer's money
+  follows the game's: held until the cut-off, or taken at once after it; and a rescuer whose card
+  is refused keeps the seat for 30 minutes, never past the start.
 - **Fill in** — the group's rescue board (**Seats to fill**) plus **You're In**, your own yeses
   that have not filled or are *waiting for the club*. It never offers a proposal that is still
   filling.
@@ -1447,27 +1463,35 @@ charges' (**Payments**), its result the Game's (**Games**).
   **booked** game that lost one, whose seat is a **Rescue**; and, since ADR-0189's 2026-10-09
   amendment (the mechanics Q106), a full game that **went back to filling before it was booked** —
   a player left while the club decided, a yes was taken back because that player's week filled or
-  because two players stopped fitting at the club's yes, or a **Time to pay** ran out. That second
+  because two players stopped fitting at the club's yes, or a **Time to pay** (since Q113, also a
+  **Time to fix the card**) ran out. That second
   kind is not a rescue: its seat is offered only in decks, as any proposal still filling, and it
   is in *You're In* as well. It goes back to *waiting for the club* (or is booked, at a club that
   books at once) when it refills, and is called off, nobody paid, if its book-by passes first.
   The second kind is decided and not yet built ([#624](https://github.com/Raketa02/Raketa/issues/624)).
   _Avoid_: called off for a game that is only filling again.
-- **Waiting for one payment** — a full game while one player's **Time to pay** runs: nobody has
-  paid, the others' holds are kept, and at an On request club so are the club's yes and its court.
-  It is on all four's Home as *Waiting for one payment · until 14:40 · Nobody pays until it's in*,
-  the payer's own card reading *Confirm your payment by 14:40*; the club's Bookings reads *Accepted · waiting for one player's payment until …*. It ends booked
+- **Waiting for one payment** — a full game while one player's **Time to fix the card** (before
+  the cut-off) or **Time to pay** (after it) runs: nobody has paid, the others' holds are kept,
+  and at an On request club so are the club's yes and its court. It is on all four's Home as
+  *Waiting for one payment · until 14:40 · Nobody pays until it's in* in both windows. The refused
+  player's own card reads *Fix your card by 14:40* before the cut-off (Q113) and *Confirm your
+  payment by 14:40* after it. The club's Bookings reads *Accepted · waiting for one player's
+  payment until …*, or before the cut-off *… one player's card until …*. It ends booked
   when the payment is in, *Seat open* when the time runs out, or called off when no time is left
-  before the book-by. Decided by ADR-0189's 2026-10-09 amendment (the mechanics Q109–Q112) and not
-  yet built ([#625](https://github.com/Raketa02/Raketa/issues/625),
-  [#626](https://github.com/Raketa02/Raketa/issues/626)).
+  before the book-by. Decided by ADR-0189's 2026-10-09 amendment (the mechanics Q109–Q112) and
+  built by [#625](https://github.com/Raketa02/Raketa/issues/625) and
+  [#626](https://github.com/Raketa02/Raketa/issues/626); the time to fix the card is
+  [#638](https://github.com/Raketa02/Raketa/issues/638)'s.
 
 **Invariants**
 - **A game plays full or not at all.** A seat that opened before the club's cut-off and is still
   open at it calls the game off, and the court is the club's again; a seat that opened after the
   cut-off leaves the game going ahead short.
 - **The club may move or cancel a game until it starts.** A move is to another court of the sport
-  at the same hour; a cancellation refunds everybody still in, in full, and is on nobody's record.
+  at the same hour. A cancellation refunds everybody still in, in full, and is on nobody's record.
+  Since Q113 that holds after the cut-off, where the club bears the fees; before it, the
+  cancellation lets every hold go and nobody pays a fee — decided, and not yet built
+  ([#637](https://github.com/Raketa02/Raketa/issues/637)).
 
 ### Payments
 
@@ -1479,24 +1503,67 @@ account by [#537](https://github.com/Raketa02/Raketa/issues/537).
 
 **How a player pays: a card or a wallet saved once, charged later by the club.** Every charge is
 made on the club's own account — **the club is the seller** — and a player's card is copied there
-for each one.
+for each one. Since ADR-0189's 2026-10-10 amendment (the mechanics Q113) a share is **held** when
+its game fills and **taken** at the club's **Cut-off**; nothing is taken before it, and no
+estimated card fee is printed anywhere — decided, and not yet built
+([#636](https://github.com/Raketa02/Raketa/issues/636)–[#641](https://github.com/Raketa02/Raketa/issues/641)).
 
 - **The club is the seller** — every charge is made on the club's own Stripe account, and the club
   pays the card fee. Raketa takes no fee.
 - **Seat charge** — one seat's money in one booking: an **event-sourced aggregate, one stream per
-  payment**, born at the fill and never before — a yes moves no money. Held on the player's card
-  or refused; then taken, released, or confirmed by the player when their bank wanted them present.
-  Raketa's account of a payment; Stripe is the ledger of record, and a notice from it moves a
-  charge only forward.
-- **Time to pay** — the **30 minutes** a player whose share was refused when a game filled, or
-  when its On request club accepted it, has to pay, never past the game's book-by. Their seat is
-  theirs alone meanwhile, and the other seats' holds are kept, so paying in time books the game
-  without asking anybody's bank, or the club, again; when it runs out the holds are let go and the
-  seat is offered as any open seat of a game still filling. Nothing retries a card by itself. It is
-  one player's clock, never a card's: the book-by stays the only deadline on a proposal. Decided by
-  ADR-0189's 2026-10-09 amendment (the mechanics Q109) and not yet built
-  ([#625](https://github.com/Raketa02/Raketa/issues/625),
-  [#626](https://github.com/Raketa02/Raketa/issues/626)). _Avoid_: grace period, payment window.
+  payment**, born at the fill and never before — a yes moves no money. Raketa's account of a
+  payment; Stripe is the ledger of record, and a notice from it moves a charge only forward. Since
+  ADR-0189's 2026-10-10 amendment (Q113; not yet built — [#636](https://github.com/Raketa02/Raketa/issues/636), [#637](https://github.com/Raketa02/Raketa/issues/637), [#639](https://github.com/Raketa02/Raketa/issues/639),
+  [#641](https://github.com/Raketa02/Raketa/issues/641)) it is:
+  - **checked** — held for seconds and let go at the fill, its hold not reaching the cut-off, and
+    waiting for its **Holding time**;
+  - **held** — until the cut-off, with the hold's **last moment**;
+  - **taken** — at the cut-off, or at once after it, with the **real fee** once the provider
+    reports it;
+  - **released** — let go on a leave, a call-off or a club's cancel before the cut-off: settled,
+    and nothing moved;
+  - **refunded** — by an **exact amount**, the share or the share less the fee kept;
+  - or **refused**, and then confirmed by the player when their bank wanted them present or the
+    card was declined.
+
+  **A held charge is not paid**: *paid*, and a club's *Collected*, mean taken. _Avoid_: *charged*
+  for a share that is only held.
+- **Time to pay** — the **30 minutes** a player whose share was refused **after the cut-off**,
+  where money is taken at once — when a game filled, when its On request club accepted it, or
+  taking a **Rescue** — has to pay, never past the game's book-by (a rescue: never past its start).
+  Their seat is theirs alone meanwhile, and the other seats' holds are kept, so paying in time
+  books the game without asking anybody's bank, or the club, again; when it runs out the holds are
+  let go and the seat is offered as any open seat of a game still filling (on a rescue, the seat is
+  offered again). Nothing retries a card
+  by itself. It is one player's clock, never a card's: the book-by stays the only deadline on a
+  proposal. Decided by ADR-0189's 2026-10-09 amendment (the mechanics Q109) and built by
+  [#625](https://github.com/Raketa02/Raketa/issues/625) and
+  [#626](https://github.com/Raketa02/Raketa/issues/626); since the 2026-10-10 amendment (Q113)
+  only after the cut-off, before which it is **Time to fix the card**
+  ([#638](https://github.com/Raketa02/Raketa/issues/638)). _Avoid_: grace period, payment window.
+- **Time to fix the card** — the **30 minutes** a player whose card was refused **before the
+  cut-off** has to fix it — at the fill, at its On request club's yes, at the **Holding time**, or
+  taking a **Rescue** — never past the cut-off or the book-by. Nothing is being taken, so nothing
+  is paid in it: the player confirms with their bank or changes card, and the same **Card check**
+  or hold runs again at their press. Their seat is kept for them alone, and the others' holds are
+  kept. Not fixed, the seat goes to others and nothing is owed: at a holding it opens as a Rescue,
+  counted on the record as a leave before the cut-off. Time to pay's machinery serves it. Decided
+  by ADR-0189's 2026-10-10 amendment (the mechanics Q113) and not yet built
+  ([#638](https://github.com/Raketa02/Raketa/issues/638),
+  [#639](https://github.com/Raketa02/Raketa/issues/639),
+  [#640](https://github.com/Raketa02/Raketa/issues/640)). _Avoid_: *pay by* for it, retry.
+- **Card check** — at the fill, a seat whose hold would not reach the cut-off: its share is held for
+  a few seconds and let go, all or nothing with the others, which proves the money is there that
+  day. A hold **reaches** the cut-off when its last moment is at least **6 hours** after it — a
+  domain constant, as is the Holding time's four days. The share is then held at its **Holding
+  time**. Never a receipt. Decided by ADR-0189's 2026-10-10 amendment (Q113) and not yet built
+  ([#639](https://github.com/Raketa02/Raketa/issues/639)). _Avoid_: pre-authorisation, verification.
+- **Holding time** — when a seat's share is held to stay until the cut-off: at the fill, at an On
+  request club's yes or at the Rescue, when that hold reaches the cut-off; otherwise **four days
+  before the cut-off**, when a periodic job holds every checked share. If even that hold would not
+  reach, the share is taken at the hold's last safe moment — its last moment less 6 hours — and a
+  later leave before the cut-off is refunded in full. Decided by ADR-0189's 2026-10-10 amendment
+  (Q113) and not yet built ([#639](https://github.com/Raketa02/Raketa/issues/639)).
 - **Payment method** — a player's saved card or wallet: its **brand** (the network, as the
   provider names it), its **last four digits** and the **wallet** it came through (Apple Pay,
   Google Pay, or none). An **event-sourced aggregate, one stream per player**, born by being
@@ -1512,7 +1579,11 @@ for each one.
   **five a day** per player. _Avoid_: onboarding (that is the player's first run, and a club's
   Stripe account).
 - **Payment terms** — the words that name the club as the one charging: *when a game you said yes
-  to fills, the club charges your share* (the mechanics §12.5). **Accepted before anything is
+  to fills, the club holds your share, and takes it at its cut-off; leave before then and nothing
+  is taken* (the mechanics §12.5, a new version since Q113, owed by
+  [#637](https://github.com/Raketa02/Raketa/issues/637) and
+  [#642](https://github.com/Raketa02/Raketa/issues/642) — a player who accepted the earlier words
+  accepts these before their next game holds money). **Accepted before anything is
   saved**: the setup's secret — the only way a phone can save a card — is the answer to accepting
   them. The acceptance is recorded with **the version shown, the moment and the address**; the
   words are the client's, the version in force the backend's. **A card whose bank moved it to
@@ -1561,8 +1632,9 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
 - **Version** — one of **up to three** views of the same proposal, each dealt to different people:
   the people In, and the names dealt for the seats still open. **Each person is dealt one.** A
   seat a **No** left is dealt again into the same version, to at most three next best fits.
-- **Yes** — a swipe right, or *I'm in*: *"if everybody is in, book it and charge my share."*
-  Silent, free, holds nothing. **Yeses are the game's, never a version's**: a yes on any version
+- **Yes** — a swipe right, or *I'm in*: *"if everybody is in, book it and take my share at the
+  club's cut-off"* (Q113, decided and not yet built — [#637](https://github.com/Raketa02/Raketa/issues/637); it was *charge my share*). Silent,
+  free, and it holds no court and no money. **Yeses are the game's, never a version's**: a yes on any version
   counts toward the one game. A yes needs a saved **Payment method**. A **No** is a swipe left, equally silent, and **final**: the card never comes back.
   _Avoid_: vote, like.
 - **In** — a player who said yes to a proposal that has not filled. **Everybody In fits everybody
@@ -1579,9 +1651,12 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   poster's yes. At most two live per player. It is dealt to whom it is for — its *Who* and a level
   range that starts from the poster's **level window** — and to other players it reads as a
   **Challenge** card.
-- **Fills** — the moment the last needed yes lands and a **Booking** opens. Every seat is then
-  charged together, all or nothing — at an On request club only once the club confirms, the
-  booking *waiting for the club* until it does.
+- **Fills** — the moment the last needed yes lands and a **Booking** opens. Every seat's share is
+  then **held** together, all or nothing — a **Card check** where a seat's hold would not reach the
+  cut-off — and **taken at the club's Cut-off**, or at once for a game that fills after it; at an
+  On request club only once the club confirms, the booking *waiting for the club* until it does.
+  Holding in place of charging is decided by ADR-0189's 2026-10-10 amendment (Q113) and not yet
+  built ([#637](https://github.com/Raketa02/Raketa/issues/637)).
 - **It's a game!** — the screen the player whose yes filled the game, or who took a rescue, sees.
   It marks the players being **matched**, not only booked: since ADR-0189's 2026-10-09 amendment
   (the mechanics Q103, Q110), it also shows when the game goes to its On request club, with when

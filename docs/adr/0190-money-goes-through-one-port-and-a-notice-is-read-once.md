@@ -1,6 +1,7 @@
 # ADR-0190 — Money goes through one port, and a notice is read once
 
-- **Status:** Accepted
+- **Status:** Accepted — **§1 amended below** (2026-10-10: a hold's last moment, the real fee at
+  capture, an exact refund, and a cancel that costs nothing — Q113)
 - **Date:** 2026-09-30
 - **Builds** [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md) §4–§5 for
   [#536](https://github.com/Raketa02/Raketa/issues/536): the payments port, its two adapters, and
@@ -141,3 +142,57 @@ caller's**: it is single use, and a replay would hand back a spent one.
 - **A laptop switched from the fake to Stripe after seeding** holds fake customer ids on every
   seeded stream, which Stripe does not know: a seeded player's *Change* fails there until the
   local database is reset. Fresh sign-ups are unaffected.
+
+## Amendment — 2026-10-10: a hold's last moment, the real fee, an exact refund
+
+[ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s amendment of the same day
+(the mechanics **Q113**, specified by [#634](https://github.com/Raketa02/Raketa/issues/634)) holds
+each share from the fill until the club's cut-off and takes it then. A leave before the cut-off
+takes nothing, and a late leaver whose seat is taken gets the share back less exactly the fee kept
+on their payment. §1's port speaks of *an authorised payment* and *a refund with the fee
+withheld*, and says *no ticket after this one widens it for a known need*. Q113 is a need nobody
+knew of then, so the port widens, here and once, in four ways:
+
+- **Authorising reports the hold's last moment.** A hold lasts days, not until the game: 4 days 18
+  hours on a Visa charged without the player, 7 days on Mastercard. The caller decides whether a
+  hold reaches the cut-off, so the port reports when it ends. On Stripe that is the authorised
+  charge's `payment_method_details.card.capture_before`, read on the club's account where the
+  direct charge lives. The Seat charge records it.
+- **Capturing reports the real fee, or *not yet known*.** The fee exists only once the money is
+  taken, and Stripe classifies a card's price tier at capture. The Stripe adapter reads it from
+  the captured charge's balance transaction on the club's account. A club on its own negotiated
+  pricing gets no fee there, or gets it later, and the port says *not yet known* rather than
+  guessing. The Seat charge records the fee once it is known. **The card-fee estimate and the
+  `CardFees` port behind it retire** from every read: Home, booking details, emails, notices and
+  the club's money.
+- **A refund takes an exact amount**, in place of the withhold-the-fee flag. The caller computes
+  it: the share less the fee kept on that payment for a late leaver whose seat is taken, or the
+  whole share for a club's cancel after the cut-off and the fallback. A refund whose fee is not
+  yet known waits until it is.
+- **Cancelling an uncaptured payment is how a hold is let go, and it costs nothing.** It was
+  already in the port, for the fill's all or nothing. It now also carries a leave, a call-off at
+  the cut-off, a club's cancel before it, and the card check at a far-ahead fill.
+
+**The fake learns what Q113 tests.** Beside Stripe's five test cards, it models **card kinds** with
+their real fees — personal EU (Stripe's standard EEA card) 1,5 % + 1 zł, business 1,9 % + 1 zł,
+UK 2,5 % + 1 zł, outside Europe 3,25 % + 1 zł — and **hold windows**: Visa off-session 4 days 18 hours, Mastercard 7 days. A hold
+lapses on the fake's clock: a capture after its last moment is refused, and the payment ends
+cancelled. The games test console and the tests choose a seeded card's kind and network.
+
+**The demands register gains four obligations**, run against the fake always and against Stripe
+where a person placed a test key:
+- an authorisation reports its last moment;
+- a capture reports the real fee, or *not yet known*;
+- cancelling an uncaptured payment takes nothing;
+- a refund returns exactly the amount asked.
+
+Its rescue and refund demands move off charge-now onto authorise-then-capture, the path
+production uses.
+
+**Still unchecked against Stripe**, as everything in the *Consequences* is (#533, O7):
+- whether a manual capture's response already carries the balance transaction;
+- whether the fee on a partial capture falls on the captured amount only;
+- whether Stripe objects to a second hold placed days after a card check was let go. Renewing
+  a hold is undocumented, so the holding is a second, separate off-session payment.
+
+The build is [#636](https://github.com/Raketa02/Raketa/issues/636).

@@ -3,10 +3,11 @@
 - **Status:** Accepted — **amended below** (2026-09-30: Proposals holds a player's Games &
   money; 2026-10-09: the Home card's bubble also opens the chat, Q100; 2026-10-09: the bell's
   number, *It's a game!* when the four are matched, the club's answer emailed, and time to pay,
-  Q101–Q112)
+  Q101–Q112; 2026-10-10: the share is held until the club's cut-off, and leaving before it is
+  free, Q113)
 - **Date:** 2026-09-29
 - **Specified by** [`docs/specs/games-and-fill-in/the-mechanics.md`](../specs/games-and-fill-in/the-mechanics.md)
-  (the rules, and the decision log Q1–Q112) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
+  (the rules, and the decision log Q1–Q113) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
   (the locked player designs, the club website and the inferred backend). Where this
   record and those documents disagree on a detail, the documents win; this record holds the
   shape.
@@ -288,3 +289,82 @@ The same rulings keep a full game that falls back to filling on its players' Hom
 (Q106) and tell everyone still in it every ending and fall-back (Q104). They also tell a leaver
 only what touches them (Q108), and announce the new card owed after a no (Q107). A card that never
 filled still ends silently, and the record (§4's leaving rules, the mechanics §15.4) is unchanged.
+
+## Amendment — 2026-10-10: the share is held until the club's cut-off, and leaving before it is free
+
+The product owner ruled on 2026-10-10 from story S-01A
+([#605](https://github.com/Raketa02/Raketa/issues/605), F-LEAVE-6.1), **Q113** in the mechanics'
+decision log, specified by [#634](https://github.com/Raketa02/Raketa/issues/634). It moves **when
+money moves and what a leave costs**. It changes §2's *the last yes books the game and charges
+every seat together*, §4's second bullet, and two lines of the *Consequences*: *the club carries
+the fees, including those on refunds it did not cause (a called-off game, its own cancellation)*,
+now true only of a cancellation after the cut-off; and *a refunded leaver bears their own*. The
+rules are in the mechanics §10.1, §12–§13, §14.1, §15.4, §16.8–§16.11, §17.2 and §18, and the
+screens are in A2–A9, B4, B7, B9, C1, C3 and Part D.
+
+**The product owner's three rules** decide it, in order: the law first; **the club never pays for
+a player's leave**; and **the club's cut-off is the one deadline, the same for everyone** —
+leaving before it is free, and after it it isn't.
+
+- **The last yes holds; the cut-off takes.** §2's *all or nothing* and its ten-second undo stand,
+  and the court is booked as before. But at the fill, or at an On request club's yes, every share
+  is **held** on its player's card and nothing is taken. At the club's cut-off a full game's
+  shares are **taken**. A game still short at the cut-off is called off and every hold is **let
+  go**, so nobody pays anything. After the cut-off, money is taken at once, as before: a game that
+  fills after it, a club's yes after it, a rescue taken after it.
+- **A hold lasts only days, so a far-ahead fill is checked.** A hold placed without the player
+  lasts 4 days 18 hours on Visa and 7 days on Mastercard. A seat's hold **reaches** the cut-off
+  when its last moment is at least 6 hours after it, and is then kept. One that doesn't is let go
+  at once — a **Card check**, which proves the money is there that day — and is held again at its
+  **Holding time**, four days before the cut-off, by a new periodic job. If that holding still
+  falls short, it is taken at its last safe moment, and a later leave before the cut-off is
+  refunded in full. That fallback is the one place the club could pay for a leave, and the
+  documented windows never trigger it.
+- **What a leave costs.** Before the cut-off, nothing: the hold is let go, nothing is refunded,
+  and no fee arises for the leaver or the club. §4's *refunds at once, minus the card fee* is gone.
+  After the cut-off, a leaver whose seat is taken gets the share back less **exactly the fee Stripe
+  kept on their own payment**, known once the share is taken, so the club neither earns nor loses.
+  That is the *Consequences*' *a refunded leaver bears their own*, now only after the cut-off and
+  never an estimate. **No estimated card fee is printed anywhere**, to players or clubs.
+- **A card refused before the cut-off gets time to fix it.** Before the cut-off nothing is being
+  taken, so the refused player isn't asked to pay. The 2026-10-09 amendment's time to pay serves a
+  second window, **Time to fix the card**: 30 minutes with the seat kept and the others' holds
+  kept, nothing paid, never past the cut-off. After the cut-off the window keeps its name. A card
+  not fixed at its holding opens its seat as a rescue, and its player owes nothing. A refused
+  rescuer now keeps the seat for 30 minutes too, never past the start.
+- **Why holding, and not keeping the fee.** Stripe never returns its fee on a refund, so under §4
+  somebody always paid for a timely leave: the leaver, or the club on a called-off game. And the
+  1,60 zł the card printed was an estimate, while the fee kept depended on the card. Keeping
+  "the card fee" from a leaver also tied the sum to how they paid. Polish payment law bars a
+  payee's charge for using a personal card issued in the EU (art. 37a ust. 3 of the payment
+  services act), and the European Commission reads the consumer-law payment-fee rule as covering
+  any fee linked to how someone paid. Stripe's terms forbid surcharges the law doesn't permit.
+  Letting a hold go costs nothing at Stripe, so a leave before the cut-off now costs nobody
+  anything. The deduction after the cut-off is in the terms' new version, and its wording waits for
+  the lawyer (open item O3). If the lawyer refuses it on personal EU cards, the fallback is
+  everything back on those cards.
+- **The shape.** §5's **Seat charge** tells apart a *checked* charge, a *held* one (with the hold's
+  last moment), a *taken* one (with the real fee once known), a *released* one and a *refunded*
+  one (with the exact amount given back). A held charge is not paid. The club's *Collected* counts
+  taken charges only, and a released one is settled for payouts. The payments port moves with it:
+  [ADR-0190](0190-money-goes-through-one-port-and-a-notice-is-read-once.md)'s §1 is amended the
+  same day. **BLIK can't be held**, so §4's *BLIK waits* gains a reason: its rule is decided when it
+  launches, and it is cards only until then.
+
+Six calls [#634](https://github.com/Raketa02/Raketa/issues/634) made without a ruling are rules
+until the product owner overrules them, each marked where it stands in the mechanics:
+- a seat lost to a card not fixed at its holding counts as a leave before the cut-off on the
+  record;
+- the take at the cut-off is a quiet row and a receipt, not a push;
+- a refused rescuer keeps the seat;
+- the 6-hour reach margin and the 4-day holding lead are domain constants;
+- the fallback;
+- the club's figures drop the estimate too.
+
+§4's *a game still short at the cut-off is called off* and *a seat nobody takes after it stays
+empty* stand, as do the record's rules and the club's payout after the game. The builds are
+[#636](https://github.com/Raketa02/Raketa/issues/636)–[#641](https://github.com/Raketa02/Raketa/issues/641)
+(backend), [#642](https://github.com/Raketa02/Raketa/issues/642)–[#645](https://github.com/Raketa02/Raketa/issues/645)
+(player app) and [#646](https://github.com/Raketa02/Raketa/issues/646) (club website). Where the
+Seat charge's states and the holding job live is theirs to record here when they land, as the
+2026-09-30 amendment recorded Games & money.
