@@ -66,6 +66,8 @@ from app.modules.proposals.domain.home import (
     without_a_booking,
 )
 from app.modules.proposals.domain.ports import (
+    BookedGameChanges,
+    HoldingTimes,
     ClubNames,
     DeckPeople,
     DeckPerson,
@@ -111,6 +113,8 @@ class ReadHome:
         directory: ProposalDirectory,
         people: DeckPeople,
         clubs: ClubNames,
+        games: BookedGameChanges,
+        holding_times: HoldingTimes,
         clock: Clock,
     ) -> None:
         self._bookings = bookings
@@ -119,6 +123,8 @@ class ReadHome:
         self._directory = directory
         self._people = people
         self._clubs = clubs
+        self._games = games
+        self._holding_times = holding_times
         self._clock = clock
 
     async def execute(self, reader: UUID) -> Home:
@@ -147,6 +153,10 @@ class ReadHome:
             now=now,
         )
         names = await self._clubs.names_of({game.club_id for game in booked})
+        # The reader's own shares only checked at the fill (#639).
+        held_from = await self._holding_times.of(
+            reader, [game.booking_id for game in booked]
+        )
         cards = [
             card
             for card in (
@@ -156,6 +166,7 @@ class ReadHome:
                         game,
                         None if game.game_id is None else results.get(game.game_id),
                         now=now,
+                        held_from=held_from.get(game.booking_id),
                     ),
                     club_name=names.get(game.club_id),
                 )
@@ -164,7 +175,12 @@ class ReadHome:
             if on_home(card.game, card.state, now=now)
         ]
         owed = await owed_by(
-            reader, proposals=self._proposals, directory=self._directory, now=now
+            reader,
+            proposals=self._proposals,
+            directory=self._directory,
+            bookings=self._bookings,
+            games=self._games,
+            now=now,
         )
         return Home(
             read_at=now,

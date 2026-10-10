@@ -69,6 +69,7 @@ from app.api.dev.dependencies import (
 from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
     CUT_OFF_JOB,
+    HOLDING_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     PROPOSAL_EXPIRY_JOB,
     RATING_CATCH_UP_JOB,
@@ -216,8 +217,12 @@ class Moment(StrEnum):
     #: An On request club's answer is due.
     CLUB_ANSWER_DUE = "CLUB_ANSWER_DUE"
     #: A refused share's time to pay ends (#625, #626) — or, before the
-    #: cut-off, its time to fix the card (#638).
+    #: cut-off, its time to fix the card (#638), at the fill or at its holding
+    #: (#639).
     PAYMENT_DUE = "PAYMENT_DUE"
+    #: A share the fill only checked is held again: four days before the
+    #: cut-off (#639).
+    HOLDING = "HOLDING"
     #: Leaving stops being free: a full game's held shares are taken, and a
     #: seat still open calls the game off with every hold let go (#637).
     CUT_OFF = "CUT_OFF"
@@ -254,6 +259,12 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
             "Not fixed or paid by then, the payer's seat reopens for everybody "
             "and the holds the others kept are let go — at a club that "
             "confirms, the booking is called off and the court freed.",
+        ),
+        Moment.HOLDING: MomentRule(
+            HOLDING_JOB,
+            "The shares the fill only checked are held on their cards again, "
+            "to stay until the cut-off; a card refused then gets thirty minutes "
+            "to be fixed, the game still booked.",
         ),
         Moment.CUT_OFF: MomentRule(
             CUT_OFF_JOB,
@@ -1322,6 +1333,21 @@ class _Folded:
             ahead.append((Moment.BOOK_BY, game.book_by))
         if game.ending is None and game.pay_by is not None:
             ahead.append((Moment.PAYMENT_DUE, game.pay_by))
+        checked = [
+            charge.hold_at
+            for charge in self._charges.get(game.proposal_id, ())
+            if charge.status is SeatChargeStatus.CHECKED and charge.hold_at is not None
+        ]
+        if checked:
+            ahead.append((Moment.HOLDING, min(checked)))
+        if booking is not None and booking.cards_to_fix:
+            # A refused holding's time to fix the card (#639).
+            ahead.append(
+                (
+                    Moment.PAYMENT_DUE,
+                    min(to_fix.until for to_fix in booking.cards_to_fix.values()),
+                )
+            )
         if booking is not None:
             if (
                 booking.state is BookingState.WAITING_FOR_THE_CLUB

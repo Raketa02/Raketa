@@ -17,7 +17,8 @@ on one payment holds the court too** (#626), until it comes or does not.
 
 **A leaver keeps their seat row, marked with when they left** (#544): the
 record reads who ever held a seat — a mark is a leaver's — while every read of
-the game as it stands now reads only the seats still held.
+the game as it stands now reads only the seats still held. **A seat whose
+holding was refused is marked until when its card may be fixed** (#639).
 """
 
 from __future__ import annotations
@@ -89,7 +90,12 @@ class BookingSeatORM(Base):
     """One player on one booked game, and the side they were drawn on."""
 
     __tablename__ = "booking_seats"
-    __table_args__ = (Index("ix_booking_seats_player_id", "player_id"),)
+    __table_args__ = (
+        Index("ix_booking_seats_player_id", "player_id"),
+        # The times to fix the card that ran out — the time-to-pay job's read
+        # (#639).
+        Index("ix_booking_seats_card_to_fix_until", "card_to_fix_until"),
+    )
 
     booking_id: Mapped[UUID] = mapped_column(
         UUIDType(binary=False),
@@ -101,5 +107,10 @@ class BookingSeatORM(Base):
     side: Mapped[str] = mapped_column(String(1), nullable=False)
     #: When they left the booked game, or ``NULL`` while the seat is theirs.
     left_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: Their holding was refused, and their time to fix the card runs until
+    #: then (#639) — ``NULL`` while there is nothing to fix.
+    card_to_fix_until: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

@@ -98,15 +98,19 @@ def game_booked_email(
     held_until: Instant | None,
     app_link: str,
     booked_on_a_payment: bool = False,
+    held_from: Instant | None = None,
 ) -> OutgoingMessage:
     """*It's a game! · 30 zł held* — the booking confirmation, saying when the
     share is taken (#637; the mechanics §12.2, Q113): ``held_until`` is the
     club's cut-off, which takes it — *30 zł is held on your card and taken on
     Fri 17:00, the club's cut-off. Leave before then and nothing is taken.* —
     or ``None`` for a share taken at once, after the cut-off: *It's a game! ·
-    you paid 30 zł*. **A game booked on a payment it waited for** (#625, Q110)
-    was *It's a game!* already when it filled: *Your Tue 19:00 is booked · 30
-    zł held*, never a second *It's a game!*."""
+    you paid 30 zł*. **A card only checked** (#639) is told when the share is
+    held, ``held_from``: *Your card was checked. 40 zł will be held from Sat
+    19:00 and taken on Wed 19:00, the club's cut-off.* **A game booked on a
+    payment it waited for** (#625, Q110) was *It's a game!* already when it
+    filled: *Your Tue 19:00 is booked · 30 zł held*, never a second *It's a
+    game!*."""
 
     share = zloty(share_grosze)
     said = f"{share} held" if held_until is not None else f"you paid {share}"
@@ -119,6 +123,17 @@ def game_booked_email(
         heading = "It's a game!" if name is None else f"It's a game, {name}!"
     money: tuple[str, ...] = (
         (
+            f"Your card was checked. {share} will be held from "
+            f"{_short_hour(held_from)} and taken on {_short_hour(held_until)}, "
+            "the club's cut-off. Leave before then and nothing is taken.",
+            "A hold lasts only a few days, so we held your share for a moment "
+            "and let it go, to check the money is there. You may see it come "
+            "and go in your bank app.",
+            f"{share} is your share of the court. {club} is the seller and holds "
+            "it on your card.",
+        )
+        if held_until is not None and held_from is not None
+        else (
             f"{share} is held on your card and taken on {_short_hour(held_until)}, "
             "the club's cut-off. Leave before then and nothing is taken.",
             f"{share} is your share of the court. {club} is the seller and holds "
@@ -184,6 +199,22 @@ _TO_FIX: Final = {
 }
 
 
+#: What fixing a card refused at its Holding time asks (#639): the game is
+#: booked, so there is no yes to say again — the share is held once it is fixed.
+_TO_FIX_AT_THE_HOLDING: Final = {
+    **_TO_FIX,
+    FailureReason.TERMS_NEEDED: (
+        "The payment terms have to be accepted again before your card can be "
+        "held — they changed, or your card's brand did. Accept them in You › "
+        "Payments, and your share is held on it."
+    ),
+    FailureReason.NO_METHOD: (
+        "There is no card to hold your share on. Save one in You › Payments, "
+        "and your share is held on it."
+    ),
+}
+
+
 def confirm_payment_email(
     *,
     to: str,
@@ -196,6 +227,7 @@ def confirm_payment_email(
     rescue: bool = False,
     pay_by: Instant | None = None,
     cut_off: Instant | None = None,
+    at_the_holding: bool = False,
 ) -> OutgoingMessage:
     """*Confirm your payment to keep your seat.* Nobody paid. **With time to
     pay** (#625, #626; Q109) the seat is held for them alone until ``pay_by``,
@@ -206,11 +238,27 @@ def confirm_payment_email(
     keep your seat* — nothing is paid now, and fixing it only places the hold
     again, taken at the cut-off. **On a rescue** (#545) — an open seat on a
     booked game — *to take the seat*: nothing was charged, and the seat is
-    theirs if they confirm before somebody else takes it."""
+    theirs if they confirm before somebody else takes it. **At the Holding
+    time** (#639) the game is booked already: the share could not be held
+    again, and the seat is the player's until ``pay_by`` — then offered to
+    others, and nothing owed."""
 
-    if rescue:
-        subject = "Confirm your payment to take the seat"
+    if at_the_holding and pay_by is not None and cut_off is not None:
+        by = f"{_wall(pay_by):%H:%M}"
+        amount = zloty(amount_grosze)
+        subject = f"Fix your card by {by} to keep your seat"
         lines: tuple[str, ...] = (
+            f"Your {amount} for {_SPORT_WORDS[sport].lower()} at {club} on "
+            f"{_day_and_time(starts_at)} couldn't be held on your card.",
+            _TO_FIX_AT_THE_HOLDING[reason].format(amount=amount),
+            f"Nothing is paid now: fixing your card only places the {amount} "
+            f"hold on it, taken on {_short_hour(cut_off)}, the club's cut-off.",
+            f"Your seat is kept for you until {by}. After that it's offered to "
+            "others, and you owe nothing.",
+        )
+    elif rescue:
+        subject = "Confirm your payment to take the seat"
+        lines = (
             f"You went for the open seat in {_SPORT_WORDS[sport].lower()} at {club} "
             f"on {_day_and_time(starts_at)}, but your payment didn't go through.",
             _WHAT_TO_DO[reason].format(amount=zloty(amount_grosze)),
@@ -275,6 +323,16 @@ GAME_CALLED_OFF_KIND: Final = "payments.game_called_off.player"
 SEAT_TAKEN_KIND: Final = "payments.seat_taken.player"
 
 
+def _let_go(amount_grosze: int, *, on_the_card: bool) -> str:
+    """What letting a share go did to the card: its hold let go — or, a share
+    only checked at the fill or refused at its holding (#639), nothing held on
+    it to let go."""
+
+    if on_the_card:
+        return f"The {zloty(amount_grosze)} hold on your card is let go"
+    return "Nothing is held on your card for it"
+
+
 def left_the_game_email(
     *,
     to: str,
@@ -285,9 +343,11 @@ def left_the_game_email(
     share_grosze: int,
     app_link: str,
     held: bool = False,
+    on_the_card: bool = True,
 ) -> OutgoingMessage:
     """*You left the game · nothing was taken* — left before the club's
-    cut-off with the share only ``held``: the hold is let go (#637, Q113). A
+    cut-off with the share only ``held``: the hold is let go (#637, Q113) — or,
+    not ``on_the_card``, only checked, nothing was held to let go (#639). A
     share taken already — only #639's fallback takes one that early — is *your
     refund is on its way*: everything back, since leaving before the cut-off
     costs nothing."""
@@ -302,7 +362,7 @@ def left_the_game_email(
                 heading=heading,
                 lines=(
                     f"{_SPORT_WORDS[sport]} at {club} — {_the_hour(starts_at)}.",
-                    f"The {zloty(share_grosze)} hold on your card is let go. "
+                    f"{_let_go(share_grosze, on_the_card=on_the_card)}. "
                     "Your seat is offered to others.",
                 ),
                 button_label="Open Raketa",
@@ -379,6 +439,7 @@ def game_called_off_email(
     refunded_grosze: int,
     app_link: str,
     held: bool = False,
+    on_the_card: bool = True,
 ) -> OutgoingMessage:
     """*Game called off · nothing was taken* — a seat was still empty at the
     club's cut-off, so the game is off and every share ``held`` is let go: nobody
@@ -393,8 +454,8 @@ def game_called_off_email(
         subject = "Game called off · nothing was taken"
         lines: tuple[str, ...] = (
             off,
-            f"The {zloty(refunded_grosze)} hold on your card is let go, so "
-            "nothing was taken.",
+            f"{_let_go(refunded_grosze, on_the_card=on_the_card)}, so nothing "
+            "was taken.",
         )
     else:
         subject = f"Game called off · you're refunded {zloty(refunded_grosze)}"
@@ -450,6 +511,7 @@ def game_cancelled_email(
     because: CancelledBecause,
     app_link: str,
     held: bool = False,
+    on_the_card: bool = True,
 ) -> OutgoingMessage:
     """*Game cancelled by the club* (#547): the club cancelled the booked game,
     nothing goes on anybody's record, and everybody in it is dealt a new game
@@ -466,8 +528,8 @@ def game_cancelled_email(
         subject = f"Game cancelled by {club} · nothing was taken"
         lines: tuple[str, ...] = (
             cancelled,
-            f"The {zloty(refunded_grosze)} hold on your card is let go: nothing "
-            "was taken, and nothing about it goes on your record.",
+            f"{_let_go(refunded_grosze, on_the_card=on_the_card)}: nothing was "
+            "taken, and nothing about it goes on your record.",
             "We'll look for another game for you first.",
         )
     else:
@@ -506,6 +568,7 @@ def game_you_left_cancelled_email(
     because: CancelledBecause,
     app_link: str,
     held: bool = False,
+    on_the_card: bool = True,
 ) -> OutgoingMessage:
     """*The game you left was cancelled* (#623; the mechanics §13, Q108): the
     player left after the club's cut-off and their seat was still paid, and
@@ -518,8 +581,7 @@ def game_you_left_cancelled_email(
     if held:
         subject = "The game you left was cancelled · nothing was taken"
         money: tuple[str, ...] = (
-            f"The {zloty(refunded_grosze)} hold on your card is let go: nothing "
-            "was taken.",
+            f"{_let_go(refunded_grosze, on_the_card=on_the_card)}: nothing was taken.",
         )
     else:
         subject = (

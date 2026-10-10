@@ -65,6 +65,17 @@ class BookingDirectory(Protocol):
         ``start`` and before ``end`` — for ever when ``end`` is ``None``."""
         ...
 
+    async def cards_to_fix_past(self, *, now: Instant) -> Sequence[UUID]:
+        """Every booking with a player whose time to fix the card ran out at or
+        before ``now`` (#639) — the time-to-pay job's candidates, the earliest
+        first."""
+        ...
+
+    async def cards_to_fix_of(self, player_id: UUID) -> Sequence[UUID]:
+        """Every booking on which this player's holding was refused and their
+        card is still to fix (#639) — their *To confirm* rows."""
+        ...
+
     async def starts_for(
         self, player_id: UUID, *, start: Instant, end: Instant | None
     ) -> Sequence[Instant]:

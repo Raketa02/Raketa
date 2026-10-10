@@ -117,6 +117,7 @@ def _nothing_but(**overrides):
             "REQUEST_TIMEOUT_ENABLED": False,
             "TIME_TO_PAY_ENABLED": False,
             "CUT_OFF_ENABLED": False,
+            "HOLDING_ENABLED": False,
             "CLUB_PAYOUTS_ENABLED": False,
             "NEW_BOOKINGS_SUMMARY_ENABLED": False,
             **overrides,

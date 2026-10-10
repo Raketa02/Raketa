@@ -502,6 +502,17 @@ class Settings(BaseSettings):
     CUT_OFF_ENABLED: bool = True
     CUT_OFF_INTERVAL_SECONDS: float = 30
 
+    # --- the holding (#639, the mechanics §12.2, Q113)
+    #
+    # **Correctness depends on it**: a share the fill only checked — its hold
+    # would not have lasted until the cut-off — is held nowhere until this
+    # holds it again, and a refused one gives its player their time to fix the
+    # card. **When is emphatically not here**: four days before the cut-off, and
+    # the six hours a hold must outlast it by, are domain
+    # (`payments/domain/seat_charge.py`). Every thirty seconds, like the cut-off.
+    HOLDING_ENABLED: bool = True
+    HOLDING_INTERVAL_SECONDS: float = 30
+
     # --- club payouts (#548, the mechanics §12.6, §16.11)
     #
     # **Correctness depends on it**: a club is paid after its games are played,

@@ -122,9 +122,23 @@ class SeatChargeRepository(Protocol):
         ...
 
     async def games_held_until(self, moment: Instant) -> Sequence[UUID]:
-        """Every game with a share still held for it whose cut-off is at or
-        before ``moment`` — what the cut-off takes (#637) — the earliest
-        first."""
+        """Every game with a share still held for it to be taken at or before
+        ``moment`` — its cut-off, or a holding's last safe moment (#639) — what
+        the cut-off takes (#637), the earliest first."""
+        ...
+
+    async def games_to_hold_by(self, moment: Instant) -> Sequence[UUID]:
+        """Every game with a share checked at its fill whose Holding time is at
+        or before ``moment`` — what the holding holds (#639) — and every game
+        with a share refused there for want of terms or a method, which the
+        holding asks again once its player fixed them; the earliest first."""
+        ...
+
+    async def checked_of(
+        self, player_id: UUID, game_ids: Collection[UUID]
+    ) -> Mapping[UUID, Instant]:
+        """This player's shares only checked for these games, each game's
+        Holding time — *held from Sat 19:00* (#639)."""
         ...
 
 

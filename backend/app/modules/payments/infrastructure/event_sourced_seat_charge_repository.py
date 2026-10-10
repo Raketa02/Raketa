@@ -9,7 +9,7 @@ otherwise answer without them.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
@@ -17,6 +17,7 @@ from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import DomainEventPublisher, DomainEventStore
+from app.infrastructure.database.stored_time import stored_instant
 from app.kernel import Instant
 from app.modules.payments.domain.events import (
     SeatChargeAuthorised,
@@ -79,6 +80,7 @@ class EventSourcedSeatChargeRepository:
                     taken_at=charge.taken_at,
                     starts_at=charge.starts_at,
                     held_until=charge.held_until,
+                    hold_at=charge.hold_at,
                 )
             )
             await self._session.flush()
@@ -91,6 +93,10 @@ class EventSourcedSeatChargeRepository:
                     status=charge.status.value,
                     taken_at=charge.taken_at,
                     held_until=charge.held_until,
+                    hold_at=charge.hold_at,
+                    # A share held again at its Holding time is on a new
+                    # payment, which a notice names (#639).
+                    payment_id=charge.payment_id,
                 )
             )
         # Deliberately no commit: the transaction boundary is the use case's.
@@ -122,6 +128,45 @@ class EventSourcedSeatChargeRepository:
             .order_by(func.min(SeatChargeORM.held_until), SeatChargeORM.game_id)
         )
         return tuple(ids.all())
+
+    async def games_to_hold_by(self, moment: Instant) -> Sequence[UUID]:
+        ids = await self._session.scalars(
+            select(SeatChargeORM.game_id)
+            .where(
+                SeatChargeORM.hold_at <= moment,
+                or_(
+                    SeatChargeORM.status == SeatChargeStatus.CHECKED.value,
+                    # Refused at its holding with nothing asked of the
+                    # provider: asked again once the terms or a method are
+                    # fixed.
+                    and_(
+                        SeatChargeORM.status == SeatChargeStatus.FAILED.value,
+                        SeatChargeORM.payment_id.is_(None),
+                    ),
+                ),
+            )
+            .group_by(SeatChargeORM.game_id)
+            .order_by(func.min(SeatChargeORM.hold_at), SeatChargeORM.game_id)
+        )
+        return tuple(ids.all())
+
+    async def checked_of(
+        self, player_id: UUID, game_ids: Collection[UUID]
+    ) -> Mapping[UUID, Instant]:
+        if not game_ids:
+            return {}
+        rows = await self._session.execute(
+            select(SeatChargeORM.game_id, SeatChargeORM.hold_at).where(
+                SeatChargeORM.player_id == player_id,
+                SeatChargeORM.game_id.in_(set(game_ids)),
+                SeatChargeORM.status == SeatChargeStatus.CHECKED.value,
+            )
+        )
+        return {
+            game_id: stored_instant(hold_at)
+            for game_id, hold_at in rows.all()
+            if hold_at is not None
+        }
 
     async def receipts_of(self, player_id: UUID) -> Sequence[SeatCharge]:
         return await self._loaded(

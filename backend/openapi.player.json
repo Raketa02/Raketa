@@ -7081,7 +7081,20 @@
                 "type": "null"
               }
             ],
-            "description": "`HELD` \u2014 every share is held on its card and taken at `taken_at`, the club's cut-off; leaving before it takes nothing. `TAKEN` \u2014 taken (`paid`). `null` while nobody's money is on the game: waiting for its club or for a payment, called off, and for a reader not on the game. Switches by itself at `taken_at`."
+            "description": "`HELD` \u2014 every share is held on its card and taken at `taken_at`, the club's cut-off; leaving before it takes nothing. `CHECKED` \u2014 **the reader's** card was only checked when the game filled far ahead, and their share is held from `held_from`: *40 z\u0142 held from Sat 19:00 \u00b7 taken Wed 19:00* (#639) \u2014 free to leave until the cut-off all the same. `TAKEN` \u2014 taken (`paid`). `null` while nobody's money is on the game: waiting for its club or for a payment, called off, and for a reader not on the game. Switches by itself at `held_from` and at `taken_at`."
+          },
+          "held_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held From",
+            "description": "When the reader's share is held \u2014 its Holding time, four days before the cut-off \u2014 while it is only checked and that is ahead at `read_at` (`share_state` `CHECKED`, #639). `null` on every other line."
           },
           "taken_at": {
             "anyOf": [
@@ -7127,6 +7140,7 @@
           "share_grosze",
           "paid",
           "share_state",
+          "held_from",
           "taken_at",
           "free_to_leave_until",
           "refunded_grosze"
@@ -13409,6 +13423,7 @@
         "enum": [
           "AUTHORISED",
           "FAILED",
+          "CHECKED",
           "HELD",
           "TAKING",
           "CAPTURED",
@@ -13630,6 +13645,7 @@
         "type": "string",
         "enum": [
           "HELD",
+          "CHECKED",
           "TAKEN"
         ],
         "title": "ShareState",

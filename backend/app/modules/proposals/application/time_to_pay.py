@@ -19,13 +19,18 @@ owed here:
   wait is released: all but the payers' own, a confirmed one waiting for the
   fill as any confirmed payment does, a refused one for its player.
 
+**And on a booked game, a refused holding's time to fix the card** (#639):
+run out, the player's seat opens to Fill in — on the record a leave before the
+cut-off — and their refused holding is let go; they owe nothing
+(``run_out_the_cards_to_fix``).
+
 **Nothing here commits but the job**, which is one transaction per game, its
 game locked first, a conflict counted and stepped over.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import final
 from uuid import UUID
@@ -34,7 +39,10 @@ from app.application.events import EventStreamVersionConflict
 from app.application.ports import UnitOfWork
 from app.kernel import Clock, Instant, instant, invariant
 from app.modules.proposals.domain.ports import (
+    BookedGameChanges,
+    CardsToFix,
     ClubRequests,
+    PlayerBookings,
     ProposalDirectory,
     ProposalRepository,
     UndecidedCharges,
@@ -134,6 +142,35 @@ async def run_out_if_due(
         )
 
 
+async def run_out_the_cards_to_fix(
+    booking_id: UUID,
+    *,
+    bookings: PlayerBookings,
+    games: BookedGameChanges,
+    cards: CardsToFix,
+    now: Instant,
+) -> tuple[UUID, ...]:
+    """**A booked game's time to fix the card run out** (#639): each player
+    whose holding was refused and whose time is up at ``now`` lets their seat
+    go — it opens to Fill in, as a leaver's before the cut-off — and their
+    refused holding is let go: they owe nothing. Answers whose ran out. **No
+    commit.**"""
+
+    game = await bookings.find(booking_id)
+    if game is None:
+        return ()
+    ran_out: list[UUID] = []
+    for player, to_fix in sorted(
+        game.cards_to_fix.items(), key=lambda one: str(one[0])
+    ):
+        if now >= to_fix.until and await games.card_not_fixed(
+            booking_id, player, at=now
+        ):
+            await cards.let_go_unfixed(booking_id, player, at=now)
+            ran_out.append(player)
+    return tuple(ran_out)
+
+
 @final
 @dataclass(frozen=True, slots=True)
 class RanOut:
@@ -163,6 +200,9 @@ class RunOutTheTimeToPay:
         directory: ProposalDirectory,
         requests: ClubRequests,
         undecided: UndecidedCharges,
+        bookings: PlayerBookings,
+        games: BookedGameChanges,
+        cards: CardsToFix,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
@@ -170,23 +210,61 @@ class RunOutTheTimeToPay:
         self._directory = directory
         self._requests = requests
         self._undecided = undecided
+        self._bookings = bookings
+        self._games = games
+        self._cards = cards
         self._uow = uow
         self._clock = clock
 
     async def execute(self) -> RanOut:
         now = instant(self._clock.now())
-        games = conflicts = 0
-        for proposal_id in await self._directory.paying_past(now=now):
+        games, conflicts = await self._each(
+            await self._directory.paying_past(now=now), self._run_out, now=now
+        )
+        # A booked game's time to fix the card, at its holding (#639).
+        booked, booked_conflicts = await self._each(
+            await self._games.cards_to_fix_past(now=now),
+            self._run_out_the_cards,
+            now=now,
+        )
+        return RanOut(games=games + booked, conflicts=conflicts + booked_conflicts)
+
+    async def _each(
+        self,
+        game_ids: Sequence[UUID],
+        act: Callable[..., Awaitable[bool]],
+        *,
+        now: Instant,
+    ) -> tuple[int, int]:
+        """``act`` on each game in its own transaction: how many it recorded,
+        and how many another process reached first."""
+
+        recorded = conflicts = 0
+        for game_id in game_ids:
             try:
-                if await self._run_out(proposal_id, now=now):
+                if await act(game_id, now=now):
                     await self._uow.commit()
-                    games += 1
+                    recorded += 1
                 else:
                     await self._uow.rollback()
             except EventStreamVersionConflict:
                 await self._uow.rollback()
                 conflicts += 1
-        return RanOut(games=games, conflicts=conflicts)
+        return recorded, conflicts
+
+    async def _run_out_the_cards(self, booking_id: UUID, *, now: Instant) -> bool:
+        # The booking's id is its proposal's, whose row every act on the game
+        # locks first.
+        await self._proposals.load_for_update(booking_id)
+        return bool(
+            await run_out_the_cards_to_fix(
+                booking_id,
+                bookings=self._bookings,
+                games=self._games,
+                cards=self._cards,
+                now=now,
+            )
+        )
 
     async def _run_out(self, proposal_id: UUID, *, now: Instant) -> bool:
         proposal = await self._proposals.load_for_update(proposal_id)

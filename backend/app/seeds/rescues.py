@@ -142,9 +142,8 @@ async def seed_the_rescues(
             her
         ].week
         taken = [
-            *(booking.start for booking in bookings.bookings),
+            *bookings.starts,
             *(pick.start for pick in seeded.picks),
-            *([bookings.waiting.start] if bookings.waiting is not None else []),
             *(row.game.start for row in board.seats_to_fill),
         ]
         hers = [

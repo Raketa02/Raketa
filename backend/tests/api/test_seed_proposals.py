@@ -337,6 +337,12 @@ async def test_she_has_a_game_on_the_day_paid_and_one_before_its_cut_off_held(
     assert later.state == BEFORE_THE_CUT_OFF
     assert later.start > now + timedelta(hours=24)
     assert [booking.made for booking in seeded.bookings] == [True, True]
+    # The crowd's game filled far ahead: every seat checked, held at its
+    # Holding time four days before the cut-off (#639).
+    far = seeded.far_ahead
+    assert far is not None and far.made
+    assert far.checked == 4
+    assert far.hold_at is not None and now < far.hold_at < far.start
     receipts = (
         await client.get("/api/v1/players/me/receipts", headers=her["headers"])
     ).json()["receipts"]
@@ -366,6 +372,7 @@ async def test_a_second_run_books_nothing_twice(
     )
 
     assert [booking.made for booking in again.bookings] == [False, False]
+    assert again.far_ahead is not None and not again.far_ahead.made
     assert again.receipts == 1
 
 

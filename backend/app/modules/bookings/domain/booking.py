@@ -36,6 +36,11 @@ seat that opened after the cut-off leaves the game going ahead short. Whether a
 game is **short at its cut-off** is read off the departures and the clock, so
 every read says it from the cut-off on, whether or not the job has recorded it.
 
+**A player whose holding was refused has their time to fix the card** (#639;
+Q113): the game stays booked, their seat theirs alone until then. Fixed in
+time, it is simply theirs again; run out, it opens as a leaver's does — before
+the cut-off, which is how the record counts it.
+
 **An open seat is a rescue** (#545; the mechanics §10.1): somebody else takes
 it, paid at once, and sits where the leaver sat. **The seat that opened first is
 taken first** — the leavers are refunded in the order they left — and a seat
@@ -70,6 +75,8 @@ from app.modules.bookings.domain.events import (
     BookingTimedOut,
     CalledOffAtCutOff,
     CancelledByClub,
+    CardFixed,
+    CardToFix,
     CourtMoved,
     PaymentNotInTime,
     PlayerCheckedIn,
@@ -137,6 +144,17 @@ class CancelReason(StrEnum):
     #: The desk sold the hour too — an Instant club's double sale (§16.16).
     DOUBLE_BOOKING = "DOUBLE_BOOKING"
     OTHER = "OTHER"
+
+
+@dataclass(frozen=True, slots=True)
+class RefusedHolding:
+    """A player's holding refused (#639): until when their time to fix the
+    card runs, the payment to confirm, and why it was refused — the refusal's
+    code, which is the money's to name."""
+
+    until: Instant
+    seat_charge_id: UUID
+    reason: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -209,6 +227,9 @@ class Booking:
     cancel_reason: CancelReason | None = None
     #: Everybody the club's desk checked in, and when (#547).
     checked_in: dict[UUID, Instant] = field(default_factory=dict)
+    #: Everybody whose holding was refused and whose time to fix the card runs
+    #: (#639) — the game booked meanwhile.
+    cards_to_fix: dict[UUID, RefusedHolding] = field(default_factory=dict)
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -376,6 +397,13 @@ class Booking:
         return self.state is BookingState.WAITING_FOR_A_PAYMENT
 
     @property
+    def fixing_until(self) -> dict[UUID, Instant]:
+        """Everybody whose holding was refused, and until when their time to
+        fix the card runs (#639)."""
+
+        return {player: refused.until for player, refused in self.cards_to_fix.items()}
+
+    @property
     def seats(self) -> int:
         """Four for padel and badminton, two for tennis and squash."""
 
@@ -487,6 +515,71 @@ class Booking:
         self._record_that(
             SeatLeft(booking_id=self.booking_id, player_id=player_id, occurred_at=at)
         )
+
+    def card_to_fix(
+        self,
+        player_id: UUID,
+        *,
+        until: Instant,
+        seat_charge_id: UUID,
+        reason: str,
+        at: Instant,
+    ) -> None:
+        """This player's holding was refused (#639): the game stays booked,
+        their seat theirs alone until ``until`` — their time to fix the card,
+        never past the cut-off. Whose share it is, and that it was refused, is
+        the caller's to know; that they are on the booked game, and that the
+        time is ahead and inside the cut-off, is this one's."""
+
+        invariant(
+            self.is_booked and player_id in self.players,
+            f"{player_id} has no seat on {self.booking_id} to fix a card for",
+        )
+        invariant(
+            at < until <= self.cut_off,
+            f"a card on {self.booking_id} to fix by {until} at {at}, "
+            f"cut-off {self.cut_off}",
+        )
+        self._record_that(
+            CardToFix(
+                booking_id=self.booking_id,
+                player_id=player_id,
+                until=until,
+                seat_charge_id=seat_charge_id,
+                reason=reason,
+                occurred_at=at,
+            )
+        )
+
+    def card_fixed(self, player_id: UUID, *, at: Instant) -> bool:
+        """This player fixed their card in time (#639). Answers whether
+        anything was recorded — nothing for a card not to fix."""
+
+        if player_id not in self.cards_to_fix:
+            return False
+        self._record_that(
+            CardFixed(booking_id=self.booking_id, player_id=player_id, occurred_at=at)
+        )
+        return True
+
+    def card_not_fixed(self, player_id: UUID, *, at: Instant) -> bool:
+        """This player's time to fix the card ran out (#639): their seat opens
+        as a leaver's does — a Rescue on Fill in — and on the record it is a
+        leave before the cut-off. Answers whether anything was recorded —
+        nothing for a card not to fix, or one whose time still runs."""
+
+        to_fix = self.cards_to_fix.get(player_id)
+        if to_fix is None or at < to_fix.until or not self.is_booked:
+            return False
+        self._record_that(
+            SeatLeft(
+                booking_id=self.booking_id,
+                player_id=player_id,
+                occurred_at=at,
+                card_not_fixed=True,
+            )
+        )
+        return True
 
     def rescue(self, player_id: UUID, *, at: Instant) -> Departure:
         """*I'm in* on an open seat: this player takes **the seat that opened
@@ -783,6 +876,13 @@ class Booking:
         self._apply(event)
         self._events.record(event)
 
+    def _no_card_to_fix(self, player_id: UUID) -> None:
+        self.cards_to_fix = {
+            player: refused
+            for player, refused in self.cards_to_fix.items()
+            if player != player_id
+        }
+
     def _apply(self, event: DomainEvent) -> None:
         if isinstance(event, BookingAccepted):
             self.state = BookingState.BOOKED
@@ -825,7 +925,19 @@ class Booking:
             opened = set(event.player_ids)
             self.first_side = tuple(p for p in self.first_side if p not in opened)
             self.second_side = tuple(p for p in self.second_side if p not in opened)
+        elif isinstance(event, CardToFix):
+            self.cards_to_fix = {
+                **self.cards_to_fix,
+                event.player_id: RefusedHolding(
+                    until=instant(event.until),
+                    seat_charge_id=event.seat_charge_id,
+                    reason=event.reason,
+                ),
+            }
+        elif isinstance(event, CardFixed):
+            self._no_card_to_fix(event.player_id)
         elif isinstance(event, SeatLeft):
+            self._no_card_to_fix(event.player_id)
             side = "A" if event.player_id in self.first_side else "B"
             self.first_side = tuple(p for p in self.first_side if p != event.player_id)
             self.second_side = tuple(
@@ -864,6 +976,8 @@ class Booking:
         elif isinstance(event, CalledOffAtCutOff):
             self.state = BookingState.CALLED_OFF
             self.called_off = CalledOff.SHORT_AT_THE_CUT_OFF
+            # A game off has no card to fix: its holds are all let go (#639).
+            self.cards_to_fix = {}
         elif isinstance(event, CourtMoved):
             self.court = BookedCourt(court_id=event.court_id, name=event.court_name)
         elif isinstance(event, CancelledByClub):
@@ -871,6 +985,7 @@ class Booking:
             self.called_off = CalledOff.CANCELLED_BY_THE_CLUB
             self.cancel_reason = CancelReason(event.reason)
             self.cancelled_at = instant(event.occurred_at)
+            self.cards_to_fix = {}
         elif isinstance(event, PlayerCheckedIn):
             self.checked_in = {
                 **self.checked_in,

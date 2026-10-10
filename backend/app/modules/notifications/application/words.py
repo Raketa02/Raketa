@@ -178,6 +178,13 @@ def words_for(said: Said) -> Words:
             ),
         )
     if kind is NoticeKind.TIME_TO_FIX_RAN_OUT:
+        if said.reason == NoticeReason.SEAT_OPEN:
+            # At its holding, on a booked game (#639): the seat is offered to
+            # others as a leaver's, never theirs to take back.
+            return Words(
+                title=f"Your time to fix your card ran out · {_hour(said.starts_at)}",
+                body="Your seat is open to others now, and you owe nothing.",
+            )
         return Words(
             title=f"Your time to fix your card ran out · {_hour(said.starts_at)}",
             body=(

@@ -14,6 +14,16 @@ through ``TakeTheHeldShares``), and leaving before then lets it go — a
 rescue's share too, which follows the seats it joins. **Booked after it, every
 share is taken at once**, as before.
 
+**A hold that would not last until the cut-off is a Card check** (#639; Q113):
+a hold made without its player lasts days — 4 days 18 hours on a Visa — so a
+game booked further ahead lets that seat's hold go at once, all or nothing
+with the others, which proves the money was there that day, and the holding
+job holds it again at its **Holding time**, four days before the cut-off
+(``HoldTheCheckedShares``). A holding the card refuses gives its player their
+time to fix the card on the booked game: confirmed in time it is kept
+(``KeepTheFixedShare``), and run out it is let go with their seat
+(``LetTheUnfixedShareGo``).
+
 **The holds are asked inline, because their answer is the response** — *It's a
 game!* or *your payment didn't go through* — and before anything is written
 (``docs/adr/0190`` §4). What is written is the verdict: every charge **taken**
@@ -79,6 +89,9 @@ from app.modules.payments.domain.seat_charge import (
     FailureReason,
     SeatCharge,
     SeatChargeStatus,
+    holding_time,
+    reaches,
+    taken_by,
 )
 from app.shared.ids import new_uuid
 
@@ -243,33 +256,18 @@ class ChargeTheSeats:
     ) -> Payment | tuple[FailureReason, Payment | None]:
         """One seat's hold, or why it could not be made."""
 
-        assert seller.account_id is not None
-        method = await self._methods.load(player)
-        if method.method is None or method.customer_id is None:
-            return FailureReason.NO_METHOD, None
-        if method.terms_needed:
-            # A brand the terms were not accepted for cannot be charged
-            # off-session until its holder agrees again: the provider is not
-            # asked (the mechanics §19).
-            return FailureReason.TERMS_NEEDED, None
-        key = hold_key(game.game_id, player, attempt=attempt, at=at, rescue=game.rescue)
-        clone = await self._provider.clone_method(
-            customer_id=method.customer_id,
-            method_id=method.method.method_id,
-            account_id=seller.account_id,
-            idempotency_key=f"{key}-clone",
-        )
-        payment = await self._provider.authorise(
-            account_id=seller.account_id,
-            method_id=clone,
+        return await _held_on_the_card(
+            player,
+            methods=self._methods,
+            provider=self._provider,
+            seller=seller,
             amount_grosze=game.share_grosze,
             description=f"{game.sport.value.title()} · {seller.name}",
-            metadata={"game_id": str(game.game_id), "player_id": str(player)},
-            idempotency_key=key,
+            game_id=game.game_id,
+            key=hold_key(
+                game.game_id, player, attempt=attempt, at=at, rescue=game.rescue
+            ),
         )
-        if payment.status is PaymentStatus.AUTHORISED:
-            return payment
-        return _refusal_of(payment), payment
 
     async def _book_every_seat(
         self,
@@ -282,18 +280,36 @@ class ChargeTheSeats:
         at: Instant,
     ) -> SeatsCharged:
         """Every hold is the game's: kept until the cut-off — a rescue's too,
-        like every seat it joins — or, booked after it, taken now."""
+        like every seat it joins — or, booked after it, taken now. **A hold
+        that would not last until the cut-off is checked** (#639): let go at
+        once, and held again at its Holding time — unless that time has come,
+        when it is kept and taken by its last safe moment (``taken_by``)."""
 
         until = game.free_to_leave_until
         taken: dict[UUID, UUID] = {}
+        checked: dict[UUID, Instant] = {}
         for player in players:
             charge = confirmed.get(player) or _a_hold(
                 game, player, held[player], seller=seller, at=at
             )
-            if until is not None:
-                charge.keep(booking_id=game.game_id, until=until, at=at)
-            else:
+            if until is None:
                 charge.take(booking_id=game.game_id, at=at)
+            elif reaches(charge.last_moment, cut_off=until) or at >= holding_time(
+                until
+            ):
+                charge.keep(
+                    booking_id=game.game_id,
+                    until=taken_by(charge.last_moment, cut_off=until),
+                    at=at,
+                )
+            else:
+                checked[player] = holding_time(until)
+                charge.check(
+                    booking_id=game.game_id,
+                    until=until,
+                    hold_at=checked[player],
+                    at=at,
+                )
             await self._charges.save(charge)
             taken[player] = charge.charge_id
         payers = await self._payers.of(players)
@@ -311,6 +327,7 @@ class ChargeTheSeats:
                     starts_at=game.starts_at,
                     share_grosze=game.share_grosze,
                     held_until=until,
+                    held_from=checked.get(player),
                     app_link=self._app_link,
                     booked_on_a_payment=game.booked_on_a_payment
                     and player != game.filled_by,
@@ -389,6 +406,49 @@ class ChargeTheSeats:
         return SeatsCharged(taken={}, refused=seats)
 
 
+async def _held_on_the_card(
+    player: UUID,
+    *,
+    methods: PaymentMethodRepository,
+    provider: PaymentProvider,
+    seller: Seller,
+    amount_grosze: int,
+    description: str,
+    game_id: UUID,
+    key: str,
+) -> Payment | tuple[FailureReason, Payment | None]:
+    """One share held on a player's saved card, cloned onto the club's account
+    for that one payment — or why it could not be: a player with no method, or
+    whose card the terms in force were not accepted for, is refused **without
+    asking the provider** (the mechanics §19)."""
+
+    assert seller.account_id is not None
+    method = await methods.load(player)
+    if method.method is None or method.customer_id is None:
+        return FailureReason.NO_METHOD, None
+    if method.terms_needed:
+        # A brand the terms were not accepted for cannot be charged off-session
+        # until its holder agrees again.
+        return FailureReason.TERMS_NEEDED, None
+    clone = await provider.clone_method(
+        customer_id=method.customer_id,
+        method_id=method.method.method_id,
+        account_id=seller.account_id,
+        idempotency_key=f"{key}-clone",
+    )
+    payment = await provider.authorise(
+        account_id=seller.account_id,
+        method_id=clone,
+        amount_grosze=amount_grosze,
+        description=description,
+        metadata={"game_id": str(game_id), "player_id": str(player)},
+        idempotency_key=key,
+    )
+    if payment.status is PaymentStatus.AUTHORISED:
+        return payment
+    return _refusal_of(payment), payment
+
+
 def _a_hold(
     game: GameToCharge, player: UUID, payment: Payment, *, seller: Seller, at: Instant
 ) -> SeatCharge:
@@ -424,14 +484,226 @@ class TakeTheHeldShares:
         return await self._charges.games_held_until(at)
 
     async def execute(self, game_id: UUID, *, at: Instant) -> int:
-        """Take every share held for this game. Answers how many."""
+        """Take every share held for this game whose moment has come — the
+        cut-off, or a holding's last safe moment (#639). Answers how many."""
 
         taken = 0
         for charge in await self._charges.of_game(game_id):
-            if charge.take_at_the_cut_off(at=at):
+            if (
+                charge.held_until is not None
+                and charge.held_until <= at
+                and charge.take_at_the_cut_off(at=at)
+            ):
                 await self._charges.save(charge)
                 taken += 1
         return taken
+
+
+def holding_key(charge: SeatCharge, *, at: Instant) -> str:
+    """The key a checked share's holding is asked under: the charge, the
+    attempt — its stream version, so a holding asked again after the terms
+    were fixed asks afresh — and the hour (#639)."""
+
+    return f"raketa-holding-{charge.charge_id}-{charge.version}-{key_hour(at)}"
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class HoldingDone:
+    """What one game's holding did: whose shares were held again, and whose
+    were refused — each player's charge and why."""
+
+    held: frozenset[UUID]
+    refused: Mapping[UUID, RefusedSeat]
+
+
+@final
+class HoldTheCheckedShares:
+    """**The Holding time** (#639; the mechanics Q113): every share checked at
+    its game's fill is held again, four days before the cut-off, to stay until
+    it — **inline**, as the fill's holds are, because whether it holds decides
+    what the booked game asks of its player. A holding that still would not
+    reach the cut-off is taken by its last safe moment (``taken_by``). **A
+    refused holding** is recorded, and its player emailed to fix their card
+    by ``fix_by`` — whose seat is theirs until then is the booked game's to
+    say. A share refused for want of terms or a method is asked again on each
+    run once its player fixed them, and records nothing until then. **No
+    commit.**"""
+
+    def __init__(
+        self,
+        *,
+        methods: PaymentMethodRepository,
+        charges: SeatChargeRepository,
+        sellers: Sellers,
+        payers: Payers,
+        provider: PaymentProvider,
+        mail: MailQueue,
+        app_link: str,
+    ) -> None:
+        self._methods = methods
+        self._charges = charges
+        self._sellers = sellers
+        self._payers = payers
+        self._provider = provider
+        self._mail = mail
+        self._app_link = app_link
+
+    async def due(self, *, at: Instant) -> Sequence[UUID]:
+        """Every game with a share checked whose Holding time has come — the
+        earliest first."""
+
+        return await self._charges.games_to_hold_by(at)
+
+    async def execute(
+        self,
+        game_id: UUID,
+        *,
+        fix_by: Instant,
+        at: Instant,
+        fixing_until: Mapping[UUID, Instant] | None = None,
+    ) -> HoldingDone:
+        """``fixing_until`` names the players already given their time to fix
+        the card, and when it ends: refused again, they keep it."""
+
+        due = [
+            charge
+            for charge in await self._charges.of_game(game_id)
+            if charge.hold_at is not None
+            and charge.hold_at <= at
+            and (
+                charge.status is SeatChargeStatus.CHECKED
+                or (charge.refused_at_its_holding and charge.payment_id is None)
+            )
+        ]
+        if not due:
+            return HoldingDone(held=frozenset(), refused={})
+        seller = (await self._sellers.of([due[0].club_id])).get(due[0].club_id)
+        invariant(
+            seller is not None and seller.account_id is not None,
+            f"{game_id} held at {due[0].club_id}, which takes no payments",
+        )
+        assert seller is not None
+        held: set[UUID] = set()
+        refused: dict[UUID, RefusedSeat] = {}
+        for charge in due:
+            assert charge.held_until is not None
+            outcome = await _held_on_the_card(
+                charge.player_id,
+                methods=self._methods,
+                provider=self._provider,
+                seller=seller,
+                amount_grosze=charge.amount_grosze,
+                description=f"{charge.sport.value.title()} · {seller.name}",
+                game_id=game_id,
+                key=holding_key(charge, at=at),
+            )
+            if isinstance(outcome, Payment):
+                charge.hold_again(
+                    outcome,
+                    until=taken_by(outcome.last_moment, cut_off=charge.held_until),
+                    at=at,
+                )
+                held.add(charge.player_id)
+            else:
+                reason, answer = outcome
+                if charge.holding_refused(reason, payment=answer, at=at):
+                    refused[charge.player_id] = RefusedSeat(
+                        charge_id=charge.charge_id, reason=reason
+                    )
+            await self._charges.save(charge)
+        await self._ask_to_fix(
+            [charge for charge in due if charge.player_id in refused],
+            seller=seller,
+            fix_by=fix_by,
+            fixing_until=fixing_until or {},
+            at=at,
+        )
+        return HoldingDone(held=frozenset(held), refused=refused)
+
+    async def _ask_to_fix(
+        self,
+        refused: Sequence[SeatCharge],
+        *,
+        seller: Seller,
+        fix_by: Instant,
+        fixing_until: Mapping[UUID, Instant],
+        at: Instant,
+    ) -> None:
+        """*Fix your card by 19:30 to keep your seat* — to each player whose
+        holding was refused, by the time they have."""
+
+        payers = await self._payers.of([charge.player_id for charge in refused])
+        for charge in refused:
+            payer = payers.get(charge.player_id)
+            if payer is None or charge.failure is None:
+                continue
+            assert charge.held_until is not None
+            await self._mail.enqueue(
+                confirm_payment_email(
+                    to=payer.email,
+                    club=seller.name,
+                    sport=charge.sport,
+                    starts_at=charge.starts_at,
+                    amount_grosze=charge.amount_grosze,
+                    reason=charge.failure,
+                    app_link=self._app_link,
+                    pay_by=fixing_until.get(charge.player_id, fix_by),
+                    cut_off=charge.held_until,
+                    at_the_holding=True,
+                ),
+                at=at,
+            )
+
+
+@final
+class KeepTheFixedShare:
+    """**Fixed in time** (#639): a share refused at its Holding time that its
+    player confirmed — the payment the provider holds now — is kept for the
+    booked game until the cut-off, as a holding's is. Answers whether it was:
+    nothing for a charge that is no refused holding confirmed. **No
+    commit.**"""
+
+    def __init__(self, *, charges: SeatChargeRepository) -> None:
+        self._charges = charges
+
+    async def execute(self, charge_id: UUID, *, at: Instant) -> bool:
+        charge = await self._charges.load(charge_id)
+        if (
+            charge is None
+            or charge.status is not SeatChargeStatus.AUTHORISED
+            or charge.booking_id is None
+            or charge.held_until is None
+        ):
+            return False
+        charge.keep(
+            booking_id=charge.booking_id,
+            until=taken_by(charge.last_moment, cut_off=charge.held_until),
+            at=at,
+            fixed=True,
+        )
+        await self._charges.save(charge)
+        return True
+
+
+@final
+class LetTheUnfixedShareGo:
+    """**Not fixed in time** (#639): the share refused at its Holding time is
+    let go with its player's seat — its payment cancelled from the outbox — and
+    they owe nothing. **No commit.**"""
+
+    def __init__(self, *, charges: SeatChargeRepository) -> None:
+        self._charges = charges
+
+    async def execute(self, game_id: UUID, player_id: UUID, *, at: Instant) -> int:
+        """Answers how many were let go."""
+
+        let_go = 0
+        for charge in await self._charges.of_game(game_id):
+            if charge.player_id == player_id and charge.to_fix and charge.let_go(at=at):
+                await self._charges.save(charge)
+                let_go += 1
+        return let_go
 
 
 @final

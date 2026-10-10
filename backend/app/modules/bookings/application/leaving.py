@@ -1,13 +1,15 @@
 """Leaving a booked game, and the cut-off (#544; the mechanics §12.3, §13,
 §16.12; ``docs/adr/0189`` §5).
 
-**Two acts on one booking, each in its caller's transaction**, which is the
+**Acts on one booking, each in its caller's transaction**, which is the
 proposal's — the leaver's, and the cut-off job's — and **nothing here
 commits**:
 
 - **left** — the leaver's seat opens on the booking and on its Game, whose
   room they leave with it; what it costs them is the money's, decided by the
   caller;
+- **a card not fixed in time** (#639) — a player whose holding was refused
+  lets their seat go when their time to fix the card runs out, as a leaver;
 - **called off at the cut-off** — a seat that opened before the club's cut-off
   is still open at it: the game is off, the court the club's again, its Game
   and room end, and the club's desk is emailed at once. The people still in are
@@ -42,6 +44,56 @@ class LeaveTheBooking:
         booking.leave(player_id, at=at)
         await self._bookings.save(booking)
         await self._games.vacate(booking_id, player_id, at=at)
+
+
+@final
+class TimeToFixTheCard:
+    """**A player's holding was refused** (#639; the mechanics Q113): the game
+    stays booked while they have their time to fix the card. Fixed in time,
+    their seat is simply theirs again; run out, it opens as a leaver's does —
+    the Game's seat vacated, so they leave its room — and the money's part is
+    the caller's."""
+
+    def __init__(self, *, bookings: BookingRepository, games: GameChanges) -> None:
+        self._bookings = bookings
+        self._games = games
+
+    async def give(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        until: Instant,
+        seat_charge_id: UUID,
+        reason: str,
+        at: Instant,
+    ) -> None:
+        booking = await _loaded(self._bookings, booking_id)
+        booking.card_to_fix(
+            player_id,
+            until=until,
+            seat_charge_id=seat_charge_id,
+            reason=reason,
+            at=at,
+        )
+        await self._bookings.save(booking)
+
+    async def fixed(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> bool:
+        booking = await _loaded(self._bookings, booking_id)
+        if not booking.card_fixed(player_id, at=at):
+            return False
+        await self._bookings.save(booking)
+        return True
+
+    async def not_fixed(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> bool:
+        booking = await _loaded(self._bookings, booking_id)
+        if not booking.card_not_fixed(player_id, at=at):
+            return False
+        await self._bookings.save(booking)
+        await self._games.vacate(booking_id, player_id, at=at)
+        return True
 
 
 @final

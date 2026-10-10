@@ -22,9 +22,12 @@ from app.modules.payments.domain.events import (
     SeatChargeAuthorised,
     SeatChargeCancelled,
     SeatChargeCaptured,
+    SeatChargeChecked,
     SeatChargeConfirmed,
     SeatChargeFailed,
     SeatChargeFeeReported,
+    SeatChargeHeldAgain,
+    SeatChargeHoldingRefused,
     SeatChargeKept,
     SeatChargeRefundDecided,
     SeatChargeRefunded,
@@ -45,6 +48,9 @@ _EVENTS = (
     (SeatChargeFailed, "payments.seat_charge_failed"),
     (SeatChargeConfirmed, "payments.seat_charge_confirmed"),
     (SeatChargeKept, "payments.seat_charge_kept"),
+    (SeatChargeChecked, "payments.seat_charge_checked"),
+    (SeatChargeHeldAgain, "payments.seat_charge_held_again"),
+    (SeatChargeHoldingRefused, "payments.seat_charge_holding_refused"),
     (SeatChargeTaken, "payments.seat_charge_taken"),
     (SeatChargeReleased, "payments.seat_charge_released"),
     (SeatChargeCaptured, "payments.seat_charge_captured"),
@@ -73,6 +79,9 @@ def subscribe_payment_handlers(dispatcher: EventDispatcher) -> None:
     dispatcher.subscribe(SeatChargeFailed, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeConfirmed, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeKept, LogSeatChargeEvent())
+    dispatcher.subscribe(SeatChargeChecked, LogSeatChargeEvent())
+    dispatcher.subscribe(SeatChargeHeldAgain, LogSeatChargeEvent())
+    dispatcher.subscribe(SeatChargeHoldingRefused, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeTaken, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeReleased, LogSeatChargeEvent())
     dispatcher.subscribe(SeatChargeCaptured, LogSeatChargeEvent())
@@ -109,6 +118,8 @@ def subscribe_the_seat_charge_settler(
     dispatcher.subscribe(SeatChargeTaken, settle)
     dispatcher.subscribe(SeatChargeReleased, settle)
     dispatcher.subscribe(SeatChargeRefundDecided, settle)
+    # A Card check's hold is let go at once (#639).
+    dispatcher.subscribe(SeatChargeChecked, settle)
 
 
 def subscribe_the_seat_taken_refund_emailer(

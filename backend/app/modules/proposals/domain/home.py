@@ -58,7 +58,12 @@ from app.kernel import SPORT_SPECS, Instant, Sport, exhaustive, instant, invaria
 from app.modules.bookings.domain.check_in import is_the_game_day
 from app.modules.games.domain.windows import A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR
 from app.modules.proposals.domain.deck import GAME_LENGTH, Sides
-from app.modules.proposals.domain.proposal import Proposal, Standing, TimeTo
+from app.modules.proposals.domain.proposal import (
+    Proposal,
+    ReopenReason,
+    Standing,
+    TimeTo,
+)
 
 
 class HomeStatus(StrEnum):
@@ -204,6 +209,17 @@ class OpenSeat:
 
 @final
 @dataclass(frozen=True, slots=True)
+class RefusedHolding:
+    """A player whose holding was refused (#639; Q113): until when their time
+    to fix the card runs, the payment they confirm, and why it was refused."""
+
+    until: Instant
+    seat_charge_id: UUID
+    reason: ReopenReason
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class BookedGame:
     """A booked game, as Home and its details read it: the booking's record."""
 
@@ -245,7 +261,9 @@ class BookedGame:
     #: The booking's stream version — what a rescue's attempts are counted by.
     version: int = 0
     #: Everybody whose refused share the game waits for, and until when —
-    #: their time to pay (#625, #626). Empty while nobody's is awaited.
+    #: their time to pay (#625, #626) — and, on a booked game, everybody whose
+    #: holding was refused, until their time to fix the card ends (#639).
+    #: Empty while nobody's is awaited.
     paying: Mapping[UUID, Instant] = field(default_factory=dict)
     #: What their time is for — to fix the card, before the cut-off, or to pay,
     #: after it (#638); ``None`` while nobody's payment is awaited.
@@ -255,6 +273,9 @@ class BookedGame:
     booked_at: Instant | None = None
     #: When its club cancelled it, once it did (#637).
     cancelled_at: Instant | None = None
+    #: Everybody on the booked game whose holding was refused, their time to
+    #: fix the card still to end — each with the payment to confirm (#639).
+    cards_to_fix: Mapping[UUID, RefusedHolding] = field(default_factory=dict)
 
     @property
     def taken_at(self) -> Instant:
@@ -353,6 +374,10 @@ class ShareState(StrEnum):
     #: Held on each card until the club's cut-off, which takes it — *30 zł ·
     #: free to leave until Fri 17:00*. Not paid.
     HELD = "HELD"
+    #: The reader's card was only **checked** at the fill: their share is held
+    #: from its Holding time — *40 zł held from Sat 19:00 · taken Wed 19:00*
+    #: (#639). Not paid, and free to leave until the cut-off all the same.
+    CHECKED = "CHECKED"
     #: Taken — at the cut-off, or at once for a game booked after it: *Paid ·
     #: 30 zł*.
     TAKEN = "TAKEN"
@@ -377,6 +402,9 @@ class BookedMoney:
     #: When the shares are, or were, taken — the cut-off, or when a game booked
     #: after it was booked — whenever ``share_state`` is.
     taken_at: Instant | None = None
+    #: When the reader's share is held — its Holding time — while it is only
+    #: checked and that time is ahead (#639); ``None`` on every other line.
+    held_from: Instant | None = None
     #: What everybody still in is given back — the whole share, on a game its
     #: club cancelled after its cut-off (#547); ``None`` where nothing is, and
     #: where nothing was taken (#637).
@@ -533,14 +561,18 @@ def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
             exhaustive(status)
 
 
-def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
+def money_of(
+    game: BookedGame, *, now: Instant, held_from: Instant | None = None
+) -> BookedMoney:
     """The money line, **read off the clock** (#637; the mechanics §14.1,
     Q113): every seat of a booked game is held until the club's cut-off and
     taken at it — *30 zł · free to leave until Fri 17:00*, then *Paid · 30 zł*
     — nobody's money is on it while its club decides, once it turned it down or
     once it is called off, and everybody still in gets it all back only from a
     game its club cancelled after the cut-off had taken it (#547). A game short
-    at its cut-off, or cancelled before it, took nothing."""
+    at its cut-off, or cancelled before it, took nothing. **The reader's card
+    only checked at the fill** (#639) — ``held_from``, its Holding time — reads
+    *held from Sat 19:00* until then, as the job holds it."""
 
     called_off = game.called_off_reason(now)
     on_it = (
@@ -548,14 +580,22 @@ def money_of(game: BookedGame, *, now: Instant) -> BookedMoney:
         and called_off is None
     )
     taken = on_it and now >= game.cut_off
+    checked = on_it and not taken and held_from is not None and now < held_from
     return BookedMoney(
         share_grosze=game.share_grosze,
         paid=taken,
         free_to_leave_until=game.cut_off if on_it and not taken else None,
         share_state=(
-            None if not on_it else ShareState.TAKEN if taken else ShareState.HELD
+            None
+            if not on_it
+            else ShareState.TAKEN
+            if taken
+            else ShareState.CHECKED
+            if checked
+            else ShareState.HELD
         ),
         taken_at=game.taken_at if on_it else None,
+        held_from=held_from if checked else None,
         refunded_grosze=(
             game.share_grosze
             if called_off is CalledOffReason.CANCELLED_BY_THE_CLUB
@@ -651,16 +691,19 @@ def state_of(
     result: GameResult | None,
     *,
     now: Instant,
+    held_from: Instant | None = None,
 ) -> BookedState:
     """Everything Home and the details fold off the booking, its Game's result
-    and the clock — once, so a card and its details cannot disagree."""
+    and the clock — once, so a card and its details cannot disagree.
+    ``held_from`` is the reader's own share's Holding time, while it is only
+    checked (#639)."""
 
     status = status_of(game, result, now=now)
     return BookedState(
         status=status,
         # A game gone back to filling asks nothing of those still In (Q106).
         needs_you=needs_you(status, result) and not game.filling_again,
-        money=money_of(game, now=now),
+        money=money_of(game, now=now, held_from=held_from),
         called_off=game.called_off_reason(now)
         if status is HomeStatus.CALLED_OFF
         else None,

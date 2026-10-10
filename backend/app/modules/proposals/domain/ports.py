@@ -575,6 +575,45 @@ class BookedGameChanges(Protocol):
         nothing. In the caller's transaction."""
         ...
 
+    async def card_to_fix(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        until: Instant,
+        refused: RefusedPayment,
+        at: Instant,
+    ) -> None:
+        """This player's holding was refused (#639): the game stays booked,
+        their seat theirs alone until ``until`` — their time to fix the card.
+        In the caller's transaction."""
+        ...
+
+    async def card_fixed(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> bool:
+        """This player fixed their card in time (#639). Whether anything was
+        recorded. In the caller's transaction."""
+        ...
+
+    async def card_not_fixed(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> bool:
+        """This player's time to fix the card ran out (#639): their seat opens
+        as a leaver's — on the Game too, whose room they leave. Whether
+        anything was recorded: nothing while it still runs. In the caller's
+        transaction."""
+        ...
+
+    async def cards_to_fix_past(self, *, now: Instant) -> Sequence[UUID]:
+        """Every booked game with a time to fix the card run out by ``now`` —
+        candidates, the earliest first (#639)."""
+        ...
+
+    async def cards_to_fix_of(self, player_id: UUID) -> Sequence[UUID]:
+        """Every booked game on which this player has a card to fix (#639)."""
+        ...
+
 
 # --------------------------------------------------------------------------- #
 # On request (#543)
@@ -900,6 +939,76 @@ class HeldShares(Protocol):
     async def take(self, booking_id: UUID, *, at: Instant) -> int:
         """Take every share held for this game, in the caller's transaction —
         captured at the provider after the commit. Answers how many."""
+        ...
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class Holding:
+    """What a booked game's holding did (#639): whose shares were held again,
+    and whose were refused — each with the charge that says so."""
+
+    held: frozenset[UUID]
+    refused: Mapping[UUID, RefusedPayment]
+
+
+@runtime_checkable
+class CheckedShares(Protocol):
+    """**A demand of the Payments context**: the shares checked at their
+    game's fill, held again at their **Holding time**, four days before the
+    cut-off (#639; ADR-0189's 2026-10-10 amendment) — and a refused holding
+    fixed in time, or let go."""
+
+    async def due(self, *, at: Instant) -> Sequence[UUID]:
+        """Every booked game with a share checked whose Holding time has come
+        by ``at`` — and one refused there for want of terms or a method, asked
+        again once they are fixed — the earliest first."""
+        ...
+
+    async def hold(
+        self,
+        booking_id: UUID,
+        *,
+        fix_by: Instant,
+        fixing_until: Mapping[UUID, Instant],
+        at: Instant,
+    ) -> Holding:
+        """Hold every share of this game due — asked of the provider now, and
+        recorded in the caller's transaction — each player refused emailed to
+        fix their card by ``fix_by``, or by the time they have already
+        (``fixing_until``)."""
+        ...
+
+
+@runtime_checkable
+class CardsToFix(Protocol):
+    """**A demand of the Payments context**: a holding refused at its Holding
+    time, kept once its player fixed the card in time — or let go when that
+    time runs out, nothing owed (#639)."""
+
+    async def keep_fixed(self, seat_charge_id: UUID, *, at: Instant) -> bool:
+        """A refused holding its player confirmed: kept for the game until the
+        cut-off. Whether it was. In the caller's transaction."""
+        ...
+
+    async def let_go_unfixed(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> None:
+        """A refused holding not fixed in time: let go, nothing owed. In the
+        caller's transaction."""
+        ...
+
+
+@runtime_checkable
+class HoldingTimes(Protocol):
+    """**A demand of the Payments context**: when a share only checked at its
+    game's fill is held — *held from Sat 19:00* (#639)."""
+
+    async def of(
+        self, player_id: UUID, booking_ids: Collection[UUID]
+    ) -> Mapping[UUID, Instant]:
+        """This player's shares only checked on these games, and each one's
+        Holding time."""
         ...
 
 

@@ -11,6 +11,10 @@ without them, or is no longer filling, is not here — its payment was let go.
 **Within their time to pay** (#625, #626; Q109) the seat is theirs alone and
 the row names the time — *Confirm your payment by 14:40*; once it ran out, the
 row stays without a time while the seat is still free to take back.
+
+**And a booked game whose holding was refused** (#639): the row says *Fix your
+card by 19:30* while that time runs — and goes once it ran out, the seat no
+longer theirs to take back.
 """
 
 from __future__ import annotations
@@ -21,7 +25,9 @@ from uuid import UUID
 
 from app.kernel import Clock, Instant, instant
 from app.modules.proposals.domain.ports import (
+    BookedGameChanges,
     ClubNames,
+    PlayerBookings,
     ProposalDirectory,
     ProposalRepository,
 )
@@ -65,11 +71,15 @@ class ReadPaymentsToConfirm:
         *,
         proposals: ProposalRepository,
         directory: ProposalDirectory,
+        bookings: PlayerBookings,
+        games: BookedGameChanges,
         clubs: ClubNames,
         clock: Clock,
     ) -> None:
         self._proposals = proposals
         self._directory = directory
+        self._bookings = bookings
+        self._games = games
         self._clubs = clubs
         self._clock = clock
 
@@ -78,6 +88,8 @@ class ReadPaymentsToConfirm:
             player_id,
             proposals=self._proposals,
             directory=self._directory,
+            bookings=self._bookings,
+            games=self._games,
             now=instant(self._clock.now()),
         )
         names = await self._clubs.names_of({one.proposal.club_id for one in owed})
@@ -99,14 +111,35 @@ async def owed_by(
     *,
     proposals: ProposalRepository,
     directory: ProposalDirectory,
+    bookings: PlayerBookings,
+    games: BookedGameChanges,
     now: Instant,
 ) -> list[Owed]:
     """Every game still filling on which this player has a payment to confirm,
     with the charge, why it was refused and — within their time to pay — by
-    when (#625) — soonest first. Home counts them among the games that need the
-    player (#542)."""
+    when (#625) — and every booked game whose holding of their share was
+    refused, while their time to fix the card runs (#639) — soonest first.
+    Home counts them among the games that need the player (#542)."""
 
     owed: list[Owed] = []
+    for booking_id in await games.cards_to_fix_of(player_id):
+        game = await bookings.find(booking_id)
+        to_fix = None if game is None else game.cards_to_fix.get(player_id)
+        # Past it, their seat is no longer theirs: nothing is left to confirm.
+        if to_fix is None or now >= to_fix.until:
+            continue
+        proposal = await proposals.load(booking_id)
+        if proposal is None:
+            continue
+        owed.append(
+            Owed(
+                proposal,
+                to_fix.seat_charge_id,
+                to_fix.reason,
+                to_fix.until,
+                TimeTo.FIX_THE_CARD,
+            )
+        )
     for proposal_id in await directory.paying_for(player_id):
         proposal = await proposals.load(proposal_id)
         paying = None if proposal is None else proposal.paying.get(player_id)

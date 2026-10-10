@@ -54,6 +54,7 @@ from app.modules.proposals.application.making import loaded
 from app.modules.proposals.application.time_to_pay import (
     let_go_of_what_was_kept,
     run_out_if_due,
+    run_out_the_cards_to_fix,
 )
 from app.modules.proposals.domain.errors import (
     BookingIsCalledOff,
@@ -68,7 +69,10 @@ from app.modules.proposals.domain.errors import (
     SeatJustTaken,
 )
 from app.modules.proposals.domain.ports import (
+    BookedGameChanges,
+    CardsToFix,
     ClubRequests,
+    PlayerBookings,
     ProposalRepository,
     RefusedPayment,
     SeatCharges,
@@ -250,7 +254,11 @@ class ConfirmPayment:
     **On a booked game it is the join again** (#545): the payment was a
     rescue's, and the open seat is taken on it — unless somebody took it first
     (``seat_just_taken``), the game is off or has begun, or the seat is no
-    longer theirs to be offered; then the hold is let go.
+    longer theirs to be offered; then the hold is let go. **Or it is the card
+    fixed** (#639): a holding refused on the player's own booked game, within
+    their time to fix it, is held until the cut-off and their seat simply theirs
+    again; past that time it runs out first — the seat open to others, nothing
+    owed — and the confirmation is a leaver's, refused.
     """
 
     def __init__(
@@ -263,6 +271,9 @@ class ConfirmPayment:
         undecided: UndecidedCharges,
         requests: ClubRequests,
         rescuer: JoinsARescue,
+        bookings: PlayerBookings,
+        games: BookedGameChanges,
+        cards: CardsToFix,
         uow: UnitOfWork,
         clock: Clock,
     ) -> None:
@@ -273,6 +284,9 @@ class ConfirmPayment:
         self._undecided = undecided
         self._requests = requests
         self._rescuer = rescuer
+        self._bookings = bookings
+        self._games = games
+        self._cards = cards
         self._uow = uow
         self._clock = clock
 
@@ -289,6 +303,11 @@ class ConfirmPayment:
         )
         proposal = await _locked(self._proposals, game_id)
         if proposal.standing_at(now) is Standing.FILLED:
+            fixed = await self._card_fixed(
+                proposal, player_id, confirmed=command.seat_charge_id, now=now
+            )
+            if fixed is not None:
+                return fixed
             return await self._rescue(
                 proposal, player_id, confirmed=command.seat_charge_id, now=now
             )
@@ -328,6 +347,41 @@ class ConfirmPayment:
         await self._proposals.save(proposal)
         await self._uow.commit()
         return _answer(proposal, player_id, outcome)
+
+    async def _card_fixed(
+        self, proposal: Proposal, player_id: UUID, *, confirmed: UUID, now: Instant
+    ) -> YesAnswer | None:
+        """The player's own booked game, whose holding of this payment was
+        refused (#639): within their time, the share is held and the card
+        fixed; past it, the time runs out first — and the confirmation goes on
+        as one on a seat no longer theirs. ``None`` for any other payment."""
+
+        game = await self._bookings.find(proposal.proposal_id)
+        to_fix = None if game is None else game.cards_to_fix.get(player_id)
+        if game is None or to_fix is None or to_fix.seat_charge_id != confirmed:
+            return None
+        if now >= to_fix.until:
+            # Run out first, in this transaction and under this lock: the
+            # confirmation goes on as a leaver's, which the rescue refuses —
+            # and whose refusal commits the run-out with the hold let go.
+            await run_out_the_cards_to_fix(
+                proposal.proposal_id,
+                bookings=self._bookings,
+                games=self._games,
+                cards=self._cards,
+                now=now,
+            )
+            return None
+        await self._cards.keep_fixed(confirmed, at=now)
+        await self._games.card_fixed(proposal.proposal_id, player_id, at=now)
+        await self._uow.commit()
+        return YesAnswer(
+            proposal_id=proposal.proposal_id,
+            open_seats=game.open_seats,
+            booked=None
+            if game.game_id is None
+            else Booked(booking_id=game.booking_id, game_id=game.game_id),
+        )
 
     async def _rescue(
         self, proposal: Proposal, player_id: UUID, *, confirmed: UUID, now: Instant

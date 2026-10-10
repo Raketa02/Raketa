@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field
 from app.api.dependencies import DbSession
 from app.api.dev.dependencies import (
     TheCutOffDep,
+    TheHoldingDep,
     DecideClubPayoutsDep,
     DestroyEndedConversationsDep,
     ExpireProposalsDep,
@@ -43,6 +44,7 @@ from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
     CONVERSATION_SWEEP_JOB,
     CUT_OFF_JOB,
+    HOLDING_JOB,
     MAIL_DELIVERY_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     PHOTO_REVIEW_BACKFILL_JOB,
@@ -68,6 +70,7 @@ RUN_IT_NOW: Final[Mapping[str, str]] = MappingProxyType(
         PROPOSAL_EXPIRY_JOB: "the book-by sweep",
         REQUEST_TIMEOUT_JOB: "the club's answer window",
         TIME_TO_PAY_JOB: "time to pay",
+        HOLDING_JOB: "hold the shares",
         CUT_OFF_JOB: "the cut-off",
         CLUB_PAYOUTS_JOB: "the day close · club payouts",
         NEW_BOOKINGS_SUMMARY_JOB: "the day close · new bookings summary",
@@ -233,8 +236,10 @@ async def run_the_request_timeout(expire: ExpireUnansweredRequestsDep) -> RanRes
         "and its time to fix the card, before the cut-off (#638): the payer's "
         "seat reopens — offered to others, theirs to take back while free — "
         "the holds the others kept are let go, and at a club that confirms the "
-        "booking is called off, its desk emailed. A time still running is left "
-        "as it is."
+        "booking is called off, its desk emailed. On a booked game whose "
+        "holding was refused (#639), the player's seat opens to Fill in as a "
+        "leaver's, and they owe nothing. A time still running is left as it "
+        "is."
     ),
 )
 async def run_the_time_to_pay(run_out: RunOutTheTimeToPayDep) -> RanResponse:
@@ -247,6 +252,36 @@ async def run_the_time_to_pay(run_out: RunOutTheTimeToPayDep) -> RanResponse:
             f"{ran_out.games} game(s) whose time to pay was up: the seat reopened."
             if ran_out.games
             else "No time to pay is up: nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{HOLDING_JOB}",
+    response_model=RanResponse,
+    summary=_summary(HOLDING_JOB),
+    description=(
+        "At each checked share's Holding time — four days before its game's "
+        "cut-off — holds it on its card again, to stay until the cut-off "
+        "(#639). A game that filled far ahead had those cards only checked: a "
+        "hold made without its player would not have lasted until the cut-off. "
+        "A card refused now gives its player thirty minutes to fix it, the game "
+        "still booked — run out, their seat opens to Fill in and they owe "
+        "nothing. A share whose Holding time is still ahead is left checked."
+    ),
+)
+async def run_the_holding(holding: TheHoldingDep) -> RanResponse:
+    ran = await holding.execute()
+    done = ran.held + ran.refused
+    return RanResponse(
+        job=HOLDING_JOB,
+        done=done,
+        conflicts=ran.conflicts,
+        says=(
+            f"{ran.held} checked share(s) held until the cut-off; "
+            f"{ran.refused} refused, each player given time to fix the card."
+            if done
+            else "No checked share has reached its Holding time: nothing was done."
         ),
     )
 

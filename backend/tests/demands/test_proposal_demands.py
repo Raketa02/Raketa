@@ -41,13 +41,19 @@ from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.game import Game
 from app.modules.payments.domain.provider import Payment, PaymentStatus
-from app.modules.payments.domain.seat_charge import SeatCharge, SeatChargeStatus
+from app.modules.payments.domain.seat_charge import (
+    FailureReason,
+    SeatCharge,
+    SeatChargeStatus,
+)
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.proposals.domain.home import BookingStage, ResultStage
 from app.modules.proposals.domain.club_bookings import CodeAtTheDesk
 from app.modules.proposals.domain.home import ClubCancelReason, LateRefund
 from app.modules.proposals.domain.ports import (
+    PaymentRefusal,
+    RefusedPayment,
     BookableCourt,
     BookedGameChanges,
     BookingTakings,
@@ -58,7 +64,10 @@ from app.modules.proposals.domain.ports import (
     DeskCheckIns,
     GameResults,
     GameToAsk,
+    CardsToFix,
+    CheckedShares,
     HeldShares,
+    HoldingTimes,
     PlayerBookings,
     PlayerFit,
     PlayerNames,
@@ -760,6 +769,45 @@ async def test_a_seat_left_after_the_cut_off_calls_nothing_off(implementation, s
     assert await changes.call_off_at_the_cut_off(booking.booking_id, at=start) is None
 
 
+@pytest.mark.parametrize("implementation", registered(BookedGameChanges))
+async def test_a_refused_holding_s_card_is_fixed_in_time_or_its_seat_opens(
+    implementation, session
+):
+    """#639: a player whose holding was refused keeps their seat on the booked
+    game until their time to fix the card ends; fixed, it is simply theirs;
+    run out, it opens as a leaver's."""
+
+    changes: BookedGameChanges = implementation.build(session)
+    start = _at(5 * 24)
+    booking = await _booked_with_its_game(session, start=start)
+    fix_by = _at(1) + timedelta(minutes=30)
+    for player in (KUBA, EWA):
+        await changes.card_to_fix(
+            booking.booking_id,
+            player,
+            until=fix_by,
+            refused=RefusedPayment(
+                seat_charge_id=new_uuid(), refusal=PaymentRefusal.DECLINED
+            ),
+            at=_at(1),
+        )
+    await session.commit()
+
+    assert set(await changes.cards_to_fix_of(KUBA)) == {booking.booking_id}
+    assert await changes.cards_to_fix_past(now=fix_by - timedelta(seconds=1)) == ()
+    assert list(await changes.cards_to_fix_past(now=fix_by)) == [booking.booking_id]
+    assert await changes.card_fixed(booking.booking_id, KUBA, at=_at(1))
+    assert not await changes.card_not_fixed(booking.booking_id, EWA, at=_at(1))
+    assert await changes.card_not_fixed(booking.booking_id, EWA, at=fix_by)
+    await session.commit()
+
+    assert await changes.cards_to_fix_of(KUBA) == ()
+    assert await changes.cards_to_fix_past(now=fix_by) == ()
+    game = await registered_build(PlayerBookings, session).find(booking.booking_id)
+    assert game is not None
+    assert game.leavers == frozenset({EWA}) and game.cards_to_fix == {}
+
+
 # --------------------------------------------------------------------------- #
 # SeatRefunds and LateRefunds — a paid share given back (#544), and what a
 # leaver after the cut-off would get back (#641)
@@ -971,6 +1019,116 @@ async def test_the_shares_held_for_a_game_are_due_at_its_cut_off_and_taken_then(
         assert now is not None and now.status is SeatChargeStatus.TAKING
     assert list(await held.due(at=cut_off + timedelta(hours=1))) == [later_game]
     assert await held.take(game_id, at=cut_off) == 0
+
+
+async def _a_checked_share(
+    session, *, game_id: UUID, player_id: UUID, cut_off: Instant
+) -> SeatCharge:
+    """A share checked at its game's fill, held again four days before
+    ``cut_off`` (#639)."""
+
+    charge = SeatCharge.held(
+        charge_id=new_uuid(),
+        player_id=player_id,
+        game_id=game_id,
+        club_id=new_uuid(),
+        account_id="acct_fake_club",
+        payment=Payment(
+            payment_id=f"pi_fake_3000g_{new_uuid().hex[:8]}",
+            status=PaymentStatus.AUTHORISED,
+            amount_grosze=30_00,
+        ),
+        sport=Sport.PADEL,
+        starts_at=cut_off + timedelta(hours=24),
+        at=_at(),
+    )
+    charge.check(
+        booking_id=game_id,
+        until=cut_off,
+        hold_at=cut_off - timedelta(days=4),
+        at=_at(),
+    )
+    await _charges(session).save(charge)
+    await session.commit()
+    return charge
+
+
+@pytest.mark.parametrize("implementation", registered(CheckedShares))
+async def test_a_checked_share_is_due_at_its_holding_time(implementation, session):
+    checked: CheckedShares = implementation.build(session)
+    game_id = new_uuid()
+    cut_off = _at(7 * 24)
+    await _a_checked_share(session, game_id=game_id, player_id=OLA, cut_off=cut_off)
+    holding = cut_off - timedelta(days=4)
+
+    assert await checked.due(at=holding - timedelta(seconds=1)) == ()
+    assert list(await checked.due(at=holding)) == [game_id]
+    # A game with nothing due holds nothing, and asks nobody.
+    nothing = await checked.hold(
+        new_uuid(), fix_by=_at(1), fixing_until={}, at=holding
+    )
+    assert (nothing.held, dict(nothing.refused)) == (frozenset(), {})
+
+
+@pytest.mark.parametrize("implementation", registered(HoldingTimes))
+async def test_a_checked_share_says_when_it_is_held(implementation, session):
+    times: HoldingTimes = implementation.build(session)
+    checked_game, held_game = new_uuid(), new_uuid()
+    cut_off = _at(7 * 24)
+    await _a_checked_share(
+        session, game_id=checked_game, player_id=OLA, cut_off=cut_off
+    )
+    await _a_held_share(session, game_id=held_game, player_id=OLA, until=cut_off)
+
+    assert await times.of(OLA, [checked_game, held_game]) == {
+        checked_game: cut_off - timedelta(days=4)
+    }
+    assert await times.of(KUBA, [checked_game]) == {}
+
+
+@pytest.mark.parametrize("implementation", registered(CardsToFix))
+async def test_a_refused_holding_is_kept_once_fixed_or_let_go(implementation, session):
+    cards: CardsToFix = implementation.build(session)
+    game_id = new_uuid()
+    cut_off = _at(7 * 24)
+    holding = cut_off - timedelta(days=4)
+    olas = await _a_checked_share(
+        session, game_id=game_id, player_id=OLA, cut_off=cut_off
+    )
+    kubas = await _a_checked_share(
+        session, game_id=game_id, player_id=KUBA, cut_off=cut_off
+    )
+    repository = _charges(session)
+    for charge in (olas, kubas):
+        refused = await repository.load(charge.charge_id)
+        assert refused is not None
+        refused.holding_refused(
+            FailureReason.AUTHENTICATION_REQUIRED,
+            payment=Payment(
+                payment_id=f"pi_fake_3000g_{new_uuid().hex[:8]}",
+                status=PaymentStatus.AUTHENTICATION_REQUIRED,
+                amount_grosze=30_00,
+            ),
+            at=holding,
+        )
+        await repository.save(refused)
+    await session.commit()
+    confirmed = await repository.load(olas.charge_id)
+    assert confirmed is not None
+    confirmed.confirm(at=holding + timedelta(minutes=5))
+    await repository.save(confirmed)
+    await session.commit()
+
+    assert await cards.keep_fixed(olas.charge_id, at=holding + timedelta(minutes=5))
+    await cards.let_go_unfixed(game_id, KUBA, at=holding + timedelta(minutes=30))
+    await session.commit()
+
+    ola_now = await _charges(session).load(olas.charge_id)
+    kuba_now = await _charges(session).load(kubas.charge_id)
+    assert ola_now is not None and ola_now.status is SeatChargeStatus.HELD
+    assert kuba_now is not None and kuba_now.status is SeatChargeStatus.RELEASING
+    # A share no refused holding: nothing kept.
+    assert not await cards.keep_fixed(kubas.charge_id, at=holding)
 
 
 async def _a_share_taken(

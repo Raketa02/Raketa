@@ -20,7 +20,9 @@ club's yes** keeps the yes and the court while its player has time to pay
 **Then the booked game is lived** (#544): ``SeatLeft`` is a player leaving it —
 their seat open, the game still the others' — and ``CalledOffAtCutOff`` is a
 seat that opened before the club's cut-off still open at it: the game is off,
-and everybody still in is named, to be refunded in full.
+and everybody still in is named, to be refunded in full. **A player whose
+holding was refused** (#639) has their time to fix the card: ``CardToFix``,
+then ``CardFixed`` — or, run out, ``SeatLeft`` marked ``card_not_fixed``.
 
 **And an open seat is a rescue** (#545): ``SeatRescued`` is somebody taking it
 — the leaver's seat and side, paid at once — and ``NoSaidToTheSeat`` is a member
@@ -232,6 +234,38 @@ class SeatLeft:
     the others'. Whether they left before the club's cut-off is read off this
     instant against the booking's ``cut_off``; what it costs them is the
     money's, recorded on their Seat charge."""
+
+    booking_id: UUID
+    player_id: UUID
+    occurred_at: datetime
+    #: Not the player's own act: their holding was refused and their time to
+    #: fix the card ran out (#639). On the record it is a leave before the
+    #: cut-off all the same. ``False`` on every leave recorded before.
+    card_not_fixed: bool = False
+
+
+@dataclass(frozen=True)
+class CardToFix:
+    """**A player's holding was refused** (#639; the mechanics Q113): their
+    share, checked at the fill, could not be held at its Holding time. The game
+    stays booked, their seat theirs alone **until ``until``** — their time to
+    fix the card, never past the cut-off — and nothing is paid meanwhile.
+    ``seat_charge_id`` is the payment to confirm, and ``reason`` why it was
+    refused (``AUTHENTICATION_REQUIRED``, ``DECLINED``, ``TERMS_NEEDED`` or
+    ``NO_METHOD``)."""
+
+    booking_id: UUID
+    player_id: UUID
+    until: datetime
+    seat_charge_id: UUID
+    reason: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class CardFixed:
+    """The player fixed their card in time (#639): their share is held until
+    the cut-off, and their seat is simply theirs again."""
 
     booking_id: UUID
     player_id: UUID

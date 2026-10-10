@@ -11,6 +11,10 @@ every seat's share all or nothing, a refused payment its player confirmed, and
 the charges a game will not be paid with let go — over the Payments context's
 own use cases, its refusals translated into this context's words.
 
+``PaymentsCheckedShares`` holds a share checked at its game's fill at its
+Holding time, ``PaymentsCardsToFix`` keeps or lets go a refused holding, and
+``PaymentsHoldingTimes`` says when a checked share is held (#639).
+
 ``PaymentsSeatRefunds`` gives a booked game's shares back — a share only held
 let go, a share taken refunded (#544, #637) — ``PaymentsHeldShares`` is what the
 cut-off takes (#637), and ``PaymentsLateRefunds`` says what a leaver after the
@@ -46,6 +50,9 @@ from app.modules.payments.application.seat_charge_emails import CancelledBecause
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
+    HoldTheCheckedShares,
+    KeepTheFixedShare,
+    LetTheUnfixedShareGo,
     PaymentToConfirmOn,
     ReleaseCharges,
     TakeTheHeldShares,
@@ -70,6 +77,7 @@ from app.modules.proposals.domain.home import BookingStage, ClubCancelReason
 from app.modules.proposals.domain.home import LateRefund
 from app.modules.proposals.domain.ports import (
     GameToCharge,
+    Holding,
     PaymentRefusal,
     PlayerBookings,
     ProposalDirectory,
@@ -226,6 +234,68 @@ class PaymentsHeldShares:
     async def take(self, booking_id: UUID, *, at: Instant) -> int:
         # A booking takes its proposal's id, which every charge was made for.
         return await self._take.execute(booking_id, at=at)
+
+
+@final
+class PaymentsCheckedShares:
+    def __init__(self, hold: HoldTheCheckedShares) -> None:
+        self._hold = hold
+
+    async def due(self, *, at: Instant) -> Sequence[UUID]:
+        return await self._hold.due(at=at)
+
+    async def hold(
+        self,
+        booking_id: UUID,
+        *,
+        fix_by: Instant,
+        fixing_until: Mapping[UUID, Instant],
+        at: Instant,
+    ) -> Holding:
+        # A booking takes its proposal's id, which every charge was made for.
+        holding = await self._hold.execute(
+            booking_id, fix_by=fix_by, fixing_until=fixing_until, at=at
+        )
+        return Holding(
+            held=holding.held,
+            refused={
+                player: RefusedPayment(
+                    seat_charge_id=seat.charge_id,
+                    refusal=PaymentRefusal(seat.reason.value),
+                )
+                for player, seat in holding.refused.items()
+            },
+        )
+
+
+@final
+class PaymentsCardsToFix:
+    def __init__(
+        self, *, keep: KeepTheFixedShare, let_go: LetTheUnfixedShareGo
+    ) -> None:
+        self._keep = keep
+        self._let_go = let_go
+
+    async def keep_fixed(self, seat_charge_id: UUID, *, at: Instant) -> bool:
+        return await self._keep.execute(seat_charge_id, at=at)
+
+    async def let_go_unfixed(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> None:
+        # A booking takes its proposal's id, which every charge was made for.
+        await self._let_go.execute(booking_id, player_id, at=at)
+
+
+@final
+class PaymentsHoldingTimes:
+    def __init__(self, charges: SeatChargeRepository) -> None:
+        self._charges = charges
+
+    async def of(
+        self, player_id: UUID, booking_ids: Collection[UUID]
+    ) -> Mapping[UUID, Instant]:
+        # A booking takes its proposal's id, which every charge was made for.
+        return await self._charges.checked_of(player_id, booking_ids)
 
 
 @final

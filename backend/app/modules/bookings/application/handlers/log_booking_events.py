@@ -19,6 +19,8 @@ from app.modules.bookings.domain.events import (
     BookingTimedOut,
     CalledOffAtCutOff,
     CancelledByClub,
+    CardFixed,
+    CardToFix,
     NewBookingsSummarised,
     CourtMoved,
     PaymentNotInTime,
@@ -47,6 +49,8 @@ BookingEvent = (
     | PlayerCheckedIn
     | BookingAwaitingAPayment
     | PaymentNotInTime
+    | CardToFix
+    | CardFixed
 )
 
 _NAMES = {
@@ -65,6 +69,8 @@ _NAMES = {
     PlayerCheckedIn: "bookings.booking.player_checked_in",
     BookingAwaitingAPayment: "bookings.booking.awaiting_a_payment",
     PaymentNotInTime: "bookings.booking.payment_not_in_time",
+    CardToFix: "bookings.booking.card_to_fix",
+    CardFixed: "bookings.booking.card_fixed",
 }
 
 

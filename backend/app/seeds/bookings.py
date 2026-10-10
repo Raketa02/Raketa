@@ -32,15 +32,25 @@ club*: nobody charged, the court held, the desk emailed. **It waits the club's
 time to confirm** — an hour at Kazimierz — from the run's now, and then the
 timeout job calls it off as unanswered; a re-run puts a fresh one.
 
+**And one game of the crowd's filled far ahead** (#639): four of *Padel po
+pracy*'s crowd — never her — fill Bonarka's first padel hour whose cut-off is
+more than five days off. A card hold made without its player lasts 4 days 18
+hours on a Visa, so each seat is **checked** at the fill — held for a moment and
+let go — and held again at its **Holding time**, four days before the
+cut-off, which the console's *hold the shares* runs. The four have no game that
+week and no yes at the hour, so the fill moves nothing another layer seeded.
+
 **Re-running books nothing twice**: an hour she already has a booked game at is
-left as it is, a game of hers still waiting for Kazimierz is left waiting, and a
-later run on a later day books later hours.
+left as it is, a game of hers still waiting for Kazimierz is left waiting, a
+far-ahead hour the crowd already booked is left as it is, and a later run on a
+later day books later hours.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Final, final
 from uuid import UUID
 
@@ -54,9 +64,11 @@ from app.bootstrap.composition import (
     build_domain_event_store,
     build_event_publisher,
     build_fake_payments,
+    build_holding_times,
     build_make_proposal,
     build_player_bookings,
     build_pools,
+    build_proposal_directory,
     build_read_receipts,
     build_say_yes,
     build_the_cut_off,
@@ -71,7 +83,13 @@ from app.modules.proposals.application.commands import (
     AnswerProposalCommand,
     MakeProposalCommand,
 )
-from app.modules.proposals.domain.deck import DECK_HORIZON, GAME_LENGTH, week_of
+from app.modules.payments.domain.seat_charge import HOLDING_LEAD
+from app.modules.proposals.domain.deck import (
+    DECK_HORIZON,
+    GAME_LENGTH,
+    week_of,
+    week_window,
+)
 from app.modules.proposals.domain.home import BookingStage
 from app.modules.proposals.domain.proposal import Origin
 from app.modules.proposals.domain.proposer import CourtHourOnSale
@@ -92,6 +110,11 @@ from app.seeds.proposals import (
 WAITING_CLUB: Final = next(
     club for club in SEED_CLUBS if club.name == "Kazimierz Padel"
 )
+
+#: How far ahead of the run the far-ahead game's cut-off is, at least: past
+#: the Holding time by a day, so a Visa's hold — 4 days 18 hours — cannot
+#: reach it, and every seat is checked (#639).
+FAR_AHEAD: Final = HOLDING_LEAD + timedelta(days=1)
 
 #: The two states, in the order they are booked.
 ON_THE_DAY: Final = "on the day"
@@ -120,11 +143,37 @@ class SeededWaiting:
 
 @final
 @dataclass(frozen=True, slots=True)
+class SeededFarAhead:
+    """The crowd's game filled far ahead, its seats checked (#639)."""
+
+    start: Instant
+    #: The Holding time its checked seats are held at.
+    hold_at: Instant | None
+    #: How many of its four seats were checked.
+    checked: int
+    #: Whether this run booked it, or found it booked then already.
+    made: bool
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class SeededBookings:
     bookings: tuple[SeededBooking, ...]
     #: Her receipts once the games were booked.
     receipts: int
     waiting: SeededWaiting | None = None
+    far_ahead: SeededFarAhead | None = None
+
+    @property
+    def starts(self) -> tuple[Instant, ...]:
+        """Every hour this layer booked or put to a club — what the layers
+        after it keep out of the way of."""
+
+        return (
+            *(booking.start for booking in self.bookings),
+            *([self.waiting.start] if self.waiting is not None else []),
+            *([self.far_ahead.start] if self.far_ahead is not None else []),
+        )
 
 
 class NotEnoughToBook(RuntimeError):
@@ -192,9 +241,165 @@ async def book_her_games(
             seeded=seeded,
             now=now,
         )
+        far_ahead = await _the_crowd_far_ahead(
+            session,
+            settings=settings,
+            clock=clock,
+            provider=provider,
+            her=her,
+            pool_id=group_id,
+            club_id=club_id,
+            on_sale=hours_on_sale,
+            taken=[
+                *(booking.start for booking in bookings),
+                *(pick.start for pick in seeded.picks),
+                waiting.start,
+            ],
+            now=now,
+        )
         receipts = await build_read_receipts(session).execute(her)
     return SeededBookings(
-        bookings=tuple(bookings), receipts=len(receipts), waiting=waiting
+        bookings=tuple(bookings),
+        receipts=len(receipts),
+        waiting=waiting,
+        far_ahead=far_ahead,
+    )
+
+
+async def _the_crowd_far_ahead(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: FixedClock,
+    provider: PaymentProvider,
+    her: UUID,
+    pool_id: UUID,
+    club_id: UUID,
+    on_sale: Sequence[CourtHourOnSale],
+    taken: Sequence[Instant],
+    now: Instant,
+) -> SeededFarAhead:
+    """Four of the crowd at Bonarka's first padel hour whose cut-off is more
+    than ``FAR_AHEAD`` off — every seat checked at the fill (#639) — or the
+    game an earlier run booked there."""
+
+    terms = (await build_club_terms(session).of([club_id], now=now)).get(club_id)
+    if terms is None:
+        raise NotEnoughToBook(f"{GAMES_CLUB.name} sells nothing at {now}")
+    notice = timedelta(hours=terms.cut_off_hours)
+    start = next(
+        (
+            hour.start
+            for hour in on_sale
+            if hour.start - notice >= now + FAR_AHEAD
+            and not any(abs(hour.start - other) < GAME_LENGTH for other in taken)
+        ),
+        None,
+    )
+    if start is None:
+        raise NotEnoughToBook(
+            f"{GAMES_CLUB.name} sells no padel hour whose cut-off is "
+            f"{FAR_AHEAD.days} days past "
+            f"{now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
+        )
+    pools = build_pools(session)
+    pool = await pools.find(pool_id)
+    crowd = [] if pool is None else await pools.members_of(pool)
+    booked = build_booked_games(session)
+    for member in crowd:
+        if await booked.starts_of(member, start=start, end=start + GAME_LENGTH):
+            # An earlier run's: the crowd booked this hour already.
+            return await _far_ahead_as_it_is(
+                session, start=start, players=(member,), made=False
+            )
+    four = await _four_free_at(session, crowd, her, start, now=now)
+    answer = await all_say_yes(
+        session,
+        settings=settings,
+        clock=clock,
+        provider=provider,
+        pool_id=pool_id,
+        club_id=club_id,
+        start=start,
+        players=four,
+    )
+    if answer is None or answer.booked is None:
+        raise NotEnoughToBook(
+            f"the crowd's game at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} "
+            f"filled and did not book: {answer!r}"
+        )
+    far = await _far_ahead_as_it_is(
+        session,
+        start=start,
+        players=four,
+        made=True,
+        booking_id=answer.booked.booking_id,
+    )
+    if not far.checked:
+        raise NotEnoughToBook(
+            f"the crowd's game at {start.astimezone(CLUB_ZONE):%a %d %b %H:%M} "
+            "booked far ahead with no seat checked"
+        )
+    return far
+
+
+async def _far_ahead_as_it_is(
+    session: AsyncSession,
+    *,
+    start: Instant,
+    players: Sequence[UUID],
+    made: bool,
+    booking_id: UUID | None = None,
+) -> SeededFarAhead:
+    """How many of the far-ahead game's seats are checked, and when they are
+    held — read off its seats' own Holding times."""
+
+    if booking_id is None:
+        return SeededFarAhead(start=start, hold_at=None, checked=0, made=made)
+    times = build_holding_times(session)
+    checked = [
+        held
+        for player in players
+        for held in (await times.of(player, [booking_id])).values()
+    ]
+    return SeededFarAhead(
+        start=start,
+        hold_at=min(checked, default=None),
+        checked=len(checked),
+        made=made,
+    )
+
+
+async def _four_free_at(
+    session: AsyncSession,
+    crowd: Sequence[UUID],
+    her: UUID,
+    start: Instant,
+    *,
+    now: Instant,
+) -> tuple[UUID, ...]:
+    """Four of the crowd, in the order they joined, never her, with no game in
+    the hour's week and no yes at the hour — so the fill moves nothing another
+    layer seeded."""
+
+    booked = build_booked_games(session)
+    directory = build_proposal_directory(session)
+    week_start, week_end = week_window([week_of(start)])
+    four: list[UUID] = []
+    for member in crowd:
+        if member == her:
+            continue
+        if await booked.starts_of(member, start=week_start, end=week_end):
+            continue
+        yeses = await directory.live_yeses_of(member, now=now)
+        if any(abs(yes.start - start) < GAME_LENGTH for yes in yeses):
+            continue
+        four.append(member)
+        if len(four) == 4:
+            return tuple(four)
+    raise NotEnoughToBook(
+        f"the crowd has no four free of games the week of "
+        f"{start.astimezone(CLUB_ZONE):%a %d %b %H:%M} to fill a game far ahead"
     )
 
 
@@ -454,6 +659,19 @@ def booking_lines(seeded: SeededBookings) -> list[str]:
             f"{booking.state} · {state} · {money}"
         )
     lines.append(f"  her receipts: {seeded.receipts}")
+    if seeded.far_ahead is not None:
+        far = seeded.far_ahead
+        state = "booked" if far.made else "already booked"
+        held = (
+            ""
+            if far.hold_at is None
+            else f" · held from {far.hold_at.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
+        )
+        lines.append(
+            f"The crowd's game filled far ahead at {GAMES_CLUB.name}: "
+            f"{far.start.astimezone(CLUB_ZONE):%a %d %b %H:%M} · {state} · "
+            f"{far.checked} of 4 cards checked{held}"
+        )
     if seeded.waiting is not None:
         state = "put to the club" if seeded.waiting.made else "still waiting"
         lines.append(

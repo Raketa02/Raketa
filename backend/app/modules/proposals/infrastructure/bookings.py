@@ -46,6 +46,7 @@ from app.modules.bookings.application.book_the_game import (
 from app.modules.bookings.application.leaving import (
     CallOffAtTheCutOff,
     LeaveTheBooking,
+    TimeToFixTheCard,
 )
 from app.modules.bookings.application.rescues import SayNoToTheSeat, RescueTheSeat
 from app.modules.bookings.application.requests import (
@@ -82,6 +83,7 @@ from app.modules.proposals.domain.home import (
     BookedGame,
     BookingStage,
     CalledOffReason,
+    RefusedHolding,
     CheckIn,
     ClubCancelReason,
     OpenSeat,
@@ -91,8 +93,9 @@ from app.modules.proposals.domain.ports import (
     ClubRequest,
     FullGame,
     GameToAsk,
+    RefusedPayment,
 )
-from app.modules.proposals.domain.proposal import ClubAnswer, TimeTo
+from app.modules.proposals.domain.proposal import ClubAnswer, ReopenReason, TimeTo
 
 
 @final
@@ -149,12 +152,14 @@ class BookingsBookedGameChanges:
         rescue: RescueTheSeat,
         say_no: SayNoToTheSeat,
         call_off: CallOffAtTheCutOff,
+        fix: TimeToFixTheCard,
         directory: BookingDirectory,
     ) -> None:
         self._leave = leave
         self._rescue = rescue
         self._say_no = say_no
         self._call_off = call_off
+        self._fix = fix
         self._directory = directory
 
     async def leave(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
@@ -177,6 +182,40 @@ class BookingsBookedGameChanges:
         self, booking_id: UUID, *, at: Instant
     ) -> tuple[UUID, ...] | None:
         return await self._call_off.execute(booking_id, at=at)
+
+    async def card_to_fix(
+        self,
+        booking_id: UUID,
+        player_id: UUID,
+        *,
+        until: Instant,
+        refused: RefusedPayment,
+        at: Instant,
+    ) -> None:
+        await self._fix.give(
+            booking_id,
+            player_id,
+            until=until,
+            seat_charge_id=refused.seat_charge_id,
+            reason=refused.refusal.value,
+            at=at,
+        )
+
+    async def card_fixed(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> bool:
+        return await self._fix.fixed(booking_id, player_id, at=at)
+
+    async def card_not_fixed(
+        self, booking_id: UUID, player_id: UUID, *, at: Instant
+    ) -> bool:
+        return await self._fix.not_fixed(booking_id, player_id, at=at)
+
+    async def cards_to_fix_past(self, *, now: Instant) -> Sequence[UUID]:
+        return await self._directory.cards_to_fix_past(now=now)
+
+    async def cards_to_fix_of(self, player_id: UUID) -> Sequence[UUID]:
+        return await self._directory.cards_to_fix_of(player_id)
 
 
 @final
@@ -448,20 +487,34 @@ def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
         checked_in=dict(booking.checked_in),
         answer_by=booking.answer_by,
         version=booking.version,
-        paying=(
-            {}
-            if booking.pay_by is None
-            else {payer: booking.pay_by for payer in booking.payers}
-        ),
+        paying={
+            **(
+                {}
+                if booking.pay_by is None
+                else {payer: booking.pay_by for payer in booking.payers}
+            ),
+            # A booked game whose holding was refused (#639): the payer's own
+            # time to fix the card.
+            **booking.fixing_until,
+        },
         time_to=(
-            None
-            if booking.pay_by is None
-            else TimeTo.FIX_THE_CARD
-            if booking.to_fix_the_card
+            TimeTo.FIX_THE_CARD
+            if booking.cards_to_fix
+            or (booking.pay_by is not None and booking.to_fix_the_card)
             else TimeTo.PAY
+            if booking.pay_by is not None
+            else None
         ),
         booked_at=booking.booked_at,
         cancelled_at=booking.cancelled_at,
+        cards_to_fix={
+            player: RefusedHolding(
+                until=to_fix.until,
+                seat_charge_id=to_fix.seat_charge_id,
+                reason=ReopenReason(to_fix.reason),
+            )
+            for player, to_fix in booking.cards_to_fix.items()
+        },
     )
 
 

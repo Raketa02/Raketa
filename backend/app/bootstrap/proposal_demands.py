@@ -45,7 +45,11 @@ from app.bootstrap.composition import (
     build_club_distances,
     build_club_requests,
     build_game_results,
+    build_cards_to_fix,
+    build_checked_shares,
+    build_fake_payments,
     build_held_shares,
+    build_holding_times,
     build_player_bookings,
     build_player_fit,
     build_players_in_play,
@@ -63,7 +67,10 @@ from app.modules.proposals.domain.ports import (
     ClubRequests,
     DeskCheckIns,
     GameResults,
+    CardsToFix,
+    CheckedShares,
     HeldShares,
+    HoldingTimes,
     PlayerBookings,
     PlayerFit,
     PlayerNames,
@@ -86,6 +93,9 @@ PROPOSAL_DEMANDS: tuple[type, ...] = (
     BookedGameChanges,
     SeatRefunds,
     HeldShares,
+    CheckedShares,
+    CardsToFix,
+    HoldingTimes,
     LateRefunds,
     PlayerFit,
     PlayersInPlay,
@@ -138,6 +148,25 @@ PROPOSAL_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=HeldShares,
         name="PaymentsHeldShares",
         build=lambda session: build_held_shares(session),
+    ),
+    RegisteredImplementation(
+        port=CheckedShares,
+        name="PaymentsCheckedShares",
+        # A fresh fake of the run's own: what is due, and a holding of nothing
+        # due, ask the provider nothing.
+        build=lambda session: build_checked_shares(
+            session, provider=build_fake_payments(), settings=get_settings()
+        ),
+    ),
+    RegisteredImplementation(
+        port=CardsToFix,
+        name="PaymentsCardsToFix",
+        build=lambda session: build_cards_to_fix(session),
+    ),
+    RegisteredImplementation(
+        port=HoldingTimes,
+        name="PaymentsHoldingTimes",
+        build=lambda session: build_holding_times(session),
     ),
     RegisteredImplementation(
         port=LateRefunds,

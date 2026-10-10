@@ -172,6 +172,9 @@ class GiveTheSharesBack:
             if payer is None:
                 continue
             club = _club_named(seller)
+            # A share only checked, or refused at its holding (#639), had
+            # nothing held on the card to let go.
+            on_the_card = not held or charge.released_at is not None
             if reason is RefundReason.LEFT:
                 message = left_the_game_email(
                     to=payer.email,
@@ -182,6 +185,7 @@ class GiveTheSharesBack:
                     share_grosze=charge.amount_grosze,
                     app_link=self._app_link,
                     held=held,
+                    on_the_card=on_the_card,
                 )
             elif reason is RefundReason.SEAT_TAKEN:
                 # Only a share let go: one refunded is emailed when it is made.
@@ -207,6 +211,7 @@ class GiveTheSharesBack:
                     because=because,
                     app_link=self._app_link,
                     held=held,
+                    on_the_card=on_the_card,
                 )
             elif because is not None:
                 message = game_cancelled_email(
@@ -219,6 +224,7 @@ class GiveTheSharesBack:
                     because=because,
                     app_link=self._app_link,
                     held=held,
+                    on_the_card=on_the_card,
                 )
             else:
                 message = game_called_off_email(
@@ -230,6 +236,7 @@ class GiveTheSharesBack:
                     refunded_grosze=charge.amount_grosze,
                     app_link=self._app_link,
                     held=held,
+                    on_the_card=on_the_card,
                 )
             await self._mail.enqueue(message, at=at)
 

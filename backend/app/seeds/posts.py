@@ -122,9 +122,8 @@ async def post_her_game(
             her_posting(her, group_id), now=now
         )
         taken = [
-            *(booking.start for booking in bookings.bookings),
+            *bookings.starts,
             *(pick.start for pick in seeded.picks),
-            *([bookings.waiting.start] if bookings.waiting is not None else []),
             *(rescue.start for rescue in rescues.rescues),
         ]
         hour = next(

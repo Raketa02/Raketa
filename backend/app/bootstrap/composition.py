@@ -158,7 +158,10 @@ from app.modules.proposals.domain.ports import (
     GameBookings,
     PlayerNames as ProposalPlayerNames,
     GameResults,
+    CardsToFix,
+    CheckedShares,
     HeldShares,
+    HoldingTimes,
     PlayerBookings,
     SeatCharges,
     SeatRefunds,
@@ -210,6 +213,10 @@ from app.modules.proposals.application.club_requests import (
     RefuseTheRequest,
 )
 from app.modules.proposals.application.cut_off import TheCutOff
+from app.modules.proposals.application.holding import TheHolding
+from app.modules.proposals.application.payments_to_confirm import (
+    ReadPaymentsToConfirm,
+)
 from app.modules.proposals.application.fill import Fill
 from app.modules.proposals.application.leave_the_game import LeaveTheGame
 from app.modules.proposals.infrastructure.bookings import (
@@ -234,6 +241,7 @@ from app.modules.bookings.application.book_the_game import BookTheGame, FindACou
 from app.modules.bookings.application.leaving import (
     CallOffAtTheCutOff,
     LeaveTheBooking,
+    TimeToFixTheCard,
 )
 from app.modules.bookings.application.rescues import SayNoToTheSeat, RescueTheSeat
 from app.modules.bookings.application.requests import (
@@ -301,6 +309,9 @@ from app.modules.payments.application.refunds import (
 from app.modules.payments.application.seat_charges import (
     ChargeTheSeats,
     ConfirmSeatCharge,
+    HoldTheCheckedShares,
+    KeepTheFixedShare,
+    LetTheUnfixedShareGo,
     PaymentToConfirmOn,
     ReadReceipts,
     ReadSeatCharge,
@@ -341,7 +352,10 @@ from app.modules.proposals.infrastructure.payments import (
     PaymentsBookingTakings,
     PaymentsSavedMethods,
     PaymentsLateRefunds,
+    PaymentsCardsToFix,
+    PaymentsCheckedShares,
     PaymentsHeldShares,
+    PaymentsHoldingTimes,
     PaymentsSeatCharges,
     PaymentsSeatRefunds,
     PaymentsUndecidedCharges,
@@ -1692,6 +1706,9 @@ def build_booked_game_changes(
             bookings=bookings(), games=build_game_changes(session, runtime=runtime)
         ),
         say_no=SayNoToTheSeat(bookings=bookings()),
+        fix=TimeToFixTheCard(
+            bookings=bookings(), games=build_game_changes(session, runtime=runtime)
+        ),
         call_off=CallOffAtTheCutOff(
             bookings=bookings(),
             games=build_game_changes(session, runtime=runtime),
@@ -1772,6 +1789,81 @@ def build_held_shares(
     (#637)."""
     return PaymentsHeldShares(
         TakeTheHeldShares(charges=_seat_charge_repository(session, runtime))
+    )
+
+
+def build_checked_shares(
+    session: AsyncSession,
+    *,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> CheckedShares:
+    """The shares checked at their game's fill, held again at their Holding
+    time over ``provider`` — the job's own, a console press's, a test's — each
+    refused player emailed to fix their card (#639)."""
+    return PaymentsCheckedShares(
+        HoldTheCheckedShares(
+            methods=build_payment_method_repository(
+                session,
+                event_store=build_domain_event_store(session, runtime=runtime),
+                events=build_event_publisher(session, runtime=runtime),
+            ),
+            charges=_seat_charge_repository(session, runtime),
+            sellers=build_sellers(session, runtime=runtime),
+            payers=build_payers(session),
+            provider=provider,
+            mail=build_mail_queue(session),
+            app_link=f"{settings.APP_SCHEME}://",
+        )
+    )
+
+
+def build_cards_to_fix(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> CardsToFix:
+    """A refused holding kept once its card is fixed, or let go when the time
+    to fix it runs out — asks nothing of the provider: the cancellation follows
+    the commit, from the outbox (#639)."""
+    charges = _seat_charge_repository(session, runtime)
+    return PaymentsCardsToFix(
+        keep=KeepTheFixedShare(charges=charges),
+        let_go=LetTheUnfixedShareGo(charges=charges),
+    )
+
+
+def build_holding_times(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> HoldingTimes:
+    """When a share only checked at its game's fill is held (#639)."""
+    return PaymentsHoldingTimes(_seat_charge_repository(session, runtime))
+
+
+def build_the_holding(
+    session: AsyncSession,
+    *,
+    clock: Clock,
+    provider: PaymentProvider,
+    settings: Settings,
+    runtime: EventRuntime | None = None,
+) -> TheHolding:
+    """One holding run over this session — the job's, the console's and a
+    test's (#639): every checked share whose Holding time has come, held again
+    over ``provider``."""
+    return TheHolding(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        games=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        checked=build_checked_shares(
+            session, provider=provider, settings=settings, runtime=runtime
+        ),
+        cards=build_cards_to_fix(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
     )
 
 
@@ -2241,6 +2333,9 @@ def build_run_out_the_time_to_pay(
         directory=build_proposal_directory(session),
         requests=build_club_requests(session, settings=settings, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        games=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        cards=build_cards_to_fix(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -2282,6 +2377,9 @@ def build_confirm_payment(
             settings=settings,
             runtime=runtime,
         ),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        games=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        cards=build_cards_to_fix(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -2658,6 +2756,31 @@ def build_read_home(
         directory=build_proposal_directory(session),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
+        games=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        holding_times=build_holding_times(session, runtime=runtime),
+        clock=clock,
+    )
+
+
+def build_read_payments_to_confirm(
+    session: AsyncSession,
+    *,
+    settings: Settings,
+    clock: Clock,
+    runtime: EventRuntime | None = None,
+) -> ReadPaymentsToConfirm:
+    """The reader's payments to confirm: games still filling whose share was
+    refused, and booked games whose holding was (#639)."""
+    return ReadPaymentsToConfirm(
+        proposals=build_proposal_repository(
+            session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        ),
+        directory=build_proposal_directory(session),
+        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        games=build_booked_game_changes(session, settings=settings, runtime=runtime),
+        clubs=build_proposal_club_names(session),
         clock=clock,
     )
 
@@ -2683,6 +2806,7 @@ def build_read_booking_details(
         distances=build_club_distances(session, runtime=runtime),
         late_refunds=build_late_refunds(session, runtime=runtime),
         offers=build_rescue_offers(session, settings=settings, runtime=runtime),
+        holding_times=build_holding_times(session, runtime=runtime),
         clock=clock,
     )
 

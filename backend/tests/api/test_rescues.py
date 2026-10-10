@@ -563,6 +563,7 @@ async def test_a_member_offered_the_seat_reads_the_game_from_outside(
         "share_grosze": SHARE,
         "paid": False,
         "share_state": None,
+        "held_from": None,
         "taken_at": None,
         "free_to_leave_until": None,
         "refunded_grosze": None,

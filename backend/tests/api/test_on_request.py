@@ -241,6 +241,7 @@ async def test_a_full_game_waits_for_the_club_and_nobody_is_charged(
             "paid": False,
             "free_to_leave_until": None,
             "share_state": None,
+            "held_from": None,
             "taken_at": None,
             "refunded_grosze": None,
         }

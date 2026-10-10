@@ -44,6 +44,7 @@ from app.api.dependencies import (
 from app.bootstrap.composition import (
     build_booking_repository,
     build_the_cut_off,
+    build_the_holding,
     build_check_in_codes,
     build_club_payout_repository,
     build_club_terms,
@@ -96,6 +97,7 @@ from app.modules.proposals.application.club_requests import (
     ExpireUnansweredRequests,
 )
 from app.modules.proposals.application.cut_off import TheCutOff
+from app.modules.proposals.application.holding import TheHolding
 from app.modules.proposals.application.expire_proposals import ExpireProposals
 from app.modules.proposals.application.time_to_pay import RunOutTheTimeToPay
 from app.modules.proposals.application.making import MakeProposal
@@ -250,6 +252,17 @@ def get_the_cut_off(
 
 
 TheCutOffDep = Annotated[TheCutOff, Depends(get_the_cut_off)]
+
+
+def get_the_holding(
+    db: DbSession, clock: ClockDep, provider: PaymentProviderDep, settings: SettingsDep
+) -> TheHolding:
+    """The ``holding`` job's unit of work, over the real *now* and the provider
+    this process moves money through (#639)."""
+    return build_the_holding(db, clock=clock, provider=provider, settings=settings)
+
+
+TheHoldingDep = Annotated[TheHolding, Depends(get_the_holding)]
 
 
 def get_decide_club_payouts(

@@ -40,6 +40,7 @@ from app.bootstrap.composition import (
     build_read_fill_in,
     build_read_group_deck,
     build_read_home,
+    build_read_payments_to_confirm,
     build_read_posting_grid,
     build_read_posting_slot,
     build_read_proposal_details,
@@ -179,14 +180,9 @@ ReadLiveYesesDep = Annotated[ReadLiveYeses, Depends(get_read_live_yeses)]
 
 
 def get_read_payments_to_confirm(
-    proposals: ProposalRepositoryDep,
-    directory: ProposalDirectoryDep,
-    clubs: ProposalClubNamesDep,
-    clock: ClockDep,
+    db: DbSession, settings: SettingsDep, clock: ClockDep
 ) -> ReadPaymentsToConfirm:
-    return ReadPaymentsToConfirm(
-        proposals=proposals, directory=directory, clubs=clubs, clock=clock
-    )
+    return build_read_payments_to_confirm(db, settings=settings, clock=clock)
 
 
 ReadPaymentsToConfirmDep = Annotated[

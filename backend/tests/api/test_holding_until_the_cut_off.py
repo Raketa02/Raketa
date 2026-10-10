@@ -179,6 +179,7 @@ async def test_a_filled_game_holds_every_share_and_takes_nothing_until_the_cut_o
         "share_grosze": SHARE,
         "paid": False,
         "share_state": "HELD",
+        "held_from": None,
         "taken_at": CUT_OFF_ON_THE_WIRE,
         "free_to_leave_until": CUT_OFF_ON_THE_WIRE,
         "refunded_grosze": None,

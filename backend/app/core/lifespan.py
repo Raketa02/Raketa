@@ -120,6 +120,7 @@ def build_lifespan(settings: Settings):
             or settings.REQUEST_TIMEOUT_ENABLED
             or settings.TIME_TO_PAY_ENABLED
             or settings.CUT_OFF_ENABLED
+            or settings.HOLDING_ENABLED
             or settings.CLUB_PAYOUTS_ENABLED
             or settings.NEW_BOOKINGS_SUMMARY_ENABLED
         ):

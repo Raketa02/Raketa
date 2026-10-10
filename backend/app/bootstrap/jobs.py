@@ -41,8 +41,10 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_expire_proposals,
     build_expire_unanswered_requests,
+    build_payment_provider,
     build_run_out_the_time_to_pay,
     build_the_cut_off,
+    build_the_holding,
     build_decide_club_payouts,
     build_image_transcoder,
     build_mailer,
@@ -121,6 +123,13 @@ TIME_TO_PAY_JOB = "time-to-pay"
 #: the court and emails the club.
 CUT_OFF_JOB = "cut-off"
 
+#: The holding (#639). Four days before each booked game's cut-off it holds
+#: every share the fill only checked — its card's hold would not have lasted
+#: until the cut-off — and gives a refused one's player their time to fix the
+#: card. **Correctness depends on it**: until it runs, a checked share is held
+#: nowhere, and the cut-off has nothing of that player's to take.
+HOLDING_JOB = "holding"
+
 #: Club payouts (#548). At the close of every club day it decides, per club, one
 #: payout of what its games over by then left it — played, or called off with
 #: what that gives back decided; the outbox makes it and tells the desk.
@@ -177,6 +186,7 @@ def build_scheduled_jobs(
         or settings.REQUEST_TIMEOUT_ENABLED
         or settings.TIME_TO_PAY_ENABLED
         or settings.CUT_OFF_ENABLED
+        or settings.HOLDING_ENABLED
         or settings.CLUB_PAYOUTS_ENABLED
         or settings.NEW_BOOKINGS_SUMMARY_ENABLED
     ):
@@ -236,6 +246,10 @@ def build_scheduled_jobs(
         if settings.CUT_OFF_ENABLED:
             jobs.append(
                 build_cut_off_job(session_factory=session_factory, settings=settings)
+            )
+        if settings.HOLDING_ENABLED:
+            jobs.append(
+                build_holding_job(session_factory=session_factory, settings=settings)
             )
         if settings.CLUB_PAYOUTS_ENABLED:
             jobs.append(
@@ -478,6 +492,50 @@ def build_cut_off_job(
     return PeriodicJob(
         name=CUT_OFF_JOB,
         interval_seconds=settings.CUT_OFF_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_holding_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """At each checked share's Holding time — four days before its game's
+    cut-off — hold it on its card again, over the provider this process moves
+    money through, and give a refused one's player their time to fix the card
+    (the mechanics §12.2, Q113; #639).
+
+    **Idempotent and safe beside itself with no lock**: each game is one
+    transaction that locks it first, a share held already is no longer
+    checked and is asked nothing again, a hold asked twice under one key is
+    answered the first one's, and a genuine race is caught by the stream
+    version and stepped over. **Correctness depends on it**: until it runs, a
+    checked share is held nowhere.
+    """
+
+    clock = build_clock()
+    provider = build_payment_provider(settings)
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_the_holding(
+                session, clock=clock, provider=provider, settings=settings
+            ).execute()
+        if done.held or done.refused or done.conflicts:
+            logger.info(
+                "holding finished",
+                extra={
+                    "job": HOLDING_JOB,
+                    "held": done.held,
+                    "refused": done.refused,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=HOLDING_JOB,
+        interval_seconds=settings.HOLDING_INTERVAL_SECONDS,
         run=run,
     )
 

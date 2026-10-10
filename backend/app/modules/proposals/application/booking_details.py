@@ -76,6 +76,7 @@ from app.modules.proposals.domain.rescues import (
     sides_for,
 )
 from app.modules.proposals.domain.ports import (
+    HoldingTimes,
     ClubDistances,
     ClubNames,
     DeckPeople,
@@ -134,9 +135,11 @@ class ReadBookingDetails:
         distances: ClubDistances,
         late_refunds: LateRefunds,
         offers: RescueOffers,
+        holding_times: HoldingTimes,
         clock: Clock,
     ) -> None:
         self._offers = offers
+        self._holding_times = holding_times
         self._bookings = bookings
         self._proposals = proposals
         self._results = results
@@ -169,7 +172,11 @@ class ReadBookingDetails:
             if leaving_of(game, now=now) is Leaving.AFTER_THE_CUT_OFF
             else None
         )
-        state = state_of(game, result, now=now)
+        # The reader's own share, if it was only checked at the fill (#639).
+        held_from = await self._holding_times.of(reader, [game.booking_id])
+        state = state_of(
+            game, result, now=now, held_from=held_from.get(game.booking_id)
+        )
         names = await self._clubs.names_of([game.club_id])
         distances = await self._distances.from_player(reader, [game.club_id])
         return BookingDetails(

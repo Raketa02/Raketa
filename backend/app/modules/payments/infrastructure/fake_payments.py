@@ -23,7 +23,8 @@ and when its money is taken the fake keeps **that kind's real fee**
 (``CARD_PRICES``), which is what a late leaver's refund is the share less. A
 hold made without its player lasts its network's window on the fake's
 ``clock`` (``HOLD_WINDOWS``: 4 days 18 hours on a Visa, 7 days on a
-Mastercard; 7 days on either once the player confirmed it in the app), and
+Mastercard; 7 days on either once the player confirmed it in the app — and
+``hold_windows``, which only a test shortens, #639), and
 **lapses** after its last moment: it is read cancelled, and a capture is
 refused. A club on its own negotiated pricing (``fees_reported_later``) is
 told its fee after the capture — *not yet known* until ``reports_fee``. A fake
@@ -130,10 +131,6 @@ def fee_on(amount_grosze: int, kind: CardKind) -> int:
 
     rate, fixed = CARD_PRICES[kind]
     return (amount_grosze * rate + 5000) // 10000 + fixed
-
-
-def _hold_lasts(network: str) -> timedelta:
-    return HOLD_WINDOWS.get(network, min(HOLD_WINDOWS.values()))
 
 
 class FakeRefusal(Exception):
@@ -279,6 +276,11 @@ class FakePayments:
         #: The club accounts on their own negotiated pricing: the fee on a
         #: payment taken there is not known until ``reports_fee``.
         self.fees_reported_later: set[str] = set()
+        #: How long a hold made without its player lasts on each network —
+        #: Stripe's documented windows, which **only a test shortens**: the
+        #: fallback of a holding that would not reach the cut-off (#639) is
+        #: never called for under them.
+        self.hold_windows: dict[str, timedelta] = dict(HOLD_WINDOWS)
 
     # ----------------------------------------------------------------- controls
 
@@ -865,10 +867,17 @@ class FakePayments:
         elif card.behaviour is CardBehaviour.CHECKED_EVERY_TIME:
             payment.status = PaymentStatus.AUTHENTICATION_REQUIRED
         elif self.clock is not None:
-            payment.last_moment = instant(self.clock.now() + _hold_lasts(card.brand))
+            lasts = self._hold_lasts(card.brand)
+            payment.last_moment = instant(self.clock.now() + lasts)
         self._payments[payment_id] = payment
         self._notify(payment)
         return self._answer(payment)
+
+    def _hold_lasts(self, network: str) -> timedelta:
+        """A hold on ``network`` made without its player: any network the
+        windows do not name is given the shortest."""
+
+        return self.hold_windows.get(network, min(self.hold_windows.values()))
 
     def _notify(self, payment: _Payment) -> None:
         """Record the notice Stripe sends when a payment arrives where this one

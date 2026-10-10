@@ -957,10 +957,22 @@ class BookedMoneySchema(BaseModel):
     share_state: ShareState | None = Field(
         description=(
             "`HELD` — every share is held on its card and taken at `taken_at`, "
-            "the club's cut-off; leaving before it takes nothing. `TAKEN` — "
-            "taken (`paid`). `null` while nobody's money is on the game: "
-            "waiting for its club or for a payment, called off, and for a "
-            "reader not on the game. Switches by itself at `taken_at`."
+            "the club's cut-off; leaving before it takes nothing. `CHECKED` — "
+            "**the reader's** card was only checked when the game filled far "
+            "ahead, and their share is held from `held_from`: *40 zł held from "
+            "Sat 19:00 · taken Wed 19:00* (#639) — free to leave until the "
+            "cut-off all the same. `TAKEN` — taken (`paid`). `null` while "
+            "nobody's money is on the game: waiting for its club or for a "
+            "payment, called off, and for a reader not on the game. Switches by "
+            "itself at `held_from` and at `taken_at`."
+        )
+    )
+    held_from: datetime | None = Field(
+        description=(
+            "When the reader's share is held — its Holding time, four days "
+            "before the cut-off — while it is only checked and that is ahead "
+            "at `read_at` (`share_state` `CHECKED`, #639). `null` on every "
+            "other line."
         )
     )
     taken_at: datetime | None = Field(
@@ -1061,6 +1073,7 @@ def _money(money: BookedMoney) -> BookedMoneySchema:
         share_grosze=money.share_grosze,
         paid=money.paid,
         share_state=money.share_state,
+        held_from=money.held_from,
         taken_at=money.taken_at,
         free_to_leave_until=money.free_to_leave_until,
         refunded_grosze=money.refunded_grosze,

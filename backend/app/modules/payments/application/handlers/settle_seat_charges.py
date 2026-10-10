@@ -12,7 +12,9 @@ delivery, so a receipt reads *paid* the moment the money is.
 capture or a cancellation the provider already made answers it again. A charge
 the delivery finds already settled — a notice got there first — asks nothing.
 A released charge that never was a payment — terms to accept again, or no
-method — has nothing at the provider to cancel, and is settled at once.
+method — has nothing at the provider to cancel, and is settled at once. **A
+Card check's hold is let go at once** (#639): the payment it names is cancelled,
+and nothing more is recorded.
 
 **A refund needs the money taken first.** A player may leave seconds after the
 fill, before the capture's delivery has run: whichever of the two deliveries
@@ -38,6 +40,7 @@ from app.application.events import DeliveryContext
 from app.kernel import Clock, instant
 from app.modules.payments.domain.errors import PaymentsUnavailable
 from app.modules.payments.domain.events import (
+    SeatChargeChecked,
     SeatChargeRefundDecided,
     SeatChargeReleased,
     SeatChargeTaken,
@@ -53,6 +56,12 @@ def capture_key(charge_id: object) -> str:
 
 def cancel_seat_key(charge_id: object) -> str:
     return f"raketa-cancel-seat-{charge_id}"
+
+
+def cancel_check_key(charge_id: object) -> str:
+    """One check per charge, ever: its hold is let go once (#639)."""
+
+    return f"raketa-cancel-check-{charge_id}"
 
 
 def refund_key(charge_id: object) -> str:
@@ -76,10 +85,33 @@ class SettleSeatCharges:
 
     async def __call__(
         self,
-        event: SeatChargeTaken | SeatChargeReleased | SeatChargeRefundDecided,
+        event: (
+            SeatChargeTaken
+            | SeatChargeReleased
+            | SeatChargeRefundDecided
+            | SeatChargeChecked
+        ),
         context: DeliveryContext,
     ) -> None:
+        if isinstance(event, SeatChargeChecked):
+            await self.let_the_check_go(event)
+            return
         await self.settle(event.charge_id)
+
+    async def let_the_check_go(self, checked: SeatChargeChecked) -> None:
+        """**A Card check's hold is let go** (#639): the payment the fill held
+        for a moment is cancelled — whatever has become of the charge since,
+        which may be on another payment by now. Nothing is recorded: the check
+        was the decision, and its share holds nothing until its holding."""
+
+        charge = await self._charges.load(checked.charge_id)
+        if charge is None:
+            return
+        await self._provider.cancel(
+            account_id=charge.account_id,
+            payment_id=checked.payment_id,
+            idempotency_key=cancel_check_key(charge.charge_id),
+        )
 
     async def settle(self, charge_id: UUID) -> None:
         """Whatever this charge still owes the provider, asked of it now — what

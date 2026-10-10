@@ -129,6 +129,11 @@ class PaymentMethodUpdated:
 # hold, recorded in the transaction that books the game or does not, and acted
 # on at the provider **after** the commit by a subscriber, retried until it
 # lands (``docs/adr/0190`` §4).
+#
+# **One share, and one payment at a time** (#639): a share checked at the fill
+# (``Checked``) is held again at its Holding time on a new payment
+# (``HeldAgain``), or refused there (``HoldingRefused``) — the stream's payment
+# is the latest, and the check's was let go.
 
 
 @dataclass(frozen=True)
@@ -205,6 +210,68 @@ class SeatChargeKept:
     booking_id: UUID
     #: The club's cut-off, as the booking holds it: when the share is taken.
     until: datetime
+    occurred_at: datetime
+    #: A share refused at its Holding time and fixed in time by its player
+    #: (#639): the game was told *It's a game!* when it filled, so nobody is
+    #: told again. ``False`` on every keep recorded before.
+    fixed: bool = False
+
+
+@dataclass(frozen=True)
+class SeatChargeChecked:
+    """**A Card check** (#639; the mechanics Q113): the game booked on this
+    hold before its club's cut-off, and the hold would not last until it — its
+    last moment less than six hours past the cut-off. It is **let go at once**,
+    which proves the money was there that day, and the share is held again at
+    ``hold_at``, its Holding time, to stay until ``until``, the cut-off. Raketa's
+    decision, recorded with the booking; ``payment_id`` — the check's — is
+    cancelled at the provider after the commit. Nothing was taken."""
+
+    charge_id: UUID
+    player_id: UUID
+    booking_id: UUID
+    payment_id: str
+    #: The club's cut-off, as the booking holds it: when the share is taken.
+    until: datetime
+    #: The Holding time: four days before the cut-off.
+    hold_at: datetime
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class SeatChargeHeldAgain:
+    """**The Holding time came, and the checked share is held again** (#639) —
+    on a new payment, ``payment_id``, held until ``last_moment`` — to be taken
+    at ``until``: the cut-off, or, a hold that still would not reach it, its
+    last safe moment (the fallback). What the provider said, read inline by the
+    holding job; nothing is taken."""
+
+    charge_id: UUID
+    player_id: UUID
+    payment_id: str
+    until: datetime
+    occurred_at: datetime
+    last_moment: datetime | None = None
+
+
+@dataclass(frozen=True)
+class SeatChargeHoldingRefused:
+    """**The Holding time came, and the checked share could not be held**
+    (#639): the bank refused, wants the player present, or the method cannot
+    be charged — which asks the provider nothing (``payment_id`` is ``None``).
+    The game stays booked while its player has their **time to fix the card**;
+    nothing is paid in it. ``game_id`` and ``amount_grosze`` say whose game and
+    what, as on ``SeatChargeFailed``."""
+
+    charge_id: UUID
+    player_id: UUID
+    game_id: UUID
+    payment_id: str | None
+    amount_grosze: int
+    #: ``AUTHENTICATION_REQUIRED``, ``DECLINED``, ``TERMS_NEEDED`` or
+    #: ``NO_METHOD``.
+    reason: str
+    decline_code: str | None
     occurred_at: datetime
 
 

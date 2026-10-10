@@ -41,6 +41,8 @@ from app.modules.bookings.domain.events import (
     BookingTimedOut,
     CalledOffAtCutOff,
     CancelledByClub,
+    CardFixed,
+    CardToFix,
     CourtMoved,
     PaymentNotInTime,
     PlayerCheckedIn,
@@ -177,7 +179,20 @@ class EventSourcedBookingRepository:
                     BookingSeatORM.booking_id == event.booking_id,
                     BookingSeatORM.player_id == event.player_id,
                 )
-                .values(left_at=event.occurred_at)
+                .values(left_at=event.occurred_at, card_to_fix_until=None)
+            )
+        elif isinstance(event, (CardToFix, CardFixed)):
+            await self._statement(
+                update(BookingSeatORM)
+                .where(
+                    BookingSeatORM.booking_id == event.booking_id,
+                    BookingSeatORM.player_id == event.player_id,
+                )
+                .values(
+                    card_to_fix_until=event.until
+                    if isinstance(event, CardToFix)
+                    else None
+                )
             )
         elif isinstance(event, SeatRescued):
             # The row before its seat, as a request's are.
@@ -198,6 +213,12 @@ class EventSourcedBookingRepository:
             pass
         elif isinstance(event, (CalledOffAtCutOff, CancelledByClub)):
             await self._row(event.booking_id, state=BookingState.CALLED_OFF.value)
+            # A game off has no card to fix (#639).
+            await self._statement(
+                update(BookingSeatORM)
+                .where(BookingSeatORM.booking_id == event.booking_id)
+                .values(card_to_fix_until=None)
+            )
         elif isinstance(event, CourtMoved):
             # The court hour's own index refuses a court another game holds.
             await self._row(event.booking_id, court_id=event.court_id)
@@ -294,6 +315,30 @@ class SqlAlchemyBookingDirectory:
             )
             for court_id, at, booking_id in rows.all()
         ]
+
+    async def cards_to_fix_past(self, *, now: Instant) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingSeatORM.booking_id)
+            .where(
+                BookingSeatORM.card_to_fix_until <= now,
+                BookingSeatORM.left_at.is_(None),
+            )
+            .group_by(BookingSeatORM.booking_id)
+            .order_by(
+                func.min(BookingSeatORM.card_to_fix_until), BookingSeatORM.booking_id
+            )
+        )
+        return tuple(rows.all())
+
+    async def cards_to_fix_of(self, player_id: UUID) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingSeatORM.booking_id).where(
+                BookingSeatORM.player_id == player_id,
+                BookingSeatORM.card_to_fix_until.is_not(None),
+                BookingSeatORM.left_at.is_(None),
+            )
+        )
+        return tuple(rows.all())
 
     async def starts_for(
         self, player_id: UUID, *, start: Instant, end: Instant | None

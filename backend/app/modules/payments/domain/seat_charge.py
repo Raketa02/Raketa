@@ -23,6 +23,18 @@ held charge is **not paid** and **not settled**: no receipt, no *Collected*, no
 payout until it is taken. A game that books after its cut-off is taken at
 once.
 
+**A game that fills far ahead is checked** (#639; Q113). A card hold made
+without its player lasts days — 4 days 18 hours on a Visa, 7 on a Mastercard —
+and a hold **reaches** the cut-off only when its last moment is at least six
+hours after it (``reaches``). One that does not is **checked** (``check``):
+let go at once, which proves the money was there that day, and held again on a
+new payment at its **Holding time**, four days before the cut-off
+(``hold_again``) — or refused there (``holding_refused``), when its player has
+their time to fix the card, and confirms or not. Closed by a leave before then,
+it lets nothing go: nothing is held. A holding that still would not reach the
+cut-off is taken at its last safe moment (``taken_by``) — the fallback,
+which the documented windows never call for.
+
 **A refused charge waits for its player.** The bank wanted them present, or
 refused the card: the player can confirm **this same payment** in the app, and
 once the provider holds it (``confirm``) it is held like any other — *your yes
@@ -43,8 +55,9 @@ payout waits for the fee, as a refund less it does.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import timedelta
 from enum import StrEnum
-from typing import Iterable
+from typing import Final, Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant, invariant
@@ -52,9 +65,12 @@ from app.modules.payments.domain.events import (
     SeatChargeAuthorised,
     SeatChargeCancelled,
     SeatChargeCaptured,
+    SeatChargeChecked,
     SeatChargeConfirmed,
     SeatChargeFailed,
     SeatChargeFeeReported,
+    SeatChargeHeldAgain,
+    SeatChargeHoldingRefused,
     SeatChargeKept,
     SeatChargeRefundDecided,
     SeatChargeRefunded,
@@ -65,14 +81,56 @@ from app.modules.payments.domain.provider import Payment, PaymentStatus, Refund
 from app.shared.domain import DomainEvent
 from app.shared.domain.events import EventRecorder
 
+#: A hold **reaches** the club's cut-off when its last moment is at least this
+#: long after it (#639; Q113): Stripe captures its own delayed payments about
+#: six hours before a hold lapses. Domain, never configuration.
+REACH_MARGIN: Final = timedelta(hours=6)
+
+#: A checked share is held again this long before the cut-off — its **Holding
+#: time** (#639; Q113): inside the shortest documented window, a Visa held
+#: without its player for 4 days 18 hours, with margin. Domain, never
+#: configuration.
+HOLDING_LEAD: Final = timedelta(days=4)
+
+
+def reaches(last_moment: Instant | None, *, cut_off: Instant) -> bool:
+    """Whether a hold lasting until ``last_moment`` can be taken at the
+    club's cut-off — ``True`` where the provider did not say when it ends."""
+
+    return last_moment is None or last_moment - cut_off >= REACH_MARGIN
+
+
+def holding_time(cut_off: Instant) -> Instant:
+    """When a checked share is held again: four days before the cut-off."""
+
+    return instant(cut_off - HOLDING_LEAD)
+
+
+def taken_by(last_moment: Instant | None, *, cut_off: Instant) -> Instant:
+    """When a share held now is taken: the club's cut-off — or, **the
+    fallback**, a hold that would not reach it is taken at its **last safe
+    moment**, its last moment less six hours, whichever comes first. The
+    documented windows never call for it once a share is held at its Holding
+    time (Q113)."""
+
+    if reaches(last_moment, cut_off=cut_off):
+        return cut_off
+    assert last_moment is not None
+    return min(cut_off, instant(last_moment - REACH_MARGIN))
+
 
 class SeatChargeStatus(StrEnum):
     """Where a charge stands, as its stream leaves it."""
 
     #: Held on the card, and not yet decided.
     AUTHORISED = "AUTHORISED"
-    #: Refused at the fill; waits for its player.
+    #: Refused at the fill — or at its Holding time (#639); waits for its
+    #: player.
     FAILED = "FAILED"
+    #: The game booked before its cut-off on a hold that would not last until
+    #: it: let go at once — a Card check — and held again at its Holding time
+    #: (#639). **Not paid**, and nothing is held.
+    CHECKED = "CHECKED"
     #: The game booked before its cut-off: held for it until then (#637).
     #: **Not paid.**
     HELD = "HELD"
@@ -159,9 +217,13 @@ class SeatCharge:
     opened_at: Instant
     #: The booking it was kept or taken for, once it was.
     booking_id: UUID | None = None
-    #: The club's cut-off a share held for the booked game is taken at — while
-    #: it is held, and kept on the record after (#637).
+    #: When a share held for the booked game is taken — the club's cut-off, or
+    #: a holding's last safe moment (#639) — while it is held or checked, and
+    #: kept on the record after (#637).
     held_until: Instant | None = None
+    #: A checked share's Holding time — when it is held again (#639). ``None``
+    #: on a share never checked; kept on the record after.
+    hold_at: Instant | None = None
     #: When it was taken — the moment the player paid.
     taken_at: Instant | None = None
     #: Whether the refund decided on it keeps the card fee back — ``None``
@@ -413,13 +475,19 @@ class SeatCharge:
     @property
     def settled(self) -> bool:
         """Nothing about this share's money is still on its way (#548): no
-        share held to be taken (#637), no capture still to make, no refund
+        share held to be taken (#637) or checked to be held (#639), no capture
+        still to make, no refund
         decided and not yet given — and no fee kept on a share taken still to
         be told (#641), so what is the club's is known. A share let go is
         settled."""
 
         return (
-            self.status not in (SeatChargeStatus.HELD, SeatChargeStatus.TAKING)
+            self.status
+            not in (
+                SeatChargeStatus.CHECKED,
+                SeatChargeStatus.HELD,
+                SeatChargeStatus.TAKING,
+            )
             and not self.owes_a_refund
             and self.net_grosze is not None
         )
@@ -429,6 +497,24 @@ class SeatCharge:
         """Refused, with a payment the player can confirm in the app."""
 
         return self.status is SeatChargeStatus.FAILED and self.payment_id is not None
+
+    @property
+    def refused_at_its_holding(self) -> bool:
+        """Checked at the fill and refused at its Holding time (#639): the
+        booked game's, whose player has their time to fix the card — let go
+        with the game (``let_go``), never as an undecided hold."""
+
+        return self.status is SeatChargeStatus.FAILED and self.booking_id is not None
+
+    @property
+    def to_fix(self) -> bool:
+        """Refused at its Holding time, and not yet kept again — whether or not
+        its player confirmed it (#639): the booked game's to keep or let go."""
+
+        return self.booking_id is not None and self.status in (
+            SeatChargeStatus.AUTHORISED,
+            SeatChargeStatus.FAILED,
+        )
 
     # ----------------------------------------------------------------- acts
 
@@ -449,9 +535,12 @@ class SeatCharge:
         )
         return True
 
-    def keep(self, *, booking_id: UUID, until: Instant, at: Instant) -> None:
-        """The game booked on this hold before its club's cut-off, ``until``:
-        it is kept for the game and taken then (#637)."""
+    def keep(
+        self, *, booking_id: UUID, until: Instant, at: Instant, fixed: bool = False
+    ) -> None:
+        """The game booked on this hold before its club's cut-off: it is kept
+        for the game and taken at ``until`` (#637) — or, ``fixed``, a share
+        refused at its Holding time that its player confirmed in time (#639)."""
 
         invariant(self.held_now, f"keeping {self.charge_id}, {self.status}")
         self._record_that(
@@ -461,8 +550,95 @@ class SeatCharge:
                 booking_id=booking_id,
                 until=until,
                 occurred_at=at,
+                fixed=fixed,
             )
         )
+
+    def check(
+        self, *, booking_id: UUID, until: Instant, hold_at: Instant, at: Instant
+    ) -> None:
+        """The game booked on this hold before its club's cut-off, ``until``,
+        and the hold would not last until it: a **Card check** — let go at once,
+        and held again at ``hold_at`` (#639)."""
+
+        invariant(self.held_now, f"checking {self.charge_id}, {self.status}")
+        assert self.payment_id is not None
+        invariant(hold_at < until, f"{self.charge_id} held at {hold_at}, {until}")
+        self._record_that(
+            SeatChargeChecked(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                booking_id=booking_id,
+                payment_id=self.payment_id,
+                until=until,
+                hold_at=hold_at,
+                occurred_at=at,
+            )
+        )
+
+    def hold_again(self, payment: Payment, *, until: Instant, at: Instant) -> None:
+        """The Holding time came and the provider holds the share again on
+        ``payment`` — a checked share, or one refused there for want of terms or
+        a method, which asked the provider nothing (#639): kept for the game
+        and taken at ``until``."""
+
+        invariant(
+            self.status is SeatChargeStatus.CHECKED
+            or (self.refused_at_its_holding and self.payment_id is None),
+            f"holding {self.charge_id} again, {self.status}",
+        )
+        invariant(
+            payment.status is PaymentStatus.AUTHORISED,
+            f"a holding the provider answered {payment.status}",
+        )
+        self._record_that(
+            SeatChargeHeldAgain(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                payment_id=payment.payment_id,
+                until=until,
+                occurred_at=at,
+                last_moment=payment.last_moment,
+            )
+        )
+
+    def holding_refused(
+        self, reason: FailureReason, *, payment: Payment | None, at: Instant
+    ) -> bool:
+        """The Holding time came and the share could not be held (#639):
+        ``payment`` is the provider's answer, or ``None`` where it was never
+        asked. Answers whether anything was recorded — nothing for a share
+        refused there already for the same want of terms or a method."""
+
+        asked = reason in (
+            FailureReason.AUTHENTICATION_REQUIRED,
+            FailureReason.DECLINED,
+        )
+        invariant(
+            asked == (payment is not None),
+            f"a {reason} refusal with payment {payment!r}",
+        )
+        if self.refused_at_its_holding and self.payment_id is None:
+            if payment is None and reason is self.failure:
+                return False
+        else:
+            invariant(
+                self.status is SeatChargeStatus.CHECKED,
+                f"{self.charge_id} refused at its holding while {self.status}",
+            )
+        self._record_that(
+            SeatChargeHoldingRefused(
+                charge_id=self.charge_id,
+                player_id=self.player_id,
+                game_id=self.game_id,
+                payment_id=None if payment is None else payment.payment_id,
+                amount_grosze=self.amount_grosze,
+                reason=reason.value,
+                decline_code=None if payment is None else payment.decline_code,
+                occurred_at=at,
+            )
+        )
+        return True
 
     def take_at_the_cut_off(self, *, at: Instant) -> bool:
         """The club's cut-off came: a share held for the booked game is taken
@@ -496,10 +672,13 @@ class SeatCharge:
     def release(self, *, at: Instant) -> bool:
         """The game will not book on this charge. Answers whether anything was
         recorded — nothing for one already taken, released or settled, and
-        nothing for a share held for the booked game, which is the game's to
-        let go (``let_go``)."""
+        nothing for a share held, checked or refused at its Holding time for the
+        booked game, which is the game's to let go (``let_go``)."""
 
-        if self.status not in (SeatChargeStatus.AUTHORISED, SeatChargeStatus.FAILED):
+        if (
+            self.status not in (SeatChargeStatus.AUTHORISED, SeatChargeStatus.FAILED)
+            or self.to_fix
+        ):
             return False
         self._record_that(
             SeatChargeReleased(
@@ -511,10 +690,15 @@ class SeatCharge:
     def let_go(self, *, at: Instant, reason: RefundReason | None = None) -> bool:
         """A share held for the booked game is given up before it is taken —
         for ``reason``: nothing was taken, so nothing is refunded and no fee
-        arises (#637). Answers whether anything was recorded: nothing for a
+        arises (#637). A share only **checked** is closed — nothing is held, so
+        nothing is let go — and one refused at its Holding time lets its
+        payment go (#639). Answers whether anything was recorded: nothing for a
         share not held for a game."""
 
-        if self.status is not SeatChargeStatus.HELD:
+        if (
+            self.status not in (SeatChargeStatus.HELD, SeatChargeStatus.CHECKED)
+            and not self.to_fix
+        ):
             return False
         self._record_that(
             SeatChargeReleased(
@@ -659,6 +843,26 @@ class SeatCharge:
             self.status = SeatChargeStatus.HELD
             self.booking_id = event.booking_id
             self.held_until = instant(event.until)
+        elif isinstance(event, SeatChargeChecked):
+            self.status = SeatChargeStatus.CHECKED
+            self.booking_id = event.booking_id
+            self.held_until = instant(event.until)
+            self.hold_at = instant(event.hold_at)
+            # The check's hold is let go: nothing is held until the holding.
+            self.last_moment = None
+        elif isinstance(event, SeatChargeHeldAgain):
+            self.status = SeatChargeStatus.HELD
+            self.payment_id = event.payment_id
+            self.held_until = instant(event.until)
+            self.last_moment = (
+                None if event.last_moment is None else instant(event.last_moment)
+            )
+            self.failure = None
+        elif isinstance(event, SeatChargeHoldingRefused):
+            self.status = SeatChargeStatus.FAILED
+            self.payment_id = event.payment_id
+            self.failure = FailureReason(event.reason)
+            self.last_moment = None
         elif isinstance(event, SeatChargeTaken):
             self.status = SeatChargeStatus.TAKING
             self.booking_id = event.booking_id
@@ -666,7 +870,12 @@ class SeatCharge:
         elif isinstance(event, SeatChargeReleased):
             if self.status is SeatChargeStatus.HELD:
                 self.released_at = instant(event.occurred_at)
-            self.status = SeatChargeStatus.RELEASING
+            # A checked share holds nothing to let go: it is closed at once.
+            self.status = (
+                SeatChargeStatus.CANCELLED
+                if self.status is SeatChargeStatus.CHECKED
+                else SeatChargeStatus.RELEASING
+            )
         elif isinstance(event, SeatChargeCaptured):
             self.status = SeatChargeStatus.CAPTURED
             self.fee_taken_grosze = event.fee_grosze

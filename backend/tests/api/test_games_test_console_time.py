@@ -65,6 +65,7 @@ GAMES_JOBS = (
     "proposal-expiry",
     "request-timeout",
     "time-to-pay",
+    "holding",
     "cut-off",
     "club-payouts",
     "new-bookings-summary",
@@ -383,6 +384,35 @@ async def test_a_booked_game_counts_down_to_its_cut_off_and_its_days_close(
         "CUT_OFF",
         "CLUB_PAYOUT",
     ]
+
+
+async def test_a_game_filled_far_ahead_counts_down_to_its_holding_and_is_held_then(
+    client, session_factory, payments, clock, world
+):
+    """Booked on Monday morning for Saturday 17 October at 17:00, its cut-off
+    Friday 16 October: a Visa's hold would not last until then, so every seat
+    is only checked, and held at its Holding time — Monday 12 October at
+    17:00, four days before the cut-off — by *hold the shares* (#639)."""
+
+    game = await a_card(
+        session_factory, clock, world, world.bonarka, start=warsaw(17, 17)
+    )
+    assert (await all_say_yes(client, game, world))["booked"] is not None
+    await players.deliver_the_outbox(session_factory, payments=payments)
+
+    pane = pane_of(await board_of(client, world.group), game)
+
+    assert moments_of(pane)["HOLDING"] == (at(warsaw(12, 17)), "holding")
+    assert {charge["status"] for charge in pane["charges"]} == {"CHECKED"}
+    # Not due: the press leaves every seat checked.
+    assert (await runs(client, "holding"))["done"] == 0
+    clock.move(warsaw(12, 17) - clock.now())
+    ran = await runs(client, "holding")
+    assert (ran["done"], ran["conflicts"]) == (4, 0)
+    pane = pane_of(await board_of(client, world.group), game)
+    assert {charge["status"] for charge in pane["charges"]} == {"HELD"}
+    assert "HOLDING" not in moments_of(pane)
+    assert moments_of(pane)["CUT_OFF"] == (at(warsaw(16, 17)), "cut-off")
 
 
 async def test_a_game_booked_after_its_day_closed_is_summed_up_at_the_next_close(

@@ -3338,8 +3338,31 @@
           "dev"
         ],
         "summary": "Run it now \u00b7 time to pay",
-        "description": "Runs out every refused share's time to pay that is up (#625, #626) \u2014 and its time to fix the card, before the cut-off (#638): the payer's seat reopens \u2014 offered to others, theirs to take back while free \u2014 the holds the others kept are let go, and at a club that confirms the booking is called off, its desk emailed. A time still running is left as it is.",
+        "description": "Runs out every refused share's time to pay that is up (#625, #626) \u2014 and its time to fix the card, before the cut-off (#638): the payer's seat reopens \u2014 offered to others, theirs to take back while free \u2014 the holds the others kept are let go, and at a club that confirms the booking is called off, its desk emailed. On a booked game whose holding was refused (#639), the player's seat opens to Fill in as a leaver's, and they owe nothing. A time still running is left as it is.",
         "operationId": "run_the_time_to_pay_dev_jobs_time_to_pay_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dev/jobs/holding": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 hold the shares",
+        "description": "At each checked share's Holding time \u2014 four days before its game's cut-off \u2014 holds it on its card again, to stay until the cut-off (#639). A game that filled far ahead had those cards only checked: a hold made without its player would not have lasted until the cut-off. A card refused now gives its player thirty minutes to fix it, the game still booked \u2014 run out, their seat opens to Fill in and they owe nothing. A share whose Holding time is still ahead is left checked.",
+        "operationId": "run_the_holding_dev_jobs_holding_post",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -5790,6 +5813,7 @@
           "BOOK_BY",
           "CLUB_ANSWER_DUE",
           "PAYMENT_DUE",
+          "HOLDING",
           "CUT_OFF",
           "NEW_BOOKINGS_SUMMARY",
           "CLUB_PAYOUT",
@@ -7549,6 +7573,7 @@
         "enum": [
           "AUTHORISED",
           "FAILED",
+          "CHECKED",
           "HELD",
           "TAKING",
           "CAPTURED",
