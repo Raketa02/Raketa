@@ -239,7 +239,8 @@ the status's accent line beside the others' faces; the money line (`moneyLineOf`
 mechanics §14.1's table); _Open game_, which pushes the details over Home. **Every fold runs on the
 read's clock** (`useReadClock`: `read_at` moved on by how long the phone has held the read, ticking
 while a cut-off is ahead), so the cut-off's clause — _free to leave until Fri 16:00_ then, _27,18 zł
-back if you leave by Fri 16:00_ since #618 (below) — leaves the line at that instant by itself. **An ended card stays a day after its hour** (`onHome`) — the wire dates no ending of a
+back if you leave by Fri 16:00_ since #618, and _free to leave until_ again since #642 (both below) —
+leaves the line at that instant by itself. **An ended card stays a day after its hour** (`onHome`) — the wire dates no ending of a
 booking, and the hour's end is the one instant every ending has.
 
 **_New until opened_ is kept by the phone** (`useOpenedGames`, the fourth value of
@@ -369,10 +370,12 @@ _new_ marked. A seat gone before the read says _This seat isn't offered to you a
 saying what leaving costs **now** — the read's `leaving`, folded by the server — and today's _Before
 you leave_ sheet (`LeaveSheet`, this feature's since #574) with the §13 words: _You'll be refunded 27,18 zł now (the
 0,82 zł card fee isn't returned)…_ before the cut-off, _…when someone takes it; if nobody does, you
-won't be…_ after it, _Nobody has paid yet. Leaving withdraws your yes._ while the club decides. The
+won't be…_ after it, _Nobody has paid yet. Leaving withdraws your yes._ while the club decides (since
+#642, _Nothing is taken…_ before the cut-off and no figure after it, below). The
 door is `LeaveTheGame`, the group exit's shape: the sheet is the surface while the act is in flight
-and says a refusal in words; success is a toast — with when the refund lands (_BLIK within hours,
-cards up to two weeks_, §12.3) — and the leaver goes back to Home, which no longer holds the game. No
+and says a refusal in words; success is a toast — with when the refund landed (_BLIK within hours,
+cards up to two weeks_, §12.3) until #642 made it _Nothing was taken._ — and the leaver goes back to
+Home, which no longer holds the game. No
 button where the read gives none (the hour has come, the game is over). **The same door stands on a
 game still filling while its club decides**, sent as the withdrawal (`useLeaveWhileWaiting`, `DELETE
 /proposals/{id}/yes`, which calls off the request).
@@ -397,10 +400,11 @@ and the booked details say _Waiting for the club_ with no court; their _Leave th
 the yes.
 
 **Home's and the details' lines are the read's now** (§14.1): _2 seats open · fills by Fri 16:00 or
-the game is off and everyone is refunded_ (`open_seats`), _1 seat open · offered to others · the game
-goes ahead_ after the cut-off; _Called off_ with why — _A seat was still empty at the cut-off_,
-_Kazimierz Padel said no_, _… didn't answer in time_ (Q105, since #629, below) — and what came back (_Refunded 28 zł_,
-`refunded_grosze`) or _Nobody paid_; _Uncounted_ with _A seat was empty · no Level moved_ — on Home's
+the game is off and everyone is refunded_ (`open_seats`; _…and nothing is taken_ since #642), _1 seat
+open · offered to others · the game goes ahead_ after the cut-off; _Called off_ with why — _A seat was
+still empty at the cut-off_, _Kazimierz Padel said no_, _… didn't answer in time_ (Q105, since #629,
+below) — and what came back (_Refunded 28 zł_, `refunded_grosze`) or _Nobody paid_ (or _Nothing was
+taken_, since #642); _Uncounted_ with _A seat was empty · no Level moved_ — on Home's
 card, and under the share on the details' money row (`moneyRow`). A booking
 waiting for its club has no Game yet (`gameId` absent): no room (and `chatIsOpen` keeps its door
 shut, since #577 finds a room by the booking), no forecast, no result, and it is not
@@ -686,7 +690,8 @@ The wire's `free_to_leave_until` kept its name (#617 is additive), and so did th
 Home or the details says _free_ any more. The payment terms (`payments`' `PAYMENT_TERMS`, versioned)
 still say _Free to leave until the club's cut-off — refunded minus the card fee_; they keep their
 words until the lawyer's review (the spec's O3). The Games deck's _no free cancellation_, the line under _Leave the game_ and the
-leave sheet are unchanged.
+leave sheet are unchanged. **Reversed by Q113 and #642** (below): leaving before the cut-off is free
+again, so the line says so, and the figure and `backIfYouLeaveAhead` are gone.
 
 **The bubble opens the chat** ([#619](https://github.com/Raketa02/Raketa/issues/619); the mechanics
 Q100; story S-01A's F-HOME-15.1). Marta, on the tram, taps the bubble on her Thursday card, writes
@@ -841,7 +846,8 @@ the book-by, where it used to reopen the seat at once (Q109); the market's pay w
   `detailsCanRunOut`).
 - **Paying in time shows the payer _It's a game!_** (Q110; §12.2: _you see It's a game!_), at either
   kind of club. The others are told by the server: _booked · you paid 40 zł_, or _Kazimierz Padel
-  confirmed your game · you paid 25 zł_ at a club that confirms. The payer's own copy is born seen,
+  confirmed your game · you paid 25 zł_ at a club that confirms (_40 zł held_ and _25 zł held_ since
+  Q113, #637). The payer's own copy is born seen,
   because the backend records the payer as the one whose act filled it. A confirmation's booked answer
   is the fill's `booked`, drawn from the card the sheet was opened on, or off the booking for a _TO
   CONFIRM_ row, which holds no card. This replaces the toast that confirming from _TO CONFIRM_ showed,
@@ -887,8 +893,8 @@ confirmed again (#533, the backend's handover), and the laptop provider that nev
 (`payments.md`). **Nothing here has been seen on a device**: the amber line on a _TO CONFIRM_ row, the
 sheet's note, the line under the word and the details' _Confirm your payment_ all want a look.
 
-**Decided, not built here: the share is held until the club's cut-off, and leaving before it is
-free** (the mechanics Q113, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; story S-01A's F-LEAVE-6.1; root
+**Decided, and built since #642 (below) but for #643–#645: the share is held until the club's
+cut-off, and leaving before it is free** (the mechanics Q113, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; story S-01A's F-LEAVE-6.1; root
 [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a refund always cost somebody Stripe's fee, the 1,60 zł this feature prints was
 an estimate of a fee that depends on the card, and keeping it is exposed under Polish payment law.
 Letting a hold go costs nothing. So the fill holds the shares and the cut-off takes them. What it
@@ -903,3 +909,49 @@ reverses here, for the tickets that build it:
 - **A refused card before the cut-off** is the root glossary's **Time to fix the card**: _Fix your
   card by 14:40_ where this feature says _Confirm your payment_ ([#643](https://github.com/Raketa02/Raketa/issues/643)); a rescue's button says
   _held until the cut-off_ or _paid now_ ([#645](https://github.com/Raketa02/Raketa/issues/645)).
+
+**Held until the cut-off, on the phone** ([#642](https://github.com/Raketa02/Raketa/issues/642); the
+backend's #637 and #639; the mechanics Q113, §12.2, §13, §14.1; the screens A4.1, A4.2, A8; story
+S-01A's F-LEAVE-6.1). Ivan's Thursday 19:00 at Bonarka Arena fills a week ahead. His Visa is only
+checked that day, Oscar's Mastercard holds, and both read _40 zł · free to leave until Wed 19:00_ on
+Home. Ivan's details say _40 zł_ over _Held from Sat 19:00 · taken Wed 19:00_, Oscar's _Held on your
+card · taken Wed 19:00 · free to leave until then_. On Wednesday at 19:00 both lines turn to _Paid ·
+40 zł_ by themselves. **Why**: the product owner ruled that the fill holds the shares and the cut-off
+takes them, so a leave before it costs nobody a fee and _free_ is true again (Q113, amending Q99).
+
+- **The wire**: `money.back_if_you_leave_grosze` is gone. `share_state` (`HELD`, `CHECKED`, `TAKEN`),
+  `held_from` and `taken_at` come in, each absent for a `null` and from an older server.
+  `ShareState` is spelled in `domain/vocabulary.ts` and held equal to the wire's.
+- **The share on the read's clock** (`shareAt`, `domain/home.ts`): a checked share is held from
+  `heldFrom`, and every share is taken at `takenAt`, the cut-off, where the server's own `paid` turns
+  too. `lineCanRunOut` ticks while `heldFrom` is there as well as the cut-off. **Home's line**
+  (`moneyLineOf`) is the share with _free to leave until_ the cut-off while it is ahead, held or only
+  checked alike, then _Paid · 40 zł_. **The details' row** (`moneyRow`) is _YOUR SHARE 40 zł_ over the
+  held or checked words (`heldWords`), then _PAID 40 zł_ over _Paid_. The label is _Your share_ until
+  the share is taken, on a _Seat open_ game too.
+- **A game off with nothing given back** says why, then by the reason (`NOTHING_BACK`): _Nothing was
+  taken_ where the shares were held and let go (short at the cut-off, or the club's cancel before
+  it), _Nobody paid_ where nothing was ever held. _Refunded 28 zł_ stays for a club's cancel after
+  the cut-off. _1 seat open · fills by Fri 16:00 or the game is off and nothing is taken._
+- **Leaving before the cut-off**: the line under _Leave the game_ reads _Free to leave now — nothing
+  is taken_. The sheet's first line is _Nothing is taken: the hold on your card is let go._ while the
+  share is held, and _Nothing is taken._ while it is only checked (`leavingAt` folds which on the
+  read's clock). The rest of the sheet is as before. The toast says _You left the game. Nothing was
+  taken._ **At the cut-off the line turns by itself**, as the money row turns to _Paid_: `leavingAt`
+  reads a share taken at `now` as after the cut-off, which the server says once read again.
+- **Leaving after the cut-off** keeps today's shape with no figure and no estimate. The line reads
+  _Refunded only if someone takes your seat_, and the sheet _Your seat is offered to others. / If
+  someone takes it, you get your share back less what was kept on your payment; if nobody does, you
+  won't. / On your record if nobody takes it._ — the terms' own words for the refund. The read's
+  exact refund and fee kept (#641) are dropped by the mapper until #644 says them. `Leaving` carries
+  only its kind, and `letsAHoldGo` once folded.
+- **A game still filling** says _…When the last yes lands, everyone's share is held and the court is
+  booked; it's taken at the club's cut-off._ (A4.2).
+
+**Calls made without a ruling**: the line under _Leave the game_ before the cut-off (§13 only says it
+_says the same_ as the sheet), and the sheet's refund clause after it without a figure, where §13
+gives none while the fee isn't known; _Nothing was taken_ after the club's cancel before the cut-off, as §14.1's
+table puts it, where Home said _Nobody paid_; the folds at `heldFrom` and `takenAt` on the phone's
+read clock, which the backend's own reads do at the same instants. **Owed**: the rescue's join
+(#645), time to fix (#643), the late leave's figure and the receipts' _held · released_ row (#644).
+**Nothing here has been seen on a device.**

@@ -49,8 +49,8 @@ Fill in alerts_ (mock 50) — or _Only the ones always on_.
 **The eleven always on are words and a tag, never controls.** Mock 52 drew seven; the rows are
 A7.2's as [#620](https://github.com/Raketa02/Raketa/issues/620) amends it, a row a line of the
 mechanics §17.2's table, in its order ([#628](https://github.com/Raketa02/Raketa/issues/628)): _It's a
-game! · you paid_ · _It's a game! · the club answers by …_ · _Waiting for one payment_ · _Confirm your
-payment by … to keep your seat_ · _Game called off · with the refund_ · _Someone left your game · or
+game! · you paid_ (_· held_ since #642) · _It's a game! · the club answers by …_ · _Waiting for one payment_ · _Confirm your
+payment by … to keep your seat_ · _Game called off · with the refund_ (_· nothing was taken, or with the refund_ since #642) · _Someone left your game · or
 it's filling again_ · _You've been refunded_ · _The club confirmed / said no / didn't answer in time_ ·
 _Your new game_ · _A game you left_ · _Your post didn't fill_. One row can be several notices — _the
 club confirmed / said no / didn't answer in time_ is three, _A game you left_ two — and a row names a
@@ -262,10 +262,17 @@ and _TO CONFIRM_ above them. **Why**: the confirm notice puts a row there and th
 takes its time off, and before this only the games were read again — a row could be missing, or keep a
 time that had run out, until the app came back to the foreground.
 
-**Decided, not built here: twelve always on, and the take is quiet** (the mechanics Q113 and §17.2;
+**Decided, and built since #642 (below) but for #643's row: twelve always on, and the take is quiet**
+(the mechanics Q113 and §17.2;
 [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is now held when its game fills and
 taken at the club's cut-off, and a card refused before the cut-off is fixed, not paid. The first row
 reads _It's a game! · held_, the called-off row _Game called off · nothing was taken, or with the
 refund_, and _Fix your card by … to keep your seat_ joins before _Confirm your payment_
 ([#642](https://github.com/Raketa02/Raketa/issues/642), [#643](https://github.com/Raketa02/Raketa/issues/643)). The take at the cut-off is a quiet row in the list, never pushed, so it is
 not a row here.
+
+**Held, not paid** ([#642](https://github.com/Raketa02/Raketa/issues/642); the mechanics Q113,
+§17.2). The first always-on row reads _It's a game! · held_ and the called-off row _Game called off ·
+nothing was taken, or with the refund_; the words a notice says are still the backend's. The phone
+spells the two kinds #638 added, `FIX_YOUR_CARD` and `TIME_TO_FIX_RAN_OUT`, so a tap on one opens
+where the backend says; their row in the settings is #643's.

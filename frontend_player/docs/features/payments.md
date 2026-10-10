@@ -56,9 +56,9 @@ app's paused-and-resumed mutations are not wanted besides challenges': a press i
 standing in, with Stripe's native half between the writes, should say _couldn't reach Raketa_ now
 rather than resume a setup minutes later.
 
-**The terms are evidence.** `PAYMENT_TERMS` (version `2026-09-29`, the backend's) is §12.5 compressed
-from the mock's own sentences (45), plus the one promise the mock dropped — a game still short at the
-cut-off is called off with everything back. The backend records the version, never the words, so a
+**The terms are evidence.** `PAYMENT_TERMS` (version `2026-09-29`, the backend's, until #642 put
+Q113's `2026-10-10` in force, below) is §12.5 compressed from the mock's own sentences (45), plus the
+one promise the mock dropped — a game still short at the cut-off is called off with everything back. The backend records the version, never the words, so a
 changed word is a new version with the backend's, the old words kept, so every recorded acceptance
 still points at the words it was shown. A setup that answers another version shuts _Accept_ and
 says the app needs updating. Reviewed by a
@@ -152,7 +152,8 @@ section used to say the second for every row. **Why**: the old sentence was fals
 which nobody else can take until the time ends, and one list can hold both. The rows, the yes again
 and what a booked confirmation shows are `proposals.md`'s.
 
-**Decided, not built here: new terms, and receipts that explain every movement** (the mechanics
+**Decided, and built since #642 (below) but for #644's receipts: new terms, and receipts that
+explain every movement** (the mechanics
 Q113 and §12.5, the screens A7.3; [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is
 now held when its game fills and taken at the club's cut-off, so the terms, the method card's
 _Charged by the club when a game fills_ and the receipts must say what really happens. `PAYMENT_TERMS`
@@ -161,3 +162,26 @@ accepted the old one accepts again before their next game holds money ([#637](ht
 Receipts read _−40 zł · paid_ for a share taken, _+38,24 zł · refunded_ over _1,76 zł kept on your
 payment_ for a refund, and _40 zł held · released_ for a hold let go; the card check never appears,
 and the footer loses its BLIK line ([#641](https://github.com/Raketa02/Raketa/issues/641), [#644](https://github.com/Raketa02/Raketa/issues/644)).
+
+**The terms in force are Q113's** ([#642](https://github.com/Raketa02/Raketa/issues/642); the
+backend's #637; the mechanics §12.5, the screens A7.3). `PAYMENT_TERMS_VERSION` is `2026-10-10`, the
+version #637 put in force, and `PAYMENT_TERMS` is §12.5's text without its first sentence (_Your card
+is saved_ is not yet true on step 3): the share held when a game fills, or the card checked and the
+share held four days before the cut-off; taken at the club's cut-off; nothing taken for a leave
+before it; after it the share back less what was kept on the payment if the seat is taken; a game
+short at the cut-off called off with nothing taken. The retired words stay in `RETIRED_PAYMENT_TERMS`,
+keyed by their version. **A player who accepted the earlier words** meets state B's amber note, the
+terms and _Accept the terms_, as for a changed brand. The read's `terms_needed` does not say which of
+the two it is, so the note names both: _Clubs can't hold your share on this card until you accept the
+terms in force — they changed, or your bank moved the card to another network._ **Why**: the earlier
+words promised a refund less the card fee for a leave before the cut-off, which no longer happens.
+
+The method card reads _Held when a game fills · taken by the club at its cut-off_, step 4 _…it lets
+the club hold and take your share later without you present_, and the receipts' footer _Refunds can
+take up to two weeks to reach your card._, with no BLIK line. **A hold let go** (`RELEASED`, #641) is
+left out of the receipts by the mapper until #644 draws _40 zł held · released_; the wire agreement
+holds the other two kinds equal to the domain's. **Calls made without a ruling**: the setup sheet's
+_Before your first yes_ line, which the spec leaves open for the product owner, now reads _Save how you
+pay. Nothing is held until a game you said yes to fills, and nothing is taken before the club's
+cut-off._; and the terms-again note's words. **Owed to the lawyer** (O3): the clause after the
+cut-off. **Nothing here has been seen on a device.**

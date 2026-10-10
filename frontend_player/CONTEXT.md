@@ -594,8 +594,8 @@ ground, the entrance and the tile came to `features/proposals` with the face tha
   sentence** is the picture as one header, built from whole Names. Since the mechanics' Q113 (in
   the root glossary, the share is **held** at the fill and taken at the club's **Cut-off**) its
   lines and the
-  notices beside it say _held_, never _you paid_, before the cut-off — owed by
-  [#642](https://github.com/Raketa02/Raketa/issues/642). _Avoid_: "the celebration" or "the moment"
+  notices beside it say _held_, never _you paid_, before the cut-off
+  ([#642](https://github.com/Raketa02/Raketa/issues/642)). _Avoid_: "the celebration" or "the moment"
   (not terms); showing it to anybody but the player whose yes filled the game — the others are
   told by a notice — and re-showing it, which nothing does.
 
