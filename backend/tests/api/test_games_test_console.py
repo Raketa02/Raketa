@@ -617,6 +617,8 @@ async def test_the_pane_of_a_booked_game_shows_its_court_sides_and_every_charge(
     assert booking["court_name"] == "Court 1"
     assert booking["called_off"] is None
     assert booking["departures"] == []
+    # Desk check-in is removed (#651): no seat's code, nobody checked in.
+    assert not {"codes", "checked_in"} & set(booking)
     assert pane["cut_off"] == at(SATURDAY_FIVE - timedelta(hours=24))
     first, second = pane["sides"]["first"], pane["sides"]["second"]
     assert len(first) == len(second) == 2

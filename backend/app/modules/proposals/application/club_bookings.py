@@ -1,12 +1,12 @@
-"""**The club runs its Raketa bookings** (#547; the mechanics §15.1, §16.7–§16.10,
+"""**The club runs its Raketa bookings** (#547; the mechanics §16.7, §16.9,
 §16.14, §16.16; the screens B4, B6).
 
-Four acts and two reads on the club surface, each for the desk's own club:
+Two acts and two reads on the club surface, each for the desk's own club:
 
 - **the day** — every booking whose game starts on a calendar day at the club,
-  filtered, each with its status, its players (name, *paid*, *checked in*), its
-  money (the court's price, what was collected, what was refunded) and the group
-  it came from;
+  filtered, each with its status, its players (name, *paid*, *held*), its money
+  (the court's price, what was collected, what was refunded) and the group it
+  came from;
 - **the free courts** — where a game may be moved: every other court of its sport
   the club still has for Raketa at its hour;
 - **Move** — onto one of them; the players read the new number;
@@ -14,9 +14,9 @@ Four acts and two reads on the club surface, each for the desk's own club:
   and a leaver whose open seat was still paid for; nothing on anybody's record;
   the game, its room and its court hour off; and **the people still in dealt a
   new card first** — never at this club and hour — by the proposer, which the
-  cancel makes due (``propose_games.py``);
-- **Check in** — a code scanned or typed at the desk, on the game's day: the
-  player was there, and can never be reported as not coming.
+  cancel makes due (``propose_games.py``).
+
+Desk check-in is removed (#651).
 
 Move and Cancel are the club's **until the game starts**, and never on a game
 called off or still waiting for the club's answer. **Every act locks the game
@@ -46,7 +46,6 @@ from app.modules.proposals.domain.club_bookings import (
     BookedFrom,
     ClubFilter,
     ClubStatus,
-    CodeAtTheDesk,
     CourtToMoveTo,
     Takings,
     club_status,
@@ -54,14 +53,9 @@ from app.modules.proposals.domain.club_bookings import (
     still_to_be_played,
 )
 from app.modules.proposals.domain.errors import (
-    AlreadyCheckedIn,
     BookingIsCalledOff,
     BookingNotBooked,
     BookingNotFound,
-    CheckInCodeForAnotherClub,
-    CheckInCodeForAnotherDay,
-    CheckInCodeUnknown,
-    CheckInIsOff,
     CourtNotFree,
     GameHasStarted,
 )
@@ -73,7 +67,6 @@ from app.modules.proposals.domain.home import (
 from app.modules.proposals.domain.ports import (
     BookingTakings,
     ClubBookings,
-    DeskCheckIns,
     PlayerBookings,
     PlayerNames,
     PoolOrigins,
@@ -307,75 +300,3 @@ async def _still_the_clubs_to_play(
     if now >= game.start:
         raise GameHasStarted()
     return game
-
-
-# --------------------------------------------------------------------------- #
-# Check in
-# --------------------------------------------------------------------------- #
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class CheckedIn:
-    game: BookedGame
-    player_id: UUID
-    name: str | None
-    at: Instant
-
-
-@final
-class CheckInAtTheDesk:
-    def __init__(
-        self,
-        *,
-        proposals: ProposalRepository,
-        bookings: PlayerBookings,
-        club: ClubBookings,
-        desk: DeskCheckIns,
-        names: PlayerNames,
-        uow: UnitOfWork,
-        clock: Clock,
-    ) -> None:
-        self._proposals = proposals
-        self._bookings = bookings
-        self._club = club
-        self._desk = desk
-        self._names = names
-        self._uow = uow
-        self._clock = clock
-
-    async def execute(self, *, club_id: UUID, code: str) -> CheckedIn:
-        now = instant(self._clock.now())
-        if not await self._desk.checks_players_in(club_id):
-            raise CheckInIsOff()
-        seat = await self._club.seat_for(code, club_id=club_id, now=now)
-        if seat.booking_id is not None:
-            found = await self._bookings.find(seat.booking_id)
-            if found is not None and found.filling_again:
-                # A seat on a request taken back, at any club: no Game at a
-                # desk to check in to (#624).
-                raise CheckInCodeUnknown()
-        if seat.where is CodeAtTheDesk.ANOTHER_CLUB:
-            raise CheckInCodeForAnotherClub()
-        if seat.booking_id is None or seat.player_id is None:
-            raise CheckInCodeUnknown()
-        booking_id, player_id = seat.booking_id, seat.player_id
-        await self._proposals.load_for_update(booking_id)
-        game = await _the_clubs(self._bookings, club_id, booking_id)
-        if seat.where is CodeAtTheDesk.ANOTHER_DAY:
-            raise CheckInCodeForAnotherDay(starts_at=game.start.isoformat())
-        if game.called_off_reason(now) is not None:
-            raise BookingIsCalledOff()
-        if game.stage is BookingStage.WAITING_FOR_THE_CLUB or not game.has_a_seat_for(
-            player_id
-        ):
-            # A seat on a request, or one its player left: no seat to check in.
-            raise CheckInCodeUnknown()
-        names = await self._names.names_of([player_id])
-        if player_id in game.checked_in:
-            raise AlreadyCheckedIn(checked_in_at=game.checked_in[player_id].isoformat())
-        await self._club.check_in(booking_id, player_id, at=now)
-        await self._uow.commit()
-        return CheckedIn(
-            game=game, player_id=player_id, name=names.get(player_id), at=now
-        )

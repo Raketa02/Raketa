@@ -1,4 +1,4 @@
-"""A booked game's details, for a player in it (#542; the mechanics §14.2, §15.1;
+"""A booked game's details, for a player in it (#542; the mechanics §14.2;
 the screens A4.1) — and for a member the open seat on it is offered to (#545;
 the screens A4.3).
 
@@ -13,8 +13,7 @@ ordinary Game, and its balance forecast is the card today's game screen draws
 (the screens A4.1: *as built today*). What this read decides is **whether** it is
 drawn — while the full game awaits its entry; never while a seat is open.
 
-**On the game's day, the reader's check-in code**: theirs alone, derived and
-never stored (``bookings/domain/check_in.py``).
+**No code to show at the desk**: desk check-in is removed (#651).
 
 **What leaving would cost, before the reader leaves** (#544, #637, #641; the
 mechanics §13): nothing before the cut-off — the hold is let go, so there is no
@@ -30,11 +29,11 @@ while the club decides — and no button once the hour has come.
 a Seat open card, a Seats to fill row — reads the booked layout with themself
 in the seat that opened first (*You?*, unpaid), the court, the players *paid*,
 and ``rescue``: when the seat leaves the board, and so what *I'm in* costs.
-No check-in code, no *Leave*, and nothing that needs them.
+No *Leave*, and nothing that needs it.
 
 **A full game gone back to filling** (#624, Q106) is read as Home reads it —
 folded against its proposal, for the people In now: *Seat open*, nobody paid,
-no court and no code, and no *Leave* of its own — its way out is a game still
+no court, and no *Leave* of its own — its way out is a game still
 filling's, *Withdraw*. **A game waiting for one payment** (#625, #626) is read
 as Home reads it too — at a club that books at once off its proposal, since it
 has no booking — with the time to pay, and *Leave*, which withdraws the yes.
@@ -61,10 +60,8 @@ from app.modules.proposals.domain.home import (
     BookedGame,
     BookedMoney,
     BookedState,
-    CheckIn,
     LeaveTerms,
     Leaving,
-    check_in_shown,
     leave_terms,
     leaving_of,
     shows_forecast,
@@ -109,8 +106,6 @@ class BookingDetails:
     sides: Sides
     #: Whether the balance forecast is drawn.
     shows_forecast: bool
-    #: The reader's code — on the game's day only.
-    check_in: CheckIn | None
     club_name: str | None
     #: ``None`` for a reader with no Location area.
     distance_km: float | None
@@ -185,13 +180,6 @@ class ReadBookingDetails:
             state=state,
             sides=game.seen_by(reader),
             shows_forecast=shows_forecast(state.status),
-            check_in=(
-                self._bookings.check_in(game.booking_id, reader)
-                # A game gone back to filling has no Game at the desk (#624).
-                if not game.filling_again
-                and check_in_shown(state.status, start=game.start, now=now)
-                else None
-            ),
             club_name=names.get(game.club_id),
             distance_km=distances.get(game.club_id),
             people=await people_on([game], self._people),
@@ -202,7 +190,7 @@ class ReadBookingDetails:
         self, game: BookedGame, reader: UUID, *, now: Instant
     ) -> BookingDetails:
         """The rescue as a member it is offered to sees it: in the seat that
-        opened first, nothing to leave and no code to show."""
+        opened first, and nothing to leave."""
 
         result = (
             None
@@ -241,7 +229,6 @@ class ReadBookingDetails:
             ),
             sides=sides_for(game, reader),
             shows_forecast=False,
-            check_in=None,
             club_name=names.get(game.club_id),
             distance_km=distances.get(game.club_id),
             people=people,

@@ -6,51 +6,32 @@ not, where they would enter the result, and the reported player disputes it
 inside their day. Neither confirms anything: a report stands when its day
 passes in silence, which is a clock, and is proved by moving one.
 
-**A player the club checked in cannot be reported**, and the scan is the
-booking's: asked of it through ``ClubCheckIns`` at the moment of the report,
-never copied onto the game.
+Nothing at a club's desk is asked: desk check-in is removed (#651).
 """
 
 from __future__ import annotations
 
 from typing import final
 
-from app.application.ports import UnitOfWork
-from app.kernel import Clock, instant
+from app.kernel import instant
 from app.modules.games.application.answer_result import ActOnAGame
 from app.modules.games.application.commands import (
     DisputeANoShowCommand,
     ReportANoShowCommand,
 )
 from app.modules.games.application.read_games import StandingGame
-from app.modules.games.domain.ports import ClubCheckIns, GameRepository, PlayerNames
 
 
 @final
 class ReportANoShow(ActOnAGame):
     """*Kuba didn't come* — by a player who came."""
 
-    def __init__(
-        self,
-        *,
-        games: GameRepository,
-        names: PlayerNames,
-        check_ins: ClubCheckIns,
-        uow: UnitOfWork,
-        clock: Clock,
-    ) -> None:
-        super().__init__(games=games, names=names, uow=uow, clock=clock)
-        self._check_ins = check_ins
-
     async def execute(self, command: ReportANoShowCommand) -> StandingGame:
         at = instant(self._clock.now())
         game = await self._yours(game_id=command.game_id, player_id=command.player_id)
         names = await self._named(game)
         game.report_no_show(
-            by=command.player_id,
-            absent=command.absent_id,
-            checked_in=await self._check_ins.checked_in(game.challenge_id),
-            occurred_at=at,
+            by=command.player_id, absent=command.absent_id, occurred_at=at
         )
         return await self._saved(game, at, names)
 

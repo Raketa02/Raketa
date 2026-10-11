@@ -370,7 +370,6 @@ class ClubCourts:
                     time_to_confirm_minutes=settings.time_to_confirm_minutes,
                     other_clubs_courts=settings.other_clubs_courts.offered,
                     other_clubs_within_km=settings.other_clubs_courts.within_km,
-                    check_in=settings.check_in,
                     occurred_at=occurred_at,
                 )
             )
@@ -487,7 +486,6 @@ class ClubCourts:
                     offered=event.other_clubs_courts,
                     within_km=event.other_clubs_within_km,
                 ),
-                check_in=event.check_in,
             )
             self.settings_confirmed = True
         elif isinstance(event, (RaketaPaused, RaketaResumed)):

@@ -157,9 +157,7 @@ def _booked_and_played(players):
         starts_at=starts,
     )
     reported = instant(starts + timedelta(hours=2))
-    game.report_no_show(
-        by=players[0], absent=players[3], checked_in=(), occurred_at=reported
-    )
+    game.report_no_show(by=players[0], absent=players[3], occurred_at=reported)
     return game, reported
 
 

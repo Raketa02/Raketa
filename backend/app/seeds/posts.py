@@ -38,7 +38,6 @@ from app.bootstrap.composition import (
     build_proposal_repository,
     build_read_posting,
 )
-from app.core.config import Settings
 from app.kernel import Instant
 from app.modules.clubs.domain.court_hours import CLUB_ZONE
 from app.modules.player_profile.domain.weekly_hours import free_for_the_hour
@@ -99,7 +98,6 @@ def her_posting(her: UUID, group_id: UUID) -> PostingCommand:
 async def post_her_game(
     session_factory: async_sessionmaker[AsyncSession],
     *,
-    settings: Settings,
     now: Instant,
     seeded: SeededProposals,
     bookings: SeededBookings,
@@ -118,7 +116,7 @@ async def post_her_game(
         if live is not None:
             return live
         club_id = await games_club_id(session)
-        read = await build_read_posting(session, settings=settings).read(
+        read = await build_read_posting(session).read(
             her_posting(her, group_id), now=now
         )
         taken = [
@@ -151,9 +149,7 @@ async def post_her_game(
                 f"{LEAD.days} days out with somebody who fits her free, clear of "
                 f"her games — from {now.astimezone(CLUB_ZONE):%a %d %b %H:%M}"
             )
-        posted = await build_post_a_game(
-            session, settings=settings, clock=clock
-        ).execute(
+        posted = await build_post_a_game(session, clock=clock).execute(
             PostAGameCommand(
                 posting=her_posting(her, group_id),
                 club_id=club_id,

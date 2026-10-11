@@ -520,15 +520,14 @@ async def read_home(user: CurrentUserDep, read: ReadHomeDep) -> HomeResponse:
     description=(
         "The game details of a booked game, for a player in it: the sides with "
         "each seat's face, Level and *paid* tag, the status, WHERE (the club, the "
-        "court and how far it is), the hour, the money line, whether the balance "
-        "forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on "
-        "the game's day, the reader's check-in code** — a QR payload and a short "
-        "code, theirs alone. **The chat is the reader's room whose `booking_id` "
-        "is this booking's**, in `GET /conversations`.\n\n"
+        "court and how far it is), the hour, the money line, and whether the "
+        "balance forecast is drawn (`GET /games/{game_id}/pairing` draws it). "
+        "**The chat is the reader's room whose `booking_id` is this booking's**, "
+        "in `GET /conversations`.\n\n"
         "**A rescue seen from outside** (#545): a member its open seat is "
         "offered to reads the same game standing in the seat that opened first "
-        "(their tile unpaid — *You?*), with `rescue` — no check-in code, no "
-        "`leaving`. Nothing is recorded."
+        "(their tile unpaid — *You?*), with `rescue` — no `leaving`. Nothing is "
+        "recorded."
     ),
 )
 async def read_booking_details(

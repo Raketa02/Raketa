@@ -1,11 +1,11 @@
-"""What the club does to a booked game (#547; the mechanics §15.1, §16.7,
-§16.9, §16.10, §16.16).
+"""What the club does to a booked game (#547; the mechanics §16.7, §16.9,
+§16.16).
 
 **Move** puts the game on another court of its sport at the same hour — the
 players read the new number. **Cancel** calls it off with the club's reason:
 everybody still in is named, to be refunded in full, and it is on nobody's
-record. **Check-in** marks a player there — once, and only somebody with a seat
-on a booked game.
+record. The desk no longer checks players in (#651); a stored check-in folding
+to nothing is ``test_retired_check_in_rows_still_fold.py``'s.
 """
 
 from __future__ import annotations
@@ -27,7 +27,6 @@ from app.modules.bookings.domain.events import (
     BookingConfirmed,
     CancelledByClub,
     CourtMoved,
-    PlayerCheckedIn,
 )
 from app.modules.bookings.domain.keeping import Keeping, keeping_of
 from app.shared.ids import new_uuid
@@ -162,36 +161,12 @@ def test_a_cancelled_game_is_on_nobody_s_record():
 
 
 # --------------------------------------------------------------------------- #
-# Check-in
+# The record
 # --------------------------------------------------------------------------- #
 
 
-def test_checking_a_player_in_marks_them_there_once():
+def test_a_game_whose_hour_came_whole_is_kept_by_everybody():
     booking = _booked()
-
-    assert booking.check_in(EWA, at=START - timedelta(minutes=8))
-    assert not booking.check_in(EWA, at=START - timedelta(minutes=2))
-
-    assert booking.checked_in == {EWA: START - timedelta(minutes=8)}
-    [event] = booking.pull_events()
-    assert isinstance(event, PlayerCheckedIn)
-    assert _replayed(booking, [event]).checked_in == {EWA: START - timedelta(minutes=8)}
-
-
-def test_only_somebody_with_a_seat_on_a_booked_game_is_checked_in():
-    booking = _booked()
-    booking.leave(KUBA, at=_at(1))
-    with pytest.raises(InvariantViolated):
-        booking.check_in(KUBA, at=START)
-
-    booking.cancel(CancelReason.WEATHER, at=_at(2))
-    with pytest.raises(InvariantViolated):
-        booking.check_in(OLA, at=START)
-
-
-def test_a_game_whose_hour_came_whole_is_kept_by_everybody_checked_in_or_not():
-    booking = _booked()
-    booking.check_in(OLA, at=START)
 
     assert keeping_of(booking, OLA, now=START) == Keeping(kept=True, at=START)
     assert keeping_of(booking, KUBA, now=START) == Keeping(kept=True, at=START)

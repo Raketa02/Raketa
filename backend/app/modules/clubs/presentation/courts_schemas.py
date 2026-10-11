@@ -381,7 +381,6 @@ class RaketaSettingsRequest(BaseModel):
     other_clubs_courts: OtherClubsCourtsSchema = Field(
         description="The distance is 1–50 km, default 10."
     )
-    check_in: bool = Field(description="*We check players in*. Off by default.")
     paused: bool = Field(
         description=(
             "*Pause Raketa bookings*: no new cards on the club's courts; booked "
@@ -403,7 +402,6 @@ class RaketaSettingsResponse(BaseModel):
     minimum_notice_hours: int
     time_to_confirm_minutes: int
     other_clubs_courts: OtherClubsCourtsSchema
-    check_in: bool
     paused: bool
 
     @classmethod
@@ -419,7 +417,6 @@ class RaketaSettingsResponse(BaseModel):
                 offered=settings.other_clubs_courts.offered,
                 within_km=settings.other_clubs_courts.within_km,
             ),
-            check_in=settings.check_in,
             paused=club.paused,
         )
 

@@ -63,13 +63,7 @@ make seed``.
     given minutes, the hour that ended last before a score was stated across
     the net from her as if earlier — so that silence confirms it that many
     minutes from now, and the rating catch-up moves the Levels then.
-11. **Check-in at the club** — her game at the soonest hour today that has not
-    begun, at a club of the group's that books at once: made and filled by her
-    and three of the group on a clock backdated past the club's minimum notice,
-    when the hour was still on sale. Her phone shows her code on the game's day;
-    a club that checks nobody in is switched to *We check players in*, as its
-    desk would, and the situation says so.
-12. **Club day close** — the last closed club day's played games, at a club of
+11. **Club day close** — the last closed club day's played games, at a club of
     the group's that books at once and has had no day close for it yet: up to
     two, each a game's worth of the group — never her, and nobody on both —
     booked inside that day, on a clock backdated to it, and played. Running
@@ -87,7 +81,7 @@ there is time to pick the phone up before it fires.
 **A situation that writes history writes hers too**, as the seed does: her yes
 said as if earlier is the past, never a press of hers now — her post too (9).
 **A moment counted from an event is built minutes away by backdating the
-event** (situations 3, 10 and 12): the club's answer, a score's day, a club's
+event** (situations 3, 10 and 11): the club's answer, a score's day, a club's
 day close.
 """
 
@@ -150,14 +144,11 @@ from app.kernel import (
     shifted,
 )
 from app.modules.bookings.domain.summary import summary_id_for
-from app.modules.clubs.application.commands import SaveRaketaSettingsCommand
-from app.modules.clubs.domain.club_courts import ClubCourts
 from app.modules.clubs.domain.court_hours import (
     CLUB_ZONE,
     DAY_CLOSES,
     day_closes_at,
     last_closed_day,
-    local_day,
 )
 from app.modules.clubs.domain.raketa_terms import TIME_TO_CONFIRM_MINUTES
 from app.modules.clubs.domain.ports import (
@@ -167,7 +158,6 @@ from app.modules.clubs.domain.ports import (
 from app.modules.clubs.presentation.dependencies import (
     ClubAccountRepositoryDep,
     ClubCourtsRepositoryDep,
-    SaveRaketaSettingsDep,
 )
 from app.modules.games.application.commands import StateResultCommand
 from app.modules.games.domain.ports import GameRepository
@@ -511,21 +501,6 @@ class ClubDayCloseResponse(BaseModel):
         description=f"When that day closed: {DAY_CLOSES}:00 in Kraków."
     )
     games: list[DayCloseGame] = Field(description="Played that day, soonest first.")
-    says: str = Field(description="What happened, for the tester.")
-
-
-class CheckInAtTheClubResponse(BaseModel):
-    game_id: UUID
-    starts_at: datetime
-    club_id: UUID = Field(description="The club the club row acts as.")
-    club_name: str | None
-    people: list[PersonRef] = Field(description="Everybody on it, in yes order.")
-    check_in_switched_on: bool = Field(
-        description=(
-            "The club checked nobody in, and its *We check players in* was "
-            "switched on as its desk would."
-        )
-    )
     says: str = Field(description="What happened, for the tester.")
 
 
@@ -2077,119 +2052,7 @@ async def just_played(
 
 
 # --------------------------------------------------------------------------- #
-# 11 · Check-in at the club
-# --------------------------------------------------------------------------- #
-
-
-@router.post(
-    "/check-in-at-the-club",
-    response_model=CheckInAtTheClubResponse,
-    responses=_REFUSED,
-    summary="Situation 11 · Check-in at the club",
-    description=(
-        "Her game at the soonest hour today that has not begun, at a club of "
-        "the group's that books at once — made and filled by her and three of "
-        "the group as if earlier, when the hour was still on sale. Her phone "
-        "shows her check-in code today, and the club checks players in: a club "
-        "that did not is switched to *We check players in*, as its desk would."
-    ),
-)
-async def check_in_at_the_club(
-    body: HerSituationRequest,
-    clock: ClockDep,
-    groups: GroupDirectoryDep,
-    users: UserRepositoryDep,
-    hours_finder: HourFinderDep,
-    club_courts: ClubCourtsRepositoryDep,
-    save_settings: SaveRaketaSettingsDep,
-    earlier: EarlierYesesDep,
-    names: PlayerNamesDep,
-    clubs: ProposalClubNamesDep,
-) -> CheckInAtTheClubResponse:
-    her = body.protagonist_id
-    listing = await her_group(groups, users, body.group_id, her)
-    now = instant(clock.now())
-    for club_id in await hours_finder.clubs(body.group_id, on_request=False, now=now):
-        courts = await club_courts.load(club_id)
-        filled_at = instant(
-            now
-            - timedelta(hours=courts.settings.minimum_notice_hours)
-            - BEFORE_THE_NOTICE
-        )
-        found_hour = await hours_finder.hour_and_three(
-            her,
-            listing,
-            club_id,
-            body.sport,
-            on_sale_at=filled_at,
-            start=now,
-            end=now + timedelta(days=1),
-        )
-        if found_hour is None or local_day(found_hour[0].start) != local_day(now):
-            continue
-        hour, three = found_hour
-        answer = _booked(
-            await earlier.all_say_yes(
-                group_id=body.group_id,
-                sport=body.sport,
-                club_id=club_id,
-                hour=hour,
-                players=(*three, her),
-                at=filled_at,
-            ),
-            hour,
-        )
-        switched_on = not courts.settings.check_in
-        if switched_on:
-            await save_settings.execute(_checking_players_in(club_id, courts))
-        people = (*three, her)
-        named = await names.names_of(people)
-        club = (await clubs.names_of([club_id])).get(club_id)
-        return CheckInAtTheClubResponse(
-            game_id=answer.proposal_id,
-            starts_at=hour.start,
-            club_id=club_id,
-            club_name=club,
-            people=[PersonRef(player_id=p, name=named.get(p)) for p in people],
-            check_in_switched_on=switched_on,
-            says=(
-                f"Booked {_when(hour.start)} at {club or 'the club'}: her phone "
-                f"shows her code today."
-                + (
-                    " The club checked nobody in — *We check players in* is on now."
-                    if switched_on
-                    else ""
-                )
-            ),
-        )
-    raise SituationUnavailable(
-        f"No club {listing.name.value} plays at that books at once sells a "
-        f"{body.sport.value.lower()} hour later today she and three of the group "
-        f"— seed accounts with a card saved — are all free for."
-    )
-
-
-def _checking_players_in(
-    club_id: UUID, courts: ClubCourts
-) -> SaveRaketaSettingsCommand:
-    """The desk's settings form as it stands, with *We check players in* on."""
-
-    kept = courts.settings
-    return SaveRaketaSettingsCommand(
-        club_id=club_id,
-        release_lead_days=kept.release_lead_days,
-        cut_off_hours=kept.cut_off_hours,
-        minimum_notice_hours=kept.minimum_notice_hours,
-        time_to_confirm_minutes=kept.time_to_confirm_minutes,
-        other_clubs_courts=kept.other_clubs_courts.offered,
-        other_clubs_within_km=kept.other_clubs_courts.within_km,
-        check_in=True,
-        paused=courts.paused,
-    )
-
-
-# --------------------------------------------------------------------------- #
-# 12 · Club day close
+# 11 · Club day close
 # --------------------------------------------------------------------------- #
 
 
@@ -2197,7 +2060,7 @@ def _checking_players_in(
     "/club-day-close",
     response_model=ClubDayCloseResponse,
     responses=_REFUSED,
-    summary="Situation 12 · Club day close",
+    summary="Situation 11 · Club day close",
     description=(
         "Writes the last closed club day's played games — yesterday's, or "
         f"today's from {DAY_CLOSES}:00 — at a club of the group's that books at "

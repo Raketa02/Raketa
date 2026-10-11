@@ -18,7 +18,6 @@ from typing import TypeVar
 
 from app.bootstrap.composition import build_games_over
 from app.bootstrap.matcher_demands import RegisteredImplementation
-from app.core.config import get_settings
 from app.modules.payments.domain.ports import GamesOver
 
 P = TypeVar("P")
@@ -33,7 +32,7 @@ PAYMENT_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=GamesOver,
         name="BookedGamesOver",
-        build=lambda session: build_games_over(session, settings=get_settings()),
+        build=build_games_over,
     ),
 )
 

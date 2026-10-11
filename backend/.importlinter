@@ -486,8 +486,8 @@ allow_indirect_imports = true
 # club, both searches, the fold its names are matched by — and the one thing
 # `clubs` asks back, *which sports do the official groups here declare* (a details
 # edit may not untick one, docs/adr/0182 §5), is a port declared in `clubs`' own
-# words and **signed in `groups/infrastructure/`**, as `games`' check-ins are
-# signed by `bookings`. An adapter living in `clubs` would have been the obvious
+# words and **signed in `groups/infrastructure/`**, as `games`' court pairing is
+# signed by the matcher. An adapter living in `clubs` would have been the obvious
 # place to write it, and would have pointed the arrow back; this is what refuses
 # it (#509).
 #

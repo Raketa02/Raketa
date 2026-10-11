@@ -128,9 +128,7 @@ async def pays_out(session_factory, clock, mailbox):
     the desk."""
 
     async with session_factory() as session:
-        decided = await build_decide_club_payouts(
-            session, clock=clock, settings=get_settings()
-        ).execute()
+        decided = await build_decide_club_payouts(session, clock=clock).execute()
     await mailbox.drain()
     return decided
 

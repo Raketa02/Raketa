@@ -32,9 +32,11 @@ saying no to it. **A rescuer whose share was refused keeps a seat** (#640):
 ``KeptSeatRanOut``.
 
 **The club runs it** (#547): ``CourtMoved`` puts the game on another court of
-its sport at the same hour, ``CancelledByClub`` calls it off with the club's
-reason — everybody still in named, to be refunded in full — and
-``PlayerCheckedIn`` is the desk's scan of a player's code on the day.
+its sport at the same hour, and ``CancelledByClub`` calls it off with the club's
+reason — everybody still in named, to be refunded in full. ``PlayerCheckedIn``,
+the desk's scan of a player's code on the day, is **retired** with desk
+check-in (#651): nothing writes it, and it stays registered so a stored row
+still decodes.
 
 Every event carries ``booking_id``, the stream's own key. Sport and kind travel
 as their codes, as a proposal's do.
@@ -385,9 +387,12 @@ class CancelledByClub:
 
 @dataclass(frozen=True)
 class PlayerCheckedIn:
-    """The club's desk scanned this player's code, or typed it, on the day of
-    the game (#547; the mechanics §15.1, §16.10): **they were there**, and can
-    never be reported as not turning up. Evidence, never a condition for money.
+    """**Retired** (#651; ``docs/adr/0195`` §4, §9): the club's desk scanned a
+    player's code, or typed it, on the day of the game (#547).
+
+    Nothing writes it any more. It stays because stored history outlives the
+    code that wrote it, and every read of a booking walks its whole stream — so
+    a stored row still decodes, and the fold reads it and changes nothing.
     """
 
     booking_id: UUID

@@ -164,8 +164,8 @@ async def falls_back_for(client, player: dict, booking: UUID) -> dict:
     details = await details_of(client, player, booking)
     assert details.status_code == 200, details.text
     assert_seat_open_filling_again(details.json())
-    # Its way out is *Withdraw*, a game still filling's — no Leave, no code.
-    assert (details.json()["leaving"], details.json()["check_in"]) == (None, None)
+    # Its way out is *Withdraw*, a game still filling's — no Leave.
+    assert details.json()["leaving"] is None
     return card
 
 

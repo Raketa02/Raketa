@@ -3,14 +3,14 @@
 **A register of its own rather than rows in another, and that is the rule
 rather than a preference.** ``games_demands.py`` holds what this context
 *publishes*; this holds what it *demands* of contexts it does not write — the
-matcher's answer about a game's court (``docs/adr/0161``), and who the club's
-desk checked in to a booked game (#547). A provider's list and a consumer's
+matcher's answer about a game's court (``docs/adr/0161``); who the club's desk
+checked in went with desk check-in (#651). A provider's list and a consumer's
 list are two kinds of claim, and each register's exhaustiveness assertion is
 about its own kind: **a new provider or a new consumer gets a new register, not
 a row in somebody else's**, and the first person to add a row should not have
 to guess which list it belongs in.
 
-**Two rows, and the tuple is what is asserted over.** A register asserts about
+**One row, and the tuple is what is asserted over.** A register asserts about
 the ports it declares rather than about every ``Protocol`` in
 ``games/domain/ports.py``: most of them are this context's own reads or what it
 publishes, contracted on the register beside this one. ``PlayerNames`` is the
@@ -33,27 +33,22 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from app.bootstrap.composition import build_club_check_ins, build_game_court_pairing
+from app.bootstrap.composition import build_game_court_pairing
 from app.bootstrap.matcher_demands import RegisteredImplementation
-from app.modules.games.domain.ports import ClubCheckIns, CourtPairing
+from app.modules.games.domain.ports import CourtPairing
 
 P = TypeVar("P")
 
 #: What this context asks other contexts for, declared as data for the same
 #: reason every other register is: *a port with no registered implementation* has to
 #: be a question something can ask.
-GAME_DEMANDS: tuple[type, ...] = (CourtPairing, ClubCheckIns)
+GAME_DEMANDS: tuple[type, ...] = (CourtPairing,)
 
 GAME_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=CourtPairing,
         name="GamesCourtPairing",
         build=build_game_court_pairing,
-    ),
-    RegisteredImplementation(
-        port=ClubCheckIns,
-        name="BookingCheckIns",
-        build=build_club_check_ins,
     ),
 )
 

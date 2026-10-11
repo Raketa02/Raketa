@@ -31,7 +31,7 @@ from app.bootstrap.game_demands import (
 )
 from app.kernel import InvariantViolated, Sport
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
-from app.modules.games.domain.ports import ClubCheckIns, CourtPairing
+from app.modules.games.domain.ports import CourtPairing
 from tests.api import players_world as players
 
 
@@ -370,64 +370,3 @@ async def test_a_reader_who_is_not_on_the_court_is_a_broken_precondition(
             reader_id=stranger_id,
             line_up=_line_up((ada,), (bea,)),
         )
-
-
-# ---------------------------------------------------------------------------
-# ClubCheckIns — who the club's desk saw arrive. The booking's answer (#547).
-# ---------------------------------------------------------------------------
-
-
-def _check_ins(implementation, session) -> ClubCheckIns:
-    return implementation.build(session)
-
-
-@pytest.mark.parametrize("implementation", registered(ClubCheckIns))
-async def test_the_desk_s_check_ins_are_the_booking_s_and_nobody_else_s(
-    implementation, session_factory
-):
-    """Keyed by the arrangement the game was opened from — a booked game's is
-    its booking's id — and empty where no booking is behind it."""
-
-    from datetime import datetime, timedelta, timezone
-
-    from app.bootstrap.composition import (
-        build_booking_repository,
-        build_domain_event_store,
-        build_event_publisher,
-    )
-    from app.engines.matchfit.core import SearchMode
-    from app.kernel import Sport, instant
-    from app.modules.bookings.domain.booking import BookedCourt, Booking
-    from app.shared.ids import new_uuid
-
-    ola, kuba, ewa, tomek = (new_uuid() for _ in range(4))
-    start = instant(datetime(2026, 10, 10, 15, tzinfo=timezone.utc))
-    booking = Booking.confirmed(
-        booking_id=new_uuid(),
-        pool_id=new_uuid(),
-        club_id=new_uuid(),
-        court=BookedCourt(court_id=new_uuid(), name="Court 1"),
-        sport=Sport.PADEL,
-        kind=SearchMode.COMPETITIVE,
-        start=start,
-        share_grosze=30_00,
-        first_side=(ola, kuba),
-        second_side=(ewa, tomek),
-        cut_off=instant(start - timedelta(hours=24)),
-        game_id=new_uuid(),
-        at=instant(start - timedelta(days=5)),
-    )
-    booking.check_in(ewa, at=instant(start - timedelta(minutes=5)))
-    async with session_factory() as session:
-        await build_booking_repository(
-            session,
-            event_store=build_domain_event_store(session),
-            events=build_event_publisher(session),
-        ).save(booking)
-        await session.commit()
-
-    async with session_factory() as session:
-        port = _check_ins(implementation, session)
-        assert isinstance(port, ClubCheckIns)
-        assert await port.checked_in(booking.booking_id) == frozenset({ewa})
-        assert await port.checked_in(new_uuid()) == frozenset()

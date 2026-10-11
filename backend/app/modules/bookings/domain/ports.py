@@ -4,9 +4,7 @@
 the ``bookings`` and ``booking_seats`` projections in the caller's transaction,
 and the directory that reads them back — which court hours bookings hold, which
 games a player has booked, and how many were booked in each pool — and the
-summaries of each club's day of new bookings, sent once (#548). **A third is
-its own key**: each seat's check-in code, derived under the server's secret
-(#542).
+summaries of each club's day of new bookings, sent once (#548).
 
 **And one is what it publishes**: the record of who kept their booked games
 (#544), which the Player Score reads.
@@ -29,7 +27,6 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.bookings.domain.booking import BookedCourt, Booking
-from app.modules.bookings.domain.check_in import CheckInCode
 from app.modules.bookings.domain.keeping import KeepingRecord
 from app.modules.bookings.domain.summary import NewBookingsSummary
 
@@ -156,18 +153,7 @@ class BookingDirectory(Protocol):
         """Every booking at this club whose game starts from ``start`` until
         ``end``, **whatever it came to** — waiting, booked, with a seat open,
         called off — soonest first, and by id among games at one hour: the
-        club's Bookings page for a day, and the desk's search for a typed code
-        (#547)."""
-        ...
-
-    async def seats_at(
-        self, club_id: UUID | None, *, start: Instant, end: Instant
-    ) -> Sequence[tuple[UUID, UUID]]:
-        """Each ``(booking, player)`` seat held now on a booking whose game
-        starts from ``start`` until ``end`` — at this club, or at any club when
-        ``club_id`` is ``None`` — soonest first, then by booking and player:
-        where a typed check-in code is looked for, one digest a seat and no
-        stream read until one matches (#547)."""
+        club's Bookings page for a day (#547)."""
         ...
 
     async def booked_between(
@@ -202,15 +188,6 @@ class BookingHistoryQuery(Protocol):
     ) -> Mapping[UUID, KeepingRecord]:
         """Each of these players who has a settled booked game, at ``now``."""
         ...
-
-
-@runtime_checkable
-class CheckInCodes(Protocol):
-    """Each seat's check-in code (the mechanics §15.1): derived from the
-    booking and the player under **the server's own key**, never stored, so
-    the phone is shown it and the desk recomputes it."""
-
-    def code_for(self, booking_id: UUID, player_id: UUID) -> CheckInCode: ...
 
 
 @final

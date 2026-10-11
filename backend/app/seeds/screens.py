@@ -160,7 +160,6 @@ async def assert_the_fill_in(
 async def assert_the_club_bookings(
     session_factory: async_sessionmaker[AsyncSession],
     *,
-    settings: Settings,
     now: Instant,
     on: Instant,
 ) -> str:
@@ -175,9 +174,9 @@ async def assert_the_club_bookings(
 
     async with session_factory() as session:
         club_id = await games_club_id(session)
-        day = await build_read_club_bookings(
-            session, clock=FixedClock(at=now), settings=settings
-        ).execute(club_id, day=local_day(on), chosen=ClubFilter.ALL)
+        day = await build_read_club_bookings(session, clock=FixedClock(at=now)).execute(
+            club_id, day=local_day(on), chosen=ClubFilter.ALL
+        )
     where = f"Bookings · {GAMES_CLUB.name} · {day.day.isoformat()}"
     if not day.rows:
         raise ScreenIsEmpty(f"{where} lists no Raketa booking")
@@ -222,7 +221,6 @@ def looks_of(cell: GridCell) -> frozenset[str]:
 async def assert_the_posting_grid(
     session_factory: async_sessionmaker[AsyncSession],
     *,
-    settings: Settings,
     now: Instant,
 ) -> str:
     """*The protagonist's posting grid draws every look* (#546; the screens
@@ -244,9 +242,7 @@ async def assert_the_posting_grid(
                 f"{GAMES_GROUP} to read — the proposals layer runs first"
             )
         her, group_id = found
-        reader = build_read_posting_grid(
-            session, settings=settings, clock=FixedClock(at=now)
-        )
+        reader = build_read_posting_grid(session, clock=FixedClock(at=now))
         drawn: set[str] = set()
         for who in (Who.ANYONE, Who.WOMEN):
             for week in WEEKS:

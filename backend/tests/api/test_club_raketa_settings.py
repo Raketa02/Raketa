@@ -4,9 +4,9 @@ mechanics §16.3, §16.6, §16.15, the screens B5).
 **One way for the whole club** — Only Raketa, Instant or On request — chosen on
 its own, and changeable later. Then the settings, **confirmed** by saving them,
 defaults included: the release lead, the free-cancellation cut-off, the minimum
-notice, the time to confirm, other clubs' courts for the club's groups,
-check-in, and pause. The settings wait for a way, because which of them matter
-depends on it.
+notice, the time to confirm, other clubs' courts for the club's groups, and
+pause. The settings wait for a way, because which of them matter depends on it.
+*We check players in* is gone with desk check-in (#651).
 """
 
 from __future__ import annotations
@@ -29,7 +29,6 @@ DEFAULTS = {
     "minimum_notice_hours": 2,
     "time_to_confirm_minutes": 30,
     "other_clubs_courts": {"offered": False, "within_km": 10},
-    "check_in": False,
     "paused": False,
 }
 
@@ -75,7 +74,6 @@ async def test_the_desk_saves_its_settings_and_changing_the_way_keeps_them(clien
         minimum_notice_hours=3,
         time_to_confirm_minutes=45,
         other_clubs_courts={"offered": True, "within_km": 15},
-        check_in=True,
     )
 
     saved = await confirms_settings(client, desk, **changed)
@@ -85,6 +83,21 @@ async def test_the_desk_saves_its_settings_and_changing_the_way_keeps_them(clien
         "way_of_working": "INSTANT",
         **changed,
     }
+
+
+async def test_the_settings_no_longer_take_we_check_players_in(client):
+    """Desk check-in is removed (#651): a form that still sends the switch is
+    refused for a field the settings do not have, and nothing is saved."""
+
+    _, desk = await a_desk(client)
+    await chooses(client, desk, "INSTANT")
+
+    refused = await client.put(
+        RAKETA_SETTINGS, json=settings(check_in=True), headers=desk
+    )
+
+    assert (refused.status_code, refused.json()["code"]) == (422, "validation_error")
+    assert await read(client, desk) == {**DEFAULTS, "way_of_working": "INSTANT"}
 
 
 async def test_the_desk_pauses_raketa_bookings_and_resumes_them(client):

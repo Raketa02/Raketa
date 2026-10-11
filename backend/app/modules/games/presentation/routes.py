@@ -151,8 +151,6 @@ _REPORTING_REFUSALS: dict[int | str, dict[str, Any]] = {
             "`the_game_has_not_started` — its hour has not come yet.\n\n"
             "`a_result_is_entered` — somebody already said you played, with a "
             "score; answer the score instead.\n\n"
-            "`checked_in_at_the_club` — the club checked that player in: they "
-            "were there, and can never be reported.\n\n"
             "`you_were_reported_as_a_no_show` — you were reported yourself; "
             "dispute it instead.\n\n"
             "`the_game_was_called_off`, `the_game_started_short` — there was no "
@@ -404,8 +402,7 @@ async def accept_result(
         "moves. The reported player has **24 hours to dispute it** "
         "(`no_shows[].dispute_by`); after that it stands — the strongest mark "
         "on a record — with nothing written at that moment. **Nobody "
-        "arbitrates a dispute**: the report falls and is on nobody's record.\n\n"
-        "A player **the club checked in** cannot be reported."
+        "arbitrates a dispute**: the report falls and is on nobody's record."
     ),
 )
 async def report_a_no_show(

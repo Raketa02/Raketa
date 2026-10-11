@@ -457,7 +457,7 @@ async def write_the_played_history(
                     session, settings, her, club_id, sport, members
                 )
         booked = await _past_bookings(
-            session, settings, [person.player_id for person in people.values()]
+            session, [person.player_id for person in people.values()]
         )
         busy: dict[UUID, list[Instant]] = {}
         for _, players, start, _ in booked:
@@ -650,9 +650,7 @@ async def _book(
         )
     # Held until the club's cut-off, which takes the shares (#637): the cut-off
     # job runs at that moment, as the API's would have.
-    booked = await build_player_bookings(session, settings=settings).find(
-        answer.booked.booking_id
-    )
+    booked = await build_player_bookings(session).find(answer.booked.booking_id)
     if booked is not None and made_at < booked.cut_off:
         await the_cut_off_came(session, settings=settings, at=booked.cut_off)
     return answer.booked.game_id
@@ -838,12 +836,12 @@ async def _the_group(
 
 
 async def _past_bookings(
-    session: AsyncSession, settings: Settings, players: Iterable[UUID]
+    session: AsyncSession, players: Iterable[UUID]
 ) -> list[tuple[UUID, frozenset[UUID], Instant, UUID]]:
     """Every booked game these players have, once each — its group, who is on
     it, its hour and its Game."""
 
-    bookings = build_player_bookings(session, settings=settings)
+    bookings = build_player_bookings(session)
     seen: dict[UUID, tuple[UUID, frozenset[UUID], Instant, UUID]] = {}
     for player in sorted(set(players), key=str):
         for game in await bookings.of_player(player, since=None):
@@ -922,9 +920,7 @@ async def assert_her_history(
         )
         evenings = [
             await details.execute(game.booking_id, her)
-            for game in await build_player_bookings(
-                session, settings=settings
-            ).of_player(her, since=None)
+            for game in await build_player_bookings(session).of_player(her, since=None)
             if game.pool_id == group_id and game.game_id is not None
         ]
         counted = [one for one in evenings if one.state.status is HomeStatus.COUNTED]

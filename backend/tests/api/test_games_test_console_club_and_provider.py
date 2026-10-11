@@ -1,16 +1,16 @@
 """The games test console as the club and the payment provider (#591;
 ``docs/adr/0194`` §2–§5).
 
-**The club row** answers a request, moves, cancels and checks a player in as
-the club whose court it is — each press the club route's own use case, so it
+**The club row** answers a request, moves and cancels as the club whose court
+it is — each press the club route's own use case, so it
 answers what the desk's own button answers, refusals included. **The payment
 provider** is the process's fake, given controls: a card set to succeed,
 decline or ask for the bank's check; a payment the bank confirms on the phone a
 laptop cannot reach the bank from; a refund delivered; and the notices it would
 have sent, replayed twice or out of order through the webhook's own handling.
-**Run it now** runs the club's answer window over what is due. And three
-situations: *Needs her yes, On request club* (3), *Card declines at the fill*
-(4) and *Check-in at the club* (11).
+**Run it now** runs the club's answer window over what is due. And two
+situations: *Needs her yes, On request club* (3) and *Card declines at the
+fill* (4). *Check-in at the club* went with desk check-in (#651).
 
 Every claim is read where somebody would read it: the protagonist's Home, deck,
 receipts and booking details, and the desk's own lists.
@@ -33,7 +33,7 @@ import pytest
 from app.api.dependencies import get_clock
 from app.modules.payments.presentation.dependencies import get_payment_provider
 from tests.api import players_world as players
-from tests.api.club_courts_world import adds_a_court, confirms_settings, sets_hours
+from tests.api.club_courts_world import adds_a_court, sets_hours
 from tests.api.console_world import (
     CLUB,
     CONSOLE,
@@ -60,14 +60,12 @@ from tests.api.proposals_world import (
     every_hour_of_the_week,
     makes,
     the_cut_off_comes,
-    warsaw,
 )
 from tests.unit.fake_clock import MovableClock
 
 #: Thirty minutes, Kazimierz's time to confirm.
 TIME_TO_CONFIRM = timedelta(minutes=30)
 #: Monday at 09:00 — the first hour Bonarka sells that has not begun.
-MONDAY_NINE = warsaw(5, 9)
 
 
 @pytest.fixture
@@ -197,18 +195,6 @@ async def a_taken_game(
     return game
 
 
-async def a_game_today(client, session_factory, payments, clock, world) -> UUID:
-    """The four's game at Bonarka at 09:00 today, filled at five in the
-    morning — when it was still on sale — with the clock back at eight."""
-
-    clock.move(timedelta(hours=-3))
-    game = await a_booked_game(
-        client, session_factory, payments, clock, world, start=MONDAY_NINE
-    )
-    clock.move(timedelta(hours=3))
-    return game
-
-
 def charge_of(board: dict, game: UUID, member: dict) -> dict:
     [charge] = [
         charge
@@ -229,16 +215,6 @@ async def waiting_at(client, desk: dict) -> list[dict]:
     read = await client.get("/api/v1/club/bookings/waiting", headers=desk)
     assert read.status_code == 200, read.text
     return read.json()["bookings"]
-
-
-async def her_check_in_code(client, world: World, game: UUID) -> str:
-    """The short code her phone shows on the game's day."""
-
-    read = await client.get(f"/api/v1/bookings/{game}", headers=world.marta["headers"])
-    assert read.status_code == 200, read.text
-    check_in = read.json()["check_in"]
-    assert check_in is not None, read.text
-    return check_in["short_code"]
 
 
 async def the_desk_s_day(client, desk: dict) -> list[dict]:
@@ -276,14 +252,6 @@ async def club_does(
     return await client.request(
         method, f"/dev/clubs/{club}/bookings/{booking}/{tail}", json=body
     )
-
-
-async def checks_in(client, via: str, club: str, desk: dict, code: str):
-    if via == CLUB:
-        return await client.post(
-            "/api/v1/club/check-ins", json={"code": code}, headers=desk
-        )
-    return await client.post(f"/dev/clubs/{club}/check-ins", json={"code": code})
 
 
 @pytest.mark.parametrize("via", [CLUB, CONSOLE])
@@ -449,56 +417,6 @@ async def test_cancelling_a_game_called_off_already_is_refused_alike(
     assert code_of(again) == "booking_is_called_off"
 
 
-@pytest.mark.parametrize("via", [CLUB, CONSOLE])
-async def test_checking_a_player_in_as_the_club_s_own(
-    client, session_factory, payments, clock, world, via
-):
-    await confirms_settings(client, world.bonarka_desk, check_in=True)
-    game = await a_game_today(client, session_factory, payments, clock, world)
-    code = await her_check_in_code(client, world, game)
-
-    checked = await checks_in(client, via, world.bonarka, world.bonarka_desk, code)
-
-    assert checked.status_code == 200, checked.text
-    assert checked.json()["booking_id"] == str(game)
-    assert checked.json()["player"] == {
-        "player_id": str(world.marta["id"]),
-        "name": "marta",
-    }
-    [booking] = await the_desk_s_day(client, world.bonarka_desk)
-    [her] = [p for p in booking["players"] if p["player_id"] == str(world.marta["id"])]
-    assert her["checked_in_at"] == at(MONDAY_MORNING)
-
-
-@pytest.mark.parametrize("via", [CLUB, CONSOLE])
-async def test_a_second_check_in_is_refused_alike(
-    client, session_factory, payments, clock, world, via
-):
-    await confirms_settings(client, world.bonarka_desk, check_in=True)
-    game = await a_game_today(client, session_factory, payments, clock, world)
-    code = await her_check_in_code(client, world, game)
-    first = await checks_in(client, CLUB, world.bonarka, world.bonarka_desk, code)
-    assert first.status_code == 200, first.text
-
-    again = await checks_in(client, via, world.bonarka, world.bonarka_desk, code)
-
-    assert again.status_code == 409, again.text
-    assert code_of(again) == "already_checked_in"
-
-
-@pytest.mark.parametrize("via", [CLUB, CONSOLE])
-async def test_a_check_in_where_the_club_checks_nobody_in_is_refused_alike(
-    client, session_factory, payments, clock, world, via
-):
-    game = await a_game_today(client, session_factory, payments, clock, world)
-    code = await her_check_in_code(client, world, game)
-
-    checked = await checks_in(client, via, world.bonarka, world.bonarka_desk, code)
-
-    assert checked.status_code == 409, checked.text
-    assert code_of(checked) == "check_in_is_off"
-
-
 @pytest.mark.parametrize(
     ("method", "tail"),
     [
@@ -507,7 +425,6 @@ async def test_a_check_in_where_the_club_checks_nobody_in_is_refused_alike(
         ("GET", "bookings/{booking}/free-courts"),
         ("POST", "bookings/{booking}/move"),
         ("POST", "bookings/{booking}/cancellation"),
-        ("POST", "check-ins"),
     ],
 )
 async def test_the_club_row_refuses_a_club_the_seed_did_not_create(
@@ -520,7 +437,6 @@ async def test_the_club_row_refuses_a_club_the_seed_did_not_create(
     bodies = {
         "move": {"court_id": str(uuid4())},
         "cancellation": {"reason": "OTHER"},
-        "check-ins": {"code": "ABCDEF"},
     }
     body = bodies.get(tail.rsplit("/", 1)[-1])
 
@@ -1157,74 +1073,21 @@ async def test_card_declines_at_the_fill_leaves_her_yes_to_be_refused_and_recove
     assert confirmed.json()["booked"]["booking_id"] == str(game), confirmed.text
 
 
-# --------------------------------------------------------------------------- #
-# Situation 11 · Check-in at the club
-# --------------------------------------------------------------------------- #
-
-
-async def test_check_in_at_the_club_books_a_game_starting_soon_with_check_in_open(
-    client, clock, world
-):
-    pressed = await presses(
-        client,
-        "check-in-at-the-club",
-        group_id=world.group,
-        sport="PADEL",
-        protagonist_id=world.marta["id"],
-    )
-
-    assert pressed.status_code == 200, pressed.text
-    assert pressed.json()["starts_at"] == at(MONDAY_NINE)
-    assert pressed.json()["club_name"] == "Bonarka Arena"
-    assert pressed.json()["check_in_switched_on"] is True
-    game = UUID(pressed.json()["game_id"])
-    assert (await her_home_game(client, world, game))["status"] == "BOOKED"
-    # Her phone shows her code today; the club row checks her in with it.
-    code = await her_check_in_code(client, world, game)
-    pane = pane_of(await board_of(client, world.group), game)
-    assert {c["player"]["name"]: c["short_code"] for c in pane["booking"]["codes"]}[
-        "marta"
-    ] == code
-    checked = await checks_in(client, CONSOLE, world.bonarka, world.bonarka_desk, code)
-    assert checked.status_code == 200, checked.text
-    [booking] = await the_desk_s_day(client, world.bonarka_desk)
-    assert {p["name"]: p["checked_in_at"] for p in booking["players"]}["marta"] == at(
-        MONDAY_MORNING
-    )
-
-
-async def test_check_in_at_the_club_leaves_a_club_that_checks_players_in_as_it_is(
-    client, clock, world
-):
-    await confirms_settings(client, world.bonarka_desk, check_in=True)
-
-    pressed = await presses(
-        client,
-        "check-in-at-the-club",
-        group_id=world.group,
-        sport="PADEL",
-        protagonist_id=world.marta["id"],
-    )
-
-    assert pressed.status_code == 200, pressed.text
-    assert pressed.json()["check_in_switched_on"] is False
-
-
 async def test_a_situation_makes_its_game_only_at_a_club_the_seed_signed_up(
     client, payments, clock, world
 ):
     """The same four in a group homed at a club whose desk is somebody's: the
-    game is made at Bonarka, a seed club the group also plays at, and the real
-    club's settings are left as its desk left them."""
+    game is made at Bonarka, a seed club the group also plays at, and never at
+    the real club."""
 
-    real, real_desk = await a_club_and_its_desk(client, name="Wisła Park")
+    real, _ = await a_club_and_its_desk(client, name="Wisła Park")
     homed_elsewhere = await a_group(
         client, world.marta, real, world.kuba, world.zofia, world.marek
     )
 
     pressed = await presses(
         client,
-        "check-in-at-the-club",
+        "just-played",
         group_id=homed_elsewhere,
         sport="PADEL",
         protagonist_id=world.marta["id"],
@@ -1232,8 +1095,6 @@ async def test_a_situation_makes_its_game_only_at_a_club_the_seed_signed_up(
 
     assert pressed.status_code == 200, pressed.text
     assert pressed.json()["club_id"] == world.bonarka
-    settings = await client.get("/api/v1/club/raketa-settings", headers=real_desk)
-    assert settings.json()["check_in"] is False
 
 
 @pytest.mark.parametrize(
@@ -1241,7 +1102,6 @@ async def test_a_situation_makes_its_game_only_at_a_club_the_seed_signed_up(
     [
         "needs-her-yes-on-request-club",
         "card-declines-at-the-fill",
-        "check-in-at-the-club",
     ],
 )
 async def test_each_situation_refuses_a_protagonist_the_seed_did_not_create(

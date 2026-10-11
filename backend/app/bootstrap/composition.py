@@ -153,7 +153,6 @@ from app.modules.proposals.domain.ports import (
     ClubBookings,
     ClubDistances,
     ClubRequests,
-    DeskCheckIns,
     PoolOrigins,
     GameBookings,
     PlayerNames as ProposalPlayerNames,
@@ -182,7 +181,6 @@ from app.modules.proposals.domain.ports import (
 )
 from app.modules.proposals.infrastructure.club_court_hours import (
     ClubCourtHours,
-    ClubCourtsDeskCheckIns,
     DirectoryClubNames,
     SellableClubTerms,
 )
@@ -199,7 +197,6 @@ from app.modules.proposals.application.answers import (
 )
 from app.modules.proposals.application.club_bookings import (
     CancelTheGame,
-    CheckInAtTheDesk,
     MoveTheGame,
     ReadClubBookings,
     ReadFreeCourts,
@@ -233,8 +230,6 @@ from app.modules.proposals.infrastructure.club_distances import ProfileClubDista
 from app.modules.proposals.infrastructure.game_results import GamesGameResults
 from app.modules.bookings.application.at_the_club import (
     CancelTheBooking,
-    CheckInThePlayer,
-    FindTheSeat,
     MoveTheBooking,
 )
 from app.modules.bookings.application.book_the_game import BookTheGame, FindACourt
@@ -260,7 +255,6 @@ from app.modules.bookings.domain.ports import (
     BookingDirectory,
     BookingHistoryQuery,
     BookingRepository,
-    CheckInCodes,
     ClubCourtsAtTheHour,
     ClubDesks,
     GameChanges,
@@ -278,7 +272,6 @@ from app.modules.bookings.infrastructure.player_addresses import UserPlayerAddre
 from app.modules.bookings.infrastructure.event_sourced_summary_repository import (  # noqa: E501
     EventSourcedSummaryRepository,
 )
-from app.modules.bookings.infrastructure.check_in_codes import KeyedCheckInCodes
 from app.modules.bookings.infrastructure.club_courts import (
     BookedCourtHours,
     SellableClubCourts,
@@ -291,10 +284,7 @@ from app.modules.bookings.infrastructure.games_opening import (
     LeaveAndCallOffTheGame,
     OpenTheGame,
 )
-from app.modules.bookings.infrastructure.games_records import (
-    BookingCheckIns,
-    GameNoShowsOnTheRecord,
-)
+from app.modules.bookings.infrastructure.games_records import GameNoShowsOnTheRecord
 from app.modules.payments.application.handlers.settle_seat_charges import (
     SettleSeatCharges,
 )
@@ -541,7 +531,6 @@ from app.modules.conversations.infrastructure.sqlalchemy_conversation_directory 
     SqlAlchemyConversationDirectory,
 )
 from app.modules.games.domain.ports import (
-    ClubCheckIns,
     ConfirmedResultLedger,
     CourtPairing,
     GameDirectory,
@@ -1118,28 +1107,22 @@ def _club_payout_repository(
 
 
 def build_games_over(
-    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+    session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> GamesOver:
     """Which games are over for good — the payouts' demand, answered off the
     bookings as Proposals reads them (#548)."""
-    return BookedGamesOver(
-        build_player_bookings(session, settings=settings, runtime=runtime)
-    )
+    return BookedGamesOver(build_player_bookings(session, runtime=runtime))
 
 
 def build_decide_club_payouts(
-    session: AsyncSession,
-    *,
-    clock: Clock,
-    settings: Settings,
-    runtime: EventRuntime | None = None,
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
 ) -> DecideClubPayouts:
     """One run of the payouts job over this session — the job's, and a
     test's (#548). It decides; the outbox pays out."""
     return DecideClubPayouts(
         payouts=_club_payout_repository(session, runtime),
         charges=_seat_charge_repository(session, runtime),
-        games=build_games_over(session, settings=settings, runtime=runtime),
+        games=build_games_over(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -1575,9 +1558,7 @@ def build_read_group_deck(
         forecasts=build_balance_forecasts(session, runtime=runtime),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
-        offers=build_rescue_offers(
-            session, settings=settings, booked=booked, runtime=runtime
-        ),
+        offers=build_rescue_offers(session, booked=booked, runtime=runtime),
         players=build_players_in_play(session, runtime=runtime),
         clock=clock,
     )
@@ -1778,7 +1759,7 @@ def build_leave_the_game(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         requests=build_club_requests(session, settings=settings, runtime=runtime),
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
@@ -1862,7 +1843,7 @@ def build_the_holding(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         checked=build_checked_shares(
             session, provider=provider, settings=settings, runtime=runtime
@@ -1888,7 +1869,7 @@ def build_the_cut_off(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
         held=build_held_shares(session, runtime=runtime),
@@ -2123,11 +2104,11 @@ def build_refuse_the_request(
 
 
 def build_club_bookings(
-    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+    session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> ClubBookings:
     """A club's bookings as its desk reads and runs them, over the Bookings
-    context's own use cases: a day of them, the free courts and the move, the
-    cancel, whose a code is, and the check-in (#547)."""
+    context's own use cases: a day of them, the free courts and the move, and
+    the cancel (#547)."""
 
     def bookings() -> BookingRepository:
         return build_booking_repository(
@@ -2146,12 +2127,6 @@ def build_club_bookings(
         cancel=CancelTheBooking(
             bookings=bookings(), games=build_game_changes(session, runtime=runtime)
         ),
-        find=FindTheSeat(
-            bookings=bookings(),
-            directory=build_booking_directory(session),
-            codes=build_check_in_codes(settings),
-        ),
-        check_in=CheckInThePlayer(bookings=bookings()),
     )
 
 
@@ -2171,29 +2146,12 @@ def build_pool_origins(session: AsyncSession) -> PoolOrigins:
     return GroupPoolOrigins(build_group_directory(session))
 
 
-def build_desk_check_ins(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> DeskCheckIns:
-    """Whether a club checks its players in, off its own stream (#547)."""
-    return ClubCourtsDeskCheckIns(
-        build_club_courts_repository(
-            session,
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        )
-    )
-
-
 def build_read_club_bookings(
-    session: AsyncSession,
-    *,
-    clock: Clock,
-    settings: Settings,
-    runtime: EventRuntime | None = None,
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
 ) -> ReadClubBookings:
     """A day of a club's bookings — the Bookings page (#547)."""
     return ReadClubBookings(
-        bookings=build_club_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_club_bookings(session, runtime=runtime),
         takings=build_booking_takings(session, runtime=runtime),
         origins=build_pool_origins(session),
         names=build_proposal_player_names(session),
@@ -2202,41 +2160,29 @@ def build_read_club_bookings(
 
 
 def build_read_club_money(
-    session: AsyncSession,
-    *,
-    clock: Clock,
-    settings: Settings,
-    runtime: EventRuntime | None = None,
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
 ) -> ReadClubMoney:
     """A month of a club's money — the Money page (#548)."""
     return ReadClubMoney(
-        bookings=build_club_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_club_bookings(session, runtime=runtime),
         takings=build_booking_takings(session, runtime=runtime),
         clock=clock,
     )
 
 
 def build_read_free_courts(
-    session: AsyncSession,
-    *,
-    clock: Clock,
-    settings: Settings,
-    runtime: EventRuntime | None = None,
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
 ) -> ReadFreeCourts:
     """Where a club may move a game — the Move dialog (#547)."""
     return ReadFreeCourts(
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
-        club=build_club_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
+        club=build_club_bookings(session, runtime=runtime),
         clock=clock,
     )
 
 
 def build_move_the_game(
-    session: AsyncSession,
-    *,
-    clock: Clock,
-    settings: Settings,
-    runtime: EventRuntime | None = None,
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
 ) -> MoveTheGame:
     """*Move* — the game onto another free court of its sport at its hour."""
     return MoveTheGame(
@@ -2245,8 +2191,8 @@ def build_move_the_game(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
-        club=build_club_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
+        club=build_club_bookings(session, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -2267,33 +2213,10 @@ def build_cancel_the_game(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
-        club=build_club_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
+        club=build_club_bookings(session, runtime=runtime),
         refunds=build_seat_refunds(session, settings=settings, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
-        uow=build_unit_of_work(session),
-        clock=clock,
-    )
-
-
-def build_check_in_at_the_desk(
-    session: AsyncSession,
-    *,
-    clock: Clock,
-    settings: Settings,
-    runtime: EventRuntime | None = None,
-) -> CheckInAtTheDesk:
-    """*Check in* — a code scanned or typed at the club's desk (#547)."""
-    return CheckInAtTheDesk(
-        proposals=build_proposal_repository(
-            session,
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        ),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
-        club=build_club_bookings(session, settings=settings, runtime=runtime),
-        desk=build_desk_check_ins(session, runtime=runtime),
-        names=build_proposal_player_names(session),
         uow=build_unit_of_work(session),
         clock=clock,
     )
@@ -2339,7 +2262,7 @@ def build_run_out_the_time_to_pay(
         directory=build_proposal_directory(session),
         requests=build_club_requests(session, settings=settings, runtime=runtime),
         undecided=build_undecided_charges(session, runtime=runtime),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         cards=build_cards_to_fix(session, runtime=runtime),
         uow=build_unit_of_work(session),
@@ -2383,7 +2306,7 @@ def build_confirm_payment(
             settings=settings,
             runtime=runtime,
         ),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         cards=build_cards_to_fix(session, runtime=runtime),
         uow=build_unit_of_work(session),
@@ -2399,7 +2322,6 @@ def build_confirm_payment(
 def build_rescue_offers(
     session: AsyncSession,
     *,
-    settings: Settings,
     booked: BookedGames | None = None,
     runtime: EventRuntime | None = None,
 ) -> RescueOffers:
@@ -2407,7 +2329,7 @@ def build_rescue_offers(
     live over the pool's members (#545). ``booked`` as the deck's."""
     return RescueOffers(
         pools=build_pools(session),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         wanted=build_wanted_kinds(session, runtime=runtime),
         settings=build_games_and_money_repository(
             event_store=build_domain_event_store(session, runtime=runtime),
@@ -2432,8 +2354,8 @@ def build_rescuer(
     the leaver's refund, the seat on the booking and its Game (#545).
     ``proposals`` is the caller's, whose row the join locked."""
     return Rescuer(
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
-        offers=build_rescue_offers(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
+        offers=build_rescue_offers(session, runtime=runtime),
         guards=build_proposal_guards(session, runtime=runtime),
         methods=build_saved_methods(
             session,
@@ -2499,8 +2421,8 @@ def build_say_no_to_a_rescue(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
-        offers=build_rescue_offers(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
+        offers=build_rescue_offers(session, runtime=runtime),
         changes=build_booked_game_changes(session, settings=settings, runtime=runtime),
         uow=build_unit_of_work(session),
         clock=clock,
@@ -2518,9 +2440,7 @@ def build_read_fill_in(
     """A group's *Fill in* tab — Seats to fill and its badge (#545)."""
     return ReadFillIn(
         pools=build_pools(session),
-        offers=build_rescue_offers(
-            session, settings=settings, booked=booked, runtime=runtime
-        ),
+        offers=build_rescue_offers(session, booked=booked, runtime=runtime),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
         clock=clock,
@@ -2554,7 +2474,6 @@ def build_read_members(
 def build_read_posting(
     session: AsyncSession,
     *,
-    settings: Settings,
     booked: BookedGames | None = None,
     runtime: EventRuntime | None = None,
 ) -> ReadPosting:
@@ -2572,25 +2491,20 @@ def build_read_posting(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        offers=build_rescue_offers(
-            session, settings=settings, booked=booked, runtime=runtime
-        ),
+        offers=build_rescue_offers(session, booked=booked, runtime=runtime),
     )
 
 
 def build_read_posting_grid(
     session: AsyncSession,
     *,
-    settings: Settings,
     clock: Clock,
     booked: BookedGames | None = None,
     runtime: EventRuntime | None = None,
 ) -> ReadPostingGrid:
     """The posting grid — a week of a poster's best fits and courts (#546)."""
     return ReadPostingGrid(
-        posting=build_read_posting(
-            session, settings=settings, booked=booked, runtime=runtime
-        ),
+        posting=build_read_posting(session, booked=booked, runtime=runtime),
         clock=clock,
     )
 
@@ -2606,9 +2520,7 @@ def build_read_posting_slot(
     """One cell's sheet: the fits free then, the free courts, and what is
     already happening there (#546)."""
     return ReadPostingSlot(
-        posting=build_read_posting(
-            session, settings=settings, booked=booked, runtime=runtime
-        ),
+        posting=build_read_posting(session, booked=booked, runtime=runtime),
         forecasts=build_balance_forecasts(session, runtime=runtime),
         people=build_deck_people(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
@@ -2620,7 +2532,6 @@ def build_read_posting_slot(
 def build_post_a_game(
     session: AsyncSession,
     *,
-    settings: Settings,
     clock: Clock,
     booked: BookedGames | None = None,
     runtime: EventRuntime | None = None,
@@ -2628,9 +2539,7 @@ def build_post_a_game(
     """*Post — you're In* — the phone's, a seed's (#546): the post made and
     dealt through the dealer's own act, weighed by the live ruleset."""
     return PostAGame(
-        posting=build_read_posting(
-            session, settings=settings, booked=booked, runtime=runtime
-        ),
+        posting=build_read_posting(session, booked=booked, runtime=runtime),
         guards=build_proposal_guards(session, runtime=runtime),
         directory=build_proposal_directory(session),
         make=build_make_proposal(session, clock=clock, runtime=runtime),
@@ -2693,17 +2602,11 @@ def build_booking_directory(session: AsyncSession) -> BookingDirectory:
     return SqlAlchemyBookingDirectory(session)
 
 
-def build_check_in_codes(settings: Settings) -> CheckInCodes:
-    """Each seat's check-in code, derived under a key of its own drawn from the
-    platform's signing secret — never stored (#542)."""
-    return KeyedCheckInCodes(settings.JWT_SECRET_KEY)
-
-
 def build_player_bookings(
-    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+    session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> PlayerBookings:
-    """A player's booked games, folded from each booking's stream, and each
-    seat's check-in code — Home's and the details' (#542)."""
+    """A player's booked games, folded from each booking's stream — Home's and
+    the details' (#542)."""
     return BookingsPlayerBookings(
         directory=build_booking_directory(session),
         bookings=build_booking_repository(
@@ -2711,7 +2614,6 @@ def build_player_bookings(
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         ),
-        codes=build_check_in_codes(settings),
     )
 
 
@@ -2753,7 +2655,7 @@ def build_read_home(
 ) -> ReadHome:
     """Home: the reader's booked games and the ones that need them (#542)."""
     return ReadHome(
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         results=build_game_results(session, runtime=runtime),
         proposals=build_proposal_repository(
             session,
@@ -2785,7 +2687,7 @@ def build_read_payments_to_confirm(
             events=build_event_publisher(session, runtime=runtime),
         ),
         directory=build_proposal_directory(session),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         games=build_booked_game_changes(session, settings=settings, runtime=runtime),
         clubs=build_proposal_club_names(session),
         clock=clock,
@@ -2801,7 +2703,7 @@ def build_read_booking_details(
 ) -> ReadBookingDetails:
     """A booked game's details, for a player in it (#542)."""
     return ReadBookingDetails(
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
         proposals=build_proposal_repository(
             session,
             event_store=build_domain_event_store(session, runtime=runtime),
@@ -2812,7 +2714,7 @@ def build_read_booking_details(
         clubs=build_proposal_club_names(session),
         distances=build_club_distances(session, runtime=runtime),
         late_refunds=build_late_refunds(session, runtime=runtime),
-        offers=build_rescue_offers(session, settings=settings, runtime=runtime),
+        offers=build_rescue_offers(session, runtime=runtime),
         holding_times=build_holding_times(session, runtime=runtime),
         clock=clock,
     )
@@ -2895,20 +2797,6 @@ def build_game_no_shows(
     return GameNoShowsOnTheRecord(
         build_game_repository(
             session=session,
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        )
-    )
-
-
-def build_club_check_ins(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> ClubCheckIns:
-    """Who the club's desk checked in to a booked game, off its booking's
-    stream — what a no-show report asks first (#547)."""
-    return BookingCheckIns(
-        build_booking_repository(
-            session,
             event_store=build_domain_event_store(session, runtime=runtime),
             events=build_event_publisher(session, runtime=runtime),
         )
@@ -4253,13 +4141,13 @@ def build_paid_shares(
 
 
 def build_seat_offers(
-    session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
+    session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> SeatOffers:
     """Who an open seat is offered to — the Fill in board's own offer."""
     return RescueSeatOffers(
         pools=build_pools(session),
-        bookings=build_player_bookings(session, settings=settings, runtime=runtime),
-        offers=build_rescue_offers(session, settings=settings, runtime=runtime),
+        bookings=build_player_bookings(session, runtime=runtime),
+        offers=build_rescue_offers(session, runtime=runtime),
     )
 
 
@@ -4295,7 +4183,7 @@ def build_tell_the_players(
         games=build_game_briefs(session, runtime=runtime),
         decks=build_decks(session, settings=settings, runtime=runtime),
         shares=build_paid_shares(session, runtime=runtime),
-        offers=build_seat_offers(session, settings=settings, runtime=runtime),
+        offers=build_seat_offers(session, runtime=runtime),
         preferences=preferences,
     )
 

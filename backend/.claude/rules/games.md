@@ -108,6 +108,6 @@ from the code.
   goes on the record of the players who stayed. A result is refused `the_game_started_short`
   and a seat can no longer move.
 - **A booked game takes a report of somebody not coming, and its club's cancel** (#547): two
-  standings (`NO_SHOW_REPORTED`, `NO_SHOW`), a 24-hour dispute that falls to `UNSCORED`, the
-  desk's check-in asked through `ClubCheckIns`, and `Game.call_off_whole` — a booked game called
+  standings (`NO_SHOW_REPORTED`, `NO_SHOW`), a 24-hour dispute that falls to `UNSCORED` — no
+  desk check-in asked since #651 — and `Game.call_off_whole` — a booked game called
   off by nobody whole or with a seat open. Written up in `bookings.md`'s last bullet.

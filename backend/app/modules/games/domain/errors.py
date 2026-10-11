@@ -394,17 +394,6 @@ class YouCannotReportYourself(BadRequestError):
         super().__init__("You cannot report yourself as not coming.")
 
 
-class CheckedInAtTheClub(ConflictError):
-    """A no-show reported of a player the club's desk checked in (the mechanics
-    §15.1, §16.10): the scan is evidence they were there, so they can never be
-    reported."""
-
-    code = "checked_in_at_the_club"
-
-    def __init__(self) -> None:
-        super().__init__("The club checked this player in.")
-
-
 class YouWereReportedAsANoShow(ConflictError):
     """A player reported as not turning up reporting somebody else. Their answer
     is the dispute, inside their day; two reports pointing at each other would

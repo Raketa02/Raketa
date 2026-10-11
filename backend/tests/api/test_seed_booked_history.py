@@ -133,7 +133,7 @@ async def statuses_on_the_details(client, session_factory, headers: dict) -> lis
     me = await client.get("/api/v1/users/me", headers=headers)
     assert me.status_code == 200, me.text
     async with session_factory() as session:
-        games = await build_player_bookings(session, settings=get_settings()).of_player(
+        games = await build_player_bookings(session).of_player(
             UUID(me.json()["id"]), since=None
         )
     statuses = []

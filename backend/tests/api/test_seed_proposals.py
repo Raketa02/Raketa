@@ -353,9 +353,7 @@ async def test_she_has_a_game_on_the_day_paid_and_one_before_its_cut_off_held(
     games = (await client.get("/api/v1/games", headers=her["headers"])).json()
     assert len(games["games"]) == 2
     # #547: her club's Bookings page lists the game on its day.
-    line = await assert_the_club_bookings(
-        session_factory, settings=get_settings(), now=now, on=soon.start
-    )
+    line = await assert_the_club_bookings(session_factory, now=now, on=soon.start)
     assert "1 booking(s), 4 share(s) paid" in line
 
 
@@ -497,7 +495,6 @@ async def test_she_posts_a_game_her_crowd_is_dealt_as_a_challenge_once(
 
     post = await post_her_game(
         session_factory,
-        settings=get_settings(),
         now=now,
         seeded=proposals,
         bookings=bookings,
@@ -505,7 +502,6 @@ async def test_she_posts_a_game_her_crowd_is_dealt_as_a_challenge_once(
     )
     again = await post_her_game(
         session_factory,
-        settings=get_settings(),
         now=now,
         seeded=proposals,
         bookings=bookings,
@@ -540,7 +536,7 @@ async def test_a_crowd_that_cannot_draw_every_look_fails_the_run_by_name(
     await seeded_world(client, session_factory, payments, now)
 
     with pytest.raises(ScreenIsEmpty, match="few · no court"):
-        await assert_the_posting_grid(session_factory, settings=get_settings(), now=now)
+        await assert_the_posting_grid(session_factory, now=now)
 
 
 async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_it(
@@ -588,14 +584,13 @@ async def test_the_cohort_draws_every_posting_grid_look_the_way_make_seed_runs_i
     )
     post = await post_her_game(
         session_factory,
-        settings=settings,
         now=now,
         seeded=proposals,
         bookings=bookings,
         rescues=rescues,
     )
 
-    line = await assert_the_posting_grid(session_factory, settings=settings, now=now)
+    line = await assert_the_posting_grid(session_factory, now=now)
 
     assert post.made
     assert "every look over two weeks for anybody and for women" in line

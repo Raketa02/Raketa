@@ -32,7 +32,6 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.clubs.domain.ports import (
-    ClubCourtsRepository,
     ClubDirectory,
     SellableCourtHours,
 )
@@ -162,16 +161,3 @@ class SellableClubTerms:
             )
             for club_id, offer in offers.items()
         }
-
-
-@final
-class ClubCourtsDeskCheckIns:
-    """``DeskCheckIns`` over the club's own stream (#547): *We check players
-    in* is one of its Raketa settings, read whether or not the club sells today
-    — a paused club still runs its booked games."""
-
-    def __init__(self, clubs: ClubCourtsRepository) -> None:
-        self._clubs = clubs
-
-    async def checks_players_in(self, club_id: UUID) -> bool:
-        return (await self._clubs.load(club_id)).settings.check_in

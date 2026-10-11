@@ -1,5 +1,5 @@
 """Home's statuses and money lines — the rules that need no I/O (#542; the
-mechanics §14.1–§14.2, §15.1; the screens A4.1, A8).
+mechanics §14.1–§14.2; the screens A4.1, A8).
 
 **Home holds the player's games from the moment they fill** (``docs/adr/0189``
 §6), and each card says one status. **The status is folded on every read** from
@@ -37,11 +37,8 @@ day after its hour's end — the phone's own shelf — and any game that needs t
 reader, read only from the earliest hour a game can still ask anything of its
 players (``on_home_since``). Everything older is a card nobody would see.
 
-**Two borrows, pure**: ``is_the_game_day`` from the Bookings domain, whose desk
-the check-in code is for — *on the day* is the club's calendar day, one rule for
-the phone that shows the code and the desk that scans it — and how long a booked
-game needs its players, from the Games domain's own clocks, so the hour Home
-reads from moves when one of them does.
+**One borrow, pure**: how long a booked game needs its players, from the Games
+domain's own clocks, so the hour Home reads from moves when one of them does.
 """
 
 from __future__ import annotations
@@ -55,7 +52,6 @@ from uuid import UUID
 
 from app.engines.matchfit.core import SearchMode
 from app.kernel import SPORT_SPECS, Instant, Sport, exhaustive, instant, invariant
-from app.modules.bookings.domain.check_in import is_the_game_day
 from app.modules.games.domain.windows import A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR
 from app.modules.proposals.domain.deck import GAME_LENGTH, Sides
 from app.modules.proposals.domain.proposal import (
@@ -266,9 +262,6 @@ class BookedGame:
     said_no: frozenset[UUID] = frozenset()
     #: Why the club cancelled it, once it did (#547).
     cancel_reason: ClubCancelReason | None = None
-    #: Everybody the club's desk checked in, and when (#547) — never reported
-    #: as not coming.
-    checked_in: Mapping[UUID, Instant] = field(default_factory=dict)
     #: When its On request club's answer is due — on a booking ever put to it.
     answer_by: Instant | None = None
     #: The booking's stream version — what a rescue's attempts are counted by.
@@ -403,15 +396,6 @@ class BookedGame:
         return Sides(yours=yours, theirs=theirs)
 
 
-@final
-@dataclass(frozen=True, slots=True)
-class CheckIn:
-    """A player's check-in code for one booked game: to type, and to scan."""
-
-    short_code: str
-    qr_payload: str
-
-
 class ShareState(StrEnum):
     """Where the players' shares of a booked game stand (#637; the mechanics
     §12.2, §14.1, Q113)."""
@@ -503,15 +487,6 @@ class LeaveTerms:
 #: The two statuses at which the game awaits its entry with every seat filled —
 #: the forecast's (the mechanics §14.2: *as today, hidden while a seat is open*).
 _FORECAST_SHOWN: Final = frozenset({HomeStatus.BOOKED, HomeStatus.NEEDS_RESULT})
-
-#: The statuses at which there is no game at the club's desk to check in to.
-_NO_GAME_AT_THE_DESK: Final = frozenset(
-    {
-        HomeStatus.WAITING_FOR_THE_CLUB,
-        HomeStatus.WAITING_FOR_A_PAYMENT,
-        HomeStatus.CALLED_OFF,
-    }
-)
 
 
 def status_of(
@@ -820,13 +795,6 @@ def shows_forecast(status: HomeStatus) -> bool:
     entry with every seat filled."""
 
     return status in _FORECAST_SHOWN
-
-
-def check_in_shown(status: HomeStatus, *, start: Instant, now: Instant) -> bool:
-    """Whether the details carry the check-in code: on the game's day, while
-    there is a game at the desk to check in to (the mechanics §15.1)."""
-
-    return status not in _NO_GAME_AT_THE_DESK and is_the_game_day(start, now=now)
 
 
 def as_filling_again(

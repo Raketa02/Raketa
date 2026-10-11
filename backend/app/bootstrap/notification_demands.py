@@ -68,7 +68,7 @@ NOTIFICATION_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=SeatOffers,
         name="RescueSeatOffers",
-        build=lambda session: build_seat_offers(session, settings=get_settings()),
+        build=build_seat_offers,
     ),
     RegisteredImplementation(
         port=Names, name="PlatformNames", build=build_notice_names

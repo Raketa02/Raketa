@@ -1,5 +1,5 @@
 """The club's Bookings page — the rules that need no I/O (#547; the mechanics
-§16.7–§16.10, §16.14; the screens B4, B6).
+§16.7–§16.9, §16.14; the screens B4, B6).
 
 **One day at a time**, every Raketa booking at the club, each with one status
 **folded on every read** from the booking and the clock — never stored:
@@ -23,9 +23,10 @@
 or with a seat open — may be moved or cancelled **until it starts**, and never
 once it is called off.
 
-**What the club sees of a player is their name, whether they paid, and whether
-the desk checked them in** (§16.14) — nothing about their level, their record
-or the game's chat.
+**What the club sees of a player is their name, and whether they paid or their
+share is only held** (§16.14) — nothing about their level, their record or the
+game's chat, and since desk check-in was removed (#651), nothing about whether
+they came.
 """
 
 from __future__ import annotations
@@ -185,23 +186,6 @@ class BookedFrom:
     name: str
     #: One of the club's own official groups, or a player group.
     official: bool
-
-
-class CodeAtTheDesk(StrEnum):
-    """What a code handed to the club's desk is, there and then (§16.10)."""
-
-    HERE_TODAY = "HERE_TODAY"
-    ANOTHER_DAY = "ANOTHER_DAY"
-    ANOTHER_CLUB = "ANOTHER_CLUB"
-    UNKNOWN = "UNKNOWN"
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class SeatForTheCode:
-    where: CodeAtTheDesk
-    booking_id: UUID | None = None
-    player_id: UUID | None = None
 
 
 @final

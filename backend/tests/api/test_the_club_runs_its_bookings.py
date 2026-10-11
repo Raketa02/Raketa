@@ -2,13 +2,13 @@
 (#547; the mechanics §15, §16.7–§16.10, §16.14, §19; the screens B4, B6).
 
 The club's desk reads its bookings **by day**, filtered, each with its players
-(name, *paid*, *checked in*), its money and the group it came from. It **moves**
-a booked game to another free court at the same hour, **cancels** one with a
+(name, *paid*, *held*), its money and the group it came from. It **moves** a
+booked game to another free court at the same hour, and **cancels** one with a
 reason — everybody refunded in full, nothing on anybody's record, the players
-dealt a new card first — and **checks players in** on the day by a scanned or
-typed code. And on the Game, the players who came **report one who did not**:
-they have a day to dispute it, a player the club checked in cannot be reported,
-and a no-show that stands is the strongest mark on a record.
+dealt a new card first. And on the Game, the players who came **report one who
+did not**: they have a day to dispute it, and a no-show that stands is the
+strongest mark on a record. **Desk check-in is removed** (#651): a scan the desk
+made before it was is still in the booking's stream, and stops no report.
 
 Every act is taken over HTTP as the website and the phone take it, against the
 fake payment provider; every claim is read where somebody would read it.
@@ -24,15 +24,19 @@ from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import func, select
 
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import (
-    build_check_in_codes,
     build_court_hours,
     build_proposal_directory,
 )
-from app.core.config import get_settings
+from app.infrastructure.events.event_store_model import EventStoreORM
 from app.kernel import Sport
+from app.modules.bookings.domain.events import PlayerCheckedIn
+from app.modules.bookings.infrastructure.event_sourced_booking_repository import (
+    BOOKING_AGGREGATE,
+)
 from tests.api.club_courts_world import adds_a_court, sets_hours
 from tests.api.proposals_world import (
     MONDAY_MORNING,
@@ -46,10 +50,10 @@ from tests.api.proposals_world import (
     the_cut_off_comes,
     warsaw,
 )
+from tests.unit import event_log
 from tests.unit.fake_clock import MovableClock
 
 BOOKINGS = "/api/v1/club/bookings"
-CHECK_INS = "/api/v1/club/check-ins"
 HOME = "/api/v1/home"
 RECEIPTS = "/api/v1/players/me/receipts"
 SHARE = 30_00
@@ -66,10 +70,10 @@ def clock(app):
 
 @pytest.fixture
 async def club(client) -> tuple[str, dict]:
-    """Bonarka Arena, Instant, checking its players in — and a second padel
-    court, Court 3, a game can be moved to."""
+    """Bonarka Arena, Instant — and a second padel court, Court 3, a game can be
+    moved to."""
 
-    club_id, desk = await a_club_and_its_desk(client, way="INSTANT", check_in=True)
+    club_id, desk = await a_club_and_its_desk(client, way="INSTANT")
     padel = await client.get("/api/v1/club/courts", headers=desk)
     court_1 = next(one for one in padel.json()["courts"] if one["name"] == "Court 1")
     court_2 = next(one for one in padel.json()["courts"] if one["name"] == "Court 2")
@@ -183,16 +187,9 @@ async def test_the_club_reads_its_bookings_by_day_with_what_it_may_see(
     # Held until the cut-off, which takes them (#637): not paid, not
     # collected yet.
     assert all((p["paid"], p["held"]) == (False, True) for p in row["players"])
-    assert all(player["checked_in_at"] is None for player in row["players"])
-    # Nothing about a player but the name, whether they paid or are held, and
-    # the check-in.
-    assert set(row["players"][0]) == {
-        "player_id",
-        "name",
-        "paid",
-        "held",
-        "checked_in_at",
-    }
+    # Nothing about a player but the name and whether they paid or are held —
+    # and since #651 never whether the desk saw them.
+    assert set(row["players"][0]) == {"player_id", "name", "paid", "held"}
     assert row["money"] == {
         "price_grosze": 120_00,
         "collected_grosze": 0,
@@ -424,78 +421,6 @@ async def test_a_game_is_cancelled_only_until_it_starts(client, clock, club, boo
 
 
 # --------------------------------------------------------------------------- #
-# Check in
-# --------------------------------------------------------------------------- #
-
-
-async def test_the_desk_checks_a_player_in_by_the_code_on_their_phone(
-    client, clock, club, booking, four
-):
-    _, desk = club
-    clock.move(SATURDAY_FIVE - MONDAY_MORNING - timedelta(minutes=8))
-    code = (await details_of(client, four[2], booking))["check_in"]
-
-    typed = await client.post(
-        CHECK_INS, json={"code": code["short_code"].lower()}, headers=desk
-    )
-
-    assert typed.status_code == 200, typed.text
-    assert typed.json()["player"]["name"] == "ewa"
-    assert (typed.json()["court_name"], typed.json()["sport"]) == ("Court 1", "PADEL")
-    again = await client.post(
-        CHECK_INS, json={"code": code["qr_payload"]}, headers=desk
-    )
-    assert (again.status_code, again.json()["code"]) == (409, "already_checked_in")
-    assert datetime.fromisoformat(
-        again.json()["details"]["checked_in_at"]
-    ) == datetime.fromisoformat(typed.json()["checked_in_at"])
-    [row] = (await the_day(client, desk))["bookings"]
-    checked = {one["name"]: one["checked_in_at"] for one in row["players"]}
-    assert checked["ewa"] is not None and checked["ola"] is None
-    tiles = (await details_of(client, four[0], booking))["sides"]
-    assert {
-        tile["player_id"]: tile["checked_in"]
-        for tile in (*tiles["yours"], *tiles["theirs"])
-    }[str(four[2]["id"])] is True
-
-
-async def test_a_code_for_another_day_or_club_or_nobody_is_refused_with_its_reason(
-    client, clock, club, booking, four
-):
-    _, desk = club
-    code = build_check_in_codes(get_settings()).code_for(UUID(booking), four[0]["id"])
-
-    # Monday: Ola's game is on Saturday.
-    early = await client.post(CHECK_INS, json={"code": code.short_code}, headers=desk)
-    assert (early.status_code, early.json()["code"]) == (
-        409,
-        "check_in_code_for_another_day",
-    )
-
-    clock.move(SATURDAY_FIVE - MONDAY_MORNING - timedelta(minutes=10))
-    _, other = await a_club_and_its_desk(client, name="Kazimierz Padel", check_in=True)
-    elsewhere = await client.post(
-        CHECK_INS, json={"code": code.short_code}, headers=other
-    )
-    assert (elsewhere.status_code, elsewhere.json()["code"]) == (
-        409,
-        "check_in_code_for_another_club",
-    )
-    nobody = await client.post(CHECK_INS, json={"code": "ZZZZZZ"}, headers=desk)
-    assert (nobody.status_code, nobody.json()["code"]) == (404, "check_in_code_unknown")
-
-
-async def test_a_club_that_does_not_check_players_in_is_refused(
-    client, clock, session_factory, payments
-):
-    club_id, desk = await a_club_and_its_desk(client, name="Ogrody 33")
-
-    refused = await client.post(CHECK_INS, json={"code": "ABCDEF"}, headers=desk)
-
-    assert (refused.status_code, refused.json()["code"]) == (409, "check_in_is_off")
-
-
-# --------------------------------------------------------------------------- #
 # Somebody did not come
 # --------------------------------------------------------------------------- #
 
@@ -607,29 +532,55 @@ async def test_a_dispute_after_the_day_is_too_late(client, clock, club, booking,
     )
 
 
-async def test_a_player_the_club_checked_in_cannot_be_reported(
-    client, clock, club, booking, four
+async def a_check_in_from_before(
+    session_factory, booking_id: UUID, player_id: UUID, *, at: datetime
+) -> None:
+    """The desk's scan of ``player_id``, as a booking's stream holds it from
+    before desk check-in was removed (#651) — a row nothing writes any more."""
+
+    async with session_factory() as session:
+        version = await session.scalar(
+            select(func.max(EventStoreORM.version)).where(
+                EventStoreORM.aggregate_type == BOOKING_AGGREGATE,
+                EventStoreORM.aggregate_id == booking_id,
+            )
+        )
+    await event_log.append(
+        session_factory,
+        PlayerCheckedIn(booking_id=booking_id, player_id=player_id, occurred_at=at),
+        aggregate_type=BOOKING_AGGREGATE,
+        aggregate_id=booking_id,
+        version=version + 1,
+    )
+
+
+async def test_a_check_in_from_before_it_was_removed_stops_no_report(
+    client, clock, session_factory, club, booking, four
 ):
-    _, desk = club
+    """A scan the desk made before #651 still decodes, and a report of that
+    player is taken as anybody's is: nothing consults check-ins any more."""
+
     ola, kuba, *_ = four
     game_id = await _game_id(client, ola, booking)
-    clock.move(SATURDAY_FIVE - MONDAY_MORNING - timedelta(minutes=5))
-    code = (await details_of(client, kuba, booking))["check_in"]
-    assert (
-        await client.post(CHECK_INS, json={"code": code["short_code"]}, headers=desk)
-    ).status_code == 200
-    clock.move(timedelta(hours=2))
+    await a_check_in_from_before(
+        session_factory,
+        UUID(booking),
+        kuba["id"],
+        at=SATURDAY_FIVE - timedelta(minutes=5),
+    )
+    clock.move(SATURDAY_FIVE - MONDAY_MORNING + timedelta(hours=2))
 
-    refused = await client.post(
+    reported = await client.post(
         f"/api/v1/games/{game_id}/no-shows",
         json={"player_id": str(kuba["id"])},
         headers=ola["headers"],
     )
 
-    assert (refused.status_code, refused.json()["code"]) == (
-        409,
-        "checked_in_at_the_club",
-    )
+    assert reported.status_code == 200, reported.text
+    assert reported.json()["standing"] == "NO_SHOW_REPORTED"
+    [row] = (await the_day(client, club[1]))["bookings"]
+    assert row["status"] == "PLAYED"
+    assert (await details_of(client, kuba, booking))["uncounted_reason"] == "NO_SHOW"
 
 
 async def test_nobody_is_reported_before_the_game_starts(client, club, booking, four):

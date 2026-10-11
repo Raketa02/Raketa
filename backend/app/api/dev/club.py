@@ -1,5 +1,6 @@
-"""The club row: a request answered, a game moved or cancelled, a player
-checked in — as the club whose court it is (``docs/adr/0194`` §2, §3; #591).
+"""The club row: a request answered, a game moved or cancelled — as the club
+whose court it is (``docs/adr/0194`` §2, §3; #591). Its check-in press went
+with desk check-in (#651).
 
 **Each route is the club's own route with the acting club in place of the
 signed-in desk** — ``POST /dev/clubs/{club_id}/bookings/{id}/acceptance`` beside
@@ -7,8 +8,7 @@ the desk's ``POST /api/v1/club/bookings/{id}/acceptance`` — and runs the same
 use case, built by the same dependency, with the same arguments and the same
 wire. So a press does what the desk's own button would do, **refusals
 included**: a booking at another club is ``booking_not_found``, a request
-answered already ``request_not_waiting``, a club that checks nobody in
-``check_in_is_off``.
+answered already ``request_not_waiting``.
 
 **Only a club the seed signed up**: the acting club's desk signs in on the
 reserved ``.example`` TLD, as a seeded player's account does, and any other club
@@ -17,8 +17,8 @@ case is built. A real club's desk is somebody's, and the console never acts as
 anybody's.
 
 **No no-show button here.** The club does not report a no-show: a player on the
-court does (the mechanics §15.3), and the desk's scan is evidence, never a
-verdict (§16.10) — so it is a person's row's press (#593), not the club's.
+court does (the mechanics §15.3) — so it is a person's row's press (#593), not
+the club's.
 """
 
 from __future__ import annotations
@@ -37,8 +37,6 @@ from app.modules.clubs.presentation.dependencies import ClubAccountRepositoryDep
 from app.modules.proposals.presentation.club_routes import (
     AcceptanceResponse,
     CancelRequest,
-    CheckInRequest,
-    CheckInResponse,
     CourtToMoveToSchema,
     FreeCourtsResponse,
     MoveRequest,
@@ -47,7 +45,6 @@ from app.modules.proposals.presentation.club_routes import (
 from app.modules.proposals.presentation.dependencies import (
     AcceptTheRequestDep,
     CancelTheGameDep,
-    CheckInAtTheDeskDep,
     MoveTheGameDep,
     ReadFreeCourtsDep,
     RefuseTheRequestDep,
@@ -212,20 +209,3 @@ async def cancel(
 ) -> Response:
     await cancel.execute(club_id=club, booking_id=booking_id, because=payload.reason)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.post(
-    "/check-ins",
-    response_model=CheckInResponse,
-    status_code=status.HTTP_200_OK,
-    responses=_REFUSED,
-    summary="Check a player in, as the club",
-    description=(
-        "`POST /api/v1/club/check-ins` as the acting club, with the code the "
-        "desk would read off the phone — a booked game's pane lists each seat's."
-    ),
-)
-async def check_in(
-    payload: CheckInRequest, club: ActingClubDep, check_in: CheckInAtTheDeskDep
-) -> CheckInResponse:
-    return CheckInResponse.of(await check_in.execute(club_id=club, code=payload.code))

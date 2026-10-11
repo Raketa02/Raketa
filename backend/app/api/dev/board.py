@@ -15,11 +15,9 @@ Which press a phone would *offer* is the player's details' question
 (``GET /proposals/{id}``); the console offers all three, and the use case says
 what a person's own button would have said.
 
-**And what the club row and the payment provider need** (#591): each row's
-saved card and what the provider will do with its next payment — read off the
-process's fake, the one the console steers, and ``null`` where the provider is
-not it — and each booked seat's check-in code, as the phone shows it and the
-desk would type it.
+**And what the payment provider needs** (#591): each row's saved card and what
+the provider will do with its next payment — read off the process's fake, the
+one the console steers, and ``null`` where the provider is not it.
 
 **And a countdown on every pending moment** (#592): each moment still ahead on
 a game that a timed rule acts at — its book-by, the club's answer, its cut-off,
@@ -59,7 +57,6 @@ from app.api.dependencies import ClockDep, DbSession, UserRepositoryDep
 from app.api.dev.accounts import seed_accounts_only
 from app.api.dev.dependencies import (
     BookingRepositoryDep,
-    CheckInCodesDep,
     ClubTermsDep,
     DeckPeopleDep,
     PlayerNamesDep,
@@ -85,7 +82,7 @@ from app.modules.bookings.domain.booking import (
     CalledOff,
     CancelReason,
 )
-from app.modules.bookings.domain.ports import BookingRepository, CheckInCodes
+from app.modules.bookings.domain.ports import BookingRepository
 from app.modules.clubs.domain.court_hours import CLUB_ZONE, day_close_after, local_day
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide
@@ -526,16 +523,6 @@ class DeparturePane(BaseModel):
     )
 
 
-class SeatCodePane(BaseModel):
-    player: PersonRef
-    short_code: str = Field(
-        description=(
-            "What the desk types — the phone shows it on the game's day. The "
-            "club row's *Check in* sends it."
-        )
-    )
-
-
 class BookingPane(BaseModel):
     state: BookingState
     court_name: str
@@ -547,10 +534,6 @@ class BookingPane(BaseModel):
     called_off: CalledOff | None
     cancel_reason: CancelReason | None
     departures: list[DeparturePane]
-    checked_in: list[PersonRef]
-    codes: list[SeatCodePane] = Field(
-        description="Each seated player's check-in code, the first side first."
-    )
 
 
 class ScorePane(BaseModel):
@@ -759,7 +742,6 @@ class GamePanes:
         clubs: ClubNames,
         terms: ClubTerms,
         details: ReadProposalDetails,
-        codes: CheckInCodes,
     ) -> None:
         self._bookings = bookings
         self._games = games
@@ -768,7 +750,6 @@ class GamePanes:
         self._clubs = clubs
         self._terms = terms
         self._details = details
-        self._codes = codes
 
     async def read(self, games: Sequence[Proposal], *, now: Instant) -> "_Folded":
         bookings: dict[UUID, Booking] = {}
@@ -808,7 +789,6 @@ class GamePanes:
             played=played,
             charges=charges,
             sides=sides,
-            codes=self._codes,
         )
 
 
@@ -820,7 +800,6 @@ def get_game_panes(
     clubs: ProposalClubNamesDep,
     terms: ClubTermsDep,
     details: ReadProposalDetailsDep,
-    codes: CheckInCodesDep,
 ) -> GamePanes:
     return GamePanes(
         bookings=bookings,
@@ -830,7 +809,6 @@ def get_game_panes(
         clubs=clubs,
         terms=terms,
         details=details,
-        codes=codes,
     )
 
 
@@ -1225,7 +1203,6 @@ class _Folded:
         played: Mapping[UUID, Game],
         charges: Mapping[UUID, Sequence[SeatCharge]],
         sides: Mapping[UUID, Sides],
-        codes: CheckInCodes,
     ) -> None:
         self.names = names
         self._now = now
@@ -1235,7 +1212,6 @@ class _Folded:
         self._played = played
         self._charges = charges
         self._sides = sides
-        self._codes = codes
 
     def booked_by(self, player: UUID) -> list[RowBooked]:
         """Every game on the board this player holds a seat on, soonest first
@@ -1422,16 +1398,6 @@ class _Folded:
                     else self._ref(departure.rescued_by),
                 )
                 for departure in booking.departures
-            ],
-            checked_in=self._refs(list(booking.checked_in)),
-            codes=[
-                SeatCodePane(
-                    player=self._ref(player),
-                    short_code=self._codes.code_for(
-                        booking.booking_id, player
-                    ).short_code,
-                )
-                for player in booking.players
             ],
         )
 

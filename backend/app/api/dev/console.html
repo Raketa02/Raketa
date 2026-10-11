@@ -138,8 +138,7 @@
         <button id="empty-seat">7 · Empty seat at the cut-off</button>
         <button id="she-leaves">8 · <span class="she">she</span> leaves</button>
         <button id="posted-game">9 · A posted game</button>
-        <button id="check-in">11 · Check-in at the club</button>
-        <button id="day-close">12 · Club day close</button>
+        <button id="day-close">11 · Club day close</button>
       </div>
       <div class="row">
         <button id="just-played">10 · Just played</button>
@@ -706,8 +705,7 @@ function drawGames() {
           ${booking.cancel_reason ? ` · ${esc(booking.cancel_reason)}` : ""}
           ${booking.booked_at ? ` · booked ${when(booking.booked_at)}` : ""}
           ${booking.answer_by ? ` · club answers by ${when(booking.answer_by)}` : ""}</dd>
-        <dt>Left</dt><dd>${departures}</dd>
-        <dt>Checked in</dt><dd>${names(booking.checked_in)}</dd>` : ""}
+        <dt>Left</dt><dd>${departures}</dd>` : ""}
         ${game.result ? `<dt>Result</dt><dd>${resultOf(game.result)}</dd>` : ""}
         <dt>Pending</dt><dd>${momentsOf(game)}</dd>
         <dt>Money</dt><dd>${charges}</dd>
@@ -775,16 +773,12 @@ function clubButtons(game) {
     : courts.length ? courts.map((c) => b("move", `→ ${esc(c.name)}`, `data-court="${c.court_id}"`)).join("")
     : `<span class="note">no free court</span>`;
   const reasons = CANCEL_REASONS.map((r) => `<option>${r}</option>`).join("");
-  const checkIns = booking.codes.map((c) =>
-    b("check-in", `Check in ${nameOf(c.player)}`, `data-code="${esc(c.short_code)}"`) +
-    `<span class="mono">${esc(c.short_code)}</span>`).join("");
   return `<span class="club">${moves}
-      <select data-reason-for="${id}">${reasons}</select>${b("cancel", "Cancel")}</span>
-    <div class="club">${checkIns}</div>`;
+      <select data-reason-for="${id}">${reasons}</select>${b("cancel", "Cancel")}</span>`;
 }
 
 async function clubAct(button) {
-  const { club: verb, clubId, game, court, code } = button.dataset;
+  const { club: verb, clubId, game, court } = button.dataset;
   const at = (tail) => `/dev/clubs/${clubId}/${tail}`;
   const words = `The club · ${verb} on ${esc(game.slice(0, 8))}`;
   let done;
@@ -807,9 +801,6 @@ async function clubAct(button) {
     const reason = document.querySelector(`select[data-reason-for="${game}"]`).value;
     done = await call("POST", at(`bookings/${game}/cancellation`), { reason });
     say(done, done.ok ? `${words} → cancelled (${esc(reason)})` : words);
-  } else if (verb === "check-in") {
-    done = await call("POST", at("check-ins"), { code });
-    say(done, done.ok ? `${words} → ${nameOf(done.json.player)} checked in` : words);
   }
   delete state.freeCourts[game];
   await loadBoard();
@@ -968,12 +959,6 @@ async function cardDeclines() {
   await loadBoard();
 }
 
-async function checkIn() {
-  const done = await call("POST", "/dev/situations/check-in-at-the-club", herSituation());
-  say(done, done.ok ? `Check-in at the club → ${esc(done.json.says)}` : "Check-in at the club");
-  await loadBoard();
-}
-
 async function aboutToExpire() {
   const done = await call("POST", "/dev/situations/about-to-expire", herSituation());
   say(done, done.ok ? `About to expire → ${esc(done.json.says)}` : "About to expire");
@@ -1036,7 +1021,6 @@ $("fresh-deal").addEventListener("click", freshDeal);
 $("needs-her-yes").addEventListener("click", needsHerYes);
 $("on-request").addEventListener("click", onRequest);
 $("card-declines").addEventListener("click", cardDeclines);
-$("check-in").addEventListener("click", checkIn);
 $("about-to-expire").addEventListener("click", aboutToExpire);
 $("empty-seat").addEventListener("click", emptySeat);
 $("day-close").addEventListener("click", dayClose);

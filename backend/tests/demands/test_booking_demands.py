@@ -332,7 +332,7 @@ async def test_a_no_show_counts_only_once_its_day_has_passed_undisputed(
     game = await games.for_challenge(booking_id)
     assert game is not None
     reported = instant(SATURDAY_FIVE + timedelta(hours=2))
-    game.report_no_show(by=OLA, absent=KUBA, checked_in=(), occurred_at=reported)
+    game.report_no_show(by=OLA, absent=KUBA, occurred_at=reported)
     await games.save(game)
     await session.commit()
 

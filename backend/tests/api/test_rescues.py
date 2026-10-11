@@ -605,7 +605,7 @@ async def test_a_member_offered_the_seat_reads_the_game_from_outside(
     assert details["court_name"] == "Court 1"
     assert details["rescue"]["fills_by_the_cut_off"] is True
     assert details["rescue"]["deadline"].startswith("2026-10-09T15:00:00")
-    assert (details["leaving"], details["check_in"]) == (None, None)
+    assert details["leaving"] is None
     assert details["needs_you"] is False
     # Zosia has paid nothing and has nothing to leave: *I'm in · 30 zł*.
     assert details["money"] == {

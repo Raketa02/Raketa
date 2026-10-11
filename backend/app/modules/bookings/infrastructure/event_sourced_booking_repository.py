@@ -256,7 +256,7 @@ class EventSourcedBookingRepository:
             # The court hour's own index refuses a court another game holds.
             await self._row(event.booking_id, court_id=event.court_id)
         elif isinstance(event, PlayerCheckedIn):
-            # The desk's scan is the booking's to fold; no read asks it of a row.
+            # Retired (#651): nothing writes it, and no row ever held it.
             pass
         else:
             raise TypeError(f"Unsupported booking event {event!r}")
@@ -512,26 +512,6 @@ class SqlAlchemyBookingDirectory:
             .order_by(BookingORM.start, BookingORM.id)
         )
         return list(rows.all())
-
-    async def seats_at(
-        self, club_id: UUID | None, *, start: Instant, end: Instant
-    ) -> Sequence[tuple[UUID, UUID]]:
-        query = (
-            select(BookingSeatORM.booking_id, BookingSeatORM.player_id)
-            .join(BookingORM, BookingORM.id == BookingSeatORM.booking_id)
-            .where(
-                BookingSeatORM.left_at.is_(None),
-                BookingORM.start >= start,
-                BookingORM.start < end,
-            )
-            .order_by(
-                BookingORM.start, BookingSeatORM.booking_id, BookingSeatORM.player_id
-            )
-        )
-        if club_id is not None:
-            query = query.where(BookingORM.club_id == club_id)
-        rows = await self._session.execute(query)
-        return [(booking_id, player_id) for booking_id, player_id in rows.all()]
 
     async def booked_between(
         self, *, start: Instant, end: Instant

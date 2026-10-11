@@ -187,7 +187,6 @@ COURT_EVENTS = [
         time_to_confirm_minutes=30,
         other_clubs_courts=True,
         other_clubs_within_km=15,
-        check_in=False,
         occurred_at=NOW,
     ),
     RaketaPaused(club_id=CLUB, occurred_at=NOW),

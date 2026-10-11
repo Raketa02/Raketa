@@ -2523,7 +2523,7 @@
           "games"
         ],
         "summary": "Say somebody didn't come",
-        "description": "***Kuba didn't come*** \u2014 on a **booked** game whose hour has come, where you would otherwise enter the result (#547). Said by somebody who came, about somebody else on the court; a second report of the same player answers the same and writes nothing, and each player who did not come is reported on their own.\n\n**The game does not count** from the report on, and nobody's Level moves. The reported player has **24 hours to dispute it** (`no_shows[].dispute_by`); after that it stands \u2014 the strongest mark on a record \u2014 with nothing written at that moment. **Nobody arbitrates a dispute**: the report falls and is on nobody's record.\n\nA player **the club checked in** cannot be reported.",
+        "description": "***Kuba didn't come*** \u2014 on a **booked** game whose hour has come, where you would otherwise enter the result (#547). Said by somebody who came, about somebody else on the court; a second report of the same player answers the same and writes nothing, and each player who did not come is reported on their own.\n\n**The game does not count** from the report on, and nobody's Level moves. The reported player has **24 hours to dispute it** (`no_shows[].dispute_by`); after that it stands \u2014 the strongest mark on a record \u2014 with nothing written at that moment. **Nobody arbitrates a dispute**: the report falls and is on nobody's record.",
         "operationId": "report_a_no_show_api_v1_games__game_id__no_shows_post",
         "security": [
           {
@@ -2574,7 +2574,7 @@
             }
           },
           "409": {
-            "description": "Everything above, plus:\n\n`no_shows_are_for_booked_games` \u2014 only a game booked on a court has an hour somebody could fail to come to.\n\n`the_game_has_not_started` \u2014 its hour has not come yet.\n\n`a_result_is_entered` \u2014 somebody already said you played, with a score; answer the score instead.\n\n`checked_in_at_the_club` \u2014 the club checked that player in: they were there, and can never be reported.\n\n`you_were_reported_as_a_no_show` \u2014 you were reported yourself; dispute it instead.\n\n`the_game_was_called_off`, `the_game_started_short` \u2014 there was no game to come to.",
+            "description": "Everything above, plus:\n\n`no_shows_are_for_booked_games` \u2014 only a game booked on a court has an hour somebody could fail to come to.\n\n`the_game_has_not_started` \u2014 its hour has not come yet.\n\n`a_result_is_entered` \u2014 somebody already said you played, with a score; answer the score instead.\n\n`you_were_reported_as_a_no_show` \u2014 you were reported yourself; dispute it instead.\n\n`the_game_was_called_off`, `the_game_started_short` \u2014 there was no game to come to.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6222,7 +6222,7 @@
           "proposals"
         ],
         "summary": "A booked game",
-        "description": "The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** \u2014 a QR payload and a short code, theirs alone. **The chat is the reader's room whose `booking_id` is this booking's**, in `GET /conversations`.\n\n**A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid \u2014 *You?*), with `rescue` \u2014 no check-in code, no `leaving`. Nothing is recorded.",
+        "description": "The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, and whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it). **The chat is the reader's room whose `booking_id` is this booking's**, in `GET /conversations`.\n\n**A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid \u2014 *You?*), with `rescue` \u2014 no `leaving`. Nothing is recorded.",
         "operationId": "read_booking_details_api_v1_bookings__booking_id__get",
         "security": [
           {
@@ -7259,11 +7259,6 @@
             "type": "boolean",
             "title": "Paid",
             "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
-          },
-          "checked_in": {
-            "type": "boolean",
-            "title": "Checked In",
-            "description": "The club's desk checked them in on the day (#547): they were there, so *didn't come* is never offered for them."
           }
         },
         "type": "object",
@@ -7274,8 +7269,7 @@
           "photo_id",
           "photo_url",
           "level",
-          "paid",
-          "checked_in"
+          "paid"
         ],
         "title": "BookedTileSchema",
         "description": "One seat on a booked game."
@@ -7460,17 +7454,6 @@
             "title": "Shows Forecast",
             "description": "Draw the balance forecast \u2014 `GET /games/{game_id}/pairing`, the card today's game screen draws \u2014 while the full game awaits its entry. `false` while a seat is open and once a result is told."
           },
-          "check_in": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/CheckInSchema"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "On the game's day \u2014 the club's calendar day \u2014 the reader's code to show at the desk. `null` on every other day, and for a game that will not be played."
-          },
           "leaving": {
             "anyOf": [
               {
@@ -7521,7 +7504,6 @@
           "your_payment_due_by",
           "time_to",
           "shows_forecast",
-          "check_in",
           "leaving"
         ],
         "title": "BookingDetailsResponse",
@@ -7708,27 +7690,6 @@
         ],
         "title": "ChangeSocialTagsRequest",
         "description": "The Social tags, replaced whole (``docs/adr/0179`` \u00a78).\n\nStrings rather than an enum, as the commit carries them: an id outside the\nserved vocabulary is refused by the domain with ``unknown_social_tag``, a\ncount outside the served bounds with ``social_tag_selection_out_of_bounds``,\nand the client gets a code it can act on rather than a 422."
-      },
-      "CheckInSchema": {
-        "properties": {
-          "short_code": {
-            "type": "string",
-            "title": "Short Code",
-            "description": "Six characters to type when the camera will not read \u2014 upper case, no look-alikes."
-          },
-          "qr_payload": {
-            "type": "string",
-            "title": "Qr Payload",
-            "description": "What the QR code encodes: the booking, the player and the code."
-          }
-        },
-        "type": "object",
-        "required": [
-          "short_code",
-          "qr_payload"
-        ],
-        "title": "CheckInSchema",
-        "description": "*Show at the desk*: the reader's own code for this game."
       },
       "ClaimCodeRequest": {
         "properties": {

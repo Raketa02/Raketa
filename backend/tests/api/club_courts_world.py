@@ -90,7 +90,6 @@ def settings(**overrides) -> dict:
         "minimum_notice_hours": 2,
         "time_to_confirm_minutes": 30,
         "other_clubs_courts": {"offered": False, "within_km": 10},
-        "check_in": False,
         "paused": False,
         **overrides,
     }

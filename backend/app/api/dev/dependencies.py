@@ -45,7 +45,6 @@ from app.bootstrap.composition import (
     build_booking_repository,
     build_the_cut_off,
     build_the_holding,
-    build_check_in_codes,
     build_club_payout_repository,
     build_club_terms,
     build_court_hours,
@@ -74,7 +73,6 @@ from app.bootstrap.composition import (
 from app.modules.bookings.application.daily_summary import SummariseNewBookings
 from app.modules.bookings.domain.ports import (
     BookingRepository,
-    CheckInCodes,
     SummaryRepository,
 )
 from app.kernel import Clock
@@ -193,14 +191,6 @@ def get_court_hours(db: DbSession) -> CourtHours:
 CourtHoursDep = Annotated[CourtHours, Depends(get_court_hours)]
 
 
-def get_check_in_codes(settings: SettingsDep) -> CheckInCodes:
-    """Each seat's code, as the phone shows it and the desk recomputes it."""
-    return build_check_in_codes(settings)
-
-
-CheckInCodesDep = Annotated[CheckInCodes, Depends(get_check_in_codes)]
-
-
 def get_expire_unanswered_requests(
     db: DbSession, clock: ClockDep, settings: SettingsDep
 ) -> ExpireUnansweredRequests:
@@ -265,12 +255,10 @@ def get_the_holding(
 TheHoldingDep = Annotated[TheHolding, Depends(get_the_holding)]
 
 
-def get_decide_club_payouts(
-    db: DbSession, clock: ClockDep, settings: SettingsDep
-) -> DecideClubPayouts:
+def get_decide_club_payouts(db: DbSession, clock: ClockDep) -> DecideClubPayouts:
     """The ``club-payouts`` job's unit of work — the day close's decision —
     over the real *now*. The outbox pays out."""
-    return build_decide_club_payouts(db, clock=clock, settings=settings)
+    return build_decide_club_payouts(db, clock=clock)
 
 
 DecideClubPayoutsDep = Annotated[DecideClubPayouts, Depends(get_decide_club_payouts)]
@@ -354,12 +342,10 @@ def get_notice_pushes(db: DbSession) -> NoticePushes:
 NoticePushesDep = Annotated[NoticePushes, Depends(get_notice_pushes)]
 
 
-def get_rescue_offers(
-    db: DbSession, settings: SettingsDep, booked: BookedGamesDep
-) -> RescueOffers:
+def get_rescue_offers(db: DbSession, booked: BookedGamesDep) -> RescueOffers:
     """Who a booked game's open seat is offered to, and its best fits — the
     rule *Fill in* and the deck read, which a row's rescues show (#593)."""
-    return build_rescue_offers(db, settings=settings, booked=booked)
+    return build_rescue_offers(db, booked=booked)
 
 
 RescueOffersDep = Annotated[RescueOffers, Depends(get_rescue_offers)]
@@ -374,12 +360,10 @@ def get_players_in_play(db: DbSession) -> PlayersInPlay:
 PlayersInPlayDep = Annotated[PlayersInPlay, Depends(get_players_in_play)]
 
 
-def get_read_posting(
-    db: DbSession, settings: SettingsDep, booked: BookedGamesDep
-) -> ReadPosting:
+def get_read_posting(db: DbSession, booked: BookedGamesDep) -> ReadPosting:
     """What every step of posting reads, as of whatever instant it is asked
     about — *A posted game* reads it as of her post (#593)."""
-    return build_read_posting(db, settings=settings, booked=booked)
+    return build_read_posting(db, booked=booked)
 
 
 ReadPostingDep = Annotated[ReadPosting, Depends(get_read_posting)]
@@ -389,14 +373,12 @@ PostAGameOn = Callable[[Clock], PostAGame]
 StateResultOn = Callable[[Clock], StateResult]
 
 
-def get_post_a_game_on(
-    db: DbSession, settings: SettingsDep, booked: BookedGamesDep
-) -> PostAGameOn:
+def get_post_a_game_on(db: DbSession, booked: BookedGamesDep) -> PostAGameOn:
     """*Post — you're In* on a clock the caller names — the one stopped
     earlier that *A posted game* writes her post on (#593)."""
 
     def on(clock: Clock) -> PostAGame:
-        return build_post_a_game(db, settings=settings, clock=clock, booked=booked)
+        return build_post_a_game(db, clock=clock, booked=booked)
 
     return on
 

@@ -1,3 +1,14 @@
+"""The Bookings context's durable event names, and who hears them.
+
+A name here is a **published contract** and outlives every Python class it maps
+to (``.claude/rules/domain-events.md``).
+
+**``bookings.player_checked_in`` is retired** with desk check-in (#651;
+``docs/adr/0195`` §9): nothing writes it, and it stays registered — decode-only,
+logged like the rest if a stored row is ever delivered — so a stored row still
+decodes, and the Booking's fold reads it and changes nothing.
+"""
+
 from __future__ import annotations
 
 from app.application.events import EventCatalog, EventDispatcher

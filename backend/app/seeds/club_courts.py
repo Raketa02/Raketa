@@ -291,7 +291,6 @@ SEED_CLUB_COURTS: Final[tuple[SeedClubCourts, ...]] = (
         settings=RaketaSettings(
             time_to_confirm_minutes=20,
             other_clubs_courts=OtherClubsCourts(offered=True, within_km=8),
-            check_in=True,
         ),
     ),
     SeedClubCourts(
@@ -560,7 +559,6 @@ async def _set_up(
                 time_to_confirm_minutes=settings.time_to_confirm_minutes,
                 other_clubs_courts=settings.other_clubs_courts.offered,
                 other_clubs_within_km=settings.other_clubs_courts.within_km,
-                check_in=settings.check_in,
                 paused=declared.paused,
             )
         )

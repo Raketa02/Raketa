@@ -400,26 +400,6 @@ class ScoredGames(Protocol):
 
 
 @runtime_checkable
-class ClubCheckIns(Protocol):
-    """*Who did the club see arrive?* — this context's demand on whoever keeps
-    a booking (#547; the mechanics §15.1, §16.10).
-
-    A player the club's desk checked in **can never be reported as not
-    turning up**, and the scan is the booking's fact, recorded where the desk
-    made it; so this context asks for it rather than keeping a copy that could
-    disagree. **Keyed by the id the game was opened under** — a booked game's
-    ``challenge_id`` is its booking's id, the field keeping the name it was
-    born with — so the caller asks in a currency it already holds. A game with
-    no booking behind it has no desk, and nobody on it was checked in.
-    """
-
-    async def checked_in(self, challenge_id: UUID) -> frozenset[UUID]:
-        """Everybody the club checked in to the game opened from
-        ``challenge_id`` — empty when there is no booking behind it."""
-        ...
-
-
-@runtime_checkable
 class GameRepository(Protocol):
     """One game's stream, loaded and appended to."""
 

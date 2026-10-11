@@ -1318,7 +1318,6 @@ async def run(settings: Settings | None = None) -> SeedReport:
         # hour of her week clear of every game and yes the layers above seeded.
         post = await post_her_game(
             session_factory,
-            settings=settings,
             now=now,
             seeded=proposals,
             bookings=bookings,
@@ -1343,10 +1342,9 @@ async def run(settings: Settings | None = None) -> SeedReport:
                 now=now,
                 expects_after_the_cut_off=rescues.skipped is None,
             ),
-            await assert_the_posting_grid(session_factory, settings=settings, now=now),
+            await assert_the_posting_grid(session_factory, now=now),
             await assert_the_club_bookings(
                 session_factory,
-                settings=settings,
                 now=now,
                 on=bookings.bookings[0].start,
             ),

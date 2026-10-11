@@ -62,7 +62,6 @@ from app.modules.proposals.domain.home import (
     BookedMoney,
     CalledOffReason,
     ClubCancelReason,
-    CheckIn,
     HomeStatus,
     LeaveTerms,
     Leaving,
@@ -951,12 +950,6 @@ class BookedTileSchema(BaseModel):
             "open seat — the dashed *You?* (#545)."
         )
     )
-    checked_in: bool = Field(
-        description=(
-            "The club's desk checked them in on the day (#547): they were there, "
-            "so *didn't come* is never offered for them."
-        )
-    )
 
 
 class BookedSidesSchema(BaseModel):
@@ -1042,7 +1035,6 @@ def _tile(
     reader: UUID,
     sport_people: Mapping[UUID, DeckPerson],
     paid: bool,
-    checked_in: bool,
 ) -> BookedTileSchema:
     person = sport_people.get(player_id)
     return BookedTileSchema(
@@ -1053,7 +1045,6 @@ def _tile(
         photo_url=None if person is None else person.photo_url,
         level=None if person is None else person.level,
         paid=paid,
-        checked_in=checked_in,
     )
 
 
@@ -1078,7 +1069,6 @@ def _booked_sides(
                 reader=reader,
                 sport_people=sport_people,
                 paid=paid and player in on_it,
-                checked_in=player in game.checked_in,
             )
             for player in sides.yours
         ],
@@ -1088,7 +1078,6 @@ def _booked_sides(
                 reader=reader,
                 sport_people=sport_people,
                 paid=paid and player in on_it,
-                checked_in=player in game.checked_in,
             )
             for player in sides.theirs
         ],
@@ -1289,24 +1278,6 @@ class WhereSchema(BaseModel):
     )
 
 
-class CheckInSchema(BaseModel):
-    """*Show at the desk*: the reader's own code for this game."""
-
-    short_code: str = Field(
-        description=(
-            "Six characters to type when the camera will not read — upper case, "
-            "no look-alikes."
-        )
-    )
-    qr_payload: str = Field(
-        description="What the QR code encodes: the booking, the player and the code."
-    )
-
-    @classmethod
-    def from_code(cls, code: CheckIn) -> "CheckInSchema":
-        return cls(short_code=code.short_code, qr_payload=code.qr_payload)
-
-
 class LeavingSchema(BaseModel):
     """What *Leave the game* would cost now (the mechanics §13)."""
 
@@ -1442,13 +1413,6 @@ class BookingDetailsResponse(BaseModel):
             "`false` while a seat is open and once a result is told."
         )
     )
-    check_in: CheckInSchema | None = Field(
-        description=(
-            "On the game's day — the club's calendar day — the reader's code to "
-            "show at the desk. `null` on every other day, and for a game that "
-            "will not be played."
-        )
-    )
     leaving: LeavingSchema | None = Field(
         description=(
             "What *Leave the game* would cost now — the line under the button and "
@@ -1524,11 +1488,6 @@ class BookingDetailsResponse(BaseModel):
                 read_at=details.read_at,
             ),
             shows_forecast=details.shows_forecast,
-            check_in=(
-                None
-                if details.check_in is None
-                else CheckInSchema.from_code(details.check_in)
-            ),
             leaving=(
                 None
                 if details.leaving is None
@@ -1801,7 +1760,6 @@ class SeatToFillSchema(BaseModel):
                     sport_people=people,
                     # Held until the cut-off, taken at it (#637).
                     paid=not fills_by_the_cut_off,
-                    checked_in=player in game.checked_in,
                 )
                 for player in game.players
             ],

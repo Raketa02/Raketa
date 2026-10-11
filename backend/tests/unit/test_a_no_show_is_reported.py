@@ -1,10 +1,10 @@
 """Somebody did not turn up to a booked game (#547; the mechanics §15.3, §15.4,
-§16.10, §19).
+§19).
 
 **The players who came say so where they would enter the result** — *Kuba
 didn't come* — and Kuba has **twenty-four hours to dispute it**; after that it
-stands. **A player the club checked in cannot be reported**: the desk's scan is
-evidence they were there. **The game does not count**, nobody's Level moves,
+stands. Nothing at a club's desk is asked: desk check-in is removed (#651).
+**The game does not count**, nobody's Level moves,
 and a no-show that stood is the strongest mark on a record. **A dispute is not
 arbitrated**: the report falls, and a game nobody agrees about is an evening
 that proves nothing — uncounted, on nobody's record.
@@ -23,7 +23,6 @@ from app.kernel import InvariantViolated, Sport, instant
 from app.modules.games.domain.errors import (
     ANoShowIsReported,
     AResultIsAlreadyEntered,
-    CheckedInAtTheClub,
     NobodyReportedYou,
     NoShowsAreForBookedGames,
     NotOnThisCourt,
@@ -52,7 +51,6 @@ BOOKED_AT = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
 STARTS_AT = instant(datetime(2026, 10, 10, 15, tzinfo=timezone.utc))
 #: Back home after the game, entering the result.
 AFTER = instant(STARTS_AT + timedelta(hours=2))
-NOBODY_CHECKED_IN: frozenset = frozenset()
 
 
 def _game(*, starts_at=STARTS_AT) -> Game:
@@ -76,9 +74,7 @@ def _game(*, starts_at=STARTS_AT) -> Game:
 
 
 def _reported(game: Game, absent=BO, *, by=ANA, at=AFTER) -> None:
-    game.report_no_show(
-        by=by, absent=absent, checked_in=NOBODY_CHECKED_IN, occurred_at=at
-    )
+    game.report_no_show(by=by, absent=absent, occurred_at=at)
 
 
 def _score() -> Score:
@@ -218,15 +214,6 @@ def test_reporting_somebody_twice_writes_nothing():
 # --------------------------------------------------------------------------- #
 # Who may be reported, by whom, and when
 # --------------------------------------------------------------------------- #
-
-
-def test_a_player_the_club_checked_in_cannot_be_reported():
-    game = _game()
-
-    with pytest.raises(CheckedInAtTheClub):
-        game.report_no_show(
-            by=ANA, absent=BO, checked_in=frozenset({BO}), occurred_at=AFTER
-        )
 
 
 def test_only_the_people_on_the_court_report_and_only_each_other():

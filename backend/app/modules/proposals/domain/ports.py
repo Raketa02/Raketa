@@ -19,15 +19,15 @@ for the proposer (#540), where a pool may play (groups and clubs), every hour a
 club sells (clubs), and each member's Level and week (rating, the Player
 profile) — and, for the fill (#541), a court for a full game and its booking
 (bookings), and every seat's share, all or nothing (payments) — and, for Home
-and the details (#542), a player's booked games and each seat's check-in code
-(bookings), where each game's result stands (games), and how far a club is from
-a player (the Player profile and clubs) — and, for an On request club (#543), the
-request a full game is put to it as, and its answer (bookings), and what each
-player is called on the club's list of them (users) — and, for rescues (#545), a
-pool's booked games with a seat open and somebody taking one (bookings), and a
-refused payment waiting for its player (payments) — and, for posting (#546),
-each member's gender and preference (the Player profile) and the engine's level
-window around a poster (the matcher's pair rule).
+and the details (#542), a player's booked games (bookings), where each game's
+result stands (games), and how far a club is from a player (the Player profile
+and clubs) — and, for an On request club (#543), the request a full game is put
+to it as, and its answer (bookings), and what each player is called on the
+club's list of them (users) — and, for rescues (#545), a pool's booked games
+with a seat open and somebody taking one (bookings), and a refused payment
+waiting for its player (payments) — and, for posting (#546), each member's
+gender and preference (the Player profile) and the engine's level window around
+a poster (the matcher's pair rule).
 """
 
 from __future__ import annotations
@@ -47,14 +47,12 @@ from app.modules.proposals.domain.club_bookings import (
     BookedFrom,
     ClubCancellation,
     CourtToMoveTo,
-    SeatForTheCode,
     Takings,
 )
 from app.modules.proposals.domain.deck import CardForecast, SellingTerms, Sides
 from app.modules.proposals.domain.games_and_money import GamesAndMoney
 from app.modules.proposals.domain.home import (
     BookedGame,
-    CheckIn,
     ClubCancelReason,
     GameResult,
     LateRefund,
@@ -1085,7 +1083,7 @@ class UndecidedCharges(Protocol):
 @runtime_checkable
 class PlayerBookings(Protocol):
     """**A demand of the Bookings context**: the games a player booked, as
-    their booking records them, and each seat's check-in code."""
+    their booking records them."""
 
     async def of_player(
         self, player_id: UUID, *, since: Instant | None
@@ -1115,10 +1113,6 @@ class PlayerBookings(Protocol):
         """Every booked game in this pool and sport with a seat open and its
         hour still ahead at ``now`` — **soonest first** (#545). Candidates:
         whether a seat is there to take is ``domain/rescues.py``'s to say."""
-        ...
-
-    def check_in(self, booking_id: UUID, player_id: UUID) -> CheckIn:
-        """This player's code for this booking — the same on every read."""
         ...
 
 
@@ -1168,9 +1162,9 @@ class ClubDistances(Protocol):
 @runtime_checkable
 class ClubBookings(Protocol):
     """**A demand of the Bookings context**: a club's bookings as its desk
-    reads and runs them (the mechanics §16.7–§16.10) — a day of them, a court to
-    move one to, the move, the cancel, whose a code is, and the check-in. Every
-    act is in the caller's transaction, after the caller has locked the game."""
+    reads and runs them (the mechanics §16.7, §16.9) — a day of them, a court to
+    move one to, the move and the cancel. Every act is in the caller's
+    transaction, after the caller has locked the game."""
 
     async def on_day(
         self, club_id: UUID, *, start: Instant, end: Instant
@@ -1201,17 +1195,6 @@ class ClubBookings(Protocol):
         owes."""
         ...
 
-    async def seat_for(
-        self, code: str, *, club_id: UUID, now: Instant
-    ) -> SeatForTheCode:
-        """Whose seat a code handed to this club's desk is — scanned or typed —
-        and whether it is this club's, today."""
-        ...
-
-    async def check_in(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
-        """The desk checked this player in."""
-        ...
-
 
 @runtime_checkable
 class BookingTakings(Protocol):
@@ -1231,11 +1214,3 @@ class PoolOrigins(Protocol):
     async def of(self, pool_ids: Collection[UUID]) -> Mapping[UUID, BookedFrom]:
         """Each pool that is a group still there; one that is not is absent."""
         ...
-
-
-@runtime_checkable
-class DeskCheckIns(Protocol):
-    """**A demand of the Club context**: whether a club switched on *We check
-    players in* (the mechanics §16.6, §16.10)."""
-
-    async def checks_players_in(self, club_id: UUID) -> bool: ...

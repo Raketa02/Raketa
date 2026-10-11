@@ -30,12 +30,11 @@ is neither an evening nor a ghost, and every read that counts either leaves it
 out.
 
 **A booked game can say somebody did not come** (#547; the mechanics §15.3).
-The players who came report them where they would enter the result; the
-reported player has a day to dispute it; a player the club checked in cannot be
-reported. A report is the entry for that game — no score stands beside one — and
-whatever it comes to, **the game does not count**. And **a booked game is called
-off whole** when its club takes the court back before its hour, with a seat
-open or none (``call_off_whole``).
+The players who came report them where they would enter the result, and the
+reported player has a day to dispute it. A report is the entry for that game —
+no score stands beside one — and whatever it comes to, **the game does not
+count**. And **a booked game is called off whole** when its club takes the
+court back before its hour, with a seat open or none (``call_off_whole``).
 
 **One aggregate per game and never one per player.** Whether you won is a
 property of the game and of which side you were on; a per-player record would be
@@ -51,7 +50,7 @@ derived.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Collection, Iterable
+from typing import Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant, invariant
@@ -64,7 +63,6 @@ from app.modules.games.domain.errors import (
     ANoShowIsReported,
     AResultIsAlreadyEntered,
     AResultMustCarryAScore,
-    CheckedInAtTheClub,
     NobodyHasProposedAResult,
     NobodyReportedYou,
     NoShowsAreForBookedGames,
@@ -461,7 +459,6 @@ class Game:
         *,
         by: UUID,
         absent: UUID,
-        checked_in: Collection[UUID],
         occurred_at: Instant,
     ) -> None:
         """*Kuba didn't come* — said by somebody who came to a **booked** game,
@@ -470,10 +467,9 @@ class Game:
         **What it refuses, in order**: somebody off the court, a game with no
         hour, a report of yourself or of somebody who was not on it; a game
         called off, started short, not started yet, scored, settled, or past
-        its entry window; a reporter reported themselves, whose answer is the
-        dispute; and **a player the club checked in** — ``checked_in`` is the
-        desk's word, asked by the caller. A player already reported is
-        reported: a second report writes nothing.
+        its entry window; and a reporter reported themselves, whose answer is
+        the dispute. A player already reported is reported: a second report
+        writes nothing.
         """
 
         self._side_of(by)
@@ -498,8 +494,6 @@ class Game:
             raise TheEntryWindowHasClosed()
         if by in self.no_shows:
             raise YouWereReportedAsANoShow()
-        if absent in checked_in:
-            raise CheckedInAtTheClub()
         if absent in self.no_shows:
             return
         self._record_that(

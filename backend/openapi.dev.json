@@ -1738,93 +1738,6 @@
         }
       }
     },
-    "/dev/clubs/{club_id}/check-ins": {
-      "post": {
-        "tags": [
-          "dev",
-          "dev"
-        ],
-        "summary": "Check a player in, as the club",
-        "description": "`POST /api/v1/club/check-ins` as the acting club, with the code the desk would read off the phone \u2014 a booked game's pane lists each seat's.",
-        "operationId": "check_in_dev_clubs__club_id__check_ins_post",
-        "parameters": [
-          {
-            "name": "club_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`.",
-              "title": "Club Id"
-            },
-            "description": "The acting club: one the seed signed up, whose desk signs in on the reserved TLD. Any other id is refused `not_a_seed_account`."
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckInRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckInResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "`not_a_seed_account` \u2014 the acting club is not one the seed signed up. Nothing was asked of the use case.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "As the club's own route answers it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "As the club's own route answers it.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/dev/payments/cards/{player_id}": {
       "put": {
         "tags": [
@@ -3094,86 +3007,13 @@
         }
       }
     },
-    "/dev/situations/check-in-at-the-club": {
-      "post": {
-        "tags": [
-          "dev",
-          "dev"
-        ],
-        "summary": "Situation 11 \u00b7 Check-in at the club",
-        "description": "Her game at the soonest hour today that has not begun, at a club of the group's that books at once \u2014 made and filled by her and three of the group as if earlier, when the hour was still on sale. Her phone shows her check-in code today, and the club checks players in: a club that did not is switched to *We check players in*, as its desk would.",
-        "operationId": "check_in_at_the_club_dev_situations_check_in_at_the_club_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/HerSituationRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CheckInAtTheClubResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "`not_a_seed_account` \u2014 the protagonist, or somebody the situation would act as, is not an account the seed created.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "`group_not_found` \u2014 no such group.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "`situation_unavailable` \u2014 it cannot be set up in this store, and why. Any other code is a use case's own refusal, in its own words.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/dev/situations/club-day-close": {
       "post": {
         "tags": [
           "dev",
           "dev"
         ],
-        "summary": "Situation 12 \u00b7 Club day close",
+        "summary": "Situation 11 \u00b7 Club day close",
         "description": "Writes the last closed club day's played games \u2014 yesterday's, or today's from 23:00 \u2014 at a club of the group's that books at once and has had no day close for it yet: up to 2, each a game's worth of the group, never the protagonist, booked inside that day on a clock backdated to it. Once the outbox has captured the shares, *Run it now* on club payouts pays the club for them, and on the new bookings summary emails its desk the day's bookings.",
         "operationId": "club_day_close_dev_situations_club_day_close_post",
         "requestBody": {
@@ -3975,11 +3815,6 @@
             "type": "boolean",
             "title": "Paid",
             "description": "Their share was taken \u2014 the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat \u2014 the dashed *You?* (#545)."
-          },
-          "checked_in": {
-            "type": "boolean",
-            "title": "Checked In",
-            "description": "The club's desk checked them in on the day (#547): they were there, so *didn't come* is never offered for them."
           }
         },
         "type": "object",
@@ -3990,8 +3825,7 @@
           "photo_id",
           "photo_url",
           "level",
-          "paid",
-          "checked_in"
+          "paid"
         ],
         "title": "BookedTileSchema",
         "description": "One seat on a booked game."
@@ -4061,21 +3895,6 @@
             },
             "type": "array",
             "title": "Departures"
-          },
-          "checked_in": {
-            "items": {
-              "$ref": "#/components/schemas/PersonRef"
-            },
-            "type": "array",
-            "title": "Checked In"
-          },
-          "codes": {
-            "items": {
-              "$ref": "#/components/schemas/SeatCodePane"
-            },
-            "type": "array",
-            "title": "Codes",
-            "description": "Each seated player's check-in code, the first side first."
           }
         },
         "type": "object",
@@ -4087,9 +3906,7 @@
           "booked_at",
           "called_off",
           "cancel_reason",
-          "departures",
-          "checked_in",
-          "codes"
+          "departures"
         ],
         "title": "BookingPane"
       },
@@ -4347,158 +4164,6 @@
           "refund"
         ],
         "title": "ChargePane"
-      },
-      "CheckInAtTheClubResponse": {
-        "properties": {
-          "game_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Game Id"
-          },
-          "starts_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Starts At"
-          },
-          "club_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Club Id",
-            "description": "The club the club row acts as."
-          },
-          "club_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Club Name"
-          },
-          "people": {
-            "items": {
-              "$ref": "#/components/schemas/PersonRef"
-            },
-            "type": "array",
-            "title": "People",
-            "description": "Everybody on it, in yes order."
-          },
-          "check_in_switched_on": {
-            "type": "boolean",
-            "title": "Check In Switched On",
-            "description": "The club checked nobody in, and its *We check players in* was switched on as its desk would."
-          },
-          "says": {
-            "type": "string",
-            "title": "Says",
-            "description": "What happened, for the tester."
-          }
-        },
-        "type": "object",
-        "required": [
-          "game_id",
-          "starts_at",
-          "club_id",
-          "club_name",
-          "people",
-          "check_in_switched_on",
-          "says"
-        ],
-        "title": "CheckInAtTheClubResponse"
-      },
-      "CheckInRequest": {
-        "properties": {
-          "code": {
-            "type": "string",
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Code",
-            "description": "What the camera read off the player's QR code, or the six-character short code typed by hand \u2014 spaces, dashes and case do not matter."
-          }
-        },
-        "type": "object",
-        "required": [
-          "code"
-        ],
-        "title": "CheckInRequest"
-      },
-      "CheckInResponse": {
-        "properties": {
-          "booking_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Booking Id"
-          },
-          "starts_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Starts At"
-          },
-          "ends_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Ends At"
-          },
-          "court_name": {
-            "type": "string",
-            "title": "Court Name"
-          },
-          "sport": {
-            "$ref": "#/components/schemas/Sport"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/SearchMode"
-          },
-          "player": {
-            "$ref": "#/components/schemas/CheckedInPlayerSchema"
-          },
-          "checked_in_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Checked In At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "booking_id",
-          "starts_at",
-          "ends_at",
-          "court_name",
-          "sport",
-          "kind",
-          "player",
-          "checked_in_at"
-        ],
-        "title": "CheckInResponse",
-        "description": "The booking and the player \u2014 *19:00 \u00b7 Court 2 \u00b7 Padel*, *Piotr S. \u2014\nchecked in \u2713*."
-      },
-      "CheckedInPlayerSchema": {
-        "properties": {
-          "player_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Player Id"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          }
-        },
-        "type": "object",
-        "required": [
-          "player_id",
-          "name"
-        ],
-        "title": "CheckedInPlayerSchema"
       },
       "ClubCancelReason": {
         "type": "string",
@@ -7670,24 +7335,6 @@
         ],
         "title": "SeatChargeStatus",
         "description": "Where a charge stands, as its stream leaves it."
-      },
-      "SeatCodePane": {
-        "properties": {
-          "player": {
-            "$ref": "#/components/schemas/PersonRef"
-          },
-          "short_code": {
-            "type": "string",
-            "title": "Short Code",
-            "description": "What the desk types \u2014 the phone shows it on the game's day. The club row's *Check in* sends it."
-          }
-        },
-        "type": "object",
-        "required": [
-          "player",
-          "short_code"
-        ],
-        "title": "SeatCodePane"
       },
       "SeatToFillSchema": {
         "properties": {

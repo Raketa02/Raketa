@@ -55,7 +55,7 @@ still taken in the order they opened.
 **The club runs it** (#547; the mechanics §16.7–§16.10): it may **move** the
 game to another court of its sport at the same hour, or **cancel** it with its
 reason — everybody still in refunded in full, on nobody's record — until the
-game starts; and its desk **checks players in** on the day. *Played* is read
+game starts. Its desk no longer checks players in (#651). *Played* is read
 off the clock — a booked game whose hour has passed — and never recorded: there
 is nothing to decide about it, and a recorded copy would be wrong for the whole
 gap until something wrote it.
@@ -244,8 +244,6 @@ class Booking:
     said_no: frozenset[UUID] = frozenset()
     #: Why the club cancelled it, once it did (#547).
     cancel_reason: CancelReason | None = None
-    #: Everybody the club's desk checked in, and when (#547).
-    checked_in: dict[UUID, Instant] = field(default_factory=dict)
     #: Everybody whose holding was refused and whose time to fix the card runs
     #: (#639) — the game booked meanwhile.
     cards_to_fix: dict[UUID, RefusedHolding] = field(default_factory=dict)
@@ -775,29 +773,6 @@ class Booking:
             )
         )
 
-    def check_in(self, player_id: UUID, *, at: Instant) -> bool:
-        """The desk checked this player in (#547; the mechanics §15.1). Answers
-        whether anything was recorded — nothing for a player already checked
-        in, whose first scan stands. Whether it is the game's day at the
-        game's club is the caller's question; that the player has a seat on a
-        booked game is this one's."""
-
-        invariant(
-            self.is_booked, f"{player_id} checked in to {self.booking_id} {self.state}"
-        )
-        invariant(
-            player_id in self.players,
-            f"{player_id} checked in with no seat on {self.booking_id}",
-        )
-        if player_id in self.checked_in:
-            return False
-        self._record_that(
-            PlayerCheckedIn(
-                booking_id=self.booking_id, player_id=player_id, occurred_at=at
-            )
-        )
-        return True
-
     def call_off_at_the_cut_off(self, *, at: Instant) -> None:
         """Short at its cut-off: the game is off, and everybody still in is
         named, to be refunded in full."""
@@ -1126,10 +1101,9 @@ class Booking:
             self.cards_to_fix = {}
             self.kept = {}
         elif isinstance(event, PlayerCheckedIn):
-            self.checked_in = {
-                **self.checked_in,
-                event.player_id: instant(event.occurred_at),
-            }
+            # Retired (#651): a stored scan is read and changes nothing —
+            # nothing asks who the desk saw any more.
+            pass
         elif isinstance(event, BookingRequested):
             self.court = BookedCourt(court_id=event.court_id, name=event.court_name)
             self.first_side = tuple(event.first_side)

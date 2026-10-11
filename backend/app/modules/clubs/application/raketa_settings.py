@@ -56,7 +56,6 @@ class SaveRaketaSettings:
                 offered=command.other_clubs_courts,
                 within_km=command.other_clubs_within_km,
             ),
-            check_in=command.check_in,
         )
         club = await self._courts.load(command.club_id)
         club.save_settings(

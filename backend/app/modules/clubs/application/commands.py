@@ -155,7 +155,6 @@ class SaveRaketaSettingsCommand:
     time_to_confirm_minutes: int
     other_clubs_courts: bool
     other_clubs_within_km: int
-    check_in: bool
     paused: bool
 
 

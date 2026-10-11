@@ -84,7 +84,6 @@ class RaketaSettings:
     minimum_notice_hours: int = 2
     time_to_confirm_minutes: int = 30
     other_clubs_courts: OtherClubsCourts = field(default_factory=OtherClubsCourts)
-    check_in: bool = False
 
     def __post_init__(self) -> None:
         # In the form's order, so the first refusal is the first field read.

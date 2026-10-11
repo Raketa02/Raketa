@@ -5,7 +5,7 @@ over what is due at the real *now*, and leaves what is not due exactly as it
 was. **A countdown on every pending moment** of a game's state pane says when a
 press will find something. And three situations whose moment is a clock:
 *About to expire* (5) and *Empty seat at the cut-off* (7) land on the next full
-hour the rules allow and say when it fires; *Club day close* (12) writes the
+hour the rules allow and say when it fires; *Club day close* (11) writes the
 last closed day's played games, so that running the day close pays the club and
 emails its desk.
 
@@ -614,7 +614,7 @@ async def test_empty_seat_at_the_cut_off_answers_with_the_domain_s_refusal(
 
 
 # --------------------------------------------------------------------------- #
-# Situation 12 · Club day close
+# Situation 11 · Club day close
 # --------------------------------------------------------------------------- #
 
 

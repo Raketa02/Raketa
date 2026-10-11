@@ -289,7 +289,7 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   answered *waiting for the club* — it waits an hour from the run's now, then the timeout calls
   it off; a re-run puts a fresh one. `FakePayments.phone_confirms_payment` is a phone confirming a payment.
 - **Home and the details read the bookings; Proposals assembles them** (#542; the mechanics
-  §14, §15.1). `GET /home`, `GET /bookings/{id}` and `GET /proposals/{id}` are Proposals' reads
+  §14). `GET /home`, `GET /bookings/{id}` and `GET /proposals/{id}` are Proposals' reads
   (`application/home.py`, `booking_details.py`, `proposal_details.py`), over `PlayerBookings` —
   signed in `proposals/infrastructure/bookings.py`, folding each booking's stream — beside the
   deck's people and forecasts. **Home's read is bounded** (#613): the bookings are read only
@@ -318,20 +318,16 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   `domain/home.py`'s `as_filling_again`) — the people In now on the sides they were drawn
   on, anybody In since in the first place free, a player who took their yes back since off
   it — *seat open* with `filling_again`, nobody paid, `needs_you` false (the badge never
-  counts it), no Leave, no check-in code, no court; `club_confirms` says *… is asked again
+  counts it), no Leave, no court; `club_confirms` says *… is asked again
   when it's full*. *Called off* · `BOOK_BY_PASSED` once its book-by passes first (or a seat
   opened after it while the club decided) and · `COURT_HOUR_LOST` once its court goes. A
   departure on it withdraws the yes, as while the club decides. **The club never sees it**:
-  its day, its acts, a rescue and `GamesOver` refuse or skip it, and a seat's code on it is
-  unknown at the desk — the club's document keeps its own four-value `CalledOffReason`.
+  its day, its acts, a rescue and `GamesOver` refuse or skip it — the club's document keeps
+  its own four-value `CalledOffReason`.
   *seat open*, *called off · short at the cut-off* and
   *uncounted · a seat was empty* are #544's (below); the club's cancel is #547's. **The
   forecast is the Game's pairing** (`GET /games/{id}/pairing`) — the details only say
-  whether it is drawn. **A check-in code is derived,
-  never stored** (`bookings/domain/check_in.py`): an HMAC of the booking and the player under a
-  key drawn from `JWT_SECRET_KEY` with its own prefix (`KeyedCheckInCodes`), six characters in
-  the typed-code alphabet plus a `RAKETA-CHECK-IN:1:<booking>:<player>:<code>` QR payload, shown
-  on the club's calendar day of the game while it stands — #547's desk recomputes it.
+  whether it is drawn. **No code to show at a desk**: desk check-in is removed (#651, below).
 - **Held until the cut-off, taken at it; leaving before it takes nothing; a game plays full or
   not at all** (#544, #637; `proposals/application/leave_the_game.py`, `cut_off.py`,
   `bookings/application/leaving.py`; the mechanics §12.2, §12.3, §13, §14.1, §15.4, Q113).
@@ -419,7 +415,7 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   no (`POST /bookings/{id}/no`, `NoSaidToTheSeat`; the board keeps the row). Derived at every
   read: the reader's own offer is asked first, and the whole pool is read only when a seat is
   offered to them. An outsider offered the seat reads `GET /bookings/{id}` from outside — in
-  the seat, unpaid, with `rescue` (deadline, *fills by the cut-off*), no check-in, no leaving.
+  the seat, unpaid, with `rescue` (deadline, *fills by the cut-off*), no leaving.
   **Joining** (`POST /bookings/{id}/seats`, `JoinARescue` over `Rescuer`) locks the proposal
   row first, so two joiners for the last seat are one after the other and **the second reads
   it gone** (`seat_just_taken`) **before its bank is asked**. Then the money is the fill's own
@@ -479,21 +475,21 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   fails a run whose board lacks what was seeded.
 - **The club runs its bookings** (#547; `proposals/application/club_bookings.py`, rules in
   `proposals/domain/club_bookings.py`, acts in `bookings/application/at_the_club.py`; the
-  mechanics §15.1, §16.7–§16.10, §16.14; the screens B4, B6). **The club surface is
+  mechanics §16.7, §16.9, §16.14; the screens B4, B6). **The club surface is
   proposals'**, as On request's is — a cancel refunds and owes a new card, and every act
   locks the game's proposal row first: `GET /api/v1/club/bookings?date&filter` (one club
   calendar day, 07:00–23:00, every state but a request taken back; `ALL`, `WAITING_FOR_YOU`,
   `SEAT_OPEN`, `CALLED_OFF`, with the whole day's `counts`), `GET …/{id}/free-courts`,
-  `POST …/{id}/move` (`{court_id}`), `POST …/{id}/cancellation` (`{reason}`) and
-  `POST /api/v1/club/check-ins` (`{code}`). **The club's status is folded on every read**:
-  *waiting for you* until the answer is due, *called off* — refused, no answer (read off the
+  `POST …/{id}/move` (`{court_id}`) and `POST …/{id}/cancellation` (`{reason}`). **The
+  club's status is folded on every read**: *waiting for you* until the answer is due,
+  *called off* — refused, no answer (read off the
   clock from `answer_by`), short at the cut-off, or cancelled — *played* once the hour is over
   (never recorded: a `BookingPlayed` event was in the screens' C1 and is not built; a game
   that went ahead short, or one somebody did not come to, is *played* — the club is paid),
   else *seat open* or *booked*. **What the club sees of a player is the name, `paid` (a
   charge `TAKING`/`CAPTURED`, `BookingTakings` over each booking's Seat charges — one
-  `of_game` read per booking listed), `held` (a charge `HELD` until the cut-off, #637) and
-  `checked_in_at`**; the money is the court's price (share × seats), what was collected —
+  `of_game` read per booking listed) and `held` (a charge `HELD` until the cut-off,
+  #637)**; the money is the court's price (share × seats), what was collected —
   **taken shares only** — and what was refunded (given, or decided and not yet given: the
   share, less the fee kept where withheld); the group comes from `groups`
   (`PoolOrigins`). **Move and Cancel are the club's while the game is booked or seat open, not
@@ -521,27 +517,20 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   `CancelledByClub` resumes paused weeks and marks the proposer due everywhere. **Home and
   the details** read `called_off_reason: CANCELLED_BY_THE_CLUB`, `club_cancel_reason`, and
   `money.refunded_grosze`; **nothing goes on anybody's record** (`keeping_of` answers `None`
-  for every called-off reason but short at the cut-off). **Check in** is the desk's when the
-  club's *We check players in* is on (`check_in_is_off`, `DeskCheckIns` over the club's own
-  stream — read whether or not it sells). `FindTheSeat` reads the code (`check_in.read_code`:
-  a QR payload names its seat and is checked against the digest; six typed characters,
-  spaces, dashes and case ignored, name nothing) and places it: **typed codes are looked for
-  among this club's seats today, then this club's ±14 days, then every club's today** —
-  each tier one read of the held seats (`BookingDirectory.seats_at`) and a digest a seat, a
-  stream read only for the seat the code is — so a
-  code for another day (`check_in_code_for_another_day`, `details.starts_at`) or club
-  (`check_in_code_for_another_club`, nothing about it said) is told apart from nobody's
-  (`404 check_in_code_unknown`, which a leaver's seat and a request's are too); another
-  club's code on another day is unknown. `PlayerCheckedIn` is the booking's, once
-  (`already_checked_in`, `details.checked_in_at`); tiles carry `checked_in`.
+  for every called-off reason but short at the cut-off). **Desk check-in is removed** (#651;
+  ADR-0195 §4, §9): no per-seat code or QR payload, no keyed derivation, no club route, no
+  *We check players in*, and nothing reads who the desk saw. Check-ins lived only in event
+  streams, so nothing was migrated: a stored `bookings.player_checked_in` stays registered
+  and **folds to nothing** but the stream's version, and a stored
+  `clubs.raketa_settings_changed` keeps decoding its `check_in`, which nothing reads (a row
+  saved since carries `null`) — `tests/unit/test_retired_check_in_rows_still_fold.py`.
 - **Somebody did not come: the report is the Game's** (#547; `games/domain/game.py`,
   `standing.py`, `games/application/no_shows.py`; the mechanics §15.3–§15.4). On a **booked**
   game (`starts_at`) whose hour has come, inside its entry window, with nothing entered, a
   player on the court reports another (`POST /games/{id}/no-shows`, `NoShowReported`); a
   reported player disputes inside **24 hours** (`POST /games/{id}/no-shows/dispute`,
-  `NoShowDisputed`, `NO_SHOW_DISPUTE_WINDOW`). **A player the club checked in cannot be
-  reported** — `ClubCheckIns`, games' demand, signed in `bookings/infrastructure/games_records.py`
-  over the booking's stream, never a copy on the game. A report **is the game's entry**: a
+  `NoShowDisputed`, `NO_SHOW_DISPUTE_WINDOW`). **Nothing at a club's desk is asked** (#651):
+  a check-in stored before the removal stops no report. A report **is the game's entry**: a
   score is refused beside one (`a_result_is_entered`, `a_no_show_is_reported`), and **the
   game does not count whatever it comes to**. Standings: `NO_SHOW_REPORTED` while any
   undisputed report's day runs (not settled — a later report or a dispute may still come),

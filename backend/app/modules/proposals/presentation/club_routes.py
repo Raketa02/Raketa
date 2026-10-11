@@ -1,7 +1,7 @@
 """**The club's Raketa bookings**, on the club surface: **On request — the club
 confirms** (#543; the mechanics §16.8, §16.12, §16.14; the screens B2, B4), and
-**the club runs them** — a day of bookings, Move, Cancel, and the desk's Check in
-(#547; the mechanics §15.1, §16.7, §16.9, §16.10; the screens B4, B6).
+**the club runs them** — a day of bookings, Move and Cancel (#547; the mechanics
+§16.7, §16.9; the screens B4, B6). The desk's Check in is removed (#651).
 
 Mounted under ``/api/v1/club``, which only the club website consumes
 (``docs/adr/0187`` §5), and it takes a **club-audience** token: a desk answers
@@ -9,8 +9,8 @@ its own club's requests. **Signed by this context** because the answer is the
 fill's — everybody charged together on the club's yes, the people dealt a new
 card on its no — and the fill is ``proposals``'.
 
-**What the club sees of a player is their Name, whether they paid, and whether
-the desk checked them in** (§16.14) — and on a request nobody has paid yet.
+**What the club sees of a player is their Name, and whether they paid or their
+share is only held** (§16.14) — and on a request nobody has paid yet.
 Signed here for the bookings' acts too: a cancel refunds and owes a new card, and
 every act on a game locks its proposal first.
 """
@@ -30,7 +30,6 @@ from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, invariant
 from app.modules.clubs.presentation.dependencies import CurrentClubAccountDep
 from app.modules.proposals.application.club_bookings import (
-    CheckedIn,
     ClubBookingRow,
     ClubDay,
 )
@@ -54,7 +53,6 @@ from app.modules.proposals.domain.proposal import TimeTo
 from app.modules.proposals.presentation.dependencies import (
     AcceptTheRequestDep,
     CancelTheGameDep,
-    CheckInAtTheDeskDep,
     MoveTheGameDep,
     ReadClubBookingsDep,
     ReadClubMoneyDep,
@@ -64,8 +62,6 @@ from app.modules.proposals.presentation.dependencies import (
 )
 
 router = APIRouter(prefix="/bookings", tags=["club"])
-#: The desk's Check in page posts here (#547).
-check_ins_router = APIRouter(prefix="/check-ins", tags=["club"])
 #: The Money page reads here (#548).
 money_router = APIRouter(prefix="/money", tags=["club"])
 
@@ -336,9 +332,8 @@ async def refuse(
 
 
 class ClubBookingPlayerSchema(BaseModel):
-    """A player on the game, as the club sees them — **a name, whether they
-    paid or their share is only held, and whether the desk checked them in**,
-    and nothing else (§16.14)."""
+    """A player on the game, as the club sees them — **a name, and whether they
+    paid or their share is only held**, and nothing else (§16.14)."""
 
     player_id: UUID
     name: str | None = Field(
@@ -353,9 +348,6 @@ class ClubBookingPlayerSchema(BaseModel):
             "*held*. Not paid, and not in `collected_grosze` (#637). Never "
             "`true` with `paid`."
         )
-    )
-    checked_in_at: datetime | None = Field(
-        description="When the desk checked them in — *checked in ✓* — or `null`."
     )
 
 
@@ -492,7 +484,6 @@ class ClubBookingSchema(BaseModel):
                     name=day.names.get(player),
                     paid=player in row.takings.paid,
                     held=player in row.takings.held,
-                    checked_in_at=game.checked_in.get(player),
                 )
                 for player in game.players
             ],
@@ -585,52 +576,6 @@ class CancelRequest(BaseModel):
     )
 
 
-class CheckInRequest(BaseModel):
-    code: str = Field(
-        min_length=1,
-        max_length=200,
-        description=(
-            "What the camera read off the player's QR code, or the six-character "
-            "short code typed by hand — spaces, dashes and case do not matter."
-        ),
-    )
-
-
-class CheckedInPlayerSchema(BaseModel):
-    player_id: UUID
-    name: str | None
-
-
-class CheckInResponse(BaseModel):
-    """The booking and the player — *19:00 · Court 2 · Padel*, *Piotr S. —
-    checked in ✓*."""
-
-    booking_id: UUID
-    starts_at: datetime
-    ends_at: datetime
-    court_name: str
-    sport: Sport
-    kind: SearchMode
-    player: CheckedInPlayerSchema
-    checked_in_at: datetime
-
-    @classmethod
-    def of(cls, checked: CheckedIn) -> "CheckInResponse":
-        game = checked.game
-        return cls(
-            booking_id=game.booking_id,
-            starts_at=game.start,
-            ends_at=game.start + GAME_LENGTH,
-            court_name=game.court_name,
-            sport=game.sport,
-            kind=game.kind,
-            player=CheckedInPlayerSchema(
-                player_id=checked.player_id, name=checked.name
-            ),
-            checked_in_at=checked.at,
-        )
-
-
 _NOT_TO_BE_PLAYED = (
     "`booking_not_booked` — it is waiting for your answer: accept or refuse it. "
     "`booking_is_called_off` — it is off already. `game_has_started` — its hour "
@@ -646,8 +591,8 @@ _NOT_TO_BE_PLAYED = (
     description=(
         "Every Raketa booking at this club on one of its calendar days — the "
         "Bookings page — each with its status, its players (name, *paid*, "
-        "*checked in*), its money (the court's price, collected, refunded) and "
-        "the group it came from. `filter` narrows the list; `counts` are the "
+        "*held*), its money (the court's price, collected, refunded) and the "
+        "group it came from. `filter` narrows the list; `counts` are the "
         "whole day's. A request a player's leaving took back is not listed: "
         "it comes back when the game is full and asks again."
     ),
@@ -755,48 +700,6 @@ async def cancel(
         club_id=account.club_id, booking_id=booking_id, because=payload.reason
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@check_ins_router.post(
-    "",
-    response_model=CheckInResponse,
-    status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_404_NOT_FOUND: {
-            "model": ErrorResponse,
-            "description": (
-                "`check_in_code_unknown` — the code opens no seat: mistyped, or "
-                "a seat its player left."
-            ),
-        },
-        status.HTTP_409_CONFLICT: {
-            "model": ErrorResponse,
-            "description": (
-                "`check_in_is_off` — you have not switched on *We check players "
-                "in*. `check_in_code_for_another_day` — a seat here on another "
-                "day (`details.starts_at`). `check_in_code_for_another_club` — a "
-                "seat at another club. `already_checked_in` — scanned already "
-                "(`details.checked_in_at`: *Checked in at 18:52*). "
-                "`booking_is_called_off` — the game is off."
-            ),
-        },
-    },
-    summary="Check a player in",
-    description=(
-        "**Check in** a player on the game's day: the code the camera read off "
-        "their QR, or the short code typed by hand. They were there, and can "
-        "never be reported as not coming. **Money never depends on it** — you "
-        "are paid whether people come or not."
-    ),
-)
-async def check_in(
-    payload: CheckInRequest,
-    account: CurrentClubAccountDep,
-    check_in: CheckInAtTheDeskDep,
-) -> CheckInResponse:
-    return CheckInResponse.of(
-        await check_in.execute(club_id=account.club_id, code=payload.code)
-    )
 
 
 # --------------------------------------------------------------------------- #

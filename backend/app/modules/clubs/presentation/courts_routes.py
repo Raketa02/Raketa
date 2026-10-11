@@ -456,7 +456,6 @@ async def save_raketa_settings(
             time_to_confirm_minutes=payload.time_to_confirm_minutes,
             other_clubs_courts=payload.other_clubs_courts.offered,
             other_clubs_within_km=payload.other_clubs_courts.within_km,
-            check_in=payload.check_in,
             paused=payload.paused,
         )
     )

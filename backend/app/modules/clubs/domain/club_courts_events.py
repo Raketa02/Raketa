@@ -166,7 +166,11 @@ class WayOfWorkingChosen:
 class RaketaSettingsChanged:
     """The club saved its Raketa settings, **all of them as they now stand**.
     The first one is also the club **confirming** them — defaults included —
-    which is the setup checklist's last step."""
+    which is the setup checklist's last step.
+
+    ``check_in`` is **retired** with desk check-in (#651; ``docs/adr/0195``
+    §9): a row saved before carries *We check players in*, and still decodes;
+    nothing reads it, and a row saved since carries ``null``."""
 
     club_id: UUID
     release_lead_days: int
@@ -175,8 +179,8 @@ class RaketaSettingsChanged:
     time_to_confirm_minutes: int
     other_clubs_courts: bool
     other_clubs_within_km: int
-    check_in: bool
     occurred_at: datetime
+    check_in: bool | None = None
 
 
 @dataclass(frozen=True)

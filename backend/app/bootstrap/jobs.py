@@ -558,9 +558,7 @@ def build_club_payouts_job(
 
     async def run() -> None:
         async with session_factory() as session:
-            done = await build_decide_club_payouts(
-                session, clock=clock, settings=settings
-            ).execute()
+            done = await build_decide_club_payouts(session, clock=clock).execute()
         if done.decided or done.conflicts:
             logger.info(
                 "club payouts finished",

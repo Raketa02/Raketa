@@ -1,9 +1,9 @@
-"""**Home and a game's details** (#542; the mechanics §3, §14, §15.1; the screens
+"""**Home and a game's details** (#542; the mechanics §3, §14; the screens
 A4, A8): the reader's games from the moment they fill, each with its status and
-money line and how many need them; a booked game's details with its check-in code
-on the day; a game still filling, opened by anybody dealt it; the club's *Games*
-figure; and the booked game's room, which the details reach through the reader's
-own list of rooms.
+money line and how many need them; a booked game's details — and never a code
+to show at a desk (#651); a game still filling, opened by anybody dealt it; the
+club's *Games* figure; and the booked game's room, which the details reach
+through the reader's own list of rooms.
 
 Every read is taken over HTTP as the phone or the club's website takes it, and
 every game is made the way the platform makes one: proposed, answered over HTTP,
@@ -682,8 +682,6 @@ async def test_a_player_in_the_game_reads_its_details(
     assert not any(tile["paid"] for tile in yours + theirs)
     assert all(tile["level"] is not None for tile in yours + theirs)
     assert details["shows_forecast"] is True
-    # Monday: not the game's day.
-    assert details["check_in"] is None
 
 
 async def test_the_forecast_the_details_draw_is_the_game_s_own_pairing(
@@ -708,42 +706,23 @@ async def test_the_forecast_the_details_draw_is_the_game_s_own_pairing(
     }
 
 
-async def test_on_the_game_day_each_player_is_shown_their_own_check_in_code(
+async def test_on_the_game_day_the_details_carry_no_check_in(
     client, session_factory, clock, club, four, group
 ):
+    """Desk check-in is removed (#651): no code to show at the desk, and no tile
+    says who the desk saw — not even on the game's day."""
+
     booked = await a_booked_game(
         client, session_factory, clock, club=club, group=group, four=four
     )
     clock.move(timedelta(days=5))  # Saturday 08:00
 
-    codes = {}
-    for player in four:
-        details = (await details_of(client, player, booked["booking_id"])).json()
-        check_in = details["check_in"]
-        assert check_in is not None
-        assert len(check_in["short_code"]) == 6
-        assert check_in["qr_payload"].endswith(
-            f":{booked['booking_id']}:{player['id']}:{check_in['short_code']}"
-        )
-        codes[player["id"]] = check_in["short_code"]
-        again = (await details_of(client, player, booked["booking_id"])).json()
-        assert again["check_in"] == check_in
-
-    assert len(set(codes.values())) == 4
-
-
-async def test_the_check_in_code_is_gone_the_day_after(
-    client, session_factory, clock, club, four, group
-):
-    booked = await a_booked_game(
-        client, session_factory, clock, club=club, group=group, four=four
-    )
-    clock.move(timedelta(days=6))  # Sunday 08:00
-
     details = (await details_of(client, four[0], booked["booking_id"])).json()
 
-    assert details["status"] == "NEEDS_RESULT"
-    assert details["check_in"] is None
+    assert details["status"] == "BOOKED"
+    assert "check_in" not in details
+    tiles = (*details["sides"]["yours"], *details["sides"]["theirs"])
+    assert all("checked_in" not in tile for tile in tiles)
 
 
 async def test_the_forecast_is_not_drawn_once_a_score_is_told(

@@ -14,11 +14,10 @@ is put to the club as, the club's yes or no, and a seat opening while it waits.
 deck's, the proposer's and the fill's — with a player's booked games, replacing
 the stand-in that answered nothing while no game could be booked.
 ``BookingsPlayerBookings`` is Home's and the details': a player's booked games
-as their bookings record them, folded from each stream, and each seat's
-check-in code — and a pool's booked games with a seat open (#545).
+as their bookings record them, folded from each stream — and a pool's booked
+games with a seat open (#545).
 ``BookingsClubBookings`` is the club website's (#547): a day of its bookings, a
-court to move one to, the move, the cancel, whose a code handed to the desk is,
-and the check-in.
+court to move one to, the move and the cancel.
 ``BookingsGroupBornGames`` is the club's *Games* figure, which
 ``groups`` asks in its own words: **a group's pool is filed under the group's own
 id**, which is this context's fact, so the games booked in a group are the
@@ -33,10 +32,7 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport, invariant
 from app.modules.bookings.application.at_the_club import (
-    AtTheDesk,
     CancelTheBooking,
-    CheckInThePlayer,
-    FindTheSeat,
     MoveTheBooking,
 )
 from app.modules.bookings.application.book_the_game import (
@@ -75,13 +71,10 @@ from app.modules.bookings.domain.errors import CourtTaken
 from app.modules.bookings.domain.ports import (
     BookingDirectory,
     BookingRepository,
-    CheckInCodes,
 )
 from app.modules.proposals.domain.club_bookings import (
     ClubCancellation,
-    CodeAtTheDesk,
     CourtToMoveTo,
-    SeatForTheCode,
 )
 from app.modules.proposals.domain.errors import CourtJustTaken
 from app.modules.proposals.domain.home import (
@@ -89,7 +82,6 @@ from app.modules.proposals.domain.home import (
     BookingStage,
     CalledOffReason,
     RefusedHolding,
-    CheckIn,
     ClubCancelReason,
     KeptSeat,
     OpenSeat,
@@ -420,11 +412,9 @@ class BookingsPlayerBookings:
         *,
         directory: BookingDirectory,
         bookings: BookingRepository,
-        codes: CheckInCodes,
     ) -> None:
         self._directory = directory
         self._bookings = bookings
-        self._codes = codes
 
     async def of_player(
         self, player_id: UUID, *, since: Instant | None
@@ -456,10 +446,6 @@ class BookingsPlayerBookings:
             if game is not None:
                 found.append(game)
         return found
-
-    def check_in(self, booking_id: UUID, player_id: UUID) -> CheckIn:
-        code = self._codes.code_for(booking_id, player_id)
-        return CheckIn(short_code=code.short_code, qr_payload=code.qr_payload)
 
 
 _STAGES = {
@@ -523,7 +509,6 @@ def _booked_game(booking: Booking, *, for_the_club: bool = False) -> BookedGame:
             if booking.cancel_reason is None
             else _CANCEL_REASONS[booking.cancel_reason]
         ),
-        checked_in=dict(booking.checked_in),
         answer_by=booking.answer_by,
         version=booking.version,
         paying={
@@ -573,14 +558,6 @@ def _open_seat(left: Departure) -> OpenSeat:
     return OpenSeat(side=left.side, left_by=left.player_id, left_at=left.at)
 
 
-_AT_THE_DESK = {
-    AtTheDesk.HERE_TODAY: CodeAtTheDesk.HERE_TODAY,
-    AtTheDesk.ANOTHER_DAY: CodeAtTheDesk.ANOTHER_DAY,
-    AtTheDesk.ANOTHER_CLUB: CodeAtTheDesk.ANOTHER_CLUB,
-    AtTheDesk.UNKNOWN: CodeAtTheDesk.UNKNOWN,
-}
-
-
 @final
 class BookingsClubBookings:
     def __init__(
@@ -590,15 +567,11 @@ class BookingsClubBookings:
         directory: BookingDirectory,
         move: MoveTheBooking,
         cancel: CancelTheBooking,
-        find: FindTheSeat,
-        check_in: CheckInThePlayer,
     ) -> None:
         self._bookings = bookings
         self._directory = directory
         self._move = move
         self._cancel = cancel
-        self._find = find
-        self._check_in = check_in
 
     async def on_day(
         self, club_id: UUID, *, start: Instant, end: Instant
@@ -637,19 +610,6 @@ class BookingsClubBookings:
         return ClubCancellation(
             still_in=cancelled.still_in, refunded=cancelled.refunded
         )
-
-    async def seat_for(
-        self, code: str, *, club_id: UUID, now: Instant
-    ) -> SeatForTheCode:
-        seat = await self._find.execute(code, club_id=club_id, now=now)
-        return SeatForTheCode(
-            where=_AT_THE_DESK[seat.where],
-            booking_id=seat.booking_id,
-            player_id=seat.player_id,
-        )
-
-    async def check_in(self, booking_id: UUID, player_id: UUID, *, at: Instant) -> None:
-        await self._check_in.execute(booking_id, player_id, at=at)
 
 
 @final

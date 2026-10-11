@@ -19,9 +19,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `rating_demands.py`, `player_score_demands.py` and `sportsmanship_demands.py` each hold
   the ports one *provider* publishes outward; `game_demands.py` holds what `games` demands
   of other contexts — the court's pairing
-  ([ADR-0161](../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)), and who
-  the club's desk checked in — on its own list because `games_demands.py` is what that
-  context *publishes* and a demand is the other kind of claim; and
+  ([ADR-0161](../../../docs/adr/0161-the-game-screen-draws-its-courts-pairing.md)) — on its
+  own list because `games_demands.py` is what that context *publishes* and a demand is the
+  other kind of claim; and
   `conversation_demands.py` holds what a **room** demands of the contexts it is told by and
   reads from. There is deliberately no *conversations provider* register, and there never
   will be: a conversation is told and tells nothing. **Two registers went with their
@@ -60,10 +60,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   #546 the pair rule and a player's level window (`PlayerFit`) and each member's Level, week,
   gender and preference (`PlayersInPlay`) — and since #547 the club's bookings as its desk
   reads and runs them (`ClubBookings`), what each took and gave back (`BookingTakings`), the
-  group each pool is (`PoolOrigins`) and whether a club checks players in (`DeskCheckIns`)
-  — and since #639 the shares checked at the fill and held at their Holding time
-  (`CheckedShares`, registered over a fresh fake: what is due and a holding of nothing ask
-  the provider nothing), a refused holding kept or let go (`CardsToFix`), when a checked
+  group each pool is (`PoolOrigins`) — `DeskCheckIns`, whether a club checked players in,
+  went with desk check-in (#651) — and since #639 the shares checked at the fill and held
+  at their Holding time (`CheckedShares`, registered over a fresh fake: what is due and a
+  holding of nothing ask the provider nothing), a refused holding kept or let go
+  (`CardsToFix`), when a checked
   share is held (`HoldingTimes`), and a refused holding's time to fix the card on the booked
   game (`BookedGameChanges`' card methods) — and since #640 a seat kept for a refused rescuer,
   taken or run out once (`BookedGameChanges`' keep methods).
@@ -76,7 +77,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   club's cancel do to it (`GameChanges`, #544, #545, #547), and who did not come to it
   (`GameNoShows`, #547), which the record reads. **`game_demands.py` gained its third row
   with #547**: who the club's desk checked in (`ClubCheckIns`), the booking's fact a no-show
-  report asks first — signed by `bookings`; since #578 it is the second of two rows.
+  report asked first — signed by `bookings`; it went with desk check-in (#651), and the
+  register is the pairing's one row.
   **The twelfth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
   consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
   games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.

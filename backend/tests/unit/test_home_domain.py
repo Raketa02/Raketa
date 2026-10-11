@@ -1,13 +1,12 @@
 """Home's statuses and money lines — the rules that need no I/O (#542; the
-mechanics §14.1–§14.2, §15.1; the screens A4.1, A8).
+mechanics §14.1–§14.2; the screens A4.1, A8).
 
 **A booked game's status is folded on every read** from the booking, its
 ordinary Game's result and the clock — never stored. Booked until its hour; then
 the result states, unchanged from today's cards. **The money line** is the share
 every seat holds until the club's cut-off and takes at it — *free to leave
 until* then, *Paid* from it on (#637). **The forecast** shows while
-the game awaits its entry, and **the check-in code** on the game's day, while
-the game stands.
+the game awaits its entry.
 """
 
 from __future__ import annotations
@@ -40,7 +39,6 @@ from app.modules.proposals.domain.home import (
     ResultStage,
     ShareState,
     as_filling_again,
-    check_in_shown,
     leave_terms,
     money_of,
     needs_you,
@@ -377,7 +375,7 @@ def test_a_club_s_cancel_refunds_only_what_the_cut_off_had_taken(
 
 
 # --------------------------------------------------------------------------- #
-# The forecast and the check-in code
+# The forecast
 # --------------------------------------------------------------------------- #
 
 
@@ -395,26 +393,6 @@ def test_a_club_s_cancel_refunds_only_what_the_cut_off_had_taken(
 )
 def test_the_forecast_shows_while_a_full_game_awaits_its_entry(status, shown):
     assert shows_forecast(status) is shown
-
-
-def test_the_check_in_code_shows_on_the_game_day_only():
-    start = warsaw(10, 17)
-
-    assert check_in_shown(HomeStatus.BOOKED, start=start, now=warsaw(10, 6))
-    assert check_in_shown(HomeStatus.NEEDS_RESULT, start=start, now=warsaw(10, 18))
-    assert not check_in_shown(HomeStatus.BOOKED, start=start, now=warsaw(9, 23, 59))
-    assert not check_in_shown(
-        HomeStatus.NEEDS_RESULT, start=start, now=warsaw(11, 0, 1)
-    )
-
-
-@pytest.mark.parametrize(
-    "status", [HomeStatus.WAITING_FOR_THE_CLUB, HomeStatus.CALLED_OFF]
-)
-def test_a_game_that_does_not_stand_has_no_check_in_code(status):
-    start = warsaw(10, 17)
-
-    assert not check_in_shown(status, start=start, now=warsaw(10, 9))
 
 
 def test_a_booked_game_names_its_players_side_by_side():
@@ -471,8 +449,6 @@ def test_a_request_turned_down_or_withdrawn_is_called_off_with_nobody_paid(reaso
     assert status_of(game, None, now=warsaw(5, 8)) is HomeStatus.CALLED_OFF
     assert money_of(game, now=warsaw(5, 8)).paid is False
     assert game.court_given is False
-    shown = check_in_shown(HomeStatus.CALLED_OFF, start=game.start, now=game.start)
-    assert shown is False
 
 
 def test_a_waiting_game_says_when_its_club_must_answer_until_that_moment():
@@ -671,7 +647,6 @@ def test_leaving_a_game_waiting_for_a_payment_withdraws_the_yes():
 
     assert terms is not None
     assert (terms.kind, terms.refund_grosze) == (Leaving.WHILE_WAITING_FOR_THE_CLUB, 0)
-    assert not check_in_shown(state.status, start=game.start, now=game.start)
 
 
 def test_a_game_gone_back_to_filling_keeps_the_payer_s_time():
