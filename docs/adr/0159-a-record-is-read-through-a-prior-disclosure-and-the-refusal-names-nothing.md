@@ -2,6 +2,11 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-08
+- **The 2026-09-08 amendment *the two live strands* amended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)** §1 and
+  §8. `SubjectReliability` answers **points, a band, *New* and four counts** (turned up, late,
+  kept, results left in dispute), and for the subject also their reliability filter. The strand
+  rows, their raw pairs and their figures leave the wire, and *the weights stay off the wire*
+  has nothing left to keep off. The record's admission, gates and one refusal are unchanged.
 - **§4–§5 and the 2026-10-02 amendment narrowed 2026-10-06 by [ADR-0193](0193-a-block-keeps-two-people-off-one-court-and-the-blocker-can-see-it.md)** §2: a block is no
   longer a gate a record is admitted under, in either direction. The blocker opens the record to
   unblock, and the blocked person's read is the same byte for byte whether or not they were

@@ -1,6 +1,11 @@
 # ADR-0160 — A results strand counts answers, and never agreements
 
-- **Status:** Accepted
+- **Status:** Accepted — **superseded 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)** §1 and §5. *Answers about
+  results* leaves the reliability figure and the wire: **silence on a score costs nothing**, and
+  `ANSWERED_RESULTS_WINDOW` and the per-strand minimums retire with the strands. Decision 1's
+  argument survives in a stronger form, since nothing about answering a score is priced at all.
+  What a disagreement leaves behind is now counted apart, as *Results left in dispute*:
+  information on the record, never points.
 - **Date:** 2026-09-08
 - **Overturns nothing in [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)
   §5, and that is the whole of Decision 1.** *Confirms results* stays struck; what ships

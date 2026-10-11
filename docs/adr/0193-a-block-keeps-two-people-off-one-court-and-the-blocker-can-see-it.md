@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
+- **§1 extended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)**
+  §6: the pair rule gains one more clause, the **reliability filter**, asked exactly where a block
+  is asked. Unlike §4, it takes no yes back: yeses already given stand.
 - **Amends [ADR-0095](0095-block-directed-record-symmetric-effect-gates-fail-closed.md)** in five
   places:
   - **§3's** *"from any surface where that player is visible"* becomes **no surface is recorded**

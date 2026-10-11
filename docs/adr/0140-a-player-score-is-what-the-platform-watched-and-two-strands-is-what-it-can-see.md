@@ -2,6 +2,13 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-04
+- **§2, §3, §4 and §5 amended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)** §1–§2. The **ghost charged to the
+  whole court retires**: a full booked game nobody recorded reads *Played · no score* and earns
+  each player the points of a game played through. The strands, their ratio and the 35 / 15 / 12
+  weights become **points**: 100 to start, a fixed price per failure, +5 per game played through,
+  each failure dropping out after a rolling **6 months**, with four bands and *New*. §1 stands:
+  the figure keeps no record of its own and is folded on every read. The Classic play note's
+  *§2, §4 and §5 stand* is history from this date.
 - **Carries out [ADR-0137](0137-a-result-is-the-record-that-a-game-happened.md)'s Decision 5** —
   *confirms results* leaves the vocabulary, the ruleset and the wire here.
 - **Decides a clause ADR-0137 opened and did not close**: whether *shows up* survives the same

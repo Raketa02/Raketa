@@ -2,6 +2,12 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-17
+- **§2's *Player reliability* row amended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)** §1 and §6. The screen
+  draws the **figure, its band word** (*Very high · High · Medium · Low*) and *New*, then four
+  count lines over the last 6 months (*Shows up*, *Keeps plans*, *Being late*, *Results left in
+  dispute*), then the optional **reliability filter**'s switch with its *hides N of M* line. The
+  ring's tone-ladder words (*Reliable · Holding · Under the bar*) and the strand rows with their
+  meters retire. Opponent variety and the sportsmanship figure stay.
 - **§9 amended 2026-09-29 by [ADR-0189](0189-a-yes-books-a-court-and-the-club-is-the-seller.md)**: the tab gains an **Account** group — *Games & money*, *Payments*, *Notifications*.
 - **§1's header card gains one element from [ADR-0185](0185-one-account-holds-several-profiles-and-a-password-change-signs-out-everywhere.md)** (2026-09-25): the profile switcher chip, in each profile (club mock 7). This record's own rule applied: the mock won and the record is amended. Everything else stands.
 - **Amends** [ADR-0096](0096-gender-preference-mutual-gate-invisible-to-the-scorer.md) §6 by

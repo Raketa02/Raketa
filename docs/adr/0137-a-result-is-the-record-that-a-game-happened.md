@@ -2,6 +2,13 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-04
+- **§2's ends and §4's flow amended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)** §2 and §5. *Never played*
+  retires: a full booked game nobody recorded reads **Played · no score**. An acceptance **settles
+  at once** and closes the game, so the six-hour acceptance grace retires and no counter is taken
+  after it. Two standing scores that name the **same winner** count with the closer one, and
+  **different winners** end **disputed**, with no Level moved and each poster counted in *Results
+  left in dispute*. No score is taken before the hour, and corrections end with the entry window.
+  §5 stands, and is now true of the reliability figure too: silence on a score costs nothing.
 - **Revises ADR-0034** (deleted in the
   2026-08-25 reset, on `prototype/result-confirmation`): the shape is now **event-sourced**.
 - **Carries forward ADR-0048**

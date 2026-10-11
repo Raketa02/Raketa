@@ -6,8 +6,14 @@
   Q101–Q112; 2026-10-10: the share is held until the club's cut-off, and leaving before it is
   free, Q113)
 - **Date:** 2026-09-29
+- **§5's *check-ins* (Bookings) and *no-show report* (Games), and §7's *Check in*,
+  amended 2026-10-11 by [ADR-0195](0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)** §3–§4. Desk check-in is **removed** from the player app, the club
+  website and the backend. A no-show is caught **at the court** instead: a player at the club taps
+  *isn't here yet* in the first half of the game, and the arrival decides *on time*, *Came late*
+  or *Didn't come*. Money still never moves on any of it (§4 stands). The mechanics Q62 and Q66
+  are amended by Q115 and Q116.
 - **Specified by** [`docs/specs/games-and-fill-in/the-mechanics.md`](../specs/games-and-fill-in/the-mechanics.md)
-  (the rules, and the decision log Q1–Q113) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
+  (the rules, and the decision log Q1–Q120) and [`docs/specs/games-and-fill-in/the-screens.md`](../specs/games-and-fill-in/the-screens.md)
   (the locked player designs, the club website and the inferred backend). Where this
   record and those documents disagree on a detail, the documents win; this record holds the
   shape.
