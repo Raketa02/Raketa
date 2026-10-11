@@ -221,12 +221,17 @@ points.
   (`e2e/stub/courts.ts`), keeps #535's rules for courts, hours, exceptions, prices and settings
   and reads the setup checklist off them; it starts with nothing set, and `club.raketa.ready()`
   makes the club live. Its bookings, `club.bookings` (`e2e/stub/bookings.ts`), keep #543's,
-  #547's and #626's rules: each status folded from where the booking stands and the clock, as
-  the backend folds it (a request unanswered by its time reads _no answer_, a yes whose one
-  payment is not in by its time reads _payment not in time_), and a booking still to be played,
-  or whose yes waits on a payment, holds its court for Courts & prices. Its money,
-  `club.money` (`e2e/stub/money.ts`), answers a month's rows soonest first with their totals,
-  and its payouts newest first. A test seats its people in `club.administrators`, its groups in
+  #547's, #626's and #637's rules: each status folded from where the booking stands and the
+  clock, as the backend folds it (a request unanswered by its time reads _no answer_, a yes whose
+  one payment is not in by its time reads _payment not in time_), and a booking still to be
+  played, or whose yes waits on a payment, holds its court for Courts & prices. Each booking keeps
+  the cut-off it was booked with (a day before it unless the test says), which the read never
+  sends: before it a booked game's shares are held and nothing is collected, after it they are
+  taken; an Accept holds or takes by it, a cancel lets every hold go and refunds what was taken,
+  and `club.bookings.passTheCutOff(game)` takes the held shares where a test needs the clock to pass
+  it. Its money, `club.money` (`e2e/stub/money.ts`), answers a month's rows soonest first with
+  their totals, deriving what is the club's on every read, _not yet known_ while a fee or a
+  refund a row needs is `null` (#641), and its payouts newest first. A test seats its people in `club.administrators`, its groups in
   `club.groups` (`officialGroup(…)`, with `requests: [joinRequest(…)]` or just a
   `waiting_count`), its courts in `club.raketa.courts` (`court(…)`), its games
   with `club.bookings.add(booking(…))` and its money with `club.money.add(moneyRow(…))` and
@@ -269,7 +274,9 @@ wire's integer grosze and never through `Intl.NumberFormat` or `toFixed`
 (`docs/value-formatting.md`, which left the rendering to the first client to draw a price). A
 sum of five figures or more is set in threes with a no-break space, `12 840 zł`, as Polish sets
 it, and a sum below nought takes U+2212, `−6 zł`: the Money page's totals and payouts are the
-first to need either.
+first to need either. A sum Stripe has not given yet (a card fee, a refund less the fee kept, and
+the net that needs both) is the words _Not yet known_, from bookings' `knownZloty`, and never an
+estimate (#641).
 
 **A page works at every width, down to a phone with no sideways scrolling.** On a phone the top
 bar becomes three rows: the wordmark and _Sign out_, the club, then the pages. Every table is

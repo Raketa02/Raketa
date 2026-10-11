@@ -83,8 +83,10 @@ keeps the courts, prices and settings and reads the setup checklist off them (no
 a test says; `club.raketa.ready()` makes the club live), and whose bookings, `club.bookings`,
 fold their status off the clock as the backend does (a test seats them with
 `club.bookings.add(booking(…))`, and reads a seat's check-in code with
-`club.bookings.checkInCode(game, seat)`), and whose money, `club.money`, answers a month's rows
-and the payouts a test seats (`moneyRow(…)`, `payout(…)`). Stripe's hosted pages are the stub's
+`club.bookings.checkInCode(game, seat)`) and hold each share until the game's `cut_off`, taken
+after it (`club.bookings.passTheCutOff(game)` takes them), and whose money, `club.money`, answers a
+month's rows and the payouts a test seats (`moneyRow(…)`, `payout(…)`; a fee Stripe hasn't
+given is `null`, _not yet known_). Stripe's hosted pages are the stub's
 too, so a redirect to one lands, and `stub.stripePages` says which opened. A test about one reply overrides
 that operation with `stub.on`, naming it by the contract's path, `{administrator_id}` and all.
 A spec that opens _Check in_ gives the page **the fake camera** first (`fakeCamera(page)`,
