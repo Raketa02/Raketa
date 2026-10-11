@@ -152,6 +152,23 @@ section used to say the second for every row. **Why**: the old sentence was fals
 which nobody else can take until the time ends, and one list can hold both. The rows, the yes again
 and what a booked confirmation shows are `proposals.md`'s.
 
+**The confirmation reads by the window the server names**
+([#643](https://github.com/Raketa02/Raketa/issues/643), [#645](https://github.com/Raketa02/Raketa/issues/645);
+the backend's #638 and #640; the mechanics Q113, §12.2). Before the club's cut-off nothing is being
+taken, so a refused card is fixed, never paid: the sheet is _Fix your card_, its note _Fix your card
+by 14:40 to keep your seat_, a line _Nothing is paid now — fixing your card only places the hold
+again._, the bank's check _Your bank wants you to confirm the hold on your card yourself._ and
+a decline _Your bank declined the hold on the card on file. Fix it with another card._ over **Use this
+card**. After it, the words above. **Whoever opens the sheet hands the window in with the time**
+(`ConfirmAsk.timeTo`, from `time_to`), since the seat charge's read carries neither, and the sheet
+reads both as of its opening (`paymentWindowAt`). With no window named — a time run out, an older
+server — the words say _confirm_, never _pay_: a decline reads _Your bank declined the card on file.
+Use another card for this share._ over **Use this card**, since a seat taken back before the cut-off
+is held, not paid. **On a rescue** the seat is kept for the player to take (#640), so the note
+reads _Fix your card by 14:40 to take the seat — it's kept for you until then_; the fill knows a rescue
+by the card the yes was said on, and a _TO CONFIRM_ row holds none. The words are `proposals.md`'s
+record; `FILL_COPY.confirm` keys each by the window.
+
 **Decided, and built since #642 and #644 (below): new terms, and receipts that explain every
 movement** (the mechanics
 Q113 and §12.5, the screens A7.3; [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is

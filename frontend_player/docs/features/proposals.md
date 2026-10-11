@@ -363,7 +363,8 @@ other's rows; the starting card only once both have said there is nothing.
 row's upper block push `/play/group/[groupId]/rescue/[bookingId]` — under Play, so _back_ is the
 group — which mounts `BookedGameScreen` with `offer`: the read carries `rescue`, and the screen draws
 the players _paid_, the reader's dashed seat, WHERE with the court, the share with how long the seat
-is offered, and a volt **I'm in · 27 zł** (`TakeTheSeat`, the row's door too) — no Chat, no Leave, no
+is offered, and a volt **I'm in · 27 zł** (`TakeTheSeat`, the row's door too; spoken by what the share
+does since [#645](https://github.com/Raketa02/Raketa/issues/645), below) — no Chat, no Leave, no
 _new_ marked. A seat gone before the read says _This seat isn't offered to you any more._
 
 **_Leave the game_ is at the foot of a booked game's details** (A4.1, details 10; §13), with the line
@@ -893,7 +894,7 @@ confirmed again (#533, the backend's handover), and the laptop provider that nev
 (`payments.md`). **Nothing here has been seen on a device**: the amber line on a _TO CONFIRM_ row, the
 sheet's note, the line under the word and the details' _Confirm your payment_ all want a look.
 
-**Decided, and built since #642 and #644 (below) but for #643 and #645: the share is held until
+**Decided, and built since #642, #643, #644 and #645 (below): the share is held until
 the club's cut-off, and leaving before it is free** (the mechanics Q113, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; story S-01A's F-LEAVE-6.1; root
 [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a refund always cost somebody Stripe's fee, the 1,60 zł this feature prints was
 an estimate of a fee that depends on the card, and keeping it is exposed under Polish payment law.
@@ -950,7 +951,7 @@ _says the same_ as the sheet), and the sheet's refund clause after it without a 
 gives none while the fee isn't known (gone since #644, below); _Nothing was taken_ after the club's cancel before the cut-off, as §14.1's
 table puts it, where Home said _Nobody paid_; the folds at `heldFrom` and `takenAt` on the phone's
 read clock, which the backend's own reads do at the same instants. **Owed**: the rescue's join
-(#645), time to fix (#643). **Nothing here has been seen on a device.**
+(#645), time to fix (#643) — both built since (below). **Nothing here has been seen on a device.**
 
 **The late leave's exact refund** ([#644](https://github.com/Raketa02/Raketa/issues/644); the
 backend's #641; the mechanics Q113, §13, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; the screens A4.1, details 10). Ivan leaves Thursday's game on
@@ -977,3 +978,75 @@ anywhere (Q113).
 figure and no clause_ — #642's _Refunded only if someone takes your seat_ is gone with the clause it
 stood for. **Owed to the lawyer** (O3): the clause's wording, the terms'. **Nothing here has been seen
 on a device**: the line under the button is now a sentence long and wants a look.
+
+**Time to fix the card, and a rescue's share, on the phone**
+([#643](https://github.com/Raketa02/Raketa/issues/643), [#645](https://github.com/Raketa02/Raketa/issues/645);
+the backend's #638, #639 and #640; the mechanics Q113, §10.1, §12.2, §14.1; the screens A2.4, A3.1,
+A4.1, A4.3, A5.3, A7.3, A8; story S-01A's F-LEAVE-6.1). Paula's card is refused at 14:10 when Ivan's
+yes fills Thursday's game, a week before the cut-off. Nothing is being taken, so she is told _Your
+card didn't go through — fix it to keep your seat. Nothing is paid now._, and her card, her _TO
+CONFIRM_ row and her sheet read _Fix your card by 14:40_. On Monday Diego goes for the seat Kuba freed on
+Thursday's 19:00: his _I'm in · 27 zł_ is said _held until the cut-off_, and once in he reads _27 zł ·
+free to leave until Wed 19:00_, like everyone in the game. **Why**: the product
+owner ruled that before the cut-off nothing is taken, only held, so a refused card is fixed, never
+paid (Q113); after it, money is taken at once, and the words stay #630's.
+
+- **The window is the server's** (`time_to`, the vocabulary's `TimeTo`, held equal to the wire's):
+  on Home and the booked details beside `your_payment_due_by` (`HomeGame.timeTo`), on a refused
+  share's `your_payment` (`YourPayment.timeTo`, so `Confirmation` carries it to the sheet), and on a
+  _TO CONFIRM_ row. **One fold reads it at an instant** (`paymentWindowAt`, `domain/home.ts`): the
+  read's window while the time is ahead, else `UNNAMED` — the time ran out (the read then names
+  none), none was given, or an older server. Every surface asks it, so a row, its spoken name, its
+  sheet and the details' button agree at the deadline. **Unnamed, the words say _confirm_, never
+  _pay_**: a seat taken back before the cut-off is held, not paid (§12.2: _you are not asked to
+  pay_), so a decline reads _Use another card for this share_ over **Use this card** where the time
+  to pay's says _Pay this share with another card_. **Only the refused player's own words change by
+  it**: the others read _Waiting for one payment ·
+  until 14:40 · Nobody pays until it's in_ in both windows, and _It's a game!_'s line is always about
+  another player's card, so it keeps its words (the mechanics §12.2, written in while recording Q113).
+- **The words**, a `Record` over the window (`PROPOSALS_COPY.game.yourTimeBy`, `FILL_COPY`'s
+  `refused`, `confirm` and `toConfirm`): Home's card and the details' row _Fix your card by 14:40_
+  (`yourPaymentWords`, off a `YourTime` — the deadline and its window); the toast at the fill
+  (`refusedToast`, the screens A2.4's words); the sheet _Fix your card_, its note _Fix your card by
+  14:40 to keep your seat_ and a line _Nothing is paid now — fixing your card only places the hold
+  again._, the mechanics' own _the hold is only placed again_, true of a card check run again too
+  (`payments.md`); a _TO CONFIRM_ row _Fix your card by 14:40_ over _Nothing is paid now_ (A7.3), its
+  button **Fix**, spoken _Fix your card for Padel · Saturday 15:00 at Bonarka Arena, 28 zł_.
+- **A card refused at the holding time leaves the game booked** (#639; A8, A4.1). `moneyLineOf` now
+  gives the payer their own line whatever the status — the read names the time to its payer alone —
+  so the card stays _Booked_ and reads _Fix your card by 14:40_; the others' cards don't change. The
+  details' row says what is at stake there, _Fix your card by 14:40 to keep your seat_
+  (`stakeOnTheDetails`: a game booked already, where the tag says nothing of it — the seat at stake
+  is a `SeatAtStake`, _yours_ or _aRescue_, the notice's two endings; `seatKeptBy` words it), and
+  **Fix your card** under the game card opens the confirmation, as _Confirm your payment_ did on a
+  game waiting for one payment.
+- **A rescue's _I'm in · 27 zł_ says what the share does** (`seatButtonSpoken`): _I'm in, 27 zł held
+  until the cut-off_ while it is ahead, _I'm in, 27 zł paid now_ after it — on a _Seats to fill_ row,
+  a rescue's details and the slot sheet (each offer's `fillsByTheCutOff`, the row leaving at its
+  deadline), and the deck's _I'm in_ under a _Seat open_ card (`answerLabels`, off the card's
+  `noFreeCancellation`). The drawn words stay _I'm in · 27 zł_ (A3.1: _its spoken name says which_).
+  Once in, Home and the details read the game as any player's (#642's held, checked or taken).
+- **A refused rescuer keeps the seat for 30 minutes** (#640). The toast says _Your card didn't go
+  through — fix it to take the seat. Nothing is paid now._ (after the cut-off _Your payment didn't go
+  through — confirm it to take the seat_), and the sheet's note _Fix your card by 14:40 to take the
+  seat — it's kept for you until then_ — the notice's and the email's _to take the seat_, since the seat
+  is not yet theirs (`seatAtStake`, off the card the yes was said on). The rescue's details seen from
+  outside read the kept seat's time under the share,
+  _Fix your card by 14:40 to take the seat_, and while their _TO CONFIRM_ row holds the payment
+  **Fix your card** stands where _I'm in_ stood, opening the same sheet: the join again is that
+  confirmation, and _I'm in_ there would only be refused `payment_to_confirm`. A refusal for terms
+  or a missing method has no row, so _I'm in_ stays, the server's _joined again here_.
+
+**Calls made without a ruling**: the sheet's title _Fix your card_, its check line _Your bank wants
+you to confirm the hold on your card yourself._, its decline line _Your bank declined the hold on the
+card on file. Fix it with another card._ and button _Use this card_, where the spec words only the
+note; the row's button **Fix**; the rescue toast's words, the fill's with _to take the seat_; the
+rescue sheet's _— it's kept for you until then_, for the ticket's _that the seat is his until then_;
+the booked details' **Fix your card**, which A4.1 calls _the confirmation one tap away_; the deck's
+_I'm in_ spoken by the share on a _Seat open_ card, the one door the ticket's _Seat open card_ can
+mean; the words with no window named, which say _confirm_ where the time to pay's say _pay_.
+**Known gaps, both the read's to close**: a _TO CONFIRM_ row names no rescue, so its sheet says _to
+keep your seat_ to a rescuer too; and once a time ran out the read names no window, so a seat taken
+back can't be told _fix_ before the cut-off or _pay_ after it — the phone says _confirm_ to both. **Owed by the root**: the root `CONTEXT.md`'s **Time
+to fix the card** and **Rescue** still say _not yet built_. **Nothing here has been seen on a
+device**: the row's fourth line and its **Fix**, and the sheet's extra line, want a look.

@@ -617,10 +617,13 @@ One client-only concept, in `features/proposals/` (#555; the Games & Fill in mec
 - **A payment to confirm** — this player's share refused (the bank wants them present, or a
   decline): nobody paid, their seat is kept for them alone for the window the server names, and
   confirming it on the phone — on the club's account, the same payment — books it. The window is
-  the root glossary's **Time to pay**, or since Q113 its **Time to fix the card** (owed by
-  [#643](https://github.com/Raketa02/Raketa/issues/643) and
-  [#645](https://github.com/Raketa02/Raketa/issues/645)). _Avoid_: "retry the payment" (the server
-  never retries it; the player confirms it).
+  the root glossary's **Time to pay**, or since Q113 its **Time to fix the card**, named by the
+  read (`timeTo`: `FIX_THE_CARD` or `PAY`) and drawn by it — _Fix your card by 14:40_ where it would
+  say _Confirm your payment by 14:40_
+  ([#643](https://github.com/Raketa02/Raketa/issues/643),
+  [#645](https://github.com/Raketa02/Raketa/issues/645)). On a rescue the seat is kept for them
+  to take: _… to take the seat_. _Avoid_: "retry the payment" (the server never retries it; the
+  player confirms it); "pay" for the time to fix the card (nothing is paid in it).
 
 ### Home
 
