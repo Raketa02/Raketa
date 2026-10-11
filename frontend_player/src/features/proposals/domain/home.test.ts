@@ -13,6 +13,7 @@ import {
   onHome,
   openedFrom,
   openedToKeep,
+  paymentOf,
   resultActOf,
   shareAt,
   type BookedMoney,
@@ -542,6 +543,13 @@ describe('leavingAt — what leaving lets go of, now', () => {
     const late = { money: HELD, leaving: { kind: 'AFTER_THE_CUT_OFF' as const } };
     expect(leavingAt(late, BEFORE_CUT_OFF)).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
     expect(leavingAt({ money: HELD }, BEFORE_CUT_OFF)).toBeUndefined();
+  });
+});
+
+/** Ivan's 40 zł, 1,76 zł kept on it: what comes back and what was kept make the payment (Q113). */
+describe('paymentOf — the payment a late refund is less of', () => {
+  it('is what comes back and what was kept, together', () => {
+    expect(paymentOf({ backGrosze: 3824, keptGrosze: 176 })).toBe(4000);
   });
 });
 

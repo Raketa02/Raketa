@@ -19,9 +19,11 @@ import type { Sport } from '@/shared/vocabulary/sport';
 import {
   courtIsGiven,
   moneyLineOf,
+  paymentOf,
   shareAt,
   type BookedGame,
   type HomeGame,
+  type LateRefund,
   type Leaving,
   type MoneyLine,
   type ShareAt,
@@ -482,9 +484,23 @@ export function homeCardLabel({
 // ---------------------------------------------------------------------------
 
 /**
+ * ***you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)*** after the clause's
+ * opening — the read's two figures as they come, and the payment they make together.
+ */
+function backIfTaken(opening: string, refund: LateRefund): string {
+  const words = COPY.leave;
+  const back = formatZloty(refund.backGrosze);
+  const paid = formatZloty(paymentOf(refund));
+  const kept = formatZloty(refund.keptGrosze);
+  return `${opening} ${back} ${words.back} (${paid} ${words.lessThe} ${kept} ${words.keptOnYourPayment})`;
+}
+
+/**
  * **The line under *Leave the game*** — what leaving costs at this moment, from the read (Q113):
- * *Free to leave now — nothing is taken* before the cut-off, *Refunded only if someone takes your
- * seat* after it, *Nobody has paid yet* while the club decides.
+ * *Free to leave now — nothing is taken* before the cut-off; after it *If someone takes your seat,
+ * you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)*, or only *Your seat is
+ * offered to others* while the read quotes no figure (#644); *Nobody has paid yet* while the club
+ * decides.
  */
 export function leavingLine(leaving: Leaving): string {
   const words = COPY.leave;
@@ -492,7 +508,9 @@ export function leavingLine(leaving: Leaving): string {
     case 'BEFORE_THE_CUT_OFF':
       return words.freeNow;
     case 'AFTER_THE_CUT_OFF':
-      return words.refundedIfTaken;
+      return leaving.lateRefund === undefined
+        ? words.offered
+        : backIfTaken(words.ifSomeoneTakesYourSeat, leaving.lateRefund);
     case 'WHILE_WAITING_FOR_THE_CLUB':
       return words.nobodyPaidYet;
   }
@@ -501,8 +519,8 @@ export function leavingLine(leaving: Leaving): string {
 /**
  * **The sheet's words** — the mechanics §13's table, a line a clause: before the cut-off nothing is
  * taken, and the hold on the card is let go when there is one (`leavingAt`); after it the seat is
- * offered and comes back less what was kept on the payment if it is taken, with no figure until the
- * phone says the read's exact one (#644).
+ * offered and comes back less exactly what was kept on the payment if it is taken — a clause given
+ * only with the read's figure, never without one (#644).
  */
 export function leavingSheetBody(leaving: Leaving): readonly string[] {
   const words = COPY.leave;
@@ -510,11 +528,17 @@ export function leavingSheetBody(leaving: Leaving): readonly string[] {
     case 'BEFORE_THE_CUT_OFF':
       return [
         leaving.letsAHoldGo === true ? words.holdLetGo : words.nothingTaken,
-        words.offered,
+        `${words.offered}.`,
         words.onRecordIfCalledOff,
       ];
     case 'AFTER_THE_CUT_OFF':
-      return [words.offered, words.backIfTaken, words.onRecordIfNobody];
+      return [
+        `${words.offered}.`,
+        ...(leaving.lateRefund === undefined
+          ? []
+          : [`${backIfTaken(words.ifSomeoneTakesIt, leaving.lateRefund)}; ${words.ifNobodyDoes}`]),
+        words.onRecordIfNobody,
+      ];
     case 'WHILE_WAITING_FOR_THE_CLUB':
       return [`${words.nobodyPaidYet}.`, words.withdrawsYourYes];
   }
@@ -527,7 +551,7 @@ export function leftToast(left: LeavingKind): string {
     case 'BEFORE_THE_CUT_OFF':
       return `${words.left} ${words.nothingWasTaken}`;
     case 'AFTER_THE_CUT_OFF':
-      return `${words.left} ${words.offered}`;
+      return `${words.left} ${words.offered}.`;
     case 'WHILE_WAITING_FOR_THE_CLUB':
       return `${words.left} ${words.yesWithdrawn}`;
   }

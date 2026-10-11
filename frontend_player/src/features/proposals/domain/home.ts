@@ -149,8 +149,7 @@ export interface CheckIn {
  * is over, and for a reader not on the game.
  *
  * Before the cut-off nothing is taken (Q113). After it the read quotes what comes back if somebody
- * takes the seat, to the grosz, or nothing while the fee kept is not known (#641) — words this
- * phone does not say yet (#644), so the quote is not carried.
+ * takes the seat, to the grosz, or nothing while the fee kept is not known (#641).
  */
 export interface Leaving {
   readonly kind: LeavingKind;
@@ -160,6 +159,27 @@ export interface Leaving {
    * clock (`leavingAt`); the read's own `leaving` carries none.
    */
   readonly letsAHoldGo?: boolean;
+  /**
+   * **After the cut-off, the read's exact quote** (#641, #644) — absent while the fee kept on the
+   * payment is not yet known, where the words give no figure and no clause, never an estimate.
+   */
+  readonly lateRefund?: LateRefund;
+}
+
+/**
+ * *If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)*
+ * — **what a leaver after the cut-off gets back if somebody takes the seat** (Q113): the share less
+ * exactly what was kept on the reader's own payment, both the server's to the grosz. The two
+ * together are the payment.
+ */
+export interface LateRefund {
+  readonly backGrosze: number;
+  readonly keptGrosze: number;
+}
+
+/** **The payment a late refund is less of** — *40 zł*: what comes back and what was kept, together. */
+export function paymentOf(refund: LateRefund): number {
+  return refund.backGrosze + refund.keptGrosze;
 }
 
 /**

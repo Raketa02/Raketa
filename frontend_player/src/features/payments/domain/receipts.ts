@@ -1,7 +1,8 @@
 /**
- * **You › Payments' *RECEIPTS*** — every share the reader paid, and every refund, newest first,
- * **the club named as the seller** ([#555](https://github.com/Raketa02/Raketa/issues/555); the
- * screens A7.3; mock 49; the mechanics §12.1).
+ * **You › Payments' *RECEIPTS*** — every share the reader paid, every refund, and every hold let go,
+ * newest first, **the club named as the seller** ([#555](https://github.com/Raketa02/Raketa/issues/555),
+ * [#644](https://github.com/Raketa02/Raketa/issues/644); the screens A7.3; mock 49; the mechanics
+ * §12.1, Q113).
  *
  * Pure: the read's rows as the section draws them, and the one decision the row makes over them —
  * how the game's day is named.
@@ -14,11 +15,12 @@ import type { Weekday } from '@/shared/vocabulary/week';
 import type { Seller } from './seatCharge';
 
 /**
- * A charge (✓) or a refund (↩). The wire serves a third, a hold let go (`RELEASED`, #641) — *40 zł
- * held · released* — which this phone does not draw yet (#644): the mapper leaves those rows out,
- * and `mappers/wireVocabulary.ts` holds the rest of the wire's kinds equal to this union.
+ * A share taken (✓, *−40 zł · paid*), a refund (↩, *+38,24 zł · refunded*), or **a hold let go**
+ * untaken (*40 zł held · released*, #641) — a leave before the cut-off, a game short at it, the
+ * club's cancel before it — so the hold the bank app showed is explained. A card checked when a game
+ * filled far ahead is never a receipt. `mappers/wireVocabulary.ts` holds this equal to the wire's.
  */
-export type ReceiptKind = 'CHARGE' | 'REFUND';
+export type ReceiptKind = 'CHARGE' | 'REFUND' | 'RELEASED';
 
 export interface Receipt {
   readonly seatChargeId: string;
@@ -27,8 +29,15 @@ export interface Receipt {
   readonly sport: Sport;
   /** The game's hour. */
   readonly startsAt: string;
-  /** What was paid, or refunded — always positive; the kind says which way it went. */
+  /** What was paid, refunded or held — always positive; the kind says which way it went. */
   readonly amountGrosze: number;
+  /**
+   * On a refund, **exactly what was kept on the payment** (#641) — nought on a refund in full, the
+   * provider's own figure and never an estimate. Absent on every other kind.
+   */
+  readonly keptGrosze?: number;
+  /** When the money moved: taken, given back, or — on a hold let go — when it was let go. */
+  readonly movedAt: string;
 }
 
 /** How a receipt names its game's day — *Today*, *Yesterday*, *Saturday*, *26 Sep*. */

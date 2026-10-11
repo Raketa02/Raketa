@@ -207,8 +207,15 @@ export const PAYMENTS_COPY = {
     tomorrow: 'Tomorrow',
     yesterday: 'Yesterday',
     unknownClub: 'A club',
+    /** *−40 zł · paid*, *+38,24 zł · refunded*, *40 zł held · released* (the screens A7.3, #644). */
     paid: 'paid',
     refunded: 'refunded',
+    held: 'held',
+    released: 'released',
+    /** Under a refund: *1,76 zł kept on your payment* — the exact fee, never an estimate. */
+    keptOnYourPayment: 'kept on your payment',
+    /** Under a hold let go: *Released 28 Sep*, the day it was, as a bank app dates the hold. */
+    releasedOn: 'Released',
   },
 } as const;
 

@@ -419,13 +419,33 @@ describe('toBookedGame', () => {
     );
     const after = toBookedGame(
       details({
-        leaving: { kind: 'AFTER_THE_CUT_OFF', refund_grosze: 2758, card_fee_grosze: 142 },
+        leaving: { kind: 'AFTER_THE_CUT_OFF', refund_grosze: 3824, card_fee_grosze: 176 },
       }),
     );
 
     expect(before?.leaving).toEqual({ kind: 'BEFORE_THE_CUT_OFF' });
-    expect(after?.leaving).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
+    expect(after?.leaving).toEqual({
+      kind: 'AFTER_THE_CUT_OFF',
+      lateRefund: { backGrosze: 3824, keptGrosze: 176 },
+    });
     expect(toBookedGame(details())).not.toHaveProperty('leaving');
+  });
+
+  /** No figure while the fee kept isn't known (#641) — and the club's wait quotes nought, which is no refund. */
+  it('carries no quote after the cut-off while the fee kept is unknown, nor while the club decides', () => {
+    const unknown = toBookedGame(
+      details({
+        leaving: { kind: 'AFTER_THE_CUT_OFF', refund_grosze: null, card_fee_grosze: null },
+      }),
+    );
+    const waiting = toBookedGame(
+      details({
+        leaving: { kind: 'WHILE_WAITING_FOR_THE_CLUB', refund_grosze: 0, card_fee_grosze: 0 },
+      }),
+    );
+
+    expect(unknown?.leaving).toEqual({ kind: 'AFTER_THE_CUT_OFF' });
+    expect(waiting?.leaving).toEqual({ kind: 'WHILE_WAITING_FOR_THE_CLUB' });
   });
 
   it('reads the open seat offered from outside, and nothing for a player in the game', () => {

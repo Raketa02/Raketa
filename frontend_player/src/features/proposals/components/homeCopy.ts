@@ -156,23 +156,30 @@ export const HOME_GAME_COPY = {
   /**
    * ***Leave the game*** (the mechanics §13; #557) — the line under the button for the moment, the
    * sheet's words (today's *Before you leave* sheet, `LeaveSheet`), the toast once it is done, and
-   * the route's three refusals. Before the cut-off nothing is taken (Q113); after it, today's words
-   * with no figure until the phone says the exact one the read quotes (#644), and never an estimate.
+   * the route's three refusals. Before the cut-off nothing is taken (Q113); after it, the exact
+   * refund the read quotes, or no figure and no clause while it quotes none — never an estimate (#644).
    */
   leave: {
     /** The line under the button before the cut-off. */
     freeNow: 'Free to leave now — nothing is taken',
-    /** …and after it. */
-    refundedIfTaken: 'Refunded only if someone takes your seat',
-    /** The sheet after the cut-off, between the seat offered and the record. */
-    backIfTaken:
-      'If someone takes it, you get your share back less what was kept on your payment; if nobody does, you won’t.',
+    /**
+     * …and after it, with the read's figure: *If someone takes your seat, you get 38,24 zł back (40
+     * zł less the 1,76 zł kept on your payment)*. The sheet's clause opens *If someone takes it*,
+     * after the seat offered, and closes *; if nobody does, you won't.*
+     */
+    ifSomeoneTakesYourSeat: 'If someone takes your seat, you get',
+    ifSomeoneTakesIt: 'If someone takes it, you get',
+    back: 'back',
+    lessThe: 'less the',
+    keptOnYourPayment: 'kept on your payment',
+    ifNobodyDoes: 'if nobody does, you won’t.',
     nobodyPaidYet: 'Nobody has paid yet',
     /** The sheet's first line before the cut-off, while the share is held on the card. */
     holdLetGo: 'Nothing is taken: the hold on your card is let go.',
     /** …while it is only checked, which holds nothing until its holding time. */
     nothingTaken: 'Nothing is taken.',
-    offered: 'Your seat is offered to others.',
+    /** The sheet's, and the line's after the cut-off while the read quotes no figure — no clause. */
+    offered: 'Your seat is offered to others',
     onRecordIfCalledOff: 'On your record only if the game is then called off.',
     onRecordIfNobody: 'On your record if nobody takes it.',
     withdrawsYourYes: 'Leaving withdraws your yes.',

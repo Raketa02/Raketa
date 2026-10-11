@@ -124,10 +124,13 @@ function toBooking(
 
 /**
  * What leaving costs. After the cut-off the read quotes the refund if the seat is taken and the fee
- * kept, to the grosz (#641) — dropped here until the phone says them (#644).
+ * kept, to the grosz (#641), or neither while the fee is not yet known. The noughts the read sends
+ * while the club decides are no quote: nobody has paid.
  */
 function toLeaving(wire: Schemas['LeavingSchema']): Leaving {
-  return { kind: wire.kind };
+  const { kind, refund_grosze: back, card_fee_grosze: kept } = wire;
+  if (kind !== 'AFTER_THE_CUT_OFF' || back === null || kept === null) return { kind };
+  return { kind, lateRefund: { backGrosze: back, keptGrosze: kept } };
 }
 
 function toRescue(wire: Schemas['RescueOfferSchema']): RescueOffer {

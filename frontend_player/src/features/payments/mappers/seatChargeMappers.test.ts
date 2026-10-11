@@ -86,15 +86,22 @@ describe('the receipts', () => {
         sport: 'padel',
         startsAt: '2026-09-30T14:00:00Z',
         amountGrosze: 2800,
+        movedAt: '2026-09-29T18:00:00Z',
       },
       expect.objectContaining({ seatChargeId: 'r-1', club: { id: CLUB.id, name: 'Ogrody 33' } }),
     ]);
   });
 
-  /** A hold let go (#641) would read as a refund in today's row; #644 draws it in its own words. */
-  it('leaves out a hold let go until the row can say it', () => {
-    const row = (id: string, kind: Wire['ReceiptSchema']['kind']): Wire['ReceiptSchema'] => ({
-      seat_charge_id: id,
+  /**
+   * Every movement of the money (#641, #644): a share taken, a refund with exactly what was kept on
+   * the payment, and a hold let go — dated when it was let go.
+   */
+  it('reads a refund with what was kept on the payment, and a hold let go with when it was', () => {
+    const row = (
+      kind: Wire['ReceiptSchema']['kind'],
+      extra: Partial<Wire['ReceiptSchema']> = {},
+    ): Wire['ReceiptSchema'] => ({
+      seat_charge_id: `r-${kind}`,
       kind,
       club: CLUB,
       sport: 'PADEL',
@@ -102,12 +109,25 @@ describe('the receipts', () => {
       amount_grosze: 4000,
       card_fee_grosze: null,
       paid_at: '2026-09-29T18:00:00Z',
+      ...extra,
     });
 
-    expect(
-      toReceipts({ receipts: [row('r-2', 'RELEASED'), row('r-1', 'CHARGE')] }).map(
-        (receipt) => receipt.seatChargeId,
-      ),
-    ).toEqual(['r-1']);
+    const [refund, released, whole] = toReceipts({
+      receipts: [
+        row('REFUND', { amount_grosze: 3824, card_fee_grosze: 176 }),
+        row('RELEASED', { paid_at: '2026-09-28T09:00:00Z' }),
+        // The club cancelled after the cut-off: everything back, nothing kept.
+        row('REFUND', { card_fee_grosze: 0 }),
+      ],
+    });
+
+    expect(refund).toMatchObject({ kind: 'REFUND', amountGrosze: 3824, keptGrosze: 176 });
+    expect(released).toMatchObject({
+      kind: 'RELEASED',
+      amountGrosze: 4000,
+      movedAt: '2026-09-28T09:00:00Z',
+    });
+    expect(released).not.toHaveProperty('keptGrosze');
+    expect(whole).toMatchObject({ kind: 'REFUND', keptGrosze: 0 });
   });
 });

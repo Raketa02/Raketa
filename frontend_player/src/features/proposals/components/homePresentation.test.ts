@@ -620,7 +620,7 @@ describe('homeCardLabel — a Home card, spoken as one element', () => {
 /**
  * ***Leave the game*** (the mechanics §13; Q113) — before the cut-off it is free and nothing is
  * taken, the hold let go when there is one; after it the share stays taken, and what comes back if
- * the seat is taken is #644's to say, so no figure is given here.
+ * the seat is taken is the read's exact figure, or no figure and no clause while it quotes none (#644).
  */
 describe('leavingLine, leavingSheetBody, leftToast — what leaving costs, said', () => {
   it('says leaving is free before the cut-off, and nothing is taken', () => {
@@ -643,18 +643,32 @@ describe('leavingLine, leavingSheetBody, leftToast — what leaving costs, said'
     ]);
   });
 
-  it('keeps today’s shape after the cut-off, with no figure — and never an estimate', () => {
-    expect(leavingLine({ kind: 'AFTER_THE_CUT_OFF' })).toBe(
-      'Refunded only if someone takes your seat',
+  it('gives the read’s exact refund after the cut-off, and the fee kept on the payment', () => {
+    const late = {
+      kind: 'AFTER_THE_CUT_OFF',
+      lateRefund: { backGrosze: 3824, keptGrosze: 176 },
+    } as const;
+
+    expect(leavingLine(late)).toBe(
+      'If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)',
     );
-    expect(leavingSheetBody({ kind: 'AFTER_THE_CUT_OFF' })).toEqual([
+    expect(leavingSheetBody(late)).toEqual([
       'Your seat is offered to others.',
-      'If someone takes it, you get your share back less what was kept on your payment; if nobody does, you won’t.',
+      'If someone takes it, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment); if nobody does, you won’t.',
       'On your record if nobody takes it.',
     ]);
     expect(leftToast('AFTER_THE_CUT_OFF')).toBe(
       'You left the game. Your seat is offered to others.',
     );
+  });
+
+  /** The fee kept isn't known yet (#641): no figure and no clause — and never an estimate. */
+  it('gives no figure and no clause after the cut-off while the read quotes none', () => {
+    expect(leavingLine({ kind: 'AFTER_THE_CUT_OFF' })).toBe('Your seat is offered to others');
+    expect(leavingSheetBody({ kind: 'AFTER_THE_CUT_OFF' })).toEqual([
+      'Your seat is offered to others.',
+      'On your record if nobody takes it.',
+    ]);
   });
 
   it('says nobody has paid while the club decides, and the yes is withdrawn', () => {

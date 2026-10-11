@@ -172,28 +172,50 @@ describe('before the club’s cut-off (§13; Q113)', () => {
 });
 
 describe('after the cut-off (§12.3)', () => {
-  const late = () =>
+  /** Ivan's 40 zł, paid by a business Visa: 1,76 zł kept on it (Q113). */
+  const late = (
+    quote: Pick<Wire['LeavingSchema'], 'refund_grosze' | 'card_fee_grosze'> = {
+      refund_grosze: 3824,
+      card_fee_grosze: 176,
+    },
+  ) =>
     bookingDetails({
-      money: takenMoney(),
-      leaving: { kind: 'AFTER_THE_CUT_OFF', refund_grosze: 2758, card_fee_grosze: 42 },
+      money: takenMoney({ share_grosze: 4000 }),
+      leaving: { kind: 'AFTER_THE_CUT_OFF', ...quote },
     });
 
-  /** The read's exact figure is #644's to say; until then today's words with no figure, no estimate. */
-  it('says the refund waits for somebody to take the seat, and so does the sheet — with no figure', async () => {
+  it('gives the exact refund if the seat is taken, and the fee kept, under the button and on the sheet', async () => {
     await openDetails(late());
 
-    expect(screen.getByText('Refunded only if someone takes your seat')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)',
+      ),
+    ).toBeTruthy();
 
     leave();
 
     expect(await screen.findByText('Your seat is offered to others.')).toBeTruthy();
     expect(
       screen.getByText(
-        'If someone takes it, you get your share back less what was kept on your payment; if nobody does, you won’t.',
+        'If someone takes it, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment); if nobody does, you won’t.',
       ),
     ).toBeTruthy();
     expect(screen.getByText('On your record if nobody takes it.')).toBeTruthy();
-    expect(screen.queryByText(/27,58|0,42|card fee|BLIK/)).toBeNull();
+    expect(screen.queryByText(/card fee|BLIK/)).toBeNull();
+  });
+
+  /** The fee kept isn't known yet (#641): no figure and no clause — and never an estimate. */
+  it('gives no figure and no clause while the read quotes none', async () => {
+    await openDetails(late({ refund_grosze: null, card_fee_grosze: null }));
+
+    expect(screen.getByText('Your seat is offered to others')).toBeTruthy();
+
+    leave();
+
+    expect(await screen.findByText('Your seat is offered to others.')).toBeTruthy();
+    expect(screen.getByText('On your record if nobody takes it.')).toBeTruthy();
+    expect(screen.queryByText(/someone takes|kept on your payment/)).toBeNull();
   });
 
   /** The details' money row turns to *Paid* at the cut-off by itself, and so does what leaving costs. */
@@ -206,7 +228,8 @@ describe('after the cut-off (§12.3)', () => {
 
     act(() => jest.advanceTimersByTime(60 * 60 * 1000));
 
-    expect(await screen.findByText('Refunded only if someone takes your seat')).toBeTruthy();
+    // With no figure until the read quotes one: the fee is known once the share is taken.
+    expect(await screen.findByText('Your seat is offered to others')).toBeTruthy();
     expect(screen.queryByText(/Free to leave/)).toBeNull();
   });
 

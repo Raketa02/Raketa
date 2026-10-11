@@ -1,9 +1,8 @@
 /**
  * **A seat charge and the receipts, off the wire** (#555) — pure. What is dropped on the way in is
  * named: a charge's status beyond *does it wait for you* (the confirmation asks nothing else of it),
- * its proposal (the caller already holds the game), the receipt's `paid_at` (the server orders the
- * list), and — on the read the sheet draws — **the payment's secret**, which only `toPaymentToConfirm`
- * reads, for the press that hands it to the port.
+ * its proposal (the caller already holds the game), and — on the read the sheet draws — **the
+ * payment's secret**, which only `toPaymentToConfirm` reads, for the press that hands it to the port.
  */
 
 import { toSport } from '@/features/onboarding/types';
@@ -46,8 +45,8 @@ export function toPaymentToConfirm(wire: Schemas['SeatChargeResponse']): Payment
 
 function toReceipt(wire: Schemas['ReceiptSchema']): Receipt | undefined {
   const sport = toSport(wire.sport);
-  // A hold let go (#641) is the row's to draw (#644) — until then it would read as a refund.
-  if (sport === undefined || wire.kind === 'RELEASED') return undefined;
+  if (sport === undefined) return undefined;
+  const kept = wire.card_fee_grosze;
   return {
     seatChargeId: wire.seat_charge_id,
     kind: wire.kind,
@@ -55,13 +54,13 @@ function toReceipt(wire: Schemas['ReceiptSchema']): Receipt | undefined {
     sport,
     startsAt: wire.starts_at,
     amountGrosze: wire.amount_grosze,
+    // The read sends a fee kept on a refund alone.
+    ...(wire.kind === 'REFUND' && kept !== null ? { keptGrosze: kept } : {}),
+    movedAt: wire.paid_at,
   };
 }
 
-/**
- * The list in the server's order — a row whose sport this build cannot name is left out, and so is a
- * hold let go, until the row draws it (#644).
- */
+/** The list in the server's order — a row whose sport this build cannot name is left out. */
 export function toReceipts(wire: Schemas['ReceiptsResponse']): readonly Receipt[] {
   return wire.receipts.map(toReceipt).filter((row): row is Receipt => row !== undefined);
 }

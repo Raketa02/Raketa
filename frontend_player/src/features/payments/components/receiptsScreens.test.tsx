@@ -1,6 +1,7 @@
 /**
  * **You › Payments' RECEIPTS, walked** — the real route tree with only `fetch` faked
- * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A7.3; mock 49).
+ * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A7.3; mock 49): a share
+ * taken, a refund with what was kept on the payment, and a hold let go (#644).
  *
  * **The day words are asserted on dates a week or more from the read**, where they are a date
  * whatever the clock says: the harness runs every pending timer on each navigation and moves the
@@ -110,10 +111,10 @@ describe('RECEIPTS', () => {
 
     expect(await screen.findByText('Bonarka Arena')).toBeTruthy();
     expect(screen.getByText('Padel · 20 Oct · 16:00')).toBeTruthy();
-    expect(screen.getByText('−28 zł')).toBeTruthy();
+    expect(screen.getByText('−28 zł · paid')).toBeTruthy();
     expect(screen.getByLabelText('Bonarka Arena, Padel · 20 Oct · 16:00, 28 zł paid')).toBeTruthy();
     expect(screen.getByText('Tennis · 19 Sep · 18:00')).toBeTruthy();
-    expect(screen.getByText('−26,50 zł')).toBeTruthy();
+    expect(screen.getByText('−26,50 zł · paid')).toBeTruthy();
 
     const rows = screen.getAllByTestId(/^receipt-/).map((row) => row.props.testID as string);
     expect(rows).toEqual([
@@ -125,21 +126,49 @@ describe('RECEIPTS', () => {
     expect(screen.queryByText(/BLIK/)).toBeNull();
   });
 
-  it('draws a refund beside the share it gave back — two rows under one payment (#544)', async () => {
+  /** Ivan left after the cut-off and Diego took his seat: 1,76 zł kept on his 40 zł (Q113). */
+  it('draws a refund beside the share it gave back, with exactly what was kept on the payment under it', async () => {
     stubReceipts(transport, [
       receipt({
         kind: 'REFUND',
-        amount_grosze: 2718,
-        card_fee_grosze: 82,
+        amount_grosze: 3824,
+        card_fee_grosze: 176,
         paid_at: '2026-09-30T18:00:00Z',
       }),
-      receipt(),
+      receipt({ amount_grosze: 4000 }),
     ]);
     await onPayments();
 
-    expect(await screen.findByText('+27,18 zł')).toBeTruthy();
-    expect(screen.getByText('−28 zł')).toBeTruthy();
+    expect(await screen.findByText('+38,24 zł · refunded')).toBeTruthy();
+    expect(screen.getByText('1,76 zł kept on your payment')).toBeTruthy();
+    expect(screen.getByText('−40 zł · paid')).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        'Bonarka Arena, Padel · 20 Oct · 16:00, 38,24 zł refunded, 1,76 zł kept on your payment',
+      ),
+    ).toBeTruthy();
+    // A refunded share is two rows under one payment (#544).
     expect(screen.getAllByTestId('receipt-a2000000-0000-4000-8000-000000000001')).toHaveLength(2);
+  });
+
+  /** A leave before the cut-off: nothing was taken, and the hold the bank app showed is explained. */
+  it('draws a hold let go, dated when it was, with nothing signed — nothing moved', async () => {
+    stubReceipts(transport, [
+      receipt({
+        kind: 'RELEASED',
+        amount_grosze: 4000,
+        // Monday 28 September, 11:00 in Warsaw.
+        paid_at: '2026-09-28T09:00:00Z',
+      }),
+    ]);
+    await onPayments();
+
+    expect(await screen.findByText('40 zł held · released')).toBeTruthy();
+    expect(screen.getByText('Released 28 Sep')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Bonarka Arena, Padel · 20 Oct · 16:00, 40 zł held, released 28 Sep'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/[−+]40 zł/)).toBeNull();
   });
 
   it('says what will land here when nothing has, and keeps the footer for rows', async () => {
