@@ -149,6 +149,16 @@ itself.
 
 ## 4. Answers about results
 
+> **2026-10-11, [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+> §1 and §5** (the mechanics Q117, Q119, from story S-01D's F-RESULT-35.1 and F-RESULT-44.1):
+> ***Answers about results* has left Player reliability.** Silence on a score costs nothing: a
+> lone score settles 24 hours after it went up, and one *That's right* from the other side settles
+> it at once. Nobody is asked twice. What a disagreement leaves behind is counted apart, as
+> ***Results left in dispute***: the games whose two scores named different winners, for each
+> player who put one of them up, over the last 6 months. It is information on the record, never
+> points. Player reliability itself is now points from 100, with no strands and no weights. The
+> row, its minimum of 5, the weights 35 / 20 / 15 and the twelve-month window below are history.
+
 The design asked for *Confirms results*. Investigation found the row cannot mean what it says.
 
 **Silence is a yes.** When one score stands unanswered for a day, it is confirmed. A player
@@ -309,6 +319,14 @@ opponents said"**. Two headings, no lie, and a reader can see which is which.
 ---
 
 ## 6. Per-strand minimums
+
+> **2026-10-11, [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+> §1** (the mechanics Q117): **the per-strand minimums are gone with the strands.** Player
+> reliability is points, and everyone starts at 100. A player reads ***100 · New*** until their
+> first 3 games are played through, ever: a word beside the figure, not a bar that hides it. A New
+> player passes every reliability filter. So the worry below — a newcomer going from a score of 100
+> to no score at all — is answered by nobody ever being without a figure. Sportsmanship's minimum
+> of **1** stands: it is its own figure.
 
 The bar a strand must clear is **one number for every strand today: three observations**.
 Two of the decisions above need different bars, which that shape cannot express.

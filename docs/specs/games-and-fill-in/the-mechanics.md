@@ -51,9 +51,14 @@
 8. **Members can post a game.** They pick the hour and the court; the app deals it to their
    best fits as a **Challenge**.
 9. **The club is the seller.** On the club website it lists its courts, hours and prices,
-   sets how it works with Raketa, answers requests, cancels and checks players in; it gets
-   paid through Raketa after the game and pays the card fee as it would at its own terminal.
-   Raketa earns nothing for now ([§16](#16-the-club-website)).
+   sets how it works with Raketa, answers requests and cancels; it gets paid through Raketa
+   after the game and pays the card fee as it would at its own terminal. Raketa earns nothing
+   for now ([§16](#16-the-club-website)).
+10. **After the game, only an exception asks anything** (Q114–Q119). A full game nobody recorded
+    was played. A player who isn't there is caught at the court, in the first half of the game, by
+    the people waiting for them. One *That's right*, or a day of silence, settles a score, and
+    silence costs nothing. **Player reliability** is points from 100, and a player may choose to
+    play only with players of at least High or Medium reliability ([§15](#15-on-the-day-and-after)).
 
 ---
 
@@ -82,6 +87,9 @@
 | **Rescue** | An open seat in a booked game that lost a player. |
 | **Post** | A game a member creates by picking the hour and the court. Its players see it as a **Challenge**. |
 | **Home** | The first tab of the bottom bar: your games. |
+| **Isn't here yet · Arrival** | The tap a player at the club makes, in the first half of the game, about another player on the court; and the moment that player is shown to be at the club, by their own *I'm here* or a courtmate's *They're here*. The arrival makes it **on time**, **Came late** or **Didn't come** ([§15.1](#151-attendance-at-the-court), Q115). |
+| **Played · no score** | The end of a full booked game nobody recorded and nobody *Didn't come* to: played, for everyone, with no Level moved ([§15.3](#153-a-game-nobody-recorded-and-a-game-somebody-didnt-come-to), Q114). |
+| **Player reliability** | A player's figure in **points**, from 100: a fixed price off for each failure, 5 back for each game played through, each failure dropping out after 6 months. Read with a band, *Very high · High · Medium · Low* ([§15.4](#154-the-record), Q117). |
 
 ---
 
@@ -182,8 +190,12 @@ even four (or two) — and deals it as a **Picked for you** card to each of its 
 The new games keep three pieces of the matchmaking engine, and nothing else of it:
 
 - **The pair rule** (`PlayerFit`), asked of every pair a card, a fill, a rescue or a post would
-  put on one court: **no block** either way, a **mutual gender preference**, and Levels inside
-  the kind's **level window**, whose tolerance per kind is the live ruleset's.
+  put on one court: **no block** either way, a **mutual gender preference**, Levels inside
+  the kind's **level window**, whose tolerance per kind is the live ruleset's, and — since Q118 —
+  the **reliability filter** either of them switched on: a pair is unfit when either player's
+  minimum band is above the other's band, a *New* player passing every minimum. Unlike a block, the
+  filter takes no yes back: a yes given before it was switched on, or before somebody dropped below
+  it, stands, and the fill doesn't re-ask it for that yes ([§15.4](#154-the-record)).
   While either player is inside their **14-day newcomer window**, the pair is held to the
   Competitive window whatever the kind. A post's Level range starts from the same window.
 - **The balance forecast** — the engine's own `forecast`, which the proposer reads directly and
@@ -196,7 +208,14 @@ The new games keep three pieces of the matchmaking engine, and nothing else of i
 Who is free is each player's **weekly hours**, read for the whole hour; which kinds they are
 dealt is their **Play intent**. **Distance stands down inside a group**: it decides only which
 clubs a player group plays at (§4.3), and it will matter again at city scale. There is no
-score, no weight and no toggle — what is new is the assembly (people × hour × court).
+score and no weight, and one toggle: a player's own **reliability filter**, which is a clause of
+the pair rule and ranks nothing. What is new is the assembly (people × hour × court).
+
+> **Amended 2026-10-11** (Q118, [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+> §6). This said *there is no score, no weight and no toggle*, and the correction of 2026-10-06
+> above had made reliability play no part in which game the deck builds (rule R-ENGINE-15). It
+> now plays one: an optional filter, off by default, that keeps a player off any court shared
+> with somebody below the band they chose.
 
 ### 5.2 What a card promises
 
@@ -799,7 +818,7 @@ reaches a leaver:
 - **your empty seat called it off at the cut-off:** *"Tuesday's 19:00 at Bonarka Arena, which you
   left, was called off"* / *"Your seat stayed empty, so it counts on your record. Nothing was
   taken from you."* (Q113: a leave before the cut-off took nothing, so there is no refund to
-  stand). It changes no money, so it isn't emailed. The mark is §15.4's, unchanged;
+  stand). It changes no money, so it isn't emailed. What it costs is §15.4's: 10 points since Q117;
 - **the club's cancel refunded you** — you left after the cut-off and your seat was still paid
   for: you are told in a leaver's words, with the club's reason and your refund, and never promised
   a new game. The notice and the refund email both use those words.
@@ -820,7 +839,7 @@ on, Needs a player** and **Held** are gone: the booking *is* the plan.
 | **Booked** | Full and booked | Before the cut-off, whether the share is held yet or only checked: *30 zł · free to leave until Sat 17:00*. After it, once the share is taken: *Paid · 30 zł* (Q113). A player whose card was refused at the holding time reads *Fix your card by 14:40* until it is fixed; the game stays booked, and the others' cards don't change |
 | **Seat open** | Someone left a booked game | Before the cut-off: *1 seat open · fills by Sat 17:00 or the game is off and nothing is taken*. After: *1 seat open · offered to others · the game goes ahead* |
 | **Seat open** | A full game went back to filling before it was booked (Q106) | At a club that confirms: *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid*. At a club that books at once: *1 seat open · books when it's full · nobody paid* |
-| **Needs result · Confirm the result · Counted · Uncounted · Never played** | Unchanged from today | — |
+| **Needs result · Confirm the result · Counted · Uncounted · Played · no score** | After the hour ([§15.2](#152-results-and-sportsmanship), [§15.3](#153-a-game-nobody-recorded-and-a-game-somebody-didnt-come-to)). *Needs result* follows *How did it go?* on a Competitive game; *Played · no score* replaced *Never played* (Q114); *Uncounted* says why — a seat empty at the hour, or someone who didn't come (Q115) | — |
 | **Called off** | A seat was empty at the cut-off; the club cancelled; the club said no or didn't answer in time; a game that went back to filling reached its book-by; a player left it after its book-by while the club decided; a failed payment had no time left before the book-by, or the court went to another card while it waited for that payment | The reason, and *nothing was taken* (the holds were let go: at the cut-off, or a club's cancel before it), *refunded 30 zł* (a club's cancel after the cut-off) or *nobody paid* |
 
 **A full game that falls back stays on Home** (Q106). It goes back to filling before it is booked
@@ -874,8 +893,13 @@ From the mocks (details 5–10, in [`mocks/game-details/`](mocks/game-details/))
   the court facts (**WHERE** club · court · distance, **DAY**, **TIME** start–end, the money row,
   which says when the share is held and when it is taken — [§14.1](#141-home-and-the-statuses)).
 - **The balance forecast**, as today. Hidden while a seat is open.
-- **On the day:** a **QR code** to show at the club desk, with a short code under it
-  ([§15.1](#151-check-in-at-the-club)).
+- **At the court:** from the hour's start to 30 minutes after it, *isn't here yet* beside each
+  courtmate's tile, *I'm here* for yourself when you're the one waited for, *They're here* for a
+  courtmate who was, and afterwards *I was there* and *Yes, they were here*
+  ([§15.1](#151-attendance-at-the-court), Q115). There is no QR code and nothing to show at the
+  desk (Q116).
+- **After the hour:** *How did it go?* on a Competitive game, which leads to putting the score up,
+  and *Is that right?* for the other side ([§15.2](#152-results-and-sportsmanship), Q119).
 - **Leave the game** ([§13](#13-leaving-a-game)).
 
 The same screen serves two more readers (Q75, Q96):
@@ -912,42 +936,150 @@ The same screen serves two more readers (Q75, Q96):
 
 ## 15. On the day and after
 
-### 15.1 Check-in at the club
+### 15.1 Attendance at the court
 
-- Every player's game details carry a **QR code on the day**, with a short code under it.
-- Clubs that choose to can scan it on the club website's **Check in** page (phone or tablet
-  camera), or type the code. It doubles as proof of the booking at the desk.
-- A scan marks the player as **there**: they can never be reported as a no-show.
-- Check-in is **optional per club**, and **money never depends on it** — the club is owed the
-  court whether people come or not.
+Nobody checks in, and **everyone who arrives on time does nothing** (Q115, Q116). Whether somebody
+came is caught by the people waiting for them, at the court, while it happens. Take Wednesday 14
+Oct, tennis 17:00–18:00 at Ogrody 33, 40 zł each:
+
+1. **From 17:00 to 17:30**, the first half of the game, Ivan can tap **"Oscar isn't here yet"** on
+   the game's details. It works only from the club: the phone reads its location at that tap.
+2. **Oscar is pushed at once:** *"Ivan is at Ogrody 33 and you're not there yet — tap I'm here when
+   you arrive."*
+3. **His arrival** is the first of two things, each made at the club: his own **I'm here**, or
+   anyone on the court tapping **"Oscar's here"** when he walks in. Whoever tapped is told *Oscar is
+   at the club*.
+4. **The arrival time decides what it was:**
+   - **on time** within 10 minutes of the start: nothing is recorded, and the tap vanishes;
+   - **Came late** from 10 to 30 minutes after the start;
+   - **Didn't come** if he wasn't there by 17:30.
+5. **A phone that died gets one way back.** Within 24 hours of 17:30, Oscar taps **I was there**;
+   the others on the court are asked *Were they there?*, and any of them can confirm it with **"Yes,
+   he was here"**. That turns *Didn't come* into *Came late*, because the tap still proves he wasn't
+   there when it was made. Until those 24 hours end, *Didn't come* is provisional.
+6. **The tap costs the person who made it nothing.**
+
+- **Who may tap** *(a call)*: any player on the court who is at the club, about any other, partner
+  included; never about yourself; never while you are yourself absent and not yet arrived. Two
+  absentees can each be tapped. *They're here* is checked for location too *(a call)*.
+- **At the club** means within **300 m** of the club's map point, allowing for the fix's own stated
+  accuracy up to 200 m, so that a large indoor hall still passes *(a call)*.
+- **Location** is a precise, one-shot fix, read in the foreground only at the moment of the tap and
+  sent with it. The backend compares it with the club's map point and keeps only *at the club, at
+  that time*; **the coordinates are never stored**, on the phone or on the server *(a call)*.
+  Background location stays off.
+- **Refusals are plain sentences:** not at the club — *You can say so only from Ogrody 33*; location
+  off — the phone asks for it and says why; outside the window — it says the window has passed.
+- **What it changes.** *Didn't come*: the game takes no score and never counts, as a confirmed
+  no-show did. *Came late*: the game carries on as usual, score and Level included. Each is priced on
+  the record ([§15.4](#154-the-record)). The outcomes are read against the server's clock, never the
+  phone's.
+- **Money never moves on any of this.** Everyone paid, and the club was paid for the hour; nobody is
+  refunded and nobody owes anything.
+- **The club sees none of it.** Its Bookings reads *Played* for every game that reached its hour
+  ([§16.7](#167-bookings)).
+- **There is no desk check-in** (Q116). The *Show at the desk* QR card, the club's **Check in** page
+  and its switch were removed on 2026-10-11 ([§16.10](#1610-check-in)).
 
 ### 15.2 Results and sportsmanship
 
-Unchanged from today: *we played*, the score, the confirmation, counted or friendly by kind, the
-sportsmanship stars.
+**The score is asked for once, and is settled by one tap or by silence** (Q119). On a
+**Competitive** booked game:
 
-### 15.3 No-shows
+1. **No score is taken before the hour.** The entry window runs from the game's start until 24
+   hours after its hour ends.
+2. **When the hour ends, all of its players are asked *How did it go?*** Any of them puts the score
+   up.
+3. **The other side is asked *Is that right?*** One *That's right* from either of them settles it
+   **at once** and closes the game. In doubles, the first agreement wins, and a later different
+   score is refused.
+4. **Silence settles it 24 hours after the score**, or after its last correction, and the screen
+   says so truthfully: when silence makes the score the result, and that silence costs nothing.
+5. **Corrections stop when the entry window closes.** Until then, either player of the side that
+   put the score up may correct it while the other side hasn't answered.
+6. **Levels move the moment the result settles**: within a minute of a *That's right*, or of the
+   24-hour mark on silence.
 
-- When entering the result, the players who were there can tap **"Kuba didn't come"**. Kuba has
-  **24 hours** to dispute it; after that it is confirmed. A player checked in by the club cannot
-  be reported.
-- He already paid, so there is no debt, and nobody is refunded — the court was used.
-- The game does not count and no levels move. A confirmed no-show is the strongest mark on a
-  record.
-- If nobody enters anything, the game ends **Never played**, as today.
+When **two scores** stand when the answer window closes — one per side, neither accepted:
+
+- **the same winner:** the game counts with the **closer** score, the one with the smaller
+  difference in games won; on a tie, the first score put up *(a call)*;
+- **different winners:** the game is **disputed**. No Level moves, and each of the two who put a
+  score up gets a ***Results left in dispute*** line on their record. The line is information only
+  and costs no points ([§15.4](#154-the-record)).
+
+Nobody rules on a score — not the club, not Raketa.
+
+A **For fun** game asks nothing and reads *Played*. A score can be added for fun; it stands at once
+and needs no answer *(a call)*. No Level moves, as before.
+
+The sportsmanship stars are unchanged from today.
+
+### 15.3 A game nobody recorded, and a game somebody didn't come to
+
+- **A game that was full counts as played** (Q114). A booked game that reached its hour full, that
+  nobody recorded and that nobody *Didn't come* to, reads **Played · no score** for all of its
+  players when its entry window closes. Each of them gains the 5 points of a game played through,
+  and no Level moves. *Never played* is gone: there are no unbooked games left, and a booked, paid
+  court is the evidence it stood in for.
+- **A game somebody didn't come to** ([§15.1](#151-attendance-at-the-court)) takes no score and
+  does not count, and no levels move. It reads *Uncounted*, with the reason. The player who didn't
+  come had paid, so there is no debt, and nobody is refunded — the court was used.
+- **The no-show report is gone** (Q115). Until 2026-10-11 the players who were there could tap
+  *"Kuba didn't come"* while entering the result, from anywhere, and Kuba had 24 hours to dispute
+  it. A game that held such a report reads *Played · no score*.
 
 ### 15.4 The record
 
-| Never on the record | A mark | The strongest mark |
+**Player reliability is points** (Q117). Everyone starts at **100**. A failure takes a fixed price
+off; every game **played through** — a booked game that reached its hour full with the player on
+its court, on time and not called off, scored or *Played · no score* — gives 5 back, never above
+100. Each failure drops out of the figure **6 months** after it happened. The window rolls, so
+nothing ever resets everything at once.
+
+| What happened | Part | Points |
 | --- | --- | --- |
-| Swiping left · withdrawing a yes · a card or post that never filled · a failed payment you fixed · leaving before the cut-off when your seat is taken or the game still plays · a game the club cancelled | Leaving before the cut-off when your seat stays empty and the game is called off because of it · leaving after the cut-off when nobody takes your seat | Not turning up |
+| **Didn't come** ([§15.1](#151-attendance-at-the-court)) | Shows up | −25 |
+| **Came late** | Shows up | −10 |
+| Leaving after the cut-off when nobody takes your seat, so the game is played short | Keeps plans | −15 |
+| Leaving before the cut-off when your seat stays empty and the game is called off because of it | Keeps plans | −10 |
+| Each game played through | — | +5, up to 100 |
+
+**Never on the record:** swiping left · withdrawing a yes · a card or post that never filled · a
+failed payment you fixed · leaving when your seat is taken, or before the cut-off when the game still
+plays · a game the club cancelled · silence on a score · a disputed score (a line, never points).
 
 A seat lost because its player's card wasn't fixed at the holding time counts as **leaving before
 the cut-off**: on the record only if the game is then called off because of it
 ([§12.2](#122-when-a-game-fills)). *(A call made without a ruling, Q113.)*
 
-The reliability score stops counting *answers challenges* (challenges no longer wait for
-answers) and counts *keeps booked games* from the table above.
+- **A *Came late* game earns nothing back** *(a call)*: only a game played through on time earns +5.
+  Otherwise a late arrival would net only −5. A game that started short earns the players who
+  stayed nothing either way.
+- **A *Didn't come* is priced once**, on Shows up, and no longer also breaks Keeps plans.
+- **Bands**, shown under the figure: **Very high** 90–100 · **High** 75–89 · **Medium** 50–74 ·
+  **Low** below 50 reliability. As a rule of thumb, one no-show keeps you High, two close together
+  drop you to Medium, and three to Low.
+- **New.** A player reads ***100 · New*** until their first 3 games are played through, ever, and
+  passes every filter. Stopping for 6 months doesn't make anybody New again *(a call)*.
+- **The record sheet shows counts only**, over the last 6 months: *Shows up* — turned up 12 of 13;
+  *Keeps plans* — kept 13 of 14; *Being late* — late 1 time; *Results left in dispute* — 0. No ledger.
+- **One figure per player, across sports**, computed whenever it is read — now including one read
+  of the members' points per deal, for the filter below *(a call)*.
+
+**The reliability filter** (Q118). The Player reliability screen has an optional switch, off by
+default: ***Play only with players of at least High reliability*** (or *at least Medium*).
+
+- **Where it applies.** It keeps the player off every court shared with somebody below that band,
+  in both directions: *Picked for you*, *Challenges*, *Seat open* and Fill in. It is one more clause
+  of the pair rule ([§5.1](#51-what-it-does)).
+- **From when.** From the moment it is switched on, or the moment someone drops below it. Yeses
+  already given stand *(a call: the fill doesn't re-ask it, unlike a block)*, and booked games never
+  change.
+- **What the filtering player sees:** *"Your filter hides 2 of the 11 players in your groups."*
+- **What a hidden player sees, with nobody named:** *"Some players in your groups play only with
+  High reliability or above. At 75 you're dealt with everyone again."*
+- **A group's Members list** shows each member's points and band.
 
 ---
 
@@ -972,7 +1104,7 @@ signed in with the club's own account. The player app never shows club tools, an
 | **Courts & prices** | — | **New** ([§16.4](#164-courts), [§16.5](#165-hours-and-prices)) |
 | **Raketa settings** | — | **New** ([§16.3](#163-three-ways-to-work-with-raketa), [§16.6](#166-settings)) |
 | **Bookings** | — | **New** ([§16.7](#167-bookings)–[§16.9](#169-cancelling-a-booking)) |
-| **Check in** | — | **New**, only when the club checks players in ([§16.10](#1610-check-in)) |
+| **Check in** | — | **Removed** on 2026-10-11 (Q116), after it was built: whether somebody came is caught at the court ([§15.1](#151-attendance-at-the-court), [§16.10](#1610-check-in)) |
 | **Money** | — | **New** ([§16.11](#1611-money)) |
 
 ### 16.2 Getting ready to take bookings
@@ -1048,11 +1180,10 @@ automatically; nothing else about bookings changes for the club.
 | Minimum notice (Instant / On request): the latest a Raketa game can book | 2 h before |
 | Time to confirm (On request) | 30 min |
 | Offer our groups other clubs' courts when ours are full ([§4.3](#43-courts)) | off · 10 km |
-| We check players in ([§16.10](#1610-check-in)) | off |
 | Pause Raketa bookings ([§16.15](#1615-pausing-or-leaving-raketa)) ◇ | off |
 
 A changed setting applies to games booked **after** the change; a booked game keeps the cut-off it
-was booked with ◇.
+was booked with ◇. *We check players in* was removed with check-in on 2026-10-11 (Q116).
 
 ### 16.7 Bookings
 
@@ -1062,7 +1193,7 @@ One page, by day, listing every Raketa booking at the club ◇:
 | --- | --- |
 | **When · court** | Day, hour, court number (with **Move** to another free court) |
 | **Sport · kind** | Padel · Competitive, Tennis · friendly… |
-| **Players** | Each player's name, their share **held** or **taken** (Q113), and **checked in ✓** when the club checks in |
+| **Players** | Each player's name, and their share **held** or **taken** (Q113). Nothing about who came or the score (Q115, Q116) |
 | **Status** | See below |
 | **Money** | Court price, collected, refunded |
 | **Where it came from** | The group it was booked in (official or player group) |
@@ -1076,7 +1207,7 @@ The statuses the club sees:
 | **Booked** | Full; its shares are held until the cut-off and taken at it. Before the cut-off it can still be called off if a player leaves and nobody replaces them |
 | **Seat open** | A player left; Raketa is finding a replacement. Before the cut-off: if nobody is found, the game is called off at the cut-off and the court comes back to the club |
 | **Called off** | With the reason: short at the cut-off, cancelled by the club, refused, no answer, or a player's payment didn't come in time after the club accepted (Q112). Every hold was let go, everyone was refunded (a cancel after the cut-off), or nobody paid; the hour is free again |
-| **Played** | The hour has passed |
+| **Played** | The hour has passed — whatever the players record about who came and the score, which the club never sees (Q115) |
 
 Filters: all · waiting for you · seat open · called off
 ([the-screens.md B4](the-screens.md#b4-bookings)) ◇.
@@ -1129,14 +1260,14 @@ Filters: all · waiting for you · seat open · called off
 
 ### 16.10 Check in
 
-- Only for clubs that switched on **We check players in**.
-- The **Check in** page opens the device camera (phone or tablet) to scan a player's QR code, or
-  takes the **short code** typed by hand.
-- It shows the booking and the player, and marks the player **checked in**. A code for another day
-  or another club is refused with that reason ◇.
-- A checked-in player can never be reported as a no-show. A player who is not scanned is
-  **unknown**, never "absent": the club's scan is evidence, not a verdict ([§15.3](#153-no-shows)).
-- **Money never depends on it.** The club is paid whether people come or not.
+**Removed on 2026-10-11** (Q116). Clubs that switched on *We check players in* could scan a
+player's QR code, or type its short code, on a **Check in** page; a checked-in player could never be
+reported as a no-show. It solved a problem with no evidence that it was real, it only ever said that
+somebody came, and it put a queue in front of the desk at every club that used it. The page, its
+scanner and typed-code form, the switch, the Bookings *Check in* button and its *checked in ✓* mark
+are gone. Players walk straight to the court; whether somebody came is caught there
+([§15.1](#151-attendance-at-the-court)), and **money never depended on it** — the club is paid
+whether people come or not.
 
 ### 16.11 Money
 
@@ -1160,8 +1291,10 @@ Filters: all · waiting for you · seat open · called off
 - **The Money page** ◇: per booking — collected, refunded, card fee, net; the list of payouts; a
   link to the club's own Stripe dashboard for the detail.
 - **Disputes** (a player's bank reverses a payment): handled through Stripe on the club's account,
-  where the dispute is raised; the club can answer with the booking's evidence (the check-in, the
-  result). Stripe covers a negative balance under Raketa's setup ◇.
+  where the dispute is raised; the club can answer with the booking's evidence (the booking and the
+  terms the player accepted, which Stripe's list for a *not received* dispute names; there is no
+  check-in since Q116).
+  Stripe covers a negative balance under Raketa's setup ◇.
 - **Receipts and invoices for the club's own accounting** (Polish fiscal-receipt and invoicing
   rules for online sales) are the club's, as the seller — open item O5.
 
@@ -1193,9 +1326,9 @@ On the website (badges on Bookings and Overview), and by **email** where marked 
 
 - **One login per club**, as today ◇. Separate staff logins (desk staff, managers) come later; until
   then the desk uses the club's login.
-- **About players** ◇, the club sees only what running the court needs: each player's **name**, whether
-  their share is **held** or **taken**, and whether they were **checked in**. No email, no phone, no level, no record, no
-  access to the game's chat. The club cannot message players; everything players need to know comes
+- **About players** ◇, the club sees only what running the court needs: each player's **name**, and whether
+  their share is **held** or **taken**. No email, no phone, no level, no record, no attendance and no
+  score (Q115), no access to the game's chat. The club cannot message players; everything players need to know comes
   from Raketa.
 
 ### 16.15 Pausing or leaving Raketa
@@ -1217,7 +1350,7 @@ On the website (badges on Bookings and Overview), and by **email** where marked 
 | The club changes a price after cards were dealt | The dealt cards and booked games keep their price. |
 | A player leaves after the cut-off and nobody replaces them | The game goes ahead short; every share was taken at the cut-off, so the club is paid in full. |
 | A game is still short at the cut-off | Called off; every hold is let go, so nobody paid and no fee arises; the hour is free again for the club. |
-| A player's bank disputes a payment | Handled on the club's Stripe account; the check-in and the result are the evidence. |
+| A player's bank disputes a payment | Handled on the club's Stripe account; the booking and the accepted terms are the evidence (no check-in since Q116). |
 | The club's Stripe account needs attention | New cards stop until it is fixed; booked games are unaffected. |
 | The club wants to stop | Pause, then disconnect once everything booked has been played and paid out. |
 
@@ -1230,7 +1363,7 @@ Top bar:  Overview · Bookings · Courts & prices · Money · Groups · Administ
                                                                                     ├ Details
                                                                                     └ Raketa settings
 Overview ........ setup checklist until live · then only what is waiting for your answer
-Bookings ........ by day · Accept / Refuse · Move · Cancel · [Check in] button (if the club checks in)
+Bookings ........ by day · Accept / Refuse · Move · Cancel
 Courts & prices . courts · weekly hours · exceptions · price bands
 Money ........... per booking · payouts · link to the Stripe dashboard
 Raketa settings . way of working · cut-off · release · notice · confirm · pause
@@ -1259,7 +1392,9 @@ The You tab gains an **Account** group of three rows (screens in [the-screens.md
 ### 17.2 Notifications
 
 Delivered by **push** (built with this feature, through Expo's push service: free on Android;
-on iPhone it needs the Apple Developer membership, which publishing the app needs anyway), by an
+on iPhone it needs the Apple Developer membership, which publishing the app needs anyway — and
+switched on end to end on both since Q120, once a human has set up the Expo project, Firebase and
+the Apple Developer Program at 99 USD a year), by an
 **in-app banner** when the app is open, and in a **recent notices** list behind the bell on Home.
 Every notice about money is **also emailed** — the standard for bookings and payments (Q85, Q94):
 *It's a game! · 40 zł held* (the booking confirmation, saying when the share is taken; *you paid*
@@ -1302,6 +1437,18 @@ game — it's filling again."* ([§13](#13-leaving-a-game)). If a paused yes lat
 refills the game, all four are told as at any fill. A card that never filled still disappears
 untold ([§5.4](#54-the-only-deadline-the-courts-book-by)).
 
+**The game's own notices** (Q120). Five notices come from the game itself, each because it decides
+somebody's record or result, so each is **always on** *(a call)*. Each opens **the game's result
+screen**, and a **For fun** game is told none of them:
+
+- ***Isn't here yet*** — to the absent player: *"Ivan is at Ogrody 33 and you're not there yet —
+  tap I'm here when you arrive"* ([§15.1](#151-attendance-at-the-court));
+- ***They're at the club*** — to whoever tapped, when the absent player arrives;
+- ***How did it go?*** — to every player of a Competitive booked game, when its hour ends
+  ([§15.2](#152-results-and-sportsmanship));
+- ***Is that right?*** — to the other side, when a score goes up;
+- ***Were they there?*** — to the others on the court, when an absent player claims *I was there*.
+
 | Notification | Setting |
 | --- | --- |
 | **It's a game! · 30 zł held** (*you paid 30 zł* after the cut-off) — or, after one payment was missing, *Your Tue 19:00 is booked · 40 zł held* | always on |
@@ -1316,6 +1463,7 @@ untold ([§5.4](#54-the-only-deadline-the-courts-book-by)).
 | **Your new game** — *Your new game · Sat 10:00 at Bonarka Arena* / *The same players · 40 zł a share — say yes to book it.*, whenever a notice or email promised *you'll get a new card first* (the club said no, didn't answer, or cancelled), to the players it is dealt to (Q107) | always on · not emailed |
 | **A game you left** — called off by your empty seat, or cancelled by the club with your refund ([§13](#13-leaving-a-game), Q108) | always on · emailed only for the club's cancel |
 | **Your post didn't fill** | always on |
+| **Isn't here yet** · **They're at the club** · **How did it go?** · **Is that right?** · **Were they there?** — the game's own notices, above (Q120) | always on · not emailed (written in: none is about money or the club's answer) · never for For fun |
 | **You complete it** — a card needs only you | on by default · at most 1 a day, bundled |
 | **Challenges for you** — a member's post names you | on by default · at most 3 a day, bundled |
 | **Fill in alerts** — a booked game you fit needs one more | off by default · at most 3 a day |
@@ -1348,7 +1496,19 @@ No notification is ever sent for a single swipe.
 | Book-by | release time (Only Raketa) or start − minimum notice |
 | Club defaults | release 3 days · cut-off 24 h · minimum notice 2 h · confirm 30 min · other clubs 10 km |
 | Player group reach | home club + 10 km |
-| No-show dispute | 24 hours |
+| Attendance tap window | from the hour's start to 30 minutes after it — the first half of a one-hour game (Q115) |
+| On time · Came late · Didn't come | an arrival within 10 minutes of the start · 10 to 30 minutes after it · none by 30 minutes after it |
+| Late claim (*I was there*) and its confirmation | within 24 hours of the tap window closing |
+| At the club | within **300 m** of the club's map point, the fix's own accuracy allowed up to 200 m (a call, Q115) |
+| Entry window (a score) | from the hour's start, never before, until 24 hours after the hour ends; corrections are refused once it closes (Q119) |
+| Answer window | 24 hours from the score or its last correction |
+| An acceptance settles | **at once** (the six-hour wait retired, Q119) |
+| Levels move | within a minute of a result settling (a call, Q119) |
+| Player reliability | from **100**: −25 *Didn't come* · −10 *Came late* · −15 a late leave with the seat left empty · −10 an early leave (or an unfixed card) when the empty seat calls the game off · +5 per game played through, never above 100 (Q117) |
+| Its window | each failure drops out after **6 months**, rolling |
+| Bands | Very high 90–100 · High 75–89 · Medium 50–74 · Low below 50 |
+| New | fewer than **3** games played through, ever |
+| Results left in dispute | counted over the same 6 months (a call); never points |
 | Card fee | Stripe's real fee on each share taken, paid by the club; a leaver refunded after the cut-off bears the fee kept on their own payment. Known only once the share is taken, by card kind ([Appendix A](#appendix-a--payments-with-stripe-notes-for-development)), and **never estimated or printed in advance** (Q113) |
 
 ---
@@ -1387,8 +1547,18 @@ No notification is ever sent for a single swipe.
 | The club changes its prices | Only new cards carry the new price. |
 | You leave a group | Your yeses there are withdrawn. Your booked games stay. |
 | Somebody you blocked | Never on a card with you. Your yeses where they are In are taken back, until the club confirms. Your booked games stay. |
-| Someone doesn't turn up | Reported in the result; 24 h to dispute; strongest mark; no levels move ([§15.3](#153-no-shows)). |
-| The club checked someone in | They cannot be reported as a no-show. |
+| Someone isn't there at the start | In the first half of the game, anyone at the club taps *isn't here yet*; they are pushed at once. Arriving within 10 minutes records nothing; 10 to 30 minutes is *Came late* (−10) and the game plays on; no arrival by 30 minutes is *Didn't come* (−25), and the game takes no score ([§15.1](#151-attendance-at-the-court)). |
+| A tap from home, from 2 km away, after 30 minutes, or about yourself | Refused, in a plain sentence. |
+| The person tapped was on another court | Their own *I'm here* from the club lifts it at once; the tap cost its maker nothing. |
+| A phone died | *I was there* within 24 hours, confirmed by anyone else on the court, turns *Didn't come* into *Came late*. |
+| Nobody records a full game | It reads *Played · no score* for everyone: 5 points each, no Level moved ([§15.3](#153-a-game-nobody-recorded-and-a-game-somebody-didnt-come-to)). |
+| A score put up before the game | Refused. |
+| *That's right*, then a different score from the other side | The first agreement settled it; the later score is refused. |
+| Nobody answers a score | It settles 24 hours after it, and Levels move then; the silence costs nothing. |
+| Two scores, the same winner | The game counts with the closer one. |
+| Two scores, different winners | Disputed: no Level moves, and each of the two who put a score up gets a *Results left in dispute* line, never points. |
+| A For fun game | Nobody is asked anything; it reads *Played*. |
+| Your reliability filter hides someone | Never on a card, a rescue or a post with you; a yes you gave before stands; a booked game never changes. A *New* player always passes ([§15.4](#154-the-record)). |
 
 ---
 
@@ -1680,7 +1850,10 @@ Aug–Sep 2026).
 | A queue for freed seats | None (Polish users ask for one) | Rescues in Fill in, the deck and alerts |
 | Poland | Cards, Apple Pay, Google Pay; no BLIK | Cards and wallets; BLIK when Stripe confirms |
 | Player fee | 20 %, capped 1.24–3.99 zł per seat | None |
-| No-shows | Reported by others within 7 days; charged the court as a debt | Already paid; reported in the result, 24 h to dispute; optional club check-in |
+| No-shows | Reported by others within 7 days; charged the court as a debt. Arriving 10 minutes or more late is a no-show, and the others choose *Wait and Play* or *Declare No-Show* | Already paid; caught at the court in the first half of the game: on time within 10 minutes, *Came late* to 30, *Didn't come* after; no desk check-in (Q115, Q116) |
+| A game nobody recorded | Ends *No score recorded* | *Played · no score*: played for everyone, no Level moved (Q114) |
+| A score | One acceptance from the other team validates it at once; auto-confirmed after 24 h; a disagreement left open may be nullified | The same, and silence costs nothing; two scores naming the same winner count with the closer one, different winners end disputed (Q119) |
+| Reliability | Confidence in the level, not attendance; no attendance score | Points from 100 for turning up and keeping plans, with an optional filter (Q117, Q118) |
 
 ---
 
@@ -1693,7 +1866,7 @@ Aug–Sep 2026).
 | 3 | A Picked-for-you card is a shared proposal; a yes holds no court; In tags; a short last-seat line. |
 | 4 | The deck shows games that name you; Fill in is separate. → refined by Q38 |
 | 5 | Raketa earns nothing for now; the share is the court price ÷ seats. |
-| 6 | A booked group game lives like today's games (chat, details, result, stars, record). |
+| 6 | A booked group game lives like today's games (chat, details, result, stars, record). → amended by Q114, Q117, Q119 |
 | 7 | Silent yes, visible momentum. |
 | 8 | No push for a single swipe. → Q27 |
 | 9 | A yes is to the game; empty seats can be filled by anyone who fits. |
@@ -1723,7 +1896,7 @@ Aug–Sep 2026).
 | 33 | The old loop is retired into the flag. → Q42 *Superseded 2026-10-06: the old loop and its flag were removed (#569).* |
 | 34 | Fill in has **You're In**, including your posts. |
 | 35 | The moment a game fills. → amended by Q103/Q110 |
-| 36 | The statuses. → updated by Q39/Q58/Q98/Q99/Q105/Q106/Q111/Q113 |
+| 36 | The statuses. → updated by Q39/Q58/Q98/Q99/Q105/Q106/Q111/Q113/Q114 |
 | 37 | The chat opens when the game fills. |
 | 38 | Fill in is the rescue board; games that are still filling stay in the deck; three card types. |
 | 39 | *Held/Booked* wording (Held later removed by Q54). |
@@ -1748,11 +1921,11 @@ Aug–Sep 2026).
 | 59 | The screen before the first yes. |
 | 60 | Versions are not a card type; thin posts; singles versions. |
 | 61 | Nobody confirms anything at the fill; receipts by email and in the app. |
-| 62 | No-shows reported in the result, 24 h to dispute; optional QR check-in that never gates money. |
+| 62 | No-shows reported in the result, 24 h to dispute; optional QR check-in that never gates money. → amended by Q115, Q116 |
 | 63 | Price fixed on the card; club cancellations; leaving a group; blocks; the empty deck. |
 | 64 | This document goes in the repo, the illustrated HTML on the Desktop; then the ADR, then the UI document, then building. |
 | 65 | A 10-second undo, only on the yes that fills a game. → amended by Q74 |
-| 66 | The club website's bookings and check-in pages. |
+| 66 | The club website's bookings and check-in pages. → the check-in page amended by Q116 |
 | 67 | After the session, on request: a dedicated club-website section ([§16](#16-the-club-website)). Its **◇** items were filled in while writing, not grilled. |
 | 68 | FRIEND shows only once a friends feature exists. |
 | 69 | The *asked / no answer yet* tag is removed. |
@@ -1771,7 +1944,7 @@ Aug–Sep 2026).
 | 82 | Payment setup order: choose → card details (Stripe's fields) → accept the terms → confirm with your bank; only the phone's wallet shows. |
 | 83 | Change keeps the old method until the new one is saved; Remove only with nothing live; LIVE YESES · n; chips Off · 35 · 45 · 60 zł. |
 | 84 | Screens missing from the mocks are built in their style (Home cards, details additions, chat, Undo toast, It's a game!, intent question, payment interstitial, empty states). |
-| 85 | Push notifications are built (free except the Apple membership publishing needs anyway), with money notices also emailed. |
+| 85 | Push notifications are built (free except the Apple membership publishing needs anyway), with money notices also emailed. → extended by Q120 |
 | 86 | The club website design is mine as proposed; the Overview shows only what waits for an answer. |
 | 87 | Backend shape: the pool is first-class; new event-sourced contexts; availability becomes hours; payments behind a port with a fake adapter. |
 | 88 | Every piece of data is seeded through the real use cases, with fake payments; Stripe test keys are a human's. |
@@ -1800,3 +1973,10 @@ Aug–Sep 2026).
 | 111 | (2026-10-09, adds a status to Q36's; ruled by the product owner while grilling story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), with no finding of its own) *What does Home show while one payment is missing?* For the 30 minutes the game is on all four's Home as **Waiting for one payment**: *Waiting for one payment · until 14:40 · Nobody pays until it's in*. The payer's card reads *Confirm your payment by 14:40*, beside their *To confirm* row. At the end it becomes *Booked*, or *Seat open* (Q106). Evidence: as Q109's — Playmore's held seat says until when (*Trzymamy dla Ciebie miejsce do {time}*). |
 | 112 | (2026-10-09, extends §16.7, §16.8 and §16.12; ruled by the product owner when the tickets for story S-01B, [#606](https://github.com/Raketa02/Raketa/issues/606), were cut, with no finding of its own) *What does the desk see during the time to pay?* The accepted booking reads *Accepted · waiting for one player's payment until 21:20* in the club's Bookings. It isn't in *Waiting for you*, because the desk has answered. If the time runs out, the desk is emailed as for a cut-off: *A game didn't go ahead* / *A player's payment didn't come in time — the court is free again.* When the game is full again, the desk is asked again as for any new request. Evidence: as Q109's; in the build the desk's yes is thrown away when one card fails, and the desk is asked a second time once the game is full again ([#626](https://github.com/Raketa02/Raketa/issues/626)). |
 | 113 | (2026-10-10, amends Q24, Q47, Q54, Q58, Q99, Q108 and Q109, and Q36's money lines; ruled by the product owner from story S-01A, [#605](https://github.com/Raketa02/Raketa/issues/605#issuecomment-6097600856), F-LEAVE-6.1; specified by [#634](https://github.com/Raketa02/Raketa/issues/634); recorded by ADR-0189's 2026-10-10 amendment and ADR-0190's §1 amendment) *When does a share move, and what does leaving cost?* **The share is held when the game fills and taken at the club's cut-off, the one deadline, the same for everyone; leaving before it is free.** The product owner's rules: the law first; the club never pays for a player's leave; the club's cut-off is the one deadline. At the fill, or at an On request club's yes, every seat's share is held, all or nothing, and the court is booked as before; nothing is taken (amends Q54 and Q58). A seat whose hold would not reach the cut-off — its last moment less than 6 hours after it — gets a **card check**: held for seconds and let go, which proves the money is there that day, and held again at its **holding time**, four days before the cut-off. At the cut-off a full game's shares are taken; a game still short is called off and every hold is let go, so nobody pays anything. A leave before the cut-off lets the hold go: nothing is taken or refunded, and no fee arises for the leaver or the club. The card reads *40 zł · free to leave until Wed 19:00* from the moment the game fills (amends Q99, whose reason — never call a leave free when it costs a fee — is now met), and a leaver whose empty seat called the game off is told *Nothing was taken from you* (amends Q108). A card refused before the cut-off — at the fill, the club's yes, the holding or a rescue — gets **time to fix the card**: 30 minutes with the seat kept and nothing paid, *Fix your card by 14:40 to keep your seat*; not fixed, the seat goes to others and nothing is owed (amends Q109, and Q24, whose rule stands under the new names). After the cut-off money is taken at once — a game filling after it, a club's yes after it, a rescue after it — and a refusal gets time to pay as before. A leaver after the cut-off whose seat is taken gets the share back less exactly what Stripe kept on their payment, shown to the grosz before leaving and on the receipt: *If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)*. The club neither earns nor loses on it (amends Q47: only after the cut-off, and at the real fee). The terms' wording for it waits for the lawyer (O3); if the lawyer refuses it for personal EU cards, the fallback is everything back on those cards. No estimated card fee is printed anywhere. BLIK can't be held: its rule is decided when it launches, and it is cards only until then. A club's cancel before the cut-off lets every hold go; after it, everyone is refunded in full and the club bears the fees, as before. The terms get a new version, which every player accepts before their next game holds money. **Six calls #634 made without a ruling** are written in as rules, each marked *a call* where it stands, for the product owner to overrule: a seat lost because the card wasn't fixed at its holding counts as leaving before the cut-off on the record (§15.4); the take at the cut-off is a quiet row and a receipt, not a push (§17.2); a refused rescuer keeps the seat for 30 minutes, never past the start (§10.1); the reach margin is 6 hours and the holding lead 4 days, both domain constants (§12.2); the fallback takes a holding early when its last moment still falls short, and refunds a later timely leave in full, the one place the club could pay for a leave (§12.2); and the club's figures drop the estimate too (§16.11). **Words the ruling and its tickets didn't give** were written in while recording it, each marked where it stands: the others' words while one card is being fixed stay *Waiting for one payment* (§12.2); the leaver's emails (§13); the desk reads *Accepted · waiting for one player's card until 21:20*, and is emailed *A player's card wasn't fixed in time* on a lapse (§16.8); the quiet row reads *Your 40 zł for Thu 19:00 was taken* (§17.2); and, in the screens, the toast for a card refused at the fill (A2.4), the method card's line, the terms step and the receipts' footer (A7.3). **Evidence:** Stripe never returns its fee on a refund — *"Stripe's processing fees from the original transaction aren't returned"* — and letting a hold go is free — *"You can cancel a payment before it's completed at no cost"* ([Stripe: refunds](https://docs.stripe.com/refunds)); a Visa hold placed without the customer lasts *"4 days and 18 hours"* and a Mastercard 7 days, and Stripe's own delayed capture runs *"about 6 hours before the expiration time"* ([Stripe: place a hold](https://docs.stripe.com/payments/place-a-hold-on-a-payment-method)); *"the `payment_method_details.card.capture_before` attribute on the charge is the most reliable and accurate way to determine your charge's authorization window"* ([Stripe: CITs and MITs](https://docs.stripe.com/payments/cits-and-mits)); the fee exists only once the money is taken — *"A PaymentIntent must be captured and have a status of `succeeded` for the Stripe fees to be available"* ([Stripe: expand use cases](https://docs.stripe.com/expand/use-cases)) — and a card's tier is known only *"at the point of capture"* ([Stripe support: standard and premium cards](https://support.stripe.com/questions/what-s-the-difference-between-standard-and-premium-cards)), so the 1,60 zł the card and the leave sheet printed was an estimate: in Poland Stripe keeps *"1.5% + 1.00zł for standard European Economic Area cards"*, *"1.9% + 1.00zł for premium"*, *"2.5% + 1.00zł for UK cards"* and *"3.25% + 1.00zł for international cards"* ([Stripe pricing, Poland](https://stripe.com/en-pl/pricing)), so a leaver on a business Visa would have had 1,76 zł kept where 1,60 zł was promised. Stripe's terms say *"Except to the extent the Card Network Rules or Law permits, User must not charge surcharges, other fees, or Taxes for accepting payment cards"* (§3.4(e), [Stripe Services Agreement](https://stripe.com/legal/ssa-service-terms)). Polish payment law says *"Odbiorca nie pobiera opłat za korzystanie z instrumentów płatniczych, w przypadku których opłaty interchange są regulowane w przepisach rozdziału II rozporządzenia (UE) 2015/751"* — no charge for using the personal EU cards whose interchange the EU caps (art. 37a ust. 3, [ustawa o usługach płatniczych, Dz.U. 2026 poz. 623](https://api.sejm.gov.pl/eli/acts/DU/2026/623/text.pdf)). The civil code caps any payment fee at cost — *"Przedsiębiorca nie może żądać od konsumenta opłaty za skorzystanie z określonego sposobu zapłaty przewyższającej poniesione przez przedsiębiorcę koszty w związku z tym sposobem zapłaty"* (art. 383¹, [Kodeks cywilny, Dz.U. 2026 poz. 795](https://api.sejm.gov.pl/eli/acts/DU/2026/795/text.pdf)) — and the European Commission reads that rule as covering *"all kind of fees which are linked to a means of payment, regardless of how they are presented to consumers"* ([guidance on the Consumer Rights Directive, 2021/C 525/01, §8.2](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:52021XC1229(04))). UOKiK says a leisure business whose customer resigns *"może zatrzymać jedynie kwotę odpowiadającą faktycznie poniesionym kosztom"* ([UOKiK, 2014](https://archiwum.uokik.gov.pl/aktualnosci.php?news_id=11103)). A dated sports booking carries no statutory withdrawal right: art. 38 ust. 1 pkt 12 excludes services *"związanych z wypoczynkiem, wydarzeniami rozrywkowymi, sportowymi lub kulturalnymi, jeżeli w umowie oznaczono dzień lub okres świadczenia usługi"* ([ustawa o prawach konsumenta, Dz.U. 2026 poz. 1244](https://api.sejm.gov.pl/eli/acts/DU/2026/1244/text.pdf)), so the leave is the club's own rule and a late leaver is owed nothing back. Stripe's extended authorisation *"only applies to Customer-Initiated Transactions"* on Visa ([Stripe: extended authorization](https://docs.stripe.com/payments/extended-authorization)), and BLIK has *"Manual capture support: No"* ([Stripe: BLIK](https://docs.stripe.com/payments/blik)). |
+| 114 | (2026-10-11, amends Q6 and §15.3's *if nobody enters anything, the game ends Never played, as today*, and ADR-0140 §2's ghost; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-10.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §2) *What is a full booked game nobody recorded?* **Played.** It reads *Played · no score* for all of its players when its entry window closes; each gains the 5 points of a game played through, and no Level moves. *Never played* retires, and nobody is charged on *Shows up* for an unrecorded evening. Evidence: in the build, four players who played and paid at Bonarka and went home without opening the app each took a miss on *Shows up*, and a newcomer whose first game it was read 26 out of 100. Playtomic ends such a game *No score recorded — Sometimes it's not about the results, it's about having a good time together*; no platform or Kraków club rulebook checked penalises a casual booked and paid game nobody recorded; and Playmore's own team calls its post-game loop dead (*od 8.06: 3 wyniki*). |
+| 115 | (2026-10-11, amends Q62's no-show report and §15.3; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-10.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §3) *How is a no-show caught?* **At the court, while it happens.** In the first half of the game a player within about 300 m of the club taps *"Oscar isn't here yet"*, and Oscar is pushed at once. His arrival — his own location-checked *I'm here*, or a courtmate's *Oscar's here* — is on time within 10 minutes of the start (nothing is recorded), *Came late* from 10 to 30 minutes, and *Didn't come* after that. A phone that died has *I was there* within 24 hours, which a courtmate confirms, and it reads *Came late*. The tap costs its maker nothing; *Didn't come* takes no score, *Came late* plays on, and money never moves. Location is read only at a tap and never stored. Calls made without a ruling: the location rules, 300 m with the fix's accuracy allowed up to 200 m, *They're here* checked too, who may tap, and the retired events folding to nothing (ADR-0195 §10). Evidence: in the build anyone on the court could tap *didn't come* from home for 25 hours, the reported player's *I was there* from the sofa lifted it, and neither was told. Playtomic's terms make arriving 10 minutes or more late a no-show, and its players choose *Wait and Play* or *Declare No-Show*; Playmore's *Spóźnię się* tells the others *żeby nie czekali pod kortem* (not to wait at the court). Complaints name a no-show window *closed even though the slot for our game finished two minutes ago*, and a player *physically present* marked a no-show from *system logs*. |
+| 116 | (2026-10-11, amends Q62's optional QR check-in and Q66; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-10.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §4) *Does a club check players in?* **No.** Desk check-in is removed everywhere: the player's *Show at the desk* QR card, the club website's **Check in** page and its *We check players in* switch, *checked in ✓* in Bookings, and the backend's codes and routes. It solved a problem with no evidence that it was real, and it put a desk queue in front of players at every club. The checked-in event and the setting's field stay decodable and fold to nothing. Evidence: Playtomic has no check-in — *Players can go straight to the court … no need to stop at reception* — and none of its 157 club help articles explains one; tenis4U's desk marks a payment (*Oznacz płatność*), never an arrival. The cost: for Visa's *not received* reason Stripe lists *check-in confirmations* among the proof of service ([Stripe: dispute reason codes](https://docs.stripe.com/disputes/reason-codes-defense-requirements)), and the club loses that evidence ([§16.11](#1611-money)). |
+| 117 | (2026-10-11, amends §15.4 and ADR-0140 §2–§5, supersedes ADR-0160, reversing rules R-RESULT-34 and R-RESULT-7; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-44.1 and F-RESULT-35.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §1) *What is Player reliability?* **Points.** Everyone starts at 100. *Didn't come* −25, *Came late* −10, leaving after the cut-off with the seat left empty −15, leaving before it (or losing the seat to an unfixed card) when the empty seat calls the game off −10; +5 per game played through, never above 100; each failure drops out after 6 months, rolling. Bands *Very high* 90–100 · *High* 75–89 · *Medium* 50–74 · *Low* below 50, served by the backend; *100 · New* until 3 games are played through. The sheet shows counts only over 6 months — *Shows up*, *Keeps plans*, *Being late* and *Results left in dispute* — and no ledger. *Answers about results* leaves the figure, and silence on a score costs nothing. It is still computed on every read. Calls made without a ruling: a *Came late* game earns nothing back, *New* is fewer than 3 games ever, and *Results left in dispute* counts over the same 6 months. Evidence: in the build a newcomer's first ghost read 26 out of 100 while a veteran's no-show weighed almost nothing, and the words *Reliable · Holding · Under the bar* named a bar at 70 that nothing applies. Playtomic keeps no attendance score (its *reliability* is confidence in the level); Playmore's league collects punctuality ratings that *widzi tylko obsługa klubu* (only club staff see); and a Kraków complaint about tenis4U is that a club's warnings, unseen by the player, block booking at every club. |
+| 118 | (2026-10-11, reverses §5.1's *no score, no weight and no toggle* and rule R-ENGINE-15; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-44.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §6) *Can a player keep away from unreliable partners?* **Yes, with an optional switch**, off by default: *Play only with players of at least High reliability* (or *at least Medium*). It is one more clause of the pair rule, in both directions, on *Picked for you*, *Challenges*, *Seat open* and Fill in; a *New* player passes every minimum. It acts from the moment it is switched on, or the moment someone drops below it; yeses already given stand (a call: the fill doesn't re-ask it, unlike a block), and booked games never change. The filtering player reads *Your filter hides 2 of the 11 players in your groups*; a hidden player reads, with nobody named, *Some players in your groups play only with High reliability or above. At 75 you're dealt with everyone again.* Members lists show points and band. Evidence: Playtomic's players ask for exactly this — *I've learnt to only book competitive matches with people whose reliability of their play level is more than 50%*, *falta poner una opción para … poner una fiabilidad mínima para entrar*, *why can't we … limit participation to those with a certain reliabilty rating?* — and Playtomic already refuses some matches with *The match requires a player reliability level of …*. |
+| 119 | (2026-10-11, amends Q6 and §15.2's *unchanged from today*, and ADR-0137's acceptance grace and two standing scores, reversing rules R-RESULT-6, R-RESULT-7 and R-RESULT-8; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-35.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §5) *How is a score settled?* **By one tap or by silence.** No score is taken before the hour. When the hour ends, all of a Competitive game's players are asked *How did it go?*, and the other side is asked *Is that right?* when a score goes up. One *That's right* settles it at once and closes the game, so in doubles the first agreement wins. Silence settles it 24 hours after the score, and costs nothing. Corrections end with the entry window, and Levels move within a minute of settling. Two scores naming the same winner count with the closer one; different winners end disputed, with no Level moved and a *Results left in dispute* line for both posters, never points. For fun asks nothing and reads *Played*. Calls made without a ruling: the closer score's tie, a For fun score standing at once, and Levels within a minute through the outbox and a one-minute catch-up job. Evidence: in the build *Is that right?* said silence cost nothing and then charged a year-long miss on *Answers about results*, and a different score at 22:00 wiped out a *That's right* at 20:35. Playtomic: *If one of the opposing team's players accepts the result, it will validate immediately*, results auto-confirm after 24 hours, and a friendly *will not affect your level*. Playmore freezes a disputed result until the club clears it, which Raketa doesn't do: nobody rules on a score. |
+| 120 | (2026-10-11, extends Q85, Q94 and §17.2; ruled by the product owner from story S-01D, [#608](https://github.com/Raketa02/Raketa/issues/608#issuecomment-6113038779), F-RESULT-10.1 and F-RESULT-35.1; specified by [#649](https://github.com/Raketa02/Raketa/issues/649); recorded by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §7) *Who is told about attendance and the score, and how?* Five new notices, always on — *Isn't here yet*, *They're at the club*, *How did it go?*, *Is that right?* and *Were they there?* — each opening the game's result screen, and never for a For fun game. **Push goes end to end on Android and iPhone**: a human follows a step-by-step ticket for the Expo project, Firebase and the Apple Developer Program at 99 USD a year (accepted by the product owner), and the app then switches push on. Every new notice being always on is a call. Evidence: a tap at the court is worth nothing if it reaches the absent player only when they next open the app; Playtomic documents one push after a match and none when the other team enters or confirms a score; Playtomic and Playmore both push through Firebase; and iOS is 32 % of Polish mobile web traffic. |

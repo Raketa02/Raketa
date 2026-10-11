@@ -26,6 +26,11 @@ rather than an unbuilt feature. They are argued in §2 and summarised in §2.6:
 | *Confirms results* | **struck, and it stays struck** — ADR-0137: an unconfirmed result is a fact about a pair, and a strand is a verdict about a person. What ships in its place is **Answers about results** (ADR-0160), a different measurement over the same events: it counts answers, a counter scores exactly as an acceptance does, and only silence is a miss |
 | *Sportsmanship, by opponents* | the strand stands down: no surface on this platform lets anybody rate anybody, and turning it on retunes every published score in the product |
 
+> **2026-10-11, [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md):**
+> *Answers about results* left the record with every other strand. Player reliability is points
+> from 100, with a band, *New*, and four counts — *Shows up*, *Keeps plans*, *Being late* and
+> *Results left in dispute*. Silence on a score costs nothing.
+
 **Everything else ships**, and one item the design asks for comes *back* from a withdrawal:
 **opponent variety** returns as this context's own demand, which is what ADR-0098's amendment
 said would happen when a consumer finally arrived.

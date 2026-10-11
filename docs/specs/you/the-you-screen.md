@@ -108,7 +108,7 @@ were on the first draft and are out — §4 says why and what each would need.
 | Row | Live line (example) | Tap opens | Update | Status |
 | --- | --- | --- | --- | --- |
 | Skill passport | `Padel 2,71 · Tennis 3,10 · Squash 2,30` | the onboarding result card per sport, with the record's three blocks under each; *Add a sport*; the ladder | **none** on a rating; *Add a sport* starts a questionnaire | reads exist; questionnaire exists |
-| Player reliability | `92 of 100 · 3 things counted` | the ring, then the record card's rows | **none** | read exists; one decision (§5.3) |
+| Player reliability | `75 · High` · `100 · New` (since ADR-0195, written in from #660's sheet head; it read `92 of 100 · 3 things counted`) | the figure and its band, the four counts, the reliability filter | the filter only | read exists; one decision (§5.3); the filter's route is #661's |
 | What kind of game | `Padel Competitive · Tennis For fun · Squash not set` | one row per rated sport, expands to the three answers | in place, `PUT /play-intents/{sport}` | **built** |
 | Your week | `10 slots ticked` | the availability grid as the step draws it, *Save* / *Clear all* | `PUT /players/me/availability` on *Save* | route exists, screen missing |
 | Where you play | `Area set · updates when you open Raketa` | *Your area is set*, *Read my area again*, the permission states | `PUT /players/me/location` | route exists, screen missing |
@@ -175,44 +175,60 @@ new sport. All exist.
 
 ### 3.2 Player reliability
 
-**What it is.** The Player Score — out of a hundred, computed from what happened and never from
-opinions or results — and the rows the record draws beside it. Five rows, and the distinction
-that matters is that **three of the five are strands and weigh on the number, and two sit beside
-it and do not**:
+> **Amended 2026-10-11** by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §1 and §6 (the
+> mechanics Q117, Q118; built by [#660](https://github.com/Raketa02/Raketa/issues/660) and
+> [#662](https://github.com/Raketa02/Raketa/issues/662)). Until then this row was the weighted
+> Player Score — *Shows up* 35, *Answers about results* 15, *Keeps plans* 12, renormalised over the
+> strands present and never printed — drawn as a score ring with *Reliable* from 90, *Holding* from
+> 70 and *Under the bar* below, a meter per strand, and *nothing counted yet* for a player with no
+> record. All of that is retired. What follows is the row as decided.
 
-| Row | Weight | What it counts | In the number? |
-| --- | --- | --- | --- |
-| Shows up | 35 | plans that settled → games that happened; a Ghost game is charged to everybody on that court | yes |
-| Answers about results | 15 | scores put to you → answered inside the window; **a counter is as good as an acceptance**; forgets after twelve months | yes |
-| Keeps plans | 12 | booked games whose hour came → kept with every seat held; **broken only by leaving** so that the game is called off at its cut-off, or after it with nobody taking the seat (#544) | yes |
-| Opponent variety | — | different people over times on a court, whole record; two counts and the share | no — context for a Level |
-| Sportsmanship, by players | — | what other players said | no — matchmaking never reads it |
+**What it is.** Player reliability, in **points**, computed from what happened and never from
+opinions or results. Everyone starts at **100**. A failure takes a fixed price off — *Didn't come*
+−25, *Came late* −10, a late leave with the seat left empty −15, an early leave or an unfixed card
+when the empty seat calls the game off −10 — and every game played through gives 5 back, never above
+100. Each failure drops out 6 months after it happened. Beside the figure, the record's rows:
 
-*Answers challenges* stands down — challenges no longer wait for an answer (#544) — and *Settles
-up* has nothing to measure, because the court money is taken up front; neither is a row.
-*Confirms results* was struck and stays struck (ADR-0137). The weights are the player's own —
-35 / 15 / 12 — renormalised over the strands that are there, and **they are not printed**: the
-record does not carry them on the wire and the screen draws what the record draws.
+| Row | What it counts, over the last 6 months | In the figure? |
+| --- | --- | --- |
+| Shows up | turned up, of the games that reached their hour with you on the court — late counts as turned up | its failures are: *Didn't come* −25, *Came late* −10 |
+| Keeps plans | kept, of the games you were in at the hour | its failures are: −15 or −10 |
+| Being late | how many times you came late | through *Came late* |
+| Results left in dispute | games whose two scores named different winners, where you put one up | no — information only |
+| Opponent variety | different people over times on a court, whole record; two counts and the share | no — context for a Level |
+| Sportsmanship, by players | what other players said | no — matchmaking never reads it |
+
+There are no weights and no ledger. Silence on a score is not on it at all.
 
 **What opens.**
 
-- a dark card: the **score ring** in volt with the figure, and the one word the record's tone
-  ladder gives it (*Reliable* from 90, *Holding* from 70, *Under the bar* below);
-- **the record card's rows, as `RecordCard` draws them** — each strand's name and its raw pair
-  (`11 of 12`) on one line, the `Meter` under it at the served `pct` in the record's tone (mint
-  from 90, night between, red under 70); then *Opponent variety* as `70% · 14 of 20`; then
-  *Sportsmanship, by players* as **the figure and its count** — `4,3 / 5 · 12 players` — which
-  is what the record prints to a *reader* and, since ADR-0179 §5, to the subject too (§5.3).
+- a dark card: the figure and its band — `75 · High` — with *Out of 100* and the band's word,
+  *Very high*, *High*, *Medium* or *Low reliability*, drawn from the server's band; a player with
+  fewer than 3 games played through reads `100 · New`. The phone holds no thresholds of its own;
+- the four count lines — `Shows up` *turned up 12 of 13*, `Keeps plans` *kept 13 of 14*, `Being
+  late` *late 1 time*, `Results left in dispute` *0* — then *Opponent variety* as `70% · 14 of 20`
+  and *Sportsmanship, by players* as **the figure and its count**, `4,3 / 5 · 12 players` (§5.3);
+- **the reliability filter**: *Play only with players of at least High reliability*, offering Off,
+  At least Medium and At least High, Off by default. While a filter is on, the line under it reads
+  *Your filter hides 2 of the 11 players in your groups*;
+- for a player somebody filters out, and only for them: *Some players in your groups play only with
+  High reliability or above. At 75 you're dealt with everyone again.* Nobody is named.
 
-Nothing else. The explanatory cards of the first draft (*what it changes*, *what clears it*)
-and the sentence under each row are gone; the rows are the explanation.
+The explanatory cards of the first draft (*what it changes*, *what clears it*) stay gone.
 
-**How the update happens.** It does not. Only what the player does moves it.
+**How the update happens.** The figure moves only with what the player does, and each failure fades
+after 6 months. The filter is written by a tap, through a new player route, and shows what is
+saved.
 
-**What it needs.** `GET /players/me/record`, which exists and is ungated — *"this is the one
-screen a held player has for finding out how they appear."* Absence is honest: a player nothing
-has fallen due for has no `reliability` at all, and the row says *nothing counted yet* rather than
-drawing a nought. The sportsmanship figure needs §5.3.
+**What changes.** With a filter on, the player is never dealt, offered a rescue with, or joined on a
+post with somebody below the band — in both directions — from the moment it is switched on. Yeses
+already given stand, booked games never change, and a *New* player always passes.
+
+**What it needs.** `GET /players/me/record`, ungated — *"this is the one screen a held player has for
+finding out how they appear."* Its reliability block is points, the band, *New*, the four counts,
+the filter (its minimum, and how many it hides of how many) and, for a filtered-out player, the
+figure that brings them back (ADR-0195 §8). Nobody is without a figure any more, so the absence that
+said *nothing counted yet* is gone. The sportsmanship figure needs §5.3.
 
 ### 3.3 What kind of game — Play intent, per sport
 

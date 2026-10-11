@@ -983,6 +983,10 @@ anything else.
 > result's in `onboarding`, the sheet's in §25 — and are cited here, never respelled. What is
 > new is the tab's own words: the titles, the live lines, and the few sentences a screen gained
 > or lost on the way from a step to a row.
+>
+> **Amended 2026-10-11** by [ADR-0195](../../adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §1 and §6: Player
+> reliability is points, read with a band, and its screen carries the reliability filter. The
+> rows marked *(ADR-0195)* below say the new words; the words they replace are retired.
 
 | Where | Sentence | Note |
 | --- | --- | --- |
@@ -992,7 +996,7 @@ anything else.
 | The rows, Finding players | `Your week` · `Where you play` · `Who you play with` | |
 | The rows, On your card | `How others see you` · `Photos` · `Tags` · `Intro` · `Name` | *How others see you* is §25's `OWN_RECORD_TITLE`, cited |
 | Live line, passport | `{sport} {level}` joined by ` · ` | one per rating, the registry's order |
-| Live line, reliability | `{score} of 100 · {n} things counted` · `Nothing counted yet` | |
+| Live line, reliability | `{points} · {band}` · `100 · New` | *(ADR-0195)* written in from the sheet's own head, `75 · High` ([#660](https://github.com/Raketa02/Raketa/issues/660): *the You row's line uses points and bands*); `{score} of 100 · {n} things counted` and `Nothing counted yet` retired with the strands |
 | Live line, kind of game | `{sport} {intent}` joined by ` · `, `not set` for a sport with no answer | the intent words are `playIntentPresentation`'s |
 | Live line, week | `{n} slots ticked` · `Nothing ticked — we do not know when you play` | |
 | Live line, area | `Area set · updates when you open Raketa` | the one state — a profile cannot be committed without an area |
@@ -1005,8 +1009,11 @@ anything else.
 | Passport, a card's status chip | `Initial estimate` · `Calibrating` · `Stable` | `ratingStatusLabel`, cited; drawn as a `Tag`, not a row — the result card's *Rating status* row stays under the bar as well |
 | Passport, add a sport | `Add a sport` · `One questionnaire, one rating. Nothing you already hold changes.` · chip `Rate {sport}` | the chip begins a pass of one sport (ADR-0179 §3) |
 | Passport, the ladder | `The ladder` · `{edges}` · `{band} · you ({sports})` · *the band's meaning* | `bandPresentation`'s meanings, cited |
-| Reliability, the word by the ring | `Reliable` from 90 · `Holding` from 70 · `Under the bar` below · `Out of 100` | the tone ladder's three steps, said |
-| Reliability, with no record | `Nothing has fallen due for you yet — no plan has settled and nobody has asked you anything with a deadline. There is no score to draw, and that is not a low one.` | |
+| Reliability, the figure and its word | `{points} · {band}` · `Out of 100` · the band said as `Very high reliability` · `High reliability` · `Medium reliability` · `Low reliability` · `New` beside 100 | *(ADR-0195)* the band is the server's — Very high 90–100, High 75–89, Medium 50–74, Low below 50 — and the phone holds no thresholds; `Reliable` from 90 · `Holding` from 70 · `Under the bar` below retired with the tone ladder |
+| Reliability, the counts | `Shows up` · `turned up {n} of {m}` — `Keeps plans` · `kept {n} of {m}` — `Being late` · `late {n} time(s)` — `Results left in dispute` · `{n}` | *(ADR-0195)* over the last 6 months; no meters and no ledger ([#660](https://github.com/Raketa02/Raketa/issues/660)) |
+| Reliability, a new player | the new-player sentence, which no longer speaks of plans | *(ADR-0195)* `Nothing has fallen due for you yet — no plan has settled …` retired: everyone has a figure from the start. The new sentence is #660's to write |
+| Reliability, the filter | `Play only with players of at least High reliability` · `… at least Medium reliability` · off by default · `Your filter hides {n} of the {m} players in your groups.` | *(ADR-0195)* the *hides* line only while a filter is on ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
+| Reliability, a player someone filters out | `Some players in your groups play only with {band} reliability or above. At {floor} you're dealt with everyone again.` | *(ADR-0195)* names nobody; `{floor}` is the lowest band floor among the filters that hide them ([#662](https://github.com/Raketa02/Raketa/issues/662)) |
 | What kind of game, under the title | `This changes how people find you` | replaces the section's heading and body; the footnote for an undeclared sport is #296's, cited |
 | Your week, the buttons | `Save your week` · `Saved` · `Clear all` | the grid's footnote is the step's, cited |
 | Where you play | `Your area is set` · `Your area updates each time you open Raketa; it is never finer than about a kilometre.` · `Read my area again` | the permission states are the step's, cited; the middle line is static, the one written trace of the cold-start refresh, and was §26's until the radar went |

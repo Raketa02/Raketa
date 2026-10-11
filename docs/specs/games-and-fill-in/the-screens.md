@@ -30,7 +30,7 @@
 ## A1. Where things live
 
 - **Bottom bar:** **Home · ⚡ Play · You**. Home's badge counts games that need you (a result to
-  enter or confirm, a payment to confirm, a seat open in your game). **Players** and **Chats**
+  enter or confirm on a Competitive game, a payment to confirm, a seat open in your game). **Players** and **Chats**
   were the older loop, hidden behind a *Classic play* flag and then removed on 2026-10-06
   ([#569](https://github.com/Raketa02/Raketa/issues/569)).
 - **Group page** (mock 1): header (back, monogram, name, *n members · home club*, the sport pill
@@ -180,7 +180,26 @@ One screen (details 5–10, from Part 1), three readers.
   card was refused at the holding time reads *Fix your card by 14:40 to keep your seat* there, with
   the confirmation one tap away. No card fee is printed.
 - **Balance forecast** (details 9) — as built today; hidden while a seat is open.
-- **Show at the desk** — on the day only: a QR code and a short code under it.
+- **At the court** ([the mechanics §15.1](the-mechanics.md#151-attendance-at-the-court), Q115) — from the
+  hour's start to 30 minutes after it, the attendance block, built in the style of the details:
+  - **isn't here yet**, one per courtmate who hasn't arrived — *Oscar isn't here yet* — and, once
+    somebody has tapped it, **They're here** for when he walks in;
+  - **I'm here**, for the player somebody is waiting for;
+  - afterwards, **I was there** for a player who reads *Didn't come*, until 24 hours after the
+    window, and **Yes, they were here** for the others while a claim waits;
+  - every outcome and refusal as a plain sentence: on time (the line vanishes), *Came late*,
+    *Didn't come*, *You can say so only from Ogrody 33*, location off (the phone asks for it and
+    says why), and the window passed. Each tap reads the location once, through the app's existing
+    location port, and sends it with the tap.
+- **After the hour — the result screen** ([the mechanics §15.2](the-mechanics.md#152-results-and-sportsmanship),
+  Q119) — on a Competitive game, **How did it go?** leads into putting the score up; the other side
+  reads **Is that right?**, which says truthfully when the score becomes the result if nobody
+  answers, and that saying nothing costs nothing, with **That's right**, which settles it at once.
+  A For fun game asks nothing and reads *Played*. The endings *Played · no score* and *disputed* are
+  said in words. Every notice of [the mechanics §17.2](the-mechanics.md#172-notifications)'s *game's own
+  notices* opens this screen.
+- **No *Show at the desk*.** The QR card and its short code were removed with desk check-in on
+  2026-10-11 (Q116).
 - **Leave the game** (details 10) — outlined, red text; the line under it states the cost for
   the moment ([the mechanics §13](the-mechanics.md#13-leaving-a-game)); the confirmation sheet is
   today's *Before you leave* sheet with the new words (Q113):
@@ -315,14 +334,15 @@ Back chevron + title; changes save as you tap.
 
 ### A7.2 Notifications (mocks 52, 53)
 
-- **ALWAYS ON** — twelve inert rows with a green **on** tag, those of
+- **ALWAYS ON** — seventeen inert rows with a green **on** tag, those of
   [the mechanics §17.2](the-mechanics.md#172-notifications): *It's a game! · held* · *It's a
   game! · the club answers by …* · *Waiting for one payment* · *Fix your card by … to keep your
   seat* · *Confirm your payment by … to keep your seat* · *Game called off · nothing was taken, or
   with the refund* · *Someone left your game · or it's filling again* · *You've been refunded* · *The
   club confirmed / said no / didn't answer in time* · *Your new game* · *A game you left* · *Your
-  post didn't fill* (Q113 adds *Fix your card*; the quiet row for the take at the cut-off is never
-  pushed, so it isn't listed).
+  post didn't fill* · *Isn't here yet* · *They're at the club* · *How did it go?* · *Is that right?* ·
+  *Were they there?* (Q113 adds *Fix your card*; the quiet row for the take at the cut-off is never
+  pushed, so it isn't listed; Q120 adds the game's own five, written in as the list's words).
 - **YOUR CHOICE** — three rows with a working **On / Off** chip: *You complete it* (on; *A card
   needs only you · at most 1 a day, bundled*), *Challenges for you* (on; *A member's post names
   you · at most 3 a day, bundled*), *Fill in alerts* (off; *A booked game you fit needs one more ·
@@ -387,7 +407,9 @@ rest grey. **The order is changed from the mocks** (Q82):
 The rail of game cards that was *Now*, renamed **Home**, showing the statuses of
 [the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses): **Waiting for the club**
 (amber), **Waiting for one payment** (amber), **Booked** (mint), **Seat open** (amber), the result
-statuses as today, **Called off** (red) — each with its money line. **Open game** →
+statuses — *Needs result*, *Confirm the result*, *Counted*, *Uncounted* with its reason, and
+**Played · no score**, which replaced *Never played* (Q114) — **Called off** (red) — each with its
+money line. A booked card carries no QR code and nothing to show at the desk (Q116). **Open game** →
 [A4.1](#a41-a-booked-game-youre-in-details-510).
 On a booked card the **speech bubble is the chat's door**: it opens the game's chat
 ([A4.4](#a44-the-chat)) straight over Home, and Back returns to Home
@@ -448,13 +470,23 @@ card first*.
 | A game you left — called off by your empty seat | ✓ | ✓ | — |
 | A game you left — cancelled by the club, with your refund | ✓ | ✓ | ✓ |
 | Your post didn't fill | ✓ | ✓ | — |
+| Isn't here yet — *Ivan is at Ogrody 33 and you're not there yet* (to the absent player, Q115, Q120) | ✓ | ✓ | — |
+| They're at the club (to whoever tapped) | ✓ | ✓ | — |
+| How did it go? (a Competitive game's hour ended, Q119, Q120) | ✓ | ✓ | — |
+| Is that right? (the other side put a score up) | ✓ | ✓ | — |
+| Were they there? (an absent player claimed *I was there*) | ✓ | ✓ | — |
 | You complete it · Challenges for you · Fill in alerts | ✓ if on | ✓ if on | — |
 
-Push goes through Expo's push service. Emails go through the existing mailer (ADR-0186).
+Push goes through Expo's push service, switched on end to end on Android and iPhone since Q120: a
+human sets up the Expo project, Firebase and the Apple Developer Program, and the app then turns it
+on. Emails go through the existing mailer (ADR-0186). For fun games are told none of the game's
+own five.
 
 **Where a notice opens.** Tapping a notice — the banner, its row in the list or, later, a push —
 opens the game it is about. Three open the group's Games deck with their card on top: *You
-complete it*, *Challenges* and **Your new game** (Q107). **Home is read again whenever a notice
+complete it*, *Challenges* and **Your new game** (Q107). The game's own five — *Isn't here yet*,
+*They're at the club*, *How did it go?*, *Is that right?* and *Were they there?* — open **the game's
+result screen** ([A4.1](#a41-a-booked-game-youre-in-details-510), Q120). **Home is read again whenever a notice
 arrives**, so a game a notice is about is there when it is tapped (Q103).
 
 **The bell and its number** (Q101). The recent notices are a list, the newest 30, reached from a
@@ -539,9 +571,9 @@ Three sections on one page.
 ## B4. Bookings
 
 - **One day at a time**: *‹ Today ›* with a date picker; filters **All · Waiting for you · Seat
-  open · Called off**. **Check in** button at the top right when the club checks players in.
-- **Row** (per booking): time + court + sport + kind · the players (name, their share *held* or
-  *taken* — Q113 — and *checked in ✓*) · status tag · money (court price, collected, refunded) ·
+  open · Called off**. No *Check in* button (Q116).
+- **Row** (per booking): time + court + sport + kind · the players (name, and their share *held* or
+  *taken* — Q113; no *checked in ✓*, and nothing about who came or the score) · status tag · money (court price, collected, refunded) ·
   the group it came from · actions:
   - **Waiting for you** → **Accept** / **Refuse** with the countdown; Refuse asks for an optional
     reason, and tells the desk what the players will read: *Kazimierz Padel said no* · *Nobody
@@ -571,16 +603,17 @@ One page, one form, **Save settings**:
 - **Release lead** (Only Raketa) · **Minimum notice** (Instant, On request) · **Time to confirm**
   (On request) · **Free-cancellation cut-off** — number fields with their defaults.
 - **Other clubs' courts for our groups** — on/off + distance (default 10 km).
-- **We check players in** — on/off.
 - **Pause Raketa bookings** — on/off with its consequence line.
 - **Leave Raketa** — a text link at the bottom, refused while anything is booked or unpaid.
 
+*We check players in* was removed with desk check-in on 2026-10-11 (Q116).
+
 ## B6. Check in
 
-Opens the device camera in the browser; a scanned code shows the booking (*19:00 · Court 2 ·
-Padel*) and the player (*Piotr S. — checked in ✓*). A field below takes the **short code** by hand.
-Wrong day or club: *"This code is for another day"* / *"… another club"*. Already scanned:
-*"Checked in at 18:52"*.
+**Removed on 2026-10-11** (Q116, [the mechanics §16.10](the-mechanics.md#1610-check-in)). The page opened
+the device camera to scan a player's QR code, took a typed short code, and marked *checked in ✓*.
+The page, its scanner, the typed-code form, the camera and QR dependencies and the Bookings button
+that led to it are gone; players walk straight to the court, and whether somebody came is caught there.
 
 ## B7. Money
 
@@ -618,7 +651,8 @@ The shape is ADR-0189 §5. What each app needs from it:
 - **Club courts** (Clubs, per club): `CourtAdded`, `CourtChanged`, `CourtSwitchedOff/On`,
   `RaketaHoursSet` (per court, weekly hours), `ExceptionAdded/Removed`, `PricesSet`,
   `WayOfWorkingChosen`, `RaketaSettingsChanged`, `StripeAccountLinked`, `StripeAccountStatusChanged`,
-  `RaketaPaused/Resumed`.
+  `RaketaPaused/Resumed`. *We check players in* left the settings with check-in (Q116); its field
+  stays decodable on `RaketaSettingsChanged` and folds to nothing.
 - **Proposal** (Proposals, per proposed game): `ProposalMade` (origin: pick | post; pool, sport,
   kind, who, level range, club, start, share, book-by), `VersionDealt`, `YesSaid`, `YesWithdrawn`,
   `NoSaid`, `ProposalFilled` (the people and sides), `ProposalExpired`, `ProposalWithdrawn`,
@@ -627,9 +661,15 @@ The shape is ADR-0189 §5. What each app needs from it:
   `BookingAccepted` / `BookingRefused` / `BookingTimedOut` / `RequestWithdrawn` (a player left
   while it waited), `BookingConfirmed` (court number,
   seats, cut-off), `CourtMoved`, `SeatLeft`, `SeatRescued`, `CalledOffAtCutOff`,
-  `CancelledByClub`, `PlayerCheckedIn`, `BookingPlayed`. It opens the ordinary **Game** on
-  confirmation — the only thing that opens one since the old loop was removed (#569); the
-  no-show report lives on the Game.
+  `CancelledByClub`, `BookingPlayed`. `PlayerCheckedIn` retired with check-in (Q116); it stays
+  decodable and folds to nothing. It opens the ordinary **Game** on confirmation — the only thing
+  that opens one since the old loop was removed (#569). A new read gives a booking's club map
+  point, for the attendance verdict below.
+- **Game** (Games, grows — Q114, Q115, Q119): one event per attendance act — *note absent*, *note
+  arrival*, *claim presence*, *confirm presence* — each carrying the verdict *at the club* and never
+  the coordinates; the no-show report's two events retire, decodable and folding to nothing. An
+  acceptance settles the result at once, and *Played · no score* and *disputed* are folded ends,
+  never stored. The event names are the build's (#654, #655, #657).
 - **Payment method** (Payments, per player): `MethodSaved` (Stripe customer and method ids, brand,
   last four, wallet), `TermsAccepted` (version, time, IP), `MethodChanged`, `MethodRemoved`,
   `BrandChanged` (asks again).
@@ -660,7 +700,7 @@ proposals' needs, per club and hour.
 
 - **The proposer** — continuously, per pool and sport: free court hours × free fitting members →
   proposals. *Fitting* is the pair rule (`PlayerFit`: blocks, mutual gender preference, the level
-  window), and the most even four is read off the balance forecast — no ranking or score
+  window, and since Q118 the reliability filter), and the most even four is read off the balance forecast — no ranking or score
   ([the mechanics §5.1](the-mechanics.md#51-what-it-does)); distance only picks a group's clubs.
   Deals versions at half-In and after every no. Respects games-per-week, most-I'll-pay and one
   card per people-set per batch.
@@ -681,6 +721,11 @@ proposals' needs, per club and hour.
   the desk (Q109, Q112). At a holding, it opens the player's seat as a rescue; on a rescue, it
   offers the seat again.
 - **Rescue dealing** — on every `SeatLeft`: Seats to fill, Seat open cards, Fill in alerts.
+- **How did it go?** (Q119, Q120) — every 30 seconds, as the other money and seat jobs: tells the
+  players of every Competitive booked game whose hour has ended. For fun games are told nothing.
+- **Levels** (Q119) — a result settled by an acceptance is settled for rating from the outbox, for
+  that one game; results settled by a window closing (silence, or the closer score) are caught up
+  every minute. The hourly cadence retired.
 - **Notifications** — caps and bundling (1 / 3 / 3 a day), push through Expo, email through the
   mailer, in-app list.
 - **Stripe webhooks** — one endpoint for the platform and one **Connected accounts** endpoint
@@ -693,18 +738,21 @@ proposals' needs, per club and hour.
   `POST /bookings/{id}/seats` (rescue join), `POST /bookings/{id}/departure` (leave),
   `GET /pools/{id}/posting-grid?sport&kind&who&level_min&level_max&week`,
   `GET /pools/{id}/posting-grid/slot?…`, `POST /pools/{id}/posts`, `GET /proposals/{id}`,
-  `GET /bookings/{id}` (details incl. the check-in code), `GET /home`, `PUT
+  `GET /bookings/{id}` (details; the check-in code went with Q116), `GET /home`, `PUT
   /players/me/weekly-hours`, `GET/PUT /players/me/games-and-money`, `GET/PUT
   /players/me/notifications`, `POST /players/me/devices`, `POST /players/me/payment-methods/setup`
   (a SetupIntent — its id, never its secret), `POST /players/me/payment-methods/terms` (answers
   the secret), `POST /players/me/payment-methods/confirmation`, `GET` and `DELETE
   /players/me/payment-methods/current` (settled by #536, ADR-0190), `GET /players/me/payments`
   (live yeses + receipts),
-  `POST /seat-charges/{id}/confirmation` (recovery).
+  `POST /seat-charges/{id}/confirmation` (recovery). Since Q115 and Q118, four routes carry the
+  attendance acts on a game, each with a location fix in its body, and one sets the reliability
+  filter; the no-show routes are gone. The tickets settle the paths.
 - **Club surface** — `GET/POST/PATCH /club/courts`, `PUT /club/courts/{id}/hours`,
   `GET/POST/DELETE /club/exceptions`, `PUT /club/prices`, `GET/PUT /club/raketa-settings`,
   `POST /club/stripe/onboarding-link`, `GET /club/setup`, `GET /club/bookings?date&filter`,
-  `POST /club/bookings/{id}/acceptance|refusal|move|cancellation`, `POST /club/check-ins`,
+  `POST /club/bookings/{id}/acceptance|refusal|move|cancellation` (`POST /club/check-ins` went
+  with Q116),
   `GET /club/money?month`, `GET /club/payouts`.
 - **Webhooks** — `POST /api/v1/webhooks/stripe` (built by #536, on no client's contract —
   ADR-0190 §4), `POST /api/v1/webhooks/stripe-connect`.
@@ -723,15 +771,16 @@ stored in UTC and shown in Europe/Warsaw.
 Seeds drive the real use cases only (ADR-0029; `backend/app/seeds/`), with the **fake payments
 adapter**, and **nothing a mock shows is hard-coded**. On top of today's cohort and groups:
 
-- **Clubs** in all three ways of working, with courts per sport, weekly Raketa hours, one
+- **Clubs** in all three ways of working, none with a check-in switch (Q116), with courts per sport, weekly Raketa hours, one
   exception, price bands, a linked (fake) payments account; one club **not live** (half its
   checklist done) and one **paused**.
 - **Members** with hourly weekly hours, spread so the posting grid shows every cell state.
 - **For a protagonist**, in one group and sport: fresh picks; picks with 1, 2 and 3 In (one *Book
   it now*); a challenge with momentum and one whose poster withdrew; rescues before and after the
   cut-off; a post of their own in You're In; a game waiting for an On request club; booked games
-  (one before, one after the cut-off, one on the day with a check-in code, and since Q113 one
-  filled far ahead with its seats checked); a called-off game; receipts and a refund; a week at the
+  (one before, one after the cut-off, one on the day, and since Q113 one filled far ahead with its
+  seats checked); since Q114 the evening nobody recorded reads *Played · no score*, and the
+  protagonist's Player reliability is in points (Q117); a called-off game; receipts and a refund; a week at the
   games-per-week cap; a card above a price ceiling (for the filter). Past seeded games are taken and
   settled; upcoming ones are held, or checked with a holding time, as the rules say (Q113).
 - **Screens assertions** (`seeds/screens.py`) extended so the seed fails if the deck, Fill in, the
