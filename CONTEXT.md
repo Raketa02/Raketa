@@ -158,8 +158,9 @@ A rating is **never only a number**.
   Manual editing is refused by the domain itself, not guarded by a permission check.
 - **Only the rating context writes μ, σ, volatility and status.** Every other engine
   contributes evidence, an information weight, or an anomaly signal — never a rating point.
-- **A result moves a Level or it moves nothing, and there is no third outcome.** An unscored
-  game is *an evening, not evidence*; a friendly was never evidence about anybody by the choice
+- **A result moves a Level or it moves nothing, and there is no third outcome.** A game with no
+  agreed score — *Disputed*, *Played · no score*, and before ADR-0195 *unscored* — is *an evening,
+  not evidence*; a friendly was never evidence about anybody by the choice
   of the people who arranged it. Both are absent from what the rating context reads, so neither
   is a branch anybody could forget.
 - **Absence widens, it never lowers.** Layoff and inactivity add to σ and never touch μ. A
@@ -760,9 +761,15 @@ about how good anybody is — that is the rating context reading this one.
 - **Game** — one booked game and its result. **Opened by its Booking**, in the transaction that
   made it *booked*, and never by a request: nothing a client sends can produce one, which is what
   makes *these people are playing this* a fact rather than a claim. One game per booking, for
-  ever. It reaches **five ends**: three folded from the record and the clock, a fourth —
-  **Called off** — that is announced, and a fifth — **Started short** — that the hour reads off a
-  line-up with a seat still open. **The fourth end says who**: `called_off_by`, or nobody when it
+  ever. Its ends are **folded from the record and the clock** — **Confirmed**, **Disputed**,
+  **Played · no score**, and a game somebody **Didn't come** to — except **Called off**, which is
+  announced, and **Started short**, which the hour reads off a line-up with a seat still open.
+  Since [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) (2026-10-11, not yet built —
+  [#654](https://github.com/Raketa02/Raketa/issues/654),
+  [#655](https://github.com/Raketa02/Raketa/issues/655),
+  [#657](https://github.com/Raketa02/Raketa/issues/657)) *Played · no score* replaces *Never
+  played*, *Disputed* is where two scores naming different winners end, and *Didn't come*
+  replaces the no-show report. **Called off says who**: `called_off_by`, or nobody when it
   is the club's cut-off or the club taking the court back
   ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md),
   [ADR-0172](docs/adr/0172-the-court-ends-with-the-game-the-ending-says-who-and-a-called-off-card-can-be-cleared.md),
@@ -784,61 +791,112 @@ about how good anybody is — that is the rating context reading this one.
   typed a score would hand a player the exact evening they said they did not want, and would give
   one word two meanings.
 - **Result** — *we played, here is the score*. **The entry is the record that the game
-  happened**, and it can be made until the game's **entry window**, which runs from the end of
-  its hour, closes.
+  happened**. It can be made inside the game's **entry window**: from the hour's start, **never
+  before**, until 24 hours after the hour ends. When a **Competitive** game's hour ends, all of its
+  players are asked ***How did it go?***; a **For fun** game asks nothing, and a score put up on
+  one settles at once with no answer window. The edges, the question and For fun are ADR-0195's
+  (§5), not yet built ([#654](https://github.com/Raketa02/Raketa/issues/654)).
 - **Score** — the sets, absolute rather than from anybody's point of view. **A score names a
   winner**: a level set has not finished and none of the four sports produces a draw, so a level
   score is refused. *Set* is used for whatever the sport calls its unit.
 - **Proposal** — a score on the table, **one per side**. The cap is what bounds an argument to
-  two rounds, and it is what makes silence safe to read as agreement. *Not* the **Proposal** of
+  two rounds, and it is what makes silence safe to read as agreement. The other side is asked
+  ***Is that right?*** when it goes up. *Not* the **Proposal** of
   Proposals, which is a game still filling: this one is a score, and the word is always read in
   its context.
 - **Correction** — the proposing side revising its own score while the other side has not
-  answered. **Not a second proposal**, and **any member of that side may make it** — the rule
+  answered, and never after the entry window has closed (ADR-0195 §5). **Not a second proposal**, and **any member of that side may make it** — the rule
   that makes a teammate's agreement worthless is the same rule that makes a teammate's objection
   credible.
 - **Counter** — the other side's one turn, and **it carries a score**. There is no bare
   rejection: a rejection carrying nothing would be free and always optimal for the loser.
 - **Acceptance** — agreement, **from the opposing side only**, because a teammate agreeing with
-  a teammate proves nothing. **One opponent suffices.**
-- **Acceptance grace** — how long an acceptance waits before it settles anything, measured from
-  the *score* and not from the tap. Inside it a counter still wins, so a partner who is quick to
-  their phone cannot close the door on an opponent who has not read the score yet.
-- **No-show report** — the players who came marking one who did not, where they would enter the
-  result. The reported player has **a day to dispute it**, and a player the club **checked in**
-  cannot be reported. A report is the entry for that game — no score stands beside one — and
-  whatever it comes to, **the game does not count**. One that stands its day is the strongest
-  mark a record carries.
+  a teammate proves nothing. **One opponent suffices.** Since ADR-0195 §5 (*That's right*, not yet
+  built — [#654](https://github.com/Raketa02/Raketa/issues/654)) it **settles the result at once
+  and closes the game**: no counter is taken after it, so in doubles the first agreement from the
+  other side wins.
+- **Acceptance grace** — *retired 2026-10-11* (ADR-0195 §5). An acceptance waited six hours from
+  the score before it settled anything, and a counter inside that time won. An acceptance now
+  settles at once.
+- **Closer score** — of two standing scores that name **the same winner**, the one with the smaller
+  difference in games won; on a tie, the first put up. The game is confirmed with it (ADR-0195 §5).
+- **Disputed** — the end of a game whose two standing scores name **different winners** when the
+  answer window closes. No Level moves, and each of the two players who put a score up is counted
+  in **Results left in dispute** (Player Score). It takes the place *Unscored* held for two scores
+  nobody accepted.
+- **Played · no score** — the end of a **full** booked game whose entry window closed with no
+  score and nobody *Didn't come*. Played, for all its players: each gains the points of a game
+  **played through**, and no Level moves. It replaces *Never played*, which retires: every game is
+  opened by a booking, so there is no unbooked plan left to dissolve (ADR-0195 §2, not yet built —
+  [#655](https://github.com/Raketa02/Raketa/issues/655)).
+- **Tap window** — from a booked game's start to 30 minutes after it, the first half of a one-hour
+  game: when attendance is caught at the court (ADR-0195 §3, not yet built —
+  [#657](https://github.com/Raketa02/Raketa/issues/657)).
+- **Isn't here yet** — the tap a player on the court makes, **at the club**, in the tap window,
+  about another player on the court who hasn't arrived. Never about yourself, never while you are
+  yourself absent and not yet arrived; a partner may be tapped, and two absentees can each be.
+  The absent player is pushed at once. It costs its maker nothing.
+- **Arrival** — the moment an absent player is shown to be at the club: their own **I'm here**, or
+  a courtmate's **They're here**, each made at the club. The first one counts.
+- **On time · Came late · Didn't come** — the three attendance outcomes, read from the arrival:
+  **on time** within 10 minutes of the start (nothing is recorded, and the tap vanishes), **Came
+  late** 10 to 30 minutes after it, **Didn't come** with no arrival by 30 minutes after it. A
+  *Came late* game carries on, score and Level included. A *Didn't come* game takes no score and
+  never counts, and *Didn't come* is provisional until the late claim's 24 hours end. Folded per
+  player against the server's clock, never the phone's.
+- **I was there** — the absent player's late claim, within 24 hours of the tap window closing,
+  for a phone that died. A courtmate confirms it with **Yes, they were here**, and *Didn't come*
+  becomes *Came late*: the tap still proves they weren't there when it was made.
+- **At the club** — the verdict an attendance act carries: the phone's one-shot fix, read only at
+  the tap, within **300 m** of the club's map point, allowing for the fix's own stated accuracy up
+  to 200 m. The Game is given only the verdict; **the coordinates are never stored**.
+- **No-show report** — *retired 2026-10-11* (ADR-0195 §3). The players who came marked one who
+  did not, from anywhere, for a day after the hour; the reported player had a day to dispute it,
+  and a player the club checked in could not be reported. It is replaced by **Isn't here yet** and
+  the **Arrival**, made at the court. Its events stay decodable and fold to nothing, and a game
+  that held one reads *Played · no score*.
 - **Standing** — what a game *is* right now: `AWAITING_ENTRY`, `NEVER_PLAYED`,
   `AWAITING_ANSWER`, `CONFIRMED`, `UNSCORED`, `CALLED_OFF`, `STARTED_SHORT`,
-  `NO_SHOW_REPORTED`, `NO_SHOW`. **Derived from the record and the clock, never stored** — and
+  `NO_SHOW_REPORTED`, `NO_SHOW`. ADR-0195 changes the list (not yet built — #654, #655, #657):
+  `NEVER_PLAYED`, `NO_SHOW_REPORTED` and `NO_SHOW` go, and **Played · no score**, somebody **not
+  here yet**, **Didn't come** and **Disputed** come; the builds name their codes. Two scores now
+  end confirmed or disputed, so `UNSCORED` is left with no case (#654 settles its code). **Derived from
+  the record and the clock, never stored** — and
   never announced, with one exception: `CALLED_OFF` is a decision, folded off `GameCalledOff` and
   read first ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). It is an
-  end, and it is **neither an evening nor a ghost**: a ghost is silence and this was an act, so
-  it is in no tally and moves no **Strand**. Neither `STARTED_SHORT` nor `NO_SHOW` is in a tally
-  either. Spelled `GameStanding` in code and on the wire, a name kept from when Challenges
+  end, and it is **not an evening**: this was an act, so it is in no tally, and it earns nobody a
+  game played through (its cost to a leaver is the record's, in points). Neither `STARTED_SHORT` nor
+  *Didn't come* is in a tally either. (Before ADR-0195 this also said *nor a ghost* and *moves no
+  Strand*; both terms are retired.) Spelled `GameStanding` in code and on the wire, a name kept from when Challenges
   published a `Standing` component of its own: renaming a component is a change to types a
   shipped app generated. The same is true of `GameSide`.
 - **Counted game** — a counted-kind game somebody said was played, **scored or not**. What the
-  player record's skill panel counts.
-- **Ghost game** — a booked game whose entry window closed with nobody ever saying it happened.
-  Kept distinguishable from a played game, because familiarity is about people who actually
-  played. A **called-off** game is not one: the window did not close on silence, somebody ended
-  it.
+  player record's skill panel counts. A *Disputed* game is one. Whether a *Played · no score* game
+  — which nobody said was played — is one too is for
+  [#655](https://github.com/Raketa02/Raketa/issues/655) to settle.
+- **Ghost game** — *retired 2026-10-11* (ADR-0195 §2). A booked game whose entry window closed
+  with nobody ever saying it happened, charged to everybody on its court on *Shows up*. A full
+  booked game nobody recorded is now **Played · no score**, and nothing is charged for silence.
 
 **Invariants**
 
-- **Silence confirms.** A lone score nobody answers stands when its window closes, and the game
-  counts. There is nothing anywhere in this context called *confirm*: a result is agreed when a
-  clock passes, and a clock is nobody's request.
-- **Two standing scores nobody accepts leave the game unscored — and an unscored game is an
-  evening, not evidence.** It is in history, it is a counted game, it establishes that these
-  people have played together, and **it moves nobody's Level.**
+- **Silence confirms, and costs nothing.** A lone score nobody answers stands 24 hours after it
+  went up or was last corrected, and the game counts. There is nothing anywhere in this context called *confirm*: a
+  result is agreed when a clock passes or when the other side says *That's right*.
+- **Two standing scores nobody accepts are settled by who they name.** The same winner: the game
+  is confirmed with the **closer score**. Different winners: the game is **Disputed** (ADR-0195
+  §5). **A disputed game, like a *Played · no score* one, is an evening, not evidence**: it is in
+  history, it establishes that these people have played together, and **it moves nobody's
+  Level.**
 - **No player is penalised for not entering or not agreeing a result.** Not the silent loser,
-  not the four who all went home, not the side whose counter went unaccepted. **This is why
-  *confirms results* is not a Player Score strand** — and why the strand that does read this
-  context's records counts **answers**, where a counter scores exactly as an acceptance does,
-  so disagreeing still costs nothing. See below.
+  not the four who all went home — a full booked game nobody recorded is *Played · no score* and
+  earns them their points — and not either side of a dispute. **This is why *confirms results*
+  was struck**, and why since ADR-0195 nothing about answering a score is in the reliability
+  figure at all: silence costs nothing, and *Results left in dispute* is a line on the record,
+  never points.
+- **Attendance is caught at the court and never stored as a place.** The attendance acts are made
+  in the tap window, from the club, each carrying only the verdict *at the club*. Money never
+  moves on them: everyone paid, and the club was paid for the hour.
 - **We will not arbitrate.** Two people who were both on court and cannot agree what happened is
   not a result, and Raketa will not invent one. A settled result is final: no support correction
   path and no reversal.
@@ -935,61 +993,78 @@ Nothing about when, where, money or the result belongs here — it is **told** a
 
 ### Player Score (`backend/app/modules/player_score/`)
 
-What the platform has watched a player *do*, as distinct from how well they play. **One number
-in the UI, six strands underneath it**, each published in its own right on the player record. The
-words are the player's: they are read on the player's own screen, and nothing that decides who
-plays with whom reads them.
+What the platform has watched a player *do*, as distinct from how well they play: **Player
+reliability**, one figure in **points**, with the counts it is read beside. The words are the
+player's: they are read on the player's own screen, on a group's Members list, and by the
+**Reliability filter**, which is the only thing that acts on the figure.
 
-**Three of the six have a source and three do not** — decided by
-[ADR-0140](docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
-which also settles the clause ADR-0137 opened about whether *shows up* survives at all, and by
-[ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md), which adds
-the third. **The three changed once without the count changing**
-([#544](https://github.com/Raketa02/Raketa/issues/544)): *answers challenges* stood down and
-*keeps plans* came up on booked games, and the published weights were not touched.
+**The figure was a weighted blend of strands until 2026-10-11**
+([ADR-0140](docs/adr/0140-a-player-score-is-what-the-platform-watched-and-two-strands-is-what-it-can-see.md),
+[ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md), #544). It is
+now **points** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+§1, §6), decided and not yet built ([#659](https://github.com/Raketa02/Raketa/issues/659) the
+points, [#661](https://github.com/Raketa02/Raketa/issues/661) the filter); until they land, the
+code still computes the weighted strand blend that the retired **Strand** entry below describes.
 
-- **Player Score** — the blended number a player sees, out of a hundred. Computed from what
-  happened, never from opinions and never from results: **losing costs nothing here.** The
-  blend is over **the strands that are there**, renormalised, so a player the platform can see
-  two things about is comparable to one it can see five about, and neither is credited for a
-  record nobody keeps.
-- **Strand** — one of the six things the score is made of. Each is a record of **opportunities**
-  and what came of them, and each is published in its own right. An opportunity is something
-  that **fell due**: a strand never counts a question still waiting for its answer.
-  - **Shows up** — whether the game gets played at all. **Live.** The opportunity is a game that
-    settled — one somebody said had happened, or a **Ghost game** whose entry window closed on
-    silence — and the good outcome is the game. **A ghost is charged to everybody who was on
-    that court**, because nobody proposed anything and nobody countered anything: what is priced
-    is an arrangement that dissolved, and there is nobody in it to blame.
-  - **Answers challenges** — whether an invitation to a game got an answer inside its window.
-    **Stands down**, and has nothing to count since challenges went: a yes on a Games card is
-    silent and waits for nobody, so there is no silence to price.
-  - **Answers about results** — whether a score put in front of a player gets an answer inside
-    its window. **Live** ([ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md)).
-    The opportunity is a **score put to you**: the entry that records *we played* records a
-    score in the same act, so one side opens and the other is asked, and once both sides have
-    put a score up nobody is asked anything further — the opener facing a counter may only give
-    way, and pricing that would price surrender. **Accepting counts and countering counts**, so
-    this is the second strand where a no scores; what it prices is silence until the window
-    closed. **It is not *confirms results* under a new name** — see below — and it is the only
-    strand that **forgets**: opportunities older than twelve months fall out of it.
-  - **Keeps plans** — whether a booked game the player held a seat on reached its hour with them
-    in it. **Live** ([#544](https://github.com/Raketa02/Raketa/issues/544)), read off `bookings`:
-    the strand keeps its name, and a booked game is the plan: *kept* when its hour comes with
-    every seat held, and *broken* by leaving it so that it is called off at the cut-off, or after
-    the cut-off with nobody taking the seat.
-  - **Settles up** — whether a court share that fell due was settled without a case. **Stands
-    down:** there is no record of its own to read — a seat's money is taken before the game
-    exists. It is the **historical record**, never the live case — the open case is the Hold.
-  - **Sportsmanship** — what opponents said afterwards. A mean, not a ratio. **Stands down,
-    and now permanently**
-    ([ADR-0158](docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). The
-    surface it was waiting for exists — see **Sportsmanship** below — and the reason it stays
-    down has changed rather than lapsed: **it is not a strand and never was.** A star average
-    is not a ratio out of a hundred, so it cannot be a term in a weighted mean over ratios;
-    and nothing that decides who plays with whom may read it in any shape, because it is the one
-    thing here a person can weaponise with no appeal route behind it. It is published as **its own figure**, on
-    the player record, under its own heading.
+- **Player Score** — the figure a player sees as **Player reliability**, out of a hundred, one per
+  player across all sports. Computed from what happened, never from opinions and never from
+  results: **losing costs nothing here.**
+- **Points** — the figure's unit. **Everyone starts at 100.** A failure takes a fixed price off;
+  every game **played through** gives 5 back; the figure stays between 0 and 100. Each failure drops
+  out **6 months** after it happened, and the window rolls, so nothing ever resets everything at
+  once.
+
+  | What happened | Part | Points |
+  | --- | --- | --- |
+  | **Didn't come** (Games) | *Shows up* | −25 |
+  | **Came late** (Games) | *Shows up* | −10 |
+  | Left after the cut-off, and the seat stayed empty, so the game was played short | *Keeps plans* | −15 |
+  | Left before the cut-off, the seat stayed empty, and the game was called off for everyone — or a card not fixed in time lost the seat, with the same result | *Keeps plans* | −10 |
+  | Each game **played through** | — | +5, up to 100 |
+
+  A *Didn't come* is priced once, on *Shows up*, never also on *Keeps plans*. **Never counted**: a
+  swipe, a withdrawn yes, a card that never filled, a card fixed in time, leaving when your seat is
+  taken or the game still plays, a club's cancel, and silence on a score.
+- **Played through** — a booked game that reached its hour **full**, with the player on its court,
+  not *Came late*, not *Didn't come* and not called off; scored or *Played · no score*. It earns +5.
+  A *Came late* game earns nothing back, and a game that started short earns the players who stayed
+  nothing either way.
+- **Reliability band** — the word under the figure: **Very high** 90–100 · **High** 75–89 ·
+  **Medium** 50–74 · **Low** below 50 reliability. **Served by the backend**; a client draws the word
+  from the band and holds no thresholds of its own. _Avoid_: *Reliable*, *Holding*, *Under the bar*
+  — the three words of the retired tone ladder, which named a bar at 70 that nothing applies.
+- **New** — a player with fewer than **3 games played through, ever**, across sports. They read
+  *100 · New*, and pass every **Reliability filter**. A player who stops for six months doesn't
+  become New again. _Avoid_: newcomer, which is the **Newcomer window**'s 14 days in the level
+  window (Matchmaking), a different clock.
+- **The counts** — what the record shows beside the figure, over the last 6 months, and no ledger:
+  - **Shows up** — turned up, of the games that reached their hour with the player on the court
+    (late counts as turned up): *turned up 12 of 13*;
+  - **Keeps plans** — kept, of the games they were in at the hour: *kept 13 of 14*;
+  - **Being late** — how many times they came late: *late 1 time*;
+  - **Results left in dispute** — see below.
+- **Results left in dispute** — how many **Disputed** games (Games) the player put one of the two
+  scores up on, over the last 6 months. **Information only, and it costs no points**: saying a
+  score is wrong when it is wrong must never hurt. Someone who disputes every game is visible to
+  their groups, and nothing more.
+- **Reliability filter** — a player's optional preference, **off by default**: *Play only with
+  players of at least High reliability*, or *at least Medium*. It is **one more clause of the pair
+  rule** (Proposals' **In**), asked exactly where a block is: a pair is unfit when either player's
+  minimum band is above the other's band, in both directions, and **New passes every minimum**. It
+  acts from the moment it is switched on, or someone drops below it; **yeses already given stand**,
+  and booked games never change. The filtering player is told how many players in their groups it
+  hides (*hides 2 of the 11*); a hidden player is told, **with nobody named**, the figure that
+  brings them back to everyone, the lowest band floor among the filters that hide them.
+- **Strand** — *retired 2026-10-11* (ADR-0195 §1). One of the six things the blended figure was
+  made of, each a ratio of **opportunities** that fell due and what came of them, weighted
+  35 / 20 / 15 / 12 / 10 / 8 and renormalised over the strands present. **Shows up** and **Keeps
+  plans** live on as two **counts** and as the parts a price is filed under. **Answers about
+  results** ([ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md))
+  leaves the figure, so silence on a score costs nothing. **Answers challenges** and **Settles up**
+  had stood down with nothing to count. **Sportsmanship** was never a strand: it is its own figure,
+  on the player record, under its own heading
+  ([ADR-0158](docs/adr/0158-a-rating-is-one-per-person-and-the-collapse-is-the-key.md)). _Avoid_:
+  the strand weights, and a ratio for the figure.
 - **Confirms results** — **struck, and it stays struck**
   ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)). It read *whether a
   counted game gets confirmed, so it counts*, and it cannot be published honestly: **an
@@ -1007,6 +1082,9 @@ the third. **The three changed once without the count changing**
   replacement counts **answers**, where a counter is as good as an acceptance, so the
   who-was-wrong problem is dissolved rather than solved. The 15 ADR-0140 set aside rather than
   redistributed is what it enters at.
+  *Answers about results* itself left the figure on 2026-10-11
+  ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)):
+  silence on a score now costs nothing at all.
 - **Opponent variety** — how widely a player spreads their games: how many **different
   people** over how many **counted games**, across their whole record. **Not
   `player_score`'s, and it now has a consumer:** it was contracted here on behalf of two
@@ -1020,26 +1098,22 @@ the third. **The three changed once without the count changing**
   few faces every week, whose rating may be narrow but untested. See *Player record* below.
 
 **Invariants**
-- **No record is not a bad record.** A player without a score is not bad and not average — they
-  are **absent from the answer**. The same principle the rating engine already applies to skill. A strand nobody can
-  publish is absent the same way, and neither is ever a `0` or a `0.5`.
-- **This context keeps no record of its own.** It has no aggregate, no table and no migration:
-  every strand is folded out of `games`' and `bookings`' records when somebody asks, through each
-  one's published port. A stored
-  score would be a second place for *did that game happen* to be true, and the copy would be the
-  one that got believed.
-- **The score is a memory, and it fades with new evidence.** Decay belongs here, on the side
-  that owns the record; a consumer that applies its own would be counting the same forgetting
-  twice. **The ratio is the fading** — one no-show among forty games weighs almost nothing —
-  and there is **one** window, on one strand, named rather than general: *answers about results*
-  forgets after twelve months, because turning up is a commitment somebody made and answering a
-  score is a habit of opening an app, which is cheap to fail by accident and must therefore be
-  possible to work off.
-- **The published number is the player's.** Its weights are **35 / 20 / 15 / 12 / 10 / 8** and
-  live in this context, never in a ruleset: a release must not change what somebody's own profile
-  says about them. The player record prints it **beside the rows it is the mean of**, and a
-  group's members list reads it too. The **strand ratios themselves** cross on the record, as a
-  raw pair and the figure derived from it; the weights never do.
+- **A new player is not a bad player.** Everyone starts at 100, and *New* says the 100 hasn't been
+  tested yet. The figure is never absent and never a nought for want of a record: the absence that
+  stood for *nothing has fallen due* retires with the strands.
+- **This context keeps no record of its own.** It has no aggregate, no table and no migration: the
+  figure and the counts are folded out of `games`' and `bookings`' records when somebody asks,
+  through each one's published port, and the 6-month window bounds the read. A stored score would
+  be a second place for *did that game happen* to be true, and the copy would be the one that got
+  believed. If one read per deal for the filter grows too costly, a projection needs its own ADR.
+- **A failure fades on a clock, the same for everyone.** Each one drops out 6 months after it
+  happened, and the same failure costs the same for a newcomer and a veteran. A consumer that
+  applied its own forgetting would be counting the same fading twice.
+- **The prices, the window, the bands and *New* are this context's constants**, domain and never
+  configuration, and never a ruleset: a release must not change what somebody's own record says
+  about them.
+- **Nobody is ever named by the filter.** Neither the filtering player nor the filtered one is told
+  who, the same principle as a block.
 
 ### Sportsmanship (`backend/app/modules/sportsmanship/`)
 
@@ -1068,7 +1142,11 @@ still means the μ/σ a player holds in a sport.
   there a booked game nobody ever claimed is settled too, and there is nobody to rate for an evening
   that did not happen. Here it means **played, and over** — confirmed, or unscored because two
   sides disagreed and both windows closed. **An unscored game is in**: two people who cannot
-  agree what the score was were still on a court together for two hours.
+  agree what the score was were still on a court together for two hours. Since
+  [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  a game nobody claimed is **Played · no score** — played — and two disagreeing sides end
+  **Disputed**; both are in, as *played, and over*, for #655 and #654 to build (sportsmanship counts
+  a *Played · no score* game as played, #655).
 
 **Invariants**
 - **You rate everybody else who was on the court.** In doubles both opponents **and your
@@ -1132,12 +1210,17 @@ every fact read through the owning context's published port, and one rule of its
   Score, so a player working their record back up can watch it lift. One row per live strand of
   `player_score`'s, read through that context's published port and never recomputed here. **The weights are not on the
   wire**: they are a fact about how the number is made rather than about the person.
+  **Retired 2026-10-11** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  §8, not yet built — [#659](https://github.com/Raketa02/Raketa/issues/659)): the record's
+  reliability block becomes the **points**, the **band**, **New** and the four **counts** (Player
+  Score), and for the subject also their **Reliability filter** and what it hides. No row, pair or
+  ratio per strand crosses.
 - **Run of form** — a player's **last five counted results, oldest to newest**, each a win or a
   loss, in the record's skill panel beside their **counted games**. **Outcomes in order and no
   dates, at any granularity**: a moment beside one of them would be activity recency, which no
   surface carries in any shape. Fewer than five is a real answer and it is **never padded** —
   three results are drawn as three. A count includes a game nobody agreed a score for and a Run
-  of form does not — *an unscored game is an evening, not evidence*
+  of form does not — *an unscored game, now a Disputed one, is an evening, not evidence*
   ([ADR-0137](docs/adr/0137-a-result-is-the-record-that-a-game-happened.md)).
 - **The gates** — re-run live on every open, because a disclosure made in August is not a
   permission to show somebody in December: the disclosure entitles a reader to *ask*, and the
@@ -1175,7 +1258,8 @@ every fact read through the owning context's published port, and one rule of its
   and a client dividing the pair itself would be the third. Variety prices no promise and nothing rounds it, so the division is the client's.
 - **A missing zone is omitted whole, never nulled or emptied.** A player with no publishable
   strand has no reliability section at all — no `player_score` to draw a red pill from and no
-  empty list to head a card with. The four absences on this sheet are four different
+  empty list to head a card with. (Since ADR-0195 everyone has a figure, *100 · New* to start, so
+  this absence retires when #659 lands; the other three stand.) The four absences on this sheet are four different
   questions: rated in nothing, no counted game ever played, nothing ever fallen due, and
   nobody having said anything.
 - **No zone depends on who is reading.** *What other players said* crossed as a band to its
@@ -1259,8 +1343,10 @@ website, and lists there the courts, hours and prices it sells through Raketa.
   the release lead (Only Raketa; 1–13 days, default 3), the **Cut-off**, the **minimum notice**
   (Instant and On request; 1–48 h, default 2), the time to confirm (On request; 5–60 min, default
   30 — never more than the shortest minimum notice), **other clubs' courts** for its groups (off
-  by default, within 10 km), **check-in** (off) and **Paused** (off). Each bound is domain, never
-  configuration. Confirmed only once a Way of working is chosen, since which of them matter
+  by default, within 10 km) and **Paused** (off). Each bound is domain, never
+  configuration. *We check players in* left them on 2026-10-11 with **Check-in** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  §4, not yet built — [#651](https://github.com/Raketa02/Raketa/issues/651)); the field stays
+  decodable on the settings event and folds to nothing. Confirmed only once a Way of working is chosen, since which of them matter
   depends on it.
 - **Cut-off** — the club's free-cancellation deadline, a Raketa setting (0–72 h, default 24 h
   before), and **the one deadline in a game, the same for everyone in it**. Leaving before it is
@@ -1456,9 +1542,14 @@ charges' (**Payments**), its result the Game's (**Games**).
 - **Fill in** — the group's rescue board (**Seats to fill**) plus **You're In**, your own yeses
   that have not filled or are *waiting for the club*. It never offers a proposal that is still
   filling.
-- **Check-in** — a club scanning a player's code, or typing its short code, on the day. Evidence
-  that the player was there, never a condition for money; a player checked in cannot be reported
-  as a no-show.
+- **Check-in** — *retired 2026-10-11* ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §4, not yet built —
+  [#651](https://github.com/Raketa02/Raketa/issues/651)–[#653](https://github.com/Raketa02/Raketa/issues/653)).
+  A club scanning a player's QR code, or typing its short code, at the desk on the day; optional
+  per club, off by default, and never a condition for money. It shielded a player from a no-show
+  report and proved only that somebody came. It is removed from the player app, the club website
+  and the backend; whether somebody came is now caught **at the court** (Games: **Isn't here
+  yet**, **Arrival**). `PlayerCheckedIn` stays decodable and folds to nothing. _Avoid_: check-in
+  for an **Arrival**.
 - **Seat open** — a game missing a player, as the people still in it read it on Home: a
   **booked** game that lost one, whose seat is a **Rescue**; and, since ADR-0189's 2026-10-09
   amendment (the mechanics Q106), a full game that **went back to filling before it was booked** —
@@ -1640,7 +1731,11 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
 - **In** — a player who said yes to a proposal that has not filled. **Everybody In fits everybody
   else In**: a version is dealt only to people who fit the people In and each other, and a yes
   lands only from somebody who fits everybody In — *fits* being today's pair rule for one
-  court (no block either way, mutual gender preference, Levels within the kind's window).
+  court (no block either way, mutual gender preference, Levels within the kind's window). Since
+  [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §6 the rule gains one more clause, the **Reliability filter**
+  (Player Score), asked where a block is; unlike a block it takes no yes back, so a yes given
+  before the filter was switched on, or before somebody dropped below it, stands (not yet built —
+  [#661](https://github.com/Raketa02/Raketa/issues/661)).
 - **Withdraw** — taking a yes back before the game fills: free and silent, and the seat is open
   again. Unlike a **No** it is no verdict on the card: the player may say yes again while the
   game fills.
@@ -1740,6 +1835,18 @@ told by the other contexts and tells none of them.
   that a payment they confirmed completed one, is born seen. Nothing comes down at launch; what
   was told while the app was closed is in the number. _Avoid_: unread count; badge (Home's badge
   counts the games that need you).
+- **The games' notices** — five always-on kinds told from the **Games** context, the first that
+  Notifications hears from it ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §7, not yet built —
+  [#663](https://github.com/Raketa02/Raketa/issues/663)): ***Isn't here yet*** to the absent
+  player (*Ivan is at Ogrody 33 and you're not there yet — tap I'm here when you arrive*), ***They're
+  at the club*** to whoever tapped, ***How did it go?*** to all of a Competitive booked game's
+  players when its hour ends (a job tells it, every 30 seconds), ***Is that right?*** to the other
+  side when a score goes up, and ***Were they there?*** to the courtmates when an absent player
+  claims *I was there*. Each opens the game's **result screen**. Always on, because each decides
+  somebody's record or result; **a For fun game is told none of them**. They are worth little
+  until push reaches both phones, which a human sets up
+  ([#665](https://github.com/Raketa02/Raketa/issues/665)) and the player app switches on
+  ([#666](https://github.com/Raketa02/Raketa/issues/666)).
 
 ## Cross-cutting concepts
 
