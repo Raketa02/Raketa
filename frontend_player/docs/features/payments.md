@@ -152,8 +152,8 @@ section used to say the second for every row. **Why**: the old sentence was fals
 which nobody else can take until the time ends, and one list can hold both. The rows, the yes again
 and what a booked confirmation shows are `proposals.md`'s.
 
-**Decided, and built since #642 (below) but for #644's receipts: new terms, and receipts that
-explain every movement** (the mechanics
+**Decided, and built since #642 and #644 (below): new terms, and receipts that explain every
+movement** (the mechanics
 Q113 and §12.5, the screens A7.3; [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; root [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a share is
 now held when its game fills and taken at the club's cut-off, so the terms, the method card's
 _Charged by the club when a game fills_ and the receipts must say what really happens. `PAYMENT_TERMS`
@@ -178,10 +178,36 @@ words promised a refund less the card fee for a leave before the cut-off, which 
 
 The method card reads _Held when a game fills · taken by the club at its cut-off_, step 4 _…it lets
 the club hold and take your share later without you present_, and the receipts' footer _Refunds can
-take up to two weeks to reach your card._, with no BLIK line. **A hold let go** (`RELEASED`, #641) is
-left out of the receipts by the mapper until #644 draws _40 zł held · released_; the wire agreement
-holds the other two kinds equal to the domain's. **Calls made without a ruling**: the setup sheet's
+take up to two weeks to reach your card._, with no BLIK line. **A hold let go** (`RELEASED`, #641) was
+left out of the receipts by the mapper until #644 drew it (below). **Calls made without a ruling**: the setup sheet's
 _Before your first yes_ line, which the spec leaves open for the product owner, now reads _Save how you
 pay. Nothing is held until a game you said yes to fills, and nothing is taken before the club's
 cut-off._; and the terms-again note's words. **Owed to the lawyer** (O3): the clause after the
 cut-off. **Nothing here has been seen on a device.**
+
+**Receipts explain every movement of the money** ([#644](https://github.com/Raketa02/Raketa/issues/644);
+the backend's #641; the mechanics Q113, §12.1, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; the screens A7.3). Ivan left Thursday's game after the
+cut-off and Diego took his seat, so his receipts read _−40 zł · paid_ and _+38,24 zł · refunded_ over
+_1,76 zł kept on your payment_. A player who left before the cut-off reads _40 zł held · released_
+over _Released 28 Sep_. **Why**: the share is held at the fill and taken at the cut-off (Q113), so a
+bank app shows holds that never became payments; a receipt that says the hold was let go, and when,
+explains it, and a refund says to the grosz what was kept.
+
+- **Three kinds, `Exact` with the wire's** (`ReceiptKind`): `CHARGE` (✓ on `paper2`, ink), `REFUND`
+  (↩ on `mintSoft`, `mintInk`), `RELEASED` (Feather `unlock` on `paper2`, all `muted`, unsigned —
+  nothing moved). The `Exclude` stopgap in `mappers/wireVocabulary.ts` is gone.
+- **What the movement leaves to explain is a third line** (`receiptNote`): exactly what was kept on a
+  refund's payment (`card_fee_grosze`, carried as `keptGrosze` on a refund alone), nothing for a
+  refund in full, where nought was kept; and on a hold let go, the day it was let go (`paid_at`, now
+  carried as `movedAt`), a date as a bank app dates the hold. The spoken label carries both.
+- **The amount shares the club's line** in the row, where it was centred beside the club and the game
+  under it: _+38,24 zł · refunded_ in the number role is half the row's width, and beside a two-line
+  block of words it would squeeze the game's line onto two. The game's line and the note now run the
+  row's whole width.
+- **The footer** keeps no BLIK line (#642), asserted by the screen test.
+
+**Calls made without a ruling**: the released row's date is the day the hold was let go, as the
+backend dates it (`paid_at`, _dated when it was let go_ in its tests), drawn _Released 28 Sep_ — the
+screens say only _with its date_; the open lock as its glyph; and a refund in full drawing no _0 zł
+kept_ line. **Nothing here has been seen on a device**: the amount on the club's line and the three
+rows want a look.

@@ -893,8 +893,8 @@ confirmed again (#533, the backend's handover), and the laptop provider that nev
 (`payments.md`). **Nothing here has been seen on a device**: the amber line on a _TO CONFIRM_ row, the
 sheet's note, the line under the word and the details' _Confirm your payment_ all want a look.
 
-**Decided, and built since #642 (below) but for #643–#645: the share is held until the club's
-cut-off, and leaving before it is free** (the mechanics Q113, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; story S-01A's F-LEAVE-6.1; root
+**Decided, and built since #642 and #644 (below) but for #643 and #645: the share is held until
+the club's cut-off, and leaving before it is free** (the mechanics Q113, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; story S-01A's F-LEAVE-6.1; root
 [#635](https://github.com/Raketa02/Raketa/issues/635)). **Why**: a refund always cost somebody Stripe's fee, the 1,60 zł this feature prints was
 an estimate of a fee that depends on the card, and keeping it is exposed under Polish payment law.
 Letting a hold go costs nothing. So the fill holds the shares and the cut-off takes them. What it
@@ -939,19 +939,41 @@ takes them, so a leave before it costs nobody a fee and _free_ is true again (Q1
   read's clock). The rest of the sheet is as before. The toast says _You left the game. Nothing was
   taken._ **At the cut-off the line turns by itself**, as the money row turns to _Paid_: `leavingAt`
   reads a share taken at `now` as after the cut-off, which the server says once read again.
-- **Leaving after the cut-off** keeps today's shape with no figure and no estimate. The line reads
-  _Refunded only if someone takes your seat_, and the sheet _Your seat is offered to others. / If
-  someone takes it, you get your share back less what was kept on your payment; if nobody does, you
-  won't. / On your record if nobody takes it._ — the terms' own words for the refund. The read's
-  exact refund and fee kept (#641) are dropped by the mapper until #644 says them. `Leaving` carries
-  only its kind, and `letsAHoldGo` once folded.
+- **Leaving after the cut-off** kept today's shape with no figure and no estimate — _Refunded only if
+  someone takes your seat_ under the button, the terms' own words for the refund on the sheet — until
+  #644 gave the read's exact figure (below).
 - **A game still filling** says _…When the last yes lands, everyone's share is held and the court is
   booked; it's taken at the club's cut-off._ (A4.2).
 
 **Calls made without a ruling**: the line under _Leave the game_ before the cut-off (§13 only says it
 _says the same_ as the sheet), and the sheet's refund clause after it without a figure, where §13
-gives none while the fee isn't known; _Nothing was taken_ after the club's cancel before the cut-off, as §14.1's
+gives none while the fee isn't known (gone since #644, below); _Nothing was taken_ after the club's cancel before the cut-off, as §14.1's
 table puts it, where Home said _Nobody paid_; the folds at `heldFrom` and `takenAt` on the phone's
 read clock, which the backend's own reads do at the same instants. **Owed**: the rescue's join
-(#645), time to fix (#643), the late leave's figure and the receipts' _held · released_ row (#644).
-**Nothing here has been seen on a device.**
+(#645), time to fix (#643). **Nothing here has been seen on a device.**
+
+**The late leave's exact refund** ([#644](https://github.com/Raketa02/Raketa/issues/644); the
+backend's #641; the mechanics Q113, §13, [ADR-0189](../../../docs/adr/0189-a-yes-books-a-court-and-the-club-is-the-seller.md)'s 2026-10-10 amendment; the screens A4.1, details 10). Ivan leaves Thursday's game on
+Wednesday at 21:00, after the cut-off, with his business Visa. The line under _Leave the game_ reads
+_If someone takes your seat, you get 38,24 zł back (40 zł less the 1,76 zł kept on your payment)_, and
+the sheet _Your seat is offered to others. / If someone takes it, you get 38,24 zł back (40 zł less the
+1,76 zł kept on your payment); if nobody does, you won't. / On your record if nobody takes it._
+**Why**: the product owner ruled that a leaver after the cut-off gets the share back less exactly what
+Stripe kept on their payment, shown to the grosz before leaving, and that no estimate is printed
+anywhere (Q113).
+
+- **The quote is the read's** (`leaving.refund_grosze`, `leaving.card_fee_grosze`): `Leaving` carries
+  it as `lateRefund` (`backGrosze`, `keptGrosze`) after the cut-off only. The noughts the read sends
+  while an On request club decides are no quote — nobody has paid. The _40 zł_ is the two together,
+  which is the payment: the server's refund is the payment less the fee.
+- **While the read quotes none** — the fee is not yet known, which is the case for a club on its own
+  negotiated pricing until Stripe reports it, and for the moment `leavingAt` turns a share taken at
+  the cut-off on the phone's clock — **there is no figure and no clause**: the line reads _Your seat
+  is offered to others_, and the sheet drops the refund clause, _Your seat is offered to others. / On
+  your record if nobody takes it._, as the backend's no-figure email does. The toast is unchanged.
+  The line and the sheet share one copy key for the seat offered, the sheet adding the full stop.
+
+**Calls made without a ruling**: the line's words without a figure, where §13 and A4.1 say only _no
+figure and no clause_ — #642's _Refunded only if someone takes your seat_ is gone with the clause it
+stood for. **Owed to the lawyer** (O3): the clause's wording, the terms'. **Nothing here has been seen
+on a device**: the line under the button is now a sentence long and wants a look.
