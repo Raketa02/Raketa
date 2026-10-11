@@ -6,7 +6,14 @@
 
 import { formId, formText, isId } from '@/ui/forms';
 
-import { FILTERS, isCancelReason, type BookingsFilter, type CancelReason } from './mappers';
+import {
+  FILTERS,
+  isCancelGivesBack,
+  isCancelReason,
+  type BookingsFilter,
+  type CancelGivesBack,
+  type CancelReason,
+} from './mappers';
 
 /** The page's address, read. */
 export interface DayQuery {
@@ -95,11 +102,17 @@ export interface PostedAct {
   readonly note: string;
   readonly courtId: string | null;
   readonly cancel: CancelReason | null;
+  /**
+   * What the cancel dialog said a cancel does with the players' money: what landed is said as the
+   * desk was told it, since the backend's reply says nothing.
+   */
+  readonly givesBack: CancelGivesBack | null;
 }
 
 export function readAct(form: FormData): PostedAct {
   const reason = formText(form, 'reason');
   const act = formText(form, 'act');
+  const givesBack = formText(form, 'gives_back');
   return {
     act: isBookingAct(act) ? act : null,
     id: formId(form, 'id'),
@@ -107,6 +120,7 @@ export function readAct(form: FormData): PostedAct {
     note: formText(form, 'note').trim().replace(/\s+/g, ' '),
     courtId: formId(form, 'court_id'),
     cancel: isCancelReason(reason) ? reason : null,
+    givesBack: isCancelGivesBack(givesBack) ? givesBack : null,
   };
 }
 

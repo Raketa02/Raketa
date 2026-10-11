@@ -9,6 +9,7 @@ import { CLUB_ZONE, clubDay } from '@/features/courts/mappers';
 
 type WireDay = components['schemas']['ClubBookingsResponse'];
 type WireBooking = components['schemas']['ClubBookingSchema'];
+type WirePlayer = components['schemas']['ClubBookingPlayerSchema'];
 type WireWaitingList = components['schemas']['WaitingBookingsResponse'];
 type WireWaiting = components['schemas']['WaitingBookingSchema'];
 type WireAcceptance = components['schemas']['AcceptanceResponse'];
@@ -26,8 +27,36 @@ export type Kind = components['schemas']['SearchMode'];
 /** Why a game will not be played. */
 export type CalledOffReason = components['schemas']['CalledOffReason'];
 
-/** Why the club cancelled a game: the players are told it with their refund (§16.9). */
+/** Why the club cancelled a game: the players are told it with what comes of their money (§16.9). */
 export type CancelReason = components['schemas']['ClubCancelReason'];
+
+/**
+ * **What a player's time to `payment_due_by` is for** (#638): before the club's cut-off, where
+ * every share is only held, to fix their card; after it, where a share is taken at once, to pay.
+ */
+export type TimeTo = components['schemas']['TimeTo'];
+
+/**
+ * **Where a player's share stands, as the club sees it** (the mechanics §16.7, Q113): held on
+ * their card until the cut-off, or taken (at the cut-off, or at once after it).
+ */
+export type Share = 'HELD' | 'TAKEN';
+
+/**
+ * **What cancelling a game does with the players' money** (the mechanics §16.9): before the
+ * cut-off every hold is let go and nobody pays a fee; after it everyone is refunded in full, and
+ * the card fees are not returned.
+ */
+export type CancelGivesBack = 'HOLDS_LET_GO' | 'REFUNDED_IN_FULL';
+
+const KNOWN_CANCEL_GIVES_BACK: Readonly<Record<CancelGivesBack, true>> = {
+  HOLDS_LET_GO: true,
+  REFUNDED_IN_FULL: true,
+};
+
+export function isCancelGivesBack(value: unknown): value is CancelGivesBack {
+  return typeof value === 'string' && value in KNOWN_CANCEL_GIVES_BACK;
+}
 
 /** Which of the day's bookings the page shows: all, or one status. */
 export type BookingsFilter = components['schemas']['ClubFilter'];
@@ -90,12 +119,19 @@ export function clubHour(startsAt: string, endsAt: string): ClubHour {
   };
 }
 
-/** A player on a game, as the club sees them: a name, and whether they paid and were checked in. */
+/**
+ * A player on a game, as the club sees them: a name, where their share stands, and whether they
+ * were checked in.
+ */
 export interface BookingPlayer {
   readonly id: string;
   /** `null` for an account that can no longer be named. */
   readonly name: string | null;
-  readonly paid: boolean;
+  /**
+   * `null` while it is neither held nor taken: on a request, while a yes waits on a payment, on a
+   * card checked and held later, or once its hold was let go.
+   */
+  readonly share: Share | null;
   readonly checkedIn: boolean;
 }
 
@@ -116,12 +152,14 @@ export interface AnswerBy {
 
 /**
  * **The one payment the club's yes waits on** (the mechanics §16.8): due by `until` on the
- * club's clock, and never whose. When it is due, and when the page read it, are kept as a
- * request's clock is, so the page reads itself again once the time comes.
+ * club's clock, and never whose, for a card to be fixed or a payment to be made. When it is due,
+ * and when the page read it, are kept as a request's clock is, so the page reads itself again
+ * once the time comes.
  */
 export interface PaymentDue {
   /** `21:20`. */
   readonly until: string;
+  readonly timeTo: TimeTo;
   readonly at: number;
   readonly readAt: number;
 }
@@ -144,9 +182,13 @@ export interface Booking {
   readonly openSeats: number;
   readonly money: {
     readonly priceGrosze: number;
+    /** Taken shares only: a share held is not collected yet. */
     readonly collectedGrosze: number;
-    readonly refundedGrosze: number;
+    /** `null`, not yet known, while a refund less the fee kept waits for Stripe to say the fee. */
+    readonly refundedGrosze: number | null;
   };
+  /** What a cancel would do with the players' money, as the dialog spells it out. */
+  readonly cancelGivesBack: CancelGivesBack;
   /** `null` for a group that is gone. */
   readonly from: BookedFrom | null;
   /** While it waits for the club's answer; `null` otherwise. */
@@ -169,6 +211,22 @@ export interface BookingsDay {
   readonly bookings: readonly Booking[];
 }
 
+/**
+ * **What a cancel would do**: refund in full when a share was taken, else let every hold go. The
+ * read names no cut-off, and a game keeps the one it was booked with (§16.6), so the shares say
+ * which side of it the game is, as the backend's cancel gives back what it took and lets go what
+ * it held. A share taken early by the fallback (§12.2), beside others still held, reads as
+ * refunded too: the club bears that share's fee, so *nobody pays a fee* would not be true.
+ */
+function cancelGivesBack(players: readonly WirePlayer[]): CancelGivesBack {
+  return players.some((player) => player.paid) ? 'REFUNDED_IN_FULL' : 'HOLDS_LET_GO';
+}
+
+function shareOf(player: WirePlayer): Share | null {
+  if (player.paid) return 'TAKEN';
+  return player.held ? 'HELD' : null;
+}
+
 function toBooking(wire: WireBooking, readAt: number): Booking {
   return {
     id: wire.booking_id,
@@ -184,7 +242,7 @@ function toBooking(wire: WireBooking, readAt: number): Booking {
     players: wire.players.map((player) => ({
       id: player.player_id,
       name: player.name,
-      paid: player.paid,
+      share: shareOf(player),
       checkedIn: player.checked_in_at !== null,
     })),
     openSeats: wire.open_seats,
@@ -193,16 +251,20 @@ function toBooking(wire: WireBooking, readAt: number): Booking {
       collectedGrosze: wire.money.collected_grosze,
       refundedGrosze: wire.money.refunded_grosze,
     },
+    cancelGivesBack: cancelGivesBack(wire.players),
     from:
       wire.booked_from === null
         ? null
         : { name: wire.booked_from.name, official: wire.booked_from.official },
     answerBy: wire.answer_by === null ? null : { at: Date.parse(wire.answer_by), readAt },
+    // The time comes with what it is for, as the contract says: without it no sentence about
+    // it is true, and the status says *Accepted* alone.
     paymentDue:
-      wire.payment_due_by === null
+      wire.payment_due_by === null || wire.time_to === null
         ? null
         : {
             until: clubClock(wire.payment_due_by),
+            timeTo: wire.time_to,
             at: Date.parse(wire.payment_due_by),
             readAt,
           },
@@ -257,30 +319,35 @@ export function toRequests(wire: WireWaitingList): readonly WaitingRequest[] {
 }
 
 /**
- * **What the club's yes came to**: booked, everybody paid, on that court; accepted and waiting
- * on one player's payment until a time on the club's clock, the court kept for it; called off,
- * because that payment had no time left to come; or a player who could no longer be on the
- * game, so nobody paid and it is looking for a player again.
+ * **What the club's yes came to**: booked on that court, every share held until the cut-off (or
+ * taken at once after it); accepted and waiting on one player's card to be fixed, or payment to
+ * be made, until a time on the club's clock, the court kept for it; called off, because that
+ * payment had no time left to come; or a player who could no longer be on the game, so nobody
+ * paid and it is looking for a player again.
  */
 export type Accepted =
   | { readonly outcome: 'BOOKED'; readonly court: string }
-  | { readonly outcome: 'WAITING_FOR_A_PAYMENT'; readonly until: string }
+  | { readonly outcome: 'WAITING_FOR_A_PAYMENT'; readonly until: string; readonly timeTo: TimeTo }
   | { readonly outcome: 'CALLED_OFF' }
   | { readonly outcome: 'SEAT_OPENED' };
 
 /**
- * The court comes with `BOOKED` and the time with `WAITING_FOR_A_PAYMENT`, as the contract says.
- * A reply without one is a backend that broke it, and no sentence the desk could be told about
- * it is true: `null`.
+ * The court comes with `BOOKED`, and the time and what it is for with `WAITING_FOR_A_PAYMENT`, as
+ * the contract says. A reply without one is a backend that broke it, and no sentence the desk
+ * could be told about it is true: `null`.
  */
 export function toAccepted(wire: WireAcceptance): Accepted | null {
   switch (wire.outcome) {
     case 'BOOKED':
       return wire.court_name === null ? null : { outcome: 'BOOKED', court: wire.court_name };
     case 'WAITING_FOR_A_PAYMENT':
-      return wire.payment_due_by == null
+      return wire.payment_due_by == null || wire.time_to == null
         ? null
-        : { outcome: 'WAITING_FOR_A_PAYMENT', until: clubClock(wire.payment_due_by) };
+        : {
+            outcome: 'WAITING_FOR_A_PAYMENT',
+            until: clubClock(wire.payment_due_by),
+            timeTo: wire.time_to,
+          };
     case 'CALLED_OFF':
     case 'SEAT_OPENED':
       return { outcome: wire.outcome };

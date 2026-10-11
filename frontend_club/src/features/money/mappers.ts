@@ -18,14 +18,21 @@ export type PayoutStatus = components['schemas']['PayoutStatus'];
 
 /**
  * **What a booking, or a month, came to**, in grosze, on the club's own Stripe account: what the
- * players paid, what was given back, Stripe's card fees, and what is the club's.
+ * players paid, what was given back, Stripe's card fees, and what is the club's. A figure Stripe
+ * has not given yet is `null`, *not yet known*, and never an estimate (#641).
  */
 export interface Takings {
+  /** The shares taken, at the cut-off or at once after it: a share only held is not money yet. */
   readonly collectedGrosze: number;
-  readonly refundedGrosze: number;
-  readonly cardFeesGrosze: number;
-  /** Below nought when a game given back whole cost the club its card fees. */
-  readonly netGrosze: number;
+  /** `null` while a refund less the fee kept waits for Stripe to say the fee. */
+  readonly refundedGrosze: number | null;
+  /** The real fees, `null` until Stripe has said every one. */
+  readonly cardFeesGrosze: number | null;
+  /**
+   * Below nought when a game given back whole cost the club its card fees; `null` while the card
+   * fees or the refunds are not yet known.
+   */
+  readonly netGrosze: number | null;
 }
 
 /** **One booking's money**, as a row of the month draws it. */

@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
+import { booking } from './stub/bookings';
 import { atClubHour, dayFromToday } from './stub/clock';
 import { court } from './stub/courts';
 import { moneyRow, payout } from './stub/money';
@@ -153,6 +154,127 @@ test.describe('Money', () => {
       page.getByRole('heading', { name: named(thisAndLastMonth().now), level: 2 }),
     ).toBeVisible();
     expect(stub.requests('get', '/api/v1/club/money').at(-1)?.query).toEqual({});
+  });
+
+  test('a game whose shares are held has collected nothing; at its cut-off they are taken, and its card fees are not yet known until Stripe says', async ({
+    page,
+    club,
+  }) => {
+    club.raketa.courts = [PADEL];
+    // A game two days ahead: its cut-off, a day before it, is still ahead.
+    const day = dayFromToday(2);
+    const month = day.slice(0, 7);
+    const game = club.bookings.add(
+      booking({
+        court: PADEL,
+        day,
+        hour: 19,
+        money: { price_grosze: 160_00, collected_grosze: 0, refunded_grosze: 0 },
+      }),
+    );
+    await signIn(page);
+    const theGame = () =>
+      page
+        .getByRole('row')
+        .filter({ has: page.getByRole('rowheader').filter({ hasText: '19:00–20:00' }) });
+    const theMonth = () => page.getByRole('region', { name: named(month) });
+
+    await page.goto(`/bookings?date=${day}`);
+    await expect(theGame().getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
+      /held$/,
+      /held$/,
+      /held$/,
+      /held$/,
+    ]);
+    await expect(theGame().getByRole('cell').nth(3)).toHaveText(
+      /Price\s*160 zł\s*Collected\s*0 zł\s*Refunded\s*0 zł/,
+    );
+    // A share only held is no money yet.
+    await page.goto(`/money?month=${month}`);
+    await expect(theMonth()).toContainText(`No Raketa booking took money in ${named(month)}.`);
+    await expect(theMonth().getByRole('definition')).toHaveText(['0 zł', '0 zł', '0 zł', '0 zł']);
+
+    // The cut-off comes and takes the four shares. Stripe hasn't said its fees yet.
+    club.bookings.passTheCutOff(game);
+    const taken = club.money.add(
+      moneyRow({
+        court: PADEL,
+        day,
+        hour: 19,
+        booking_id: game.booking_id,
+        status: 'BOOKED',
+        collected_grosze: 160_00,
+        card_fees_grosze: null,
+      }),
+    );
+    await page.goto(`/bookings?date=${day}`);
+    await expect(theGame().getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
+      /taken$/,
+      /taken$/,
+      /taken$/,
+      /taken$/,
+    ]);
+    await expect(theGame().getByRole('cell').nth(3)).toHaveText(
+      /Price\s*160 zł\s*Collected\s*160 zł\s*Refunded\s*0 zł/,
+    );
+    await page.goto(`/money?month=${month}`);
+    await expect(theMonth().getByRole('definition')).toHaveText([
+      '160 zł',
+      '0 zł',
+      'Not yet known',
+      'Not yet known',
+    ]);
+    await expect(theMonth().getByRole('row').nth(1).getByRole('cell')).toHaveText([
+      'Court 1 Padel · Booked',
+      '160 zł',
+      '0 zł',
+      'Not yet known',
+      'Not yet known',
+      'Not yet',
+    ]);
+
+    // Stripe says the fees it kept: the real ones, never an estimate.
+    taken.card_fees_grosze = 6_40;
+    await page.reload();
+    await expect(theMonth().getByRole('definition')).toHaveText([
+      '160 zł',
+      '0 zł',
+      '6,40 zł',
+      '153,60 zł',
+    ]);
+    await expect(theMonth().getByRole('row').nth(1).getByRole('cell')).toHaveText([
+      'Court 1 Padel · Booked',
+      '160 zł',
+      '0 zł',
+      '6,40 zł',
+      '153,60 zł',
+      'Not yet',
+    ]);
+  });
+
+  test('a refund that waits for its fee is not yet known, and so is what is the club’s', async ({
+    page,
+    club,
+  }) => {
+    club.money.add(moneyRow({ court: PADEL, day: '2026-03-02', hour: 19 }));
+    club.money.add(moneyRow({ court: TENNIS, day: '2026-03-03', hour: 9, refunded_grosze: null }));
+    await signIn(page);
+    await page.goto('/money?month=2026-03');
+    const month = bookings(page);
+    await expect(month.getByRole('definition')).toHaveText([
+      '280 zł',
+      'Not yet known',
+      '12 zł',
+      'Not yet known',
+    ]);
+    await expect(month.getByRole('row').nth(2).getByRole('cell')).toHaveText([
+      'Kort 2 Tennis · Played',
+      '140 zł',
+      'Not yet known',
+      '6 zł',
+      'Not yet known',
+      'Not yet',
+    ]);
   });
 
   test('a game given back whole leaves the club its card fees, said below nought', async ({

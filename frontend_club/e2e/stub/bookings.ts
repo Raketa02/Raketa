@@ -19,10 +19,13 @@ type ClubStatus = components['schemas']['ClubStatus'];
 type ClubFilter = components['schemas']['ClubFilter'];
 type ClubBooking = components['schemas']['ClubBookingSchema'];
 type CalledOffReason = components['schemas']['CalledOffReason'];
+type TimeTo = components['schemas']['TimeTo'];
 type ErrorBody = components['schemas']['ErrorResponse'];
 
 const HOUR_MS = 3_600_000;
 const MINUTE_MS = 60_000;
+/** The club's cut-off unless a test says otherwise: the setting's default, a day before (§16.6). */
+const CUT_OFF_MS = 24 * HOUR_MS;
 
 /** The one alphabet a person types a code in on the platform: upper case, no look-alikes. */
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -48,6 +51,11 @@ export type Stage =
 export type FakeBooking = Omit<ClubBooking, 'status' | 'ends_at' | 'may_move_or_cancel'> & {
   court_id: string;
   stage: Stage;
+  /**
+   * The cut-off the game was booked with, which the club's read never sends (§16.6): before it a
+   * share is held and a refused card is fixed, after it a share is taken and paid (#637, #638).
+   */
+  cut_off: string;
   /** What the desk wrote when it refused the request, for its own records. */
   refusal_reason: string | null;
 };
@@ -55,11 +63,18 @@ export type FakeBooking = Omit<ClubBooking, 'status' | 'ends_at' | 'may_move_or_
 /** The names a game's players get unless a test names them, the first side first. */
 const NAMES = ['Anna Nowak', 'Piotr Sikora', 'Kasia Wiśniewska', 'Marek Zając'];
 
+/** Before the cut-off a refused card is fixed; after it, the share is paid (#638). */
+function timeTo(cutOff: string): TimeTo {
+  return Date.now() < Date.parse(cutOff) ? 'FIX_THE_CARD' : 'PAY';
+}
+
 /**
- * **A booking on `court` at `hour` of the local `day`**: booked, full and paid, from an official
- * group, unless the test says otherwise. A waiting request is answered within half an hour and
- * nobody has paid it; an accepted one waits half an hour for one player's payment, nobody paid
- * yet; one with a seat open lacks its last player.
+ * **A booking on `court` at `hour` of the local `day`**: booked and full, from an official group,
+ * with a cut-off a day before it, unless the test says otherwise. A booked game's shares are held
+ * while its cut-off is ahead and taken once it has passed, and only a taken share is collected
+ * (#637). A waiting request is answered within half an hour and nobody has paid it; an accepted
+ * one waits half an hour for one player's card or payment, nobody paid yet; one with a seat open
+ * lacks its last player.
  */
 export function booking(
   fields: { court: Court; day: string; hour: number; stage?: Stage } & Partial<
@@ -70,12 +85,16 @@ export function booking(
   const seats = SEATS[court.sport];
   const share = 35_00;
   const seated = stage === 'SEAT_OPEN' ? seats - 1 : seats;
-  const paid = stage !== 'WAITING_FOR_YOU' && stage !== 'WAITING_FOR_A_PAYMENT';
+  const startsAt = atClubHour(day, hour);
+  const cutOff = rest.cut_off ?? new Date(Date.parse(startsAt) - CUT_OFF_MS).toISOString();
+  const booked = stage === 'BOOKED' || stage === 'SEAT_OPEN';
+  const taken = booked && Date.now() >= Date.parse(cutOff);
   const inHalfAnHour = new Date(Date.now() + 30 * MINUTE_MS).toISOString();
   const players = NAMES.slice(0, seated).map((name) => ({
     player_id: randomUUID(),
     name,
-    paid,
+    paid: taken,
+    held: booked && !taken,
     checked_in_at: null,
   }));
   return {
@@ -84,20 +103,22 @@ export function booking(
     court_name: court.name,
     sport: court.sport,
     kind: 'COMPETITIVE',
-    starts_at: atClubHour(day, hour),
+    starts_at: startsAt,
     stage,
+    cut_off: cutOff,
     called_off_reason: null,
     cancel_reason: null,
     players,
     open_seats: seats - seated,
     money: {
       price_grosze: share * seats,
-      collected_grosze: paid ? share * seated : 0,
+      collected_grosze: taken ? share * seated : 0,
       refunded_grosze: 0,
     },
     booked_from: { group_id: randomUUID(), name: 'Ogrody 33 Club', official: true },
     answer_by: stage === 'WAITING_FOR_YOU' ? inHalfAnHour : null,
     payment_due_by: stage === 'WAITING_FOR_A_PAYMENT' ? inHalfAnHour : null,
+    time_to: stage === 'WAITING_FOR_A_PAYMENT' ? timeTo(cutOff) : null,
     refusal_reason: null,
     ...rest,
   };
@@ -143,6 +164,23 @@ export class FakeClubBookings {
 
   find(id: string | undefined): FakeBooking | undefined {
     return this.bookings.find((each) => each.booking_id === id);
+  }
+
+  /**
+   * **The game's cut-off comes now** (#637): every share held for it is taken, and collected, as
+   * the backend's cut-off job takes them. A test calls it where the clock would have passed it.
+   */
+  passTheCutOff(game: FakeBooking): FakeBooking {
+    const share = game.money.price_grosze / SEATS[game.sport];
+    const held = game.players.filter((player) => player.held).length;
+    return this.replace({
+      ...game,
+      cut_off: new Date().toISOString(),
+      players: game.players.map((player) =>
+        player.held ? { ...player, held: false, paid: true } : player,
+      ),
+      money: { ...game.money, collected_grosze: game.money.collected_grosze + share * held },
+    });
   }
 
   /**
@@ -243,6 +281,7 @@ export class FakeClubBookings {
       booked_from: held.booked_from,
       answer_by: status === 'WAITING_FOR_YOU' ? held.answer_by : null,
       payment_due_by: status === 'WAITING_FOR_A_PAYMENT' ? held.payment_due_by : null,
+      time_to: status === 'WAITING_FOR_A_PAYMENT' ? held.time_to : null,
       may_move_or_cancel: this.stillToBePlayed(held),
     };
   }
@@ -365,12 +404,14 @@ export class FakeClubBookings {
       if (held === undefined) return notFound;
       const refused = this.stillWaiting(held);
       if (refused !== null) return refused;
+      // Every share is held until the cut-off, or taken at once after it (#637).
+      const taken = Date.now() >= Date.parse(held.cut_off);
       this.replace({
         ...held,
         stage: 'BOOKED',
         answer_by: null,
-        players: held.players.map((player) => ({ ...player, paid: true })),
-        money: { ...held.money, collected_grosze: held.money.price_grosze },
+        players: held.players.map((player) => ({ ...player, held: !taken, paid: taken })),
+        money: { ...held.money, collected_grosze: taken ? held.money.price_grosze : 0 },
       });
       return { status: 200, body: { outcome: 'BOOKED' as const, court_name: held.court_name } };
     });
@@ -430,11 +471,13 @@ export class FakeClubBookings {
         if (held === undefined) return notFound;
         const refused = this.stillPlayable(held);
         if (refused !== null) return refused;
+        // Every hold is let go and every share taken is refunded in full (#637).
         this.replace({
           ...held,
           stage: 'CALLED_OFF',
           called_off_reason: 'CANCELLED_BY_THE_CLUB',
           cancel_reason: body.reason,
+          players: held.players.map((player) => ({ ...player, held: false })),
           money: { ...held.money, refunded_grosze: held.money.collected_grosze },
         });
         return { status: 204, body: undefined };

@@ -22,31 +22,56 @@ type ErrorBody = components['schemas']['ErrorResponse'];
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /**
- * **One booking's money**, on `court` at `hour` of the local `day`: a full game played and paid,
- * 140 zł collected, nothing refunded and 6 zł of card fees, unless the test says otherwise. What
- * is the club's is derived, as the backend derives it.
+ * **A booking's money as the fake keeps it**: the wire's row, but what is the club's is derived on
+ * every read, as the backend derives it, so a test that changes a figure changes the net too.
+ */
+export type FakeMoneyRow = Omit<MoneyBooking, 'net_grosze'>;
+
+/**
+ * **One booking's money**, on `court` at `hour` of the local `day`: a full game played, its shares
+ * taken, 140 zł collected, nothing refunded and 6 zł of card fees, unless the test says otherwise.
+ * A booking whose shares are only held has collected nothing and is no row at all (#637); card
+ * fees Stripe has not reported yet are `null`, *not yet known* (#641).
  */
 export function moneyRow(
   fields: { court: Court; day: string; hour: number } & Partial<
-    Omit<MoneyBooking, 'court_name' | 'sport' | 'starts_at' | 'net_grosze'>
+    Omit<FakeMoneyRow, 'court_name' | 'sport' | 'starts_at'>
   >,
-): MoneyBooking {
+): FakeMoneyRow {
   const { court, day, hour, ...rest } = fields;
-  const row = {
+  return {
     booking_id: randomUUID(),
     starts_at: atClubHour(day, hour),
     court_name: court.name,
     sport: court.sport,
-    status: 'PLAYED' as const,
+    status: 'PLAYED',
     collected_grosze: 140_00,
     refunded_grosze: 0,
     card_fees_grosze: 6_00,
     paid_out: false,
     ...rest,
   };
+}
+
+/** A sum of figures each real or not yet known: not yet known if any is, never one left out. */
+function knownSum(figures: readonly (number | null)[]): number | null {
+  let total = 0;
+  for (const figure of figures) {
+    if (figure === null) return null;
+    total += figure;
+  }
+  return total;
+}
+
+/** What is the club's: collected, less refunded, less the card fees; not yet known with either. */
+function withNet(row: FakeMoneyRow): MoneyBooking {
+  const { collected_grosze, refunded_grosze, card_fees_grosze } = row;
   return {
     ...row,
-    net_grosze: row.collected_grosze - row.refunded_grosze - row.card_fees_grosze,
+    net_grosze:
+      refunded_grosze === null || card_fees_grosze === null
+        ? null
+        : collected_grosze - refunded_grosze - card_fees_grosze,
   };
 }
 
@@ -57,7 +82,7 @@ export function payout(fields: Pick<Payout, 'amount_grosze' | 'arrives_at'> & Pa
 
 export class FakeClubMoney {
   /** Every booking that took money, any month; a month lists its own, soonest first. */
-  bookings: MoneyBooking[] = [];
+  bookings: FakeMoneyRow[] = [];
   /** The payouts Stripe has made to the club's bank, in any order; the list is newest first. */
   payouts: Payout[] = [];
 
@@ -71,7 +96,7 @@ export class FakeClubMoney {
   ) {}
 
   /** Seat a booking's money, and answer it, so a test can name it. */
-  add(row: MoneyBooking): MoneyBooking {
+  add(row: FakeMoneyRow): FakeMoneyRow {
     this.bookings.push(row);
     return row;
   }
@@ -84,11 +109,11 @@ export class FakeClubMoney {
       if (!MONTH.test(month)) return { status: 422, body: refusal('validation_error') };
       const rows = this.bookings
         .filter((row) => clubTime(row.starts_at).day.startsWith(`${month}-`))
-        .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at));
-      const sum = (pick: (row: MoneyBooking) => number) =>
-        rows.reduce((total, row) => total + pick(row), 0);
+        .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))
+        .map(withNet);
+      const sum = (pick: (row: MoneyBooking) => number | null) => knownSum(rows.map(pick));
       const totals: Totals = {
-        collected_grosze: sum((row) => row.collected_grosze),
+        collected_grosze: rows.reduce((total, row) => total + row.collected_grosze, 0),
         refunded_grosze: sum((row) => row.refunded_grosze),
         card_fees_grosze: sum((row) => row.card_fees_grosze),
         net_grosze: sum((row) => row.net_grosze),

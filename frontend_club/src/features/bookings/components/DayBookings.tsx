@@ -7,7 +7,7 @@ import { BOOKINGS_COPY } from '../copy';
 import type { BookingsDay } from '../mappers';
 
 import { ActNotice, NOTHING_DONE } from './ActNotice';
-import type { Asked } from './Asked';
+import type { Asked, AskedToCancel } from './Asked';
 import styles from './Bookings.module.css';
 import { BookingsTable, rowId } from './BookingsTable';
 import { CancelDialog } from './CancelDialog';
@@ -18,7 +18,7 @@ import { RefuseDialog } from './RefuseDialog';
 type Asking =
   | { readonly kind: 'refuse'; readonly game: Asked }
   | { readonly kind: 'move'; readonly game: Asked }
-  | { readonly kind: 'cancel'; readonly game: Asked };
+  | { readonly kind: 'cancel'; readonly game: AskedToCancel };
 
 /**
  * **The day's games and what the club does to them**: the table (or the day's empty line), the

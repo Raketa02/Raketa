@@ -29,7 +29,7 @@ export const SETTINGS_COPY = {
         title: 'On request',
         explain:
           'Raketa and your own desk both sell. You confirm each full game within your time to ' +
-          'confirm. Nobody pays until you do.',
+          'confirm. The players’ shares are held when you do and taken at your cut-off.',
       },
     } satisfies Record<WayOfWorking, { title: string; explain: string }>,
   },

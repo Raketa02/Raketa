@@ -1,4 +1,4 @@
-import { formatZloty } from '@/ui/format';
+import { knownZloty } from '@/features/bookings/copy';
 import tableStyles from '@/ui/Table.module.css';
 
 import { MONEY_COPY, playedAt, sportAndStatus } from '../copy';
@@ -8,23 +8,27 @@ import styles from './Money.module.css';
 
 const COPY = MONEY_COPY;
 
-/** A figure's cell, which says on a phone what it is, since the column heads are gone there. */
-function Figure({ label, grosze }: { label: string; grosze: number }) {
+/**
+ * A figure's cell, which says on a phone what it is, since the column heads are gone there, and
+ * *Not yet known* while Stripe has not given it.
+ */
+function Figure({ label, grosze }: { label: string; grosze: number | null }) {
   return (
     <td
       className={`${styles.figure} ${tableStyles.labelled}`}
       data-label={label}
-      data-below-nought={grosze < 0}
+      data-below-nought={grosze !== null && grosze < 0}
+      data-unknown={grosze === null}
     >
-      {formatZloty(grosze)}
+      {knownZloty(grosze)}
     </td>
   );
 }
 
 /**
  * **A month's bookings, booking by booking** (the screens B7): when each game is played, its
- * court, sport and status, what the players paid, what was given back, Stripe's card fees and
- * what is the club's, and whether a payout has carried it to the bank yet.
+ * court, sport and status, the shares taken, what was given back, Stripe's real card fees (or
+ * *Not yet known*) and what is the club's, and whether a payout has carried it to the bank yet.
  */
 export function MoneyTable({ bookings }: { bookings: readonly MoneyBooking[] }) {
   const { columns } = COPY;

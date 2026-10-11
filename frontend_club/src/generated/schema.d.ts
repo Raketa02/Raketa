@@ -597,7 +597,7 @@ export interface paths {
         put?: never;
         /**
          * Accept a request
-         * @description **Accept** books the game: everybody is charged at this moment, all together or not at all, on your account — you are the seller — and the players are given the court that was reserved for them. Their game, its chat and their receipts open; *It's a game! · you paid* is emailed to each.
+         * @description **Accept** books the game: every share is held at this moment, all together or not at all, on your account — you are the seller — and taken at your cut-off, or at once when you accept after it (#637); the players are given the court that was reserved for them. Their game and its chat open; *It's a game! · 30 zł held* (*you paid* after the cut-off) is emailed to each.
          */
         post: operations["accept_api_v1_club_bookings__booking_id__acceptance_post"];
         delete?: never;
@@ -697,7 +697,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel a game
-         * @description **Cancel** a booked game, with your reason, until it starts: everybody is **refunded in full** — the card fees on those payments are not returned, and as the seller you bear them — it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.
+         * @description **Cancel** a booked game, with your reason, until it starts. **Before your cut-off** every share is only held, and every hold is let go: nothing was taken, nobody is refunded and nobody pays a fee, you included (#637). **After it** everybody is **refunded in full** — the card fees on those payments are not returned, and as the seller you bear them. Either way it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.
          */
         post: operations["cancel_api_v1_club_bookings__booking_id__cancellation_post"];
         delete?: never;
@@ -758,7 +758,7 @@ export interface components {
         AcceptOutcome: "BOOKED" | "WAITING_FOR_A_PAYMENT" | "CALLED_OFF" | "SEAT_OPENED";
         /** AcceptanceResponse */
         AcceptanceResponse: {
-            /** @description `BOOKED` — everybody paid, the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` — accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` — a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` — a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full. */
+            /** @description `BOOKED` — every share is held, and taken at your cut-off (or taken now, after it — #637); the game is booked on `court_name` and the players are told. `WAITING_FOR_A_PAYMENT` — accepted, and one player's payment did not go through (#626): **your yes and the court are kept** until `payment_due_by` while they pay. Nobody has paid yet; when they do, it is booked and you are not asked again, and if they don't, it is called off and you are emailed *A game didn't go ahead*. `CALLED_OFF` — a player's payment did not go through and the game's last moment to book had come, so there was no time to pay: called off, nobody paid, and the hour is yours to sell again. `SEAT_OPENED` — a player could no longer be on the game: **nobody paid**, the request is off and the game is looking for a player again; you are asked again when it is full. */
             outcome: components["schemas"]["AcceptOutcome"];
             /**
              * Court Name
@@ -770,6 +770,8 @@ export interface components {
              * @description When the player's payment is due — *Accepted · waiting for one player's payment until 21:20*. Never who. `WAITING_FOR_A_PAYMENT` only.
              */
             payment_due_by?: string | null;
+            /** @description What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` — you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted · waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` — you accepted after it, where the shares are taken at once: *Accepted · waiting for one player's payment until 21:20*. `null` with `payment_due_by`. */
+            time_to?: components["schemas"]["TimeTo"] | null;
         };
         /** AdministratorGroupSchema */
         AdministratorGroupSchema: {
@@ -868,7 +870,7 @@ export interface components {
         CalledOffReason: "REFUSED" | "NO_ANSWER" | "SHORT_AT_THE_CUT_OFF" | "CANCELLED_BY_THE_CLUB" | "PAYMENT_NOT_IN_TIME";
         /** CancelRequest */
         CancelRequest: {
-            /** @description `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the players with their refund. */
+            /** @description `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the players with what comes of their money. */
             reason: components["schemas"]["ClubCancelReason"];
         };
         /** CheckInRequest */
@@ -960,19 +962,20 @@ export interface components {
             price_grosze: number;
             /**
              * Collected Grosze
-             * @description Every share taken from the players, on your account.
+             * @description Every share taken from the players, on your account — at your cut-off, or at once after it. A share only held is not collected (#637).
              */
             collected_grosze: number;
             /**
              * Refunded Grosze
-             * @description Everything given back — to a leaver less the card fee, in full on a game called off or cancelled. Refunds are automatic: you never refund anybody by hand.
+             * @description Everything given back of a share taken — to a leaver whose seat was taken after the cut-off, less exactly the fee kept on their payment; in full on a game cancelled after it. A hold let go before the cut-off refunds nothing: nothing was taken. Refunds are automatic: you never refund anybody by hand. `null` — *not yet known* — while a refund less the fee waits for a fee the provider has not told you yet (#641); never an estimate.
              */
-            refunded_grosze: number;
+            refunded_grosze: number | null;
         };
         /**
          * ClubBookingPlayerSchema
          * @description A player on the game, as the club sees them — **a name, whether they
-         *     paid, and whether the desk checked them in**, and nothing else (§16.14).
+         *     paid or their share is only held, and whether the desk checked them in**,
+         *     and nothing else (§16.14).
          */
         ClubBookingPlayerSchema: {
             /**
@@ -990,6 +993,11 @@ export interface components {
              * @description Their share was taken — *paid ✓*.
              */
             paid: boolean;
+            /**
+             * Held
+             * @description Their share is held on their card, and taken at the cut-off — *held*. Not paid, and not in `collected_grosze` (#637). Never `true` with `paid`.
+             */
+            held: boolean;
             /**
              * Checked In At
              * @description When the desk checked them in — *checked in ✓* — or `null`.
@@ -1025,7 +1033,7 @@ export interface components {
             sport: components["schemas"]["Sport"];
             /** @description Competitive, or for fun (a friendly). */
             kind: components["schemas"]["SearchMode"];
-            /** @description `WAITING_FOR_YOU` — an On request game asking for the court: Accept or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` — you accepted, and one player's payment is still to come until `payment_due_by` (#626): *Accepted · waiting for one player's payment until 21:20*. Your yes and the court are kept; nothing for you to answer. `BOOKED` — full and paid. `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
+            /** @description `WAITING_FOR_YOU` — an On request game asking for the court: Accept or Refuse before `answer_by`. `WAITING_FOR_A_PAYMENT` — you accepted, and one player's payment is still to come until `payment_due_by` (#626): *Accepted · waiting for one player's payment until 21:20*. Your yes and the court are kept; nothing for you to answer. `BOOKED` — full; each share held until your cut-off and taken at it (#637). `SEAT_OPEN` — a player left and Raketa is finding a replacement; before the cut-off, a seat still open at it calls the game off and the court comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody was refunded or nobody paid, and the hour is free again. `PLAYED` — the hour has passed; you are paid whatever happened on the court. */
             status: components["schemas"]["ClubStatus"];
             /** @description Why a `CALLED_OFF` game will not be played — `null` otherwise. `SHORT_AT_THE_CUT_OFF` — a seat was still empty at your cut-off. `CANCELLED_BY_THE_CLUB` — you cancelled it (`cancel_reason`). `REFUSED` — you refused the request. `NO_ANSWER` — it was not answered in time. `PAYMENT_NOT_IN_TIME` — you accepted, and a player's payment didn't come in time: nobody paid, and you were emailed *A game didn't go ahead*. Full again, the game asks you again as a new request. */
             called_off_reason: components["schemas"]["CalledOffReason"] | null;
@@ -1054,6 +1062,8 @@ export interface components {
              * @description When the player's payment your yes waits on is due — `WAITING_FOR_A_PAYMENT` only, else `null`. Never who.
              */
             payment_due_by: string | null;
+            /** @description What the player's time to `payment_due_by` is for (#638; Q113). `FIX_THE_CARD` — you accepted **before your cut-off**, where every share is only held, so it is their time to fix their card: *Accepted · waiting for one player's card until 21:20*, never past your cut-off; a lapse emails you *A player's card wasn't fixed in time*. `PAY` — you accepted after it, where the shares are taken at once: *Accepted · waiting for one player's payment until 21:20*. `null` with `payment_due_by`. */
+            time_to: components["schemas"]["TimeTo"] | null;
             /**
              * May Move Or Cancel
              * @description **Move** and **Cancel** are yours: booked or with a seat open, and not started yet.
@@ -1641,12 +1651,21 @@ export interface components {
             status: components["schemas"]["ClubStatus"];
             /** Collected Grosze */
             collected_grosze: number;
-            /** Refunded Grosze */
-            refunded_grosze: number;
-            /** Card Fees Grosze */
-            card_fees_grosze: number;
-            /** Net Grosze */
-            net_grosze: number;
+            /**
+             * Refunded Grosze
+             * @description `null` while a refund less the fee kept is not yet known.
+             */
+            refunded_grosze: number | null;
+            /**
+             * Card Fees Grosze
+             * @description The real fee the provider kept on each share taken, or `null` — *not yet known* — until it has said every one (#641).
+             */
+            card_fees_grosze: number | null;
+            /**
+             * Net Grosze
+             * @description `null` while the card fees or the refunds are not yet known.
+             */
+            net_grosze: number | null;
             /**
              * Paid Out
              * @description A payout carried its money to your bank. Until then it waits on your account: **you are paid after the game is played**, at the close of its day, since a refund before the start comes out of it.
@@ -1657,24 +1676,24 @@ export interface components {
         MoneyTotalsSchema: {
             /**
              * Collected Grosze
-             * @description Every share taken from the players.
+             * @description Every share taken from the players — at your cut-off, or at once after it; never a share only held (#637).
              */
             collected_grosze: number;
             /**
              * Refunded Grosze
-             * @description Everything given back — automatically: you never refund anybody by hand.
+             * @description Everything given back — automatically: you never refund anybody by hand. `null` while a booking's is not yet known.
              */
-            refunded_grosze: number;
+            refunded_grosze: number | null;
             /**
              * Card Fees Grosze
-             * @description The provider's card fee on every share taken, yours to pay as at your own terminal. A refund never returns it.
+             * @description The provider's card fee on every share taken, yours to pay as at your own terminal. A refund never returns it. **The real fees, or `null` — *not yet known*** — while any booking's is (#641): a club on its own negotiated pricing is told its fees after the take. Never an estimate.
              */
-            card_fees_grosze: number;
+            card_fees_grosze: number | null;
             /**
              * Net Grosze
-             * @description Yours: collected, less refunded, less the card fees. Below nought when games given back whole cost you their card fees.
+             * @description Yours: collected, less refunded, less the card fees. Below nought when games given back whole cost you their card fees. `null` while the card fees or the refunds are not yet known.
              */
-            net_grosze: number;
+            net_grosze: number | null;
         };
         /**
          * MonogramSchema
@@ -2030,6 +2049,13 @@ export interface components {
          * @enum {string}
          */
         StepState: "DONE" | "TO_DO" | "LOCKED";
+        /**
+         * TimeTo
+         * @description What a refused share's thirty minutes are for (#638; the mechanics
+         *     §12.2, Q113) — one machinery, two names, decided by the club's cut-off.
+         * @enum {string}
+         */
+        TimeTo: "FIX_THE_CARD" | "PAY";
         /** TokenResponse */
         TokenResponse: {
             /** Access Token */

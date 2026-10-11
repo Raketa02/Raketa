@@ -187,7 +187,7 @@ test.describe('Overview', () => {
     ).toBeVisible();
     // What a request left unanswered comes to, in the players' own words (Q105).
     await expect(waiting).toContainText(
-      'a request not answered in time is called off: the players read “Ogrody 33 didn’t answer in time”.',
+      'A request not answered in time is called off: the players read “Ogrody 33 didn’t answer in time”.',
     );
   });
 
@@ -226,6 +226,9 @@ test.describe('Overview', () => {
     ).toBeVisible();
 
     const waiting = page.getByRole('region', { name: 'Waiting for your answer' });
+    await expect(waiting).toContainText(
+      'Nobody has paid: the shares are held when you accept and taken at your cut-off.',
+    );
     const requests = waiting.getByRole('listitem');
     // The one due first, first; booked games are not here.
     await expect(requests).toHaveCount(2);
@@ -245,7 +248,7 @@ test.describe('Overview', () => {
       .getByRole('button', { name: /^Accept/ })
       .click();
     await expect(page.getByRole('main').getByRole('status').last()).toHaveText(
-      /^The 19:00 game on .+ is booked on Court 1\. Everybody paid\.$/,
+      /^The 19:00 game on .+ is booked on Court 1\. The shares are held now and taken at your cut-off, or taken at once if it has passed\.$/,
     );
     await expect(requests).toHaveCount(1);
     await expect(

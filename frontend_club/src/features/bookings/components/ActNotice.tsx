@@ -16,7 +16,9 @@ function AcceptNotice({ name, accepted }: { name: string; accepted: Accepted }) 
       return <Notice tone="success">{COPY.accepted(name, accepted.court)}</Notice>;
     case 'WAITING_FOR_A_PAYMENT':
       return (
-        <Notice tone="success">{COPY.acceptedWaitingForAPayment(name, accepted.until)}</Notice>
+        <Notice tone="success">
+          {COPY.acceptedWaitingFor[accepted.timeTo](name, accepted.until)}
+        </Notice>
       );
     case 'CALLED_OFF':
       return <Notice tone="info">{COPY.noTimeToPay(name)}</Notice>;
@@ -27,8 +29,8 @@ function AcceptNotice({ name, accepted }: { name: string; accepted: Accepted }) 
 
 /**
  * **What came of the last act on a game**, over the list: booked, refused, moved or cancelled,
- * said about the game; a yes that waits on one player's payment, with until when; a yes that
- * came to nobody paying, said plainly; or what was refused.
+ * said about the game; a yes that waits on one player's card or payment, with until when; a yes
+ * that came to nobody paying, said plainly; or what was refused.
  */
 export function ActNotice({
   state,
@@ -51,6 +53,6 @@ export function ActNotice({
     case 'move':
       return <Notice tone="success">{COPY.moved(done.name, done.court)}</Notice>;
     case 'cancel':
-      return <Notice tone="success">{COPY.cancelled(done.name)}</Notice>;
+      return <Notice tone="success">{COPY.cancelled(done.name, done.givesBack)}</Notice>;
   }
 }

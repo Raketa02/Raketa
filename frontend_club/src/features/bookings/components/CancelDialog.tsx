@@ -11,7 +11,7 @@ import { Form } from '@/ui/Form';
 import { BOOKINGS_COPY } from '../copy';
 import { CANCEL_REASONS, type CancelReason } from '../mappers';
 
-import type { Asked } from './Asked';
+import type { AskedToCancel } from './Asked';
 import styles from './Bookings.module.css';
 import { GameFields } from './GameFields';
 
@@ -27,7 +27,7 @@ function CancelForm({
   action,
   onClose,
 }: {
-  game: Asked;
+  game: AskedToCancel;
   action: (form: FormData) => void;
   onClose: () => void;
 }) {
@@ -35,6 +35,7 @@ function CancelForm({
   return (
     <Form action={action} onSent={onClose} className={styles.dialogForm}>
       <GameFields act="cancel" id={game.id} name={game.name} />
+      <input type="hidden" name="gives_back" value={game.givesBack} />
       <div>
         <Choices
           legend={COPY.reason}
@@ -45,7 +46,7 @@ function CancelForm({
         />
         <p className={fieldStyles.hint}>{COPY.reasonHint}</p>
       </div>
-      <p className={styles.consequence}>{COPY.consequence}</p>
+      <p className={styles.consequence}>{COPY.consequence[game.givesBack]}</p>
       <div className={styles.dialogButtons}>
         <Button type="button" tone="secondary" onClick={onClose}>
           {COPY.back}
@@ -60,8 +61,9 @@ function CancelForm({
 
 /**
  * **"Cancel the 19:00 game on Sat 3 Oct?"** (the mechanics §16.9): why, which the players are
- * told; what it comes to, spelled out (everyone refunded in full, the card fees not returned,
- * nobody's record); then *Keep the game* or *Cancel the booking*, once a reason is chosen.
+ * told; what it comes to, spelled out (before the cut-off every hold let go and nobody paying a
+ * fee; after it everyone refunded in full, the card fees not returned; nobody's record either
+ * way); then *Keep the game* or *Cancel the booking*, once a reason is chosen.
  */
 export function CancelDialog({
   game,
@@ -69,7 +71,7 @@ export function CancelDialog({
   onClose,
 }: {
   /** The game asked about, or `null` while nothing is asked. */
-  game: Asked | null;
+  game: AskedToCancel | null;
   action: (form: FormData) => void;
   onClose: () => void;
 }) {

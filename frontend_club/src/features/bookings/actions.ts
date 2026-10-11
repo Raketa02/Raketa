@@ -13,6 +13,7 @@ import {
   toMoveBody,
   toRefusalBody,
   type Accepted,
+  type CancelGivesBack,
   type FreeCourt,
 } from './mappers';
 import { checkAct, readAct } from './schemas';
@@ -22,7 +23,7 @@ export type Done = { readonly id: string; readonly name: string } & (
   | { readonly act: 'accept'; readonly accepted: Accepted }
   | { readonly act: 'refuse' }
   | { readonly act: 'move'; readonly court: string }
-  | { readonly act: 'cancel' }
+  | { readonly act: 'cancel'; readonly givesBack: CancelGivesBack | null }
 );
 
 export interface BookingActState {
@@ -68,19 +69,21 @@ function settle<T>(
 /**
  * **Accept**, **Refuse**, **Move** or **Cancel** one game: which is the hidden `act`.
  *
- * - *Accept* books an On request game: everybody is charged now, all together or not at all.
- *   A payment that does not go through keeps the yes and the court while its player has time to
- *   pay, or, with no time left, calls the game off; nobody has paid either way.
+ * - *Accept* books an On request game: every share is held now, all together or not at all, and
+ *   taken at the cut-off, or taken at once after it. A card that does not go through keeps the
+ *   yes and the court while its player has time to fix it or to pay, or, with no time left, calls
+ *   the game off; nobody has paid either way.
  * - *Refuse*, with a note for the club's own records: nobody paid.
  * - *Move* onto another free court of its sport at its hour, until it starts.
- * - *Cancel*, with the reason the players are told: everybody is refunded in full.
+ * - *Cancel*, with the reason the players are told: before the cut-off every hold is let go,
+ *   after it everybody is refunded in full.
  */
 export async function actOnBooking(
   _previous: BookingActState,
   form: FormData,
 ): Promise<BookingActState> {
   const posted = readAct(form);
-  const { act, id, name, note, courtId, cancel } = posted;
+  const { act, id, name, note, courtId, cancel, givesBack } = posted;
   const refused = checkAct(posted);
   if (refused !== null || act === null || id === null) {
     return { done: null, refusal: { code: refused ?? 'request_invalid', name } };
@@ -137,7 +140,7 @@ export async function actOnBooking(
           }),
         ),
         name,
-        () => ({ act, id, name }),
+        () => ({ act, id, name, givesBack }),
       );
   }
 }

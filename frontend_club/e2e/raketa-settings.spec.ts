@@ -30,7 +30,7 @@ test.describe('Raketa settings', () => {
       await expect(ways.getByRole('radio', { name: way })).not.toBeChecked();
     }
     await expect(ways.getByRole('radio', { name: 'On request' })).toHaveAccessibleDescription(
-      /You confirm each full game within your time to confirm\. Nobody pays until you do\./,
+      /You confirm each full game within your time to confirm\. The players’ shares are held when you do and taken at your cut-off\./,
     );
     await expect(ways).toContainText('A change applies to hours not yet booked.');
 

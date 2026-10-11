@@ -1,14 +1,13 @@
 'use client';
 
 import { Button } from '@/ui/Button';
-import { formatZloty } from '@/ui/format';
 import tableStyles from '@/ui/Table.module.css';
 import { Tag } from '@/ui/Tag';
 
-import { BOOKINGS_COPY, sportAndKind } from '../copy';
+import { BOOKINGS_COPY, knownZloty, sportAndKind } from '../copy';
 import type { Booking, BookingStatus, PaymentDue } from '../mappers';
 
-import { askedAbout, type Asked } from './Asked';
+import { askedAbout, type Asked, type AskedToCancel } from './Asked';
 import styles from './Bookings.module.css';
 import { RequestActions } from './RequestActions';
 import { useReadAgainAt } from './useReadAgainAt';
@@ -30,12 +29,12 @@ export function rowId(bookingId: string): string {
 }
 
 /**
- * Until when the club's yes waits on one player's payment, never whose. Once that time comes the
- * page is read again, and the game reads booked or called off.
+ * Until when the club's yes waits on one player's card or payment, never whose. Once that time
+ * comes the page is read again, and the game reads booked or called off.
  */
 function PaymentAwaited({ due }: { due: PaymentDue }) {
   useReadAgainAt(due);
-  return <span className={styles.why}>{COPY.waitingForAPayment(due.until)}</span>;
+  return <span className={styles.why}>{COPY.waitingFor[due.timeTo](due.until)}</span>;
 }
 
 function Status({ booking }: { booking: Booking }) {
@@ -60,9 +59,11 @@ function Players({ booking }: { booking: Booking }) {
       {booking.players.map((player) => (
         <li key={player.id}>
           <span className={styles.player}>{player.name ?? COPY.nameless}</span>
-          {player.paid || player.checkedIn ? (
+          {player.share !== null || player.checkedIn ? (
             <span className={styles.marks}>
-              {player.paid ? ` ${COPY.paid}` : null}
+              {player.share === null ? null : (
+                <span data-share={player.share}>{` ${COPY.shares[player.share]}`}</span>
+              )}
               {player.checkedIn ? ` ${COPY.checkedIn}` : null}
             </span>
           ) : null}
@@ -88,7 +89,7 @@ function Money({ booking }: { booking: Booking }) {
     <dl className={styles.money}>
       {lines.map(([label, grosze]) => (
         <div key={label} className={styles.moneyLine}>
-          <dt>{label}</dt> <dd>{formatZloty(grosze)}</dd>
+          <dt>{label}</dt> <dd data-unknown={grosze === null}>{knownZloty(grosze)}</dd>
         </div>
       ))}
     </dl>
@@ -110,10 +111,11 @@ function From({ booking }: { booking: Booking }) {
 
 /**
  * **One day's bookings** (the screens B4): each game's hour and court, sport and kind, its
- * players (*paid ✓*, *checked in ✓*), its status (with until when a yes waits on one player's
- * payment), its money and the group it came from, and what the club may do about it: answer a
- * request before its countdown ends, or move or cancel a game until it starts. Every act waits
- * while one is under way. The booking a link pointed at is marked.
+ * players (their share *held* or *taken*, *checked in ✓*), its status (with until when a yes
+ * waits on one player's card or payment), its money and the group it came from, and what the
+ * club may do about it: answer a request before its countdown ends, or move or cancel a game
+ * until it starts. Every act waits while one is under way. The booking a link pointed at is
+ * marked.
  */
 export function BookingsTable({
   bookings,
@@ -131,7 +133,7 @@ export function BookingsTable({
   pending: boolean;
   onRefuse: (game: Asked) => void;
   onMove: (game: Asked) => void;
-  onCancel: (game: Asked) => void;
+  onCancel: (game: AskedToCancel) => void;
 }) {
   return (
     <table className={tableStyles.table}>
@@ -202,7 +204,7 @@ export function BookingsTable({
                       type="button"
                       tone="danger"
                       disabled={pending}
-                      onClick={() => onCancel(game)}
+                      onClick={() => onCancel({ ...game, givesBack: booking.cancelGivesBack })}
                       aria-label={`${COPY.cancel} ${game.name}`}
                     >
                       {COPY.cancel}

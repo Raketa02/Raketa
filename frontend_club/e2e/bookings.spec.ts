@@ -15,6 +15,7 @@ import { court, week } from './stub/courts';
 
 const EVERY_DAY = [1, 2, 3, 4, 5, 6, 7];
 const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
 
 /** The row a booking's hour heads. */
 function rowAt(page: Page, hours: string) {
@@ -30,7 +31,7 @@ async function openDay(page: Page, day: string) {
 }
 
 test.describe('Bookings', () => {
-  test('a day lists each game: its hour and court, sport and kind, players, status, money and group', async ({
+  test('a day lists each game: its hour and court, sport and kind, players and their shares, status, money and group', async ({
     page,
     club,
   }) => {
@@ -53,8 +54,11 @@ test.describe('Bookings', () => {
         hour: 18,
         kind: 'FOR_FUN',
         stage: 'SEAT_OPEN',
+        // Its cut-off has passed: the shares are taken, and a leaver's refund less the fee kept
+        // on their payment waits for Stripe to say the fee (#641).
+        cut_off: fromNow(-HOUR_MS),
         booked_from: { group_id: crypto.randomUUID(), name: 'Padel po pracy', official: false },
-        money: { price_grosze: 90_00, collected_grosze: 90_00, refunded_grosze: 40_00 },
+        money: { price_grosze: 90_00, collected_grosze: 90_00, refunded_grosze: null },
       }),
     );
     club.bookings.add(booking({ court: padel, day: dayFromToday(3), hour: 19 }));
@@ -70,26 +74,27 @@ test.describe('Bookings', () => {
     const seatOpen = rowAt(page, '18:00–19:00');
     await expect(seatOpen.getByRole('cell').nth(0)).toHaveText('Tennis · Friendly');
     await expect(seatOpen.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-      /Anna Nowak\s*paid ✓$/,
+      /Anna Nowak\s*taken$/,
       'Open seat',
     ]);
     await expect(seatOpen.getByRole('cell').nth(2)).toHaveText('Seat open');
     await expect(seatOpen.getByRole('cell').nth(3)).toHaveText(
-      /Price\s*90 zł\s*Collected\s*90 zł\s*Refunded\s*40 zł/,
+      /Price\s*90 zł\s*Collected\s*90 zł\s*Refunded\s*Not yet known/,
     );
     await expect(seatOpen.getByRole('cell').nth(4)).toHaveText(/Padel po pracy\s*Player group/);
 
+    // Its cut-off is a day before it, still ahead: every share is held, and nothing collected.
     const booked = rowAt(page, '19:00–20:00');
     await expect(booked.getByRole('cell').nth(0)).toHaveText('Padel · Competitive');
     await expect(booked.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-      /Anna Nowak\s*paid ✓\s*checked in ✓/,
-      /Piotr Sikora\s*paid ✓$/,
-      /Kasia Wiśniewska\s*paid ✓$/,
-      /Marek Zając\s*paid ✓$/,
+      /Anna Nowak\s*held\s*checked in ✓/,
+      /Piotr Sikora\s*held$/,
+      /Kasia Wiśniewska\s*held$/,
+      /Marek Zając\s*held$/,
     ]);
     await expect(booked.getByRole('cell').nth(2)).toHaveText('Booked');
     await expect(booked.getByRole('cell').nth(3)).toHaveText(
-      /Price\s*140 zł\s*Collected\s*140 zł\s*Refunded\s*0 zł/,
+      /Price\s*140 zł\s*Collected\s*0 zł\s*Refunded\s*0 zł/,
     );
     await expect(booked.getByRole('cell').nth(4)).toHaveText(/Ogrody 33 Club\s*Official group/);
   });
@@ -146,7 +151,9 @@ test.describe('Bookings', () => {
         called_off_reason: 'SHORT_AT_THE_CUT_OFF',
       }),
     );
-    const nameless = club.bookings.add(booking({ court: padel, day, hour: 12 }));
+    const nameless = club.bookings.add(
+      booking({ court: padel, day, hour: 12, cut_off: fromNow(-HOUR_MS) }),
+    );
     nameless.players = nameless.players.map((player, index) =>
       index === 3 ? { ...player, name: null } : player,
     );
@@ -167,7 +174,7 @@ test.describe('Bookings', () => {
     );
     await expect(
       rowAt(page, '12:00–13:00').getByRole('cell').nth(1).getByRole('listitem').last(),
-    ).toHaveText(/A player\s*paid ✓/);
+    ).toHaveText(/A player\s*taken/);
   });
 
   test('‹ and › walk the days, the date box opens any, and Today comes back', async ({
@@ -310,7 +317,7 @@ test.describe('Bookings', () => {
   });
 
   test.describe('a request waiting for the club', () => {
-    test('shows its countdown; Accept books it, everybody pays, and the badge goes down', async ({
+    test('shows its countdown; Accept books it, every share held until the cut-off, and the badge goes down', async ({
       page,
       stub,
       club,
@@ -325,6 +332,7 @@ test.describe('Bookings', () => {
           hour: 19,
           stage: 'WAITING_FOR_YOU',
           answer_by: fromNow(25 * MINUTE_MS),
+          cut_off: fromNow(2 * HOUR_MS),
         }),
       );
       club.bookings.add(
@@ -349,12 +357,13 @@ test.describe('Bookings', () => {
       await row.getByRole('button', { name: /^Accept the 19:00 game on / }).click();
 
       await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^The 19:00 game on \w{3} \d{1,2} \w{3} is booked on Court 1\. Everybody paid\.$/,
+        /^The 19:00 game on \w{3} \d{1,2} \w{3} is booked on Court 1\. The shares are held now and taken at your cut-off, or taken at once if it has passed\.$/,
       );
       await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
       await expect(row.getByRole('cell').nth(1).getByRole('listitem').first()).toHaveText(
-        /Anna Nowak\s*paid ✓/,
+        /Anna Nowak\s*held$/,
       );
+      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł/);
       await expect(row.getByRole('timer')).toHaveCount(0);
       await expect(row.getByRole('button', { name: /^Move/ })).toBeVisible();
       await expect(
@@ -363,6 +372,34 @@ test.describe('Bookings', () => {
       expect(
         stub.requests('post', '/api/v1/club/bookings/{booking_id}/acceptance').map((r) => r.params),
       ).toEqual([{ booking_id: waiting.booking_id }]);
+    });
+
+    test('an Accept after the cut-off takes every share at once', async ({ page, club }) => {
+      const padel = court({ name: 'Court 1', sport: 'PADEL' });
+      club.raketa.courts = [padel];
+      const day = dayFromToday(1);
+      club.bookings.add(
+        booking({
+          court: padel,
+          day,
+          hour: 19,
+          stage: 'WAITING_FOR_YOU',
+          cut_off: fromNow(-HOUR_MS),
+        }),
+      );
+      await openDay(page, day);
+      const row = rowAt(page, '19:00–20:00');
+
+      await row.getByRole('button', { name: /^Accept/ }).click();
+
+      await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
+      await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
+        /Anna Nowak\s*taken$/,
+        /Piotr Sikora\s*taken$/,
+        /Kasia Wiśniewska\s*taken$/,
+        /Marek Zając\s*taken$/,
+      ]);
+      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*140 zł\s*Refunded\s*0 zł/);
     });
 
     test('Refuse asks first, keeps a note for the club, and nobody pays', async ({
@@ -437,12 +474,14 @@ test.describe('Bookings', () => {
         waiting.stage = 'WAITING_FOR_A_PAYMENT';
         waiting.answer_by = null;
         waiting.payment_due_by = dueBy;
+        waiting.time_to = 'PAY';
         return {
           status: 200,
           body: {
             outcome: 'WAITING_FOR_A_PAYMENT' as const,
             court_name: null,
             payment_due_by: dueBy,
+            time_to: 'PAY' as const,
           },
         };
       });
@@ -484,11 +523,70 @@ test.describe('Bookings', () => {
       // The payment came in: an ordinary booked game.
       waiting.stage = 'BOOKED';
       waiting.payment_due_by = null;
+      waiting.time_to = null;
       waiting.players = waiting.players.map((player) => ({ ...player, paid: true }));
       waiting.money = { ...waiting.money, collected_grosze: waiting.money.price_grosze };
       await page.reload();
       await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
       await expect(row.getByRole('button', { name: /^Move/ })).toBeVisible();
+    });
+
+    test('a yes before the cut-off waits on one player’s card, not a payment', async ({
+      page,
+      stub,
+      club,
+    }) => {
+      const padel = court({ name: 'Court 1', sport: 'PADEL' });
+      club.raketa.courts = [padel];
+      const day = dayFromToday(2);
+      const dueBy = atClubHour(day, 18, 20);
+      const waiting = club.bookings.add(
+        booking({ court: padel, day, hour: 19, stage: 'WAITING_FOR_YOU' }),
+      );
+      stub.on('post', '/api/v1/club/bookings/{booking_id}/acceptance', () => {
+        waiting.stage = 'WAITING_FOR_A_PAYMENT';
+        waiting.answer_by = null;
+        waiting.payment_due_by = dueBy;
+        waiting.time_to = 'FIX_THE_CARD';
+        return {
+          status: 200,
+          body: {
+            outcome: 'WAITING_FOR_A_PAYMENT' as const,
+            court_name: null,
+            payment_due_by: dueBy,
+            time_to: 'FIX_THE_CARD' as const,
+          },
+        };
+      });
+      await openDay(page, day);
+      const row = rowAt(page, '19:00–20:00');
+      await row.getByRole('button', { name: /^Accept/ }).click();
+
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^You accepted the 19:00 game on .+\. One player’s card is still to be fixed, until 18:20: the court is kept for it, and once it’s fixed the game is booked\. If it isn’t, the game is called off and you’re emailed\.$/,
+      );
+      await expect(row.getByRole('cell').nth(2)).toHaveText(
+        /^Accepted\s*Waiting for one player’s card until 18:20$/,
+      );
+      // Nobody's share is held yet, and nobody is named as the one it waits on.
+      await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
+        'Anna Nowak',
+        'Piotr Sikora',
+        'Kasia Wiśniewska',
+        'Marek Zając',
+      ]);
+
+      // The card was fixed: booked, every share held until the cut-off.
+      waiting.stage = 'BOOKED';
+      waiting.payment_due_by = null;
+      waiting.time_to = null;
+      waiting.players = waiting.players.map((player) => ({ ...player, held: true }));
+      await page.reload();
+      await expect(row.getByRole('cell').nth(2)).toHaveText('Booked');
+      await expect(row.getByRole('cell').nth(1).getByRole('listitem').first()).toHaveText(
+        /Anna Nowak\s*held$/,
+      );
+      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł/);
     });
 
     test('a yes whose time to pay runs out reads called off from that moment', async ({
@@ -505,6 +603,7 @@ test.describe('Bookings', () => {
           hour: 19,
           stage: 'WAITING_FOR_A_PAYMENT',
           payment_due_by: fromNow(4_000),
+          time_to: 'PAY',
         }),
       );
       await openDay(page, day);
@@ -585,6 +684,7 @@ test.describe('Bookings', () => {
         waiting.stage = 'WAITING_FOR_A_PAYMENT';
         waiting.answer_by = null;
         waiting.payment_due_by = fromNow(30 * MINUTE_MS);
+        waiting.time_to = 'PAY';
         return {
           status: 200,
           body: { outcome: 'WAITING_FOR_A_PAYMENT' as const, court_name: null },
@@ -763,7 +863,7 @@ test.describe('Bookings', () => {
       await expect(rowAt(page, '19:00–20:00')).toContainText('Court 1');
     });
 
-    test('Cancel asks why, spells out what it comes to, and refunds everybody', async ({
+    test('Cancel before the cut-off asks why, spells out that every hold is let go, and nobody pays', async ({
       page,
       stub,
       club,
@@ -784,8 +884,9 @@ test.describe('Bookings', () => {
         /^Weather\s*Repair\s*Double booking\s*Other$/,
       );
       await expect(dialog).toContainText(
-        'Everyone is refunded in full; the card fees are not returned. It goes on nobody’s record',
+        'Every hold is let go and nobody pays a fee. It goes on nobody’s record',
       );
+      await expect(dialog).not.toContainText('refunded');
       await expect(dialog.getByRole('button', { name: 'Cancel the booking' })).toBeDisabled();
       await dialog.getByRole('button', { name: 'Keep the game' }).click();
       await expect(dialog).toBeHidden();
@@ -799,19 +900,53 @@ test.describe('Bookings', () => {
       await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
 
       await expect(page.getByRole('main').getByRole('status')).toHaveText(
-        /^You cancelled the 19:00 game on .+\. Everyone is refunded in full\.$/,
+        /^You cancelled the 19:00 game on .+\. Every hold is let go: nobody pays\.$/,
       );
       const row = rowAt(page, '19:00–20:00');
       await expect(row.getByRole('cell').nth(2)).toHaveText(
         /Called off\s*Cancelled by you · Double booking/,
       );
-      await expect(row.getByRole('cell').nth(3)).toHaveText(
-        /Collected\s*105 zł\s*Refunded\s*105 zł/,
-      );
+      // Nothing was taken, so nothing is refunded, and no share is held any more.
+      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*0 zł\s*Refunded\s*0 zł/);
+      await expect(row.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
+        'Anna Nowak',
+        'Piotr Sikora',
+        'Kasia Wiśniewska',
+        'Open seat',
+      ]);
       await expect(row.getByRole('button')).toHaveCount(0);
       expect(cancellations().map((r) => [r.params.booking_id, r.body])).toEqual([
         [game.booking_id, { reason: 'DOUBLE_BOOKING' }],
       ]);
+    });
+
+    test('Cancel after the cut-off spells out that everyone is refunded in full, the card fees not returned', async ({
+      page,
+      club,
+    }) => {
+      const padel = court({ name: 'Court 1', sport: 'PADEL' });
+      club.raketa.courts = [padel];
+      const day = dayFromToday(1);
+      club.bookings.add(booking({ court: padel, day, hour: 19, cut_off: fromNow(-HOUR_MS) }));
+      await openDay(page, day);
+      const row = rowAt(page, '19:00–20:00');
+      await expect(row.getByRole('cell').nth(3)).toHaveText(/Collected\s*140 zł\s*Refunded\s*0 zł/);
+
+      await row.getByRole('button', { name: /^Cancel/ }).click();
+      const dialog = page.getByRole('dialog', { name: /^Cancel the 19:00 game on .+\?$/ });
+      await expect(dialog).toContainText(
+        'Everyone is refunded in full; the card fees are not returned. It goes on nobody’s record',
+      );
+      await expect(dialog).not.toContainText('hold');
+      await dialog.getByRole('radio', { name: 'Weather' }).check();
+      await dialog.getByRole('button', { name: 'Cancel the booking' }).click();
+
+      await expect(page.getByRole('main').getByRole('status')).toHaveText(
+        /^You cancelled the 19:00 game on .+\. Everyone is refunded in full\.$/,
+      );
+      await expect(row.getByRole('cell').nth(3)).toHaveText(
+        /Collected\s*140 zł\s*Refunded\s*140 zł/,
+      );
     });
 
     test('once it has started it is neither moved nor cancelled, and a page read before says why', async ({

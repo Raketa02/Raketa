@@ -42,12 +42,17 @@
   font-weight: var(--weight-medium);
 }
 
-/* paid ✓ and checked in ✓, under the name. */
+/* The share held or taken, and checked in ✓, under the name. */
 .marks {
   display: block;
   color: var(--colour-green);
   font-size: var(--text-small);
   font-weight: var(--weight-bold);
+}
+
+/* A share only held: nothing has moved yet. */
+.marks [data-share='HELD'] {
+  color: var(--colour-muted);
 }
 
 .open {
@@ -90,6 +95,11 @@
   margin: 0;
   font-family: var(--font-mono);
   white-space: nowrap;
+}
+
+/* A sum Stripe has not given yet: words, not a figure. */
+.moneyLine dd[data-unknown='true'] {
+  color: var(--colour-muted);
 }
 
 .from {

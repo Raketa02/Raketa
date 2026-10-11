@@ -5,6 +5,7 @@
 
 import { sportName, type Sport } from '@/features/club-details/mappers';
 import { MONTHS } from '@/features/courts/copy';
+import { formatZloty } from '@/ui/format';
 import { sentenceAbout, type RefusalAbout } from '@/ui/forms';
 import type { NavItem } from '@/ui/NavLinks';
 
@@ -12,9 +13,12 @@ import type {
   BookingStatus,
   BookingsFilter,
   CalledOffReason,
+  CancelGivesBack,
   CancelReason,
   ClubHour,
   Kind,
+  Share,
+  TimeTo,
 } from './mappers';
 import { dayAfter, REFUSAL_NOTE_MOST } from './schemas';
 
@@ -54,10 +58,29 @@ export function countdown(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+/**
+ * **A sum of the club's money, or *Not yet known*** while Stripe has not said a fee it depends on
+ * (#641). Never an estimate.
+ */
+export function knownZloty(grosze: number | null): string {
+  return grosze === null ? 'Not yet known' : formatZloty(grosze);
+}
+
 /** *Padel · Competitive*, *Tennis · Friendly*. */
 export function sportAndKind(sport: Sport, kind: Kind): string {
   return `${sportName(sport)} · ${BOOKINGS_COPY.kinds[kind]}`;
 }
+
+/** What came of the players' money, once a cancel landed. */
+const CANCELLED_MONEY = {
+  HOLDS_LET_GO: 'Every hold is let go: nobody pays.',
+  REFUNDED_IN_FULL: 'Everyone is refunded in full.',
+} as const satisfies Record<CancelGivesBack, string>;
+
+/** What a cancel comes to beyond the money, either side of the cut-off (the mechanics §16.9). */
+const CANCEL_AFTERMATH =
+  'It goes on nobody’s record, the players are offered another game first, and the hour is ' +
+  'yours to sell again.';
 
 export const BOOKINGS_COPY = {
   caption: 'Raketa games at your courts',
@@ -111,15 +134,22 @@ export const BOOKINGS_COPY = {
     CANCELLED_BY_THE_CLUB: 'Cancelled by you',
     PAYMENT_NOT_IN_TIME: 'Payment didn’t come in time',
   } satisfies Record<CalledOffReason, string>,
-  /** Under *Accepted*, while the club's yes waits on one player's payment: never whose. */
-  waitingForAPayment: (until: string) => `Waiting for one player’s payment until ${until}`,
+  /**
+   * Under *Accepted*, while the club's yes waits on one player, never whose: their card to be
+   * fixed before the cut-off, their payment after it (the mechanics §16.8).
+   */
+  waitingFor: {
+    FIX_THE_CARD: (until: string) => `Waiting for one player’s card until ${until}`,
+    PAY: (until: string) => `Waiting for one player’s payment until ${until}`,
+  } satisfies Record<TimeTo, (until: string) => string>,
   cancelReasons: {
     WEATHER: 'Weather',
     REPAIR: 'Repair',
     DOUBLE_BOOKING: 'Double booking',
     OTHER: 'Other',
   } satisfies Record<CancelReason, string>,
-  paid: 'paid ✓',
+  /** A player's share, under their name (Q113): held on their card until the cut-off, or taken. */
+  shares: { HELD: 'held', TAKEN: 'taken' } satisfies Record<Share, string>,
   checkedIn: 'checked in ✓',
   openSeat: 'Open seat',
   /** A player whose account can no longer be named. */
@@ -166,21 +196,34 @@ export const BOOKINGS_COPY = {
   cancelDialog: {
     title: (game: string) => `Cancel ${game}?`,
     reason: 'Why',
-    reasonHint: 'The players are told it, with their refund.',
-    consequence:
-      'Everyone is refunded in full; the card fees are not returned. It goes on nobody’s ' +
-      'record, the players are offered another game first, and the hour is yours to sell again.',
+    reasonHint: 'The players are told it, with what comes of their money.',
+    /** Before the cut-off, and after it (the mechanics §16.9). */
+    consequence: {
+      HOLDS_LET_GO: `Every hold is let go and nobody pays a fee. ${CANCEL_AFTERMATH}`,
+      REFUNDED_IN_FULL: `Everyone is refunded in full; the card fees are not returned. ${CANCEL_AFTERMATH}`,
+    } satisfies Record<CancelGivesBack, string>,
     back: 'Keep the game',
     confirm: 'Cancel the booking',
   },
   done: {
+    /** The reply names no cut-off, so the sentence is true on either side of it (Q113). */
     accepted: (game: string, court: string) =>
-      `${opening(game)} is booked on ${court}. Everybody paid.`,
-    /** A yes that met a refused payment: the court is kept for that player's time to pay. */
-    acceptedWaitingForAPayment: (game: string, until: string) =>
-      `You accepted ${game}. One player’s payment is still to come, until ${until}: the court ` +
-      'is kept for it, and once it’s in the game is booked. If it doesn’t come, the game is ' +
-      'called off and you’re emailed.',
+      `${opening(game)} is booked on ${court}. The shares are held now and taken at your ` +
+      'cut-off, or taken at once if it has passed.',
+    /**
+     * A yes that met a refused card: the court is kept for that player's time to fix it (before
+     * the cut-off) or to pay (after it).
+     */
+    acceptedWaitingFor: {
+      FIX_THE_CARD: (game: string, until: string) =>
+        `You accepted ${game}. One player’s card is still to be fixed, until ${until}: the ` +
+        'court is kept for it, and once it’s fixed the game is booked. If it isn’t, the game is ' +
+        'called off and you’re emailed.',
+      PAY: (game: string, until: string) =>
+        `You accepted ${game}. One player’s payment is still to come, until ${until}: the court ` +
+        'is kept for it, and once it’s in the game is booked. If it doesn’t come, the game is ' +
+        'called off and you’re emailed.',
+    } satisfies Record<TimeTo, (game: string, until: string) => string>,
     /** A yes that met a refused payment when the game's last moment to book had come. */
     noTimeToPay: (game: string) =>
       `A player’s payment didn’t go through for ${game}, and there was no time left to pay, so ` +
@@ -192,14 +235,17 @@ export const BOOKINGS_COPY = {
       `You refused ${game}. Nobody paid, and the hour is yours to sell again.`,
     moved: (game: string, court: string) =>
       `${opening(game)} is on ${court} now. The players see the new court.`,
-    cancelled: (game: string) => `You cancelled ${game}. Everyone is refunded in full.`,
+    /** With what the dialog said of the money, when the page said it. */
+    cancelled: (game: string, givesBack: CancelGivesBack | null) =>
+      `You cancelled ${game}.${givesBack === null ? '' : ` ${CANCELLED_MONEY[givesBack]}`}`,
   },
   waiting: {
     title: 'Waiting for your answer',
     /** What a request left unanswered comes to, in the players' own words (the mechanics §16.8). */
     lead: (clubName: string) =>
-      'Full games asking for one of your courts. Nobody pays until you accept, and a request ' +
-      `not answered in time is called off: the players read “${clubName} didn’t answer in time”.`,
+      'Full games asking for one of your courts. Nobody has paid: the shares are held when you ' +
+      'accept and taken at your cut-off. A request not answered in time is called off: the ' +
+      `players read “${clubName} didn’t answer in time”.`,
     none: 'Nothing is waiting for you.',
     /** *140 zł · 35 zł each*. */
     price: (price: string, share: string) => `${price} · ${share} each`,

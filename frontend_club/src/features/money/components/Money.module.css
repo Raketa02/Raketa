@@ -38,6 +38,12 @@
   font-weight: var(--weight-bold);
 }
 
+/* A figure Stripe has not given yet: words, not a sum. */
+.total dd[data-unknown='true'],
+.figure[data-unknown='true'] {
+  color: var(--colour-muted);
+}
+
 /* A row of the month, and a payout. */
 
 .when {

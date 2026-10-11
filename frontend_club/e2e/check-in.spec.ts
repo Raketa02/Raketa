@@ -121,10 +121,10 @@ test.describe('Check in', () => {
       .click();
     await expect(page.getByRole('heading', { name: 'Bookings', level: 1 })).toBeVisible();
     await expect(page.getByRole('listitem').filter({ hasText: 'Piotr Sikora' })).toHaveText(
-      /Piotr Sikora\s*paid ✓\s*checked in ✓/,
+      /Piotr Sikora\s*taken\s*checked in ✓/,
     );
     await expect(page.getByRole('listitem').filter({ hasText: 'Anna Nowak' })).toHaveText(
-      /Anna Nowak\s*paid ✓$/,
+      /Anna Nowak\s*taken$/,
     );
   });
 
