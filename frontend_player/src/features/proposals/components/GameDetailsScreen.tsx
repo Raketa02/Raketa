@@ -92,7 +92,7 @@ import {
   yesOnDetails,
   type ProposalDetails,
 } from '../domain/details';
-import { LEAVING_WHILE_WAITING, answerByAhead } from '../domain/home';
+import { LEAVING_WHILE_WAITING, answerByAhead, paymentWindowAt } from '../domain/home';
 import type { GameKind } from '../domain/vocabulary';
 import { gameDayOf, weekdayAt } from '../domain/when';
 import { useFillYes } from '../hooks/useFillYes';
@@ -352,7 +352,11 @@ function Details({
 
           {actions.includes('CONFIRM_PAYMENT') && details.yourPayment !== undefined ? (
             <Button
-              label={FILL_COPY.confirm.title}
+              label={
+                FILL_COPY.confirm.title[
+                  paymentWindowAt(details.yourPayment.confirmBy, details.yourPayment.timeTo, at)
+                ]
+              }
               size="lg"
               onPress={() => {
                 if (details.yourPayment !== undefined) fill.confirm(details.yourPayment, yesOn);

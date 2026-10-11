@@ -4,12 +4,19 @@
  * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A2.3, A2.4, A4.3; mock 2; the
  * mechanics §10.1; the backend's #545).
  *
+ * **What the share does** ([#645](https://github.com/Raketa02/Raketa/issues/645); Q113): before
+ * the club's cut-off *I'm in · 27 zł* is said *held until the cut-off*, and once in, the rescuer
+ * reads the game as everybody does — held, free to leave until the cut-off; after it, *paid now*.
+ * **A rescuer whose card is refused** keeps the seat for 30 minutes (#640), told to fix the card
+ * before the cut-off, to confirm the payment after it, *to take the seat*.
+ *
  * The real route tree, from a group's Games tab, with the payment provider's phone half faked at the
  * platform edge. **The ten seconds are walked by advancing the fake clock past them, never by
  * polling** (`theFill.test.tsx`'s rule).
  */
 
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { router } from 'expo-router';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 
 import { FILL_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
@@ -27,8 +34,17 @@ import {
   yesPath,
   youTile,
 } from '@/test-support/groupDeck';
-import { bookingDetails, stubBooking } from '@/test-support/home';
 import {
+  BOOKED_STARTS_AT,
+  bookedMoney,
+  bookingDetails,
+  homeGame,
+  stubBooking,
+  stubHomeGames,
+  takenMoney,
+} from '@/test-support/home';
+import {
+  PAYMENTS_TO_CONFIRM_PATH,
   bookingPath,
   launchSignedIn,
   resetClipboard,
@@ -60,6 +76,10 @@ const FILL = FILL_COPY;
 
 const PAST_THE_FLIGHT = 400;
 const SECOND = 1_000;
+
+/** *I'm in · 27 zł* aloud, before the club's cut-off and after it (Q113). */
+const HELD_UNTIL_THE_CUT_OFF = 'I’m in, 27 zł held until the cut-off';
+const PAID_NOW = 'I’m in, 27 zł paid now';
 
 const HIDDEN_TOO = { includeHiddenElements: true } as const;
 
@@ -218,6 +238,9 @@ async function openGames(
 
 const toasts = () => useToastQueue.getState().queue.map((toast) => [toast.message, toast.tone]);
 
+/** A rescue after the club's cut-off: offered until the start, and paid at once. */
+const lateRescue = () => rescueCard({ no_free_cancellation: true, deadline: BOOKED_STARTS_AT });
+
 /** The ten seconds, from a yes just said. */
 const theTenSeconds = () => act(() => jest.advanceTimersByTime(10 * SECOND));
 
@@ -262,7 +285,7 @@ describe('taking the seat from the card (A2.4)', () => {
     const card = rescueCard();
     await openGames([card]);
 
-    fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
+    fireEvent.press(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF }));
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
     expect(transport.requestsTo('POST', seatsPath(card.proposal_id))).toHaveLength(0);
@@ -307,7 +330,7 @@ describe('taking the seat from the card (A2.4)', () => {
     const card = rescueCard();
     await openGames([card], () => errorResponse(409, 'seat_just_taken'));
 
-    fireEvent.press(screen.getByRole('button', { name: COPY.yes }));
+    fireEvent.press(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF }));
     act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
     theTenSeconds();
 
@@ -342,7 +365,7 @@ describe('the rescue seen from outside (A4.3)', () => {
     expect(screen.getByLabelText('Where, Ogrody 33, Court 6 · 3,1 km')).toBeTruthy();
     // The card's deadline is the cut-off, 21 hours after the read: Thursday 07:00 in Warsaw.
     expect(screen.getByLabelText('Your share, 27 zł, fills by Thu 07:00')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'I’m in, pays 27 zł now' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Chat' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Leave the game' })).toBeNull();
   });
@@ -350,7 +373,7 @@ describe('the rescue seen from outside (A4.3)', () => {
   it('takes the seat from there: ten seconds, the booking’s seat, It’s a game!, and back to the group', async () => {
     const card = await openRescue();
 
-    fireEvent.press(screen.getByRole('button', { name: 'I’m in, pays 27 zł now' }));
+    fireEvent.press(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF }));
 
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
     expect(screen.getByRole('button', { name: FILL.undo.booking })).toBeTruthy();
@@ -373,5 +396,208 @@ describe('the rescue seen from outside (A4.3)', () => {
     fireEvent.press(await screen.findByRole('button', { name: COPY.details }));
 
     expect(await screen.findByText('This seat isn’t offered to you any more.')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// What taking the seat does with the share (#645; Q113)
+// ---------------------------------------------------------------------------
+
+describe('what taking the seat does with the share (#645; Q113)', () => {
+  it('says I’m in on the card is held until the cut-off before it, and paid now after it', async () => {
+    await openGames([rescueCard()]);
+    expect(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: PAID_NOW })).toBeNull();
+  });
+
+  it('says paid now on a seat offered after the cut-off — the card and its details', async () => {
+    const card = lateRescue();
+    stubBooking(transport, {
+      ...rescueDetails(card),
+      rescue: { deadline: card.deadline, fills_by_the_cut_off: false },
+    });
+    await openGames([card]);
+    expect(screen.getByRole('button', { name: PAID_NOW })).toBeTruthy();
+
+    fireEvent.press(await screen.findByRole('button', { name: COPY.details }));
+    expect(await screen.findByLabelText('Your share, 27 zł, offered until the start')).toBeTruthy();
+    expect(screen.getByRole('button', { name: PAID_NOW })).toBeTruthy();
+  });
+
+  /** Once in, the rescuer is any player: held until the cut-off, and free to leave until then. */
+  it('reads the joined game as everybody does — held, and free to leave until the cut-off', async () => {
+    const card = rescueCard();
+    const joined = { booking_id: card.proposal_id, money: bookedMoney({ share_grosze: 2700 }) };
+    await openGames([card]);
+    stubHomeGames(transport, [homeGame(joined)]);
+    stubBooking(transport, bookingDetails({ ...joined, game_id: GAME_ID, pool_id: CREW.id }));
+
+    fireEvent.press(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    theTenSeconds();
+    fireEvent.press(await screen.findByRole('button', { name: FILL.itsAGame.open }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${card.proposal_id}`));
+    expect(
+      await screen.findByLabelText(
+        'Your share, 27 zł, Held on your card · taken Fri 16:00 · free to leave until then',
+      ),
+    ).toBeTruthy();
+    act(() => router.back());
+    const drawn = await screen.findByTestId(`home-game-${card.proposal_id}`);
+    expect(within(drawn).getByText('27 zł · free to leave until Fri 16:00')).toBeTruthy();
+  });
+
+  it('reads it paid once joined after the cut-off', async () => {
+    const card = lateRescue();
+    const joined = { booking_id: card.proposal_id, money: takenMoney({ share_grosze: 2700 }) };
+    await openGames([card]);
+    stubHomeGames(transport, [homeGame(joined)]);
+    stubBooking(transport, bookingDetails({ ...joined, game_id: GAME_ID, pool_id: CREW.id }));
+
+    fireEvent.press(screen.getByRole('button', { name: PAID_NOW }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    theTenSeconds();
+    fireEvent.press(await screen.findByRole('button', { name: FILL.itsAGame.open }));
+
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${card.proposal_id}`));
+    expect(await screen.findByLabelText('Paid, 27 zł, Paid')).toBeTruthy();
+    act(() => router.back());
+    const drawn = await screen.findByTestId(`home-game-${card.proposal_id}`);
+    expect(within(drawn).getByText('Paid · 27 zł')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A refused rescuer keeps the seat (#640, #645)
+// ---------------------------------------------------------------------------
+
+describe('a rescuer whose card is refused keeps the seat for 30 minutes (#640, #645)', () => {
+  const SEAT_CHARGE = 'a2000000-0000-4000-8000-000000000007';
+  /** Half an hour after the deck's read: 10:30 on Wednesday, the end of the kept seat. */
+  const KEPT_UNTIL = new Date(DECK_READ_AT + 30 * 60 * SECOND).toISOString();
+
+  const refused = (
+    card: Wire['DeckCardSchema'],
+    timeTo: Wire['TimeTo'],
+  ): Wire['YesAnswerResponse'] => ({
+    proposal_id: card.proposal_id,
+    open_seats: 1,
+    booked: null,
+    waiting_for_the_club: false,
+    your_payment: {
+      seat_charge_id: SEAT_CHARGE,
+      refusal: 'AUTHENTICATION_REQUIRED',
+      confirm_by: KEPT_UNTIL,
+      time_to: timeTo,
+    },
+    payment_awaited_until: null,
+  });
+
+  function stubSeatCharge(card: Wire['DeckCardSchema']) {
+    transport.on('GET', `/api/v1/seat-charges/${SEAT_CHARGE}`, () =>
+      json<Wire['SeatChargeResponse']>({
+        seat_charge_id: SEAT_CHARGE,
+        proposal_id: card.proposal_id,
+        status: 'FAILED',
+        refusal: 'AUTHENTICATION_REQUIRED',
+        amount_grosze: card.share_grosze,
+        sport: 'PADEL',
+        starts_at: card.starts_at,
+        club: card.club,
+        to_confirm: {
+          client_secret: 'pi_1_secret_abc',
+          connected_account_id: 'acct_ogrody',
+          publishable_key: 'pk_test_raketa',
+        },
+      }),
+    );
+  }
+
+  it('before the cut-off, is told to fix the card to take the seat — nothing paid, the seat kept', async () => {
+    const card = rescueCard();
+    stubSeatCharge(card);
+    await openGames([card], () => json(refused(card, 'FIX_THE_CARD')));
+
+    fireEvent.press(screen.getByRole('button', { name: HELD_UNTIL_THE_CUT_OFF }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    theTenSeconds();
+
+    expect(
+      await screen.findByText(
+        'Fix your card by 10:30 to take the seat — it’s kept for you until then',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(FILL.confirm.title.FIX_THE_CARD)).toBeTruthy();
+    expect(screen.getByText(FILL.confirm.onlyPlacedAgain)).toBeTruthy();
+    expect(toasts()).toEqual([
+      ['Your card didn’t go through — fix it to take the seat. Nothing is paid now.', 'bad'],
+    ]);
+    expect(screen.queryByTestId('its-a-game')).toBeNull();
+  });
+
+  it('after the cut-off, is told to confirm the payment to take the seat', async () => {
+    const card = lateRescue();
+    stubSeatCharge(card);
+    await openGames([card], () => json(refused(card, 'PAY')));
+
+    fireEvent.press(screen.getByRole('button', { name: PAID_NOW }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    theTenSeconds();
+
+    expect(
+      await screen.findByText(
+        'Confirm your payment by 10:30 to take the seat — it’s kept for you until then',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(FILL.confirm.title.PAY)).toBeTruthy();
+    expect(screen.queryByText(FILL.confirm.onlyPlacedAgain)).toBeNull();
+    expect(toasts()).toEqual([
+      ['Your payment didn’t go through — confirm it to take the seat', 'bad'],
+    ]);
+  });
+
+  it('reads the kept seat on the rescue’s details, its confirmation where I’m in stood', async () => {
+    const card = rescueCard();
+    stubSeatCharge(card);
+    stubBooking(transport, {
+      ...rescueDetails(card),
+      your_payment_due_by: KEPT_UNTIL,
+      time_to: 'FIX_THE_CARD',
+    });
+    transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
+      json<Wire['PaymentsToConfirmResponse']>({
+        payments: [
+          {
+            seat_charge_id: SEAT_CHARGE,
+            refusal: 'AUTHENTICATION_REQUIRED',
+            proposal_id: card.proposal_id,
+            pool_id: CREW.id,
+            sport: 'PADEL',
+            kind: 'COMPETITIVE',
+            starts_at: card.starts_at,
+            club: card.club,
+            share_grosze: card.share_grosze,
+            book_by: card.deadline,
+            confirm_by: KEPT_UNTIL,
+            time_to: 'FIX_THE_CARD',
+          },
+        ],
+      }),
+    );
+    await openGames([card]);
+
+    fireEvent.press(await screen.findByRole('button', { name: COPY.details }));
+    expect(
+      await screen.findByLabelText('Your share, 27 zł, Fix your card by 10:30 to take the seat'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: HELD_UNTIL_THE_CUT_OFF })).toBeNull();
+    fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.title.FIX_THE_CARD }));
+
+    expect(
+      await screen.findByText(
+        'Fix your card by 10:30 to take the seat — it’s kept for you until then',
+      ),
+    ).toBeTruthy();
   });
 });

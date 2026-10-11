@@ -212,6 +212,28 @@ describe('toHome', () => {
     expect(older).not.toHaveProperty('yourPaymentDueBy');
   });
 
+  it('carries what the time is for — to fix the card or to pay (#638) — and nothing from a null', () => {
+    const [fixing, paying, unset, older] = toHome({
+      read_at: '2026-10-06T12:10:00Z',
+      needing_you: 0,
+      games: [
+        homeGame({ your_payment_due_by: '2026-10-06T12:40:00Z', time_to: 'FIX_THE_CARD' }),
+        homeGame({
+          status: 'WAITING_FOR_A_PAYMENT',
+          your_payment_due_by: '2026-10-06T12:40:00Z',
+          time_to: 'PAY',
+        }),
+        homeGame(),
+        homeGame({ time_to: undefined }),
+      ],
+    }).games;
+
+    expect(fixing?.timeTo).toBe('FIX_THE_CARD');
+    expect(paying?.timeTo).toBe('PAY');
+    expect(unset).not.toHaveProperty('timeTo');
+    expect(older).not.toHaveProperty('timeTo');
+  });
+
   /**
    * **Held, checked or taken** (#637, #639; Q113) — the share's state and the two instants it
    * switches at, and nothing from an older server's silence.
@@ -483,6 +505,11 @@ describe('toBookedGame', () => {
       yourPaymentDueBy: '2026-10-06T12:40:00Z',
     });
     expect(toBookedGame(details())).not.toHaveProperty('paymentDueBy');
+    expect(
+      toBookedGame(
+        details({ your_payment_due_by: '2026-10-06T12:40:00Z', time_to: 'FIX_THE_CARD' }),
+      ),
+    ).toMatchObject({ timeTo: 'FIX_THE_CARD' });
   });
 
   it('reads a full game gone back to filling in detail, as Home does', () => {

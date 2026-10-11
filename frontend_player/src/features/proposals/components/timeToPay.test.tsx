@@ -16,6 +16,10 @@
  * - **At a club that confirms** a card refused at the club's *Accept* reads the same: paying in time
  *   shows its payer *It's a game!* too (§12.2), and out of time the game is filling again, the club
  *   asked again when it is full.
+ * - **Before the cut-off it is the time to fix the card** ([#643](https://github.com/Raketa02/Raketa/issues/643);
+ *   Q113): nothing is being taken, so the payer is told to fix the card, never to pay — at the fill,
+ *   and at the holding time of a game booked far ahead, which stays booked meanwhile. The others'
+ *   words are the same in both windows.
  *
  * The real route tree, with `fetch`, the payment provider's phone half and the platform edges faked.
  * The notices themselves are the server's (#625, #626): what is asserted is that the phone draws
@@ -200,7 +204,7 @@ function toConfirmRow(
     share_grosze: 4000,
     book_by: '2026-10-02T14:00:00Z',
     confirm_by: DUE,
-    time_to: 'FIX_THE_CARD',
+    time_to: 'PAY',
     ...extra,
   };
 }
@@ -361,14 +365,60 @@ describe('the last yes, when another player’s share is refused (Q110)', () => 
         seat_charge_id: SEAT_CHARGE,
         refusal: 'AUTHENTICATION_REQUIRED',
         confirm_by: until,
+        time_to: 'PAY',
       },
       payment_awaited_until: until,
     });
 
-    expect(await screen.findByText(FILL.confirm.title)).toBeTruthy();
+    expect(await screen.findByText(FILL.confirm.title.PAY)).toBeTruthy();
     expect(await screen.findByText('Confirm your payment by 10:30 to keep your seat')).toBeTruthy();
     expect(screen.getByText('32 zł to Bonarka Arena')).toBeTruthy();
-    expect(toasts()).toEqual([[FILL.paymentFailed, 'bad']]);
+    expect(toasts()).toEqual([
+      ['Your payment didn’t go through — confirm it to keep your seat', 'bad'],
+    ]);
+    expect(screen.queryByText(FILL.confirm.onlyPlacedAgain)).toBeNull();
+    expect(screen.queryByTestId('its-a-game')).toBeNull();
+  });
+
+  // Q113: before the cut-off nothing is being taken — the payer is told to fix the card, not to pay.
+  it('before the cut-off, tells him to fix his card — nothing is paid now (#643)', async () => {
+    transport.on('GET', SEAT_CHARGE_PATH, () =>
+      json(
+        seatCharge({
+          proposal_id: lastSeat.proposal_id,
+          amount_grosze: lastSeat.share_grosze,
+          starts_at: lastSeat.starts_at,
+          club: lastSeat.club,
+        }),
+      ),
+    );
+    await fillIt({
+      proposal_id: lastSeat.proposal_id,
+      open_seats: 0,
+      booked: null,
+      waiting_for_the_club: false,
+      your_payment: {
+        seat_charge_id: SEAT_CHARGE,
+        refusal: 'AUTHENTICATION_REQUIRED',
+        confirm_by: until,
+        time_to: 'FIX_THE_CARD',
+      },
+      payment_awaited_until: until,
+    });
+
+    expect(await screen.findByText('Fix your card')).toBeTruthy();
+    expect(await screen.findByText('Fix your card by 10:30 to keep your seat')).toBeTruthy();
+    expect(
+      screen.getByText('Nothing is paid now — fixing your card only places the hold again.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Your bank wants you to confirm the hold on your card yourself.'),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: FILL.confirm.check })).toBeTruthy();
+    expect(toasts()).toEqual([
+      ['Your card didn’t go through — fix it to keep your seat. Nothing is paid now.', 'bad'],
+    ]);
+    expect(screen.queryByText(/Confirm your payment/)).toBeNull();
     expect(screen.queryByTestId('its-a-game')).toBeNull();
   });
 });
@@ -415,7 +465,7 @@ describe('Home while one payment is awaited (Q111)', () => {
     ).toBeTruthy();
     expect(screen.getByLabelText('Where, Bonarka Arena, 3,1 km')).toBeTruthy();
     expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: FILL.confirm.title })).toBeNull();
+    expect(screen.queryByRole('button', { name: FILL.confirm.title.PAY })).toBeNull();
   });
 
   it('names the payer’s time on their card, their To confirm row, the details and the sheet', async () => {
@@ -441,7 +491,7 @@ describe('Home while one payment is awaited (Q111)', () => {
       await screen.findByLabelText('Your share, 40 zł, Confirm your payment by 10:30'),
     ).toBeTruthy();
 
-    fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.title }));
+    fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.title.PAY }));
     expect(await screen.findByText('Confirm your payment by 10:30 to keep your seat')).toBeTruthy();
     expect(screen.getByText('40 zł to Bonarka Arena')).toBeTruthy();
   });
@@ -479,8 +529,183 @@ describe('Home while one payment is awaited (Q111)', () => {
     expect(screen.getByLabelText('Your share, 32 zł, Confirm your payment by 10:30')).toBeTruthy();
     expect(screen.getByRole('button', { name: LEAVE_THE_GAME })).toBeTruthy();
 
-    fireEvent.press(screen.getByRole('button', { name: FILL.confirm.title }));
+    fireEvent.press(screen.getByRole('button', { name: FILL.confirm.title.PAY }));
     expect(await screen.findByText('Confirm your payment by 10:30 to keep your seat')).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Before the cut-off: time to fix the card
+// ---------------------------------------------------------------------------
+
+describe('before the cut-off, the time to fix the card (#643; Q113)', () => {
+  it('names the payer’s time to fix the card on their card, their To confirm row, the details and the sheet', async () => {
+    stubHomeGames(
+      transport,
+      [waitingForAPayment({ your_payment_due_by: DUE, time_to: 'FIX_THE_CARD' })],
+      { needing_you: 1 },
+    );
+    transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
+      json<Wire['PaymentsToConfirmResponse']>({
+        payments: [toConfirmRow({ time_to: 'FIX_THE_CARD' })],
+      }),
+    );
+    stubBooking(transport, waitingDetails({ your_payment_due_by: DUE, time_to: 'FIX_THE_CARD' }));
+    transport.on('GET', SEAT_CHARGE_PATH, () => json(seatCharge()));
+    await onHome();
+
+    const drawn = await card();
+    expect(within(drawn).getByText(HOME.status.WAITING_FOR_A_PAYMENT)).toBeTruthy();
+    expect(within(drawn).getByText('Fix your card by 10:30')).toBeTruthy();
+    const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
+    expect(within(row).getByText('Fix your card by 10:30')).toBeTruthy();
+    expect(within(row).getByText('Nothing is paid now')).toBeTruthy();
+    expect(within(row).getByText('Fix')).toBeTruthy();
+    expect(
+      within(row).getByRole('button', { name: /^Fix your card for Padel · Saturday 16:00 at/ }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Confirm your payment/)).toBeNull();
+
+    fireEvent.press(screen.getByRole('button', { name: HOME.openGame }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(await screen.findByLabelText('Your share, 40 zł, Fix your card by 10:30')).toBeTruthy();
+
+    fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.title.FIX_THE_CARD }));
+    expect(await screen.findByText('Fix your card by 10:30 to keep your seat')).toBeTruthy();
+    expect(screen.getByText(FILL.confirm.onlyPlacedAgain)).toBeTruthy();
+  });
+
+  it('reads Waiting for one payment to the others, as after the cut-off — never whose', async () => {
+    stubHomeGames(transport, [waitingForAPayment({ time_to: 'FIX_THE_CARD' })]);
+    await onHome();
+
+    const drawn = await card();
+    expect(
+      within(drawn).getByText('Waiting for one payment · until 10:30 · Nobody pays until it’s in'),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Fix your card/)).toBeNull();
+  });
+
+  // §12.2: before the cut-off nobody is asked to pay — and once the time ran out the read names no
+  // window, so the words say confirm, never pay.
+  it('out of time, the row loses its time and its sheet names no window — confirm, never pay', async () => {
+    let ranOut = false;
+    transport.on('GET', HOME_PATH, () =>
+      json<Wire['HomeResponse']>({ read_at: HOME_READ_AT, needing_you: 1, games: [] }),
+    );
+    transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
+      json<Wire['PaymentsToConfirmResponse']>({
+        payments: [
+          toConfirmRow({
+            refusal: 'DECLINED',
+            ...(ranOut ? { confirm_by: null, time_to: null } : { time_to: 'FIX_THE_CARD' }),
+          }),
+        ],
+      }),
+    );
+    transport.on('GET', SEAT_CHARGE_PATH, () => json(seatCharge({ refusal: 'DECLINED' })));
+    await onHome();
+    const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
+    expect(within(row).getByText('Fix your card by 10:30')).toBeTruthy();
+
+    ranOut = true;
+    await told(
+      notice({
+        kind: 'TIME_TO_FIX_RAN_OUT',
+        title: 'Your time to fix your card ran out · Sat 16:00',
+        body: 'Your seat is open to others now — you owe nothing, and you can still take it back while it’s free.',
+      }),
+    );
+
+    expect(await screen.findByText('Your time to fix your card ran out · Sat 16:00')).toBeTruthy();
+    const after = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
+    expect(await within(after).findByText(FILL.toConfirm.open)).toBeTruthy();
+    expect(within(after).queryByText('Nothing is paid now')).toBeNull();
+
+    fireEvent.press(within(after).getByRole('button', { name: /^Confirm your payment for Padel/ }));
+    expect(
+      await screen.findByText(
+        'Your bank declined the card on file. Use another card for this share.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Use this card', disabled: true })).toBeTruthy();
+    expect(screen.queryByText(/Pay this share|Pay with this card/)).toBeNull();
+  });
+});
+
+describe('a card refused at the holding time (#639, #643; Q113)', () => {
+  const OTHER = 'f3000000-0000-4000-8000-000000000001';
+  /** Checked when it filled, far ahead; its holding, at 10:00, refused — the game stays booked. */
+  const checked = bookedMoney({ share_state: 'CHECKED', held_from: HOME_READ_AT });
+
+  it('leaves the game booked, and only its player’s card reads their time to fix it', async () => {
+    stubHomeGames(
+      transport,
+      [
+        homeGame({ money: checked, your_payment_due_by: DUE, time_to: 'FIX_THE_CARD' }),
+        homeGame({ booking_id: OTHER }),
+      ],
+      { needing_you: 1 },
+    );
+    transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
+      json<Wire['PaymentsToConfirmResponse']>({
+        payments: [toConfirmRow({ time_to: 'FIX_THE_CARD', share_grosze: 2800 })],
+      }),
+    );
+    await onHome();
+
+    const refused = await card();
+    expect(within(refused).getByText(HOME.status.BOOKED)).toBeTruthy();
+    expect(within(refused).getByText('Fix your card by 10:30')).toBeTruthy();
+    const other = await screen.findByTestId(`home-game-${OTHER}`);
+    expect(within(other).getByText(HOME.status.BOOKED)).toBeTruthy();
+    expect(within(other).getByText(/free to leave until/, HIDDEN_TOO)).toBeTruthy();
+    expect(within(other).queryByText(/Fix your card/, HIDDEN_TOO)).toBeNull();
+    const row = await screen.findByTestId(`to-confirm-${SEAT_CHARGE}`);
+    expect(within(row).getByText('Fix your card by 10:30')).toBeTruthy();
+    expect(within(row).getByText('Nothing is paid now')).toBeTruthy();
+  });
+
+  it('says what is at stake on the details, and the confirmation fixes the card with another', async () => {
+    stubHomeGames(
+      transport,
+      [homeGame({ money: checked, your_payment_due_by: DUE, time_to: 'FIX_THE_CARD' })],
+      { needing_you: 1 },
+    );
+    transport.on('GET', PAYMENTS_TO_CONFIRM_PATH, () =>
+      json<Wire['PaymentsToConfirmResponse']>({
+        payments: [
+          toConfirmRow({ time_to: 'FIX_THE_CARD', refusal: 'DECLINED', share_grosze: 2800 }),
+        ],
+      }),
+    );
+    stubBooking(
+      transport,
+      bookingDetails({ money: checked, your_payment_due_by: DUE, time_to: 'FIX_THE_CARD' }),
+    );
+    transport.on('GET', SEAT_CHARGE_PATH, () =>
+      json(seatCharge({ refusal: 'DECLINED', amount_grosze: 2800 })),
+    );
+    await onHome();
+
+    await card();
+    fireEvent.press(screen.getByRole('button', { name: HOME.openGame }));
+    await waitFor(() => expect(screen).toHavePathname(`/booking/${BOOKING}`));
+    expect(await screen.findByText(HOME.status.BOOKED)).toBeTruthy();
+    expect(
+      screen.getByLabelText('Your share, 28 zł, Fix your card by 10:30 to keep your seat'),
+    ).toBeTruthy();
+
+    fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.title.FIX_THE_CARD }));
+    expect(
+      await screen.findByText(
+        'Your bank declined the hold on the card on file. Fix it with another card.',
+      ),
+    ).toBeTruthy();
+    // The sheet's note says it as the money row behind it does.
+    expect(screen.getAllByText('Fix your card by 10:30 to keep your seat')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Use this card', disabled: true })).toBeTruthy();
+    expect(screen.queryByText(/Pay this share/)).toBeNull();
   });
 });
 
@@ -632,7 +857,7 @@ describe('out of time (Q109, Q111)', () => {
       await screen.findByRole('button', { name: `${timeRanOut.title}. ${timeRanOut.body}` }),
     );
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW_ID}/game/${BOOKING}`));
-    expect(await screen.findByRole('button', { name: FILL.confirm.title })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: FILL.confirm.title.PAY })).toBeTruthy();
     expect(screen.queryByText(/Confirm your payment by/)).toBeNull();
   });
 });

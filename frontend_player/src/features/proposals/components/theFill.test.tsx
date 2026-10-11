@@ -302,7 +302,9 @@ describe('a yes that moves money waits ten seconds behind Undo (§6.5)', () => {
     transport.on('POST', seatsPath(rescue.proposal_id), () => json(counted(rescue, 1)));
     await openGames([rescue]);
 
-    sayYes();
+    // On a Seat open card, I'm in says what the share does (#645; Q113).
+    fireEvent.press(screen.getByRole('button', { name: 'I’m in, 27 zł held until the cut-off' }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
 
     expect(screen.getByText('Booking in 10 s')).toBeTruthy();
     theRestOfTheTenSeconds();
@@ -561,11 +563,11 @@ describe('a payment that did not go through is confirmed on the same payment (§
     sayYes();
     theRestOfTheTenSeconds();
 
-    await waitFor(() => expect(toasts()).toEqual([[FILL.paymentFailed, 'bad']]));
-    expect(await screen.findByText(FILL.confirm.title)).toBeTruthy();
+    await waitFor(() => expect(toasts()).toEqual([[FILL.refused.yours.PAY, 'bad']]));
+    expect(await screen.findByText(FILL.confirm.title.PAY)).toBeTruthy();
     expect(await screen.findByText('32 zł to Bonarka Arena')).toBeTruthy();
     expect(screen.getByText('Padel · Saturday · 16:00')).toBeTruthy();
-    expect(screen.getByText(FILL.confirm.checkLine)).toBeTruthy();
+    expect(screen.getByText(FILL.confirm.checkLine.PAY)).toBeTruthy();
 
     fireEvent.press(screen.getByRole('button', { name: FILL.confirm.check }));
 
@@ -574,25 +576,34 @@ describe('a payment that did not go through is confirmed on the same payment (§
       { accountId: 'acct_bonarka', clientSecret: 'pi_1_secret_abc', with: 'onFile' },
     ]);
     expect(transport.requestsTo('POST', CONFIRMATION_PATH)).toHaveLength(1);
-    expect(screen.queryByText(FILL.confirm.title)).toBeNull();
+    expect(screen.queryByText(FILL.confirm.title.PAY)).toBeNull();
   });
 
   it('pays a declined share with another card typed into the fields', async () => {
     const card = bookItNow();
-    await openGames([card], (said) => refused(said, 'DECLINED'));
+    // After the cut-off, where the share is taken at once: its time to pay (Q113).
+    await openGames([card], (said) => ({
+      ...refused(said, 'DECLINED'),
+      your_payment: {
+        seat_charge_id: SEAT_CHARGE,
+        refusal: 'DECLINED',
+        confirm_by: new Date(DECK_READ_AT + 30 * 60 * SECOND).toISOString(),
+        time_to: 'PAY',
+      },
+    }));
     transport.on('GET', SEAT_CHARGE_PATH, () => json(seatCharge(card, 'DECLINED')));
     transport.on('POST', CONFIRMATION_PATH, () => json(booked(card)));
 
     sayYes();
     theRestOfTheTenSeconds();
 
-    expect(await screen.findByText(FILL.confirm.declinedLine)).toBeTruthy();
+    expect(await screen.findByText(FILL.confirm.declinedLine.PAY)).toBeTruthy();
     expect(
-      screen.getByRole('button', { name: FILL.confirm.payWithCard, disabled: true }),
+      screen.getByRole('button', { name: FILL.confirm.withThisCard.PAY, disabled: true }),
     ).toBeTruthy();
 
     fireEvent.changeText(screen.getByLabelText(FAKE_CARD_NUMBER), TEST_CARDS.saves);
-    fireEvent.press(screen.getByRole('button', { name: FILL.confirm.payWithCard }));
+    fireEvent.press(screen.getByRole('button', { name: FILL.confirm.withThisCard.PAY }));
 
     expect(await screen.findByText(FILL.itsAGame.word)).toBeTruthy();
     expect(phone.payments.map((asked) => asked.with)).toEqual(['typed']);
@@ -610,7 +621,7 @@ describe('a payment that did not go through is confirmed on the same payment (§
 
     expect(await screen.findByText(FILL.confirm.phone.cancelled)).toBeTruthy();
     expect(transport.requestsTo('POST', CONFIRMATION_PATH)).toHaveLength(0);
-    expect(screen.getByText(FILL.confirm.title)).toBeTruthy();
+    expect(screen.getByText(FILL.confirm.title.PAY)).toBeTruthy();
   });
 
   it('says the server’s refusal when somebody else took the seat first', async () => {
@@ -637,7 +648,7 @@ describe('a payment that did not go through is confirmed on the same payment (§
     theRestOfTheTenSeconds();
     fireEvent.press(await screen.findByRole('button', { name: FILL.confirm.check }));
 
-    await waitFor(() => expect(screen.queryByText(FILL.confirm.title)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(FILL.confirm.title.PAY)).toBeNull());
     expect(toasts()).toContainEqual([FILL.confirm.kept, 'ok']);
   });
 
@@ -660,7 +671,7 @@ describe('a payment that did not go through is confirmed on the same payment (§
     sayYes();
     theRestOfTheTenSeconds();
 
-    expect(await screen.findByText(FILL.confirm.title)).toBeTruthy();
+    expect(await screen.findByText(FILL.confirm.title.PAY)).toBeTruthy();
     expect(await screen.findByText('32 zł to Bonarka Arena')).toBeTruthy();
   });
 
@@ -672,7 +683,7 @@ describe('a payment that did not go through is confirmed on the same payment (§
     theRestOfTheTenSeconds();
 
     await waitFor(() => expect(toasts()).toEqual([[FILL.termsAgain, 'bad']]));
-    expect(screen.queryByText(FILL.confirm.title)).toBeNull();
+    expect(screen.queryByText(FILL.confirm.title.PAY)).toBeNull();
   });
 });
 

@@ -35,9 +35,10 @@ export const NOTIFICATIONS_COPY = {
   loading: 'Reading your notifications…',
   readAgain: 'Try again',
   /**
-   * Eleven always on (A7.2 as #620 amends it; mock 52 drew seven) — the mechanics §17.2's table, a
-   * row a line of it: *the club confirmed / said no / didn't answer in time* is one row for three
-   * notices, as *A game you left* is for two.
+   * Twelve always on (A7.2 as #620 amends it, and Q113 adds *Fix your card*; mock 52 drew seven) —
+   * the mechanics §17.2's table, a row a line of it: *the club confirmed / said no / didn't answer in
+   * time* is one row for three notices, as *A game you left* is for two. The quiet row for the take
+   * at the cut-off is never pushed, so it is not listed.
    */
   alwaysOn: {
     title: 'Always on',
@@ -46,6 +47,7 @@ export const NOTIFICATIONS_COPY = {
       'It’s a game! · held',
       'It’s a game! · the club answers by …',
       'Waiting for one payment',
+      'Fix your card by … to keep your seat',
       'Confirm your payment by … to keep your seat',
       'Game called off · nothing was taken, or with the refund',
       'Someone left your game · or it’s filling again',

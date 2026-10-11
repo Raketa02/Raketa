@@ -21,6 +21,7 @@ import {
   moneyLineOf,
   paymentOf,
   shareAt,
+  stakeOnTheDetails,
   type BookedGame,
   type HomeGame,
   type LateRefund,
@@ -50,6 +51,7 @@ import {
   yourPaymentWords,
 } from './deckPresentation';
 import { seatWhen } from './fillInPresentation';
+import { seatKeptBy } from './fillPresentation';
 import type { FactWords } from './GameFacts';
 import { HOME_GAME_COPY } from './homeCopy';
 import { PROPOSALS_COPY } from './proposalsCopy';
@@ -168,7 +170,7 @@ function moneyParts(line: MoneyLine): readonly string[] {
     case 'paymentAwaited':
       return paymentAwaitedClauses(line.until);
     case 'yourPayment':
-      return [yourPaymentWords(line.by)];
+      return [yourPaymentWords(line)];
     case 'calledOff':
       return [
         ...(line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })]),
@@ -339,13 +341,16 @@ export function bookedTime(
  * club decides, over *Bonarka answers by 20:45 · Nobody
  * pays until it confirms* — the card's own line — until its deadline passes (Q98); the share nobody
  * pays yet over *Waiting for one payment · until 14:40 · Nobody pays until it's in*, or the payer's
- * own *Confirm your payment by 14:40* (Q111); and on a game a
+ * own *Confirm your payment by 14:40* (Q111) — *Fix your card by 14:40* before the cut-off (Q113),
+ * and on a booked game whose holding was refused *Fix your card by 14:40 to keep your seat*, the
+ * game still booked (#639); and on a game a
  * player left, one called off or one that started short, the card's own line under the share —
  * *1 seat open · fills by Fri 16:00 or the game is off…*, why it is off with what came back, *A seat
  * was empty* (§14.1). A full game gone back to filling is the share nobody pays over the card's
  * *1 seat open · Kazimierz Padel is asked again when it's full · nobody paid* (Q106). **A rescue
  * seen from outside** (A4.3) is the share *I'm in* would pay over how long the seat is offered — the
- * *Seats to fill* row's own words.
+ * *Seats to fill* row's own words — or, while a refused rescuer's seat is kept for them, their time:
+ * *Fix your card by 14:40 to take the seat* (#640).
  */
 export function moneyRow(
   game: Pick<
@@ -363,6 +368,7 @@ export function moneyRow(
     | 'fillingAgain'
     | 'paymentDueBy'
     | 'yourPaymentDueBy'
+    | 'timeTo'
   >,
   now: number,
 ): FactWords {
@@ -372,11 +378,11 @@ export function moneyRow(
   const held = shareAt(money, now);
   const share = held?.kind === 'taken' ? words.paid : words.yourShare;
 
-  if (game.rescue !== undefined) {
+  const line = moneyLineOf({ ...game, club: game.where }, now);
+  // A refused rescuer's seat is kept for them alone until their time runs out (#640): their time.
+  if (game.rescue !== undefined && line?.kind !== 'yourPayment') {
     return { label: words.yourShare, value, below: seatWhen(game.rescue) };
   }
-
-  const line = moneyLineOf({ ...game, club: game.where }, now);
   switch (line?.kind) {
     case 'calledOff': {
       const why = line.reason === undefined ? [] : [calledOffWhy({ ...line, reason: line.reason })];
@@ -394,8 +400,10 @@ export function moneyRow(
     }
     case 'waiting':
       return { label: words.yourShare, value, below: waitingWords(line.club, line.answerBy) };
-    case 'paymentAwaited':
     case 'yourPayment':
+      // With the seat at stake where the tag does not say it (`stakeOnTheDetails`, the screens A4.1).
+      return { label: share, value, below: seatKeptBy(line, stakeOnTheDetails(game)) };
+    case 'paymentAwaited':
     case 'seatOpen':
     case 'fillingAgain':
     case 'seatEmpty':

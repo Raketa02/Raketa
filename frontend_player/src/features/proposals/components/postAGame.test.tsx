@@ -846,8 +846,10 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
       share_grosze: 3000,
       open_seats: 2,
     });
+    // A seat offered after its game's cut-off: paid at once (Q113).
+    const late = seatToFill({ fills_by_the_cut_off: false, deadline: '2026-10-03T14:00:00Z' });
     const post = postStillFilling();
-    stubPostingSlot(transport, CREW.id, postingSlot({ rescues: [rescue], posts: [post] }));
+    stubPostingSlot(transport, CREW.id, postingSlot({ rescues: [rescue, late], posts: [post] }));
 
     fireEvent.press(cellOf(SAT, 'EVENING'));
 
@@ -857,7 +859,14 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     expect(within(rescueRow).getByText('Centrum Ruchu · Court 2 · 30 zł each')).toBeTruthy();
     expect(within(rescueRow).getByText('2 seats')).toBeTruthy();
     expect(within(rescueRow).getByLabelText('any level, you are free')).toBeTruthy();
-    expect(within(rescueRow).getByRole('button', { name: 'I’m in, pays 30 zł now' })).toBeTruthy();
+    expect(
+      within(rescueRow).getByRole('button', { name: 'I’m in, 30 zł held until the cut-off' }),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId(`slot-rescue-${late.booking_id}`)).getByRole('button', {
+        name: 'I’m in, 27 zł paid now',
+      }),
+    ).toBeTruthy();
     const postRow = screen.getByTestId(`slot-post-${post.proposal_id}`);
     expect(
       within(postRow).getByText('Kuba Wiśniewski · Bonarka Arena · 32 zł if it fills'),
@@ -916,7 +925,9 @@ describe('a cell’s sheet (mocks 34, 35)', () => {
     );
     fireEvent.press(cellOf(SAT, 'EVENING'));
 
-    fireEvent.press(await screen.findByRole('button', { name: 'I’m in, pays 27 zł now' }));
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'I’m in, 27 zł held until the cut-off' }),
+    );
 
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${CREW.id}`));
     act(() => jest.advanceTimersByTime(10 * SECOND));

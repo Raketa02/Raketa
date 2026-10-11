@@ -109,6 +109,29 @@ describe('a yes’s answer', () => {
     expect(toYesAnswer(wire).yourPayment).not.toHaveProperty('confirmBy');
     expect(toYesAnswer(wire)).not.toHaveProperty('paymentAwaitedUntil');
   });
+
+  it('reads what the refused share’s time is for — to fix the card, or to pay (#638)', () => {
+    const refused = (time_to: Wire['TimeTo'] | null): Wire['YesAnswerResponse'] => ({
+      proposal_id: PROPOSAL,
+      open_seats: 0,
+      waiting_for_the_club: false,
+      your_payment: {
+        seat_charge_id: 'a2000000-0000-4000-8000-000000000001',
+        refusal: 'AUTHENTICATION_REQUIRED',
+        confirm_by: time_to === null ? null : '2026-10-06T12:40:00Z',
+        time_to,
+      },
+    });
+
+    expect(toYesAnswer(refused('FIX_THE_CARD')).yourPayment).toEqual({
+      seatChargeId: 'a2000000-0000-4000-8000-000000000001',
+      refusal: 'AUTHENTICATION_REQUIRED',
+      confirmBy: '2026-10-06T12:40:00Z',
+      timeTo: 'FIX_THE_CARD',
+    });
+    expect(toYesAnswer(refused('PAY')).yourPayment?.timeTo).toBe('PAY');
+    expect(toYesAnswer(refused(null)).yourPayment).not.toHaveProperty('timeTo');
+  });
 });
 
 describe('the payments to confirm', () => {
@@ -143,6 +166,15 @@ describe('the payments to confirm', () => {
 
     expect(timed?.confirmBy).toBe('2026-10-06T12:40:00Z');
     expect(lapsed).not.toHaveProperty('confirmBy');
+  });
+
+  it('carries what the time is for with it — to fix the card before the cut-off (#638)', () => {
+    const [fixing, lapsed] = toPaymentsToConfirm({
+      payments: [waiting('AUTHENTICATION_REQUIRED', '2026-10-06T12:40:00Z'), waiting('DECLINED')],
+    });
+
+    expect(fixing?.timeTo).toBe('FIX_THE_CARD');
+    expect(lapsed).not.toHaveProperty('timeTo');
   });
 
   it('leaves out a refusal that does not wait for the player', () => {

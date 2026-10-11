@@ -15,7 +15,7 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import { youAreIn, type DeckCard, type Overlap } from './deck';
 import type { YesOn, YourPayment } from './fill';
-import { deadlineAhead, type Deadline } from './home';
+import { deadlineAhead, paymentWindowAt, type Deadline, type YourTime } from './home';
 import type { CardType, CourtState, GameKind, ProposalStatus, ReaderAction } from './vocabulary';
 
 /** One game still filling, as its details read it. */
@@ -105,12 +105,12 @@ export function yesOnDetails(details: ProposalDetails): YesOn {
 
 /**
  * **A time to pay, as the money row names it** (#625, #626; Q111) — the payment the game waits for
- * (*until 14:40*), and the reader's own (*Confirm your payment by 14:40*), each only while it is
- * ahead of `now`.
+ * (*until 14:40*), and the reader's own (*Confirm your payment by 14:40*, or before the cut-off *Fix
+ * your card by 14:40*, #638; Q113), each only while it is ahead of `now`.
  */
 export interface PaymentDue {
   readonly dueBy?: Deadline;
-  readonly yoursBy?: Deadline;
+  readonly yours?: YourTime;
 }
 
 export function paymentDueOf(
@@ -118,10 +118,12 @@ export function paymentDueOf(
   now: number,
 ): PaymentDue {
   const dueBy = deadlineAhead(details.paymentDueBy, now);
-  const yoursBy = deadlineAhead(details.yourPayment?.confirmBy, now);
+  const payment = details.yourPayment;
+  const by = deadlineAhead(payment?.confirmBy, now);
+  const paymentWindow = paymentWindowAt(payment?.confirmBy, payment?.timeTo, now);
   return {
     ...(dueBy === undefined ? {} : { dueBy }),
-    ...(yoursBy === undefined ? {} : { yoursBy }),
+    ...(by === undefined ? {} : { yours: { by, window: paymentWindow } }),
   };
 }
 

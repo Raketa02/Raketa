@@ -41,7 +41,11 @@
  *   until it's in*; *Leave the game* withdraws the yes, nobody having paid. **The payer** reads their
  *   own time there, *Confirm your payment by 14:40*, and ***Confirm your payment*** under the card —
  *   the payment their *TO CONFIRM* row holds for this game, opened on the fill's confirmation with
- *   the same time — so the details that name the time also offer the act.
+ *   the same time — so the details that name the time also offer the act. Before the club's cut-off
+ *   it is their time to fix the card (Q113): *Fix your card by 14:40* and ***Fix your card***.
+ * - **A booked game whose holding was refused** (#639; Q113) — still *Booked*, the others' cards
+ *   unchanged; its player's money row reads *Fix your card by 14:40 to keep your seat*, and ***Fix
+ *   your card*** under the card opens the same confirmation.
  * - **A full game gone back to filling** (Q106, #629) — *Seat open* in amber, no court and no Chat,
  *   the share nobody pays over *1 seat open · Kazimierz Padel is asked again when it's full · nobody
  *   paid*; its way out is a game still filling's, ***Withdraw***, free and never on the record, as
@@ -51,7 +55,10 @@
  *   that opened (*You complete it* on the last one, *You?* while more are open), the court, the share
  *   and how long the seat is offered, and a volt ***I'm in · 27 zł*** (`TakeTheSeat`) — no Chat, no
  *   Leave. Taking the seat leaves this screen for the group under *It's a game!*; a seat that has
- *   gone meanwhile says so in one sentence (`offer`).
+ *   gone meanwhile says so in one sentence (`offer`). **A rescuer whose card was refused** (#640)
+ *   reads their kept seat's time, *Fix your card by 14:40 to take the seat*, and while their *TO
+ *   CONFIRM* row holds the payment, ***Fix your card*** (or ***Confirm your payment*** after the
+ *   cut-off) stands where *I'm in* stood: the join again is that confirmation.
  *
  * ## The chat is reached from here — and from Home's bubble
  *
@@ -101,6 +108,7 @@ import {
   isFillingAgain,
   leavingAt,
   lineCanRunOut,
+  paymentWindowAt,
   resultActOf,
   type BookedGame,
 } from '../domain/home';
@@ -220,6 +228,11 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
   // Neither Chat nor Leave for a rescue seen from outside (A4.3): the reader is not in the game.
   const chat = rescue === undefined && chatIsOpen(game) ? room.conversationId : undefined;
   const act = resultActOf(game);
+  // A rescue's own seat — what I'm in takes, and what a refused rescuer's confirmation is for.
+  const seat = yesOnRescue({ bookingId: game.bookingId, club: game.where, sides: game.sides });
+  const leaveHere = () => {
+    if (here.current) router.back();
+  };
 
   return (
     <>
@@ -274,13 +287,17 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
             />
           )}
 
-          {rescue !== undefined || toConfirm === undefined ? null : (
+          {toConfirm === undefined ? null : (
             <Button
-              label={FILL_COPY.confirm.title}
+              label={
+                FILL_COPY.confirm.title[paymentWindowAt(toConfirm.confirmBy, toConfirm.timeTo, now)]
+              }
               size="lg"
               onPress={() =>
                 fill.confirm({
                   dealtIn: { groupId: game.groupId, sport: game.sport, kind: game.kind },
+                  // From outside, the seat confirmed is the rescue's, taken by it (#640).
+                  ...(rescue === undefined ? {} : { card: seat, leave: leaveHere }),
                   ...confirmationOf(toConfirm),
                 })
               }
@@ -293,19 +310,14 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
 
           {game.checkIn === undefined ? null : <CheckInCard checkIn={game.checkIn} />}
 
-          {rescue === undefined ? null : (
+          {rescue === undefined || toConfirm !== undefined ? null : (
             <TakeTheSeat
-              seat={yesOnRescue({
-                bookingId: game.bookingId,
-                club: game.where,
-                sides: game.sides,
-              })}
+              seat={seat}
               dealtIn={{ groupId: game.groupId, sport: game.sport, kind: game.kind }}
               share={share}
+              heldUntilTheCutOff={rescue.fillsByTheCutOff}
               size="lg"
-              leave={() => {
-                if (here.current) router.back();
-              }}
+              leave={leaveHere}
             />
           )}
 

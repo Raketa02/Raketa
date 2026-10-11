@@ -13,9 +13,16 @@
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { DeckCard, DeckPerson } from './deck';
-import { answerByAhead, deadlineOf, type AnswerBy, type BookedGame, type Deadline } from './home';
+import {
+  answerByAhead,
+  deadlineOf,
+  type AnswerBy,
+  type BookedGame,
+  type Deadline,
+  type SeatAtStake,
+} from './home';
 import type { LiveYes } from './liveYes';
-import type { GameKind, PaymentRefusal } from './vocabulary';
+import type { GameKind, PaymentRefusal, TimeTo } from './vocabulary';
 
 /**
  * **What a yes is said on** — a dealt card, a game's details, a rescue's details or a *Seats to fill*
@@ -63,6 +70,15 @@ export function isRescue(card: Pick<DeckCard, 'type'>): boolean {
 }
 
 /**
+ * **Whose seat a refused yes leaves at stake** — a rescue's, kept for the player to take (#640), when
+ * the yes was said on one; the player's own otherwise. A *TO CONFIRM* row holds no card, so it reads
+ * as their own: the read does not say which it is.
+ */
+export function seatAtStake(card: Pick<YesOn, 'type'> | undefined): SeatAtStake {
+  return card !== undefined && isRescue(card) ? 'aRescue' : 'yours';
+}
+
+/**
  * **What the fill holds for a rescue's *I'm in*** — from its details seen from outside, or a *Seats to
  * fill* row: the booking's seat, waiting behind *Undo* as every rescue join does (Q74), with the
  * sides when the surface holds them.
@@ -101,17 +117,24 @@ export interface Booked {
 }
 
 /**
- * This player's share, refused when the game filled or when its club said yes: nobody paid, and
- * their seat is theirs alone for their time to pay (Q109) — open to others too once it ran out.
+ * This player's share, refused when the game filled, when its club said yes, or when they went for
+ * a rescue's seat: nobody paid, and the seat is theirs alone for their time (Q109, #640) — open to
+ * others too once it ran out.
  */
 export interface YourPayment {
   readonly seatChargeId: string;
   readonly refusal: PaymentRefusal;
   /**
-   * **Their time to pay** (#625, #626) — *Confirm your payment by 14:40 to keep your seat*. Absent
-   * once it ran out, where none was given, and from an older server.
+   * **Their time** (#625, #626) — *Confirm your payment by 14:40 to keep your seat*. Absent once it
+   * ran out, where none was given, and from an older server.
    */
   readonly confirmBy?: string;
+  /**
+   * **What it is for** (#638; Q113) — to fix the card, before the club's cut-off, where nothing is
+   * paid now; or to pay, after it. With `confirmBy`; absent from an older server, which read as
+   * the time to pay.
+   */
+  readonly timeTo?: TimeTo;
 }
 
 /** What a yes left on the game — `POST /proposals/{id}/yes`, and the payment confirmation's answer. */
@@ -206,16 +229,17 @@ export function fillOutcome(answer: YesAnswer): FillOutcome {
 }
 
 /**
- * **A refused share to confirm** — the payment the confirmation opens on, and the player's time to
- * pay while one runs (Q109), which the sheet names. What every opener hands the fill: the yes's
- * answer, a *TO CONFIRM* row, a game's details.
+ * **A refused share to confirm** — the payment the confirmation opens on, and the player's time
+ * while one runs (Q109) and what it is for (Q113), which the sheet names. What every opener hands
+ * the fill: the yes's answer, a *TO CONFIRM* row, a game's details.
  */
-export type Confirmation = Pick<YourPayment, 'seatChargeId' | 'confirmBy'>;
+export type Confirmation = Pick<YourPayment, 'seatChargeId' | 'confirmBy' | 'timeTo'>;
 
 export function confirmationOf(payment: Confirmation): Confirmation {
   return {
     seatChargeId: payment.seatChargeId,
     ...(payment.confirmBy === undefined ? {} : { confirmBy: payment.confirmBy }),
+    ...(payment.timeTo === undefined ? {} : { timeTo: payment.timeTo }),
   };
 }
 
@@ -230,10 +254,12 @@ export interface PaymentToConfirm extends LiveYes {
   /** Only the two that wait for the player: the bank's check, or a decline. */
   readonly refusal: Extract<PaymentRefusal, 'AUTHENTICATION_REQUIRED' | 'DECLINED'>;
   /**
-   * **Their time to pay** (Q109) — *Confirm your payment by 14:40*. Absent once it ran out: the row
-   * stays, without a time, while the seat is still free to take back.
+   * **Their time** (Q109) — *Confirm your payment by 14:40*. Absent once it ran out: the row stays,
+   * without a time, while the seat is still free to take back.
    */
   readonly confirmBy?: string;
+  /** What it is for (Q113) — *Fix your card by 14:40* before the cut-off. With `confirmBy`. */
+  readonly timeTo?: TimeTo;
 }
 
 /**

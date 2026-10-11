@@ -126,6 +126,15 @@ export type LeavingKind = 'BEFORE_THE_CUT_OFF' | 'AFTER_THE_CUT_OFF' | 'WHILE_WA
 export type ShareState = 'HELD' | 'CHECKED' | 'TAKEN';
 
 /**
+ * **What a refused card's thirty minutes are for** (#638; the mechanics §12.2, Q113) — one
+ * machinery, two names, decided by the club's cut-off: before it nothing is taken, only held, so it
+ * is the time to fix the card (*Fix your card by 14:40*); from it on the money is taken at once, so
+ * it is the time to pay (*Confirm your payment by 14:40*). Only the refused player's own words
+ * change by it; the others read *Waiting for one payment* either way.
+ */
+export type TimeTo = 'FIX_THE_CARD' | 'PAY';
+
+/**
  * **Where a game still filling stands, for its details** (the mechanics §14.2; #542) — filling,
  * full and waiting for an On request club, full and waiting for one player's payment (#625, #626),
  * booked, or one of the four ways it ended unfilled.

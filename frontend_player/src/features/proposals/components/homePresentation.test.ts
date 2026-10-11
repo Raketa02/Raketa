@@ -150,8 +150,15 @@ describe('moneyWords — the line under a Home card (the mechanics §14.1)', () 
     expect(moneyWords({ kind: 'paymentAwaited' })).toBe(
       'Waiting for one payment · Nobody pays until it’s in',
     );
-    expect(moneyWords({ kind: 'yourPayment', by: ELEVEN_TODAY })).toBe(
+    expect(moneyWords({ kind: 'yourPayment', by: ELEVEN_TODAY, window: 'UNNAMED' })).toBe(
       'Confirm your payment by 11:00',
+    );
+    expect(moneyWords({ kind: 'yourPayment', by: ELEVEN_TODAY, window: 'PAY' })).toBe(
+      'Confirm your payment by 11:00',
+    );
+    // Before the cut-off nothing is taken: it is their time to fix the card (Q113).
+    expect(moneyWords({ kind: 'yourPayment', by: ELEVEN_TODAY, window: 'FIX_THE_CARD' })).toBe(
+      'Fix your card by 11:00',
     );
   });
 
@@ -436,6 +443,24 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
     });
   });
 
+  /**
+   * #639 (Q113): a card refused at the holding time leaves the game booked — the row names the
+   * player's time to fix it, and what is at stake (the screens A4.1).
+   */
+  it('is the payer’s time to fix the card, and their seat, on a booked game whose holding was refused', () => {
+    const refused = booked({ yourPaymentDueBy: ELEVEN, timeTo: 'FIX_THE_CARD' });
+    expect(moneyRow(refused, BEFORE)).toEqual({
+      label: 'Your share',
+      value: '28 zł',
+      below: 'Fix your card by 11:00 to keep your seat',
+    });
+    expect(moneyRow(refused, Date.parse(ELEVEN))).toEqual({
+      label: 'Your share',
+      value: '28 zł',
+      below: 'Held on your card · taken Fri 16:00 · free to leave until then',
+    });
+  });
+
   it('is what came back, nothing taken, or nobody paid, once the game is called off', () => {
     expect(
       moneyRow(
@@ -536,6 +561,34 @@ describe('moneyRow — the details’ money row (A4.1)', () => {
       label: 'Your share',
       value: '27 zł',
       below: 'offered until the start',
+    });
+  });
+
+  /** #640: a refused rescuer's seat is kept for them alone — their time, and what it is for. */
+  it('is the rescuer’s own time while their seat is kept, then how long it is offered again', () => {
+    const kept = (timeTo: 'FIX_THE_CARD' | 'PAY') =>
+      booked({
+        status: 'SEAT_OPEN',
+        openSeats: 1,
+        money: { shareGrosze: 2700, paid: false },
+        rescue: { deadline: CUT_OFF, fillsByTheCutOff: timeTo === 'FIX_THE_CARD' },
+        yourPaymentDueBy: ELEVEN,
+        timeTo,
+      });
+    expect(moneyRow(kept('FIX_THE_CARD'), BEFORE)).toEqual({
+      label: 'Your share',
+      value: '27 zł',
+      below: 'Fix your card by 11:00 to take the seat',
+    });
+    expect(moneyRow(kept('PAY'), BEFORE)).toEqual({
+      label: 'Your share',
+      value: '27 zł',
+      below: 'Confirm your payment by 11:00 to take the seat',
+    });
+    expect(moneyRow(kept('FIX_THE_CARD'), Date.parse(ELEVEN))).toEqual({
+      label: 'Your share',
+      value: '27 zł',
+      below: 'fills by Fri 16:00',
     });
   });
 });

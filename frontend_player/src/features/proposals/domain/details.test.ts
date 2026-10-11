@@ -102,9 +102,20 @@ describe('paymentDueOf — the times to pay the money row names (Q111)', () => {
     });
     expect(paymentDueOf(waiting, READ)).toEqual({
       dueBy: { at: TWENTY_TO_THREE, today: true },
-      yoursBy: { at: TWENTY_TO_THREE, today: true },
+      yours: { by: { at: TWENTY_TO_THREE, today: true }, window: 'UNNAMED' },
     });
     expect(paymentDueOf(waiting, Date.parse(TWENTY_TO_THREE))).toEqual({});
+  });
+
+  it('says what the reader’s own time is for, while it runs — to fix the card (#638; Q113)', () => {
+    const fixing = details({
+      status: 'WAITING_FOR_A_PAYMENT',
+      yourPayment: { ...yours, timeTo: 'FIX_THE_CARD' },
+    });
+    expect(paymentDueOf(fixing, READ)).toEqual({
+      yours: { by: { at: TWENTY_TO_THREE, today: true }, window: 'FIX_THE_CARD' },
+    });
+    expect(paymentDueOf(fixing, Date.parse(TWENTY_TO_THREE))).toEqual({});
   });
 
   it('is nothing where no time is given — a refused share whose time ran out included', () => {

@@ -1,7 +1,9 @@
 /**
- * ***I'm in · 27 zł* on a rescue** — a booked game's open seat taken and paid for at once
+ * ***I'm in · 27 zł* on a rescue** — a booked game's open seat taken at once
  * ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3.1, A4.3; the mechanics
- * §10.1), from a rescue's details and from a *Seats to fill* row.
+ * §10.1), from a rescue's details and from a *Seats to fill* row. **Its name says what the share
+ * does** (#645; Q113): *I'm in, 27 zł held until the cut-off* while the cut-off is ahead — held
+ * like every seat's, and free to leave until then — and *I'm in, 27 zł paid now* after it.
  *
  * **The fill is the deck's** (`useFillYes`): with nothing saved the payment setup opens first and the
  * join lands once a method is; every rescue join counts ten seconds behind *Undo* (Q74) — the button
@@ -26,14 +28,27 @@ export interface TakeTheSeatProps {
   readonly seat: YesOn;
   /** The group, sport and kind the seat is offered in — what a join re-reads. */
   readonly dealtIn: DealtIn;
-  /** *27 zł* — what the join charges. */
+  /** *27 zł* — what the join holds, or takes. */
   readonly share: string;
+  /**
+   * **Before the club's cut-off** the share is held until it; after it, taken at once (Q113). A seat
+   * that opened before the cut-off is offered until it and leaves at it (`fillsByTheCutOff`), so the
+   * offer's own mark says which.
+   */
+  readonly heldUntilTheCutOff: boolean;
   readonly size: ButtonSize;
   /** The screen to leave once the seat is taken — the details; nothing on a row. */
   readonly leave?: () => void;
 }
 
-export function TakeTheSeat({ seat, dealtIn, share, size, leave }: TakeTheSeatProps) {
+export function TakeTheSeat({
+  seat,
+  dealtIn,
+  share,
+  heldUntilTheCutOff,
+  size,
+  leave,
+}: TakeTheSeatProps) {
   const fill = useFillYes(dealtIn, leave);
   const counting = fill.counting === seat.proposalId;
 
@@ -52,7 +67,7 @@ export function TakeTheSeat({ seat, dealtIn, share, size, leave }: TakeTheSeatPr
   return (
     <Button
       label={seatButtonLabel(share)}
-      accessibilityLabel={seatButtonSpoken(share)}
+      accessibilityLabel={seatButtonSpoken(share, heldUntilTheCutOff)}
       variant="volt"
       size={size}
       busy={counting}

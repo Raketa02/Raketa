@@ -7,7 +7,10 @@ import {
   chargeLine,
   itsAGameLine,
   itsAGameSentence,
-  keepYourSeatBy,
+  confirmNote,
+  refusedToast,
+  seatKeptBy,
+  toConfirmLabel,
   toConfirmRowLine,
 } from './fillPresentation';
 
@@ -109,13 +112,92 @@ describe('It’s a game!’s line while one payment is missing (Q110)', () => {
 describe('the time to pay, where the payer confirms (Q109)', () => {
   it('names the time on the sheet, and on a To confirm row while it runs', () => {
     const by = { at: '2026-10-06T12:40:00Z', today: true } as const;
-    expect(keepYourSeatBy(by)).toBe('Confirm your payment by 14:40 to keep your seat');
-    expect(toConfirmRowLine(by)).toBe('Confirm your payment by 14:40');
+    const time = { by, window: 'PAY' } as const;
+    expect(seatKeptBy(time, 'yours')).toBe('Confirm your payment by 14:40 to keep your seat');
+    expect(toConfirmRowLine(time)).toBe('Confirm your payment by 14:40');
   });
 
   it('says the seat is open to others on a row whose time ran out', () => {
     expect(toConfirmRowLine(undefined)).toBe(
       'Your seat stays open until you confirm — or someone else takes it.',
+    );
+  });
+});
+
+describe('the time to fix the card, before the cut-off (Q113)', () => {
+  const by = { at: '2026-10-06T12:40:00Z', today: true } as const;
+  const fix = { by, window: 'FIX_THE_CARD' } as const;
+  const pay = { by, window: 'PAY' } as const;
+
+  it('names the window the server names — to fix the card before the cut-off, to pay after it', () => {
+    expect(seatKeptBy(fix, 'yours')).toBe('Fix your card by 14:40 to keep your seat');
+    expect(seatKeptBy(pay, 'yours')).toBe('Confirm your payment by 14:40 to keep your seat');
+    expect(seatKeptBy({ by, window: 'UNNAMED' }, 'yours')).toBe(
+      'Confirm your payment by 14:40 to keep your seat',
+    );
+    expect(toConfirmRowLine(fix)).toBe('Fix your card by 14:40');
+    expect(toConfirmRowLine(pay)).toBe('Confirm your payment by 14:40');
+  });
+
+  it('says a rescuer’s seat is kept for them to take (#640), and the time alone where no seat is named', () => {
+    expect(seatKeptBy(fix, 'aRescue')).toBe('Fix your card by 14:40 to take the seat');
+    expect(seatKeptBy(pay, 'aRescue')).toBe('Confirm your payment by 14:40 to take the seat');
+    expect(seatKeptBy(fix, undefined)).toBe('Fix your card by 14:40');
+  });
+
+  it('notes on the sheet whose seat it is, and that a rescuer’s is theirs until then', () => {
+    expect(confirmNote(fix, 'yours')).toBe('Fix your card by 14:40 to keep your seat');
+    expect(confirmNote(fix, 'aRescue')).toBe(
+      'Fix your card by 14:40 to take the seat — it’s kept for you until then',
+    );
+    expect(confirmNote(pay, 'aRescue')).toBe(
+      'Confirm your payment by 14:40 to take the seat — it’s kept for you until then',
+    );
+  });
+
+  it('tells a card refused at the fill or on a rescue, by its window (the screens A2.4)', () => {
+    expect(refusedToast('FIX_THE_CARD', 'yours')).toBe(
+      'Your card didn’t go through — fix it to keep your seat. Nothing is paid now.',
+    );
+    expect(refusedToast('PAY', 'yours')).toBe(
+      'Your payment didn’t go through — confirm it to keep your seat',
+    );
+    expect(refusedToast('UNNAMED', 'yours')).toBe(
+      'Your payment didn’t go through — confirm it to keep your seat',
+    );
+    expect(refusedToast('FIX_THE_CARD', 'aRescue')).toBe(
+      'Your card didn’t go through — fix it to take the seat. Nothing is paid now.',
+    );
+    expect(refusedToast('PAY', 'aRescue')).toBe(
+      'Your payment didn’t go through — confirm it to take the seat',
+    );
+  });
+
+  it('speaks a To confirm row’s button by its window — confirm, never pay, with none named', () => {
+    const payment = {
+      proposalId: 'p-1',
+      groupId: 'group-1',
+      sport: 'padel',
+      kind: 'competitive',
+      startsAt: '2026-10-03T13:00:00Z',
+      deadline: '2026-10-03T11:00:00Z',
+      club: { id: 'club-1', name: 'Bonarka Arena' },
+      shareGrosze: 2800,
+      waitingForTheClub: false,
+      seatChargeId: 's-1',
+      refusal: 'AUTHENTICATION_REQUIRED',
+      confirmBy: '2026-10-01T08:30:00Z',
+      timeTo: 'FIX_THE_CARD',
+    } as const;
+    const day = { kind: 'weekday', weekday: 6 } as const;
+    expect(toConfirmLabel(payment, day, 'FIX_THE_CARD')).toBe(
+      'Fix your card for Padel · Saturday 15:00 at Bonarka Arena, 28 zł',
+    );
+    expect(toConfirmLabel(payment, day, 'PAY')).toBe(
+      'Confirm your payment for Padel · Saturday 15:00 at Bonarka Arena, 28 zł',
+    );
+    expect(toConfirmLabel(payment, day, 'UNNAMED')).toBe(
+      'Confirm your payment for Padel · Saturday 15:00 at Bonarka Arena, 28 zł',
     );
   });
 });

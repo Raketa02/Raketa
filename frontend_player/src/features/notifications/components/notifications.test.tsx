@@ -252,12 +252,13 @@ describe('the Notifications row, in the ACCOUNT group', () => {
 // ---------------------------------------------------------------------------
 
 describe('the Notifications screen', () => {
-  // The screens A7.2 as #620 amends it: the mechanics §17.2's always-on notices, eleven rows.
-  it('lists the eleven always on, each inert with its green tag (mock 52)', async () => {
+  // The screens A7.2 as #620 amends it, and Q113 adds Fix your card: §17.2's always-on notices.
+  it('lists the twelve always on, each inert with its green tag (mock 52)', async () => {
     const rows = [
       'It’s a game! · held',
       'It’s a game! · the club answers by …',
       'Waiting for one payment',
+      'Fix your card by … to keep your seat',
       'Confirm your payment by … to keep your seat',
       'Game called off · nothing was taken, or with the refund',
       'Someone left your game · or it’s filling again',

@@ -13,7 +13,7 @@ import type { components } from '@/generated/schema';
 
 import type { DeckPerson } from '../domain/deck';
 import type { BookedGame, BookedMoney, Home, HomeGame, Leaving, RescueOffer } from '../domain/home';
-import type { LeavingKind, ShareState } from '../domain/vocabulary';
+import type { LeavingKind, ShareState, TimeTo } from '../domain/vocabulary';
 
 import { toClub, toKind } from './deckMappers';
 
@@ -85,6 +85,12 @@ function toYourPaymentDueBy(wire: {
   return due === null || due === undefined ? {} : { yourPaymentDueBy: due };
 }
 
+/** **What the time is for** (#638) — as `toPaymentDueBy`: nothing for a `null` or an older server. */
+function toTimeTo(wire: { readonly time_to?: TimeTo | null }): Pick<HomeGame, 'timeTo'> {
+  const timeTo = wire.time_to;
+  return timeTo === null || timeTo === undefined ? {} : { timeTo };
+}
+
 /**
  * **A full game gone back to filling** (#624) — and which way its line ends. Nothing for a booked
  * game, and nothing from a server older than it, which sends neither field.
@@ -119,6 +125,7 @@ function toBooking(
     ...toFillingAgain(wire),
     ...toPaymentDueBy(wire),
     ...toYourPaymentDueBy(wire),
+    ...toTimeTo(wire),
   };
 }
 

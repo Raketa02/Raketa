@@ -36,7 +36,8 @@ import {
   type WeekCap,
 } from '../domain/deck';
 import type { PaymentDue } from '../domain/details';
-import type { AnswerBy, Deadline } from '../domain/home';
+import { isRescue } from '../domain/fill';
+import type { AnswerBy, Deadline, YourTime } from '../domain/home';
 import type { DayRange, GameKind, ProposalStatus } from '../domain/vocabulary';
 import { gameEndsAt, weekdayAt, type GameDay } from '../domain/when';
 
@@ -344,18 +345,37 @@ export function stampsFor(card: DeckCard, charges: boolean) {
   } as const;
 }
 
-/** *I'm in · 27 zł* — a rescue's door: the seat taken and paid for at once (A3.1, A4.3). */
+/** *I'm in · 27 zł* — a rescue's door: the seat taken at once, the game being booked (A3.1, A4.3). */
 export function seatButtonLabel(share: string): string {
   return `${COPY.yes}${DOT}${share}`;
 }
 
-/** *I'm in, pays 27 zł now* — the same door aloud, the charge said as one. */
-export function seatButtonSpoken(share: string): string {
-  return `${COPY.yes}, pays ${share} now`;
+/**
+ * *I'm in, 27 zł held until the cut-off* — the same door aloud, saying what the share does (Q113):
+ * held on the card until the club's cut-off while it is ahead, as every seat's is, and *paid now*
+ * after it, when a join is taken at once (the screens A3.1, A4.3, A5.3).
+ */
+export function seatButtonSpoken(share: string, heldUntilTheCutOff: boolean): string {
+  return `${COPY.yes}, ${share} ${heldUntilTheCutOff ? COPY.heldUntilTheCutOff : COPY.paidNow}`;
 }
 
 /** The three buttons' names — the game's, where Players names the person. */
 export const ANSWER_LABELS = { pass: COPY.no, accept: COPY.yes, record: COPY.details } as const;
+
+/**
+ * **The three buttons' names for the card on top** — and on a *Seat open* card, *I'm in* says what
+ * the share does, as the rescue's other doors do (`seatButtonSpoken`, Q113): held until the cut-off
+ * while it is ahead, paid now after it. The card leaves the deck at its cut-off, so a card the read
+ * dealt before it is a card before it.
+ */
+export function answerLabels(card: Pick<DeckCard, 'type' | 'shareGrosze' | 'noFreeCancellation'>): {
+  readonly pass: string;
+  readonly accept: string;
+  readonly record: string;
+} {
+  if (!isRescue(card)) return ANSWER_LABELS;
+  return { ...ANSWER_LABELS, accept: seatButtonSpoken(shareWords(card), !card.noFreeCancellation) };
+}
 
 /**
  * **What a refused answer says** — the route's code over the recovery sentence every screen
@@ -401,8 +421,9 @@ export function detailsSubline(sport: Sport, status: ProposalStatus): string {
  * Nobody pays until it confirms* until that deadline passes (`answerByAhead`, Q98), then *Nobody
  * pays until Bonarka Arena confirms*; while one payment is awaited (Q111), *Waiting for one payment
  * · until 14:40 · Nobody pays until it's in*; and nothing once it is booked or over: the share is the
- * share. **The payer reads their own time under it** while it runs — *Confirm your payment by 14:40*
- * — on a game waiting for their payment, and on one gone back to filling meanwhile.
+ * share. **The payer reads their own time under it** while it runs — *Confirm your payment by 14:40*,
+ * or *Fix your card by 14:40* before the cut-off (Q113) — on a game waiting for their payment, and on
+ * one gone back to filling meanwhile.
  */
 export function detailsShareWords(
   status: ProposalStatus,
@@ -411,7 +432,7 @@ export function detailsShareWords(
   answerBy: AnswerBy | undefined,
   payment: PaymentDue = {},
 ): Pick<FactWords, 'aside' | 'below'> {
-  const yours = payment.yoursBy === undefined ? undefined : yourPaymentWords(payment.yoursBy);
+  const yours = payment.yours === undefined ? undefined : yourPaymentWords(payment.yours);
   switch (status) {
     case 'FILLING':
       return {
@@ -494,9 +515,12 @@ export function paymentAwaitedClauses(until: Deadline | undefined): readonly str
   ];
 }
 
-/** *Confirm your payment by 14:40* — **the payer's own time to pay** (Q109, Q111). */
-export function yourPaymentWords(by: Deadline): string {
-  return `${COPY.game.confirmYourPaymentBy} ${deadlineWords(by)}`;
+/**
+ * *Confirm your payment by 14:40* — **the payer's own time to pay** (Q109, Q111); *Fix your card by
+ * 14:40* when it is their time to fix the card, before the club's cut-off (Q113).
+ */
+export function yourPaymentWords(time: YourTime): string {
+  return `${COPY.game.yourTimeBy[time.window]} ${deadlineWords(time.by)}`;
 }
 
 /**

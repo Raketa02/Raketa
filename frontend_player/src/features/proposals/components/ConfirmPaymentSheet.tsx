@@ -1,7 +1,7 @@
 /**
  * ***Confirm your payment*** — a share refused when its game filled, confirmed on the same payment
  * ([#555](https://github.com/Raketa02/Raketa/issues/555); the screens A2.4; the mechanics §12.2;
- * #541).
+ * #541) — ***Fix your card*** before the club's cut-off (#643; Q113).
  *
  * ```
  * Confirm your payment                      ✕
@@ -11,6 +11,15 @@
  * Your bank wants to check this payment once before the club can take it.
  * [ Confirm with your bank ]
  * ```
+ *
+ * **Which window it is, is the server's** (`timeTo`, #638): before the cut-off nothing is being
+ * taken, so the player is never asked to pay — the sheet is *Fix your card*, its note *Fix your card
+ * by 14:40 to keep your seat*, a line that nothing is paid now (fixing it only places the hold
+ * again), and a decline is fixed with another card (*Use this card*). After it, the words above.
+ * With no window named — a time run out, an older server — the words say *confirm*, never *pay*: a
+ * seat taken back before the cut-off is held, not paid.
+ * **On a rescue** (#640) the seat is kept for the player to take, not yet theirs: *Fix your card by
+ * 14:40 to take the seat — it's kept for you until then*.
  *
  * **Two refusals wait for the player, and each has its one way through.** The bank wanting them
  * present is the bank's check over the card on file; a decline is another card, typed into the
@@ -31,8 +40,8 @@
  * **Their time to pay is named while it runs** (#625, #626; Q109) — an amber note, *Confirm your
  * payment by 14:40 to keep your seat*, the notice's and the email's words, written as Home writes the
  * time. The payment's own read does not carry it (it is the Payments context's, and the time is the
- * game's), so whoever opens the sheet hands it in: the yes's answer, a *TO CONFIRM* row, a game's
- * details. Once it ran out there is no time to name, and no note.
+ * game's), so whoever opens the sheet hands it in, with its window: the yes's answer, a *TO CONFIRM*
+ * row, a game's details. Once it ran out there is no time to name, and no note.
  */
 
 import { useState } from 'react';
@@ -43,10 +52,11 @@ import { codeMessage, offlineMessage, recoveryMessage, type AppError } from '@/s
 import { usePayments } from '@/shared/lib/platform';
 import { BottomSheet, Button, Note, theme } from '@/shared/ui';
 
-import { deadlineAhead } from '../domain/home';
+import { deadlineAhead, paymentWindowAt, type SeatAtStake } from '../domain/home';
+import type { TimeTo } from '../domain/vocabulary';
 
 import { FILL_COPY } from './fillCopy';
-import { chargeGameLine, chargeLine, keepYourSeatBy } from './fillPresentation';
+import { chargeGameLine, chargeLine, confirmNote } from './fillPresentation';
 
 const WORDS = FILL_COPY.confirm;
 
@@ -54,21 +64,28 @@ export interface ConfirmPaymentSheetProps {
   readonly seatChargeId: string;
   /** **Their time to pay**, while it runs (Q109). */
   readonly confirmBy?: string;
+  /** What it is for (Q113) — to fix the card, before the cut-off; to pay, after it. */
+  readonly timeTo?: TimeTo;
+  /** Their own seat, or a rescue's, kept for them to take (#640). */
+  readonly seat: SeatAtStake;
   /** Closed: the seat stays open until the player confirms, or somebody else takes it. */
   readonly onClose: () => void;
   /** The yes again, once the provider says the payment is confirmed. Rejects with the refusal. */
   readonly yesAgain: () => Promise<unknown>;
 }
 
-export function ConfirmPaymentSheet({
-  seatChargeId,
-  confirmBy,
-  onClose,
-  yesAgain,
-}: ConfirmPaymentSheetProps) {
+export function ConfirmPaymentSheet({ onClose, ...confirmation }: ConfirmPaymentSheetProps) {
+  // One instant for the title and the note: the time, and its window, as of the opening.
+  const [openedAt] = useState(Date.now);
+  const paymentWindow = paymentWindowAt(confirmation.confirmBy, confirmation.timeTo, openedAt);
   return (
-    <BottomSheet visible onClose={onClose} title={WORDS.title} closeLabel={WORDS.close}>
-      <Confirmation seatChargeId={seatChargeId} confirmBy={confirmBy} yesAgain={yesAgain} />
+    <BottomSheet
+      visible
+      onClose={onClose}
+      title={WORDS.title[paymentWindow]}
+      closeLabel={WORDS.close}
+    >
+      <Confirmation {...confirmation} openedAt={openedAt} />
     </BottomSheet>
   );
 }
@@ -76,8 +93,11 @@ export function ConfirmPaymentSheet({
 function Confirmation({
   seatChargeId,
   confirmBy,
+  timeTo,
+  seat,
+  openedAt,
   yesAgain,
-}: Pick<ConfirmPaymentSheetProps, 'seatChargeId' | 'confirmBy' | 'yesAgain'>) {
+}: Omit<ConfirmPaymentSheetProps, 'onClose'> & { readonly openedAt: number }) {
   const read = useSeatCharge(seatChargeId);
   const confirmOnPhone = useConfirmOnPhone();
   const { CardFields } = usePayments();
@@ -113,7 +133,8 @@ function Confirmation({
 
   const typed = confirmsWith(charge) === 'typed';
   // Named only while it is ahead: a row read before the time ran out still hands it in.
-  const by = deadlineAhead(confirmBy, read.dataUpdatedAt);
+  const by = deadlineAhead(confirmBy, openedAt);
+  const paymentWindow = paymentWindowAt(confirmBy, timeTo, openedAt);
 
   const confirm = async () => {
     if (busy) return;
@@ -142,8 +163,13 @@ function Confirmation({
           {chargeGameLine(charge.sport, charge.startsAt, read.dataUpdatedAt)}
         </Text>
       </View>
-      {by === undefined ? null : <Note variant="amber">{keepYourSeatBy(by)}</Note>}
-      <Text style={s.line}>{typed ? WORDS.declinedLine : WORDS.checkLine}</Text>
+      {by === undefined ? null : (
+        <Note variant="amber">{confirmNote({ by, window: paymentWindow }, seat)}</Note>
+      )}
+      {paymentWindow === 'FIX_THE_CARD' ? (
+        <Text style={s.line}>{WORDS.onlyPlacedAgain}</Text>
+      ) : null}
+      <Text style={s.line}>{(typed ? WORDS.declinedLine : WORDS.checkLine)[paymentWindow]}</Text>
       {typed ? (
         <CardFields
           onChange={(entry) => setCardComplete(entry.complete)}
@@ -157,7 +183,7 @@ function Confirmation({
         </Note>
       )}
       <Button
-        label={typed ? WORDS.payWithCard : WORDS.check}
+        label={typed ? WORDS.withThisCard[paymentWindow] : WORDS.check}
         size="lg"
         busy={busy}
         busyLabel={WORDS.confirming}

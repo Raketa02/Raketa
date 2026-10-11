@@ -46,8 +46,11 @@
  *   club (§12.2: *you see It's a game!*); the others are told *booked · 40 zł held*, or the club's yes.
  *   A *TO CONFIRM* row holds no card, so its faces are read off the booking.
  * - **A share to confirm** — *Your payment didn't go through — confirm it to keep your seat*, and
- *   the confirmation opens on that payment, naming the player's time to pay (Q109). A plain yes
- *   refused `payment_to_confirm` opens it too, and so does a row of *TO CONFIRM* (`confirm`).
+ *   the confirmation opens on that payment, naming the player's time to pay (Q109). Before the club's
+ *   cut-off it is their time to fix the card (Q113): *Your card didn't go through — fix it to keep
+ *   your seat. Nothing is paid now.* On a rescue the seat is kept for them to take (#640): *… to
+ *   take the seat*. A plain yes refused `payment_to_confirm` opens it too, and so does a row of *TO
+ *   CONFIRM* (`confirm`).
  * - **No method** — the setup, and the yes again once saved. **Terms needed** — a toast naming You ›
  *   Payments, where they are accepted.
  * - **Sent to the club** — the yes filled a game an On request club confirms (#543): nobody paid,
@@ -91,6 +94,7 @@ import {
   fillOutcome,
   fillRefusal,
   itsAGameWaiting,
+  seatAtStake,
   undoSecondsLeft,
   waitsForUndo,
   type FillOutcome,
@@ -103,6 +107,7 @@ import {
   type Fill,
   type FillAsk,
 } from '../hooks/useFill';
+import { paymentWindowAt } from '../domain/home';
 import { rereadAfterFill, useBookingYes, useConfirmPaymentYes } from '../hooks/useFillWrites';
 import { dropCard } from '../hooks/useGroupDeck';
 import { useBooking, useBookingSinceMount } from '../hooks/useHome';
@@ -111,7 +116,7 @@ import { useLatest } from '../hooks/useLatest';
 import { ConfirmPaymentSheet } from './ConfirmPaymentSheet';
 import { refusalMessage } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
-import { bookingAnnouncement, bookingIn } from './fillPresentation';
+import { bookingAnnouncement, bookingIn, refusedToast } from './fillPresentation';
 import { ItsAGame } from './ItsAGame';
 
 interface Counting extends BookAsk {
@@ -200,7 +205,13 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
         });
         return;
       case 'confirm':
-        showToast({ message: FILL_COPY.paymentFailed, tone: 'bad' });
+        showToast({
+          message: refusedToast(
+            paymentWindowAt(outcome.confirmBy, outcome.timeTo, Date.now()),
+            seatAtStake(ask.card),
+          ),
+          tone: 'bad',
+        });
         setConfirming({ ...ask, ...confirmationOf(outcome) });
         return;
       case 'setUp':
@@ -333,6 +344,8 @@ export function FillProvider({ toastAbove, openGame, children }: FillProviderPro
           key={confirming.seatChargeId}
           seatChargeId={confirming.seatChargeId}
           confirmBy={confirming.confirmBy}
+          timeTo={confirming.timeTo}
+          seat={seatAtStake(confirming.card)}
           onClose={() => setConfirming(null)}
           yesAgain={() => confirmPayment(confirming)}
         />

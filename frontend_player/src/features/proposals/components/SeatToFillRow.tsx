@@ -60,6 +60,7 @@ export function SeatToFillRow({ row, groupId, now, onOpen, onHold }: SeatToFillR
         seat={yesOnRow(row)}
         dealtIn={{ groupId, sport: row.sport, kind: row.kind }}
         share={formatZloty(row.shareGrosze)}
+        heldUntilTheCutOff={row.fillsByTheCutOff}
         size="md"
       />
     </FillInRow>

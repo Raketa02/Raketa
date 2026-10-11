@@ -10,9 +10,12 @@
  * the game, as a live yes is drawn — *Padel · Saturday 15:00* over the club, the share — and under
  * them **their time to pay** while it runs, *Confirm your payment by 14:40* in amber (Q109; the
  * words Home's card says beside it), or, once it ran out, that the seat is open to others until they
- * confirm. **Confirm** opens the fill's confirmation on that payment, naming the same time. It is
- * hidden when empty and while the first read is on its way; a read that failed says so under the
- * section's name.
+ * confirm. **Before the club's cut-off it is their time to fix the card** (#643; Q113): *Fix your
+ * card by 14:40*, with a line that nothing is paid now, and the button **Fix** — a card refused at
+ * the fill, at its club's yes, at the holding time of a game booked already (#639), or on a rescue
+ * (#640). **Confirm** opens the fill's confirmation on that payment, naming the same time and
+ * window. It is hidden when empty and while the first read is on its way; a read that failed says
+ * so under the section's name.
  *
  * The time is written as Home writes it — the hour alone on the day of the read — and leaves the
  * row at the deadline on this phone's clock, the read naming no instant of its own; the server takes
@@ -28,7 +31,7 @@ import { offlineMessage } from '@/shared/errors';
 import { Button, Card, Note, theme } from '@/shared/ui';
 
 import { confirmationOf, type PaymentToConfirm } from '../domain/fill';
-import { deadlineAhead } from '../domain/home';
+import { deadlineAhead, paymentWindowAt } from '../domain/home';
 import { gameDayOf } from '../domain/when';
 import { useFill } from '../hooks/useFill';
 import { useReadClock } from '../hooks/useHome';
@@ -89,6 +92,8 @@ export function PaymentsToConfirm() {
         {list.map((payment, at) => {
           const day = gameDayOf(payment.startsAt, readAt);
           const by = deadlineAhead(payment.confirmBy, now);
+          // Once the time is gone the row reads as the server's next read will: no window named.
+          const paymentWindow = paymentWindowAt(payment.confirmBy, payment.timeTo, now);
           return (
             <View
               key={payment.seatChargeId}
@@ -100,11 +105,16 @@ export function PaymentsToConfirm() {
                 <Text
                   style={s.club}
                 >{`${clubName(payment)}${LINE_JOIN}${shareWords(payment)}`}</Text>
-                <Text style={by === undefined ? s.line : s.timeToPay}>{toConfirmRowLine(by)}</Text>
+                <Text style={by === undefined ? s.line : s.timeToPay}>
+                  {toConfirmRowLine(by === undefined ? undefined : { by, window: paymentWindow })}
+                </Text>
+                {paymentWindow === 'FIX_THE_CARD' ? (
+                  <Text style={s.line}>{WORDS.nothingPaidNow}</Text>
+                ) : null}
               </View>
               <Button
-                label={WORDS.action}
-                accessibilityLabel={toConfirmLabel(payment, day)}
+                label={WORDS.action[paymentWindow]}
+                accessibilityLabel={toConfirmLabel(payment, day, paymentWindow)}
                 size="sm"
                 onPress={() => confirm(payment)}
               />

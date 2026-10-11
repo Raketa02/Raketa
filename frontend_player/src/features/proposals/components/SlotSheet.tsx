@@ -217,7 +217,7 @@ function SlotBody({
                 act={
                   <Button
                     label={seatButtonLabel(share)}
-                    accessibilityLabel={seatButtonSpoken(share)}
+                    accessibilityLabel={seatButtonSpoken(share, row.fillsByTheCutOff)}
                     variant="volt"
                     size="md"
                     onPress={() => onJoinRescue(row)}

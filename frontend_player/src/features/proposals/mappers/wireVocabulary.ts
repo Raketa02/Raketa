@@ -25,6 +25,7 @@ import type {
   ProposalStatus,
   ReaderAction,
   ShareState,
+  TimeTo,
   UncountedReason,
   Who,
 } from '../domain/vocabulary';
@@ -44,6 +45,7 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   readonly uncountedReason: Exact<UncountedReason, Schemas['UncountedReason']>;
   readonly leaving: Exact<LeavingKind, Schemas['Leaving']>;
   readonly shareState: Exact<ShareState, Schemas['ShareState']>;
+  readonly timeTo: Exact<TimeTo, Schemas['TimeTo']>;
   readonly proposalStatus: Exact<ProposalStatus, Schemas['ProposalStatus']>;
   readonly readerAction: Exact<ReaderAction, Schemas['ReaderAction']>;
   readonly who: Exact<Who, Schemas['Who']>;
@@ -60,6 +62,7 @@ export const PROPOSALS_VOCABULARY_AGREES: {
   uncountedReason: true,
   leaving: true,
   shareState: true,
+  timeTo: true,
   proposalStatus: true,
   readerAction: true,
   who: true,

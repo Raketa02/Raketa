@@ -25,6 +25,7 @@ import type {
   HomeStatus,
   LeavingKind,
   ShareState,
+  TimeTo,
   UncountedReason,
 } from './vocabulary';
 import { GAME_LENGTH_MS, gameDayOf } from './when';
@@ -118,6 +119,12 @@ export interface HomeGame {
    * server.
    */
   readonly yourPaymentDueBy?: string;
+  /**
+   * **What that time is for** (#638; Q113) — to fix the card, refused before the club's cut-off
+   * where nothing is taken (*Fix your card by 14:40*), or to pay, after it. Only the payer's words
+   * change by it. Absent while no time runs, and from an older server.
+   */
+  readonly timeTo?: TimeTo;
 }
 
 /** How a full game gone back to filling is booked once it is full again — the line's last clause. */
@@ -234,7 +241,9 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
  * - `paymentAwaited` — one player's payment awaited (Q111): *Waiting for one payment · until 14:40
  *   · Nobody pays until it's in*, the time while it is ahead. Never whose.
  * - `yourPayment` — the same game, or one gone back to filling meanwhile, read by the payer while
- *   their time runs: *Confirm your payment by 14:40*.
+ *   their time runs: *Confirm your payment by 14:40*, or before the cut-off *Fix your card by 14:40*
+ *   (`window`, Q113). So is a booked game whose holding was refused (#639): it stays booked, and
+ *   only its player's card says so.
  * - `calledOff` — why, and *refunded 30 zł* when the shares came back; when none did, *nothing was
  *   taken* or *nobody paid*, by the reason. The club is carried for the reasons that are the club's.
  * - `seatEmpty` — *Uncounted* because its hour came with a seat still open: no Level moved.
@@ -260,7 +269,7 @@ export type MoneyLine =
       readonly clubConfirms: boolean;
     }
   | { readonly kind: 'paymentAwaited'; readonly until?: Deadline }
-  | { readonly kind: 'yourPayment'; readonly by: Deadline }
+  | ({ readonly kind: 'yourPayment' } & YourTime)
   | {
       readonly kind: 'calledOff';
       readonly reason?: CalledOffReason;
@@ -320,6 +329,53 @@ export interface Deadline {
 /** *Bonarka answers by 20:45* — the club's deadline to say yes (Q98). */
 export type AnswerBy = Deadline;
 
+/**
+ * **The window a refused card's words are in** (#638; Q113) — the one the read names while the time
+ * runs: `FIX_THE_CARD` before the club's cut-off, where nothing is taken and nobody is asked to pay,
+ * `PAY` after it. `UNNAMED` once the time has gone — the read names none then, and a seat taken back
+ * is held before the cut-off and paid after it — where no time was given, and from an older server:
+ * the words then say *confirm*, never *pay* nor *fix*.
+ */
+export type PaymentWindow = TimeTo | 'UNNAMED';
+
+/**
+ * **The payer's own time, and its window** — *Fix your card by 14:40* or *Confirm your payment by
+ * 14:40*: what Home's line, the details' row, a *TO CONFIRM* row and the sheet name.
+ */
+export interface YourTime {
+  readonly by: Deadline;
+  readonly window: PaymentWindow;
+}
+
+/** The window at `now`: the read's, while `by` is ahead of it. */
+export function paymentWindowAt(
+  by: string | undefined,
+  timeTo: TimeTo | undefined,
+  now: number,
+): PaymentWindow {
+  return timeTo === undefined || deadlineAhead(by, now) === undefined ? 'UNNAMED' : timeTo;
+}
+
+/**
+ * **Whose seat a refused card's time keeps** — the player's own, on a game that filled or was booked
+ * (*to keep your seat*), or a rescue's, kept for them alone to take and not yet theirs (*to take the
+ * seat*, #640): the notice's and the email's two endings.
+ */
+export type SeatAtStake = 'yours' | 'aRescue';
+
+/**
+ * **The seat the details' money row says is at stake**, beside the payer's own time — where the
+ * status tag does not say it: a rescue's, seen from outside (#640), and the player's own on a game
+ * booked already, whose holding was refused and whose tag still says *Booked* (#639; the screens
+ * A4.1). Nothing on a game not booked yet: its tag says it waits.
+ */
+export function stakeOnTheDetails(
+  game: Pick<BookedGame, 'rescue' | 'status' | 'fillingAgain'>,
+): SeatAtStake | undefined {
+  if (game.rescue !== undefined) return 'aRescue';
+  return courtIsGiven(game) ? 'yours' : undefined;
+}
+
 /** **A deadline as Home writes it, from `now`** — whether it is still ahead or not. */
 export function deadlineOf(at: string, now: number): Deadline {
   return { at, today: gameDayOf(at, now)?.kind === 'today' };
@@ -373,7 +429,9 @@ export function lineCanRunOut(
  *
  * **The payer reads their own time first** (Q111): on a game waiting for their payment, or gone back
  * to filling meanwhile, *Confirm your payment by 14:40* while it runs — the status tag still says
- * which of the two it is. From the deadline on, the line is everybody's.
+ * which of the two it is — and on a booked game whose holding was refused, *Fix your card by 14:40*
+ * (#639, Q113), the tag still *Booked*. The read names the time to its payer alone, so whichever the
+ * status, it is theirs. From the deadline on, the line is everybody's.
  */
 export function moneyLineOf(
   game: Pick<
@@ -390,14 +448,19 @@ export function moneyLineOf(
     | 'fillingAgain'
     | 'paymentDueBy'
     | 'yourPaymentDueBy'
+    | 'timeTo'
   >,
   now: number,
 ): MoneyLine | undefined {
   const { money } = game;
   const club = game.club.name === undefined ? {} : { club: game.club.name };
   const yours = deadlineAhead(game.yourPaymentDueBy, now);
-  if (yours !== undefined && (game.status === 'WAITING_FOR_A_PAYMENT' || isFillingAgain(game))) {
-    return { kind: 'yourPayment', by: yours };
+  if (yours !== undefined) {
+    return {
+      kind: 'yourPayment',
+      by: yours,
+      window: paymentWindowAt(game.yourPaymentDueBy, game.timeTo, now),
+    };
   }
   switch (game.status) {
     case 'BOOKED': {

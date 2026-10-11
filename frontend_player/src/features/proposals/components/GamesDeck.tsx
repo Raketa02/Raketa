@@ -104,7 +104,7 @@ import { DeckAnswers } from './DeckAnswers';
 import { DeckStage, type DeckExit, type DragVerdict } from './DeckStage';
 import { DeclarationInterstitial } from './DeclarationInterstitial';
 import {
-  ANSWER_LABELS,
+  answerLabels,
   capLine,
   refusalMessage,
   segmentLabel,
@@ -333,7 +333,7 @@ export function GamesDeck({ groupId, sport, chosen, onChoose, empty, onTop }: Ga
         </View>
 
         <DeckAnswers
-          labels={ANSWER_LABELS}
+          labels={answerLabels(top)}
           onPass={() => answerTo('no', top)}
           onAccept={() => answerTo('yes', top)}
           onRecord={() => open(top)}

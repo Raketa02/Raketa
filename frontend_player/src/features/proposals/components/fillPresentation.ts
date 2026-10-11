@@ -14,7 +14,7 @@ import { platformClock } from '@/shared/date/platformZone';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Face, ItsAGamePicture, PaymentToConfirm, StillMissing } from '../domain/fill';
-import type { Deadline } from '../domain/home';
+import type { PaymentWindow, SeatAtStake, YourTime } from '../domain/home';
 import { gameDayOf, type GameDay } from '../domain/when';
 
 import {
@@ -85,20 +85,41 @@ export function itsAGameLine(missing: StillMissing): {
 }
 
 /**
- * *Confirm your payment by 14:40 to keep your seat* — **the payer's time on the confirmation**
- * (Q109): the notice's and the email's words, written as Home writes the time.
+ * *Confirm your payment by 14:40 to keep your seat* — **the payer's time with the seat it keeps**
+ * (Q109): the notice's and the email's words, written as Home writes the time; before the club's
+ * cut-off *Fix your card by 14:40 to keep your seat* (Q113), and on a rescue *… to take the seat*
+ * (#640). With no seat named — where the status tag says what is at stake — the time alone.
  */
-export function keepYourSeatBy(by: Deadline): string {
-  return `${yourPaymentWords(by)} ${FILL_COPY.confirm.toKeepYourSeat}`;
+export function seatKeptBy(time: YourTime, seat: SeatAtStake | undefined): string {
+  const words = yourPaymentWords(time);
+  return seat === undefined ? words : `${words} ${FILL_COPY.confirm.toSeat[seat]}`;
+}
+
+/**
+ * **The confirmation's note** while the time runs — the seat it keeps, and on a rescue that the seat
+ * is theirs until then: *Fix your card by 14:40 to take the seat — it's kept for you until then*.
+ */
+export function confirmNote(time: YourTime, seat: SeatAtStake): string {
+  const kept = seatKeptBy(time, seat);
+  return seat === 'aRescue' ? `${kept} — ${FILL_COPY.confirm.keptForYou}` : kept;
+}
+
+/**
+ * **The toast at a refused card** (the screens A2.4) — *Your card didn't go through — fix it to keep
+ * your seat. Nothing is paid now.* before the cut-off, *Your payment didn't go through — confirm it
+ * to keep your seat* after it; *to take the seat* on a rescue (#640).
+ */
+export function refusedToast(window: PaymentWindow, seat: SeatAtStake): string {
+  return FILL_COPY.refused[seat][window];
 }
 
 /**
  * **A *TO CONFIRM* row's line** — *Confirm your payment by 14:40* while the payer's time runs (Q109,
- * the screens A7.3), the words Home's card says beside it; once it ran out, that the seat is open
- * to others until they confirm.
+ * the screens A7.3), or *Fix your card by 14:40* before the cut-off (Q113), the words Home's card
+ * says beside it; once it ran out, that the seat is open to others until they confirm.
  */
-export function toConfirmRowLine(by: Deadline | undefined): string {
-  return by === undefined ? FILL_COPY.toConfirm.open : yourPaymentWords(by);
+export function toConfirmRowLine(time: YourTime | undefined): string {
+  return time === undefined ? FILL_COPY.toConfirm.open : yourPaymentWords(time);
 }
 
 /** The share to confirm and the seller: *32 zł to Bonarka Arena*. */
@@ -120,8 +141,14 @@ export function chargeGameLine(sport: Sport, startsAt: string, now: number): str
 
 /**
  * A *TO CONFIRM* row's button, spoken — what it confirms: *Confirm your payment for Padel · Saturday
- * 15:00 at Bonarka Arena, 28 zł*.
+ * 15:00 at Bonarka Arena, 28 zł*, or *Fix your card for …* before the cut-off (Q113), its window the
+ * row's own.
  */
-export function toConfirmLabel(payment: PaymentToConfirm, day: GameDay | undefined): string {
-  return `Confirm your payment for ${liveYesTitle(payment, day)} at ${clubName(payment)}, ${shareWords(payment)}`;
+export function toConfirmLabel(
+  payment: PaymentToConfirm,
+  day: GameDay | undefined,
+  window: PaymentWindow,
+): string {
+  const act = FILL_COPY.toConfirm.spoken[window];
+  return `${act} ${liveYesTitle(payment, day)} at ${clubName(payment)}, ${shareWords(payment)}`;
 }

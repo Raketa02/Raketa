@@ -14,8 +14,10 @@ import {
   openedFrom,
   openedToKeep,
   paymentOf,
+  paymentWindowAt,
   resultActOf,
   shareAt,
+  stakeOnTheDetails,
   type BookedMoney,
   type HomeGame,
 } from './home';
@@ -289,9 +291,24 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
       expect(moneyLineOf(yours, READ)).toEqual({
         kind: 'yourPayment',
         by: { at: TWENTY_TO_THREE, today: true },
+        window: 'UNNAMED',
       });
       expect(moneyLineOf(yours, Date.parse(TWENTY_TO_THREE))).toEqual({
         kind: 'paymentAwaited',
+      });
+    });
+
+    it('says what the payer’s time is for — to fix the card before the cut-off (#638; Q113)', () => {
+      const fixing = waiting({ yourPaymentDueBy: TWENTY_TO_THREE, timeTo: 'FIX_THE_CARD' });
+      expect(moneyLineOf(fixing, READ)).toEqual({
+        kind: 'yourPayment',
+        by: { at: TWENTY_TO_THREE, today: true },
+        window: 'FIX_THE_CARD',
+      });
+      // Everybody else reads Waiting for one payment, whichever window it is.
+      expect(moneyLineOf(waiting({ timeTo: 'FIX_THE_CARD' }), READ)).toEqual({
+        kind: 'paymentAwaited',
+        until: { at: TWENTY_TO_THREE, today: true },
       });
     });
 
@@ -307,6 +324,7 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
       expect(moneyLineOf(fellBack, READ)).toEqual({
         kind: 'yourPayment',
         by: { at: TWENTY_TO_THREE, today: true },
+        window: 'UNNAMED',
       });
       expect(moneyLineOf(fellBack, Date.parse(TWENTY_TO_THREE))).toEqual({
         kind: 'fillingAgain',
@@ -314,6 +332,35 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
         club: 'Bonarka Arena',
         clubConfirms: false,
       });
+    });
+
+    /**
+     * **A card refused at the holding time** (#639; Q113) leaves the game booked: only its player's
+     * card reads their time to fix it, and the others' cards don't change.
+     */
+    it('names the payer’s time to fix the card on a booked game whose holding was refused', () => {
+      const refused = game({
+        yourPaymentDueBy: TWENTY_TO_THREE,
+        timeTo: 'FIX_THE_CARD',
+        // Checked at the fill, its holding four days before Saturday's cut-off refused at 14:10.
+        money: {
+          ...HELD,
+          shareState: 'CHECKED',
+          heldFrom: '2026-10-06T12:10:00Z',
+          takenAt: '2026-10-10T12:10:00Z',
+          freeToLeaveUntil: '2026-10-10T12:10:00Z',
+        },
+      });
+      expect(moneyLineOf(refused, READ)).toEqual({
+        kind: 'yourPayment',
+        by: { at: TWENTY_TO_THREE, today: true },
+        window: 'FIX_THE_CARD',
+      });
+      expect(moneyLineOf({ ...refused, status: 'SEAT_OPEN', openSeats: 1 }, READ)).toMatchObject({
+        kind: 'yourPayment',
+      });
+      // At the deadline the line is the game's again, until the next read says the seat went.
+      expect(moneyLineOf(refused, Date.parse(TWENTY_TO_THREE))).toMatchObject({ kind: 'booked' });
     });
 
     it('is called off with why when the payment did not come in before its last moment to book', () => {
@@ -625,6 +672,42 @@ describe('chatIsOpen — the room lives its own life once booked, and closes as 
   /** No Game and no room: the chat opens when the game is booked, as on *Waiting for the club*. */
   it('has no room on a full game gone back to filling', () => {
     expect(chatIsOpen({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: true } })).toBe(false);
+  });
+});
+
+describe('paymentWindowAt — the window a refused card’s words are in (#638; Q113)', () => {
+  const NOW = Date.parse('2026-10-06T12:10:00Z');
+  const BY = '2026-10-06T12:40:00Z';
+
+  it('is the one the read names while the time runs', () => {
+    expect(paymentWindowAt(BY, 'FIX_THE_CARD', NOW)).toBe('FIX_THE_CARD');
+    expect(paymentWindowAt(BY, 'PAY', NOW)).toBe('PAY');
+  });
+
+  it('names none once the time has gone, where none was given, or from an older server', () => {
+    expect(paymentWindowAt(BY, 'FIX_THE_CARD', Date.parse(BY))).toBe('UNNAMED');
+    expect(paymentWindowAt(undefined, 'FIX_THE_CARD', NOW)).toBe('UNNAMED');
+    expect(paymentWindowAt(BY, undefined, NOW)).toBe('UNNAMED');
+  });
+});
+
+describe('stakeOnTheDetails — the seat a payer’s time keeps, where the tag does not say it', () => {
+  it('is a rescue’s seen from outside, and the player’s own on a game booked already', () => {
+    expect(
+      stakeOnTheDetails({
+        status: 'SEAT_OPEN',
+        rescue: { deadline: CUT_OFF, fillsByTheCutOff: true },
+      }),
+    ).toBe('aRescue');
+    expect(stakeOnTheDetails({ status: 'BOOKED' })).toBe('yours');
+    expect(stakeOnTheDetails({ status: 'SEAT_OPEN' })).toBe('yours');
+  });
+
+  it('is nothing on a game not booked yet, whose tag says it waits', () => {
+    expect(stakeOnTheDetails({ status: 'WAITING_FOR_A_PAYMENT' })).toBeUndefined();
+    expect(
+      stakeOnTheDetails({ status: 'SEAT_OPEN', fillingAgain: { clubConfirms: false } }),
+    ).toBeUndefined();
   });
 });
 

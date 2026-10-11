@@ -8,6 +8,7 @@
  * with their names, prices and dates read as mock data — none of it is here.
  */
 
+import type { PaymentWindow } from '../domain/home';
 import type { ProposalStatus } from '../domain/vocabulary';
 
 export const PROPOSALS_COPY = {
@@ -43,6 +44,12 @@ export const PROPOSALS_COPY = {
   youQuestion: 'You?',
   /** Under *You complete it* on a rescue's seat — the share, and that the court is already booked. */
   courtBooked: 'court booked',
+  /**
+   * A rescue's *I'm in · 27 zł*, aloud (Q113; the screens A3.1, A4.3, A5.3): what the share does —
+   * held until the club's cut-off before it, as every seat's is, and taken at once after it.
+   */
+  heldUntilTheCutOff: 'held until the cut-off',
+  paidNow: 'paid now',
   in: 'IN',
   inSpoken: 'In',
   /** A booked game's seat whose share was taken — beside the Level (details 8, #556). */
@@ -124,8 +131,16 @@ export const PROPOSALS_COPY = {
      */
     waitingForOnePayment: 'Waiting for one payment',
     nobodyPaysUntilItsIn: 'Nobody pays until it’s in',
-    /** *Confirm your payment by 14:40* — the payer's own time to pay (Q109, Q111). */
-    confirmYourPaymentBy: 'Confirm your payment by',
+    /**
+     * *Confirm your payment by 14:40* — the payer's own time to pay (Q109, Q111); before the club's
+     * cut-off, where nothing is taken, *Fix your card by 14:40* (Q113). Keyed by the window the read
+     * names; with none named, *confirm*.
+     */
+    yourTimeBy: {
+      FIX_THE_CARD: 'Fix your card by',
+      PAY: 'Confirm your payment by',
+      UNNAMED: 'Confirm your payment by',
+    } satisfies Readonly<Record<PaymentWindow, string>>,
   },
   /**
    * **What a refused answer says** (the screens A2.4) — a toast, and the card springs back or

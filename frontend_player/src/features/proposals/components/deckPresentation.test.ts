@@ -9,6 +9,7 @@ import { AppError } from '@/shared/errors';
 import { rowsOf, type DeckCard, type DeckPerson } from '../domain/deck';
 
 import {
+  answerLabels,
   answersByWords,
   barLabels,
   capLine,
@@ -19,6 +20,8 @@ import {
   inOnGameLine,
   refusalMessage,
   ribbonWords,
+  seatButtonLabel,
+  seatButtonSpoken,
   segmentLabel,
   shareAside,
   sidesSpoken,
@@ -118,6 +121,29 @@ describe('the stamps', () => {
   });
 });
 
+describe('a rescue’s I’m in (A3.1, A4.3, A5.3)', () => {
+  it('draws the share, and says aloud whether it is held until the cut-off or paid now (Q113)', () => {
+    expect(seatButtonLabel('27 zł')).toBe('I’m in · 27 zł');
+    expect(seatButtonSpoken('27 zł', true)).toBe('I’m in, 27 zł held until the cut-off');
+    expect(seatButtonSpoken('27 zł', false)).toBe('I’m in, 27 zł paid now');
+  });
+
+  it('names the deck’s I’m in the same on a Seat open card, and plainly on any other', () => {
+    const rescue = { type: 'SEAT_OPEN', shareGrosze: 2700 } as const;
+    expect(answerLabels({ ...rescue, noFreeCancellation: false })).toEqual({
+      pass: 'Not this time',
+      accept: 'I’m in, 27 zł held until the cut-off',
+      record: 'Game details',
+    });
+    expect(answerLabels({ ...rescue, noFreeCancellation: true }).accept).toBe(
+      'I’m in, 27 zł paid now',
+    );
+    expect(
+      answerLabels({ type: 'PICKED_FOR_YOU', shareGrosze: 2700, noFreeCancellation: false }).accept,
+    ).toBe('I’m in');
+  });
+});
+
 describe('a refused answer', () => {
   const refusal = (code: string, details?: Readonly<Record<string, unknown>>) =>
     new AppError('conflict', 'business-conflict', 'refused', {
@@ -174,11 +200,22 @@ describe('a game’s details', () => {
     expect(
       detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined, {
         dueBy: twentyToThree,
-        yoursBy: twentyToThree,
+        yours: { by: twentyToThree, window: 'PAY' },
       }),
     ).toEqual({ below: 'Confirm your payment by 14:40' });
+    // Before the cut-off it is their time to fix the card (#638; Q113).
+    expect(
+      detailsShareWords('WAITING_FOR_A_PAYMENT', card, 2, undefined, {
+        dueBy: twentyToThree,
+        yours: { by: twentyToThree, window: 'FIX_THE_CARD' },
+      }),
+    ).toEqual({ below: 'Fix your card by 14:40' });
     // Gone back to filling while the payer's time runs on (#625): the book-by, and their time.
-    expect(detailsShareWords('FILLING', card, 2, undefined, { yoursBy: twentyToThree })).toEqual({
+    expect(
+      detailsShareWords('FILLING', card, 2, undefined, {
+        yours: { by: twentyToThree, window: 'UNNAMED' },
+      }),
+    ).toEqual({
       aside: 'if it fills · book by Tue 17:00',
       below: 'Confirm your payment by 14:40',
     });

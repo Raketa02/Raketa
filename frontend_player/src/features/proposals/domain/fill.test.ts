@@ -13,6 +13,7 @@ import {
   itsAGamePicture,
   itsAGameWaiting,
   paymentToConfirmOn,
+  seatAtStake,
   undoSecondsLeft,
   waitsForUndo,
   yesOnRescue,
@@ -178,6 +179,25 @@ describe('confirmationOf — a refused share to confirm, and its time to pay', (
       confirmBy: '2026-10-06T12:40:00Z',
     });
     expect(confirmationOf({ seatChargeId: 's-1' })).toEqual({ seatChargeId: 's-1' });
+  });
+
+  it('carries what the time is for to the sheet (#638; Q113)', () => {
+    expect(
+      confirmationOf({
+        seatChargeId: 's-1',
+        confirmBy: '2026-10-06T12:40:00Z',
+        timeTo: 'FIX_THE_CARD',
+      }),
+    ).toEqual({ seatChargeId: 's-1', confirmBy: '2026-10-06T12:40:00Z', timeTo: 'FIX_THE_CARD' });
+  });
+});
+
+describe('seatAtStake — whose seat a refused yes leaves at stake (#640)', () => {
+  it('is a rescue’s when the yes was said on one, and the player’s own otherwise', () => {
+    expect(seatAtStake({ type: 'SEAT_OPEN' })).toBe('aRescue');
+    expect(seatAtStake({ type: 'PICKED_FOR_YOU' })).toBe('yours');
+    // A TO CONFIRM row holds no card: the read does not say which it is.
+    expect(seatAtStake(undefined)).toBe('yours');
   });
 });
 
