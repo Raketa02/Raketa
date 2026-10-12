@@ -211,9 +211,12 @@ class RescueOffers:
         *,
         sport: Sport,
         now: Instant,
+        reliability_filter: bool = True,
     ) -> dict[UUID, tuple[UUID, ...]]:
         """Each game's members it is offered to, in ``candidates``' order —
-        one pair rule read over everybody for every kind, never one per game."""
+        one pair rule read over everybody for every kind, never one per game.
+        ``reliability_filter=False`` for a seat kept for its rescuer, a claim
+        made before (``docs/adr/0195`` §6)."""
 
         # In the enum's order rather than a set's, so the reads run alike on
         # every process (docs/adr/0105); every kind over one reading — one read
@@ -227,6 +230,7 @@ class RescueOffers:
             sport=sport,
             kinds=[kind for kind in SearchMode if any(g.kind is kind for g in games)],
             at=now,
+            reliability_filter=reliability_filter,
         )
         return {
             game.booking_id: tuple(
@@ -258,16 +262,33 @@ class RescueOffers:
         *,
         sport: Sport,
         now: Instant,
+        reliability_filter: bool = True,
     ) -> list[BookedGame]:
         """Those of these games whose seat is offered to this one player."""
 
         candidates = await self.candidates([player], sport=sport, games=games, now=now)
-        offered = await self.offered(games, candidates, sport=sport, now=now)
+        offered = await self.offered(
+            games,
+            candidates,
+            sport=sport,
+            now=now,
+            reliability_filter=reliability_filter,
+        )
         return [game for game in games if player in offered[game.booking_id]]
 
-    async def is_offered(self, game: BookedGame, player: UUID, *, now: Instant) -> bool:
+    async def is_offered(
+        self,
+        game: BookedGame,
+        player: UUID,
+        *,
+        now: Instant,
+        already_kept: bool = False,
+    ) -> bool:
         """Whether this rescue is offered to this one player now — a member of
-        its pool, as the board and the deck read only their own pool's."""
+        its pool, as the board and the deck read only their own pool's.
+        ``already_kept`` for a rescuer whose seat is kept for them while their
+        time runs (#640): a claim made before, which the reliability filter
+        never takes back (``docs/adr/0195`` §6)."""
 
         if not rescuable(game, now=now, by=player):
             return False
@@ -275,7 +296,13 @@ class RescueOffers:
         if pool is None or not await self._pools.members_among(pool, [player]):
             return False
         return bool(
-            await self.offered_to_one([game], player, sport=game.sport, now=now)
+            await self.offered_to_one(
+                [game],
+                player,
+                sport=game.sport,
+                now=now,
+                reliability_filter=not already_kept,
+            )
         )
 
     async def dealt_to(
@@ -418,7 +445,12 @@ class Rescuer:
             )
         if not rescuable(game, now=now, by=player):
             raise SeatJustTaken()
-        if not await self._offers.is_offered(game, player, now=now):
+        if not await self._offers.is_offered(
+            game,
+            player,
+            now=now,
+            already_kept=game.kept_for(player, now=now) is not None,
+        ):
             raise RescueNotOffered()
         waiting = await self._charges.to_confirm(booking_id, player_id=player)
         if waiting is not None and waiting != confirmed:

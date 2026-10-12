@@ -1126,10 +1126,13 @@ async def test_the_reliability_filter_is_switched_on_and_off_with_a_204(
     ]
 
 
-@pytest.mark.parametrize("minimum", ["VERY_HIGH", "LOW"])
-async def test_a_filter_the_switch_does_not_offer_is_refused(
+@pytest.mark.parametrize("minimum", ["VERY_HIGH", "LOW", "RELIABLE"])
+async def test_a_filter_the_switch_does_not_offer_is_refused_at_the_boundary(
     client, session_factory, minimum
 ):
+    """*At least Medium*, *at least High* or off — the contract names the two
+    bands and no other, so *at least Very high* never reaches the profile."""
+
     player_id, headers = await a_player(client)
     before = await stream_length(session_factory, player_id)
 
@@ -1137,22 +1140,16 @@ async def test_a_filter_the_switch_does_not_offer_is_refused(
         RELIABILITY_FILTER_URL, json={"minimum": minimum}, headers=headers
     )
 
-    assert response.status_code == 400, response.text
-    assert response.json()["code"] == "reliability_minimum_not_offered"
+    assert response.status_code == 422, response.text
     assert await stream_length(session_factory, player_id) == before
 
 
-async def test_a_filter_outside_the_bands_or_left_out_is_refused_at_the_boundary(
-    client,
-):
+async def test_a_filter_left_out_is_refused_at_the_boundary(client):
     _, headers = await a_player(client)
 
-    unknown = await client.put(
-        RELIABILITY_FILTER_URL, json={"minimum": "RELIABLE"}, headers=headers
-    )
     missing = await client.put(RELIABILITY_FILTER_URL, json={}, headers=headers)
 
-    assert (unknown.status_code, missing.status_code) == (422, 422)
+    assert missing.status_code == 422
 
 
 @pytest.mark.parametrize(

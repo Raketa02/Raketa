@@ -15,9 +15,13 @@ a rescue cannot come to two answers about one pair.
 **Live facts, read now**: the blocks off the log, each person's gender, their
 preference, their filter and when their profile was made off their own stream,
 their Level in the sport off rating's published read, and — only where somebody
-among them has a filter on — everybody's points off ``player_score``'s, **one
-read per call** (``unfit_pairs_by_kind`` serves every kind of a deal with it).
-Never a projection that may be a tick behind a block.
+among them has a filter on — everybody's points off ``player_score``'s. **Each
+person's points are folded at most once per deal**: at one instant this adapter
+remembers whose it has read, so a deck read that asks for its cards, the
+reader's rescues and then the whole pool folds nobody twice, and
+``unfit_pairs_by_kind`` serves every kind with one reading. The composition root
+builds it per request and per job run, and another instant reads afresh. Never a
+projection that may be a tick behind a block.
 
 **A yes already given is asked without the filter** (``reliability_filter=False``):
 the fill's re-check and a paused yes coming back. The filter acts on what is
@@ -78,6 +82,9 @@ class MatcherPlayerFit:
         self._ratings = ratings
         self._ruleset = ruleset
         self._scores = scores
+        #: Whose points were folded at ``_read_at`` — this deal's, and no other.
+        self._read: dict[UUID, PlayerScore] = {}
+        self._read_at: Instant | None = None
 
     async def unfit_pairs(
         self,
@@ -104,9 +111,14 @@ class MatcherPlayerFit:
         sport: Sport,
         kinds: Sequence[SearchMode],
         at: Instant,
+        reliability_filter: bool = True,
     ) -> Mapping[SearchMode, frozenset[frozenset[UUID]]]:
         return await self._unfit(
-            player_ids, sport=sport, kinds=kinds, at=at, reliability_filter=True
+            player_ids,
+            sport=sport,
+            kinds=kinds,
+            at=at,
+            reliability_filter=reliability_filter,
         )
 
     async def _unfit(
@@ -183,7 +195,7 @@ class MatcherPlayerFit:
         }
         if not any(minimums.values()):
             return frozenset()
-        scores = await self._scores.scores_for(list(minimums), now=at)
+        scores = await self._points_of(list(minimums), at=at)
 
         def passes(minimum_of: UUID, score: PlayerScore) -> bool:
             return passes_reliability_minimum(
@@ -195,6 +207,18 @@ class MatcherPlayerFit:
             for one, other in combinations(minimums, 2)
             if not passes(one, scores[other]) or not passes(other, scores[one])
         )
+
+    async def _points_of(
+        self, people: Sequence[UUID], *, at: Instant
+    ) -> Mapping[UUID, PlayerScore]:
+        """Their points at ``at``, folding only those not folded at it yet."""
+
+        if at != self._read_at:
+            self._read, self._read_at = {}, at
+        unread = [person for person in people if person not in self._read]
+        if unread:
+            self._read.update(await self._scores.scores_for(unread, now=at))
+        return {person: self._read[person] for person in people}
 
     async def level_window(
         self, player_id: UUID, *, sport: Sport, kind: SearchMode, at: Instant

@@ -25,7 +25,7 @@ nothing. Nothing on that read is ever nulled.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -922,12 +922,15 @@ class SetReliabilityFilterRequest(BaseModel):
     """*Play only with players of at least High reliability* — or Medium, or
     off (``docs/adr/0195`` §6, #661)."""
 
-    minimum: ReliabilityBand | None = Field(
+    #: The switch's three positions, and no fourth: the bands a minimum may be
+    #: (the engine's ``RELIABILITY_MINIMUMS``), so a generated client cannot
+    #: send *at least Very high* or *at least Low* (#661).
+    minimum: Literal[ReliabilityBand.MEDIUM, ReliabilityBand.HIGH] | None = Field(
         ...,
         description=(
             "`MEDIUM` or `HIGH` — the band everybody on a court with this player "
             "must be at least — or `null`, the filter off, which every profile "
-            "starts with. Any other band is `reliability_minimum_not_offered`.\n\n"
+            "starts with.\n\n"
             "**Both ways, from then on**: it keeps this player off every court "
             "shared with somebody below it, and keeps that somebody off theirs — "
             "the deal, the deck, posts, *Seat open* and Fill in, the details. "

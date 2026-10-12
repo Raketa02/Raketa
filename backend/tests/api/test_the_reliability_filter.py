@@ -27,7 +27,7 @@ The clock stands on **Monday 5 October 2026, 08:00 in Kraków**; the games are o
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from uuid import UUID
 
 import pytest
@@ -55,6 +55,7 @@ from tests.api.reliability_world import (
     SERGIO_AT_65,
     a_history,
 )
+from tests.api.test_rescues import confirms, refused_rescuer
 from tests.unit.fake_clock import MovableClock
 
 FILTER = "/api/v1/players/me/reliability-filter"
@@ -263,25 +264,38 @@ async def test_a_card_with_sergio_in_is_withheld_from_her_and_hers_from_him(
     assert names_on(sergios[0]) == {"sergio", "ola", "kuba"}
 
 
-async def test_the_details_of_a_card_with_sergio_in_are_not_hers_to_read(
+async def test_the_details_of_a_card_with_the_other_in_are_not_theirs_to_read(
     client, session_factory, clock, club, crowd, group
 ):
+    """His card with him In is not hers to open once her filter is on, and
+    hers with her In is not his — the deck's withholding, as a screen."""
+
     marta, sergio = crowd["marta"], crowd["sergio"]
+    four = (marta, sergio, crowd["ola"], crowd["kuba"])
     his = await makes(
+        session_factory, clock, pool_id=group, club_id=club, versions=(four,)
+    )
+    hers = await makes(
         session_factory,
         clock,
         pool_id=group,
         club_id=club,
-        versions=((marta, sergio, crowd["ola"], crowd["kuba"]),),
+        start=SAT_18,
+        versions=(four,),
     )
     assert (await says_yes(client, sergio, his)).status_code == 200
+    assert (await says_yes(client, marta, hers)).status_code == 200
     before = await client.get(f"/api/v1/proposals/{his}", headers=marta["headers"])
 
     await switches_on(client, marta)
-    after = await client.get(f"/api/v1/proposals/{his}", headers=marta["headers"])
+    hers_of_his = await client.get(f"/api/v1/proposals/{his}", headers=marta["headers"])
+    his_of_hers = await client.get(
+        f"/api/v1/proposals/{hers}", headers=sergio["headers"]
+    )
 
     assert before.status_code == 200, before.text
-    assert (after.status_code, code_of(after)) == (404, "proposal_not_found")
+    for read in (hers_of_his, his_of_hers):
+        assert (read.status_code, code_of(read)) == (404, "proposal_not_found")
 
 
 # --------------------------------------------------------------------------- #
@@ -539,17 +553,25 @@ async def test_her_post_never_reaches_sergio_and_his_never_reaches_her(
         assert answer.status_code == 201, answer.text
         return answer.json()
 
-    grid = await client.get(
-        f"/api/v1/pools/{group}/posting-grid", params=posting, headers=marta["headers"]
-    )
-    [cell] = [
-        cell
-        for row in grid.json()["days"]
-        if row["day"] == SATURDAY.isoformat()
-        for cell in row["cells"]
-        if cell["range"] == "EVENING"
-    ]
-    assert cell["fits_free"] == 3
+    async def fits_free_for(player: dict) -> int:
+        grid = await client.get(
+            f"/api/v1/pools/{group}/posting-grid",
+            params=posting,
+            headers=player["headers"],
+        )
+        assert grid.status_code == 200, grid.text
+        [cell] = [
+            cell
+            for row in grid.json()["days"]
+            if row["day"] == SATURDAY.isoformat()
+            for cell in row["cells"]
+            if cell["range"] == "EVENING"
+        ]
+        return cell["fits_free"]
+
+    # Ola, Kuba and Ewa for each of them — never the other.
+    assert await fits_free_for(marta) == 3
+    assert await fits_free_for(sergio) == 3
 
     hers = await posts(marta, SAT_18)
     assert hers["dealt_to"] == 3
@@ -612,10 +634,46 @@ async def test_a_seat_on_his_game_is_never_offered_to_her_and_on_hers_never_to_h
     assert await fill_in(client, marta, group) == []
     assert await fill_in(client, sergio, group) == []
     assert set(await fill_in(client, zosia, group)) == {his, hers}
-    joined = await client.post(
-        f"/api/v1/bookings/{his}/seats", headers=marta["headers"]
+    # No Seat open card either — she would be one of his seat's best fits.
+    assert his not in ids_of(await deck_of(client, marta, group))
+    assert hers not in ids_of(await deck_of(client, sergio, group))
+    for player, booking in ((marta, his), (sergio, hers)):
+        joined = await client.post(
+            f"/api/v1/bookings/{booking}/seats", headers=player["headers"]
+        )
+        assert (joined.status_code, code_of(joined)) == (409, "rescue_not_offered")
+
+
+async def test_a_seat_kept_for_sergio_before_she_switched_it_on_is_still_his(
+    client, session_factory, payments, clock, mailbox, club, crowd, group
+):
+    """Nerea leaves Marta's Saturday game; Sergio's bank checks his *I'm in*,
+    so the seat is kept for him for thirty minutes (#640). Marta switches her
+    filter on meanwhile — a claim made before stands: he confirms in time and
+    takes the seat."""
+
+    marta, sergio, nerea = crowd["marta"], crowd["sergio"], crowd["nerea"]
+    booking = await books(
+        client,
+        session_factory,
+        clock,
+        group=group,
+        club=club,
+        four=(marta, nerea, crowd["ola"], crowd["kuba"]),
+        start=SATURDAY_FIVE,
     )
-    assert (joined.status_code, code_of(joined)) == (409, "rescue_not_offered")
+    left = await client.post(
+        f"/api/v1/bookings/{booking}/departure", headers=nerea["headers"]
+    )
+    assert left.status_code == 200, left.text
+    answer = await refused_rescuer(client, payments, booking, sergio)
+
+    await switches_on(client, marta)
+    clock.move(timedelta(minutes=20))
+    confirmed = await confirms(client, payments, sergio, answer["your_payment"])
+
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()["booked"]["booking_id"] == booking
 
 
 # --------------------------------------------------------------------------- #

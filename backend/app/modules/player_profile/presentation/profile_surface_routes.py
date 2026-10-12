@@ -491,13 +491,6 @@ async def change_gender_preference(
     "/reliability-filter",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
-        status.HTTP_400_BAD_REQUEST: {
-            "model": ErrorResponse,
-            "description": (
-                "`reliability_minimum_not_offered` — the filter is at least "
-                "`MEDIUM`, at least `HIGH`, or `null`."
-            ),
-        },
         status.HTTP_404_NOT_FOUND: _NO_PROFILE,
         status.HTTP_409_CONFLICT: _LOST_THE_RACE,
     },

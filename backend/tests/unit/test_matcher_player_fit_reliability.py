@@ -12,7 +12,7 @@ over HTTP in ``tests/api/test_the_reliability_filter.py``.
 from __future__ import annotations
 
 from collections.abc import Collection, Mapping
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from app.bootstrap.composition import build_ruleset
@@ -207,3 +207,34 @@ async def test_one_read_of_the_points_serves_every_kind_of_a_deal():
             people, sport=Sport.PADEL, kind=kind, at=NOW
         )
     assert by_kind[SearchMode.FOR_FUN] == {pair(MARTA, SERGIO)}
+
+
+async def test_a_deal_folds_each_persons_points_once_however_often_it_asks():
+    """A deck read asks the pair rule for its cards, then for the reader's
+    rescues, then for the whole pool: at one instant nobody's points are folded
+    twice — the second ask reads only who the first did not."""
+
+    fit, points = a_fit({MARTA: ReliabilityBand.HIGH})
+
+    await unfit(fit, MARTA, SERGIO)
+    await unfit(fit, MARTA)
+    await unfit(fit, MARTA, SERGIO, NEREA, IVAN)
+    await fit.unfit_pairs_by_kind(
+        (SERGIO, IVAN), sport=Sport.PADEL, kinds=list(SearchMode), at=NOW
+    )
+
+    assert points.reads == [frozenset((MARTA, SERGIO)), frozenset((NEREA, IVAN))]
+
+
+async def test_another_instant_reads_the_points_afresh():
+    fit, points = a_fit({MARTA: ReliabilityBand.HIGH})
+
+    await unfit(fit, MARTA, SERGIO)
+    await fit.unfit_pairs(
+        (MARTA, SERGIO),
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        at=instant(NOW + timedelta(minutes=1)),
+    )
+
+    assert points.reads == [frozenset((MARTA, SERGIO))] * 2

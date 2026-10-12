@@ -63,19 +63,19 @@ class FiltersInTheGroups:
         minimums = {
             person: await self._minimum_of(person) for person in (player_id, *mates)
         }
-        mine = minimums[player_id]
-        if mine is None and not any(minimums[mate] for mate in mates):
+        readers_minimum = minimums[player_id]
+        if readers_minimum is None and not any(minimums[mate] for mate in mates):
             return ReliabilityFilter(
                 minimum=None, hides=0, of=len(mates), back_with_everyone=None
             )
 
         scores = await self._scores.scores_for([player_id, *mates], now=now)
-        own = scores[player_id]
+        readers_score = scores[player_id]
         hides = sum(
             1
             for mate in mates
             if not passes_reliability_minimum(
-                mine, band=scores[mate].band, is_new=scores[mate].is_new
+                readers_minimum, band=scores[mate].band, is_new=scores[mate].is_new
             )
         )
         kept_off_by: list[ReliabilityBand] = [
@@ -83,11 +83,11 @@ class FiltersInTheGroups:
             for mate in mates
             if (minimum := minimums[mate]) is not None
             and not passes_reliability_minimum(
-                minimum, band=own.band, is_new=own.is_new
+                minimum, band=readers_score.band, is_new=readers_score.is_new
             )
         ]
         return ReliabilityFilter(
-            minimum=mine,
+            minimum=readers_minimum,
             hides=hides,
             of=len(mates),
             # The highest of them: reaching it passes every one at once.

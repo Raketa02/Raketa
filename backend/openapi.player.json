@@ -1556,16 +1556,6 @@
           "204": {
             "description": "Successful Response"
           },
-          "400": {
-            "description": "`reliability_minimum_not_offered` \u2014 the filter is at least `MEDIUM`, at least `HIGH`, or `null`.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "404": {
             "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
             "content": {
@@ -14006,13 +13996,18 @@
           "minimum": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ReliabilityBand"
+                "type": "string",
+                "enum": [
+                  "MEDIUM",
+                  "HIGH"
+                ]
               },
               {
                 "type": "null"
               }
             ],
-            "description": "`MEDIUM` or `HIGH` \u2014 the band everybody on a court with this player must be at least \u2014 or `null`, the filter off, which every profile starts with. Any other band is `reliability_minimum_not_offered`.\n\n**Both ways, from then on**: it keeps this player off every court shared with somebody below it, and keeps that somebody off theirs \u2014 the deal, the deck, posts, *Seat open* and Fill in, the details. **New passes every minimum.** Yeses already given stand, and booked games never change."
+            "title": "Minimum",
+            "description": "`MEDIUM` or `HIGH` \u2014 the band everybody on a court with this player must be at least \u2014 or `null`, the filter off, which every profile starts with.\n\n**Both ways, from then on**: it keeps this player off every court shared with somebody below it, and keeps that somebody off theirs \u2014 the deal, the deck, posts, *Seat open* and Fill in, the details. **New passes every minimum.** Yeses already given stand, and booked games never change."
           }
         },
         "type": "object",

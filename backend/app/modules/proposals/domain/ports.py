@@ -345,12 +345,14 @@ class PlayerFit(Protocol):
         sport: Sport,
         kinds: Sequence[SearchMode],
         at: Instant,
+        reliability_filter: bool = True,
     ) -> Mapping[SearchMode, frozenset[frozenset[UUID]]]:
         """``unfit_pairs`` for each of ``kinds`` over one reading of the
         players — **one read of their points per deal** (``docs/adr/0195`` §6).
         Whether a pair fits is about that pair alone, so a caller asking about
         everybody a deal could seat, of every kind, is answered each kind's
-        pairs as if it had asked that kind alone."""
+        pairs as if it had asked that kind alone. ``reliability_filter`` as
+        ``unfit_pairs``'."""
         ...
 
     async def level_window(
