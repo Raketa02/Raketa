@@ -69,7 +69,6 @@ from app.modules.clubs.domain.value_objects import (
 )
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
-from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.modules.groups.domain.group import Group
 from app.modules.groups.domain.value_objects import (
     DeclaredSports,
@@ -722,8 +721,8 @@ async def test_both_live_strands_cross_as_their_counts_and_their_figure(
 ):
     """**The raw pair per row, and the figure derived from it.**
 
-    Two plans, one of which produced a game and one of which nobody ever
-    claimed; two booked games, one kept and one left after its cut-off with
+    Two games, one played and one the subject was reported not to have come
+    to; two booked games, one kept and one left after its cut-off with
     nobody taking the seat (#544). Each strand is a half, and the pair is what
     makes *one of two* and *twenty of forty* different claims on a sheet.
     """
@@ -731,7 +730,7 @@ async def test_both_live_strands_cross_as_their_counts_and_their_figure(
     reliability = implementation.build(session)
     subject, other = new_uuid(), new_uuid()
     await _a_played_plan(session, subject, other)
-    await _a_ghosted_plan(session, subject, other)
+    await _a_game_not_come_to(session, subject, other)
     await _a_booked_game(session, subject, starts=_ago(days=4))
     await _a_booked_game(session, subject, starts=_ago(days=3), left=True)
 
@@ -761,7 +760,7 @@ async def test_the_pill_is_the_blend_the_rows_reproduce(implementation, session)
     reliability = implementation.build(session)
     subject, other = new_uuid(), new_uuid()
     await _a_played_plan(session, subject, other)
-    await _a_ghosted_plan(session, subject, other)
+    await _a_game_not_come_to(session, subject, other)
     await _a_booked_game(session, subject, starts=_ago(days=4))
 
     panel = await reliability.reliability_of(subject, now=_now())
@@ -1013,12 +1012,6 @@ def _ago(**offset) -> Instant:
     return instant(datetime.now(timezone.utc) - timedelta(**offset))
 
 
-#: Old enough that a plan made then has closed its entry window on silence. Read
-#: off ``games``' own two windows rather than typed, so a change to either moves
-#: this with it instead of leaving a test that passes for the wrong reason.
-_LONG_ENOUGH_TO_GHOST = PLAN_HORIZON + ENTRY_GRACE + timedelta(days=1)
-
-
 def _a_plan(one: UUID, other: UUID, *, at: Instant) -> Game:
     return Game.planned(
         game_id=new_uuid(),
@@ -1054,14 +1047,31 @@ async def _a_played_plan(session, one: UUID, other: UUID) -> None:
     await session.commit()
 
 
-async def _a_ghosted_plan(session, one: UUID, other: UUID) -> None:
-    """A plan nobody ever claimed, old enough that its entry window has shut.
+async def _a_game_not_come_to(session, absent: UUID, reporter: UUID) -> None:
+    """A booked game ``reporter`` came to and said ``absent`` did not, the
+    report undisputed for its day (#547) — a miss on *shows up* for the player
+    reported and nobody else. Since #655 it is the only one: a full court
+    nobody recorded is played."""
 
-    A ghost is charged to **everybody who was on that court**: a dissolved
-    arrangement is a fact about the court, and there is nobody in it to blame.
-    """
-
-    game = _a_plan(one, other, at=instant(_now() - _LONG_ENOUGH_TO_GHOST))
+    starts = _ago(days=6)
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=SPORT,
+        kind=GameKind.COUNTED,
+        window=None,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=absent),
+                Seating(side=GameSide.B, player_id=reporter),
+            )
+        ),
+        occurred_at=instant(starts - timedelta(days=2)),
+        starts_at=starts,
+    )
+    game.report_no_show(
+        by=reporter, absent=absent, occurred_at=instant(starts + timedelta(minutes=30))
+    )
     await build_game_repository(
         session=session,
         event_store=build_domain_event_store(session),

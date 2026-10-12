@@ -156,10 +156,10 @@ async def test_her_evenings_are_on_her_record_with_a_mixed_run_and_her_stars(
     body = record.json()
     assert body["skill"]["sport"] == "TENNIS"
     assert sorted(set(body["skill"]["last_five"])) == ["LOSS", "WIN"]
-    assert body["variety"] == {"distinct_opponents": 3, "times_on_court": 5}
+    assert body["variety"] == {"distinct_opponents": 3, "times_on_court": 6}
     assert body["sportsmanship"] == {"average": 4.5, "raters": 2}
     strands = {row["strand"]: row for row in body["reliability"]["strands"]}
-    assert (strands["SHOWS_UP"]["good"], strands["SHOWS_UP"]["opportunities"]) == (5, 6)
+    assert (strands["SHOWS_UP"]["good"], strands["SHOWS_UP"]["opportunities"]) == (6, 6)
 
 
 async def test_every_evening_is_over_before_her_week_began(
@@ -206,7 +206,7 @@ async def test_her_evenings_have_ended_and_left_her_home(
     home = await client.get(HOME, headers=headers)
     statuses = await statuses_on_the_details(client, session_factory, headers)
 
-    assert statuses == sorted(["COUNTED"] * 5 + ["NEVER_PLAYED"]), statuses
+    assert statuses == sorted(["COUNTED"] * 5 + ["PLAYED_NO_SCORE"]), statuses
     assert home.status_code == 200, home.text
     assert home.json()["games"] == []
     assert home.json()["needing_you"] == 0

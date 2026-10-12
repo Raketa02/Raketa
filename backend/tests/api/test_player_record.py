@@ -41,12 +41,10 @@ from app.modules.blocks.presentation.dependencies import get_block_query
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
-from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.modules.player_score.domain.strands import (
     PUBLISHED_WEIGHTS,
     out_of_a_hundred,
 )
-from app.modules.player_profile.domain.weekly_hours import Window
 from app.modules.rating.domain.events import RatingInitialised
 from app.modules.sportsmanship.domain.card import (
     SettledCourt,
@@ -142,34 +140,35 @@ async def also_rated_in(session_factory, player_id: UUID, *, sport: Sport, mu: f
     )
 
 
-async def a_ghosted_plan(session_factory, a: UUID, b: UUID, *, sport: Sport):
-    """A plan nobody ever claimed, old enough that its entry window has shut.
+async def a_game_not_come_to(
+    session_factory, absent: UUID, reporter: UUID, *, sport: Sport
+):
+    """A booked game ``reporter`` came to and said ``absent`` did not, the
+    report undisputed for its day (#547).
 
-    The miss half of *shows up*, and it is charged to **everybody who was on that
-    court**: a dissolved arrangement is a fact about the court and there is
-    nobody in it to blame. The age is read off ``games``' own two windows rather
-    than typed, so a change to either moves this with it.
+    The miss half of *shows up*, charged to **the player reported** and to
+    nobody else on that court. Since #655 it is the only one: a full court
+    nobody recorded is played, and nothing is charged for the silence.
     """
 
-    # A day past the far edge of both windows, so the plan's entry window has
-    # certainly shut. Read off ``games``' own two constants rather than typed, so
-    # a change to either moves this with it.
-    made = instant(
-        datetime.now(timezone.utc) - PLAN_HORIZON - ENTRY_GRACE - timedelta(days=1)
-    )
+    starts = instant(datetime.now(timezone.utc) - timedelta(days=6))
     game = Game.planned(
         game_id=new_uuid(),
         challenge_id=new_uuid(),
         sport=sport,
         kind=GameKind.COUNTED,
-        window=Window.TODAY,
+        window=None,
         line_up=LineUp.of(
             (
-                Seating(side=GameSide.A, player_id=a),
-                Seating(side=GameSide.B, player_id=b),
+                Seating(side=GameSide.A, player_id=absent),
+                Seating(side=GameSide.B, player_id=reporter),
             )
         ),
-        occurred_at=made,
+        occurred_at=instant(starts - timedelta(days=2)),
+        starts_at=starts,
+    )
+    game.report_no_show(
+        by=reporter, absent=absent, occurred_at=instant(starts + timedelta(minutes=30))
     )
     async with session_factory() as session:
         await build_game_repository(
@@ -911,15 +910,17 @@ async def test_each_strand_crosses_as_its_raw_pair_and_its_own_figure(
     """**A perfect record over nine and one over forty are different claims**,
     and a bar alone hides which — so the two counts cross beside the figure.
 
-    One plan that produced a game and one nobody ever claimed: an opportunity
-    each, one of them good.
+    One game played and one they were reported not to have come to: an
+    opportunity each, one of them good.
     """
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
     await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
-    await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
+    await a_game_not_come_to(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL
+    )
 
     body = (await record_of(client, searcher["token"], subject)).json()
 
@@ -944,7 +945,9 @@ async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
     await players.a_confirmed_game(
         session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
     )
-    await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
+    await a_game_not_come_to(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL
+    )
     await a_kept_booked_game(session_factory, subject)
 
     reliability = (await record_of(client, searcher["token"], subject)).json()[
@@ -1015,7 +1018,9 @@ async def test_your_own_record_carries_the_number_that_decides_your_exposure(
     nobody can fix, and a player working their record back up must be able to
     watch it lift."""
 
-    await a_ghosted_plan(session_factory, searcher["id"], uuid4(), sport=Sport.PADEL)
+    await a_game_not_come_to(
+        session_factory, searcher["id"], uuid4(), sport=Sport.PADEL
+    )
 
     body = (await own_record(client, searcher["token"])).json()
 
@@ -1027,8 +1032,8 @@ async def test_your_own_record_carries_the_number_that_decides_your_exposure(
         ],
     }
     # **And the two absences are different questions**, which this arrangement
-    # is the proof of: a plan that dissolved is an opportunity and is not a game
-    # anybody played, so there are rows here and no variety at all. `0` is a
+    # is the proof of: a game they did not come to is an opportunity and is not
+    # a game they played, so there are rows here and no variety at all. `0` is a
     # measured figure on a row that exists; an omitted zone is not a nought.
     assert "variety" not in body
 
@@ -1247,7 +1252,9 @@ async def test_stars_move_no_part_of_the_reliability_pill(
     """
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
-    await a_ghosted_plan(session_factory, subject, searcher["id"], sport=Sport.PADEL)
+    await a_game_not_come_to(
+        session_factory, subject, searcher["id"], sport=Sport.PADEL
+    )
     await a_kept_booked_game(session_factory, subject)
 
     before = (await record_of(client, searcher["token"], subject)).json()["reliability"]

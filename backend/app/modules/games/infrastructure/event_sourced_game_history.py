@@ -7,7 +7,7 @@ the people on the court now**: the streams read finds everybody a court has ever
 seated, and the folded line-up is what says who is still on it — a leaver is
 nobody's attendee, and their list no longer holds the game.
 
-**Nothing is projected.** Every fact these reads publish — played or a ghost,
+**Nothing is projected.** Every fact these reads publish — played or missed,
 counted, confirmed, won or lost — is folded from the record against the caller's
 clock, so a game past a deadline has moved in this answer whether or not anything
 swept it. A projection storing the standing would be right until a deadline
@@ -38,7 +38,6 @@ from app.modules.games.domain.ports import (
     Attendance,
     CountedResult,
     OpponentVariety,
-    PlayedOutcome,
     ResultAnswering,
 )
 from app.modules.games.domain.standing import GameStanding
@@ -120,7 +119,7 @@ class EventSourcedGameHistory:
     async def attendance_for(
         self, player_ids: Collection[UUID], *, now: Instant
     ) -> Mapping[UUID, Attendance]:
-        """What became of each of these people's arrangements — played, or ghosted.
+        """What became of each of these people's arrangements — played, or missed.
 
         **Counted per person and never per pair**: a four played once is one
         evening and three counterparts, so a *shows up* strand summed pair by
@@ -131,10 +130,11 @@ class EventSourcedGameHistory:
         say they had.
 
         **A booked game somebody did not come to is read per player** (#547):
-        a report that stood its day is a miss for the player it named — the
-        same miss a ghost is, which with the broken booked game on *keeps
-        plans* makes it the strongest mark on a record — and a game played for
-        everybody else on the court, who came.
+        a report that stood its day is a miss for the player it named — which
+        with the broken booked game on *keeps plans* makes it the strongest
+        mark on a record — and a game played for everybody else on the court,
+        who came. **It is the only miss left**: a full court nobody recorded is
+        played for all of it (#655; ``docs/adr/0195`` §2).
         """
 
         wanted = set(player_ids)
@@ -142,7 +142,7 @@ class EventSourcedGameHistory:
             return {}
 
         played: dict[UUID, int] = defaultdict(int)
-        ghosts: dict[UUID, int] = defaultdict(int)
+        missed: dict[UUID, int] = defaultdict(int)
         latest: dict[UUID, Instant] = {}
         for game in await self._games_among(wanted):
             if game.standing_at(now) is GameStanding.NO_SHOW:
@@ -152,26 +152,22 @@ class EventSourcedGameHistory:
                 at = game.became_history_at(now) or game.planned_at
                 for player_id in game.line_up.players & wanted:
                     if player_id in absent:
-                        ghosts[player_id] += 1
+                        missed[player_id] += 1
                     else:
                         played[player_id] += 1
                     latest[player_id] = max(at, latest.get(player_id, at))
                 continue
-            settled = _settled_arrangement(game, now)
-            if settled is None:
+            moment = _played_for_the_record_at(game, now)
+            if moment is None:
                 continue
-            outcome, at = settled
             for player_id in game.line_up.players & wanted:
-                if outcome is PlayedOutcome.PLAYED:
-                    played[player_id] += 1
-                else:
-                    ghosts[player_id] += 1
-                latest[player_id] = max(at, latest.get(player_id, at))
+                played[player_id] += 1
+                latest[player_id] = max(moment, latest.get(player_id, moment))
 
         return {
             player_id: Attendance(
                 played=played[player_id],
-                ghosts=ghosts[player_id],
+                missed=missed[player_id],
                 last_at=at,
             )
             for player_id, at in latest.items()
@@ -241,8 +237,8 @@ class EventSourcedGameHistory:
         size.
 
         **Which games count is still ``_counted_and_played``'s**, written once
-        below: a friendly and a ghost put nobody in either half, so a face can
-        never enter the count without an evening under it.
+        below: a friendly and a game nobody played put nobody in either half,
+        so a face can never enter the count without an evening under it.
 
         **Nothing is trimmed and nothing is windowed.** The whole record is the
         statistic: this caller asked for a career.
@@ -289,8 +285,10 @@ def _counted_and_played(game: Game, now: Instant) -> bool:
 
     **Counted rather than a friendly**, because the people who arranged a
     friendly said it was not evidence; **played rather than merely arranged**,
-    because a plan nobody claimed is not an evening. An unscored game passes
-    both: it is an evening and it is not evidence, and those are two questions.
+    because a game called off or started short is not an evening. A game with
+    no agreed score passes both — disputed, or a full court nobody recorded
+    (*Played · no score*, #655) — because it is an evening and it is not
+    evidence, and those are two questions.
 
     Written once and read by the variety fold, so both halves of the pair a
     record prints come from one idea of what a counted game is.
@@ -299,37 +297,29 @@ def _counted_and_played(game: Game, now: Instant) -> bool:
     return game.kind is GameKind.COUNTED and game.was_played_at(now)
 
 
-def _settled_arrangement(
-    game: Game, now: Instant
-) -> tuple[PlayedOutcome, Instant] | None:
-    """What this game says about the people on its court, **with the moment the
-    arrangement settled.**
+def _played_for_the_record_at(game: Game, now: Instant) -> Instant | None:
+    """When this game became an evening the people on its court played, or
+    ``None`` while it says nothing about them.
 
-    Three answers and not two: a game whose entry window is still open says
-    **nothing yet**, and is left out rather than filed as either.
+    A game whose entry window is still open says **nothing yet**, and is left
+    out rather than filed as played. **A game called off or started short says
+    nothing at all, for good** (``docs/adr/0163`` §3, #544): it is not an
+    evening, and filing it against the people who stayed would price somebody
+    else's departure through them, which #411 rule 7 refuses. **A full court
+    nobody recorded is played** once its window closes (#655): there is no
+    ghost any more, and silence costs nobody anything.
 
-    **And a called-off game says nothing at all, for good** (``docs/adr/0163``
-    §3). It is not an evening — nobody played — and it is not a ghost, because a
-    ghost is a window closing on silence and this was an act somebody took while
-    a seat was open. Filing it as a ghost would charge the people who stayed for
-    somebody else's departure, which #411 rule 7 refuses.
-
-    The moment is when the *opportunity closed*, and for a ghost that is not
-    when it was planned — the plan was made a week before the entry window shut
-    on it. Dating a ghost from its plan would age a record faster than the
-    record aged.
+    The moment is when the *opportunity closed* — the entry, or a window
+    closing on nobody — and never when the game was booked, which would age a
+    record faster than the record aged.
     """
 
-    if game.standing_at(now) is GameStanding.NEVER_PLAYED:
-        outcome = PlayedOutcome.PLANNED_NEVER_PLAYED
-    elif game.was_played_at(now):
-        outcome = PlayedOutcome.PLAYED
-    else:
+    if not game.was_played_at(now):
         return None
     # The moment is the aggregate's own fold — one date for one game, wherever
-    # it is read — and it is set for both outcomes above, so the narrowing is
+    # it is read — and it is set for every played standing, so the narrowing is
     # stated rather than asserted.
-    return outcome, game.became_history_at(now) or game.planned_at
+    return game.became_history_at(now) or game.planned_at
 
 
 __all__ = ["EventSourcedGameHistory"]

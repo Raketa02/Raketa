@@ -2,7 +2,7 @@
 
 **A game with a seat open can be called off**, and nothing else can. ``call_off``
 writes ``GameCalledOff``; the standing reads it **first**; it is an end —
-settled, and refusing every act — and it is **neither played nor a ghost**.
+settled, and refusing every act — and it is **never played**.
 Driven on the aggregate and on the use case the call-off hands over to, with a
 hand-written repository, because what is under test is *what the record does*
 rather than anything about a database.
@@ -176,12 +176,12 @@ def test_a_game_that_was_not_called_off_names_nobody():
     game = _a_reopened_game()
     assert game.called_off_by is None
 
-    ghost = _a_reopened_game()
+    short = _a_reopened_game()
     past_the_window = instant(
         PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE + timedelta(hours=1)
     )
-    assert ghost.standing_at(past_the_window) is GameStanding.NEVER_PLAYED
-    assert ghost.called_off_by is None
+    assert short.standing_at(past_the_window) is GameStanding.STARTED_SHORT
+    assert short.called_off_by is None
 
 
 # ---------------------------------------------------------------------------
@@ -190,8 +190,8 @@ def test_a_game_that_was_not_called_off_names_nobody():
 
 
 def test_only_a_court_with_a_seat_open_can_be_called_off():
-    """A full court that will not play lets its window lapse into *Never
-    played*, as today (#411 rule 4)."""
+    """A full court nobody records lets its window lapse into *Played · no
+    score* (#655)."""
 
     whole = _a_game()
 
@@ -201,18 +201,19 @@ def test_only_a_court_with_a_seat_open_can_be_called_off():
 
 
 def test_a_game_that_has_ended_by_its_clock_cannot_be_called_off():
-    """A ghost stays a ghost: a call-off that reached it would flip a standing
-    the platform has already drawn, and un-charge a strand after the fact."""
+    """An end its clock reached stays that end: a call-off that reached it
+    would flip a standing the platform has already drawn. A court with no hour
+    whose window closes on a seat still open went ahead short (#655)."""
 
-    ghost = _a_reopened_game()
+    short = _a_reopened_game()
     past_the_window = instant(
         PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE + timedelta(hours=1)
     )
-    assert ghost.standing_at(past_the_window) is GameStanding.NEVER_PLAYED
+    assert short.standing_at(past_the_window) is GameStanding.STARTED_SHORT
 
     with pytest.raises(NotAGameToCallOff):
-        ghost.call_off(by=ANA, occurred_at=past_the_window)
-    assert ghost.standing_at(past_the_window) is GameStanding.NEVER_PLAYED
+        short.call_off(by=ANA, occurred_at=past_the_window)
+    assert short.standing_at(past_the_window) is GameStanding.STARTED_SHORT
 
 
 def test_a_game_already_called_off_cannot_be_called_off_again():
@@ -261,9 +262,9 @@ def test_somebody_whose_seat_is_the_open_one_may_call_it_off():
 
 
 def test_a_called_off_game_refuses_every_act():
-    """The entry names the end it met, with its own code, as a ghost's entry
-    does; the acceptance meets the umbrella, as it does on a ghost; and nothing
-    on the line-up moves."""
+    """The entry names the end it met, with its own code, as a late entry
+    does; the acceptance meets the umbrella, as it does on every settled game;
+    and nothing on the line-up moves."""
 
     game = _a_reopened_game()
     game.call_off(by=ANA, occurred_at=at(2))
@@ -354,24 +355,26 @@ async def test_a_game_already_called_off_is_not_reached_by_a_second_call_off():
     assert game.called_off_at == at(2), "the first end stands"
 
 
-async def test_a_ghost_is_no_longer_stepped_over():
+async def test_a_game_nobody_recorded_is_not_stepped_over():
     """The step-over a reopened challenge court needed (``docs/adr/0163`` §6)
     went with the challenges (#578): nothing calls off a game whose entry
-    window has closed, so one arriving is a broken precondition and the
-    aggregate's refusal fires and rolls the act back."""
+    window has closed, so one arriving — at a full court nobody recorded,
+    *Played · no score* (#655) — is a broken precondition and the aggregate's
+    refusal fires and rolls the act back."""
 
-    ghost = _a_reopened_game()
-    games = _Remembering(ghost)
+    unrecorded = _a_game()
+    games = _Remembering(unrecorded)
     past_the_window = instant(
         PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE + timedelta(hours=1)
     )
+    assert unrecorded.standing_at(past_the_window) is GameStanding.PLAYED_NO_SCORE
 
     with pytest.raises(NotAGameToCallOff):
         await CallOffGame(games=games).execute(
-            CallOffGameCommand(challenge_id=ghost.challenge_id, called_by=None),
+            CallOffGameCommand(challenge_id=unrecorded.challenge_id, called_by=None),
             occurred_at=past_the_window,
         )
-    assert ghost.called_off_at is None
+    assert unrecorded.called_off_at is None
 
 
 async def test_a_played_game_is_not_stepped_over():
@@ -405,8 +408,8 @@ def test_a_game_became_history_at_the_entry_the_window_or_the_call_off():
     The seat change refuses on the standing, the deck's cool-off and the
     pairwise record run from the moment — so the moment is folded on the
     aggregate, once. Three endings: the entry that said *we played* whatever
-    the score does afterwards, the window closing on a plan nobody claimed,
-    and the call-off, dated from nothing but itself.
+    the score does afterwards, the window closing on a full court nobody
+    recorded (#655), and the call-off, dated from nothing but itself.
     """
 
     played = _a_game()
@@ -416,11 +419,11 @@ def test_a_game_became_history_at_the_entry_the_window_or_the_call_off():
     # the entry: a proposal window closing does not re-date the evening.
     assert played.became_history_at(at(48)) == at(2)
 
-    ghost = _a_game()
+    unrecorded = _a_game()
     window_closes = instant(PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE)
-    assert ghost.became_history_at(instant(window_closes + timedelta(hours=1))) == (
-        window_closes
-    )
+    assert unrecorded.became_history_at(
+        instant(window_closes + timedelta(hours=1))
+    ) == (window_closes)
 
     called_off = _a_reopened_game()
     called_off.call_off(by=ANA, occurred_at=at(2))

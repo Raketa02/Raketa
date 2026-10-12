@@ -15,15 +15,16 @@ in ``games`` has, which is bounded by how many games the platform has recorded;
 the index that fixes it belongs with the first query that measures it.
 
 **``RATEABLE`` is ``games``' two words intersected, and the intersection is the
-whole rule.** *Settled* over there includes a plan nobody ever claimed — a ghost —
+whole rule.** *Settled* over there includes a game called off or started short,
 and there is nobody to rate for an evening that did not happen; *played* includes
 a game whose score is still being argued over, and asking how somebody was while
 they are still disagreeing with you about the score is asking at the worst
-possible moment. What is left is a game that happened and is over: confirmed, or
-unscored because two sides could not agree and both windows closed. **An unscored
-game is in on purpose** — two people who cannot agree what the score was were
-still on a court together for two hours, and how that went is exactly the thing
-this context exists to collect.
+possible moment. What is left is a game that happened and is over: confirmed,
+disputed because two sides named different winners, or **played with no score**
+because a full court nobody recorded had its window close (#655). **A game with
+no agreed score is in on purpose** — two people who cannot agree what the score
+was, or four who never said, were still on a court together, and how that went
+is exactly the thing this context exists to collect.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ from uuid import UUID
 from app.kernel import Instant
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.ports import GameDirectory
-from app.modules.games.domain.standing import PLAYED, SETTLED
+from app.modules.games.domain.standing import PLAYED, SETTLED, GameStanding
 from app.modules.sportsmanship.domain.card import SettledCourt
 
 #: The standings a card may be drawn for: **played, and over.** Derived from
@@ -87,9 +88,15 @@ class GamesSettledCourts:
         cannot come to two answers depending on which route asked.
         """
 
-        if game.standing_at(now) not in RATEABLE:
+        standing = game.standing_at(now)
+        if standing not in RATEABLE:
             return None
         played_at = game.played_at
+        if played_at is None and standing is GameStanding.PLAYED_NO_SCORE:
+            # **A full court nobody recorded was played at its hour** (#655):
+            # nobody said when, and the booked hour is the evening's own
+            # moment — the only one there is.
+            played_at = game.starts_at
         if played_at is None:
             # A game nobody said they played: ``UNSCORED`` is reached only by a
             # booked game every report of not coming to was disputed (#547) —

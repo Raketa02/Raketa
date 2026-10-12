@@ -641,7 +641,7 @@ async def _entry_closes_at(client, token: str) -> datetime:
     return datetime.fromisoformat(game["entry_closes_at"])
 
 
-async def test_a_never_played_games_room_ends_when_its_entry_window_closes(
+async def test_an_unrecorded_games_room_ends_when_its_entry_window_closes(
     client, clock, a_room
 ):
     """``docs/adr/0153`` §2 — measured from the booked hour: the instant *we

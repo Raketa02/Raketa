@@ -2,8 +2,10 @@
 
 **A game is born from a booking, and a result is the record that it happened**
 (``docs/adr/0137``, #541). Until somebody says *we played* the game is a plan,
-and past its entry window a plan nobody claimed is a **ghost** — the outcome
-familiarity must be able to tell from a real one.
+and past its entry window a full court nobody recorded was **played all the
+same** — *Played · no score*, with no Level moving (#655; ``docs/adr/0195``
+§2): it was booked and paid for, and nothing is charged to anybody for the
+silence.
 
 **Nothing here stores a standing.** ``standing_at`` folds the record against a
 clock the caller supplies, so *is this confirmed* answers the same at every
@@ -26,8 +28,7 @@ still open (#544) — and the only act here that announces an end: ``CALLED_OFF`
 is the fourth end, a decision rather than a reading of the clock, folded off
 ``GameCalledOff`` and read before the clock, **and it says who**
 (``called_off_by``, ``docs/adr/0172`` §4) — nobody, when it is the cut-off. It
-is neither an evening nor a ghost, and every read that counts either leaves it
-out.
+is not an evening, and every read that counts one leaves it out.
 
 **A booked game can say somebody did not come** (#547; the mechanics §15.3).
 The players who came report them where they would enter the result, and the
@@ -282,8 +283,8 @@ class Game:
         seat still open (#544), where ``by`` is nobody. What this refuses is
         the aggregate's own invariant, kept whether or not the caller already
         guarantees it: **a game awaiting its entry with a seat open**, and
-        nothing else. A court standing whole that will not play lets its window
-        lapse into *Never played*; a game already ended by its clock is never
+        nothing else. A court standing whole that nobody records lapses into
+        *Played · no score* (#655); a game already ended by its clock is never
         un-ended, because the platform has drawn that card. And a named caller
         **was on the court**: on it now, or the one whose leaving opened a seat
         that is still open — the one rule every act here shares, read at the
@@ -371,7 +372,7 @@ class Game:
 
         if self.played_at is None:
             if self.called_off_at is not None:
-                # **Asked before the window**, as the ghost's refusal is asked
+                # **Asked before the window**, as the window's refusal is asked
                 # before the open seat: the end this game met is the answer,
                 # and its window stopped mattering the moment it was called off.
                 raise TheGameWasCalledOff()
@@ -387,7 +388,7 @@ class Game:
                 # **A score on a court with a seat open is refused**
                 # (``docs/adr/0162`` §3): a side the engine cannot price, and
                 # a seat with no outcome to give anyone. Asked after the
-                # window, so a ghost is told it is a ghost.
+                # window, so a score too late is told it is too late.
                 raise TheCourtHasAnOpenSeat()
             self._record_that(
                 GamePlayed(game_id=self.game_id, said_by=by, occurred_at=occurred_at)
@@ -498,7 +499,8 @@ class Game:
             raise TheGameHasNotStarted()
         if self.played_at is not None:
             raise AResultIsAlreadyEntered()
-        if standing in SETTLED and standing is not GameStanding.NEVER_PLAYED:
+        if standing in SETTLED and standing is not GameStanding.PLAYED_NO_SCORE:
+            # A game nobody recorded is told its window closed, as a score is.
             raise TheResultIsSettled()
         if occurred_at >= self.entry_closes_at:
             raise TheEntryWindowHasClosed()
@@ -583,7 +585,8 @@ class Game:
         True from the entry onward and for every ending after it, because *an
         unscored game is an evening, not evidence*: it counts toward how much
         somebody has played and toward who they have played with, and only the
-        Level is untouched by it.
+        Level is untouched by it. **And true of a full court nobody recorded**
+        once its window has closed (#655): *Played · no score*.
         """
 
         return self.standing_at(now) in PLAYED
@@ -595,10 +598,11 @@ class Game:
         seat change, a chat exit, a pairwise record and a deck's cool-off cannot
         come to four dates for one game. Three endings and one clock: the entry
         that said *we played*, whatever was agreed about the score afterwards;
-        the window closing on silence, which is a ghost; and the call-off, which
-        is an act and is dated from nothing but itself. ``None`` is *awaiting
-        its entry* — the game is still ahead, whether or not its agreed moment
-        has passed, because a plan whose moment has passed can still be moved.
+        the window closing on silence, which is *Played · no score* on a full
+        court (#655); and the call-off, which is an act and is dated from
+        nothing but itself. ``None`` is *awaiting its entry* — the game is
+        still ahead, whether or not its agreed moment has passed, because a
+        plan whose moment has passed can still be moved.
         """
 
         standing = self.standing_at(now)
@@ -608,11 +612,12 @@ class Game:
             # than asserted, because a read is a bad place to raise about a
             # stream somebody else wrote.
             return self.called_off_at or now
-        if standing is GameStanding.NEVER_PLAYED:
+        if standing is GameStanding.PLAYED_NO_SCORE:
             return self.entry_closes_at
         if standing is GameStanding.STARTED_SHORT:
-            # Set for exactly this standing, which only a booked game reaches.
-            return self.starts_at or now
+            # A booked game started short at its hour; a stream with no hour
+            # reaches it only when its window closes on a seat still open.
+            return self.starts_at or self.entry_closes_at
         if self.no_shows:
             # A report is the entry of a game somebody did not come to: it is
             # history from the first one, whatever the reports come to (#547).

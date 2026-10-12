@@ -171,8 +171,9 @@ class Evening:
     #: naming a different winner and neither accepted the other's — **disputed**
     #: (#654): an evening, not evidence.
     she_won: bool | None
-    #: ``False`` is a game nobody said was played: its entry window closed over
-    #: it and it reads as never played.
+    #: ``False`` is a game nobody recorded: its entry window closed over a full
+    #: court and it reads **Played · no score** (#655) — played, for both of
+    #: them, with no Level moving.
     entered: bool = True
     #: ``False`` is the score she never answered. Silence confirms it anyway.
     answered: bool = True
@@ -199,12 +200,15 @@ class Evening:
 #: **Her evenings, oldest first, one a day.** Read down the endings rather than
 #: the scores, because they are what her record draws:
 #:
-#: - six games, five of them played — the second is the one nobody claimed, so
-#:   *shows up* reads 5 of 6;
+#: - six games, all six played — the second is the one nobody recorded, which
+#:   reads *Played · no score* (#655) and costs nobody anything, so *shows up*
+#:   reads 6 of 6;
 #: - five scores put to her and the newest of them unanswered, so *answers about
 #:   results* reads 4 of 5;
-#: - three people over five counted games, so *opponent variety* reads 3 of 5;
-#: - a run of five that mixes wins and losses.
+#: - three people over six counted games, the unrecorded one among them, so
+#:   *opponent variety* reads 3 of 6;
+#: - a run of five that mixes wins and losses — the unrecorded evening has no
+#:   result to put in it.
 HER_EVENINGS: Final[tuple[Evening, ...]] = (
     Evening(opponent="cohort-d-08", she_won=True),
     Evening(opponent="cohort-c-00", she_won=None, entered=False),
@@ -277,7 +281,6 @@ def _refuse_evenings_she_could_not_have_played() -> None:
             f"'{PROTAGONIST_HANDLE}' has to have committed her profile more than "
             f"{WRITTEN_AT_MOST_DAYS_AGO} days ago to have played her evenings"
         )
-    played = [evening for evening in HER_EVENINGS if evening.entered]
     for index, evening in enumerate(HER_EVENINGS):
         member = COHORT.by_handle(evening.opponent)
         if member.committed_days_ago <= WRITTEN_AT_MOST_DAYS_AGO:
@@ -298,7 +301,7 @@ def _refuse_evenings_she_could_not_have_played() -> None:
                 f"not play {HISTORY_SPORT.value} competitively"
             )
         if not evening.entered and evening.was_scored:
-            raise RuntimeError(f"evening {index} was never claimed and has a winner")
+            raise RuntimeError(f"evening {index} was never recorded and has a winner")
         if not evening.answered and not evening.was_scored:
             raise RuntimeError(
                 f"evening {index} was left unanswered and has no winner: silence "
@@ -307,10 +310,10 @@ def _refuse_evenings_she_could_not_have_played() -> None:
     for rater, stars in WHAT_THEY_SAID_ABOUT_HER.items():
         if not lowest <= stars <= highest:
             raise RuntimeError(f"'{rater}' gives her {stars} stars")
-        if all(evening.opponent != rater for evening in played):
-            raise RuntimeError(
-                f"'{rater}' rates her and played her on no evening that happened"
-            )
+        if all(evening.opponent != rater for evening in HER_EVENINGS):
+            # Every evening was played — an unrecorded one too (#655) — so
+            # every one of them draws a card.
+            raise RuntimeError(f"'{rater}' rates her and played her on no evening")
 
 
 _refuse_evenings_she_could_not_have_played()
@@ -974,7 +977,7 @@ async def assert_her_history(
 
 def _ending(game: PlayedGame, *, hers: bool) -> str:
     if not game.entered:
-        return "never claimed"
+        return "nobody recorded it — played, no score"
     if game.won_by is None:
         return "nobody agreed a score"
     won = (

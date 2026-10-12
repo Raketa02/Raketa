@@ -5095,7 +5095,7 @@
               }
             ],
             "title": "Entry Closes At",
-            "description": "When *we played* stops being sayable and the game becomes a game that never happened. ``null`` once somebody has said it happened, and ``null`` on a game that was called off \u2014 the window no longer matters, and a card that shelved itself by it would stay for eight days."
+            "description": "When *we played* stops being sayable, and a full game nobody recorded reads `PLAYED_NO_SCORE`. ``null`` once somebody has said it happened, and ``null`` on a game that was called off \u2014 the window no longer matters, and a card that shelved itself by it would stay for eight days."
           },
           "called_off_at": {
             "anyOf": [
@@ -5196,7 +5196,7 @@
         "type": "string",
         "enum": [
           "AWAITING_ENTRY",
-          "NEVER_PLAYED",
+          "PLAYED_NO_SCORE",
           "AWAITING_ANSWER",
           "CONFIRMED",
           "UNSCORED",

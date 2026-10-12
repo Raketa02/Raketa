@@ -8,11 +8,13 @@ posture ``games/domain/windows.py`` takes for its own three, and this context
 takes it for the same reason.
 
 **Both edges run from ``games``' ``played_at``**, which is *the moment somebody
-said we played* and not the hour four people stood on a court — this platform
-records no such hour, and that one is the only moment it has. It is therefore
+said we played* and not the hour four people stood on a court. It is therefore
 never earlier than the game itself, so *not until the day after it was played* is
 satisfied conservatively: an entry three days late moves the card three days
-later, never earlier.
+later, never earlier. **A full court nobody recorded runs from its booked hour**
+(#655): nobody said when, so the hour is the only moment the evening has, and
+its card is drawn from when its entry window closes — an hour into the day the
+card is open — until a week after the day after.
 
 A window anchored instead to the moment a *score* settled would restart
 somebody's week every time two people argued about it for another day, and would

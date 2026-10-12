@@ -284,9 +284,12 @@ async def test_a_score_nobody_answered_is_counted_once_its_window_closes(
     assert details["needs_you"] is False
 
 
-async def test_a_game_nobody_said_happened_ends_never_played(
+async def test_a_full_game_nobody_recorded_ends_played_no_score(
     client, session_factory, clock, club, four, group
 ):
+    """Played, for all four, and no Level moves (#655): the status that took
+    *Never played*'s place."""
+
     booked = await a_booked_game(
         client, session_factory, clock, club=club, group=group, four=four
     )
@@ -296,7 +299,8 @@ async def test_a_game_nobody_said_happened_ends_never_played(
     details = (await details_of(client, four[0], booked["booking_id"])).json()
     home = await home_of(client, four[0])
 
-    assert details["status"] == "NEVER_PLAYED"
+    assert details["status"] == "PLAYED_NO_SCORE"
+    assert details["uncounted_reason"] is None
     # Its entry closes as its day on Home ends (#613).
     assert home["games"] == []
     assert home["needing_you"] == 0

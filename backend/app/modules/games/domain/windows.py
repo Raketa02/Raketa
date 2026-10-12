@@ -78,15 +78,15 @@ A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR: Final = (
 def entry_closes_at(
     planned_at: Instant, *, starts_at: Instant | None = None
 ) -> Instant:
-    """When *we played* stops being sayable, and the game becomes a ghost.
+    """When *we played* stops being sayable, and a full court nobody recorded
+    reads *Played · no score* (#655).
 
-    Past it the game reads as never played whether or not anything swept it,
-    which is what makes the answer to *did this happen* the same at every
-    instant.
+    Past it the game reads so whether or not anything swept it, which is what
+    makes the answer to *did this happen* the same at every instant.
 
     **A booked game knows its hour** (``starts_at``, #541): it is played then,
     so the grace runs from that hour's end. A booking may be a fortnight ahead,
-    and a week from the moment it was booked would ghost a game before it was
+    and a week from the moment it was booked would end a game before it was
     played. A game with no hour — a stream written before bookings — has its
     week; a reader holding a ``Game`` asks ``Game.entry_closes_at``, which
     passes it.

@@ -58,7 +58,6 @@ so that a reader meets the difference instead of rediscovering it.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
@@ -73,27 +72,20 @@ RECENT_RESULTS = 5
 
 
 @final
-class PlayedOutcome(str, Enum):
-    """How an arrangement settled for the people on its court.
-
-    **A ghost is kept distinguishable from a game**, because *shows up* charges
-    a ghost and credits a game (``Attendance``).
-    """
-
-    PLAYED = "PLAYED"
-    PLANNED_NEVER_PLAYED = "PLANNED_NEVER_PLAYED"
-
-
-@final
 @dataclass(frozen=True, slots=True)
 class Attendance:
     """What became of the games one player was arranged into. **Per person.**
 
     The *shows up* strand's whole input (``docs/adr/0140``). ``played`` is games
-    somebody on that court said had happened; ``ghosts`` is plans whose entry
-    window closed with nobody ever saying so. A game still inside its entry
-    window is in **neither**: it is not a ghost until the clock says so, and
-    claiming it either way would publish a conclusion nothing has reached.
+    the player was on the court of — somebody said it happened, or a full court
+    nobody recorded whose window closed (*Played · no score*, #655); ``missed``
+    is booked games a report of their not coming stood its day on (#547). A game
+    still inside its entry window is in **neither**: claiming it either way
+    would publish a conclusion nothing has reached.
+
+    **Nothing is charged to a court for silence** (``docs/adr/0195`` §2): the
+    ghost — a window closing on nobody, once a miss for everybody on the court —
+    retired with *Never played*.
 
     **Counted and friendly games are both here.** Turning up is not evidence
     about anybody's Level, so the choice that makes a game a friendly has nothing
@@ -105,23 +97,24 @@ class Attendance:
     many people they play with.
 
     ``last_at`` is when the most recent of those opportunities **closed** — the
-    moment a game was played, or the moment a plan's entry window shut on
-    silence. It is the strand's observation moment, and dating a ghost from the
-    plan instead would age a record faster than the record aged.
+    moment somebody said a game was played, the moment a full court's entry
+    window shut on nobody, or the first report of somebody not coming. It is the
+    strand's observation moment, and dating one from the moment it was booked
+    would age a record faster than the record aged.
     """
 
     played: int
-    ghosts: int
+    missed: int
     last_at: Instant
 
     def __post_init__(self) -> None:
         invariant(
-            self.played >= 0 and self.ghosts >= 0,
+            self.played >= 0 and self.missed >= 0,
             f"a negative arrangement count: {self.played} played, "
-            f"{self.ghosts} ghosts",
+            f"{self.missed} missed",
         )
         invariant(
-            self.played + self.ghosts >= 1,
+            self.played + self.missed >= 1,
             "an attendance record with no settled arrangement behind it is an "
             "absence, not a zero — absence is spelled by not being in the answer",
         )
@@ -161,9 +154,9 @@ class ResultAnswering:
     same type.** Three counts and a moment is what an opportunity record looks
     like — ``bookings``' ``KeepingRecord`` is a third one (#544) — and a shared
     ``Opportunity(good, missed, last_at)`` would be a type whose field names could
-    not say *played* or *ghosted* or *ignored*. The words are the whole content of
-    these rows: a reader of the fold has to know that a ghost is charged to a
-    whole court and an ignored score only to the side it faced, and a generic pair
+    not say *played* or *missed* or *ignored*. The words are the whole content of
+    these rows: a reader of the fold has to know that a miss is charged to the
+    player reported and an ignored score to the whole side it faced, and a generic pair
     is exactly where that stops being visible. The cost is two invariants spelled
     twice, and it is smaller than the cost of the alternative.
     """
@@ -268,9 +261,9 @@ class OpponentVariety:
     is a share.
 
     **Both halves are read off the same games**, which is what keeps the pair
-    coherent: a friendly and a ghost are in neither, so a player with forty
-    friendlies and two counted games cannot be described as playing twenty
-    different people an evening.
+    coherent: a friendly and a game nobody played are in neither, so a player
+    with forty friendlies and two counted games cannot be described as playing
+    twenty different people an evening.
     """
 
     distinct_counterparts: int
@@ -685,7 +678,7 @@ class GameHistoryQuery(Protocol):
     async def attendance_for(
         self, player_ids: Collection[UUID], *, now: Instant
     ) -> Mapping[UUID, Attendance]:
-        """What became of each of these people's arrangements — played, or ghosted.
+        """What became of each of these people's arrangements — played, or missed.
 
         **A player with none is absent from the answer, because a zero here would
         be invented**: a ``0/0`` would say *this person was due somewhere and did
@@ -740,7 +733,6 @@ __all__ = [
     "GameRepository",
     "OpponentVariety",
     "OpponentVarietyQuery",
-    "PlayedOutcome",
     "PlayerNames",
     "ResultAnswering",
 ]

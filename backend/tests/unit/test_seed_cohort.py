@@ -205,13 +205,11 @@ def test_the_protagonist_plays_in_none_of_the_cohorts_own():
 
 
 def test_nobody_is_rated_by_somebody_they_never_played():
-    """A card is drawn for an evening, and a **ghost** is not one: there is
-    nobody to rate for a game the platform says did not happen."""
+    """A card is drawn for an evening — a game nobody recorded is one, played
+    with no score (#655) — and for nothing else."""
 
     together: dict[str, set[str]] = {}
     for game in EVERY_PLAYED_GAME:
-        if game.was_a_ghost:
-            continue
         for pair in game.pairs:
             one, other = sorted(pair)
             together.setdefault(one, set()).add(other)
@@ -230,10 +228,7 @@ def test_somebody_is_rated_by_nobody():
 
     rated = set(WHAT_PLAYERS_SAID)
     played_by_somebody = {
-        handle
-        for game in EVERY_PLAYED_GAME
-        if not game.was_a_ghost
-        for handle in game.players
+        handle for game in EVERY_PLAYED_GAME for handle in game.players
     }
 
     assert played_by_somebody - rated, "everybody who played has been rated"

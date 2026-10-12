@@ -112,7 +112,7 @@ def test_from_its_hour_a_game_nobody_said_happened_needs_its_result():
         (ResultStage.SCORE_TO_ANSWER, HomeStatus.CONFIRM_THE_RESULT),
         (ResultStage.CONFIRMED, HomeStatus.COUNTED),
         (ResultStage.UNSCORED, HomeStatus.UNCOUNTED),
-        (ResultStage.NEVER_PLAYED, HomeStatus.NEVER_PLAYED),
+        (ResultStage.PLAYED_NO_SCORE, HomeStatus.PLAYED_NO_SCORE),
         (ResultStage.CALLED_OFF, HomeStatus.CALLED_OFF),
     ],
 )
@@ -161,7 +161,7 @@ def test_a_seat_open_in_your_game_needs_you():
         HomeStatus.BOOKED,
         HomeStatus.COUNTED,
         HomeStatus.UNCOUNTED,
-        HomeStatus.NEVER_PLAYED,
+        HomeStatus.PLAYED_NO_SCORE,
         HomeStatus.CALLED_OFF,
     ],
 )
@@ -184,7 +184,7 @@ LIVE = (
 ENDED = (
     HomeStatus.COUNTED,
     HomeStatus.UNCOUNTED,
-    HomeStatus.NEVER_PLAYED,
+    HomeStatus.PLAYED_NO_SCORE,
     HomeStatus.CALLED_OFF,
 )
 

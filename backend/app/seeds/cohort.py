@@ -565,15 +565,11 @@ class PlayedGame:
     side_b: tuple[str, ...]
     #: ``"A"``, ``"B"``, or ``None`` where the two sides never agreed.
     won_by: str | None
-    #: Whether anybody ever said *we played*. ``False`` is **a ghost**: the
-    #: line-up completed, the evening came and went, nobody entered a score
-    #: before the entry window closed, and the arrangement now reads as never
-    #: played to everybody who looks at it.
-    #:
-    #: It is the one ending that is a *bad* outcome on a strand — *shows up* is
-    #: played over played-plus-ghosted — and a fixture without one publishes
-    #: nothing but full bars, which is a card whose whole point (a penalty you
-    #: can look up and watch lift) has never been drawn.
+    #: Whether anybody ever said *we played*. ``False`` is **a game nobody
+    #: recorded**: the line-up completed, the evening came and went, nobody
+    #: entered a score before the entry window closed, and it reads *Played ·
+    #: no score* to everybody who looks at it (#655) — played, for everybody on
+    #: the court, with no Level moving and nothing charged to anybody.
     entered: bool = True
     #: Whether the side that was **asked** replied to the score at all.
     #: ``False`` is the score nobody answered: it confirms by silence anyway, so
@@ -599,12 +595,12 @@ class PlayedGame:
         return self.won_by is not None
 
     @property
-    def was_a_ghost(self) -> bool:
-        """Nobody claimed the evening, so the platform says it never happened.
+    def went_unrecorded(self) -> bool:
+        """Nobody recorded the evening, so it was played with no score.
 
-        Read off ``entered`` rather than stored beside it, because *a ghost* is
-        what the absence of an entry **means** and a second field saying so is a
-        second place for the two to disagree.
+        Read off ``entered`` rather than stored beside it, because *unrecorded*
+        is what the absence of an entry **means** and a second field saying so
+        is a second place for the two to disagree.
         """
 
         return not self.entered
@@ -642,17 +638,16 @@ class PlayedGame:
 #: different card.
 PLAYED_AT_LEAST_DAYS_AGO: Final = 2
 
-#: How long ago an arrangement has to have been made before **nobody claiming
-#: it** reads as a ghost rather than as a game still awaiting its entry.
+#: How long ago an arrangement has to have been made before **nobody recording
+#: it** reads *Played · no score* (#655) rather than a game still awaiting its
+#: entry.
 #:
 #: **Derived from the window and never typed.** A plan has an ordinary week to
 #: become a game and a day's grace after it, so the honest floor is eight days
 #: and one more on top — read off ``games``' own constants, so a horizon that
-#: moves takes this with it instead of leaving a fixture quietly declaring a
-#: ghost the platform still calls ``AWAITING_ENTRY``. Which is exactly what a
-#: typed seven did: the record published *shows up 5 of 5*, the bar was full,
-#: and nothing failed.
-GHOSTED_AT_LEAST_DAYS_AGO: Final = (PLAN_HORIZON + ENTRY_GRACE).days + 1
+#: moves takes this with it instead of leaving a fixture quietly declaring an
+#: ending the platform still calls ``AWAITING_ENTRY``.
+UNRECORDED_AT_LEAST_DAYS_AGO: Final = (PLAN_HORIZON + ENTRY_GRACE).days + 1
 
 #: **The played history, and the states each row is for.** Every one of them is
 #: a row on the card of somebody in the protagonist's own padel pool, because a
@@ -1408,7 +1403,7 @@ def _game_document(game: PlayedGame) -> dict[str, object]:
     """One declared arrangement, as the artifact spells it. **Inputs only.**
 
     ``entered`` and ``answered`` are here for the same reason ``won_by`` is:
-    each is a thing a player did or did not do, and the ghost, the run of form
+    each is a thing a player did or did not do, and the ending, the run of form
     and the strand that reads them are what the platform makes of it.
     """
 
@@ -1645,24 +1640,24 @@ def _refuse_an_ending_no_evening_can_have(index: int, game: PlayedGame) -> None:
     """The three endings, and the two combinations that are not one of them.
 
     A game ends **agreed** (a winner, answered), **disagreed** (no winner, both
-    sides answered and neither accepted) or **ghosted** (nobody said it
-    happened). ``entered`` and ``answered`` are two flags and four combinations,
-    so the fourth has to be refused somewhere — here, at import, rather than
-    half way through a run where it would surface as a use case declining an act
-    the fixture asked for.
+    sides answered and neither accepted) or **unrecorded** (nobody said it
+    happened — *Played · no score*, #655). ``entered`` and ``answered`` are two
+    flags and four combinations, so the fourth has to be refused somewhere —
+    here, at import, rather than half way through a run where it would surface
+    as a use case declining an act the fixture asked for.
     """
 
-    if game.was_a_ghost and game.was_scored:
+    if game.went_unrecorded and game.was_scored:
         raise RuntimeError(
-            f"played game {index} is declared a ghost and names a winner. "
-            f"Nobody entered a score, so there is no score to have won: a ghost "
-            f"is `entered=False` with `won_by=None`."
+            f"played game {index} is declared unrecorded and names a winner. "
+            f"Nobody entered a score, so there is no score to have won: an "
+            f"unrecorded game is `entered=False` with `won_by=None`."
         )
-    if game.was_a_ghost and not game.answered:
+    if game.went_unrecorded and not game.answered:
         raise RuntimeError(
-            f"played game {index} is declared a ghost and declares that nobody "
-            f"answered the score. There was no score to answer — an evening the "
-            f"platform says did not happen puts nothing in front of anybody."
+            f"played game {index} is declared unrecorded and declares that "
+            f"nobody answered the score. There was no score to answer — an "
+            f"evening nobody recorded puts nothing in front of anybody."
         )
     if not game.answered and not game.was_scored:
         raise RuntimeError(
@@ -1679,22 +1674,20 @@ def _refuse_an_opinion_nobody_was_on_a_court_to_have(cohort: "Cohort") -> None:
     """Every declared rating, against the courts that would have to carry it.
 
     **A card may only be answered about somebody you were on a court with**, and
-    the court has to be one that is *over*: an evening the platform says never
-    happened has nobody to rate. So a row here that no game backs is a card the
-    use case would refuse mid-run, with a message about a game id rather than
-    about the table it came from.
+    the court has to be one that is *played and over* — an unrecorded one too,
+    since a full court nobody recorded was played (#655). So a row here that no
+    game backs is a card the use case would refuse mid-run, with a message
+    about a game id rather than about the table it came from.
     """
 
     lowest, highest = STARS_ARE_ONE_TO_FIVE
     known = {member.handle for member in cohort.members} | {PROTAGONIST_HANDLE}
-    #: Who shared a **rateable** court with whom, and how recently. A ghost is
-    #: not in it, which is the whole reason this is computed rather than read off
-    #: ``pairs``; the day is here because the card has a week and the writer puts
-    #: each rating on the **latest** court a pair shared.
+    #: Who shared a **rateable** court with whom, and how recently — every
+    #: declared game is one, an unrecorded one included (#655); the day is here
+    #: because the card has a week and the writer puts each rating on the
+    #: **latest** court a pair shared.
     together: dict[str, dict[str, int]] = {}
     for game in EVERY_PLAYED_GAME:
-        if game.was_a_ghost:
-            continue
         for pair in game.pairs:
             one, other = sorted(pair)
             for who, whom in ((one, other), (other, one)):
@@ -1733,9 +1726,7 @@ def _refuse_an_opinion_nobody_was_on_a_court_to_have(cohort: "Cohort") -> None:
                     f"'{rater}' rates '{subject}' and the two of them share no "
                     f"court that is played and over. A card is drawn for an "
                     f"evening, so a rating with no evening behind it cannot be "
-                    f"written at all — and a **ghost** is not one: there is "
-                    f"nobody to rate for a game the platform says did not "
-                    f"happen."
+                    f"written at all."
                 )
             if latest > RATED_WITHIN_DAYS:
                 raise RuntimeError(

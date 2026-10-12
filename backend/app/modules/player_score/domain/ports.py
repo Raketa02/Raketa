@@ -7,7 +7,7 @@ through their own contexts' published ports — ``games``' ``GameHistoryQuery``,
 twice, and ``bookings``' ``BookingHistoryQuery`` (#544) — rather than through a
 query written here. A ``select`` over ``event_store`` on this side would make
 this context a second reader of two other schemas and a second author of what *a
-ghost* means.
+miss* means.
 
 **Why it is not called ``PlayerScoreQuery``.** The matcher declared a port of
 that name — its *demand*, in its own vocabulary, answered by an adapter on its
@@ -47,10 +47,11 @@ class PublishedScoreQuery(Protocol):
     belongs to the caller that could not afford another one.
 
     **It takes the clock rather than reading one.** Every part of the answer is a
-    fact about an instant — a plan is a ghost only once its entry window has
-    closed, a booked game is kept only once its hour has come, a score is ignored
-    only once its window has — so a caller asking about attendance and about
-    answering in one request must get one instant's answer to all of it. The
+    fact about an instant — a game is played only once somebody says so or its
+    entry window has closed, a booked game is kept only once its hour has come,
+    a score is ignored only once its window has — so a caller asking about
+    attendance and about answering in one request must get one instant's
+    answer to all of it. The
     instant is also what the one **window** here is measured back from
     (``docs/adr/0160``), so two clocks would be two horizons.
     """

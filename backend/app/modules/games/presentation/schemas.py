@@ -5,7 +5,8 @@ Three rules decide everything below.
 **The standing is derived and travels as a code.** ``GameStanding`` is ten values —
 ``STARTED_SHORT`` arrived with leaving a booked game (#544), ``NO_SHOW_REPORTED`` and
 ``NO_SHOW`` with reporting a player who did not come to one (#547), ``DISPUTED`` with
-two scores that named different winners (#654) — and the words for them are the
+two scores that named different winners (#654), ``PLAYED_NO_SCORE`` with a full court
+nobody recorded, in *Never played*'s place (#655) — and the words for them are the
 client's (``docs/adr/0022``). It is on the response
 because it is a fold of the record against the moment the list was read — and it
 is **not** on the aggregate, in the store, or anywhere a second copy could go
@@ -301,11 +302,11 @@ class GameSchema(BaseModel):
     entry_closes_at: datetime | None = Field(
         default=None,
         description=(
-            "When *we played* stops being sayable and the game becomes a game "
-            "that never happened. ``null`` once somebody has said it happened, "
-            "and ``null`` on a game that was called off — the window no longer "
-            "matters, and a card that shelved itself by it would stay for eight "
-            "days."
+            "When *we played* stops being sayable, and a full game nobody "
+            "recorded reads `PLAYED_NO_SCORE`. ``null`` once somebody has said "
+            "it happened, and ``null`` on a game that was called off — the "
+            "window no longer matters, and a card that shelved itself by it "
+            "would stay for eight days."
         ),
     )
     called_off_at: datetime | None = Field(
@@ -485,9 +486,9 @@ class GameListResponse(BaseModel):
     """Your games, newest arrangement first.
 
     **One list and not several.** A game awaiting an entry, one awaiting an
-    answer and one that never happened are one thing at three moments of its
-    life, and splitting them would make the client's shelves the platform's
-    opinion about which of them matters.
+    answer and one that is over are one thing at three moments of its life,
+    and splitting them would make the client's shelves the platform's opinion
+    about which of them matters.
 
     ``read_at`` is the instant every standing and deadline here was folded
     against. It travels so a client's countdowns and the standings beside them

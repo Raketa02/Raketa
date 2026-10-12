@@ -1,8 +1,8 @@
 """A booked game whose hour comes with a seat open (#544; the mechanics §14.1,
 §19): somebody left after the club's cut-off and nobody took the seat, so the
 game went ahead short. **It cannot take a result, and it ends uncounted — a
-seat was empty**: no Level moves, and it is neither an evening the players had
-nor a ghost they owe, so it is in no tally.
+seat was empty**: no Level moves, and it is not an evening the players had, so
+it is in no tally.
 """
 
 from __future__ import annotations

@@ -23,7 +23,7 @@ renormalises over what is there.
 **It reads each provider's own published port and never their streams.** A
 ``select`` over ``event_store`` written here would make ``player_score`` a second
 reader of two other contexts' schemas and, worse, a second author of what *a
-ghost*, *a lapse* and *an ignored score* mean — and the second copy is always the
+miss*, *a lapse* and *an ignored score* mean — and the second copy is always the
 one that gets believed. What crosses each seam is the provider's own vocabulary;
 the arithmetic that turns it into a verdict about a person is this context's, and
 is the only thing here that is not somebody else's fact.
@@ -90,10 +90,10 @@ class ThreeStrandsFromTheRecord:
         make the score answer about nobody until the platform had every record
         about the same person.
 
-        **One instant for every half.** A plan is a ghost only once its entry
-        window has closed and a booked game is kept only once its hour has come,
-        so two clocks here would let a score be computed from two different
-        presents.
+        **One instant for every half.** A game is played only once somebody
+        says so or its entry window has closed, and a booked game is kept only
+        once its hour has come, so two clocks here would let a score be
+        computed from two different presents.
         """
 
         wanted = set(player_ids)
@@ -150,7 +150,7 @@ def _strands_of(
     if attendance is not None:
         strands[ReliabilityStrand.SHOWS_UP] = StrandRatio(
             good=attendance.played,
-            opportunities=attendance.played + attendance.ghosts,
+            opportunities=attendance.played + attendance.missed,
             last_at=attendance.last_at,
         )
     if keeping is not None:

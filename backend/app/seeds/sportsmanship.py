@@ -27,9 +27,10 @@ them shared rather than by hoping the order works out.
 backdated clock: the day it opens, and past the day a silence takes to confirm a
 score, so the court is settled and the card is inside the week it is open for
 whatever day the run falls on. ``AnswerTheCard`` refuses on *whose evening it
-was* and *has this been answered*, neither of which is a clock — the ghost is
-the only court nobody may rate, and it is not one of these because a ghost is
-not settled-and-played at all.
+was* and *has this been answered*, neither of which is a clock — a court
+called off or started short is the only kind nobody may rate, and it is not
+one of these because it is not settled-and-played at all. A court nobody
+recorded is played (#655), and its card runs from its booked hour.
 
 **The declarations are the cohort's own** (``WHAT_PLAYERS_SAID``) by default,
 and every handle in them is a cohort member's.
@@ -233,7 +234,7 @@ def _cards_of(
                 f"platform holds no court of theirs that is played, over and "
                 f"has '{subject}' on it. A card is drawn for an evening: the "
                 f"declaration names a pair the played history never put on the "
-                f"same court, or put there only on the game nobody claimed."
+                f"same court."
             )
         latest = max(shared, key=lambda court: court.played_at)
         cards.setdefault(latest.game_id, (latest, []))[1].append(

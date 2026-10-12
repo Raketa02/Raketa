@@ -41,10 +41,10 @@ would be a client choosing whether it may see somebody (``docs/adr/0159``).
 **One clock, read once, handed down.** The run of form, the metered rows and the
 variety fold are all folded against an instant — two reads of the clock in one
 response is how a sheet ends up describing a pair on two instants. It matters
-most on the rows: a plan is a ghost only once its entry window has closed and a
-seat has lapsed only once its day has run out, so two presents would publish a
-pill whose strands disagree with the variety beside them about which games
-exist.
+most on the rows: a game nobody recorded is played only once its entry window
+has closed and a seat has lapsed only once its day has run out, so two presents
+would publish a pill whose strands disagree with the variety beside them about
+which games exist.
 """
 
 from __future__ import annotations

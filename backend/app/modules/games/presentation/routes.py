@@ -76,10 +76,10 @@ _REFUSALS: dict[int | str, dict[str, Any]] = {
     status.HTTP_409_CONFLICT: {
         "model": ErrorResponse,
         "description": (
-            "`the_entry_window_has_closed` — nobody said this game happened in "
-            "time, so it now reads as never played to everybody who has looked "
-            "at it. An entry that resurrected it would contradict a card the "
-            "platform has already drawn.\n\n"
+            "`the_entry_window_has_closed` — nobody recorded this game in time, "
+            "so it now reads `PLAYED_NO_SCORE` to everybody who has looked at "
+            "it. A score that arrived now would contradict a card the platform "
+            "has already drawn.\n\n"
             "`the_result_is_settled` — the result is final: agreed with, settled "
             "by silence, settled with the closer of two scores naming the same "
             "winner, or **disputed** — two scores naming different winners. "
@@ -209,12 +209,13 @@ _ACCEPTING_REFUSALS: dict[int | str, dict[str, Any]] = {
     summary="Your games",
     description=(
         "**Arranged, played and finished in one list.** A game awaiting an "
-        "entry, one awaiting an answer and one that never happened are one thing "
-        "at three moments of its life.\n\n"
+        "entry, one awaiting an answer and one that is over are one thing at "
+        "three moments of its life.\n\n"
         "**The standing is derived, never stored.** It is folded from the record "
-        "and the clock at the moment you asked, so a game whose entry window ran "
-        "out reads as never played whether or not anything has swept it — "
-        "nothing sweeps it, because there is nothing for a sweep to correct.\n\n"
+        "and the clock at the moment you asked, so a full game whose entry "
+        "window ran out with nobody recording it reads `PLAYED_NO_SCORE` whether "
+        "or not anything has swept it — nothing sweeps it, because there is "
+        "nothing for a sweep to correct.\n\n"
         "**`read_at` is the instant every standing and deadline here was folded "
         "against.** Render your countdowns from it, so they cannot disagree with "
         "the standing beside them."

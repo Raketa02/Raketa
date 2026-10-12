@@ -48,9 +48,9 @@ class ScoreSubjectReliability:
         """What the platform watched of this one person, or nothing at all.
 
         ``now`` is handed down rather than read: both strands are facts about an
-        instant — a plan is a ghost only once its entry window has closed, a seat
-        has lapsed only once its day has run out — and every figure on one
-        response is folded against one present.
+        instant — a game nobody recorded is played only once its entry window
+        has closed, a seat has lapsed only once its day has run out — and every
+        figure on one response is folded against one present.
         """
 
         published = await self._scores.scores_for([player_id], now=now)

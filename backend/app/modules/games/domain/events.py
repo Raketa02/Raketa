@@ -134,8 +134,8 @@ class GameCalledOff:
 
     **It is the fourth end and the only one an event reaches.** The standing
     reads it first, before the clock; a game already ended by its clock is never
-    told this, because un-ghosting a game the platform has already drawn as
-    *Never played* would contradict the card.
+    told this, because calling off a game the platform has already drawn as
+    *Played · no score* (#655) would contradict the card.
     """
 
     game_id: UUID

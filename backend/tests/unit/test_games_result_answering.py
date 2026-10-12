@@ -111,7 +111,7 @@ def test_silence_until_the_window_closes_is_the_miss():
     """Nothing was said, the day ran out, and the moment is the deadline.
 
     Dating it from the score going up would age a record faster than the record
-    aged — the same rule a ghost is dated by.
+    aged — the same rule a game nobody recorded is dated by.
     """
 
     game = _put(_game())

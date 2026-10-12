@@ -89,10 +89,10 @@ class NotAGameToCallOff(ConflictError):
 
     **One code for both halves** (``docs/adr/0163`` §2), because they are one
     sentence — *this is not a game that can be called off*. A court standing
-    whole that will not play lets its window lapse into *Never played*, as it
-    always has (#411 rule 4); a game that has already ended by its clock stays
-    the end it is, because a call-off that reached a ghost would flip a standing
-    the platform has already drawn and un-charge a strand after the fact.
+    whole that nobody records lets its window lapse into *Played · no score*
+    (#655); a game that has already ended by its clock stays the end it is,
+    because a call-off that reached one would flip a standing the platform has
+    already drawn and move a record after the fact.
 
     The booking guarantees the open seat by construction — its cut-off calls
     off only a game short of a player — and the use case steps over a game that
@@ -112,11 +112,11 @@ class NotAGameToCallOff(ConflictError):
 class TheGameWasCalledOff(ConflictError):
     """*We played* said about a game somebody called off.
 
-    Its own code rather than the ghost's ``the_entry_window_has_closed`` or the
-    umbrella ``the_result_is_settled``, for the ghost's own reason: the entry is
-    the one act a player composes by hand, and it is told which end it met. The
-    acceptance meets the umbrella, as it does on a ghost — a tap on a score that
-    is already on the table needs no such precision.
+    Its own code rather than the window's ``the_entry_window_has_closed`` or the
+    umbrella ``the_result_is_settled``, for the window's own reason: the entry
+    is the one act a player composes by hand, and it is told which end it met.
+    The acceptance meets the umbrella — a tap on a score that is already on the
+    table needs no such precision.
     """
 
     code = "the_game_was_called_off"
@@ -147,11 +147,12 @@ class TheGameIsNotOpenToSeating(ConflictError):
 
 
 class TheEntryWindowHasClosed(ConflictError):
-    """*We played* said too late, about a game that is now a ghost.
+    """*We played* said too late, about a game whose entry window has closed.
 
-    A refusal rather than a late acceptance: the game already reads as never
-    played to everybody who has looked at it, and an entry that resurrected it
-    would contradict a card the platform has already drawn.
+    A refusal rather than a late acceptance: a full court nobody recorded
+    already reads *Played · no score* to everybody who has looked at it (#655),
+    and a score arriving now would contradict a card the platform has already
+    drawn.
     """
 
     code = "the_entry_window_has_closed"

@@ -7,7 +7,7 @@ the build red.
 
 **This context stores nothing, so every arrangement here is made through
 somebody else's aggregate** — a ``Booking`` that was kept or left, a ``Game``
-that was played or ghosted — and never an ``INSERT`` (``docs/adr/0029``). That
+that was played or not come to — and never an ``INSERT`` (``docs/adr/0029``). That
 is not ceremony: the folds under this port live in ``games`` and ``bookings``,
 and the only honest way to exercise a fold is to make the history it folds.
 
@@ -51,7 +51,6 @@ from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
-from app.modules.games.domain.windows import ENTRY_GRACE, PLAN_HORIZON
 from app.modules.player_score.domain.ports import PublishedScoreQuery
 from app.modules.player_profile.domain.weekly_hours import Window
 from app.shared.ids import new_uuid
@@ -85,12 +84,6 @@ def _ago(**offset) -> Instant:
     """A moment that far behind the clock these demands read ``now`` from."""
 
     return instant(datetime.now(timezone.utc) - timedelta(**offset))
-
-
-#: Old enough that a plan made then has closed its entry window on silence.
-#: Read off the two windows rather than typed, so a change to either moves this
-#: with it instead of leaving a test that passes for the wrong reason.
-_LONG_ENOUGH_TO_GHOST = PLAN_HORIZON + ENTRY_GRACE + timedelta(days=1)
 
 
 def _games(session):
@@ -187,10 +180,30 @@ async def _answered_a_score(
     return game
 
 
-async def _ghosted(session, *, one: UUID, other: UUID) -> Game:
-    """A plan nobody ever claimed, old enough that its entry window has shut."""
+async def _not_come_to(session, *, absent: UUID, reporter: UUID) -> Game:
+    """A booked game ``reporter`` came to and said ``absent`` did not, the
+    report undisputed for its day (#547) — the one miss on *shows up* since a
+    full court nobody recorded is played (#655)."""
 
-    game = _plan(one=one, other=other, at=instant(_now() - _LONG_ENOUGH_TO_GHOST))
+    starts = _ago(days=6)
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.TENNIS,
+        kind=GameKind.COUNTED,
+        window=None,
+        line_up=LineUp.of(
+            (
+                Seating(side=GameSide.A, player_id=absent),
+                Seating(side=GameSide.B, player_id=reporter),
+            )
+        ),
+        occurred_at=instant(starts - timedelta(days=2)),
+        starts_at=starts,
+    )
+    game.report_no_show(
+        by=reporter, absent=absent, occurred_at=instant(starts + timedelta(minutes=30))
+    )
     await _games(session).save(game)
     await session.commit()
     return game
@@ -259,26 +272,27 @@ async def test_a_score_read_answers_only_about_players_it_was_asked_about(
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_a_game_that_happened_and_a_plan_that_ghosted_are_one_strand(
+async def test_a_game_that_happened_and_a_game_not_come_to_are_one_strand(
     implementation, session
 ):
     """*Shows up*, both halves, on the same person.
 
-    The ghost is charged to **everybody who was on that court**, which is the
-    decision ``docs/adr/0140`` had to take rather than inherit: a dissolved
-    arrangement is a fact about the court and there is nobody in it to blame.
+    The miss is charged to **the player reported** and to nobody else on that
+    court: whoever came to it played. Nothing is charged to a court for silence
+    any more — a full court nobody recorded is played (#655).
     """
 
     port = implementation.build(session)
     one, other = new_uuid(), new_uuid()
     await _played(session, one=one, other=other, at=_ago(days=3))
-    await _ghosted(session, one=one, other=other)
+    await _not_come_to(session, absent=one, reporter=other)
 
     scores = await port.scores_for([one, other], now=_now())
     strand = scores[one].strands[ReliabilityStrand.SHOWS_UP]
+    came = scores[other].strands[ReliabilityStrand.SHOWS_UP]
 
     assert (strand.good, strand.opportunities) == (1, 2)
-    assert scores[other].strands[ReliabilityStrand.SHOWS_UP] == strand
+    assert (came.good, came.opportunities) == (2, 2)
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
@@ -466,7 +480,7 @@ async def test_one_strand_is_a_score_and_the_two_records_are_independent(
 ):
     """A reading needs *a* strand, not all of them.
 
-    Somebody who has kept a booked game and never had a game ghost or a score
+    Somebody who has kept a booked game and never had a game played or a score
     put to them has a Player Score of one strand — and requiring every record
     would make the score answer about nobody until the platform held all of
     them about the same person.

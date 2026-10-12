@@ -13,7 +13,8 @@ seat open (#544), the fifth a report of somebody not turning up that stood its
 day, and the third wait that day (#547), the sixth two scores naming different
 winners when their answer window closed (#654) — and **the tenth is the one
 exemption this module holds, and it is written down so it stays one**
-(``docs/adr/0163``).
+(``docs/adr/0163``). The first end is a full game's entry window closing on
+nobody: **Played · no score** (#655), which took *Never played*'s place.
 A game called off is a decision — a booking's cut-off, or its club taking the
 court back — and there is nothing on the record to fold it out of, so it is the
 one standing an event announces — on the rule *an event may announce a
@@ -51,9 +52,15 @@ class GameStanding(str, Enum):
 
     #: Arranged, and nobody has said it happened yet.
     AWAITING_ENTRY = "AWAITING_ENTRY"
-    #: The entry window closed and nobody ever said it happened. **A ghost game**
-    #: — the pairwise outcome familiarity must be able to tell from a real one.
-    NEVER_PLAYED = "NEVER_PLAYED"
+    #: A **full** game whose entry window closed with nobody having said it
+    #: happened, and nobody reported as not coming (#655; ``docs/adr/0195``
+    #: §2). **Played, for everybody on its court** — the court was booked and
+    #: paid for, and the four almost certainly played — and **no Level
+    #: moves**: an evening with no score is not evidence about skill. It took
+    #: the place of *Never played*, the ghost charged to the whole court: every
+    #: game is opened by a booking, so there is no unbooked plan left to
+    #: dissolve.
+    PLAYED_NO_SCORE = "PLAYED_NO_SCORE"
     #: They played, a score is on the table, and its window is still open.
     AWAITING_ANSWER = "AWAITING_ANSWER"
     #: They played and a score is agreed — by an acceptance, at once; by
@@ -70,27 +77,28 @@ class GameStanding(str, Enum):
     #: named **different winners** (#654; ``docs/adr/0195`` §5). No Level
     #: moves — *we will not arbitrate* — and the two players who put the scores
     #: up each have a result left in dispute (``Game.left_in_dispute_by``). An
-    #: evening, like ``UNSCORED``: they were on a court together.
+    #: evening, like ``UNSCORED`` and ``PLAYED_NO_SCORE``: they were on a court
+    #: together.
     DISPUTED = "DISPUTED"
     #: Somebody ended it while a seat was open, before it happened. **The one
     #: value here that no reading of the record reaches** (``docs/adr/0163``):
     #: nobody said they played and no window closed, so it can reuse none of the
     #: three ends above. It arrives on the fold from ``GameCalledOff`` and from
-    #: nowhere else — told by the challenge in the transaction of the act that
+    #: nowhere else — told by ``bookings`` in the transaction of the act that
     #: called the court off, and it says who (``docs/adr/0172`` §4). **An end,
-    #: and neither an evening nor a ghost**: a ghost is silence, this was an
-    #: act, and it is in no tally.
+    #: and not an evening**: this was an act, and it is in no tally.
     CALLED_OFF = "CALLED_OFF"
     #: A **booked** game whose hour came with a seat open (#544): somebody left
     #: after the club's cut-off and nobody took the seat, so it went ahead
     #: short — *uncounted, a seat was empty*. Read off the record and the clock
     #: — the hour, and a line-up with a seat open — like the three ends above,
     #: and **in no tally**, like a call-off: it is not an evening the people
-    #: who stayed had, and not a ghost anybody owes.
+    #: who stayed had. A stream with no hour reaches it when its entry window
+    #: closes on a seat still open (#655): *played* is a full court's word.
     STARTED_SHORT = "STARTED_SHORT"
     #: Somebody who came to a **booked** game reported a player who did not
     #: (#547), and that player's day to dispute it is still running — a wait,
-    #: like a score on the table, and neither an evening nor a ghost yet.
+    #: like a score on the table, and not an evening yet.
     NO_SHOW_REPORTED = "NO_SHOW_REPORTED"
     #: Every report of not turning up that stands has had its day undisputed
     #: (#547): **the game does not count** and nobody's Level moves, and the
@@ -99,22 +107,21 @@ class GameStanding(str, Enum):
     NO_SHOW = "NO_SHOW"
 
 
-#: The five standings that mean *nothing more will happen to this game*. A
+#: The seven standings that mean *nothing more will happen to this game*. A
 #: settled game refuses every act, which is ADR-0048's *a settled result is
 #: final* with no support correction path and no reversal.
 #:
-#: **``CALLED_OFF`` is the fourth, and it is a fourth *kind* of ending** rather
-#: than a spelling of the ghost's (``docs/adr/0163`` §3): a ghost is a window
-#: closing on silence and this is a decision somebody took. They are one set here
-#: because the readers of this set — the mutual mint's idempotence key, the
-#: sportsmanship court, every act on the result — ask *is anything more going to
-#: happen*, and for both the answer is no. **``STARTED_SHORT`` is the fifth**
-#: (#544): a booked game's hour came with a seat open, and nothing more can.
-#: **``NO_SHOW`` is the sixth** (#547): every standing report has had its day.
-#: **``DISPUTED`` is the seventh** (#654): two scores named different winners.
+#: **``CALLED_OFF`` is a *kind* of ending of its own** rather than a spelling of
+#: a window closing (``docs/adr/0163`` §3): it is a decision somebody took. The
+#: readers of this set — the sportsmanship court, every act on the result — ask
+#: *is anything more going to happen*, and for every member the answer is no.
+#: **``STARTED_SHORT``** (#544): a booked game's hour came with a seat open,
+#: and nothing more can. **``NO_SHOW``** (#547): every standing report has had
+#: its day. **``DISPUTED``** (#654): two scores named different winners.
+#: **``PLAYED_NO_SCORE``** (#655): a full game's window closed on nobody.
 SETTLED = frozenset(
     {
-        GameStanding.NEVER_PLAYED,
+        GameStanding.PLAYED_NO_SCORE,
         GameStanding.CONFIRMED,
         GameStanding.UNSCORED,
         GameStanding.DISPUTED,
@@ -124,20 +131,24 @@ SETTLED = frozenset(
     }
 )
 
-#: The four standings that mean these people were on a court together. Read by
-#: the pairwise fold, and by ``counted_games``. ``DISPUTED`` is one (#654): both
-#: sides said they played, and disagreed only about who won. **``CALLED_OFF`` is
-#: not here**, and neither is it read as a ghost anywhere: the history walk
-#: answers ``None`` for it, as it does for a game still inside its window — and
-#: nor is ``STARTED_SHORT`` (#544), for the same reason, nor ``NO_SHOW`` (#547):
-#: the people who came were not the four the game was, and *shows up* reads it
-#: per player instead.
+#: The five standings that mean these people were on a court together. Read by
+#: *shows up*, by who they have played with, and by the sportsmanship court.
+#: ``DISPUTED`` is one (#654): both sides said they played, and disagreed only
+#: about who won. **``PLAYED_NO_SCORE`` is one** (#655; ``docs/adr/0195`` §2):
+#: nobody said so, and a full court booked and paid for was played all the same
+#: — so it is a counted game for everybody on it, scored or not, and moves no
+#: Level. **``CALLED_OFF`` is not here**: the history walk answers ``None`` for
+#: it, as it does for a game still inside its window — and nor is
+#: ``STARTED_SHORT`` (#544), for the same reason, nor ``NO_SHOW`` (#547): the
+#: people who came were not the four the game was, and *shows up* reads it per
+#: player instead.
 PLAYED = frozenset(
     {
         GameStanding.AWAITING_ANSWER,
         GameStanding.CONFIRMED,
         GameStanding.UNSCORED,
         GameStanding.DISPUTED,
+        GameStanding.PLAYED_NO_SCORE,
     }
 )
 
@@ -318,8 +329,8 @@ def standing_of(
     still what it was — the game is on the record and its window may not have
     closed — so a
     fold that read the clock first would answer with the standing somebody has
-    just ended, and would turn a called-off game into a ghost the day its window
-    closed. ``called_off_at`` is **stated by every caller and never defaulted**,
+    just ended, and would turn a called-off game into a played one the day its
+    window closed. ``called_off_at`` is **stated by every caller and never defaulted**,
     so a second reader of this function has to say which game it is asking about
     rather than inheriting an answer — and so is ``line_up_complete``, for the
     same reason, and ``kind``.
@@ -334,8 +345,11 @@ def standing_of(
     score is taken after one — so its day, and what it came to, is the
     standing (``no_show_standing``).
 
-    **Did it happen at all?** Nothing about a score matters until somebody says
-    they played, and after the entry window nothing ever will.
+    **Did anybody say it happened?** Nothing about a score matters until
+    somebody says they played. After the entry window nothing ever will, and a
+    **full** court nobody recorded was played all the same (#655): *Played · no
+    score*. A court still short then — only a stream with no hour can be, a
+    booked one having started short at its hour — went ahead short.
 
     **Has what is on the table settled?** ``settlement_of`` says how it settles
     and when: once the clock has reached that moment the game is confirmed —
@@ -358,11 +372,11 @@ def standing_of(
         return reported
 
     if played_at is None:
-        return (
-            GameStanding.AWAITING_ENTRY
-            if now < entry_closes_at(planned_at, starts_at=starts_at)
-            else GameStanding.NEVER_PLAYED
-        )
+        if now < entry_closes_at(planned_at, starts_at=starts_at):
+            return GameStanding.AWAITING_ENTRY
+        if not line_up_complete:
+            return GameStanding.STARTED_SHORT
+        return GameStanding.PLAYED_NO_SCORE
 
     settles = settlement_of(kind=kind, proposals=proposals, acceptance=acceptance)
     if settles is None or now < settles.at:

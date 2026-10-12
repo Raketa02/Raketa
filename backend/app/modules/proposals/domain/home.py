@@ -82,8 +82,10 @@ class HomeStatus(StrEnum):
     COUNTED = "COUNTED"
     #: They played, and no score is agreed.
     UNCOUNTED = "UNCOUNTED"
-    #: Nobody said it happened before the entry window closed.
-    NEVER_PLAYED = "NEVER_PLAYED"
+    #: Full at its hour, and nobody recorded it before the entry window closed:
+    #: played for everybody on it, and no Level moves (#655; it took *Never
+    #: played*'s place).
+    PLAYED_NO_SCORE = "PLAYED_NO_SCORE"
     #: The game will not be played.
     CALLED_OFF = "CALLED_OFF"
 
@@ -167,7 +169,8 @@ class ResultStage(StrEnum):
     #: Two scores named different winners and neither side gave way (#654):
     #: no Level moves.
     DISPUTED = "DISPUTED"
-    NEVER_PLAYED = "NEVER_PLAYED"
+    #: A full court nobody recorded before its entry window closed (#655).
+    PLAYED_NO_SCORE = "PLAYED_NO_SCORE"
     CALLED_OFF = "CALLED_OFF"
     #: Its hour came with a seat open: no result can be told (#544).
     STARTED_SHORT = "STARTED_SHORT"
@@ -522,8 +525,8 @@ def status_of(
             return HomeStatus.COUNTED
         case ResultStage.UNSCORED | ResultStage.DISPUTED:
             return HomeStatus.UNCOUNTED
-        case ResultStage.NEVER_PLAYED:
-            return HomeStatus.NEVER_PLAYED
+        case ResultStage.PLAYED_NO_SCORE:
+            return HomeStatus.PLAYED_NO_SCORE
         case ResultStage.CALLED_OFF:
             return HomeStatus.CALLED_OFF
         case ResultStage.STARTED_SHORT:
@@ -576,7 +579,7 @@ def needs_you(status: HomeStatus, result: GameResult | None) -> bool:
             | HomeStatus.WAITING_FOR_A_PAYMENT
             | HomeStatus.BOOKED
             | HomeStatus.COUNTED
-            | HomeStatus.NEVER_PLAYED
+            | HomeStatus.PLAYED_NO_SCORE
             | HomeStatus.CALLED_OFF
         ):
             return False
@@ -754,7 +757,7 @@ _ENDED: Final = frozenset(
     {
         HomeStatus.COUNTED,
         HomeStatus.UNCOUNTED,
-        HomeStatus.NEVER_PLAYED,
+        HomeStatus.PLAYED_NO_SCORE,
         HomeStatus.CALLED_OFF,
     }
 )

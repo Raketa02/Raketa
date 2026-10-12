@@ -8,11 +8,14 @@ answer was the derivation's. Derivation makes it right; it does not make it
 *asserted*, and ``docs/adr/0158`` §7 calls two of the members load-bearing by
 name:
 
-**A ghost is out, and so is a called-off game.** ``NEVER_PLAYED`` and
-``CALLED_OFF`` are settled over in ``games`` and there is nobody to rate for an
-evening that did not happen — so the intersection is the whole of the narrowing,
-and a reader who reached for ``SETTLED`` alone would offer cards for games nobody
-turned up to.
+**A called-off game is out, and so is one that started short.** ``CALLED_OFF``
+and ``STARTED_SHORT`` are settled over in ``games`` and there is nobody to rate
+for an evening that did not happen — so the intersection is the whole of the
+narrowing, and a reader who reached for ``SETTLED`` alone would offer cards for
+games nobody played.
+
+**A full court nobody recorded is in** (#655): ``PLAYED_NO_SCORE`` was played,
+and its card runs from the booked hour, since nobody said when.
 
 **A disputed game is in, on purpose.** Two people who cannot agree who won were
 still on a court together for an hour, and how that went is exactly what this
@@ -27,10 +30,9 @@ The file also pins the other half of the port's contract — that a game the cal
 did not play in is not findable through it at all, because the read asks *which
 games are mine* rather than *which game is this*.
 
-**Both arities are swept over the same six standings**, because they are one
-question and the narrowing has one home: a list that offered a ghost and a
-singular that refused one would be a screen showing a card the act behind it
-would not accept.
+**Both arities are swept over every standing**, because they are one question
+and the narrowing has one home: a list that offered a court and a singular that
+refused it would be a screen showing a card the act behind it would not accept.
 """
 
 from __future__ import annotations
@@ -46,11 +48,7 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.games.domain.standing import GameStanding
-from app.modules.games.domain.windows import (
-    ENTRY_GRACE,
-    PLAN_HORIZON,
-    PROPOSAL_WINDOW,
-)
+from app.modules.games.domain.windows import PROPOSAL_WINDOW
 from app.modules.sportsmanship.infrastructure.games_settled_courts import (
     RATEABLE,
     GamesSettledCourts,
@@ -109,9 +107,22 @@ def _awaiting_entry():
     return game, instant(PLANNED_AT + timedelta(days=1))
 
 
-def _never_played():
-    game = a_doubles_game(*_four())
-    return game, instant(PLANNED_AT + PLAN_HORIZON + ENTRY_GRACE + timedelta(hours=1))
+def _played_no_score():
+    """A full booked game nobody recorded, its entry window closed (#655)."""
+
+    players = _four()
+    starts = instant(PLANNED_AT + timedelta(days=3))
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        kind=GameKind.COUNTED,
+        window=None,
+        line_up=a_doubles_game(*players).line_up,
+        occurred_at=PLANNED_AT,
+        starts_at=starts,
+    )
+    return game, instant(game.entry_closes_at + timedelta(hours=1))
 
 
 def _called_off():
@@ -225,7 +236,7 @@ def _disputed():
 
 BUILDERS = {
     GameStanding.AWAITING_ENTRY: _awaiting_entry,
-    GameStanding.NEVER_PLAYED: _never_played,
+    GameStanding.PLAYED_NO_SCORE: _played_no_score,
     GameStanding.CALLED_OFF: _called_off,
     GameStanding.AWAITING_ANSWER: _awaiting_answer,
     GameStanding.CONFIRMED: _confirmed,
@@ -236,19 +247,32 @@ BUILDERS = {
     GameStanding.NO_SHOW: _no_show,
 }
 
-#: The three that may be rated. Spelled out rather than derived, so this file
+#: The four that may be rated. Spelled out rather than derived, so this file
 #: disagrees with ``RATEABLE`` if somebody changes the derivation — which is the
 #: only way a test of a derived constant is worth writing.
 MAY_BE_RATED = {
     GameStanding.CONFIRMED,
     GameStanding.UNSCORED,
     GameStanding.DISPUTED,
+    GameStanding.PLAYED_NO_SCORE,
 }
 
-#: The two a card is drawn for: the endings somebody said they played. An
-#: unscored game is only ever a no-show every report of was disputed now, and
-#: nobody said they played it — so it is rateable and has no evening to rate.
-DRAWN_FOR = {GameStanding.CONFIRMED, GameStanding.DISPUTED}
+#: The three a card is drawn for: the endings somebody said they played, and a
+#: full court nobody recorded (#655). An unscored game is only ever a no-show
+#: every report of was disputed now, and nobody said they played it — so it is
+#: rateable and has no evening to rate.
+DRAWN_FOR = {
+    GameStanding.CONFIRMED,
+    GameStanding.DISPUTED,
+    GameStanding.PLAYED_NO_SCORE,
+}
+
+
+def _the_evening_of(game: Game):
+    """When the card's window runs from: the entry, or — nobody having said
+    when — the booked hour."""
+
+    return game.played_at or game.starts_at
 
 
 def test_every_standing_has_a_builder():
@@ -259,7 +283,7 @@ def test_every_standing_has_a_builder():
 
 
 @pytest.mark.parametrize("standing", sorted(GameStanding, key=lambda one: one.value))
-async def test_a_card_may_be_drawn_for_exactly_the_two_endings_that_happened(
+async def test_a_card_may_be_drawn_for_exactly_the_endings_that_happened(
     standing: GameStanding,
 ):
     game, read_at = BUILDERS[standing]()
@@ -274,13 +298,13 @@ async def test_a_card_may_be_drawn_for_exactly_the_two_endings_that_happened(
         assert court.game_id == game.id
         assert court.rater_id == me
         assert set(court.others) == game.line_up.players - {me}
-        assert court.played_at == game.played_at
+        assert court.played_at == _the_evening_of(game)
     else:
         assert court is None, f"{standing.value} should not be rateable"
 
 
 @pytest.mark.parametrize("standing", sorted(GameStanding, key=lambda one: one.value))
-async def test_the_list_offers_exactly_the_same_two_endings(standing: GameStanding):
+async def test_the_list_offers_exactly_the_same_endings(standing: GameStanding):
     """**One narrowing, two arities.** A list that offered an ending the act
     refuses would draw a card nothing could answer."""
 
@@ -295,7 +319,7 @@ async def test_the_list_offers_exactly_the_same_two_endings(standing: GameStandi
         assert only.game_id == game.id
         assert only.rater_id == me
         assert set(only.others) == game.line_up.players - {me}
-        assert only.played_at == game.played_at
+        assert only.played_at == _the_evening_of(game)
     else:
         assert found == ()
 

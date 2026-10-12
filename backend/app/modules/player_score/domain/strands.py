@@ -12,7 +12,7 @@ over all of them.
 **The six names, and which of them can be published today.**
 
 +---------------------+-------------------------------------------------------+
-| ``SHOWS_UP``        | live — a plan that produced a game, or a ghost         |
+| ``SHOWS_UP``        | live — a game played, or a report of not coming stood  |
 | ``ANSWERS_CHALLENGES`` | stands down — challenges no longer wait (#544)      |
 | ``ANSWERS_RESULTS`` | live — a score answered inside its window, or ignored  |
 | ``KEEPS_PLANS``     | live — a booked game kept, or broken by leaving (#544) |
@@ -74,7 +74,7 @@ from app.kernel import Instant, instant, invariant
 #: profile says about them.
 #:
 #: Falsified if two players the same distance apart on this blend are
-#: indistinguishable on ghost rate, challenge answer rate and result answer
+#: indistinguishable on no-show rate, challenge answer rate and result answer
 #: rate: then the split between the three live names is wrong.
 PUBLISHED_WEIGHTS: Mapping[ReliabilityStrand, int] = MappingProxyType(
     {
@@ -154,9 +154,9 @@ class StrandRatio:
 
     ``last_at`` is the most recent of those opportunities and is what the
     matcher's horizon reads once it is folded across the strands. It is the
-    moment the opportunity **closed**, not the moment the plan was made: a ghost
-    is observed when its entry window shuts, and dating it from the plan would
-    age a record faster than the record aged.
+    moment the opportunity **closed**, not the moment the plan was made: a game
+    nobody recorded is observed when its entry window shuts, and dating it from
+    the booking would age a record faster than the record aged.
     """
 
     good: int

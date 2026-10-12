@@ -38,9 +38,9 @@ class ScorePutToASide:
 
     ``closed_at`` is the moment the opportunity **closed** — the answer, or the
     window running out on silence — and never the moment the score went up. It is
-    the strand's observation moment for the same reason a ghost is dated from its
-    entry window rather than from its plan: dating it from the question would age
-    a record faster than the record aged.
+    the strand's observation moment for the same reason a game nobody recorded
+    is dated from its entry window rather than from its booking: dating it from
+    the question would age a record faster than the record aged.
 
     **There is no third value here and that is deliberate.** A score still inside
     its window is not a ``ScorePutToASide`` at all — it is ``None`` from the fold

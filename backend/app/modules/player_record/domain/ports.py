@@ -283,9 +283,9 @@ class SubjectReliability(Protocol):
         panel that exists carries only what was actually observed.
 
         ``now`` is taken rather than read, because both live strands are facts
-        about an instant — a plan is a ghost once its window has closed, a seat
-        has lapsed once its day has run out — and every figure on one response is
-        folded against one present.
+        about an instant — a game nobody recorded is played once its window has
+        closed, a seat has lapsed once its day has run out — and every figure on
+        one response is folded against one present.
         """
         ...
 
