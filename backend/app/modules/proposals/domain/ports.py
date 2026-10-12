@@ -311,8 +311,10 @@ class ClubNames(Protocol):
 class PlayerFit(Protocol):
     """**Whether two people may be on one game**, as today's engine requires of
     every pair on a court (``docs/adr/0116``): neither blocked the other, each
-    passes the other's gender preference, and their Levels in the sport are
-    within the kind's window — narrower while either is new.
+    passes the other's gender preference, their Levels in the sport are within
+    the kind's window — narrower while either is new — and neither's
+    **reliability filter** is above the other's band, *New* passing every
+    minimum (``docs/adr/0195`` §6, #661).
 
     It answers the pairs that **do not** fit and names nobody's reason: which
     rule refused a pair is not something a card may say (``docs/adr/0130``).
@@ -327,8 +329,28 @@ class PlayerFit(Protocol):
         sport: Sport,
         kind: SearchMode,
         at: Instant,
+        reliability_filter: bool = True,
     ) -> frozenset[frozenset[UUID]]:
-        """Every pair among these players that may not share a court."""
+        """Every pair among these players that may not share a court.
+
+        ``reliability_filter=False`` asks it **of yeses already given** — the
+        fill's re-check, a paused yes coming back — which the filter never takes
+        back: it acts on what is dealt and joined from then on."""
+        ...
+
+    async def unfit_pairs_by_kind(
+        self,
+        player_ids: Collection[UUID],
+        *,
+        sport: Sport,
+        kinds: Sequence[SearchMode],
+        at: Instant,
+    ) -> Mapping[SearchMode, frozenset[frozenset[UUID]]]:
+        """``unfit_pairs`` for each of ``kinds`` over one reading of the
+        players — **one read of their points per deal** (``docs/adr/0195`` §6).
+        Whether a pair fits is about that pair alone, so a caller asking about
+        everybody a deal could seat, of every kind, is answered each kind's
+        pairs as if it had asked that kind alone."""
         ...
 
     async def level_window(

@@ -45,6 +45,7 @@ from app.kernel import Instant, Sport
 from app.modules.player_record.domain.record import (
     GameOutcome,
     OpponentVariety,
+    ReliabilityFilter,
     ReliabilityPanel,
     SubjectIdentity,
     SubjectRating,
@@ -278,6 +279,32 @@ class SubjectReliability(Protocol):
 
 
 @runtime_checkable
+class ReliabilityFilters(Protocol):
+    """The reader's own reliability filter in their groups, and the figure that
+    brings them back where somebody's keeps them off a court (``docs/adr/0195``
+    §6, #661).
+
+    **The eleventh demand, and the only one about the reader's groups rather than
+    the subject.** It is asked on your own record alone — the ``/me`` wiring
+    holds it and the other route has no such collaborator — because a filter is
+    a preference about other people and a stranger's sheet must not say who
+    filters whom. **It names nobody**: two counts and a band.
+
+    **The pair rule's clause, counted.** Who a filter hides is the engine's
+    ``passes_reliability_minimum`` over each group-mate's points and *New* — the
+    same clause ``proposals``' pair rule asks — so the sheet cannot count a
+    player the deck would deal.
+    """
+
+    async def filter_of(self, player_id: UUID, *, now: Instant) -> ReliabilityFilter:
+        """Their minimum, how many of the players in their groups it hides out
+        of how many, and — where somebody's filter there keeps them off a court
+        — the figure that brings them back to everyone. Folded against one
+        ``now``, like every figure on the sheet."""
+        ...
+
+
+@runtime_checkable
 class SubjectVariety(Protocol):
     """How widely this person spreads their games — over their **whole** record.
 
@@ -370,6 +397,7 @@ PLAYER_RECORD_DEMANDS: tuple[type, ...] = (
     SubjectReliability,
     SubjectSportsmanship,
     SubjectVariety,
+    ReliabilityFilters,
 )
 
 
@@ -379,6 +407,7 @@ __all__ = [
     "PriorDisclosure",
     "RecordGates",
     "RecordPhotoLink",
+    "ReliabilityFilters",
     "SubjectForm",
     "SubjectIdentitySource",
     "SubjectRatings",

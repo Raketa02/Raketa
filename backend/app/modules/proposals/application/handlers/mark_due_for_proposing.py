@@ -9,19 +9,19 @@ is missed.
 
 What makes a pool due (the mechanics §5.1: *a court frees up, a member joins,
 someone changes their hours*): somebody joining a group, a player's week, Play
-intent, first rating in a sport or Games & money — each of which changes which
-games they may be dealt in every pool they are in — a swipe, which may leave a
-seat for the next best fits or a pick at half In, and **anything a club changes
-about what it sells**, which is everywhere: a club's courts may be in reach of
-any group near it. Its payments account going ready — or ready no longer — is
-one of those, since it is what makes a club live (#537). **A game filling is
-one too** (#541): its booking took a court hour from every card at that club
-and hour, in any pool — and a seat reopened, or a yes paused, left a seat open.
-**So is a game put to an On request club, and the club's answer** (#543): the
-request holds a court hour, and a request refused, unanswered or withdrawn
-frees it — and a turned-down game's people are owed a new card first. **And
-the club's cancel of a booked game** (#547): its court hour is free, and the
-people still in are owed a new card first.
+intent, first rating in a sport, Games & money or reliability filter (#661) —
+each of which changes which games they may be dealt in every pool they are in —
+a swipe, which may leave a seat for the next best fits or a pick at half In, and
+**anything a club changes about what it sells**, which is everywhere: a club's
+courts may be in reach of any group near it. Its payments account going ready —
+or ready no longer — is one of those, since it is what makes a club live (#537).
+**A game filling is one too** (#541): its booking took a court hour from every
+card at that club and hour, in any pool — and a seat reopened, or a yes paused,
+left a seat open. **So is a game put to an On request club, and the club's
+answer** (#543): the request holds a court hour, and a request refused,
+unanswered or withdrawn frees it — and a turned-down game's people are owed a
+new card first. **And the club's cancel of a booked game** (#547): its court
+hour is free, and the people still in are owed a new card first.
 """
 
 from __future__ import annotations
@@ -55,6 +55,7 @@ from app.modules.clubs.domain.club_courts_events import (
 from app.modules.groups.domain.events import GroupJoined, JoinRequestApproved
 from app.modules.player_profile.domain.events import (
     PlayIntentDeclared,
+    ReliabilityMinimumSet,
     WeeklyHoursSet,
 )
 from app.modules.proposals.application.propose_games import DueForProposing
@@ -80,6 +81,8 @@ PLAYER_EVENTS = (
     PlayIntentDeclared,
     RatingInitialised,
     GamesAndMoneySet,
+    # The reliability filter: who they may share a court with (#661).
+    ReliabilityMinimumSet,
 )
 #: A swipe on a game still filling — or a yes that stopped counting, which
 #: opens a seat as a withdrawal does: a time to pay that ran out reopens its

@@ -49,6 +49,7 @@ which games exist.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import final
 from uuid import UUID
 
@@ -61,6 +62,7 @@ from app.modules.player_record.domain.errors import (
 from app.modules.player_record.domain.ports import (
     BlocksByTheReader,
     RecordPhotoLink,
+    ReliabilityFilters,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -269,6 +271,7 @@ class ReadOwnRecord:
         ratings: SubjectRatings,
         form: SubjectForm,
         reliability: SubjectReliability,
+        filters: ReliabilityFilters,
         variety: SubjectVariety,
         sportsmanship: SubjectSportsmanship,
         clock: Clock,
@@ -278,6 +281,7 @@ class ReadOwnRecord:
         self._ratings = ratings
         self._form = form
         self._reliability = reliability
+        self._filters = filters
         self._variety = variety
         self._sportsmanship = sportsmanship
         self._clock = clock
@@ -286,15 +290,22 @@ class ReadOwnRecord:
         self, *, reader_id: UUID, arrived_from: Sport | None = None
     ) -> PlayerRecord:
         """**Still no gate, and now a clock.** The instant is read for the run of
-        form and for nothing else here — a sheet about yourself has nothing to
-        re-evaluate."""
+        form and the figures, and for nothing else here — a sheet about yourself
+        has nothing to re-evaluate.
 
-        return await assemble_record(
+        **And the reader's own reliability filter** (#661) — how many players
+        in their groups it hides, and the figure that brings them back where
+        somebody's keeps them off a court. Attached here and nowhere else: the
+        other route has no such collaborator, so nobody's filter can reach a
+        stranger's sheet."""
+
+        now = self._clock.now()
+        record = await assemble_record(
             subject_id=reader_id,
             is_self=True,
             blocked_by_reader=False,
             arrived_from=arrived_from,
-            now=self._clock.now(),
+            now=now,
             ratings=self._ratings,
             form=self._form,
             reliability=self._reliability,
@@ -302,6 +313,13 @@ class ReadOwnRecord:
             sportsmanship=self._sportsmanship,
             identities=self._identities,
             photos=self._photos,
+        )
+        return replace(
+            record,
+            reliability=replace(
+                record.reliability,
+                filter=await self._filters.filter_of(reader_id, now=now),
+            ),
         )
 
 

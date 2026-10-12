@@ -158,7 +158,8 @@ def test_a_count_larger_than_what_it_is_of_cannot_be_built():
 
 def test_no_strand_ratio_or_weight_crosses_this_seam_in_any_shape():
     """The strands, their ratios and the weights left with ADR-0195 §1: the
-    panel is points, a band, *New* and four counts, and nothing else."""
+    panel is points, a band, *New* and four counts — and, on your own record,
+    your reliability filter (§6, #661) — and nothing else."""
 
     assert {field.name for field in fields(ReliabilityPanel)} == {
         "player_score",
@@ -170,4 +171,5 @@ def test_no_strand_ratio_or_weight_crosses_this_seam_in_any_shape():
         "kept",
         "kept_of",
         "left_in_dispute",
+        "filter",
     }

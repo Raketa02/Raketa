@@ -35,6 +35,7 @@ from app.bootstrap.composition import (
     build_event_publisher,
     build_game_repository,
     build_group_repository,
+    build_player_profile_repository,
     build_skill_rating_repository,
     build_sportsmanship_ledger,
 )
@@ -55,7 +56,7 @@ from app.bootstrap.player_record_demands import (
     implementations_of,
 )
 from app.engines.matchfit.core import ReliabilityBand, SearchMode
-from app.kernel import Instant, Sport, instant
+from app.kernel import Instant, Sport, instant, iso_weekday
 from app.modules.administrators.domain.administrator import Administrator
 from app.modules.blocks.domain.block import Block
 from app.modules.bookings.domain.booking import BookedCourt, Booking
@@ -78,12 +79,21 @@ from app.modules.groups.domain.value_objects import (
     JoinPolicy,
     WhatsAppSize,
 )
-from app.modules.player_profile.domain.weekly_hours import Window
+from app.modules.player_profile.domain.gender import Gender
+from app.modules.player_profile.domain.location import LocationArea
+from app.modules.player_profile.domain.profile import PlayerProfile
+from app.modules.player_profile.domain.social_tags import SocialTagSelection
+from app.modules.player_profile.domain.weekly_hours import (
+    WeeklyHour,
+    WeeklyHours,
+    Window,
+)
 from app.modules.player_record.domain.ports import (
     BlocksByTheReader,
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    ReliabilityFilters,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -92,7 +102,9 @@ from app.modules.player_record.domain.ports import (
     SubjectVariety,
 )
 from app.modules.player_record.domain.record import (
+    BackWithEveryone,
     OpponentVariety,
+    ReliabilityFilter,
     ReliabilityPanel,
     WhatPlayersSaid,
 )
@@ -250,7 +262,13 @@ async def _a_club(session) -> UUID:
     return club.id
 
 
-async def _a_group(session, owner: UUID, *others: UUID, policy=JoinPolicy.ANYONE):
+async def _a_group(
+    session,
+    owner: UUID,
+    *others: UUID,
+    policy=JoinPolicy.ANYONE,
+    code: str = "k7pq2mxa",
+):
     """A player group at a club, and whoever else tapped *Join* — each made
     through its own aggregate, the club first because a group has a home club."""
 
@@ -262,7 +280,7 @@ async def _a_group(session, owner: UUID, *others: UUID, policy=JoinPolicy.ANYONE
         home_club_id=await _a_club(session),
         join_policy=policy,
         owner_id=owner,
-        code=GroupCode("k7pq2mxa"),
+        code=GroupCode(code),
         occurred_at=now,
     )
     for other in others:
@@ -774,6 +792,113 @@ async def test_a_booked_game_still_ahead_is_not_counted_yet(implementation, sess
     panel = await reliability.reliability_of(subject, now=_now())
 
     assert (panel.player_score, panel.kept, panel.kept_of) == (100, 0, 0)
+
+
+# ---------------------------------------------------------------------------
+# ReliabilityFilters — the reader's own filter in their groups (#661)
+# ---------------------------------------------------------------------------
+
+
+async def _a_profile(
+    session, player_id: UUID, *, minimum: ReliabilityBand | None = None
+) -> None:
+    """A Player profile, through its aggregate — with the reliability filter
+    switched on at ``minimum`` where one is given."""
+
+    now = instant(datetime.now(timezone.utc))
+    profile = PlayerProfile.create(
+        player_id=player_id,
+        social_tags=SocialTagSelection.from_ids(("PLAYS_TO_WIN", "HERE_TO_IMPROVE")),
+        photo_ids=(),
+        weekly_hours=WeeklyHours.of([WeeklyHour(day=iso_weekday(6), hour=17)]),
+        location=LocationArea.around(50.06, 19.95),
+        gender=Gender.WOMAN,
+        idempotency_key=f"commit-{player_id}",
+        occurred_at=now,
+    )
+    profile.set_reliability_minimum(minimum, occurred_at=now)
+    await build_player_profile_repository(
+        event_store=build_domain_event_store(session),
+        events=build_event_publisher(session),
+    ).save(profile)
+    await session.commit()
+
+
+async def _a_figure(session, player: UUID, *, played: int, missed: int) -> None:
+    """``missed`` evenings they Didn't come to six days ago, then ``played``
+    games played through three days ago — each a fold over a real stream."""
+
+    for _ in range(missed):
+        await _a_game_not_come_to(session, player, new_uuid())
+    for _ in range(played):
+        await _a_played_plan(session, player, new_uuid())
+
+
+@pytest.mark.parametrize("implementation", registered(ReliabilityFilters))
+async def test_a_filter_hides_the_players_below_it_and_never_somebody_new(
+    implementation, session
+):
+    """Marta at *at least High* in a group with Sergio — 65, Medium, three
+    games played through — Nerea, New at 50, and Ivan at a hundred: her filter
+    hides one of three, and Sergio is told the figure that brings him back,
+    naming nobody."""
+
+    filters = implementation.build(session)
+    marta, sergio, nerea, ivan = new_uuid(), new_uuid(), new_uuid(), new_uuid()
+    await _a_profile(session, marta, minimum=ReliabilityBand.HIGH)
+    for player in (sergio, nerea, ivan):
+        await _a_profile(session, player)
+    await _a_figure(session, sergio, played=3, missed=2)
+    await _a_figure(session, nerea, played=0, missed=2)
+    await _a_group(session, marta, sergio, nerea, ivan)
+
+    assert await filters.filter_of(marta, now=_now()) == ReliabilityFilter(
+        minimum=ReliabilityBand.HIGH, hides=1, of=3, back_with_everyone=None
+    )
+    assert await filters.filter_of(sergio, now=_now()) == ReliabilityFilter(
+        minimum=None,
+        hides=0,
+        of=3,
+        back_with_everyone=BackWithEveryone(band=ReliabilityBand.HIGH),
+    )
+    assert (await filters.filter_of(nerea, now=_now())).back_with_everyone is None
+
+
+@pytest.mark.parametrize("implementation", registered(ReliabilityFilters))
+async def test_the_figure_back_clears_every_filter_and_a_player_counts_once(
+    implementation, session
+):
+    """Kasia — Low, at 15 — shares two groups with Marta (*at least High*) and
+    one with Piotr (*at least Medium*): back with everyone at 75, the highest
+    of the two, and Marta is one player in her groups, not two."""
+
+    filters = implementation.build(session)
+    kasia, marta, piotr = new_uuid(), new_uuid(), new_uuid()
+    await _a_profile(session, kasia)
+    await _a_profile(session, marta, minimum=ReliabilityBand.HIGH)
+    await _a_profile(session, piotr, minimum=ReliabilityBand.MEDIUM)
+    await _a_figure(session, kasia, played=3, missed=4)
+    await _a_group(session, kasia, marta, code="k7pq2mxa")
+    await _a_group(session, marta, kasia, piotr, code="m3xq8vbn")
+
+    assert await filters.filter_of(kasia, now=_now()) == ReliabilityFilter(
+        minimum=None,
+        hides=0,
+        of=2,
+        back_with_everyone=BackWithEveryone(band=ReliabilityBand.HIGH),
+    )
+    assert (await filters.filter_of(piotr, now=_now())).hides == 1
+
+
+@pytest.mark.parametrize("implementation", registered(ReliabilityFilters))
+async def test_a_player_in_no_group_has_nobody_to_hide(implementation, session):
+    filters = implementation.build(session)
+    loner = new_uuid()
+    await _a_profile(session, loner, minimum=ReliabilityBand.MEDIUM)
+
+    assert await filters.filter_of(loner, now=_now()) == ReliabilityFilter(
+        minimum=ReliabilityBand.MEDIUM, hides=0, of=0, back_with_everyone=None
+    )
 
 
 # ---------------------------------------------------------------------------

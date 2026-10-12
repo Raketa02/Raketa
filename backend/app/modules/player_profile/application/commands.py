@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Sequence
 from uuid import UUID
 
+from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Sport
 from app.modules.player_profile.domain.gender import Gender, GenderPreference
 from app.modules.player_profile.domain.play_intent import (
@@ -215,3 +216,12 @@ class ChangeGenderPreferenceCommand:
 
     player_id: UUID
     gender_preference: GenderPreference
+
+
+@dataclass(frozen=True, slots=True)
+class SetReliabilityMinimumCommand:
+    """*Play only with players of at least High reliability* — or Medium, or
+    ``None`` for the filter off (``docs/adr/0195`` §6, #661)."""
+
+    player_id: UUID
+    minimum: ReliabilityBand | None

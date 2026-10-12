@@ -1534,6 +1534,76 @@
         ]
       }
     },
+    "/api/v1/players/me/reliability-filter": {
+      "put": {
+        "tags": [
+          "player-profile"
+        ],
+        "summary": "Play only with players of at least High or Medium reliability",
+        "description": "The Player reliability screen's switch (`docs/adr/0195` \u00a76, #661): *Play only with players of at least High reliability*, *at least Medium*, or off. Unkeyed; an unchanged value records nothing.\n\n**One more clause of the pair rule, asked both ways and from then on**: a pair is unfit when either player's minimum is above the other's band, and **New passes every minimum** \u2014 on the deal, the deck, posts, *Seat open* and Fill in, and the details. **Yeses already given stand**, a player who drops below it keeps theirs, and booked games never change.\n\n**`204` and no body**: the setting is read back on `GET /players/me/record`, with how many players in this player's groups it hides.",
+        "operationId": "set_reliability_filter_api_v1_players_me_reliability_filter_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetReliabilityFilterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "description": "`reliability_minimum_not_offered` \u2014 the filter is at least `MEDIUM`, at least `HIGH`, or `null`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`player_profile_not_found` \u2014 this player has not finished onboarding's second part. The recovery is that part, which `GET /users/me` already sends a cold launch into.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`concurrent_modification` \u2014 two writes reached this player's profile and this one lost. Retry: the retry reads the winner, and lands the same state or nothing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/play-intents/{sport}": {
       "put": {
         "tags": [
@@ -7214,6 +7284,28 @@
         ],
         "title": "AttendanceState",
         "description": "What became of one player somebody said was not here yet."
+      },
+      "BackWithEveryoneSchema": {
+        "properties": {
+          "band": {
+            "$ref": "#/components/schemas/ReliabilityBand",
+            "description": "The highest minimum among the filters that keep you off a court \u2014 `HIGH` or `MEDIUM` \u2014 the word in *play only with High reliability or above*. Draw the word from this code."
+          },
+          "points": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Points",
+            "description": "Where that band begins \u2014 *at 75 you're dealt with everyone again*. Reaching it passes every one of those filters at once."
+          }
+        },
+        "type": "object",
+        "required": [
+          "band",
+          "points"
+        ],
+        "title": "BackWithEveryoneSchema",
+        "description": "The figure that deals you with everyone in your groups again (ADR-0195\n\u00a76) \u2014 *Some players in your groups play only with High reliability or above.\nAt 75 you're dealt with everyone again.* **Names nobody.**"
       },
       "BandResponse": {
         "properties": {
@@ -13363,6 +13455,37 @@
         "title": "ReliabilityBand",
         "description": "The word under a player's reliability figure (``docs/adr/0195`` \u00a71).\n**Four bands, served by the backend**: a client draws the word from the band\nand holds no threshold of its own.\n\n**Here, and never in a context**, for the reason ``racketskill/core`` holds\nthe Level's bands: it is a closed vocabulary read by every surface that\nshows the figure \u2014 a player's record, a group's Members list \u2014 and by the\none thing that acts on it, the reliability filter in the pair rule (#661).\nA copy in each would satisfy every test in its own context while being free\nto drift, and a client would be handed two words for one band.\n\nThe words the phone draws \u2014 *Very high*, *High*, *Medium*, *Low* \u2014 are its\nown; the retired tone ladder's *Reliable*, *Holding* and *Under the bar*\nnamed a bar at 70 that nothing applies."
       },
+      "ReliabilityFilterSchema": {
+        "properties": {
+          "minimum": {
+            "$ref": "#/components/schemas/ReliabilityBand",
+            "description": "`MEDIUM` or `HIGH` \u2014 the switch's position. **Omitted while the filter is off**, which it is until the player switches it on (`PUT /players/me/reliability-filter`)."
+          },
+          "hides": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Hides",
+            "description": "How many of the players in your groups your filter keeps off your courts \u2014 *Your filter hides 2 of the 11 players in your groups*. Never somebody New, who passes every filter; `0` while it is off."
+          },
+          "of": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Of",
+            "description": "Everybody else in every group you are in, each counted once \u2014 the *of 11*."
+          },
+          "back_with_everyone": {
+            "$ref": "#/components/schemas/BackWithEveryoneSchema",
+            "description": "**Present only while somebody in your groups filters you out** \u2014 draw *Some players in your groups play only with High reliability or above. At 75 you're dealt with everyone again.* Omitted while nobody does: New players pass every filter."
+          }
+        },
+        "type": "object",
+        "required": [
+          "hides",
+          "of"
+        ],
+        "title": "ReliabilityFilterSchema",
+        "description": "**Your** reliability filter \u2014 *Play only with players of at least High\nreliability* \u2014 as it stands in your groups, and whether anybody else's keeps\nyou off a court (ADR-0195 \u00a76). **On your own record only, and it names\nnobody**: two counts and, where it applies, a band."
+      },
       "ReliabilitySchema": {
         "properties": {
           "player_score": {
@@ -13416,6 +13539,10 @@
             "minimum": 0.0,
             "title": "Left In Dispute",
             "description": "*Results left in dispute*: how many games, over the last six months, they put up one of two scores that named different winners and neither side gave way. **Information only \u2014 it costs no points.**"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/ReliabilityFilterSchema",
+            "description": "**Your** reliability filter and how many players in your groups it hides, and the figure that brings you back where somebody's filter keeps you off a court (#661).\n\n**On `/players/me/record` always, and on nobody else's record ever** \u2014 a filter is a preference about other people, and showing it to them would say who filters whom."
           }
         },
         "type": "object",
@@ -13873,6 +14000,27 @@
         ],
         "title": "SendMessageRequest",
         "description": "One player's own words."
+      },
+      "SetReliabilityFilterRequest": {
+        "properties": {
+          "minimum": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReliabilityBand"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "`MEDIUM` or `HIGH` \u2014 the band everybody on a court with this player must be at least \u2014 or `null`, the filter off, which every profile starts with. Any other band is `reliability_minimum_not_offered`.\n\n**Both ways, from then on**: it keeps this player off every court shared with somebody below it, and keeps that somebody off theirs \u2014 the deal, the deck, posts, *Seat open* and Fill in, the details. **New passes every minimum.** Yeses already given stand, and booked games never change."
+          }
+        },
+        "type": "object",
+        "required": [
+          "minimum"
+        ],
+        "title": "SetReliabilityFilterRequest",
+        "description": "*Play only with players of at least High reliability* \u2014 or Medium, or\noff (``docs/adr/0195`` \u00a76, #661)."
       },
       "SetScoreSchema": {
         "properties": {

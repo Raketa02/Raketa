@@ -6,9 +6,9 @@ uuid, an hour of the week as its code, a location as two floats, a gender and an
 intent as their machine codes. Nothing here holds a value object, and nothing
 here holds display text.
 
-Ten events. Nine belong to the profile's own stream, keyed on the player, and
-they fall into three kinds; the tenth belongs to a **second aggregate** in this
-context and is kept here because a context's durable names have one home.
+Eleven events. Ten belong to the profile's own stream, keyed on the player, and
+they fall into three kinds; the eleventh belongs to a **second aggregate** in
+this context and is kept here because a context's durable names have one home.
 
 **One creation.** ``PlayerProfileCreated`` is the single commit that ends
 onboarding's second part, carrying every preference at once (``docs/adr/0089``).
@@ -17,8 +17,10 @@ lets the same request arriving twice be recognised as the same request without a
 table beside the stream to keep in step with it. The key is evidence about a
 *write*, not about the player, and it is on the creating event only.
 
-**Six preference changes**, for the profile screen that edits the same values
-later: tags, photos, weekly hours, location, gender and gender preference. Each
+**Seven preference changes**, for the profile screen that edits the same values
+later: tags, photos, weekly hours, location, gender and gender preference — and
+the reliability filter (#661), which the creating event never carried: every
+profile starts with it off. Each
 carries the whole new value rather than a delta, because a preference is small,
 replay stays a fold, and *what was it before* is answered by the event before it.
 
@@ -212,6 +214,27 @@ class GenderPreferenceChanged:
 
     player_id: UUID
     gender_preference: str
+    occurred_at: datetime
+
+
+@dataclass(frozen=True)
+class ReliabilityMinimumSet:
+    """A new durable answer to *whom will I share a court with*, by reliability:
+    *at least Medium*, *at least High*, or ``None`` — the filter off
+    (``docs/adr/0195`` §6, #661).
+
+    **A preference beside the gender preference, and read the same way**: the
+    pair rule asks it of every pair it would seat, both ways, whenever somebody
+    else's game is being made — which a setting made at the moment could not
+    bind. ``minimum`` is a ``ReliabilityBand`` code, the engine's spelling.
+
+    **Yeses already given stand.** It acts on what is dealt and joined from then
+    on: nothing downstream of this event takes a yes back or touches a booked
+    game, unlike a block.
+    """
+
+    player_id: UUID
+    minimum: str | None
     occurred_at: datetime
 
 

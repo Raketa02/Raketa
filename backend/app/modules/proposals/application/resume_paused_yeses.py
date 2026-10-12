@@ -81,8 +81,9 @@ class ResumePausedYeses:
                 if not await self._guards.in_the_pool(proposal.pool, [player_id]):
                     continue
                 await self._guards.refuse_an_unchargeable_yes(player_id)
+                # A yes given before: the reliability filter takes none back.
                 await self._guards.refuse_a_yes_that_does_not_fit(
-                    player_id, proposal, at=at
+                    player_id, proposal, at=at, already_given=True
                 )
                 await self._guards.refuse_a_yes_the_post_is_not_for(player_id, proposal)
             except (PaymentMethodRequired, NoLongerFits):

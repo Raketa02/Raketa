@@ -40,7 +40,7 @@ from enum import StrEnum
 from typing import Final, final
 from uuid import UUID
 
-from app.engines.matchfit.core import ReliabilityBand
+from app.engines.matchfit.core import RELIABILITY_BAND_FLOORS, ReliabilityBand
 from app.kernel import Sport, invariant
 
 
@@ -350,6 +350,64 @@ class WhatPlayersSaid:
 
 @final
 @dataclass(frozen=True, slots=True)
+class BackWithEveryone:
+    """The figure that deals a filtered-out player with everyone in their groups
+    again (``docs/adr/0195`` §6, #661) — *Some players in your groups play only
+    with High reliability or above. At 75 you're dealt with everyone again.*
+
+    ``band`` is the **highest** minimum among the filters that keep them off a
+    court, and ``points`` where that band begins: reaching it passes every one
+    of those filters at once, which is what *with everyone* promises. A lower
+    floor would pass only some of them, and the sentence would be false (a call
+    made without a ruling: the ticket's *lowest band floor among those filters*
+    reads as the lowest figure that clears them all).
+    """
+
+    band: ReliabilityBand
+
+    @property
+    def points(self) -> int:
+        """Where the band begins — the engine's floors, never a copy."""
+
+        return RELIABILITY_BAND_FLOORS[self.band]
+
+
+@final
+@dataclass(frozen=True, slots=True)
+class ReliabilityFilter:
+    """The reader's own reliability filter as it stands in their groups, and
+    whether anybody else's keeps them off a court (``docs/adr/0195`` §6, #661).
+
+    **Only ever on your own record, and it names nobody** — ADR-0193 §3's
+    principle for blocks: how many of your group-mates your filter hides, never
+    who; that some of them filter you out, never who, only the figure that brings
+    you back.
+
+    ``of`` is everybody else in every group the reader is in, each counted once;
+    ``hides`` those of them the reader's ``minimum`` keeps off the reader's
+    courts — never somebody New. Nought while the filter is off.
+    """
+
+    minimum: ReliabilityBand | None
+    hides: int
+    of: int
+    #: ``None`` while nobody's filter in their groups keeps them off a court —
+    #: New, everyone passing, or nobody filtering at all.
+    back_with_everyone: BackWithEveryone | None
+
+    def __post_init__(self) -> None:
+        invariant(
+            0 <= self.hides <= self.of,
+            f"a filter that hides more players than there are: {self}",
+        )
+        invariant(
+            self.minimum is not None or self.hides == 0,
+            f"a filter that is off and hides somebody: {self}",
+        )
+
+
+@final
+@dataclass(frozen=True, slots=True)
 class ReliabilityPanel:
     """Player reliability: the figure in points, its band, *New*, and the four
     counts beside it (``docs/adr/0195`` §1, #659).
@@ -383,6 +441,10 @@ class ReliabilityPanel:
     kept: int
     kept_of: int
     left_in_dispute: int
+    #: The reader's own reliability filter (#661) — **on your own record and
+    #: nobody else's**: a filter is a preference about other people, and
+    #: showing it to them would name who filters them out.
+    filter: ReliabilityFilter | None = None
 
     def __post_init__(self) -> None:
         invariant(
@@ -464,10 +526,12 @@ __all__ = [
     "LOWEST_AVERAGE",
     "RATER_WINDOW",
     "GameOutcome",
+    "BackWithEveryone",
     "LikelyRange",
     "OnCourtVerdict",
     "OpponentVariety",
     "PlayerRecord",
+    "ReliabilityFilter",
     "ReliabilityPanel",
     "SkillPanel",
     "SportPill",

@@ -283,3 +283,20 @@ class PlayerProfileNotFound(NotFoundError):
 
     def __init__(self) -> None:
         super().__init__("This player has no profile.")
+
+
+class ReliabilityMinimumNotOffered(BadRequestError):
+    """A reliability filter at a band the switch does not offer.
+
+    *Play only with players of at least Medium* or *at least High* reliability
+    (``docs/adr/0195`` §6), or no filter at all: *at least Low* lets everybody
+    through and is the filter off said another way, and *at least Very high* is
+    not a choice the product makes. The switch draws three positions, so a client
+    built from it cannot send another; it is refused here because a disabled
+    button is not a validation.
+    """
+
+    code = "reliability_minimum_not_offered"
+
+    def __init__(self) -> None:
+        super().__init__("A reliability filter is at least Medium or at least High.")

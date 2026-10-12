@@ -272,11 +272,11 @@ class ProposeGames:
             },
             key=str,
         )
-        unfit: dict[SearchMode, frozenset[frozenset[UUID]]] = {}
-        for kind in SearchMode:
-            unfit[kind] = await self._fit.unfit_pairs(
-                everybody, sport=sport, kind=kind, at=now
-            )
+        # Every kind over one reading: one read of the members' points per
+        # deal (docs/adr/0195 §6).
+        unfit = await self._fit.unfit_pairs_by_kind(
+            everybody, sport=sport, kinds=list(SearchMode), at=now
+        )
         return await asyncio.to_thread(
             propose,
             sport=sport,

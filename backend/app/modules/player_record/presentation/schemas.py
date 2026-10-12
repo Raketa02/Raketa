@@ -296,6 +296,71 @@ class RecordSportsmanshipSchema(BaseModel):
     )
 
 
+class BackWithEveryoneSchema(BaseModel):
+    """The figure that deals you with everyone in your groups again (ADR-0195
+    §6) — *Some players in your groups play only with High reliability or above.
+    At 75 you're dealt with everyone again.* **Names nobody.**"""
+
+    band: ReliabilityBand = Field(
+        ...,
+        description=(
+            "The highest minimum among the filters that keep you off a court — "
+            "`HIGH` or `MEDIUM` — the word in *play only with High reliability or "
+            "above*. Draw the word from this code."
+        ),
+    )
+    points: int = Field(
+        ...,
+        ge=0,
+        le=100,
+        description=(
+            "Where that band begins — *at 75 you're dealt with everyone again*. "
+            "Reaching it passes every one of those filters at once."
+        ),
+    )
+
+
+class ReliabilityFilterSchema(BaseModel):
+    """**Your** reliability filter — *Play only with players of at least High
+    reliability* — as it stands in your groups, and whether anybody else's keeps
+    you off a court (ADR-0195 §6). **On your own record only, and it names
+    nobody**: two counts and, where it applies, a band."""
+
+    minimum: ReliabilityBand = Field(
+        default=OMITTED,
+        description=(
+            "`MEDIUM` or `HIGH` — the switch's position. **Omitted while the filter "
+            "is off**, which it is until the player switches it on "
+            "(`PUT /players/me/reliability-filter`)."
+        ),
+    )
+    hides: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "How many of the players in your groups your filter keeps off your "
+            "courts — *Your filter hides 2 of the 11 players in your groups*. "
+            "Never somebody New, who passes every filter; `0` while it is off."
+        ),
+    )
+    of: int = Field(
+        ...,
+        ge=0,
+        description=(
+            "Everybody else in every group you are in, each counted once — the *of 11*."
+        ),
+    )
+    back_with_everyone: BackWithEveryoneSchema = Field(
+        default=OMITTED,
+        description=(
+            "**Present only while somebody in your groups filters you out** — "
+            "draw *Some players in your groups play only with High reliability or "
+            "above. At 75 you're dealt with everyone again.* Omitted while nobody "
+            "does: New players pass every filter."
+        ),
+    )
+
+
 class ReliabilitySchema(BaseModel):
     """**Player reliability** — the figure in points, its band, *New*, and the
     four counts the record shows beside it (ADR-0195 §1).
@@ -398,6 +463,17 @@ class ReliabilitySchema(BaseModel):
             "months, they put up one of two scores that named different winners "
             "and neither side gave way. **Information only — it costs no "
             "points.**"
+        ),
+    )
+    filter: ReliabilityFilterSchema = Field(
+        default=OMITTED,
+        description=(
+            "**Your** reliability filter and how many players in your groups it "
+            "hides, and the figure that brings you back where somebody's filter "
+            "keeps you off a court (#661).\n\n"
+            "**On `/players/me/record` always, and on nobody else's record "
+            "ever** — a filter is a preference about other people, and showing it "
+            "to them would say who filters whom."
         ),
     )
 
@@ -660,17 +736,30 @@ class PlayerRecordResponse(BaseModel):
                 last_five=list(panel.last_five),
             )
         watched = record.reliability
-        fields["reliability"] = ReliabilitySchema(
-            player_score=watched.player_score,
-            band=watched.band,
-            is_new=watched.is_new,
-            turned_up=watched.turned_up,
-            turned_up_of=watched.turned_up_of,
-            late=watched.late,
-            kept=watched.kept,
-            kept_of=watched.kept_of,
-            left_in_dispute=watched.left_in_dispute,
-        )
+        reliability: dict[str, Any] = {
+            "player_score": watched.player_score,
+            "band": watched.band,
+            "is_new": watched.is_new,
+            "turned_up": watched.turned_up,
+            "turned_up_of": watched.turned_up_of,
+            "late": watched.late,
+            "kept": watched.kept,
+            "kept_of": watched.kept_of,
+            "left_in_dispute": watched.left_in_dispute,
+        }
+        if watched.filter is not None:
+            # Your own record's alone (#661): omitted on everybody else's.
+            own = watched.filter
+            filtering: dict[str, Any] = {"hides": own.hides, "of": own.of}
+            if own.minimum is not None:
+                filtering["minimum"] = own.minimum
+            if own.back_with_everyone is not None:
+                filtering["back_with_everyone"] = BackWithEveryoneSchema(
+                    band=own.back_with_everyone.band,
+                    points=own.back_with_everyone.points,
+                )
+            reliability["filter"] = ReliabilityFilterSchema(**filtering)
+        fields["reliability"] = ReliabilitySchema(**reliability)
         if record.sportsmanship is not None:
             said = record.sportsmanship
             fields["sportsmanship"] = RecordSportsmanshipSchema(
@@ -690,9 +779,11 @@ class PlayerRecordResponse(BaseModel):
 
 
 __all__ = [
+    "BackWithEveryoneSchema",
     "OpponentVarietySchema",
     "PlayerRecordResponse",
     "RecordLikelyRangeSchema",
+    "ReliabilityFilterSchema",
     "ReliabilitySchema",
     "SkillPanelSchema",
     "SportPillSchema",

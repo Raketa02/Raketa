@@ -30,6 +30,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Sport
 from app.modules.player_profile.application.read_player_profile import (
     PlayerProfileSurface,
@@ -913,5 +914,24 @@ class ChangeGenderPreferenceRequest(BaseModel):
             "anybody — and the client must say so at the moment of setting; "
             "learning it from silence is not acceptable. Seats already accepted "
             "are facts, not candidates: nothing already agreed is undone."
+        ),
+    )
+
+
+class SetReliabilityFilterRequest(BaseModel):
+    """*Play only with players of at least High reliability* — or Medium, or
+    off (``docs/adr/0195`` §6, #661)."""
+
+    minimum: ReliabilityBand | None = Field(
+        ...,
+        description=(
+            "`MEDIUM` or `HIGH` — the band everybody on a court with this player "
+            "must be at least — or `null`, the filter off, which every profile "
+            "starts with. Any other band is `reliability_minimum_not_offered`.\n\n"
+            "**Both ways, from then on**: it keeps this player off every court "
+            "shared with somebody below it, and keeps that somebody off theirs — "
+            "the deal, the deck, posts, *Seat open* and Fill in, the details. "
+            "**New passes every minimum.** Yeses already given stand, and booked "
+            "games never change."
         ),
     )

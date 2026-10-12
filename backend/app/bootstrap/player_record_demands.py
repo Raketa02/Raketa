@@ -48,6 +48,7 @@ from app.bootstrap.composition import (
     build_photo_storage,
     build_record_gates,
     build_record_photo_link,
+    build_reliability_filters,
     build_runner_disclosure,
     build_subject_identity_source,
     build_subject_reliability,
@@ -62,6 +63,7 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    ReliabilityFilters,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -171,6 +173,11 @@ PLAYER_RECORD_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
         port=SubjectReliability,
         name="ScoreSubjectReliability",
         build=build_subject_reliability,
+    ),
+    RegisteredImplementation(
+        port=ReliabilityFilters,
+        name="FiltersInTheGroups",
+        build=build_reliability_filters,
     ),
     RegisteredImplementation(
         port=SubjectVariety,

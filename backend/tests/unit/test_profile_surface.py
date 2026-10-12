@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Sport
 from app.modules.player_profile.application.change_gender import ChangeGender
 from app.modules.player_profile.application.change_gender_preference import (
@@ -41,6 +42,7 @@ from app.modules.player_profile.application.commands import (
     ChangeSocialTagsCommand,
     CommitPlayerProfileCommand,
     DeclarePlayIntentCommand,
+    SetReliabilityMinimumCommand,
 )
 from app.modules.player_profile.application.commit_player_profile import (
     CommitPlayerProfile,
@@ -51,12 +53,16 @@ from app.modules.player_profile.application.declare_play_intent import (
 from app.modules.player_profile.application.read_player_profile import (
     ReadPlayerProfile,
 )
+from app.modules.player_profile.application.set_reliability_minimum import (
+    SetReliabilityMinimum,
+)
 from app.modules.player_profile.application.set_weekly_hours import SetWeeklyHours
 from app.modules.player_profile.domain.errors import (
     IntroNotAdmitted,
     IntroRefusal,
     PhotoNotFound,
     PlayerProfileNotFound,
+    ReliabilityMinimumNotOffered,
     SocialTagSelectionOutOfBounds,
     TooManyPhotos,
     UnknownSocialTag,
@@ -69,6 +75,7 @@ from app.modules.player_profile.domain.events import (
     PhotosChanged,
     PlayerProfileCreated,
     PlayIntentDeclared,
+    ReliabilityMinimumSet,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -219,6 +226,13 @@ class Harness:
                 player_id=player_id, gender_preference=preference
             )
         )
+
+    async def set_reliability_minimum(
+        self, minimum: ReliabilityBand | None, *, player_id=PLAYER
+    ) -> None:
+        await SetReliabilityMinimum(
+            profiles=self._profiles(), uow=self.uow, clock=self.clock
+        ).execute(SetReliabilityMinimumCommand(player_id=player_id, minimum=minimum))
 
     async def declare(
         self,
@@ -655,6 +669,81 @@ async def test_a_gender_or_a_preference_written_without_a_profile_is_refused(
         await harness.change_gender(Gender.MAN)
     with pytest.raises(PlayerProfileNotFound):
         await harness.change_gender_preference(GenderPreference.MEN_ONLY)
+
+    assert harness.uow.commits == 0
+
+
+# ---------------------------------------------------------------------------
+# The reliability filter (#661)
+# ---------------------------------------------------------------------------
+
+
+async def test_a_profile_starts_with_the_filter_off(harness):
+    await harness.commit_profile()
+
+    assert (await harness.read()).profile.reliability_minimum is None
+
+
+async def test_switching_the_filter_on_is_its_own_event(harness):
+    """*Play only with players of at least High reliability* — a durable
+    answer to *who am I willing to play with*, beside the gender preference
+    (``docs/adr/0195`` §6)."""
+
+    await harness.commit_profile()
+
+    await harness.set_reliability_minimum(ReliabilityBand.HIGH)
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, ReliabilityMinimumSet)
+    assert released.minimum == "HIGH"
+    assert (await harness.read()).profile.reliability_minimum is ReliabilityBand.HIGH
+
+
+async def test_switching_it_off_again_is_recorded_as_none(harness):
+    await harness.commit_profile()
+    await harness.set_reliability_minimum(ReliabilityBand.MEDIUM)
+    harness.forget_what_the_commit_released()
+
+    await harness.set_reliability_minimum(None)
+
+    (released,) = harness.publisher.published
+    assert isinstance(released, ReliabilityMinimumSet) and released.minimum is None
+    assert (await harness.read()).profile.reliability_minimum is None
+
+
+async def test_the_same_filter_twice_appends_nothing(harness):
+    await harness.commit_profile()
+    await harness.set_reliability_minimum(ReliabilityBand.HIGH)
+    harness.forget_what_the_commit_released()
+
+    await harness.set_reliability_minimum(ReliabilityBand.HIGH)
+    await harness.set_reliability_minimum(None)
+    await harness.set_reliability_minimum(None)
+
+    assert [type(event) for event in harness.publisher.published] == [
+        ReliabilityMinimumSet
+    ]
+
+
+@pytest.mark.parametrize("band", [ReliabilityBand.VERY_HIGH, ReliabilityBand.LOW])
+async def test_a_minimum_the_switch_does_not_offer_is_refused_before_the_store(
+    harness, band
+):
+    """*At least Medium* or *at least High*, and nothing else: *at least Low*
+    is no filter, and *at least Very high* is not a choice the product makes."""
+
+    await harness.commit_profile()
+
+    with pytest.raises(ReliabilityMinimumNotOffered):
+        await harness.set_reliability_minimum(band)
+
+    assert harness.store.appends == 0
+    assert harness.uow.commits == 0
+
+
+async def test_a_filter_written_without_a_profile_is_refused(harness):
+    with pytest.raises(PlayerProfileNotFound):
+        await harness.set_reliability_minimum(ReliabilityBand.HIGH)
 
     assert harness.uow.commits == 0
 

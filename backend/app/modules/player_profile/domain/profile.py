@@ -43,9 +43,11 @@ from datetime import datetime
 from typing import Final, Iterable, Sequence
 from uuid import UUID
 
+from app.engines.matchfit.core import RELIABILITY_MINIMUMS, ReliabilityBand
 from app.kernel import Instant, instant
 from app.modules.player_profile.domain.errors import (
     DuplicatePhoto,
+    ReliabilityMinimumNotOffered,
     TooManyPhotos,
 )
 from app.modules.player_profile.domain.events import (
@@ -56,6 +58,7 @@ from app.modules.player_profile.domain.events import (
     LocationChanged,
     PhotosChanged,
     PlayerProfileCreated,
+    ReliabilityMinimumSet,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -131,6 +134,11 @@ class PlayerProfile:
     idempotency_key: str
     created_at: Instant
     updated_at: Instant
+    #: The reliability filter (``docs/adr/0195`` §6, #661): the band everybody
+    #: beside this player must be at least — ``MEDIUM`` or ``HIGH`` — or
+    #: ``None``, the filter off, which every profile starts with. A clause of
+    #: the pair rule, asked both ways like the gender preference beside it.
+    reliability_minimum: ReliabilityBand | None = None
     version: int = 0
     _events: EventRecorder = field(
         default_factory=EventRecorder, init=False, repr=False, compare=False
@@ -157,6 +165,7 @@ class PlayerProfile:
         profile = cls.__new__(cls)
         profile.version = 0
         profile.intro = None
+        profile.reliability_minimum = None
         profile._events = EventRecorder()
         return profile
 
@@ -348,6 +357,29 @@ class PlayerProfile:
             )
         )
 
+    def set_reliability_minimum(
+        self, minimum: ReliabilityBand | None, *, occurred_at: Instant
+    ) -> None:
+        """Switch the reliability filter on at ``minimum``, or off with ``None``
+        (``docs/adr/0195`` §6).
+
+        Durable like the gender preference, and for its reason: the pair rule
+        asks it when somebody else's game is being made. A band the switch does
+        not offer is refused; the value already held records nothing.
+        """
+
+        if minimum is not None and minimum not in RELIABILITY_MINIMUMS:
+            raise ReliabilityMinimumNotOffered()
+        if minimum == self.reliability_minimum:
+            return
+        self._record_that(
+            ReliabilityMinimumSet(
+                player_id=self.player_id,
+                minimum=None if minimum is None else minimum.value,
+                occurred_at=occurred_at,
+            )
+        )
+
     # ------------------------------------------------------------------
     # Replay
     # ------------------------------------------------------------------
@@ -398,6 +430,12 @@ class PlayerProfile:
             return
         if isinstance(event, GenderPreferenceChanged):
             self.gender_preference = GenderPreference(event.gender_preference)
+            self._touch(event.occurred_at)
+            return
+        if isinstance(event, ReliabilityMinimumSet):
+            self.reliability_minimum = (
+                None if event.minimum is None else ReliabilityBand(event.minimum)
+            )
             self._touch(event.occurred_at)
             return
         if isinstance(event, IntroWritten):

@@ -86,6 +86,31 @@ def reliability_band_of(points: int) -> ReliabilityBand:
     return ReliabilityBand.LOW
 
 
+#: What the reliability filter may ask of everybody beside a player
+#: (``docs/adr/0195`` §6, #661): *at least Medium* or *at least High* — and
+#: nothing, which is the filter off. Loosest first, the order the switch draws.
+RELIABILITY_MINIMUMS: Final[tuple[ReliabilityBand, ...]] = (
+    ReliabilityBand.MEDIUM,
+    ReliabilityBand.HIGH,
+)
+
+
+def passes_reliability_minimum(
+    minimum: ReliabilityBand | None, *, band: ReliabilityBand, is_new: bool
+) -> bool:
+    """Whether somebody in ``band`` passes a filter at ``minimum`` — the one
+    clause the filter adds to the pair rule, which asks it both ways
+    (``docs/adr/0195`` §6). Their band at or above the minimum, by the floors
+    above; **New passes every minimum**, so nobody is shut out before they
+    have had a chance; ``None`` is no filter."""
+
+    return (
+        minimum is None
+        or is_new
+        or RELIABILITY_BAND_FLOORS[band] >= RELIABILITY_BAND_FLOORS[minimum]
+    )
+
+
 class ForecastAssumption(str, Enum):
     """What a **provisional** forecast assumed, as a code the client renders.
 

@@ -158,6 +158,8 @@ async def test_her_evenings_are_on_her_record_with_a_mixed_run_and_her_stars(
     assert sorted(set(body["skill"]["last_five"])) == ["LOSS", "WIN"]
     assert body["variety"] == {"distinct_opponents": 3, "times_on_court": 6}
     assert body["sportsmanship"] == {"average": 4.5, "raters": 2}
+    # Her own filter is off, so it hides nobody in her groups (#661).
+    assert body["reliability"].pop("filter")["hides"] == 0
     # Six evenings played through, the unrecorded one among them, and every
     # booking kept: 100 · Very high, no longer New (#659).
     assert body["reliability"] == {

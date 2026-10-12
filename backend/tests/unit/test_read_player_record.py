@@ -37,6 +37,8 @@ from app.modules.player_record.domain.record import (
     LikelyRange,
     OnCourtVerdict,
     OpponentVariety,
+    BackWithEveryone,
+    ReliabilityFilter,
     ReliabilityPanel,
     SubjectIdentity,
     SubjectRating,
@@ -138,6 +140,21 @@ class Reliability:
     ) -> ReliabilityPanel:
         self.asked.append(player_id)
         return self.panel
+
+
+class Filters:
+    """The reader's own reliability filter in their groups (#661). **It records
+    that it was asked**, because only your own sheet may ask it."""
+
+    def __init__(self, answer: ReliabilityFilter | None = None) -> None:
+        self.answer = answer or ReliabilityFilter(
+            minimum=None, hides=0, of=0, back_with_everyone=None
+        )
+        self.asked: list[UUID] = []
+
+    async def filter_of(self, player_id: UUID, *, now: Instant) -> ReliabilityFilter:
+        self.asked.append(player_id)
+        return self.answer
 
 
 class Variety:
@@ -339,6 +356,7 @@ async def test_your_own_record_is_read_with_no_admission_collaborator_at_all():
         ratings=Ratings(),
         form=Form(),
         reliability=Reliability(),
+        filters=Filters(),
         variety=Variety(),
         sportsmanship=Opinions(),
         clock=Clock(),
@@ -361,10 +379,54 @@ async def test_a_reader_whose_own_identity_cannot_be_read_is_refused_alike():
             ratings=Ratings(),
             form=Form(),
             reliability=Reliability(),
+            filters=Filters(),
             variety=Variety(),
             sportsmanship=Opinions(),
             clock=Clock(),
         ).execute(reader_id=READER)
+
+
+async def test_your_own_record_carries_your_filter_beside_the_figure():
+    """*Your filter hides 2 of the 11 players in your groups* — and, for a
+    player somebody filters out, *at 75 you're dealt with everyone again*: asked
+    of the reader alone, attached to the figure it is about (#661)."""
+
+    yours = ReliabilityFilter(
+        minimum=ReliabilityBand.HIGH,
+        hides=2,
+        of=11,
+        back_with_everyone=BackWithEveryone(band=ReliabilityBand.HIGH),
+    )
+    filters = Filters(yours)
+
+    record = await ReadOwnRecord(
+        identities=Identities(an_identity()),
+        photos=Links(),
+        ratings=Ratings(),
+        form=Form(),
+        reliability=Reliability(a_panel(points=70)),
+        filters=filters,
+        variety=Variety(),
+        sportsmanship=Opinions(),
+        clock=Clock(),
+    ).execute(reader_id=READER)
+
+    assert record.reliability.filter == yours
+    assert record.reliability.player_score == 70
+    assert filters.asked == [READER]
+    assert yours.back_with_everyone is not None
+    assert yours.back_with_everyone.points == 75
+
+
+async def test_somebody_else_s_record_carries_no_filter_at_all():
+    """A filter is a preference about other people: on their sheet it would
+    name who filters whom. The route has no collaborator to ask it of."""
+
+    use_case, _, _ = reading(admits=True, identity=an_identity())
+
+    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
+
+    assert record.reliability.filter is None
 
 
 async def test_the_sport_asked_for_reaches_the_sheet_and_never_the_admission():
@@ -584,6 +646,7 @@ async def test_the_subject_is_told_the_figure_and_the_count_too():
         ratings=Ratings(),
         form=Form(),
         reliability=Reliability(),
+        filters=Filters(),
         variety=Variety(),
         sportsmanship=opinions,
         clock=Clock(),

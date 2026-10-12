@@ -617,6 +617,9 @@ from app.modules.player_record.infrastructure.games_subject_form import (
 from app.modules.player_record.infrastructure.games_subject_variety import (
     GamesSubjectVariety,
 )
+from app.modules.player_record.infrastructure.groups_reliability_filters import (
+    FiltersInTheGroups,
+)
 from app.modules.player_record.infrastructure.published_subject_sportsmanship import (
     PublishedSubjectSportsmanship,
 )
@@ -631,6 +634,7 @@ from app.modules.player_record.domain.ports import (
     PriorDisclosure,
     RecordGates,
     RecordPhotoLink,
+    ReliabilityFilters,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -1286,8 +1290,10 @@ def build_player_fit(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> PlayerFit:
     """Whether two people may be on one game, by the matcher's own pair rule
-    under the live ruleset: blocks off the log, genders and preferences off
-    each profile, Levels off rating's published read."""
+    under the live ruleset: blocks off the log, genders, preferences and
+    reliability filters off each profile, Levels off rating's published read,
+    and — where a filter is on — everybody's points off ``player_score``'s
+    (#661)."""
     return MatcherPlayerFit(
         blocks=build_block_query(session, runtime=runtime),
         profiles=build_player_profile_repository(
@@ -1296,6 +1302,7 @@ def build_player_fit(
         ),
         ratings=build_rated_player_query(session, runtime=runtime),
         ruleset=build_ruleset(),
+        scores=build_published_score_query(session),
     )
 
 
@@ -3491,6 +3498,22 @@ def build_subject_reliability(session: AsyncSession) -> SubjectReliability:
     """
 
     return ScoreSubjectReliability(build_published_score_query(session))
+
+
+def build_reliability_filters(session: AsyncSession) -> ReliabilityFilters:
+    """The reader's own reliability filter in their groups, and the figure that
+    brings them back (#661) — over ``groups``' directory, each member's Player
+    profile and ``player_score``'s **published** read, the same three facts the
+    pair rule's clause is asked over."""
+
+    return FiltersInTheGroups(
+        groups=build_group_directory(session),
+        profiles=build_player_profile_repository(
+            event_store=build_domain_event_store(session),
+            events=build_event_publisher(session),
+        ),
+        scores=build_published_score_query(session),
+    )
 
 
 def build_subject_sportsmanship(

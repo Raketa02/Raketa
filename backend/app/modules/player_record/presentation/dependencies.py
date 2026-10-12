@@ -37,6 +37,7 @@ from app.bootstrap.composition import (
     build_group_disclosure,
     build_record_gates,
     build_record_photo_link,
+    build_reliability_filters,
     build_runner_disclosure,
     build_subject_form,
     build_subject_identity_source,
@@ -59,6 +60,7 @@ from app.modules.player_record.application.read_player_record import (
 from app.modules.player_record.domain.ports import (
     BlocksByTheReader,
     RecordPhotoLink,
+    ReliabilityFilters,
     SubjectForm,
     SubjectIdentitySource,
     SubjectRatings,
@@ -209,12 +211,23 @@ def get_read_player_record(
 ReadPlayerRecordDep = Annotated[ReadPlayerRecord, Depends(get_read_player_record)]
 
 
+def get_reliability_filters(db: DbSession) -> ReliabilityFilters:
+    """The reader's own reliability filter in their groups (#661) — **wired into
+    the ``/me`` route alone**, so nobody's filter reaches a stranger's sheet."""
+
+    return build_reliability_filters(db)
+
+
+ReliabilityFiltersDep = Annotated[ReliabilityFilters, Depends(get_reliability_filters)]
+
+
 def get_read_own_record(
     identities: SubjectIdentitySourceDep,
     photos: RecordPhotoLinkDep,
     ratings: SubjectRatingsDep,
     form: SubjectFormDep,
     reliability: SubjectReliabilityDep,
+    filters: ReliabilityFiltersDep,
     variety: SubjectVarietyDep,
     sportsmanship: SubjectSportsmanshipDep,
     clock: ClockDep,
@@ -240,6 +253,7 @@ def get_read_own_record(
         ratings=ratings,
         form=form,
         reliability=reliability,
+        filters=filters,
         variety=variety,
         sportsmanship=sportsmanship,
         clock=clock,

@@ -65,6 +65,12 @@ every launch free. It answers `204` and no body, and **the read
 does not serve the area either, nor a flag for it**: a profile cannot be
 committed without one, so `has_location` could never be false, and the tab
 branches on the phone's permission state instead.
+
+**And the reliability filter is written here too** (``docs/adr/0195`` §6,
+#661): a preference beside the gender preference, a clause of the same pair
+rule, so the same aggregate holds it. It answers `204` like the preference, and
+is read back on the player's own record, beside how many players in their groups
+it hides — never on the profile read.
 """
 
 from __future__ import annotations
@@ -79,6 +85,7 @@ from app.modules.player_profile.application.commands import (
     ChangeLocationCommand,
     ChangePhotosCommand,
     ChangeSocialTagsCommand,
+    SetReliabilityMinimumCommand,
     SetWeeklyHoursCommand,
 )
 from app.modules.player_profile.presentation.dependencies import (
@@ -89,6 +96,7 @@ from app.modules.player_profile.presentation.dependencies import (
     ChangePhotosDep,
     ChangeSocialTagsDep,
     ReadPlayerProfileDep,
+    SetReliabilityMinimumDep,
     SetWeeklyHoursDep,
 )
 from app.modules.player_profile.presentation.schemas import (
@@ -100,6 +108,7 @@ from app.modules.player_profile.presentation.schemas import (
     ChangeSocialTagsRequest,
     PhotosResponse,
     PlayerProfileReadResponse,
+    SetReliabilityFilterRequest,
     SetWeeklyHoursRequest,
     SocialTagsResponse,
     WeeklyHoursResponse,
@@ -475,4 +484,44 @@ async def change_gender_preference(
         ChangeGenderPreferenceCommand(
             player_id=user.id, gender_preference=payload.gender_preference
         )
+    )
+
+
+@router.put(
+    "/reliability-filter",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_400_BAD_REQUEST: {
+            "model": ErrorResponse,
+            "description": (
+                "`reliability_minimum_not_offered` — the filter is at least "
+                "`MEDIUM`, at least `HIGH`, or `null`."
+            ),
+        },
+        status.HTTP_404_NOT_FOUND: _NO_PROFILE,
+        status.HTTP_409_CONFLICT: _LOST_THE_RACE,
+    },
+    summary="Play only with players of at least High or Medium reliability",
+    description=(
+        "The Player reliability screen's switch (`docs/adr/0195` §6, #661): "
+        "*Play only with players of at least High reliability*, *at least "
+        "Medium*, or off. Unkeyed; an unchanged value records nothing.\n\n"
+        "**One more clause of the pair rule, asked both ways and from then on**: "
+        "a pair is unfit when either player's minimum is above the other's band, "
+        "and **New passes every minimum** — on the deal, the deck, posts, *Seat "
+        "open* and Fill in, and the details. **Yeses already given stand**, a "
+        "player who drops below it keeps theirs, and booked games never "
+        "change.\n\n"
+        "**`204` and no body**: the setting is read back on `GET "
+        "/players/me/record`, with how many players in this player's groups it "
+        "hides."
+    ),
+)
+async def set_reliability_filter(
+    payload: SetReliabilityFilterRequest,
+    user: CurrentUserDep,
+    use_case: SetReliabilityMinimumDep,
+) -> None:
+    await use_case.execute(
+        SetReliabilityMinimumCommand(player_id=user.id, minimum=payload.minimum)
     )

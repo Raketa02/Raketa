@@ -11,6 +11,11 @@ blocked each other after saying yes — is not the newcomer's refusal to carry,
 and it is the fill's to read: the later of the two yeses stops counting
 (``fill.py``).
 
+**A yes already given stands against the reliability filter** (``docs/adr/0195``
+§6, #661): a new yes is held to it like every other clause of the pair rule, and a
+paused yes coming back is not (``already_given``) — the filter acts on what is
+dealt and joined from then on.
+
 **A yes needs two facts about the player's own account first**, in the order
 the phone meets them: a method to charge (the setup opens), and then the fit
 (the card has gone). How many yeses a player has on games still filling is not
@@ -133,13 +138,28 @@ class Guards:
             raise NoLongerFits()
 
     async def refuse_a_yes_that_does_not_fit(
-        self, player_id: UUID, proposal: Proposal, *, at: Instant
+        self,
+        player_id: UUID,
+        proposal: Proposal,
+        *,
+        at: Instant,
+        already_given: bool = False,
     ) -> None:
-        if await self._misfits(proposal, [player_id], at=at):
+        """``already_given`` for a paused yes coming back: asked without the
+        reliability filter, which takes no yes back (``docs/adr/0195`` §6)."""
+
+        if await self._misfits(
+            proposal, [player_id], at=at, reliability_filter=not already_given
+        ):
             raise NoLongerFits()
 
     async def _misfits(
-        self, proposal: Proposal, newcomers: Collection[UUID], *, at: Instant
+        self,
+        proposal: Proposal,
+        newcomers: Collection[UUID],
+        *,
+        at: Instant,
+        reliability_filter: bool = True,
     ) -> bool:
         """Whether any pair among the people In and ``newcomers`` that holds a
         newcomer does not fit — a yes being a version of one."""
@@ -150,5 +170,6 @@ class Guards:
             sport=proposal.sport,
             kind=proposal.kind,
             at=at,
+            reliability_filter=reliability_filter,
         )
         return any(pair & arriving for pair in unfit)

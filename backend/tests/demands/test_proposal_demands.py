@@ -82,6 +82,7 @@ from app.kernel import minutes
 from app.shared.ids import new_uuid
 from tests.api import players_world as players
 from tests.api.administration_world import club_signs_up
+from tests.api.reliability_world import NEW_AT_50, SERGIO_AT_65, a_history
 
 OLA, KUBA, EWA, TOMEK = (new_uuid() for _ in range(4))
 
@@ -1296,6 +1297,64 @@ async def test_two_people_fit_by_the_matchers_own_pair_rule(
     assert frozenset((ola, far)) in unfit
     assert frozenset((ola, picky)) in unfit
     assert frozenset((ola, unrated)) in unfit
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerFit))
+async def test_a_reliability_filter_keeps_a_pair_apart_both_ways_and_new_passes(
+    implementation, client, session_factory, session
+):
+    """Marta's *at least High* (#661): Sergio at 65 — Medium, not New — does
+    not fit her, whoever is asked about first; Nerea at 50, New, does. A yes
+    already given is asked without the filter."""
+
+    marta, token = await players.register(client, "marta")
+    await players.commit_profile(client, token)
+    await players.rate_in(session_factory, marta, Sport.PADEL, mu=2.5)
+    sergio = await _rated(client, session_factory, "sergio", mu=2.5)
+    nerea = await _rated(client, session_factory, "nerea", mu=2.5)
+    await a_history(session_factory, sergio, SERGIO_AT_65)
+    await a_history(session_factory, nerea, NEW_AT_50)
+    switched = await client.put(
+        "/api/v1/players/me/reliability-filter",
+        json={"minimum": "HIGH"},
+        headers=players.auth(token),
+    )
+    assert switched.status_code == 204, switched.text
+    fit: PlayerFit = implementation.build(session)
+    asked = dict(sport=Sport.PADEL, kind=SearchMode.COMPETITIVE, at=_at())
+
+    unfit = await fit.unfit_pairs([sergio, marta, nerea], **asked)
+    given = await fit.unfit_pairs([marta, sergio], **asked, reliability_filter=False)
+
+    assert unfit == {frozenset((marta, sergio))}
+    assert given == frozenset()
+
+
+@pytest.mark.parametrize("implementation", registered(PlayerFit))
+async def test_every_kind_over_one_reading_answers_as_each_kind_alone(
+    implementation, client, session_factory, session
+):
+    """A deal asks every kind at once (#661): 2,5 and 3,4 are too far apart
+    for a competitive game and close enough for fun, as asking each alone
+    says."""
+
+    ola = await _rated(client, session_factory, "ola", mu=2.5)
+    far = await _rated(client, session_factory, "zosia", mu=3.3)
+    fit: PlayerFit = implementation.build(session)
+    people = [ola, far]
+    # Two months on, so neither is new and For fun's window is its own.
+    settled = instant(build_clock().now()) + timedelta(days=60)
+
+    by_kind = await fit.unfit_pairs_by_kind(
+        people, sport=Sport.PADEL, kinds=list(SearchMode), at=settled
+    )
+
+    for kind in SearchMode:
+        assert by_kind[kind] == await fit.unfit_pairs(
+            people, sport=Sport.PADEL, kind=kind, at=settled
+        )
+    assert by_kind[SearchMode.COMPETITIVE] == {frozenset((ola, far))}
+    assert by_kind[SearchMode.FOR_FUN] == frozenset()
 
 
 @pytest.mark.parametrize("implementation", registered(PlayerFit))

@@ -359,23 +359,21 @@ class ReadGroupDeck:
         in_the_pool = await self._pools.members_among(
             pool, {player for proposal in candidates for player in named_on(proposal)}
         )
-        unfit: dict[SearchMode, frozenset[frozenset[UUID]]] = {}
         # In the enum's order rather than a set's, so the reads run alike on
-        # every process (docs/adr/0105).
+        # every process (docs/adr/0105); every kind over one reading — one read
+        # of the points per deal (docs/adr/0195 §6).
         kinds = [kind for kind in SearchMode if any(p.kind is kind for p in candidates)]
-        for kind in kinds:
-            everybody = {
-                reader,
-                *(
-                    player
-                    for proposal in candidates
-                    if proposal.kind is kind
-                    for player in (*proposal.yeses, *named_on(proposal))
-                ),
-            }
-            unfit[kind] = await self._fit.unfit_pairs(
-                sorted(everybody), sport=sport, kind=kind, at=now
-            )
+        everybody = {
+            reader,
+            *(
+                player
+                for proposal in candidates
+                for player in (*proposal.yeses, *named_on(proposal))
+            ),
+        }
+        unfit = await self._fit.unfit_pairs_by_kind(
+            sorted(everybody), sport=sport, kinds=kinds, at=now
+        )
         genders = await genders_of(
             self._players,
             {

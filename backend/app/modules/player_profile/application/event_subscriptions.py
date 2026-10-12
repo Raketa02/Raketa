@@ -4,7 +4,7 @@ A name here is a **published contract** and outlives every Python class it maps
 to: renaming ``PlayerProfileCreated`` must never change what is already in the
 store.
 
-**Ten names, on two aggregates.** ``player_profile.play_intent_declared`` is
+**Eleven names, on two aggregates.** ``player_profile.play_intent_declared`` is
 a ``PlayIntentDeclaration`` stream and not a profile one (``docs/adr/0094``); it
 is registered here because a *context* owns its durable names, and the prefix is
 therefore the context's rather than the aggregate's. Splitting the prefix would
@@ -30,7 +30,8 @@ name is a decoding error, like a version 2 creation.
 
 **The v1 registrations beside it are none of them an edit.**
 ``gender_changed``, ``gender_preference_changed``, ``play_intent_declared``,
-``intro_written``, ``intro_changed`` and ``weekly_hours_set`` are new contracts;
+``intro_written``, ``intro_changed``, ``weekly_hours_set`` and
+``reliability_minimum_set`` (#661) are new contracts;
 ``player_profile.created`` gained two fields while it was still v1, which was
 legitimate only because both were appended with defaults and every row then in
 the store still decoded into the class (``domain/events.py`` says what each
@@ -55,6 +56,7 @@ from app.modules.player_profile.domain.events import (
     PhotosChanged,
     PlayerProfileCreated,
     PlayIntentDeclared,
+    ReliabilityMinimumSet,
     SocialTagsChanged,
     WeeklyHoursSet,
 )
@@ -75,6 +77,7 @@ _CONTRACTS = (
     (GenderPreferenceChanged, "player_profile.gender_preference_changed", 1),
     (IntroWritten, "player_profile.intro_written", 1),
     (IntroChanged, "player_profile.intro_changed", 1),
+    (ReliabilityMinimumSet, "player_profile.reliability_minimum_set", 1),
     (PlayIntentDeclared, "player_profile.play_intent_declared", 1),
 )
 

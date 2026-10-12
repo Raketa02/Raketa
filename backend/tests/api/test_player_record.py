@@ -1006,6 +1006,8 @@ async def test_your_own_record_carries_the_figure_others_read(
         "player_score": 75,
         "band": "HIGH",
         "turned_up_of": 1,
+        # Their own filter, off, in no group yet (#661).
+        "filter": {"hides": 0, "of": 0},
     }
     # A game they Didn't come to is not a game they played: no variety at all.
     assert "variety" not in body

@@ -462,10 +462,15 @@ class Fill:
         self, proposal: Proposal, *, now: Instant
     ) -> frozenset[UUID]:
         """The later yes of every pair In that no longer fits — each seat
-        reopened."""
+        reopened. **Never for the reliability filter**: every yes here was
+        given already, and the filter takes none back (``docs/adr/0195`` §6)."""
 
         unfit = await self._fit.unfit_pairs(
-            proposal.yeses, sport=proposal.sport, kind=proposal.kind, at=now
+            proposal.yeses,
+            sport=proposal.sport,
+            kind=proposal.kind,
+            at=now,
+            reliability_filter=False,
         )
         if not unfit:
             return frozenset()

@@ -46,6 +46,9 @@ from app.modules.player_profile.application.has_player_profile import HasPlayerP
 from app.modules.player_profile.application.read_player_profile import (
     ReadPlayerProfile,
 )
+from app.modules.player_profile.application.set_reliability_minimum import (
+    SetReliabilityMinimum,
+)
 from app.modules.player_profile.application.set_weekly_hours import SetWeeklyHours
 from app.modules.player_profile.application.upload_photo import UploadPhoto
 from app.modules.player_profile.domain.ports import (
@@ -286,6 +289,19 @@ def get_change_gender_preference(
 
 ChangeGenderPreferenceDep = Annotated[
     ChangeGenderPreference, Depends(get_change_gender_preference)
+]
+
+
+def get_set_reliability_minimum(
+    profiles: PlayerProfileRepositoryDep,
+    uow: UnitOfWorkDep,
+    clock: ClockDep,
+) -> SetReliabilityMinimum:
+    return SetReliabilityMinimum(profiles=profiles, uow=uow, clock=clock)
+
+
+SetReliabilityMinimumDep = Annotated[
+    SetReliabilityMinimum, Depends(get_set_reliability_minimum)
 ]
 
 
