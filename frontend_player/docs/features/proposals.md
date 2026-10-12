@@ -217,9 +217,9 @@ been seen on a device.**
 
 **Home's booked games and a booked game's details are this feature's**
 ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.1, A4.4, A8; the mechanics
-§11.4, §14, §15.1). Two reads, both #542's and both the backend's Proposals context: `GET /home` (the
+§11.4, §14). Two reads, both #542's and both the backend's Proposals context: `GET /home` (the
 reader's booked games, soonest first, the ended ones too, and Home's badge) and `GET /bookings/{id}`
-(one booked game in detail, with the check-in code on its day). `useHome`, `useBooking`, keys
+(one booked game in detail). `useHome`, `useBooking`, keys
 `proposalKeys.home()` and `booking(id)` (under `bookings()`); rules in `domain/home.ts`, words in
 `homeCopy.ts` and `homePresentation.ts`.
 
@@ -256,10 +256,8 @@ tiles with _2,71 · paid_ (`GameTiles` draws _paid_ where a filling game says IN
 with the court and the distance, DAY, TIME to the read's `ends_at`, and the money row
 (`moneyRow`); once the hour has come, today's **We played** / **Confirm the result**, which opens
 today's game screen at the Game the booking opened (`BookedGameResult`, `/booking/[id]/result`:
-`GameScreen` with the score leading and its three Classic slots empty); the Game's own forecast
-(`games`' `GameForecast`) while the booking says to draw it; and **Show at the desk** on the game's
-day (`CheckInCard`: the QR drawn by `qrPath.ts` over `qrcode`'s core as one path, the short code
-spoken a character at a time). The filling details and the booked ones share `GameFacts` and
+`GameScreen` with the score leading and its three Classic slots empty); and the Game's own
+forecast (`games`' `GameForecast`) while the booking says to draw it. The filling details and the booked ones share `GameFacts` and
 `OthersFaces`.
 
 **The chat is reached from the details** (A4.4, §14.3) — and, since #619, from the Home card's
@@ -314,7 +312,7 @@ lists a booked game's room and opens it in the Classic form, plan card and _Deta
 (#542's call 8 — the shell could leave booked rooms out of Chats, or open them in their booked
 form); `CLAUDE.md`'s _three per-account choices_ now reads four (agent config, left for the
 user). **Nothing here has
-been seen on a device**, the QR least of all: it is drawn from `qrcode`'s matrix and never scanned.
+been seen on a device.**
 
 **Fill in, rescues, leaving and On request are this feature's**
 ([#557](https://github.com/Raketa02/Raketa/issues/557); the screens A3, A4.2, A4.3, A8; mocks 2,
@@ -568,12 +566,10 @@ legend's width and two sheets swapping in one tick on iOS least of all.
 
 **Somebody didn't come — the booking hands the Game what it knows, and Home says it**
 ([#560](https://github.com/Raketa02/Raketa/issues/560); the backend's #547; the mechanics §15.3).
-`BookedGameResult` composes `games`' result screen with `booked`: who the desk checked in, read off
-the booking's tiles (`DeckPerson.checkedIn`, the wire's `checked_in`; `checkedInOn`), and
-`useRereadBooking` — Home and this booking read again once a score, an agreement, a mark or a
-dispute lands, so the status, the bar's badge and the door under the screen follow at once. The
-result entry then offers _Kuba Nowak didn't come_ for every other player but a checked-in one
-(`games.md` has the screen). **The player marked finds it on Home**: an uncounted card with
+`BookedGameResult` composes `games`' result screen with `booked`: `useRereadBooking` — Home and
+this booking read again once a score, an agreement, a mark or a dispute lands, so the status, the
+bar's badge and the door under the screen follow at once. The result entry then offers _Kuba Nowak
+didn't come_ for every other player (`games.md` has the screen). **The player marked finds it on Home**: an uncounted card with
 `uncounted_reason` `NO_SHOW` says _You were marked as not coming · say so if you were there_ while the
 read says it needs them, and _Somebody didn't come · no Level moved_ to everybody else (`MoneyLine`'s
 `noShow`, the details' money row too); `resultActOf` takes the game now and opens **Say you were
@@ -587,8 +583,6 @@ them. The walk is `noShows.test.tsx`.
 
 - **A sheet stands in front of the mark** — the mechanics say players _can tap_ _Kuba didn't come_;
   a mark that can become the strongest on a record is never one tap away here.
-- **A checked-in player keeps a row**, _Inés Díaz · checked in at the club_, where the criterion
-  only says they cannot be marked: a missing button alone leaves the reader guessing why.
 - **Marking goes on while a report's day runs**, for whoever nobody marked — two players can fail
   to come to a doubles game. The backend takes a mark until the entry window closes, and that window
   is off the wire once a report is made, so a mark past it is refused and said so (_too late to mark
@@ -601,8 +595,6 @@ them. The walk is `noShows.test.tsx`.
   reads it on the result screen they marked from, and Home's line after that.
 - **A game every report was disputed on reads as today's unscored evening** (_No result_), the
   backend's `UNSCORED` — nothing says a report was made and fell.
-- **_checked in_ is not drawn on the details' tiles**; no mock has it, and it is read only to keep
-  a player from being marked.
 - **The club's three reasons are said as clauses** — _because of the weather_, _for a court repair_,
   _after a double booking_ — where §16.9 lists the club's words for the dialog.
 
@@ -1050,3 +1042,15 @@ keep your seat_ to a rescuer too; and once a time ran out the read names no wind
 back can't be told _fix_ before the cut-off or _pay_ after it — the phone says _confirm_ to both. **Owed by the root**: the root `CONTEXT.md`'s **Time
 to fix the card** and **Rescue** still say _not yet built_. **Nothing here has been seen on a
 device**: the row's fourth line and its **Fix**, and the sheet's extra line, want a look.
+
+**Nothing is shown at the desk: players walk straight to the court**
+([#653](https://github.com/Raketa02/Raketa/issues/653); ADR-0195, Q116; the backend's #651). The
+booked details no longer carry a _Show at the desk_ card on the game's day, and Home's card never
+had a desk line. `CheckInCard`, its QR drawing (`qrPath.ts`, the `qrcode` core declared in
+`qrcode-core.d.ts`), the `qrcode` and `@types/qrcode` dependencies, the four desk words in
+`homeCopy.ts`, `shortCodeSpoken` and the theme's `size.checkIn` are deleted. `BookedGame.checkIn`,
+`DeckPerson.checkedIn` and `checkedInOn` went with the wire's `check_in` and `checked_in`. So
+`BookedGameResult` hands `games`' result screen only the re-read now, and every other player on the
+court has a _didn't come_ row (`games.md`). **The phone was broken against the backend until this
+landed**: #651 stopped sending `check_in`, and the mapper read `wire.check_in.short_code` whenever
+the field was not `null`, so every booked game's details threw.

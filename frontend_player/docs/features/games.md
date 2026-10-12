@@ -316,11 +316,10 @@ clock of your day; it is never an editing act. **Marking is not a `ResultAct`**:
 person, offered beside the entry rather than instead of it, so `domain/noShows.ts`' `noShowRows`
 folds the rows of the _Didn't come?_ block — every other player on the court in its order, on the
 entry arm with the court whole and on `no-show-reported` for a reader nobody marked, so the second
-player who did not come to a doubles game can be marked after the first; a player the desk checked
-in keeps a row with the reason in words and nothing to press. **Which game is booked, and who was
-checked in, are the booking's**, so `GameScreen` takes an optional `booked` (`BookedFacts`: the
-check-ins, and a `reread` of the booking's own reads that this feature cannot name); a Classic game
-has no block because nobody hands one in. **A row presses and a sheet decides** (`NoShowSheet`, the
+player who did not come to a doubles game can be marked after the first. **Which game is booked is
+the booking's**, so `GameScreen` takes an optional `booked` (`BookedFacts`: a `reread` of the
+booking's own reads that this feature cannot name); a Classic game has no block because nobody hands
+one in. **A row presses and a sheet decides** (`NoShowSheet`, the
 leave sheet's shape: _Before you say so_, three lines, _Don't mark anybody_) — the mark, if it
 stands, is the strongest thing on a record — and focus goes back to the row pressed. Confirming puts
 the sheet away and the mark happens on the row, busy there, a refusal said in the pinned footer with
@@ -354,3 +353,10 @@ It had no reader, and on a booked game it was the booking's id under the old loo
 `GameSchema` still spells it `challenge_id` until the backend's removal reaches it. The record is
 [`conversations.md`](conversations.md), whose join to a booked game's room moved onto the booking in
 the same ticket.
+
+**Every other player on the court can be marked** ([#653](https://github.com/Raketa02/Raketa/issues/653);
+ADR-0195). Nobody at the club checks anybody in now, so `noShowRows` takes no check-ins. A row no
+longer reads _Inés Díaz · checked in at the club_ with nothing to press (`checkedInLine` is
+deleted), and `BookedFacts` carries only the `reread`. `gameErrorMessage` loses
+`checked_in_at_the_club`, which the backend no longer raises. The record is
+[`proposals.md`](proposals.md), where the booking stopped carrying the desk's word.
