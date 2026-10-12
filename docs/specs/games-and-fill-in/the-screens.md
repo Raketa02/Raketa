@@ -80,8 +80,8 @@ Dark card, top to bottom:
 | **vs line** | *KAROL + YOU VS ANIA + KUBA* | The top row is one side, the bottom row the other (Q70). |
 | **Balance forecast** | percentage (green / amber / red by today's tones) + the bar | The bar names **the same sides as the rows, your side on the left** (light half). Computed for this version. Existing `BalanceBar`, `onDark`. |
 | **Overlap grid** | *High / Good / Slim overlap* over 7 day columns × 3 range rows | Ranges **Morning 07–12 · Afternoon 12–17 · Evening 17–23**. Bright volt = everyone on the card free for at least one whole hour in the range; dim olive = all but one; dark = fewer. The game's range is ringed in coral. Today's column letter is white. Label colours: volt for High and Good, amber for Slim. |
-| **Court block** | state tag · share (volt, mono) · *Saturday 16:00 · Ogrody 33* (+ *· Court 6* once booked) | Tag: **Court available** (grey — your yes is a free vote; dashed block border), **Book it now** (green — your yes fills it and holds everyone's share after the undo, or at an On request club once the club confirms; solid green border), **Booked** (volt — a rescue; solid border). *Tomorrow* / *Today* for near days. **no free cancellation** in amber after the club's cut-off (mock 6). |
-| **Stamps** | **I'M IN** (right) / **NOT THIS TIME** (left), fading in while dragging | **I'M IN · 32 zł** whenever the yes books at once: *Book it now* or a rescue (Q72). It holds the share until the club's cut-off, or takes it at once after the cut-off (Q113). At an On request club the hold waits for the club, so its *Book it now* stamp carries no price. |
+| **Court block** | state tag · share (volt, mono) · *Saturday 16:00 · Ogrody 33* (+ *· Court 6 · indoor* once booked) · *Indoor* or *Outdoor* when every free court the card could be booked on is of that kind, nothing when they are mixed ([the mechanics §5.2](the-mechanics.md#52-what-a-card-promises), Q122) | Tag: **Court available** (grey — your yes is a free vote; dashed block border), **Book it now** (green — your yes fills it and holds everyone's share after the undo, at every club since Q121; solid green border), **Booked** (volt — a rescue; solid border). *Tomorrow* / *Today* for near days. **no free cancellation** in amber after the club's cut-off (mock 6). |
+| **Stamps** | **I'M IN** (right) / **NOT THIS TIME** (left), fading in while dragging | **I'M IN · 32 zł** whenever the yes books at once: *Book it now* or a rescue (Q72). It holds the share until the club's cut-off, or takes it at once after the cut-off (Q113). Every club books at once since Q121, so the stamp always shows the price (at an *On request* club it showed none). |
 
 **Per type:**
 
@@ -89,9 +89,14 @@ Dark card, top to bottom:
   climbs the deck.
 - **Challenge** — the poster always carries IN (posting was their yes). Otherwise it behaves like
   a pick, and outranks one at the same momentum.
-- **Seat open** — players *paid*, the dashed seat with your share, the court number, **Booked**.
-  A yes takes the seat at once: your share is held until the cut-off, or paid at once after it
-  (Q113).
+- **Seat open** — players *paid*, the dashed seat with your share, the court number and its kind,
+  **Booked**. A yes takes the seat at once: your share is held until the cut-off, or paid at once
+  after it (Q113).
+
+**An owed card** ([the mechanics §8.2](the-mechanics.md#82-the-order), Q123) — the card dealt first
+to the players of a game a club's cancel called off — looks like any other card: **no mark**, no
+ribbon of its own, for anybody. It is simply first in the deck of each player it is owed to, as the
+server orders it.
 
 **Singles** (mock 10) follow the same rules with two tall tiles and no *vs* line.
 
@@ -104,20 +109,18 @@ this game* — counting the yeses on every version.
 | You swipe… | On… | What happens |
 | --- | --- | --- |
 | right | a card that won't fill | Your tile gains IN for the others; the card leaves your deck; the yes appears in **Fill in › You're In**. Nothing charged. |
-| right | *Book it now* | Toast **"Booking in 10 s · Undo"** with a draining ring. At zero: everyone's share held together → **It's a game!** (taken at once only for a game booked after its cut-off). At an On request club, at zero the game goes to the club (*waiting for the club*) and **It's a game!** shows at once with *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*, in place of a toast; the holds follow when the club confirms ([the mechanics §11](the-mechanics.md#11-the-moment-a-game-fills), Q103, Q113). |
+| right | *Book it now* | Toast **"Booking in 10 s · Undo"** with a draining ring. At zero: everyone's share held together → **It's a game!** (taken at once only for a game booked after its cut-off), at every club ([the mechanics §11](the-mechanics.md#11-the-moment-a-game-fills), Q113, Q121). |
 | right | a rescue | The same toast; at zero your share is held (taken at once after the cut-off) → **It's a game!**; the game is in **Home**. A refused card keeps the seat yours for 30 minutes ([the mechanics §10.1](the-mechanics.md#101-seats-to-fill--the-rescue-board)). |
 | right | without a saved method | The **payment setup** ([A7.3](#a73-payments)) opens as a sheet; the yes lands when it finishes, or is dropped if you close it. |
 | left | anything | The card leaves; silent; never on your record. |
 
 - **It's a game!** — today's yes screen (ADR-0167): full screen, the faces, the one word *It's a
   game!*, **Open game** and **Later**. It marks the players being matched, not only booked (Q103).
-  Shown to the player whose action filled it — a yes or a rescue join — at every kind of club,
-  and to a player whose confirmed payment completes a game waiting for it (Q110). Under the word,
-  one line when something is still missing:
-  - at a club that confirms, *Kazimierz Padel answers by 21:15 · Nobody pays until it confirms*,
-    its time written as in [A8](#a8-home);
-  - when another player's payment failed at a club that books at once, *Waiting for one payment ·
-    until 14:40 · Nobody pays until it's in*.
+  Shown to the player whose action filled it — a yes or a rescue join — and to a player whose
+  confirmed payment completes a game waiting for it (Q110). Under the word, one line when another
+  player's payment failed: *Waiting for one payment · until 14:40 · Nobody pays until it's in*, its
+  time written as in [A8](#a8-home). Its other line, *Kazimierz Padel answers by 21:15 · Nobody pays
+  until it confirms* at a club that confirmed, went with *On request* (Q121).
 
   Its player gets no banner for it, and the bell doesn't count it; the row is still in their list
   (Q102, [A9](#a9-notifications-delivery)).
@@ -155,11 +158,11 @@ Coral 1.5 pt border.
 Mint 1.5 pt border. Picks, challenges and posts — never rescues (Q76).
 
 - **Title** — *Padel · Saturday 15:00*. Tap → the game's details (filling view).
-- **Subtitle** — *Bonarka Arena · **book by Saturday 13:00***; while an On request club decides,
-  the bold part is amber ***waiting for the club***.
+- **Subtitle** — *Bonarka Arena · **book by Saturday 13:00***. (Until Q121, while an *On request*
+  club decided, the bold part was amber ***waiting for the club***.)
 - **Squares** — filled posters for everyone In (you included), dashed empties for the open seats.
 - **Withdraw** (red text, outlined) — free and silent. On your own post: if others are In the
-  game carries on without you; if not, the post disappears. Hidden while *waiting for the club*.
+  game carries on without you; if not, the post disappears.
 
 ## A4. Game details
 
@@ -172,7 +175,8 @@ One screen (details 5–10, from Part 1), three readers.
   the game isn't over.
 - **The game card** (details 8) — status tag (dot + word), tiles with *paid*, the *vs* line, then
   the court facts on an accent line in the status colour: **WHERE** *Bonarka Arena · Court 2 ·
-  3,1 km* · **DAY** *Sunday 20 Sep* (*· next week* beyond seven days) · **TIME** *10:00 until
+  indoor · 3,1 km* — the court's kind always shown (Q122) ·
+  **DAY** *Sunday 20 Sep* (*· next week* beyond seven days) · **TIME** *10:00 until
   11:00* · the money row, which says when the share is held and when it is taken
   ([the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q113): held, *28 zł held on
   your card · taken Sat 10:00 · free to leave until then*; checked, *28 zł held from Tue 10:00 ·
@@ -212,16 +216,15 @@ One screen (details 5–10, from Part 1), three readers.
 
 ### A4.2 A game still filling (Q75)
 
-Same layout. Status *Filling · 2 of 4 in* (or *Waiting for the club*, amber — and for a game that
-had filled, *Seat open* or *Waiting for one payment*, as on [A8](#a8-home)); tiles with IN tags;
-WHERE shows the club and distance, no court number; the money row reads *30 zł if it fills · book
-by Sat 13:00* — while *waiting for the club*, *YOUR SHARE 30 zł* · *nobody pays until Bonarka
-Arena confirms*, with *Bonarka Arena answers by 20:45* beside it until that deadline passes
-([the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q98; its time is written as in
-[A8](#a8-home)); the **overlap grid** follows the forecast; then one plain paragraph: *"Your yes
+Same layout. Status *Filling · 2 of 4 in* (and for a game that had filled, *Seat open* or *Waiting
+for one payment*, as on [A8](#a8-home)); tiles with IN tags; WHERE shows the club and distance, no
+court number, and *Indoor* or *Outdoor* when every free court it could be booked on is of that kind
+(Q122); the money row reads *30 zł if it fills · book by Sat 13:00* (until Q121, while *waiting for
+the club*, *nobody pays until Bonarka Arena confirms* with *Bonarka Arena answers by 20:45*); the
+**overlap grid** follows the forecast; then one plain paragraph: *"Your yes
 costs nothing until everybody is in. When the last yes lands, everyone's share is held and the
 court is booked; it's taken at the club's cut-off."* (Q113) Actions at the bottom: **I'm in** / **Not this time** if you haven't
-answered, **Withdraw** if you're In — while *waiting for the club*, **Leave the game** with its
+answered, **Withdraw** if you're In — while it waits for one payment, **Leave the game** with its
 sheet ([the mechanics §13](the-mechanics.md#13-leaving-a-game)). No Chat.
 
 ### A4.3 A rescue seen from outside (Q96)
@@ -334,15 +337,16 @@ Back chevron + title; changes save as you tap.
 
 ### A7.2 Notifications (mocks 52, 53)
 
-- **ALWAYS ON** — seventeen inert rows with a green **on** tag, those of
-  [the mechanics §17.2](the-mechanics.md#172-notifications): *It's a game! · held* · *It's a
-  game! · the club answers by …* · *Waiting for one payment* · *Fix your card by … to keep your
-  seat* · *Confirm your payment by … to keep your seat* · *Game called off · nothing was taken, or
-  with the refund* · *Someone left your game · or it's filling again* · *You've been refunded* · *The
-  club confirmed / said no / didn't answer in time* · *Your new game* · *A game you left* · *Your
-  post didn't fill* · *Isn't here yet* · *They're at the club* · *How did it go?* · *Is that right?* ·
-  *Were they there?* (Q113 adds *Fix your card*; the quiet row for the take at the cut-off is never
-  pushed, so it isn't listed; Q120 adds the game's own five, written in as the list's words).
+- **ALWAYS ON** — sixteen inert rows with a green **on** tag, those of
+  [the mechanics §17.2](the-mechanics.md#172-notifications): *It's a game! · held* · *Waiting for
+  one payment* · *Fix your card by … to keep your seat* · *Confirm your payment by … to keep your
+  seat* · *Game called off · nothing was taken, or with the refund* · *Game moved* · *Someone left
+  your game · or it's filling again* · *You've been refunded* · *Your new game* · *A game you left* ·
+  *Your post didn't fill* · *Isn't here yet* · *They're at the club* · *How did it go?* · *Is that
+  right?* · *Were they there?* (Q113 adds *Fix your card*; the quiet row for the take at the
+  cut-off is never pushed, so it isn't listed; Q120 adds the game's own five, written in as the
+  list's words; Q121 removes *It's a game! · the club answers by …* and *The club confirmed / said
+  no / didn't answer in time*; Q122 adds *Game moved*).
 - **YOUR CHOICE** — three rows with a working **On / Off** chip: *You complete it* (on; *A card
   needs only you · at most 1 a day, bundled*), *Challenges for you* (on; *A member's post names
   you · at most 3 a day, bundled*), *Fill in alerts* (off; *A booked game you fit needs one more ·
@@ -382,7 +386,8 @@ rest grey. **The order is changed from the mocks** (Q82):
   new one is saved). Under it a small **Remove this method** link, refused with its reason while
   anything is live (Q83).
 - **TO CONFIRM** — above the live yeses, and above Home's rail too: a card refused when a game
-  filled, when its club accepted it, at the holding time or on a rescue, which the player can still
+  filled, at the holding time or on a rescue (and, until Q121, when its club accepted it),
+  which the player can still
   confirm; tap → the confirmation. While the seat is held for them, the row names the end of their
   window by the one the server names: *Fix your card by 14:40* before the cut-off (with a line that
   nothing is paid now), *Confirm your payment by 14:40* after it, written as the times in
@@ -405,16 +410,17 @@ rest grey. **The order is changed from the mocks** (Q82):
 ## A8. Home
 
 The rail of game cards that was *Now*, renamed **Home**, showing the statuses of
-[the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses): **Waiting for the club**
-(amber), **Waiting for one payment** (amber), **Booked** (mint), **Seat open** (amber), the result
+[the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses): **Waiting for one payment**
+(amber), **Booked** (mint), **Seat open** (amber), the result
 statuses — *Needs result*, *Confirm the result*, *Counted*, *Uncounted* with its reason, and
 **Played · no score**, which replaced *Never played* (Q114) — **Called off** (red) — each with its
-money line. A booked card carries no QR code and nothing to show at the desk (Q116). **Open game** →
+money line. A booked card names its court and the court's kind, *Court 3 · indoor* (Q122), and
+carries no QR code and nothing to show at the desk (Q116). **Open game** →
 [A4.1](#a41-a-booked-game-youre-in-details-510).
 On a booked card the **speech bubble is the chat's door**: it opens the game's chat
 ([A4.4](#a44-the-chat)) straight over Home, and Back returns to Home
 ([the mechanics §14.3](the-mechanics.md#143-the-chat), Q100). It shows when the game's chat is
-open, never on *Waiting for the club* or *Called off*. It carries no count until the details'
+open — never before the game is booked, nor on *Called off*. It carries no count until the details'
 *Chat · n* has its unread count; then it shows the same number. Games that filled since you last
 looked are marked *new*; opening the details, or the chat from the bubble, clears it.
 
@@ -422,18 +428,16 @@ A **Booked** card's money line follows the share (Q113): *40 zł · free to leav
 while the cut-off is ahead, whether the share is held yet or only checked, and *Paid · 40 zł* once it
 is taken. A game called off at its cut-off reads *nothing was taken* where it read *Refunded*.
 
-A game **waiting for the club** says when the club must answer, the time its desk is given
-([the mechanics §14.1](the-mechanics.md#141-home-and-the-statuses), Q98): *Bonarka Arena answers
-by 20:45 · Nobody pays until it confirms*, and once that time has passed, *Nobody pays until
-Bonarka Arena confirms*. **The time is in Warsaw time, as every day and hour on Home is**: the hour
-alone when it falls today (*answers by 20:45*), else the weekday and the hour (*answers by Sun
-00:15*), in the form of *free to leave until Sun 17:00*.
+**A time on Home is in Warsaw time, as every day and hour on Home is**: the hour alone when it falls
+today (*until 14:40*), else the weekday and the hour (*until Sun 00:15*), in the form of *free to
+leave until Sun 17:00*. (Until Q121 a game **waiting for the club** said when its *On request* club
+must answer, *Bonarka Arena answers by 20:45 · Nobody pays until it confirms*, in that form, Q98.)
 
 **A full game that falls back stays on Home as *Seat open*** for those still In (Q106): *1 seat
-open · Kazimierz Padel is asked again when it's full · nobody paid*, or *1 seat open · books when
-it's full · nobody paid* at a club that books at once, mirroring a booked game's *Seat open*. It
-reads *Waiting for the club* again when it refills, and *Called off · nobody paid* if its book-by
-passes first. It is in *You're In* too ([A3.2](#a32-youre-in--n--your-row-mock-13)).
+open · books when it's full · nobody paid*, mirroring a booked game's *Seat open*. It is booked when
+it refills, and reads *Called off · nobody paid* if its book-by passes first. (At an *On request*
+club, until Q121, it read *… is asked again when it's full*, and *Waiting for the club* on
+refilling.) It is in *You're In* too ([A3.2](#a32-youre-in--n--your-row-mock-13)).
 
 **Waiting for one payment** (Q111) is on all four's Home while one player's time to fix the card
 or time to pay runs: *Waiting for one payment · until 14:40 · Nobody pays until it's in*, the same
@@ -442,28 +446,26 @@ in both windows. The refused player's own card reads *Fix your card by 14:40* be
 Q113). At the end it becomes *Booked*, or *Seat open*. A card refused at the holding time leaves the
 game *Booked*: only its player's card reads *Fix your card by 14:40*.
 
-A **Called off** card says the club's answer as the notice and the email do (Q105): *Kazimierz
-Padel said no* or *Kazimierz Padel didn't answer in time*, with *Nobody paid — you'll get a new
-card first*.
+A **Called off** card says why, as the notice and the email do: short at the cut-off, the club's
+cancel with its reason, a payment that didn't come in time. The club's answer, *Kazimierz Padel said
+no* or *… didn't answer in time* (Q105), went with *On request* (Q121).
 
 ## A9. Notifications delivery
 
 | Notice | Push | In-app banner + recent list | Email |
 | --- | --- | --- | --- |
 | It's a game! · 40 zł held (*you paid* after the cut-off; or *… is booked · 40 zł held* after one payment was missing) | ✓ | ✓ | ✓ (booking confirmation, saying when the share is taken) |
-| It's a game! · Kazimierz Padel answers by 21:15 | ✓ | ✓ | — |
 | Waiting for one payment | ✓ | ✓ | — |
 | Fix your card by 14:40 to keep your seat (before the cut-off, Q113) | ✓ | ✓ | ✓ |
 | Your time to fix your card ran out | ✓ | ✓ | — |
 | Confirm your payment by 14:40 to keep your seat (after the cut-off) | ✓ | ✓ | ✓ |
 | Your time to pay ran out | ✓ | ✓ | — |
 | Your 40 zł for Thu 19:00 was taken — the take at the cut-off, quiet (Q113, a call) | — | the list only, never bannered | ✓ (the receipt) |
-| Game called off · nothing was taken, or with the refund | ✓ | ✓ | ✓ |
-| Game called off · nobody paid (not the club's answer) | ✓ | ✓ | — |
+| Game called off · nothing was taken, or with the refund — after a club's cancel, with *We'll look for another game for you first* (Q123) | ✓ | ✓ | ✓ |
+| Game called off · nobody paid (a full game that never booked: its book-by passed, or a payment had no time left) | ✓ | ✓ | — |
 | You've been refunded · your seat was taken (the exact sum and the fee kept on your payment) | ✓ | ✓ | ✓ |
 | Someone left your game · or it's filling again | ✓ | ✓ | — |
-| The club confirmed | ✓ | ✓ | ✓ (booking confirmation) |
-| The club said no · didn't answer in time | ✓ | ✓ | ✓ (Q105) |
+| Game moved — *Bonarka Arena moved your game to Court 3 · Thu 19:00* (Q122) | ✓ | ✓ | — |
 | Your new game | ✓ | ✓ | — |
 | You left the game · nothing was taken (your own leave, before the cut-off — Q113) | — | — | ✓ |
 | You left the game · the exact refund if your seat is taken (your own leave, after the cut-off — Q113) | — | — | ✓ |
@@ -480,12 +482,14 @@ card first*.
 Push goes through Expo's push service, switched on end to end on Android and iPhone since Q120: a
 human sets up the Expo project, Firebase and the Apple Developer Program, and the app then turns it
 on. Emails go through the existing mailer (ADR-0186). For fun games are told none of the game's
-own five.
+own five. (Q121 removed three rows: *It's a game! · Kazimierz Padel answers by 21:15*, *The club
+confirmed*, and *The club said no · didn't answer in time*, the last two emailed.)
 
 **Where a notice opens.** Tapping a notice — the banner, its row in the list or, later, a push —
 opens the game it is about. Three open the group's Games deck with their card on top: *You
-complete it*, *Challenges* and **Your new game** (Q107). The game's own five — *Isn't here yet*,
-*They're at the club*, *How did it go?*, *Is that right?* and *Were they there?* — open **the game's
+complete it*, *Challenges* and **Your new game** (Q107), which opens it on the owed card, first in
+the deck anyway (Q123). **Game moved** opens the booked game (Q122). The game's own five — *Isn't
+here yet*, *They're at the club*, *How did it go?*, *Is that right?* and *Were they there?* — open **the game's
 result screen** ([A4.1](#a41-a-booked-game-youre-in-details-510), Q120). **Home is read again whenever a notice
 arrives**, so a game a notice is about is there when it is tapped (Q103).
 
@@ -502,8 +506,8 @@ row, and there is no *mark all*. The app icon carries no number until push is on
   the rest.
 - **Never for your own act.** The player whose yes filled the game, or whose confirmed payment
   completed it, sees *It's a game!*; their own notice is in the list, already seen, never bannered
-  and never counted. A notice about money held or taken by somebody else's act, such as *Kazimierz
-  Padel confirmed your game · 25 zł held*, is bannered as usual.
+  and never counted. A notice about money held or taken by somebody else's act, such as *Your Tue
+  19:00 is booked · 40 zł held* when another player's payment comes in, is bannered as usual.
 
 ## A10. Design-system work (Part 16 rows)
 
@@ -529,24 +533,25 @@ doors. Clean and minimal: one task per page, one primary button per section.
 ## B1. The top bar
 
 **Overview · Bookings · Courts & prices · Money · Groups · Administrators**, and on the right the
-club's name opening a menu with **Details** and **Raketa settings**. A coral count badge on
-Bookings while something waits for an answer.
+club's name opening a menu with **Details** and **Raketa settings**. (A coral count badge on
+Bookings, for requests waiting for an answer, went with *On request*, Q121.)
 
 ## B2. Overview
 
-- **Until the club is live — the setup checklist.** Five rows, each with its state (done ✓ /
+- **Until the club is live — the setup checklist.** Four rows, each with its state (done ✓ /
   next / locked) and one button:
   1. **Connect payments** → *Connect with Stripe* (Stripe's hosted sign-up; back to Overview).
      States: *not started*, *Stripe needs more details* (with *Continue with Stripe*), *ready*.
-  2. **Choose how you work with Raketa** → the choice page ([B5](#b5-raketa-settings)).
-  3. **Add your courts** → Courts & prices.
-  4. **Set hours and prices** → Courts & prices, the week grid.
-  5. **Check the settings** → Raketa settings, **Confirm settings**.
-  When the fifth is done: a one-time line *"You're live — your courts can now be booked through
-  Raketa"*, and the checklist is gone.
-- **After that — waiting for your answer**: the On request bookings with their countdown and
-  Accept / Refuse, and any *Stripe needs something from you* notice. When nothing waits: *"Nothing
-  is waiting for you."* (The statistics that will live here are out of scope.)
+  2. **Add your courts** → Courts & prices.
+  3. **Set hours and prices** → Courts & prices, the week grid.
+  4. **Check the settings** → Raketa settings, **Confirm settings**.
+  When the fourth is done: a one-time line *"You're live — your courts can now be booked through
+  Raketa"*, and the checklist is gone. (Until Q121 there were five: the second was **Choose how you
+  work with Raketa**.)
+- **After that** — a line that the club is live on Raketa and a link to **today's Bookings** (Q121,
+  *a call*), and any *Stripe needs something from you* notice. Nothing waits for the club's answer
+  any more: until Q121 this listed the *On request* bookings with their countdown and Accept /
+  Refuse. (The statistics that will live here are out of scope.)
 
 ## B3. Courts & prices
 
@@ -570,43 +575,45 @@ Three sections on one page.
 
 ## B4. Bookings
 
-- **One day at a time**: *‹ Today ›* with a date picker; filters **All · Waiting for you · Seat
-  open · Called off**. No *Check in* button (Q116).
-- **Row** (per booking): time + court + sport + kind · the players (name, and their share *held* or
+- **One day at a time**: *‹ Today ›* with a date picker; filters **All · Seat open · Called off**
+  (*Waiting for you* went with *On request*, Q121). No *Check in* button (Q116).
+- **Row** (per booking): time + court and its kind (*Court 3 · indoor*, Q122) + sport + kind ·
+  the players (name, and their share *held* or
   *taken* — Q113; no *checked in ✓*, and nothing about who came or the score) · status tag · money (court price, collected, refunded) ·
   the group it came from · actions:
-  - **Waiting for you** → **Accept** / **Refuse** with the countdown; Refuse asks for an optional
-    reason, and tells the desk what the players will read: *Kazimierz Padel said no* · *Nobody
-    paid — you'll get a new card first* (Q105). Where the site explains a request left unanswered,
-    it promises *Kazimierz Padel didn't answer in time*.
-  - **Accepted · waiting for one player's payment until 21:20** (Q112) — an Accept that met a
-    refused card: the club's yes and the court are kept for that player's time to pay, and the
-    player is never named. Before the cut-off, where it is their time to fix the card, it reads
-    *Accepted · waiting for one player's card until 21:20* (Q113). It is not under *Waiting for you* or on Overview, because the desk has
-    answered. It becomes an ordinary booked game when the payment comes in; when the time runs out
-    it leaves the day as a called-off game does, and the desk has the email *A game didn't go
-    ahead* ([B9](#b9-emails-to-the-club)).
-  - **Booked / Seat open** → **Move** (a dialog listing the free courts of that sport at that
-    hour; players see the new number) and **Cancel** (a dialog: reason *weather · repair · double
-    booking · other*, the consequence spelled out, and **Cancel the booking**). Not possible after
-    the start. The consequence depends on the cut-off (Q113): before it, *"Every hold is let go
-    and nobody pays a fee"*; after it, as before, *"Everyone is refunded in full; the card fees are
-    not returned"*.
+  - **Booked / Seat open** → **Move** and **Cancel**. Not possible after the start.
+    - **Move** — a dialog listing the free courts of that sport at that hour that keep the game's
+      kind: the same kind, or an indoor court for an outdoor game, each with its kind (Q122, *a
+      call*). Players see the new number and are told *Game moved*.
+    - **Cancel** — a dialog that asks for the reason, *weather · repair · double booking · other*,
+      and then shows what this cancel would do ([the mechanics §16.9](the-mechanics.md#169-cancelling-a-booking),
+      Q122, *a call*):
+      - *"This game moves to Court 3 · indoor · the players are told, nobody is refunded"*, with
+        **Cancel the booking** and **Cancel the game anyway**, for a club closing the whole hour;
+      - or *"This game is called off"*, with the consequence, which depends on the cut-off (Q113):
+        before it, *"Every hold is let go and nobody pays a fee"*; after it, *"Everyone is refunded
+        in full; the card fees are not returned"*; and **Cancel the booking**.
+
+      The cancel decides afresh when the club confirms, and its answer says what happened: the
+      game moved, to the court named or the next that qualifies, or was called off.
+  - Until Q121, a **Waiting for you** row offered **Accept** / **Refuse** with a countdown, and an
+    Accept that met a refused card read **Accepted · waiting for one player's payment until 21:20**
+    (Q112). Both went with *On request*.
 - **Empty day**: *"No Raketa bookings on this day."*
 
 ## B5. Raketa settings
 
 One page, one form, **Save settings**:
 
-- **How you work with Raketa** — three radio cards (Only Raketa / Instant / On request), each with
-  two lines of what it means; changing it applies to hours not yet booked.
-- **Release lead** (Only Raketa) · **Minimum notice** (Instant, On request) · **Time to confirm**
-  (On request) · **Free-cancellation cut-off** — number fields with their defaults.
+- **Release lead** · **Free-cancellation cut-off** — number fields with their defaults.
 - **Other clubs' courts for our groups** — on/off + distance (default 10 km).
 - **Pause Raketa bookings** — on/off with its consequence line.
 - **Leave Raketa** — a text link at the bottom, refused while anything is booked or unpaid.
 
-*We check players in* was removed with desk check-in on 2026-10-11 (Q116).
+*We check players in* was removed with desk check-in on 2026-10-11 (Q116). **How you work with
+Raketa** (three radio cards, Only Raketa / Instant / On request), the **Minimum notice** and the
+**Time to confirm** were removed with *Instant* and *On request* on 2026-10-12 (Q121): every club
+works Only Raketa.
 
 ## B6. Check in
 
@@ -633,12 +640,12 @@ to the *other clubs' courts* setting.
 
 ## B9. Emails to the club
 
-Through the existing mailer (ADR-0186): *A booking is waiting for your answer* (at once, with the
-countdown and a link, and that *the shares are held when you accept and taken at the cut-off* —
-Q113), *New bookings today* (a daily summary), *A game was called off at the
-cut-off — the hour is free again* (at once), *A game didn't go ahead* — *A player's payment didn't
-come in time — the court is free again.* (at once, after an Accept that waited on one payment,
-Q112; before the cut-off, *A player's card wasn't fixed in time — the court is free again.*, Q113), *A payout was sent*, *Stripe needs something from you* (at once).
+Through the existing mailer (ADR-0186): *New bookings today* (a daily summary), *A game was called
+off at the cut-off — the hour is free again* (at once), *A payout was sent*, *Stripe needs something
+from you* (at once).
+
+*A booking is waiting for your answer* and *A game didn't go ahead* (after an Accept that waited on
+one payment, Q112, Q113) went with *On request* (Q121).
 
 ---
 
@@ -650,17 +657,24 @@ The shape is ADR-0189 §5. What each app needs from it:
 
 - **Club courts** (Clubs, per club): `CourtAdded`, `CourtChanged`, `CourtSwitchedOff/On`,
   `RaketaHoursSet` (per court, weekly hours), `ExceptionAdded/Removed`, `PricesSet`,
-  `WayOfWorkingChosen`, `RaketaSettingsChanged`, `StripeAccountLinked`, `StripeAccountStatusChanged`,
-  `RaketaPaused/Resumed`. *We check players in* left the settings with check-in (Q116); its field
+  `RaketaSettingsChanged`, `StripeAccountLinked`, `StripeAccountStatusChanged`,
+  `RaketaPaused/Resumed`. `WayOfWorkingChosen` and the settings' minimum notice and time to confirm
+  go with Q121, with no decoder: the local store is reset (a clean cut, *a call*).
+  *We check players in* left the settings with check-in (Q116); its field
   stays decodable on `RaketaSettingsChanged` and folds to nothing.
 - **Proposal** (Proposals, per proposed game): `ProposalMade` (origin: pick | post; pool, sport,
   kind, who, level range, club, start, share, book-by), `VersionDealt`, `YesSaid`, `YesWithdrawn`,
   `NoSaid`, `ProposalFilled` (the people and sides), `ProposalExpired`, `ProposalWithdrawn`,
   `CourtHourLost` (the last court at that club and hour went; the people In are re-dealt first).
-- **Booking** (Bookings, per filled proposal): `BookingRequested` (On request) /
-  `BookingAccepted` / `BookingRefused` / `BookingTimedOut` / `RequestWithdrawn` (a player left
-  while it waited), `BookingConfirmed` (court number,
-  seats, cut-off), `CourtMoved`, `SeatLeft`, `SeatRescued`, `CalledOffAtCutOff`,
+  Since Q123 the redeal after a club's cancel records **the players the new card is owed to**, and
+  the deck orders by that (*a call*); the never-at-this-club-and-hour rule goes, and *turned down*
+  leaves the endings.
+- **Booking** (Bookings, per filled proposal): `BookingConfirmed` (court number,
+  seats, cut-off) — born booked at every club since Q121, the request events
+  (`BookingRequested`, `BookingAccepted`, `BookingRefused`, `BookingTimedOut`, `RequestWithdrawn`
+  and the rest of the seven) gone with no decoder — `CourtMoved` (since Q122 also carrying the new
+  court's kind and, after a move by cancel, the cancel's reason), `SeatLeft`,
+  `SeatRescued`, `CalledOffAtCutOff`,
   `CancelledByClub`, `BookingPlayed`. `PlayerCheckedIn` retired with check-in (Q116); it stays
   decodable and folds to nothing. It opens the ordinary **Game** on confirmation — the only thing
   that opens one since the old loop was removed (#569). A new read gives a booking's club map
@@ -688,12 +702,15 @@ The shape is ADR-0189 §5. What each app needs from it:
 
 ## C2. Read models
 
-Per reader, never stored as aggregates: the **group deck** (cards addressed to you, ordered by
-[the mechanics §8.2](the-mechanics.md#82-the-order), filtered by games-per-week and most-I'll-pay),
+Per reader, never stored as aggregates: the **group deck** (cards addressed to you, an owed card
+first, ordered by [the mechanics §8.2](the-mechanics.md#82-the-order), filtered by games-per-week and
+most-I'll-pay, each card carrying *indoor*, *outdoor* or neither, Q122–Q123),
 **Fill in** (Seats to fill you fit and are free for; You're In), **Home**, **Payments** (live
 yeses across pools, receipts), the **posting grid** (per range: best-hour count, court
-availability, happening-here), the **slot sheet**, the club's **Bookings**, **Money** and the
-**setup checklist**. Court-hour availability is derived from Club courts + bookings + live
+availability, happening-here), the **slot sheet**, the club's **Bookings** (each court with its
+kind), the **cancel preview** (moves to a named court of a named kind, or called off — Q122),
+**Money** and the **setup checklist** (four steps since Q121).
+Court-hour availability is derived from Club courts + bookings + live
 proposals' needs, per club and hour.
 
 ## C3. Jobs
@@ -703,7 +720,9 @@ proposals' needs, per club and hour.
   window, and since Q118 the reliability filter), and the most even four is read off the balance forecast — no ranking or score
   ([the mechanics §5.1](the-mechanics.md#51-what-it-does)); distance only picks a group's clubs.
   Deals versions at half-In and after every no. Respects games-per-week, most-I'll-pay and one
-  card per people-set per batch.
+  card per people-set per batch. Since Q123 an **owed card** is chosen closest to the cancelled
+  game first: the same club, day and hour; for a player group, another club at that day and hour,
+  nearest first; then the closest hour, the home club first.
 - **Book-by expiry** — expires unfilled proposals; tells posters.
 - **Holding the shares** (Q113) — every 30 seconds, as time to pay and the cut-off: holds the
   share of every checked charge whose holding time — four days before the cut-off — has come. A
@@ -714,11 +733,13 @@ proposals' needs, per club and hour.
   real fee recorded once Stripe reports it; still short → called off and **every hold let go**,
   nobody refunded because nothing was taken; a share already taken by the fallback is refunded in
   full (Q113). Its console press, *cut-off*, does the same.
-- **On request timeout** — expires unanswered requests.
+- **On request timeout** — expired unanswered requests. Removed with *On request* (Q121), with its
+  switch, its interval and its row in the jobs register, and its console press.
 - **Time to pay** — at the end of a refused card's 30 minutes, whichever window it is — time to fix
   the card before the cut-off, time to pay after it (Q113): lets the kept holds go and offers the
-  seat, or calls the game off when its book-by has come; tells the players and, after an Accept,
-  the desk (Q109, Q112). At a holding, it opens the player's seat as a rescue; on a rescue, it
+  seat, or calls the game off when its book-by has come; tells the players (Q109). Until Q121 it
+  also told the desk, after an Accept (Q112).
+  At a holding, it opens the player's seat as a rescue; on a rescue, it
   offers the seat again.
 - **Rescue dealing** — on every `SeatLeft`: Seats to fill, Seat open cards, Fill in alerts.
 - **How did it go?** (Q119, Q120) — every 30 seconds, as the other money and seat jobs: tells the
@@ -751,7 +772,9 @@ proposals' needs, per club and hour.
 - **Club surface** — `GET/POST/PATCH /club/courts`, `PUT /club/courts/{id}/hours`,
   `GET/POST/DELETE /club/exceptions`, `PUT /club/prices`, `GET/PUT /club/raketa-settings`,
   `POST /club/stripe/onboarding-link`, `GET /club/setup`, `GET /club/bookings?date&filter`,
-  `POST /club/bookings/{id}/acceptance|refusal|move|cancellation` (`POST /club/check-ins` went
+  `POST /club/bookings/{id}/move|cancellation` — the cancellation takes a reason and an *anyway*
+  flag and answers *moved* (with the court and its kind) or *called off*, beside a **cancel
+  preview** — (`…/acceptance|refusal` and the waiting read went with Q121; `POST /club/check-ins`
   with Q116),
   `GET /club/money?month`, `GET /club/payouts`.
 - **Webhooks** — `POST /api/v1/webhooks/stripe` (built by #536, on no client's contract —
@@ -771,13 +794,16 @@ stored in UTC and shown in Europe/Warsaw.
 Seeds drive the real use cases only (ADR-0029; `backend/app/seeds/`), with the **fake payments
 adapter**, and **nothing a mock shows is hard-coded**. On top of today's cohort and groups:
 
-- **Clubs** in all three ways of working, none with a check-in switch (Q116), with courts per sport, weekly Raketa hours, one
-  exception, price bands, a linked (fake) payments account; one club **not live** (half its
-  checklist done) and one **paused**.
+- **Clubs**, every one **Only Raketa** since Q121 (*a call*: each with a release lead that keeps its
+  seeded games fillable), none with a check-in switch (Q116), with courts per sport, weekly Raketa
+  hours, one exception, price bands, a linked (fake) payments account; **at least one with indoor
+  and outdoor courts of one sport at the same hours**, so that a move by cancel, the weather rule and
+  a card's kind can be walked (Q122); one club **not live** (half its checklist done) and one
+  **paused**.
 - **Members** with hourly weekly hours, spread so the posting grid shows every cell state.
 - **For a protagonist**, in one group and sport: fresh picks; picks with 1, 2 and 3 In (one *Book
   it now*); a challenge with momentum and one whose poster withdrew; rescues before and after the
-  cut-off; a post of their own in You're In; a game waiting for an On request club; booked games
+  cut-off; a post of their own in You're In; booked games
   (one before, one after the cut-off, one on the day, and since Q113 one filled far ahead with its
   seats checked); since Q114 the evening nobody recorded reads *Played · no score*, and the
   protagonist's Player reliability is in points (Q117); a called-off game; receipts and a refund; a week at the
