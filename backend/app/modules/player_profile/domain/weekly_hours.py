@@ -68,7 +68,7 @@ tries has to argue with it.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Final, Iterable, Mapping
 
@@ -190,10 +190,24 @@ class WeeklyHours:
 
     hours: tuple[WeeklyHour, ...] = ()
 
+    #: The same hours as ``(weekday, hour)`` pairs, for :meth:`holds` to answer
+    #: by lookup rather than by scanning (#703, ``docs/adr/0197`` §2b). **Derived
+    #: once per week value, and no part of the value**: it is out of equality,
+    #: the hash and the repr, nothing stores it, no event carries it, and a week
+    #: rebuilt from its codes or cells derives its own. The overlap grid asks
+    #: *is this hour ticked* for every hour of every range of every person on
+    #: every dealt card, which was a scan over the week each time.
+    ticked: frozenset[tuple[int, int]] = field(init=False, repr=False, compare=False)
+
     def __post_init__(self) -> None:
         invariant(
             list(self.hours) == _in_reading_order(self.hours),
             "a week of hours was built outside `of`",
+        )
+        # The one write a frozen dataclass allows itself: a derived field, set
+        # at construction and never again.
+        object.__setattr__(
+            self, "ticked", frozenset((int(cell.day), cell.hour) for cell in self.hours)
         )
 
     @classmethod
@@ -298,9 +312,7 @@ class WeeklyHours:
         honestly, and the answer is no.
         """
 
-        return any(
-            int(cell.day) == int(day) and cell.hour == hour for cell in self.hours
-        )
+        return (int(day), hour) in self.ticked
 
     def __len__(self) -> int:
         return len(self.hours)
