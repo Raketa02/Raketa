@@ -10,15 +10,14 @@
  * #557's) — and no court, because the details drew the forecast already. The Game is found off the
  * booking's own read, which the details have just made.
  *
- * **And the booking's two facts the Game does not carry** ([#560](https://github.com/Raketa02/Raketa/issues/560)):
- * who the club's desk checked in, off the booking's tiles — the result entry offers *Kuba didn't
- * come* for every other player but them — and the re-read of Home and these details, so the status,
- * the badge and the door under this screen follow a score, a mark or a dispute at once.
+ * **And the booking's fact the Game does not carry** ([#560](https://github.com/Raketa02/Raketa/issues/560)):
+ * that it is booked — so the result entry offers *Kuba didn't come* for every other player — with
+ * the re-read of Home and these details, so the status, the badge and the door under this screen
+ * follow a score, a mark or a dispute at once.
  */
 
 import { GameScreen } from '@/features/games/types';
 
-import { checkedInOn } from '../domain/home';
 import { bookingReadState, useBooking, useRereadBooking } from '../hooks/useHome';
 
 import { BookingAbsent } from './BookingAbsent';
@@ -56,7 +55,7 @@ export function BookedGameResult({ bookingId }: BookedGameResultProps) {
       court={null}
       plan={null}
       fill={null}
-      booked={{ checkedIn: checkedInOn(game), reread }}
+      booked={{ reread }}
     />
   );
 }

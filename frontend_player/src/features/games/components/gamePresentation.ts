@@ -737,11 +737,6 @@ export function didNotComeLabel(who: NamedPlayer): string {
   return `${playerName(who)} didn’t come`;
 }
 
-/** The row of a player the club's desk checked in — drawn, and nothing to press. */
-export function checkedInLine(who: NamedPlayer): string {
-  return `${playerName(who)} · checked in at the club`;
-}
-
 /**
  * The sheet's title names **the moment**, so the act is named once — by the control that carries it
  * out — on the leave sheet's rule.

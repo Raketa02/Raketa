@@ -135,10 +135,6 @@ export const HOME_GAME_COPY = {
     nobodyPaid: 'nobody paid',
     nobodyPaidNewCardFirst: 'nobody paid — you’ll get a new card first',
     nothingWasTaken: 'nothing was taken',
-    showAtTheDesk: 'Show at the desk',
-    deskLine: 'Show this at the club’s desk when you arrive — or read them the code.',
-    qrSpoken: 'Your check-in code as a QR code',
-    codeSpoken: 'Your check-in code',
     /** Today's result act, once the hour has come — the button under the game card. */
     resultAct: {
       'we-played': WE_PLAYED,

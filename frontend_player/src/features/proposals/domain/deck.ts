@@ -44,11 +44,6 @@ export interface DeckPerson {
    * rescue, which is the seat that opened.
    */
   readonly paid?: boolean;
-  /**
-   * **The club's desk checked them in on the day** (#547) — evidence they were there, so they can
-   * never be marked as not coming (#560). Absent where there is no desk to ask: a card still filling.
-   */
-  readonly checkedIn?: boolean;
 }
 
 /** One cell of the overlap grid. */

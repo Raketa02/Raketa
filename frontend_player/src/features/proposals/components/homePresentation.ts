@@ -442,11 +442,6 @@ function heldWords(share: ShareAt): string {
   }
 }
 
-/** *Your check-in code: K 7 M 2 Q X* — the short code aloud, a character at a time. */
-export function shortCodeSpoken(code: string): string {
-  return `${COPY.details.codeSpoken}: ${[...code].join(' ')}`;
-}
-
 /**
  * **A Home card, spoken** — one element with no action, as the Classic card's body is: *Booked,
  * new. Padel. Bonarka Arena, Court 2. Saturday, 16:00 until 17:00. Paid, 30 zł.* *Open game* and

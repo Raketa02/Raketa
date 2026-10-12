@@ -77,7 +77,6 @@ const BY_CODE: Readonly<Record<string, string>> = {
   the_game_has_not_started: 'The game hasn’t started yet.',
   a_result_is_entered:
     'A score went in while this screen was open, so the game happened — answer the score instead.',
-  checked_in_at_the_club: 'The club checked them in, so they were there.',
   you_were_reported_as_a_no_show:
     'You were marked as not coming yourself — say you were there instead.',
   // These two refuse a score as well as a mark, so their sentences say only what both share.

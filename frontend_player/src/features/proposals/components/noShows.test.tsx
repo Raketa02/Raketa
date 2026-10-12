@@ -5,9 +5,9 @@
  * faked.
  *
  * The acceptance criteria are assertions here. A booked game's result entry offers *Kuba didn't
- * come* for each other player, and a player the club checked in has a row with nothing to press;
- * the mark goes through a sheet that says what it does, and the screen then reads the report. The
- * player marked finds it on Home, opens the game and says they were there inside their day.
+ * come* for each other player — nobody at the club checks anybody in (ADR-0195); the mark goes
+ * through a sheet that says what it does, and the screen then reads the report. The player marked
+ * finds it on Home, opens the game and says they were there inside their day.
  *
  * The rules are `games`' `noShows.test.ts` and `resultArgument.test.ts`, and the words
  * `gamePresentation.test.ts`; what is asserted here is that the screens are wired to them.
@@ -26,7 +26,6 @@ import {
   PIOTR,
   bookedGameOnTheList,
   bookedRoomRow,
-  bookedSides,
   bookingDetails,
   homeGame,
   stubBooking,
@@ -110,17 +109,6 @@ function theGame(extra: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
   return bookedGameOnTheList({ entry_closes_at: '2026-10-06T15:00:00Z', ...extra });
 }
 
-/** Inés checked in at the desk; the other two were not scanned. */
-function sidesWithInesCheckedIn(): Wire['BookedSidesSchema'] {
-  const sides = bookedSides();
-  return {
-    yours: sides.yours,
-    theirs: sides.theirs.map((tile) =>
-      tile.player_id === INES ? { ...tile, checked_in: true } : tile,
-    ),
-  };
-}
-
 /** Land on Home with the game, open its details, and take the result act they offer. */
 async function openResult(details: Wire['BookingDetailsResponse'], act: string) {
   stubHomeGames(transport, [
@@ -149,20 +137,18 @@ describe('marking somebody who didn’t come, where the result is entered', () =
       status: 'NEEDS_RESULT',
       needs_you: true,
       read_at: AFTER,
-      sides: sidesWithInesCheckedIn(),
-      check_in: null,
       leaving: null,
       shows_forecast: false,
     });
 
-  it('offers it for each other player, and never for one the club checked in', async () => {
+  it('offers it for each other player, and draws nobody as checked in', async () => {
     stubGames(transport, [theGame()], AFTER);
     await openResult(needsResult(), HOME.details.resultAct['we-played']);
 
     expect(await screen.findByRole('button', { name: 'Piotr Sowa didn’t come' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Inés Díaz didn’t come' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Bartek Lis didn’t come' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Inés Díaz didn’t come' })).toBeNull();
-    expect(screen.getByText('Inés Díaz · checked in at the club')).toBeTruthy();
+    expect(screen.queryByText(/checked in/)).toBeNull();
     // Never the reader: you are the one person your report proves came.
     expect(screen.queryByRole('button', { name: 'You didn’t come' })).toBeNull();
     // The score is still the screen's: the grid's send stays where it was.
@@ -228,21 +214,25 @@ describe('marking somebody who didn’t come, where the result is entered', () =
     expect(transport.requestsTo('POST', NO_SHOWS_PATH)).toHaveLength(0);
   });
 
-  it('says why a mark was refused — the desk checked them in meanwhile', async () => {
+  it('says why a mark was refused — a score went in meanwhile', async () => {
     stubGames(transport, [theGame()], AFTER);
-    transport.on('POST', NO_SHOWS_PATH, () => errorResponse(409, 'checked_in_at_the_club'));
+    transport.on('POST', NO_SHOWS_PATH, () => errorResponse(409, 'a_result_is_entered'));
     await openResult(needsResult(), HOME.details.resultAct['we-played']);
 
     fireEvent.press(await screen.findByRole('button', { name: 'Piotr Sowa didn’t come' }));
     const sheet = await screen.findByTestId('bottom-sheet');
     fireEvent.press(within(sheet).getByRole('button', { name: 'Piotr Sowa didn’t come' }));
 
-    expect(await screen.findByText('The club checked them in, so they were there.')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'A score went in while this screen was open, so the game happened — answer the score instead.',
+      ),
+    ).toBeTruthy();
   });
 
   it('clears a refused mark’s sentence once a score goes through instead', async () => {
     stubGames(transport, [theGame()], AFTER);
-    transport.on('POST', NO_SHOWS_PATH, () => errorResponse(409, 'checked_in_at_the_club'));
+    transport.on('POST', NO_SHOWS_PATH, () => errorResponse(400, 'not_on_this_court'));
     const RESULT_PATH = `/api/v1/games/${BOOKED_GAME}/result`;
     transport.on('POST', RESULT_PATH, () => json(theGame()));
     await openResult(needsResult(), HOME.details.resultAct['we-played']);
@@ -250,16 +240,14 @@ describe('marking somebody who didn’t come, where the result is entered', () =
     fireEvent.press(await screen.findByRole('button', { name: 'Piotr Sowa didn’t come' }));
     const sheet = await screen.findByTestId('bottom-sheet');
     fireEvent.press(within(sheet).getByRole('button', { name: 'Piotr Sowa didn’t come' }));
-    expect(await screen.findByText('The club checked them in, so they were there.')).toBeTruthy();
+    expect(await screen.findByText('That player isn’t on this game.')).toBeTruthy();
 
     // They all came after all: 6–4, 6–2, the caret crossing the row and then down.
     for (const figure of ['6', '4', '6', '2']) fireEvent.press(screen.getByLabelText(figure));
     fireEvent.press(screen.getByRole('button', { name: /Send this score/ }));
 
     await waitFor(() => expect(transport.requestsTo('POST', RESULT_PATH)).toHaveLength(1));
-    await waitFor(() =>
-      expect(screen.queryByText('The club checked them in, so they were there.')).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByText('That player isn’t on this game.')).toBeNull());
   });
 });
 
@@ -276,8 +264,6 @@ async function landOnResult(game: Wire['GameSchema']) {
       status: 'UNCOUNTED',
       uncounted_reason: 'NO_SHOW',
       read_at: AFTER,
-      sides: sidesWithInesCheckedIn(),
-      check_in: null,
       leaving: null,
       shows_forecast: false,
     }),
@@ -355,7 +341,6 @@ describe('the player marked says they were there, inside their day', () => {
       uncounted_reason: 'NO_SHOW',
       needs_you: true,
       read_at: AFTER,
-      check_in: null,
       leaving: null,
       shows_forecast: false,
     });
@@ -487,7 +472,6 @@ describe('an act on a booked game’s result', () => {
         status: 'CONFIRM_THE_RESULT',
         needs_you: true,
         read_at: AFTER,
-        check_in: null,
         leaving: null,
         shows_forecast: false,
       }),

@@ -166,8 +166,8 @@ export function getHome({ signal }: Cancellable = {}): Promise<Schemas['HomeResp
 }
 
 /**
- * **A booked game in detail**, for a player in it — with the reader's check-in code on the game's
- * day — or for a member its open seat is offered to, who reads it from outside (`rescue`, #545).
+ * **A booked game in detail**, for a player in it, or for a member its open seat is offered to, who
+ * reads it from outside (`rescue`, #545).
  * `booking_not_found` (404) for a booking that does not exist and for one that is neither.
  */
 export function getBooking(

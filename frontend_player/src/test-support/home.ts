@@ -49,7 +49,6 @@ function seat(
     photo_url: null,
     level,
     paid: false,
-    checked_in: false,
     ...extra,
   };
 }
@@ -141,7 +140,7 @@ export function stubHomeGames(
   stubHome(transport, { read_at: HOME_READ_AT, games: [...games], ...extra });
 }
 
-/** The booked game in detail — off the day, so no check-in code. */
+/** The booked game in detail. */
 export function bookingDetails(
   extra: Partial<Wire['BookingDetailsResponse']> = {},
 ): Wire['BookingDetailsResponse'] {
@@ -167,7 +166,6 @@ export function bookingDetails(
     sides: bookedSides(),
     money: bookedMoney(),
     shows_forecast: true,
-    check_in: null,
     leaving: { kind: 'BEFORE_THE_CUT_OFF', refund_grosze: null, card_fee_grosze: null },
     rescue: null,
     answer_by: null,

@@ -240,7 +240,6 @@ function seatOf(tile: Tile): Wire['BookedTileSchema'] {
     photo_url: tile.photo_url,
     level: tile.level,
     paid: true,
-    checked_in: false,
   };
 }
 

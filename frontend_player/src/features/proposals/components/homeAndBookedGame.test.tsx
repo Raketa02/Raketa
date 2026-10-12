@@ -6,8 +6,8 @@
  * The acceptance criteria are assertions here: a Home card says its status and its money line, is
  * *new* until opened, carries *Open game* and the chat's bubble — a door straight into the room,
  * whose Back is Home (Q100, #619); the details draw the top bar, the game card with *paid* tiles
- * and the court facts, the Game's forecast and the code to show at the desk on the day; and the
- * chat opened from the details, without the plan card or a *Details* button, goes back to them.
+ * and the court facts, and the Game's forecast — and nothing to show at the desk (ADR-0195); and
+ * the chat opened from the details, without the plan card or a *Details* button, goes back to them.
  *
  * The rules are `domain/home.test.ts`'s and the words `homePresentation.test.ts`'s; what is asserted
  * here is that the screens are wired to both.
@@ -839,27 +839,18 @@ describe('a booked game’s details (A4.1)', () => {
     expect(screen.queryByRole('header', { name: BALANCE_FORECAST })).toBeNull();
   });
 
-  it('shows the QR and the short code at the desk on the game’s day', async () => {
-    await openDetails(
-      bookingDetails({
-        check_in: {
-          short_code: 'K7M2QX',
-          qr_payload: `RAKETA-CHECK-IN:1:${BOOKING}:${GATE_USER.id}:K7M2QX`,
-        },
-      }),
-    );
+  it('has nothing to show at the desk on the game’s day — they walk straight to the court', async () => {
+    stubHomeGames(transport, [homeGame()]);
+    stubBooking(transport, bookingDetails({ read_at: '2026-10-03T08:00:00Z' }));
+    stubConversations(transport, [bookedRoomRow()]);
+    await launchSignedIn();
 
-    expect(await screen.findByRole('header', { name: DETAILS.showAtTheDesk })).toBeTruthy();
-    expect(screen.getByTestId('check-in-qr')).toBeTruthy();
-    expect(screen.getByText('K7M2QX')).toBeTruthy();
-    expect(screen.getByLabelText(`${DETAILS.codeSpoken}: K 7 M 2 Q X`)).toBeTruthy();
-  });
-
-  it('has nothing to show at the desk on any other day', async () => {
-    await openDetails();
+    const open = await screen.findByRole('button', { name: HOME.openGame });
+    expect(screen.queryByText(/desk/i)).toBeNull();
+    fireEvent.press(open);
 
     await screen.findByText('Padel · booked');
-    expect(screen.queryByText(DETAILS.showAtTheDesk)).toBeNull();
+    expect(screen.queryByText(/desk/i)).toBeNull();
   });
 
   it('offers today’s result once the hour has come, on today’s game screen', async () => {

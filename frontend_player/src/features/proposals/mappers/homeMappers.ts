@@ -27,7 +27,6 @@ export function toSeat(wire: Schemas['BookedTileSchema']): DeckPerson {
     // Nobody on a booked court is *In* — that word is a game still filling's.
     isIn: false,
     paid: wire.paid,
-    checkedIn: wire.checked_in,
     ...(wire.name === null ? {} : { name: wire.name }),
     ...(wire.photo_url === null ? {} : { photoUrl: wire.photo_url }),
     ...(wire.level === null ? {} : { level: wire.level }),
@@ -173,9 +172,6 @@ export function toBookedGame(wire: Schemas['BookingDetailsResponse']): BookedGam
       ...(wire.where.distance_km === null ? {} : { distanceKm: wire.where.distance_km }),
     },
     showsForecast: wire.shows_forecast,
-    ...(wire.check_in === null
-      ? {}
-      : { checkIn: { shortCode: wire.check_in.short_code, qrPayload: wire.check_in.qr_payload } }),
     ...(wire.leaving === null ? {} : { leaving: toLeaving(wire.leaving) }),
     ...(rescue === null ? {} : { rescue: toRescue(rescue) }),
   };

@@ -142,14 +142,6 @@ export interface Home {
   readonly games: readonly HomeGame[];
 }
 
-/** *Show at the desk* — the reader's own code for the game, on its day. */
-export interface CheckIn {
-  /** Six characters to type when the camera will not read. */
-  readonly shortCode: string;
-  /** What the QR code encodes. */
-  readonly qrPayload: string;
-}
-
 /**
  * **What *Leave the game* would cost now** (the mechanics §13; #544) — the line under the button and
  * the sheet in front of it. Absent where there is no button: once the hour has come, on a game that
@@ -213,8 +205,6 @@ export interface BookedGame extends Omit<HomeGame, 'club'> {
   readonly where: DeckCard['club'] & { readonly distanceKm?: number };
   /** Draw the balance forecast — the Game's own pairing read — while the full game awaits its entry. */
   readonly showsForecast: boolean;
-  /** On the game's day, the reader's code to show at the desk; absent on every other day. */
-  readonly checkIn?: CheckIn;
   /** *Leave the game*'s cost now — absent where there is no button. */
   readonly leaving?: Leaving;
   /** The reader is not on the game, and its open seat is offered to them: a rescue seen from outside. */
@@ -739,14 +729,4 @@ export function resultActOf(
  */
 function youMayDispute(game: Pick<HomeGame, 'status' | 'uncountedReason' | 'needsYou'>): boolean {
   return game.status === 'UNCOUNTED' && game.uncountedReason === 'NO_SHOW' && game.needsYou;
-}
-
-/**
- * **Who the club's desk checked in** — by id, as `games`' result screen is handed them: a player
- * checked in can never be marked as not coming (#560; the mechanics §15.1).
- */
-export function checkedInOn(game: Pick<HomeGame, 'sides'>): readonly string[] {
-  return [...game.sides.yours, ...game.sides.theirs].flatMap((person) =>
-    person.checkedIn === true ? [person.playerId] : [],
-  );
 }

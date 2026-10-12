@@ -12,7 +12,6 @@ const tile = (extra: Partial<Wire['BookedTileSchema']> = {}): Wire['BookedTileSc
   photo_url: null,
   level: 2.95,
   paid: true,
-  checked_in: false,
   ...extra,
 });
 
@@ -59,7 +58,7 @@ const OLDER_MONEY = {
 } as Wire['BookedMoneySchema'];
 
 describe('toHome', () => {
-  it('reads the badge, the clock and every card, the sides with their paid and check-in', () => {
+  it('reads the badge, the clock and every card, the sides with their paid', () => {
     const home = toHome({
       read_at: '2026-10-01T08:00:00Z',
       needing_you: 2,
@@ -67,7 +66,7 @@ describe('toHome', () => {
         homeGame({
           sides: {
             yours: [tile({ player_id: 'me', is_you: true })],
-            theirs: [tile({ checked_in: true })],
+            theirs: [tile()],
           },
         }),
       ],
@@ -96,7 +95,6 @@ describe('toHome', () => {
                 isYou: true,
                 isIn: false,
                 paid: true,
-                checkedIn: false,
                 name: 'Piotr Sowa',
                 level: 2.95,
               },
@@ -107,7 +105,6 @@ describe('toHome', () => {
                 isYou: false,
                 isIn: false,
                 paid: true,
-                checkedIn: true,
                 name: 'Piotr Sowa',
                 level: 2.95,
               },
@@ -155,7 +152,6 @@ describe('toHome', () => {
       isYou: false,
       isIn: false,
       paid: false,
-      checkedIn: false,
     });
     expect(game?.money).toEqual({ shareGrosze: 2800, paid: false });
   });
@@ -385,7 +381,6 @@ describe('toBookedGame', () => {
       refunded_grosze: null,
     },
     shows_forecast: true,
-    check_in: { short_code: 'K7M2QX', qr_payload: 'RAKETA-CHECK-IN:1:b-1:me:K7M2QX' },
     leaving: null,
     rescue: null,
     answer_by: null,
@@ -395,7 +390,7 @@ describe('toBookedGame', () => {
     ...extra,
   });
 
-  it('reads the details, WHERE with its distance and the code for the desk', () => {
+  it('reads the details and WHERE with its distance', () => {
     expect(toBookedGame(details())).toMatchObject({
       bookingId: 'b-1',
       gameId: 'g-1',
@@ -408,17 +403,13 @@ describe('toBookedGame', () => {
       courtName: 'Court 2',
       money: { shareGrosze: 2800, paid: true },
       showsForecast: true,
-      checkIn: { shortCode: 'K7M2QX', qrPayload: 'RAKETA-CHECK-IN:1:b-1:me:K7M2QX' },
     });
   });
 
-  it('has no distance for a reader with no Location area, and no code off the day', () => {
-    const game = toBookedGame(
-      details({ where: { id: 'club-1', name: null, distance_km: null }, check_in: null }),
-    );
+  it('has no distance for a reader with no Location area', () => {
+    const game = toBookedGame(details({ where: { id: 'club-1', name: null, distance_km: null } }));
 
     expect(game?.where).toEqual({ id: 'club-1' });
-    expect(game).not.toHaveProperty('checkIn');
   });
 
   it('carries where the share stands on the money row, as Home’s card does (Q113)', () => {

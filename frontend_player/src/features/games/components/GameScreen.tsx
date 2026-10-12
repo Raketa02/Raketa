@@ -142,10 +142,9 @@
  *
  * [#560](https://github.com/Raketa02/Raketa/issues/560) (the Games & Fill in mechanics §15.3): where
  * a **booked** game's result is entered, a *Didn't come?* block under the grid has a row per other
- * player — *Kuba Nowak didn't come*, behind a sheet that says what it does — and a player the club
- * checked in has a row with nothing to press. Which game is booked, and who was checked in, are the
- * booking's to know, so the composer hands them in (`booked`); a Classic game has no block because
- * nobody hands one in. Once somebody is marked the game takes no score: the arm reads the reports,
+ * player — *Kuba Nowak didn't come*, behind a sheet that says what it does. Which game is booked
+ * is the booking's to know, so the composer hands its facts in (`booked`); a Classic game has no
+ * block because nobody hands one in. Once somebody is marked the game takes no score: the arm reads the reports,
  * the rows go on offering whoever else did not come, and **the player marked** finds *I was there*
  * pinned, with their day on the clock.
  */
@@ -221,8 +220,6 @@ import { ScoreTable } from './ScoreTable';
  * which holds the booking, and absent on a Classic game.
  */
 export interface BookedFacts {
-  /** Who the club's desk checked in, by id: they were there, and can never be marked. */
-  readonly checkedIn: readonly string[];
   /**
    * Re-read the booking's own reads once an act here has landed — Home's status and badge, and the
    * details this screen is pushed over — which this feature cannot name.
@@ -281,9 +278,8 @@ export interface GameScreenProps {
    */
   readonly fill: ReactNode;
   /**
-   * **A booked game's facts** (#560) — who the club checked in and how to re-read the booking.
-   * Present, the entry offers *Kuba didn't come*; absent, it is a Classic game, which has no hour
-   * anybody could fail to come to.
+   * **A booked game's facts** (#560) — how to re-read the booking. Present, the entry offers *Kuba
+   * didn't come*; absent, it is a Classic game, which has no hour anybody could fail to come to.
    */
   readonly booked?: BookedFacts;
 }
@@ -368,9 +364,9 @@ function Argument({
   const opener = useRef<View>(null);
   /**
    * **The rows of *Didn't come?*** — a booked game's alone, and the domain's to fill
-   * (`noShowRows`): every other player, a checked-in one without a control.
+   * (`noShowRows`): every other player.
    */
-  const rows = booked === undefined ? [] : noShowRows(game, playerId, booked.checkedIn);
+  const rows = booked === undefined ? [] : noShowRows(game, playerId);
 
   /**
    * **A new act clears what the last one was refused**, so the footer's one sentence is always

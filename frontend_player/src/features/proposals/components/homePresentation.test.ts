@@ -11,7 +11,6 @@ import {
   moneyRow,
   moneySpoken,
   moneyWords,
-  shortCodeSpoken,
   sportWords,
   statusSubline,
   whereAside,
@@ -288,12 +287,6 @@ describe('clubsAnswer — the club’s answer to a game it turned down (Q105)', 
 
   it('is nothing for a game not called off', () => {
     expect(clubsAnswer({ where })).toBeUndefined();
-  });
-});
-
-describe('shortCodeSpoken — the code for the desk, aloud', () => {
-  it('is said a character at a time', () => {
-    expect(shortCodeSpoken('K7M2QX')).toBe('Your check-in code: K 7 M 2 Q X');
   });
 });
 

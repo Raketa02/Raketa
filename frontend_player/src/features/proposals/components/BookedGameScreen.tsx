@@ -1,7 +1,7 @@
 /**
  * **A booked game you're in, in detail** — what Home's *Open game* and *It's a game!*'s *Open game*
  * open ([#556](https://github.com/Raketa02/Raketa/issues/556); the screens A4.1, details 5–10; the
- * mechanics §14.2, §15.1).
+ * mechanics §14.2).
  *
  * ```
  * ‹  [faces]  Piotr Sowa, Inés Díaz, Bartek Lis              [ Chat ]   the top bar (details 7)
@@ -19,18 +19,20 @@
  * └─────────────────────────────────────────────┘
  * [ We played ]                                     the result, once the hour has come
  * BALANCE FORECAST …                                the Game's own forecast (details 9)
- * SHOW AT THE DESK  [QR]  K7M2QX                    on the game's day
  * ```
  *
+ * **Nothing to show at the desk** (ADR-0195): players walk straight to the court, so the details
+ * carry no QR code and no check-in code, on the game's day or any other.
+ *
  * **One read, `GET /bookings/{id}`, and nothing re-derived.** The status, the sides, the share and
- * whether it was paid, the cut-off, the club's deadline, whether the forecast is drawn, the
- * check-in code and what leaving costs are the server's (#542, #544, #614); what is decided here is
- * how they are drawn, and the clock the money row's *held from*, *taken* and *answers by* run on is
- * the read's (`useReadClock`).
+ * whether it was paid, the cut-off, the club's deadline, whether the forecast is drawn and what
+ * leaving costs are the server's (#542, #544, #614); what is decided here is how they are drawn,
+ * and the clock the money row's *held from*, *taken* and *answers by* run on is the read's
+ * (`useReadClock`).
  *
  * ## Three readers, one screen (A4)
  *
- * - **A player in the game** — the card, the result, the forecast, the desk, and ***Leave the game***
+ * - **A player in the game** — the card, the result, the forecast, and ***Leave the game***
  *   with the line saying what it costs now (`LeaveTheGame`, #557; details 10), drawn while the read
  *   says there is a button: not once the hour has come, nor on a game that is over.
  * - **A game waiting for the club** (A4.2, #543) — the same, *Waiting for the club* in amber, no
@@ -120,7 +122,6 @@ import { usePaymentsToConfirm } from '../hooks/useLiveYeses';
 
 import { CardTag } from './CardTag';
 import { BookingAbsent } from './BookingAbsent';
-import { CheckInCard } from './CheckInCard';
 import { clubName, detailsDay, othersTitle, refusalMessage } from './deckPresentation';
 import { FILL_COPY } from './fillCopy';
 import { GameFacts, type FactWords } from './GameFacts';
@@ -307,8 +308,6 @@ function Booked({ game, receivedAt }: { readonly game: BookedGame; readonly rece
           {game.showsForecast && me !== undefined && game.gameId !== undefined ? (
             <GameForecast gameId={game.gameId} playerId={me} />
           ) : null}
-
-          {game.checkIn === undefined ? null : <CheckInCard checkIn={game.checkIn} />}
 
           {rescue === undefined || toConfirm !== undefined ? null : (
             <TakeTheSeat

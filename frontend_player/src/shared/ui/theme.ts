@@ -1008,11 +1008,6 @@ const size = {
    *  line height plus a step, so it sits in the line rather than growing it; `ringStroke` is the
    *  ring around a face on dark, 2. */
   undo: { ring: 20, ringStroke: 2 },
-  /** SHOW AT THE DESK — the check-in code's QR on a booked game's day (#556, the Games & Fill in
-   *  screens A4.1, the mechanics §15.1; Part 16 2026-10-01). `code` is the drawing's side, quiet
-   *  zone included: a version-5 code is 45 modules with it, so a module is a little over 4pt —
-   *  what a desk's camera reads at arm's length — and 192 is on the 3pt grid. */
-  checkIn: { code: 192 },
   /** THE RADAR — the sizes of the field's drawn objects, every one of them the spec's own
    *  ([ADR-0174](../../../../docs/adr/0174-the-radar-plots-the-reach-and-a-look-is-not-a-deal.md)
    *  §7, `the-radar.md` §7.2–7.4). Points; the kilometres, the ladder and the thresholds are

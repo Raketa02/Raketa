@@ -139,7 +139,6 @@ function bookedTile(tile: Wire['DeckTileSchema']): Wire['BookedTileSchema'] {
     photo_url: tile.photo_url,
     level: tile.level,
     paid: !tile.is_you,
-    checked_in: false,
   };
 }
 
@@ -173,7 +172,6 @@ function rescueDetails(card: Wire['DeckCardSchema']): Wire['BookingDetailsRespon
       refunded_grosze: null,
     },
     shows_forecast: false,
-    check_in: null,
     leaving: null,
     rescue: { deadline: card.deadline, fills_by_the_cut_off: true },
   });

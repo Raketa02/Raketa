@@ -1038,8 +1038,6 @@ export interface paths {
          * @description ***Kuba didn't come*** — on a **booked** game whose hour has come, where you would otherwise enter the result (#547). Said by somebody who came, about somebody else on the court; a second report of the same player answers the same and writes nothing, and each player who did not come is reported on their own.
          *
          *     **The game does not count** from the report on, and nobody's Level moves. The reported player has **24 hours to dispute it** (`no_shows[].dispute_by`); after that it stands — the strongest mark on a record — with nothing written at that moment. **Nobody arbitrates a dispute**: the report falls and is on nobody's record.
-         *
-         *     A player **the club checked in** cannot be reported.
          */
         post: operations["report_a_no_show_api_v1_games__game_id__no_shows_post"];
         delete?: never;
@@ -2118,9 +2116,9 @@ export interface paths {
         };
         /**
          * A booked game
-         * @description The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it), and **on the game's day, the reader's check-in code** — a QR payload and a short code, theirs alone. **The chat is the reader's room whose `booking_id` is this booking's**, in `GET /conversations`.
+         * @description The game details of a booked game, for a player in it: the sides with each seat's face, Level and *paid* tag, the status, WHERE (the club, the court and how far it is), the hour, the money line, and whether the balance forecast is drawn (`GET /games/{game_id}/pairing` draws it). **The chat is the reader's room whose `booking_id` is this booking's**, in `GET /conversations`.
          *
-         *     **A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid — *You?*), with `rescue` — no check-in code, no `leaving`. Nothing is recorded.
+         *     **A rescue seen from outside** (#545): a member its open seat is offered to reads the same game standing in the seat that opened first (their tile unpaid — *You?*), with `rescue` — no `leaving`. Nothing is recorded.
          */
         get: operations["read_booking_details_api_v1_bookings__booking_id__get"];
         put?: never;
@@ -2638,11 +2636,6 @@ export interface components {
              * @description Their share was taken — the *paid* tag. `false` while the game waits for its club, on a request that was never booked, and on the reader's own tile when they are not on the game but offered its open seat — the dashed *You?* (#545).
              */
             paid: boolean;
-            /**
-             * Checked In
-             * @description The club's desk checked them in on the day (#547): they were there, so *didn't come* is never offered for them.
-             */
-            checked_in: boolean;
         };
         /**
          * BookingDetailsResponse
@@ -2739,8 +2732,6 @@ export interface components {
              * @description Draw the balance forecast — `GET /games/{game_id}/pairing`, the card today's game screen draws — while the full game awaits its entry. `false` while a seat is open and once a result is told.
              */
             shows_forecast: boolean;
-            /** @description On the game's day — the club's calendar day — the reader's code to show at the desk. `null` on every other day, and for a game that will not be played. */
-            check_in: components["schemas"]["CheckInSchema"] | null;
             /** @description What *Leave the game* would cost now — the line under the button and its sheet (`POST /bookings/{id}/departure`). `null` where there is no button: once the hour has come, on a game that is over, for a reader not on the game, and on a game `filling_again`, whose way out is a game still filling's — *Withdraw*, `DELETE /proposals/{id}/yes`. */
             leaving: components["schemas"]["LeavingSchema"] | null;
             /** @description Present for a reader **not on the game** whom its open seat is offered to — a Seat open card, a Seats to fill row (#545): they stand in the seat that opened first, unpaid (*You?*), and **I'm in · `money.share_grosze`** is `POST /bookings/{id}/seats`. No Chat and no Leave. `null` for a player in it. */
@@ -2896,22 +2887,6 @@ export interface components {
              * @description Every tag this player now holds, as ids served by `GET /player-profile/options`. **The list is the selection** — what is absent is dropped. Re-checked against the served vocabulary and the served floor and ceiling exactly as the commit re-checks them; the same id twice is refused with `duplicate_social_tag`.
              */
             social_tags: string[];
-        };
-        /**
-         * CheckInSchema
-         * @description *Show at the desk*: the reader's own code for this game.
-         */
-        CheckInSchema: {
-            /**
-             * Short Code
-             * @description Six characters to type when the camera will not read — upper case, no look-alikes.
-             */
-            short_code: string;
-            /**
-             * Qr Payload
-             * @description What the QR code encodes: the booking, the player and the code.
-             */
-            qr_payload: string;
         };
         /**
          * ClaimCodeRequest
@@ -9642,8 +9617,6 @@ export interface operations {
              *     `the_game_has_not_started` — its hour has not come yet.
              *
              *     `a_result_is_entered` — somebody already said you played, with a score; answer the score instead.
-             *
-             *     `checked_in_at_the_club` — the club checked that player in: they were there, and can never be reported.
              *
              *     `you_were_reported_as_a_no_show` — you were reported yourself; dispute it instead.
              *
