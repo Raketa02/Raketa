@@ -6,9 +6,10 @@ the members free and fitting for them → *Picked for you* cards; the seats a no
 left and the unanswered seats of a pick at half In → next best fits; the cards
 whose last court at their club and hour went → lost, and the people who were In
 dealt a new card first — as are the people still in on a booked game its club
-cancelled (#547), never at that club and hour, by the first run that finds them
-an hour. What to do is decided by one pure batch (``domain/proposer.py``); this
-reads its facts and applies it.
+cancelled (#547), who are dealt **the owed card**, closest to the cancelled
+game first and recording whom it is owed to (#673), by the first run that finds
+them an hour. What to do is decided by one pure batch (``domain/proposer.py``);
+this reads its facts and applies it.
 
 **Every fact is read live and once per pool**, one read per provider where the
 provider allows: the pool's members and clubs, the games filling in it, every
@@ -373,6 +374,7 @@ class ProposeGames:
                 start=pick.start,
                 versions=[pick.named],
                 proposal_id=game_id,
+                owed_card_for=pick.owed_card_for,
             )
         )
         return True
@@ -416,6 +418,7 @@ def _game_of(pool: Pool, sport: Sport, pick: Pick) -> UUID:
         club_id=pick.club_id,
         start=pick.start,
         named=pick.named,
+        after=pick.after,
     )
 
 

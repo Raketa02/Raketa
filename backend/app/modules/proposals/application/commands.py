@@ -28,7 +28,8 @@ class MakeProposalCommand:
     none at all is a proposal nobody has been dealt yet. ``proposal_id`` is the
     stream to make it in — the proposer's ``pick_id``, so two processes cannot
     make one game twice — and a fresh one when ``None``. ``posted_for`` is who
-    a post is for (#546); ``None`` on a pick, and on a post for anybody."""
+    a post is for (#546); ``None`` on a pick, and on a post for anybody.
+    ``owed_card_for`` makes a pick the owed card for those people (#673)."""
 
     pool_id: UUID
     origin: Origin
@@ -40,6 +41,7 @@ class MakeProposalCommand:
     versions: Sequence[Sequence[UUID]] = ()
     proposal_id: UUID | None = None
     posted_for: PostedFor | None = None
+    owed_card_for: Sequence[UUID] = ()
 
 
 @dataclass(frozen=True)

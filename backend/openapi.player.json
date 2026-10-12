@@ -9892,7 +9892,7 @@
             },
             "type": "array",
             "title": "Cards",
-            "description": "This segment's cards in the order dealt: seats open after the reader's yes (fewest first), then seat open \u203a challenge \u203a pick, then the soonest deadline, then the best forecast; the same people only at their best hour."
+            "description": "This segment's cards in the order dealt. **A card owed to the reader comes first** \u2014 the new game a club's cancel owed them, soonest first among two, with no mark (#673). Then seats open after the reader's yes (fewest first), then seat open \u203a challenge \u203a pick, then the soonest deadline, then the best forecast; the same people only at their best hour."
           }
         },
         "type": "object",

@@ -272,6 +272,14 @@ class Decks(Protocol):
         so an alert never points at a card the reader cannot find."""
         ...
 
+    async def kind_of_court(self, game_id: UUID) -> bool | None:
+        """The kind of court the card promises, as the deck shows it now:
+        ``True`` indoor and ``False`` outdoor when every free court it could be
+        booked on is of that kind, ``None`` when they are mixed or there is no
+        such card (Q122) — what *Your new game* names at the club and hour a
+        cancel took (#673)."""
+        ...
+
 
 @dataclass(frozen=True, slots=True)
 class PaidShare:

@@ -20,7 +20,10 @@ given.
 **Every ending and fall-back of a full game has words of its own** (#623;
 Q104, Q108): *filling again* never says whose week filled, who no longer fits
 or whose card failed; and a leaver is told in a leaver's words — *which you
-left* — and never promised a new game.
+left* — and never promised a new game. **The club's cancel promises the owed
+card** to the players still in (#673; Q123): *We'll look for another game for
+you first*, as their email says — and *Your new game* names the kind of court
+when it is at the club and hour the cancel took.
 
 **A time to pay names its time and never its payer** (#625; Q109, Q110): the
 payer reads *Confirm your payment by 14:40 to keep your seat*, the others *It's
@@ -220,9 +223,15 @@ def words_for(said: Said) -> Words:
             ),
         )
     if kind is NoticeKind.NEW_GAME:
+        # At the club and hour the cancel took, the kind is what changed —
+        # kept on the notice only then (#673, Q123).
+        kind_of_court = "" if said.indoor is None else f" · {_KIND_WORDS[said.indoor]}"
         return Words(
             title=f"Your new game · {_hour(said.starts_at)} at {said.club}",
-            body=f"The same players · {money} a share — say yes to book it.",
+            body=(
+                f"The same players{kind_of_court} · {money} a share "
+                "— say yes to book it."
+            ),
         )
     if kind is NoticeKind.GAME_MOVED:
         # The club's own Move (#671, Q122): the new court and its kind, and
@@ -495,4 +504,7 @@ def _called_off(said: Said, *, sport: str, when: str, game: str) -> str:
         return f"{game} was still short at the club's cut-off."
     because = _CALLED_OFF_BECAUSE.get(said.reason or CancelReason.OTHER)
     cancelled = f"{said.club} cancelled {sport.lower()} · {when}"
-    return f"{cancelled} {because}." if because else f"{cancelled}."
+    why = f"{cancelled} {because}." if because else f"{cancelled}."
+    # The players still in are owed the card first, as their email says
+    # (#673, Q123) — a leaver is told in a leaver's words, promised nothing.
+    return f"{why} We'll look for another game for you first."

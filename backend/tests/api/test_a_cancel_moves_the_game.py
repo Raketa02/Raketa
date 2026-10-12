@@ -30,8 +30,10 @@ import pytest
 from app.api.dependencies import get_clock
 from app.bootstrap.composition import build_proposal_directory
 from tests.api.club_courts_world import (
+    EXCEPTIONS,
     adds_a_court,
     court_path,
+    exception_path,
     sets_hours,
     sets_prices,
 )
@@ -518,3 +520,91 @@ async def test_a_game_that_has_started_has_no_preview(client, clock, club, booki
     )
 
     assert (late.status_code, late.json()["code"]) == (409, "game_has_started")
+
+
+# --------------------------------------------------------------------------- #
+# The court a club's cancel took is closed for the hour (#673)
+# --------------------------------------------------------------------------- #
+
+
+async def exceptions_of(client, desk: dict) -> list[dict]:
+    read = await client.get(EXCEPTIONS, headers=desk)
+    assert read.status_code == 200, read.text
+    return read.json()["exceptions"]
+
+
+def closing(court: dict, reason: str) -> tuple:
+    return ([court["id"]], SATURDAY, SATURDAY, 17, 18, reason)
+
+
+def what_it_closes(exception: dict) -> tuple:
+    return (
+        exception["court_ids"],
+        exception["first_day"],
+        exception["last_day"],
+        exception["from_hour"],
+        exception["until_hour"],
+        exception["reason"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("reason", "label"),
+    [
+        ("WEATHER", "Game cancelled · weather"),
+        ("REPAIR", "Game cancelled · repair"),
+        ("DOUBLE_BOOKING", "Game cancelled · booked twice"),
+        ("OTHER", "Game cancelled"),
+    ],
+)
+async def test_a_cancel_that_calls_the_game_off_closes_its_court_for_the_hour(
+    client, session_factory, clock, club, booking, payments, reason, label
+):
+    """The court the club cancelled can't be played then — so it is never
+    sold for that hour again, to these four or anybody: an exception on the
+    club's own list, worded by the cancel's reason."""
+
+    club_id, desk = club
+    court_1 = await court_named(client, desk, "Court 1")
+
+    assert await cancels(client, desk, booking, reason, anyway=True) == CALLED_OFF
+
+    [closed] = await exceptions_of(client, desk)
+    assert what_it_closes(closed) == closing(court_1, label)
+    other = await another_four_book_the_hour(
+        client, session_factory, clock, payments, club_id
+    )
+    assert (await the_desk_s_row(client, desk, other))["court_name"] == "Court 3"
+
+
+async def test_a_move_by_cancel_closes_the_court_it_left_for_the_hour(
+    client, session_factory, clock, club, booking, payments
+):
+    club_id, desk = club
+    court_1 = await court_named(client, desk, "Court 1")
+
+    assert moved_to(await cancels(client, desk, booking, "REPAIR"))[1] == "Court 3"
+
+    [closed] = await exceptions_of(client, desk)
+    assert what_it_closes(closed) == closing(court_1, "Game cancelled · repair")
+    # Court 1 can't be played, and the game is on Court 3: only Court 4 is left.
+    other = await another_four_book_the_hour(
+        client, session_factory, clock, payments, club_id
+    )
+    assert (await the_desk_s_row(client, desk, other))["court_name"] == "Court 4"
+
+
+async def test_the_desk_sells_a_court_a_cancel_closed_again_by_removing_it(
+    client, session_factory, clock, club, booking, payments
+):
+    club_id, desk = club
+    await cancels(client, desk, booking, "REPAIR", anyway=True)
+    [closed] = await exceptions_of(client, desk)
+
+    removed = await client.delete(exception_path(closed["id"]), headers=desk)
+
+    assert removed.status_code == 204, removed.text
+    other = await another_four_book_the_hour(
+        client, session_factory, clock, payments, club_id
+    )
+    assert (await the_desk_s_row(client, desk, other))["court_name"] == "Court 1"

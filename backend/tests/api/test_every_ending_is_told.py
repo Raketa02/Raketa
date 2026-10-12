@@ -448,7 +448,8 @@ async def test_a_paid_leaver_the_club_s_cancel_refunds_is_told_as_a_leaver(
     # new game first.
     assert await last_told(client, mailbox, marta) == (
         "Game called off · you're refunded 40 zł",
-        "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the weather.",
+        "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the "
+        "weather. We'll look for another game for you first.",
     )
     [theirs] = [
         email

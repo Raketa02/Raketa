@@ -1,5 +1,5 @@
-"""What ``bookings`` demands of the rest of the platform (#541, #544), run
-against every registered implementation.
+"""What ``bookings`` demands of the rest of the platform (#541, #544, #673),
+run against every registered implementation.
 
 **A demand nobody executes is a demand satisfied by accident** (``docs/adr/0098``).
 Every implementation registered in ``app/bootstrap/booking_demands.py`` is
@@ -22,16 +22,19 @@ from app.bootstrap.booking_demands import (
     implementations_of,
 )
 from app.bootstrap.composition import (
+    build_club_courts_at_the_hour,
     build_domain_event_store,
     build_event_publisher,
     build_game_opening,
     build_game_repository,
 )
 from app.kernel import InvariantViolated, Sport, instant
+from app.modules.bookings.domain.booking import CancelReason
 from app.modules.bookings.domain.ports import (
     ClubCourtsAtTheHour,
     ClubDesk,
     ClubDesks,
+    CourtClosures,
     GameChanges,
     GameNoShows,
     GameOpening,
@@ -140,6 +143,45 @@ async def test_the_free_courts_at_an_hour_are_the_sport_s_in_the_club_s_order(
         UUID(club_id), sport=Sport.SQUASH, start=SATURDAY_FIVE
     )
     assert list(squash) == []
+
+
+# --------------------------------------------------------------------------- #
+# CourtClosures — the court a club's cancel took, closed for the hour (#673)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(CourtClosures))
+async def test_a_court_closed_by_a_cancel_is_off_sale_for_that_hour_alone(
+    implementation, client, session
+):
+    club_id, desk = await a_club_and_its_desk(client)
+    court_3 = await adds_a_court(client, desk, name="Court 3", sport="PADEL")
+    await sets_hours(client, desk, [court_3["id"]], every_hour_of_the_week())
+    courts = build_club_courts_at_the_hour(session)
+    [court_1, _] = await courts.free_courts(
+        UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE
+    )
+    closures: CourtClosures = implementation.build(session)
+
+    await closures.close(
+        UUID(club_id),
+        court_1.court.court_id,
+        start=SATURDAY_FIVE,
+        because=CancelReason.REPAIR,
+        at=MONDAY_MORNING,
+    )
+    await session.commit()
+
+    def names(free) -> list[str]:
+        return [one.court.name for one in free]
+
+    assert names(
+        await courts.free_courts(UUID(club_id), sport=Sport.PADEL, start=SATURDAY_FIVE)
+    ) == ["Court 3"]
+    an_hour_on = SATURDAY_FIVE + timedelta(hours=1)
+    assert names(
+        await courts.free_courts(UUID(club_id), sport=Sport.PADEL, start=an_hour_on)
+    ) == ["Court 1", "Court 3"]
 
 
 # --------------------------------------------------------------------------- #

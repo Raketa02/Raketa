@@ -53,7 +53,9 @@ every club, so a full game never waits for a club's answer, and On request's
 **A booked game its club cancels is owed a new card** (#547): the proposal
 still filled — the booking says it was cancelled, and why — but the people
 still in when the club cancelled are dealt a new card first, until the proposer
-deals it (``Redealt``), and never at that club and hour.
+deals it (``Redealt``). **That card is the owed card** (#673): it is born
+knowing whom it is owed to (``owed_card_for``), which is what puts it first in
+their decks.
 
 **A refused share waits for its player: time to pay** (#625, #626; the
 mechanics §12.2, Q109). When a share is refused as the game fills, nobody pays,
@@ -275,6 +277,9 @@ class Proposal:
     #: Who a post is for — ``None`` on a pick, and on a post made before posts
     #: had a *Who*, which is for anybody.
     posted_for: PostedFor | None = None
+    #: Whom this is **the owed card** for (#673): the people still in on a game
+    #: its club cancelled — first in each one's deck. Empty on any other card.
+    owed_card_for: tuple[UUID, ...] = ()
     versions: tuple[DealtVersion, ...] = ()
     #: Everybody In, in the order they said yes.
     yeses: tuple[UUID, ...] = ()
@@ -338,9 +343,11 @@ class Proposal:
         book_by: Instant,
         at: Instant,
         posted_for: PostedFor | None = None,
+        owed_card_for: Sequence[UUID] = (),
     ) -> "Proposal":
         """A game proposed at a court hour. **A post is its poster's yes**, so
-        it is born with them In."""
+        it is born with them In. ``owed_card_for`` makes it the owed card for
+        those people (#673) — only ever the engine's pick."""
 
         invariant(
             (origin is Origin.POST) == (poster_id is not None),
@@ -349,6 +356,10 @@ class Proposal:
         invariant(
             origin is Origin.POST or posted_for is None,
             f"a pick is for nobody in particular: {posted_for}",
+        )
+        invariant(
+            origin is Origin.PICK or not owed_card_for,
+            f"a post is nobody's owed card: {owed_card_for}",
         )
         invariant(share_grosze > 0, f"a share of {share_grosze} grosze")
         invariant(
@@ -371,6 +382,7 @@ class Proposal:
             who=None if posted_for is None else posted_for.who.value,
             level_low=None if posted_for is None else posted_for.levels.low,
             level_high=None if posted_for is None else posted_for.levels.high,
+            owed_card_for=tuple(owed_card_for),
         )
         proposal = cls._born(made)
         proposal._events.record(made)
@@ -406,6 +418,7 @@ class Proposal:
             book_by=instant(made.book_by),
             made_at=instant(made.occurred_at),
             posted_for=_posted_for(made),
+            owed_card_for=made.owed_card_for,
             version=1,
         )
 

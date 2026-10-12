@@ -342,6 +342,13 @@ class ReadGroupDeck:
         deal = await self.deal_to(reader, pool, proposal.sport, [proposal], now=now)
         return bool(deal.views)
 
+    async def kind_of_court(self, proposal: Proposal) -> bool | None:
+        """The kind of court this card promises now, as every reader's deck
+        draws it (Q122) — what *Your new game* names (#673)."""
+
+        hour = (proposal.club_id, proposal.sport, proposal.start)
+        return (await self._kinds.of({hour})).get(hour)
+
     async def _dealt(
         self, reader: UUID, command: ReadGroupDeckCommand, now: Instant
     ) -> list[Proposal]:

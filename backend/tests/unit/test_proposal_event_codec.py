@@ -9,7 +9,7 @@ of strings, so a replayed version would name nobody a member's id is equal to.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -205,3 +205,66 @@ def test_a_new_card_dealt_before_it_named_its_card_names_none():
 
     assert isinstance(decoded, Redealt)
     assert (decoded.card_id, decoded.player_ids) == (None, ())
+
+
+def _made(*, owed_card_for: tuple[UUID, ...]) -> ProposalMade:
+    return ProposalMade(
+        proposal_id=PROPOSAL,
+        pool_id=uuid4(),
+        pool_kind="GROUP",
+        origin="PICK",
+        poster_id=None,
+        sport="PADEL",
+        kind="COMPETITIVE",
+        club_id=uuid4(),
+        start=datetime(2026, 10, 10, 15, tzinfo=timezone.utc),
+        share_grosze=30_00,
+        book_by=datetime(2026, 10, 10, 13, tzinfo=timezone.utc),
+        occurred_at=NOW,
+        owed_card_for=owed_card_for,
+    )
+
+
+def test_an_owed_card_names_whom_it_is_owed_to_and_decodes_back():
+    """A replayed owed card must name its people as ids equal to theirs — the
+    deck lifts it for exactly them (#673)."""
+
+    codec = _codec()
+    made = _made(owed_card_for=(PLAYER, uuid4()))
+    encoded = codec.encode(made)
+
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=uuid4(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=encoded.payload,
+            occurred_at=NOW,
+        )
+    )
+
+    assert decoded == made
+
+
+def test_a_card_made_before_it_could_be_owed_is_owed_to_nobody():
+    """``owed_card_for`` came with #673, defaulted rather than a version 2: a
+    row written before it reads as a card like any other."""
+
+    codec = _codec()
+    encoded = codec.encode(_made(owed_card_for=(PLAYER,)))
+    older = {
+        key: value for key, value in encoded.payload.items() if key != "owed_card_for"
+    }
+
+    decoded = codec.decode(
+        SerializedEventEnvelope(
+            id=uuid4(),
+            event_type=encoded.event_type,
+            schema_version=encoded.schema_version,
+            payload=older,
+            occurred_at=NOW,
+        )
+    )
+
+    assert isinstance(decoded, ProposalMade)
+    assert decoded.owed_card_for == ()

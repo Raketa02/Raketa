@@ -141,6 +141,49 @@ def test_posting_is_the_poster_s_yes():
     assert proposal.open_seats == 3
 
 
+def test_the_owed_card_records_whom_it_is_owed_to_and_says_so_again_when_replayed():
+    owed = Proposal.make(
+        proposal_id=uuid4(),
+        pool=Pool(id=uuid4(), kind=PoolKind.GROUP),
+        origin=Origin.PICK,
+        poster_id=None,
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+        club_id=uuid4(),
+        start=START,
+        share_grosze=30_00,
+        book_by=BOOK_BY,
+        at=MADE_AT,
+        owed_card_for=(B, C),
+    )
+
+    [made] = owed.pull_events()
+
+    assert isinstance(made, ProposalMade)
+    assert made.owed_card_for == (B, C)
+    assert Proposal.from_history([made]).owed_card_for == (B, C)
+    # Any other card is owed to nobody.
+    assert a_pick().owed_card_for == ()
+
+
+def test_only_the_engine_s_pick_is_an_owed_card():
+    with pytest.raises(InvariantViolated):
+        Proposal.make(
+            proposal_id=uuid4(),
+            pool=Pool(id=uuid4(), kind=PoolKind.GROUP),
+            origin=Origin.POST,
+            poster_id=MAREK,
+            sport=Sport.PADEL,
+            kind=SearchMode.FOR_FUN,
+            club_id=uuid4(),
+            start=START,
+            share_grosze=30_00,
+            book_by=BOOK_BY,
+            at=MADE_AT,
+            owed_card_for=(B,),
+        )
+
+
 def test_a_singles_game_has_two_seats():
     assert a_pick(Sport.TENNIS).seats == 2
     assert a_post(sport=Sport.SQUASH).open_seats == 1

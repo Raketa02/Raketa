@@ -6,7 +6,8 @@ consumer gets a new register. Notifications is *told* through the outbox and
 tells nothing (``.importlinter``'s *No context knows Notifications exists*), so
 it publishes no port and has no provider register; every row here is a
 demand — what a game is now (``GameBriefs``: the proposal's stream and its
-booking's), whose deck shows a card (``Decks``: the deck's own ``shows``), what
+booking's), whose deck shows a card and the kind of court it promises
+(``Decks``: the deck's own ``shows`` and ``kind_of_court``, #673), what
 a refund gave back (``PaidShares``: the share's Seat charge),
 who an open seat is offered to (``SeatOffers``: the Fill in board's own offer)
 and what a person and a club are called (``Names``). Each is signed in

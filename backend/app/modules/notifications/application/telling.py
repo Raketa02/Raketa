@@ -67,7 +67,8 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
   card whose yes would book it.
 - ``VersionDealt`` on a post — *Challenges for you*, to the newly dealt.
 - ``Redealt`` — *Your new game*, to the people a club's cancel promised a new
-  card first, on the card they were dealt (Q107). **Every
+  card first, on the card they were dealt (Q107) — naming its kind of court
+  when it is at the club and hour the cancel took (#673). **Every
   other card the proposer deals tells nobody.**
 
 **An alert never points at a card the reader cannot find**: *You complete it*,
@@ -835,6 +836,14 @@ class TellThePlayers:
         card = await self._games.about(event.card_id, at=at)
         if card is None or not card.filling:
             return
+        # At the club and hour the cancel took, what changed is the kind of
+        # court or the price: the notice names the kind, as the card shows it
+        # (#673, Q123).
+        cancelled = await self._games.about(event.proposal_id, at=at)
+        at_its_hour = cancelled is not None and (
+            cancelled.club_id,
+            cancelled.starts_at,
+        ) == (card.club_id, card.starts_at)
         await self._tell(
             await self._decks.showing(card.game_id, event.player_ids, at=at),
             _notice(
@@ -843,6 +852,9 @@ class TellThePlayers:
                 key=f"{NoticeKind.NEW_GAME}:{key}",
                 opens=Opens.DECK,
                 amount_grosze=card.share_grosze,
+                indoor=await self._decks.kind_of_court(card.game_id)
+                if at_its_hour
+                else None,
             ),
             at=at,
         )

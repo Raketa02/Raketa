@@ -13,7 +13,9 @@ summaries of each club's day of new bookings, sent once (#548).
 has for Raketa at an hour, and its cut-off (``clubs``, over what it sells); the
 ordinary Game a booking opens (``games``, over the use case a completed line-up
 opens one with); and whom a club's email is addressed to and what the club is
-called (``clubs``, over its own account and details).
+called (``clubs``, over its own account and details). A club's cancel also
+closes the court it took a game off for that hour (``clubs``, over its own
+exceptions, #673).
 """
 
 from __future__ import annotations
@@ -24,7 +26,12 @@ from typing import Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport
-from app.modules.bookings.domain.booking import BookedCourt, Booking, FreeCourt
+from app.modules.bookings.domain.booking import (
+    BookedCourt,
+    Booking,
+    CancelReason,
+    FreeCourt,
+)
 from app.modules.bookings.domain.keeping import KeepingRecord
 from app.modules.bookings.domain.summary import NewBookingsSummary
 
@@ -210,6 +217,27 @@ class ClubCourtsAtTheHour(Protocol):
         share one player pays for it at that hour, which a club's cancel asks
         of a court before it absorbs the game (#672). Empty when there is none,
         or the club no longer sells."""
+        ...
+
+
+@runtime_checkable
+class CourtClosures(Protocol):
+    """**A demand of the Club context**: the court a club's cancel took a game
+    off, closed for the game's hour (#673, a ruling beside ``docs/adr/0196``
+    §3) — it can't be played then, so it is never sold for that hour again."""
+
+    async def close(
+        self,
+        club_id: UUID,
+        court_id: UUID,
+        *,
+        start: Instant,
+        because: CancelReason,
+        at: Instant,
+    ) -> None:
+        """Close ``court_id`` for the hour from ``start``, in the caller's
+        transaction, saying why in the club's own list — until the club
+        opens it again."""
         ...
 
 

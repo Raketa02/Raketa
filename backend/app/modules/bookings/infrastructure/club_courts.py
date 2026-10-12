@@ -11,6 +11,11 @@ the club's own order, and the first of the sport at the hour is the one booked.
 **The court hours bookings hold** are what a club can no longer sell, and why a
 court with a booking ahead cannot be deleted or its hour closed
 (``CourtBookings``).
+
+**The court a club's cancel took a game off is closed for the hour** (#673)
+through the Club context's own act, an exception on the club's list worded by
+the cancel's reason — the desk reads why, and removes it to sell the court
+again.
 """
 
 from __future__ import annotations
@@ -21,14 +26,25 @@ from typing import Final, final
 from uuid import UUID
 
 from app.kernel import Instant, Sport
-from app.modules.bookings.domain.booking import BookedCourt, FreeCourt
+from app.modules.bookings.domain.booking import BookedCourt, CancelReason, FreeCourt
 from app.modules.bookings.domain.ports import BookingDirectory, CourtForTheGame
+from app.modules.clubs.application.hours_exceptions import CloseACourtForAnHour
 from app.modules.clubs.domain.ports import SellableCourtHours, TakenCourtHour
 from app.modules.clubs.domain.raketa_terms import before_any_deadline
 from app.modules.clubs.domain.sellable import ClubOffer
 
 #: Every game is one hour, for every sport (the mechanics §2).
 _A_GAME: Final = timedelta(hours=1)
+
+#: The reason a court a club's cancel closed gives on the club's own list of
+#: exceptions — *Game cancelled · repair* — by the cancel's reason (#673). No
+#: player reads it.
+_CLOSED_BY_A_CANCEL: Final[dict[CancelReason, str]] = {
+    CancelReason.WEATHER: "Game cancelled · weather",
+    CancelReason.REPAIR: "Game cancelled · repair",
+    CancelReason.DOUBLE_BOOKING: "Game cancelled · booked twice",
+    CancelReason.OTHER: "Game cancelled",
+}
 
 
 @final
@@ -99,3 +115,25 @@ class BookedCourtHours:
             )
             for held in await self._directory.held_at(club_id, start=start, end=end)
         ]
+
+
+@final
+class ClosedByTheCancel:
+    """The Bookings context's ``CourtClosures``, over the Club context's own
+    act — an exception closing the one court for the one hour."""
+
+    def __init__(self, close: CloseACourtForAnHour) -> None:
+        self._close = close
+
+    async def close(
+        self,
+        club_id: UUID,
+        court_id: UUID,
+        *,
+        start: Instant,
+        because: CancelReason,
+        at: Instant,
+    ) -> None:
+        await self._close.execute(
+            club_id, court_id, start=start, reason=_CLOSED_BY_A_CANCEL[because], at=at
+        )

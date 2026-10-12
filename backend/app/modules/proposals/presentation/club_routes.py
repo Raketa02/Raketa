@@ -160,7 +160,9 @@ class ClubBookingSchema(BaseModel):
             "a player left and Raketa is finding a replacement; before the "
             "cut-off, a seat still open at it calls the game off and the court "
             "comes back to you. `CALLED_OFF` — see `called_off_reason`; everybody "
-            "was refunded or nobody paid, and the hour is free again. `PLAYED` — "
+            "was refunded or nobody paid, and the hour is free again — but the "
+            "court you cancelled stays closed for it, an exception you remove to "
+            "sell it again (#673). `PLAYED` — "
             "the hour has passed; you are paid whatever happened on the court."
         )
     )
@@ -505,9 +507,11 @@ async def cancellation_preview(
         "was taken, nobody is refunded and nobody pays a fee, you included "
         "(#637); **after it** everybody is **refunded in full** — the card fees "
         "on those payments are not returned, and as the seller you bear them. "
-        "Either way it goes on **nobody's record**, the hour is yours to sell "
-        "again, and the players are told you cancelled, with the reason, and "
-        "dealt a new game first. Answers which it was."
+        "Either way it goes on **nobody's record**, and the players are told "
+        "you cancelled, with the reason, and dealt a new game first. **Moved or "
+        "called off, the court the game was on is closed for that hour** — it "
+        "can't be played then — as an exception on your list, worded by the "
+        "reason; remove it to sell the court again. Answers which it was."
     ),
 )
 async def cancel(

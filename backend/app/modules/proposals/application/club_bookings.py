@@ -18,8 +18,11 @@ Two acts and three reads on the club surface, each for the desk's own club:
   the players are told *Game moved*. Otherwise, or *anyway*: everybody still
   in refunded **in full**, and a leaver whose open seat was still paid for;
   nothing on anybody's record; the game, its room and its court hour off; and
-  **the people still in dealt a new card first** — never at this club and hour
-  — by the proposer, which the cancel makes due (``propose_games.py``);
+  **the people still in dealt the owed card first**, closest to this game
+  (#673), by the proposer, which the cancel makes due (``propose_games.py``).
+  **Either way the court the game was on is closed for the hour** (#673): it
+  can't be played then, so it is never sold for that hour again until the
+  club removes the exception;
 - **the cancel's preview** — what a cancel with a reason would do now: move
   the game to a named court of a named kind, or call it off. The cancel
   decides afresh when the club confirms.

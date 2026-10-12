@@ -653,8 +653,10 @@ class GroupDeckResponse(BaseModel):
     )
     cards: list[DeckCardSchema] = Field(
         description=(
-            "This segment's cards in the order dealt: seats open after the "
-            "reader's yes (fewest first), then seat open › challenge › pick, "
+            "This segment's cards in the order dealt. **A card owed to the "
+            "reader comes first** — the new game a club's cancel owed them, "
+            "soonest first among two, with no mark (#673). Then seats open after "
+            "the reader's yes (fewest first), then seat open › challenge › pick, "
             "then the soonest deadline, then the best forecast; the same people "
             "only at their best hour."
         )

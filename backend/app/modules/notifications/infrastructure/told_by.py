@@ -147,6 +147,10 @@ class ProposalsDecks:
                 shown.append(player)
         return tuple(shown)
 
+    async def kind_of_court(self, game_id: UUID) -> bool | None:
+        proposal = await self._proposals.load(game_id)
+        return None if proposal is None else await self._deck.kind_of_court(proposal)
+
 
 @final
 class RescueSeatOffers:

@@ -496,7 +496,8 @@ async def test_a_game_the_club_cancels_is_called_off_with_its_reason(
     for player in crowd[:4]:
         assert (await pushed_to(mailbox, pushes, player))[-1] == (
             "Game called off · nothing was taken",
-            "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the weather.",
+            "Bonarka Arena cancelled padel · Sat 10 Oct, 17:00 because of the "
+            "weather. We'll look for another game for you first.",
         )
 
 
@@ -673,8 +674,8 @@ async def test_the_new_card_a_club_s_cancel_owed_is_told_to_each_player_once(
 
     assert (proposed.redealt, proposed.made) == (1, 1)
     [card] = await deck_of(client, four[0], group)
-    # The four together at the nearest hour they are all free — never the
-    # 17:00 the club cancelled.
+    # The four together at the nearest hour they are all free: the club's one
+    # court at 17:00, the one it cancelled, is closed for the hour (#673).
     assert datetime.fromisoformat(card["starts_at"]) == warsaw(10, 18)
     for player in four:
         assert (await pushed_to(mailbox, pushes, player))[

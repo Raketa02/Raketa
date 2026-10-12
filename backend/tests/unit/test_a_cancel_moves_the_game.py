@@ -207,6 +207,11 @@ class _NoGames:
         raise AssertionError("a move by cancel calls no game off")
 
 
+class _NoClosures:
+    async def close(self, club_id, court_id, *, start, because, at) -> None:
+        raise AssertionError("a court is closed only once the booking's save freed it")
+
+
 async def test_a_court_another_game_claimed_a_moment_ago_is_court_just_taken():
     """The absorbing court read free, and another game's booking took its hour
     before this one's save: the transaction is spent, and the club is answered
@@ -218,6 +223,7 @@ async def test_a_court_another_game_claimed_a_moment_ago_is_court_just_taken():
         bookings=_ClaimedAtTheIndex(booking),
         games=_NoGames(),
         courts=_Courts(*_free(COURT_3)),
+        closures=_NoClosures(),
     )
     club = BookingsClubBookings(
         bookings=_ClaimedAtTheIndex(booking),

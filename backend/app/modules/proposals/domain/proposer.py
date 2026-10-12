@@ -71,10 +71,16 @@ completed by their best fits. Nobody's yes carries over: a yes is to a court at
 an hour.
 
 **A booked game its club cancelled** (#547) is *owed*: the people still in it
-are dealt a new card first, exactly as a lost card's are, **never at the club
-and hour that cancelled it** — by the first batch that finds them an hour,
-until its own hour has passed. No club confirms a game (``docs/adr/0196`` §1),
-so a club's cancel is the one source of an owed game (#669).
+are dealt **the owed card**, exactly as a lost card's people are dealt theirs —
+**the closest to the cancelled game first** (#673; ``docs/adr/0196`` §3,
+Q123): the same club and hour, sold again on a court of the other kind or at a
+new price; for a player group, another club at that hour; then the closest
+hour, the home club first — by the first batch that finds them an hour, until
+its own hour has passed. The card records whom it is owed to
+(``Pick.owed_card_for``),
+which is what lifts it to the top of their decks. No club confirms a game
+(``docs/adr/0196`` §1), so a club's cancel is the one source of an owed game
+(#669).
 """
 
 from __future__ import annotations
@@ -266,9 +272,15 @@ class Pick:
     club_id: UUID
     start: Instant
     named: tuple[UUID, ...]
-    #: The card that lost its court hour, whose people In this is dealt to
-    #: first; ``None`` for a fresh pick.
+    #: The card that lost its court hour — or the booked game its club
+    #: cancelled — whose people this is dealt to first; ``None`` for a fresh
+    #: pick.
     after: UUID | None = None
+    #: Whom it is **the owed card** for (#673; Q123): the people still in on
+    #: the game a club's cancel called off, never a best fit dealt beside them
+    #: — first in each one's deck. Empty on every other pick, a lost card's
+    #: new one included: no notice promised its people a game.
+    owed_card_for: tuple[UUID, ...] = ()
 
 
 @final
@@ -506,10 +518,7 @@ class _Batching:
         redealt = tuple(
             proposal.proposal_id
             for proposal in self._owed
-            # Anywhere but the club and hour that cancelled it.
-            if self._deal_again_to_those_in(
-                proposal, not_at=(proposal.club_id, proposal.start)
-            )
+            if self._deal_again_to_those_in(proposal)
         )
         for proposal in self._live:
             self._deal_on(proposal)
@@ -544,14 +553,17 @@ class _Batching:
             pool &= ~self._mask(people)
             free_courts -= 1
 
-    def _deal_again_to_those_in(
-        self, lost: Proposal, *, not_at: tuple[UUID, Instant] | None = None
-    ) -> bool:
+    def _deal_again_to_those_in(self, lost: Proposal) -> bool:
         """The people In on a card that lost its court hour — or the people
-        still in a booked game its club cancelled (#547) — dealt a new card
-        first: the nearest hour they are
-        all free, completed by their best fits — or as many of them as there
-        are — and never ``not_at``. Whether a card was dealt."""
+        still in a booked game its club cancelled (#547), whose new card is the
+        owed card — dealt a new card first, **the closest to the one they
+        lost** (#673; Q123): its own club and hour, sold again on a court of the
+        other kind or at a new price; then the same hour at another club the
+        pool plays at, nearest first — an official group's refusal of another
+        club while its players share an hour at home is ``_refusal``'s, as for
+        any card; then the closest hour, the home club first, the earlier of
+        two as close — completed by their best fits, or as many of them as
+        there are. Whether a card was dealt."""
 
         kind = lost.kind
         in_ = tuple(player for player in lost.owed_to if player in self._members)
@@ -563,13 +575,12 @@ class _Batching:
             self._selling,
             key=lambda hour: (
                 abs(hour.start - lost.start),
-                hour.start,
+                (hour.club_id, hour.start) != (lost.club_id, lost.start),
                 self._clubs.rank_of(hour.club_id),
+                hour.start,
             ),
         )
         for hour in nearest:
-            if (hour.club_id, hour.start) == not_at:
-                continue
             if self._picks_at(hour) >= hour.courts or not all(
                 self._may_play(
                     player, kind, start=hour.start, share_grosze=hour.share_grosze
@@ -582,7 +593,13 @@ class _Batching:
             for size in range(self._seats, len(in_) - 1, -1):
                 people = self._evenest(kind, pool, size, must=in_, refused=refused)
                 if people is not None:
-                    self._pick(kind, hour, people, after=lost.proposal_id)
+                    self._pick(
+                        kind,
+                        hour,
+                        people,
+                        after=lost.proposal_id,
+                        owed_card_for=in_ if lost.owes_a_new_card else (),
+                    )
                     return True
         return False
 
@@ -593,6 +610,7 @@ class _Batching:
         people: tuple[UUID, ...],
         *,
         after: UUID | None = None,
+        owed_card_for: tuple[UUID, ...] = (),
     ) -> None:
         self._picks.append(
             Pick(
@@ -601,6 +619,7 @@ class _Batching:
                 start=hour.start,
                 named=people,
                 after=after,
+                owed_card_for=owed_card_for,
             )
         )
         self._dealt_at.setdefault(hour.start, set()).update(people)

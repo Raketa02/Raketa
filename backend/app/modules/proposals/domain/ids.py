@@ -15,6 +15,11 @@ is made, and the same people at the same hour are the same game whatever it
 costs. The cost is named: a pick whose court hour was lost and later sold again
 cannot be made twice for the same people — its stream is taken — and the next
 batch deals them another.
+
+**A card dealt first to the people of another names that one too** (#673): the
+owed card is the closest game to the one a club's cancel took, so it may be the
+same people at the same club and hour — the cancelled game's own id, whose
+stream is taken — and only the game it is dealt after tells the two apart.
 """
 
 from __future__ import annotations
@@ -36,8 +41,11 @@ def pick_id(
     club_id: UUID,
     start: Instant,
     named: Sequence[UUID],
+    after: UUID | None = None,
 ) -> UUID:
-    """The stream id of the pick of these people at this court hour."""
+    """The stream id of the pick of these people at this court hour — dealt
+    first to the people of ``after``, the card that lost its court hour or the
+    game its club cancelled, when it is."""
 
     return uuid5(
         _PICK_NAMESPACE,
@@ -49,6 +57,7 @@ def pick_id(
                 str(club_id),
                 start.isoformat(),
                 *(str(player) for player in named),
+                *(() if after is None else (f"after={after}",)),
             )
         ),
     )

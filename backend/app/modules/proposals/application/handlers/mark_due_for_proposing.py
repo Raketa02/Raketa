@@ -17,9 +17,11 @@ any group near it. Its payments account going ready — or ready no longer — i
 one of those, since it is what makes a club live (#537). **A game filling is
 one too** (#541): its booking took a court hour from every card at that club
 and hour, in any pool — and a seat reopened, or a yes paused, left a seat open.
-**And the club's cancel of a booked game** (#547): its court hour is free, and
-the people still in are owed a new card first. **A club's move too** (#671):
-the court it left is free at the hour again, and offered again at once.
+**And the club's cancel of a booked game** (#547): the people still in are
+owed a new card first — the court it was on closed for the hour (#673). **A
+club's move too** (#671): the court it left is free at the hour again, and
+offered again at once — unless a cancel moved it, which closes that court for
+the hour.
 """
 
 from __future__ import annotations

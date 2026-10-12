@@ -53,6 +53,8 @@ from app.modules.proposals.domain.proposal import (
     TimeTo,
 )
 from app.shared.ids import new_uuid
+from tests.api.club_courts_world import adds_a_court, sets_hours
+from tests.api.proposals_world import a_club_and_its_desk, every_hour_of_the_week
 
 OLA, KUBA, EWA, TOMEK, ZOSIA = (new_uuid() for _ in range(5))
 NOW = instant(datetime(2026, 10, 5, 6, tzinfo=timezone.utc))
@@ -79,7 +81,9 @@ def _store(session):
     }
 
 
-async def _a_proposal(session, *, poster: UUID | None = None) -> Proposal:
+async def _a_proposal(
+    session, *, poster: UUID | None = None, club_id: UUID | None = None
+) -> Proposal:
     proposal = Proposal.make(
         proposal_id=new_uuid(),
         pool=Pool(id=new_uuid(), kind=PoolKind.GROUP),
@@ -87,7 +91,7 @@ async def _a_proposal(session, *, poster: UUID | None = None) -> Proposal:
         poster_id=poster,
         sport=Sport.PADEL,
         kind=SearchMode.COMPETITIVE,
-        club_id=new_uuid(),
+        club_id=club_id or new_uuid(),
         start=START,
         share_grosze=30_00,
         book_by=START - timedelta(hours=2),
@@ -482,6 +486,25 @@ async def test_a_card_is_shown_to_nobody_outside_its_pool(implementation, sessio
 
     assert await decks.showing(proposal.proposal_id, [OLA, KUBA], at=NOW) == ()
     assert await decks.showing(new_uuid(), [OLA], at=NOW) == ()
+
+
+@pytest.mark.parametrize("implementation", registered(Decks))
+async def test_a_card_promises_a_kind_of_court_only_when_its_courts_are_one_kind(
+    implementation, client, session
+):
+    """What *Your new game* names at the club and hour a cancel took (#673): the
+    kind the card promises, as the deck shows it (Q122)."""
+
+    club_id, desk = await a_club_and_its_desk(client)
+    decks: Decks = implementation.build(session)
+    card = await _saved(session, await _a_proposal(session, club_id=UUID(club_id)))
+
+    # Court 1 is the club's one padel court, and indoor.
+    assert await decks.kind_of_court(card.proposal_id) is True
+    outdoor = await adds_a_court(client, desk, name="Court 4", indoor=False)
+    await sets_hours(client, desk, [outdoor["id"]], every_hour_of_the_week())
+    assert await decks.kind_of_court(card.proposal_id) is None
+    assert await decks.kind_of_court(new_uuid()) is None
 
 
 @pytest.mark.parametrize("implementation", registered(Names))

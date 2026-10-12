@@ -244,6 +244,7 @@ from app.modules.bookings.domain.ports import (
     BookingRepository,
     ClubCourtsAtTheHour,
     ClubDesks,
+    CourtClosures,
     GameChanges,
     GameNoShows,
     GameOpening,
@@ -259,6 +260,7 @@ from app.modules.bookings.infrastructure.event_sourced_summary_repository import
 )
 from app.modules.bookings.infrastructure.club_courts import (
     BookedCourtHours,
+    ClosedByTheCancel,
     SellableClubCourts,
 )
 from app.modules.bookings.infrastructure.event_sourced_booking_repository import (
@@ -402,6 +404,7 @@ from app.modules.clubs.domain.ports import (
     OfficialGroupSports,
     PaymentsAccounts,
 )
+from app.modules.clubs.application.hours_exceptions import CloseACourtForAnHour
 from app.modules.clubs.application.payments_account import HeedPaymentsAccount
 from app.modules.clubs.domain.payments_account import OnboardingPages
 from app.modules.clubs.infrastructure.event_sourced_club_account_repository import (
@@ -2001,6 +2004,7 @@ def build_club_bookings(
             bookings=bookings(),
             games=build_game_changes(session, runtime=runtime),
             courts=build_club_courts_at_the_hour(session, runtime=runtime),
+            closures=build_court_closures(session, runtime=runtime),
         ),
     )
 
@@ -2616,6 +2620,22 @@ def build_club_courts_at_the_hour(
     """The courts a club still has for Raketa at an hour, off what the Club
     context publishes it sells."""
     return SellableClubCourts(build_sellable_court_hours(session, runtime=runtime))
+
+
+def build_court_closures(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> CourtClosures:
+    """The court a club's cancel took a game off, closed for the hour (#673)
+    through the Club context's own act — in the cancel's transaction."""
+    return ClosedByTheCancel(
+        CloseACourtForAnHour(
+            courts=build_club_courts_repository(
+                session,
+                event_store=build_domain_event_store(session, runtime=runtime),
+                events=build_event_publisher(session, runtime=runtime),
+            )
+        )
+    )
 
 
 def build_game_opening(

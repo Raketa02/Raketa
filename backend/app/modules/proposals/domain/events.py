@@ -58,6 +58,16 @@ class ProposalMade:
     who: str | None = None
     level_low: float | None = None
     level_high: float | None = None
+    #: Whom it is **the owed card** for (#673; ``docs/adr/0196`` §3): the
+    #: people still in on a game its club cancelled, dealt this first — and
+    #: first in each one's deck. Empty on every other card, and on a card made
+    #: before it was asked.
+    owed_card_for: tuple[UUID, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "owed_card_for", tuple(UUID(str(one)) for one in self.owed_card_for)
+        )
 
 
 @dataclass(frozen=True)
@@ -317,8 +327,9 @@ class YesResumed:
 class ClubCancelled:
     """**The club cancelled the booked game** (#547; the mechanics §16.9): the
     booking says why, and refunds everybody still in in full. ``player_ids``
-    — everybody still in when it did — are **dealt a new card first**, never at
-    this club and hour. The proposal still filled; this is what it owes."""
+    — everybody still in when it did — are **dealt a new card first**: the
+    owed card, closest to this game first (#673). The proposal still filled;
+    this is what it owes."""
 
     proposal_id: UUID
     player_ids: tuple[UUID, ...]
