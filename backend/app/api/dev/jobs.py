@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field
 
 from app.api.dependencies import DbSession
 from app.api.dev.dependencies import (
+    AskHowDidItGoDep,
     TheCutOffDep,
     TheHoldingDep,
     DecideClubPayoutsDep,
@@ -45,6 +46,7 @@ from app.bootstrap.jobs import (
     CONVERSATION_SWEEP_JOB,
     CUT_OFF_JOB,
     HOLDING_JOB,
+    HOW_DID_IT_GO_JOB,
     MAIL_DELIVERY_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     PHOTO_REVIEW_BACKFILL_JOB,
@@ -72,6 +74,7 @@ RUN_IT_NOW: Final[Mapping[str, str]] = MappingProxyType(
         TIME_TO_PAY_JOB: "time to pay",
         HOLDING_JOB: "hold the shares",
         CUT_OFF_JOB: "the cut-off",
+        HOW_DID_IT_GO_JOB: "the hour ends · How did it go?",
         CLUB_PAYOUTS_JOB: "the day close · club payouts",
         NEW_BOOKINGS_SUMMARY_JOB: "the day close · new bookings summary",
         RATING_CATCH_UP_JOB: "the rating catch-up",
@@ -313,6 +316,32 @@ async def run_the_cut_off(cut_off: TheCutOffDep) -> RanResponse:
             if done
             else "No game has a cut-off that has come with anything to do: "
             "nothing was done."
+        ),
+    )
+
+
+@router.post(
+    f"/{HOW_DID_IT_GO_JOB}",
+    response_model=RanResponse,
+    summary=_summary(HOW_DID_IT_GO_JOB),
+    description=(
+        "Asks all four of every Competitive booked game whose hour ended in the "
+        "last half hour *How did it go?* (#663) — once, given at the hour's "
+        "end — while nobody has put a score up and nobody Didn't come. A For "
+        "fun game asks nobody, and a game whose hour is still running is left "
+        "as it is."
+    ),
+)
+async def run_how_did_it_go(ask: AskHowDidItGoDep) -> RanResponse:
+    asked = await ask.execute()
+    return RanResponse(
+        job=HOW_DID_IT_GO_JOB,
+        done=asked.games,
+        conflicts=asked.conflicts,
+        says=(
+            f"{asked.games} game(s) whose hour ended: its players asked How did it go?"
+            if asked.games
+            else "No game's hour ended with anybody left to ask: nothing was done."
         ),
     )
 

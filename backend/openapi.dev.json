@@ -3434,6 +3434,29 @@
         }
       }
     },
+    "/dev/jobs/how-did-it-go": {
+      "post": {
+        "tags": [
+          "dev",
+          "dev"
+        ],
+        "summary": "Run it now \u00b7 the hour ends \u00b7 How did it go?",
+        "description": "Asks all four of every Competitive booked game whose hour ended in the last half hour *How did it go?* (#663) \u2014 once, given at the hour's end \u2014 while nobody has put a score up and nobody Didn't come. A For fun game asks nobody, and a game whose hour is still running is left as it is.",
+        "operationId": "run_how_did_it_go_dev_jobs_how_did_it_go_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RanResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/dev/jobs/club-payouts": {
       "post": {
         "tags": [
@@ -5919,6 +5942,7 @@
           "PAYMENT_DUE",
           "HOLDING",
           "CUT_OFF",
+          "HOUR_ENDS",
           "NEW_BOOKINGS_SUMMARY",
           "CLUB_PAYOUT",
           "RESULT_CONFIRMS"
@@ -6066,7 +6090,12 @@
           "POST_DID_NOT_FILL",
           "YOU_COMPLETE_IT",
           "CHALLENGE",
-          "FILL_IN_ALERT"
+          "FILL_IN_ALERT",
+          "NOT_HERE_YET",
+          "AT_THE_CLUB",
+          "HOW_DID_IT_GO",
+          "IS_THAT_RIGHT",
+          "WERE_THEY_THERE"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -6142,7 +6171,7 @@
           },
           "opens": {
             "$ref": "#/components/schemas/Opens",
-            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top."
+            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663)."
           },
           "game_id": {
             "type": "string",
@@ -6409,7 +6438,8 @@
         "enum": [
           "BOOKING",
           "PROPOSAL",
-          "DECK"
+          "DECK",
+          "RESULT"
         ],
         "title": "Opens",
         "description": "The screen a notice opens on when tapped (the screens A9)."

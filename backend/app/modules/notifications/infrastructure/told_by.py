@@ -1,10 +1,14 @@
 """What a notice says, read off the contexts that own it — every adapter
 **signed here**, so the arrows run ``notifications → proposals``, ``→ bookings``,
-``→ payments`` and ``→ users`` (a club's name is read through Proposals' own
-``ClubNames``), and none of them knows a notice exists (#549).
+``→ games``, ``→ payments`` and ``→ users`` (a club's name is read through
+Proposals' own ``ClubNames``), and none of them knows a notice exists (#549).
 
 ``BookedAndProposedGames`` is a game as it stands: the proposal's stream folded,
-and its booking's when it has one — one id for both. ``ProposalsDecks`` asks
+and its booking's when it has one — one id for both. ``GameStreamCourts`` is the
+court of the game a booking opened, asked of the Game itself — who is awaited,
+whose agreement a score waits on, whose *I was there* waits (#663) — and
+``BookedHours`` the booked games whose hour has just ended, off the bookings'
+own projection. ``ProposalsDecks`` asks
 **the deck itself** whether it shows a card to a reader
 (``ReadGroupDeck.shows``), and ``RescueSeatOffers`` asks the Fill in board's
 own ``RescueOffers`` who a seat is offered to — never a second reading of
@@ -15,13 +19,23 @@ a club's.
 
 from __future__ import annotations
 
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from typing import final
 from uuid import UUID
 
-from app.kernel import Instant
-from app.modules.bookings.domain.ports import BookingRepository
-from app.modules.notifications.domain.ports import GameBrief, PaidShare
+from app.kernel import Instant, instant
+from app.modules.bookings.domain.ports import BookingDirectory, BookingRepository
+from app.modules.games.domain.attendance import NOT_HERE_STATES, AttendanceState
+from app.modules.games.domain.game import Game
+from app.modules.games.domain.lineup import GameKind
+from app.modules.games.domain.ports import GameRepository
+from app.modules.games.domain.standing import GameStanding, settlement_of
+from app.modules.games.domain.windows import (
+    A_BOOKED_GAME,
+    hour_ends_at,
+    late_claim_closes_at,
+)
+from app.modules.notifications.domain.ports import CourtBrief, GameBrief, PaidShare
 from app.modules.payments.domain.ports import SeatChargeRepository
 from app.modules.payments.domain.seat_charge import PAID, RefundReason, SeatCharge
 from app.modules.proposals.application.group_deck import ReadGroupDeck
@@ -135,6 +149,77 @@ class BookedAndProposedGames:
             ),
             waiting_for_a_payment=filling and proposal.waiting_for_a_payment,
             booked_on_a_payment=proposal.booked_on_a_payment,
+        )
+
+
+@final
+class GameStreamCourts:
+    def __init__(self, *, games: GameRepository) -> None:
+        self._games = games
+
+    async def of_game(self, game_id: UUID, *, at: Instant) -> CourtBrief | None:
+        return _court(await self._games.load(game_id), at=at)
+
+    async def of_booking(self, booking_id: UUID, *, at: Instant) -> CourtBrief | None:
+        return _court(await self._games.for_challenge(booking_id), at=at)
+
+
+def _court(game: Game | None, *, at: Instant) -> CourtBrief | None:
+    # A game with no hour was opened by no booking: nothing is asked of it.
+    if game is None or game.starts_at is None:
+        return None
+    starts_at = game.starts_at
+    states = game.attendance_at(at)
+    players = game.line_up.players
+    to_agree = frozenset(
+        player for player in players if game.awaits_agreement_from(player, now=at)
+    )
+    # When what is on the table settles if nobody answers — the games' own
+    # rule: a lone score when its day is up, two when the later one's is.
+    settles = settlement_of(
+        kind=game.kind, proposals=game.proposals, acceptance=game.acceptance
+    )
+    return CourtBrief(
+        booking_id=game.challenge_id,
+        competitive=game.kind is GameKind.COUNTED,
+        sides={
+            player: side.value
+            for player in players
+            if (side := game.line_up.side_of(player)) is not None
+        },
+        hour_ends_at=hour_ends_at(starts_at),
+        awaiting_a_score=game.standing_at(at) is GameStanding.AWAITING_ENTRY,
+        noted_by={
+            player: absence.noted_by for player, absence in game.attendance.items()
+        },
+        awaited=frozenset(
+            player
+            for player, state in states.items()
+            if state is AttendanceState.WAITING
+        ),
+        to_agree=to_agree,
+        settles_at=settles.at if to_agree and settles is not None else None,
+        claimed=frozenset(
+            player
+            for player, state in states.items()
+            if state is AttendanceState.CLAIMED
+        ),
+        vouching=frozenset(
+            player for player in players if states.get(player) not in NOT_HERE_STATES
+        ),
+        claims_close_at=late_claim_closes_at(starts_at),
+    )
+
+
+@final
+class BookedHours:
+    def __init__(self, directory: BookingDirectory) -> None:
+        self._directory = directory
+
+    async def ended(self, *, after: Instant, by: Instant) -> Sequence[UUID]:
+        # The hour ends one booked game's length after it starts.
+        return await self._directory.booked_starting(
+            after=instant(after - A_BOOKED_GAME), by=instant(by - A_BOOKED_GAME)
         )
 
 

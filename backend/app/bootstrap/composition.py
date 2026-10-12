@@ -364,10 +364,13 @@ from app.modules.payments.infrastructure.stripe_notices import StripeNotices
 from app.modules.payments.infrastructure.stripe_payments import StripePayments
 from app.modules.notifications.application.pushing import NoticePushes, PushTheNotice
 from app.modules.notifications.application.reading import NoticeWords
+from app.modules.notifications.application.asking import AskHowDidItGo
 from app.modules.notifications.application.telling import GiveNotice, TellThePlayers
 from app.modules.notifications.domain.ports import (
     BellRepository,
+    GameCourts,
     Decks,
+    EndedHours,
     GameBriefs,
     Names,
     NoticeDayRepository,
@@ -386,6 +389,8 @@ from app.modules.notifications.infrastructure.event_sourced_notification_reposit
 from app.modules.notifications.infrastructure.push import ExpoPush, RecordingPush
 from app.modules.notifications.infrastructure.told_by import (
     BookedAndProposedGames,
+    BookedHours,
+    GameStreamCourts,
     PlatformNames,
     ProposalsDecks,
     RescueSeatOffers,
@@ -4251,6 +4256,26 @@ def build_game_briefs(
     )
 
 
+def build_game_courts(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GameCourts:
+    """A booked game's court as a notice tells it — the Game's own stream
+    (#663)."""
+    return GameStreamCourts(
+        games=build_game_repository(
+            session=session,
+            event_store=build_domain_event_store(session, runtime=runtime),
+            events=build_event_publisher(session, runtime=runtime),
+        )
+    )
+
+
+def build_ended_hours(session: AsyncSession) -> EndedHours:
+    """The booked games whose hour has just ended — the bookings' own
+    projection (#663)."""
+    return BookedHours(build_booking_directory(session))
+
+
 def build_decks(
     session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
 ) -> Decks:
@@ -4304,6 +4329,16 @@ def build_notice_pushes(session: AsyncSession) -> NoticePushes:
     return NoticePushes(words=build_notice_words(session))
 
 
+def build_give_notice(
+    session: AsyncSession, *, runtime: EventRuntime | None = None
+) -> GiveNotice:
+    """One player told one notice, as their choices and their day allow."""
+    return GiveNotice(
+        preferences=build_notification_preferences_repository(session, runtime=runtime),
+        days=build_notice_day_repository(session, runtime=runtime),
+    )
+
+
 def build_tell_the_players(
     session: AsyncSession, *, settings: Settings, runtime: EventRuntime | None = None
 ) -> TellThePlayers:
@@ -4311,15 +4346,28 @@ def build_tell_the_players(
     run, over the session the delivery commits in."""
     preferences = build_notification_preferences_repository(session, runtime=runtime)
     return TellThePlayers(
-        give=GiveNotice(
-            preferences=preferences,
-            days=build_notice_day_repository(session, runtime=runtime),
-        ),
+        give=build_give_notice(session, runtime=runtime),
         games=build_game_briefs(session, runtime=runtime),
+        courts=build_game_courts(session, runtime=runtime),
         decks=build_decks(session, settings=settings, runtime=runtime),
         shares=build_paid_shares(session, runtime=runtime),
         offers=build_seat_offers(session, runtime=runtime),
         preferences=preferences,
+    )
+
+
+def build_ask_how_did_it_go(
+    session: AsyncSession, *, clock: Clock, runtime: EventRuntime | None = None
+) -> AskHowDidItGo:
+    """One run of *How did it go?* over this session — the job's, the
+    console's press and a test's (#663)."""
+    return AskHowDidItGo(
+        hours=build_ended_hours(session),
+        courts=build_game_courts(session, runtime=runtime),
+        games=build_game_briefs(session, runtime=runtime),
+        give=build_give_notice(session, runtime=runtime),
+        uow=build_unit_of_work(session),
+        clock=clock,
     )
 
 

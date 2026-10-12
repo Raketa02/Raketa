@@ -11603,7 +11603,12 @@
           "POST_DID_NOT_FILL",
           "YOU_COMPLETE_IT",
           "CHALLENGE",
-          "FILL_IN_ALERT"
+          "FILL_IN_ALERT",
+          "NOT_HERE_YET",
+          "AT_THE_CLUB",
+          "HOW_DID_IT_GO",
+          "IS_THAT_RIGHT",
+          "WERE_THEY_THERE"
         ],
         "title": "NoticeKind",
         "description": "Every notice a player can be told (the mechanics \u00a717.2)."
@@ -11634,7 +11639,7 @@
           },
           "opens": {
             "$ref": "#/components/schemas/Opens",
-            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top."
+            "description": "`BOOKING` \u2014 the booked game's details (`GET /bookings/{game_id}`); `PROPOSAL` \u2014 a game still filling, or one that did not (`GET /proposals/{game_id}`); `DECK` \u2014 the pool's deck in the sport and kind, with this card on top; `RESULT` \u2014 the booked game's result screen (`GET /bookings/{game_id}`): who turned up, and the score (#663)."
           },
           "game_id": {
             "type": "string",
@@ -11713,7 +11718,7 @@
           "fill_in_alerts"
         ],
         "title": "NotificationChoicesSchema",
-        "description": "The three notices a player chooses. The nine that are always on are\nno choice, and are not here."
+        "description": "The three notices a player chooses. Every other kind is always on, no\nchoice, and not here."
       },
       "OfficialGroupClubSchema": {
         "properties": {
@@ -11838,7 +11843,8 @@
         "enum": [
           "BOOKING",
           "PROPOSAL",
-          "DECK"
+          "DECK",
+          "RESULT"
         ],
         "title": "Opens",
         "description": "The screen a notice opens on when tapped (the screens A9)."

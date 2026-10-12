@@ -23,6 +23,7 @@ import app.bootstrap.jobs as jobs_module
 from app.bootstrap.composition import build_clock
 from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
+    HOW_DID_IT_GO_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     CONVERSATION_SWEEP_JOB,
     MAIL_DELIVERY_JOB,
@@ -120,6 +121,7 @@ def _nothing_but(**overrides):
             "HOLDING_ENABLED": False,
             "CLUB_PAYOUTS_ENABLED": False,
             "NEW_BOOKINGS_SUMMARY_ENABLED": False,
+            "HOW_DID_IT_GO_ENABLED": False,
             **overrides,
         }
     )
@@ -606,4 +608,46 @@ async def test_the_payouts_and_the_summary_run_end_to_end_through_the_real_wirin
     assert not any(
         record.message in ("club payouts finished", "new bookings summary finished")
         for record in caplog.records
+    )
+
+
+def test_how_did_it_go_is_registered_at_the_seat_jobs_cadence():
+    """How often an ended hour is looked for is a setting — every thirty
+    seconds, like the other seat jobs; when its players are asked, and for how
+    long after, is domain (#663)."""
+
+    assert get_settings().HOW_DID_IT_GO_INTERVAL_SECONDS == 30
+    settings = _nothing_but(
+        HOW_DID_IT_GO_ENABLED=True, HOW_DID_IT_GO_INTERVAL_SECONDS=45.0
+    )
+
+    jobs = build_scheduled_jobs(session_factory=UNUSED_SESSIONS, settings=settings)
+
+    assert [(job.name, job.interval_seconds) for job in jobs] == [
+        (HOW_DID_IT_GO_JOB, 45.0)
+    ]
+
+
+def test_how_did_it_go_without_a_session_factory_refuses_to_be_registered():
+    with pytest.raises(ValueError, match="session factory"):
+        build_scheduled_jobs(
+            session_factory=None, settings=_nothing_but(HOW_DID_IT_GO_ENABLED=True)
+        )
+
+
+async def test_how_did_it_go_runs_end_to_end_through_the_real_wiring(
+    session_factory, caplog
+):
+    """With no hour ended, a run asks nobody and says nothing."""
+
+    [job] = build_scheduled_jobs(
+        session_factory=session_factory,
+        settings=_nothing_but(HOW_DID_IT_GO_ENABLED=True),
+    )
+
+    with caplog.at_level(logging.INFO):
+        await job.run_once()
+
+    assert not any(
+        record.message == "how did it go finished" for record in caplog.records
     )

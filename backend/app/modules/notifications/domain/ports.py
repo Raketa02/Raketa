@@ -6,12 +6,13 @@ adapter and a recording fake (``infrastructure/``).
 
 **Everybody else's, asked and never told**: Notifications is *told* through
 the outbox by contexts that do not know it exists, as a room is
-(``docs/adr/0146`` §5), and reads what a notice says off them through five
-ports declared here — what a game is now (``GameBriefs``), whose deck shows a
-card (``Decks``), what a refund gave back (``PaidShares``), who an open seat is
-offered to (``SeatOffers``) and what a person and a club are called
-(``Names``). Each is signed in ``infrastructure/`` over the context that owns
-the fact, and contracted in ``app/bootstrap/notification_demands.py``.
+(``docs/adr/0146`` §5), and reads what a notice says off them through seven
+ports declared here — what a game is now (``GameBriefs``), what its court says
+(``GameCourts``, #663), which booked hours have just ended (``EndedHours``), whose
+deck shows a card (``Decks``), what a refund gave back (``PaidShares``), who an
+open seat is offered to (``SeatOffers``) and what a person and a club are
+called (``Names``). Each is signed in ``infrastructure/`` over the context that
+owns the fact, and contracted in ``app/bootstrap/notification_demands.py``.
 """
 
 from __future__ import annotations
@@ -268,6 +269,68 @@ class GameBriefs(Protocol):
         ...
 
 
+@dataclass(frozen=True, slots=True)
+class CourtBrief:
+    """A booked game's court as it stands, at the instant asked about — who
+    is on it, and what it waits on them for (#663). Read off the game the
+    booking opened: its line-up, its attendance and its score.
+
+    **Each wait is read against the instant**, as the court folds it: a
+    player still awaited, a score still waiting for its answer, a claim not
+    yet confirmed. Something already answered by then is waited on by
+    nobody."""
+
+    #: The booking it was opened for — the id ``GameBriefs`` reads the game
+    #: under, and a notice carries.
+    booking_id: UUID
+    #: A Competitive game; a For fun one asks nobody anything.
+    competitive: bool
+    #: Everybody on the court, each with their side's code (``A``, ``B``).
+    sides: Mapping[UUID, str]
+    #: When its booked hour ends.
+    hour_ends_at: Instant
+    #: Nobody has said they played, and nothing stops a score: nobody is
+    #: awaited, nobody Didn't come, it is not called off nor short.
+    awaiting_a_score: bool
+    #: Each player tapped *isn't here yet* — awaited or not — and who first
+    #: tapped it.
+    noted_by: Mapping[UUID, UUID]
+    #: Those still awaited: tapped, not arrived, the tap window running.
+    awaited: frozenset[UUID]
+    #: Those whose agreement a score on the table waits on.
+    to_agree: frozenset[UUID]
+    #: When what is on the table settles if nobody answers — ``None`` with
+    #: nothing waiting.
+    settles_at: Instant | None
+    #: Those who said *I was there* and wait for somebody to confirm it.
+    claimed: frozenset[UUID]
+    #: Those who may confirm a claim: on the court, and not absent themselves.
+    vouching: frozenset[UUID]
+    #: When *I was there* and its confirmation stop being sayable.
+    claims_close_at: Instant
+
+
+class GameCourts(Protocol):
+    async def of_game(self, game_id: UUID, *, at: Instant) -> CourtBrief | None:
+        """The court of the game with this id — the Game's own, which its
+        events carry — read against ``at``; ``None`` for no such booked
+        game."""
+        ...
+
+    async def of_booking(self, booking_id: UUID, *, at: Instant) -> CourtBrief | None:
+        """The court of the game this booking opened, read against ``at``;
+        ``None`` while it has none."""
+        ...
+
+
+class EndedHours(Protocol):
+    async def ended(self, *, after: Instant, by: Instant) -> Sequence[UUID]:
+        """Every booked game, whole, whose hour ended after ``after`` and by
+        ``by`` — its booking's id, the earliest first. **Candidates**: the
+        court says whether anything is asked."""
+        ...
+
+
 class Decks(Protocol):
     async def showing(
         self, game_id: UUID, players: Collection[UUID], *, at: Instant
@@ -327,7 +390,10 @@ class Names(Protocol):
 
 __all__ = [
     "BellRepository",
+    "CourtBrief",
+    "GameCourts",
     "Decks",
+    "EndedHours",
     "GameBrief",
     "GameBriefs",
     "Names",

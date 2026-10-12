@@ -6,7 +6,9 @@ consumer gets a new register. Notifications is *told* through the outbox and
 tells nothing (``.importlinter``'s *No context knows Notifications exists*), so
 it publishes no port and has no provider register; every row here is a
 demand — what a game is now (``GameBriefs``: the proposal's stream and its
-booking's), whose deck shows a card (``Decks``: the deck's own ``shows``), what
+booking's), what its court says (``GameCourts``: the Game's own stream, #663),
+which booked hours have just ended (``EndedHours``: the bookings' projection),
+whose deck shows a card (``Decks``: the deck's own ``shows``), what
 a refund gave back (``PaidShares``: the share's Seat charge),
 who an open seat is offered to (``SeatOffers``: the Fill in board's own offer)
 and what a person and a club are called (``Names``). Each is signed in
@@ -24,7 +26,9 @@ from __future__ import annotations
 from typing import TypeVar
 
 from app.bootstrap.composition import (
+    build_game_courts,
     build_decks,
+    build_ended_hours,
     build_game_briefs,
     build_notice_names,
     build_paid_shares,
@@ -33,7 +37,9 @@ from app.bootstrap.composition import (
 from app.bootstrap.matcher_demands import RegisteredImplementation
 from app.core.config import get_settings
 from app.modules.notifications.domain.ports import (
+    GameCourts,
     Decks,
+    EndedHours,
     GameBriefs,
     Names,
     PaidShares,
@@ -46,6 +52,8 @@ P = TypeVar("P")
 #: *a port with no registered implementation* is a question something can ask.
 NOTIFICATION_DEMANDS: tuple[type, ...] = (
     GameBriefs,
+    GameCourts,
+    EndedHours,
     Decks,
     PaidShares,
     SeatOffers,
@@ -56,6 +64,12 @@ NOTIFICATION_DEMANDS: tuple[type, ...] = (
 NOTIFICATION_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=GameBriefs, name="BookedAndProposedGames", build=build_game_briefs
+    ),
+    RegisteredImplementation(
+        port=GameCourts, name="GameStreamCourts", build=build_game_courts
+    ),
+    RegisteredImplementation(
+        port=EndedHours, name="BookedHours", build=build_ended_hours
     ),
     RegisteredImplementation(
         port=Decks,

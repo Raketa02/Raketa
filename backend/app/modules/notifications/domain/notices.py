@@ -24,7 +24,7 @@ of going past a cap — and a day nothing was told about has no stream.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from enum import StrEnum
 from typing import Final, Iterable
 from uuid import UUID, uuid5
@@ -86,6 +86,21 @@ class NoticeKind(StrEnum):
     CHALLENGE = "CHALLENGE"
     #: *Fill in alerts* — a booked game you fit needs one more.
     FILL_IN_ALERT = "FILL_IN_ALERT"
+    #: *Ivan is at Ogrody 33 and you're not there yet* — to the player
+    #: somebody at the club tapped *isn't here yet* about (#663).
+    NOT_HERE_YET = "NOT_HERE_YET"
+    #: *Oscar is at Ogrody 33* — to whoever tapped *isn't here yet*, when the
+    #: player arrives (#663).
+    AT_THE_CLUB = "AT_THE_CLUB"
+    #: *How did it go?* — to all four of a Competitive booked game whose hour
+    #: has just ended (#663).
+    HOW_DID_IT_GO = "HOW_DID_IT_GO"
+    #: *Is that right?* — to the other side, when a score goes up on a
+    #: Competitive game: put up, changed, or a different one (#663).
+    IS_THAT_RIGHT = "IS_THAT_RIGHT"
+    #: *Was Oscar at Ogrody 33?* — to the courtmates, when a player who Didn't
+    #: come says *I was there* (#663).
+    WERE_THEY_THERE = "WERE_THEY_THERE"
 
 
 class Opens(StrEnum):
@@ -97,6 +112,8 @@ class Opens(StrEnum):
     PROPOSAL = "PROPOSAL"
     #: The group's deck, with the card on top.
     DECK = "DECK"
+    #: The booked game's result screen — who turned up, and the score (#663).
+    RESULT = "RESULT"
 
 
 class NoticeReason(StrEnum):
@@ -135,6 +152,10 @@ class NoticeReason(StrEnum):
     #: Its court went to another game before the payment it waited for came in
     #: (#625).
     COURT_LOST_WAITING_FOR_A_PAYMENT = "COURT_LOST_WAITING_FOR_A_PAYMENT"
+    #: A side changed the score it put up: *Is that right?* again (#663).
+    CORRECTED = "CORRECTED"
+    #: The other side put a different score up: two scores stand (#663).
+    COUNTERED = "COUNTERED"
 
 
 @dataclass(frozen=True, slots=True)
@@ -159,6 +180,13 @@ CHOSEN: Final[dict[NoticeKind, Chosen]] = {
         NotificationChoice.FILL_IN_ALERTS, daily_cap=3, bundled=False
     ),
 }
+
+#: How long after its hour ends a game is still asked *How did it go?* (#663) —
+#: **while its players are still at the club**, which is the point of asking
+#: then: the score is put up where it was played. A run that reaches a game
+#: later than this — the process down past it — asks nothing; the game's result
+#: screen and Home still ask for the score until its entry window closes.
+ASKED_WITHIN: Final = timedelta(minutes=30)
 
 #: What a day's stream id is drawn under — fixed for ever, since a stored stream
 #: is found by it.

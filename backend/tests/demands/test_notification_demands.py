@@ -20,6 +20,7 @@ from app.bootstrap.composition import (
     build_booking_repository,
     build_domain_event_store,
     build_event_publisher,
+    build_game_repository,
     build_proposal_repository,
     build_seat_charge_repository,
 )
@@ -31,8 +32,14 @@ from app.bootstrap.notification_demands import (
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking, CancelReason
+from app.modules.games.domain.attendance import ClubVerdict
+from app.modules.games.domain.game import Game
+from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
+from app.modules.games.domain.results import Score
 from app.modules.notifications.domain.ports import (
+    GameCourts,
     Decks,
+    EndedHours,
     GameBriefs,
     Names,
     PaidShares,
@@ -447,6 +454,200 @@ async def test_no_such_game_is_nothing(implementation, session):
     games: GameBriefs = implementation.build(session)
 
     assert await games.about(new_uuid(), at=NOW) is None
+
+
+# --------------------------------------------------------------------------- #
+# GameCourts — a booked game's court, and what it waits on (#663)
+# --------------------------------------------------------------------------- #
+
+#: At the club, as an attendance tap's verdict hands it to the Game.
+HERE = ClubVerdict(at_the_club=True, club_name="Bonarka Arena")
+
+
+async def _a_court(
+    session, *, kind: GameKind = GameKind.COUNTED, act=lambda game: None
+) -> Game:
+    """Ola and Kuba against Ewa and Tomek on Saturday at 17:00, opened for a
+    booking — and whatever ``act`` does to it, through the Game's own acts."""
+
+    game = Game.planned(
+        game_id=new_uuid(),
+        challenge_id=new_uuid(),
+        sport=Sport.PADEL,
+        kind=kind,
+        window=None,
+        line_up=LineUp.of(
+            [
+                Seating(side=GameSide.A, player_id=OLA),
+                Seating(side=GameSide.A, player_id=KUBA),
+                Seating(side=GameSide.B, player_id=EWA),
+                Seating(side=GameSide.B, player_id=TOMEK),
+            ]
+        ),
+        occurred_at=NOW,
+        starts_at=START,
+    )
+    act(game)
+    await build_game_repository(session=session, **_store(session)).save(game)
+    await session.commit()
+    return game
+
+
+@pytest.mark.parametrize("implementation", registered(GameCourts))
+async def test_a_court_is_its_booking_its_sides_and_its_hour(implementation, session):
+    courts: GameCourts = implementation.build(session)
+    game = await _a_court(session)
+    after = START + timedelta(hours=1)
+
+    by_game = await courts.of_game(game.game_id, at=after)
+    by_booking = await courts.of_booking(game.challenge_id, at=after)
+
+    assert by_game is not None and by_game == by_booking
+    assert (by_game.booking_id, by_game.competitive, by_game.hour_ends_at) == (
+        game.challenge_id,
+        True,
+        START + timedelta(hours=1),
+    )
+    assert by_game.sides == {OLA: "A", KUBA: "A", EWA: "B", TOMEK: "B"}
+    # Nobody said they played: it waits for its score, and nothing else.
+    assert by_game.awaiting_a_score
+    assert (by_game.awaited, by_game.to_agree, by_game.claimed) == (
+        frozenset(),
+        frozenset(),
+        frozenset(),
+    )
+    assert by_game.settles_at is None
+    assert by_game.vouching == {OLA, KUBA, EWA, TOMEK}
+
+
+@pytest.mark.parametrize("implementation", registered(GameCourts))
+async def test_a_player_tapped_is_awaited_until_they_arrive(implementation, session):
+    courts: GameCourts = implementation.build(session)
+    tapped = START + timedelta(minutes=5)
+    game = await _a_court(
+        session,
+        act=lambda game: game.note_absent(
+            by=OLA, absent=EWA, where=HERE, occurred_at=tapped
+        ),
+    )
+
+    awaited = await courts.of_game(game.game_id, at=tapped)
+
+    assert awaited is not None
+    assert (awaited.awaited, awaited.noted_by) == ({EWA}, {EWA: OLA})
+    # Nothing takes a score while somebody is awaited, and the awaited player
+    # vouches for nobody.
+    assert not awaited.awaiting_a_score
+    assert awaited.vouching == {OLA, KUBA, TOMEK}
+
+    arrives = START + timedelta(minutes=20)
+    games = build_game_repository(session=session, **_store(session))
+    again = await games.load(game.game_id)
+    assert again is not None
+    again.note_arrival(by=EWA, arrived=EWA, where=HERE, occurred_at=arrives)
+    await games.save(again)
+    await session.commit()
+    arrived = await courts.of_game(game.game_id, at=arrives)
+
+    assert arrived is not None
+    assert (arrived.awaited, arrived.noted_by) == (frozenset(), {EWA: OLA})
+
+
+@pytest.mark.parametrize("implementation", registered(GameCourts))
+async def test_a_score_waits_on_the_other_side_until_its_day_is_up(
+    implementation, session
+):
+    courts: GameCourts = implementation.build(session)
+    stated = START + timedelta(hours=1, minutes=5)
+    game = await _a_court(
+        session,
+        act=lambda game: game.state_result(
+            by=OLA, score=Score.from_code("6-4,6-3"), occurred_at=stated
+        ),
+    )
+
+    court = await courts.of_game(game.game_id, at=stated)
+
+    assert court is not None
+    assert court.to_agree == {EWA, TOMEK}
+    assert court.settles_at == stated + timedelta(hours=24)
+    assert not court.awaiting_a_score
+
+
+@pytest.mark.parametrize("implementation", registered(GameCourts))
+async def test_a_claim_waits_on_a_confirmation_from_somebody_who_came(
+    implementation, session
+):
+    courts: GameCourts = implementation.build(session)
+    claimed = START + timedelta(hours=16)
+
+    def ewa_never_came_and_says_she_did(game: Game) -> None:
+        game.note_absent(
+            by=OLA, absent=EWA, where=HERE, occurred_at=START + timedelta(minutes=5)
+        )
+        game.claim_presence(by=EWA, occurred_at=claimed)
+
+    game = await _a_court(session, act=ewa_never_came_and_says_she_did)
+
+    court = await courts.of_game(game.game_id, at=claimed)
+
+    assert court is not None
+    assert court.claimed == {EWA}
+    assert court.vouching == {OLA, KUBA, TOMEK}
+    assert court.claims_close_at == START + timedelta(minutes=30, hours=24)
+
+
+@pytest.mark.parametrize("implementation", registered(GameCourts))
+async def test_a_for_fun_court_is_not_competitive(implementation, session):
+    courts: GameCourts = implementation.build(session)
+    game = await _a_court(session, kind=GameKind.FRIENDLY)
+
+    court = await courts.of_game(game.game_id, at=START)
+
+    assert court is not None and not court.competitive
+
+
+@pytest.mark.parametrize("implementation", registered(GameCourts))
+async def test_no_such_game_has_no_court(implementation, session):
+    courts: GameCourts = implementation.build(session)
+
+    assert await courts.of_game(new_uuid(), at=NOW) is None
+    assert await courts.of_booking(new_uuid(), at=NOW) is None
+
+
+# --------------------------------------------------------------------------- #
+# EndedHours — the booked games whose hour has just ended (#663)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("implementation", registered(EndedHours))
+async def test_a_booked_hour_is_found_once_it_has_ended(implementation, session):
+    hours: EndedHours = implementation.build(session)
+    proposal = await _saved(session, await _a_proposal(session))
+    booking = _booked(proposal, at=NOW)
+    await build_booking_repository(session, **_store(session)).save(booking)
+    await session.commit()
+    ends = START + timedelta(hours=1)
+
+    assert await hours.ended(after=ends - timedelta(minutes=1), by=ends) == [
+        booking.booking_id
+    ]
+    # Not before its end, and not twice: the window is after one, by the other.
+    assert await hours.ended(after=START, by=ends - timedelta(seconds=1)) == []
+    assert await hours.ended(after=ends, by=ends + timedelta(minutes=1)) == []
+
+
+@pytest.mark.parametrize("implementation", registered(EndedHours))
+async def test_a_game_with_a_seat_open_has_no_hour_to_end(implementation, session):
+    hours: EndedHours = implementation.build(session)
+    proposal = await _saved(session, await _a_proposal(session))
+    booking = _booked(proposal, at=NOW)
+    booking.leave(KUBA, at=NOW + timedelta(hours=1))
+    await build_booking_repository(session, **_store(session)).save(booking)
+    await session.commit()
+    ends = START + timedelta(hours=1)
+
+    assert await hours.ended(after=ends - timedelta(minutes=1), by=ends) == []
 
 
 # --------------------------------------------------------------------------- #

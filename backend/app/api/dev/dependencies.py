@@ -45,6 +45,7 @@ from app.bootstrap.composition import (
     build_booking_repository,
     build_the_cut_off,
     build_the_holding,
+    build_ask_how_did_it_go,
     build_club_payout_repository,
     build_club_terms,
     build_court_hours,
@@ -85,6 +86,7 @@ from app.modules.games.presentation.dependencies import (
     PlayerNamesDep as CourtNamesDep,
 )
 from app.modules.notifications.application.pushing import NoticePushes
+from app.modules.notifications.application.asking import AskHowDidItGo
 from app.modules.payments.application.handlers.settle_seat_charges import (
     SettleSeatCharges,
 )
@@ -253,6 +255,14 @@ def get_the_holding(
 
 
 TheHoldingDep = Annotated[TheHolding, Depends(get_the_holding)]
+
+
+def get_ask_how_did_it_go(db: DbSession, clock: ClockDep) -> AskHowDidItGo:
+    """The ``how-did-it-go`` job's unit of work, over the real *now* (#663)."""
+    return build_ask_how_did_it_go(db, clock=clock)
+
+
+AskHowDidItGoDep = Annotated[AskHowDidItGo, Depends(get_ask_how_did_it_go)]
 
 
 def get_decide_club_payouts(db: DbSession, clock: ClockDep) -> DecideClubPayouts:

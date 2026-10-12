@@ -67,6 +67,7 @@ from app.bootstrap.jobs import (
     CLUB_PAYOUTS_JOB,
     CUT_OFF_JOB,
     HOLDING_JOB,
+    HOW_DID_IT_GO_JOB,
     NEW_BOOKINGS_SUMMARY_JOB,
     PROPOSAL_EXPIRY_JOB,
     RATING_CATCH_UP_JOB,
@@ -94,6 +95,7 @@ from app.modules.games.domain.windows import (
     A_BOOKED_GAME,
     ENTRY_GRACE,
     PROPOSAL_WINDOW,
+    hour_ends_at,
     late_claim_closes_at,
     proposal_closes_at,
     tap_window_closes_at,
@@ -226,6 +228,9 @@ class Moment(StrEnum):
     #: Leaving stops being free: a full game's held shares are taken, and a
     #: seat still open calls the game off with every hold let go (#637).
     CUT_OFF = "CUT_OFF"
+    #: A counted booked game's hour ends with nobody having put a score up:
+    #: all four are asked *How did it go?* (#663).
+    HOUR_ENDS = "HOUR_ENDS"
     #: The close of the club day it was booked in: its desk is emailed it among
     #: the day's new bookings.
     NEW_BOOKINGS_SUMMARY = "NEW_BOOKINGS_SUMMARY"
@@ -273,6 +278,11 @@ MOMENT_RULES: Mapping[Moment, MomentRule] = MappingProxyType(
             "Leaving stops being free: a full game has every held share taken, "
             "and a seat still open then calls the game off with every hold let "
             "go — nobody pays.",
+        ),
+        Moment.HOUR_ENDS: MomentRule(
+            HOW_DID_IT_GO_JOB,
+            "The hour ends: all four are asked How did it go? — unless a score "
+            "is up by then, or somebody didn't come.",
         ),
         Moment.NEW_BOOKINGS_SUMMARY: MomentRule(
             NEW_BOOKINGS_SUMMARY_JOB,
@@ -1367,6 +1377,15 @@ class _Folded:
                     (Moment.NEW_BOOKINGS_SUMMARY, day_close_after(booking.booked_at))
                 )
                 ahead.append((Moment.CLUB_PAYOUT, day_close_after(booking.start)))
+        if (
+            played is not None
+            and played.kind is GameKind.COUNTED
+            and played.starts_at is not None
+            and played.standing_at(self._now) is GameStanding.AWAITING_ENTRY
+        ):
+            # Nobody has put a score up yet: they are asked for it at the
+            # hour's end (#663).
+            ahead.append((Moment.HOUR_ENDS, hour_ends_at(played.starts_at)))
         if (
             played is not None
             and played.kind is GameKind.COUNTED

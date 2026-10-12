@@ -34,6 +34,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bootstrap.composition import (
+    build_ask_how_did_it_go,
     build_propose_games,
     build_clock,
     build_destroy_ended_conversations,
@@ -132,6 +133,12 @@ CUT_OFF_JOB = "cut-off"
 #: nowhere, and the cut-off has nothing of that player's to take.
 HOLDING_JOB = "holding"
 
+#: How did it go? (#663). When a Competitive booked game's hour ends, all four
+#: are asked for the score while they are still at the club. A clock passing
+#: announces nothing, so nothing else asks: the result screen and Home still
+#: wait for a score whether or not this has run.
+HOW_DID_IT_GO_JOB = "how-did-it-go"
+
 #: Club payouts (#548). At the close of every club day it decides, per club, one
 #: payout of what its games over by then left it — played, or called off with
 #: what that gives back decided; the outbox makes it and tells the desk.
@@ -189,6 +196,7 @@ def build_scheduled_jobs(
         or settings.TIME_TO_PAY_ENABLED
         or settings.CUT_OFF_ENABLED
         or settings.HOLDING_ENABLED
+        or settings.HOW_DID_IT_GO_ENABLED
         or settings.CLUB_PAYOUTS_ENABLED
         or settings.NEW_BOOKINGS_SUMMARY_ENABLED
     ):
@@ -252,6 +260,12 @@ def build_scheduled_jobs(
         if settings.HOLDING_ENABLED:
             jobs.append(
                 build_holding_job(session_factory=session_factory, settings=settings)
+            )
+        if settings.HOW_DID_IT_GO_ENABLED:
+            jobs.append(
+                build_how_did_it_go_job(
+                    session_factory=session_factory, settings=settings
+                )
             )
         if settings.CLUB_PAYOUTS_ENABLED:
             jobs.append(
@@ -538,6 +552,43 @@ def build_holding_job(
     return PeriodicJob(
         name=HOLDING_JOB,
         interval_seconds=settings.HOLDING_INTERVAL_SECONDS,
+        run=run,
+    )
+
+
+def build_how_did_it_go_job(
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    settings: Settings,
+) -> PeriodicJob:
+    """Ask all four *How did it go?* when a Competitive booked game's hour
+    ends (#663).
+
+    **Idempotent and safe beside itself with no lock**: a game's players are
+    told under a key of the game's, on the day of its hour's end, so a second
+    run tells nothing again — and two processes at once collide on a player's
+    day, the second stepped over. **What it buys is the asking, not
+    correctness**: a game waits for its score whether or not this has run.
+    """
+
+    clock = build_clock()
+
+    async def run() -> None:
+        async with session_factory() as session:
+            done = await build_ask_how_did_it_go(session, clock=clock).execute()
+        if done.games or done.conflicts:
+            logger.info(
+                "how did it go finished",
+                extra={
+                    "job": HOW_DID_IT_GO_JOB,
+                    "games": done.games,
+                    "conflicts": done.conflicts,
+                },
+            )
+
+    return PeriodicJob(
+        name=HOW_DID_IT_GO_JOB,
+        interval_seconds=settings.HOW_DID_IT_GO_INTERVAL_SECONDS,
         run=run,
     )
 

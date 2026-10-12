@@ -19,8 +19,8 @@ from app.modules.notifications.domain.preferences import (
 
 
 class NotificationChoicesSchema(BaseModel):
-    """The three notices a player chooses. The nine that are always on are
-    no choice, and are not here."""
+    """The three notices a player chooses. Every other kind is always on, no
+    choice, and not here."""
 
     you_complete_it: bool = Field(
         description=(
@@ -87,7 +87,9 @@ class NoticeSchema(BaseModel):
             "`BOOKING` — the booked game's details (`GET /bookings/{game_id}`); "
             "`PROPOSAL` — a game still filling, or one that did not "
             "(`GET /proposals/{game_id}`); `DECK` — the pool's deck in the "
-            "sport and kind, with this card on top."
+            "sport and kind, with this card on top; `RESULT` — the booked "
+            "game's result screen (`GET /bookings/{game_id}`): who turned up, "
+            "and the score (#663)."
         )
     )
     game_id: UUID = Field(

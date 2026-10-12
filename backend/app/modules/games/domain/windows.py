@@ -136,6 +136,13 @@ def scores_still_waiting_since(now: Instant) -> Instant:
     return instant(now - PROPOSAL_WINDOW)
 
 
+def hour_ends_at(starts_at: Instant) -> Instant:
+    """When a booked game's hour ends — when its players are asked *How did
+    it go?* (#663)."""
+
+    return instant(starts_at + A_BOOKED_GAME)
+
+
 def tap_window_closes_at(starts_at: Instant) -> Instant:
     """When *isn't here yet* and an arrival stop being sayable, and a player
     tapped and not arrived **Didn't come** (#657)."""

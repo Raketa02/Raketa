@@ -513,6 +513,18 @@ class Settings(BaseSettings):
     HOLDING_ENABLED: bool = True
     HOLDING_INTERVAL_SECONDS: float = 30
 
+    # --- How did it go? (#663, the mechanics §15.2)
+    #
+    # When a Competitive booked game's hour ends, all four are asked for the
+    # score — while they are still at the club. A clock passing announces
+    # nothing, so a job looks for the hours that ended. **When, and for how
+    # long after, is emphatically not here**: the hour's end and the half hour
+    # it is still asked within are domain (`games/domain/windows.py`,
+    # `notifications/domain/notices.py`). Every thirty seconds, like the other
+    # seat jobs.
+    HOW_DID_IT_GO_ENABLED: bool = True
+    HOW_DID_IT_GO_INTERVAL_SECONDS: float = 30
+
     # --- club payouts (#548, the mechanics §12.6, §16.11)
     #
     # **Correctness depends on it**: a club is paid after its games are played,

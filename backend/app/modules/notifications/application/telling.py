@@ -1,11 +1,12 @@
 """**Players are told, through the outbox, by contexts that do not know it**
 (#549; the mechanics §6.3, §6.4, §9.2, §10.1, §12–§13, §17.2; the screens A9).
 
-``proposals``, ``bookings`` and ``payments`` publish what happened to a game and
-its money; this subscribes, as a room does (``docs/adr/0146`` §5), and asks them
-nothing but reads. Each event is read against the game **as it stands** —
-``GameBriefs``, at the event's own instant — so a game that moved on before the
-delivery is told as it is, and a card that filled meanwhile needs nobody.
+``proposals``, ``bookings``, ``payments`` and ``games`` publish what happened
+to a game and its money; this subscribes, as a room does (``docs/adr/0146`` §5),
+and asks them nothing but reads. Each event is read against the game **as it
+stands** — ``GameBriefs``, and for a game's own events its court (``GameCourts``),
+at the event's own instant — so a game that moved on before the delivery is
+told as it is, and a card that filled meanwhile needs nobody.
 
 **The table** (``_TELLING``) — what each event tells, and whom:
 
@@ -76,6 +77,17 @@ delivery is told as it is, and a card that filled meanwhile needs nobody.
 - ``Redealt`` — *Your new game*, to the people a club's no, silence or cancel
   promised a new card first, on the card they were dealt (Q107). **Every
   other card the proposer deals tells nobody.**
+- ``AbsenceNoted`` — *Ivan is at Ogrody 33 and you're not there yet*, to the
+  player tapped, while they are still awaited; ``ArrivalNoted`` — *Oscar is at
+  Ogrody 33*, to whoever tapped *isn't here yet* about them (#663).
+- ``PresenceClaimed`` — *Was Oscar at Ogrody 33?*, to everybody else on the
+  court who may confirm it, while the claim waits.
+- ``ResultProposed``, ``ResultCorrected``, ``ResultCountered`` — *Is that
+  right?*, to those across the net whose agreement the score waits on. **Every
+  one of these is a Competitive game's**: For fun asks nobody anything, and is
+  told none of them; and each opens **the game's result screen**. *How did it
+  go?* is no event's — a clock passing announces nothing — so ``asking.py``
+  tells it when the hour ends.
 
 **An alert never points at a card the reader cannot find**: *You complete it*,
 a challenge and *Your new game* go only to a reader whose deck shows the card
@@ -112,6 +124,14 @@ from app.modules.bookings.domain.events import (
     SeatLeft,
 )
 from app.modules.clubs.domain.court_hours import local_day
+from app.modules.games.domain.events import (
+    AbsenceNoted,
+    ArrivalNoted,
+    PresenceClaimed,
+    ResultCorrected,
+    ResultCountered,
+    ResultProposed,
+)
 from app.modules.notifications.domain.notices import (
     CHOSEN,
     Notice,
@@ -120,6 +140,8 @@ from app.modules.notifications.domain.notices import (
     Opens,
 )
 from app.modules.notifications.domain.ports import (
+    CourtBrief,
+    GameCourts,
     Decks,
     GameBrief,
     GameBriefs,
@@ -183,17 +205,21 @@ class GiveNotice:
         self._preferences = preferences
         self._days = days
 
-    async def execute(self, player_id: UUID, notice: Notice, *, at: Instant) -> None:
+    async def execute(self, player_id: UUID, notice: Notice, *, at: Instant) -> bool:
+        """Whether it was given — or gathered into the day's last of its kind."""
+
         chosen = CHOSEN.get(notice.kind)
         if chosen is not None:
             if not (await self._preferences.load(player_id)).wants(chosen.choice):
-                return
+                return False
         day = await self._days.load(player_id, local_day(at))
-        if day.give(notice, at=at) is not None:
-            await self._days.save(day)
+        if day.give(notice, at=at) is None:
+            return False
+        await self._days.save(day)
+        return True
 
 
-def _notice(
+def notice_about(
     kind: NoticeKind,
     game: GameBrief,
     *,
@@ -238,6 +264,7 @@ class TellThePlayers:
         *,
         give: GiveNotice,
         games: GameBriefs,
+        courts: GameCourts,
         decks: Decks,
         shares: PaidShares,
         offers: SeatOffers,
@@ -245,6 +272,7 @@ class TellThePlayers:
     ) -> None:
         self._give = give
         self._games = games
+        self._courts = courts
         self._decks = decks
         self._shares = shares
         self._offers = offers
@@ -325,7 +353,7 @@ class TellThePlayers:
         )
         await self._give.execute(
             event.player_id,
-            _notice(
+            notice_about(
                 kind,
                 game,
                 key=f"{kind}:{key}",
@@ -371,7 +399,7 @@ class TellThePlayers:
         rescue = game.booked and event.player_id not in game.seated
         await self._give.execute(
             event.player_id,
-            _notice(
+            notice_about(
                 kind,
                 game,
                 # One key whichever words it takes, so a delivery retried
@@ -404,7 +432,9 @@ class TellThePlayers:
         )
         await self._give.execute(
             event.player_id,
-            _notice(kind, game, key=f"{kind}:{key}", opens=Opens.BOOKING, rescue=True),
+            notice_about(
+                kind, game, key=f"{kind}:{key}", opens=Opens.BOOKING, rescue=True
+            ),
             at=at,
         )
 
@@ -428,7 +458,7 @@ class TellThePlayers:
             return
         await self._tell(
             [player for player in game.in_ if player not in game.paying],
-            _notice(
+            notice_about(
                 NoticeKind.WAITING_FOR_A_PAYMENT,
                 game,
                 key=f"{NoticeKind.WAITING_FOR_A_PAYMENT}:{game.game_id}:{until}",
@@ -471,7 +501,7 @@ class TellThePlayers:
         ):
             await self._tell(
                 theirs,
-                _notice(kind, game, key=f"{kind}:{key}", opens=Opens.PROPOSAL),
+                notice_about(kind, game, key=f"{kind}:{key}", opens=Opens.PROPOSAL),
                 at=at,
             )
         # Full again before this was delivered — booked, asked of its club, or
@@ -480,7 +510,7 @@ class TellThePlayers:
             return
         await self._tell(
             [player for player in game.in_ if player not in payers],
-            _notice(
+            notice_about(
                 NoticeKind.SOMEONE_LEFT,
                 game,
                 key=f"{NoticeKind.SOMEONE_LEFT}:{key}",
@@ -511,7 +541,7 @@ class TellThePlayers:
     ) -> None:
         await self._tell(
             players,
-            _notice(
+            notice_about(
                 NoticeKind.GAME_CALLED_OFF,
                 game,
                 key=f"{NoticeKind.GAME_CALLED_OFF}:{key}",
@@ -539,7 +569,7 @@ class TellThePlayers:
         you_left = event.reason == RefundReason.CANCELLED_AFTER_YOU_LEFT
         await self._give.execute(
             event.player_id,
-            _notice(
+            notice_about(
                 kind,
                 game,
                 key=f"{kind}:{key}",
@@ -569,7 +599,7 @@ class TellThePlayers:
             return
         await self._give.execute(
             event.player_id,
-            _notice(
+            notice_about(
                 NoticeKind.REFUNDED,
                 game,
                 key=f"{NoticeKind.REFUNDED}:{key}",
@@ -603,7 +633,7 @@ class TellThePlayers:
         you_left = event.reason == RefundReason.CANCELLED_AFTER_YOU_LEFT
         await self._give.execute(
             event.player_id,
-            _notice(
+            notice_about(
                 kind,
                 game,
                 key=f"{kind}:{key}",
@@ -629,7 +659,7 @@ class TellThePlayers:
             return
         await self._tell(
             (*event.first_side, *event.second_side),
-            _notice(
+            notice_about(
                 NoticeKind.WAITING_FOR_THE_CLUB,
                 game,
                 key=f"{NoticeKind.WAITING_FOR_THE_CLUB}:{key}",
@@ -653,7 +683,7 @@ class TellThePlayers:
         )
         await self._tell(
             game.seated,
-            _notice(
+            notice_about(
                 NoticeKind.CLUB_COULD_NOT_TAKE_IT,
                 game,
                 key=f"{NoticeKind.CLUB_COULD_NOT_TAKE_IT}:{key}",
@@ -674,7 +704,7 @@ class TellThePlayers:
             # seat is the others' to fill now, and they owe nothing.
             await self._give.execute(
                 event.player_id,
-                _notice(
+                notice_about(
                     NoticeKind.TIME_TO_FIX_RAN_OUT,
                     game,
                     key=f"{NoticeKind.TIME_TO_FIX_RAN_OUT}:{key}",
@@ -689,7 +719,7 @@ class TellThePlayers:
         taken_by = game.seats_taken.get(event.player_id)
         await self._tell(
             [p for p in game.seated if p not in (event.player_id, taken_by)],
-            _notice(
+            notice_about(
                 NoticeKind.SOMEONE_LEFT,
                 game,
                 key=f"{NoticeKind.SOMEONE_LEFT}:{key}",
@@ -717,7 +747,7 @@ class TellThePlayers:
             return
         await self._tell(
             await self._offers.offered_among(game.game_id, wanting, at=at),
-            _notice(
+            notice_about(
                 NoticeKind.FILL_IN_ALERT,
                 game,
                 key=f"{NoticeKind.FILL_IN_ALERT}:{game.game_id}",
@@ -743,7 +773,7 @@ class TellThePlayers:
             share = await self._shares.of_player(game.game_id, leaver)
             await self._give.execute(
                 leaver,
-                _notice(
+                notice_about(
                     NoticeKind.GAME_CALLED_OFF,
                     game,
                     key=f"{NoticeKind.GAME_CALLED_OFF}:{key}",
@@ -797,7 +827,7 @@ class TellThePlayers:
             kind, reason = NoticeKind.SOMEONE_LEFT, NoticeReason.FELL_BACK
         await self._tell(
             [player for player in game.in_ if player not in opened],
-            _notice(
+            notice_about(
                 kind,
                 game,
                 key=f"{kind}:{key}",
@@ -853,7 +883,7 @@ class TellThePlayers:
     ) -> None:
         await self._tell(
             game.in_,
-            _notice(
+            notice_about(
                 NoticeKind.GAME_CALLED_OFF,
                 game,
                 key=f"{NoticeKind.GAME_CALLED_OFF}:{key}",
@@ -868,7 +898,7 @@ class TellThePlayers:
             return
         await self._give.execute(
             game.posted_by,
-            _notice(
+            notice_about(
                 NoticeKind.POST_DID_NOT_FILL,
                 game,
                 key=f"{NoticeKind.POST_DID_NOT_FILL}:{key}",
@@ -897,7 +927,7 @@ class TellThePlayers:
             return
         await self._tell(
             await self._decks.showing(game.game_id, game.named, at=at),
-            _notice(
+            notice_about(
                 NoticeKind.YOU_COMPLETE_IT,
                 game,
                 key=f"{NoticeKind.YOU_COMPLETE_IT}:{game.game_id}",
@@ -917,7 +947,7 @@ class TellThePlayers:
             return
         await self._tell(
             await self._decks.showing(card.game_id, event.player_ids, at=at),
-            _notice(
+            notice_about(
                 NoticeKind.NEW_GAME,
                 card,
                 key=f"{NoticeKind.NEW_GAME}:{key}",
@@ -937,7 +967,7 @@ class TellThePlayers:
         poster = (game.posted_by,) if game.posted_by in game.in_ else ()
         await self._tell(
             await self._decks.showing(game.game_id, dealt, at=at),
-            _notice(
+            notice_about(
                 NoticeKind.CHALLENGE,
                 game,
                 key=f"{NoticeKind.CHALLENGE}:{game.game_id}",
@@ -947,6 +977,136 @@ class TellThePlayers:
             at=at,
         )
 
+    # -- the court (#663) ----------------------------------------------------
+
+    async def _on_the_court(
+        self, game_id: UUID, *, at: Instant
+    ) -> tuple[CourtBrief, GameBrief] | None:
+        """A Competitive booked game's court, and the game a notice tells —
+        ``None`` for a For fun one, which is told none of these."""
+
+        court = await self._courts.of_game(game_id, at=at)
+        if court is None or not court.competitive:
+            return None
+        game = await self._games.about(court.booking_id, at=at)
+        return None if game is None else (court, game)
+
+    async def _not_here_yet(
+        self, event: AbsenceNoted, *, key: str, at: Instant
+    ) -> None:
+        """*Ivan is at Ogrody 33 and you're not there yet* — to the player
+        tapped, at once; one who arrived before this was delivered is awaited
+        by nobody."""
+
+        found = await self._on_the_court(event.game_id, at=at)
+        if found is None:
+            return
+        court, game = found
+        if event.player_id not in court.awaited:
+            return
+        await self._give.execute(
+            event.player_id,
+            notice_about(
+                NoticeKind.NOT_HERE_YET,
+                game,
+                key=f"{NoticeKind.NOT_HERE_YET}:{key}",
+                opens=Opens.RESULT,
+                people=(event.noted_by,),
+            ),
+            at=at,
+        )
+
+    async def _arrived(self, event: ArrivalNoted, *, key: str, at: Instant) -> None:
+        """*Oscar is at Ogrody 33* — to whoever tapped *isn't here yet* about
+        him; theirs is their own when they said *they're here* themselves."""
+
+        found = await self._on_the_court(event.game_id, at=at)
+        if found is None:
+            return
+        court, game = found
+        tapped_by = court.noted_by.get(event.player_id)
+        if tapped_by is None:
+            return
+        await self._tell(
+            (tapped_by,),
+            notice_about(
+                NoticeKind.AT_THE_CLUB,
+                game,
+                key=f"{NoticeKind.AT_THE_CLUB}:{key}",
+                opens=Opens.RESULT,
+                people=(event.player_id,),
+            ),
+            at=at,
+            whose_act=event.noted_by,
+        )
+
+    async def _were_they_there(
+        self, event: PresenceClaimed, *, key: str, at: Instant
+    ) -> None:
+        """*Was Oscar at Ogrody 33?* — to everybody else on the court who may
+        confirm it, by the end of the late claim's day; a claim confirmed
+        before this was delivered asks nobody."""
+
+        found = await self._on_the_court(event.game_id, at=at)
+        if found is None:
+            return
+        court, game = found
+        if event.player_id not in court.claimed:
+            return
+        await self._tell(
+            [player for player in court.vouching if player != event.player_id],
+            notice_about(
+                NoticeKind.WERE_THEY_THERE,
+                game,
+                key=f"{NoticeKind.WERE_THEY_THERE}:{key}",
+                opens=Opens.RESULT,
+                people=(event.player_id,),
+                until=court.claims_close_at,
+            ),
+            at=at,
+        )
+
+    async def _score_up(
+        self,
+        event: ResultProposed | ResultCorrected | ResultCountered,
+        *,
+        key: str,
+        at: Instant,
+    ) -> None:
+        """*Is that right?* — to those across the net from whoever put the
+        score up, whose agreement it waits on, and by when silence settles it.
+        A score agreed with before this was delivered asks nobody."""
+
+        found = await self._on_the_court(event.game_id, at=at)
+        if found is None:
+            return
+        court, game = found
+        await self._tell(
+            [
+                player
+                for player in court.to_agree
+                if court.sides.get(player) != event.side
+            ],
+            notice_about(
+                NoticeKind.IS_THAT_RIGHT,
+                game,
+                key=f"{NoticeKind.IS_THAT_RIGHT}:{key}",
+                opens=Opens.RESULT,
+                people=(event.player_id,),
+                reason=_SCORE_PUT_UP[type(event)],
+                until=court.settles_at,
+            ),
+            at=at,
+        )
+
+
+#: How a score went up, as *Is that right?* says it: put up, changed by its own
+#: side, or a different one from across the net.
+_SCORE_PUT_UP: Final[dict[type[Any], NoticeReason | None]] = {
+    ResultProposed: None,
+    ResultCorrected: NoticeReason.CORRECTED,
+    ResultCountered: NoticeReason.COUNTERED,
+}
 
 _Telling = Callable[..., Awaitable[None]]
 
@@ -978,6 +1138,12 @@ _TELLING: Final[dict[type[Any], _Telling]] = {
     YesResumed: TellThePlayers._one_seat_left,
     VersionDealt: TellThePlayers._dealt,
     Redealt: TellThePlayers._new_card,
+    AbsenceNoted: TellThePlayers._not_here_yet,
+    ArrivalNoted: TellThePlayers._arrived,
+    PresenceClaimed: TellThePlayers._were_they_there,
+    ResultProposed: TellThePlayers._score_up,
+    ResultCorrected: TellThePlayers._score_up,
+    ResultCountered: TellThePlayers._score_up,
 }
 
 #: What ``subscribe_the_teller`` hears.

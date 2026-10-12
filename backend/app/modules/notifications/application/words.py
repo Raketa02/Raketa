@@ -23,6 +23,13 @@ fits or whose card failed; the club's no and its silence read apart; and a
 leaver is told in a leaver's words — *which you left* — and never promised a
 new game.
 
+**Each new step at the court reaches the person it waits on** (#663): *isn't
+here yet* to the player awaited, *they're at the club* to whoever tapped it,
+*How did it go?* to all four when the hour ends, *Is that right?* across the
+net when a score goes up — saying when silence settles it, and that silence
+costs nothing — and *were they there?* to the courtmates of a player who says
+*I was there*.
+
 **A time to pay names its time and never its payer** (#625, #626; Q109, Q110):
 the payer reads *Confirm your payment by 14:40 to keep your seat*, the others
 *It's a game! · waiting for one payment until 14:40* — at the club's yes, *Your
@@ -314,6 +321,78 @@ def words_for(said: Said) -> Words:
     if kind is NoticeKind.FILL_IN_ALERT:
         return Words(
             title="A game you fit needs one more", body=f"{game} · {money} a seat."
+        )
+    if kind in _ON_THE_COURT:
+        return _on_the_court(said, sport=sport, game=game)
+    raise ValueError(f"no words for {kind}")
+
+
+#: The court's own notices (#663) — each opening the game's result screen.
+_ON_THE_COURT: Final = frozenset(
+    {
+        NoticeKind.NOT_HERE_YET,
+        NoticeKind.AT_THE_CLUB,
+        NoticeKind.HOW_DID_IT_GO,
+        NoticeKind.IS_THAT_RIGHT,
+        NoticeKind.WERE_THEY_THERE,
+    }
+)
+
+
+def _on_the_court(said: Said, *, sport: str, game: str) -> Words:
+    """**Each new step at the court, said to the person it waits on** (#663;
+    ``docs/adr/0195`` §3, §5): who is not here yet and who arrived, *How did
+    it go?* when the hour ends, *Is that right?* when a score goes up — when
+    silence settles it, and that silence costs nothing — and *were they
+    there?* when somebody who Didn't come says they were."""
+
+    who = _people(said.names)
+    hour = f"{sport} · {_hour(said.starts_at)}"
+    kind = said.kind
+    if kind is NoticeKind.NOT_HERE_YET:
+        return Words(
+            title=f"{who} is at {said.club} and you're not there yet",
+            body=f"Tap I'm here when you arrive — {hour}.",
+        )
+    if kind is NoticeKind.AT_THE_CLUB:
+        arrived = invariant(said.given_at, "an arrival told at no moment")
+        return Words(
+            title=f"{who} is at {said.club}",
+            body=f"{hour} — arrived at {arrived.astimezone(CLUB_ZONE):%H:%M}.",
+        )
+    if kind is NoticeKind.HOW_DID_IT_GO:
+        return Words(title="How did it go?", body=f"{game} — put the score up.")
+    if kind is NoticeKind.IS_THAT_RIGHT:
+        by = _by(
+            invariant(said.until, "a score that settles at no time"),
+            given_at=said.given_at,
+        )
+        where = f"{hour} at {said.club}."
+        if said.reason == NoticeReason.COUNTERED:
+            return Words(
+                title=f"Is that right? · {who} put a different score up",
+                body=f"{where} The two scores don't match — unless one side agrees "
+                f"with the other's by {by}, it settles then. Saying nothing costs "
+                "nothing.",
+            )
+        put = (
+            "changed the score"
+            if said.reason == NoticeReason.CORRECTED
+            else "put a score up"
+        )
+        return Words(
+            title=f"Is that right? · {who} {put}",
+            body=f"{where} If nobody answers by {by}, it becomes the result — "
+            "saying nothing costs nothing.",
+        )
+    if kind is NoticeKind.WERE_THEY_THERE:
+        by = _by(
+            invariant(said.until, "a claim confirmed by no time"),
+            given_at=said.given_at,
+        )
+        return Words(
+            title=f"Was {who} at {said.club}?",
+            body=f"{who} tapped I was there for {hour} — confirm it by {by} if so.",
         )
     raise ValueError(f"no words for {kind}")
 

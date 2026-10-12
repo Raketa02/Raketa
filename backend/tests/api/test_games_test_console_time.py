@@ -67,6 +67,7 @@ GAMES_JOBS = (
     "time-to-pay",
     "holding",
     "cut-off",
+    "how-did-it-go",
     "club-payouts",
     "new-bookings-summary",
     "rating-catch-up",
@@ -366,7 +367,9 @@ async def test_a_booked_game_counts_down_to_its_cut_off_and_its_days_close(
     client, session_factory, payments, clock, world
 ):
     """Booked on Monday morning for Saturday 17:00: its cut-off is Friday
-    17:00, the desk is told on Monday's close, and paid on Saturday's."""
+    17:00, the desk is told on Monday's close, the four are asked *How did it
+    go?* when its hour ends at 18:00 (#663), and the club is paid on
+    Saturday's close."""
 
     game = await a_card(session_factory, clock, world, world.bonarka)
     assert (await all_say_yes(client, game, world))["booked"] is not None
@@ -377,11 +380,13 @@ async def test_a_booked_game_counts_down_to_its_cut_off_and_its_days_close(
     assert moments_of(pane) == {
         "CUT_OFF": (at(warsaw(9, 17)), "cut-off"),
         "NEW_BOOKINGS_SUMMARY": (at(warsaw(5, 23)), "new-bookings-summary"),
+        "HOUR_ENDS": (at(warsaw(10, 18)), "how-did-it-go"),
         "CLUB_PAYOUT": (at(warsaw(10, 23)), "club-payouts"),
     }
     assert [m["moment"] for m in pane["moments"]] == [
         "NEW_BOOKINGS_SUMMARY",
         "CUT_OFF",
+        "HOUR_ENDS",
         "CLUB_PAYOUT",
     ]
 
@@ -439,6 +444,11 @@ async def test_a_moment_once_passed_is_no_longer_counted_down(
     game = await a_card(session_factory, clock, world, world.bonarka)
     await all_say_yes(client, game, world)
     clock.move(timedelta(days=4, hours=10))  # Friday 18:00, past the cut-off
+
+    pane = pane_of(await board_of(client, world.group), game)
+
+    assert set(moments_of(pane)) == {"HOUR_ENDS", "CLUB_PAYOUT"}
+    clock.move(timedelta(days=1))  # Saturday 18:00, the hour over
 
     pane = pane_of(await board_of(client, world.group), game)
 

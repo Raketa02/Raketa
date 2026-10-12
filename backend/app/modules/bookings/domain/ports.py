@@ -172,6 +172,13 @@ class BookingDirectory(Protocol):
         way (#544). **Candidates**: the aggregate decides."""
         ...
 
+    async def booked_starting(self, *, after: Instant, by: Instant) -> Sequence[UUID]:
+        """Every booked game, **whole**, whose hour starts after ``after`` and
+        by ``by`` — the soonest first, and by id among games at one hour: whose
+        players are asked *How did it go?* when it ends (#663). One waiting,
+        with a seat open or called off is not here."""
+        ...
+
 
 @runtime_checkable
 class BookingHistoryQuery(Protocol):

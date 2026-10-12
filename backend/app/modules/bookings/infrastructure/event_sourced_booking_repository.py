@@ -526,6 +526,18 @@ class SqlAlchemyBookingDirectory:
             booked.setdefault(club_id, []).append(booking_id)
         return booked
 
+    async def booked_starting(self, *, after: Instant, by: Instant) -> Sequence[UUID]:
+        rows = await self._session.scalars(
+            select(BookingORM.id)
+            .where(
+                BookingORM.state == BookingState.BOOKED.value,
+                BookingORM.start > after,
+                BookingORM.start <= by,
+            )
+            .order_by(BookingORM.start, BookingORM.id)
+        )
+        return list(rows.all())
+
     async def short_at_the_cut_off(self, *, now: Instant) -> Sequence[UUID]:
         rows = await self._session.scalars(
             select(BookingORM.id)
