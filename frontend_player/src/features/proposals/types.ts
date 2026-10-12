@@ -27,6 +27,8 @@ export { GamesAndMoneyScreen } from './components/GamesAndMoneyScreen';
 export { LiveYeses } from './components/LiveYeses';
 export { PaymentsToConfirm } from './components/PaymentsToConfirm';
 export { useGamesBadge } from './hooks/useGroupDeck';
+/** What the group page's pull re-reads on Games and on Fill in — the two tabs this feature draws. */
+export { useRereadGroupGames } from './hooks/useGroupDeck';
 /**
  * **A group's Fill in tab** (#557) — *Seats to fill* and *You're In*, drawn by the group page as its
  * Fill in tab, with the badge its tab reads; the page hands in the starting card for a tab with no

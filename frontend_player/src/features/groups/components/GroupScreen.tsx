@@ -47,8 +47,14 @@
  *
  * **Info re-reads on a pull, and each time it is come back to** (#529) — the group, who is waiting
  * and the members row with it — from another tab or from a screen pushed over the page (Members,
- * Edit group), so what another phone changed meanwhile is on it without a pull. Only Info: the
- * other three tabs are drawn for a sport and read their own rows.
+ * Edit group), so what another phone changed meanwhile is on it without a pull. Only Info is read
+ * again on the way back: the other three tabs are drawn for a sport and read their own rows.
+ *
+ * **Games and Fill in pull too** — the group, for the header and the starting cards, and every read
+ * `proposals` draws the two tabs from (`useRereadGroupGames`): the decks, Fill in, *You're In*'s
+ * yeses and their games. One control and one spinner for the page, re-reading what the tab on
+ * screen draws; Fill in's is the page's scroller's, and Games', which lays itself out, is handed
+ * to the deck, which puts it on whichever scroller it is in. Friends keeps none.
  *
  * **Every state has its drawing.** While the read is on its way the header has only its way back.
  * `group_not_found` is one sentence, because the server gives the same answer for *no such group*
@@ -67,6 +73,7 @@ import {
   forgetPostDraft,
   useFillInBadge,
   useGamesBadge,
+  useRereadGroupGames,
 } from '@/features/proposals/types';
 import { codeMessage } from '@/shared/errors';
 import { useOnReturn } from '@/shared/lib/platform';
@@ -172,7 +179,21 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
   const show = useGroupTab((state) => state.show);
   const setTab = (next: GroupTab) => show(groupId, next);
   const reread = useGroupReread(groupId);
-  const { refreshing, pull } = usePull(reread);
+  const rereadGames = useRereadGroupGames(groupId);
+  // Info is the group's; Games and Fill in are the group's and the games drawn on them.
+  const { refreshing, pull } = usePull(() =>
+    tab === 'info' ? reread() : Promise.all([reread(), rereadGames()]).then(() => undefined),
+  );
+  // The Shell's control, drawn as the Shell draws it.
+  const pullControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={pull}
+      tintColor={theme.color.muted}
+      colors={[theme.color.muted]}
+      progressBackgroundColor={theme.color.paper}
+    />
+  );
 
   // Coming back to Info is a look at it, so it is read again — from another tab, or back from a
   // screen pushed over the page.
@@ -264,6 +285,7 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
                   <GamesTab
                     group={group}
                     sport={playing}
+                    refreshControl={pullControl}
                     {...(card === undefined ? {} : { onTop: card })}
                   />
                 </View>
@@ -271,18 +293,7 @@ export function GroupScreen({ groupId, arrival }: GroupScreenProps) {
                 <ScrollView
                   testID="group-page-body"
                   contentContainerStyle={s.body}
-                  refreshControl={
-                    tab === 'info' ? (
-                      // The Shell's control, drawn as the Shell draws it.
-                      <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={pull}
-                        tintColor={theme.color.muted}
-                        colors={[theme.color.muted]}
-                        progressBackgroundColor={theme.color.paper}
-                      />
-                    ) : undefined
-                  }
+                  refreshControl={tab === 'friends' ? undefined : pullControl}
                 >
                   {/* Info is about the group rather than a sport, so it never waits for the filter. */}
                   {tab === 'info' ? (

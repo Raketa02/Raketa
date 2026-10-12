@@ -11,6 +11,7 @@
  */
 
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { RefreshControl } from 'react-native';
 
 import { RECORD_TITLE } from '@/features/player_record/types';
 import { FILL_COPY, FILL_IN_COPY, PROPOSALS_COPY } from '@/features/proposals/types';
@@ -262,6 +263,63 @@ describe('the Fill in tab (mock 11)', () => {
     refused = false;
     fireEvent.press(screen.getByRole('button', { name: PROPOSALS_COPY.readAgain }));
     expect(await screen.findByRole('header', { name: 'Seats to fill · 1' })).toBeTruthy();
+  });
+});
+
+describe('pulling Fill in', () => {
+  // The page's own scroller — the Groups list under it has a pull of its own (#529).
+  const pageBody = () => within(screen.getByTestId('group-page-body'));
+  const control = () => pageBody().UNSAFE_getByType(RefreshControl);
+  const pull = () => fireEvent(control(), 'refresh');
+
+  it('reads both sections again — a seat offered meanwhile, a yes said on another phone', async () => {
+    let rows: Wire['SeatToFillSchema'][] = [];
+    await openFillIn(() => rows);
+    expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
+
+    rows = [seatToFill()];
+    stubLiveYeses(transport, [yesInTheCrew()]);
+    await act(async () => {
+      pull();
+    });
+
+    expect(await screen.findByRole('header', { name: 'Seats to fill · 1' })).toBeTruthy();
+    expect(await screen.findByRole('header', { name: 'You’re In · 1' })).toBeTruthy();
+    // And the tab's badge with it, which is Seats to fill's own count.
+    expect(screen.getByRole('button', { name: 'Fill in, 1 seat to fill' })).toBeTruthy();
+    await waitFor(() => expect(control().props.refreshing).toBe(false));
+  });
+
+  it('takes off a row gone meanwhile', async () => {
+    let rows = [seatToFill()];
+    await openFillIn(() => rows);
+    expect(await screen.findByRole('header', { name: 'Seats to fill · 1' })).toBeTruthy();
+
+    // Somebody else took the seat.
+    rows = [];
+    await act(async () => {
+      pull();
+    });
+
+    expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
+    expect(screen.queryByText(/Seats to fill/)).toBeNull();
+  });
+
+  it('reads the group with it — the starting card counts who joined meanwhile', async () => {
+    let page: Wire['GroupResponse'] = { ...PAGE, member_count: 1 };
+    await openFillIn();
+    transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(page));
+    await act(async () => {
+      pull();
+    });
+    expect(await screen.findByText(GROUPS_COPY.fillIn.alone)).toBeTruthy();
+
+    page = { ...PAGE, member_count: 2 };
+    await act(async () => {
+      pull();
+    });
+
+    expect(await screen.findByText(GROUPS_COPY.fillIn.others)).toBeTruthy();
   });
 });
 

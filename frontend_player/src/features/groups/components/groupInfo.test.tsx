@@ -637,8 +637,8 @@ describe('pulling Info', () => {
     );
   });
 
-  // On a tab the page's scroller draws: Games lays itself out, outside it (#553).
-  it('is Info’s alone', async () => {
+  // Info, Games and Fill in pull; Friends, drawn by the page's scroller too, does not.
+  it('is not Friends’', async () => {
     await openInfo({ members: OWNED, policy: 'PEOPLE_I_APPROVE' });
     fireEvent.press(await tab('Friends'));
     await tab('Friends', true);

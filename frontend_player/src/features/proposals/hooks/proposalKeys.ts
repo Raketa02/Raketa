@@ -26,6 +26,11 @@ export const proposalKeys = {
   /** One group's deck, for one sport and one kind. */
   deck: (groupId: string, sport: Sport, kind: GameKind) =>
     [...proposalKeys.group(groupId), sport, kind] as const,
+  /**
+   * **A mutation key**: an answer to a card — the deck's, the details' and the fill's booked yes —
+   * so the deck can tell which cards have an answer on its way (`useAnswersOnTheirWay`).
+   */
+  answers: () => [...proposalKeys.all, 'answer'] as const,
   /** `GET /players/me/live-yeses` — every yes on a game still filling, across groups. */
   liveYeses: () => [...proposalKeys.all, 'live-yeses'] as const,
   /** `GET /players/me/payments-to-confirm` — the reader's refused shares, waiting for them (#555). */

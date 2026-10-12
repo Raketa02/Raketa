@@ -51,6 +51,7 @@ export function useBookingYes(handlers: FillHandlers<BookAsk>) {
 
   return useMutation<YesAnswer | null, AppError, BookAsk>({
     ...NOW_OR_NOT,
+    mutationKey: proposalKeys.answers(),
     mutationFn: ({ card }) =>
       answerCard({ proposalId: card.proposalId, said: 'yes', rescue: isRescue(card) }),
     onSuccess: (answer, ask) => {

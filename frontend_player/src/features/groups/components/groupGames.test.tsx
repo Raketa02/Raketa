@@ -20,7 +20,8 @@
 
 import { onlineManager } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
+import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
+import { RefreshControl } from 'react-native';
 
 import { PAYMENTS_COPY } from '@/features/payments/types';
 import { RECORD_TITLE } from '@/features/player_record/types';
@@ -343,6 +344,92 @@ describe('the states around the deck', () => {
     fireEvent.press(await screen.findByRole('button', { name: COPY.readAgain }));
 
     expect(await screen.findByLabelText(COPY.details)).toBeTruthy();
+  });
+});
+
+describe('pulling Games', () => {
+  // The deck's own scroller — the Groups list under the page has a pull of its own (#529).
+  const body = () => within(screen.getByTestId('games-deck-body'));
+  const control = () => body().UNSAFE_getByType(RefreshControl);
+  const pull = () => fireEvent(control(), 'refresh');
+
+  it('reads the deck again: a game dealt meanwhile is on it, one gone is off it', async () => {
+    const taken = deckCard();
+    const posted = deckCard();
+    let dealt = [taken];
+    await openGames(() => groupDeck({ cards: dealt }));
+    expect(await screen.findByTestId(`game-card-${taken.proposal_id}`)).toBeTruthy();
+
+    // The first game filled on other phones, and somebody posted another.
+    dealt = [posted];
+    await act(async () => {
+      pull();
+    });
+
+    expect(await screen.findByTestId(`game-card-${posted.proposal_id}`)).toBeTruthy();
+    expect(screen.queryByTestId(`game-card-${taken.proposal_id}`)).toBeNull();
+    await waitFor(() => expect(control().props.refreshing).toBe(false));
+  });
+
+  it('pulls on the starting card too, and the game dealt meanwhile takes its place', async () => {
+    const posted = deckCard();
+    let dealt: Wire['DeckCardSchema'][] = [];
+    await openGames(() => groupDeck({ cards: dealt }));
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+
+    dealt = [posted];
+    await act(async () => {
+      pull();
+    });
+
+    expect(await screen.findByTestId(`game-card-${posted.proposal_id}`)).toBeTruthy();
+    expect(screen.queryByText('Nothing picked right now')).toBeNull();
+  });
+
+  it('pulls on a read that failed, as the retry does', async () => {
+    let refused = false;
+    stubMyGroups(transport, [CREW]);
+    transport.on('GET', `/api/v1/groups/${CREW.id}`, () => json(PAGE));
+    transport.on('GET', deckPath(CREW.id), () => {
+      if (refused) return json(groupDeck({ cards: [deckCard()] }));
+      refused = true;
+      return errorResponse(429, 'rate_limited');
+    });
+    await launchSignedIn();
+    jest.setSystemTime(DECK_READ_AT);
+    fireEvent.press(await screen.findByLabelText('Play'));
+    fireEvent.press(await screen.findByRole('button', { name: /^Kazimierz crew,/ }));
+    expect(await screen.findByRole('button', { name: COPY.readAgain })).toBeTruthy();
+
+    await act(async () => {
+      pull();
+    });
+
+    expect(await screen.findByLabelText(COPY.details)).toBeTruthy();
+  });
+
+  it('reads the group with it — the starting card counts who is in it now', async () => {
+    await openGames();
+    expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+
+    // The four others who play padel left on their phones.
+    transport.on('GET', `/api/v1/groups/${CREW.id}`, () =>
+      json<Wire['GroupResponse']>({
+        ...PAGE,
+        rated_by_sport: [
+          {
+            sport: 'PADEL',
+            rated_count: 1,
+            first_rated: [{ player_id: GATE_USER.id, name: 'Ada Lovelace' }],
+          },
+        ],
+      }),
+    );
+    await act(async () => {
+      pull();
+    });
+
+    expect(await screen.findByText('Just you so far')).toBeTruthy();
   });
 });
 
@@ -703,6 +790,163 @@ describe('answering', () => {
 
     await waitFor(() => expect(toasts()).toEqual([[COPY.refused.proposal_is_full, 'bad']]));
     expect(await screen.findByText('Nothing picked right now')).toBeTruthy();
+  });
+});
+
+// Another player's yes reaches this deck on its next read (the mechanics §6.4, §8.2): the card it
+// rose to comes up next, and the card the player is reading is never swapped from under them.
+describe('the deck read again while it is answered', () => {
+  const READING = () =>
+    deckCard({ sides: { yours: [youTile(), KAROL()], theirs: [ANIA(), EWA()] } });
+  const pull = () =>
+    fireEvent(
+      within(screen.getByTestId('games-deck-body')).UNSAFE_getByType(RefreshControl),
+      'refresh',
+    );
+
+  /**
+   * The deck's route, as a slow server answers it once `slow` is on: each read is computed when it
+   * arrives (`atRequest`) or when it is let go, and waits in `out` until a test lets it go.
+   */
+  function slowDeck(dealt: () => Wire['DeckCardSchema'][]) {
+    const state = { slow: false, atRequest: false, out: [] as (() => void)[] };
+    transport.on('GET', deckPath(CREW.id), () => {
+      if (!state.slow) return json(groupDeck({ cards: dealt() }));
+      const computed = state.atRequest ? groupDeck({ cards: dealt() }) : undefined;
+      return new Promise<Response>((resolve) => {
+        state.out.push(() => resolve(json(computed ?? groupDeck({ cards: dealt() }))));
+      });
+    });
+    return state;
+  }
+
+  async function letGo(state: { out: (() => void)[] }) {
+    const out = state.out.splice(0);
+    await act(async () => {
+      for (const release of out) release();
+    });
+  }
+
+  it('keeps the card being read on top, its tiles fresh, and deals the game that rose behind it', async () => {
+    const reading = READING();
+    const rising = deckCard({ sides: { yours: [youTile(), ZOFIA()], theirs: [KUBA(), EWA()] } });
+    let dealt = [reading, rising];
+    await openGames(() => groupDeck({ cards: dealt }));
+    expect(await screen.findByLabelText('Karol Tomaszewski, level 2,75')).toBeTruthy();
+
+    // On their phones: Zofia and Kuba said yes to the second game, which now ranks first, and Karol
+    // to the one on screen.
+    dealt = [
+      {
+        ...rising,
+        in_count: 2,
+        open_seats_after_your_yes: 1,
+        sides: {
+          yours: [youTile(), ZOFIA({ is_in: true })],
+          theirs: [KUBA({ is_in: true }), EWA()],
+        },
+      },
+      {
+        ...reading,
+        in_count: 1,
+        sides: { yours: [youTile(), KAROL({ is_in: true })], theirs: [ANIA(), EWA()] },
+      },
+    ];
+    await act(async () => {
+      pull();
+    });
+
+    // The card under the thumb is the one it was, with Karol In on it; the risen game is behind it.
+    expect(await screen.findByLabelText('Karol Tomaszewski, level 2,75, In')).toBeTruthy();
+    expect(screen.queryByLabelText(/^Zofia Bielecka/)).toBeNull();
+    expect(screen.getByLabelText('Zofia Bielecka, level 2,69, In', HIDDEN_TOO)).toBeTruthy();
+
+    // Answered, it goes, and the risen game comes up next.
+    transport.on('POST', noPath(reading.proposal_id), () => noContent());
+    fireEvent.press(screen.getByRole('button', { name: COPY.no }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+
+    expect(await screen.findByLabelText('Zofia Bielecka, level 2,69, In')).toBeTruthy();
+  });
+
+  it('lets a slow read land while the player answers on, so a yes said meanwhile reaches the deck', async () => {
+    const first = READING();
+    const second = deckCard({ sides: { yours: [youTile(), KUBA()], theirs: [ANIA(), EWA()] } });
+    const third = deckCard({ sides: { yours: [youTile(), ZOFIA()], theirs: [KUBA(), EWA()] } });
+    let dealt = [first, second, third];
+    await openGames(() => groupDeck({ cards: dealt }));
+    await screen.findByLabelText('Karol Tomaszewski, level 2,75');
+    const server = slowDeck(() => dealt);
+    for (const card of [first, second]) {
+      transport.on('POST', noPath(card.proposal_id), () => {
+        dealt = dealt.filter((dealtCard) => dealtCard.proposal_id !== card.proposal_id);
+        return noContent();
+      });
+    }
+    server.slow = true;
+
+    // The first answer settles, and the deck is read again — slowly.
+    fireEvent.press(screen.getByRole('button', { name: COPY.no }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    await waitFor(() => expect(server.out).toHaveLength(1));
+    // The player answers the next card before that read is back.
+    expect(await screen.findByLabelText(/^Kuba Wiśniewski, level/)).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: COPY.no }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', noPath(second.proposal_id))).toHaveLength(1),
+    );
+    await act(async () => {});
+    // The second answer's re-read waits for the read already out, rather than throwing it away.
+    expect(server.out).toHaveLength(1);
+
+    // Meanwhile Zofia said yes to the third game on her phone.
+    dealt = [
+      {
+        ...third,
+        in_count: 1,
+        sides: { yours: [youTile(), ZOFIA({ is_in: true })], theirs: [KUBA(), EWA()] },
+      },
+    ];
+    // The read that was out comes back: it is drawn, not thrown away for the second answer's.
+    await letGo(server);
+
+    expect(await screen.findByLabelText('Zofia Bielecka, level 2,69, In')).toBeTruthy();
+    // One more read follows it, for the answer that settled while it was out — and only one.
+    await waitFor(() => expect(server.out).toHaveLength(1));
+    server.slow = false;
+    await letGo(server);
+  });
+
+  it('never deals back a card answered while a read that predates the answer was out', async () => {
+    const first = READING();
+    const second = deckCard({ sides: { yours: [youTile(), KUBA()], theirs: [ANIA(), EWA()] } });
+    let dealt = [first, second];
+    await openGames(() => groupDeck({ cards: dealt }));
+    await screen.findByLabelText('Karol Tomaszewski, level 2,75');
+    const server = slowDeck(() => dealt);
+    transport.on('POST', noPath(first.proposal_id), () => {
+      dealt = [second];
+      return noContent();
+    });
+    server.slow = true;
+    server.atRequest = true;
+
+    // A read goes out with both cards in it, and the first is answered before it is back.
+    await act(async () => {
+      pull();
+    });
+    await waitFor(() => expect(server.out).toHaveLength(1));
+    fireEvent.press(screen.getByRole('button', { name: COPY.no }));
+    act(() => jest.advanceTimersByTime(PAST_THE_FLIGHT));
+    await waitFor(() =>
+      expect(transport.requestsTo('POST', noPath(first.proposal_id))).toHaveLength(1),
+    );
+    server.slow = false;
+    await letGo(server);
+
+    expect(await screen.findByLabelText(/^Kuba Wiśniewski, level/)).toBeTruthy();
+    expect(screen.queryByTestId(`game-card-${first.proposal_id}`, HIDDEN_TOO)).toBeNull();
   });
 });
 

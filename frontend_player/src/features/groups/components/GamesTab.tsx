@@ -29,7 +29,8 @@
  * the headline has already said who is missing. *3 of 4* is a count and is drawn in mono (1.4).
  */
 
-import { StyleSheet, View } from 'react-native';
+import type { ReactElement } from 'react';
+import { StyleSheet, View, type RefreshControlProps } from 'react-native';
 
 import { GamesDeck } from '@/features/proposals/types';
 import { courtSeatCount, SeatFace, theme } from '@/shared/ui';
@@ -50,9 +51,11 @@ export interface GamesTabProps {
   readonly sport: Sport;
   /** The card a notice opened the deck at (#559) — on top while it is dealt. */
   readonly onTop?: string;
+  /** The page's pull, which the deck puts on whichever scroller it is in. */
+  readonly refreshControl?: ReactElement<RefreshControlProps>;
 }
 
-export function GamesTab({ group, sport, onTop }: GamesTabProps) {
+export function GamesTab({ group, sport, onTop, refreshControl }: GamesTabProps) {
   const chosen = useGameIntent((state) => state.intent);
   const choose = useGameIntent((state) => state.choose);
 
@@ -64,6 +67,7 @@ export function GamesTab({ group, sport, onTop }: GamesTabProps) {
       onChoose={choose}
       empty={<StartingCard group={group} sport={sport} />}
       {...(onTop === undefined ? {} : { onTop })}
+      {...(refreshControl === undefined ? {} : { refreshControl })}
     />
   );
 }
