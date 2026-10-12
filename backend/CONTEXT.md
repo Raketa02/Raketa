@@ -305,8 +305,8 @@ there; they are not repeated here.
   replaced *one identity at a time*. **The acting club** is the club-row twin (#591): the
   club whose court it is, named in `/dev/clubs/{club_id}/…`, refused the same way unless its
   desk signs in on the reserved TLD, and its buttons sit on its game's pane under its name.
-  The club has no *no-show* button — a player on the court reports one, and the desk's scan
-  is evidence, never a verdict (the mechanics §15.3, §16.10). _Avoid_: *impersonation*,
+  The club has no attendance button — whether somebody came is caught by the players at the
+  court (the mechanics §15.1, #657), and the club sees none of it. _Avoid_: *impersonation*,
   *logged in as*, a press that does not name who it acts as.
 - **Provider controls** — the dev console's steering of the **in-process fake** payment
   provider, the one a laptop moves money through (#591; `app/api/dev/provider.py`): a seed

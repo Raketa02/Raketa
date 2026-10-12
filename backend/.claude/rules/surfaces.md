@@ -25,7 +25,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (#590). A no-build `console.html` at `/dev`, out of the contract; the roster the phone signs
   in from; and a route per thing the page presses — a person's buttons under
   `/dev/as/{player_id}/…` (the answers to a card, #590; leaving, a rescue's seat, the
-  posting sheet and the post, a score, an agreement, a no-show and its dispute, #593 — a
+  posting sheet and the post, a score, an agreement, #593; *isn't here yet*, *I'm here*,
+  *they're here* — each **at the club or away**, the press building the fix on the club's
+  point (`GameClubs.of`) or 2 km north of it — *I was there* and *yes, they were here*,
+  #657 — a
   *Join* is their yes), the club's under `/dev/clubs/{club_id}/…` (#591), the payment
   provider's controls under `/dev/payments/…` (#591), a group's board under `/dev/groups`,
   the situations under `/dev/situations/…`, *Run it now* under `/dev/jobs/{job}` — the

@@ -765,8 +765,8 @@ about how good anybody is — that is the rating context reading this one.
   **Played · no score**, and a game somebody **Didn't come** to — except **Called off**, which is
   announced, and **Started short**, which the hour reads off a line-up with a seat still open.
   Since [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) (2026-10-11; built by
-  [#654](https://github.com/Raketa02/Raketa/issues/654) and
-  [#655](https://github.com/Raketa02/Raketa/issues/655), not yet by
+  [#654](https://github.com/Raketa02/Raketa/issues/654),
+  [#655](https://github.com/Raketa02/Raketa/issues/655) and
   [#657](https://github.com/Raketa02/Raketa/issues/657)) *Played · no score* replaces *Never
   played*, *Disputed* is where two scores naming different winners end, and *Didn't come*
   replaces the no-show report. **Called off says who**: `called_off_by`, or nobody when it
@@ -831,7 +831,7 @@ about how good anybody is — that is the rating context reading this one.
   [#655](https://github.com/Raketa02/Raketa/issues/655) as `PLAYED_NO_SCORE`). A court whose
   window closes with a seat still open is never one: it went ahead short.
 - **Tap window** — from a booked game's start to 30 minutes after it, the first half of a one-hour
-  game: when attendance is caught at the court (ADR-0195 §3, not yet built —
+  game: when attendance is caught at the court (ADR-0195 §3, built by
   [#657](https://github.com/Raketa02/Raketa/issues/657)).
 - **Isn't here yet** — the tap a player on the court makes, **at the club**, in the tap window,
   about another player on the court who hasn't arrived. Never about yourself, never while you are
@@ -847,21 +847,29 @@ about how good anybody is — that is the rating context reading this one.
   player against the server's clock, never the phone's.
 - **I was there** — the absent player's late claim, within 24 hours of the tap window closing,
   for a phone that died. A courtmate confirms it with **Yes, they were here**, and *Didn't come*
-  becomes *Came late*: the tap still proves they weren't there when it was made.
-- **At the club** — the verdict an attendance act carries: the phone's one-shot fix, read only at
-  the tap, within **300 m** of the club's map point, allowing for the fix's own stated accuracy up
-  to 200 m. The Game is given only the verdict; **the coordinates are never stored**.
+  becomes *Came late*: the tap still proves they weren't there when it was made. Built by #657
+  with two calls made without a ruling: **the claim and its confirmation carry no location**
+  (they are made a day later, from wherever; the courtmate is the proof), and **a player who
+  Didn't come can't confirm anybody** (two absentees can't vouch for each other).
+- **At the club** — the verdict a tap in the **tap window** carries (*isn't here yet*, *I'm
+  here*, *they're here*): the phone's one-shot fix, read only at the tap, within **300 m** of the
+  club's map point, allowing for the fix's own stated accuracy up to 200 m. The Game is given
+  only the verdict; **the coordinates are never stored**. The windows are half-open: an arrival
+  at exactly 10 minutes is *Came late*, and a tap at exactly 30 minutes is refused (a call,
+  #657). A score put up and still waiting for its answer stops no tap, and counts for nothing
+  if the player tapped never comes (a call, #657).
 - **No-show report** — *retired 2026-10-11* (ADR-0195 §3). The players who came marked one who
   did not, from anywhere, for a day after the hour; the reported player had a day to dispute it,
   and a player the club checked in could not be reported. It is replaced by **Isn't here yet** and
   the **Arrival**, made at the court. Its events stay decodable and fold to nothing, and a game
   that held one reads *Played · no score*.
 - **Standing** — what a game *is* right now: `AWAITING_ENTRY`, `PLAYED_NO_SCORE`,
-  `AWAITING_ANSWER`, `CONFIRMED`, `UNSCORED`, `DISPUTED`, `CALLED_OFF`, `STARTED_SHORT`,
-  `NO_SHOW_REPORTED`, `NO_SHOW`. ADR-0195 changes the list: `DISPUTED` came with #654 and
-  `PLAYED_NO_SCORE` took `NEVER_PLAYED`'s place with #655; `NO_SHOW_REPORTED` and `NO_SHOW` go,
-  and somebody **not here yet** and **Didn't come** come, with #657, which names their codes. Two scores now
-  end confirmed or disputed, so `UNSCORED` is left with no case (#654 settles its code). **Derived from
+  `AWAITING_ANSWER`, `CONFIRMED`, `DISPUTED`, `CALLED_OFF`, `STARTED_SHORT`, `NOT_HERE_YET`,
+  `DIDNT_COME`. ADR-0195 changed the list: `DISPUTED` came with #654, `PLAYED_NO_SCORE` took
+  `NEVER_PLAYED`'s place with #655, and with #657 somebody **not here yet** (`NOT_HERE_YET`, a
+  wait in the tap window) and **Didn't come** (`DIDNT_COME`, which a confirmed *I was there*
+  can still undo for a day) took `NO_SHOW_REPORTED`'s and `NO_SHOW`'s places, and `UNSCORED`
+  left with the no-show report, its last case. **Derived from
   the record and the clock, never stored** — and
   never announced, with one exception: `CALLED_OFF` is a decision, folded off `GameCalledOff` and
   read first ([ADR-0163](docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)). It is an

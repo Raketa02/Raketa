@@ -56,10 +56,12 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   only staleness horizon left. **The published figure has no observation bar**, which is
   deliberate: on the sheet the honesty mechanism is printing the fraction. The per-strand bars
   and the two per-mode strand vectors were the matcher's ruleset and went with it (#580).
-- **A confirmed no-show is the strongest mark because it is two** (#547; the mechanics §15.4):
-  a miss on *shows up* (`attendance_for` reads a `NO_SHOW` game per player) and a broken booked
-  game on *keeps plans* (`keeping_of(…, no_shows=)` over `bookings`' `GameNoShows`), where an
-  ordinary mark is *keeps plans* alone. No weight moved and no ruleset release. A game the
+- **Didn't come is the strongest mark because it is two** (#547, #657; the mechanics §15.4),
+  until #659 prices it once on *shows up*: a miss on *shows up* (`attendance_for` reads a
+  `DIDNT_COME` game per player, once the late claim's day is over — `Game.didnt_come_at`) and a
+  broken booked game on *keeps plans* (`keeping_of(…, no_shows=)` over `bookings`'
+  `GameNoShows`), where an ordinary mark is *keeps plans* alone. **Came late counts as turned
+  up** until then: a Came late player is on the court of a played game. No weight moved and no ruleset release. A game the
   club cancelled is on nobody's record. See `bookings.md`. **It is the only miss on *shows
   up* since #655**: a full court nobody recorded is `PLAYED_NO_SCORE`, played for everybody on
   it, and the ghost charged to the whole court retired with `NEVER_PLAYED`

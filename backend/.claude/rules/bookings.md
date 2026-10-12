@@ -295,10 +295,10 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   deck's people and forecasts. **Home's read is bounded** (#613): the bookings are read only
   from `on_home_since` — the earliest hour a game can still ask anything of its players, off
   the games' own clocks (`windows.A_BOOKED_GAME_NEEDS_ITS_PLAYERS_FOR`: the hour, the entry's
-  day, then a day for a score's answer or a report's dispute) — and of those a card is sent
-  only while it is live, ended less than a day after its hour's end (the phone's own shelf),
-  or `needs_you` (`domain/home.py`'s `on_home`), so the badge counts what it always did and an
-  *uncounted* card whose report the reader may still dispute outlives the shelf. **A score
+  day, then a day for a score's answer; a late *I was there* closes inside it, #657) — and of
+  those a card is sent only while it is live, ended less than a day after its hour's end (the
+  phone's own shelf), or `needs_you` (`domain/home.py`'s `on_home`), so the badge counts what
+  it always did. **A score
   put on the table again reaches further back**: a correction re-dates its side's score and
   may be made again while the other side has not answered, so an older game is still read
   when a score may still wait on it (`GameResults.waiting_among`, over `games`' `ScoredGames`:
@@ -485,7 +485,8 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   *called off* — refused, no answer (read off the
   clock from `answer_by`), short at the cut-off, or cancelled — *played* once the hour is over
   (never recorded: a `BookingPlayed` event was in the screens' C1 and is not built; a game
-  that went ahead short, or one somebody did not come to, is *played* — the club is paid),
+  that went ahead short, or one somebody Didn't come to, is *played* — the club is paid and
+  sees no attendance, #657),
   else *seat open* or *booked*. **What the club sees of a player is the name, `paid` (a
   charge `TAKING`/`CAPTURED`, `BookingTakings` over each booking's Seat charges — one
   `of_game` read per booking listed) and `held` (a charge `HELD` until the cut-off,
@@ -524,26 +525,23 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   and **folds to nothing** but the stream's version, and a stored
   `clubs.raketa_settings_changed` keeps decoding its `check_in`, which nothing reads (a row
   saved since carries `null`) — `tests/unit/test_retired_check_in_rows_still_fold.py`.
-- **Somebody did not come: the report is the Game's** (#547; `games/domain/game.py`,
-  `standing.py`, `games/application/no_shows.py`; the mechanics §15.3–§15.4). On a **booked**
-  game (`starts_at`) whose hour has come, inside its entry window, with nothing entered, a
-  player on the court reports another (`POST /games/{id}/no-shows`, `NoShowReported`); a
-  reported player disputes inside **24 hours** (`POST /games/{id}/no-shows/dispute`,
-  `NoShowDisputed`, `NO_SHOW_DISPUTE_WINDOW`). **Nothing at a club's desk is asked** (#651):
-  a check-in stored before the removal stops no report. A report **is the game's entry**: a
-  score is refused beside one (`a_result_is_entered`, `a_no_show_is_reported`), and **the
-  game does not count whatever it comes to**. Standings: `NO_SHOW_REPORTED` while any
-  undisputed report's day runs (not settled — a later report or a dispute may still come),
-  then `NO_SHOW` (settled, in no tally, not rateable) once one undisputed report stood its day;
-  **every report disputed is `UNSCORED`** — nobody arbitrates, as with two scores — an
-  evening on nobody's record. History is dated from the first report. **The strongest mark is
-  two strands**: a stood report is a miss on *shows up* (`attendance_for` reads `NO_SHOW` per
-  player: the absent missed, everybody else played) **and** a broken booked game on *keeps
-  plans* (`keeping_of(…, no_shows=)`, fed by `GameNoShows` once the hour has come); an
-  ordinary mark is *keeps plans* alone. Home reads *uncounted · `NO_SHOW`* from the report on
-  (`needs_you` for the reported player while they may dispute — `Game.may_dispute`, their
-  own report's day); a disputed one is plain
-  *uncounted*. The reporter is not on the wire.
+- **Somebody Didn't come: caught at the court, and the Game's** (#657, replacing #547's
+  report; ADR-0195 §3; written up in `games.md`). A player at the club taps *isn't here yet*
+  in the first 30 minutes; no arrival by then is **Didn't come**, and a confirmed *I was
+  there* within a day makes it Came late. **Nothing at a club's desk is asked** (#651): a
+  check-in stored before the removal stops no tap, and the club sees no attendance. The
+  Game's club is the booking's: **`GameClubs`** (`infrastructure/game_clubs.py`,
+  `BookedGameClubs`) answers where it is, and how far a position is from it, for an attendance
+  tap. **The strongest mark is two strands, until #659 prices it once**: a final *Didn't
+  come* (`Game.didnt_come_at`, the late claim's day over) is a miss on *shows up*
+  (`attendance_for` per player: the absent missed, everybody else — late or not — played)
+  **and** a broken booked game on *keeps plans* (`keeping_of(…, no_shows=)`, fed by
+  `GameNoShows` once the hour has come); an ordinary mark is *keeps plans* alone, and a Came
+  late player kept it. Home reads *uncounted · `DIDNT_COME`* from the tap window's end, and
+  *needs result* while somebody is not here yet (`NOT_HERE_YET`, the game still being
+  played) — `needs_you` then only for the player awaited, whose *I'm here* it is; and
+  `needs_you` while a late claim waits on the reader — their own *I was there*, or somebody
+  else's to confirm (`Game.attendance_waits_on`). Who tapped is not on the wire.
 - **The club's money, and its day of new bookings** (#548; the mechanics §16.11, §16.12;
   the screens B7, B9). **The Money page** is Proposals', beside the Bookings page
   (`application/club_money.py`): `GET /api/v1/club/money?month=YYYY-MM` reads every booking

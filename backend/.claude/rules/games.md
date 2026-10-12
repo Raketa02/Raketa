@@ -111,8 +111,8 @@ from the code.
   the same winner, `CONFIRMED` with the **closer** (`Score.margin`, games won across every set;
   a tie goes to the first put up); naming different winners, **`DISPUTED`** — in `SETTLED` and
   in `PLAYED`, no Level moves, and `Game.left_in_dispute_by` names the two who put the scores
-  up (the record's *Results left in dispute*, read by #659). `UNSCORED` is reached now only by
-  a booked game every no-show report of was disputed, and goes with the report (#657). **A
+  up (the record's *Results left in dispute*, read by #659). `UNSCORED` went with the no-show
+  report, its last case (#657). **A
   correction is refused once the entry window has closed** (`corrections_have_closed`); a
   counter is not a correction and stays open while the score it answers waits. **For fun asks
   nothing**: its first score is the result at once, nobody is asked
@@ -134,17 +134,65 @@ from the code.
   [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
   §2). It replaced `NEVER_PLAYED` — the ghost charged to the whole court — on the wire too
   (`GameStanding`, and Home's `HomeStatus`/`ResultStage`). `standing_of` reaches it when the
-  entry window closes with nobody having said *we played*, no report of not coming, and the
+  entry window closes with nobody having said *we played*, nobody **Didn't come**, and the
   court **full**. It is in `SETTLED` **and in `PLAYED`**, so everything that reads *played*
-  reads it with no branch of its own: *shows up* credits everybody on the court (a stood
-  no-show report is the only miss left — `Attendance.missed`, which was `ghosts`, and
+  reads it with no branch of its own: *shows up* credits everybody on the court (a final
+  *Didn't come* is the only miss left — `Attendance.missed`, which was `ghosts`, and
   `PlayedOutcome` is gone), it is a **counted game** for who they have played with
   (`_counted_and_played`, variety), and sportsmanship draws a card for it. It has **no
   score, no outcome and no Level** — nothing in `ConfirmedResultLedger`. Its moment
   (`became_history_at`) is the entry window closing; its card's (`GamesSettledCourts`) is the
-  **booked hour**, since nobody said when. A score or a report after it still meets
+  **booked hour**, since nobody said when. A score after it still meets
   `the_entry_window_has_closed`.
-- **A booked game takes a report of somebody not coming, and its club's cancel** (#547): two
-  standings (`NO_SHOW_REPORTED`, `NO_SHOW`), a 24-hour dispute that falls to `UNSCORED` — no
-  desk check-in asked since #651 — and `Game.call_off_whole` — a booked game called
-  off by nobody whole or with a seat open. Written up in `bookings.md`'s last bullet.
+- **Turning up is caught at the court** (#657;
+  [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  §3; `domain/attendance.py`, `application/attendance.py`). **Only a real absence starts
+  anything**: nothing is recorded about a player nobody tapped. Four acts on the Game, four
+  events, four routes under `POST /games/{id}/attendance/…`: **`not-here-yet`**
+  (`note_absent`, `AbsenceNoted`) by a player on the court about another, partner included,
+  never yourself, never while yourself awaited or Didn't come; **`arrival`** (`note_arrival`,
+  `ArrivalNoted`) — *I'm here* naming yourself, *they're here* a courtmate — about somebody
+  tapped, the first one counting; both only in the **tap window** (`TAP_WINDOW`, the start to
+  30 min after it, `the_tap_window_has_closed` from 17:30) and only **at the club**;
+  **`claim`** (`claim_presence`, `PresenceClaimed`) — *I was there* — by the player who Didn't
+  come, from the window's end for **`LATE_CLAIM_WINDOW`** (a day); and **`confirmation`**
+  (`confirm_presence`, `PresenceConfirmed`) by anybody else on the court inside the same day
+  (a call: refused from a player who Didn't come themselves — two absentees cannot vouch for
+  each other). **The outcome is folded per player** (`attendance.state_of`, against the
+  server's clock): the arrival within `ON_TIME_GRACE` (10 min) is **on time** — nothing
+  recorded, the row reads `ON_TIME`; after it **Came late**; no arrival by the window's end
+  **Didn't come**, provisional until the late claim's day ends (`CLAIMED` while a claim waits),
+  and a confirmed claim is `CONFIRMED`, Came late. **Two standings come of it**, read right
+  after `STARTED_SHORT`: `NOT_HERE_YET` while anybody is awaited, and **`DIDNT_COME`** once
+  anybody Didn't come — no score and no agreement is taken beside either
+  (`somebody_is_not_here_yet`, `somebody_did_not_come`), in no tally, and **not in
+  `SETTLED`**, because a confirmation brings the ordinary game back, score and Level
+  included. A Came late game carries on as usual. **A score still waiting for its answer
+  stops no tap** (a call): the entry window opens at the hour and a score carries no
+  location, so an absent player's side could otherwise post one from home at 17:00 and never
+  be caught — it waits with the game and counts for nothing if they never come; only a
+  **settled** result refuses a tap (`the_result_is_settled` — a For fun score settles at
+  once, the one way left round it). **The windows are half-open**: an arrival at exactly
+  17:10 is Came late, and a tap at exactly 17:30 is refused. `Game.didnt_come_at` is the final set — the record's (`attendance_for` per player,
+  `bookings`' `GameNoShows` on *keeps plans*: the old strongest mark until #659), and
+  `Game.attendance_waits_on` is Home's `needs_you` — the awaited player's *I'm here*, the
+  absent player's *I was there*, a courtmate's confirmation; while somebody is not here yet
+  Home reads *needs result* and needs nobody else. **At the club** is
+  decided in the application layer: the tap's one-shot fix (`LocationFix`, whose repr
+  withholds it) goes to the inward demand **`GameClubs`** — the booking's club and its map
+  point, measured with the platform's great-circle `distance_km`, signed by `bookings`
+  (`bookings/infrastructure/game_clubs.py`), since `games` imports neither `bookings` nor the
+  matcher — and the Game is handed only a `ClubVerdict`: within `AT_THE_CLUB_WITHIN_M` (300 m),
+  allowing the fix's own accuracy up to `ACCURACY_ALLOWED_UP_TO_M` (200 m). **The
+  coordinates are never stored** — no event field, no log, no table; an event a tap writes is
+  itself the record of *at the club, at that time*, since one from anywhere else is refused
+  (`not_at_the_club`, *You can say so only from Ogrody 33.*). **The late claim and its
+  confirmation carry no fix** (a call: they are made a day later, from wherever, and what
+  proves them is the courtmate). **Every refusal is a plain sentence** on `message`.
+  **The no-show report is retired** (ADR-0195 §9): `games.no_show_reported` and
+  `games.no_show_disputed` stay registered, decode and fold to nothing, so a game that held a
+  report reads `PLAYED_NO_SCORE`; the routes, `NO_SHOW_REPORTED`, `NO_SHOW` and `UNSCORED` are
+  gone. Tested in `tests/unit/test_attendance_at_the_court.py` and
+  `tests/api/test_attendance_at_the_court.py`.
+- **A booked game is called off whole by its club** (#547): `Game.call_off_whole` — called
+  off by nobody, whole or with a seat open. Written up in `bookings.md`.

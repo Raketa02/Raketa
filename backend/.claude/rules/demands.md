@@ -74,11 +74,14 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   free court of a club at an hour with its cut-off and time to confirm, and a club's desk —
   both the Club context's facts — and the Games context's: the ordinary Game a booking opens
   (`GameOpening`, #541, registered by #544), what leaving, a rescue, the cut-off and the
-  club's cancel do to it (`GameChanges`, #544, #545, #547), and who did not come to it
-  (`GameNoShows`, #547), which the record reads. **`game_demands.py` gained its third row
-  with #547**: who the club's desk checked in (`ClubCheckIns`), the booking's fact a no-show
-  report asked first — signed by `bookings`; it went with desk check-in (#651), and the
-  register is the pairing's one row.
+  club's cancel do to it (`GameChanges`, #544, #545, #547), and who Didn't come to it
+  (`GameNoShows`, #547 — a stood report then, a final *Didn't come* since #657), which the
+  record reads. **`game_demands.py` gained its third row with #547**: who the club's desk
+  checked in (`ClubCheckIns`), the booking's fact a no-show report asked first — signed by
+  `bookings`; it went with desk check-in (#651). **Its second row now is `GameClubs`**
+  (#657): where a booked game's club is — its name and map point, and how far a position is
+  from it in great-circle metres — signed by `bookings` (`BookedGameClubs`), so an attendance
+  tap is measured against the place the game is played.
   **The twelfth, `bookings_demands.py`, is what Bookings publishes** (#544), beside its
   consumer register as `games_demands.py` stands beside `game_demands.py`: who kept the booked
   games they held a seat on (`BookingHistoryQuery`), *keeps plans*' input.

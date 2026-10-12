@@ -55,8 +55,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `PlayerNames`' lives in `games`; *settled* there is narrowed to **played and over**,
   because a game called off or started short has nobody to rate, and a disputed game very
   much does — and so does a full court nobody recorded (`PLAYED_NO_SCORE`, #655), whose card
-  runs from its **booked hour**, since nobody said when (an unscored one is now only a
-  no-show every report of was disputed, which nobody said they played — no card). **The card's two
+  runs from its **booked hour**, since nobody said when (*unscored* retired with the no-show
+  report, #657; a game somebody **Didn't come** to is in neither set — no card). **The card's two
   clocks are domain and neither is configuration** (`domain/window.py`): it opens the day
   after the game — an answer given ten minutes after losing badly is not the answer wanted —
   and closes seven days later. Both edges run from `games`' `played_at`, which is *the moment
