@@ -104,8 +104,18 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
     kind are the event's, and kept on the notice** (`Notice.court_name`, `indoor` →
     `NoticeGiven` → `notices`, migration 0059, defaulted `None` for every other kind and
     every row before), so the row reads *Court 3 · indoor* after a second move too; a
-    notice told without them says *another court*. The move by cancel's wording — *Court 2
-    can't be played* — is #672's.
+    notice told without them says *another court*.
+  - **A move by cancel says why** (#672; the mechanics §16.9, Q122): the same `GAME_MOVED`,
+    told off the same `bookings.court_moved`, which then carries the cancel's `reason` and
+    the court it left (`moved_from`) — *Bonarka Arena moved your game to Court 3 · Thu
+    19:00* / *Court 2 can't be played · Padel · indoor · nothing else changes*, the court
+    left worded per reason (`words.py`'s `_CANNOT_BE_PLAYED`): *can't be played in this
+    weather*, *can't be played* (repair), *was booked twice*, *isn't available* (other) —
+    a call, since the mechanics give *can't be played* alone. The reason rides on
+    `notices.reason`; the court left is kept on the row (`Notice.moved_from` →
+    `NoticeGiven` → `notices.moved_from`, migration 0060, `None` on every other kind and
+    every row before), so it too reads the same after a second move. Nothing about the
+    money is told: nothing moved.
 - **A time to pay names its time and never its payer** (#625, #626; Q109, Q110). Always
   on, never capped, and emailed only where money is — the payer's confirm email:
   - **`CONFIRM_PAYMENT`** with `until` — *Confirm your payment by 14:40 to keep your seat* /

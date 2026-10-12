@@ -31,7 +31,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   #657 — a
   *Join* is their yes), the club's under `/dev/clubs/{club_id}/…` (#591; the move press
   lists each free court with its kind, *→ Court 3 · indoor*, and the pane names the booked
-  court's, #671), the payment
+  court's, #671; *Cancel* says whether it moved the game and where, beside *Cancel
+  anyway*, #672), the payment
   provider's controls under `/dev/payments/…` (#591), a group's board under `/dev/groups`,
   the situations under `/dev/situations/…`, *Run it now* under `/dev/jobs/{job}` — the
   scheduler's own job name (#592; #591's club's answer window went with On request, #669) —

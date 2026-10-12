@@ -60,7 +60,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   (`PlayerBookings.rescues_in`), a seat taken or declined, and a seat-taken refund — and since
   #546 the pair rule and a player's level window (`PlayerFit`) and each member's Level, week,
   gender and preference (`PlayersInPlay`) — and since #547 the club's bookings as its desk
-  reads and runs them (`ClubBookings`), what each took and gave back (`BookingTakings`), the
+  reads and runs them (`ClubBookings` — since #672 with the cancel's preview and a move by
+  cancel), what each took and gave back (`BookingTakings`), the
   group each pool is (`PoolOrigins`) — `DeskCheckIns`, whether a club checked players in,
   went with desk check-in (#651) — and since #639 the shares checked at the fill and held
   at their Holding time (`CheckedShares`, registered over a fresh fake: what is due and a
@@ -72,7 +73,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   The rest of the deck's, the proposer's and the fill's ports (#538–#541) were contracted
   over HTTP only and are owed rows there.
   **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first
-  free court of a club at an hour with its cut-off, and a club's desk —
+  free court of a club at an hour with its cut-off — and every free court, each with its
+  kind (#671) and its share, which a club's cancel asks before a court absorbs it (#672) —
+  and a club's desk —
   both the Club context's facts — and the Games context's: the ordinary Game a booking opens
   (`GameOpening`, #541, registered by #544), what leaving, a rescue, the cut-off and the
   club's cancel do to it (`GameChanges`, #544, #545, #547), and who Didn't come to it

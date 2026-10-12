@@ -570,8 +570,9 @@ signed in as the protagonist (an address from the roster, and the one seed passw
   *Refresh* covers the rest — nothing on the page acts on its own.
 - **The club** acts from its game's pane, as the club whose court it is:
   *Move* to a free court of the same kind, or an indoor one for an outdoor game — each
-  listed with its kind — and *Cancel* with a reason —
-  `/dev/clubs/{club_id}/…`, each the desk's own route's use case. (Attendance is the
+  listed with its kind — *Cancel* with a reason, which moves the game when another free
+  court of the club's absorbs it and says where (#672), and *Cancel anyway*, which calls it
+  off all the same — `/dev/clubs/{club_id}/…`, each the desk's own route's use case. (Attendance is the
   players' at the court, never the club's.)
 - **The payment provider** is the backend's in-process fake, steered: each row's saved card
   set to pay, decline or ask for the bank's check; *Bank confirms* on a payment that waits

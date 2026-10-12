@@ -411,8 +411,10 @@ unregistered and the local store reset, so the last yes books the game at every 
   proposals'** — a cancel refunds and owes a new card, and every act locks the game's
   proposal row first: `GET /api/v1/club/bookings?date&filter` (one club calendar day,
   07:00–23:00, every state; `ALL`, `SEAT_OPEN`, `CALLED_OFF`, with the whole day's
-  `counts`), `GET …/{id}/free-courts`, `POST …/{id}/move` (`{court_id}`) and
-  `POST …/{id}/cancellation` (`{reason}`). **The club's status is folded on every read**:
+  `counts`), `GET …/{id}/free-courts`, `POST …/{id}/move` (`{court_id}`),
+  `GET …/{id}/cancellation/preview?reason` and `POST …/{id}/cancellation`
+  (`{reason, anyway}`, answering `MOVED` with the court or `CALLED_OFF`, #672). **The
+  club's status is folded on every read**:
   *called off* — short at the cut-off, or cancelled — *played* once the hour is over
   (never recorded: a `BookingPlayed` event was in the screens' C1 and is not built; a game
   that went ahead short, or one somebody Didn't come to, is *played* — the club is paid and
@@ -438,8 +440,28 @@ unregistered and the local store reset, so the last yes books the game at every 
   the deck's `SEAT_OPEN` card and the club's row carry `indoor`, folded off the booking,
   so the kind follows a move — and **a move wakes the proposer** (`CourtMoved` in
   `MarkDueForProposing`'s `CLUB_EVENTS`), since the court it left is free at the hour again;
-  every player on the booking is told *Game moved* (`notifications.md`). **Cancel**
-  (`CancelledByClub`, reason `WEATHER`/`REPAIR`/`DOUBLE_BOOKING`/`OTHER`) frees the court
+  every player on the booking is told *Game moved* (`notifications.md`). **Cancel tries a
+  move first — a move by cancel** (#672; the mechanics §16.9, Q122; ADR-0196 §2):
+  `Booking.absorbing_court` over `ClubCourtsAtTheHour.free_courts`, which carries each
+  court's share at the hour (`FreeCourt`), picks a court other than the game's own **sold at
+  the booking's share, of its kind or indoor for an outdoor game (`may_move_to`), and
+  indoor only for `WEATHER`** — an outdoor court at the same hour is rained on too — the
+  same kind first, then indoor, each in the club's order (a stable sort). The same club,
+  sport, day and hour are the read's. The share stands for the price (`share_of` splits a
+  price exactly), compared against what the club sells the court at **now**, so a club
+  that has raised its price since the fill has no court to absorb the cancel. If one
+  absorbs it, `CancelTheBooking` **moves** the booking there (`CourtMoved` with the cancel's
+  `reason` and the court it left, `moved_from` — both defaulted, version 2 unchanged, so a
+  move recorded before reads as the club's own), and **nothing else happens**:
+  `CancelTheGame` refunds nobody, lets no hold go, releases no rescue's payment and records
+  no `ClubCancelled` — nobody is owed a card — so every hold or taken share stays as it
+  was, before or after the cut-off; the proposer is marked due by `CourtMoved` as for a
+  Move. **The cancel decides afresh** at every press, whatever the preview
+  (`PreviewTheCancel`, the same `absorbing_court` read) said: a court booked in between
+  leaves the next one, or none; a race on the court hour's index is `court_just_taken`,
+  and pressing again decides afresh. **`anyway`** — *Cancel the game anyway*, for a club
+  closing the whole hour — skips the move. **Otherwise the game is called off**
+  (`CancelledByClub`, reason `WEATHER`/`REPAIR`/`DOUBLE_BOOKING`/`OTHER`), which frees the court
   (partial index), calls the Game off by nobody **whole or with a seat open** (`Game.call_off_whole`,
   through `GameChanges.call_off_whole`), **before the cut-off lets every hold go** — nothing
   taken, nobody refunded, no fee for anybody, emailed *Game cancelled by <club> · nothing was
