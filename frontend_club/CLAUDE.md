@@ -2,10 +2,13 @@
 
 Next.js 16 (App Router) + React 19 + TypeScript, pnpm. A club signs up, signs in, keeps its
 details, sets up what it sells through Raketa (courts, weekly hours, exceptions, prices and its
-Raketa settings, followed by Overview's setup checklist), runs its Raketa bookings (answering a
-request, moving or cancelling a game), connects Stripe and sees its money and payouts, invites
-its Administrators and watches its official groups
+Raketa settings, followed by Overview's four-step setup checklist), runs its Raketa bookings
+(moving or cancelling a game), connects Stripe and sees its money and payouts, invites its
+Administrators and watches its official groups
 ([ADR-0187](../docs/adr/0187-four-deployables-the-club-website-and-the-public-site-live-in-this-repo.md)).
+Every club works one way, Only Raketa: there is nothing to choose, and no club confirms a game,
+so nothing here waits for the desk's answer
+([ADR-0196](../docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)).
 It talks to the backend's **club surface** (`backend/openapi.club.json`) **from its server
 only**: the browser never holds a token.
 
@@ -33,9 +36,9 @@ for its own machinery are in [`CONTEXT.md`](CONTEXT.md); domain words are the ro
 - **`src/proxy.ts`** renews a pair that is about to lapse before a page or an action reads it,
   because a render cannot set a cookie, and stamps each request with its own path.
 - **`src/features/<area>/`**: `queries.ts` reads, `actions.ts` writes (and makes the reads
-  that have no render to read in: a dialog opening, the frame's badge), `mappers.ts` turns wire
-  into view model (**the only file outside `src/server/` and `e2e/` that imports a generated
-  type**), `schemas.ts` checks a form, `copy.ts` holds every sentence, and `components/` are
+  that have no render to read in, such as a dialog opening), `mappers.ts` turns wire into view
+  model (**the only file outside `src/server/` and `e2e/` that imports a generated type**),
+  `schemas.ts` checks a form, `copy.ts` holds every sentence, and `components/` are
   server components unless a page needs interaction. A feature may use another feature's
   components, schemas, copy and mappers, never its actions or queries.
 - **Decisions branch on the backend's error `code`, never its message.** An action answers a

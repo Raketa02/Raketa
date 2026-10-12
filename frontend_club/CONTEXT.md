@@ -59,6 +59,3 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
   sends the desk back to Overview, or, when the link was spent or went stale, to
   **`/payments/continue`**, which asks for another and follows it. Where the account stands is the
   domain's (not started, _Stripe needs more details_, ready), read off the setup checklist.
-- **Countdown** — what is left of a request's time to answer, counted from the backend's own
-  `read_at`, so a browser whose clock is wrong draws the same figure. Not a timer of the
-  backend's: when it runs out the page is read again, and the backend says the request is off.
