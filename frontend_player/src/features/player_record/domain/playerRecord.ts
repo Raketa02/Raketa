@@ -14,12 +14,15 @@
  * ## Absence has one spelling, and it is the field's own
  *
  * Every optional here is *the platform has nothing to say*, and **never a nought**. A player
- * with no rating in any sport has no `skill` and an empty `sports`; one nothing has ever
- * fallen due for has no `reliability`; one nobody has rated has no `opinion`. **Each absence
- * asks a different question and they do not move together** — somebody rated in four sports may
- * never have had a game counted, and somebody with a full record of counted games may have been
- * rated by nobody, since rating is a favour and nothing anywhere records that a card was
- * ignored — so each is read where it is drawn and nothing is inferred from another.
+ * with no rating in any sport has no `skill` and an empty `sports`; one with no counted game has
+ * no `variety`; one nobody has rated has no `opinion`. **Each absence asks a different question
+ * and they do not move together** — somebody rated in four sports may never have had a game
+ * counted, and somebody with a full record of counted games may have been rated by nobody, since
+ * rating is a favour and nothing anywhere records that a card was ignored — so each is read where
+ * it is drawn and nothing is inferred from another.
+ *
+ * **`reliability` is not one of them any more** (ADR-0195 §1): everyone starts at 100, so the
+ * figure is there for a player nothing has happened to as for anybody, and reads *New*.
  *
  * ## What is deliberately not here
  *
@@ -54,70 +57,71 @@ export type RecordSubject =
   | { readonly kind: 'player'; readonly playerId: string };
 
 /**
- * **The six strands a reliability reading is built from**, read separately.
+ * **The four bands Player reliability is read in** — the word under the figure
+ * ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+ * §1), best first.
  *
- * Written down here rather than read off the contract because a copy table is keyed by it and
- * transport does not reach `components/` — the two are held equal by the compiler in
- * `mappers/wireVocabulary.ts`, which is where a code added, removed or renamed fails the build.
- *
- * **Three of them have no provider on this platform today** and never cross on this response.
- * They are in the union because the vocabulary is closed and shared with the Fit breakdown,
- * not because they are coming.
+ * **Served, and never derived here.** This client holds no 90, 75 or 50: the tone ladder that
+ * once drew a bar at 70 nothing applied was a second set of thresholds, and a phone working the
+ * band out from the figure disagrees with the server the day the floors move, on exactly the
+ * figures a player looks at twice. Written down here rather than read off the contract because a
+ * copy table is keyed by it and transport does not reach `components/` — the two are held equal
+ * by the compiler in `mappers/wireVocabulary.ts`.
  */
-export const RELIABILITY_STRANDS = [
-  'SHOWS_UP',
-  'ANSWERS_CHALLENGES',
-  'ANSWERS_RESULTS',
-  'KEEPS_PLANS',
-  'SETTLES_UP',
-  'SPORTSMANSHIP',
-] as const;
+export const RELIABILITY_BANDS = ['VERY_HIGH', 'HIGH', 'MEDIUM', 'LOW'] as const;
 
-export type ReliabilityStrand = (typeof RELIABILITY_STRANDS)[number];
+export type ReliabilityBand = (typeof RELIABILITY_BANDS)[number];
 
 /**
- * **One metered row: what fell due, what came of it, and the figure the platform acts on.**
- *
- * All three are carried and the third is not a convenience. `good` and `opportunities` are the
- * raw pair, because a perfect record over nine and one over forty are different claims and a
- * bar alone hides which; `pct` is the platform's own rounding of them, so that a client
- * dividing for itself is not the fourth place one record gets rounded.
+ * **The figure and its word** — what the You row's line, the record block, the ring and the
+ * Members tag's spoken name are built from. Named apart from the counts because those four read
+ * it without them.
  */
-export interface StrandRow {
-  readonly strand: ReliabilityStrand;
+export interface ReliabilityFigure {
+  /** Points, 0 to 100. Everyone starts at 100. **Served, never derived.** */
+  readonly playerScore: number;
   /**
-   * How many of those opportunities went the way the strand is named for.
-   *
-   * **A no is a good outcome on two of the three.** Turning somebody down inside your day *is*
-   * answering them, and so is countering a score you believe is wrong: what both price is
-   * silence, which is the whole of
-   * [ADR-0160](../../../../../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md).
+   * The word under the figure, as the server banded it. **Absent only where this build cannot
+   * name the served code** — the figure is then drawn alone rather than with a guessed word.
    */
-  readonly good: number;
+  readonly band?: ReliabilityBand;
   /**
-   * How many times it fell due. **An opportunity and never a total** — a game still awaiting
-   * its entry and a score still inside its window are in neither half, because publishing them
-   * either way would state a conclusion the clock has not reached. Never nought: a row with
-   * nothing behind it is not served at all.
+   * Fewer than 3 games played through, ever, across sports: the figure reads *New* in the band's
+   * place, because a 100 nobody has tested yet is not a *Very high* one.
    */
-  readonly opportunities: number;
-  /** The figure out of a hundred. **Served, never derived** — see the interface note. */
-  readonly pct: number;
+  readonly isNew: boolean;
 }
 
 /**
- * **What the platform watched somebody do** — the pill, and the rows it is the mean of.
- *
- * One optional and not two, because it is **one absence**: nothing has ever fallen due for
- * them. A `playerScore` beside a separate list of rows would let a build draw a figure over an
- * empty card, which is the shape this response is served whole precisely to prevent. There is
- * always at least one row.
+ * **The four counts the record shows beside the figure**, over the last 6 months — counts and
+ * never ratios, and no ledger (ADR-0195 §1: the product owner chose counts over a list of
+ * events).
  */
-export interface Reliability {
-  /** Out of a hundred — the figure the matcher acts on, at the player's own published weights. */
-  readonly playerScore: number;
-  /** In the strand vocabulary's own order, and never re-sorted. Only the strands they have. */
-  readonly strands: readonly StrandRow[];
+export interface ReliabilityCounts {
+  /** *Shows up*: turned up, late counting as turned up… */
+  readonly turnedUp: number;
+  /** …of the games that reached their hour with them on the court. May be nought. */
+  readonly turnedUpOf: number;
+  /** *Being late*: how many times they came late. */
+  readonly late: number;
+  /** *Keeps plans*: kept… */
+  readonly kept: number;
+  /** …of the booked games they were in at the hour. May be nought. */
+  readonly keptOf: number;
+  /** *Results left in dispute*: information only, and it costs no points. */
+  readonly leftInDispute: number;
+}
+
+/**
+ * **Player reliability** — the figure in points, its band, *New*, and the counts it is read
+ * beside ([#660](https://github.com/Raketa02/Raketa/issues/660)).
+ *
+ * It replaced the pill and the metered strands it was the weighted mean of: there are no
+ * weights, no ratios and no tone here, and nothing on this client blends, bands or thresholds
+ * anything.
+ */
+export interface Reliability extends ReliabilityFigure {
+  readonly counts: ReliabilityCounts;
 }
 
 /**
@@ -172,10 +176,9 @@ export interface OpponentVariety {
  * is the record's own and not this shape's: the collapse to one answer per rater, the
  * fifty-rater window, no zero on the scale, and no individual rating on any route.
  *
- * **It is not a strand and does not enter the pill.** A star average is not a ratio out of a
- * hundred, the matcher never reads it, and it is drawn as the card's last row under a label
- * naming its own author — because every row above it was counted by the system and this is
- * the one thing on the sheet people wrote.
+ * **It is not in Player reliability.** A star average is not points, nothing acts on it, and it
+ * is drawn as the card's last row under a label naming its own author — because every row above
+ * it was counted by the system and this is the one thing on the sheet people wrote.
  *
  * Named once because three layers pass it around: the mapper builds it, the row draws it and
  * the spoken reading reads it, and a shape restated at each of those is the shape that
@@ -283,27 +286,23 @@ export interface PlayerRecord {
   /** Omitted where they hold no rating at all; the pills then speak alone. */
   readonly skill?: SkillPanel;
   /**
-   * The pill and the metered rows under it.
-   *
-   * Omitted where nothing has ever fallen due for them, which is most people today, and is
-   * never a nought: nobody has failed to turn up who was never due to.
+   * Player reliability — the figure, its band, *New* and the four counts. **Always there**:
+   * everyone starts at 100, so a player nothing has happened to reads *100 · New*.
    */
-  readonly reliability?: Reliability;
+  readonly reliability: Reliability;
   /**
-   * The variety row, which is a **different absence** and does not move with the one above.
+   * The variety row, which is an **absence** of its own.
    *
    * Omitted where no counted game has ever been recorded for them — a habit nobody has been
-   * observed having is not a narrow one — and a plan that dissolved is an opportunity above
-   * without being a game anybody played.
+   * observed having is not a narrow one.
    */
   readonly variety?: OpponentVariety;
   /**
    * What other players said — the figure and its count, whoever is reading.
    *
-   * A **fourth absence**, asking a fourth question: omitted where nobody has rated them, which
-   * is most people. Rating is a favour, ignoring the card costs nothing, and nothing anywhere
-   * records that somebody did not answer — so a plan that dissolved and a seat that ran out are
-   * opportunities above, and neither is an opinion anybody offered.
+   * A **third absence**, asking a third question: omitted where nobody has rated them, which is
+   * most people. Rating is a favour, ignoring the card costs nothing, and nothing anywhere
+   * records that somebody did not answer — so a game played is not an opinion anybody offered.
    */
   readonly opinion?: Opinion;
   /**

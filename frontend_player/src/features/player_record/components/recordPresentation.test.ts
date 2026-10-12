@@ -8,7 +8,7 @@
 
 import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 
-import type { StrandRow } from '../domain/playerRecord';
+import type { ReliabilityCounts } from '../domain/playerRecord';
 
 import {
   IN_YOUR_AREA,
@@ -16,8 +16,9 @@ import {
   fitRowLabel,
   OWN_RECORD_TITLE,
   RECORD_TITLE,
-  STRAND_NAME,
+  RELIABILITY_BAND_WORD,
   YOU_MARK,
+  countLines,
   identityLine,
   introLine,
   lastFiveReading,
@@ -30,8 +31,9 @@ import {
   recordHeaderLabel,
   skillCardLabel,
   skillHeadline,
+  reliabilityHead,
+  reliabilityMark,
   socialTagsLabel,
-  strandFraction,
   varietyValue,
 } from './recordPresentation';
 
@@ -158,20 +160,68 @@ describe('the skill card’s headline, and what left it', () => {
 });
 
 /**
+ * **The figure's head** — the points and the word beside them, the one spelling the You row's
+ * line, the record block and the spoken readings are all built from (#660, ADR-0195 §1).
+ */
+describe('the figure and its word', () => {
+  /** The band's four words, keyed by the served code — the phone holds no thresholds. */
+  it('says the band in the server’s four words, and never the retired ladder’s', () => {
+    expect(RELIABILITY_BAND_WORD).toEqual({
+      VERY_HIGH: 'Very high',
+      HIGH: 'High',
+      MEDIUM: 'Medium',
+      LOW: 'Low',
+    });
+    expect(Object.values(RELIABILITY_BAND_WORD).join(' ')).not.toMatch(
+      /Reliable|Holding|Under the bar/,
+    );
+  });
+
+  it('reads 75 · High for Sergio', () => {
+    expect(reliabilityHead({ playerScore: 75, band: 'HIGH', isNew: false })).toBe('75 · High');
+  });
+
+  /**
+   * **New takes the band's place**, whatever the band is: fewer than 3 games played through is
+   * a figure nobody has tested yet, which is what *New* says and *Very high* would not.
+   */
+  it('reads 100 · New for Nerea, and New in the band’s place for anybody new', () => {
+    expect(reliabilityHead({ playerScore: 100, band: 'VERY_HIGH', isNew: true })).toBe('100 · New');
+    expect(reliabilityHead({ playerScore: 75, band: 'HIGH', isNew: true })).toBe('75 · New');
+  });
+
+  /** A band this build cannot name leaves the figure alone, never a guessed word. */
+  it('reads the bare figure where the band could not be named', () => {
+    expect(reliabilityHead({ playerScore: 42, isNew: false })).toBe('42');
+    expect(reliabilityMark({ playerScore: 42, isNew: false })).toBeUndefined();
+  });
+});
+
+/**
  * **The three blocks, as one element** — and the three absences that do not move together.
  *
- * A player with a Player Score and no rating at all is the case the row exists outside the skill
- * card for: they draw one box, and it is the one figure the matcher acts on.
+ * Player reliability is always there now (ADR-0195 §1), so its block is the one a newcomer
+ * draws; the run and the count still come and go with the sport.
  */
 describe('the record blocks, as one element', () => {
-  it('reads left to right, and spells the scale the figure alone could not', () => {
+  const SERGIO = { playerScore: 75, band: 'HIGH', isNew: false } as const;
+
+  it('reads left to right, and spells the scale and the band the figure alone could not', () => {
     expect(
-      recordBlocksLabel({ playerScore: 91, lastFive: ['WIN', 'WIN', 'LOSS'], countedGames: 5 }),
-    ).toBe('Player reliability 91 out of 100. 2 of the last 3 won. 5 counted games');
+      recordBlocksLabel({ reliability: SERGIO, lastFive: ['WIN', 'WIN', 'LOSS'], countedGames: 5 }),
+    ).toBe('Player reliability 75 out of 100, High. 2 of the last 3 won. 5 counted games');
+  });
+
+  it('says New for a player who is new', () => {
+    expect(
+      recordBlocksLabel({ reliability: { playerScore: 100, band: 'VERY_HIGH', isNew: true } }),
+    ).toBe('Player reliability 100 out of 100, New');
   });
 
   it('says nothing at all about a block it did not draw', () => {
-    expect(recordBlocksLabel({ playerScore: 91 })).toBe('Player reliability 91 out of 100');
+    expect(recordBlocksLabel({ reliability: SERGIO })).toBe(
+      'Player reliability 75 out of 100, High',
+    );
     expect(recordBlocksLabel({ countedGames: 1 })).toBe('1 counted game');
     expect(recordBlocksLabel({})).toBe('');
   });
@@ -182,8 +232,8 @@ describe('the record blocks, as one element', () => {
    * *0 of the last 0 won*.
    */
   it('treats an empty run as no run', () => {
-    expect(recordBlocksLabel({ playerScore: 91, lastFive: [] })).toBe(
-      recordBlocksLabel({ playerScore: 91 }),
+    expect(recordBlocksLabel({ reliability: SERGIO, lastFive: [] })).toBe(
+      recordBlocksLabel({ reliability: SERGIO }),
     );
   });
 });
@@ -296,17 +346,19 @@ describe('the pairing control', () => {
 });
 
 /**
- * **The card's own words**, and the two rules a build session could quietly undo: the raw pair
- * beside every figure, and the strand that is named for what it counts.
+ * **The card's own words** — the four counts as the record serves them, over the last 6 months
+ * (#660, ADR-0195 §1), and the two rows under them.
  */
 describe('the record card', () => {
-  const row = (over: Partial<StrandRow> = {}): StrandRow => ({
-    strand: 'SHOWS_UP',
-    good: 9,
-    opportunities: 9,
-    pct: 100,
-    ...over,
-  });
+  /** Sergio's: turned up 12 of 13, kept 13 of 14, late once, nothing left in dispute. */
+  const SERGIO: ReliabilityCounts = {
+    turnedUp: 12,
+    turnedUpOf: 13,
+    late: 1,
+    kept: 13,
+    keptOf: 14,
+    leftInDispute: 0,
+  };
 
   /**
    * **The card has no heading, and the row that needed one carries it.**
@@ -323,22 +375,37 @@ describe('the record card', () => {
   });
 
   /**
-   * **Answering, never confirming.** Countering a score you believe is wrong is an answer and
-   * costs nothing; a player who did exactly that and watched a *confirms* figure rise is the
-   * one person certain to notice the word was wrong.
+   * **Four counts, each in its own words and never a ratio** — the raw pair where there is an
+   * *of*, a count where there is none, and no percentage anywhere: the figure is points, and
+   * these are what it is read beside.
    */
-  it('names the results strand for the thing it counts', () => {
-    expect(STRAND_NAME.ANSWERS_RESULTS).toBe('Answers about results');
-    expect(Object.values(STRAND_NAME).join(' ')).not.toMatch(/confirm/i);
+  it('prints Shows up, Keeps plans, Being late and Results left in dispute as counts', () => {
+    expect(countLines(SERGIO)).toEqual([
+      { label: 'Shows up', value: 'turned up 12 of 13' },
+      { label: 'Keeps plans', value: 'kept 13 of 14' },
+      { label: 'Being late', value: 'late 1 time' },
+      { label: 'Results left in dispute', value: '0' },
+    ]);
+  });
+
+  it('counts being late through the one pluralisation helper', () => {
+    const late = (times: number) =>
+      countLines({ ...SERGIO, late: times }).find((line) => line.label === 'Being late')?.value;
+
+    expect(late(0)).toBe('late 0 times');
+    expect(late(2)).toBe('late 2 times');
   });
 
   /**
-   * A perfect record over nine games and one over forty draw the same bar. The pair is what
-   * tells them apart, which is why it is printed and why the bar is allowed to say nothing.
+   * **The strands are gone, and so are their names.** *Answers about results* left the figure
+   * with the rest (ADR-0195 §1) — silence on a score costs nothing — and no row may say it.
    */
-  it('prints the raw pair, so nine and forty are visibly different claims', () => {
-    expect(strandFraction(row({ good: 9, opportunities: 9 }))).toBe('9 of 9');
-    expect(strandFraction(row({ good: 40, opportunities: 40 }))).toBe('40 of 40');
+  it('names no strand the figure no longer has', () => {
+    const words = countLines(SERGIO)
+      .map((line) => `${line.label} ${line.value}`)
+      .join(' ');
+
+    expect(words).not.toMatch(/Answers|Settles up|confirm|%/i);
   });
 
   /**
@@ -355,22 +422,14 @@ describe('the record card', () => {
     expect(varietyValue({ distinctOpponents: 2, timesOnCourt: 3 })).toBe('67% · 2 of 3');
   });
 
-  /**
-   * The card is one accessibility element: the heading leads, one clause per row follows, and
-   * **no bar is in it** — every meter draws a fraction spoken two words earlier.
-   */
-  it('reaches a listener as the heading and one clause a row', () => {
+  /** The card is one accessibility element: one clause per row, in the order they are drawn. */
+  it('reaches a listener as one clause a row', () => {
     expect(
-      recordCardLabel({
-        rows: [row(), row({ strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 })],
-        variety: { distinctOpponents: 14, timesOnCourt: 20 },
-      }),
-    ).toBe('Shows up, 9 of 9. Answers about results, 8 of 10. Opponent variety, 70%, 14 of 20');
-  });
-
-  /** A card with one row is one clause. Nothing is spoken as absent. */
-  it('says nothing about a row it was not given', () => {
-    expect(recordCardLabel({ rows: [row()] })).toBe('Shows up, 9 of 9');
+      recordCardLabel({ counts: SERGIO, variety: { distinctOpponents: 14, timesOnCourt: 20 } }),
+    ).toBe(
+      'Shows up, turned up 12 of 13. Keeps plans, kept 13 of 14. Being late, late 1 time. ' +
+        'Results left in dispute, 0. Opponent variety, 70%, 14 of 20',
+    );
   });
 
   /**
@@ -383,12 +442,11 @@ describe('the record card', () => {
    * here: the two registers said different things for as long as one carried the promise.
    */
   it('speaks the rating as a row, and makes no promise about it', () => {
-    const spoken = recordCardLabel({
-      rows: [row()],
-      opinion: { average: 4.7, raters: 17 },
-    });
+    const spoken = recordCardLabel({ counts: SERGIO, opinion: { average: 4.7, raters: 17 } });
 
-    expect(spoken).toBe(`Shows up, 9 of 9. ${SPORTSMANSHIP_LABEL}, 4,7 out of 5, 17 players`);
+    expect(spoken).toMatch(
+      new RegExp(`Results left in dispute, 0\\. ${SPORTSMANSHIP_LABEL}, 4,7 out of 5, 17 players$`),
+    );
     expect(spoken).not.toContain('holds nobody back');
   });
 });
@@ -429,9 +487,12 @@ describe('what opponents said', () => {
    * three words are spelled here only to be asserted absent: no export names them any more.
    */
   it('speaks the figure and its count for everybody, and never a band word', () => {
-    const spoken = recordCardLabel({ rows: [], opinion: { average: 4.7, raters: 17 } });
+    const spoken = recordCardLabel({
+      counts: { turnedUp: 0, turnedUpOf: 0, late: 0, kept: 0, keptOf: 0, leftInDispute: 0 },
+      opinion: { average: 4.7, raters: 17 },
+    });
 
-    expect(spoken).toBe(`${SPORTSMANSHIP_LABEL}, 4,7 out of 5, 17 players`);
+    expect(spoken).toMatch(new RegExp(`${SPORTSMANSHIP_LABEL}, 4,7 out of 5, 17 players$`));
     expect(spoken).not.toMatch(/\b(Good|Mixed|Poor)\b/);
   });
 });

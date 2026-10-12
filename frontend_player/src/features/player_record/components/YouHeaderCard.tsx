@@ -65,7 +65,7 @@ import { ConfidenceRing, PhotoPanel, PressableDarkCard, Tag, theme } from '@/sha
 import { useOwnRecord } from '../hooks/useOwnRecord';
 
 import { OPENS_OWN_RECORD_HINT, SCORE_LABEL, scoreRingLabel } from './youRecordPresentation';
-import { introLine, sportPill } from './recordPresentation';
+import { introLine, reliabilityReading, sportPill } from './recordPresentation';
 
 export interface YouHeaderCardProps {
   /** Opens *How others see you* — the tab's overlay, which the shell holds. */
@@ -81,7 +81,7 @@ export function YouHeaderCard({ onPress }: YouHeaderCardProps) {
   const name = user.data?.name;
   const handle = user.data?.nickname === undefined ? undefined : atNickname(user.data.nickname);
   const intro = own?.intro === undefined ? undefined : introLine(own.intro);
-  const score = own?.reliability?.playerScore;
+  const reliability = own?.reliability;
   // Drawn short — three pills have to fit between a face and a ring — and spoken in full.
   const pills = (ratings.data ?? []).map(({ sport, level }) => ({
     sport,
@@ -97,7 +97,8 @@ export function YouHeaderCard({ onPress }: YouHeaderCardProps) {
         ...(handle === undefined ? [] : [handle]),
         ...(intro === undefined ? [] : [intro]),
         ...(pills.length === 0 ? [] : [pills.map((pill) => pill.spoken).join(', ')]),
-        ...(score === undefined ? [] : [scoreRingLabel(score)]),
+        // The band's word or *New* is spoken here, since the ring draws the figure alone.
+        ...(reliability === undefined ? [] : [reliabilityReading(reliability)]),
       ].join('. ')}
       accessibilityHint={OPENS_OWN_RECORD_HINT}
       onPress={onPress}
@@ -131,13 +132,13 @@ export function YouHeaderCard({ onPress }: YouHeaderCardProps) {
         )}
       </View>
 
-      {score === undefined ? null : (
+      {reliability === undefined ? null : (
         <ConfidenceRing
           size="sm"
-          value={score}
-          figure={String(score)}
+          value={reliability.playerScore}
+          figure={String(reliability.playerScore)}
           label={SCORE_LABEL}
-          accessibilityLabel={scoreRingLabel(score)}
+          accessibilityLabel={scoreRingLabel(reliability.playerScore)}
         />
       )}
     </PressableDarkCard>

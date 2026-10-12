@@ -110,7 +110,6 @@ import type { SocialTagOverlap } from '@/shared/vocabulary/socialTagOverlap';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { PlayerRecord, RecordSubject } from '../domain/playerRecord';
-import { recordCardDrawn } from '../domain/recordCard';
 import { recordTagRow } from '../domain/tagRow';
 import { usePlayerRecord } from '../hooks/usePlayerRecord';
 
@@ -293,11 +292,6 @@ function Filled({
   // engine's and is kept; every other silence draws the tags and says nothing.
   const tags = recordTagRow(record.socialTags, tagOverlap);
   const tagsLabel = socialTagsLabel(tags);
-  const cardDrawn = recordCardDrawn({
-    ...(record.reliability === undefined ? {} : { strands: record.reliability.strands }),
-    ...(record.variety === undefined ? {} : { variety: record.variety }),
-    ...(record.opinion === undefined ? {} : { opinion: record.opinion }),
-  });
 
   return (
     <>
@@ -315,40 +309,34 @@ function Filled({
 
       {/* 7.13's three blocks, under the band bar. **A row of the sheet rather than a footer on
           the card above it**, and the reason is an absence: two of the three are that sport's
-          and the Player Score is the whole person's, so a block nested in a card drawn only
-          when a Level resolves would take a ghosted newcomer's one figure down with the sport.
-          The row draws nothing at all when it has none of the three. */}
+          and Player reliability is the whole person's, so a block nested in a card drawn only
+          when a Level resolves would take a newcomer's *100 · New* down with the sport. */}
       <RecordBlocks
-        {...(record.reliability === undefined
-          ? {}
-          : { playerScore: record.reliability.playerScore })}
+        reliability={record.reliability}
         {...(record.skill?.lastFive === undefined ? {} : { lastFive: record.skill.lastFive })}
         {...(record.skill === undefined ? {} : { countedGames: record.skill.countedGames })}
       />
 
       {/* Everything under the blocks is folded under *Full record* (`RecordDetails`): the
-          blocks are the summary, and this is its account. No fold over nothing — a newcomer
-          with neither a card nor a tag gets a short sheet, not a row that opens onto empty. */}
-      {!cardDrawn && tagsLabel === '' ? null : (
-        <RecordDetails>
-          {/* Three absences that do not move together, handed down separately and drawn as
-              whatever survives them: a newcomer's record is a short sheet rather than an empty
-              card. What other players said is a row on it now rather than a block under it —
-              the card's heading promised *counted by the system, not written by people*, and
-              the heading is what went. */}
-          <RecordCard
-            {...(record.reliability === undefined ? {} : { reliability: record.reliability })}
-            {...(record.variety === undefined ? {} : { variety: record.variety })}
-            {...(record.opinion === undefined ? {} : { opinion: record.opinion })}
-          />
+          blocks are the summary, and this is its account. Always drawn now — the four counts
+          are on every record since ADR-0195 §1, a newcomer's included (#660). */}
+      <RecordDetails>
+        {/* The counts, then two absences that do not move together, handed down separately and
+            drawn as whatever survives them. What other players said is a row on the card rather
+            than a block under it — the card's heading promised *counted by the system, not
+            written by people*, and the heading is what went. */}
+        <RecordCard
+          counts={record.reliability.counts}
+          {...(record.variety === undefined ? {} : { variety: record.variety })}
+          {...(record.opinion === undefined ? {} : { opinion: record.opinion })}
+        />
 
-          {tagsLabel === '' ? null : (
-            <View accessible accessibilityLabel={tagsLabel}>
-              <SocialTagRow row={tags} />
-            </View>
-          )}
-        </RecordDetails>
-      )}
+        {tagsLabel === '' ? null : (
+          <View accessible accessibilityLabel={tagsLabel}>
+            <SocialTagRow row={tags} />
+          </View>
+        )}
+      </RecordDetails>
 
       {/* The foot, last, where the surface filled it. A sheet reads statement first and answer
           last, which is the whole reason it is at the end and inside the scroll (9.1). */}

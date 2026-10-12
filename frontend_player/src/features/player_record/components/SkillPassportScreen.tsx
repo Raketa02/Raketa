@@ -215,7 +215,7 @@ function PassportCard({
         onExplain={onExplain}
       />
       <RecordBlocks
-        {...(own?.reliability === undefined ? {} : { playerScore: own.reliability.playerScore })}
+        {...(own === undefined ? {} : { reliability: own.reliability })}
         {...(thisSport?.lastFive === undefined ? {} : { lastFive: thisSport.lastFive })}
         {...(thisSport === undefined ? {} : { countedGames: thisSport.countedGames })}
       />

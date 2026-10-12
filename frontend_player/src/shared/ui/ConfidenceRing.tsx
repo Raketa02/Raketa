@@ -46,7 +46,7 @@
  *
  * The You tab draws the same ring twice more, still inside a dark card (Part 16, 2026-09-17 —
  * ADR-0179 §1, §2): the Player Score in the header card at `ringSm`, with `SCORE` beneath, and
- * on the reliability screen at `ringLg`, with the tone ladder's word beside it and nothing
+ * on the reliability screen at `ringLg`, with the band's word beside it (#660) and nothing
  * beneath. A Player Score is *out of a hundred* and not a percentage, so the caller may hand
  * the figure to print — `92` — where the default is the confidence's `92%`. The size changes
  * the diameter and nothing else: one stroke, one tick, one overshoot, one type role for the

@@ -40,8 +40,9 @@ import { ON_COURT_CLAUSE } from '@/shared/ui';
 import type {
   Opinion,
   OpponentVariety,
-  ReliabilityStrand,
-  StrandRow,
+  ReliabilityBand,
+  ReliabilityCounts,
+  ReliabilityFigure,
 } from '../domain/playerRecord';
 import { varietyShare } from '../domain/recordCard';
 
@@ -185,15 +186,66 @@ const PLAYER_SCORE_DENOMINATOR = 100;
  * **The block says *Player reliability* and the glossary still says *Player Score*.**
  *
  * That is a divergence on purpose and it is worth knowing which way round it runs. The domain
- * term is the platform's — the ruleset prices it, the matcher acts on it, `CONTEXT.md` owns the
- * word — and nothing here renames any of that. What changed is the **label over the figure**,
- * because *Score* beside a Level, a band and a run of form is the fourth number on one card a
- * reader could take for a rating, and *reliability* is the one word that says what it is not.
+ * term is the platform's — the ruleset prices it, the reliability filter acts on it,
+ * `CONTEXT.md` owns the word — and nothing here renames any of that. What changed is the
+ * **label over the figure**, because *Score* beside a Level, a band and a run of form is the
+ * fourth number on one card a reader could take for a rating, and *reliability* is the one word
+ * that says what it is not.
  *
  * It is spelled once, here, so the drawn label and the spoken one cannot come apart.
  */
 export function scorePillLabel(score: number): string {
   return `${PLAYER_SCORE_BLOCK} ${score} out of ${PLAYER_SCORE_DENOMINATOR}`;
+}
+
+/**
+ * **The band's word, keyed by the served code** — *Very high*, *High*, *Medium*, *Low*
+ * ([ADR-0195](../../../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+ * §1, `the-words.md` §27).
+ *
+ * **Keyed by the band and never by the figure**: the server says which band a figure is in, and
+ * this table only says what that band is called. The retired tone ladder's *Reliable*, *Holding*
+ * and *Under the bar* named a bar at 70 that nothing applies, and no export spells them now.
+ */
+export const RELIABILITY_BAND_WORD: Readonly<Record<ReliabilityBand, string>> = {
+  VERY_HIGH: 'Very high',
+  HIGH: 'High',
+  MEDIUM: 'Medium',
+  LOW: 'Low',
+};
+
+/** *New* — fewer than 3 games played through, ever. Drawn in the band's place. */
+export const NEW_MARK = 'New';
+
+/**
+ * **The word beside the figure** — *New* where it applies, the band's word otherwise, and
+ * nothing where this build could not name the band.
+ *
+ * *New* wins over the band, whatever the band is: a figure nobody has tested yet is what a
+ * reader most needs told, and a *Very high* beside a newcomer's 100 would say the opposite
+ * (PRD #649, story 33: *so that others know my 100 hasn't been tested yet*).
+ */
+export function reliabilityMark(figure: ReliabilityFigure): string | undefined {
+  if (figure.isNew) return NEW_MARK;
+  return figure.band === undefined ? undefined : RELIABILITY_BAND_WORD[figure.band];
+}
+
+/**
+ * `75 · High` · `100 · New` — **the figure's head**, one line, as the You row writes it in from
+ * the sheet. The bare figure where there is no word to put beside it.
+ */
+export function reliabilityHead(figure: ReliabilityFigure): string {
+  const mark = reliabilityMark(figure);
+  return mark === undefined ? String(figure.playerScore) : `${figure.playerScore} · ${mark}`;
+}
+
+/**
+ * *Player reliability 75 out of 100, High* — the figure as a listener meets it wherever the word
+ * beside it is not drawn as its own text: the block row and the header card.
+ */
+export function reliabilityReading(figure: ReliabilityFigure): string {
+  const mark = reliabilityMark(figure);
+  return [scorePillLabel(figure.playerScore), ...(mark === undefined ? [] : [mark])].join(', ');
 }
 
 /**
@@ -319,14 +371,18 @@ export function skillCardLabel(facts: SkillCardFacts): string {
  * *Tennis*.
  */
 export interface RecordBlockFacts {
-  readonly playerScore?: number;
+  /**
+   * The figure and its word. Always on a record since ADR-0195 §1; absent only where a surface
+   * draws the blocks before the record is in.
+   */
+  readonly reliability?: ReliabilityFigure;
   readonly lastFive?: readonly GameResult[];
   readonly countedGames?: number;
 }
 
 export function recordBlocksLabel(facts: RecordBlockFacts): string {
   return sentences([
-    ...(facts.playerScore === undefined ? [] : [scorePillLabel(facts.playerScore)]),
+    ...(facts.reliability === undefined ? [] : [reliabilityReading(facts.reliability)]),
     ...(facts.lastFive === undefined || facts.lastFive.length === 0
       ? []
       : [lastFiveReading(facts.lastFive)]),
@@ -336,58 +392,62 @@ export function recordBlocksLabel(facts: RecordBlockFacts): string {
 
 // **The card carries no heading, and losing it was the point.** It read *The record — counted
 // by the system, not written by people*, and that sentence was a promise about **authorship**:
-// it is why `countedRows` drops the sportsmanship strand, and why what other players said stood
-// outside the card in a block of its own. The rating belongs on the record, so the heading went
-// rather than the row — a title claiming nobody wrote any of this, over a star average people
-// wrote, is worse than no title. What it was carrying is now on {@link SPORTSMANSHIP_LABEL},
-// the one row that has an author.
+// it is why what other players said stood outside the card in a block of its own. The rating
+// belongs on the record, so the heading went rather than the row — a title claiming nobody
+// wrote any of this, over a star average people wrote, is worse than no title. What it was
+// carrying is now on {@link SPORTSMANSHIP_LABEL}, the one row that has an author.
 
 /**
- * **What each strand is called on screen**, keyed off the served code and never off the row's
- * position — a strand with nothing behind it is absent from the list entirely, so the rows a
- * card gets are the rows that person has.
- *
- * **`ANSWERS_RESULTS` is *Answers about results* and never *confirms* anything.** Countering a
- * score you believe is wrong is an answer and costs nothing
- * ([ADR-0160](../../../../../docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md));
- * a player who did exactly that and then watched a *confirms* figure rise is the one person
- * certain to notice the word was wrong.
- *
- * Three of the six have **no provider on this platform today** and never reach a screen. They
- * carry words anyway, because the table is keyed by the whole vocabulary and a code with no
- * words is a build failure — which is the point of keying it that way.
+ * **The four counts' names** — `the-words.md` §27 as ADR-0195 §1 wrote them
+ * ([#660](https://github.com/Raketa02/Raketa/issues/660)). They replaced the strands' names, and
+ * *Answers about results* is not among them: silence on a score costs nothing now, and no row
+ * may say it is counted.
  */
-export const STRAND_NAME: Readonly<Record<ReliabilityStrand, string>> = {
-  SHOWS_UP: 'Shows up',
-  ANSWERS_CHALLENGES: 'Answers challenges',
-  ANSWERS_RESULTS: 'Answers about results',
-  KEEPS_PLANS: 'Keeps plans',
-  SETTLES_UP: 'Settles up',
-  SPORTSMANSHIP: 'Sportsmanship',
-};
+export const SHOWS_UP_LABEL = 'Shows up';
+export const KEEPS_PLANS_LABEL = 'Keeps plans';
+export const BEING_LATE_LABEL = 'Being late';
+export const LEFT_IN_DISPUTE_LABEL = 'Results left in dispute';
 
 /**
- * `9 of 9` — **the raw pair, in the one spelling every row on this card prints it in.**
+ * `9 of 9` — **the raw pair, in the one spelling every row on this card that has one prints it
+ * in.**
  *
- * A perfect record over nine games and one over forty are different claims and a bar alone
- * hides which, which is the whole reason the card carries three numbers per row and draws two
- * of them. It is also what makes the bar decoration: the figure is text two words earlier, so
- * a meter announcing itself would be the same fact read twice.
- *
- * The variety row prints its pair through here too — the honesty rule is the card's rather
- * than the strand rows', and a second spelling of it is how the two rows drift apart.
+ * A perfect record over nine games and one over forty are different claims, which is why
+ * *Shows up* and *Keeps plans* print both halves rather than a share. The variety row prints
+ * its pair through here too — the honesty rule is the card's rather than one row's, and a
+ * second spelling of it is how two rows drift apart. *Being late* and *Results left in dispute*
+ * have no *of*, and print the count alone.
  */
 function rawPair(part: number, whole: number): string {
   return `${part} of ${whole}`;
 }
 
-export function strandFraction(row: Pick<StrandRow, 'good' | 'opportunities'>): string {
-  return rawPair(row.good, row.opportunities);
+/** One count line: the name on the left, the count on the right. */
+export interface CountLine {
+  readonly label: string;
+  readonly value: string;
 }
 
-/** One row as a listener meets it — the name and the pair, never the bar. */
-function strandReading(row: StrandRow): string {
-  return `${STRAND_NAME[row.strand]}, ${strandFraction(row)}`;
+/**
+ * **The four count lines, in the order the card draws them** — *turned up 12 of 13*, *kept 13 of
+ * 14*, *late 1 time*, *0*.
+ *
+ * **Counts, never a ratio and never a bar**: the figure is points, and these are what it is read
+ * beside. Drawn as served, noughts included — *turned up 0 of 0* is what is true of somebody
+ * nothing has fallen due for, and the *New* beside their figure is what explains it.
+ */
+export function countLines(counts: ReliabilityCounts): readonly CountLine[] {
+  return [
+    { label: SHOWS_UP_LABEL, value: `turned up ${rawPair(counts.turnedUp, counts.turnedUpOf)}` },
+    { label: KEEPS_PLANS_LABEL, value: `kept ${rawPair(counts.kept, counts.keptOf)}` },
+    { label: BEING_LATE_LABEL, value: `late ${counted(counts.late, 'time', 'times')}` },
+    { label: LEFT_IN_DISPUTE_LABEL, value: String(counts.leftInDispute) },
+  ];
+}
+
+/** One line as a listener meets it — the name, then the count. */
+function countReading(line: CountLine): string {
+  return `${line.label}, ${line.value}`;
 }
 
 export const VARIETY_LABEL = 'Opponent variety';
@@ -419,9 +479,8 @@ function varietyParts(variety: OpponentVariety): readonly [string, string] {
  * itself.**
  *
  * The percentage is the client's one division; the pair is the platform's and is what stops the
- * share being read as a settled habit over three games. The row draws **no bar**: the contract
- * attaches no banding, floor or tone to this figure, and an untoned meter in a column of toned
- * ones would be a tone claim made by adjacency.
+ * share being read as a settled habit over three games. The row draws **no bar**, like every row
+ * on the card: the contract attaches no banding, floor or tone to this figure.
  */
 export function varietyValue(variety: OpponentVariety): string {
   return varietyParts(variety).join(' · ');
@@ -432,16 +491,10 @@ function varietyReading(variety: OpponentVariety): string {
   return `${VARIETY_LABEL}, ${varietyParts(variety).join(', ')}`;
 }
 
-/**
- * **The record card, as one element** — the heading first, then one clause per row.
- *
- * The bars are not in it and carry nothing of their own: each is a drawing of the fraction
- * spoken two words earlier, which is 6.8's argument about the availability grid's column heads
- * arriving on a third surface.
- */
+/** **The record card, as one element** — one clause per row, in the order they are drawn. */
 export interface RecordCardFacts {
-  /** The rows the card actually drew, in the order it drew them. */
-  readonly rows: readonly StrandRow[];
+  /** The four counts, always drawn. */
+  readonly counts: ReliabilityCounts;
   readonly variety?: OpponentVariety;
   readonly opinion?: Opinion;
 }
@@ -458,7 +511,7 @@ export interface RecordCardFacts {
  */
 export function recordCardLabel(facts: RecordCardFacts): string {
   return sentences([
-    ...facts.rows.map(strandReading),
+    ...countLines(facts.counts).map(countReading),
     ...(facts.variety === undefined ? [] : [varietyReading(facts.variety)]),
     ...(facts.opinion === undefined ? [] : [opinionReading(facts.opinion)]),
   ]);
@@ -480,13 +533,12 @@ const STAR_SCALE = 5;
  * A figure drawn without its count is this field's one way of lying: `4,7 / 5 · 17 players` and
  * `3,0 / 5 · 1 player` are the same field, and the second has to visibly read as one person's
  * opinion. There is no minimum before it publishes because the count does a minimum's work
- * honestly — which is the discipline the metered rows already take by printing their raw pair.
+ * honestly — which is the discipline the counts above it take by printing their raw pair.
  *
  * The mean is **served, not derived**: there is one rounding of this record on the platform.
- * And it is drawn in the card's mono figure role with **no tone**: `scoreTone` is this sheet's
- * one ladder and it belongs to the Player Score, so a star average painted in the same three
- * colours would offer itself as a second score on the screen a held player opens to find out
- * what is holding them back.
+ * And it is drawn in the card's mono figure role with **no tone**, like every row on the card:
+ * a star average painted in a band's colours would offer itself as a second reliability figure
+ * on the screen a player opens to find out how they appear.
  *
  * The subject used to be answered here with one word — *Good*, *Mixed* or *Poor*, a band too
  * coarse to subtract a rater from — and is answered with the figure since ADR-0179 §5

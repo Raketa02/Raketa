@@ -6,14 +6,14 @@
  *
  * *Skill passport* and *Player reliability* are the first two rows because they are the two
  * a player most wants to look at and the two they cannot change: a Level is proved, never
- * declared, and a Player Score is what the platform watched. *How others see you* is the
+ * declared, and Player reliability is what the platform watched. *How others see you* is the
  * record sheet about yourself, and it is a door the shell opens — the sheet is the tab's
  * overlay, so the row takes the press rather than pushing a route.
  *
  * | Row | Read |
  * | --- | --- |
  * | Skill passport | `GET /ratings` — one clause per rating |
- * | Player reliability | `GET /players/me/record` — the score and the strands, or nothing counted |
+ * | Player reliability | `GET /players/me/record` — the points and the band, `75 · High` or `100 · New` |
  * | How others see you | nothing — the line names the sheet |
  */
 

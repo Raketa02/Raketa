@@ -5,20 +5,24 @@
  * The passport is the result card once per rating and the reliability screen is the record
  * card under a ring, so their sentences are the result's and `recordPresentation`'s, cited.
  * What is new is small on purpose: the two rows' titles and live lines, the passport's chip
- * and its two cards, the word the tone ladder gives a score, and the one sentence a player
- * nothing has fallen due for is told.
+ * and its two cards, the band said in full beside the figure, and the one sentence a new player
+ * is told.
  */
 
 import { sportLabel } from '@/features/onboarding/types';
-import { counted } from '@/shared/formatting/counted';
 import { formatLevel } from '@/shared/formatting/ratingFormat';
 import type { TagVariant } from '@/shared/ui';
 import type { Sport } from '@/shared/vocabulary/sport';
 
-import type { RatedSport, Reliability } from '../domain/playerRecord';
-import type { ScoreTone } from '../domain/scoreTone';
+import type { RatedSport, ReliabilityFigure } from '../domain/playerRecord';
 
-import { OWN_RECORD_TITLE, PLAYER_SCORE_BLOCK, scorePillLabel } from './recordPresentation';
+import {
+  OWN_RECORD_TITLE,
+  PLAYER_SCORE_BLOCK,
+  reliabilityHead,
+  reliabilityMark,
+  scorePillLabel,
+} from './recordPresentation';
 
 // --- the rows -----------------------------------------------------------------------------------
 
@@ -43,29 +47,31 @@ export function passportLine(ratings: readonly RatedSport[]): string {
 }
 
 /**
- * `92 of 100 · 3 things counted`, or what an absent record is.
+ * `75 · High` · `100 · New` — **the sheet's own head, written in** (`the-words.md` §27,
+ * [#660](https://github.com/Raketa02/Raketa/issues/660)).
  *
- * *Things counted* is the strands the record has — the rows the score is the mean of — and
- * never a nought: a player nothing has fallen due for has no `reliability` at all, and the
- * line says so in words rather than drawing `0 of 100` over nothing.
+ * It read `92 of 100 · 3 things counted`, the strands behind a blended score, and *Nothing
+ * counted yet* for a player with none. Everyone has a figure from the start now, so there is no
+ * second arm: a player nothing has happened to reads `100 · New`.
  */
-export function reliabilityLine(reliability: Reliability | undefined): string {
-  if (reliability === undefined) return NOTHING_COUNTED_LINE;
-  const things = counted(reliability.strands.length, 'thing counted', 'things counted');
-  return `${reliability.playerScore} of ${SCORE_SCALE} · ${things}`;
+export function reliabilityLine(reliability: ReliabilityFigure): string {
+  return reliabilityHead(reliability);
 }
-
-const SCORE_SCALE = 100;
-const NOTHING_COUNTED_LINE = 'Nothing counted yet';
 
 // --- the reliability screen ---------------------------------------------------------------------
 
-/** The tone ladder's three steps, said — one word for each of `scoreTone`'s answers. */
-export const SCORE_TONE_WORD: Readonly<Record<ScoreTone, string>> = {
-  good: 'Reliable',
-  neutral: 'Holding',
-  poor: 'Under the bar',
-};
+/**
+ * **The band said in full, beside the figure** — *Very high*, *High*, *Medium* or *Low
+ * reliability*, keyed by the served band — or *New* in its place. Nothing where this build could
+ * not name the band: the figure is drawn alone rather than beside a guessed word.
+ *
+ * It replaced the tone ladder's *Reliable*, *Holding* and *Under the bar*, which this phone worked
+ * out from its own 70 and 90 and which named a bar nothing applies.
+ */
+export function reliabilityWord(figure: ReliabilityFigure): string | undefined {
+  const mark = reliabilityMark(figure);
+  return figure.isNew || mark === undefined ? mark : `${mark} reliability`;
+}
 
 export const OUT_OF_100 = 'Out of 100';
 
@@ -73,7 +79,7 @@ export const OUT_OF_100 = 'Out of 100';
 export const READING_OWN_RECORD = 'Reading your record';
 export const LOADING_RATINGS = 'Loading your ratings';
 
-/** The ring's spoken name: the block's word and the scale, exactly as the sheet's pill says it. */
+/** The ring's spoken name: the block's word and the scale, exactly as the sheet's block says it. */
 export function scoreRingLabel(score: number): string {
   return scorePillLabel(score);
 }
@@ -82,12 +88,17 @@ export function scoreRingLabel(score: number): string {
 export const SCORE_LABEL = 'Score';
 
 /**
- * A player with no record, told what that is — and that it is not a low score. The one
- * sentence on the reliability screen that is not the record card's.
+ * **What a new player is told** — where the figure starts and what *New* beside it means. The
+ * one sentence on the reliability screen that is not the record card's, drawn only while they
+ * are New.
+ *
+ * It spoke of plans that had not settled and of a score there was none of (`the-words.md` §27,
+ * retired by ADR-0195): everyone has a figure from the start now, and *New* is the word for a
+ * figure nobody has tested yet. It names no price and no filter — the explanatory cards stayed
+ * gone (`the-you-screen.md` §3.2), and the counts under it are the account.
  */
-export const NOTHING_COUNTED =
-  'Nothing has fallen due for you yet — no plan has settled and nobody has asked you anything ' +
-  'with a deadline. There is no score to draw, and that is not a low one.';
+export const NEW_PLAYER_NOTE =
+  'Everyone starts at 100. Yours reads New until you’ve played 3 games through.';
 
 // --- the passport -------------------------------------------------------------------------------
 

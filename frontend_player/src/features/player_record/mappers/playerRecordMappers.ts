@@ -16,14 +16,12 @@
  * | `social_tags[]` | that tag is dropped | a chip with no words on it |
  * | `skill.sport` | the **whole panel** goes | the sport is printed on the panel and on the poster beside it; a card that could not say which sport it was about would be a Level with no subject |
  * | `skill.last_five` | the **whole run** goes | its length is a claim: dropping one entry says a counted game fewer than the platform counted, and a third kind of square is a drawing nobody has designed |
- * | `reliability.strands[].strand` | that row is dropped | a metered row with no label is a bar with a fraction beside it and nothing saying what was counted |
+ * | `reliability.band` | the **word** goes, the figure stays | the points are the server's and still true; a word this phone guessed from them would be the thresholds it gave up |
  * | `review` | folded to *no mark* | the absence is already a state, and it is the one that draws nothing |
  *
- * A dropped strand row is a **shorter card and not a wrong one**, which is the opposite answer
- * to the run of five's above it and for the reason stated there: a run's length is itself the
- * claim, where a card states one row per thing the platform has watched and has never promised
- * how many. The figure over it is the server's own blend and is not recomputed from what
- * survived, so the pill goes on being right about a row this build could not name.
+ * The band's answer is the opposite of the skill panel's sport and for the reason stated there:
+ * a sport is what the panel is **about**, where a band is a word **under** a figure that means
+ * the same without it — so the figure is drawn alone rather than taken off the sheet.
  *
  * ## The opinion is one figure for every reader, and the band no longer crosses
  *
@@ -45,10 +43,11 @@
  *
  * ## Nothing is defaulted to a nought
  *
- * Every optional on the response is *the platform has nothing to say*, and the four absences
- * ask four different questions. A `?? 0` anywhere below would turn *nobody has been due
- * anywhere* into *they never turn up*, which is the one confusion this whole sheet is built to
- * avoid.
+ * Every optional on the response is *the platform has nothing to say*, and the three absences
+ * ask three different questions. A `?? 0` anywhere below would turn *nobody has rated them* into
+ * *they rate badly*, which is the one confusion this whole sheet is built to avoid. Player
+ * reliability is not optional at all since ADR-0195 §1 — everyone starts at 100 — so its
+ * noughts are the server's counts and are carried as they came.
  */
 
 import type { components } from '@/generated/schema';
@@ -57,15 +56,14 @@ import { GAME_RESULTS, type GameResult } from '@/shared/vocabulary/gameResult';
 import { SOCIAL_TAG_IDS, type SocialTagId } from '@/shared/vocabulary/socialTags';
 
 import {
-  RELIABILITY_STRANDS,
+  RELIABILITY_BANDS,
   type Opinion,
   type OpponentVariety,
   type PlayerRecord,
   type RatedSport,
   type Reliability,
-  type ReliabilityStrand,
+  type ReliabilityBand,
   type SkillPanel,
-  type StrandRow,
 } from '../domain/playerRecord';
 
 type PlayerRecordResponse = components['schemas']['PlayerRecordResponse'];
@@ -89,9 +87,7 @@ export function toPlayerRecord(response: PlayerRecordResponse): PlayerRecord {
     socialTags: response.social_tags.flatMap((tag) => toSocialTagId(tag) ?? []),
     sports: response.sports.flatMap(toRatedSport),
     ...skillPanel(response.skill),
-    ...(response.reliability === undefined
-      ? {}
-      : { reliability: reliability(response.reliability) }),
+    reliability: reliability(response.reliability),
     ...(response.variety === undefined ? {} : { variety: variety(response.variety) }),
     ...opinion(response),
     ...ownBlock(response),
@@ -123,34 +119,25 @@ function opinion(response: PlayerRecordResponse): { readonly opinion?: Opinion }
 }
 
 /**
- * The pill and its rows, as one fact.
- *
- * They are carried together because they are **one absence** — nothing has ever fallen due —
- * and splitting them here is how a build ends up drawing a figure over an empty card.
+ * **Player reliability, field for field** (#660) — the points, the band where this build can name
+ * it, *New*, and the four counts. Nothing is computed here: the band is the server's and the
+ * counts are the server's, and a phone that worked either out would be a second opinion.
  */
 function reliability(served: ReliabilitySchema): Reliability {
+  const band = toReliabilityBand(served.band);
   return {
     playerScore: served.player_score,
-    strands: served.strands.flatMap(toStrandRow),
+    ...(band === undefined ? {} : { band }),
+    isNew: served.is_new,
+    counts: {
+      turnedUp: served.turned_up,
+      turnedUpOf: served.turned_up_of,
+      late: served.late,
+      kept: served.kept,
+      keptOf: served.kept_of,
+      leftInDispute: served.left_in_dispute,
+    },
   };
-}
-
-/** One row, or none — see the narrowing table above. The order is the server's and is kept. */
-function toStrandRow(served: ReliabilitySchema['strands'][number]): readonly StrandRow[] {
-  const strand = toStrand(served.strand);
-  return strand === undefined
-    ? []
-    : [
-        {
-          strand,
-          good: served.good,
-          opportunities: served.opportunities,
-          // Served rather than divided here: `good / opportunities` on this side would be the
-          // fourth rounding of one record, and the two disagree by a point on exactly the
-          // values a player notices.
-          pct: served.pct,
-        },
-      ];
 }
 
 /** The raw pair, whole. The share it is drawn as is `varietyShare`'s one division. */
@@ -207,7 +194,7 @@ function lastFive(served: readonly string[]): { readonly lastFive?: readonly Gam
 
 const KNOWN_RESULTS = new Set<string>(GAME_RESULTS);
 const KNOWN_TAGS = new Set<string>(SOCIAL_TAG_IDS);
-const KNOWN_STRANDS = new Set<string>(RELIABILITY_STRANDS);
+const KNOWN_BANDS = new Set<string>(RELIABILITY_BANDS);
 
 function toGameResult(served: string): GameResult | undefined {
   return KNOWN_RESULTS.has(served) ? (served as GameResult) : undefined;
@@ -217,6 +204,11 @@ function toSocialTagId(served: string): SocialTagId | undefined {
   return KNOWN_TAGS.has(served) ? (served as SocialTagId) : undefined;
 }
 
-function toStrand(served: string): ReliabilityStrand | undefined {
-  return KNOWN_STRANDS.has(served) ? (served as ReliabilityStrand) : undefined;
+/**
+ * **A served band, or nothing** — see the narrowing table above. Exported through `types.ts` for
+ * the one other reader of the code, `groups`' Members rows, so one list cannot read a band two
+ * ways.
+ */
+export function toReliabilityBand(served: string): ReliabilityBand | undefined {
+  return KNOWN_BANDS.has(served) ? (served as ReliabilityBand) : undefined;
 }

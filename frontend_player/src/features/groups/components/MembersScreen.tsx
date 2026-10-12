@@ -14,9 +14,9 @@
  * **The list is the server's, in the server's order**: only members rated in the sport, the
  * reader first as *You*, then the Owner with the **admin** tag — on an official group, its
  * Administrator who joined as a player (#519) — then newest joined first. Each row is the name,
- * the **score tag** (`PlayerScoreTag`: a spark and the Player Score on its band's tint) and the
- * admin tag, over the sport's dot and *Padel 2,71*; no tag for somebody the platform has watched
- * nothing of. A block hides nobody here, either way round (ADR-0193 §2). **No friend tag**:
+ * the **score tag** (`PlayerScoreTag`: a spark and the points on the tint of the band the server
+ * served, #660) and the admin tag, over the sport's dot and *Padel 2,71*; every row has one, since
+ * everyone starts at 100. A block hides nobody here, either way round (ADR-0193 §2). **No friend tag**:
  * there is no friends feature (PRD #500 overrides play 61 by name).
  *
  * ## Who runs it is always here
@@ -349,7 +349,10 @@ function MemberRow({ member, sport, you, divided, onOpen }: MemberRowProps) {
           <Text style={s.name} numberOfLines={1}>
             {memberName(person)}
           </Text>
-          {member.playerScore === undefined ? null : <PlayerScoreTag score={member.playerScore} />}
+          <PlayerScoreTag
+            score={member.playerScore}
+            {...(member.reliabilityBand === undefined ? {} : { band: member.reliabilityBand })}
+          />
           {adminTagged(member) ? <Tag label={COPY.admin} /> : null}
         </View>
         <View style={s.lineRow}>

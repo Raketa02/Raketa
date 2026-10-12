@@ -4,8 +4,9 @@
  * ([7.13](../../../../docs/design-system.md#713-the-record-block)).
  *
  * ```
- * Player Score      Last 5            Counted
- * 91                ■ ■ ▨ ■ ▨         5
+ * Player reliability   Last 5            Counted
+ * 75                   ■ ■ ▨ ■ ▨         5
+ * High
  * ```
  *
  * ## It is the competitive card's row, on a second surface
@@ -22,51 +23,56 @@
  *
  * ## It is a row of the sheet and not part of the skill card, and the reason is an absence
  *
- * Two of the three are that sport's — the run and the count come off `skill` — and the Player
- * Score is about the **whole person**, folded from games and challenges that have no sport in
- * them. So the row cannot live inside a card that is drawn only when a Level resolves: a player
- * who has been ghosted on and holds no rating at all has a Player Score and no skill panel, and
- * a block nested in that card would take their one figure down with the sport.
+ * Two of the three are that sport's — the run and the count come off `skill` — and Player
+ * reliability is about the **whole person**, folded from games and bookings across every sport.
+ * So the row cannot live inside a card that is drawn only when a Level resolves: a player who
+ * holds no rating at all still has a figure — 100 to start — and a block nested in that card
+ * would take it down with the sport.
  *
- * That is the sheet's standing rule about its own four absences, applied to a row rather than to
- * a zone: **they do not move together, and nothing may make one imply another.**
+ * That is the sheet's standing rule about its absences, applied to a row rather than to a zone:
+ * **they do not move together, and nothing may make one imply another.**
  *
- * ## Nothing here is tinted, and that is the ladder staying where it belongs
+ * ## The figure says its band, or *New*, and nothing here is tinted
  *
- * The figure was a `Tag` in the header, tinted by `scoreTone`. A block's figure is `ink` — 7.13
- * fixes it — and the tone stays on the metered rows below, which is where a reader can act on
- * it: a bar that lifts is the thing a held player came to watch, and the same three colours
- * printed twice on one sheet would offer the pill to be read as a fourth strand.
+ * Under the figure, the band's word — *Very high*, *High*, *Medium*, *Low* — or *New* in its
+ * place ([#660](https://github.com/Raketa02/Raketa/issues/660), ADR-0195 §1): a group-mate who
+ * opens somebody's record reads what they read about themselves, and *New* is what tells them a
+ * 100 has not been tested yet. On its own line, in the key-value row's value role, so a
+ * *Very high* never has to share a third of the width with the figure. Both are `ink` — 7.13
+ * fixes the figure's colour — and the band's tone is the Members tag's alone, on the one list
+ * that compares people at a glance.
  *
  * ## Each block is hidden when its fact is absent, and never zeroed
  *
- * The three fields are omitted on the wire rather than sent as `0` — a player nothing was ever
- * arranged for has not failed to turn up — so a newcomer draws no row at all and a player with
- * one fact draws one block filling the width. There is no empty state and no sentence
- * explaining the gap, which is every other absence's spelling on this sheet.
+ * The run and the count are omitted on the wire rather than sent as `0`, so a player with no
+ * rating draws the reliability block alone, filling the width. Player reliability itself is
+ * always on a record; a surface that draws the blocks before the record is in passes none, and
+ * the row waits rather than drawing a nought.
  */
 
-import { View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { RunOfForm, StatBox, StatFigure, StatRow } from '@/shared/ui';
+import { RunOfForm, StatBox, StatFigure, StatRow, theme } from '@/shared/ui';
 
 import {
   COUNTED_BLOCK,
   LAST_FIVE_BLOCK,
   PLAYER_SCORE_BLOCK,
   recordBlocksLabel,
+  reliabilityMark,
   type RecordBlockFacts,
 } from './recordPresentation';
 
 export type RecordBlocksProps = RecordBlockFacts;
 
-export function RecordBlocks({ playerScore, lastFive, countedGames }: RecordBlocksProps) {
+export function RecordBlocks({ reliability, lastFive, countedGames }: RecordBlocksProps) {
   // A run the wire omitted and an empty one are one absence here, exactly as they are at the
   // mapper: a run's length is a claim, so nought squares is nothing to draw rather than a box
   // of nothing. The three are asked the same question and the spoken label asks it again.
   const run = lastFive === undefined || lastFive.length === 0 ? undefined : lastFive;
 
-  if (playerScore === undefined && run === undefined && countedGames === undefined) return null;
+  if (reliability === undefined && run === undefined && countedGames === undefined) return null;
+  const mark = reliability === undefined ? undefined : reliabilityMark(reliability);
 
   return (
     // §20.1: no block is an action, so the row is one element and every box is a clause of its
@@ -75,15 +81,18 @@ export function RecordBlocks({ playerScore, lastFive, countedGames }: RecordBloc
     <View
       accessible
       accessibilityLabel={recordBlocksLabel({
-        ...(playerScore === undefined ? {} : { playerScore }),
+        ...(reliability === undefined ? {} : { reliability }),
         ...(run === undefined ? {} : { lastFive: run }),
         ...(countedGames === undefined ? {} : { countedGames }),
       })}
     >
       <StatRow>
-        {playerScore === undefined ? null : (
+        {reliability === undefined ? null : (
           <StatBox label={PLAYER_SCORE_BLOCK}>
-            <StatFigure>{String(playerScore)}</StatFigure>
+            <StatFigure>{String(reliability.playerScore)}</StatFigure>
+            {/* The band's word or *New*, under the figure — the bare figure where this build
+                could not name the band, never a guessed word. */}
+            {mark === undefined ? null : <Text style={s.mark}>{mark}</Text>}
           </StatBox>
         )}
 
@@ -106,3 +115,8 @@ export function RecordBlocks({ playerScore, lastFive, countedGames }: RecordBloc
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  // 5.5's value role: a word under a figure, read as the figure's answer.
+  mark: { ...theme.type.rlValue, color: theme.color.ink },
+});

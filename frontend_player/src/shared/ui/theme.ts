@@ -708,7 +708,7 @@ const size = {
   ring: 72,
   /** The ring's two other homes, both still inside a dark card (Part 16, 2026-09-17 — ADR-0179
    *  §1, §2): the You tab's header card draws the Player Score at 56, and the reliability
-   *  screen draws it at 74 beside the tone ladder's word. Diameters only — the stroke, the tick
+   *  screen draws it at 74 beside the band's word. Diameters only — the stroke, the tick
    *  and the overshoot are the one ring's, whichever size it is drawn at. */
   ringSm: 56,
   ringLg: 74,

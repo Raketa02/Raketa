@@ -57,6 +57,7 @@ import {
   stubShare,
 } from '@/test-support/onboardingRouter';
 import { fakeClipboard, fakeHaptics, fakePayments, fakeShare } from '@/test-support/platform';
+import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
   installTransport,
@@ -362,7 +363,7 @@ describe('a Seats to fill row (A3.1, mock 12)', () => {
         area_code: 'A+050612+0019938',
         social_tags: [],
         sports: [{ sport: 'PADEL', level: 2.75, band: 'Established' }],
-        reliability: { player_score: 88, strands: [] },
+        reliability: servedReliability({ player_score: 88, band: 'HIGH', is_new: false }),
         variety: { distinct_opponents: 3, times_on_court: 3 },
       }),
     );

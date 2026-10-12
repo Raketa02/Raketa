@@ -1,54 +1,5 @@
-import type { OpponentVariety, StrandRow } from './playerRecord';
-import { countedRows, varietyShare } from './recordCard';
-
-const row = (over: Partial<StrandRow> = {}): StrandRow => ({
-  strand: 'SHOWS_UP',
-  good: 9,
-  opportunities: 9,
-  pct: 100,
-  ...over,
-});
-
-describe('what the record card may print under its own heading', () => {
-  it('keeps the counted rows, in the order they were served', () => {
-    const served = [
-      row({ strand: 'SHOWS_UP' }),
-      row({ strand: 'ANSWERS_CHALLENGES' }),
-      row({ strand: 'ANSWERS_RESULTS' }),
-    ];
-
-    expect(countedRows(served).map((kept) => kept.strand)).toEqual([
-      'SHOWS_UP',
-      'ANSWERS_CHALLENGES',
-      'ANSWERS_RESULTS',
-    ]);
-  });
-
-  /**
-   * **The one row that would make the heading false.** Everything else on this card is a ratio
-   * the platform observed; stars are what people typed, and they have a block of their own that
-   * says so. The contract states this row never crosses here — which is exactly the kind of
-   * statement a heading should not have to trust a remote service for.
-   */
-  it('drops a strand that is somebody’s opinion, whatever the wire says', () => {
-    const kept = countedRows([row(), row({ strand: 'SPORTSMANSHIP', pct: 96 })]);
-
-    expect(kept.map((one) => one.strand)).toEqual(['SHOWS_UP']);
-  });
-
-  /**
-   * The other two names with no provider today are **counted** — plans kept, money settled —
-   * so the day one of them lights up it draws, and the rows go on agreeing with the pill above
-   * them. A filter that took the whole absent half would have made that a silent disagreement.
-   */
-  it('keeps a counted strand this build has never been served', () => {
-    expect(countedRows([row({ strand: 'KEEPS_PLANS' })])).toHaveLength(1);
-  });
-
-  it('draws no rows from no strands', () => {
-    expect(countedRows([])).toEqual([]);
-  });
-});
+import type { OpponentVariety } from './playerRecord';
+import { varietyShare } from './recordCard';
 
 describe('how widely somebody spreads their games', () => {
   const variety = (over: Partial<OpponentVariety> = {}): OpponentVariety => ({

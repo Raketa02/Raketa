@@ -68,6 +68,7 @@ import {
 } from '@/test-support/onboardingRouter';
 import { fakeClipboard, fakeHaptics, fakeShare, type FakeHaptics } from '@/test-support/platform';
 import { dragTo, release, swipe } from '@/test-support/swipe';
+import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
   installTransport,
@@ -159,10 +160,13 @@ function karolsRecord(): Wire['PlayerRecordResponse'] {
       likely_range: { low: 2.5, high: 2.9 },
       last_five: ['WIN', 'LOSS', 'WIN'],
     },
-    reliability: {
+    reliability: servedReliability({
       player_score: 88,
-      strands: [{ strand: 'SHOWS_UP', good: 3, opportunities: 3, pct: 100 }],
-    },
+      band: 'HIGH',
+      is_new: false,
+      turned_up: 3,
+      turned_up_of: 3,
+    }),
     variety: { distinct_opponents: 3, times_on_court: 3 },
   };
 }

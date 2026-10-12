@@ -104,8 +104,9 @@ seat's ring, which the group page, Fill in and a booked game's players card draw
 
 **`ConfidenceRing` is drawn at three diameters now, and it is one ring.** 7.8's 72 on the result
 card and the passport; `ringSm` (56) in the You tab's header card, printing the Player Score with
-`SCORE` beneath; `ringLg` (74) on the reliability screen, with the tone ladder's word beside it
-and nothing beneath (Part 16, 2026-09-17; ADR-0179 §1–§2). The `size` changes the diameter and
+`SCORE` beneath; `ringLg` (74) on the reliability screen, with the band's word beside it — the
+server's band, said in full, or _New_ (#660) — and nothing beneath (Part 16, 2026-09-17;
+ADR-0179 §1–§2). The `size` changes the diameter and
 nothing else — one stroke, one tick, one overshoot, one type role for the figure — and the
 caller may hand the `figure` to print, because a Player Score is out of a hundred and not a
 percentage. The `label` beneath became optional for the reliability screen's reason.
@@ -183,16 +184,18 @@ is no prop to pass one through, which is what stops somebody helpfully adding
 `accessibilityRole="progressbar"` and having every row announced twice.
 
 **The meter's fill takes a `tone` and the ladder does not come with it.** Three steps in an
-existing fill — `mint` · `night` · `red` — because the record card stacks three metered rows in
-one column where the why-fit sheet draws one fill for all of them
+existing fill — `mint` · `night` · `red` — because the record card stacked three metered rows in
+one column where the why-fit sheet drew one fill for all of them
 ([#385](https://github.com/Raketa02/Raketa/issues/385)). What the component deliberately does
 not hold is **where** a figure turns poor: that is a fact about the figure and belongs to
-whoever knows what it means, which on the record sheet is the same rule that tints the
-reliability pill above the card. A meter that banded its own share would be a second opinion,
-and the screen would eventually show a green bar under a red pill for one ratio. `METER_TONE_FILL`
-is exported so `meterTone.test.ts` derives the ratios off the component rather than off the
-theme — and the pair bound there is stated in `L*` rather than as a contrast ratio, because
-three fills that each clear their track cannot also be 3:1 from one another.
+whoever knows what it means. A meter that banded its own share would be a second opinion.
+`METER_TONE_FILL` is exported so `meterTone.test.ts` derives the ratios off the component rather
+than off the theme — and the pair bound there is stated in `L*` rather than as a contrast ratio,
+because three fills that each clear their track cannot also be 3:1 from one another. **It has no
+caller since [#660](https://github.com/Raketa02/Raketa/issues/660)**: the why-fit sheet left with
+Classic play, and the record card draws Player reliability's four counts as words — a bar draws a
+ratio, and nothing there is one any more. It stays as 7.3's primitive until a surface needs it or a
+design-system pass retires it with its `size.meter` and `radius.meter`.
 
 **Two OS questions, one collapse.** `overlay.tsx` reads reduced motion **and** whether a
 screen reader is running, and `useCollapsedPresentation()` is the single condition either

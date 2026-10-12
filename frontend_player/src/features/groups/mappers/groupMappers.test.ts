@@ -307,7 +307,7 @@ describe('the Info tab’s members row', () => {
 });
 
 describe('Members, for one sport', () => {
-  it('reads each row’s face, Level, score, ownership and when they joined, in the order served', () => {
+  it('reads each row’s face, Level, points, band, ownership and when they joined, in the order served', () => {
     expect(
       toGroupMembers({
         sport: 'PADEL',
@@ -317,6 +317,7 @@ describe('Members, for one sport', () => {
             name: 'Tomek Kowal',
             level: 2.71,
             player_score: 92,
+            reliability_band: 'VERY_HIGH',
             is_owner: false,
             is_administrator: false,
             joined_at: '2026-09-20T10:00:00Z',
@@ -327,7 +328,8 @@ describe('Members, for one sport', () => {
             photo_id: 'f1',
             photo_url: 'https://photos.test/f1',
             level: 2.75,
-            player_score: 93,
+            player_score: 75,
+            reliability_band: 'HIGH',
             is_owner: true,
             is_administrator: false,
             joined_at: '2026-09-01T10:00:00Z',
@@ -340,6 +342,7 @@ describe('Members, for one sport', () => {
         name: 'Tomek Kowal',
         level: 2.71,
         playerScore: 92,
+        reliabilityBand: 'VERY_HIGH',
         isOwner: false,
         isAdministrator: false,
       },
@@ -348,22 +351,28 @@ describe('Members, for one sport', () => {
         name: 'Karol Tomczak',
         photoUrl: 'https://photos.test/f1',
         level: 2.75,
-        playerScore: 93,
+        playerScore: 75,
+        reliabilityBand: 'HIGH',
         isOwner: true,
         isAdministrator: false,
       },
     ]);
   });
 
-  // No record is not a bad one: the score is absent, never 0.
-  it('carries no score for somebody the platform has watched nothing of', () => {
-    const answer = toGroupMembers({
+  /**
+   * **A band this build cannot name keeps the points and drops the word** (#660): the tag draws
+   * the figure on the neutral tint rather than a tone this phone guessed from it.
+   */
+  it('drops a band it cannot name, and keeps the points', () => {
+    const [ewa] = toGroupMembers({
       sport: 'TENNIS',
       members: [
         {
           player_id: 'p2',
           name: 'Ewa Mazur',
           level: 2.6,
+          player_score: 61,
+          reliability_band: 'SHAKY' as Wire['ReliabilityBand'],
           is_owner: false,
           is_administrator: false,
           joined_at: '2026-09-10T10:00:00Z',
@@ -371,7 +380,8 @@ describe('Members, for one sport', () => {
       ],
     });
 
-    expect(answer[0]).not.toHaveProperty('playerScore');
+    expect(ewa).toMatchObject({ playerScore: 61 });
+    expect(ewa).not.toHaveProperty('reliabilityBand');
   });
 
   it('reads an official group’s Administrator who joined as a player', () => {
@@ -382,6 +392,8 @@ describe('Members, for one sport', () => {
           player_id: 'p3',
           name: 'Marta Wójcik',
           level: 2.6,
+          player_score: 100,
+          reliability_band: 'VERY_HIGH',
           is_owner: false,
           is_administrator: true,
           joined_at: '2026-09-01T10:00:00Z',

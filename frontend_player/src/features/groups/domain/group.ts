@@ -14,6 +14,7 @@
  * Location area. This file holds what came, in the app's spelling.
  */
 
+import type { ReliabilityBand } from '@/features/player_record/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { GroupKind, GroupRelation, JoinPolicy, ReadAs } from './vocabulary';
@@ -169,14 +170,21 @@ export interface Group {
 
 /**
  * **One row of Members, for one sport** (play 61; #514) — *Padel 2,71* and a score tag. Only members
- * rated in the sport are listed, so `level` is always there; `playerScore` is **absent** for
- * somebody the platform has watched nothing of — no record is not a bad one, and never `0`.
- * The **admin** tag is drawn on a player group's Owner and on an official group's Administrator who
- * joined it as a player (`adminTagged`).
+ * rated in the sport are listed, so `level` is always there; and so is `playerScore`, their Player
+ * reliability in points — everyone starts at 100 (ADR-0195 §1, #660). The **admin** tag is drawn
+ * on a player group's Owner and on an official group's Administrator who joined it as a player
+ * (`adminTagged`).
  */
 export interface GroupMember extends GroupPerson {
   readonly level: number;
-  readonly playerScore?: number;
+  /** Player reliability, 0 to 100 — the figure on the tag. */
+  readonly playerScore: number;
+  /**
+   * The band the server put that figure in — the tag's tint and its spoken word. **Absent only
+   * where this build cannot name the served code**: the figure is then drawn untinted and said
+   * alone, never banded by this phone.
+   */
+  readonly reliabilityBand?: ReliabilityBand;
   readonly isOwner: boolean;
   /** Whether they run this official group and joined it as a player. Always `false` on a player group. */
   readonly isAdministrator: boolean;

@@ -11,6 +11,7 @@
 
 import type { components } from '@/generated/schema';
 import { toSport } from '@/features/onboarding/types';
+import { toReliabilityBand } from '@/features/player_record/types';
 import type { Sport } from '@/shared/vocabulary/sport';
 
 import type {
@@ -164,19 +165,24 @@ export function toGroup(wire: Schemas['GroupResponse']): Group {
 
 /**
  * **Members, for one sport** — in the order served: the reader, the Owner, then newest joined
- * first. The score travels only where there is one: no record is not a bad one, and a `0` drawn
- * in its place would say it was.
+ * first. Every row carries its points and band since #659 (ADR-0195 §1); the band is narrowed by
+ * `player_record`'s own reading of the code, so the list and the record it opens cannot read one
+ * band two ways, and a band this build cannot name is dropped rather than guessed.
  */
 export function toGroupMembers(wire: Schemas['GroupMembersResponse']): readonly GroupMember[] {
-  return wire.members.map((member) => ({
-    playerId: member.player_id,
-    name: member.name,
-    ...photoOf(member),
-    level: member.level,
-    ...(member.player_score === undefined ? {} : { playerScore: member.player_score }),
-    isOwner: member.is_owner,
-    isAdministrator: member.is_administrator,
-  }));
+  return wire.members.map((member) => {
+    const band = toReliabilityBand(member.reliability_band);
+    return {
+      playerId: member.player_id,
+      name: member.name,
+      ...photoOf(member),
+      level: member.level,
+      playerScore: member.player_score,
+      ...(band === undefined ? {} : { reliabilityBand: band }),
+      isOwner: member.is_owner,
+      isAdministrator: member.is_administrator,
+    };
+  });
 }
 
 /** Every Level this build can name — a figure with no sport behind it claims nothing. */

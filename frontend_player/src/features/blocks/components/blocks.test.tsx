@@ -56,6 +56,7 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
+import { servedReliability } from '@/test-support/playerRecord';
 import {
   installTransport,
   json,
@@ -149,7 +150,7 @@ function recordOf(who: Person, blockedByYou: boolean | undefined): Wire['PlayerR
     area_code: 'A+050612+0019938',
     social_tags: [],
     sports: [{ sport: 'PADEL', level: 2.8, band: 'Established' }],
-    reliability: { player_score: 96, strands: [] },
+    reliability: servedReliability({ player_score: 96, is_new: false }),
     ...(blockedByYou === undefined ? {} : { blocked_by_you: blockedByYou }),
   };
 }

@@ -35,6 +35,7 @@ import {
 } from '@/test-support/onboardingRouter';
 import { fakeClipboard, fakeShare } from '@/test-support/platform';
 import { stubGroupDeck } from '@/test-support/groupDeck';
+import { NEW_MEMBER_RELIABILITY } from '@/test-support/playerRecord';
 import {
   installTransport,
   json,
@@ -623,6 +624,7 @@ const KASIA_ROW: Wire['GroupMemberSchema'] = {
   player_id: GATE_USER.id,
   name: 'Kasia Lis',
   level: 2.71,
+  ...NEW_MEMBER_RELIABILITY,
   is_owner: false,
   is_administrator: false,
   joined_at: '2026-09-20T10:00:00Z',
@@ -631,6 +633,7 @@ const MICHAL_ROW: Wire['GroupMemberSchema'] = {
   player_id: 'e0000000-0000-4000-8000-000000000042',
   name: 'Michał Rogalski',
   level: 2.44,
+  ...NEW_MEMBER_RELIABILITY,
   is_owner: false,
   is_administrator: false,
   joined_at: '2026-09-10T10:00:00Z',
@@ -698,6 +701,7 @@ describe('Members of an official group', () => {
             player_id: GATE_USER.id,
             name: 'Kasia Lis',
             level: 2.71,
+            ...NEW_MEMBER_RELIABILITY,
             is_owner: false,
             is_administrator: false,
             joined_at: '2026-09-20T10:00:00Z',
@@ -707,6 +711,7 @@ describe('Members of an official group', () => {
             name: 'Marta Wójcik',
             level: 2.6,
             player_score: 91,
+            reliability_band: 'VERY_HIGH',
             is_owner: false,
             is_administrator: true,
             joined_at: '2026-09-01T10:00:00Z',
@@ -715,6 +720,7 @@ describe('Members of an official group', () => {
             player_id: 'e0000000-0000-4000-8000-000000000042',
             name: 'Michał Rogalski',
             level: 2.44,
+            ...NEW_MEMBER_RELIABILITY,
             is_owner: false,
             is_administrator: false,
             joined_at: '2026-09-10T10:00:00Z',
@@ -727,9 +733,13 @@ describe('Members of an official group', () => {
     fireEvent.press(await screen.findByRole('button', { name: /^12 members, / }));
     await waitFor(() => expect(screen).toHavePathname(`/play/group/${O3_MINE.id}/members`));
 
-    expect(await screen.findByLabelText('Marta Wójcik, score 91, admin, Padel 2,60')).toBeTruthy();
+    expect(
+      await screen.findByLabelText('Marta Wójcik, reliability 91, Very high, admin, Padel 2,60'),
+    ).toBeTruthy();
     expect(screen.getAllByText(COPY.members.admin)).toHaveLength(1);
-    expect(screen.getByLabelText('Michał Rogalski, Padel 2,44')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Michał Rogalski, reliability 100, Very high, Padel 2,44'),
+    ).toBeTruthy();
     // Her own row says who runs it: she is not drawn twice.
     expect(screen.queryByTestId('members-runner')).toBeNull();
   });
@@ -745,6 +755,7 @@ describe('Members of an official group', () => {
             player_id: GATE_USER.id,
             name: 'Tomek Kowal',
             level: 2.71,
+            ...NEW_MEMBER_RELIABILITY,
             is_owner: false,
             is_administrator: true,
             joined_at: '2026-09-20T10:00:00Z',
@@ -756,7 +767,9 @@ describe('Members of an official group', () => {
       pageOf(O3_MINE, { administrator_name: 'Tomek Kowal', is_administrator: true }),
     );
 
-    expect(await screen.findByLabelText('You, admin, Padel 2,71')).toBeTruthy();
+    expect(
+      await screen.findByLabelText('You, reliability 100, Very high, admin, Padel 2,71'),
+    ).toBeTruthy();
     expect(screen.queryByTestId('members-runner')).toBeNull();
   });
 });

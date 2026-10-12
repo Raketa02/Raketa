@@ -6,11 +6,10 @@
  *
  * ## The reliability pill left, and it is now a block under the level bar
  *
- * It was a `Tag` here, tinted by `scoreTone`. It is `RecordBlocks`' first box now — 7.13's own
- * shape, the same one the competitive card draws the same figure in — which is what a reader
- * arriving from a shortlist has already met it as. The move takes the **tint** with it: a
- * block's figure is `ink`, and the ladder stays on the metered rows below, where a bar lifting
- * is the thing a held player opened this sheet to watch.
+ * It was a tinted `Tag` here. It is `RecordBlocks`' first box now — 7.13's own shape, the same
+ * one the competitive card draws the same figure in — with the band's word or *New* under the
+ * figure (#660). The move took the **tint** with it: a block's figure is `ink`, and nothing on
+ * this sheet is toned since the tone ladder went with the metered rows.
  *
  * ## The panel is the same drawn object the candidate card carries
  *

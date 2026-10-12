@@ -228,15 +228,11 @@ describe('Home’s badge', () => {
 describe('You', () => {
   /** The stubbed profile's one declaration, as the row says it. */
   const DECLARED_LINE = kindOfGameLine([{ sport: 'padel', intent: 'FOR_FUN' }]);
-  /** The stubbed record's score over its three strands, as the row says it. */
+  /** The stubbed record's points and band, as the row says it — `75 · High` (#660). */
   const RELIABILITY_LINE = reliabilityLine({
-    playerScore: OWN_RECORD_SERVED.reliability?.player_score ?? 0,
-    strands: (OWN_RECORD_SERVED.reliability?.strands ?? []).map((row) => ({
-      strand: row.strand,
-      good: row.good,
-      opportunities: row.opportunities,
-      pct: row.pct,
-    })),
+    playerScore: OWN_RECORD_SERVED.reliability.player_score,
+    band: OWN_RECORD_SERVED.reliability.band,
+    isNew: OWN_RECORD_SERVED.reliability.is_new,
   });
 
   /** The tab, with its reads in — the last row's line is the last read to land. */
@@ -376,9 +372,7 @@ describe('You', () => {
     await openYou();
 
     expect(
-      await screen.findByLabelText(
-        scoreRingLabel(OWN_RECORD_SERVED.reliability?.player_score ?? 0),
-      ),
+      await screen.findByLabelText(scoreRingLabel(OWN_RECORD_SERVED.reliability.player_score)),
     ).toBeTruthy();
     // The name and the handle — the You tab is one of the two screens that draw an
     // `@nickname` (ADR-0171 §4) — and the intro in the drawing's marks.

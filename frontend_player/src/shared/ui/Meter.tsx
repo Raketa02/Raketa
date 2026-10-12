@@ -32,14 +32,16 @@
  *
  * ## The fill takes a tone, and the tone is the caller's rule rather than the meter's
  *
- * The record card's metered rows are drawn in three fills where the why-fit row's are drawn in
+ * The record card's metered rows were drawn in three fills where the why-fit row's were drawn in
  * one ([#385](https://github.com/Raketa02/Raketa/issues/385)), so `tone` is a **step in an
  * existing fill** and invents no colour — [15.2](../../../docs/design-system.md#152-adding-a-colour)'s
- * own licence, and exactly what `FIT_HIGH` already is. What it deliberately does not carry is
- * the ladder: *where* good becomes poor is a fact about the figure being drawn and belongs to
- * whoever knows what the figure means, which on the record sheet is the one rule the pill above
- * the card reads too. A meter that banded its own share would be a second opinion, and the
- * screen would eventually show a green bar under a red pill for one ratio.
+ * own licence. What it deliberately does not carry is the ladder: *where* good becomes poor is a
+ * fact about the figure being drawn and belongs to whoever knows what the figure means. A meter
+ * that banded its own share would be a second opinion.
+ *
+ * **No surface draws it since [#660](https://github.com/Raketa02/Raketa/issues/660)**: the
+ * why-fit sheet left with Classic play, and the record card draws Player reliability's counts as
+ * words. It stays as 7.3's primitive (`shared/ui/README.md` says until when).
  *
  * **The three fills are derived, never eyeballed** — `meterTone.test.ts` holds each against the
  * track it is drawn on and each pair against the other two, in lightness as well as in hue,

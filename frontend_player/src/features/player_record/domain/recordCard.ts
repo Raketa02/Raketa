@@ -1,35 +1,15 @@
 /**
- * **The two rules behind the record card** — which rows it may print, and the one division it
- * makes ([#385](https://github.com/Raketa02/Raketa/issues/385)).
+ * **The one division the record card makes** ([#385](https://github.com/Raketa02/Raketa/issues/385)).
  *
- * ## The heading is a promise about authorship, and it is kept here
- *
- * *Counted by the system, not written by people* is the rule the card enforces rather than a
- * label on it. Five of the six strands are ratios the platform observed; `SPORTSMANSHIP` is
- * what other players typed, and it has a block of its own under a heading that says so. The
- * contract already states that row never crosses in this list — but a heading that is only true
- * while a remote service keeps its word is a heading that goes quietly false, so the one row
- * that would break it is dropped here and the promise is kept by construction.
- *
- * **The row could not be drawn honestly even if the heading permitted it.** Every row on this
- * card prints a raw pair, and stars are an average out of five rather than a count of
- * opportunities that went one way — there is no *`4,8` of what*. That is the same fact the
- * decisions record states from the other end when it keeps the figure out of the pill: *a star
- * average is not a ratio out of a hundred, so it cannot be a strand in a weighted mean over
- * ratios.*
- *
- * **Nothing else is filtered, and that is the other half of the rule.** `KEEPS_PLANS` and
- * `SETTLES_UP` have no provider on this platform today, and both are ratios the system counts
- * that would enter the published blend: the day either lights up it draws. Taking the whole
- * absent half would have made the pill and the rows disagree the moment it did, silently, on a
- * card whose entire argument is that the figure above is the mean of the figures below — where
- * dropping a strand the pill was never allowed to contain cannot.
+ * The rule about which rows it may print went with the strands it filtered
+ * ([#660](https://github.com/Raketa02/Raketa/issues/660)): the card is Player reliability's four
+ * counts now, served as counts, and every one of them is drawn. What is left is variety's share.
  *
  * ## The share is this client's, and it is the only arithmetic on the sheet
  *
- * Opponent variety crosses as **two counts and no percentage**, deliberately: the card argues
- * three rows above that a perfect record over nine games and one over forty are different
- * claims, so publishing a bare share would break the rule the card had just made about itself.
+ * Opponent variety crosses as **two counts and no percentage**, deliberately: the counts above it
+ * print their raw pairs because nine of nine and forty of forty are different claims, so
+ * publishing a bare share would break the rule the card makes about itself.
  * The division is one line and it is here rather than in the drawing, because a figure computed
  * where it is printed is a figure the next surface computes again.
  *
@@ -51,32 +31,7 @@
  * twice.
  */
 
-import type { OpponentVariety, StrandRow } from './playerRecord';
-
-/**
- * The rows the card draws, in the order they were served — see the module note for the one
- * that is not among them.
- */
-export function countedRows(strands: readonly StrandRow[]): readonly StrandRow[] {
-  return strands.filter((row) => row.strand !== 'SPORTSMANSHIP');
-}
-
-/**
- * **Whether the record card has anything to draw** — a counted row, the variety pair or the
- * sportsmanship figure. Asked by the card, which draws nothing without one, and by the sheet,
- * which folds the card and the tags under *Full record* and draws no fold over nothing.
- */
-export function recordCardDrawn(record: {
-  readonly strands?: readonly StrandRow[];
-  readonly variety?: OpponentVariety;
-  readonly opinion?: unknown;
-}): boolean {
-  return (
-    countedRows(record.strands ?? []).length > 0 ||
-    record.variety !== undefined ||
-    record.opinion !== undefined
-  );
-}
+import type { OpponentVariety } from './playerRecord';
 
 /** What the share means at its top. */
 const WIDEST = 100;

@@ -14,6 +14,7 @@
  */
 
 import { sportLabel, sportShortLabel } from '@/features/onboarding/types';
+import { RELIABILITY_BAND_WORD } from '@/features/player_record/types';
 import { counted } from '@/shared/formatting/counted';
 import { playerName } from '@/shared/formatting/playerName';
 import { formatDistanceKm, formatLevel } from '@/shared/formatting/ratingFormat';
@@ -471,8 +472,8 @@ export function membersTitle(count: number | undefined): string {
 }
 
 /**
- * *Padel 2,71* — a row's line, after the sport's dot. The Player Score left it for a tag beside the
- * name (`PlayerScoreTag`), so the line is the sport and its Level and nothing else.
+ * *Padel 2,71* — a row's line, after the sport's dot. Player reliability left it for a tag beside
+ * the name (`PlayerScoreTag`), so the line is the sport and its Level and nothing else.
  */
 export function memberLine(sport: Sport, member: Pick<GroupMember, 'level'>): string {
   return `${sportLabel(sport)} ${formatLevel(member.level)}`;
@@ -481,7 +482,7 @@ export function memberLine(sport: Sport, member: Pick<GroupMember, 'level'>): st
 /** Who a Members row is about, and whether it is the reader's own. */
 export interface MemberRowPerson extends Pick<
   GroupMember,
-  'name' | 'level' | 'playerScore' | 'isOwner' | 'isAdministrator'
+  'name' | 'level' | 'playerScore' | 'reliabilityBand' | 'isOwner' | 'isAdministrator'
 > {
   readonly you: boolean;
 }
@@ -492,16 +493,22 @@ export function memberName(member: Pick<MemberRowPerson, 'name' | 'you'>): strin
 }
 
 /**
- * *Karol Tomczak, score 93, admin, Padel 2,75* — a row, spoken in the order it is drawn: the name,
- * the score tag, the admin tag, the line. **No score for somebody with no record**, never
- * *score 0*: the tag is not drawn, so it is not said. The tag's tint is not spoken — the figure
- * is the fact, and the band is a reading of it.
+ * *Karol Tomczak, reliability 75, High, admin, Padel 2,75* — a row, spoken in the order it is
+ * drawn: the name, the score tag, the admin tag, the line (#660). **The tag's tint is said as the
+ * band's word**: the band is the server's fact now rather than this phone's reading of the
+ * figure, and colour is never its only carrier. A band this build cannot name is not said.
  */
 export function memberRowLabel(sport: Sport, member: MemberRowPerson): string {
-  const score =
-    member.playerScore === undefined ? [] : [`${GROUPS_COPY.members.score} ${member.playerScore}`];
+  const band =
+    member.reliabilityBand === undefined ? [] : [RELIABILITY_BAND_WORD[member.reliabilityBand]];
   const admin = adminTagged(member) ? [GROUPS_COPY.members.admin] : [];
-  return [memberName(member), ...score, ...admin, memberLine(sport, member)].join(', ');
+  return [
+    memberName(member),
+    `${GROUPS_COPY.members.reliability} ${member.playerScore}`,
+    ...band,
+    ...admin,
+    memberLine(sport, member),
+  ].join(', ');
 }
 
 /** *Opens their record* — what a tap on a row does. The row's label already says whose. */

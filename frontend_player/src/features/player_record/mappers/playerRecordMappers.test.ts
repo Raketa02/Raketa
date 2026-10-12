@@ -6,6 +6,7 @@
  * *we have nothing to say* into a nought.
  */
 
+import { SERGIO_RELIABILITY, servedReliability } from '@/test-support/playerRecord';
 import type { Wire } from '@/test-support/transport';
 
 import { toPlayerRecord } from './playerRecordMappers';
@@ -23,6 +24,7 @@ function response(over: Partial<Wire['PlayerRecordResponse']> = {}): Wire['Playe
       { sport: 'PADEL', level: 2.75, band: 'Established' },
       { sport: 'SQUASH', level: 2.9, band: 'Established' },
     ],
+    reliability: servedReliability(),
     ...over,
   };
 }
@@ -184,75 +186,60 @@ describe('the skill panel', () => {
 });
 
 /**
- * **Nothing is ever a nought here.** *We have not seen enough* and *they are bad at this* are
- * different facts, and a mapper defaulting one to the other is where the difference is lost.
+ * **Player reliability is points, and it is always there** (#660, ADR-0195 §1). Everyone starts
+ * at 100, so the block crosses for a player nothing has happened to as for anybody — `100`,
+ * *New*, every count nought — and the one thing this boundary still narrows is the band's code.
  */
 describe('what the platform watched', () => {
-  it('carries the figure the matcher acts on', () => {
-    const served = response({
-      reliability: {
-        player_score: 93,
-        strands: [{ strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 }],
-      },
-    });
+  it('carries the figure, the band, New and the four counts, field for field', () => {
+    const served = response({ reliability: SERGIO_RELIABILITY });
 
-    expect(toPlayerRecord(served).reliability?.playerScore).toBe(93);
+    expect(toPlayerRecord(served).reliability).toEqual({
+      playerScore: 75,
+      band: 'HIGH',
+      isNew: false,
+      counts: { turnedUp: 12, turnedUpOf: 13, late: 1, kept: 13, keptOf: 14, leftInDispute: 0 },
+    });
   });
 
-  it('leaves it absent where nothing has ever fallen due, and never at nought', () => {
-    expect(toPlayerRecord(response()).reliability).toBeUndefined();
-  });
+  it('carries a player nothing has happened to as 100 and New, with every count at nought', () => {
+    const served = response({ reliability: servedReliability() });
 
-  it('carries every row behind the figure, in the order they were served', () => {
-    const served = response({
-      reliability: {
-        player_score: 93,
-        strands: [
-          { strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 },
-          { strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 },
-        ],
-      },
+    expect(toPlayerRecord(served).reliability).toEqual({
+      playerScore: 100,
+      band: 'VERY_HIGH',
+      isNew: true,
+      counts: { turnedUp: 0, turnedUpOf: 0, late: 0, kept: 0, keptOf: 0, leftInDispute: 0 },
     });
-
-    expect(toPlayerRecord(served).reliability?.strands).toEqual([
-      { strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 },
-      { strand: 'ANSWERS_RESULTS', good: 8, opportunities: 10, pct: 80 },
-    ]);
   });
 
   /**
-   * **A shorter card, not a wrong one** — which is the opposite answer the run of five gets one
-   * panel up, and deliberately: a run's length is itself a claim, where a card states one row
-   * per thing the platform watched and never promises how many. The figure over it is the
-   * server's own blend and is not recomputed here, so the pill goes on being right about a row
-   * this build could not name.
+   * **The figure without its word, rather than a guessed word.** A band this build cannot name
+   * — one added after this phone was installed — drops the word and keeps the points: the figure
+   * is still the server's and still true, and a client mapping it onto a band of its own would
+   * be the thresholds this feature gave up.
    */
-  it('drops a strand this build has no words for, and keeps the figure and the rest', () => {
+  it('drops a band this build has no words for, and keeps the figure and the counts', () => {
     const served = response({
-      reliability: {
-        player_score: 93,
-        strands: [
-          {
-            strand: 'TURNS_UP_EARLY' as Wire['ReliabilityStrand'],
-            good: 3,
-            opportunities: 3,
-            pct: 100,
-          },
-          { strand: 'SHOWS_UP', good: 9, opportunities: 9, pct: 100 },
-        ],
-      },
+      reliability: servedReliability({
+        player_score: 42,
+        band: 'SHAKY' as Wire['ReliabilityBand'],
+        is_new: false,
+        late: 3,
+      }),
     });
     const read = toPlayerRecord(served).reliability;
 
-    expect(read?.strands.map((one) => one.strand)).toEqual(['SHOWS_UP']);
-    expect(read?.playerScore).toBe(93);
+    expect(read).not.toHaveProperty('band');
+    expect(read.playerScore).toBe(42);
+    expect(read.counts.late).toBe(3);
   });
 });
 
 /**
  * **A different absence, asking a different question.** Somebody rated in nothing may have
  * played all week, and somebody rated in four sports may never have had a game counted — so
- * this moves with neither the skill panel nor the strands above it.
+ * this moves with neither the skill panel nor the counts above it.
  */
 describe('how widely they spread their games', () => {
   it('carries the raw pair, and never a share computed at the boundary', () => {

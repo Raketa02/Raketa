@@ -267,31 +267,52 @@ describe('Members', () => {
     expect(membersTitle(undefined)).toBe('Members');
   });
 
-  it('reads a row’s line as the sport and its Level — the score is the tag beside the name', () => {
+  it('reads a row’s line as the sport and its Level — the points are the tag beside the name', () => {
     expect(memberLine('padel', { level: 2.71 })).toBe('Padel 2,71');
     expect(memberLine('tennis', { level: 3.1 })).toBe('Tennis 3,10');
   });
 
-  it('speaks a row as it is drawn: who, the score tag, the admin tag, and the line', () => {
+  /**
+   * **The tag spoken: the points and the band's word** (#660). The tint is a reading of the band,
+   * so the band is said in words — colour is never the only carrier — and the word is the
+   * server's band, never one this phone worked out from the figure.
+   */
+  it('speaks a row as it is drawn: who, the points and the band, the admin tag, and the line', () => {
     expect(
       memberRowLabel('padel', {
         name: 'Karol Tomczak',
         level: 2.75,
-        playerScore: 93,
+        playerScore: 75,
+        reliabilityBand: 'HIGH',
         isOwner: true,
         isAdministrator: false,
         you: false,
       }),
-    ).toBe('Karol Tomczak, score 93, admin, Padel 2,75');
+    ).toBe('Karol Tomczak, reliability 75, High, admin, Padel 2,75');
     expect(
       memberRowLabel('padel', {
         name: 'Tomek Kowal',
         level: 2.71,
+        playerScore: 100,
+        reliabilityBand: 'VERY_HIGH',
         isOwner: false,
         isAdministrator: false,
         you: true,
       }),
-    ).toBe('You, Padel 2,71');
+    ).toBe('You, reliability 100, Very high, Padel 2,71');
+  });
+
+  it('speaks the points alone where the band could not be named', () => {
+    expect(
+      memberRowLabel('padel', {
+        name: 'Ewa Mazur',
+        level: 2.6,
+        playerScore: 61,
+        isOwner: false,
+        isAdministrator: false,
+        you: false,
+      }),
+    ).toBe('Ewa Mazur, reliability 61, Padel 2,60');
   });
 
   it('speaks an official group’s Administrator who joined as a player with the admin tag', () => {
@@ -299,11 +320,13 @@ describe('Members', () => {
       memberRowLabel('padel', {
         name: 'Marta Wójcik',
         level: 2.6,
+        playerScore: 88,
+        reliabilityBand: 'HIGH',
         isOwner: false,
         isAdministrator: true,
         you: false,
       }),
-    ).toBe('Marta Wójcik, admin, Padel 2,60');
+    ).toBe('Marta Wójcik, reliability 88, High, admin, Padel 2,60');
   });
 
   it('hints what a tap on a row opens — the name is already the row’s', () => {

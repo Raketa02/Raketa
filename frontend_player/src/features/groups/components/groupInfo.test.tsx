@@ -15,7 +15,13 @@ import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-lib
 import { RefreshControl, StyleSheet } from 'react-native';
 
 import { sportColour } from '@/features/onboarding/types';
-import { OWN_RECORD_TITLE, RECORD_TITLE } from '@/features/player_record/types';
+import {
+  FULL_RECORD,
+  OWN_RECORD_TITLE,
+  RECORD_TITLE,
+  RELIABILITY_BAND_WORD,
+  countLines,
+} from '@/features/player_record/types';
 import { clearStoredTokens, resetSessionStatus } from '@/shared/lib/auth';
 import { queryClient } from '@/shared/lib/query-client';
 import { useToastQueue } from '@/shared/store/toast.store';
@@ -40,6 +46,7 @@ import {
   type FakeShare,
 } from '@/test-support/platform';
 import { stubGroupDeck } from '@/test-support/groupDeck';
+import { servedReliability } from '@/test-support/playerRecord';
 import {
   errorResponse,
   installTransport,
@@ -62,12 +69,20 @@ interface Person {
   readonly id: string;
   readonly name: string;
   readonly levels: Readonly<Partial<Record<Wire['Sport'], number>>>;
-  readonly score?: number;
+  /** Player reliability in points — everyone has one, 100 to start (ADR-0195 §1). */
+  readonly score: number;
+  readonly band: Wire['ReliabilityBand'];
 }
 
-function person(n: number, name: string, levels: Person['levels'], score?: number): Person {
+function person(
+  n: number,
+  name: string,
+  levels: Person['levels'],
+  score = 100,
+  band: Wire['ReliabilityBand'] = 'VERY_HIGH',
+): Person {
   const id = `e0000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-  return { id, name, levels, ...(score === undefined ? {} : { score }) };
+  return { id, name, levels, score, band };
 }
 
 /** The reader — `GET /users/me`'s id, which is how the rows know which one is *You*. */
@@ -76,13 +91,14 @@ const ME: Person = {
   name: 'Tomek Kowal',
   levels: { PADEL: 2.71, TENNIS: 3.1 },
   score: 92,
+  band: 'VERY_HIGH',
 };
-const KAROL = person(1, 'Karol Tomczak', { PADEL: 2.75, TENNIS: 3.0 }, 93);
+const KAROL = person(1, 'Karol Tomczak', { PADEL: 2.75, TENNIS: 3.0 }, 75, 'HIGH');
 const EWA = person(2, 'Ewa Mazur', { PADEL: 2.6 }, 91);
 const ZOFIA = person(3, 'Zofia Bąk', { PADEL: 2.69 }, 95);
 const ANIA = person(4, 'Ania Kowalczyk', { PADEL: 2.68 }, 99);
 const KUBA = person(5, 'Kuba Wróbel', { PADEL: 2.8 }, 96);
-/** Rated in padel with no record behind her: no score, never *score 0*. */
+/** Rated in padel and nothing has happened to her yet: 100, like everybody at the start. */
 const OLA = person(6, 'Ola Nowak', { PADEL: 2.64 });
 /** Plays tennis and not padel: in the group, and not on its padel Members. */
 const MAREK = person(7, 'Marek Zając', { TENNIS: 3.2 }, 91);
@@ -183,7 +199,8 @@ function crew({
         player_id: who.id,
         name: who.name,
         level: who.levels[sport] ?? 0,
-        ...(who.score === undefined ? {} : { player_score: who.score }),
+        player_score: who.score,
+        reliability_band: who.band,
         is_owner: who.id === state.ownerId,
         is_administrator: false,
         joined_at: joinedAt(who),
@@ -948,15 +965,20 @@ describe('Members', () => {
     expect(screen.queryByText(/^Play Padel/)).toBeNull();
     // Marek plays tennis only, so he is not on padel's list.
     expect(memberIds()).toEqual([ME.id, KAROL.id, OLA.id, KUBA.id, ANIA.id, ZOFIA.id, EWA.id]);
-    expect(screen.getByLabelText('You, score 92, Padel 2,71')).toBeTruthy();
-    expect(screen.getByLabelText('Karol Tomczak, score 93, admin, Padel 2,75')).toBeTruthy();
-    // No record, no score — never *score 0*.
-    expect(screen.getByLabelText('Ola Nowak, Padel 2,64')).toBeTruthy();
-    // The score is a tag beside the name now, on its band's tint; Ola has none.
+    // The points and the band's word, spoken as the tag draws them (#660).
+    expect(screen.getByLabelText('You, reliability 92, Very high, Padel 2,71')).toBeTruthy();
+    expect(
+      screen.getByLabelText('Karol Tomczak, reliability 75, High, admin, Padel 2,75'),
+    ).toBeTruthy();
+    // Nothing has happened to Ola yet: 100, like everybody at the start, never a missing tag.
+    expect(screen.getByLabelText('Ola Nowak, reliability 100, Very high, Padel 2,64')).toBeTruthy();
+    // The tag beside the name, on the tint of the band the server served.
     const row = (id: string) => within(screen.getByTestId(`member-${id}`));
-    expect(row(ME.id).getByTestId('score-tag-strong')).toBeTruthy();
+    expect(row(ME.id).getByTestId('score-tag-VERY_HIGH')).toBeTruthy();
     expect(row(ME.id).getByText('92')).toBeTruthy();
-    expect(row(OLA.id).queryByTestId(/^score-tag-/)).toBeNull();
+    expect(row(KAROL.id).getByTestId('score-tag-HIGH')).toBeTruthy();
+    expect(row(KAROL.id).getByText('75')).toBeTruthy();
+    expect(row(OLA.id).getByTestId('score-tag-VERY_HIGH')).toBeTruthy();
     // Every line opens on the sport's own dot.
     const dots = screen.getAllByTestId('member-sport-dot', { includeHiddenElements: true });
     expect(dots).toHaveLength(7);
@@ -1016,7 +1038,16 @@ describe('Members', () => {
           likely_range: { low: 2.4, high: 2.9 },
           last_five: ['WIN'],
         },
-        reliability: { player_score: 95, strands: [] },
+        reliability: servedReliability({
+          player_score: 95,
+          band: 'VERY_HIGH',
+          is_new: false,
+          turned_up: 9,
+          turned_up_of: 9,
+          kept: 8,
+          kept_of: 8,
+          left_in_dispute: 1,
+        }),
         variety: { distinct_opponents: 3, times_on_court: 3 },
       }),
     );
@@ -1029,6 +1060,25 @@ describe('Members', () => {
     await waitFor(() =>
       expect(transport.requestsTo('GET', `/api/v1/players/${ZOFIA.id}/record`)).toHaveLength(1),
     );
+    // A group-mate reads the sheet Zofia reads about herself: the points and the band's word,
+    // and the four counts under *Full record* (#660).
+    // (The block's figure, not the Members row's tag under the sheet, which prints 95 too.)
+    expect(await screen.findByText(RELIABILITY_BAND_WORD.VERY_HIGH)).toBeTruthy();
+    expect(screen.getAllByText('95')).toHaveLength(2);
+    fireEvent.press(screen.getByRole('button', { name: FULL_RECORD }));
+    const lines = countLines({
+      turnedUp: 9,
+      turnedUpOf: 9,
+      late: 0,
+      kept: 8,
+      keptOf: 8,
+      leftInDispute: 1,
+    });
+    expect(await screen.findByText(lines[0]?.value ?? '')).toBeTruthy();
+    for (const line of lines) {
+      expect(screen.getByText(line.label)).toBeTruthy();
+      expect(screen.getByText(line.value)).toBeTruthy();
+    }
   });
 
   it('opens your own record from your own row, a button like every other', async () => {
@@ -1052,7 +1102,9 @@ describe('Members', () => {
 
     await openMembers();
 
-    expect(await screen.findByLabelText('Ewa Mazur, score 91, admin, Padel 2,60')).toBeTruthy();
+    expect(
+      await screen.findByLabelText('Ewa Mazur, reliability 91, Very high, admin, Padel 2,60'),
+    ).toBeTruthy();
     expect(memberIds()).toEqual([ME.id, EWA.id, OLA.id, KUBA.id, ANIA.id, ZOFIA.id]);
     expect(screen.queryByLabelText(/^Karol Tomczak,/)).toBeNull();
   });

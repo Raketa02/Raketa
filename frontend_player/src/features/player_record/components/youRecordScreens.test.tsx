@@ -8,8 +8,8 @@
  * card under a ring, and both of those drawings have suites of their own. What is proved here
  * is what the two screens add: a card **per** rating with its status chip, no ceiling tick
  * where none was served, the record's blocks under each card from that sport's read, *Add a
- * sport* drawn and inert, the ladder printing only the edges it was sent; the ring's word and
- * the record card on one screen, and the one sentence a player with no record is told.
+ * sport* drawn and inert, the ladder printing only the edges it was sent; the figure in points
+ * with the band's word, the four counts, and the one sentence a new player is told (#660).
  */
 
 import { fireEvent, screen, waitFor } from 'expo-router/testing-library';
@@ -29,6 +29,7 @@ import {
   stubProfileOptions,
   stubProfileSurface,
 } from '@/test-support/onboardingRouter';
+import { SERGIO_RELIABILITY, servedReliability } from '@/test-support/playerRecord';
 import { installTransport, json, type Transport, type Wire } from '@/test-support/transport';
 
 import {
@@ -38,19 +39,18 @@ import {
   OWN_RECORD_TITLE,
   PLAYER_SCORE_BLOCK,
   SPORTSMANSHIP_LABEL,
-  STRAND_NAME,
   VARIETY_LABEL,
   opinionFigure,
   recordBlocksLabel,
+  recordCardLabel,
 } from './recordPresentation';
 import {
   ADD_A_SPORT,
   HOW_OTHERS_SEE_YOU_LINE,
   HOW_OTHERS_SEE_YOU_TITLE,
-  NOTHING_COUNTED,
+  NEW_PLAYER_NOTE,
   OUT_OF_100,
   PLAYER_RELIABILITY_TITLE,
-  SCORE_TONE_WORD,
   SKILL_PASSPORT_TITLE,
   THE_LADDER,
   ladderRung,
@@ -170,7 +170,7 @@ describe('the Skill passport', () => {
     expect(
       await screen.findByLabelText(
         recordBlocksLabel({
-          playerScore: 92,
+          reliability: { playerScore: 75, band: 'HIGH', isNew: false },
           lastFive: ['WIN', 'LOSS', 'WIN', 'WIN', 'LOSS'],
           countedGames: 9,
         }),
@@ -255,74 +255,86 @@ describe('the Skill passport', () => {
 // ---------------------------------------------------------------------------
 
 describe('Player reliability', () => {
-  const RELIABILITY_LINE = reliabilityLine({
-    playerScore: 92,
-    strands: [
-      { strand: 'SHOWS_UP', good: 11, opportunities: 12, pct: 92 },
-      { strand: 'ANSWERS_CHALLENGES', good: 6, opportunities: 7, pct: 86 },
-      { strand: 'ANSWERS_RESULTS', good: 5, opportunities: 5, pct: 100 },
-    ],
-  });
+  /** The served record is Sergio's six months: 75 · High. */
+  const RELIABILITY_LINE = reliabilityLine({ playerScore: 75, band: 'HIGH', isNew: false });
 
-  async function openReliability() {
+  async function openReliability(line: string = RELIABILITY_LINE) {
     await onYou();
-    fireEvent.press(
-      await screen.findByLabelText(doorRowLabel(PLAYER_RELIABILITY_TITLE, RELIABILITY_LINE)),
-    );
+    fireEvent.press(await screen.findByLabelText(doorRowLabel(PLAYER_RELIABILITY_TITLE, line)));
     await screen.findByRole('header', { name: PLAYER_RELIABILITY_TITLE });
   }
 
-  it('draws the score in the ring with the tone ladder’s word, then the record card’s rows', async () => {
+  /**
+   * **Sergio reads 75 · High, and the four counts** (#660) — the figure in the ring, the band's
+   * word beside it, *Out of 100* under that, then *Shows up*, *Keeps plans*, *Being late* and
+   * *Results left in dispute* as the record serves them, and the two rows under them.
+   */
+  it('draws the points with the band’s word, then the four counts and the two rows under them', async () => {
+    expect(RELIABILITY_LINE).toBe('75 · High');
     await openReliability();
 
-    expect(await screen.findByLabelText(scoreRingLabel(92))).toBeTruthy();
-    expect(screen.getByText(SCORE_TONE_WORD.good)).toBeTruthy();
+    expect(await screen.findByLabelText(scoreRingLabel(75))).toBeTruthy();
+    expect(screen.getByText('High reliability')).toBeTruthy();
     expect(screen.getByText(OUT_OF_100)).toBeTruthy();
-    // The card, as the sheet draws it: the strands, the variety, the sportsmanship — the
-    // figure, since #468 serves it to the subject as to anybody (ADR-0179 §5), and no band
-    // word anywhere on the screen (#473; the three are spelled only to be asserted absent).
-    expect(screen.getByText(STRAND_NAME.SHOWS_UP)).toBeTruthy();
-    expect(screen.getByText('11 of 12')).toBeTruthy();
+    expect(screen.getByText('Shows up')).toBeTruthy();
+    expect(screen.getByText('turned up 12 of 13')).toBeTruthy();
+    expect(screen.getByText('Keeps plans')).toBeTruthy();
+    expect(screen.getByText('kept 13 of 14')).toBeTruthy();
+    expect(screen.getByText('Being late')).toBeTruthy();
+    expect(screen.getByText('late 1 time')).toBeTruthy();
+    expect(screen.getByText('Results left in dispute')).toBeTruthy();
+    // Every count's value, as the card speaks it — *Results left in dispute, 0* included.
+    expect(
+      screen.getByLabelText(
+        recordCardLabel({
+          counts: { turnedUp: 12, turnedUpOf: 13, late: 1, kept: 13, keptOf: 14, leftInDispute: 0 },
+          variety: { distinctOpponents: 14, timesOnCourt: 20 },
+          opinion: { average: 4.3, raters: 12 },
+        }),
+      ),
+    ).toBeTruthy();
     expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
     expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
     expect(screen.getByText(opinionFigure({ average: 4.3, raters: 12 }))).toBeTruthy();
+    // No meter and no retired word: the one progress drawing is the ring, and neither the
+    // ladder's three words nor the sportsmanship band's three are anywhere on the screen.
+    expect(screen.getAllByRole('progressbar')).toEqual([screen.getByLabelText(scoreRingLabel(75))]);
+    expect(screen.queryByText(/^(Reliable|Holding|Under the bar)$/)).toBeNull();
     expect(screen.queryByText(/^(Good|Mixed|Poor)$/)).toBeNull();
-  });
-
-  it('gives a score under the bar its own word', async () => {
-    stubOwnRecord(transport, {
-      ...OWN_RECORD_SERVED,
-      reliability: {
-        player_score: 64,
-        strands: [{ strand: 'SHOWS_UP', good: 5, opportunities: 8, pct: 63 }],
-      },
-    });
-    await launchSignedIn();
-    fireEvent.press(await screen.findByLabelText('You'));
-    fireEvent.press(await screen.findByLabelText(PLAYER_RELIABILITY_TITLE, { exact: false }));
-
-    expect(await screen.findByText(SCORE_TONE_WORD.poor)).toBeTruthy();
-  });
-
-  it('tells a player with no record that there is no score, and that it is not a low one', async () => {
-    const { reliability: _none, ...noRecord } = OWN_RECORD_SERVED;
-    stubOwnRecord(transport, noRecord);
-    await launchSignedIn();
-    fireEvent.press(await screen.findByLabelText('You'));
-    fireEvent.press(
-      await screen.findByLabelText(
-        doorRowLabel(PLAYER_RELIABILITY_TITLE, reliabilityLine(undefined)),
-      ),
-    );
-
-    expect(await screen.findByText(NOTHING_COUNTED)).toBeTruthy();
-    expect(screen.queryByLabelText(/out of 100/)).toBeNull();
-    // The variety is a different absence, and is still drawn.
-    expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
+    // Sergio is not new, so nobody tells him where the figure starts.
+    expect(screen.queryByText(NEW_PLAYER_NOTE)).toBeNull();
   });
 
   /**
-   * **A player nobody has rated draws no sportsmanship row, as before** — the fourth absence,
+   * **Nerea reads 100 · New** — on the You row and on the screen — and the one sentence a new
+   * player is told, which speaks of games and never of plans. Her counts are drawn as served:
+   * nothing has fallen due for her yet.
+   */
+  it('reads 100 · New for a new player, with the sentence that says what that is', async () => {
+    stubOwnRecord(transport, { ...OWN_RECORD_SERVED, reliability: servedReliability() });
+    await openReliability(reliabilityLine({ playerScore: 100, band: 'VERY_HIGH', isNew: true }));
+
+    expect(await screen.findByLabelText(scoreRingLabel(100))).toBeTruthy();
+    expect(screen.getByText('New')).toBeTruthy();
+    expect(screen.queryByText('Very high reliability')).toBeNull();
+    expect(screen.getByText(NEW_PLAYER_NOTE)).toBeTruthy();
+    expect(screen.getByText('turned up 0 of 0')).toBeTruthy();
+  });
+
+  /** The word is the server's band — a 49 served Low reads *Low reliability*. */
+  it('draws the band the server served', async () => {
+    stubOwnRecord(transport, {
+      ...OWN_RECORD_SERVED,
+      reliability: { ...SERGIO_RELIABILITY, player_score: 49, band: 'LOW', turned_up: 10 },
+    });
+    await openReliability(reliabilityLine({ playerScore: 49, band: 'LOW', isNew: false }));
+
+    expect(await screen.findByText('Low reliability')).toBeTruthy();
+    expect(screen.getByText('turned up 10 of 13')).toBeTruthy();
+  });
+
+  /**
+   * **A player nobody has rated draws no sportsmanship row, as before** — its own absence,
    * asking its own question: the rows above it are still drawn, and nothing is drawn at nought.
    */
   it('draws no sportsmanship row for a player nobody has rated', async () => {
@@ -330,7 +342,7 @@ describe('Player reliability', () => {
     stubOwnRecord(transport, unrated);
     await openReliability();
 
-    expect(await screen.findByText(STRAND_NAME.SHOWS_UP)).toBeTruthy();
+    expect(await screen.findByText('Shows up')).toBeTruthy();
     expect(screen.getByText(VARIETY_LABEL)).toBeTruthy();
     expect(screen.queryByText(SPORTSMANSHIP_LABEL)).toBeNull();
   });
@@ -353,10 +365,21 @@ describe('How others see you', () => {
       screen.getByLabelText(doorRowLabel(HOW_OTHERS_SEE_YOU_TITLE, HOW_OTHERS_SEE_YOU_LINE)),
     );
     await screen.findByRole('header', { name: OWN_RECORD_TITLE });
+    // The block says what the reliability screen says: the points and the band's word.
+    expect(
+      await screen.findByLabelText(
+        recordBlocksLabel({
+          reliability: { playerScore: 75, band: 'HIGH', isNew: false },
+          lastFive: ['WIN', 'LOSS', 'WIN', 'WIN', 'LOSS'],
+          countedGames: 9,
+        }),
+      ),
+    ).toBeTruthy();
     // The card is folded under *Full record* on the sheet, as on anybody's.
     fireEvent.press(await screen.findByRole('button', { name: FULL_RECORD }));
 
-    expect(await screen.findByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
+    expect(await screen.findByText('turned up 12 of 13')).toBeTruthy();
+    expect(screen.getByText(SPORTSMANSHIP_LABEL)).toBeTruthy();
     expect(screen.getByText(opinionFigure({ average: 4.3, raters: 12 }))).toBeTruthy();
     expect(screen.queryByText(/^(Good|Mixed|Poor)$/)).toBeNull();
   });

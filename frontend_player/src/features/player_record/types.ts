@@ -16,20 +16,22 @@
 export { PlayerRecordSheet, type PlayerRecordSheetProps } from './components/PlayerRecordSheet';
 
 /**
- * **A Player Score drawn as a tag**, for Members' rows in `groups` — the one surface that tints
- * the figure itself. The tint is `scoreBand`'s, which this feature owns beside the ladder it
- * refines, so a group's list and the record it opens cannot band one number two ways.
+ * **Player reliability drawn as a tag**, for Members' rows in `groups` — the one surface that
+ * tints the figure itself. The tint is the **served band**'s (#660, ADR-0195 §1), and so are the
+ * band's words and the one narrowing of its code: a group's list and the record it opens read one
+ * band one way, and neither holds a threshold.
  */
 export { PlayerScoreTag, type PlayerScoreTagProps } from './components/PlayerScoreTag';
+export { toReliabilityBand } from './mappers/playerRecordMappers';
+export { RELIABILITY_BAND_WORD } from './components/recordPresentation';
 
 export type {
   Opinion,
   OpponentVariety,
   PlayerRecord,
   RecordSubject,
-  ReliabilityStrand,
+  ReliabilityBand,
   SkillPanel,
-  StrandRow,
 } from './domain/playerRecord';
 
 /**
@@ -82,11 +84,9 @@ export {
   ADD_A_SPORT,
   HOW_OTHERS_SEE_YOU_LINE,
   HOW_OTHERS_SEE_YOU_TITLE,
-  NOTHING_COUNTED,
   OUT_OF_100,
   PLAYER_RELIABILITY_TITLE,
   SCORE_LABEL,
-  SCORE_TONE_WORD,
   SKILL_PASSPORT_TITLE,
   THE_LADDER,
   passportLine,
@@ -104,10 +104,11 @@ export {
  * walk reads: the two titles, the close control's name, the pairing row's spoken name, the one
  * line a record that cannot be opened draws, the one clause a client is licensed to write from
  * two area codes — which the walk asserts is **absent** from your own record — the record
- * card's heading with the two figures it prints, and the sportsmanship row's label with the
+ * card's four counts with the two figures it prints, and the sportsmanship row's label with the
  * figure it draws for everybody. The three band words it used to draw for the subject are
  * exported by nothing, because nothing draws them
- * ([#473](https://github.com/Raketa02/Raketa/issues/473)).
+ * ([#473](https://github.com/Raketa02/Raketa/issues/473)); nor are the strands' names or the
+ * tone ladder's words, retired by ADR-0195 (#660).
  */
 export {
   IN_YOUR_AREA,
@@ -118,9 +119,8 @@ export {
   fitRowLabel,
   RECORD_UNAVAILABLE,
   SPORTSMANSHIP_LABEL,
-  STRAND_NAME,
+  countLines,
   opinionFigure,
   recordCloseLabel,
-  strandFraction,
   varietyValue,
 } from './components/recordPresentation';

@@ -140,8 +140,11 @@ export const GROUPS_COPY = {
     title: 'Members',
     back: 'Back to the group',
     admin: 'admin',
-    /** The score tag, spoken — *score 92*; the tag itself draws a spark and the figure. */
-    score: 'score',
+    /**
+     * The score tag, spoken — *reliability 92, Very high*; the tag itself draws a spark and the
+     * figure on its band's tint (#660). The band's word is `player_record`'s.
+     */
+    reliability: 'reliability',
     /** A row's hint: a tap opens the record, and the row's label already says whose. */
     openYours: 'Opens your record',
     openTheirs: 'Opens their record',

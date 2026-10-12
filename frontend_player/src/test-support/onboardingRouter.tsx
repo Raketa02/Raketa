@@ -110,6 +110,7 @@ import {
 import { queryClient } from '@/shared/lib/query-client';
 
 import { fakePayments } from './platform';
+import { SERGIO_RELIABILITY } from './playerRecord';
 import { errorResponse, json, noContent, type Transport, type Wire } from './transport';
 
 /**
@@ -793,7 +794,7 @@ const GATE_USER_NICKNAME = 'ada';
  * record behind them, and the sportsmanship figure with its count, which the route serves its
  * subject as it serves any reader (ADR-0179 §5, #468).
  *
- * The You tab draws it three times over: the header card's face, intro and score, the
+ * The You tab draws it three times over: the header card's face, intro and figure, the
  * reliability row's line, and — with `?sport=` — the passport's blocks under each card. The
  * transport drops the query string, so one stub answers all three.
  */
@@ -814,14 +815,8 @@ export const OWN_RECORD_SERVED: Wire['PlayerRecordResponse'] = {
     likely_range: { low: 2.09, high: 3.33 },
     last_five: ['WIN', 'LOSS', 'WIN', 'WIN', 'LOSS'],
   },
-  reliability: {
-    player_score: 92,
-    strands: [
-      { strand: 'SHOWS_UP', good: 11, opportunities: 12, pct: 92 },
-      { strand: 'ANSWERS_CHALLENGES', good: 6, opportunities: 7, pct: 86 },
-      { strand: 'ANSWERS_RESULTS', good: 5, opportunities: 5, pct: 100 },
-    ],
-  },
+  // Sergio's six months — 75 · High, turned up 12 of 13, kept 13 of 14, late once (#660).
+  reliability: SERGIO_RELIABILITY,
   variety: { distinct_opponents: 14, times_on_court: 20 },
   // The figure and its count, to the subject as to anybody (#468, ADR-0179 §5).
   sportsmanship: { average: 4.3, raters: 12 },

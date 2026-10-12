@@ -47,6 +47,7 @@ import {
   TOMEK,
   type GroupSetup,
 } from '@/test-support/officialGroupsServer';
+import { NEW_MEMBER_RELIABILITY } from '@/test-support/playerRecord';
 import {
   errorResponse,
   installTransport,
@@ -521,6 +522,7 @@ describe('Members, from the members card', () => {
     player_id: who.id,
     name: who.name,
     level,
+    ...NEW_MEMBER_RELIABILITY,
     is_owner: false,
     is_administrator: false,
     joined_at: '2026-09-24T09:00:00Z',

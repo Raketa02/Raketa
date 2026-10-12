@@ -4,11 +4,9 @@
  *
  * The passport's cards are the result screen's and the reliability screen's rows are the
  * record card's, so their sentences are asserted where they live. What is new is the two rows'
- * live lines, the passport's chip and card words, the ring's word on the reliability screen,
- * and the one sentence a player with no record is told.
+ * live lines, the passport's chip and card words, the word beside the figure on the reliability
+ * screen, and the one sentence a new player is told.
  */
-
-import type { Reliability } from '../domain/playerRecord';
 
 import { OWN_RECORD_TITLE, PLAYER_SCORE_BLOCK } from './recordPresentation';
 import {
@@ -16,29 +14,20 @@ import {
   ADD_A_SPORT_BODY,
   HOW_OTHERS_SEE_YOU_LINE,
   HOW_OTHERS_SEE_YOU_TITLE,
-  NOTHING_COUNTED,
+  NEW_PLAYER_NOTE,
   OUT_OF_100,
   PLAYER_RELIABILITY_TITLE,
   SCORE_LABEL,
-  SCORE_TONE_WORD,
   SKILL_PASSPORT_TITLE,
   THE_LADDER,
   ladderRung,
   passportLine,
   rateSportChip,
   reliabilityLine,
+  reliabilityWord,
   scoreRingLabel,
   statusChipVariant,
 } from './youRecordPresentation';
-
-const RELIABILITY: Reliability = {
-  playerScore: 92,
-  strands: [
-    { strand: 'SHOWS_UP', good: 11, opportunities: 12, pct: 92 },
-    { strand: 'ANSWERS_CHALLENGES', good: 6, opportunities: 7, pct: 86 },
-    { strand: 'ANSWERS_RESULTS', good: 5, opportunities: 5, pct: 100 },
-  ],
-};
 
 describe('the two rows', () => {
   it('names the passport, and lists each rating with its level', () => {
@@ -51,16 +40,11 @@ describe('the two rows', () => {
     ).toBe('Padel 2,71 · Tennis 3,10');
   });
 
-  it('names reliability by the block’s own word, and counts what is behind the score', () => {
+  /** The sheet's own head, written in (`the-words.md` §27, ADR-0195): points and the band. */
+  it('names reliability by the block’s own word, and reads the points and the band', () => {
     expect(PLAYER_RELIABILITY_TITLE).toBe(PLAYER_SCORE_BLOCK);
-    expect(reliabilityLine(RELIABILITY)).toBe('92 of 100 · 3 things counted');
-    expect(reliabilityLine({ playerScore: 70, strands: [RELIABILITY.strands[0]!] })).toBe(
-      '70 of 100 · 1 thing counted',
-    );
-  });
-
-  it('says what an absent record is, rather than drawing a nought', () => {
-    expect(reliabilityLine(undefined)).toBe('Nothing counted yet');
+    expect(reliabilityLine({ playerScore: 75, band: 'HIGH', isNew: false })).toBe('75 · High');
+    expect(reliabilityLine({ playerScore: 100, band: 'VERY_HIGH', isNew: true })).toBe('100 · New');
   });
 
   it('opens your own record under the sheet’s own title, cited', () => {
@@ -70,23 +54,41 @@ describe('the two rows', () => {
 });
 
 describe('the reliability screen', () => {
-  /** The tone ladder's three steps, said — `scoreTone`'s bounds, one word each. */
-  it('gives each step of the tone ladder a word, and the scale under it', () => {
-    expect(SCORE_TONE_WORD).toEqual({
-      good: 'Reliable',
-      neutral: 'Holding',
-      poor: 'Under the bar',
-    });
+  /**
+   * **The band said in full, beside the figure** — *Very high*, *High*, *Medium* or *Low
+   * reliability*, keyed by the served code, and *New* in its place for a player who is new. The
+   * retired tone ladder's three words are spelled here only to be asserted absent.
+   */
+  it('says the band beside the figure, and New where it applies', () => {
+    expect(reliabilityWord({ playerScore: 92, band: 'VERY_HIGH', isNew: false })).toBe(
+      'Very high reliability',
+    );
+    expect(reliabilityWord({ playerScore: 75, band: 'HIGH', isNew: false })).toBe(
+      'High reliability',
+    );
+    expect(reliabilityWord({ playerScore: 64, band: 'MEDIUM', isNew: false })).toBe(
+      'Medium reliability',
+    );
+    expect(reliabilityWord({ playerScore: 40, band: 'LOW', isNew: false })).toBe('Low reliability');
+    expect(reliabilityWord({ playerScore: 100, band: 'VERY_HIGH', isNew: true })).toBe('New');
+    expect(reliabilityWord({ playerScore: 42, isNew: false })).toBeUndefined();
     expect(OUT_OF_100).toBe('Out of 100');
   });
 
-  it('names the ring by the block’s word and the scale, as the sheet’s pill does', () => {
+  it('names the ring by the block’s word and the scale, as the sheet’s block does', () => {
     expect(scoreRingLabel(92)).toBe('Player reliability 92 out of 100');
   });
 
-  it('tells a player with no record that there is no score, and that it is not a low one', () => {
-    expect(NOTHING_COUNTED).toMatch(/not a low one/);
-    expect(NOTHING_COUNTED).not.toMatch(/\b0\b/);
+  /**
+   * **The new player's sentence speaks of games, never of plans** (#660): everyone has a figure
+   * from the start, so what a new player is told is where it starts and what *New* means — not
+   * that nothing has fallen due.
+   */
+  it('tells a new player where the figure starts and what New means', () => {
+    expect(NEW_PLAYER_NOTE).toBe(
+      'Everyone starts at 100. Yours reads New until you’ve played 3 games through.',
+    );
+    expect(NEW_PLAYER_NOTE).not.toMatch(/plan/i);
   });
 
   it('labels the header card’s ring with the one word under it', () => {
