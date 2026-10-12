@@ -39,15 +39,18 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   §6): a pair is unfit when either's minimum (a Player profile preference,
   `PUT /players/me/reliability-filter`) is above the other's band, *New* passing every minimum
   (the engine's `passes_reliability_minimum`), the points read off `player_score`'s published
-  query **only where somebody among them has a filter on, and once per call** — the proposer,
-  the deck and rescues ask every kind at once (`unfit_pairs_by_kind`), so a deal reads the
-  members' points once. **Yeses already given stand**: the fill's `NO_LONGER_FITS` re-check
-  and a paused yes coming back (`Guards.refuse_a_yes_that_does_not_fit(…, already_given=True)`)
-  ask it with `reliability_filter=False` — unlike a block, the filter takes back no yes, not
-  even at the fill (a call, the grilling's *from then on*); a new yes, a join, a version
-  dealt, the deck, the details, posting and rescues all ask it, and a booked game is never
-  touched. A seat reopened when a time to pay ran out is a yes again, so its late
-  confirmation meets the filter (a call). **The court hour is
+  query **only where somebody among them has a filter on** — and **each person's folded at
+  most once per deal**: the adapter remembers whose it read at one instant (it is built per
+  request and per job run), so a deck read asking for its cards, the reader's rescues and the
+  whole pool folds nobody twice, and the proposer, the deck and rescues ask every kind at once
+  (`unfit_pairs_by_kind`). **Yeses already given stand**: the fill's `NO_LONGER_FITS` re-check,
+  a paused yes coming back (`Guards.refuse_a_yes_that_does_not_fit(…, already_given=True)`)
+  and a seat kept for a refused rescuer confirmed within its time (#640;
+  `RescueOffers.is_offered(…, already_kept=True)`) ask it with `reliability_filter=False` —
+  unlike a block, the filter takes back no yes, not even at the fill (a call, the grilling's
+  *from then on*); a new yes, a join, a version dealt, the deck, the details, posting and
+  rescues all ask it, and a booked game is never touched. A seat reopened when a time to pay
+  ran out is a yes again, so its late confirmation meets the filter (a call). **The court hour is
   read, never supplied**: the share and the book-by come off `SellableCourtHours`
   (`CourtHours`), so a paused or unlive club, an unsold hour or one past its book-by is
   `court_hour_not_for_sale`. **Expired is read off the clock**: `standing_at` compares the

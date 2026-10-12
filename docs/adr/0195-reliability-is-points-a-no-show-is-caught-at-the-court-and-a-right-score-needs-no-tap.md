@@ -291,6 +291,12 @@ of at least **High** reliability*, or *at least **Medium***.
 - **What a hidden player sees, with nobody named:** *Some players in your groups play only with High
   reliability or above. At 75 you're dealt with everyone again.* The figure is the lowest band floor
   among the filters that hide them. Nobody is ever named: ADR-0193 §3's principle for blocks.
+
+  > **Note — as built, 2026-10-12 ([#661](https://github.com/Raketa02/Raketa/issues/661)), a call
+  > awaiting a ruling.** The figure is the floor of the **highest** minimum among the filters that
+  > hide them, not the lowest. Only that figure passes every one of those filters at once, so only it
+  > makes *dealt with everyone again* true for a player below both a Medium and a High filter. For a
+  > player hidden by High filters alone, Sergio's case above, the two readings agree.
 - **The group's Members list** carries each member's points and band.
 - **One read of the members' points per deal.** It still ranks nothing: a card is either fit for a
   pair or it isn't.
