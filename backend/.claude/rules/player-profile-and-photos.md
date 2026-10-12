@@ -90,3 +90,10 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   shapes — `tests/unit/test_intro.py`'s sweep is what caught the fourth. **A sixth, the
   proposals opt-in answered again from `PROFILE`, went with the search radius** (#581):
   only the "who fits whom" ranking read either, so a profile now commits without both.
+  **And the reliability filter is a profile preference** (#661; ADR-0195 §6):
+  `PUT /players/me/reliability-filter` (`{minimum: MEDIUM | HIGH | null}`, `204`),
+  `PlayerProfile.reliability_minimum` (every profile starts off, `None`), recorded as
+  `player_profile.reliability_minimum_set` / v1, a no-op on the value held, any other band
+  `reliability_minimum_not_offered` (400). It sits beside the gender preference because it is a
+  clause of the same pair rule — `proposals`' `MatcherPlayerFit` reads it off the profile load
+  it already makes — and it is read back on the player's own record, never on the profile read.

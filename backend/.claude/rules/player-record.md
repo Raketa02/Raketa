@@ -96,9 +96,23 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `SubjectReliability` is the eighth demand and the **first here whose provider reads a set**
   — `PublishedScoreQuery` answers about a whole group's members for the Members list, and
   the narrowing to one person is the adapter's, which is the mirror of variety's fence.
-  `ReliabilityBand` is the one name this context imports rather than respells: the engines
-  are the pure layer every context reads and none owns, and the band is on the player contract
-  under that spelling on the record and on Members alike.
+  `ReliabilityBand` and its floors are the names this context imports rather than respells:
+  the engines are the pure layer every context reads and none owns, and the band is on the
+  player contract under that spelling on the record and on Members alike.
+  **The reader's own reliability filter rides on the figure, and only on your own record**
+  (#661; ADR-0195 §6): `reliability.filter` — `minimum` (omitted while it is off), `hides` of
+  `of` (everybody else in every group the reader is in, each counted once; never somebody
+  New) and, while somebody's filter in their groups keeps them off a court,
+  `back_with_everyone` (`band`, `points`) — the **highest** of those minimums, whose floor
+  clears every one of them at once (a call made without a ruling: the ticket's *the lowest band
+  floor among those filters* would make *at 50 you're dealt with everyone again* false for a
+  Low player below both a Medium and a High filter). It is the eleventh demand,
+  `ReliabilityFilters` (`FiltersInTheGroups`, over `GroupDirectory`, each member's Player
+  profile and `PublishedScoreQuery`, asking no points while nobody filters), and **`ReadOwnRecord`
+  alone holds it** — attached to the assembled panel, so `ReadPlayerRecord` has no such
+  collaborator and nobody's filter can reach a stranger's sheet. It **names nobody**: two
+  counts and a band. Who a filter hides is the engine's `passes_reliability_minimum`, the
+  clause `proposals`' pair rule asks, so the sheet cannot count a player the deck would deal.
   **What other players said is the fifth fact, and it no longer depends on who is
   reading** (#382, then #468). It was the one zone that did — the figure and its count for
   a reader, a **coarse band and neither** for the person it is about, split on the **port**

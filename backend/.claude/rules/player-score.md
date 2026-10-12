@@ -30,7 +30,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   a game by its booked hour, a keeping by the hour or the cut-off that settled it — so *missed
   on 13 October* drops out on 13 April. The **band** is the engine's (`ReliabilityBand`,
   `RELIABILITY_BAND_FLOORS` in `app/engines/matchfit/core.py`: 90 / 75 / 50, one home for the
-  record, Members and #661's filter); **New** is fewer than 3 games played through **ever**,
+  record, Members and the reliability filter — #661, which reads the figure through
+  `PublishedScoreQuery` in `proposals`' pair rule, once per deal and only where a filter is on,
+  and for the own record's *hides N of M*); **New** is fewer than 3 games played through **ever**,
   so every line is read for it and only the six months for the rest. **The counts** — *turned
   up* of *turned up of*, *late*, *kept* of *kept of*, *left in dispute* — are over the same
   six months; noughts are measured now, not invented. **Everybody asked is answered**: a

@@ -34,7 +34,20 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   In and each other, and so must a yes (`no_longer_fits`, naming nobody), judged by
   `PlayerFit` — the matcher's own line-up mask (blocks, mutual gender preference, the kind's
   `level_tolerance`, narrowed for a newcomer) over live profiles and rating's published read,
-  failing closed on a missing fact and raising on an unreadable block. **The court hour is
+  failing closed on a missing fact and raising on an unreadable block — and since #661 **the
+  reliability filter** ([ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  §6): a pair is unfit when either's minimum (a Player profile preference,
+  `PUT /players/me/reliability-filter`) is above the other's band, *New* passing every minimum
+  (the engine's `passes_reliability_minimum`), the points read off `player_score`'s published
+  query **only where somebody among them has a filter on, and once per call** — the proposer,
+  the deck and rescues ask every kind at once (`unfit_pairs_by_kind`), so a deal reads the
+  members' points once. **Yeses already given stand**: the fill's `NO_LONGER_FITS` re-check
+  and a paused yes coming back (`Guards.refuse_a_yes_that_does_not_fit(…, already_given=True)`)
+  ask it with `reliability_filter=False` — unlike a block, the filter takes back no yes, not
+  even at the fill (a call, the grilling's *from then on*); a new yes, a join, a version
+  dealt, the deck, the details, posting and rescues all ask it, and a booked game is never
+  touched. A seat reopened when a time to pay ran out is a yes again, so its late
+  confirmation meets the filter (a call). **The court hour is
   read, never supplied**: the share and the book-by come off `SellableCourtHours`
   (`CourtHours`), so a paused or unlive club, an unsold hour or one past its book-by is
   `court_hour_not_for_sale`. **Expired is read off the clock**: `standing_at` compares the
@@ -129,8 +142,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   *Your new game*, #622). **When**: `ProposeGames` runs per pool from two
   jobs — the sweep over every pool (`GroupDirectory.every`) and a short tick over the pools
   a delivered change made due (`DueForProposing`, fed per delivery run by
-  `MarkDueForProposing`: a joining, a player's week, intent, first rating or Games & money,
-  a swipe, anything a club changes about what it sells — which is everywhere). The due set
+  `MarkDueForProposing`: a joining, a player's week, intent, first rating, Games & money or
+  reliability filter, a swipe, anything a club changes about what it sells — which is everywhere). The due set
   is process memory and best effort; the sweep is the guarantee.
 - **A game still filling has its details, for anybody dealt it** (#542; the mechanics §14.2):
   `GET /proposals/{id}` (`application/proposal_details.py`, rules in `domain/details.py`) is the

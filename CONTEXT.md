@@ -1013,8 +1013,8 @@ player's: they are read on the player's own screen, on a group's Members list, a
 [ADR-0160](docs/adr/0160-a-results-strand-counts-answers-and-never-agreements.md), #544). It is
 now **points** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
 §1, §6): the points, bands, *New* and counts are built
-([#659](https://github.com/Raketa02/Raketa/issues/659)), and the **Reliability filter** is
-decided and not yet built ([#661](https://github.com/Raketa02/Raketa/issues/661)).
+([#659](https://github.com/Raketa02/Raketa/issues/659)), and so is the **Reliability filter**
+([#661](https://github.com/Raketa02/Raketa/issues/661)).
 
 - **Player Score** — the figure a player sees as **Player reliability**, out of a hundred, one per
   player across all sports. Computed from what happened, never from opinions and never from
@@ -1064,7 +1064,10 @@ decided and not yet built ([#661](https://github.com/Raketa02/Raketa/issues/661)
   acts from the moment it is switched on, or someone drops below it; **yeses already given stand**,
   and booked games never change. The filtering player is told how many players in their groups it
   hides (*hides 2 of the 11*); a hidden player is told, **with nobody named**, the figure that
-  brings them back to everyone, the lowest band floor among the filters that hide them.
+  brings them back to everyone: the floor of the highest minimum among the filters that hide
+  them, which clears all of them at once (a call in
+  [#661](https://github.com/Raketa02/Raketa/issues/661): *the lowest band floor* would not bring
+  a player below both a Medium and a High filter back to everyone).
 - **Strand** — *retired 2026-10-11* (ADR-0195 §1). One of the six things the blended figure was
   made of, each a ratio of **opportunities** that fell due and what came of them, weighted
   35 / 20 / 15 / 12 / 10 / 8 and renormalised over the strands present. **Shows up** and **Keeps
@@ -1223,8 +1226,9 @@ every fact read through the owning context's published port, and one rule of its
   **Retired 2026-10-11** ([ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
   §8, built by [#659](https://github.com/Raketa02/Raketa/issues/659)): the record's
   reliability block is the **points**, the **band**, **New** and the four **counts** (Player
-  Score) — and, once [#661](https://github.com/Raketa02/Raketa/issues/661) lands, for the
-  subject also their **Reliability filter** and what it hides. No row, pair or ratio per strand
+  Score) — and, on the subject's own record alone, their **Reliability filter**, how many
+  players in their groups it hides, and the figure that brings them back
+  ([#661](https://github.com/Raketa02/Raketa/issues/661)). No row, pair or ratio per strand
   crosses.
 - **Run of form** — a player's **last five counted results, oldest to newest**, each a win or a
   loss, in the record's skill panel beside their **counted games**. **Outcomes in order and no
@@ -1745,7 +1749,7 @@ by [#541](https://github.com/Raketa02/Raketa/issues/541), rescues by
   court (no block either way, mutual gender preference, Levels within the kind's window). Since
   [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) §6 the rule gains one more clause, the **Reliability filter**
   (Player Score), asked where a block is; unlike a block it takes no yes back, so a yes given
-  before the filter was switched on, or before somebody dropped below it, stands (not yet built —
+  before the filter was switched on, or before somebody dropped below it, stands (built by
   [#661](https://github.com/Raketa02/Raketa/issues/661)).
 - **Withdraw** — taking a yes back before the game fills: free and silent, and the seat is open
   again. Unlike a **No** it is no verdict on the card: the player may say yes again while the
