@@ -1,6 +1,3 @@
-import { CHECK_IN_COPY } from '@/features/check-in/copy';
-import { CHECK_IN_PATH } from '@/features/check-in/schemas';
-import { ButtonLink } from '@/ui/Button';
 import { Card } from '@/ui/Card';
 import { PageHeader } from '@/ui/PageHeader';
 import { PeriodBar } from '@/ui/PeriodBar';
@@ -18,35 +15,23 @@ const COPY = BOOKINGS_COPY;
 /**
  * **Bookings** (the screens B4, the mechanics §16.7): one day at a time, *‹ Today ›* and a date
  * box, the filters with the day's count under each, and the day's games. A link may point at one
- * booking, which is marked. *Check in* is at the top right when the club checks players in.
+ * booking, which is marked.
  */
 export function Bookings({
   day,
   clubName,
   pointedAt,
-  checksIn,
 }: {
   day: BookingsDay;
   /** As the players read it. */
   clubName: string;
   pointedAt: string | null;
-  checksIn: boolean;
 }) {
   const at = (date: string) =>
     dayHref({ date: date === day.today ? null : date, filter: day.filter });
   return (
     <>
-      <PageHeader
-        caption={COPY.caption}
-        title={COPY.title}
-        aside={
-          checksIn ? (
-            <ButtonLink href={CHECK_IN_PATH} tone="primary">
-              {CHECK_IN_COPY.title}
-            </ButtonLink>
-          ) : undefined
-        }
-      />
+      <PageHeader caption={COPY.caption} title={COPY.title} />
       <Card labelledBy="day-title">
         <PeriodBar
           label={COPY.day.label}

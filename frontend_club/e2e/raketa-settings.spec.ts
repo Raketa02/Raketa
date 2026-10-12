@@ -52,7 +52,8 @@ test.describe('Raketa settings', () => {
     await expect(
       page.getByRole('switch', { name: "Offer our groups other clubs' courts when ours are full" }),
     ).not.toBeChecked();
-    await expect(page.getByRole('switch', { name: 'We check players in' })).not.toBeChecked();
+    // The desk checks nobody in (ADR-0195): these two are the only switches.
+    await expect(page.getByRole('main').getByRole('switch')).toHaveCount(2);
     await expect(page.getByRole('switch', { name: 'Pause Raketa bookings' })).not.toBeChecked();
     await expect(page.getByRole('button', { name: 'Confirm settings' })).toBeVisible();
   });
@@ -65,7 +66,6 @@ test.describe('Raketa settings', () => {
     await openSettings(page);
     await page.getByRole('radio', { name: 'Instant' }).check();
     await page.getByLabel('Minimum notice').fill('3');
-    await page.getByRole('switch', { name: 'We check players in' }).check();
     await page.getByRole('button', { name: 'Confirm settings' }).click();
 
     await expect(page.getByRole('main').getByRole('status')).toHaveText('Settings confirmed.');
@@ -79,7 +79,6 @@ test.describe('Raketa settings', () => {
         minimum_notice_hours: 3,
         time_to_confirm_minutes: 30,
         other_clubs_courts: { offered: false, within_km: 10 },
-        check_in: true,
         paused: false,
       },
     ]);
@@ -206,7 +205,6 @@ test.describe('Raketa settings', () => {
         minimum_notice_hours: 2,
         time_to_confirm_minutes: 30,
         other_clubs_courts: { offered: false, within_km: 10 },
-        check_in: false,
         paused: true,
       },
     ]);

@@ -63,10 +63,6 @@ export const SETTINGS_COPY = {
       "Only when your courts have no hour your groups' players share in the next 14 days. Your " +
       'own courts always come first.',
   },
-  checkIn: {
-    label: 'We check players in',
-    hint: 'Players show a code at your desk, and you mark them checked in.',
-  },
   paused: {
     label: 'Pause Raketa bookings',
     hint:

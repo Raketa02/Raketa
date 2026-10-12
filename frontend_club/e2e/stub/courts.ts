@@ -57,7 +57,6 @@ export const DEFAULT_SETTINGS: Settings = {
   minimum_notice_hours: 2,
   time_to_confirm_minutes: 30,
   other_clubs_courts: { offered: false, within_km: 10 },
-  check_in: false,
   paused: false,
 };
 

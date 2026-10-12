@@ -59,9 +59,9 @@ function submitLabel(confirmed: boolean, pending: boolean): string {
 /**
  * **Raketa settings** (the screens B5): one form, one save. The way the club works, as three
  * cards; then the numbers that way asks for, with the cut-off every way has; then other clubs'
- * courts, check-in and the pause. A number the chosen way does not ask for is sent as the
- * backend holds it, so a hidden box can never be what a save is refused for. The first save
- * confirms the settings, the setup checklist's last step, and the button says so.
+ * courts and the pause. A number the chosen way does not ask for is sent as the backend holds
+ * it, so a hidden box can never be what a save is refused for. The first save confirms the
+ * settings, the setup checklist's last step, and the button says so.
  */
 export function RaketaSettingsForm({
   settings,
@@ -76,7 +76,7 @@ export function RaketaSettingsForm({
   const [answered, setAnswered] = useState(state);
   const [pauseAnswered, setPauseAnswered] = useState(pauseState);
   const [leaving, setLeaving] = useState(false);
-  const feedback = useFormFeedback<SettingsField | 'check_in' | 'paused'>(state);
+  const feedback = useFormFeedback<SettingsField | 'paused'>(state);
 
   // A new answer: adjust during render, as React recommends over an effect.
   if (answered !== state) {
@@ -155,16 +155,6 @@ export function RaketaSettingsForm({
               asHeld('other_clubs_courts')
             )}
           </Toggle>
-          <Toggle
-            label={COPY.checkIn.label}
-            hint={COPY.checkIn.hint}
-            name="check_in"
-            checked={draft.checkIn}
-            onChange={(checkIn) => {
-              setDraft({ ...draft, checkIn });
-              feedback.edit('check_in');
-            }}
-          />
           <Toggle
             label={COPY.paused.label}
             hint={COPY.paused.hint}

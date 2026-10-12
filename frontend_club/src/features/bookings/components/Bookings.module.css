@@ -42,8 +42,8 @@
   font-weight: var(--weight-medium);
 }
 
-/* The share held or taken, and checked in ✓, under the name. */
-.marks {
+/* The share held or taken, under the name. */
+.share {
   display: block;
   color: var(--colour-green);
   font-size: var(--text-small);
@@ -51,7 +51,7 @@
 }
 
 /* A share only held: nothing has moved yet. */
-.marks [data-share='HELD'] {
+.share[data-share='HELD'] {
   color: var(--colour-muted);
 }
 

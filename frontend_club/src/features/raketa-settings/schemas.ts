@@ -60,7 +60,6 @@ export interface SettingsDraft {
   /** Each number as typed. */
   readonly numbers: Readonly<Record<NumberField, string>>;
   readonly otherClubs: boolean;
-  readonly checkIn: boolean;
   readonly paused: boolean;
 }
 
@@ -83,7 +82,6 @@ export function draftOf(settings: WayAndSettings): SettingsDraft {
       NUMBER_FIELDS.map((field) => [field, String(numbers[field])]),
     ) as Record<NumberField, string>,
     otherClubs: settings.otherClubs.offered,
-    checkIn: settings.checkIn,
     paused: settings.paused,
   };
 }
@@ -96,7 +94,6 @@ export function readSettings(form: FormData): SettingsDraft {
       NUMBER_FIELDS.map((field) => [field, formText(form, field)]),
     ) as Record<NumberField, string>,
     otherClubs: form.get('other_clubs') === 'on',
-    checkIn: form.get('check_in') === 'on',
     paused: form.get('paused') === 'on',
   };
 }
@@ -128,7 +125,6 @@ export function settingsOf(draft: SettingsDraft): RaketaSettings {
     minimumNoticeHours: number('minimum_notice_hours'),
     timeToConfirmMinutes: number('time_to_confirm_minutes'),
     otherClubs: { offered: draft.otherClubs, withinKm: number('other_clubs_courts') },
-    checkIn: draft.checkIn,
     paused: draft.paused,
   };
 }

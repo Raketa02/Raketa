@@ -150,7 +150,6 @@ export const BOOKINGS_COPY = {
   } satisfies Record<CancelReason, string>,
   /** A player's share, under their name (Q113): held on their card until the cut-off, or taken. */
   shares: { HELD: 'held', TAKEN: 'taken' } satisfies Record<Share, string>,
-  checkedIn: 'checked in ✓',
   openSeat: 'Open seat',
   /** A player whose account can no longer be named. */
   nameless: 'A player',

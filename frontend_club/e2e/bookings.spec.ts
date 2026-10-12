@@ -43,10 +43,7 @@ test.describe('Bookings', () => {
     });
     club.raketa.courts = [padel, tennis];
     const day = dayFromToday(2);
-    const full = club.bookings.add(booking({ court: padel, day, hour: 19 }));
-    full.players = full.players.map((player, index) =>
-      index === 0 ? { ...player, checked_in_at: new Date().toISOString() } : player,
-    );
+    club.bookings.add(booking({ court: padel, day, hour: 19 }));
     club.bookings.add(
       booking({
         court: tennis,
@@ -87,7 +84,7 @@ test.describe('Bookings', () => {
     const booked = rowAt(page, '19:00–20:00');
     await expect(booked.getByRole('cell').nth(0)).toHaveText('Padel · Competitive');
     await expect(booked.getByRole('cell').nth(1).getByRole('listitem')).toHaveText([
-      /Anna Nowak\s*held\s*checked in ✓/,
+      /Anna Nowak\s*held$/,
       /Piotr Sikora\s*held$/,
       /Kasia Wiśniewska\s*held$/,
       /Marek Zając\s*held$/,
@@ -119,6 +116,22 @@ test.describe('Bookings', () => {
     expect(stub.requests('get', '/api/v1/club/bookings').at(-1)?.query).toEqual({
       filter: 'ALL',
     });
+  });
+
+  test('the desk checks nobody in: Bookings has no Check in, and its old address finds nothing', async ({
+    page,
+    club,
+  }) => {
+    const padel = court({ name: 'Court 1', sport: 'PADEL' });
+    club.raketa.courts = [padel];
+    club.bookings.add(booking({ court: padel, day: dayFromToday(0), hour: 7 }));
+    await openDay(page, dayFromToday(0));
+    await expect(page.getByRole('rowheader')).toHaveText([/07:00–08:00\s*Court 1/]);
+    await expect(page.getByRole('link', { name: 'Check in' })).toHaveCount(0);
+
+    const old = await page.goto('/bookings/check-in');
+    expect(old?.status()).toBe(404);
+    await expect(page.getByRole('heading', { name: 'Nothing at this address' })).toBeVisible();
   });
 
   test('a called-off game says why, and a nameless player is still a seat', async ({

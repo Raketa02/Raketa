@@ -181,12 +181,10 @@ export class FakeClub {
       () => this.details.sports,
       () => this.bookings.ahead(),
     );
-    this.bookings = new FakeClubBookings(
-      stub,
-      guard,
-      () => ({ courts: this.raketa.courts, exceptions: this.raketa.exceptions }),
-      () => this.raketa.settings.check_in,
-    );
+    this.bookings = new FakeClubBookings(stub, guard, () => ({
+      courts: this.raketa.courts,
+      exceptions: this.raketa.exceptions,
+    }));
     this.money = new FakeClubMoney(stub, guard);
   }
 

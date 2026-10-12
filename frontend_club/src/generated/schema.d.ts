@@ -635,7 +635,7 @@ export interface paths {
         };
         /**
          * Your bookings, by day
-         * @description Every Raketa booking at this club on one of its calendar days — the Bookings page — each with its status, its players (name, *paid*, *checked in*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's. A request a player's leaving took back is not listed: it comes back when the game is full and asks again.
+         * @description Every Raketa booking at this club on one of its calendar days — the Bookings page — each with its status, its players (name, *paid*, *held*), its money (the court's price, collected, refunded) and the group it came from. `filter` narrows the list; `counts` are the whole day's. A request a player's leaving took back is not listed: it comes back when the game is full and asks again.
          */
         get: operations["bookings_on_a_day_api_v1_club_bookings_get"];
         put?: never;
@@ -700,26 +700,6 @@ export interface paths {
          * @description **Cancel** a booked game, with your reason, until it starts. **Before your cut-off** every share is only held, and every hold is let go: nothing was taken, nobody is refunded and nobody pays a fee, you included (#637). **After it** everybody is **refunded in full** — the card fees on those payments are not returned, and as the seller you bear them. Either way it goes on **nobody's record**, the hour is yours to sell again, and the players are told you cancelled, with the reason, and dealt a new game first.
          */
         post: operations["cancel_api_v1_club_bookings__booking_id__cancellation_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/club/check-ins": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Check a player in
-         * @description **Check in** a player on the game's day: the code the camera read off their QR, or the short code typed by hand. They were there, and can never be reported as not coming. **Money never depends on it** — you are paid whether people come or not.
-         */
-        post: operations["check_in_api_v1_club_check_ins_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -873,56 +853,6 @@ export interface components {
             /** @description `WEATHER`, `REPAIR`, `DOUBLE_BOOKING` or `OTHER` — told to the players with what comes of their money. */
             reason: components["schemas"]["ClubCancelReason"];
         };
-        /** CheckInRequest */
-        CheckInRequest: {
-            /**
-             * Code
-             * @description What the camera read off the player's QR code, or the six-character short code typed by hand — spaces, dashes and case do not matter.
-             */
-            code: string;
-        };
-        /**
-         * CheckInResponse
-         * @description The booking and the player — *19:00 · Court 2 · Padel*, *Piotr S. —
-         *     checked in ✓*.
-         */
-        CheckInResponse: {
-            /**
-             * Booking Id
-             * Format: uuid
-             */
-            booking_id: string;
-            /**
-             * Starts At
-             * Format: date-time
-             */
-            starts_at: string;
-            /**
-             * Ends At
-             * Format: date-time
-             */
-            ends_at: string;
-            /** Court Name */
-            court_name: string;
-            sport: components["schemas"]["Sport"];
-            kind: components["schemas"]["SearchMode"];
-            player: components["schemas"]["CheckedInPlayerSchema"];
-            /**
-             * Checked In At
-             * Format: date-time
-             */
-            checked_in_at: string;
-        };
-        /** CheckedInPlayerSchema */
-        CheckedInPlayerSchema: {
-            /**
-             * Player Id
-             * Format: uuid
-             */
-            player_id: string;
-            /** Name */
-            name: string | null;
-        };
         /**
          * ClaimCodeRequest
          * @description The address and the 8-character code from the email. The code is read
@@ -973,9 +903,8 @@ export interface components {
         };
         /**
          * ClubBookingPlayerSchema
-         * @description A player on the game, as the club sees them — **a name, whether they
-         *     paid or their share is only held, and whether the desk checked them in**,
-         *     and nothing else (§16.14).
+         * @description A player on the game, as the club sees them — **a name, and whether they
+         *     paid or their share is only held**, and nothing else (§16.14).
          */
         ClubBookingPlayerSchema: {
             /**
@@ -998,11 +927,6 @@ export interface components {
              * @description Their share is held on their card, and taken at the cut-off — *held*. Not paid, and not in `collected_grosze` (#637). Never `true` with `paid`.
              */
             held: boolean;
-            /**
-             * Checked In At
-             * @description When the desk checked them in — *checked in ✓* — or `null`.
-             */
-            checked_in_at: string | null;
         };
         /**
          * ClubBookingSchema
@@ -1898,11 +1822,6 @@ export interface components {
             /** @description The distance is 1–50 km, default 10. */
             other_clubs_courts: components["schemas"]["OtherClubsCourtsSchema"];
             /**
-             * Check In
-             * @description *We check players in*. Off by default.
-             */
-            check_in: boolean;
-            /**
              * Paused
              * @description *Pause Raketa bookings*: no new cards on the club's courts; booked games are played as booked, and cards already dealt keep their court until their book-by.
              */
@@ -1925,8 +1844,6 @@ export interface components {
             /** Time To Confirm Minutes */
             time_to_confirm_minutes: number;
             other_clubs_courts: components["schemas"]["OtherClubsCourtsSchema"];
-            /** Check In */
-            check_in: boolean;
             /** Paused */
             paused: boolean;
         };
@@ -3870,57 +3787,6 @@ export interface operations {
                 };
             };
             /** @description `booking_not_booked` — it is waiting for your answer: accept or refuse it. `booking_is_called_off` — it is off already. `game_has_started` — its hour has begun. Nothing was recorded. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    check_in_api_v1_club_check_ins_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CheckInRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CheckInResponse"];
-                };
-            };
-            /** @description `check_in_code_unknown` — the code opens no seat: mistyped, or a seat its player left. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `check_in_is_off` — you have not switched on *We check players in*. `check_in_code_for_another_day` — a seat here on another day (`details.starts_at`). `check_in_code_for_another_club` — a seat at another club. `already_checked_in` — scanned already (`details.checked_in_at`: *Checked in at 18:52*). `booking_is_called_off` — the game is off. */
             409: {
                 headers: {
                     [name: string]: unknown;

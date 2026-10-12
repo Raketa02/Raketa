@@ -59,14 +59,11 @@ function Players({ booking }: { booking: Booking }) {
       {booking.players.map((player) => (
         <li key={player.id}>
           <span className={styles.player}>{player.name ?? COPY.nameless}</span>
-          {player.share !== null || player.checkedIn ? (
-            <span className={styles.marks}>
-              {player.share === null ? null : (
-                <span data-share={player.share}>{` ${COPY.shares[player.share]}`}</span>
-              )}
-              {player.checkedIn ? ` ${COPY.checkedIn}` : null}
+          {player.share === null ? null : (
+            <span className={styles.share} data-share={player.share}>
+              {` ${COPY.shares[player.share]}`}
             </span>
-          ) : null}
+          )}
         </li>
       ))}
       {Array.from({ length: booking.openSeats }, (_, seat) => (
@@ -111,11 +108,10 @@ function From({ booking }: { booking: Booking }) {
 
 /**
  * **One day's bookings** (the screens B4): each game's hour and court, sport and kind, its
- * players (their share *held* or *taken*, *checked in ✓*), its status (with until when a yes
- * waits on one player's card or payment), its money and the group it came from, and what the
- * club may do about it: answer a request before its countdown ends, or move or cancel a game
- * until it starts. Every act waits while one is under way. The booking a link pointed at is
- * marked.
+ * players (their share *held* or *taken*), its status (with until when a yes waits on one
+ * player's card or payment), its money and the group it came from, and what the club may do
+ * about it: answer a request before its countdown ends, or move or cancel a game until it
+ * starts. Every act waits while one is under way. The booking a link pointed at is marked.
  */
 export function BookingsTable({
   bookings,

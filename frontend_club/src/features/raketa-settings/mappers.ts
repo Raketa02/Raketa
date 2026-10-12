@@ -38,7 +38,6 @@ export interface RaketaSettings {
   readonly timeToConfirmMinutes: number;
   /** *Offer our groups other clubs' courts when ours are full*, and how far; kept while off. */
   readonly otherClubs: { readonly offered: boolean; readonly withinKm: number };
-  readonly checkIn: boolean;
   readonly paused: boolean;
 }
 
@@ -59,7 +58,6 @@ export function toWayAndSettings(wire: WireSettings): WayAndSettings {
       offered: wire.other_clubs_courts.offered,
       withinKm: wire.other_clubs_courts.within_km,
     },
-    checkIn: wire.check_in,
     paused: wire.paused,
   };
 }
@@ -75,7 +73,6 @@ export function toSettingsBody(settings: RaketaSettings): WireSettingsBody {
       offered: settings.otherClubs.offered,
       within_km: settings.otherClubs.withinKm,
     },
-    check_in: settings.checkIn,
     paused: settings.paused,
   };
 }

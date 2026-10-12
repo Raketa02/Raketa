@@ -7,7 +7,7 @@
  * is about one reply overrides that handler with `stub.on`.
  */
 
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 import type { components } from '../../src/generated/schema';
 
@@ -26,18 +26,6 @@ const HOUR_MS = 3_600_000;
 const MINUTE_MS = 60_000;
 /** The club's cut-off unless a test says otherwise: the setting's default, a day before (§16.6). */
 const CUT_OFF_MS = 24 * HOUR_MS;
-
-/** The one alphabet a person types a code in on the platform: upper case, no look-alikes. */
-const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-const QR_PREFIX = 'RAKETA-CHECK-IN:1';
-/** How far either side of now a typed code is looked for, to say it is another day's. */
-const ANOTHER_DAY_REACH_MS = 14 * 24 * HOUR_MS;
-
-/** **A seat's check-in code** (#542): six characters to type, and the QR's payload to scan. */
-export interface CheckInCode {
-  readonly short: string;
-  readonly payload: string;
-}
 
 /**
  * Where a booking stands, before the clock is read: waiting for the club's answer, accepted and
@@ -95,7 +83,6 @@ export function booking(
     name,
     paid: taken,
     held: booked && !taken,
-    checked_in_at: null,
   }));
   return {
     booking_id: randomUUID(),
@@ -147,8 +134,6 @@ export class FakeClubBookings {
       courts: readonly Court[];
       exceptions: readonly Exception[];
     },
-    /** Whether the club has switched on *We check players in*. */
-    private readonly checksIn: () => boolean,
   ) {}
 
   /** Seat a booking, and answer it, so a test can name it. */
@@ -181,47 +166,6 @@ export class FakeClubBookings {
       ),
       money: { ...game.money, collected_grosze: game.money.collected_grosze + share * held },
     });
-  }
-
-  /**
-   * **The code of the `seat`th player's seat** (the first side first), as their phone shows it on
-   * the day. The backend keys a digest with a secret of its own; the fake needs only one that is
-   * the same on every read and different for every seat.
-   */
-  checkInCode(held: FakeBooking, seat: number): CheckInCode {
-    const player = held.players[seat];
-    if (player === undefined) throw new Error(`No player in seat ${seat}`);
-    let digest = BigInt(
-      `0x${createHash('sha256').update(`${held.booking_id}:${player.player_id}`).digest('hex')}`,
-    );
-    let short = '';
-    for (let index = 0; index < 6; index += 1) {
-      short += CODE_ALPHABET[Number(digest % BigInt(CODE_ALPHABET.length))];
-      digest /= BigInt(CODE_ALPHABET.length);
-    }
-    return { short, payload: `${QR_PREFIX}:${held.booking_id}:${player.player_id}:${short}` };
-  }
-
-  /**
-   * **Whose seat a code is**: a scan names its booking and player, and a typed code is looked for
-   * among the seats within a fortnight of now, however the desk spaced or cased it. `undefined`
-   * when it is nobody's.
-   */
-  private seatFor(text: string): { held: FakeBooking; seat: number } | undefined {
-    const trimmed = text.trim();
-    const scanned = trimmed.toUpperCase().startsWith('RAKETA-CHECK-IN:');
-    const typed = trimmed.replace(/[ -]/g, '').toUpperCase();
-    for (const held of this.bookings) {
-      const far = Math.abs(Date.parse(held.starts_at) - Date.now()) > ANOTHER_DAY_REACH_MS;
-      if (!scanned && far) continue;
-      for (let seat = 0; seat < held.players.length; seat += 1) {
-        const code = this.checkInCode(held, seat);
-        if (scanned ? code.payload.toUpperCase() === trimmed.toUpperCase() : code.short === typed) {
-          return { held, seat };
-        }
-      }
-    }
-    return undefined;
   }
 
   /**
@@ -483,54 +427,6 @@ export class FakeClubBookings {
         return { status: 204, body: undefined };
       },
     );
-
-    // At the desk, on the game's day (#547): the backend's order of refusals, each with its words.
-    stub.on('post', '/api/v1/club/check-ins', ({ headers, body }) => {
-      const signedOut = this.guard(headers.authorization);
-      if (signedOut !== null) return signedOut;
-      if (!this.checksIn()) return conflict('check_in_is_off');
-      const found = this.seatFor(body.code);
-      const unknown = { status: 404, body: refusal('check_in_code_unknown') } as const;
-      if (found === undefined) return unknown;
-      const { held, seat } = found;
-      if (clubTime(held.starts_at).day !== dayFromToday(0)) {
-        return {
-          status: 409,
-          body: refusal('check_in_code_for_another_day', undefined, { starts_at: held.starts_at }),
-        } as const;
-      }
-      if (this.calledOff(held) !== null) return conflict('booking_is_called_off');
-      // A seat on a request is no seat to check in yet.
-      if (held.stage === 'WAITING_FOR_YOU') return unknown;
-      const player = held.players[seat];
-      if (player === undefined) return unknown;
-      if (player.checked_in_at !== null) {
-        return {
-          status: 409,
-          body: refusal('already_checked_in', undefined, { checked_in_at: player.checked_in_at }),
-        } as const;
-      }
-      const at = new Date().toISOString();
-      this.replace({
-        ...held,
-        players: held.players.map((each, index) =>
-          index === seat ? { ...each, checked_in_at: at } : each,
-        ),
-      });
-      return {
-        status: 200,
-        body: {
-          booking_id: held.booking_id,
-          starts_at: held.starts_at,
-          ends_at: new Date(Date.parse(held.starts_at) + HOUR_MS).toISOString(),
-          court_name: held.court_name,
-          sport: held.sport,
-          kind: held.kind,
-          player: { player_id: player.player_id, name: player.name },
-          checked_in_at: at,
-        },
-      };
-    });
 
     return this;
   }

@@ -119,10 +119,7 @@ export function clubHour(startsAt: string, endsAt: string): ClubHour {
   };
 }
 
-/**
- * A player on a game, as the club sees them: a name, where their share stands, and whether they
- * were checked in.
- */
+/** A player on a game, as the club sees them: a name, and where their share stands. */
 export interface BookingPlayer {
   readonly id: string;
   /** `null` for an account that can no longer be named. */
@@ -132,7 +129,6 @@ export interface BookingPlayer {
    * card checked and held later, or once its hold was let go.
    */
   readonly share: Share | null;
-  readonly checkedIn: boolean;
 }
 
 /** The group a game was booked in: one of the club's official groups, or a player group. */
@@ -243,7 +239,6 @@ function toBooking(wire: WireBooking, readAt: number): Booking {
       id: player.player_id,
       name: player.name,
       share: shareOf(player),
-      checkedIn: player.checked_in_at !== null,
     })),
     openSeats: wire.open_seats,
     money: {

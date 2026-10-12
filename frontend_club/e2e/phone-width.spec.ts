@@ -1,4 +1,3 @@
-import { fakeCamera } from './camera';
 import { expect, signIn, test } from './fixtures';
 import { refusal } from './stub/backend';
 import { booking } from './stub/bookings';
@@ -32,15 +31,11 @@ test('the signed-out pages fit a phone', async ({ page }) => {
   }
 });
 
-test('the signed-in pages fit a phone, top bar and all', async ({ page, club }) => {
-  // So Bookings has its Check in button, and Check in its camera and box.
-  club.raketa.settings.check_in = true;
-  await fakeCamera(page);
+test('the signed-in pages fit a phone, top bar and all', async ({ page }) => {
   await signIn(page);
   for (const path of [
     '/overview',
     '/bookings',
-    '/bookings/check-in',
     '/courts',
     '/money',
     '/groups',
@@ -222,13 +217,7 @@ test('Bookings fits a phone: the day, its filters, its rows and each question', 
     }),
   );
   long.players = long.players.map((player, index) =>
-    index === 0
-      ? {
-          ...player,
-          name: 'Małgorzata Szczepańska-Wiśniewska',
-          checked_in_at: new Date().toISOString(),
-        }
-      : player,
+    index === 0 ? { ...player, name: 'Małgorzata Szczepańska-Wiśniewska' } : player,
   );
   club.bookings.add(booking({ court: one, day, hour: 20, stage: 'WAITING_FOR_YOU' }));
   await signIn(page);
