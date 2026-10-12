@@ -19,7 +19,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   *Run it now* in `app/api/dev/jobs.py`'s `RUN_IT_NOW`, run over the request's session and
   clock through the same builder the job calls, or a line in `NOT_RUN_HERE` saying why not —
   `tests/api/test_games_test_console_time.py` fails a registered job that is neither
-  (#592). Thirteen jobs today — two went with the challenges (#578), five
+  (#592). Fifteen jobs today — two went with the challenges (#578), five
   with the searches (#579): the **exposure roll**, the two **prompt loops** (intent drift,
   availability staleness), the **interest expiry loop** and the **scale-pressure probe** —
   and two with the ranking (#580): the **candidate index's tail and refresh**, with trigger 4
@@ -173,3 +173,19 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   The four days and the six hours a hold must outlast the cut-off by are domain
   (`payments/domain/seat_charge.py`); only the cadence (thirty seconds) is a setting. It has
   a *Run it now* (*hold the shares*), and a game's pane carries its `HOLDING` moment.
+  The twenty-third is **How did it go?** (`how-did-it-go`, #663; `AskHowDidItGo` in
+  `notifications/application/asking.py`), and it **buys the asking, not correctness**: a
+  game waits for its score whether or not it runs. When a Competitive booked game's hour
+  ends, all four are asked for the score — a clock passing announces nothing, so no event
+  could tell it (`notifications.md`). Its read names **candidates** (`EndedHours.ended`,
+  over `BookingDirectory.booked_starting`: `state = 'BOOKED'` and the hour started an hour
+  before the window — **no index of its own**, a call: `bookings` has none on `(state,
+  start)`, and an index is a migration), the games whose hour ended within `ASKED_WITHIN`
+  (30 min, domain: `notifications/domain/notices.py`), each read off its court and asked only while it awaits its score; each
+  one transaction. **Safe beside itself with no lock**: the notice is given at the hour's
+  end under a key of the game's, so every process tells it on one day's stream — a second
+  run tells nothing, and two at once collide on a player's day and the second is counted
+  and stepped over. Every game in the window is read on every tick, 60 times over its half
+  hour — the price of holding no cursor. Only the cadence (thirty seconds, like the other
+  seat jobs) is a setting. It has a *Run it now* (*the hour ends · How did it go?*), and a
+  counted game's pane carries its `HOUR_ENDS` moment while nobody has put a score up.

@@ -43,8 +43,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   register and fails a job that is neither. Each game's pane carries its **pending
   moments** (`board.py`'s `Moment`: book-by, the club's answer, a payment due — at the fill,
   at a refused holding, or a seat kept for a refused rescuer (#640) — the holding of the
-  shares checked at the fill (#639), cut-off, the day close that tells the desk and the one
-  that pays the club, and a stated score confirming, #593), each
+  shares checked at the fill (#639), cut-off, the hour's end that asks *How did it go?*
+  (#663), the day close that tells the desk and the one that pays the club, and a stated
+  score confirming, #593), each
   with the job that acts at it — every press over the request's clock, the rating catch-up's
   too, whose builder takes one from the console alone — and the page's **one timer** redraws
   their countdowns and nothing else — the page test holds that it fetches and presses

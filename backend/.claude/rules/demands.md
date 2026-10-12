@@ -95,7 +95,9 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   asked over a loopback server speaking Expo's documented push API, never Expo itself.
   **The fifteenth, `notification_demands.py`, is Notifications' consumer register**
   (#549): a game as it stands (`GameBriefs`), what a refund gave back (`PaidShares`), who an
-  open seat is offered to (`SeatOffers`) and what a person and a club are called (`Names`).
+  open seat is offered to (`SeatOffers`) and what a person and a club are called (`Names`) —
+  and since #663 a booked game's court, asked of the Game (`GameCourts`), and the booked hours
+  just ended, off the bookings' projection (`EndedHours`).
   Notifications is told and tells nothing, so like a conversation it publishes no port.
   **A row carries a builder, and not always over a bare session.** Most build over a
   session; `payments_demands.py`'s and `push_demands.py`'s build over the settings.

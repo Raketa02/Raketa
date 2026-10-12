@@ -10,17 +10,19 @@ paths:
 # Notifications
 
 Decisions that are load-bearing and not obvious from the code (#549, #621, #622, #623,
-#625, #626; ADR-0189 §5 and its 2026-10-09 amendment; the mechanics §13, §17.2,
-Q101–Q105, Q107–Q110; the screens A7.2, A9).
+#625, #626, #663; ADR-0189 §5 and its 2026-10-09 amendment; ADR-0195 §3, §5; the
+mechanics §13, §17.2, Q101–Q105, Q107–Q110; the screens A7.2, A9).
 
 - **A player is told, and nothing asks** (`.importlinter`'s *No context knows
   Notifications exists*). `notifications/application/telling.py` subscribes to
-  `proposals`', `bookings`' and `payments`' events, as a room is told
-  (ADR-0146 §5) — **its `TOLD_ABOUT` table is the only list of what tells a player
-  anything** — and reads what a notice says through four ports of its own
-  (`GameBriefs`, `Decks`, `PaidShares`, `SeatOffers`, `Names`), signed in
+  `proposals`', `bookings`', `payments`' and — since #663 — `games`' events, as a room
+  is told (ADR-0146 §5) — **its `TOLD_ABOUT` table is the only list of what an event
+  tells a player**, and `application/asking.py`'s `AskHowDidItGo` the one notice a
+  clock tells — and
+  reads what a notice says through ports of its own (`GameBriefs`, `GameCourts`,
+  `EndedHours`, `Decks`, `PaidShares`, `SeatOffers`, `Names`), signed in
   `infrastructure/told_by.py` over Proposals' own deck (`ReadGroupDeck.shows`) and
-  `RescueOffers`, the Booking and the Seat charge. The teller and the pusher write, so both are added **per
+  `RescueOffers`, the Booking, the Game and the Seat charge. The teller and the pusher write, so both are added **per
   delivery run** over its session (`app/bootstrap/events.py`), and the push service is a
   **per-run seam** beside the payment provider: `create_event_batch_for(..., push=)` is
   required — the API's is Expo (`PUSH_PROVIDER`, refused as `recording` deployed), a seed
@@ -246,6 +248,47 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
     *Bonarka Arena cancelled it because of the weather — you're refunded 40 zł.*, and the
     email *The game you left was cancelled · you're refunded 40 zł*, with no *we'll look for
     another game*. A leaver refunded already is refunded nothing twice, and told nothing.
+- **Each new step at the court reaches the person it waits on** (#663; ADR-0195 §3,
+  §5) — five kinds, **always on**, never capped, never emailed, **each opening the
+  game's result screen** (`Opens.RESULT`, the phone's `booking/{game_id}/result`), and
+  **told only of a Competitive game: For fun is told none of them**. Each is read off
+  the game's court (`GameCourts` → `GameStreamCourts`: the Game's own stream, by its id or its
+  booking's) at the event's own instant, so what was answered before the delivery is
+  told by nothing:
+  - **`NOT_HERE_YET`** on `AbsenceNoted` — *Ivan is at Ogrody 33 and you're not there
+    yet* / *Tap I'm here when you arrive — Padel · Wed 17:00.* — to the player tapped,
+    **while still awaited**; one who arrived first is told nothing.
+  - **`AT_THE_CLUB`** on `ArrivalNoted` — *Oscar is at Ogrody 33* / *Padel · Wed 17:00
+    — arrived at 17:22.* — to **whoever first tapped *isn't here yet*** (the absence's
+    `noted_by`), on time or late alike; **their own** when they tapped *they're here*
+    themselves (the arrival's `noted_by`, Q102).
+  - **`HOW_DID_IT_GO`** — *How did it go?* / *Padel at Bonarka Arena · Sat 10 Oct, 17:00
+    — put the score up.* — to all four, **at the hour's end**. A clock passing
+    announces nothing, so no event tells it: **`AskHowDidItGo`, the `how-did-it-go`
+    job** (`jobs.md`), every thirty seconds over the booked games whose hour ended
+    within **`ASKED_WITHIN`** (30 min, `domain/notices.py`: *while they are still at
+    the club* — a
+    run that reaches it later asks nothing; the result screen and Home still ask) —
+    candidates off the `bookings` projection (`EndedHours` → `BookedHours`:
+    `state = 'BOOKED'`, so a game short or called off is none), each asked only while
+    it **awaits its score** (`AWAITING_ENTRY`: no score up, nobody awaited or Didn't
+    come). **Given at the hour's end** whenever the run comes to it, keyed by the game,
+    so every process tells it on one day's stream and once; each game one transaction,
+    a collision counted and stepped over.
+  - **`IS_THAT_RIGHT`** on `ResultProposed`, `ResultCorrected` (`CORRECTED`) and
+    `ResultCountered` (`COUNTERED`) — *Is that right? · marta put a score up* / *Padel ·
+    Wed 17:00 at Ogrody 33. If nobody answers by Thu 18:05, it becomes the result —
+    saying nothing costs nothing.*; *… changed the score*; *… put a different score up*
+    / *The two scores don't match — unless one side agrees with the other's by Thu
+    18:20, it settles then. Saying nothing costs nothing.* — to **those across the net from the poster whose
+    agreement it waits on** (`Game.awaits_agreement_from`), naming the person who put
+    it up, `until` the moment silence settles it (games' own `settlement_of`: the
+    later score's day when two stand). A score agreed with before the delivery asks nobody; a correction asks
+    again.
+  - **`WERE_THEY_THERE`** on `PresenceClaimed` — *Was oscar at Ogrody 33?* / *oscar
+    tapped I was there for Padel · Wed 17:00 — confirm it by 17:30 if so.* — to
+    **everybody else on the court who may confirm it** (not absent themselves), `until`
+    the late claim's day ends; a claim confirmed first asks nobody.
 - **A push fails soft, and that is deliberate.** The outbox retries a raised delivery at
   the head of every batch with no backoff and rolls back everything delivered beside it,
   so a push service down for an hour, raising, would hold the queue for that hour.
@@ -260,12 +303,13 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
 - **A notice records facts, never words** (`NoticeGiven`: the game, pool, club, hour,
   amount, the people it names by id, a reason code, a deadline (`until`), whether its reader
   had left the game (`you_left`), and where a tap
-  opens it — `BOOKING`, `PROPOSAL` or `DECK`). The words are `application/words.py`'s, drawn at push
+  opens it — `BOOKING`, `PROPOSAL`, `DECK` or `RESULT`). The words are `application/words.py`'s, drawn at push
   time and again at every read, as an email's copy lives in the backend: a push is shown by
   the phone's system before the app runs. Deployed, an `EXPO_ACCESS_TOKEN` with Expo's
   enhanced push security makes a leaked phone token useless to anybody else.
 - **Two registers**: `push_demands.py` (the two adapters of the push port — the recording
   service and Expo, asked over a loopback server speaking Expo's documented API, never
-  Expo) and `notification_demands.py` (what Notifications reads of others). Seeded by
+  Expo) and `notification_demands.py` (what Notifications reads of others — since
+  #663 the court, `GameCourts`, and the hours just ended, `EndedHours`). Seeded by
   nothing of its own: the seed's drain gives every seeded player their notices, listed,
   and pushes nothing.
