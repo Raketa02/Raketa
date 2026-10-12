@@ -764,9 +764,9 @@ about how good anybody is — that is the rating context reading this one.
   ever. Its ends are **folded from the record and the clock** — **Confirmed**, **Disputed**,
   **Played · no score**, and a game somebody **Didn't come** to — except **Called off**, which is
   announced, and **Started short**, which the hour reads off a line-up with a seat still open.
-  Since [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) (2026-10-11, not yet built —
-  [#654](https://github.com/Raketa02/Raketa/issues/654),
-  [#655](https://github.com/Raketa02/Raketa/issues/655),
+  Since [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md) (2026-10-11; built by
+  [#654](https://github.com/Raketa02/Raketa/issues/654) and
+  [#655](https://github.com/Raketa02/Raketa/issues/655), not yet by
   [#657](https://github.com/Raketa02/Raketa/issues/657)) *Played · no score* replaces *Never
   played*, *Disputed* is where two scores naming different winners end, and *Didn't come*
   replaces the no-show report. **Called off says who**: `called_off_by`, or nobody when it
@@ -827,8 +827,9 @@ about how good anybody is — that is the rating context reading this one.
 - **Played · no score** — the end of a **full** booked game whose entry window closed with no
   score and nobody *Didn't come*. Played, for all its players: each gains the points of a game
   **played through**, and no Level moves. It replaces *Never played*, which retires: every game is
-  opened by a booking, so there is no unbooked plan left to dissolve (ADR-0195 §2, not yet built —
-  [#655](https://github.com/Raketa02/Raketa/issues/655)).
+  opened by a booking, so there is no unbooked plan left to dissolve (ADR-0195 §2, built by
+  [#655](https://github.com/Raketa02/Raketa/issues/655) as `PLAYED_NO_SCORE`). A court whose
+  window closes with a seat still open is never one: it went ahead short.
 - **Tap window** — from a booked game's start to 30 minutes after it, the first half of a one-hour
   game: when attendance is caught at the court (ADR-0195 §3, not yet built —
   [#657](https://github.com/Raketa02/Raketa/issues/657)).
@@ -855,11 +856,11 @@ about how good anybody is — that is the rating context reading this one.
   and a player the club checked in could not be reported. It is replaced by **Isn't here yet** and
   the **Arrival**, made at the court. Its events stay decodable and fold to nothing, and a game
   that held one reads *Played · no score*.
-- **Standing** — what a game *is* right now: `AWAITING_ENTRY`, `NEVER_PLAYED`,
-  `AWAITING_ANSWER`, `CONFIRMED`, `UNSCORED`, `CALLED_OFF`, `STARTED_SHORT`,
-  `NO_SHOW_REPORTED`, `NO_SHOW`. ADR-0195 changes the list (not yet built — #654, #655, #657):
-  `NEVER_PLAYED`, `NO_SHOW_REPORTED` and `NO_SHOW` go, and **Played · no score**, somebody **not
-  here yet**, **Didn't come** and **Disputed** come; the builds name their codes. Two scores now
+- **Standing** — what a game *is* right now: `AWAITING_ENTRY`, `PLAYED_NO_SCORE`,
+  `AWAITING_ANSWER`, `CONFIRMED`, `UNSCORED`, `DISPUTED`, `CALLED_OFF`, `STARTED_SHORT`,
+  `NO_SHOW_REPORTED`, `NO_SHOW`. ADR-0195 changes the list: `DISPUTED` came with #654 and
+  `PLAYED_NO_SCORE` took `NEVER_PLAYED`'s place with #655; `NO_SHOW_REPORTED` and `NO_SHOW` go,
+  and somebody **not here yet** and **Didn't come** come, with #657, which names their codes. Two scores now
   end confirmed or disputed, so `UNSCORED` is left with no case (#654 settles its code). **Derived from
   the record and the clock, never stored** — and
   never announced, with one exception: `CALLED_OFF` is a decision, folded off `GameCalledOff` and
@@ -870,10 +871,11 @@ about how good anybody is — that is the rating context reading this one.
   Strand*; both terms are retired.) Spelled `GameStanding` in code and on the wire, a name kept from when Challenges
   published a `Standing` component of its own: renaming a component is a change to types a
   shipped app generated. The same is true of `GameSide`.
-- **Counted game** — a counted-kind game somebody said was played, **scored or not**. What the
-  player record's skill panel counts. A *Disputed* game is one. Whether a *Played · no score* game
-  — which nobody said was played — is one too is for
-  [#655](https://github.com/Raketa02/Raketa/issues/655) to settle.
+- **Counted game** — a counted-kind game that was played, **scored or not**. What *opponent
+  variety* on the player record counts — not the skill card's `counted_games`, which is the
+  results that moved the Level. A *Disputed* game is one, and so is a *Played · no score* game
+  ([#655](https://github.com/Raketa02/Raketa/issues/655)): nobody said it was played, and it was —
+  *played* has one meaning, so who somebody has played with counts it too.
 - **Ghost game** — *retired 2026-10-11* (ADR-0195 §2). A booked game whose entry window closed
   with nobody ever saying it happened, charged to everybody on its court on *Shows up*. A full
   booked game nobody recorded is now **Played · no score**, and nothing is charged for silence.
@@ -1145,8 +1147,8 @@ still means the μ/σ a player holds in a sport.
   agree what the score was were still on a court together for two hours. Since
   [ADR-0195](docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
   a game nobody claimed is **Played · no score** — played — and two disagreeing sides end
-  **Disputed**; both are in, as *played, and over*, for #655 and #654 to build (sportsmanship counts
-  a *Played · no score* game as played, #655).
+  **Disputed**; both are in, as *played, and over* (#654, #655). Nobody said when a *Played · no
+  score* game was played, so its card runs from its booked hour.
 
 **Invariants**
 - **You rate everybody else who was on the court.** In doubles both opponents **and your

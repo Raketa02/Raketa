@@ -53,13 +53,16 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   It borrows one thing,
   `SettledCourts` over `games`' directory, whose adapter lives in **this** context the way
   `PlayerNames`' lives in `games`; *settled* there is narrowed to **played and over**,
-  because a ghost has nobody to rate and a disputed game very much does (an unscored one is
-  now only a no-show every report of was disputed, which nobody said they played — no card). **The card's two
+  because a game called off or started short has nobody to rate, and a disputed game very
+  much does — and so does a full court nobody recorded (`PLAYED_NO_SCORE`, #655), whose card
+  runs from its **booked hour**, since nobody said when (an unscored one is now only a
+  no-show every report of was disputed, which nobody said they played — no card). **The card's two
   clocks are domain and neither is configuration** (`domain/window.py`): it opens the day
   after the game — an answer given ten minutes after losing badly is not the answer wanted —
   and closes seven days later. Both edges run from `games`' `played_at`, which is *the moment
-  somebody said we played* and never the hour on court, because this platform records no such
-  hour; it is never earlier than the game, so the day-after rule holds conservatively. Anchoring
+  somebody said we played* rather than the hour on court; it is never earlier than the game, so
+  the day-after rule holds conservatively. Only a game nobody recorded, which has no such
+  moment, runs from its booked hour (#655). Anchoring
   the close to a *settlement* instead would let an argument over the score restart somebody's
   week, and the price is named rather than discovered: a game two sides argued over settles up
   to a day into the week, so that one card is drawn for six days rather than seven. *Has it

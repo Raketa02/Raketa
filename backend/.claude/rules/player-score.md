@@ -60,4 +60,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   a miss on *shows up* (`attendance_for` reads a `NO_SHOW` game per player) and a broken booked
   game on *keeps plans* (`keeping_of(…, no_shows=)` over `bookings`' `GameNoShows`), where an
   ordinary mark is *keeps plans* alone. No weight moved and no ruleset release. A game the
-  club cancelled is on nobody's record. See `bookings.md`.
+  club cancelled is on nobody's record. See `bookings.md`. **It is the only miss on *shows
+  up* since #655**: a full court nobody recorded is `PLAYED_NO_SCORE`, played for everybody on
+  it, and the ghost charged to the whole court retired with `NEVER_PLAYED`
+  (ADR-0195 §2) — the strand fold itself is unchanged until #659 turns it into points.

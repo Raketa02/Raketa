@@ -254,7 +254,7 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   `OpenPlannedGame`, the booking's id in the arrangement's slot (`challenge_id`), **with its hour**
   (`GamePlanned.starts_at`, nullable and defaulted). The hour is what moves: its entry window runs
   from the hour's end (`windows.entry_closes_at(…, starts_at=…)`), not a week from the booking,
-  which would ghost a game booked a fortnight ahead — and its room's end with it. **Its chat is
+  which would end a game booked a fortnight ahead before its hour — and its room's end with it. **Its chat is
   opened by `GamePlanned`** (the room teller's `_open`) — and since #575 by nothing else: a
   booking's yeses are silent and open nothing, so the game is the opening, the room filed under
   the booking (`booking_id`), born about the game and its members the game's line-up. **The
@@ -538,7 +538,7 @@ Decisions that are load-bearing and not obvious from the code (#541, #543, #544,
   **every report disputed is `UNSCORED`** — nobody arbitrates, as with two scores — an
   evening on nobody's record. History is dated from the first report. **The strongest mark is
   two strands**: a stood report is a miss on *shows up* (`attendance_for` reads `NO_SHOW` per
-  player: the absent a ghost, everybody else played) **and** a broken booked game on *keeps
+  player: the absent missed, everybody else played) **and** a broken booked game on *keeps
   plans* (`keeping_of(…, no_shows=)`, fed by `GameNoShows` once the hour has come); an
   ordinary mark is *keeps plans* alone. Home reads *uncounted · `NO_SHOW`* from the report on
   (`needs_you` for the reported player while they may dispute — `Game.may_dispute`, their

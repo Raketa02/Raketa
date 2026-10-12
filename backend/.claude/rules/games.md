@@ -45,7 +45,7 @@ from the code.
   tally**, and it says who (`called_off_by`, ADR-0172 §4) — nobody, for a booking's cut-off
   and its club's cancel. **`CallOffGame` steps over a game that *started short*** and over
   nothing else: a booking's cut-off call-off can arrive after its hour, and the game keeps the
-  end it already reached. The step-over a reopened challenge court needed over a ghost went
+  end it already reached. The step-over a reopened challenge court needed over a closed window went
   with the challenges, as did the old card's dismissal (`POST /games/{id}/dismissal`) —
   `games.dismissed` is retired: nothing writes it, and it stays registered so a stored row
   still decodes and folds to nothing (stored events outlive the code that wrote them).
@@ -125,10 +125,25 @@ from the code.
 - **A booked game whose hour comes with a seat open has *started short*** (#544; the
   mechanics §14.1, §19). `GameStanding.STARTED_SHORT` is folded from `starts_at` and a line-up
   with a seat open at `now >= starts_at`, asked right after a call-off and before the entry
-  window. It is in `SETTLED` and **in no tally** (not `PLAYED`, never a ghost): the history walk
-  answers `None` for it, so *shows up*, the pairwise read and variety leave it out and nothing
-  goes on the record of the players who stayed. A result is refused `the_game_started_short`
-  and a seat can no longer move.
+  window. It is in `SETTLED` and **in no tally** (not `PLAYED`): the history walk answers
+  `None` for it, so *shows up*, the pairwise read and variety leave it out and nothing goes on
+  the record of the players who stayed. A result is refused `the_game_started_short` and a
+  seat can no longer move. A stream with **no hour** reaches it when its entry window closes
+  on a seat still open (#655) — *played* is a full court's word.
+- **A full booked game nobody recorded was played: `PLAYED_NO_SCORE`** (#655;
+  [ADR-0195](../../../docs/adr/0195-reliability-is-points-a-no-show-is-caught-at-the-court-and-a-right-score-needs-no-tap.md)
+  §2). It replaced `NEVER_PLAYED` — the ghost charged to the whole court — on the wire too
+  (`GameStanding`, and Home's `HomeStatus`/`ResultStage`). `standing_of` reaches it when the
+  entry window closes with nobody having said *we played*, no report of not coming, and the
+  court **full**. It is in `SETTLED` **and in `PLAYED`**, so everything that reads *played*
+  reads it with no branch of its own: *shows up* credits everybody on the court (a stood
+  no-show report is the only miss left — `Attendance.missed`, which was `ghosts`, and
+  `PlayedOutcome` is gone), it is a **counted game** for who they have played with
+  (`_counted_and_played`, variety), and sportsmanship draws a card for it. It has **no
+  score, no outcome and no Level** — nothing in `ConfirmedResultLedger`. Its moment
+  (`became_history_at`) is the entry window closing; its card's (`GamesSettledCourts`) is the
+  **booked hour**, since nobody said when. A score or a report after it still meets
+  `the_entry_window_has_closed`.
 - **A booked game takes a report of somebody not coming, and its club's cancel** (#547): two
   standings (`NO_SHOW_REPORTED`, `NO_SHOW`), a 24-hour dispute that falls to `UNSCORED` — no
   desk check-in asked since #651 — and `Game.call_off_whole` — a booked game called
