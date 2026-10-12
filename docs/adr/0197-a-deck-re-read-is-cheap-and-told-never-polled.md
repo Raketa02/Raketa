@@ -116,8 +116,11 @@ deck's CPU read twice because run-to-run noise is about ±10 ms):
 Under cProfile, the overlap grid's share of the busy deck fell from 123 to 24 ms per read
 (§2b). The deck's response is byte-identical before and after apart from each photo URL's
 signature and its date, which change on every signing; Post a game's grid is byte-identical.
-§2c's wrapper is `ReadOnceEventStore`, built in `build_read_group_deck` alone, and every
-builder it reaches takes it as an optional `event_store`.
+§2c's wrapper is `ReadOnceEventStore`, built in `build_read_group_deck_once` alone — the
+route's dependency — and every builder it reaches takes it as an optional `event_store`. The
+notifications handler, which asks the deck *shows* for every row of an outbox batch over one
+session beside handlers that append, and the seed take the plain `build_read_group_deck`: the
+reuse is the request's and nothing beside a writer holds it.
 
 **The bar a deck optimisation ticket clears.** It must:
 - keep every response identical, shown by tests;

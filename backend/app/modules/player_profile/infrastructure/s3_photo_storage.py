@@ -38,6 +38,7 @@ container on a laptop.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, AsyncGenerator, Iterable, Iterator, Mapping
 from uuid import UUID
@@ -207,22 +208,26 @@ def _addressing() -> Config:
     return Config(signature_version="s3v4", s3={"addressing_style": "path"})
 
 
+@dataclass(frozen=True, slots=True)
+class SigningSetup:
+    """Everything a signature depends on: the host it is over, the region in
+    its scope and the credential it is derived from. The bucket is not here,
+    because it is in the request being signed, not in the client. Frozen, so
+    it is the key one client is held under."""
+
+    endpoint_url: str | None
+    region_name: str
+    access_key_id: str
+    secret_access_key: str
+
+
 @lru_cache(maxsize=None)
-def signing_client(
-    *,
-    endpoint_url: str | None,
-    region_name: str,
-    access_key_id: str,
-    secret_access_key: str,
-) -> Any:
+def signing_client(setup: SigningSetup) -> Any:
     """The process's one client for signing URLs, built on first use and shared
     by every request after it (#702).
 
-    **One per signing setup**, which in any one process is one: the key is
-    everything a signature depends on — the host it is over, the region in its
-    scope and the credential it is derived from — so two setups can never share
-    a client and sign for the wrong host. The bucket is not here, because it is
-    in the request being signed, not in the client.
+    **One per signing setup**, which in any one process is one: two setups can
+    never share a client and sign for the wrong host.
 
     Synchronous botocore rather than aiobotocore, on purpose. Presigning never
     sends a request, so there is nothing to await and no connection to pool; a
@@ -233,15 +238,15 @@ def signing_client(
 
     return botocore.session.get_session().create_client(
         "s3",
-        endpoint_url=endpoint_url,
-        region_name=region_name,
-        aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key,
+        endpoint_url=setup.endpoint_url,
+        region_name=setup.region_name,
+        aws_access_key_id=setup.access_key_id,
+        aws_secret_access_key=setup.secret_access_key,
         config=_addressing(),
     )
 
 
-def signing_clients_forgotten() -> None:
+def forget_signing_clients() -> None:
     """Drop the process's signing clients, so the next signing builds one.
 
     For a test that counts constructions; nothing in the application calls it,
@@ -283,9 +288,12 @@ class S3PhotoStorage:
             aws_secret_access_key=secret_access_key,
             region_name=region_name,
         )
-        self._region_name = region_name
-        self._access_key_id = access_key_id
-        self._secret_access_key = secret_access_key
+        self._signing = SigningSetup(
+            endpoint_url=self._public_endpoint_url,
+            region_name=region_name,
+            access_key_id=access_key_id,
+            secret_access_key=secret_access_key,
+        )
 
     def _client(self, *, endpoint_url: str | None) -> Any:
         return self._session.client(
@@ -456,13 +464,7 @@ class S3PhotoStorage:
         # by this process. No request is made — presigning is a signature over
         # the request that would be sent — so the client is the process's one
         # signing client (the module docstring), never one built for the call.
-        signer = signing_client(
-            endpoint_url=self._public_endpoint_url,
-            region_name=self._region_name,
-            access_key_id=self._access_key_id,
-            secret_access_key=self._secret_access_key,
-        )
-        url: str = signer.generate_presigned_url(
+        url: str = signing_client(self._signing).generate_presigned_url(
             "get_object",
             Params={
                 "Bucket": self._bucket,

@@ -101,7 +101,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   ticked?* by lookup** (#702, #703; ADR-0197 §2a, §2b). Presigning sends no request, so
   building an S3 client was the whole cost of a signature, once per face on every screen
   that draws faces: `s3_photo_storage.signing_client` is botocore's **synchronous** client,
-  one per signing setup (host, region, credential — the bucket is in the request), built on
+  one per `SigningSetup` (host, region, credential — the bucket is in the request), built on
   first use and held for the life of the process; it opens no socket and binds to no event
   loop, which is what the per-call *talking* client cannot promise. The credentials rotate
   as the settings carrying them do, with a restart. The URL is today's URL apart from the

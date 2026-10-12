@@ -37,7 +37,7 @@ from app.bootstrap.composition import (
     build_proposal_repository,
     build_read_booking_details,
     build_read_fill_in,
-    build_read_group_deck,
+    build_read_group_deck_once,
     build_read_home,
     build_read_payments_to_confirm,
     build_read_posting_grid,
@@ -229,7 +229,9 @@ BookedGamesDep = Annotated[BookedGames, Depends(get_booked_games)]
 def get_read_group_deck(
     db: DbSession, settings: SettingsDep, clock: ClockDep, booked: BookedGamesDep
 ) -> ReadGroupDeck:
-    return build_read_group_deck(db, settings=settings, clock=clock, booked=booked)
+    """The request's deck read: each stream loaded once for its length (#704).
+    The plain builder is the notifications handler's and the seed's."""
+    return build_read_group_deck_once(db, settings=settings, clock=clock, booked=booked)
 
 
 ReadGroupDeckDep = Annotated[ReadGroupDeck, Depends(get_read_group_deck)]

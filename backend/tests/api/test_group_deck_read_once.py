@@ -26,8 +26,21 @@ import pytest
 
 from app.api.dependencies import get_clock
 from app.bootstrap import composition
+from app.bootstrap.composition import (
+    build_decks,
+    build_read_group_deck,
+    build_read_group_deck_once,
+    build_say_yes,
+)
+from app.core.config import get_settings
 from app.engines.matchfit.core import SearchMode
+from app.kernel import Sport
+from app.infrastructure.events.read_once_event_store import ReadOnceEventStore
 from app.infrastructure.events.sqlalchemy_domain_event_store import SqlAlchemyEventStore
+from app.modules.proposals.application.commands import (
+    AnswerProposalCommand,
+    ReadGroupDeckCommand,
+)
 from tests.api import players_world as players
 from tests.api.proposals_world import (
     MONDAY_MORNING,
@@ -148,9 +161,11 @@ async def a_seat_left(client, session_factory, clock, club, group, crowd) -> str
 # --------------------------------------------------------------------------- #
 
 
-async def test_one_read_loads_no_stream_twice(
-    client, session_factory, clock, club, crowd, group, stream_loads
-):
+@pytest.fixture
+async def two_cards(client, session_factory, clock, club, crowd, group) -> list:
+    """Ola's two cards: a pick with Ewa In, and Piotr's post in two versions
+    with Ania and Marek In on the other one."""
+
     ola, kuba, ewa, tomek, ania, marek, zofia, piotr = crowd
     first = await makes(
         session_factory,
@@ -170,6 +185,14 @@ async def test_one_read_loads_no_stream_twice(
     )
     await says_yes(client, ewa, first)
     await says_yes(client, ania, second)
+    await says_yes(client, marek, second)
+    return [first, second]
+
+
+async def test_one_read_loads_no_stream_twice(
+    client, crowd, group, two_cards, stream_loads
+):
+    ola = crowd[0]
     stream_loads.clear()
 
     deck = await deck_of(client, ola, group)
@@ -203,28 +226,9 @@ async def test_a_read_with_a_rescue_offered_loads_no_stream_twice(
 
 
 async def test_a_deck_with_cards_reads_the_same_with_and_without_the_reuse(
-    client, session_factory, clock, club, crowd, group, without_the_reuse
+    client, crowd, group, two_cards, without_the_reuse
 ):
-    ola, kuba, ewa, tomek, ania, marek, zofia, piotr = crowd
-    first = await makes(
-        session_factory,
-        clock,
-        pool_id=group,
-        club_id=club,
-        versions=((ola, kuba, ewa, tomek),),
-    )
-    second = await makes(
-        session_factory,
-        clock,
-        pool_id=group,
-        club_id=club,
-        start=warsaw(11, 18),
-        poster=piotr,
-        versions=((ola, ewa, tomek), (ania, marek, zofia)),
-    )
-    await says_yes(client, ewa, first)
-    await says_yes(client, ania, second)
-    await says_yes(client, marek, second)
+    ola = crowd[0]
 
     with_reuse = await deck_of(client, ola, group)
     without_the_reuse()
@@ -299,6 +303,80 @@ async def test_a_segment_the_intent_hides_reads_the_same_with_and_without_the_re
 # --------------------------------------------------------------------------- #
 # Scoped to the read
 # --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def read_once_stores_built(monkeypatch: pytest.MonkeyPatch) -> list:
+    """Every ``ReadOnceEventStore`` the composition builds."""
+
+    built: list = []
+
+    def counting(inner):
+        store = ReadOnceEventStore(inner)
+        built.append(store)
+        return store
+
+    monkeypatch.setattr(composition, "ReadOnceEventStore", counting)
+    return built
+
+
+async def test_the_reuse_is_the_requests_alone(
+    session_factory, clock, read_once_stores_built
+):
+    """The route's builder is the one that loads each stream once. The plain
+    builder — the notifications handler's, which asks the deck ``shows`` for
+    every row of an outbox batch beside handlers that append, and the seed's
+    — reads the session's own store, as every other composition does."""
+
+    settings = get_settings()
+    async with session_factory() as session:
+        build_read_group_deck(session, settings=settings, clock=clock)
+        build_decks(session, settings=settings)
+        assert read_once_stores_built == []
+
+        build_read_group_deck_once(session, settings=settings, clock=clock)
+        assert len(read_once_stores_built) == 1
+
+
+async def test_a_yes_in_one_session_is_read_by_the_next_deck_read_in_it(
+    client, session_factory, clock, club, crowd, group, payments
+):
+    """A write path beside the deck read, in **one session**: a yes appends to
+    the proposal's stream and the deck built after it in the same session —
+    the request's and the plain one alike — shows it In."""
+
+    ola, kuba, ewa, tomek = crowd[:4]
+    proposal = await makes(
+        session_factory,
+        clock,
+        pool_id=group,
+        club_id=club,
+        versions=((ola, kuba, ewa, tomek),),
+    )
+    settings = get_settings()
+    command = ReadGroupDeckCommand(
+        player_id=ola["id"],
+        pool_id=group,
+        sport=Sport.PADEL,
+        kind=SearchMode.COMPETITIVE,
+    )
+    async with session_factory() as session:
+        [card] = (
+            await build_read_group_deck_once(
+                session, settings=settings, clock=clock
+            ).execute(command)
+        ).cards
+        assert card.in_ == ()
+
+        await build_say_yes(
+            session, clock=clock, provider=payments, settings=settings
+        ).execute(AnswerProposalCommand(proposal_id=proposal, player_id=ewa["id"]))
+
+        for build in (build_read_group_deck, build_read_group_deck_once):
+            [card] = (
+                await build(session, settings=settings, clock=clock).execute(command)
+            ).cards
+            assert card.in_ == (ewa["id"],), build.__name__
 
 
 async def test_a_write_beside_the_deck_read_sees_its_own_events(

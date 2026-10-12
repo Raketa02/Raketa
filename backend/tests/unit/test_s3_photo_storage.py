@@ -171,9 +171,12 @@ async def test_path_style_addressing_keeps_the_bucket_out_of_the_hostname() -> N
 # ---------------------------------------------------------------------------
 
 
-async def todays_signer(storage: S3PhotoStorage, ref: PhotoRef, *, seconds: int) -> str:
+async def the_signer_this_replaced(
+    storage: S3PhotoStorage, ref: PhotoRef, *, seconds: int
+) -> str:
     """The URL the adapter signed before #702: a client built for the call, over
-    the public endpoint, SigV4 and path-style. Kept here as the comparator."""
+    the public endpoint, SigV4 and path-style. Kept here as the comparator, so
+    that the one client's URL is shown to be that signer's URL."""
 
     import aioboto3
     from botocore.client import Config
@@ -203,7 +206,7 @@ async def test_the_url_is_todays_url_apart_from_the_signature_and_its_date() -> 
     """Scheme, host, path, expiry and the query's keys match the signer this
     replaced; only the signature and the date it is over may differ."""
 
-    expected = urlparse(await todays_signer(minio(), REF, seconds=300))
+    expected = urlparse(await the_signer_this_replaced(minio(), REF, seconds=300))
     signed = urlparse(await minio().presigned_read_url(REF, valid_for_seconds=300))
 
     assert (signed.scheme, signed.netloc, signed.path) == (
@@ -237,7 +240,7 @@ async def test_signing_builds_one_client_per_process_and_shares_it(
         return original(self, service_name, *args, **kwargs)
 
     monkeypatch.setattr(botocore.session.Session, "create_client", counting)
-    s3_photo_storage.signing_clients_forgotten()
+    s3_photo_storage.forget_signing_clients()
 
     first = await minio().presigned_read_url(REF, valid_for_seconds=300)
     second = await minio().presigned_read_url(
@@ -258,7 +261,7 @@ async def test_a_different_signing_setup_is_a_different_client(
 
     from app.modules.player_profile.infrastructure import s3_photo_storage
 
-    s3_photo_storage.signing_clients_forgotten()
+    s3_photo_storage.forget_signing_clients()
 
     local = await minio().presigned_read_url(REF, valid_for_seconds=300)
     deployed = await aws().presigned_read_url(REF, valid_for_seconds=300)
