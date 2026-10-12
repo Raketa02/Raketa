@@ -75,7 +75,13 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   booked; a `SEAT_OPEN` card carries its booked court's kind. The details read it the same
   way (`ProposalDetails.indoor`). A player sees it and never chooses by it. The order is
   §8.2's four keys, the fourth read as **the forecast of the reader's version**; the same
-  people only at their best hour, per segment. Every filter is read live: `PlayerFit` for
+  people only at their best hour, per segment — **after the cards owed to the reader**
+  (#673; Q123): a card whose `owed_card_for` names the reader is `DeckCard.owed_to_you`
+  and dealt first, soonest first among owed cards, ahead of the usual order and kept over
+  the same people at another hour (`dealt_in_order`). Never on the wire — it carries no
+  mark — and nobody else's deck is touched: a best fit dealt beside the owed people reads it
+  in the usual order. A card answered leaves the deck, so the usual order applies again;
+  the phone still lifts a notice-opened card on top. Every filter is read live: `PlayerFit` for
   blocks, gender preference and the level window — a card with somebody In the reader does
   not fit is withheld, a name that does not fit them or anybody on the card is left off —
   the Play intent (`WantedKinds`; *no preference* is both segments, undeclared is none), a
@@ -123,9 +129,26 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   of the pool's clubs before another hour. **A booked game its club cancelled** (#547,
   `ClubCancelled`, owed to the people still in: `Proposal.owed_to`) is *owed* — the one
   source of an owed game since On request went (#669) — read by
-  `ProposalDirectory.owed_a_new_card_in` (`club_cancelled`), its people dealt a new card
-  first exactly as a lost card's are, **never at that club and hour** (a rule written for a
-  club's refusal, which #673 lifts), by the first run that finds them an hour — owed until then, while the game's own hour is ahead
+  `ProposalDirectory.owed_a_new_card_in` (`club_cancelled`), its people dealt **the owed
+  card** (#673; ADR-0196 §3, Q123) **closest to the cancelled game first**, one sort for a
+  lost card's people and an owed game's: by distance in time, then **the lost card's own
+  club at its own hour**, then the home club and the others nearest first, then the earlier
+  of two hours as close — so the same club, day and hour come first (sold again on a court of the other
+  kind, or at a new price), then, for a player group, another club at that hour, then the
+  closest hour, home club first. **The *never at this club and hour* exclusion is gone
+  entirely**; the court the club cancelled is closed for the hour instead (`bookings.md`),
+  so the same club and hour is never the broken court. An official group's refusal of
+  another club while its players share an hour at home within the fourteen days stays
+  (`_refusal`, as for any card), every owed player must still be free to play it (free
+  for the hour, a week under the cap, within *most I'll pay* at the new price), and a game with no hour stays
+  owed until its old hour passes. **The card records whom it is owed to**:
+  `Pick.owed_card_for` → `MakeProposalCommand.owed_card_for` → `ProposalMade.owed_card_for`
+  (defaulted, so an older card is owed to nobody) → `Proposal.owed_card_for` — the owed
+  people on it, never the best fit completing it, and nothing on a lost card's new one,
+  which no notice promised. **A redealt pick's id names the game it is dealt after**
+  (`pick_id(…, after=)`): the owed card may be the same four at the same club and hour,
+  which is the cancelled pick's own id, whose stream is taken. Dealt by the first run that
+  finds them an hour — owed until then, while the game's own hour is ahead
   (`proposals.redealt`, recorded once the pick has really been made, naming the card and
   those of the owed people on it — `card_id`, `player_ids` — whom Notifications tells
   *Your new game*, #622). **When**: `ProposeGames` runs per pool from two

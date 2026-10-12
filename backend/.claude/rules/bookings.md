@@ -24,7 +24,7 @@ paths:
 # Bookings and the fill
 
 Decisions that are load-bearing and not obvious from the code (#541, #544, #545, #547,
-#548, #623, #625, #626, #669; ADR-0189 §2–§5, ADR-0196 §1; the mechanics §10.1, §11–§13,
+#548, #623, #625, #626, #669, #673; ADR-0189 §2–§5, ADR-0196 §1; the mechanics §10.1, §11–§13,
 §15, §16.7–§16.12, Q104, Q106, Q108–Q113, Q121).
 
 **No club confirms a game** (#669; ADR-0196 §1): On request — the request, the club's
@@ -439,7 +439,8 @@ unregistered and the local store reset, so the last yes books the game at every 
   booked game always names its court's kind** — Home's rows, the details, Fill in's rows,
   the deck's `SEAT_OPEN` card and the club's row carry `indoor`, folded off the booking,
   so the kind follows a move — and **a move wakes the proposer** (`CourtMoved` in
-  `MarkDueForProposing`'s `CLUB_EVENTS`), since the court it left is free at the hour again;
+  `MarkDueForProposing`'s `CLUB_EVENTS`), since the court the club's own Move left is free
+  at the hour again;
   every player on the booking is told *Game moved* (`notifications.md`). **Cancel tries a
   move first — a move by cancel** (#672; the mechanics §16.9, Q122; ADR-0196 §2):
   `Booking.absorbing_court` over `ClubCourtsAtTheHour.free_courts`, which carries each
@@ -474,9 +475,22 @@ unregistered and the local store reset, so the last yes books the game at every 
   payments, and records
   **`ClubCancelled` on the proposal** with the people still in: `Proposal.owes_a_new_card`
   and `owed_to` (the leaver is not owed), the projection's `proposals.club_cancelled`
-  (migration 0043), read by `owed_a_new_card_in`, so the proposer deals them a new card
-  first, **never at that club and hour** — a rule written for a club's refusal, which the
-  owed-card ticket lifts (#673; ADR-0196).
+  (migration 0043), read by `owed_a_new_card_in`, so the proposer deals them **the owed
+  card** first, closest to the cancelled game (#673; ADR-0196 §3; `proposals.md`) — the
+  *never at that club and hour* rule is gone.
+  **A club's cancel closes the court the game was on for its hour** (#673; a ruling made
+  while building it, beyond ADR-0196's text): moved by the cancel or called off — `anyway`
+  too — `CancelTheBooking` closes it once the booking's save has freed it, through
+  **`CourtClosures`**, a demand of the Club context in Bookings' words, signed by
+  `ClosedByTheCancel` (`infrastructure/club_courts.py`) over clubs' own
+  `CloseACourtForAnHour` (`clubs/application/hours_exceptions.py`, no commit — the
+  cancel's transaction): an ordinary **hours exception** on the Club courts stream, the one
+  court for the one hour, worded by the cancel's reason — *Game cancelled · weather*,
+  *· repair*, *· booked twice*, or *Game cancelled* — on the desk's list, which the desk
+  removes to sell the court again. The court can't be played then, so neither the four's
+  owed card nor anybody else is sold it, and a second cancel cannot move a game back onto
+  it. A court the club no longer has is nothing to close. The club's own **Move** closes
+  nothing: the desk chose to leave the court.
   `CancelledByClub` resumes paused weeks and marks the proposer due everywhere. **Home and
   the details** read `called_off_reason: CANCELLED_BY_THE_CLUB`, `club_cancel_reason`, and
   `money.refunded_grosze`; **nothing goes on anybody's record** (`keeping_of` answers `None`

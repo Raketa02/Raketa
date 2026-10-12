@@ -68,7 +68,11 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   is still live and says `taking_new_cards=False`. **What bookings hold is the Bookings
   context's**: `CourtBookings` is answered over its projection by `BookedCourtHours`, signed in
   `bookings/infrastructure/` (#541) — `court_has_bookings` and `court_booked_then` read it, and
-  API tests may stand in for it by overriding `get_court_bookings`. And **the setup
+  API tests may stand in for it by overriding `get_court_bookings`. **A club's cancel adds
+  an exception of its own** (#673): `CloseACourtForAnHour` closes the court the cancelled
+  game was on for its hour, in the cancel's transaction and worded by its reason (*Game
+  cancelled · repair*), on the desk's list like any other — asked by Bookings through its
+  `CourtClosures`, so the arrow stays `bookings → clubs`. And **the setup
   checklist is read, never stored** (`domain/setup.py`): *locked* is the backend's rule, and
   **live is all four steps** — connect payments, add courts, set hours and prices, check
   the settings; hours and prices wait for a court, and the settings wait for nothing since

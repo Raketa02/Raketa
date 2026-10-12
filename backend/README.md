@@ -572,8 +572,11 @@ signed in as the protagonist (an address from the roster, and the one seed passw
   *Move* to a free court of the same kind, or an indoor one for an outdoor game — each
   listed with its kind — *Cancel* with a reason, which moves the game when another free
   court of the club's absorbs it and says where (#672), and *Cancel anyway*, which calls it
-  off all the same — `/dev/clubs/{club_id}/…`, each the desk's own route's use case. (Attendance is the
-  players' at the court, never the club's.)
+  off all the same — `/dev/clubs/{club_id}/…`, each the desk's own route's use case. Either
+  cancel closes the court the game was on for its hour, an exception on the club's list
+  (#673), and the players it calls off are dealt the owed card first — *1 · Fresh deal*
+  runs the proposer that deals it. (Attendance is the players' at the court, never the
+  club's.)
 - **The payment provider** is the backend's in-process fake, steered: each row's saved card
   set to pay, decline or ask for the bank's check; *Bank confirms* on a payment that waits
   for its player (the laptop's phone cannot reach a bank), after which the phone's own

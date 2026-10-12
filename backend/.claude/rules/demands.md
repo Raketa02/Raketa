@@ -75,8 +75,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   **The eleventh, `booking_demands.py`, is Bookings' consumer register** (#543): the first
   free court of a club at an hour with its cut-off — and every free court, each with its
   kind (#671) and its share, which a club's cancel asks before a court absorbs it (#672) —
-  and a club's desk —
-  both the Club context's facts — and the Games context's: the ordinary Game a booking opens
+  the court a club's cancel closes for its hour (`CourtClosures`, #673), and a club's desk —
+  all the Club context's facts — and the Games context's: the ordinary Game a booking opens
   (`GameOpening`, #541, registered by #544), what leaving, a rescue, the cut-off and the
   club's cancel do to it (`GameChanges`, #544, #545, #547), and who Didn't come to it
   (`GameNoShows`, #547 — a stood report then, a final *Didn't come* since #657), which the
@@ -97,7 +97,8 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   the two adapters of the push port — the recording service every API test reads, and Expo,
   asked over a loopback server speaking Expo's documented push API, never Expo itself.
   **The fifteenth, `notification_demands.py`, is Notifications' consumer register**
-  (#549): a game as it stands (`GameBriefs`), what a refund gave back (`PaidShares`), who an
+  (#549): a game as it stands (`GameBriefs`), whose deck shows a card and, since #673, the
+  kind of court it promises (`Decks`), what a refund gave back (`PaidShares`), who an
   open seat is offered to (`SeatOffers`) and what a person and a club are called (`Names`).
   Notifications is told and tells nothing, so like a conversation it publishes no port.
   **A row carries a builder, and not always over a bare session.** Most build over a

@@ -10,7 +10,7 @@ paths:
 # Notifications
 
 Decisions that are load-bearing and not obvious from the code (#549, #621, #622, #623,
-#625, #626; ADR-0189 §5 and its 2026-10-09 amendment; the mechanics §13, §17.2,
+#625, #626, #673; ADR-0189 §5 and its 2026-10-09 amendment; the mechanics §13, §17.2,
 Q101–Q105, Q107–Q110; the screens A7.2, A9).
 
 - **A player is told, and nothing asks** (`.importlinter`'s *No context knows
@@ -96,6 +96,18 @@ Q101–Q105, Q107–Q110; the screens A7.2, A9).
     sport and kind). Once per card: `Redealt` is recorded once per owed game. **A card the
     proposer deals for any other reason tells nobody** — a lost court hour's new card first
     included, which no notice promised; older `Redealt` rows name no card and tell nobody.
+    **At the club and hour the cancel took it names the kind of court** (#673; Q123) — *The
+    same players · outdoor · 40 zł a share — say yes to book it.* — since the kind (or the
+    price) is then what changed: the teller compares the card's club and hour with the
+    cancelled game's (`GameBriefs.about` of each) and asks the deck for the kind the card
+    promises (`Decks.kind_of_court`, over `ReadGroupDeck.kind_of_court` — the deck's own
+    `CourtKinds` read), kept on the row as `notices.indoor` (migration 0059's column, so the
+    row reads the same later); `None` there when its free courts are mixed, and never asked
+    at another club or hour, which names no kind.
+  - **The cancel notice promises it** (#673; Q123): the players still in read *Bonarka Arena
+    cancelled padel · Thu 15 Oct, 19:00 because a court needs repair. We'll look for another
+    game for you first.* — the email's own line (`words.py`'s `_called_off`, the club's
+    cancel only). A leaver's cancel notice and a game short at its cut-off promise nothing.
 - **The club's own Move is told** (#671; the mechanics §16.4, §17.2, Q122) — always on,
   never capped, never emailed, since no money moves:
   - **`GAME_MOVED`** on `bookings.court_moved` — *Bonarka Arena moved your game to Court 3 ·
