@@ -184,10 +184,8 @@ function moneyParts(line: MoneyLine): readonly string[] {
       ];
     case 'seatEmpty':
       return [money.seatEmpty, money.noLevelMoved];
-    case 'noShow':
-      return line.yours
-        ? [money.youWereMarked, money.sayIfYouWere]
-        : [money.somebodyDidNotCome, money.noLevelMoved];
+    case 'didntCome':
+      return [money.somebodyDidNotCome, line.needsYou ? money.sayWhoWasThere : money.noLevelMoved];
   }
 }
 
@@ -411,7 +409,7 @@ export function moneyRow(
     case 'seatOpen':
     case 'fillingAgain':
     case 'seatEmpty':
-    case 'noShow':
+    case 'didntCome':
       return { label: share, value, below: moneyWords(line) };
     case 'booked':
     case undefined: {

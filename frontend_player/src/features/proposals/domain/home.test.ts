@@ -423,14 +423,14 @@ describe('moneyLineOf — the line under a Home card (the mechanics §14.1)', ()
   });
 
   /**
-   * **Somebody didn't come** (#560): uncounted, and the line says which of the two it is to this
-   * reader — marked themselves with a day to answer (the read's *needs you*), or anybody else.
+   * **Somebody didn't come** (#658): uncounted, and the line says whether a late *I was there*
+   * waits on this reader — theirs to say or somebody else's to confirm (the read's *needs you*).
    */
-  it('says somebody didn’t come, and to the player marked, that they were', () => {
-    const marked = game({ status: 'UNCOUNTED', uncountedReason: 'NO_SHOW', needsYou: true });
-    const other = game({ status: 'UNCOUNTED', uncountedReason: 'NO_SHOW' });
-    expect(moneyLineOf(marked, BEFORE_CUT_OFF)).toEqual({ kind: 'noShow', yours: true });
-    expect(moneyLineOf(other, BEFORE_CUT_OFF)).toEqual({ kind: 'noShow', yours: false });
+  it('says somebody didn’t come, and whether a late claim waits on the reader', () => {
+    const waits = game({ status: 'UNCOUNTED', uncountedReason: 'DIDNT_COME', needsYou: true });
+    const other = game({ status: 'UNCOUNTED', uncountedReason: 'DIDNT_COME' });
+    expect(moneyLineOf(waits, BEFORE_CUT_OFF)).toEqual({ kind: 'didntCome', needsYou: true });
+    expect(moneyLineOf(other, BEFORE_CUT_OFF)).toEqual({ kind: 'didntCome', needsYou: false });
   });
 
   it('says a seat was empty on a game uncounted for it (§14.1)', () => {
@@ -757,11 +757,32 @@ describe('resultActOf — the result, reached from the details as today', () => 
     expect(resultActOf(game({ kind: 'forFun', status: 'COUNTED' }))).toBeUndefined();
   });
 
-  /** The marked player's day to dispute it (#560) — the read's *needs you*, and theirs alone. */
-  it('opens the dispute to the player marked as not coming, while it needs them', () => {
-    const noShow = { status: 'UNCOUNTED', uncountedReason: 'NO_SHOW' } as const;
-    expect(resultActOf(game({ ...noShow, needsYou: true }))).toBe('dispute');
-    expect(resultActOf(game({ ...noShow, needsYou: false }))).toBeUndefined();
+  /**
+   * **The first half hour's door is *Who's here*** (#658), on a Competitive game and a For fun one
+   * alike — whoever is at the court, and whoever is awaited, goes through it.
+   */
+  it('opens Who’s here while the first half hour runs, then the result as before', () => {
+    const atTheCourt = { atTheCourt: true };
+    expect(resultActOf(game({ status: 'NEEDS_RESULT' }), atTheCourt)).toBe('whos-here');
+    expect(resultActOf(game({ kind: 'forFun', status: 'NEEDS_RESULT' }), atTheCourt)).toBe(
+      'whos-here',
+    );
+    expect(resultActOf(game({ status: 'NEEDS_RESULT' }), { atTheCourt: false })).toBe('we-played');
+    // A score already on the table keeps its door: the screen it opens says who's here too.
+    expect(resultActOf(game({ status: 'CONFIRM_THE_RESULT' }), atTheCourt)).toBe('confirm');
+  });
+
+  /**
+   * **A late *I was there* waiting on the reader** (#658) — theirs to say, or somebody else's to
+   * confirm: the read's *needs you*, and nobody else's door.
+   */
+  it('opens Say who was there while a late claim waits on the reader', () => {
+    const didntCome = { status: 'UNCOUNTED', uncountedReason: 'DIDNT_COME' } as const;
+    expect(resultActOf(game({ ...didntCome, needsYou: true }))).toBe('who-was-there');
+    expect(resultActOf(game({ ...didntCome, needsYou: false }))).toBeUndefined();
+    expect(
+      resultActOf(game({ status: 'UNCOUNTED', uncountedReason: 'SEAT_EMPTY', needsYou: true })),
+    ).toBeUndefined();
   });
 
   it.each<HomeStatus>([

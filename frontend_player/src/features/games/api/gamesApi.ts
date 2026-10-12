@@ -1,6 +1,6 @@
 /**
- * The three routes the result argument is — read the games, state a score, agree with one — and
- * the one act on a game that is not about a result: clearing a called-off game's card.
+ * The three routes the result argument is — read the games, state a score, agree with one — and the
+ * four that say who turned up at a booked game's court (#658).
  *
  * One of the two layers allowed to read generated types, and the only place these paths are
  * written down.
@@ -33,9 +33,11 @@
 import type { components } from '@/generated/schema';
 import { httpRequest } from '@/shared/lib/http';
 
+type ArrivalRequest = components['schemas']['ArrivalRequest'];
 type GameListResponse = components['schemas']['GameListResponse'];
 type GameSchema = components['schemas']['GameSchema'];
-type ReportANoShowRequest = components['schemas']['ReportANoShowRequest'];
+type NotHereYetRequest = components['schemas']['NotHereYetRequest'];
+type PresenceConfirmationRequest = components['schemas']['PresenceConfirmationRequest'];
 type StateResultRequest = components['schemas']['StateResultRequest'];
 
 /** The read may be abandoned; a write may not. See the module note. */
@@ -84,28 +86,59 @@ export function postResultAcceptance(gameId: string): Promise<GameSchema> {
 }
 
 /**
- * ***Kuba didn't come*** — on a booked game whose hour has come, by somebody who came, about
- * somebody else on the court (#560; the backend's #547). The game does not count from here on, and
- * the reported player has a day to dispute it. A second report of the same player answers the same
- * and writes nothing, which is why it needs no key.
+ * ***Oscar isn't here yet*** — on a booked game, in its first half hour, about somebody else on the
+ * court (#658; the backend's #657). **Made at the club**: the body carries the fix the phone read at
+ * the tap, which the backend measures against the club's point and drops. Saying it of somebody
+ * already awaited answers the same and writes nothing, which is why it needs no key.
  */
-export function postNoShow(gameId: string, body: ReportANoShowRequest): Promise<GameSchema> {
+export function postNotHereYet(gameId: string, body: NotHereYetRequest): Promise<GameSchema> {
   return httpRequest<GameSchema>({
     method: 'POST',
-    path: `/api/v1/games/${gameId}/no-shows`,
+    path: `/api/v1/games/${gameId}/attendance/not-here-yet`,
     body,
     authenticated: true,
   });
 }
 
 /**
- * ***I was there*** — the reported player, inside their day (#560). The report falls and nothing
- * goes on their record; the game still does not count. A second dispute writes nothing.
+ * ***I'm here*** with your own id, ***they're here*** with somebody else's — from the club, in the
+ * first half hour. **The first arrival is the one that counts**; a second is refused by name
+ * (`already_arrived`).
  */
-export function postNoShowDispute(gameId: string): Promise<GameSchema> {
+export function postArrival(gameId: string, body: ArrivalRequest): Promise<GameSchema> {
   return httpRequest<GameSchema>({
     method: 'POST',
-    path: `/api/v1/games/${gameId}/no-shows/dispute`,
+    path: `/api/v1/games/${gameId}/attendance/arrival`,
+    body,
+    authenticated: true,
+  });
+}
+
+/**
+ * ***I was there*** — you Didn't come and your phone died at the court. Within a day of the half
+ * hour's end, from wherever you are: no position is asked, because somebody else on the court
+ * confirming it is the proof. A second claim writes nothing.
+ */
+export function postPresenceClaim(gameId: string): Promise<GameSchema> {
+  return httpRequest<GameSchema>({
+    method: 'POST',
+    path: `/api/v1/games/${gameId}/attendance/claim`,
+    authenticated: true,
+  });
+}
+
+/**
+ * ***Yes, they were here*** — about somebody else's *I was there*, inside the same day. It turns
+ * Didn't come into Came late. A second confirmation writes nothing.
+ */
+export function postPresenceConfirmation(
+  gameId: string,
+  body: PresenceConfirmationRequest,
+): Promise<GameSchema> {
+  return httpRequest<GameSchema>({
+    method: 'POST',
+    path: `/api/v1/games/${gameId}/attendance/confirmation`,
+    body,
     authenticated: true,
   });
 }

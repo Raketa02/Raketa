@@ -1,8 +1,9 @@
 /**
  * The words `games` is spoken to this app in — **codes, and never sentences**.
  *
- * Ten of them are a standing, two are what kind of evening it was, two are a side of the net
- * and two are what a confirmed result says about you. Every one is the backend's own vocabulary
+ * Nine of them are a standing, six are what became of a player somebody said was not here yet,
+ * two are what kind of evening it was, two are a side of the net and two are what a confirmed
+ * result says about you. Every one is the backend's own vocabulary
  * ([ADR-0022](../../../../../docs/adr/0022-kernel-negative-space-and-constant-homes.md)), and
  * the words for them are this feature's — `components/gamePresentation.ts` and nowhere else.
  *
@@ -17,11 +18,11 @@
 /**
  * What a game is at the instant it was read.
  *
- * **Derived from the record and the clock and never stored**, which is why there are ten of them
+ * **Derived from the record and the clock and never stored**, which is why there are nine of them
  * and not a status column: a full game whose entry window ran out with nobody recording it reads
  * `PLAYED_NO_SCORE` whether or not anything has swept it, *because nothing sweeps it*
  * ([ADR-0137](../../../../../docs/adr/0137-a-result-is-the-record-that-a-game-happened.md) §2,
- * as amended by ADR-0195). Two are waits and the rest are ends, and the client may not fold
+ * as amended by ADR-0195). Three are waits and the rest are ends, and the client may not fold
  * another. **`CALLED_OFF` is an act rather than a fold**
  * ([ADR-0163](../../../../../docs/adr/0163-called-off-is-the-fourth-end-of-a-game.md)): somebody
  * ended a game a seat had been left on, and it is not an evening, so nothing anybody is measured
@@ -30,9 +31,9 @@
 export type GameStanding =
   | 'AWAITING_ENTRY'
   /**
-   * A **full** booked game whose entry window closed with no score and nobody marked as not coming
-   * (#655; ADR-0195 §2): played, for everybody on it, and no Level moves. It replaced *Never
-   * played* — a booked, paid, full court is the evidence that it was played.
+   * A **full** booked game whose entry window closed with no score and nobody *Didn't come* (#655;
+   * ADR-0195 §2): played, for everybody on it, and no Level moves. It replaced *Never played* — a
+   * booked, paid, full court is the evidence that it was played.
    */
   | 'PLAYED_NO_SCORE'
   | 'AWAITING_ANSWER'
@@ -42,11 +43,6 @@ export type GameStanding =
    * sentence here does either.
    */
   | 'CONFIRMED'
-  /**
-   * A booked game whose every no-show report was disputed. Since #654 two scores never end here
-   * (they end `CONFIRMED` or `DISPUTED`), and #657 retires the reports, which leaves it no case.
-   */
-  | 'UNSCORED'
   /**
    * Two scores named **different winners** and neither side agreed with the other's before the later
    * one's answer window closed (#654; ADR-0195 §5): no Level moves. Raketa does not decide who won.
@@ -60,16 +56,32 @@ export type GameStanding =
    */
   | 'STARTED_SHORT'
   /**
-   * Somebody who came to a booked game marked a player who did not (#547, #560), and a report's
-   * day to dispute it is still running — a wait, like a score on the table. The game does not
-   * count whatever the reports come to (the Games & Fill in mechanics §15.3).
+   * Somebody on a booked game's court was tapped *isn't here yet* in its first half hour and has not
+   * arrived (#657; ADR-0195 §3) — a wait, like a score on the table. **No score is taken while it
+   * holds**: their arrival, or the half hour running out, ends it.
    */
-  | 'NO_SHOW_REPORTED'
+  | 'NOT_HERE_YET'
   /**
-   * Every report that stands has had its day undisputed: the game does not count, nobody's Level
-   * moves, and not coming is the strongest mark on the record of the player who did not.
+   * Somebody tapped *isn't here yet* never arrived by half an hour after the start (#657): the game
+   * takes no score and never counts. For a day it is provisional — their *I was there*, confirmed by
+   * somebody else on the court, makes them Came late, and the game carries on.
    */
-  | 'NO_SHOW';
+  | 'DIDNT_COME';
+
+/**
+ * **What became of one player somebody said was not here yet** (#657; ADR-0195 §3) — folded by the
+ * backend against `read_at`, never stored, and never folded here.
+ *
+ * - `WAITING` — tapped, not arrived, and the half hour still runs.
+ * - `ON_TIME` — arrived within ten minutes of the start: nothing is recorded, and the tap vanishes.
+ * - `CAME_LATE` — arrived ten to thirty minutes after the start.
+ * - `DIDNT_COME` — no arrival by half an hour after the start: provisional until the late claim's
+ *   day ends, final after it.
+ * - `CLAIMED` — said *I was there*, and nobody has confirmed it yet: still *Didn't come* until then.
+ * - `CONFIRMED` — *I was there*, confirmed by somebody else on the court: **Came late**.
+ */
+export type AttendanceState =
+  'WAITING' | 'ON_TIME' | 'CAME_LATE' | 'DIDNT_COME' | 'CLAIMED' | 'CONFIRMED';
 
 /**
  * Whether this evening is evidence.

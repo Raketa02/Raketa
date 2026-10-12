@@ -20,10 +20,10 @@
  *   that cost a miss until ADR-0195 made silence free; it says *saying nothing costs nothing*
  *   now, and talks about penalties nowhere.
  * - **A game with no score reads as an evening, not an error** — a full game nobody recorded
- *   (*Played · no score*, #655), two scores naming different winners (*Disputed*, #654), and the
- *   game everybody marked said they came to. Each says why it took no score, over the facts all
- *   three share: these people played, it is in the count of how much somebody has played, and
- *   it moves nobody's Level. There is no red, no *could not*, and no *unfortunately*.
+ *   (*Played · no score*, #655) and two scores naming different winners (*Disputed*, #654). Each
+ *   says why it took no score, over the facts both share: these people played, it is in the count
+ *   of how much somebody has played, and it moves nobody's Level. There is no red, no *could not*,
+ *   and no *unfortunately*.
  * - **A correction is not a second proposal**, and the screen says which one it is offering
  *   before the tap. *"A player will spend an attempt fixing a typo"* is the failure this whole
  *   deck exists to prevent.
@@ -78,6 +78,12 @@ import type { Sport } from '@/shared/vocabulary/sport';
 
 import type { Game, GameSeat, Score } from '../domain/game';
 import { sidesForReader } from '../domain/pairing';
+import type {
+  AttendanceBlock,
+  AttendanceSaid,
+  AttendanceTap,
+  LocationRefusal,
+} from '../domain/attendance';
 import { othersOn, type CalledOffEnding, type ResultArgument } from '../domain/resultArgument';
 import type { ScoreKey, ScoreProblem } from '../domain/score';
 import { scoreColumn, type GameKind, type Outcome } from '../domain/vocabulary';
@@ -211,31 +217,27 @@ export function standingLine(argument: ResultArgument, readAt: string): string {
       return 'Counted.';
     case 'disputed':
       return 'The two scores named different winners.';
-    case 'unscored':
-      return 'No score was taken.';
     case 'started-short':
       return SEAT_WAS_EMPTY;
-    case 'no-show-reported': {
-      // The marked player's own line says how long they have, as a score's says how long silence
-      // takes: what happens when it runs out is visible before it does (#560).
-      const { yours } = argument;
-      if (yours === undefined) {
-        const marked = argument.others.map((mark) => playerName(mark.who));
-        return `${sentenceList(marked)} ${marked.length > 1 ? 'were' : 'was'} marked as not coming.`;
+    case 'not-here-yet':
+      // **Who waits, to the player awaited; whom they wait for, to everybody else** (#658). Who
+      // tapped is on no wire, so the awaited player reads everybody the game waits with — in
+      // singles that is the one person who could have.
+      if (argument.yours) {
+        return argument.here.length === 0
+          ? 'The others are waiting for you.'
+          : `${sentenceList(argument.here.map(playerName))} ${argument.here.length > 1 ? 'are' : 'is'} waiting for you.`;
       }
-      switch (yours.state) {
-        case 'open':
-          return `You were marked as not coming. ${durationLeft(yours.disputeBy, readAt)} left to say you were there.`;
-        case 'disputed':
-          return 'You said you were there, so the mark is gone.';
-        case 'stood':
-          return 'You were marked as not coming, and your day to say otherwise has passed.';
-      }
-    }
-    case 'no-show':
-      return argument.didNotCome.length === 0
+      return argument.awaited.length === 0
+        ? 'Waiting for somebody to arrive.'
+        : `Waiting for ${sentenceList(argument.awaited.map(playerName))}.`;
+    case 'didnt-come':
+      // The reader's own first: *You and Oscar Nowak didn't come* would put *You* mid-sentence, and
+      // the block names whoever else said they were there.
+      if (argument.yours !== undefined) return 'You didn’t come.';
+      return argument.absent.length === 0
         ? 'Somebody didn’t come.'
-        : `${sentenceList(argument.didNotCome.map(playerName))} didn’t come.`;
+        : `${sentenceList(argument.absent.map(playerName))} didn’t come.`;
   }
 }
 
@@ -256,23 +258,18 @@ function settlesWhen(at: string, readAt: string): string {
 }
 
 /**
- * **Everybody else's report, one line each** (#560) — what became of it: their day still running,
- * and how long it has; said they were there; or the day over and nobody said so. The reader's own
- * report is the standing line's and the clock's, so it is not repeated here.
+ * *by 17:30* · *by 17:30 on Thursday* — **a deadline on the club's clock**, with the space that
+ * joins it to the sentence: the time alone on the day the list was read, the weekday too on any
+ * other, or where the read's instant was not handed over.
+ * An instant that cannot be read drops the clause rather than inventing a day.
  */
-export function reportLines(argument: ResultArgument, readAt: string): readonly string[] {
-  if (argument.kind !== 'no-show-reported') return [];
-  return argument.others.map((mark) => {
-    const name = playerName(mark.who);
-    switch (mark.state) {
-      case 'open':
-        return `${name} — ${durationLeft(mark.disputeBy, readAt)} left to say they were there`;
-      case 'disputed':
-        return `${name} says they were there`;
-      case 'stood':
-        return `${name} didn’t come`;
-    }
-  });
+function byWhen(at: string, readAt: string | undefined): string {
+  const day = platformDay(at);
+  const clock = platformClock(at);
+  const weekday = day === undefined ? undefined : weekdayOf(day);
+  if (day === undefined || clock === undefined || weekday === undefined) return '';
+  const today = readAt !== undefined && day === platformDay(readAt);
+  return today ? ` by ${clock}` : ` by ${clock} on ${dayName(weekday)}`;
 }
 
 /** *A seat was empty.* — the standing line of a booked game that started short (#544). */
@@ -335,21 +332,12 @@ export function resultTitle(argument: ResultArgument): string {
       return 'The result';
     case 'disputed':
       return 'Disputed';
-    case 'unscored':
     case 'started-short':
-    case 'no-show':
       return 'No result';
-    case 'no-show-reported':
-      switch (argument.yours?.state) {
-        case undefined:
-          return 'Somebody didn’t come';
-        case 'open':
-          return 'Were you there?';
-        case 'disputed':
-          return 'You said you were there';
-        case 'stood':
-          return 'Marked as not coming';
-      }
+    case 'not-here-yet':
+      return argument.yours ? 'Are you here?' : 'Not here yet';
+    case 'didnt-come':
+      return argument.yours?.state === 'may-claim' ? 'Were you there?' : 'Didn’t come';
   }
 }
 
@@ -390,11 +378,21 @@ export function clockLine(argument: ResultArgument, readAt: string): ClockBlock 
       line: 'until this settles, if neither side agrees with the other’s score.',
     };
   }
-  // The marked player's day, at arm's length — what saying nothing does, before it happens (#560).
-  if (argument.kind === 'no-show-reported' && argument.yours?.state === 'open') {
+  // **The half hour, at arm's length, at the court** (#658): to the player awaited, how long to
+  // arrive; to everybody else, how long the score waits.
+  if (argument.kind === 'not-here-yet' && argument.arriveBy !== undefined) {
     return {
-      figure: durationLeft(argument.yours.disputeBy, readAt),
-      line: 'left to say you were there. After that the mark stands.',
+      figure: durationLeft(argument.arriveBy, readAt),
+      line: argument.yours
+        ? 'left to arrive. After that it’s Didn’t come.'
+        : 'left for them to arrive. No score goes in until then.',
+    };
+  }
+  // The day to say *I was there* — what saying nothing does, before it happens.
+  if (argument.kind === 'didnt-come' && argument.yours?.state === 'may-claim') {
+    return {
+      figure: durationLeft(argument.yours.claimBy, readAt),
+      line: 'left to say you were there. After that, Didn’t come stands.',
     };
   }
   // Nothing else counts down: the entry's window is its standing line's clause, and the entry arm
@@ -409,8 +407,8 @@ export interface ClockBlock {
 }
 
 /**
- * What a game with no score **still is** — variant C's fact list, drawn under every ending that
- * took none: *Played · no score*, *Disputed* and the evening everybody marked said they came to.
+ * What a game with no score **still is** — variant C's fact list, drawn under the two endings that
+ * took none and were still played: *Played · no score* and *Disputed*.
  *
  * The prototype named the other side (*"You have now played with Kuba & Ada"*) and stated the
  * kind as a fact (*"It was a counted match, not a friendly"*); the kind is `worthLine`'s and may
@@ -432,7 +430,7 @@ export const EVENING_FACTS: readonly string[] = [
  */
 export function resultBody(
   argument: ResultArgument,
-  { booked = false }: { readonly booked?: boolean } = {},
+  { booked = false, readAt }: { readonly booked?: boolean; readonly readAt?: string } = {},
 ): string | undefined {
   switch (argument.kind) {
     case 'awaiting-entry':
@@ -441,7 +439,7 @@ export function resultBody(
       // game has a booking behind it** (#556), and somebody may not have come to it (#560), so it
       // says the other thing that can be said instead of a score.
       return booked
-        ? 'Putting a score in records how this game went. If somebody didn’t come, say so below instead.'
+        ? 'Putting a score in records how this game went.'
         : 'Putting a score in is what records that this game happened. There is nothing else behind it — no booking, no calendar.';
     case 'for-fun':
       // A score for fun stands as it is put and is put to nobody (#654), so the body says so before
@@ -473,32 +471,33 @@ export function resultBody(
       return 'Raketa doesn’t decide between them. If one of you agrees with the other’s score, that settles it at once. If nobody does by then: when both scores name the same winner, the closer one counts; when they name different winners, no Level moves.';
     case 'disputed':
       return 'Each side said a different side won, and neither agreed with the other’s score in time. Raketa doesn’t decide who won.';
-    case 'unscored':
-      // Since #654 two scores never end here: it is the booked game everybody marked as not coming
-      // said they came to (#560), until #657 retires the reports.
-      return 'Somebody was marked as not coming and said they were there, so this game took no score. Raketa doesn’t decide who is right, and nobody is marked for it.';
     case 'started-short':
       // The mechanics §14.1: *it cannot take a result … no levels move, and nothing goes on the
       // record of the players who stayed*.
       return 'Somebody left after the club’s cut-off and nobody took the seat, so this game can’t take a result. No Level moved, and nobody who stayed is marked for it.';
-    case 'no-show-reported': {
-      // Nobody arbitrates (the mechanics §15.3): a dispute falls the report whole, silence lets it
-      // stand, and the game does not count either way.
-      switch (argument.yours?.state) {
-        case undefined:
-          return 'Each of them has a day to say they were there; if they don’t, the mark stands. Either way the game doesn’t count and no Level moves — and nobody who came is marked for it.';
-        case 'open':
-          return 'If you were there, say so: the mark falls and nothing goes on your record. If you don’t, it stands — not turning up is the strongest mark on a record. The game doesn’t count either way, and no Level moves.';
-        case 'disputed':
-          return 'Raketa doesn’t decide who is right, so the game doesn’t count and no Level moves — and nothing about it is on your record.';
-        case 'stood':
-          return 'The game doesn’t count, and no Level moves.';
-      }
+    case 'not-here-yet': {
+      // What the half hour decides, said before it runs out (#658; ADR-0195 §3): on time within 10
+      // minutes of the start, Came late up to 30, Didn't come after — and to everybody else, that
+      // the tap cost them nothing.
+      const by =
+        argument.arriveBy === undefined
+          ? ' within the half hour'
+          : byWhen(argument.arriveBy, readAt);
+      return argument.yours
+        ? `Tap I’m here once you’re at the club — your phone checks where you are. Within 10 minutes of the start you’re on time; after that it’s Came late. If you haven’t arrived${by}, it’s Didn’t come and the game takes no score.`
+        : `No score goes in while somebody is awaited. If they arrive${by}, the game goes on as usual — Came late if it was more than 10 minutes after the start. If not, it’s Didn’t come: the game takes no score and doesn’t count. Saying so costs you nothing.`;
     }
-    case 'no-show':
-      return argument.didNotCome.some((who) => who.kind === 'you')
-        ? 'Nobody said otherwise in time, so the mark stands: the game didn’t count, and not turning up is the strongest mark on a record.'
-        : 'The game didn’t count and no Level moved. Nobody who came is marked for it.';
+    case 'didnt-come':
+      switch (argument.yours?.state) {
+        case 'may-claim':
+          return `If you were there and your phone let you down, say I was there${byWhen(argument.yours.claimBy, readAt)}. Once somebody who played confirms it, it’s Came late and the game goes on. Until then the game takes no score.`;
+        case 'claimed':
+          return 'You said you were there. Once somebody who played confirms it, it’s Came late and the game goes on. Until then the game takes no score.';
+        case 'final':
+          return 'The game took no score and didn’t count, and no Level moved.';
+        case undefined:
+          return 'The game takes no score and doesn’t count, and no Level moves. Nobody who came is marked for it.';
+      }
     case 'not-yours':
     case 'unreadable':
     case 'confirmed':
@@ -526,24 +525,22 @@ export function saysWhatItIsWorth(argument: ResultArgument): boolean {
     case 'played-no-score':
     case 'called-off':
     case 'disputed':
-    case 'unscored':
     case 'started-short':
-    case 'no-show-reported':
-    case 'no-show':
+    case 'not-here-yet':
+    case 'didnt-come':
       return false;
   }
 }
 
 /**
  * **Whether this ending is an evening, not evidence** — the endings that took no score and still
- * count as played (*Played · no score*, *Disputed*, and the evening everybody marked said they came
- * to), each drawn over {@link EVENING_FACTS}.
+ * count as played (*Played · no score* and *Disputed*), each drawn over {@link EVENING_FACTS}. A game
+ * somebody didn't come to is not one: it never counts.
  */
 export function endsAsAnEvening(argument: ResultArgument): boolean {
   switch (argument.kind) {
     case 'played-no-score':
     case 'disputed':
-    case 'unscored':
       return true;
     case 'not-yours':
     case 'unreadable':
@@ -555,8 +552,8 @@ export function endsAsAnEvening(argument: ResultArgument): boolean {
     case 'both-stand':
     case 'confirmed':
     case 'started-short':
-    case 'no-show-reported':
-    case 'no-show':
+    case 'not-here-yet':
+    case 'didnt-come':
       return false;
   }
 }
@@ -592,10 +589,9 @@ export function settledScore(
     case 'theirs-stands':
     case 'both-stand':
     case 'disputed':
-    case 'unscored':
     case 'started-short':
-    case 'no-show-reported':
-    case 'no-show':
+    case 'not-here-yet':
+    case 'didnt-come':
       return undefined;
   }
 }
@@ -822,52 +818,79 @@ export function submitLabel(act: 'enter' | 'correct' | 'counter'): string {
 export const SENDING_LABEL = 'Sending…';
 
 // ---------------------------------------------------------------------------
-// Somebody didn't come (#560; the Games & Fill in mechanics §15.3)
+// Who's here (#658; ADR-0195 §3)
 // ---------------------------------------------------------------------------
 
 /**
- * The block's eyebrow, where a booked game's result is entered. Stored as words and drawn
- * uppercase, `BALANCE_FORECAST`'s rule.
+ * **The block's eyebrow** — *Who's here* while the half hour runs, *Who was there* after it. Stored
+ * as words and drawn uppercase, `BALANCE_FORECAST`'s rule.
  */
-export const DIDNT_COME = 'Didn’t come?';
-
-/** The one line under it — when to use it, and what it does, before anybody presses. */
-export const DIDNT_COME_LINE =
-  'Only for somebody who didn’t turn up at all. The game then doesn’t count, and they get a day to say they were there.';
+export const ATTENDANCE_EYEBROW: Readonly<Record<AttendanceBlock['phase'], string>> = {
+  'at-the-court': 'Who’s here',
+  afterwards: 'Who was there',
+};
 
 /**
- * ***Kuba Nowak didn't come*** — the control on a row, and the act on the sheet: the mechanics'
- * own words, the name **whole** (ADR-0171), never a first name derived from it.
+ * **The one line under it while *isn't here yet* is offered** — what it is for, and **why the phone
+ * reads where it is**, said before anybody presses: the tap works only from the club, and nothing is
+ * kept. No sheet stands in front of the tap: it costs its maker nothing, and an arrival lifts it.
  */
-export function didNotComeLabel(who: NamedPlayer): string {
-  return `${playerName(who)} didn’t come`;
-}
+export const NOT_HERE_YET_LINE =
+  'Tap for anybody who isn’t at the court yet. It works only from the club — your phone reads where you are as you tap, and keeps nothing.';
 
 /**
- * The sheet's title names **the moment**, so the act is named once — by the control that carries it
- * out — on the leave sheet's rule.
+ * **The control about somebody else**, named whole (ADR-0171): *Oscar Nowak isn't here yet*, *Oscar
+ * Nowak is here* — the *they're here* of the mechanics — and *Yes, Oscar Nowak was here*.
  */
-export const NO_SHOW_SHEET_TITLE = 'Before you say so';
-
-/** The sheet's dismissal, named by what it does. */
-export const NO_SHOW_SHEET_CLOSE_LABEL = 'Don’t mark anybody';
-
-/**
- * **The sheet's three lines** — when it is for, what it does to the game, and what it does to them:
- * the mechanics' 24 hours, said before the report as the product's rule; after it, the screen reads
- * the server's own instant.
- */
-export function noShowSheetBody(who: NamedPlayer): readonly string[] {
+export function attendanceTapLabel(tap: AttendanceTap, who: NamedPlayer): string {
   const name = playerName(who);
-  return [
-    `Say this only if ${name} didn’t turn up at all — not for being late.`,
-    'The game won’t count, and nobody’s Level moves.',
-    `${name} gets 24 hours to say they were there. If they don’t, it stands — the strongest mark on a record.`,
-  ];
+  switch (tap) {
+    case 'not-here-yet':
+      return `${name} isn’t here yet`;
+    case 'here':
+      return `${name} is here`;
+    case 'was-here':
+      return `Yes, ${name} was here`;
+  }
 }
 
-/** ***I was there*** — the marked player's dispute, pinned while their day runs. */
-export const DISPUTE_LABEL = 'I was there';
+/** **What is said beside somebody** — *Oscar Nowak came late*, *You came late*. */
+export function attendanceLine(said: AttendanceSaid, who: NamedPlayer): string {
+  const name = playerName(who);
+  switch (said) {
+    case 'not-here-yet':
+      return `${name} isn’t here yet`;
+    case 'came-late':
+      return `${name} came late`;
+    case 'says-they-were-there':
+      return `${name} says they were there`;
+  }
+}
+
+/** ***I'm here*** — the awaited player's own, pinned while they are awaited. */
+export const IM_HERE_LABEL = 'I’m here';
+
+/** ***I was there*** — the late claim, pinned while its day runs. */
+export const I_WAS_THERE_LABEL = 'I was there';
+
+/**
+ * **Why a tap at the club went nowhere** — the phone asked for its location and was refused, it is
+ * refused for good, or it could not tell where it is, and nothing was sent; or what it sent was too
+ * rough to place it at the club. Each says why the location is needed; the two a setting changes
+ * point at it.
+ */
+export const LOCATION_AT_THE_TAP: Readonly<Record<LocationRefusal, string>> = {
+  refused:
+    'Raketa needs your location to check you’re at the club. Allow it when your phone asks, then tap again.',
+  blocked:
+    'Location is off for Raketa, so it can’t check you’re at the club. Turn it on in Settings — it’s read only when you tap.',
+  'no-fix': 'Your phone couldn’t tell where you are. Try again in a moment.',
+  rough:
+    'Your phone could only tell roughly where you are, so Raketa couldn’t check you’re at the club. Turn on Precise Location for Raketa in Settings, or try again in a moment.',
+};
+
+/** The remedy beside a permission refused for good, and beside a rough fix. */
+export const OPEN_SETTINGS = 'Open Settings';
 
 /**
  * The rub-out key. **A word rather than ⌫**, for the reason the on-court mark is a word rather

@@ -13,11 +13,18 @@
 import type { components } from '@/generated/schema';
 import type { Exact } from '@/shared/vocabulary/wireAgreement';
 
-import type { GameKind, GameSide, GameStanding, Outcome } from '../domain/vocabulary';
+import type {
+  AttendanceState,
+  GameKind,
+  GameSide,
+  GameStanding,
+  Outcome,
+} from '../domain/vocabulary';
 
 export const GAME_VOCABULARY_AGREES: {
   readonly standing: Exact<GameStanding, components['schemas']['GameStanding']>;
   readonly kind: Exact<GameKind, components['schemas']['GameKind']>;
   readonly side: Exact<GameSide, components['schemas']['GameSide']>;
   readonly outcome: Exact<Outcome, components['schemas']['Outcome']>;
-} = { standing: true, kind: true, side: true, outcome: true };
+  readonly attendance: Exact<AttendanceState, components['schemas']['AttendanceState']>;
+} = { standing: true, kind: true, side: true, outcome: true, attendance: true };

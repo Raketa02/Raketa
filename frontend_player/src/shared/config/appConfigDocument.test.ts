@@ -95,10 +95,22 @@ describe('the config document', () => {
   it('asks for a foreground location and no background one, on either platform', () => {
     const [, options] = pluginNamed('expo-location');
 
-    expect(options.locationWhenInUsePermission).toEqual(expect.any(String));
     expect(options.isIosBackgroundLocationEnabled).toBe(false);
     expect(options.isAndroidBackgroundLocationEnabled).toBe(false);
     expect(options.isAndroidForegroundServiceEnabled).toBe(false);
+  });
+
+  /**
+   * **Both uses, in the words the player reads before the OS asks** (ADR-0195 §3): the area,
+   * and — when they say who's at a game — the check that they are at the club. A use the
+   * prompt does not name is a use nobody agreed to.
+   */
+  it('names both uses of the location in its prompt', () => {
+    const [, options] = pluginNamed('expo-location');
+
+    expect(options.locationWhenInUsePermission).toBe(
+      'Raketa uses your location to set the area you play in and, when you say who’s at a game, to check you’re at the club.',
+    );
   });
 
   /**

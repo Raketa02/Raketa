@@ -22,10 +22,9 @@
  * | `CONFIRMED` | — | the score that stands, and what it said about you |
  * | `CONFIRMED`, For fun | — | *Played*, with its score |
  * | `DISPUTED` | — | two scores named different winners: no Level moved (#654) |
- * | `UNSCORED` | — | an evening, not evidence |
  * | `STARTED_SHORT` | — | a booked game whose hour came with a seat open: no result |
- * | `NO_SHOW_REPORTED` | a report | who was marked as not coming, and the dispute for them (#560) |
- * | `NO_SHOW` | — | who did not come: the reports nobody disputed (#560) |
+ * | `NOT_HERE_YET` | — | who is awaited, and to them who is waiting (#658) |
+ * | `DIDNT_COME` | — | who didn't come, and to them whether they may still say they were there |
  *
  * ## Which of the three is read off the count, and never off an absence
  *
@@ -72,21 +71,21 @@ import type { NamedPlayer } from '@/shared/formatting/playerName';
 
 import {
   openSeats,
+  type Attendance,
   type CalledOffBy,
   type Game,
-  type NoShowReport,
   type Score,
   type StandingProposal,
 } from './game';
-import type { GameSide, Outcome } from './vocabulary';
+import type { AttendanceState, GameSide, Outcome } from './vocabulary';
 
 /**
- * The one act a screen state offers, in the order the screen draws them. **`dispute` is not about
- * a score** — it is *I was there*, the reported player's answer to a no-show report (#560) — and
- * marking somebody as not coming is not here either: it is an act per person, offered beside the
- * entry rather than instead of it (`noShowRows` in `noShows.ts`).
+ * The one act a screen state offers, in the order the screen draws them — **every one of them about
+ * a score.** Who turned up is not here: its taps are per person, offered beside the entry rather
+ * than instead of it, and the reader's own *I'm here* and *I was there* are the attendance block's
+ * too (`attendance.ts`, #658).
  */
-export type ResultAct = 'enter' | 'correct' | 'accept' | 'counter' | 'dispute';
+export type ResultAct = 'enter' | 'correct' | 'accept' | 'counter';
 
 /**
  * **What an entry arm leads with** — the plan while it is being agreed, the score once the moment
@@ -114,7 +113,7 @@ export type EntryLead = 'the-plan' | 'the-score';
  * The three acts that open a grid. **At most one of them is ever offered at once**, which is
  * what lets {@link editingAct} read the answer off {@link actsOffered} instead of restating it.
  */
-export type EditingAct = Exclude<ResultAct, 'accept' | 'dispute'>;
+export type EditingAct = Exclude<ResultAct, 'accept'>;
 
 /** The two scores on the table, **from the reader's side of the net**. Either may be absent. */
 export interface ScoresOnTable {
@@ -195,39 +194,40 @@ export type ResultArgument =
       readonly outcome?: Outcome;
       readonly seatOpen: boolean;
     }
-  | { readonly kind: 'unscored' }
   /** A booked game whose hour came with a seat still open: it takes no result (#544). */
   | { readonly kind: 'started-short' }
   /**
-   * **Somebody was marked as not coming, and a report's day still runs** (#560; the mechanics
-   * §15.3). The reader's own mark where one names them — whose `open` day is the one act this arm
-   * offers, *I was there* — and everybody else's, in the court's order.
+   * **Somebody tapped *isn't here yet* is awaited, and the first half hour runs** (#658; ADR-0195
+   * §3): no score is taken until they arrive or it ends. `awaited` is everybody awaited, the reader
+   * as *you*; `here` is everybody else on the court, the people the game waits with; `yours` is
+   * whether the reader is awaited themselves. `arriveBy` is the half hour's end, the backend's.
    */
   | {
-      readonly kind: 'no-show-reported';
-      readonly yours?: NoShowMark;
-      readonly others: readonly NoShowMark[];
+      readonly kind: 'not-here-yet';
+      readonly awaited: readonly NamedPlayer[];
+      readonly here: readonly NamedPlayer[];
+      readonly yours: boolean;
+      readonly arriveBy?: string;
     }
   /**
-   * **Every report has had its day, and one stood**: the game does not count. `didNotCome` is the
-   * reports nobody disputed — a disputed one fell, and is on nobody's record.
+   * **Somebody Didn't come** (#658): the game takes no score and never counts, for a day
+   * provisionally. `absent` names them — a claim still unconfirmed among them, since until somebody
+   * confirms it they still Didn't come — and `yours` is the reader's own where they are one.
    */
-  | { readonly kind: 'no-show'; readonly didNotCome: readonly NamedPlayer[] };
+  | {
+      readonly kind: 'didnt-come';
+      readonly absent: readonly NamedPlayer[];
+      readonly yours?: OwnAbsence;
+    };
 
 /**
- * **One no-show report, from the reader's side** — who it marks and where it stands. *Mark* is the
- * glossary's own verb for it: the players who came marking one who didn't.
+ * **The reader's own Didn't come** — `may-claim` while *I was there* may still be said, `claimed`
+ * once it is and somebody else's confirmation is awaited, `final` once the day is over. `claimBy` is
+ * the end of that day, the backend's instant.
  */
-export interface NoShowMark {
-  /** *You* on the reader's own, the whole name, or `?` where `users` lost them. */
-  readonly who: NamedPlayer;
-  /** The end of their day to say they came — the backend's instant. */
-  readonly disputeBy: string;
-  /**
-   * `open` — undisputed, its day not over when the list was read: it may still be disputed.
-   * `disputed` — they said they came, and the report fell. `stood` — undisputed, its day over.
-   */
-  readonly state: 'open' | 'disputed' | 'stood';
+export interface OwnAbsence {
+  readonly state: 'may-claim' | 'claimed' | 'final';
+  readonly claimBy: string;
 }
 
 /**
@@ -305,9 +305,9 @@ function calledOffEnding(game: Game, reader: string): CalledOffEnding {
 
 /**
  * `whoIs`'s three answers, off a field that carries its own name rather than off a seat — a
- * leaver's seat is vacated (ADR-0172 §4), and a no-show report names its player whole (#560).
+ * leaver's seat is vacated (ADR-0172 §4), and an attendance row names its player whole (#657).
  */
-function namedFrom(subject: CalledOffBy | NoShowReport, reader: string): NamedPlayer {
+function namedFrom(subject: CalledOffBy | Attendance, reader: string): NamedPlayer {
   if (subject.playerId === reader) return { kind: 'you' };
   if (subject.name === undefined) return { kind: 'unknown' };
   return { kind: 'player', name: subject.name };
@@ -355,19 +355,12 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
         : { kind: 'confirmed', score: game.score, outcome: game.outcome };
     case 'DISPUTED':
       return { kind: 'disputed' };
-    case 'UNSCORED':
-      return { kind: 'unscored' };
     case 'STARTED_SHORT':
       return { kind: 'started-short' };
-    case 'NO_SHOW_REPORTED':
-      return noShowReported(game, playerId);
-    case 'NO_SHOW':
-      return {
-        kind: 'no-show',
-        didNotCome: game.noShows.flatMap((report) =>
-          report.disputedAt === undefined ? [namedFrom(report, playerId)] : [],
-        ),
-      };
+    case 'NOT_HERE_YET':
+      return notHereYet(game, playerId);
+    case 'DIDNT_COME':
+      return didntCome(game, playerId);
     case 'AWAITING_ANSWER': {
       const ours = game.proposals.find((one) => one.side === side);
       const theirs = game.proposals.find((one) => one.side !== side);
@@ -391,33 +384,66 @@ export function resultArgument(game: Game, playerId: string): ResultArgument {
   }
 }
 
-/** The reader's own mark, and everybody else's, while a report's day still runs. */
-function noShowReported(game: Game, playerId: string): ResultArgument {
-  const marks = game.noShows.map((report) => ({
-    playerId: report.playerId,
-    mark: markOf(report, playerId, game.readAt),
-  }));
-  const yours = marks.find((one) => one.playerId === playerId)?.mark;
+/** The rows in one of these states, in the court's order — which is the wire's. */
+function inState(game: Game, states: ReadonlySet<AttendanceState>): readonly Attendance[] {
+  return game.attendance.filter((row) => row.state !== undefined && states.has(row.state));
+}
+
+const AWAITED: ReadonlySet<AttendanceState> = new Set<AttendanceState>(['WAITING']);
+/** Didn't come — with an unconfirmed *I was there*, which is still Didn't come until confirmed. */
+const ABSENT: ReadonlySet<AttendanceState> = new Set<AttendanceState>(['DIDNT_COME', 'CLAIMED']);
+/**
+ * **The states of a player who is not here** — awaited, or Didn't come. They are not among those the
+ * game waits with, and they may not say who else is here nor vouch for anybody: their own tap is the
+ * one thing proven about them. `attendance.ts` reads the same set.
+ */
+export const NOT_HERE: ReadonlySet<AttendanceState> = new Set<AttendanceState>([
+  ...AWAITED,
+  ...ABSENT,
+]);
+
+/** Who is awaited, and who the game waits with: everybody else on the court who is not away. */
+function notHereYet(game: Game, reader: string): ResultArgument {
+  const awaited = inState(game, AWAITED);
+  const away = new Set(inState(game, NOT_HERE).map((row) => row.playerId));
   return {
-    kind: 'no-show-reported',
-    ...(yours === undefined ? {} : { yours }),
-    others: marks.flatMap((one) => (one.playerId === playerId ? [] : [one.mark])),
+    kind: 'not-here-yet',
+    awaited: awaited.map((row) => namedFrom(row, reader)),
+    here: game.seats.flatMap((seat) =>
+      seat.playerId === undefined || seat.playerId === reader || away.has(seat.playerId)
+        ? []
+        : [whoIs(game, reader, seat.playerId)],
+    ),
+    yours: awaited.some((row) => row.playerId === reader),
+    ...(awaited[0] === undefined ? {} : { arriveBy: awaited[0].arriveBy }),
   };
 }
 
 /**
- * A report in the reader's terms. **Whether its day is still open** is read off two of the
- * backend's own instants — the report's `disputeBy` and the list's `readAt` — and never off this
- * phone's clock: it is the server's `may_dispute`, asked of the moment the list was folded.
+ * Who didn't come, and the reader's own where they are one. **Whether their day still runs** is read
+ * off two of the backend's own instants — the row's `claimBy` and the list's `readAt` — and never off
+ * this phone's clock.
  */
-function markOf(report: NoShowReport, reader: string, readAt: string): NoShowMark {
-  const state =
-    report.disputedAt !== undefined
-      ? 'disputed'
-      : Date.parse(readAt) < Date.parse(report.disputeBy)
-        ? 'open'
-        : 'stood';
-  return { who: namedFrom(report, reader), disputeBy: report.disputeBy, state };
+function didntCome(game: Game, reader: string): ResultArgument {
+  const absent = inState(game, ABSENT);
+  const own = absent.find((row) => row.playerId === reader);
+  const yours: OwnAbsence | undefined =
+    own === undefined
+      ? undefined
+      : {
+          state:
+            own.state === 'CLAIMED'
+              ? 'claimed'
+              : Date.parse(game.readAt) < Date.parse(own.claimBy)
+                ? 'may-claim'
+                : 'final',
+          claimBy: own.claimBy,
+        };
+  return {
+    kind: 'didnt-come',
+    absent: absent.map((row) => namedFrom(row, reader)),
+    ...(yours === undefined ? {} : { yours }),
+  };
 }
 
 /**
@@ -460,9 +486,7 @@ export function scoresOnTable(argument: ResultArgument): ScoresOnTable {
  * cannot disagree about a state.
  */
 export function editingAct(argument: ResultArgument): EditingAct | undefined {
-  return actsOffered(argument).find(
-    (act): act is EditingAct => act !== 'accept' && act !== 'dispute',
-  );
+  return actsOffered(argument).find((act): act is EditingAct => act !== 'accept');
 }
 
 /**
@@ -490,19 +514,17 @@ export function actsOffered(argument: ResultArgument): readonly ResultAct[] {
       // Either side may agree with the other's, which settles it at once. Never a counter — this
       // side has had its one turn, which is what bounds the argument to two rounds.
       return ['accept'];
-    case 'no-show-reported':
-      // *I was there* — the reported player's alone, inside their own day (#560). Nobody else
-      // answers a report: the platform does not arbitrate, and a dispute falls the report whole.
-      return argument.yours?.state === 'open' ? ['dispute'] : [];
     case 'not-yours':
     case 'unreadable':
     case 'played-no-score':
     case 'called-off':
     case 'confirmed':
     case 'disputed':
-    case 'unscored':
     case 'started-short':
-    case 'no-show':
+    // No score is taken while somebody is awaited, nor on a game somebody didn't come to (#658):
+    // what is offered there is the attendance block's.
+    case 'not-here-yet':
+    case 'didnt-come':
       return [];
   }
 }

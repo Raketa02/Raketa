@@ -91,7 +91,7 @@ function game(over: Partial<Wire['GameSchema']> = {}): Wire['GameSchema'] {
       { side: 'B', player_id: OPPONENT, name: THEIR_HANDLE },
     ],
     proposals: [],
-    no_shows: [],
+    attendance: [],
     ...over,
   };
 }
@@ -575,18 +575,30 @@ describe('the ends', () => {
   });
 
   /**
-   * Since #654 two scores never end here: it is the game everybody marked said they came to, and
-   * the body says so rather than that nobody wrote a score down.
+   * **A game somebody didn't come to is not an evening** (#658): it never counts, so it reads who
+   * didn't come and offers nothing about a score — and none of the facts of a game that was played.
    */
-  it('reads an unscored game as an evening, says why, and offers nothing', async () => {
+  it('reads a game somebody didn’t come to as that, with no evening’s facts and nothing to press', async () => {
     await openGame(
-      game({ standing: 'UNSCORED', played_at: '2026-09-04T20:00:00Z', entry_closes_at: null }),
+      game({
+        standing: 'DIDNT_COME',
+        entry_closes_at: null,
+        attendance: [
+          {
+            player_id: OPPONENT,
+            name: THEIR_HANDLE,
+            state: 'DIDNT_COME',
+            noted_at: '2026-09-04T18:05:00Z',
+            arrive_by: '2026-09-04T18:30:00Z',
+            claim_by: '2026-09-05T18:30:00Z',
+          },
+        ],
+      }),
     );
 
-    expect(screen.getByText(resultBody({ kind: 'unscored' })!)).toBeTruthy();
-    // Variant C's fact list: an account of what the evening still is, not an apology.
-    for (const fact of EVENING_FACTS) expect(screen.getByText(fact)).toBeTruthy();
-    expect(screen.queryByText(/wrote a score down/)).toBeNull();
+    expect(screen.getByText('Didn’t come')).toBeTruthy();
+    expect(screen.getByText(`${THEIR_HANDLE} didn’t come.`)).toBeTruthy();
+    for (const fact of EVENING_FACTS) expect(screen.queryByText(fact)).toBeNull();
     expect(screen.queryByText(ENTER_LABEL)).toBeNull();
     expect(screen.queryByText(ACCEPT_LABEL)).toBeNull();
   });

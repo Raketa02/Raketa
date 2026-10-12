@@ -106,10 +106,11 @@ export type ClubCancelReason = 'WEATHER' | 'REPAIR' | 'DOUBLE_BOOKING' | 'OTHER'
 
 /**
  * **Why a game on Home is uncounted with nobody disagreeing about a score** — its hour came with a
- * seat still open (#544): *Uncounted · a seat was empty*; or somebody who came marked a player who
- * did not (#547, #560), and the game does not count whatever the report comes to.
+ * seat still open (#544): *Uncounted · a seat was empty*; or somebody tapped *isn't here yet* at the
+ * court never arrived (#657, #658): the game takes no score and never counts — for a day
+ * provisionally, until a late *I was there* is confirmed or the day ends.
  */
-export type UncountedReason = 'SEAT_EMPTY' | 'NO_SHOW';
+export type UncountedReason = 'SEAT_EMPTY' | 'DIDNT_COME';
 
 /**
  * **What *Leave the game* costs right now** (the mechanics §13; #544) — before the club's cut-off
