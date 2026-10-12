@@ -40,9 +40,23 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   answers an unwritten aggregate. It holds the courts (one sport each, from
   the club's own; indoor or outdoor; offered or switched off), each court's **Raketa hours** —
   the player's own `WeeklyHours`, imported rather than respelled, with no floor — the
-  exceptions, the price table, the way of working, the settings and pause, and the club's
+  exceptions, the price table, the settings and pause, and the club's
   payments account (#537); **no projection of courts is written beside it** — the one row is
-  which club a payments account is. Four things are load-bearing. **Money is integer grosze** and a price
+  which club a payments account is. Five things are load-bearing. **One way of working: Only
+  Raketa, until Raketa is the club's booking software**
+  ([ADR-0196](../../../docs/adr/0196-only-raketa-until-raketa-is-the-clubs-booking-software-and-a-clubs-cancel-moves-the-game.md)
+  §1, #670): the club hands Raketa its Raketa hours, which Raketa sells alone until each
+  one's **release time** — the release lead before it, 1–13 days, 3 by default — so the
+  **book-by is always the release time** and no game fills later than a day before its
+  start. *Instant* and *On request* went with the choice between the three, and the
+  **minimum notice** and the **time to confirm** with them: the settings
+  (`domain/raketa_terms.py`, `PUT /club/raketa-settings`) are the release lead, the
+  cut-off, other clubs' courts for the club's groups, and pause, and saving them needs
+  nothing chosen first. A clean cut: `clubs.way_of_working_chosen` is unregistered and
+  `clubs.raketa_settings_changed` is at version 2 (version 1, which carried the two
+  settings and the retired `check_in`, is a decoding error), with the local store reset.
+  The *double booking* cancel reason stays: a desk can still sell a handed-over hour by
+  mistake. **Money is integer grosze** and a price
   must **split** among the sport's seats (`price_does_not_split`), so a share is exact and
   nothing is rounded (`domain/prices.py`; `docs/value-formatting.md`). **What a club can sell is
   never stored**: `domain/sellable.py` folds the pattern less the exceptions less what bookings
@@ -54,16 +68,19 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   `bookings/infrastructure/` (#541) — `court_has_bookings` and `court_booked_then` read it, and
   API tests may stand in for it by overriding `get_court_bookings`. And **the setup
   checklist is read, never stored** (`domain/setup.py`): *locked* is the backend's rule, and
-  **live is all five steps** — payments done only while the provider says the club's account
-  is **ready** (#537), so a club Stripe stops is live no longer, and its courts leave the
-  decks with it (`PaymentsStatusChanged` makes the proposer due). A club
+  **live is all four steps** — connect payments, add courts, set hours and prices, check
+  the settings; hours and prices wait for a court, and the settings wait for nothing since
+  *Choose how you work with Raketa* went (#670) — payments done only while the provider
+  says the club's account is **ready** (#537), so a club Stripe stops is live no longer, and
+  its courts leave the decks with it (`PaymentsStatusChanged` makes the proposer due). A club
   cannot untick a sport one of its courts plays (`club_sport_has_courts`), asked before the
   official groups are. Every hour is wall clock in `CLUB_ZONE` — one zone for every club, a
   locale assumption until the first club somewhere else — through `slot_start`.
-  Seeded by `app/seeds/club_courts.py`: Only Raketa and Instant (On request's two clubs work
-  Only Raketa since #669), Wisła Park half set up and
-  not live, Zabłocie Sport paused, and a run that fails if a live club has nothing for sale in
-  the next fortnight.
+  Seeded by `app/seeds/club_courts.py`: every club Only Raketa (#670), each with a release
+  lead that keeps its seeded games fillable — a day ahead at all but Centrum Ruchu (two),
+  Nowa Huta Squash and Zabłocie Sport (the default three) — Wisła Park half set up (its
+  courts and its settings, two steps of four) and not live, Zabłocie Sport paused, and a run
+  that fails if a live club has nothing for sale in the next fortnight.
 - **A club's payments account is on its Club courts stream, and the provider decides
   it** (#537, `domain/payments_account.py`, `application/payments_account.py`).
   `ConnectPayments` opens the account at the provider **once** (a key of the club and the

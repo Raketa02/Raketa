@@ -209,10 +209,13 @@ unregistered and the local store reset, so the last yes books the game at every 
   *It's a game! · you paid 30 zł* when it books after it, the club named as the seller; and
   *Confirm your payment to keep your seat* to each refused player, worded by reason.
 - **Seeded by `app/seeds/bookings.py`**: two of the protagonist's games — the first hour
-  Bonarka Arena sells today (else inside the cut-off) and the first Kazimierz Padel sells
-  next week (#669; it worked On request, and books at once now) — each made by
-  `MakeProposal` and filled by four `SayYes`, hers last, through the run's fake — today's taken
-  at once, after its cut-off, and the seed's outbox captures it (the fake **adopts a hold another
+  still to come today at Bonarka Arena (else inside the cut-off) and the first Kazimierz
+  Padel sells next week (#669; it worked On request, and books at once now) — each made by
+  `MakeProposal` and filled by four `SayYes`, hers last, through the run's fake. **No game
+  fills later than its release time** (#670), so today's is read off what Bonarka sold
+  before any deadline and filled **as if earlier**, an hour before its release time, and the
+  cut-off job is run at its cut-off (`the_cut_off_if_it_passed`), which takes it — and the
+  seed's outbox captures it (the fake **adopts a hold another
   process made**, as it answers a card it never saved); next week's **held** until its cut-off
   (#637) — or, run early in the week, only **checked**, its hold not lasting until the cut-off
   (#639) — so her receipts list one. **And one game of the crowd's filled far ahead** (#639):
@@ -394,10 +397,11 @@ unregistered and the local store reset, so the last yes books the game at every 
   whatever becomes of the game; the joiner keeps the game when its hour comes whole.
   **Seeded by `app/seeds/rescues.py`**: two of the crowd's games she is not on, each left by
   one of its four — one **past the cut-off by a day** (*fills by the cut-off*, on every run)
-  and one **inside it** (*offered until the start*), which needs an hour of her week that
-  Bonarka still sells inside its 24-hour cut-off — none from Saturday noon to Monday evening,
-  nor late on a weekday afternoon — and is otherwise skipped by name; `assert_the_fill_in`
-  fails a run whose board lacks what was seeded.
+  and one **inside it** (*offered until the start*), filled as if earlier, as her game today
+  is (#670), which needs an hour of her week that Bonarka sells inside its 24-hour cut-off —
+  none from Saturday afternoon to Monday evening, nor late on a weekday evening — and is
+  otherwise skipped by name; `assert_the_fill_in` fails a run whose board lacks what was
+  seeded.
 - **The club runs its bookings** (#547; `proposals/application/club_bookings.py`, rules in
   `proposals/domain/club_bookings.py`, acts in `bookings/application/at_the_club.py`; the
   mechanics §16.7, §16.9, §16.14; the screens B4, B6). **The club surface is

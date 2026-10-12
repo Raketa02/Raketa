@@ -110,7 +110,7 @@ Moved verbatim from `backend/CLAUDE.md` (2026-09-30); decisions that are load-be
   a version; a pick at half In with somebody named unswiped widens into new versions, three
   in all. **A lost court hour** is `proposals.court_hour_lost` (ending `COURT_HOUR_LOST`,
   migration 0038): no court is left at its club and hour — read off `CourtHours.held`,
-  **the offer before any deadline**, so a club lengthening its notice takes no card's
+  **the offer before any deadline**, so a club lengthening its release lead takes no card's
   court and a paused club's cards keep theirs — the card is over, and the people In are
   dealt a new card first at the nearest hour they are all free, the same hour at another
   of the pool's clubs before another hour. **A booked game its club cancelled** (#547,

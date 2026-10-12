@@ -417,12 +417,17 @@ make seed-host   # the same seed from the host — needs .env, like host-run uvi
 Both run `python -m app.seeds`. The schema must already exist; `make up` migrates on
 container start.
 
-**Reset the local store and seed it again after On request's removal** (#669;
-ADR-0196 §1): no club confirms a game now, and the seven booking events and the proposal
-event that recorded requests left the code without decoders — a clean cut, since only
-`local` has ever run. A store written before it holds streams nothing can read, so
-`make down-v && make up && make seed`; migration `0058` drops the columns only requests
-used. `make seed` alone is not enough: it reads the store it is given.
+**Reset the local store and seed it again after On request's and Instant's removal**
+(#669, #670; ADR-0196 §1): no club confirms a game now, and every club works **Only
+Raketa** — the one way of working until Raketa is the club's booking software — so a
+game's book-by is always its club's release time, a day or more before it. The seven
+booking events and the proposal event that recorded requests, and the club's
+`clubs.way_of_working_chosen`, left the code without decoders, and
+`clubs.raketa_settings_changed` moved to version 2 without the minimum notice and the
+time to confirm — a clean cut, since only `local` has ever run. A store written before it
+holds streams nothing can read, so `make down-v && make up && make seed`; migration
+`0058` drops the columns only requests used. `make seed` alone is not enough: it reads the
+store it is given.
 
 Every address is `<state>@raketa.example`, and the state is what the name says. The
 catalog is a list of **edges**, not of people: nothing yet, exactly one, the maximum, the
@@ -575,10 +580,13 @@ signed in as the protagonist (an address from the roster, and the one seed passw
   cut-off has come, and leaves the rest held.
 - **Situations** set the stage for one mechanic in one press, through the same use cases a
   request runs and at the real *now*: *1 · Fresh deal* runs the proposer for the group; *2 ·
-  Needs her yes · Instant club* puts enough people In on one of the protagonist's cards that
-  her yes on the phone fills it — and books it, at any club, since no club confirms a game
-  (*3*, which put a game to an On request club, went with it, #669); and *4 · Card declines
-  at the fill* is 2 with her card set to decline. Pressed again and again they meet the
+  Needs her yes* puts enough people In on one of the protagonist's cards that her yes on the
+  phone fills it — and books it, at any club, since no club confirms a game (*3*, which put
+  a game to an On request club, went with it, #669); and *4 · Card declines at the fill* is
+  2 with her card set to decline. **Every club works Only Raketa** (#670), so a situation
+  that books its own game writes it **as if earlier**, an hour before the hour's release
+  time — and *11 · Club day close* writes one game played that day, booked before it, and
+  one booked inside it, since no game can be both. Pressed again and again they meet the
   domain's refusals; a fresh store is `make down-v && make up && make seed`.
 
 It is gated twice, and both halves refuse:
