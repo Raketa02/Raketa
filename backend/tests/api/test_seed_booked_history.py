@@ -158,8 +158,19 @@ async def test_her_evenings_are_on_her_record_with_a_mixed_run_and_her_stars(
     assert sorted(set(body["skill"]["last_five"])) == ["LOSS", "WIN"]
     assert body["variety"] == {"distinct_opponents": 3, "times_on_court": 6}
     assert body["sportsmanship"] == {"average": 4.5, "raters": 2}
-    strands = {row["strand"]: row for row in body["reliability"]["strands"]}
-    assert (strands["SHOWS_UP"]["good"], strands["SHOWS_UP"]["opportunities"]) == (6, 6)
+    # Six evenings played through, the unrecorded one among them, and every
+    # booking kept: 100 · Very high, no longer New (#659).
+    assert body["reliability"] == {
+        "player_score": 100,
+        "band": "VERY_HIGH",
+        "is_new": False,
+        "turned_up": 6,
+        "turned_up_of": 6,
+        "late": 0,
+        "kept": 6,
+        "kept_of": 6,
+        "left_in_dispute": 0,
+    }
 
 
 async def test_every_evening_is_over_before_her_week_began(

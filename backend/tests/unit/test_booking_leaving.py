@@ -27,7 +27,7 @@ from app.modules.bookings.domain.events import (
     CalledOffAtCutOff,
     SeatLeft,
 )
-from app.modules.bookings.domain.keeping import Keeping, keeping_of
+from app.modules.bookings.domain.keeping import Broken, Keeping, keeping_of
 from app.shared.ids import new_uuid
 
 OLA, KUBA, EWA, TOMEK = (new_uuid() for _ in range(4))
@@ -167,7 +167,7 @@ def test_everybody_who_played_it_through_kept_it_once_its_hour_came():
     booking = _booked()
 
     assert keeping_of(booking, OLA, now=START - timedelta(minutes=1)) is None
-    assert keeping_of(booking, OLA, now=START) == Keeping(kept=True, at=START)
+    assert keeping_of(booking, OLA, now=START) == Keeping(at=START)
 
 
 def test_leaving_before_the_cut_off_is_a_mark_only_when_the_game_is_then_called_off():
@@ -175,9 +175,13 @@ def test_leaving_before_the_cut_off_is_a_mark_only_when_the_game_is_then_called_
     booking.leave(KUBA, at=_at(1))
 
     assert keeping_of(booking, KUBA, now=CUT_OFF - timedelta(minutes=1)) is None
-    assert keeping_of(booking, KUBA, now=CUT_OFF) == Keeping(kept=False, at=CUT_OFF)
+    assert keeping_of(booking, KUBA, now=CUT_OFF) == Keeping(
+        at=CUT_OFF, broken=Broken.CALLED_OFF_BY_LEAVING
+    )
     booking.call_off_at_the_cut_off(at=CUT_OFF + timedelta(minutes=1))
-    assert keeping_of(booking, KUBA, now=START) == Keeping(kept=False, at=CUT_OFF)
+    assert keeping_of(booking, KUBA, now=START) == Keeping(
+        at=CUT_OFF, broken=Broken.CALLED_OFF_BY_LEAVING
+    )
 
 
 def test_nothing_goes_on_the_record_of_those_who_stayed_in_a_game_called_off():
@@ -193,7 +197,9 @@ def test_leaving_after_the_cut_off_is_a_mark_when_nobody_takes_the_seat_by_the_s
     booking.leave(KUBA, at=CUT_OFF + timedelta(hours=1))
 
     assert keeping_of(booking, KUBA, now=START - timedelta(minutes=1)) is None
-    assert keeping_of(booking, KUBA, now=START) == Keeping(kept=False, at=START)
+    assert keeping_of(booking, KUBA, now=START) == Keeping(
+        at=START, broken=Broken.LEFT_AFTER_THE_CUT_OFF
+    )
     # Nothing goes on the record of the ones who stayed for a game that
     # started short (the mechanics §14.1).
     assert keeping_of(booking, OLA, now=START) is None
@@ -261,7 +267,9 @@ def test_a_card_not_fixed_in_time_opens_the_seat_as_a_leave_before_the_cut_off()
     [left] = booking.pull_events()[-1:]
     assert isinstance(left, SeatLeft) and left.card_not_fixed
     # On the record only if the game is then called off (#634's call).
-    assert keeping_of(booking, KUBA, now=CUT_OFF) == Keeping(kept=False, at=CUT_OFF)
+    assert keeping_of(booking, KUBA, now=CUT_OFF) == Keeping(
+        at=CUT_OFF, broken=Broken.CALLED_OFF_BY_LEAVING
+    )
     booking.rescue(new_uuid(), at=FIX_BY + timedelta(hours=1))
     assert keeping_of(booking, KUBA, now=START) is None
 

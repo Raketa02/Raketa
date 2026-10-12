@@ -54,7 +54,7 @@ from app.bootstrap.player_record_demands import (
     PLAYER_RECORD_IMPLEMENTATIONS,
     implementations_of,
 )
-from app.engines.matchfit.core import ReliabilityStrand, SearchMode
+from app.engines.matchfit.core import ReliabilityBand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.administrators.domain.administrator import Administrator
 from app.modules.blocks.domain.block import Block
@@ -93,16 +93,13 @@ from app.modules.player_record.domain.ports import (
 )
 from app.modules.player_record.domain.record import (
     OpponentVariety,
+    ReliabilityPanel,
     WhatPlayersSaid,
 )
 from app.modules.sportsmanship.domain.card import (
     SettledCourt,
     SportsmanshipCard,
     StarsGiven,
-)
-from app.modules.player_score.domain.strands import (
-    PUBLISHED_WEIGHTS,
-    out_of_a_hundred,
 )
 from app.modules.users.domain.value_objects import Email, Name
 from app.shared.ids import new_uuid
@@ -712,113 +709,71 @@ def test_the_variety_demand_takes_one_player_and_never_a_collection():
 
 
 # ---------------------------------------------------------------------------
-# SubjectReliability — the pill, the rows, and the absence that is not a nought
+# SubjectReliability — Player reliability in points (#659)
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("implementation", registered(SubjectReliability))
-async def test_both_live_strands_cross_as_their_counts_and_their_figure(
+async def test_the_figure_its_band_new_and_the_counts_cross_from_the_record(
     implementation, session
 ):
-    """**The raw pair per row, and the figure derived from it.**
-
-    Two games, one played and one the subject was reported not to have come
-    to; two booked games, one kept and one left after its cut-off with
-    nobody taking the seat (#544). Each strand is a half, and the pair is what
-    makes *one of two* and *twenty of forty* different claims on a sheet.
-    """
+    """Didn't come six days ago (75), a booked game kept (75), a game played
+    through (80), a booked game left after its cut-off with nobody taking the
+    seat (65): Medium, still New, turned up 1 of 2 and kept 1 of 2."""
 
     reliability = implementation.build(session)
     subject, other = new_uuid(), new_uuid()
-    await _a_played_plan(session, subject, other)
     await _a_game_not_come_to(session, subject, other)
     await _a_booked_game(session, subject, starts=_ago(days=4))
-    await _a_booked_game(session, subject, starts=_ago(days=3), left=True)
-
-    panel = await reliability.reliability_of(subject, now=_now())
-
-    assert panel is not None
-    assert [
-        (row.strand, row.good, row.opportunities, row.pct) for row in panel.strands
-    ] == [
-        (ReliabilityStrand.SHOWS_UP, 1, 2, 50),
-        (ReliabilityStrand.KEEPS_PLANS, 1, 2, 50),
-    ]
-
-
-@pytest.mark.parametrize("implementation", registered(SubjectReliability))
-async def test_the_pill_is_the_blend_the_rows_reproduce(implementation, session):
-    """**The pill is the weighted mean of the figures printed beneath it.**
-
-    Asserted by recomputing it from the rows that crossed, through the published
-    weights — which is the honesty the sheet promises: not a number arrived at
-    somewhere else and stated over rows that happen to sit under it.
-
-    The two strands are deliberately unequal here, so a blend that ignored the
-    weights or read them in the wrong order would come out somewhere else.
-    """
-
-    reliability = implementation.build(session)
-    subject, other = new_uuid(), new_uuid()
     await _a_played_plan(session, subject, other)
-    await _a_game_not_come_to(session, subject, other)
-    await _a_booked_game(session, subject, starts=_ago(days=4))
+    await _a_booked_game(session, subject, starts=_ago(days=2), left=True)
 
     panel = await reliability.reliability_of(subject, now=_now())
 
-    assert panel is not None
-    weighted = sum(PUBLISHED_WEIGHTS[row.strand] * row.pct for row in panel.strands)
-    basis = sum(PUBLISHED_WEIGHTS[row.strand] for row in panel.strands)
-    assert panel.player_score == out_of_a_hundred(weighted, 100 * basis)
+    assert panel == ReliabilityPanel(
+        player_score=65,
+        band=ReliabilityBand.MEDIUM,
+        is_new=True,
+        turned_up=1,
+        turned_up_of=2,
+        late=0,
+        kept=1,
+        kept_of=2,
+        left_in_dispute=0,
+    )
 
 
 @pytest.mark.parametrize("implementation", registered(SubjectReliability))
-async def test_a_strand_with_nothing_behind_it_is_absent_and_never_a_nought(
+async def test_a_player_nothing_has_happened_to_reads_a_hundred_and_new(
     implementation, session
 ):
-    """One record and not the other is a panel of **one row**.
-
-    Somebody who has kept a booked game and never had a plan made for them has
-    a pill built on the strand they have — the three names with no provider and
-    the one with no opportunity are the same absence, and neither drags the
-    number down.
-    """
-
-    reliability = implementation.build(session)
-    subject = new_uuid()
-    await _a_booked_game(session, subject, starts=_ago(days=4))
-
-    panel = await reliability.reliability_of(subject, now=_now())
-
-    assert panel is not None
-    assert [row.strand for row in panel.strands] == [ReliabilityStrand.KEEPS_PLANS]
-    assert panel.player_score == 100
-
-
-@pytest.mark.parametrize("implementation", registered(SubjectReliability))
-async def test_a_player_nothing_has_fallen_due_for_has_no_panel_at_all(
-    implementation, session
-):
-    """**The rule the whole chain is written around.** Nobody has failed to turn
-    up who was never due to, so the answer is nothing rather than a zone of
-    noughts — and *no record* never becomes *a bad record*."""
+    """Everyone starts at a hundred: the panel is there, at *100 · New*, with
+    every count at nought — never omitted, and never a verdict."""
 
     reliability = implementation.build(session)
 
-    assert await reliability.reliability_of(new_uuid(), now=_now()) is None
+    panel = await reliability.reliability_of(new_uuid(), now=_now())
+
+    assert (panel.player_score, panel.band, panel.is_new) == (
+        100,
+        ReliabilityBand.VERY_HIGH,
+        True,
+    )
+    assert (panel.turned_up_of, panel.kept_of, panel.late) == (0, 0, 0)
 
 
 @pytest.mark.parametrize("implementation", registered(SubjectReliability))
-async def test_a_booked_game_still_ahead_is_no_row_at_all(implementation, session):
-    """**An opportunity and never a total.** A booked game whose hour has not
-    come has not been kept *or* broken, and publishing it either way would
-    state a conclusion the clock has not reached."""
+async def test_a_booked_game_still_ahead_is_not_counted_yet(implementation, session):
+    """A booked game whose hour has not come has not been kept *or* broken, and
+    counting it either way would state a conclusion the clock has not reached."""
 
     reliability = implementation.build(session)
     subject = new_uuid()
     await _a_booked_game(session, subject, starts=_ago(days=-2))
 
-    assert await reliability.reliability_of(subject, now=_now()) is None
+    panel = await reliability.reliability_of(subject, now=_now())
+
+    assert (panel.player_score, panel.kept, panel.kept_of) == (100, 0, 0)
 
 
 # ---------------------------------------------------------------------------

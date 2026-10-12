@@ -112,8 +112,8 @@ _REFUSALS: dict[int | str, dict[str, Any]] = {
         "**Ids only.** Join `game_id` against `/api/v1/games` for the names, "
         "the sport and the date; `players` is everybody else who was on that "
         "court, in the line-up's own order.\n\n"
-        "**Ignoring all of this costs nothing.** There is no strand for rating, "
-        "no penalty, and nothing is recorded about a card that expired."
+        "**Ignoring all of this costs nothing.** No points for rating, no "
+        "penalty, and nothing is recorded about a card that expired."
     ),
 )
 async def read_the_open_cards(

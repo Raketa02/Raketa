@@ -258,7 +258,6 @@ from app.modules.bookings.domain.ports import (
     ClubCourtsAtTheHour,
     ClubDesks,
     GameChanges,
-    GameNoShows,
     GameOpening,
     PlayerAddresses,
     SummaryRepository,
@@ -285,7 +284,6 @@ from app.modules.bookings.infrastructure.games_opening import (
     OpenTheGame,
 )
 from app.modules.bookings.infrastructure.game_clubs import BookedGameClubs
-from app.modules.bookings.infrastructure.games_records import GameNoShowsOnTheRecord
 from app.modules.payments.application.handlers.settle_seat_charges import (
     SettleSeatCharges,
 )
@@ -444,7 +442,7 @@ from app.modules.groups.domain.ports import (
     GroupCodeMinter,
     GroupDirectory,
     GroupFaces,
-    GroupMemberScores,
+    GroupMemberReliability,
     GroupRepository,
     HomeClubs,
     RatedGroupMembers,
@@ -465,8 +463,8 @@ from app.modules.groups.infrastructure.event_sourced_group_repository import (
 )
 from app.modules.groups.infrastructure.profile_group_faces import ProfileGroupFaces
 from app.modules.groups.infrastructure.profile_reader_areas import ProfileReaderAreas
-from app.modules.groups.infrastructure.published_group_member_scores import (
-    PublishedGroupMemberScores,
+from app.modules.groups.infrastructure.published_group_member_reliability import (
+    PublishedGroupMemberReliability,
 )
 from app.modules.groups.infrastructure.random_group_codes import RandomGroupCodes
 from app.modules.groups.infrastructure.rated_group_members import (
@@ -565,8 +563,8 @@ from app.modules.matchmaking.infrastructure.absent_providers import (
     NoHoldsExist,
 )
 from app.modules.player_score.domain.ports import PublishedScoreQuery
-from app.modules.player_score.infrastructure.three_strands_from_the_record import (
-    ThreeStrandsFromTheRecord,
+from app.modules.player_score.infrastructure.points_from_the_record import (
+    PointsFromTheRecord,
 )
 from app.modules.matchmaking.infrastructure.rulesets import LIVE_RULESET
 from app.modules.matchmaking.infrastructure.games_court_pairing import (
@@ -2792,19 +2790,6 @@ def build_game_changes(
     )
 
 
-def build_game_no_shows(
-    session: AsyncSession, *, runtime: EventRuntime | None = None
-) -> GameNoShows:
-    """Who Didn't come to a booked game, off its ordinary Game (#547, #657)."""
-    return GameNoShowsOnTheRecord(
-        build_game_repository(
-            session=session,
-            event_store=build_domain_event_store(session, runtime=runtime),
-            events=build_event_publisher(session, runtime=runtime),
-        )
-    )
-
-
 def build_find_a_court(
     session: AsyncSession, *, runtime: EventRuntime | None = None
 ) -> FindACourt:
@@ -2977,10 +2962,10 @@ def build_group_faces(
     )
 
 
-def build_group_member_scores(session: AsyncSession) -> GroupMemberScores:
-    """A Members row's *score 92*, over ``player_score``'s published read — the
-    figure every other surface already prints, copied and never re-blended."""
-    return PublishedGroupMemberScores(build_published_score_query(session))
+def build_group_member_reliability(session: AsyncSession) -> GroupMemberReliability:
+    """A Members row's *92 Very high*, over ``player_score``'s published read —
+    the figure and band a player's record prints, copied and never re-derived."""
+    return PublishedGroupMemberReliability(build_published_score_query(session))
 
 
 def build_group_administrators(session: AsyncSession) -> GroupAdministrators:
@@ -3252,22 +3237,22 @@ def build_account_status_query(session: AsyncSession) -> AccountStatusQuery:
 
 
 def build_published_score_query(session: AsyncSession) -> PublishedScoreQuery:
-    """``player_score``, over the two contexts that keep a record of anything —
-    the games, and since #544 the bookings.
+    """``player_score`` — Player reliability in points (#659) — over the two
+    contexts that keep a record of anything: the games, and the bookings.
 
     It is built from the two providers' own published ports rather than from the
     session, so this line stays a choice of implementation and the folds behind
     it stay with the contexts that own them.
     """
-    return ThreeStrandsFromTheRecord(
+    return PointsFromTheRecord(
         games=build_game_history_query(session),
         bookings=build_booking_history(session),
     )
 
 
 def build_booking_history(session: AsyncSession) -> BookingHistoryQuery:
-    """Who kept the booked games they held a seat on, and who broke them —
-    folded off each booking's stream (#544)."""
+    """Who kept the booked games they held a seat on, and how the others were
+    broken — folded off each booking's stream (#544, #659)."""
     return EventSourcedBookingHistory(
         directory=build_booking_directory(session),
         bookings=build_booking_repository(
@@ -3275,7 +3260,6 @@ def build_booking_history(session: AsyncSession) -> BookingHistoryQuery:
             event_store=build_domain_event_store(session),
             events=build_event_publisher(session),
         ),
-        no_shows=build_game_no_shows(session),
     )
 
 
@@ -3497,13 +3481,13 @@ def build_subject_variety(
 
 
 def build_subject_reliability(session: AsyncSession) -> SubjectReliability:
-    """What the platform watched a record's subject do — the pill and its rows.
+    """A record's subject's Player reliability — points, band, *New*, counts.
 
     Built over ``player_score``'s **published** read and never over the two folds
-    underneath it, which is the same fence every other row here takes: the blend
-    a player is shown is that context's arithmetic, and a second caller reaching
-    past it to ``games`` and ``bookings`` would be a second author of what the
-    number means.
+    underneath it, which is the same fence every other row here takes: the
+    points a player is shown are that context's arithmetic, and a second caller
+    reaching past it to ``games`` and ``bookings`` would be a second author of
+    what the number means.
     """
 
     return ScoreSubjectReliability(build_published_score_query(session))

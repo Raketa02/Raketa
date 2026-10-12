@@ -505,16 +505,12 @@ async def test_the_record_marks_a_leaver_whose_seat_called_the_game_off(
     clock.move(CUT_OFF - MONDAY_MORNING)
     assert (await cuts_off(session_factory, clock)).games == 1
 
-    kubas = await own_record(client, kuba)
-    olas = await own_record(client, ola)
+    kubas = (await own_record(client, kuba))["reliability"]
+    olas = (await own_record(client, ola))["reliability"]
 
-    assert {
-        "strand": "KEEPS_PLANS",
-        "good": 0,
-        "opportunities": 1,
-        "pct": 0,
-    } in kubas["reliability"]["strands"]
-    assert "reliability" not in olas
+    # −10 on Player reliability (#659), and nothing at all for Ola.
+    assert (kubas["player_score"], kubas["kept"], kubas["kept_of"]) == (90, 0, 1)
+    assert (olas["player_score"], olas["kept_of"]) == (100, 0)
 
 
 async def test_the_record_marks_a_leaver_after_the_cut_off_nobody_replaced(
@@ -524,15 +520,13 @@ async def test_the_record_marks_a_leaver_after_the_cut_off_nobody_replaced(
     clock.move(CUT_OFF - MONDAY_MORNING + timedelta(hours=1))
     assert (await leaves(client, kuba, booking)).status_code == 200
 
-    before = await own_record(client, kuba)
+    before = (await own_record(client, kuba))["reliability"]
     clock.move(SATURDAY_FIVE - CUT_OFF)
-    after = await own_record(client, kuba)
+    after = (await own_record(client, kuba))["reliability"]
+    olas = (await own_record(client, ola))["reliability"]
 
-    assert "reliability" not in before
-    assert {
-        "strand": "KEEPS_PLANS",
-        "good": 0,
-        "opportunities": 1,
-        "pct": 0,
-    } in after["reliability"]["strands"]
-    assert "reliability" not in await own_record(client, ola)
+    # −15 once the hour comes with his seat still empty (#659) — and nothing
+    # for Ola, who stayed in a game that went ahead short.
+    assert (before["player_score"], before["kept_of"]) == (100, 0)
+    assert (after["player_score"], after["kept"], after["kept_of"]) == (85, 0, 1)
+    assert (olas["player_score"], olas["kept_of"]) == (100, 0)

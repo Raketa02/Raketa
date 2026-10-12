@@ -15,9 +15,10 @@ through *their* aggregates and why the register is worth having at all: there is
 nothing here a reader could mistake for storage that would prove it works.
 
 **One port and one implementation, and the suite is not thereby pointless.** What
-it executes is the rule this whole context exists to keep — *a player with no
-record is absent from the answer* — against a real database with real aggregates
-in front of it, which is the only place that rule can go wrong. It is also where
+it executes is the arithmetic this whole context exists to keep — Player
+reliability in points, from the lines two other contexts publish (#659) —
+against a real database with real aggregates in front of it, which is the only
+place a line can be misread. It is also where
 the two provider reads underneath it are proved: they are folds over two other
 contexts' streams, and the only honest way to exercise a fold is to arrange the
 world through the aggregates that wrote it (``docs/adr/0029``).
@@ -42,15 +43,15 @@ from app.modules.player_score.domain.ports import PublishedScoreQuery
 
 #: What this context owes the rest of the platform. One port, because there is
 #: one question — *what does the record say about this person* — and a second
-#: method for the published number alone would be a second place for the blend
-#: and the strands to disagree.
+#: method for the figure alone would be a second place for the figure and its
+#: counts to disagree.
 PLAYER_SCORE_DEMANDS: tuple[type, ...] = (PublishedScoreQuery,)
 
 
 PLAYER_SCORE_IMPLEMENTATIONS: tuple[RegisteredImplementation, ...] = (
     RegisteredImplementation(
         port=PublishedScoreQuery,
-        name="ThreeStrandsFromTheRecord",
+        name="PointsFromTheRecord",
         build=build_published_score_query,
     ),
 )

@@ -7,10 +7,10 @@ the people on the court now**: the streams read finds everybody a court has ever
 seated, and the folded line-up is what says who is still on it — a leaver is
 nobody's attendee, and their list no longer holds the game.
 
-**Nothing is projected.** Every fact these reads publish — played or missed,
-counted, confirmed, won or lost — is folded from the record against the caller's
-clock, so a game past a deadline has moved in this answer whether or not anything
-swept it. A projection storing the standing would be right until a deadline
+**Nothing is projected.** Every fact these reads publish — played through or
+not come to, counted, confirmed, won or lost — is folded from the record against
+the caller's clock, so a game past a deadline has moved in this answer whether or
+not anything swept it. A projection storing the standing would be right until a deadline
 passed, wrong until something rebuilt it, and believed throughout.
 
 **One clock per read, taken from the caller.** Every read here takes ``now``
@@ -35,10 +35,9 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind
 from app.modules.games.domain.ports import (
     RECENT_RESULTS,
-    Attendance,
     CountedResult,
+    GameOnTheRecord,
     OpponentVariety,
-    ResultAnswering,
 )
 from app.modules.games.domain.standing import GameStanding
 from app.modules.games.infrastructure.game_streams import streams_seating
@@ -116,115 +115,45 @@ class EventSourcedGameHistory:
         found.sort(key=lambda one: (one.played_at, one.game_id))
         return found
 
-    async def attendance_for(
+    async def games_on_the_record_for(
         self, player_ids: Collection[UUID], *, now: Instant
-    ) -> Mapping[UUID, Attendance]:
-        """What became of each of these people's arrangements — played, or missed.
+    ) -> Mapping[UUID, tuple[GameOnTheRecord, ...]]:
+        """What each game says about each of these people, oldest first.
 
-        **Counted per person and never per pair**: a four played once is one
-        evening and three counterparts, so a *shows up* strand summed pair by
-        pair would charge a doubles player three times for turning up once.
+        **Read per person and never per pair**: a four played once is one line
+        on each of four records. **What a game says is the aggregate's own**
+        (``Game.turnout_of``) — this walk only dates it and narrows it to the
+        people asked about.
 
-        **Absent rather than a measured zero.** A person nothing was ever
-        arranged for has not failed to come, and a ``0/0`` published here would
-        say they had.
-
-        **A booked game somebody Didn't come to is read per player** (#657):
-        once the late claim's day is over unconfirmed, a miss for each player
-        who Didn't come — which with the broken booked game on *keeps plans*
-        is the strongest mark on a record, until the points ticket prices it
-        once — and a game played for everybody else on the court, who came,
-        **late or not**. While a *Didn't come* is still provisional the game
-        is in neither half. **It is the only miss left**: a full court nobody
-        recorded is played for all of it (#655; ``docs/adr/0195`` §2), and a
-        Came late player turned up.
+        **Absent rather than an empty row**: a person nothing final has
+        happened to has no line, and is not in the answer.
         """
 
         wanted = set(player_ids)
         if not wanted:
             return {}
 
-        played: dict[UUID, int] = defaultdict(int)
-        missed: dict[UUID, int] = defaultdict(int)
-        latest: dict[UUID, Instant] = {}
+        found: dict[UUID, list[GameOnTheRecord]] = defaultdict(list)
         for game in await self._games_among(wanted):
-            if game.standing_at(now) is GameStanding.DIDNT_COME:
-                # **Per player, not per game** (#657): whoever Didn't come, for
-                # good, missed it — and everybody else came. A *Didn't come*
-                # still provisional is nobody's yet.
-                absent = game.didnt_come_at(now)
-                if not absent:
-                    continue
-                at = game.became_history_at(now) or game.planned_at
-                for player_id in game.line_up.players & wanted:
-                    if player_id in absent:
-                        missed[player_id] += 1
-                    else:
-                        played[player_id] += 1
-                    latest[player_id] = max(at, latest.get(player_id, at))
-                continue
-            moment = _played_for_the_record_at(game, now)
-            if moment is None:
-                continue
+            disputed = game.left_in_dispute_by(now)
             for player_id in game.line_up.players & wanted:
-                played[player_id] += 1
-                latest[player_id] = max(moment, latest.get(player_id, moment))
-
-        return {
-            player_id: Attendance(
-                played=played[player_id],
-                missed=missed[player_id],
-                last_at=at,
-            )
-            for player_id, at in latest.items()
-        }
-
-    async def result_answering_for(
-        self, player_ids: Collection[UUID], *, since: Instant, now: Instant
-    ) -> Mapping[UUID, ResultAnswering]:
-        """What became of the scores put in front of each of these people.
-
-        **One opportunity per game at most, charged to the side that was asked**,
-        so a doubles pair each carry the score their side never answered and the
-        side that entered it carries nothing. That is the same per-person shape
-        ``attendance_for`` takes and for a different reason: there, everybody on
-        the court was in the arrangement; here, only one side was asked.
-
-        **The window is the caller's** (``docs/adr/0160``). An opportunity that
-        closed before ``since`` is not in either half — it is not a good outcome
-        the player keeps for ever and not a miss they can never work off.
-
-        **Absent rather than a measured zero**, like ``attendance_for``: nobody
-        has ignored a score who was never sent one.
-        """
-
-        wanted = set(player_ids)
-        if not wanted:
-            return {}
-
-        answered: dict[UUID, int] = defaultdict(int)
-        ignored: dict[UUID, int] = defaultdict(int)
-        latest: dict[UUID, Instant] = {}
-        for game in await self._games_among(wanted):
-            asked = game.score_put_to_a_side_at(now)
-            if asked is None or asked.closed_at < since:
-                continue
-            for player_id in game.line_up.players_on(asked.side) & wanted:
-                if asked.answered:
-                    answered[player_id] += 1
-                else:
-                    ignored[player_id] += 1
-                latest[player_id] = max(
-                    asked.closed_at, latest.get(player_id, asked.closed_at)
+                turnout = game.turnout_of(player_id, now=now)
+                if turnout is None:
+                    continue
+                found[player_id].append(
+                    GameOnTheRecord(
+                        game_id=game.id,
+                        # When it happened: the booked hour, which every booked
+                        # game has — a stream written before bookings had none.
+                        at=game.starts_at or game.planned_at,
+                        turnout=turnout,
+                        left_in_dispute=player_id in disputed,
+                    )
                 )
 
         return {
-            player_id: ResultAnswering(
-                answered=answered[player_id],
-                ignored=ignored[player_id],
-                last_at=at,
-            )
-            for player_id, at in latest.items()
+            player_id: tuple(sorted(rows, key=lambda row: (row.at, row.game_id)))
+            for player_id, rows in found.items()
         }
 
     # -- OpponentVarietyQuery ---------------------------------------------
@@ -301,31 +230,6 @@ def _counted_and_played(game: Game, now: Instant) -> bool:
     """
 
     return game.kind is GameKind.COUNTED and game.was_played_at(now)
-
-
-def _played_for_the_record_at(game: Game, now: Instant) -> Instant | None:
-    """When this game became an evening the people on its court played, or
-    ``None`` while it says nothing about them.
-
-    A game whose entry window is still open says **nothing yet**, and is left
-    out rather than filed as played. **A game called off or started short says
-    nothing at all, for good** (``docs/adr/0163`` §3, #544): it is not an
-    evening, and filing it against the people who stayed would price somebody
-    else's departure through them, which #411 rule 7 refuses. **A full court
-    nobody recorded is played** once its window closes (#655): there is no
-    ghost any more, and silence costs nobody anything.
-
-    The moment is when the *opportunity closed* — the entry, or a window
-    closing on nobody — and never when the game was booked, which would age a
-    record faster than the record aged.
-    """
-
-    if not game.was_played_at(now):
-        return None
-    # The moment is the aggregate's own fold — one date for one game, wherever
-    # it is read — and it is set for every played standing, so the narrowing is
-    # stated rather than asserted.
-    return game.became_history_at(now) or game.planned_at
 
 
 __all__ = ["EventSourcedGameHistory"]

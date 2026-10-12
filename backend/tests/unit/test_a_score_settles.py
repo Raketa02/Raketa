@@ -338,9 +338,6 @@ def test_a_for_fun_score_settles_at_once_and_asks_nobody():
             one.awaits_agreement_from(player, now=STATED_AT)
             for player in (MARTA, IVAN, OSCAR, PAULA)
         )
-        assert one.score_put_to_a_side_at(_at(60 * 25)) is None, (
-            "nobody was asked, so nobody stayed silent"
-        )
 
 
 def test_a_for_fun_score_takes_no_answer_after_it():

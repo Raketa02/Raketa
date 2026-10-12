@@ -21,6 +21,7 @@ from datetime import datetime
 from typing import Optional, Protocol, final, runtime_checkable
 from uuid import UUID
 
+from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Instant, Sport, invariant
 from app.modules.groups.domain.group import Group
 from app.modules.groups.domain.value_objects import (
@@ -322,22 +323,32 @@ class ReaderAreas(Protocol):
 
 
 # --------------------------------------------------------------------------- #
-# The Player Score: what the platform watched of a member
+# Player reliability: what the platform watched of a member
 # --------------------------------------------------------------------------- #
 
 
-@runtime_checkable
-class GroupMemberScores(Protocol):
-    """Each member's **published** Player Score — the figure their own record
-    and a player card already print (*score 92*), never re-blended here."""
+@final
+@dataclass(frozen=True, slots=True)
+class MemberReliability:
+    """A member's **Player reliability** as a Members row prints it — the
+    figure in points and its band (*Padel 2,71 · 92 Very high*), copied from
+    their record and never re-derived (``docs/adr/0195`` §6)."""
 
-    async def scores_of(
+    points: int
+    band: ReliabilityBand
+
+
+@runtime_checkable
+class GroupMemberReliability(Protocol):
+    """Each member's **Player reliability** — the figure and band their own
+    record prints, never re-derived here."""
+
+    async def reliability_of(
         self, player_ids: Collection[UUID], *, now: Instant
-    ) -> Mapping[UUID, int]:
-        """The Player Score of each of these players **who has one**. A player
-        the platform has watched nothing of is **absent** — never a nought,
-        which would print a bad record for somebody who has none. One question
-        about the set, against one instant."""
+    ) -> Mapping[UUID, MemberReliability]:
+        """Every one of these players' reliability — **all of them**: everyone
+        starts at a hundred, so a member nothing has happened to reads 100. One
+        question about the set, against one instant."""
         ...
 
 

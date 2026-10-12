@@ -22,6 +22,7 @@ from app.modules.games.domain.attendance import (
     AttendanceState,
     ClubVerdict,
     LocationFix,
+    Turnout,
 )
 from app.modules.games.domain.errors import (
     ALocationFixIsOffTheMap,
@@ -584,6 +585,70 @@ def test_no_event_carries_a_position():
     for event in game.pull_events():
         fields = set(vars(event))
         assert not fields & {"latitude", "longitude", "accuracy_m", "fix"}
+
+
+# --------------------------------------------------------------------------- #
+# What the game says about each player on their record (#659)
+# --------------------------------------------------------------------------- #
+
+
+def test_on_time_is_played_through_once_the_game_is_played():
+    """Oscar arrived at 17:08 — on time, nothing recorded — and is played
+    through like everybody else once a score goes up."""
+
+    game = _game()
+    _absent(game, when=2)
+    _arrives(game, when=8)
+
+    assert game.turnout_of(OSCAR, now=at(40)) is None
+    game.state_result(by=IVAN, score=_score(), occurred_at=at(65))
+
+    assert {
+        player: game.turnout_of(player, now=at(70))
+        for player in (IVAN, MARTA, OSCAR, PAULA)
+    } == dict.fromkeys((IVAN, MARTA, OSCAR, PAULA), Turnout.PLAYED_THROUGH)
+
+
+def test_came_late_is_on_the_record_at_the_arrival_and_earns_nothing_back():
+    game = _game()
+    _absent(game)
+    _arrives(game, when=22)
+
+    assert game.turnout_of(OSCAR, now=at(23)) is Turnout.CAME_LATE
+    game.state_result(by=IVAN, score=_score(), occurred_at=at(65))
+    assert game.turnout_of(OSCAR, now=at(70)) is Turnout.CAME_LATE
+
+
+def test_didnt_come_is_on_the_record_once_the_late_claim_is_over():
+    """Provisional for a day, then final — and the three who came turned up to
+    a game that never counted."""
+
+    game = _game()
+    _absent(game)
+
+    assert game.turnout_of(OSCAR, now=at(31)) is None
+    assert game.turnout_of(IVAN, now=at(31)) is None
+    assert game.turnout_of(OSCAR, now=CLAIMS_CLOSE) is Turnout.DIDNT_COME
+    assert game.turnout_of(IVAN, now=CLAIMS_CLOSE) is Turnout.TURNED_UP_UNCOUNTED
+
+
+def test_a_confirmed_i_was_there_is_came_late():
+    game = _game()
+    _absent(game)
+    game.claim_presence(by=OSCAR, occurred_at=at(60 * 10))
+    game.confirm_presence(by=IVAN, claimant=OSCAR, occurred_at=at(60 * 11))
+
+    assert game.turnout_of(OSCAR, now=CLAIMS_CLOSE) is Turnout.CAME_LATE
+
+
+def test_somebody_off_the_court_and_a_game_called_off_say_nothing():
+    game = _game()
+    game.vacate(PAULA, occurred_at=at(-60 * 48))
+    game.call_off(by=None, occurred_at=at(-60 * 24))
+
+    assert game.turnout_of(PAULA, now=CLAIMS_CLOSE) is None
+    assert game.turnout_of(IVAN, now=CLAIMS_CLOSE) is None
+    assert game.turnout_of(STRANGER, now=CLAIMS_CLOSE) is None
 
 
 # --------------------------------------------------------------------------- #

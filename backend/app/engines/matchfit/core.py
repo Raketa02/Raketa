@@ -5,17 +5,20 @@ reason this module exists: a name two rulesets disagree about is a name that has
 stopped meaning anything. A ruleset *names* these; a version *computes* with
 them; neither may add one.
 
-**Three names are left, because three are read.** The "who fits whom" ranking
-went (#580, PRD #569) and took its terms, evidence kinds, liveness signals,
-modifiers, tag relationships and group terms with it: nothing the new games call
-scores a person against another. What stays is the kind of game, the six
-strands a Player Score is read in, and the one assumption a provisional forecast
-makes.
+**Three vocabularies are left, because three are read.** The "who fits whom"
+ranking went (#580, PRD #569) and took its terms, evidence kinds, liveness
+signals, modifiers, tag relationships and group terms with it: nothing the new
+games call scores a person against another. What stays is the kind of game, the
+four bands Player reliability is read in (with where each begins), and the one
+assumption a provisional forecast makes. The six strands a Player Score was read
+in left with the strands themselves (#659; ``docs/adr/0195`` §1).
 """
 
 from __future__ import annotations
 
 from enum import Enum
+from types import MappingProxyType
+from typing import Final, Mapping
 
 
 class SearchMode(str, Enum):
@@ -34,30 +37,53 @@ class SearchMode(str, Enum):
     FOR_FUN = "FOR_FUN"
 
 
-class ReliabilityStrand(str, Enum):
-    """The six strands a reliability reading is built from, read separately.
+class ReliabilityBand(str, Enum):
+    """The word under a player's reliability figure (``docs/adr/0195`` §1).
+    **Four bands, served by the backend**: a client draws the word from the band
+    and holds no threshold of its own.
 
-    The published Player Score blends them at 35/20/15/12/10/8 and the player
-    record prints each (``docs/adr/0140``). The two per-mode blends the ranking
-    weighed them by went with it (#580), so the published one is the only blend
-    left.
+    **Here, and never in a context**, for the reason ``racketskill/core`` holds
+    the Level's bands: it is a closed vocabulary read by every surface that
+    shows the figure — a player's record, a group's Members list — and by the
+    one thing that acts on it, the reliability filter in the pair rule (#661).
+    A copy in each would satisfy every test in its own context while being free
+    to drift, and a client would be handed two words for one band.
 
-    **The sixth name is not the one that was struck, and the difference is the
-    whole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached
-    an agreed score, which is a fact about a **pair**, and every denominator
-    tried on it docked somebody ADR-0049 protects — both sides of an honest
-    disagreement included (``docs/adr/0137``). *Answers about results* asks
-    whether **this person** replied to a score put in front of them, and a
-    counter is as good an answer as an acceptance, so disagreeing costs nothing
-    and only silence is priced.
+    The words the phone draws — *Very high*, *High*, *Medium*, *Low* — are its
+    own; the retired tone ladder's *Reliable*, *Holding* and *Under the bar*
+    named a bar at 70 that nothing applies.
     """
 
-    SHOWS_UP = "SHOWS_UP"
-    ANSWERS_CHALLENGES = "ANSWERS_CHALLENGES"
-    ANSWERS_RESULTS = "ANSWERS_RESULTS"
-    KEEPS_PLANS = "KEEPS_PLANS"
-    SETTLES_UP = "SETTLES_UP"
-    SPORTSMANSHIP = "SPORTSMANSHIP"
+    VERY_HIGH = "VERY_HIGH"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
+#: Where each band begins, in points out of a hundred — **the one home of these
+#: three numbers** (``docs/adr/0195`` §1): Very high 90–100, High 75–89, Medium
+#: 50–74, Low below 50. The filter's *the figure that brings you back* is a
+#: floor read from here (#661), so the sheet and the filter cannot disagree
+#: about where High starts. Highest first: ``reliability_band_of`` walks it.
+RELIABILITY_BAND_FLOORS: Final[Mapping[ReliabilityBand, int]] = MappingProxyType(
+    {
+        ReliabilityBand.VERY_HIGH: 90,
+        ReliabilityBand.HIGH: 75,
+        ReliabilityBand.MEDIUM: 50,
+        ReliabilityBand.LOW: 0,
+    }
+)
+
+
+def reliability_band_of(points: int) -> ReliabilityBand:
+    """The band a figure of ``points`` falls in — the highest whose floor it
+    reaches. A figure is clamped to 0–100 before it gets here, so ``LOW``'s
+    floor of nought catches everything below fifty."""
+
+    for band, floor in RELIABILITY_BAND_FLOORS.items():
+        if points >= floor:
+            return band
+    return ReliabilityBand.LOW
 
 
 class ForecastAssumption(str, Enum):

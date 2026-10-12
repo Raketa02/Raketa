@@ -147,15 +147,11 @@ async def own_record(client, player: dict) -> dict:
     return read.json()
 
 
-def strand(record: dict, name: str) -> dict | None:
-    return next(
-        (
-            one
-            for one in record.get("reliability", {}).get("strands", ())
-            if one["strand"] == name
-        ),
-        None,
-    )
+def keeping(record: dict) -> tuple[int, int, int]:
+    """The figure and *Keeps plans*' two counts (#659)."""
+
+    reliability = record["reliability"]
+    return (reliability["player_score"], reliability["kept"], reliability["kept_of"])
 
 
 # --------------------------------------------------------------------------- #
@@ -404,7 +400,7 @@ async def test_a_cancelled_game_is_on_nobody_s_record(
     clock.move(timedelta(days=2))
 
     for player in four:
-        assert strand(await own_record(client, player), "KEEPS_PLANS") is None
+        assert keeping(await own_record(client, player)) == (100, 0, 0)
     [row] = (await the_day(client, desk))["bookings"]
     # Kuba's paid seat was given back in full with everybody else's.
     assert row["money"]["refunded_grosze"] == 4 * SHARE

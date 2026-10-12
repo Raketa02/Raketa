@@ -1,24 +1,22 @@
 """Who kept a booked game, and who broke it — the record's rules (#544; the
 mechanics §15.4).
 
-**A booked game is a plan with a moment**, so whether somebody kept it is the
-*keeps plans* strand's opportunity: it closes when the game's hour comes, or
-when the game is called off at its cut-off. Read off the booking and the clock,
-so it says the same before and after anything records it.
+**A booked game is a plan with a moment**, so whether somebody kept it is
+*keeps plans*: it is settled when the game's hour comes, or when the game is
+called off at its cut-off. Read off the booking and the clock, so it says the
+same before and after anything records it.
 
 **Never on the record**: leaving before the cut-off when the game still plays;
 a game that was never booked; leaving when somebody then takes the seat (#545),
-whatever becomes of the game. **A mark**: leaving before the cut-off when the
-game is then called off with that seat still open; leaving after the cut-off
-when nobody takes the seat.
+whatever becomes of the game. **Broken, in two ways Player reliability prices
+apart** (``docs/adr/0195`` §1, #659 — the prices are ``player_score``'s): leaving
+after the cut-off when nobody takes the seat, and leaving before it — or a card
+not fixed in time losing the seat — when the game is then called off with that
+seat still open.
 
-**Kept is a game whose hour came with every seat held**, for everybody in it
-— **unless they Didn't come** (#657; the mechanics §15.1): tapped *isn't here
-yet* at the court, not arrived in the first half hour, and no *I was there*
-confirmed in the day after, it is *the strongest mark* — a broken game here, and
-a game missed on *shows up*, which the Game says (until the points ticket prices
-it once, on *shows up*). A player who Came late kept it. Whether somebody
-Didn't come is the Game's to say, and the caller's to ask.
+**Kept is a game whose hour came with every seat held**, for everybody in it —
+**whoever Didn't come included** (#659): a *Didn't come* is priced once, on
+*shows up*, which is the Game's to say, and never also breaks the plan.
 **Nothing goes on the record of those who stayed** in a game that went ahead
 short, or was called off at its cut-off because of somebody else's seat (the
 mechanics §14.1): it is not a game they kept or broke. **A game the club
@@ -29,56 +27,42 @@ seat it left open.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from uuid import UUID
 
-from app.kernel import Instant, invariant
+from app.kernel import Instant
 from app.modules.bookings.domain.booking import Booking, CalledOff
+
+
+class Broken(StrEnum):
+    """How a booked game was broken — two prices on Player reliability."""
+
+    #: Left after the cut-off, and nobody took the seat: the game went ahead
+    #: short.
+    LEFT_AFTER_THE_CUT_OFF = "LEFT_AFTER_THE_CUT_OFF"
+    #: Left before the cut-off — or a card not fixed in time lost the seat,
+    #: which counts as leaving before it (Q113) — and the seat still open at
+    #: the cut-off called the game off for everyone.
+    CALLED_OFF_BY_LEAVING = "CALLED_OFF_BY_LEAVING"
 
 
 @dataclass(frozen=True, slots=True)
 class Keeping:
-    """One player and one booked game, once it is settled: whether they kept
-    it, and the moment that was decided — the hour, or the cut-off."""
+    """One player and one booked game, once it is settled: the moment that was
+    decided — the hour, or the cut-off — and how it was broken, or ``None``
+    when they kept it."""
 
-    kept: bool
     at: Instant
+    broken: Broken | None = None
+
+    @property
+    def kept(self) -> bool:
+        return self.broken is None
 
 
-@dataclass(frozen=True, slots=True)
-class KeepingRecord:
-    """What became of the booked games one player held a seat on — the *keeps
-    plans* strand's whole input. **Per person**, and only the settled ones: a
-    game still ahead is in neither half.
-
-    ``last_at`` is the most recent moment one of them was settled — an hour
-    that came, or a cut-off that called a game off."""
-
-    kept: int
-    broken: int
-    last_at: Instant
-
-    def __post_init__(self) -> None:
-        invariant(
-            self.kept >= 0 and self.broken >= 0,
-            f"a negative count: {self.kept} kept, {self.broken} broken",
-        )
-        invariant(
-            self.kept + self.broken >= 1,
-            "a record with no settled booked game behind it is an absence, not a "
-            "zero — absence is spelled by not being in the answer",
-        )
-
-
-def keeping_of(
-    booking: Booking,
-    player_id: UUID,
-    *,
-    now: Instant,
-    no_shows: frozenset[UUID] = frozenset(),
-) -> Keeping | None:
+def keeping_of(booking: Booking, player_id: UUID, *, now: Instant) -> Keeping | None:
     """Whether this player kept this booked game at ``now`` — ``None`` while
-    it is not settled, and for a game that is nothing on their record.
-    ``no_shows`` is everybody its Game says Didn't come, for good, at ``now``."""
+    it is not settled, and for a game that is nothing on their record."""
 
     if booking.booked_at is None:
         # Put to its club and never booked: nobody had a seat to keep.
@@ -97,17 +81,21 @@ def keeping_of(
         whole = booking.is_booked and booking.open_seats == 0
         if not whole or now < booking.start:
             return None
-        return Keeping(kept=player_id not in no_shows, at=booking.start)
+        return Keeping(at=booking.start)
     if left is None or not left.is_open:
         # Somebody took the seat (#545): whatever becomes of the game, it is
         # not because of this one.
         return None
     if left.at < booking.cut_off:
         # Free to leave — unless the game is then called off because of it.
-        return Keeping(kept=False, at=booking.cut_off) if called_off else None
+        if not called_off:
+            return None
+        return Keeping(at=booking.cut_off, broken=Broken.CALLED_OFF_BY_LEAVING)
     # After the cut-off the seat was the leaver's to fill, and nobody took it:
     # a game whose hour came went ahead without them.
-    return Keeping(kept=False, at=booking.start) if now >= booking.start else None
+    if now < booking.start:
+        return None
+    return Keeping(at=booking.start, broken=Broken.LEFT_AFTER_THE_CUT_OFF)
 
 
 def _called_off_at_the_cut_off(booking: Booking, *, now: Instant) -> bool:

@@ -1,7 +1,7 @@
 """What a record says about a person, in this context's own words.
 
-**The header identity, the sport pills, the skill card, opponent variety, the
-metered rows and what other players said.** Every one of them is the same fact
+**The header identity, the sport pills, the skill card, opponent variety,
+Player reliability and what other players said.** Every one of them is the same fact
 whoever is reading: ``is_self`` retitles the sheet and decides nothing about
 what is on it. The last zone used to be the exception — a coarse band for the
 subject where a reader saw the figure — and is not one since ``docs/adr/0179``
@@ -16,15 +16,14 @@ ever. A record is one person, live, and read at most a handful of times a day.
 Two surfaces with two lists, and the day one of them grows a field is the day the
 other one is asked whether it wants one.
 
-**``ReliabilityStrand`` is the one name here that is imported, and the rule is
+**``ReliabilityBand`` is the one name here that is imported, and the rule is
 unbroken.** What ADR-0159 §6 refuses is borrowing another *context's* domain
 types; that enum is not one — it lives in ``app/engines/``, the pure layer every
-context reads and none of them owns, exactly as ``Sport`` lives in the kernel. It
-is also the argument ``player_score`` already made about the same six names: a
+context reads and none of them owns, exactly as ``Sport`` lives in the kernel. A
 locally-declared copy would satisfy every protocol in the suite while being free
-to drift, and the strand codes are on the player contract today under that enum's
-own spelling. A second one would put two words for one strand in front of a
-client reading a Fit breakdown and a record.
+to drift, and the band is on the player contract under that enum's own spelling
+— on this sheet and on a group's Members list — so a second one would hand a
+client two words for one band.
 
 **A photograph's three facts travel together and are meaningless apart.** The id
 is what the platform stores, the link is minted for this response and written
@@ -41,7 +40,7 @@ from enum import StrEnum
 from typing import Final, final
 from uuid import UUID
 
-from app.engines.matchfit.core import ReliabilityStrand
+from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Sport, invariant
 
 
@@ -304,14 +303,14 @@ class WhatPlayersSaid:
 
     **Its own heading, and that is the card splitting where the authority
     splits.** The record card below is headed *counted by the system, not written
-    by people*, which is the promise every metered row under it rests on; a
-    number people typed sitting beneath that title would make the title false.
+    by people*, which is the promise every count under it rests on; a number
+    people typed sitting beneath that title would make the title false.
 
     **The figure and the count travel together and are never separable.** It
     publishes from the very first rating with no minimum, and the count is what
     makes that safe: ``3,0 / 5 · 1 player`` is visibly one person's opinion and
-    reads as one — the same discipline the metered rows take by printing their
-    raw pairs.
+    reads as one — the same discipline the reliability counts take by printing
+    *12 of 13* rather than a share.
 
     **``raters`` is people, and that is what a reader wants to know.** One
     standing answer per person is the store's shape over there, so a high count
@@ -351,113 +350,51 @@ class WhatPlayersSaid:
 
 @final
 @dataclass(frozen=True, slots=True)
-class StrandRow:
-    """One metered row: what fell due, what came of it, and the figure shown.
-
-    **The raw pair travels, and it is the same honesty the row below it keeps.**
-    A perfect record over nine opportunities and one over forty are different
-    claims and a bar alone hides which — so the two counts cross and a client
-    that wants to print *9 of 9* has them.
-
-    **``pct`` crosses too, and that is where this row parts company with opponent
-    variety.** There, the share is deliberately withheld and the division is the
-    client's, because the figure prices no promise and nothing rounds it. Here it
-    is the number the platform *acts* on: ``StrandRatio.value`` is derived in one
-    place so that a card, a profile and the matcher's evidence cannot print three
-    roundings of one record, and a client dividing ``good`` by ``opportunities``
-    itself would be the fourth. It rounds halves **up**, which JavaScript's
-    ``Math.round`` does too — until the day somebody computes it over a negative,
-    or in a language that rounds to even, and the two disagree by a point on
-    exactly the values a player notices.
-
-    **No weight is on this row and none crosses the seam behind it.** The blend
-    is taken on ``player_score``'s side and arrives already taken; a weight here
-    would let a reader re-derive the pill, and would invite a sheet drawing one
-    strand as worth more than another — a claim no screen on this platform makes.
-
-    ``pct`` is not called ``value`` deliberately: the Fit breakdown already
-    publishes a ``StrandReading.value`` for the same six names, and that one is
-    the matcher's own reading between nought and one. Two scales under one word
-    on one contract is the cost the second arrival pays (``docs/adr/0137``). The
-    word itself is the contract's own for a whole percentage — the forecast and
-    the predicted-balance evidence both spell it that way already.
-
-    **There is deliberately no invariant tying ``pct`` to the pair beside it**,
-    and the asymmetry with the three below is the decision rather than an
-    omission. Checking it would mean dividing here, and a second derivation of
-    this figure is precisely what the row exists to avoid: it is copied so that a
-    card, a profile and the matcher's evidence print one rounding of one record.
-    The three checks below are about a row being *well formed*; agreement with
-    the ratio is the provider's promise and is asserted at the seam that copies
-    it.
-    """
-
-    strand: ReliabilityStrand
-    good: int
-    opportunities: int
-    #: The figure out of a hundred the player is shown for this strand —
-    #: ``StrandRatio.value``, copied and never re-derived.
-    pct: int
-
-    def __post_init__(self) -> None:
-        invariant(
-            self.opportunities >= 1,
-            "a strand with no opportunity behind it is an absence, not a row: "
-            f"{self.strand} over {self.opportunities}",
-        )
-        invariant(
-            0 <= self.good <= self.opportunities,
-            "a row claiming more good outcomes than opportunities: "
-            f"{self.good}/{self.opportunities}",
-        )
-        invariant(
-            0 <= self.pct <= 100,
-            f"a figure that is not out of a hundred: {self.pct}",
-        )
-
-
-@final
-@dataclass(frozen=True, slots=True)
 class ReliabilityPanel:
-    """What the platform watched: the pill, and the rows it is the mean of.
+    """Player reliability: the figure in points, its band, *New*, and the four
+    counts beside it (``docs/adr/0195`` §1, #659).
 
     **Counted by the system, not written by people** — the promise the card is
-    headed with, and the reason every row under it is a ratio the platform
+    headed with, and the reason every number on it is something the platform
     observed rather than an opinion somebody typed. What opponents said gets its
     own heading (#382), because a number people typed would make that title
     false.
 
-    **The pill is exactly the number the matcher acts on**, which is what makes
-    the screen worth having: a player who works their record back up must be able
-    to watch the penalty lift, and a figure that existed nowhere they could look
-    would be the unexplainable kind of penalty the reliability floor's own rule
-    forbids.
+    **Everybody has one.** Everyone starts at a hundred, so a player nothing has
+    happened to reads *100 · New* with every count at nought — the zone is never
+    omitted now, because a hundred is where everybody starts and not a verdict.
 
-    **A strand with nothing behind it is not a row.** Three of the six names
-    stand down platform-wide, and a player may have no opportunity under one that
-    does not — both are spelled by absence from ``strands``, never by a nought,
-    because *we have not seen enough* and *they are bad at this* are different
-    facts. A panel with no row at all is not a panel: the whole zone is omitted,
-    and ``PlayerRecord.reliability`` is ``None``.
+    **Everything here is copied from ``player_score`` and nothing is derived**:
+    the band is the backend's, so a client never holds thresholds of its own,
+    and *New* is the provider's, since it reads every game ever played through
+    and the counts read six months.
+
+    The counts are *Shows up* (``turned_up`` of ``turned_up_of``), *Keeps plans*
+    (``kept`` of ``kept_of``), *Being late* (``late``) and *Results left in
+    dispute* (``left_in_dispute``), all over the last six months.
     """
 
     player_score: int
-    strands: tuple[StrandRow, ...]
+    band: ReliabilityBand
+    is_new: bool
+    turned_up: int
+    turned_up_of: int
+    late: int
+    kept: int
+    kept_of: int
+    left_in_dispute: int
 
     def __post_init__(self) -> None:
         invariant(
-            bool(self.strands),
-            "a reliability panel with no row on it is an absence, and an "
-            "absence is spelled by the whole zone not being there",
-        )
-        invariant(
-            len({row.strand for row in self.strands}) == len(self.strands),
-            "a strand printed twice would draw one fact as two and double its "
-            f"weight in any mean taken from the rows: {self.strands}",
-        )
-        invariant(
             0 <= self.player_score <= 100,
             f"a Player Score that is not out of a hundred: {self.player_score}",
+        )
+        invariant(
+            0 <= self.turned_up <= self.turned_up_of
+            and 0 <= self.kept <= self.kept_of
+            and 0 <= self.late <= self.turned_up
+            and self.left_in_dispute >= 0,
+            f"counts that are not counts of anything: {self}",
         )
 
 
@@ -506,15 +443,10 @@ class PlayerRecord:
     #: which is exactly when ``sports`` is empty, and the client draws the poster
     #: with no Level on it. An omission and never a panel full of noughts.
     skill: SkillPanel | None
-    #: The pill and the metered rows behind it. ``None`` for somebody the
-    #: platform has watched nothing of — the whole zone is omitted rather than
-    #: drawn empty, because nobody has failed to turn up who was never due to.
-    #: **A third absence, and it asks a third question.** It is not ``skill``'s:
-    #: somebody rated in four sports may have had nothing at all fall due. It is
-    #: not ``variety``'s either, and the two do not move together — a plan that
-    #: dissolved and a seat that ran out are opportunities and neither is a game
-    #: anybody played.
-    reliability: ReliabilityPanel | None
+    #: Player reliability — the figure in points, its band, *New* and the
+    #: counts. **Never absent**: everyone starts at a hundred, so somebody
+    #: nothing has happened to reads *100 · New* (#659). It is about no sport.
+    reliability: ReliabilityPanel
     #: How widely they spread their games, over the **whole** record. ``None``
     #: for somebody no counted game has been watched for — which is not the same
     #: absence as ``skill``'s: a player rated in nothing may well have played,
@@ -539,7 +471,6 @@ __all__ = [
     "ReliabilityPanel",
     "SkillPanel",
     "SportPill",
-    "StrandRow",
     "SubjectIdentity",
     "SubjectRating",
     "WhatPlayersSaid",

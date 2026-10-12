@@ -168,21 +168,22 @@ async def test_its_details_read_played_no_score_and_ask_nothing_of_anybody(
         assert details["money"]["share_grosze"] == 40_00
 
 
-async def test_nobody_takes_a_shows_up_miss_and_keeps_plans_reads_it_kept(
+async def test_each_of_the_four_gains_a_game_played_through_and_kept_the_booking(
     client, clock, four, booked
 ):
-    """**The ghost miss goes** (``docs/adr/0195`` §2): the four turned up, as
-    far as the record knows, and the booking they held to its hour was kept.
-    Nothing was put to anybody, so nothing about answering a score is read."""
+    """**The ghost miss goes** (``docs/adr/0195`` §2): the four played, as far
+    as the record knows — each gains the 5 of a game played through, at 100
+    already — and the booking they held to its hour was kept."""
 
     to(clock, WEDNESDAY_EIGHT)
 
     for member in four:
-        strands = {
-            row["strand"]: (row["good"], row["opportunities"])
-            for row in (await record_of(client, member))["reliability"]["strands"]
-        }
-        assert strands == {"SHOWS_UP": (1, 1), "KEEPS_PLANS": (1, 1)}, member["name"]
+        reliability = (await record_of(client, member))["reliability"]
+        assert (
+            reliability["player_score"],
+            (reliability["turned_up"], reliability["turned_up_of"]),
+            (reliability["kept"], reliability["kept_of"]),
+        ) == (100, (1, 1), (1, 1)), member["name"]
 
 
 async def test_no_level_moves(client, session_factory, clock, four, booked):

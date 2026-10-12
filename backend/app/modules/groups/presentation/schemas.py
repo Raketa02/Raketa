@@ -29,6 +29,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.engines.matchfit.core import ReliabilityBand
 from app.kernel import Sport
 from app.modules.groups.application.club_groups import (
     ClubGroupRow,
@@ -574,7 +575,7 @@ class JoinRequestsResponse(BaseModel):
 
 
 class GroupMemberSchema(GroupPersonSchema):
-    """One row of Members, for one sport — *Padel 2,71 · score 92*."""
+    """One row of Members, for one sport — *Padel 2,71 · 92 Very high*."""
 
     level: float = Field(
         description=(
@@ -583,11 +584,20 @@ class GroupMemberSchema(GroupPersonSchema):
         )
     )
     player_score: int = Field(
-        OMITTED,
+        ge=0,
+        le=100,
         description=(
-            "Their published Player Score, 0–100 — the figure their record and "
-            "a player card print. **Omitted for somebody the platform has "
-            "watched nothing of**, never `0`: no record is not a bad one."
+            "Their **Player reliability** in points, 0–100 — the figure their "
+            "record prints. **Always present**: everyone starts at 100, so a "
+            "member nothing has happened to reads `100`."
+        ),
+    )
+    reliability_band: ReliabilityBand = Field(
+        description=(
+            "The word under that figure — `VERY_HIGH` 90–100, `HIGH` 75–89, "
+            "`MEDIUM` 50–74, `LOW` below 50 — the same code their record "
+            "serves. **Draw the word from this**, never from thresholds of your "
+            "own."
         ),
     )
     is_owner: bool = Field(
@@ -619,9 +629,9 @@ class GroupMemberSchema(GroupPersonSchema):
             "is_owner": row.is_owner,
             "is_administrator": row.is_administrator,
             "joined_at": row.joined_at,
+            "player_score": row.reliability.points,
+            "reliability_band": row.reliability.band,
         }
-        if row.player_score is not None:
-            fields["player_score"] = row.player_score
         return cls(**fields)
 
 

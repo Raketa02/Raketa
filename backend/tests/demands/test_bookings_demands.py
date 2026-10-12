@@ -8,7 +8,9 @@ booked game is arranged through the Booking aggregate**, saved by its own
 repository — never an ``INSERT``.
 
 **The absence rule** holds here as everywhere a record is published: a player
-with no settled booked game is absent from the answer, never a nought.
+with no settled booked game is absent from the answer, never an empty row. What
+is published is **every settled booked game**, oldest first, and how each broken
+one was broken — Player reliability prices the two ways differently (#659).
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ from app.bootstrap.composition import (
 from app.engines.matchfit.core import SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking
-from app.modules.bookings.domain.keeping import KeepingRecord
+from app.modules.bookings.domain.keeping import Broken, Keeping
 from app.modules.bookings.domain.ports import BookingHistoryQuery
 from app.shared.ids import new_uuid
 
@@ -140,9 +142,12 @@ async def test_a_game_played_whole_is_kept_and_a_leaver_nobody_replaced_broke_it
 
     kept = await history.keeping_for([four[0], four[1]], now=_now())
 
-    assert kept[four[0]] == KeepingRecord(kept=1, broken=1, last_at=short)
+    assert kept[four[0]] == (
+        Keeping(at=played),
+        Keeping(at=short, broken=Broken.LEFT_AFTER_THE_CUT_OFF),
+    )
     # Staying in a game that went ahead short puts nothing on the record.
-    assert kept[four[1]] == KeepingRecord(kept=1, broken=0, last_at=played)
+    assert kept[four[1]] == (Keeping(at=played),)
 
 
 @pytest.mark.parametrize("implementation", registered(BookingHistoryQuery))
@@ -159,7 +164,10 @@ async def test_a_leaver_whose_seat_called_the_game_off_broke_it_and_nobody_else(
     kept = await history.keeping_for(four, now=_now())
 
     assert kept == {
-        four[0]: KeepingRecord(
-            kept=0, broken=1, last_at=instant(starts - timedelta(hours=24))
+        four[0]: (
+            Keeping(
+                at=instant(starts - timedelta(hours=24)),
+                broken=Broken.CALLED_OFF_BY_LEAVING,
+            ),
         )
     }

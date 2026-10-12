@@ -7,23 +7,17 @@ the build red.
 
 **This context stores nothing, so every arrangement here is made through
 somebody else's aggregate** — a ``Booking`` that was kept or left, a ``Game``
-that was played or not come to — and never an ``INSERT`` (``docs/adr/0029``). That
-is not ceremony: the folds under this port live in ``games`` and ``bookings``,
-and the only honest way to exercise a fold is to make the history it folds.
+that was played, come to late or not come to — and never an ``INSERT``
+(``docs/adr/0029``). That is not ceremony: the folds under this port live in
+``games`` and ``bookings``, and the only honest way to exercise a fold is to make
+the history it folds.
 
-**The rule the whole suite is written around is the absence rule.** A player with
-no record is *absent from the answer*, never ``0`` and never ``0.5``. It is the
-one thing that cannot be checked by reading the code, because the failure looks
-like a perfectly ordinary dictionary comprehension — and it is the rule whose
-breach would turn *no record* into *a bad record* everywhere downstream at once.
-
-**Three strands and never four.** *Answers challenges* stood down with #544 —
-challenges no longer wait for answers, and *keeps plans* came up in its place —
-*settles up* has no provider on this platform, and *sportsmanship* is published
-in its own right rather than as a strand (``docs/adr/0158``), and the assertions
-below say so by name rather than by asserting a length: the day one of them
-lands, a named assertion says which, and a length assertion would only say that
-something changed.
+**What the suite is written around is Player reliability in points** (#659;
+``docs/adr/0195`` §1): everyone starts at a hundred, each thing on the record is
+read off the context that owns it and priced once, and nobody asked about is
+left out of the answer. The arithmetic's own edges — the clamp, a band's floor,
+the order — are ``tests/unit/test_player_score_points.py``'s; here each line is
+proved to be *read*, from real streams.
 """
 
 from __future__ import annotations
@@ -45,7 +39,7 @@ from app.bootstrap.player_score_demands import (
     PLAYER_SCORE_IMPLEMENTATIONS,
     implementations_of,
 )
-from app.engines.matchfit.core import ReliabilityStrand, SearchMode
+from app.engines.matchfit.core import ReliabilityBand, SearchMode
 from app.kernel import Instant, Sport, instant
 from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.attendance import ClubVerdict
@@ -53,8 +47,10 @@ from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
 from app.modules.games.domain.results import Score, SetScore
 from app.modules.player_score.domain.ports import PublishedScoreQuery
-from app.modules.player_profile.domain.weekly_hours import Window
+from app.modules.player_score.domain.points import ReliabilityCounts
 from app.shared.ids import new_uuid
+
+AT_THE_CLUB = ClubVerdict(at_the_club=True, club_name="Ogrody 33")
 
 
 @pytest_asyncio.fixture
@@ -135,261 +131,288 @@ async def _booked(
     return booking
 
 
-async def _played(session, *, one: UUID, other: UUID, at: Instant) -> Game:
-    """A plan that produced a game: somebody said *we played*, with a score."""
-
-    game = _plan(one=one, other=other, at=at)
-    game.state_result(
-        by=one,
-        score=Score.of((SetScore(a=6, b=4),)),
-        occurred_at=instant(at + timedelta(hours=2)),
-    )
-    await _games(session).save(game)
-    await session.commit()
-    return game
-
-
-async def _answered_a_score(
-    session, *, opener: UUID, answerer: UUID, at: Instant, counter: bool = False
+def _game(
+    one: UUID, other: UUID, *, starts: Instant, sport: Sport = Sport.TENNIS
 ) -> Game:
-    """A game whose score was put in front of ``answerer``, and answered.
+    """A booked singles game with an hour, ``one`` on side A."""
 
-    ``counter`` is the whole point of the strand: a player who believes the score
-    is wrong says so, and saying so is an answer. Both paths leave the same fact
-    on the record — *they replied inside the window* — and the ending they leave
-    the **game** in is deliberately different, which is what proves the strand is
-    not counting agreements.
-    """
-
-    game = _plan(one=opener, other=answerer, at=at)
-    proposed_at = instant(at + timedelta(hours=2))
-    game.state_result(
-        by=opener, score=Score.of((SetScore(a=6, b=4),)), occurred_at=proposed_at
-    )
-    if counter:
-        game.state_result(
-            by=answerer,
-            score=Score.of((SetScore(a=4, b=6),)),
-            occurred_at=instant(proposed_at + timedelta(hours=1)),
-        )
-    else:
-        game.accept_result(
-            by=answerer, occurred_at=instant(proposed_at + timedelta(hours=1))
-        )
-    await _games(session).save(game)
-    await session.commit()
-    return game
-
-
-async def _not_come_to(session, *, absent: UUID, reporter: UUID) -> Game:
-    """A booked game ``reporter`` came to and tapped ``absent`` *isn't here
-    yet* at the club, and ``absent`` **Didn't come** — for good a day later
-    (#657): the one miss on *shows up* since a full court nobody recorded is
-    played (#655)."""
-
-    starts = _ago(days=6)
-    game = Game.planned(
-        game_id=new_uuid(),
-        challenge_id=new_uuid(),
-        sport=Sport.TENNIS,
-        kind=GameKind.COUNTED,
-        window=None,
-        line_up=LineUp.of(
-            (
-                Seating(side=GameSide.A, player_id=absent),
-                Seating(side=GameSide.B, player_id=reporter),
-            )
-        ),
-        occurred_at=instant(starts - timedelta(days=2)),
-        starts_at=starts,
-    )
-    # *Isn't here yet* ten minutes in, at the club, and no arrival: Didn't
-    # come at half past, for good a day later (#657).
-    game.note_absent(
-        by=reporter,
-        absent=absent,
-        where=ClubVerdict(at_the_club=True, club_name=None),
-        occurred_at=instant(starts + timedelta(minutes=10)),
-    )
-    await _games(session).save(game)
-    await session.commit()
-    return game
-
-
-def _plan(*, one: UUID, other: UUID, at: Instant) -> Game:
     return Game.planned(
         game_id=new_uuid(),
         challenge_id=new_uuid(),
-        sport=Sport.TENNIS,
+        sport=sport,
         kind=GameKind.COUNTED,
-        window=Window.TODAY,
+        window=None,
         line_up=LineUp.of(
             (
                 Seating(side=GameSide.A, player_id=one),
                 Seating(side=GameSide.B, player_id=other),
             )
         ),
-        occurred_at=at,
+        occurred_at=instant(starts - timedelta(days=2)),
+        starts_at=starts,
     )
 
 
+async def _save(session, game: Game) -> Game:
+    await _games(session).save(game)
+    await session.commit()
+    return game
+
+
+async def _played(
+    session,
+    *,
+    one: UUID,
+    other: UUID,
+    starts: Instant,
+    sport: Sport = Sport.TENNIS,
+) -> Game:
+    """A booked game played through: ``one`` puts the score up after the hour."""
+
+    game = _game(one, other, starts=starts, sport=sport)
+    game.state_result(
+        by=one,
+        score=Score.of((SetScore(a=6, b=4),)),
+        occurred_at=instant(starts + timedelta(hours=1, minutes=5)),
+    )
+    return await _save(session, game)
+
+
+async def _not_come_to(session, *, absent: UUID, tapper: UUID, starts: Instant) -> Game:
+    """``tapper`` came and tapped ``absent`` *isn't here yet* at the club ten
+    minutes in; nobody arrived, so ``absent`` **Didn't come** — for good once
+    the late claim's day is over (#657)."""
+
+    game = _game(absent, tapper, starts=starts)
+    game.note_absent(
+        by=tapper,
+        absent=absent,
+        where=AT_THE_CLUB,
+        occurred_at=instant(starts + timedelta(minutes=10)),
+    )
+    return await _save(session, game)
+
+
+async def _came_late(session, *, late: UUID, tapper: UUID, starts: Instant) -> Game:
+    """``late`` was tapped ten minutes in and said *I'm here* at 17:22 — **Came
+    late** — and the game carried on to a score."""
+
+    game = _game(late, tapper, starts=starts)
+    game.note_absent(
+        by=tapper,
+        absent=late,
+        where=AT_THE_CLUB,
+        occurred_at=instant(starts + timedelta(minutes=10)),
+    )
+    game.note_arrival(
+        by=late,
+        arrived=late,
+        where=AT_THE_CLUB,
+        occurred_at=instant(starts + timedelta(minutes=22)),
+    )
+    game.state_result(
+        by=tapper,
+        score=Score.of((SetScore(a=6, b=4),)),
+        occurred_at=instant(starts + timedelta(hours=1, minutes=5)),
+    )
+    return await _save(session, game)
+
+
+def _counts(**said: int) -> ReliabilityCounts:
+    zero = dict(
+        turned_up=0, turned_up_of=0, late=0, kept=0, kept_of=0, left_in_dispute=0
+    )
+    return ReliabilityCounts(**{**zero, **said})
+
+
 # ---------------------------------------------------------------------------
-# The absence rule, which is the whole of what this context promises
+# Everybody asked is answered, and nobody else
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_a_player_with_no_record_is_absent_and_never_a_zero(
-    implementation, session
-):
-    """No record is not a bad record, and the spelling of that is *not answering*.
-
-    Two strangers, and a provider with two event logs behind it that can now
-    answer about somebody: the answer is empty rather than two scores of nought.
-    """
+async def test_a_player_with_no_record_reads_a_hundred_and_new(implementation, session):
+    """Everyone starts at a hundred, so nobody is left out of the answer — and
+    a hundred with every count at nought is not a verdict about anybody."""
 
     port = implementation.build(session)
+    one, other = new_uuid(), new_uuid()
 
-    assert await port.scores_for([new_uuid(), new_uuid()], now=_now()) == {}
+    scores = await port.scores_for([one, other], now=_now())
+
+    assert set(scores) == {one, other}
+    assert scores[one].points == 100
+    assert scores[one].band is ReliabilityBand.VERY_HIGH
+    assert scores[one].is_new
+    assert scores[one].counts == _counts()
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
 async def test_a_score_read_answers_only_about_players_it_was_asked_about(
     implementation, session
 ):
-    """One batched read per search, and it volunteers nobody.
-
-    The other player on the game below has a record of their own and is
-    deliberately not in the question: a read that answered about them would be
-    answering about somebody the caller never asked after.
-    """
+    """One batched read, and it volunteers nobody: the other player on the
+    game below has a record of their own and is deliberately not asked about."""
 
     port = implementation.build(session)
     one, other = new_uuid(), new_uuid()
-    await _played(session, one=one, other=other, at=_ago(days=3))
+    await _played(session, one=one, other=other, starts=_ago(days=3))
 
-    scores = await port.scores_for([other], now=_now())
-
-    assert set(scores) == {other}
+    assert set(await port.scores_for([other], now=_now())) == {other}
+    assert await port.scores_for([], now=_now()) == {}
 
 
 # ---------------------------------------------------------------------------
-# The three strands that have a provider
+# Shows up, read off the games
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_a_game_that_happened_and_a_game_not_come_to_are_one_strand(
+async def test_three_games_played_through_and_she_is_no_longer_new(
     implementation, session
 ):
-    """*Shows up*, both halves, on the same person.
+    port = implementation.build(session)
+    her, them = new_uuid(), new_uuid()
+    for days in (9, 7):
+        await _played(session, one=them, other=her, starts=_ago(days=days))
 
-    The miss is charged to **the player reported** and to nobody else on that
-    court: whoever came to it played. Nothing is charged to a court for silence
-    any more — a full court nobody recorded is played (#655).
-    """
+    before = (await port.scores_for([her], now=_now()))[her]
+    await _played(session, one=them, other=her, starts=_ago(days=5))
+    after = (await port.scores_for([her], now=_now()))[her]
+
+    assert (before.points, before.is_new) == (100, True)
+    assert (after.points, after.is_new) == (100, False)
+    assert after.counts == _counts(turned_up=3, turned_up_of=3)
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_didnt_come_costs_twenty_five_and_the_one_who_came_earns_nothing(
+    implementation, session
+):
+    """The miss is charged to **the player tapped** and to nobody else on that
+    court; whoever came turned up, to a game that took no score."""
+
+    port = implementation.build(session)
+    oscar, ivan = new_uuid(), new_uuid()
+    await _played(session, one=ivan, other=oscar, starts=_ago(days=10))
+    await _not_come_to(session, absent=oscar, tapper=ivan, starts=_ago(days=6))
+
+    scores = await port.scores_for([oscar, ivan], now=_now())
+
+    # Five earned at a hundred is nothing, and then the miss: 75.
+    assert scores[oscar].points == 75
+    assert scores[oscar].band is ReliabilityBand.HIGH
+    assert scores[oscar].counts == _counts(turned_up=1, turned_up_of=2)
+    assert scores[ivan].points == 100
+    assert scores[ivan].counts == _counts(turned_up=2, turned_up_of=2)
+    # The game Ivan turned up to never counted: one game played through.
+    assert scores[ivan].is_new
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_didnt_come_still_inside_its_late_claim_is_on_nobodys_record(
+    implementation, session
+):
+    port = implementation.build(session)
+    oscar, ivan = new_uuid(), new_uuid()
+    await _not_come_to(session, absent=oscar, tapper=ivan, starts=_ago(hours=3))
+
+    scores = await port.scores_for([oscar, ivan], now=_now())
+
+    assert scores[oscar].points == 100
+    assert scores[oscar].counts == _counts()
+    assert scores[ivan].counts == _counts()
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_came_late_costs_ten_counts_as_turned_up_and_earns_nothing_back(
+    implementation, session
+):
+    port = implementation.build(session)
+    oscar, ivan = new_uuid(), new_uuid()
+    await _came_late(session, late=oscar, tapper=ivan, starts=_ago(days=2))
+
+    scores = await port.scores_for([oscar, ivan], now=_now())
+
+    assert scores[oscar].points == 90
+    assert scores[oscar].counts == _counts(turned_up=1, turned_up_of=1, late=1)
+    assert scores[ivan].points == 100
+    assert scores[ivan].counts == _counts(turned_up=1, turned_up_of=1)
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_silence_on_a_score_costs_nothing(implementation, session):
+    """*Answers about results* left the figure (``docs/adr/0195`` §1): a score
+    put to somebody and never answered is a game played through, and nothing
+    else."""
+
+    port = implementation.build(session)
+    opener, silent = new_uuid(), new_uuid()
+    await _played(session, one=opener, other=silent, starts=_ago(days=4))
+
+    score = (await port.scores_for([silent], now=_now()))[silent]
+
+    assert score.points == 100
+    assert score.counts == _counts(turned_up=1, turned_up_of=1)
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_result_left_in_dispute_is_counted_for_both_and_costs_nothing(
+    implementation, session
+):
+    """Two scores naming different winners, and neither side gave way: a line
+    on each poster's record, and no points (``docs/adr/0195`` §5)."""
 
     port = implementation.build(session)
     one, other = new_uuid(), new_uuid()
-    await _played(session, one=one, other=other, at=_ago(days=3))
-    await _not_come_to(session, absent=one, reporter=other)
+    starts = _ago(days=5)
+    game = _game(one, other, starts=starts)
+    game.state_result(
+        by=one,
+        score=Score.of((SetScore(a=6, b=4),)),
+        occurred_at=instant(starts + timedelta(hours=1, minutes=5)),
+    )
+    game.state_result(
+        by=other,
+        score=Score.of((SetScore(a=4, b=6),)),
+        occurred_at=instant(starts + timedelta(hours=2)),
+    )
+    await _save(session, game)
 
     scores = await port.scores_for([one, other], now=_now())
-    strand = scores[one].strands[ReliabilityStrand.SHOWS_UP]
-    came = scores[other].strands[ReliabilityStrand.SHOWS_UP]
 
-    assert (strand.good, strand.opportunities) == (1, 2)
-    assert (came.good, came.opportunities) == (2, 2)
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_a_score_answered_and_a_score_ignored_are_one_strand(
-    implementation, session
-):
-    """*Answers about results*, both halves, on the same person.
-
-    Two scores were put in front of them; they replied to one and let the other
-    run out. Both are opportunities and one is a good outcome, and the miss is
-    counted **without anything having swept it** — a window that has closed has
-    closed whether or not a job noticed.
-    """
-
-    port = implementation.build(session)
-    player, opener = new_uuid(), new_uuid()
-    await _answered_a_score(session, opener=opener, answerer=player, at=_ago(days=4))
-    await _played(session, one=opener, other=player, at=_ago(days=3))
-
-    score = (await port.scores_for([player], now=_now()))[player]
-    strand = score.strands[ReliabilityStrand.ANSWERS_RESULTS]
-
-    assert (strand.good, strand.opportunities) == (1, 2)
-    assert strand.value == 50
+    for player in (one, other):
+        assert scores[player].points == 100
+        assert scores[player].counts == _counts(
+            turned_up=1, turned_up_of=1, left_in_dispute=1
+        )
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_countering_a_score_is_answering_it_and_disagreeing_costs_nothing(
-    implementation, session
-):
-    """**The reason this strand could be built and the struck one could not.**
-
-    The game ends unscored — two scores stood and neither side gave way — and the
-    person who disagreed is published at a hundred. A strand counting agreements
-    would have docked them, and would have docked the other side too, for the one
-    act ``docs/adr/0049`` most wants a player to feel free to make.
-    """
-
+async def test_one_figure_across_sports(implementation, session):
     port = implementation.build(session)
-    opener, counterer = new_uuid(), new_uuid()
-    await _answered_a_score(
-        session, opener=opener, answerer=counterer, at=_ago(days=4), counter=True
-    )
+    her, them = new_uuid(), new_uuid()
+    await _not_come_to(session, absent=her, tapper=them, starts=_ago(days=8))
+    await _played(session, one=them, other=her, starts=_ago(days=4), sport=Sport.PADEL)
+    await _played(session, one=them, other=her, starts=_ago(days=3), sport=Sport.SQUASH)
 
-    scores = await port.scores_for([opener, counterer], now=_now())
+    score = (await port.scores_for([her], now=_now()))[her]
 
-    assert scores[counterer].strands[ReliabilityStrand.ANSWERS_RESULTS].value == 100
-    # The opener was asked nothing: their score was the question.
-    assert ReliabilityStrand.ANSWERS_RESULTS not in scores[opener].strands
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_only_this_strand_forgets_and_the_other_two_count_a_career(
-    implementation, session
-):
-    """**One window, and it belongs to one strand** (``docs/adr/0160``).
-
-    The same game, more than twelve months old, is still an opportunity for
-    *shows up* and is no longer one for *answers about results*. That asymmetry is
-    the decision rather than a coincidence: turning up is a commitment somebody
-    made, and answering a score is a habit of opening an app — a mark for
-    something that cheap to fail by accident has to be one a player can work off.
-    """
-
-    port = implementation.build(session)
-    player, opener = new_uuid(), new_uuid()
-    await _played(session, one=opener, other=player, at=_ago(days=400))
-
-    score = (await port.scores_for([player], now=_now()))[player]
-
-    assert ReliabilityStrand.SHOWS_UP in score.strands
-    assert ReliabilityStrand.ANSWERS_RESULTS not in score.strands
+    assert score.points == 85
+    assert score.counts == _counts(turned_up=2, turned_up_of=3)
 
 
 # ---------------------------------------------------------------------------
-# The three that stand down, and the blend over what is left
+# Keeps plans, read off the bookings
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_a_booked_game_kept_and_one_broken_after_its_cut_off_are_one_strand(
+async def test_leaving_after_the_cut_off_with_the_seat_left_empty_costs_fifteen(
     implementation, session
 ):
-    """*Keeps plans*, both halves, on the same person (#544; the mechanics §15.4).
-
-    A booked game is a plan with a moment. They stayed in one until its hour,
-    which is keeping it; they left another after the club's cut-off and nobody
-    took the seat, which is breaking it — counted **without anything having
-    swept it**, since an hour that has come has come.
-    """
+    """Kept one, left another after the cut-off with nobody taking the seat —
+    and those who stayed in the one that went ahead short are untouched."""
 
     port = implementation.build(session)
     player, others = new_uuid(), (new_uuid(), new_uuid(), new_uuid())
@@ -402,19 +425,16 @@ async def test_a_booked_game_kept_and_one_broken_after_its_cut_off_are_one_stran
         leaving=((player, broken - timedelta(hours=3)),),
     )
 
-    score = (await port.scores_for([player, others[0]], now=_now()))
-    strand = score[player].strands[ReliabilityStrand.KEEPS_PLANS]
+    scores = await port.scores_for([player, others[0]], now=_now())
 
-    assert (strand.good, strand.opportunities) == (1, 2)
-    assert strand.last_at == broken
-    # Those who stayed kept the first; the second, which went ahead short, is
-    # nothing on their record (the mechanics §14.1).
-    stayed = score[others[0]].strands[ReliabilityStrand.KEEPS_PLANS]
-    assert (stayed.good, stayed.opportunities) == (1, 1)
+    assert scores[player].points == 85
+    assert scores[player].counts == _counts(kept=1, kept_of=2)
+    assert scores[others[0]].points == 100
+    assert scores[others[0]].counts == _counts(kept=1, kept_of=1)
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_leaving_while_it_was_free_is_a_mark_once_the_game_is_called_off(
+async def test_leaving_while_it_was_free_costs_ten_once_the_game_is_called_off(
     implementation, session
 ):
     """Leaving before the cut-off is on the record **only if the game is then
@@ -433,133 +453,66 @@ async def test_leaving_while_it_was_free_is_a_mark_once_the_game_is_called_off(
 
     scores = await port.scores_for([leaver, stayers[0]], now=_now())
 
-    assert scores[leaver].strands[ReliabilityStrand.KEEPS_PLANS].value == 0
-    assert stayers[0] not in scores
+    assert scores[leaver].points == 90
+    assert scores[leaver].counts == _counts(kept=0, kept_of=1)
+    assert scores[stayers[0]].counts == _counts()
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_a_booked_game_still_ahead_is_not_yet_an_opportunity(
-    implementation, session
-):
-    """Nobody has kept or broken a game whose hour has not come — and the
-    player is absent rather than sitting at ``0/0``."""
-
+async def test_a_booked_game_still_ahead_is_on_nobodys_record(implementation, session):
     port = implementation.build(session)
     player = new_uuid()
     await _booked(
         session, (player, new_uuid(), new_uuid(), new_uuid()), starts=_ago(days=-3)
     )
 
-    assert await port.scores_for([player], now=_now()) == {}
+    score = (await port.scores_for([player], now=_now()))[player]
+
+    assert (score.points, score.counts) == (100, _counts())
+
+
+@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
+async def test_a_didnt_come_is_priced_once_and_the_booked_game_is_kept(
+    implementation, session
+):
+    """``docs/adr/0195`` §1: *Didn't come* is −25 on *Shows up*, and it no
+    longer also breaks *Keeps plans* — the booking they held reads kept."""
+
+    port = implementation.build(session)
+    oscar, ivan, others = new_uuid(), new_uuid(), (new_uuid(), new_uuid())
+    starts = _ago(days=6)
+    await _booked(session, (oscar, ivan, *others), starts=starts)
+    await _not_come_to(session, absent=oscar, tapper=ivan, starts=starts)
+
+    score = (await port.scores_for([oscar], now=_now()))[oscar]
+
+    assert score.points == 75
+    assert score.counts == _counts(turned_up=0, turned_up_of=1, kept=1, kept_of=1)
 
 
 # ---------------------------------------------------------------------------
-# The three that stand down, and the blend over what is left
+# Six months
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_the_three_strands_with_no_provider_are_absent_and_never_nought(
+async def test_a_failure_older_than_six_months_drops_out_of_the_figure_and_counts(
     implementation, session
 ):
-    """Named one by one, so the day one lands the assertion says which.
-
-    Nobody has failed to answer a challenge since challenges stopped waiting for
-    answers (#544), and nothing sends one since they went (#578); nobody owes a
-    court share, because a share is taken before the game exists; and nobody
-    has been rated, because there is no surface on which to rate anybody.
-    """
-
     port = implementation.build(session)
-    one, other = new_uuid(), new_uuid()
-    await _played(session, one=one, other=other, at=_ago(days=3))
-
-    score = (await port.scores_for([one], now=_now()))[one]
-
-    assert ReliabilityStrand.ANSWERS_CHALLENGES not in score.strands
-    assert ReliabilityStrand.SETTLES_UP not in score.strands
-    assert ReliabilityStrand.SPORTSMANSHIP not in score.strands
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_one_strand_is_a_score_and_the_two_records_are_independent(
-    implementation, session
-):
-    """A reading needs *a* strand, not all of them.
-
-    Somebody who has kept a booked game and never had a game played or a score
-    put to them has a Player Score of one strand — and requiring every record
-    would make the score answer about nobody until the platform held all of
-    them about the same person.
-    """
-
-    port = implementation.build(session)
-    keeper = new_uuid()
+    player, others = new_uuid(), (new_uuid(), new_uuid(), new_uuid())
+    long_ago = _ago(days=200)
     await _booked(
-        session, (keeper, new_uuid(), new_uuid(), new_uuid()), starts=_ago(days=2)
-    )
-    player, opponent = new_uuid(), new_uuid()
-    await _played(session, one=player, other=opponent, at=_ago(days=3))
-
-    scores = await port.scores_for([keeper, player], now=_now())
-
-    assert set(scores[keeper].strands) == {ReliabilityStrand.KEEPS_PLANS}
-    assert set(scores[player].strands) == {ReliabilityStrand.SHOWS_UP}
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_the_published_number_is_the_blend_over_the_strands_that_are_there(
-    implementation, session
-):
-    """35, 12 and 15 over a basis of 62, and never over a hundred.
-
-    A player with all three live strands at a hundred is published at a hundred —
-    which is the assertion that the three standing-down names cost the number
-    nothing, because a blend over a basis of a hundred would have capped them at
-    62.
-    """
-
-    port = implementation.build(session)
-    player = new_uuid()
-    await _booked(
-        session, (player, new_uuid(), new_uuid(), new_uuid()), starts=_ago(days=2)
-    )
-    await _played(session, one=player, other=new_uuid(), at=_ago(days=3))
-    await _answered_a_score(
-        session, opener=new_uuid(), answerer=player, at=_ago(days=3)
+        session,
+        (player, *others),
+        starts=long_ago,
+        leaving=((player, long_ago - timedelta(hours=3)),),
     )
 
     score = (await port.scores_for([player], now=_now()))[player]
 
-    assert set(score.strands) == {
-        ReliabilityStrand.SHOWS_UP,
-        ReliabilityStrand.KEEPS_PLANS,
-        ReliabilityStrand.ANSWERS_RESULTS,
-    }
-    assert score.published == 100
-
-
-@pytest.mark.parametrize("implementation", registered(PublishedScoreQuery))
-async def test_the_freshest_observation_is_one_moment_over_the_whole_score(
-    implementation, session
-):
-    """The horizon reads one age, because the strands share one cause.
-
-    *This player stopped playing* is one fact, and two ages would be two places
-    for it to disagree with itself. The moment is the most recent opportunity to
-    have **closed**, whichever strand it belonged to.
-    """
-
-    port = implementation.build(session)
-    player = new_uuid()
-    kept_at = _ago(days=9)
-    await _booked(session, (player, new_uuid(), new_uuid(), new_uuid()), starts=kept_at)
-    game = await _played(session, one=player, other=new_uuid(), at=_ago(days=3))
-
-    score = (await port.scores_for([player], now=_now()))[player]
-
-    assert score.last_at == game.played_at
-    assert score.last_at > kept_at
+    assert score.points == 100
+    assert score.counts == _counts()
 
 
 # ---------------------------------------------------------------------------
@@ -587,5 +540,3 @@ def test_every_registered_implementation_is_of_a_published_port():
     ]
 
     assert stray == []
-
-

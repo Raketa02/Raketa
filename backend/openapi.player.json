@@ -2869,7 +2869,7 @@
           "sportsmanship"
         ],
         "summary": "Cards waiting for your stars",
-        "description": "**A card appears the day after the game and stays for seven days.** Not on the evening itself \u2014 an answer given ten minutes after losing badly is not the answer this is for \u2014 and not for ever, because a card nobody is obliged to answer can only accumulate.\n\n**A game is on this list only once it is over**: the score is agreed, or both sides put one up and neither gave way. A game nobody ever said was played never appears at all \u2014 there is nobody to rate for an evening that did not happen.\n\n**Answering removes it, whatever you put on it.** Submitting closes the card for ever, including the card you answered with everybody left blank.\n\n**Absence is the only reason given.** A game not yet a day old, one whose week has run out and one you have already answered are all simply not here \u2014 and none of them is something to draw differently.\n\n**Ids only.** Join `game_id` against `/api/v1/games` for the names, the sport and the date; `players` is everybody else who was on that court, in the line-up's own order.\n\n**Ignoring all of this costs nothing.** There is no strand for rating, no penalty, and nothing is recorded about a card that expired.",
+        "description": "**A card appears the day after the game and stays for seven days.** Not on the evening itself \u2014 an answer given ten minutes after losing badly is not the answer this is for \u2014 and not for ever, because a card nobody is obliged to answer can only accumulate.\n\n**A game is on this list only once it is over**: the score is agreed, or both sides put one up and neither gave way. A game nobody ever said was played never appears at all \u2014 there is nobody to rate for an evening that did not happen.\n\n**Answering removes it, whatever you put on it.** Submitting closes the card for ever, including the card you answered with everybody left blank.\n\n**Absence is the only reason given.** A game not yet a day old, one whose week has run out and one you have already answered are all simply not here \u2014 and none of them is something to draw differently.\n\n**Ids only.** Join `game_id` against `/api/v1/games` for the names, the sport and the date; `players` is everybody else who was on that court, in the line-up's own order.\n\n**Ignoring all of this costs nothing.** No points for rating, no penalty, and nothing is recorded about a card that expired.",
         "operationId": "read_the_open_cards_api_v1_sportsmanship_get",
         "responses": {
           "200": {
@@ -2978,7 +2978,7 @@
           "player-record"
         ],
         "summary": "Your own record \u2014 how others see you",
-        "description": "**The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.\n\n**Nothing gates it.** The gender preference is mutual and has nothing to say about somebody reading their own record, and a hold does not reach it either \u2014 this is the one screen a held player has for finding out how they appear.\n\n`is_self` is `true`, and `blocked_by_you` is `false`: nobody can block themselves. Read `is_self` rather than comparing ids.\n\n**What other players said comes back as the figure and its count** \u2014 `sportsmanship.average` and `sportsmanship.raters`, exactly what a stranger is served about you. The coarse band that used to stand in for it here is retired by ADR-0179 \u00a75, which names what that costs. It changes nothing about how you are matched: the reliability pill is what the platform acts on.\n\n**`?sport=` works here too**, and picks which of your own Levels the skill card draws \u2014 the same resolution a stranger's sheet takes.",
+        "description": "**The same sheet everybody else is shown about you**, which is what makes it worth having: the numbers on it have been deciding who you are offered to since you signed up, and a penalty nobody can look up is a penalty nobody can fix.\n\n**Nothing gates it.** The gender preference is mutual and has nothing to say about somebody reading their own record, and a hold does not reach it either \u2014 this is the one screen a held player has for finding out how they appear.\n\n`is_self` is `true`, and `blocked_by_you` is `false`: nobody can block themselves. Read `is_self` rather than comparing ids.\n\n**What other players said comes back as the figure and its count** \u2014 `sportsmanship.average` and `sportsmanship.raters`, exactly what a stranger is served about you. The coarse band that used to stand in for it here is retired by ADR-0179 \u00a75, which names what that costs. It changes nothing about how you are matched: Player reliability is what the reliability filter reads.\n\n**`?sport=` works here too**, and picks which of your own Levels the skill card draws \u2014 the same resolution a stranger's sheet takes.",
         "operationId": "read_own_record_api_v1_players_me_record_get",
         "security": [
           {
@@ -9957,8 +9957,14 @@
           },
           "player_score": {
             "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
             "title": "Player Score",
-            "description": "Their published Player Score, 0\u2013100 \u2014 the figure their record and a player card print. **Omitted for somebody the platform has watched nothing of**, never `0`: no record is not a bad one."
+            "description": "Their **Player reliability** in points, 0\u2013100 \u2014 the figure their record prints. **Always present**: everyone starts at 100, so a member nothing has happened to reads `100`."
+          },
+          "reliability_band": {
+            "$ref": "#/components/schemas/ReliabilityBand",
+            "description": "The word under that figure \u2014 `VERY_HIGH` 90\u2013100, `HIGH` 75\u201389, `MEDIUM` 50\u201374, `LOW` below 50 \u2014 the same code their record serves. **Draw the word from this**, never from thresholds of your own."
           },
           "is_owner": {
             "type": "boolean",
@@ -9982,12 +9988,14 @@
           "player_id",
           "name",
           "level",
+          "player_score",
+          "reliability_band",
           "is_owner",
           "is_administrator",
           "joined_at"
         ],
         "title": "GroupMemberSchema",
-        "description": "One row of Members, for one sport \u2014 *Padel 2,71 \u00b7 score 92*."
+        "description": "One row of Members, for one sport \u2014 *Padel 2,71 \u00b7 92 Very high*."
       },
       "GroupMembersResponse": {
         "properties": {
@@ -11774,7 +11782,7 @@
           "times_on_court"
         ],
         "title": "OpponentVarietySchema",
-        "description": "How widely this person spreads their games, over their **whole** record.\n\n**Two counts and no percentage, deliberately.** The card this sits on argues\ntwo rows above that a perfect record over nine games and one over forty are\ndifferent claims and that a bar alone hides which \u2014 so publishing a bare\nshare here would break the rule the card had just made about itself. Draw\nboth: `70 % \u00b7 14 of 20`.\n\n**The share is yours to compute and it is one division.** Nothing is rounded\non this side and there is no banding, no floor and no tone attached \u2014 unlike\na Level's band, which is a key precisely because a client deriving it would\nbe a second set of drawing constants.\n\n**This is a career statistic, not a window.** It is every counted game the\nplatform has recorded for them, which is what the number means: *how widely\ndo they spread their games*, rather than *how widely this season*. There is\nno decay behind it and no horizon.\n\n**It prices no promise.** It is not a reliability strand, it is in no\nweighted score, and it neither raises nor lowers anybody's standing. It is\ncontext for a Level \u2014 a low figure is somebody playing the same few faces\nevery week, whose rating may be narrow but untested."
+        "description": "How widely this person spreads their games, over their **whole** record.\n\n**Two counts and no percentage, deliberately.** The card this sits on argues\ntwo rows above that a perfect record over nine games and one over forty are\ndifferent claims and that a bar alone hides which \u2014 so publishing a bare\nshare here would break the rule the card had just made about itself. Draw\nboth: `70 % \u00b7 14 of 20`.\n\n**The share is yours to compute and it is one division.** Nothing is rounded\non this side and there is no banding, no floor and no tone attached \u2014 unlike\na Level's band, which is a key precisely because a client deriving it would\nbe a second set of drawing constants.\n\n**This is a career statistic, not a window.** It is every counted game the\nplatform has recorded for them, which is what the number means: *how widely\ndo they spread their games*, rather than *how widely this season*. There is\nno decay behind it and no horizon.\n\n**It prices no promise.** It is no part of Player reliability, and it\nneither raises nor lowers anybody's standing. It is context for a Level \u2014 a\nlow figure is somebody playing the same few faces every week, whose rating\nmay be narrow but untested."
       },
       "Outcome": {
         "type": "string",
@@ -12316,7 +12324,7 @@
           },
           "reliability": {
             "$ref": "#/components/schemas/ReliabilitySchema",
-            "description": "**What the platform watched them do** \u2014 the reliability pill and the metered rows it is the mean of.\n\n**Omitted where nothing has ever fallen due for them**, which is most people today, and never a section of noughts: nobody has failed to turn up who was never due to. When it is omitted there is no `player_score` to draw a red pill from and no empty `strands` to head a card with.\n\n**A third absence, asking a third question.** Not `skill`'s \u2014 somebody rated in four sports may have had nothing fall due at all. Not `variety`'s either, and they do not move together: a plan that dissolved and a seat that ran out are opportunities here and neither is a game anybody played.\n\nIt is about **no sport**, like `variety`: `?sport=` does not move it. Turning up is a habit, not a padel habit."
+            "description": "**Player reliability** \u2014 the figure in points, its band, *New* and the four counts.\n\n**Always present.** Everyone starts at 100, so somebody nothing has happened to reads `100`, `VERY_HIGH`, `is_new: true`, every count `0`.\n\nIt is about **no sport**, like `variety`: `?sport=` does not move it. Turning up is a habit, not a padel habit."
           },
           "variety": {
             "$ref": "#/components/schemas/OpponentVarietySchema",
@@ -12324,7 +12332,7 @@
           },
           "sportsmanship": {
             "$ref": "#/components/schemas/RecordSportsmanshipSchema",
-            "description": "**What other players said** \u2014 the average out of five and how many different people it rests on.\n\n**Its own zone, deliberately apart from `reliability`.** That card promises *counted by the system, not written by people*, and this is the one thing here people wrote. Two headings, no lie.\n\n**Omitted where nobody has rated them**, which is most people and is never a nought: rating is a favour, ignoring the card costs nothing, and nothing anywhere records that somebody did not answer. It is a **fourth absence** and asks a fourth question \u2014 not `skill`'s, not `variety`'s and not `reliability`'s, since a plan that dissolved and a seat that ran out are opportunities and neither is an opinion anybody offered.\n\n**On your own record too, and it is the same figure.** What you read about yourself under *Sportsmanship, by players* is what a stranger reads about you \u2014 `4,3 / 5 \u00b7 12 players` \u2014 with nothing coarsened and no count withheld. The three-step band that used to stand in for it on your own sheet is gone from this shape; ADR-0179 \u00a75 decides that and names what it costs.\n\n**It is about no sport**, like `variety` and `reliability`: `?sport=` does not move it. How somebody is to play with is not a padel fact.\n\n**The matcher never reads it.** A low figure hides nobody and demotes nobody \u2014 Pass and Block are the controls that act, and both are deliberate."
+            "description": "**What other players said** \u2014 the average out of five and how many different people it rests on.\n\n**Its own zone, deliberately apart from `reliability`.** That card promises *counted by the system, not written by people*, and this is the one thing here people wrote. Two headings, no lie.\n\n**Omitted where nobody has rated them**, which is most people and is never a nought: rating is a favour, ignoring the card costs nothing, and nothing anywhere records that somebody did not answer. It is a **third absence** and asks a third question \u2014 not `skill`'s and not `variety`'s, since a game played is not an opinion anybody offered.\n\n**On your own record too, and it is the same figure.** What you read about yourself under *Sportsmanship, by players* is what a stranger reads about you \u2014 `4,3 / 5 \u00b7 12 players` \u2014 with nothing coarsened and no count withheld. The three-step band that used to stand in for it on your own sheet is gone from this shape; ADR-0179 \u00a75 decides that and names what it costs.\n\n**It is about no sport**, like `variety` and `reliability`: `?sport=` does not move it. How somebody is to play with is not a padel fact.\n\n**The matcher never reads it.** A low figure hides nobody and demotes nobody \u2014 Pass and Block are the controls that act, and both are deliberate."
           }
         },
         "type": "object",
@@ -12334,7 +12342,8 @@
           "nickname",
           "area_code",
           "social_tags",
-          "sports"
+          "sports",
+          "reliability"
         ],
         "title": "PlayerRecordResponse",
         "description": "Everything the platform will say about one person, to this reader.\n\n**Read through a prior disclosure and never about a person at large.** A\nrecord opens for somebody you were on a game with, somebody you share a\ngroup with, somebody in a group you run, and yourself. Anybody else \u2014 and\nanybody a live gate no longer admits \u2014 is `404`, in one shape that names\nnothing."
@@ -13327,7 +13336,7 @@
           "raters"
         ],
         "title": "RecordSportsmanshipSchema",
-        "description": "What other players said \u2014 **the one thing here nobody counted.**\n\n**Named for its surface, because the contract is one namespace.** The word\nbelongs to ``sportsmanship``, which has a surface of its own; a class simply\ncalled ``SportsmanshipSchema`` here would not shadow whatever that context\npublishes next, it would *rename both* \u2014 and every generated type a shipped\napp already holds would move. It is ``RecordLikelyRangeSchema``'s rule.\n\n**Its own heading, and never mixed with the rows above.** The record card is\nheaded *counted by the system, not written by people*, which is the promise\nevery metered row under it rests on; a number people typed sitting beneath\nthat title would make the title false. Draw this under *What opponents said*\nand the two apart.\n\n**Both numbers, always, from the very first rating.** There is no minimum\nbecause the count does a minimum's work honestly: `4,7 / 5 \u00b7 17 players` and\n`3,0 / 5 \u00b7 1 player` are the same field, and the second one visibly reads as\none person's opinion. Print them together \u2014 a figure drawn without its count\nis this field's one way of lying.\n\n**`raters` is people, not ratings.** Only somebody's most recent stars about\na person ever count, so a weekly partner is **one** rater however many\nevenings they play. That is what makes a high count evidence of *breadth*.\n\n**It is the fifty most recent raters and nothing is trimmed.** Somebody can\nrecover from a bad patch by playing with fifty other people; nobody's rating\nis discarded for being an outlier, because deciding which raters were wrong\nis a larger claim than publishing the number.\n\n**The matcher does not read it, and you should say so if you draw it beside\nthe pill.** A low figure here does not hide anybody, demote anybody or keep\nanybody out of a game \u2014 the reliability pill is the counted-only number and\nis exactly what the platform acts on.\n\n**On your own record too, at this resolution.** The person it is about\nreads the same figure and the same count a stranger does; the coarse band\nthat used to stand in for it on their own sheet is gone from the shape. See\nthe field on the response for why."
+        "description": "What other players said \u2014 **the one thing here nobody counted.**\n\n**Named for its surface, because the contract is one namespace.** The word\nbelongs to ``sportsmanship``, which has a surface of its own; a class simply\ncalled ``SportsmanshipSchema`` here would not shadow whatever that context\npublishes next, it would *rename both* \u2014 and every generated type a shipped\napp already holds would move. It is ``RecordLikelyRangeSchema``'s rule.\n\n**Its own heading, and never mixed with the rows above.** The record card is\nheaded *counted by the system, not written by people*, which is the promise\nevery count under it rests on; a number people typed sitting beneath that\ntitle would make the title false. Draw this under *What opponents said*\nand the two apart.\n\n**Both numbers, always, from the very first rating.** There is no minimum\nbecause the count does a minimum's work honestly: `4,7 / 5 \u00b7 17 players` and\n`3,0 / 5 \u00b7 1 player` are the same field, and the second one visibly reads as\none person's opinion. Print them together \u2014 a figure drawn without its count\nis this field's one way of lying.\n\n**`raters` is people, not ratings.** Only somebody's most recent stars about\na person ever count, so a weekly partner is **one** rater however many\nevenings they play. That is what makes a high count evidence of *breadth*.\n\n**It is the fifty most recent raters and nothing is trimmed.** Somebody can\nrecover from a bad patch by playing with fifty other people; nobody's rating\nis discarded for being an outlier, because deciding which raters were wrong\nis a larger claim than publishing the number.\n\n**Nothing acts on it, and you should say so if you draw it beside Player\nreliability.** A low figure here does not hide anybody, demote anybody or\nkeep anybody out of a game \u2014 Player reliability is the counted-only number,\nand the reliability filter reads that and never this.\n\n**On your own record too, at this resolution.** The person it is about\nreads the same figure and the same count a stranger does; the coarse band\nthat used to stand in for it on their own sheet is gone from the shape. See\nthe field on the response for why."
       },
       "RefreshRequest": {
         "properties": {
@@ -13343,6 +13352,17 @@
         ],
         "title": "RefreshRequest"
       },
+      "ReliabilityBand": {
+        "type": "string",
+        "enum": [
+          "VERY_HIGH",
+          "HIGH",
+          "MEDIUM",
+          "LOW"
+        ],
+        "title": "ReliabilityBand",
+        "description": "The word under a player's reliability figure (``docs/adr/0195`` \u00a71).\n**Four bands, served by the backend**: a client draws the word from the band\nand holds no threshold of its own.\n\n**Here, and never in a context**, for the reason ``racketskill/core`` holds\nthe Level's bands: it is a closed vocabulary read by every surface that\nshows the figure \u2014 a player's record, a group's Members list \u2014 and by the\none thing that acts on it, the reliability filter in the pair rule (#661).\nA copy in each would satisfy every test in its own context while being free\nto drift, and a client would be handed two words for one band.\n\nThe words the phone draws \u2014 *Very high*, *High*, *Medium*, *Low* \u2014 are its\nown; the retired tone ladder's *Reliable*, *Holding* and *Under the bar*\nnamed a bar at 70 that nothing applies."
+      },
       "ReliabilitySchema": {
         "properties": {
           "player_score": {
@@ -13350,38 +13370,68 @@
             "maximum": 100.0,
             "minimum": 0.0,
             "title": "Player Score",
-            "description": "Their **Player Score** out of a hundred \u2014 the same figure the player card prints and the reliability floor prices, at the same player-facing weights.\n\n**It is the weighted mean of the `pct`s beneath it**, taken over the strands that are actually there: a name with nothing behind it costs nothing rather than dragging the number down. Read it rather than blending the rows yourself."
+            "description": "Their **Player reliability** in points, 0\u2013100 \u2014 the same figure a group's Members list prints. **Everyone starts at 100**, so a player nothing has happened to reads `100`."
           },
-          "strands": {
-            "items": {
-              "$ref": "#/components/schemas/StrandRowSchema"
-            },
-            "type": "array",
-            "minItems": 1,
-            "title": "Strands",
-            "description": "The rows behind the figure, **in the strand vocabulary's own order** \u2014 never sort them.\n\n**Only the strands this person has.** A strand nobody on this platform can measure and a strand nothing has fallen due under for *them* are the same absence here, and neither is a `0`: *we have not seen enough* and *they are bad at this* are different facts. There is always at least one row, because a panel with none is omitted whole."
+          "band": {
+            "$ref": "#/components/schemas/ReliabilityBand",
+            "description": "The word under the figure: `VERY_HIGH` 90\u2013100, `HIGH` 75\u201389, `MEDIUM` 50\u201374, `LOW` below 50. **Served, never derived** \u2014 draw the word from this code and hold no thresholds of your own."
+          },
+          "is_new": {
+            "type": "boolean",
+            "title": "Is New",
+            "description": "**New** \u2014 fewer than 3 games played through, ever, across sports. Draw *100 \u00b7 New*. A player who stops for six months does not become New again."
+          },
+          "turned_up": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Turned Up",
+            "description": "*Shows up*: how many of the games that reached their hour with them on the court they turned up to, **late counting as turned up** \u2014 over the last six months."
+          },
+          "turned_up_of": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Turned Up Of",
+            "description": "*Shows up*'s *of*: the games that reached their hour with them on the court, over the last six months \u2014 *turned up 12 of 13*. May be `0`: nothing has fallen due in six months."
+          },
+          "late": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Late",
+            "description": "*Being late*: how many times they came late \u2014 arrived ten to thirty minutes after the start, or said *I was there* and were confirmed \u2014 over the last six months."
+          },
+          "kept": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Kept",
+            "description": "*Keeps plans*: how many of the booked games they held a seat on they kept \u2014 still in when its hour came with every seat held \u2014 over the last six months. A game they Didn't come to is kept here: it is priced once, on *Shows up*."
+          },
+          "kept_of": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Kept Of",
+            "description": "*Keeps plans*' *of*: the booked games they were in, kept or broken by leaving so that the game was called off or played short, over the last six months \u2014 *kept 13 of 14*. Leaving when the seat was taken, or before the cut-off when the game still played, is in neither."
+          },
+          "left_in_dispute": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Left In Dispute",
+            "description": "*Results left in dispute*: how many games, over the last six months, they put up one of two scores that named different winners and neither side gave way. **Information only \u2014 it costs no points.**"
           }
         },
         "type": "object",
         "required": [
           "player_score",
-          "strands"
+          "band",
+          "is_new",
+          "turned_up",
+          "turned_up_of",
+          "late",
+          "kept",
+          "kept_of",
+          "left_in_dispute"
         ],
         "title": "ReliabilitySchema",
-        "description": "What the platform watched \u2014 the pill, and the rows it is the mean of.\n\n**Counted by the system, not written by people.** Every row under this\nheading is a ratio the platform observed. What opponents said about somebody\nis not here and will not be: an opinion under this title would make the title\nfalse.\n\n**The pill is exactly the number the matcher acts on**, at the player's own\npublished weights. That is what makes the screen worth having \u2014 somebody who\nworks their record back up can watch the penalty lift \u2014 and it is why the\nweights themselves are **not** on this response: they are a fact about how\nthe number is made, not about the person, and a client that had them could\nprint one strand as worth more than another, which no screen here claims."
-      },
-      "ReliabilityStrand": {
-        "type": "string",
-        "enum": [
-          "SHOWS_UP",
-          "ANSWERS_CHALLENGES",
-          "ANSWERS_RESULTS",
-          "KEEPS_PLANS",
-          "SETTLES_UP",
-          "SPORTSMANSHIP"
-        ],
-        "title": "ReliabilityStrand",
-        "description": "The six strands a reliability reading is built from, read separately.\n\nThe published Player Score blends them at 35/20/15/12/10/8 and the player\nrecord prints each (``docs/adr/0140``). The two per-mode blends the ranking\nweighed them by went with it (#580), so the published one is the only blend\nleft.\n\n**The sixth name is not the one that was struck, and the difference is the\nwhole of ``docs/adr/0160``.** *Confirms results* asked whether a game reached\nan agreed score, which is a fact about a **pair**, and every denominator\ntried on it docked somebody ADR-0049 protects \u2014 both sides of an honest\ndisagreement included (``docs/adr/0137``). *Answers about results* asks\nwhether **this person** replied to a score put in front of them, and a\ncounter is as good an answer as an acceptance, so disagreeing costs nothing\nand only silence is priced."
+        "description": "**Player reliability** \u2014 the figure in points, its band, *New*, and the\nfour counts the record shows beside it (ADR-0195 \u00a71).\n\n**Counted by the system, not written by people.** Every number under this\nheading is something the platform observed. What opponents said about\nsomebody is not here and will not be: an opinion under this title would make\nthe title false.\n\n**Everyone starts at 100.** A failure takes a fixed price off \u2014 *Didn't\ncome* \u221225, *Came late* \u221210, leaving after the cut-off with the seat left\nempty \u221215, leaving before it (or a card not fixed in time) when the empty\nseat calls the game off \u221210 \u2014 and every game played through gives 5 back,\nnever above 100. Each drops out six months after it happened. Silence on a\nscore costs nothing, and a dispute costs nothing.\n\n**No ledger and no ratio.** The figure is points, and the counts are counts\nover the last six months: draw *turned up 12 of 13*, never a percentage."
       },
       "RescueOfferSchema": {
         "properties": {
@@ -14291,42 +14341,6 @@
         ],
         "title": "StateResultRequest",
         "description": "*This is the score.*\n\n**One request for three acts**, and the record decides which: the first score\nentered, a correction of your own side's while nobody has answered it, or\nyour side's disagreement with the other's. A client that named which would be\na client that could name it wrongly, and a mislabelled correction is a\nproposal nobody may make.\n\n**There is no rejection here and there is no body without a score.** An\nobjection carrying nothing would be free and always optimal for the loser."
-      },
-      "StrandRowSchema": {
-        "properties": {
-          "strand": {
-            "$ref": "#/components/schemas/ReliabilityStrand",
-            "description": "Which strand this row is. **Key your copy off this code**, never off the row's position: a strand with nothing behind it is absent from the list entirely, so the rows you get are the rows this person has.\n\nThree of the six names have no provider on this platform today and never appear here. They are listed on the enum because the vocabulary is closed and shared with the Fit breakdown, not because they are coming."
-          },
-          "good": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Good",
-            "description": "How many of those opportunities went the way the strand is named for \u2014 a game that was played, a booked game that was kept, a score that got a reply.\n\n**A no is a good outcome on `ANSWERS_RESULTS`.** Countering a score you believe is wrong *is* answering it; what the strand prices is silence. **`KEEPS_PLANS` is broken only by leaving** a booked game so that it is called off at its cut-off, or after the cut-off with nobody taking the seat."
-          },
-          "opportunities": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Opportunities",
-            "description": "How many times this fell due. **An opportunity and never a total**: a game still awaiting its entry, a booked game whose hour has not come and a score still inside its window are in neither half of this row, because publishing them either way would state a conclusion the clock has not reached.\n\n**`ANSWERS_RESULTS` counts the last twelve months and the other rows count a career.** It is the one strand that forgets, so a player can work a bad month off it.\n\nNever `0` \u2014 a row with nothing behind it is not drawn at all."
-          },
-          "pct": {
-            "type": "integer",
-            "maximum": 100.0,
-            "minimum": 0.0,
-            "title": "Pct",
-            "description": "The figure out of a hundred for this strand. **Served, never derived** \u2014 dividing `good` by `opportunities` yourself produces a fourth rounding of one record: this one rounds halves up, and the day a client rounds differently the two disagree by a point on exactly the values a player notices.\n\n**Not the Fit breakdown's `StrandReading.value`**, which is the matcher's own reading of the same strand between 0 and 1. Two scales, two surfaces, two names \u2014 and `pct` is this contract's existing word for a whole percentage, as on the balance forecast."
-          }
-        },
-        "type": "object",
-        "required": [
-          "strand",
-          "good",
-          "opportunities",
-          "pct"
-        ],
-        "title": "StrandRowSchema",
-        "description": "One metered row: what fell due, what came of it, and the figure shown.\n\n**All three cross, and the third is not a convenience.** `good` and\n`opportunities` are the raw pair \u2014 a perfect record over nine and one over\nforty are different claims, and a bar alone hides which. `pct` is the figure\nthe platform itself acts on, served so that a client is not the fourth place\nthis record gets rounded."
       },
       "SubmitAnswerRequest": {
         "properties": {

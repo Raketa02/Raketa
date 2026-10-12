@@ -12,9 +12,9 @@ the deck and the radar called, and those went in #579. What is left is what the
 Games deck, the fill, rescues, posting and the booked game call:
 
 ``core``
-    The vocabulary: the kind of game (``SearchMode``), the six reliability
-    strands a Player Score is read in, and the one assumption a provisional
-    forecast makes.
+    The vocabulary: the kind of game (``SearchMode``), the four bands Player
+    reliability is read in (``ReliabilityBand``, and where each begins), and the
+    one assumption a provisional forecast makes.
 
 ``ruleset``
     What a ruleset *is* and what makes one malformed — now the balance rules and

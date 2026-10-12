@@ -161,8 +161,8 @@ class Evening:
     """One game she played, as this fixture declares it.
 
     **The opponent states the score and she answers it**, which is why only the
-    opponent is named: the side that states is asked nothing, so she carries an
-    *answers about results* strand only because the score is put to her.
+    opponent is named: the side that states is asked nothing, and her silence on
+    the last one costs her nothing (#659).
     """
 
     #: A cohort handle.
@@ -200,11 +200,12 @@ class Evening:
 #: **Her evenings, oldest first, one a day.** Read down the endings rather than
 #: the scores, because they are what her record draws:
 #:
-#: - six games, all six played — the second is the one nobody recorded, which
-#:   reads *Played · no score* (#655) and costs nobody anything, so *shows up*
-#:   reads 6 of 6;
-#: - five scores put to her and the newest of them unanswered, so *answers about
-#:   results* reads 4 of 5;
+#: - six games, all six played through — the second is the one nobody
+#:   recorded, which reads *Played · no score* (#655) and earns its 5 like the
+#:   rest — so her Player reliability reads **100 · Very high**, no longer New,
+#:   *turned up 6 of 6* and *kept 6 of 6* (#659);
+#: - five scores put to her and the newest of them unanswered, which costs her
+#:   nothing: silence on a score is free;
 #: - three people over six counted games, the unrecorded one among them, so
 #:   *opponent variety* reads 3 of 6;
 #: - a run of five that mixes wins and losses — the unrecorded evening has no

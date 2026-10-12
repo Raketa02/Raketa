@@ -153,6 +153,27 @@ CAME_LATE_STATES: Final = frozenset(
 
 
 @final
+class Turnout(str, Enum):
+    """What one booked game says about one player on its record — the line
+    ``player_score`` prices (#659; ``docs/adr/0195`` §1). **Only once it is
+    final**: a game still inside its entry window, or a *Didn't come* still
+    provisional, says nothing yet.
+    """
+
+    #: Reached its hour full, with them on its court, **on time**, and was
+    #: played — scored, disputed or *Played · no score*.
+    PLAYED_THROUGH = "PLAYED_THROUGH"
+    #: On time, to a game that never counted because somebody else on its
+    #: court **Didn't come** — turned up, and the game took no score.
+    TURNED_UP_UNCOUNTED = "TURNED_UP_UNCOUNTED"
+    #: **Came late** — an arrival ten to thirty minutes in, or a confirmed *I
+    #: was there*. Final the moment it is reached, so it is on the record then.
+    CAME_LATE = "CAME_LATE"
+    #: **Didn't come**, for good: the late claim's day is over unconfirmed.
+    DIDNT_COME = "DIDNT_COME"
+
+
+@final
 @dataclass(frozen=True, slots=True)
 class Absence:
     """One player somebody on the court said was not here yet, and what has
@@ -215,6 +236,7 @@ __all__ = [
     "DIDNT_COME_STATES",
     "LocationFix",
     "NOT_HERE_STATES",
+    "Turnout",
     "is_final",
     "state_of",
 ]

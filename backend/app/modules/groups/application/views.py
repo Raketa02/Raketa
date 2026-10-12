@@ -31,6 +31,7 @@ from app.modules.groups.domain.home_club_search import ClubPage, in_card_order
 from app.modules.groups.domain.join_search import ReadAs
 from app.modules.groups.domain.monogram import Monogram, monogram_of
 from app.modules.groups.domain.ports import (
+    MemberReliability,
     GroupAdministrators,
     GroupFace,
     GroupFaces,
@@ -141,18 +142,17 @@ class RequestCard:
 @dataclass(frozen=True, slots=True)
 class MemberRow:
     """One row of Members, for one sport — play 61's: who, their Level in it
-    and their Player Score (*Padel 2,71 · score 92*), whether they own the group,
-    and when they joined.
+    and their Player reliability (*Padel 2,71 · 92 Very high*), whether they own
+    the group, and when they joined.
 
-    ``player_score`` is ``None`` for somebody the platform has watched nothing
-    of, which the row prints as no score rather than a nought.
+    ``reliability`` is every member's — everyone starts at a hundred (#659).
     ``is_administrator`` is the account running an official group, who joined
     it as a player — the row the **admin** tag is drawn on, as it is on a player
     group's Owner's."""
 
     face: GroupFace
     level: float
-    player_score: int | None
+    reliability: MemberReliability
     is_owner: bool
     joined_at: datetime
     is_administrator: bool

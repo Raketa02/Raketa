@@ -16,6 +16,7 @@ from app.kernel import Sport
 from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.blocks.presentation.dependencies import get_block_query
 from tests.api import players_world as players
+from tests.api.test_player_record import a_game_not_come_to
 from tests.api.test_groups import (
     GROUPS,
     a_club,
@@ -128,16 +129,19 @@ async def test_a_row_is_a_face_the_level_in_that_sport_and_when_they_joined(clie
 
     owner, member = await listed(client, karol, group)
 
-    # Nobody here has a record yet, so there is no Player Score to print — the
-    # key is omitted, never a nought.
+    # Nothing has happened to anybody here yet, and everyone starts at a
+    # hundred (#659): every row carries the figure and its band.
     assert set(owner) == {
         "player_id",
         "name",
         "level",
+        "player_score",
+        "reliability_band",
         "is_owner",
         "is_administrator",
         "joined_at",
     }
+    assert (owner["player_score"], owner["reliability_band"]) == (100, "VERY_HIGH")
     assert owner["player_id"] == str(karol["id"])
     # A player group is run by its Owner, never by an Administrator.
     assert owner["is_administrator"] is member["is_administrator"] is False
@@ -146,22 +150,28 @@ async def test_a_row_is_a_face_the_level_in_that_sport_and_when_they_joined(clie
     assert owner["joined_at"] < member["joined_at"]
 
 
-async def test_a_member_with_a_record_carries_their_player_score(
-    client, session_factory
-):
+async def test_a_member_s_row_carries_their_points_and_band(client, session_factory):
+    """The figure and the word their own record prints (``docs/adr/0195`` §6):
+    Zofia played one game through and Didn't come to another — 75, High."""
+
     karol = await a_padel_player(client, "karol")
     zofia = await a_padel_player(client, "zofia")
     group = await a_group(client, karol, await a_club(client))
     await join(client, zofia, group)
-    # One game Zofia turned up to, out of one she was due at: a hundred.
     await players.a_confirmed_game(
         session_factory, UUID(str(zofia["id"])), uuid4(), sport=Sport.PADEL, a_won=True
+    )
+    await a_game_not_come_to(
+        session_factory, UUID(str(zofia["id"])), uuid4(), sport=Sport.PADEL
     )
 
     rows = await listed(client, karol, group)
 
-    assert "player_score" not in rows[0]
-    assert rows[1]["player_score"] == 100
+    assert (rows[0]["player_score"], rows[0]["reliability_band"]) == (
+        100,
+        "VERY_HIGH",
+    )
+    assert (rows[1]["player_score"], rows[1]["reliability_band"]) == (75, "HIGH")
 
 
 # --------------------------------------------------------------------------- #

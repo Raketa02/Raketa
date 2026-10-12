@@ -125,8 +125,8 @@ SportAsked = Annotated[
         "`sportsmanship.average` and `sportsmanship.raters`, exactly what a "
         "stranger is served about you. The coarse band that used to stand in "
         "for it here is retired by ADR-0179 §5, which names what that costs. It "
-        "changes nothing about how you are matched: the reliability pill is "
-        "what the platform acts on.\n\n"
+        "changes nothing about how you are matched: Player reliability is "
+        "what the reliability filter reads.\n\n"
         "**`?sport=` works here too**, and picks which of your own Levels the "
         "skill card draws — the same resolution a stranger's sheet takes."
     ),

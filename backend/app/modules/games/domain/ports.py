@@ -7,8 +7,9 @@ every other context in
 [#302](https://github.com/Raketa02/Raketa/issues/302) was blocked on. It is
 contracted in ``tests/demands/`` in ADR-0098's shape, over every registered
 implementation, because *a demand nobody executes is a demand satisfied by
-accident*. Its readers today are ``player_score`` (attendance and result
-answering) and the player record (a sport's run of form). **Four reads went with
+accident*. Its readers today are ``player_score`` (what each game says about
+each player on their record, #659) and the player record (a sport's run of
+form). **Four reads went with
 the ranking** (#580): who a player had arranged games with, how many counted
 games each of a list had played, the last five results across every sport, and
 the threshold a late change would be measured against — read by the matcher and
@@ -54,14 +55,11 @@ with the platform's existing great-circle distance**. What crosses back is a
 number of metres and the club's name; whether that is *at the club* is this
 context's rule (``attendance.py``), and the Game is handed only the verdict.
 
-**``attendance_for`` and ``result_answering_for`` are the two reads here that
-answer about fewer people than they were asked about**, and the exception proves
-the rule above rather than bending it (``docs/adr/0140``, ``docs/adr/0160``).
-Both are ``player_score``'s inputs — *shows up* and *answers about results* —
-where a ``0/0`` would say *this person was due somewhere and did not come* about
-somebody nothing was ever arranged for, and *this person ignored a score* about
-somebody nobody ever sent one to. The two rules live in one class deliberately,
-so that a reader meets the difference instead of rediscovering it.
+**``games_on_the_record_for`` is the one read here that answers about fewer
+people than it was asked about** (``docs/adr/0140``, ``docs/adr/0195`` §1). It is
+``player_score``'s input — a line per player per game, once the game is final
+about them — and a player nothing final has happened to is absent rather than
+an empty row, the same absence every set read here spells.
 """
 
 from __future__ import annotations
@@ -71,6 +69,7 @@ from typing import Collection, Mapping, Protocol, final, runtime_checkable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, invariant
+from app.modules.games.domain.attendance import Turnout
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, LineUp
 from app.modules.games.domain.results import Outcome
@@ -82,111 +81,35 @@ RECENT_RESULTS = 5
 
 @final
 @dataclass(frozen=True, slots=True)
-class Attendance:
-    """What became of the games one player was arranged into. **Per person.**
+class GameOnTheRecord:
+    """What one booked game says about one player — **a line on their record**
+    (#659; ``docs/adr/0195`` §1). ``player_score`` prices it; this context says
+    only what happened.
 
-    The *shows up* strand's whole input (``docs/adr/0140``). ``played`` is games
-    the player was on the court of — somebody said it happened, or a full court
-    nobody recorded whose window closed (*Played · no score*, #655) — **Came
-    late included** (#657: late counts as turned up, until the points ticket
-    prices it); ``missed`` is booked games they **Didn't come** to, once the
-    late claim's day is over unconfirmed (#657). A game still inside its entry
-    window, or whose *Didn't come* is still provisional, is in **neither**:
-    claiming it either way would publish a conclusion nothing has reached.
+    ``at`` is **when it happened**: the game's booked hour, so a line drops out
+    of the six-month window six months after the evening and never after the
+    moment a fold first noticed it. A stream with no hour, written before
+    bookings, is dated from when it was planned.
 
-    **Nothing is charged to a court for silence** (``docs/adr/0195`` §2): the
-    ghost — a window closing on nobody, once a miss for everybody on the court —
-    retired with *Never played*.
+    ``left_in_dispute`` is whether they put up one of the two scores of a game
+    left **in dispute** (``Game.left_in_dispute_by``) — information on the
+    record, beside a turnout that is always one of the two a played game has.
 
-    **Counted and friendly games are both here.** Turning up is not evidence
-    about anybody's Level, so the choice that makes a game a friendly has nothing
-    to say about whether the people who arranged it came.
-
-    **This is a per-player read and never a sum over pairs.** A four played once
-    is one game and three counterparts, so adding up pairs would charge a doubles
-    player three times for one evening and make *shows up* a statement about how
-    many people they play with.
-
-    ``last_at`` is when the most recent of those opportunities **closed** — the
-    moment somebody said a game was played, the moment a full court's entry
-    window shut on nobody, or the tap window closing on somebody who Didn't
-    come. It is the
-    strand's observation moment, and dating one from the moment it was booked
-    would age a record faster than the record aged.
+    **Counted and For fun games are both here.** Turning up is not evidence
+    about anybody's Level, so the choice that makes a game For fun has nothing
+    to say about whether the people who booked it came.
     """
 
-    played: int
-    missed: int
-    last_at: Instant
+    game_id: UUID
+    at: Instant
+    turnout: Turnout
+    left_in_dispute: bool = False
 
     def __post_init__(self) -> None:
         invariant(
-            self.played >= 0 and self.missed >= 0,
-            f"a negative arrangement count: {self.played} played, "
-            f"{self.missed} missed",
-        )
-        invariant(
-            self.played + self.missed >= 1,
-            "an attendance record with no settled arrangement behind it is an "
-            "absence, not a zero — absence is spelled by not being in the answer",
-        )
-
-
-@final
-@dataclass(frozen=True, slots=True)
-class ResultAnswering:
-    """What one player did about the scores put in front of them. **Per person.**
-
-    The *answers about results* strand's whole input (``docs/adr/0160``).
-    ``answered`` is scores they accepted or countered inside the window;
-    ``ignored`` is scores whose window ran out with nothing said. A score still
-    inside its window is in **neither** — the answer is still wanted, and filing
-    it either way would publish a conclusion the clock has not reached.
-
-    **The denominator is scores put in front of *them*, and never games.** The
-    side that entered the score is asked nothing, and once both sides have put a
-    score up the argument is capped — so a counter is the asked side's answer and
-    never a second question put back to the opener. That is the whole difference
-    from the strand ``docs/adr/0137`` struck: **nobody is docked for
-    disagreeing**, because there is no state a person reaches by holding their
-    position that this read files as a miss.
-
-    **A counter is a good outcome**, which makes this the second strand on this
-    platform where saying *no* scores, after *answers challenges*. What is priced
-    is silence, not judgement — and here the judgement being protected is
-    ADR-0049's: *no player is penalised for not agreeing a result.*
-
-    **Counted and friendly games are both here.** A score put in front of you is a
-    question whether or not the evening was evidence about anybody's Level.
-
-    ``last_at`` is the most recent moment one of those opportunities closed — the
-    instant something was said, or the deadline that passed in silence.
-
-    **It is the same shape as ``Attendance`` above and is deliberately not the
-    same type.** Three counts and a moment is what an opportunity record looks
-    like — ``bookings``' ``KeepingRecord`` is a third one (#544) — and a shared
-    ``Opportunity(good, missed, last_at)`` would be a type whose field names could
-    not say *played* or *missed* or *ignored*. The words are the whole content of
-    these rows: a reader of the fold has to know that a miss is charged to the
-    player reported and an ignored score to the whole side it faced, and a generic pair
-    is exactly where that stops being visible. The cost is two invariants spelled
-    twice, and it is smaller than the cost of the alternative.
-    """
-
-    answered: int
-    ignored: int
-    last_at: Instant
-
-    def __post_init__(self) -> None:
-        invariant(
-            self.answered >= 0 and self.ignored >= 0,
-            f"a negative score count: {self.answered} answered, "
-            f"{self.ignored} ignored",
-        )
-        invariant(
-            self.answered + self.ignored >= 1,
-            "an answering record with no closed score behind it is an absence, "
-            "not a zero — absence is spelled by not being in the answer",
+            not self.left_in_dispute
+            or self.turnout in (Turnout.PLAYED_THROUGH, Turnout.CAME_LATE),
+            f"a game left in dispute is a game played, not {self.turnout}",
         )
 
 
@@ -709,7 +632,7 @@ class GameClubs(Protocol):
 
 @runtime_checkable
 class GameHistoryQuery(Protocol):
-    """The three facts this context owes the rest of the platform about what
+    """The two facts this context owes the rest of the platform about what
     became of a player's games."""
 
     async def recent_results_in(
@@ -733,50 +656,34 @@ class GameHistoryQuery(Protocol):
         """
         ...
 
-    async def attendance_for(
+    async def games_on_the_record_for(
         self, player_ids: Collection[UUID], *, now: Instant
-    ) -> Mapping[UUID, Attendance]:
-        """What became of each of these people's arrangements — played, or missed.
+    ) -> Mapping[UUID, tuple[GameOnTheRecord, ...]]:
+        """What each game says about each of these people on their record —
+        played through, Came late, Didn't come, or on time beside somebody who
+        Didn't come — **oldest first**, every game they are on the court of now.
 
-        **A player with none is absent from the answer, because a zero here would
-        be invented**: a ``0/0`` would say *this person was due somewhere and did
-        not come*, which is a claim about a record nobody keeps
-        (``docs/adr/0098``).
+        **Per person and never per pair**: a four played once is one game on
+        each of four records, and never three counterparts on each.
 
-        Its reader is ``player_score``, which turns it into the *shows up*
-        strand. The strand's arithmetic is not here: this context knows what
-        happened to its own games and has no opinion about what that says about a
-        person.
-        """
-        ...
+        **Only what is final** (``Game.turnout_of``): a game nobody has said
+        was played while its entry window is open, one called off or started
+        short, and a *Didn't come* still provisional are on nobody's record yet
+        — a score put up is played, Came late is final at the arrival — and a
+        player with nothing final is **absent** from the answer, never an empty
+        row.
 
-    async def result_answering_for(
-        self, player_ids: Collection[UUID], *, since: Instant, now: Instant
-    ) -> Mapping[UUID, ResultAnswering]:
-        """What each of these people did about the scores put in front of them.
-
-        **A player with none is absent from the answer**, the second read here
-        whose zero would be invented: somebody nobody has ever put a score to has
-        not ignored one.
-
-        **``since`` is the caller's window and never this context's**
-        (``docs/adr/0160``). A game's own three clocks are in ``windows.py`` and
-        are what a player is promised; *how far back a strand remembers* is a
-        judgement about what a record is worth, and it belongs to the context
-        that publishes the strand. This read answers about opportunities that
-        closed at or after that instant, and holds no opinion about which instant
-        it should be.
-
-        Its reader is ``player_score``. The arithmetic is not here: this context
-        knows what happened to its own games and has no opinion about what that
-        says about a person.
+        **Unbounded**, deliberately: the six months are ``player_score``'s window
+        and *New* reads every game ever played through, so the window is the
+        caller's to apply. Its reader is ``player_score``; the prices are not
+        here — this context knows what happened to its own games and has no
+        opinion about what that says about a person.
         """
         ...
 
 
 __all__ = [
     "RECENT_RESULTS",
-    "Attendance",
     "ConfirmedGame",
     "ConfirmedResultLedger",
     "CountedResult",
@@ -791,9 +698,10 @@ __all__ = [
     "SeatLevel",
     "GameDirectory",
     "GameHistoryQuery",
+    "GameOnTheRecord",
     "GameRepository",
     "OpponentVariety",
     "OpponentVarietyQuery",
     "PlayerNames",
-    "ResultAnswering",
+    "Turnout",
 ]

@@ -27,7 +27,7 @@ from uuid import UUID
 
 from app.kernel import Instant, Sport
 from app.modules.bookings.domain.booking import BookedCourt, Booking
-from app.modules.bookings.domain.keeping import KeepingRecord
+from app.modules.bookings.domain.keeping import Keeping
 from app.modules.bookings.domain.summary import NewBookingsSummary
 
 
@@ -176,17 +176,19 @@ class BookingDirectory(Protocol):
 @runtime_checkable
 class BookingHistoryQuery(Protocol):
     """**What this context publishes about a player's record** (#544; the
-    mechanics §15.4): who kept the booked games they held a seat on, and who
-    broke them — the *keeps plans* strand's input, read by ``player_score``.
+    mechanics §15.4): who kept the booked games they held a seat on, and how
+    the others were broken — *keeps plans*, read by ``player_score``, which
+    prices a broken one on Player reliability (#659).
 
-    **A player with no settled booked game is absent from the answer**, never a
-    nought: nobody has failed to keep a game they never had. One question about
-    the set, as every record read is."""
+    **A player with no settled booked game is absent from the answer**, never
+    an empty row: nobody has kept or broken a game they never had. One question
+    about the set, as every record read is."""
 
     async def keeping_for(
         self, player_ids: Collection[UUID], *, now: Instant
-    ) -> Mapping[UUID, KeepingRecord]:
-        """Each of these players who has a settled booked game, at ``now``."""
+    ) -> Mapping[UUID, tuple[Keeping, ...]]:
+        """Each of these players' settled booked games at ``now`` — **every one,
+        oldest first**, however old: the six months are the reader's window."""
         ...
 
 
@@ -279,20 +281,6 @@ class GameChanges(Protocol):
         """The club cancelled the booking: the game is off, called off by nobody,
         **whole or with a seat open** — and its room with it. Before its hour,
         and in the caller's transaction (#547)."""
-        ...
-
-
-@runtime_checkable
-class GameNoShows(Protocol):
-    """**A demand of the Games context**: who Didn't come to the ordinary Game
-    a booking opened (#547, #657; the mechanics §15.1, §15.4) — *the strongest
-    mark* until the points ticket prices it once, which breaks the booked game
-    on the record of whoever it names. Attendance is the Game's, so the record
-    asks for it rather than keeping a copy."""
-
-    async def did_not_come(self, booking_id: UUID, *, now: Instant) -> frozenset[UUID]:
-        """Everybody who Didn't come at ``now``, for good — empty while a late
-        claim's day still runs, and for a booking with no Game."""
         ...
 
 

@@ -29,7 +29,7 @@ from app.bootstrap.composition import (
     build_group_code_minter,
     build_group_directory,
     build_group_faces,
-    build_group_member_scores,
+    build_group_member_reliability,
     build_group_repository,
     build_home_clubs,
     build_rated_group_members,
@@ -78,7 +78,7 @@ from app.modules.groups.domain.ports import (
     GroupBornGames,
     GroupDirectory,
     GroupFaces,
-    GroupMemberScores,
+    GroupMemberReliability,
     GroupRepository,
     HomeClubs,
     RatedGroupMembers,
@@ -123,11 +123,13 @@ def get_group_faces(db: DbSession, settings: SettingsDep) -> GroupFaces:
 GroupFacesDep = Annotated[GroupFaces, Depends(get_group_faces)]
 
 
-def get_group_member_scores(db: DbSession) -> GroupMemberScores:
-    return build_group_member_scores(db)
+def get_group_member_reliability(db: DbSession) -> GroupMemberReliability:
+    return build_group_member_reliability(db)
 
 
-GroupMemberScoresDep = Annotated[GroupMemberScores, Depends(get_group_member_scores)]
+GroupMemberReliabilityDep = Annotated[
+    GroupMemberReliability, Depends(get_group_member_reliability)
+]
 
 
 def get_group_administrators(db: DbSession) -> GroupAdministrators:
@@ -353,7 +355,7 @@ def get_read_group_members(
     directory: GroupDirectoryDep,
     ratings: RatedGroupMembersDep,
     faces: GroupFacesDep,
-    scores: GroupMemberScoresDep,
+    reliability: GroupMemberReliabilityDep,
     administrators: GroupAdministratorsDep,
     clock: ClockDep,
 ) -> ReadGroupMembers:
@@ -361,7 +363,7 @@ def get_read_group_members(
         directory=directory,
         ratings=ratings,
         faces=faces,
-        scores=scores,
+        reliability=reliability,
         administrators=administrators,
         clock=clock,
     )

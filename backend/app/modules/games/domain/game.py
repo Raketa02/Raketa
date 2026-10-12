@@ -67,15 +67,13 @@ from typing import Any, Iterable
 from uuid import UUID
 
 from app.kernel import Instant, Sport, instant, invariant
-from app.modules.games.domain.answering import (
-    ScorePutToASide,
-    score_put_to_a_side,
-)
 from app.modules.games.domain.attendance import (
+    CAME_LATE_STATES,
     NOT_HERE_STATES,
     Absence,
     AttendanceState,
     ClubVerdict,
+    Turnout,
     is_final,
     state_of,
 )
@@ -696,6 +694,31 @@ class Game:
             and is_final(state, starts_at=starts_at, now=now)
         )
 
+    def turnout_of(self, player_id: UUID, *, now: Instant) -> Turnout | None:
+        """What this game says about this player on their record at ``now``
+        (#659), or ``None`` while it says nothing — off the court, inside the
+        entry window, a *Didn't come* still provisional, and for good on a game
+        called off or started short.
+
+        **Came late first**, because it is final at the arrival and the game it
+        was carries on as usual; then a final *Didn't come*; then a game played
+        — on time, played through; then, beside somebody else's final *Didn't
+        come*, on time to a game that never counted.
+        """
+
+        if player_id not in self.line_up.players:
+            return None
+        if self.attendance_at(now).get(player_id) in CAME_LATE_STATES:
+            return Turnout.CAME_LATE
+        absent = self.didnt_come_at(now)
+        if player_id in absent:
+            return Turnout.DIDNT_COME
+        if self.was_played_at(now):
+            return Turnout.PLAYED_THROUGH
+        if absent:
+            return Turnout.TURNED_UP_UNCOUNTED
+        return None
+
     def attendance_waits_on(self, player_id: UUID, *, now: Instant) -> bool:
         """Whether attendance waits on this player at ``now`` (#657): their own
         *I'm here* while they are awaited, their own *I was there* while they
@@ -846,31 +869,6 @@ class Game:
         if self.standing_at(now) is not GameStanding.DISPUTED:
             return frozenset()
         return frozenset(proposal.by for proposal in self.proposals.values())
-
-    def score_put_to_a_side_at(self, now: Instant) -> ScorePutToASide | None:
-        """The one score this game put to somebody, and what became of it.
-
-        ``None`` while nothing has been asked of anybody yet — nobody has said it
-        happened, nobody has put a score up, or the score that is up is still
-        inside its window.
-
-        The fold is in ``answering.py`` beside the standing it is read off,
-        because *is a counter an answer* is a judgement about what a result is;
-        this is where a reader asks the question, on the aggregate, the way
-        ``was_played_at`` and ``confirmed_at`` are asked (``docs/adr/0160``).
-
-        **A For fun game puts its score to nobody** (#654): it asks nothing, so
-        nobody can have stayed silent about it.
-        """
-
-        if self.kind is GameKind.FRIENDLY:
-            return None
-        return score_put_to_a_side(
-            played_at=self.played_at,
-            proposals=self.proposals,
-            acceptance=self.acceptance,
-            now=now,
-        )
 
     def awaits_agreement_from(self, player_id: UUID, *, now: Instant) -> bool:
         """Whether a score on the table waits on this player's agreement — the

@@ -300,8 +300,9 @@ allow_indirect_imports = true
 # exists.
 #
 # `allow_indirect_imports = true`, for the reason its neighbour sets it: it
-# legitimately imports the Match Fit engine for `ReliabilityStrand`, which is the
-# closed vocabulary a second spelling here would fork.
+# legitimately imports the Match Fit engine for `ReliabilityBand` and
+# `reliability_band_of` (#659), the closed vocabulary a second spelling here would
+# fork.
 [importlinter:contract:player-score-does-not-know-the-matcher]
 name = The Player Score context does not import the matcher
 type = forbidden
@@ -327,10 +328,10 @@ allow_indirect_imports = true
 # a star average, because it would look like every other term beside it. This is
 # what goes red.
 #
-# It is also why the reliability pill is the counted-only number: a star average
-# is not a ratio out of a hundred and cannot be a strand in a weighted mean over
-# ratios, and had the pill included opinions the matcher ignores, the number a
-# player can see would not be the number that demotes them.
+# It is also why Player reliability is the counted-only number: points are
+# priced off what a player did, and had the figure included opinions, the number
+# a player can see would not be one they could earn back by turning up — and it
+# is what the reliability filter keeps people off a court by (#661).
 #
 # **`allow_indirect_imports = true` on both, and the second one was measured
 # rather than assumed.** With the flag off it goes red on today's tree naming
@@ -632,13 +633,13 @@ allow_indirect_imports = true
 # what catches the interesting version — a domain module that reaches somebody
 # else's type through a shared helper has borrowed it exactly as completely.
 #
-# The engines are deliberately **not** on the forbidden list, and `ReliabilityStrand`
+# The engines are deliberately **not** on the forbidden list, and `ReliabilityBand`
 # is the one name read from there: `app/engines/` is the pure layer every context
 # reads and none of them owns, exactly as the kernel is, so importing from it is not
-# reaching sideways. `player_score` already made that argument about these same five
-# names — a locally-declared copy would satisfy every protocol in the suite while
-# being free to drift — and the strand codes are on the player contract under that
-# enum's own spelling, so a second one would hand a client two words for one strand.
+# reaching sideways. A locally-declared copy would satisfy every protocol in the
+# suite while being free to drift — and the band is on the player contract under
+# that enum's own spelling, on the record and on a group's Members list, so a
+# second one would hand a client two words for one band (#659).
 #
 # The forbidden list is **spelled out rather than wildcarded**, and that carries a
 # cost worth naming: a context nobody has written yet is not on it, so the day an

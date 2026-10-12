@@ -34,7 +34,7 @@ from app.bootstrap.composition import (
     build_game_repository,
     build_sportsmanship_ledger,
 )
-from app.engines.matchfit.core import ReliabilityStrand, SearchMode
+from app.engines.matchfit.core import SearchMode
 from app.kernel import Sport, instant
 from app.modules.blocks.domain.errors import BlockStateUnavailable
 from app.modules.blocks.presentation.dependencies import get_block_query
@@ -42,10 +42,6 @@ from app.modules.bookings.domain.booking import BookedCourt, Booking
 from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameKind, GameSide, LineUp, Seating
-from app.modules.player_score.domain.strands import (
-    PUBLISHED_WEIGHTS,
-    out_of_a_hundred,
-)
 from app.modules.rating.domain.events import RatingInitialised
 from app.modules.sportsmanship.domain.card import (
     SettledCourt,
@@ -216,6 +212,20 @@ async def a_kept_booked_game(session_factory, player: UUID):
         await session.commit()
 
 
+#: A record nothing has happened to: everyone starts at a hundred.
+A_HUNDRED_AND_NEW = {
+    "player_score": 100,
+    "band": "VERY_HIGH",
+    "is_new": True,
+    "turned_up": 0,
+    "turned_up_of": 0,
+    "late": 0,
+    "kept": 0,
+    "kept_of": 0,
+    "left_in_dispute": 0,
+}
+
+
 def every_key(payload) -> list[str]:
     """Every property name anywhere in a response, however deeply nested.
 
@@ -297,6 +307,8 @@ async def test_a_group_you_share_opens_their_record(
             },
             "last_five": [],
         },
+        # Everyone starts at a hundred: nothing has happened to them yet (#659).
+        "reliability": A_HUNDRED_AND_NEW,
     }
     # The photograph's three fields are **omitted together** for a player with
     # none, and never sent as nulls: the client draws the generated poster.
@@ -907,46 +919,15 @@ async def test_your_own_record_carries_the_same_pair(
 
 
 # ---------------------------------------------------------------------------
-# What the platform watched — the pill and the metered rows
+# Player reliability — points, the band, New and the counts (#659)
 # ---------------------------------------------------------------------------
 
-
-async def test_each_strand_crosses_as_its_raw_pair_and_its_own_figure(
+async def test_the_record_reads_points_the_band_new_and_the_counts(
     client, session_factory, searcher
 ):
-    """**A perfect record over nine and one over forty are different claims**,
-    and a bar alone hides which — so the two counts cross beside the figure.
-
-    One game played and one they were reported not to have come to: an
-    opportunity each, one of them good.
-    """
-
-    subject = await a_member_of_their_group(client, session_factory, searcher)
-    await players.a_confirmed_game(
-        session_factory, subject, searcher["id"], sport=Sport.PADEL, a_won=True
-    )
-    await a_game_not_come_to(
-        session_factory, subject, searcher["id"], sport=Sport.PADEL
-    )
-
-    body = (await record_of(client, searcher["token"], subject)).json()
-
-    assert body["reliability"]["strands"] == [
-        {"strand": "SHOWS_UP", "good": 1, "opportunities": 2, "pct": 50}
-    ]
-    assert body["reliability"]["player_score"] == 50
-
-
-async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
-    client, session_factory, searcher
-):
-    """**The published figure is the weighted mean of the figures beneath it**,
-    recomputed here through the published weights from the rows that actually
-    crossed.
-
-    The two strands are deliberately unequal, so a pill blended without the
-    weights — or one taken over the unrounded ratios — would land somewhere else.
-    """
+    """A game played through a month ago (100), a booked game they Didn't come
+    to six days ago (75) — kept on *Keeps plans*, since a *Didn't come* is
+    priced once — and the booking of it kept: **75 · High**, still New."""
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
     await players.a_confirmed_game(
@@ -957,73 +938,61 @@ async def test_the_pill_is_the_blend_a_reader_can_take_from_the_rows(
     )
     await a_kept_booked_game(session_factory, subject)
 
-    reliability = (await record_of(client, searcher["token"], subject)).json()[
-        "reliability"
-    ]
+    body = (await record_of(client, searcher["token"], subject)).json()
 
-    assert [row["strand"] for row in reliability["strands"]] == [
-        "SHOWS_UP",
-        "KEEPS_PLANS",
-    ]
-    weighted = sum(
-        PUBLISHED_WEIGHTS[ReliabilityStrand(row["strand"])] * row["pct"]
-        for row in reliability["strands"]
-    )
-    basis = sum(
-        PUBLISHED_WEIGHTS[ReliabilityStrand(row["strand"])]
-        for row in reliability["strands"]
-    )
-    assert reliability["player_score"] == out_of_a_hundred(weighted, 100 * basis)
+    assert body["reliability"] == {
+        "player_score": 75,
+        "band": "HIGH",
+        "is_new": True,
+        "turned_up": 1,
+        "turned_up_of": 2,
+        "late": 0,
+        "kept": 1,
+        "kept_of": 1,
+        "left_in_dispute": 0,
+    }
 
 
-async def test_no_weight_crosses_on_this_response_in_any_shape(
+async def test_no_strand_ratio_or_weight_crosses_on_this_response(
     client, session_factory, searcher
 ):
-    """**The weights are a fact about how the number is made, not about the
-    person.** A client holding them could draw one strand as worth more than
-    another, which no screen here claims — and could re-derive the pill, which is
-    a second rounding of a figure the matcher acts on."""
+    """The strands, their raw pairs, their figures and the weights left the
+    wire with ADR-0195 §1 — *Answers about results* and the dead strands too."""
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
     await a_kept_booked_game(session_factory, subject)
 
     body = (await record_of(client, searcher["token"], subject)).json()
 
-    assert body["reliability"]["strands"]
-    assert [name for name in every_key(body) if "weight" in name.lower()] == []
+    assert set(body["reliability"]) == set(A_HUNDRED_AND_NEW)
+    assert [
+        name
+        for name in every_key(body)
+        if any(word in name.lower() for word in ("weight", "strand", "pct"))
+    ] == []
 
 
-async def test_a_player_nothing_has_fallen_due_for_has_no_section_at_all(
+async def test_a_player_nothing_has_happened_to_reads_a_hundred_and_new(
     client, session_factory, searcher
 ):
-    """**Omitted whole, and never a section of noughts.** Nobody has failed to
-    turn up who was never due to, and a zero here is how *no record* becomes *a
-    bad record* on the one screen nobody can appeal.
-
-    **No field of it is nulled or emptied either** — there is no `reliability`
-    key at all, so there is no `player_score: 0` to draw a red pill from and no
-    empty `strands` to draw a heading over.
-
-    This subject has a Level, which is the other half of the claim: the sheet
-    draws what exists, and a newcomer reads as a newcomer rather than as a
-    failure.
-    """
+    """**Everyone starts at a hundred**, so the zone is always there: a
+    newcomer reads *100 · New* with every count at nought — a newcomer, never a
+    failure, and never a blank."""
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
 
     body = (await record_of(client, searcher["token"], subject)).json()
 
-    assert "reliability" not in body
+    assert body["reliability"] == A_HUNDRED_AND_NEW
     assert body["skill"] is not None
 
 
-async def test_your_own_record_carries_the_number_that_decides_your_exposure(
+async def test_your_own_record_carries_the_figure_others_read(
     client, session_factory, searcher
 ):
-    """*How others see you* draws the pill the matcher acts on — which is the
-    whole argument for the screen: a penalty nobody can look up is a penalty
-    nobody can fix, and a player working their record back up must be able to
-    watch it lift."""
+    """*How others see you* draws the figure everybody else is shown — a
+    penalty nobody can look up is a penalty nobody can fix, and a player
+    earning their points back must be able to watch them come back."""
 
     await a_game_not_come_to(
         session_factory, searcher["id"], uuid4(), sport=Sport.PADEL
@@ -1033,15 +1002,12 @@ async def test_your_own_record_carries_the_number_that_decides_your_exposure(
 
     assert body["is_self"] is True
     assert body["reliability"] == {
-        "player_score": 0,
-        "strands": [
-            {"strand": "SHOWS_UP", "good": 0, "opportunities": 1, "pct": 0}
-        ],
+        **A_HUNDRED_AND_NEW,
+        "player_score": 75,
+        "band": "HIGH",
+        "turned_up_of": 1,
     }
-    # **And the two absences are different questions**, which this arrangement
-    # is the proof of: a game they did not come to is an opportunity and is not
-    # a game they played, so there are rows here and no variety at all. `0` is a
-    # measured figure on a row that exists; an omitted zone is not a nought.
+    # A game they Didn't come to is not a game they played: no variety at all.
     assert "variety" not in body
 
 
@@ -1083,8 +1049,8 @@ async def test_a_reader_is_told_the_figure_and_how_many_people_it_rests_on(
 ):
     """**Its own zone, and both numbers in it.** The card above promises
     *counted by the system, not written by people*; this is the one thing on the
-    sheet people typed, so it crosses under its own name and never among the
-    metered rows."""
+    sheet people typed, so it crosses under its own name and never beside the
+    reliability counts."""
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
     await stars_for(session_factory, subject, 5, 4, 5)
@@ -1099,7 +1065,7 @@ async def test_it_publishes_from_a_single_rating_with_the_count_beside_it(
 ):
     """**No minimum**, because the count does a minimum's work honestly: over one
     player the field visibly reads as one person's opinion, which is the same
-    discipline the metered rows take by printing their raw pairs."""
+    discipline the reliability counts take by printing *12 of 13*."""
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
     await stars_for(session_factory, subject, 3)
@@ -1214,7 +1180,7 @@ async def test_a_subject_nobody_has_rated_has_the_zone_absent_on_their_own_recor
 async def test_the_sport_asked_for_does_not_move_what_players_said(
     client, session_factory, searcher
 ):
-    """It is about **no sport**, like the metered rows and the variety beside it:
+    """It is about **no sport**, like Player reliability and the variety beside it:
     how somebody is to play with is not a padel fact, and `?sport=` says what the
     sheet is about rather than which record is folded."""
 
@@ -1238,24 +1204,20 @@ async def test_the_sport_asked_for_does_not_move_what_players_said(
     )
 
 
-async def test_stars_move_no_part_of_the_reliability_pill(
+async def test_stars_move_no_part_of_player_reliability(
     client, session_factory, searcher
 ):
-    """**The figure does not enter the pill, and the matcher reads it nowhere.**
+    """**What other players said does not enter the figure.**
 
-    A star average is not a ratio out of a hundred, so it cannot be a term in a
-    weighted mean over ratios — but that is an argument, and this is the check.
     The record is read twice over the same watched history, once before anybody
     has an opinion and once after three people have given the lowest stars there
-    are, and the whole block is identical: no extra row, no moved figure, no
-    moved pill.
+    are, and the whole reliability block is identical: no moved figure, no
+    moved band, no moved count.
 
-    It matters because the pill is exactly what the platform acts on
-    (``docs/adr/0158``): the moment an opinion the matcher ignores got into the
-    number a player can see, the number they can see would stop being the number
-    that demotes them, and the penalty would become the unexplainable kind the
-    reliability floor's own rule forbids. The `.importlinter` contract beside
-    this refuses the matcher the import; this refuses the arithmetic.
+    It matters because Player reliability is what the reliability filter acts
+    on (#661): the moment an opinion got into the number a player can see, the
+    figure that keeps somebody off a court would be one they could not work
+    back up by turning up.
     """
 
     subject = await a_member_of_their_group(client, session_factory, searcher)
@@ -1271,6 +1233,3 @@ async def test_stars_move_no_part_of_the_reliability_pill(
     after = (await record_of(client, searcher["token"], subject)).json()
     assert after["sportsmanship"] == {"average": 1.0, "raters": 3}
     assert after["reliability"] == before
-    assert "SPORTSMANSHIP" not in [
-        row["strand"] for row in after["reliability"]["strands"]
-    ]

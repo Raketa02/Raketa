@@ -168,16 +168,6 @@ def test_a_cancelled_game_is_on_nobody_s_record():
 def test_a_game_whose_hour_came_whole_is_kept_by_everybody():
     booking = _booked()
 
-    assert keeping_of(booking, OLA, now=START) == Keeping(kept=True, at=START)
-    assert keeping_of(booking, KUBA, now=START) == Keeping(kept=True, at=START)
-
-
-def test_a_confirmed_no_show_breaks_the_game_for_the_one_who_did_not_come():
-    booking = _booked()
-
-    assert keeping_of(
-        booking, KUBA, now=START + timedelta(days=2), no_shows=frozenset({KUBA})
-    ) == Keeping(kept=False, at=START)
-    assert keeping_of(
-        booking, OLA, now=START + timedelta(days=2), no_shows=frozenset({KUBA})
-    ) == Keeping(kept=True, at=START)
+    assert keeping_of(booking, OLA, now=START) == Keeping(at=START)
+    assert keeping_of(booking, KUBA, now=START) == Keeping(at=START)
+    assert keeping_of(booking, OLA, now=START).kept

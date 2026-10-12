@@ -105,14 +105,14 @@ async def assemble_record(
     rather than being asked and thrown away — which is the difference between a
     newcomer's record being cheap and it being the same price as anybody's.
 
-    **The rows, the variety and what players said are asked for regardless,
-    because none of them is about a sport.** The four absences are four different
-    questions and the sheet must not conflate them: a person rated in nothing may
-    have played all week, a person rated in four sports may never have had a game
-    counted, a person with a full record of games may have had nothing at all
-    *fall due*, and a person with a perfect record of turning up may have been
-    rated by nobody — nobody is obliged to answer a card, and not answering leaves
-    no record of the omission.
+    **Reliability, the variety and what players said are asked for regardless,
+    because none of them is about a sport.** Reliability is never absent —
+    everyone starts at a hundred (#659) — and the other three absences are three
+    different questions the sheet must not conflate: a person rated in nothing
+    may have played all week, a person rated in four sports may never have had a
+    game counted, and a person with a perfect record of turning up may have been
+    rated by nobody — nobody is obliged to answer a card, and not answering
+    leaves no record of the omission.
 
     **What players said is one question, and ``is_self`` does not change it.**
     The figure and its count are asked for on every sheet, the subject's own

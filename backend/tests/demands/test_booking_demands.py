@@ -33,12 +33,10 @@ from app.modules.bookings.domain.ports import (
     ClubDesk,
     ClubDesks,
     GameChanges,
-    GameNoShows,
     GameOpening,
     PlayerAddress,
     PlayerAddresses,
 )
-from app.modules.games.domain.attendance import ClubVerdict
 from app.modules.games.domain.game import Game
 from app.modules.games.domain.lineup import GameSide
 from app.modules.games.domain.standing import GameStanding
@@ -313,37 +311,3 @@ async def test_the_club_s_cancel_calls_a_whole_game_off(implementation, session)
     assert game.called_off_by is None
 
 
-# --------------------------------------------------------------------------- #
-# GameNoShows — who Didn't come to a booked game (#547, #657)
-# --------------------------------------------------------------------------- #
-
-
-@pytest.mark.parametrize("implementation", registered(GameNoShows))
-async def test_didn_t_come_counts_only_once_the_late_claim_s_day_is_over(
-    implementation, session
-):
-    no_shows: GameNoShows = implementation.build(session)
-    booking_id = new_uuid()
-    await _opened(session, booking_id)
-    games = build_game_repository(
-        session=session,
-        event_store=build_domain_event_store(session),
-        events=build_event_publisher(session),
-    )
-    game = await games.for_challenge(booking_id)
-    assert game is not None
-    game.note_absent(
-        by=OLA,
-        absent=KUBA,
-        where=ClubVerdict(at_the_club=True, club_name=None),
-        occurred_at=instant(SATURDAY_FIVE + timedelta(minutes=10)),
-    )
-    await games.save(game)
-    await session.commit()
-    half_past = instant(SATURDAY_FIVE + timedelta(minutes=30))
-
-    assert await no_shows.did_not_come(booking_id, now=half_past) == frozenset()
-    assert await no_shows.did_not_come(
-        booking_id, now=instant(half_past + timedelta(days=1))
-    ) == frozenset({KUBA})
-    assert await no_shows.did_not_come(new_uuid(), now=half_past) == frozenset()

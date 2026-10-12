@@ -27,7 +27,7 @@ from app.modules.bookings.domain.events import (
     NoSaidToTheSeat,
     SeatRescued,
 )
-from app.modules.bookings.domain.keeping import Keeping, keeping_of
+from app.modules.bookings.domain.keeping import Broken, Keeping, keeping_of
 from app.shared.ids import new_uuid
 
 OLA, KUBA, EWA, TOMEK = (new_uuid() for _ in range(4))
@@ -205,7 +205,7 @@ def test_a_leaver_after_the_cut_off_whose_seat_was_taken_broke_nothing():
     booking.rescue(ZOSIA, at=CUT_OFF + timedelta(hours=2))
 
     assert keeping_of(booking, KUBA, now=START) is None
-    assert keeping_of(booking, ZOSIA, now=START) == Keeping(kept=True, at=START)
+    assert keeping_of(booking, ZOSIA, now=START) == Keeping(at=START)
 
 
 def test_a_leaver_before_the_cut_off_whose_seat_was_taken_is_clean_even_if_called_off():
@@ -218,5 +218,7 @@ def test_a_leaver_before_the_cut_off_whose_seat_was_taken_is_clean_even_if_calle
     booking.call_off_at_the_cut_off(at=CUT_OFF)
 
     assert keeping_of(booking, KUBA, now=CUT_OFF) is None
-    assert keeping_of(booking, EWA, now=CUT_OFF) == Keeping(kept=False, at=CUT_OFF)
+    assert keeping_of(booking, EWA, now=CUT_OFF) == Keeping(
+        at=CUT_OFF, broken=Broken.CALLED_OFF_BY_LEAVING
+    )
     assert keeping_of(booking, ZOSIA, now=CUT_OFF) is None

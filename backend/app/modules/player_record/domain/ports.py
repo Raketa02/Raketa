@@ -18,7 +18,7 @@ be a contract nobody can honour cheaply for a caller that never batches. On
 fold behind it is deliberately unbounded, and a set-shaped version would be an
 invitation to call a career statistic inside a walk over five hundred
 candidates. On ``SubjectReliability`` it runs the other way — the provider's own
-read is set-shaped for a caller that holds five hundred candidates, and the
+read is set-shaped for a caller that holds a whole group's members, and the
 narrowing to one person happens in the adapter, so the shape of somebody else's
 caller does not reach a sheet that will never batch.
 
@@ -247,45 +247,32 @@ class SubjectForm(Protocol):
 
 @runtime_checkable
 class SubjectReliability(Protocol):
-    """What the platform watched this person do — the pill and its rows.
+    """Player reliability — the figure in points, its band, *New* and the four
+    counts (``docs/adr/0195`` §1, #659).
 
-    **The number the matcher acts on, and the rows it is the mean of.** The pill
-    is the *published* Player Score at the player's own weights and never the
-    matcher's per-mode blend of the same names, because a player who works their
-    record back up must be able to watch the penalty lift — which is only true
-    while the figure they can look at is the figure that demotes them.
-
-    **The weights do not cross this port.** The blend arrives already taken. A
-    row carrying its weight would let a reader re-derive the pill — a second
-    rounding of a number the platform acts on — and would invite a sheet drawing
-    one strand as worth more than another, which nothing on this surface claims.
+    **Everything crosses already taken.** The band is the backend's and *New*
+    reads every game ever played through, so nothing on this side re-derives
+    either — a second derivation would be a second place for the number a
+    player reads about themselves to be true.
 
     **One player, and this is the one demand here whose provider reads a set.**
-    ``PublishedScoreQuery`` answers about a whole collection, because the matcher
-    asks it once per search over every candidate still standing. A record is one
-    deliberate tap, so the narrowing is the adapter's and this signature is the
-    caller's own shape.
+    ``PublishedScoreQuery`` answers about a whole collection, because a group's
+    Members list asks about everybody it draws. A record is one deliberate tap,
+    so the narrowing is the adapter's and this signature is the caller's own
+    shape.
     """
 
     async def reliability_of(
         self, player_id: UUID, *, now: Instant
-    ) -> ReliabilityPanel | None:
-        """Their pill and their metered rows, or **nothing at all**.
+    ) -> ReliabilityPanel:
+        """Their reliability — **always**: everyone starts at a hundred, so
+        somebody nothing has happened to reads *100 · New* with every count at
+        nought.
 
-        ``None`` for somebody the platform has watched nothing of — no plan that
-        reached the end of its entry window, no seat that reached its deadline.
-        The zone is omitted rather than drawn at nought, because nobody has
-        failed to turn up who was never due to, and a section of noughts is how
-        *no record* becomes *a bad record* on the one screen that cannot be
-        appealed.
-
-        A strand nobody can publish is missing from the rows the same way, so a
-        panel that exists carries only what was actually observed.
-
-        ``now`` is taken rather than read, because both live strands are facts
-        about an instant — a game nobody recorded is played once its window has
-        closed, a seat has lapsed once its day has run out — and every figure on
-        one response is folded against one present.
+        ``now`` is taken rather than read, because every line under it is a fact
+        about an instant — a game is played through once its window has closed,
+        a line drops out six months after it happened — and every figure on one
+        response is folded against one present.
         """
         ...
 

@@ -12,7 +12,7 @@ from app.modules.groups.domain.ports import (
     GroupAdministrators,
     GroupDirectory,
     GroupFaces,
-    GroupMemberScores,
+    GroupMemberReliability,
     RatedGroupMembers,
 )
 
@@ -38,7 +38,7 @@ class ReadGroupMembers:
     a player, and reads the rows and their order as a member does. Anyone else —
     a removed Administrator, one the group was handed away from — meets
     ``group_not_found``, as the group's page refuses a stranger. Three reads
-    whatever the size of the group — the Levels, the faces and the scores —
+    whatever the size of the group — the Levels, the faces and Player reliability —
     each one question about the rows it serves, and on an official group a
     fourth, asked first: who runs it now.
     """
@@ -49,14 +49,14 @@ class ReadGroupMembers:
         directory: GroupDirectory,
         ratings: RatedGroupMembers,
         faces: GroupFaces,
-        scores: GroupMemberScores,
+        reliability: GroupMemberReliability,
         administrators: GroupAdministrators,
         clock: Clock,
     ) -> None:
         self._directory = directory
         self._ratings = ratings
         self._faces = faces
-        self._scores = scores
+        self._reliability = reliability
         self._administrators = administrators
         self._clock = clock
 
@@ -74,12 +74,14 @@ class ReadGroupMembers:
             run_by=who_runs_it(listing, runner),
         )
         faces = await self._faces.faces_of(shown)
-        scores = await self._scores.scores_of(shown, now=self._clock.now())
+        reliability = await self._reliability.reliability_of(
+            shown, now=self._clock.now()
+        )
         return tuple(
             MemberRow(
                 face=face_of(faces, member),
                 level=levels[member],
-                player_score=scores.get(member),
+                reliability=reliability[member],
                 is_owner=member == listing.owner_id,
                 joined_at=listing.joined_at[member],
                 is_administrator=member == runner,

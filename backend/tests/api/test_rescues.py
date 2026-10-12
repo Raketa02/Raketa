@@ -527,7 +527,8 @@ async def test_a_leaver_whose_seat_was_taken_kept_the_game_off_their_record(
 
     clock.move(SATURDAY_FIVE - AFTER_THE_CUT_OFF + timedelta(hours=2))
 
-    assert "reliability" not in await own_record(client, kuba)
+    kubas = (await own_record(client, kuba))["reliability"]
+    assert (kubas["player_score"], kubas["kept_of"]) == (100, 0)
 
 
 # --------------------------------------------------------------------------- #

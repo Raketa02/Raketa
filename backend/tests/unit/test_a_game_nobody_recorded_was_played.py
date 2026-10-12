@@ -100,7 +100,6 @@ def test_it_has_no_score_no_outcome_and_nothing_left_in_dispute():
     assert game.confirmed_at(WEDNESDAY_EIGHT) is None
     assert game.settled_by_agreement_at(WEDNESDAY_EIGHT) is None
     assert game.left_in_dispute_by(WEDNESDAY_EIGHT) == frozenset()
-    assert game.score_put_to_a_side_at(WEDNESDAY_EIGHT) is None
     assert all(
         game.outcome_for(player, now=WEDNESDAY_EIGHT) is None
         for player in game.line_up.players

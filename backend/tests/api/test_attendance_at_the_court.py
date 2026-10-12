@@ -166,17 +166,29 @@ async def details_of(client, player: dict, booking: str) -> dict:
     return read.json()
 
 
-async def strands_of(client, player: dict) -> dict:
+async def reliability_of(client, player: dict) -> dict:
+    """Their own record's Player reliability — the figure and the counts it is
+    read beside (#659)."""
+
     read = await client.get(
         "/api/v1/players/me/record",
         params={"sport": "TENNIS"},
         headers=player["headers"],
     )
     assert read.status_code == 200, read.text
-    return {
-        row["strand"]: (row["good"], row["opportunities"])
-        for row in read.json()["reliability"]["strands"]
-    }
+    return read.json()["reliability"]
+
+
+def figure(reliability: dict) -> tuple:
+    """The figure, its band and *Shows up* / *Being late* / *Keeps plans*."""
+
+    return (
+        reliability["player_score"],
+        reliability["band"],
+        (reliability["turned_up"], reliability["turned_up_of"]),
+        reliability["late"],
+        (reliability["kept"], reliability["kept_of"]),
+    )
 
 
 def refused(response, status: int, code: str) -> str:
@@ -221,6 +233,15 @@ async def test_ivan_taps_at_17_10_oscar_s_i_m_here_at_17_22_is_came_late_and_sco
     assert here.json()["standing"] == "AWAITING_ENTRY"
     [row] = here.json()["attendance"]
     assert row["state"] == "CAME_LATE"
+    # **Came late: −10, late once** (#659) — priced at the arrival, and the
+    # booking he held to its hour kept.
+    assert figure(await reliability_of(client, oscar)) == (
+        90,
+        "VERY_HIGH",
+        (1, 1),
+        1,
+        (1, 1),
+    )
     to(clock, FIVE + timedelta(minutes=65))
     scored = await a_score(client, ivan, booked["game"])
     assert scored.status_code == 200, scored.text
@@ -252,28 +273,41 @@ async def test_oscar_never_comes_he_didn_t_come_at_17_30_and_the_game_takes_no_s
     assert (oscars["needs_you"], ivans["needs_you"]) == (True, False)
 
 
-async def test_didn_t_come_is_the_strongest_mark_once_the_late_claim_s_day_is_over(
+async def test_didn_t_come_costs_twenty_five_once_the_late_claim_s_day_is_over(
     client, clock, ivan_and_oscar, booked
 ):
-    """**Until the points ticket**: a miss on *shows up* and a broken booked
-    game on *keeps plans*; the player who came is credited on both."""
+    """**Priced once** (#659; ``docs/adr/0195`` §1): −25 on *Shows up*, and the
+    booking he held to its hour stays kept. Ivan, who came, turned up to a game
+    that never counted — and earns nothing for it."""
 
     ivan, oscar = ivan_and_oscar
     to(clock, FIVE + timedelta(minutes=10))
     await not_here_yet(client, ivan, booked["game"], oscar)
 
     to(clock, THURSDAY_HALF_PAST - timedelta(seconds=1))
-    assert await strands_of(client, oscar) == {"KEEPS_PLANS": (1, 1)}
+    assert figure(await reliability_of(client, oscar)) == (
+        100,
+        "VERY_HIGH",
+        (0, 0),
+        0,
+        (1, 1),
+    )
     to(clock, THURSDAY_HALF_PAST)
 
-    assert await strands_of(client, oscar) == {
-        "SHOWS_UP": (0, 1),
-        "KEEPS_PLANS": (0, 1),
-    }
-    assert await strands_of(client, ivan) == {
-        "SHOWS_UP": (1, 1),
-        "KEEPS_PLANS": (1, 1),
-    }
+    assert figure(await reliability_of(client, oscar)) == (
+        75,
+        "HIGH",
+        (0, 1),
+        0,
+        (1, 1),
+    )
+    assert figure(await reliability_of(client, ivan)) == (
+        100,
+        "VERY_HIGH",
+        (1, 1),
+        0,
+        (1, 1),
+    )
 
 
 async def test_oscar_s_i_was_there_next_morning_confirmed_by_ivan_is_came_late(
@@ -303,9 +337,14 @@ async def test_oscar_s_i_was_there_next_morning_confirmed_by_ivan_is_came_late(
     scored = await a_score(client, ivan, booked["game"])
     assert scored.status_code == 200, scored.text
     to(clock, THURSDAY_HALF_PAST + timedelta(days=2))
-    oscars = await strands_of(client, oscar)
-    # Came late is turned up, until the points ticket prices it.
-    assert (oscars["SHOWS_UP"], oscars["KEEPS_PLANS"]) == ((1, 1), (1, 1))
+    # Came late: turned up, late once, −10 — and nothing back for the game.
+    assert figure(await reliability_of(client, oscar)) == (
+        90,
+        "VERY_HIGH",
+        (1, 1),
+        1,
+        (1, 1),
+    )
 
 
 async def test_oscar_walking_in_at_17_08_records_nothing(
@@ -325,10 +364,14 @@ async def test_oscar_walking_in_at_17_08_records_nothing(
     assert (await game_of(client, oscar, booked["game"]))["standing"] == (
         "PLAYED_NO_SCORE"
     )
-    assert await strands_of(client, oscar) == {
-        "SHOWS_UP": (1, 1),
-        "KEEPS_PLANS": (1, 1),
-    }
+    # On time: nothing recorded, and a game played through like Ivan's.
+    assert figure(await reliability_of(client, oscar)) == (
+        100,
+        "VERY_HIGH",
+        (1, 1),
+        0,
+        (1, 1),
+    )
 
 
 async def test_nobody_tapping_ends_the_game_as_it_always_did(

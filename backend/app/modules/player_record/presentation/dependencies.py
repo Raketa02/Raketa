@@ -225,7 +225,7 @@ def get_read_own_record(
     nothing here is a gate, so the one screen that tells a player how they
     appear cannot be taken down by the machinery that gates somebody else's
     sheet. The reliability read is the one that makes that worth the
-    wiring: the pill is the number deciding who this player is offered to, and a
+    wiring: the figure is the number the reliability filter reads (#661), and a
     penalty nobody can look up is a penalty nobody can fix.
 
     **The sportsmanship reader is the same object the other route gets**, and

@@ -31,14 +31,13 @@ from app.modules.player_record.application.read_player_record import (
     ReadPlayerRecord,
 )
 from app.modules.player_record.domain.errors import RecordUnavailable
-from app.engines.matchfit.core import ReliabilityStrand
+from app.engines.matchfit.core import ReliabilityBand
 from app.modules.player_record.domain.record import (
     GameOutcome,
     LikelyRange,
     OnCourtVerdict,
     OpponentVariety,
     ReliabilityPanel,
-    StrandRow,
     SubjectIdentity,
     SubjectRating,
     WhatPlayersSaid,
@@ -115,28 +114,28 @@ class Form:
         return self.run
 
 
-def a_panel(*, pct: int = 90) -> ReliabilityPanel:
+def a_panel(*, points: int = 90) -> ReliabilityPanel:
     return ReliabilityPanel(
-        player_score=pct,
-        strands=(
-            StrandRow(
-                strand=ReliabilityStrand.SHOWS_UP,
-                good=9,
-                opportunities=10,
-                pct=pct,
-            ),
-        ),
+        player_score=points,
+        band=ReliabilityBand.VERY_HIGH if points >= 90 else ReliabilityBand.HIGH,
+        is_new=False,
+        turned_up=9,
+        turned_up_of=10,
+        late=1,
+        kept=10,
+        kept_of=10,
+        left_in_dispute=0,
     )
 
 
 class Reliability:
     def __init__(self, panel: ReliabilityPanel | None = None) -> None:
-        self.panel = panel
+        self.panel = panel or a_panel(points=100)
         self.asked: list[UUID] = []
 
     async def reliability_of(
         self, player_id: UUID, *, now: Instant
-    ) -> ReliabilityPanel | None:
+    ) -> ReliabilityPanel:
         self.asked.append(player_id)
         return self.panel
 
@@ -510,43 +509,24 @@ async def test_a_player_rated_in_nothing_is_still_asked_how_widely_they_play():
     assert variety.asked == [SUBJECT]
 
 
-async def test_the_record_carries_the_pill_and_the_rows_behind_it():
-    """**The number the matcher acts on, and what it was the mean of.** Nothing
-    here is computed: the panel arrives from the context that owns the
-    arithmetic, and the assembler puts it on the sheet."""
+async def test_the_record_carries_player_reliability_as_it_arrived():
+    """**Points, band, New and the counts** (#659). Nothing here is computed:
+    the panel arrives from the context that owns the arithmetic, and the
+    assembler puts it on the sheet."""
 
-    reliability = Reliability(a_panel(pct=90))
+    reliability = Reliability(a_panel(points=80))
     use_case, _, _ = reading(
         admits=True, identity=an_identity(), reliability=reliability
     )
 
     record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
 
-    assert record.reliability == a_panel(pct=90)
+    assert record.reliability == a_panel(points=80)
     assert reliability.asked == [SUBJECT]
 
 
-async def test_a_player_nothing_has_fallen_due_for_carries_no_panel():
-    """**A third absence, and it is its own.** Somebody rated in four sports who
-    has played all year may still have had no plan reach the end of its entry
-    window and no seat reach its deadline — and the zone is omitted rather than
-    drawn at nought."""
-
-    use_case, _, _ = reading(
-        admits=True,
-        identity=an_identity(),
-        reliability=Reliability(None),
-        variety=Variety(OpponentVariety(distinct_opponents=3, times_on_court=4)),
-    )
-
-    record = await use_case.execute(reader_id=READER, subject_id=SUBJECT)
-
-    assert record.reliability is None
-    assert record.variety is not None
-
-
 async def test_a_player_rated_in_nothing_is_still_asked_what_was_watched():
-    """Like variety and unlike the run of form, the rows are about no sport —
+    """Like variety and unlike the run of form, reliability is about no sport —
     so a newcomer the sheet resolves no sport for is still asked."""
 
     reliability = Reliability(a_panel())

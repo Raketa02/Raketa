@@ -573,8 +573,8 @@ class PlayedGame:
     entered: bool = True
     #: Whether the side that was **asked** replied to the score at all.
     #: ``False`` is the score nobody answered: it confirms by silence anyway, so
-    #: the game is scored and the run of form has its square, and the people who
-    #: were asked carry an *ignored* against *answers about results*.
+    #: the game is scored and the run of form has its square, and the silence
+    #: costs the people who were asked nothing (#659).
     #:
     #: **It is not disagreement.** Two sides who each state a score and neither
     #: accepts is ``won_by=None`` with this left ``True`` — both of them
@@ -1403,8 +1403,8 @@ def _game_document(game: PlayedGame) -> dict[str, object]:
     """One declared arrangement, as the artifact spells it. **Inputs only.**
 
     ``entered`` and ``answered`` are here for the same reason ``won_by`` is:
-    each is a thing a player did or did not do, and the ending, the run of form
-    and the strand that reads them are what the platform makes of it.
+    each is a thing a player did or did not do, and the ending and the run of
+    form that read them are what the platform makes of it.
     """
 
     return {
