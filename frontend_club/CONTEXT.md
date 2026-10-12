@@ -53,13 +53,6 @@ path>`, a route handler that can set the cookie the render cannot, and is sent b
   (`club.raketa`, `e2e/stub/courts.ts`), bookings (`club.bookings`, `e2e/stub/bookings.ts`) and
   money (`club.money`, `e2e/stub/money.ts`) keep the backend's rules, so a test programs only the
   reply it is about. The stub also draws Stripe's pages, which the fake club's links point at.
-- **Scan** — what the Check in page's camera read off a player's QR code: the whole payload
-  (`RAKETA-CHECK-IN:1:…`), sent to the backend as it was read, once each time the code is held
-  up (taken away for a second, it is new again). The **short code** is the six
-  characters under the QR code, typed when the camera won't read. Both are the domain's
-  **Check-in** code; what a code _is_ (whose seat, which day) is only the backend's to say.
-- **Fake camera** — `e2e/camera.ts`: the camera the suite gives the Check in page, a canvas's
-  stream showing a real QR code a test holds up, which counts the frames the page looks at.
 - **Stripe's pages** — the hosted pages where a club gives Stripe its company, its
   representative and its bank. _Connect with Stripe_ and _Continue with Stripe_ (Overview's first
   step) ask the backend for a fresh **link** to them, which works once, and leave for it. Stripe
